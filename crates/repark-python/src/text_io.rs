@@ -50,15 +50,12 @@ pub fn write_text_frame(frame: &PyDataFrame, path: &str, line_sep: Option<String
     fenced_span!("py.write", "write_text_frame", {
         let separator = line_sep.unwrap_or_else(|| "\n".to_string());
         let segment = frame_drive_segment_cached(&frame.depths())?;
+        let twin = frame.executable()?;
         Python::attach(|py| {
             py.detach(|| {
                 block_on_grown_sized(
                     &frame.runtime,
-                    repark_core::write_text_frame(
-                        frame.inner(),
-                        Path::new(path),
-                        separator.as_str(),
-                    ),
+                    repark_core::write_text_frame(&twin, Path::new(path), separator.as_str()),
                     segment,
                 )
             })
@@ -80,12 +77,13 @@ pub fn write_text_partitioned(
     fenced_span!("py.write", "write_text_partitioned", {
         let separator = line_sep.unwrap_or_else(|| "\n".to_string());
         let segment = frame_drive_segment_cached(&frame.depths())?;
+        let twin = frame.executable()?;
         Python::attach(|py| {
             py.detach(|| {
                 block_on_grown_sized(
                     &frame.runtime,
                     repark_core::write_text_partitioned(
-                        frame.inner(),
+                        &twin,
                         Path::new(path),
                         separator.as_str(),
                         &partition_columns,

@@ -59,6 +59,25 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   through `grown_clone_frame` / `grown_clone_expr`, so the grown-stack guard
   holds with no new allow-list entry.
   pins: polars-is-duplicated-1/C-002, deep-filter-chain-crash-1/C-013
+  **Stack merge of main d0c50405+ (2026-10-04):** the ATTR-ID-1 stack's
+  `dataframe.rs` changes land here. `executable()` builds the O-1 twin
+  (`frame_names::strip_for_execution`) on a grown segment sized from the
+  cached levels (the larger of the drive segment and the clone need), keeps
+  it in the `OnceLock`, and hands out a `grown_clone_frame` of it; a twin
+  that loses the first-writer race drops on the grown segment. `Drop` takes
+  the twin and tears it down inside the same grown region as `df`. The
+  terminals (`count`, `show`, `__arrow_c_stream__`) and
+  `analyzed_arrow_schema_native` drive the twin through the cached segment,
+  and the schema still passes through `frame_names::strip_schema_ids`.
+  `sort` maps a missing key through `unresolved_sort_key` inside
+  `drive_columns`; `join_on_names` takes the two lineage nodes and returns
+  `(frame, Join node)` from inside `grown_sync`.
+  pins: attr-id-1/C-050, C-051, C-053, deep-filter-chain-crash-1/C-013
+  **Fold SM-2b item 3 (2026-10-06):** `__arrow_c_stream__` takes an optional
+  `display_names` vector alongside `requested_schema` (protocol-compatible:
+  consumers pass at most one argument); a length-matched vector renames the
+  export schema and batches, anything else keeps engine names.
+  pins: attr-id-1/C-062
 - [`tests.rs`](tests.rs) — **DEEP-FILTER-CHAIN-CRASH-1 verifier fold
   (2026-09-29):** the `dataframe` unit tests, moved verbatim from the inline
   module (Arrow export values, types, laziness, errors, schema caching).
@@ -66,3 +85,6 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   builder rule asserts cached levels equal a fresh `plan_depths`; the
   subquery-carrying shapes pin in `subquery.rs`, next to the constructors).
   pins: deep-filter-chain-crash-1/C-013
+  **Stack merge of main d0c50405+ (2026-10-04):** the battery's
+  `join_on_names` arm stamps both sides and passes their root nodes through
+  `key_join`, since the join door now requires lineage nodes.

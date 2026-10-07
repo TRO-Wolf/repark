@@ -1,0 +1,270 @@
+from __future__ import annotations
+
+from typing import Any, NoReturn
+
+from repark import _native
+from repark.errors import AnalysisException
+from repark.spark import column_fields
+from repark.spark.qualified_names import _stamped_frame_id_snapshot
+
+
+def _hits_folded(frame: Any, written: str, displays: list[str], mode: str) -> list[int]:
+    exact = [position for position, display in enumerate(displays) if display == written]
+    if frame._session is not None and _native.session_case_sensitive(frame._session):
+        return exact
+    return exact + _native.java_fold_hits(written, displays, mode)
+
+
+def _bindings(frame: Any) -> tuple[list[str], list[str], list[str | None]] | None:
+    if frame._map_bridge is not None:
+        return None
+    _, held, engine_names = _stamped_frame_id_snapshot(frame)
+    if frame._display_names is not None and frame._engine_names is not None:
+        displays = list(frame._display_names)
+    else:
+        displays = list(engine_names)
+    if len(displays) != len(engine_names) or len(held) != len(displays):
+        return None
+    return (displays, engine_names, held)
+
+
+def _grouped(hits: list[int], held: list[str | None]) -> tuple[str, list[int]]:
+    if not hits:
+        return ("missing", [])
+    groups: list[str] = []
+    for position in hits:
+        held_id = held[position]
+        if held_id is None:
+            raise RuntimeError(f"internal error: stamped position {position} has no attribute id")
+        if held_id not in groups:
+            groups.append(held_id)
+    if len(groups) == 1:
+        return ("bound", list(hits))
+    return ("ambiguous", list(hits))
+
+
+def _guard_passes(frame: Any, hits: list[int], engine_names: list[str]) -> bool:
+    if len(hits) < 2:
+        return True
+    native: Any = frame._plan()
+    for position in hits:
+        if not _native.engine_field_is_unique(native, engine_names[position]):
+            return False
+    return not _native.join_dup_below_wrappers(native)
+
+
+def _echo_option(qualifier: str | None, written: str) -> str:
+    spelled = written.replace("`", "``")
+    if qualifier is None:
+        return f"`{spelled}`"
+    parts = qualifier.split(".")
+    if parts[-1].startswith(("_repark_", "__repark_")):
+        return f"`{spelled}`"
+    return ".".join(f"`{part}`" for part in (*parts, spelled))
+
+
+def _raise_ambiguous_reference(frame: Any, written: str, hits: list[int]) -> NoReturn:
+    qualifiers: list[str | None] = _native.logical_column_qualifiers(frame._plan())
+    options = sorted(_echo_option(qualifiers[position], written) for position in hits)
+    raise AnalysisException(
+        f"[AMBIGUOUS_REFERENCE] Reference `{written}` is ambiguous, "
+        f"could be: [{', '.join(options)}]. SQLSTATE: 42704"
+    )
+
+
+def _refuse_guarded(frame: Any, hits: list[int], engine_names: list[str], written: str) -> None:
+    if not _guard_passes(frame, hits, engine_names):
+        _raise_ambiguous_reference(frame, written, hits)
+
+
+def _raise_cannot_resolve(name: str, displays: list[str]) -> NoReturn:
+    from repark.spark._integral import attach_error_condition
+
+    error = AnalysisException(f'Cannot resolve column name "{name}" among ({", ".join(displays)}).')
+    attach_error_condition(error, "_LEGACY_ERROR_TEMP_1201")
+    error._spark_message_parameters = {
+        "colName": name,
+        "fieldNames": ", ".join(displays),
+    }
+    raise error
+
+
+def _close_positions(grouped: list[int], held: list[str | None]) -> list[int]:
+    target = held[grouped[0]]
+    return [position for position, held_id in enumerate(held) if held_id == target]
+
+
+def _trim_union_first(frame: Any, grouped: list[int], closed: list[int]) -> list[int]:
+    if len(closed) > 1 and _native.union_dup_below_wrappers(frame._plan(), closed):
+        return sorted(grouped)[:1]
+    return closed
+
+
+def _bound_subset_positions(
+    frame: Any, key: str, bindings: tuple[list[str], list[str], list[str | None]]
+) -> list[int]:
+    displays, engine_names, held = bindings
+    hits = _hits_folded(frame, key, displays, "a")
+    if not hits:
+        column_fields._raise_unresolved_name(None, key, displays)
+    status, grouped = _grouped(hits, held)
+    if status == "ambiguous":
+        _raise_ambiguous_reference(frame, key, grouped)
+    closed = _trim_union_first(frame, grouped, _close_positions(grouped, held))
+    _refuse_guarded(frame, closed, engine_names, key)
+    return closed
+
+
+def _drop_qualified_column_targets(
+    frame: Any,
+    name: str,
+    split: tuple[list[str] | None, str],
+    bindings: tuple[list[str], list[str], list[str | None]],
+) -> tuple[list[str], list[str]] | None:
+    from repark.spark import filter_quote as _filter_quote
+
+    if split[0] is None:
+        return None
+    native = frame._plan()
+    exact = bool(_native.session_case_sensitive(frame._session))
+    qualifiers, payload = _filter_quote._known_qualifiers(frame, native, exact)
+    if not _filter_quote._name_matches_head(split[0][0], qualifiers, exact):
+        return None
+    qualifier = ".".join(split[0])
+    status, hits, _plan_quals = _native.resolve_display_name(
+        native, split[1], qualifier, bindings[0], exact, payload
+    )
+    if status == "bound":
+        engines = [bindings[1][position] for position in hits]
+        target = set(engines)
+        kept = {engine for index, engine in enumerate(bindings[1]) if index not in set(hits)}
+        if _guard_passes(frame, list(hits), bindings[1]) and target.isdisjoint(kept):
+            return (engines, [])
+        plan_quals = list(_native.logical_column_qualifiers(native))
+        refs = []
+        for position in hits:
+            held = plan_quals[position] if position < len(plan_quals) else None
+            if held is None:
+                return None
+            refs.append(f"{held}.{bindings[1][position]}")
+        return ([], refs)
+    if status == "ambiguous":
+        _raise_ambiguous_reference(frame, name, list(hits))
+    return ([], [])
+
+
+def _drop_targets(frame: Any, cols: tuple[Any, ...]) -> tuple[list[str], list[str], list[str]]:
+    from repark.spark.column import Column
+
+    engine_drop: list[str] = []
+    references: list[str] = []
+    attributes: list[str] = []
+    bindings = _bindings(frame) if cols else None
+    overlay = frame._display_names is not None and frame._engine_names is not None
+    for item in cols:
+        if isinstance(item, Column) and (
+            item._sort_ascending is not None or item._sort_nulls_first is not None
+        ):
+            continue
+        if (
+            isinstance(item, Column)
+            and item._attr_id is not None
+            and item._spark_display == frame._name_of(item)
+        ):
+            if item._attr_id in frame._unemitted_attr_ids:
+                continue
+            ambiguous_drop = False
+            if bindings is not None:
+                positions = [
+                    position
+                    for position, held_id in enumerate(bindings[2])
+                    if held_id == item._attr_id
+                ]
+                if positions:
+                    target = {bindings[1][position] for position in positions}
+                    kept = {
+                        engine
+                        for index, engine in enumerate(bindings[1])
+                        if index not in set(positions)
+                    }
+                    if _guard_passes(frame, positions, bindings[1]) and target.isdisjoint(kept):
+                        attributes.extend(bindings[1][position] for position in positions)
+                        continue
+                    ambiguous_drop = True
+            if ambiguous_drop:
+                references.append(frame._name_of(item))
+            continue
+        name = frame._name_of(item)
+        if bindings is None:
+            if overlay:
+                pairs = zip(frame._display_names, frame._engine_names, strict=True)
+                for display, engine in pairs:
+                    if display == name:
+                        engine_drop.append(engine)
+            else:
+                (references if isinstance(item, Column) else engine_drop).append(name)
+            continue
+        displays, engine_names, held = bindings
+        if isinstance(item, str):
+            hits = _hits_folded(frame, name, displays, "b")
+            if not hits:
+                continue
+            attributes.extend(engine_names[position] for position in hits)
+            continue
+        if item._spark_display != name:
+            continue
+        split = column_fields._split_written_name(name)
+        if split is not None and split[0] is not None:
+            targets = _drop_qualified_column_targets(frame, name, split, bindings)
+            if targets is not None:
+                attributes.extend(targets[0])
+                references.extend(targets[1])
+                continue
+        if (split is None or split[0] is not None or "`" in name) and not overlay:
+            references.append(name)
+            continue
+        hits = _hits_folded(frame, name, displays, "a")
+        if not hits:
+            continue
+        status, grouped = _grouped(hits, held)
+        if status == "ambiguous":
+            _raise_ambiguous_reference(frame, name, grouped)
+        closed = _trim_union_first(frame, grouped, _close_positions(grouped, held))
+        _refuse_guarded(frame, closed, engine_names, name)
+        attributes.extend(engine_names[position] for position in closed)
+    return (engine_drop, references, attributes)
+
+
+def _fanout_subset(frame: Any, names: list[str]) -> list[str]:
+    bindings = _bindings(frame)
+    if bindings is None:
+        resolved: list[str] = []
+        if frame._display_names is not None and frame._engine_names is not None:
+            want = {frame._name_of(item) for item in names}
+            for display, engine in zip(frame._display_names, frame._engine_names, strict=True):
+                if display in want:
+                    resolved.append(engine)
+            if not resolved:
+                for item in names:
+                    resolved.append(frame._resolve_getitem_column_name(frame._name_of(item)))
+        else:
+            for item in names:
+                held_name = frame._resolve_getitem_column_name(frame._name_of(item)).casefold()
+                resolved.extend(name for name in frame.columns if name.casefold() == held_name)
+        return resolved
+    displays, engine_names, _ = bindings
+    if frame._display_names is not None and frame._engine_names is not None:
+        hit_positions: set[int] = set()
+        for key in names:
+            key_hits = _hits_folded(frame, key, displays, "b")
+            if not key_hits:
+                _raise_cannot_resolve(key, displays)
+            hit_positions.update(key_hits)
+        return [engine_names[position] for position in sorted(hit_positions)]
+    keyed: list[str] = []
+    for key in names:
+        key_hits = _hits_folded(frame, key, displays, "b")
+        if not key_hits:
+            _raise_cannot_resolve(key, displays)
+        keyed.extend(engine_names[position] for position in key_hits)
+    return keyed

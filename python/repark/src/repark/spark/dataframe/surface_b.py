@@ -213,12 +213,12 @@ def _fill_suppressed() -> Iterator[None]:
         _FILL_SUPPRESSED.depth -= 1
 
 
-def register_view_without_fill(frame: DataFrame, name: str) -> None:
+def register_view_without_fill(frame: DataFrame, name: str, *, rename_fields: bool = True) -> None:
     """Register ``frame`` as a temp view without filling its Observation."""
     from repark.spark.catalog_surface import _register_temp_view
 
     with _fill_suppressed():
-        _register_temp_view(frame, name)
+        _register_temp_view(frame, name, rename_fields=rename_fields)
 
 
 def rows_without_fill(frame: DataFrame) -> list[Any]:

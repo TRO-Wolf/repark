@@ -106,6 +106,34 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   ignoring case to an earlier one) and `column_already_exists` (Spark's
   42711 text) with the `folded_duplicate_reports_the_lower_cased_twin` pin.
   pins: casesens-1/C-005, C-006, C-007, C-008, C-012, C-017
+- `java_case.rs` — **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** the single Java
+  case-fold home (the binding's fold tables moved out of the Python facade so
+  the three copies cannot drift). `fold_b_equal` is OpenJDK
+  `String.equalsIgnoreCase` (equal length plus per-codepoint equal, upper, and
+  lower-of-upper — the lower step runs on the uppers, which is what equates
+  U+0130 with `i`/`ı`), and `string_lower_equal` is equal length plus
+  `String.toLowerCase` (U+0130 expands to `i`+U+0307, U+03A3 takes U+03C2
+  word-finally else U+03C3, every other codepoint lowers 1:1), both over Rust
+  `char` mappings plus correction tables for the Java-17 divergence (the
+  Rust-newer identity sets, the Greek single-upper map, U+0130 lowering to
+  `i`). A full-codepoint unit test pins every mapping against
+  `java_case_dump.txt`. Reach the folds through `repark-core`'s re-export.
+  pins: attr-id-1/C-032, C-035
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** the two-fold split is measured,
+  not assumed: `drop(str)`/`dropDuplicates`/`withColumn` use `equalsIgnoreCase`
+  (the `Analyzer.resolver` bytecode path; the earlier lower-of-originals form
+  missed U+0130/`ı`), while `fillna`/`dropna`/free-Column `drop` use
+  length-plus-`String.toLowerCase` (probes s3d16..17; `select` shares this rule
+  per the r1 `sel` cells, which is S3a/S3b territory).
+  pins: attr-id-1/C-037
+  **CASESENS-2 port (2026-10-03):** `string_lowered` is public so
+  `refuse_folded_duplicate_keys` compares `withColumns` keys the way Spark's
+  `SchemaUtils.checkColumnNameDuplication` does (`toLowerCase(Locale.ROOT)`).
+  pins: casesens-2/C-010
+- `java_case_dump.txt` — the compacted Zulu-17 `Character` dump behind that
+  test: one `cp upper lower` hex line per mapped codepoint, sorted,
+  generated from the S3d probe dump with a round-trip check (the generator
+  stays in the lane work dir, out of the tree).
 - `lib.rs` — `Error` (variants: `NotImplemented(String)` — the deterministic scope-gate /
   unsupported-feature class (U4: no longer a scaffolding placeholder; `engine_err` folds
   `DataFusionError::NotImplemented` + iceberg `FeatureUnsupported` into it, verbatim `{0}`);

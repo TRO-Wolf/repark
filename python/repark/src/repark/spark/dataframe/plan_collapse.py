@@ -5,7 +5,6 @@ The module exports helpers bound by ``core`` and strips internal tighten metadat
 
 from __future__ import annotations
 
-import functools
 import logging
 import re
 from typing import TYPE_CHECKING, Any
@@ -15,6 +14,13 @@ from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._idents import sql_string_literal as _sql_string_literal
 from repark.spark.column import Column
+from repark.spark.dataframe.join_attr_tokens import (
+    _ATTR_TOKEN_RE,
+    _emit_join_side_columns,
+    _join_condition_args,
+    _replace_local_attr_token,
+    _rewrite_attr_tokens_local,
+)
 from repark.spark.dataframe.polars_cells import (
     _arrow_pa_type_label,
     _cell_text,
@@ -153,8 +159,9 @@ def _collapse_identity_projection_alias(column: Column) -> Column:
             stable_name=column._stable_name,
             partition_transform=column._partition_transform,
             sql_expr=column._sql_expr,
-            origin_plan_id=column._origin_plan_id,
-            origin_field=column._origin_field,
+            attr_id=column._attr_id,
+            birth_frame=column._birth_frame,
+            qualifiers=column._qualifiers,
             join_sql_expr=column._join_sql_expr,
             g2_range_order_names=column._g2_range_order_names,
             window_spec=column._window_spec,
@@ -765,160 +772,6 @@ def _null_safe_equi_join_sql(
     return (
         f"SELECT {', '.join(select_parts)} FROM {left_view} INNER JOIN {right_view} ON {on_clause}"
     )
-
-
-_QCOL_TOKEN_RE = re.compile(r"__REPARK_QCOL_([0-9a-f]+)__(.+?)__")
-
-_QCOL_SIDE_BOUNDARY_RE = re.compile(r"(?i)(<=>|<=|>=|<>|!=|=|<|>|\bAND\b|\bOR\b)")
-
-
-def _same_object_qcol_alternation_safe(join_sql: str) -> bool:
-    """Return whether QCOL alternation can preserve sides in a same-object self-join.
-
-    Reject compound arms because alternation could bind a field to the wrong side.
-    """
-    matches = list(_QCOL_TOKEN_RE.finditer(join_sql))
-    if len(matches) < 2:
-        return True
-    for index in range(len(matches) - 1):
-        between = join_sql[matches[index].end() : matches[index + 1].start()]
-        if _QCOL_SIDE_BOUNDARY_RE.search(between) is None:
-            return False
-    return True
-
-
-def _decode_qcol_field(field_enc: str) -> str:
-    """Decode a ``join_sql_part`` field payload (inverse of Column encoding)."""
-    return field_enc.replace("\\_\\_", "__").replace("\\n", "\n").replace("\\\\", "\\")
-
-
-def _replace_local_qcol_token(
-    match: re.Match[str],
-    *,
-    origin_map: dict[tuple[str, str], str],
-    frame: DataFrame,
-) -> str:
-    """Rewrite one ``__REPARK_QCOL_*`` token against a single frame's origin map."""
-    plan_id = match.group(1)
-    field = _decode_qcol_field(match.group(2))
-    frame._raise_if_origin_not_emitted(plan_id, field)
-    engine = origin_map.get((plan_id, field))
-    if engine is None:
-        return match.group(0)
-    return _quote_ident_sql(engine)
-
-
-def _rewrite_qcol_tokens_local(join_sql: str, frame: DataFrame, spell: Any = str) -> str:
-    """Rewrite QCOL tokens to quoted engine fields, or their ``spell`` names, on one frame."""
-    if frame._origin_map is None:
-        return join_sql
-    origin_map = {key: spell(engine) for key, engine in frame._origin_map.items()}
-    return _QCOL_TOKEN_RE.sub(
-        functools.partial(_replace_local_qcol_token, origin_map=origin_map, frame=frame),
-        join_sql,
-    )
-
-
-def _rewrite_join_qcol_sql(
-    join_sql: str,
-    *,
-    left: DataFrame,
-    right: DataFrame,
-    left_alias: str,
-    right_alias: str,
-) -> str:
-    """Rewrite join QCOL tokens to quoted fields on the matching side.
-
-    Unknown tokens remain unchanged so the engine reports an analysis error.
-    """
-    same_object = left is right
-    if same_object and not _same_object_qcol_alternation_safe(join_sql):
-        raise AnalysisException(
-            "same-object self-join condition has multi-token comparison arms that cannot "
-            "be disambiguated by alternating left/right QCOL sides (would silently "
-            'mis-bind columns). Use df.alias("l").join(df.alias("r"), …) so each side '
-            "has a distinct plan id."
-        )
-    rewriter = _JoinQcolRewriter(
-        left=left,
-        right=right,
-        left_alias=left_alias,
-        right_alias=right_alias,
-        same_object=same_object,
-    )
-    return _QCOL_TOKEN_RE.sub(rewriter, join_sql)
-
-
-def _join_side_engine(frame: DataFrame, field: str) -> str:
-    """Resolve a join-ON field name to the engine column on ``frame``."""
-    if frame._origin_map is not None:
-        for (plan_id, origin_field), engine in frame._origin_map.items():
-            if origin_field == field and plan_id == frame._plan_id:
-                return engine
-        for (_plan_id, origin_field), engine in frame._origin_map.items():
-            if origin_field == field:
-                return engine
-    if frame._display_names is not None and frame._engine_names is not None:
-        matches = [
-            engine
-            for name, engine in zip(frame._display_names, frame._engine_names, strict=True)
-            if name == field
-        ]
-        if len(matches) == 1:
-            return matches[0]
-    return field
-
-
-class _JoinQcolRewriter:
-    """Rewrite join QCOL tokens while tracking their occurrence order."""
-
-    def __init__(
-        self,
-        *,
-        left: DataFrame,
-        right: DataFrame,
-        left_alias: str,
-        right_alias: str,
-        same_object: bool,
-    ) -> None:
-        self.left = left
-        self.right = right
-        self.left_alias = left_alias
-        self.right_alias = right_alias
-        self.same_object = same_object
-        self.token_index = 0
-
-    def __call__(self, match: re.Match[str]) -> str:
-        plan_id = match.group(1)
-        field_enc = match.group(2)
-        field = field_enc.replace("\\_\\_", "__").replace("\\n", "\n").replace("\\\\", "\\")
-        left = self.left
-        right = self.right
-        if self.same_object and plan_id == left._plan_id:
-            side_alias = self.left_alias if (self.token_index % 2 == 0) else self.right_alias
-            self.token_index += 1
-            engine = _join_side_engine(left, field)
-            return f"{side_alias}.{_quote_ident_sql(engine)}"
-        if plan_id == left._plan_id or (
-            left._origin_map is not None and any(pid == plan_id for pid, _field in left._origin_map)
-        ):
-            if plan_id == left._plan_id:
-                engine = _join_side_engine(left, field)
-                return f"{self.left_alias}.{_quote_ident_sql(engine)}"
-            if left._origin_map is not None and (plan_id, field) in left._origin_map:
-                engine = left._origin_map[(plan_id, field)]
-                return f"{self.left_alias}.{_quote_ident_sql(engine)}"
-        if plan_id == right._plan_id or (
-            right._origin_map is not None
-            and any(pid == plan_id for pid, _field in right._origin_map)
-        ):
-            if plan_id == right._plan_id:
-                engine = _join_side_engine(right, field)
-                return f"{self.right_alias}.{_quote_ident_sql(engine)}"
-            if right._origin_map is not None and (plan_id, field) in right._origin_map:
-                engine = right._origin_map[(plan_id, field)]
-                return f"{self.right_alias}.{_quote_ident_sql(engine)}"
-        return match.group(0)
 
 
 def _sql_ident_bare_name(fragment: str) -> str | None:

@@ -4,6 +4,14 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [attr-id-1-ledger.md](attr-id-1-ledger.md) —
+  **WO ATTR-ID-1 (2026-09-30), in flight:** every output field of every DataFrame plan
+  carries one attribute id in field metadata (`repark.attr`), and the DataFrame door resolves a
+  written name by the set of ids over its hits. S1 lands the propagation pins on DataFusion
+  alone (C-001), `stamp` with Spark's first-input union rule (C-002), the join re-mint
+  (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
+  R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
+  **Fold SM-2d (2026-10-07):** C-071 rewritten to the nearest-visible sourced-twin rule.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
   in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,
@@ -155,6 +163,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   DDL exactness (C-013…C-016); one rule (C-017) and no regressions (C-018) flip
   last. `risk_tier: high`. Branch `feat/casesens-1-s1`.
   pins: casesens-1/C-001, C-002, C-004
+- [casesens-2-ledger.md](casesens-2-ledger.md) —
+  **WO CASESENS-2 (2026-09-28), in flight:** the DataFrame door resolves names
+  in Rust — `true` exact on every name API, qualified strings bind,
+  `withColumn(s)` / renames / `fillna` / `dropDuplicates` follow the rule.
+  Slices 1–3: C-001, C-002, C-004…C-008 PROVEN. Slice 4 (branch
+  `feat/casesens-2-s4`): the self-join halves bind (C-003 PROVEN, R-CS2-1
+  CLOSED per the owner ruling); the p10 non-join overlay shapes pin the
+  `true` misses, the R4 refusals, and the R-CS2-7 answer-gaps.
+  `risk_tier: high`. **R-CS2P-1 (2026-10-03):** closed by C-013, with the six
+  cells and Spark's answers in the residue row and mutations M11-M13.
+  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-013
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs
@@ -969,6 +988,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   0.098 s, 50×10k wide 1.164 → 0.993 s, 200k strings 0.194 → 0.191 s, 200k mixed
   0.197 → 0.139 s). `risk_tier: standard`. Branch `perf/describe-1`.
   pins: perf-describe-1/C-001, C-002, C-003, C-004
+- [stamp-2-r5p6-1-ledger.md](stamp-2-r5p6-1-ledger.md) —
+  **STAMP-2-R5P6-1 (2026-10-07), in flight:** attributes the r5p6 excess
+  (no stack cost between `7f45e460` and `13de60e1`; the excess over main is
+  construction-side, led by the `fillna` SQL re-plan) and makes the
+  attribute-token select lazy for attribute-exact projections, with `fill`
+  binding twins at the first held position. Pre-measure: whole like set
+  1.1035 → 1.0717, r5p6 1.182 → 1.128. `risk_tier: standard`. Branch
+  `perf/stamp-2-r5p6-1`.
+  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
   S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
   **PERF-UNPIVOT-1 (2026-09-12), in flight:** step 1 (#542) shipped native

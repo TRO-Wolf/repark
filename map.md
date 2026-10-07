@@ -161,7 +161,10 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   port-source pin's own config, never invented to silence a real misspelling. Its
   `extend-exclude` also covers the two Spark-written Iceberg fixture trees
   (`crates/repark-spark/src/tests/fixtures/` and, since TORTURE-1 step 4,
-  `python/repark-parity/fixtures/torture/data/` — binary Avro/Parquet/Puffin, not prose).
+  `python/repark-parity/fixtures/torture/data/` — binary Avro/Parquet/Puffin, not prose)
+  and, since ATTR-ID-1 S3d R-S3d-1, the compacted Java `Character` dump
+  (`crates/repark-common/src/java_case_dump.txt` — machine-generated hex triples,
+  never hand-edited).
   `.gitignore` also
   carries `handback.json`, the hand-back artifact an agent writes at the lane root: a `git add -A`
   picked it up twice during H3-SPILL-1, and it is never repository content.

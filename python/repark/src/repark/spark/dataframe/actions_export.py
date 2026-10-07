@@ -13,6 +13,7 @@ from repark.errors import (
 )
 from repark.spark.column import Column
 from repark.spark.dataframe.core import DataFrame, _normalize_subset
+from repark.spark.dataframe.join_attr_tokens import _attr_route_sources
 from repark.spark.dataframe.replace_expr import _NO_VALUE
 from repark.spark.types import DataType, StructField, StructType
 
@@ -74,7 +75,7 @@ class DataFrameNaFunctions:
         }
 
     def _fill_expr_for_bound(
-        self, bound: Column, value: Any, field_name: str, fallback_name: str
+        self, bound: Column, value: Any, field_name: str, fallback_name: str, source: Column
     ) -> Column:
         """Build a fill expression while preserving origin identity across projections."""
         from repark import _native
@@ -83,7 +84,7 @@ class DataFrameNaFunctions:
         probe = F.lit(value)
         filled_inner, cast_literal = _native.fill_expr_for_column(
             self._dataframe._inner,
-            bound._inner,
+            source._inner,
             field_name,
             fallback_name,
             probe._inner,
@@ -105,68 +106,92 @@ class DataFrameNaFunctions:
                 join_sql_expr=join,
                 is_foldable=True,
             )
-        filled = F.coalesce(bound, literal)
+        filled = F.coalesce(source, literal)
         display = bound._projection_name or bound.spark_display_part()
-        if bound._origin_plan_id is None or bound._origin_field is None:
+        if bound._attr_id is None:
             return filled.alias(display) if display else filled
         return Column(
             filled_inner.alias(display),
             spark_display=display,
             projection_name=display,
-            stable_name=True,
+            stable_name=False,
             has_free_attribute=True,
             sql_expr=filled._sql_expr,
-            join_sql_expr=(f"coalesce({bound.join_sql_part()}, {literal.join_sql_part()})"),
-            origin_plan_id=bound._origin_plan_id,
-            origin_field=bound._origin_field,
+            join_sql_expr=(f"coalesce({source.join_sql_part()}, {literal.join_sql_part()})"),
         )
 
     def _fill_dict(self, replacements: dict[str, Any]) -> DataFrame:
         """Fill mapping entries in one projection."""
-        known = set(self._dataframe.columns)
-        for column_name in replacements:
-            if column_name not in known:
-                raise AnalysisException(
-                    f"A column with name `{column_name}` cannot be resolved for fillna; "
-                    f"available columns: {sorted(known)}"
-                )
-        # One projection preserves the frame's display and engine-name pairing.
+        from repark.spark import subset_resolve
+
+        bounds = self._dataframe._iter_bound_columns()
+        bindings = subset_resolve._bindings(self._dataframe)
+        values: dict[int, Any] = {}
+        if bindings is None:
+            known = set(self._dataframe.columns)
+            for column_name in replacements:
+                if column_name not in known:
+                    raise AnalysisException(
+                        f"A column with name `{column_name}` cannot be resolved for fillna; "
+                        f"available columns: {sorted(known)}"
+                    )
+            for position, bound in enumerate(bounds):
+                display = bound._projection_name or bound.spark_display_part()
+                if display in replacements:
+                    values[position] = replacements[display]
+        else:
+            for column_name, replacement in replacements.items():
+                for position in subset_resolve._bound_subset_positions(
+                    self._dataframe, column_name, bindings
+                ):
+                    values[position] = replacement
+        sources = self._fill_sources(bounds, values)
         projections: list[Column | str] = []
-        for bound in self._dataframe._iter_bound_columns():
+        for position, bound in enumerate(bounds):
             display = bound._projection_name or bound.spark_display_part()
+            if position not in values:
+                projections.append(sources[position])
+                continue
             engine = None
-            # Match the bound display name to its engine field.
             if bound._sql_expr is not None and bound._sql_expr.startswith('"'):
                 engine = bound._sql_expr.strip('"').replace('""', '"')
-            if display in replacements:
-                projections.append(
-                    self._fill_expr_for_bound(
-                        bound, replacements[display], engine or display, display
-                    )
+            projections.append(
+                self._fill_expr_for_bound(
+                    bound, values[position], engine or display, display, sources[position]
                 )
-            else:
-                projections.append(bound)
+            )
         return self._dataframe.select(*projections)
 
     def _fill_scalar(self, value: Any, subset: list[str] | None) -> DataFrame:
         """Fill scalar-compatible columns in one projection."""
-        target_columns = set(self._columns_for_fill_value(value, subset))
+        target_positions = self._columns_for_fill_value(value, subset)
+        bounds = self._dataframe._iter_bound_columns()
+        sources = self._fill_sources(bounds, target_positions)
         projections: list[Column] = []
-        for bound in self._dataframe._iter_bound_columns():
+        for position, bound in enumerate(bounds):
             display = bound._projection_name or bound.spark_display_part()
             engine = None
             if bound._sql_expr is not None and bound._sql_expr.startswith('"'):
                 engine = bound._sql_expr.strip('"').replace('""', '"')
-            if display in target_columns:
+            if position in target_positions:
                 projections.append(
-                    self._fill_expr_for_bound(bound, value, engine or display, display)
+                    self._fill_expr_for_bound(
+                        bound, value, engine or display, display, sources[position]
+                    )
                 )
             else:
-                projections.append(bound)
+                projections.append(sources[position])
         return self._dataframe.select(*projections)
 
-    def _columns_for_fill_value(self, value: Any, subset: list[str] | None) -> list[str]:
-        """Return columns whose type family accepts ``value``.
+    def _fill_sources(self, bounds: list[Column], targets: Any) -> list[Column]:
+        if any(bounds[position]._attr_id is not None for position in targets):
+            sources = _attr_route_sources(self._dataframe, bounds)
+            if sources is not None:
+                return sources
+        return bounds
+
+    def _columns_for_fill_value(self, value: Any, subset: list[str] | None) -> set[int]:
+        """Return positions whose type family accepts ``value``.
 
         Numeric, boolean, and string values do not cross families. Check ``bool`` before ``int``
         because Python treats ``bool`` as an integer subclass.
@@ -202,10 +227,18 @@ class DataFrameNaFunctions:
             raise PySparkTypeError(
                 f"fillna value must be int, float, bool, str, or dict; got {type(value).__name__}"
             )
-        # Multi-name frames need display names for target matching and engine names for types.
+        from repark.spark import subset_resolve
+
         frame = self._dataframe
+        targets: set[int] | None = None
+        if subset is not None:
+            bindings = subset_resolve._bindings(frame)
+            if bindings is None:
+                return self._columns_for_fill_value_legacy(allowed, subset)
+            targets = set()
+            for key in subset:
+                targets.update(subset_resolve._bound_subset_positions(frame, key, bindings))
         if frame._display_names is not None and frame._engine_names is not None:
-            # The display overlay must not drive type lookup.
             engine_types = {
                 name: type_key for name, type_key, _ in frame._inner.logical_schema_fields()
             }
@@ -230,20 +263,69 @@ class DataFrameNaFunctions:
                 "boolean": BooleanType,
                 "string": StringType,
             }
-            names_out: list[str] = []
+            positions_out: set[int] = set()
+            pairs = zip(frame._display_names, frame._engine_names, strict=True)
+            for position, (_display, engine) in enumerate(pairs):
+                if targets is not None and position not in targets:
+                    continue
+                type_key = engine_types.get(engine, "")
+                type_cls = key_to_cls.get(type_key.split("(")[0])
+                if type_cls is not None and issubclass(type_cls, allowed):
+                    positions_out.add(position)
+            return positions_out
+        fields = frame.schema.fields
+        return {
+            position
+            for position, field in enumerate(fields)
+            if (targets is None or position in targets) and isinstance(field.dataType, allowed)
+        }
+
+    def _columns_for_fill_value_legacy(
+        self, allowed: tuple[type[DataType], ...], subset: list[str]
+    ) -> set[int]:
+        frame = self._dataframe
+        names_out: list[str] = []
+        if frame._display_names is not None and frame._engine_names is not None:
+            engine_types = {
+                name: type_key for name, type_key, _ in frame._inner.logical_schema_fields()
+            }
+            from repark.spark.types import (
+                BooleanType,
+                ByteType,
+                DoubleType,
+                FloatType,
+                IntegerType,
+                LongType,
+                ShortType,
+                StringType,
+            )
+
+            key_to_cls = {
+                "byte": ByteType,
+                "short": ShortType,
+                "int": IntegerType,
+                "long": LongType,
+                "double": DoubleType,
+                "float": FloatType,
+                "boolean": BooleanType,
+                "string": StringType,
+            }
             for display, engine in zip(frame._display_names, frame._engine_names, strict=True):
-                if subset is not None and display not in subset:
+                if display not in subset:
                     continue
                 type_key = engine_types.get(engine, "")
                 type_cls = key_to_cls.get(type_key.split("(")[0])
                 if type_cls is not None and issubclass(type_cls, allowed):
                     names_out.append(display)
-            return names_out
-        fields = frame.schema.fields
-        if subset is not None:
-            subset_set = set(subset)
-            fields = [field for field in fields if field.name in subset_set]
-        return [field.name for field in fields if isinstance(field.dataType, allowed)]
+        else:
+            fields = [field for field in frame.schema.fields if field.name in set(subset)]
+            names_out = [field.name for field in fields if isinstance(field.dataType, allowed)]
+        wanted = set(names_out)
+        return {
+            position
+            for position, bound in enumerate(frame._iter_bound_columns())
+            if (bound._projection_name or bound.spark_display_part()) in wanted
+        }
 
     def drop(
         self,
@@ -268,29 +350,24 @@ class DataFrameNaFunctions:
         )
         if names is not None and not names:
             return self._dataframe
-        # Match subset names against the display overlay, including ambiguous sides.
-        if names is None and self._dataframe._display_names is None:
-            names = list(self._dataframe.columns)
+        from repark.spark import subset_resolve
+
         if names is None:
             bound_cols = self._dataframe._iter_bound_columns()
-        elif (
-            self._dataframe._display_names is not None and self._dataframe._engine_names is not None
-        ):
-            want = set(names)
-            bound_cols = [
-                self._dataframe._bind_engine_display_column(display, engine)
-                for display, engine in zip(
-                    self._dataframe._display_names,
-                    self._dataframe._engine_names,
-                    strict=True,
-                )
-                if display in want
-            ]
         else:
-            bound_cols = [self._dataframe._bind_schema_column(name) for name in names]
+            bindings = subset_resolve._bindings(self._dataframe)
+            if bindings is None:
+                bound_cols = self._bound_subset_columns_legacy(names)
+            else:
+                bounds = self._dataframe._iter_bound_columns()
+                bound_cols = []
+                for key in names:
+                    for position in subset_resolve._bound_subset_positions(
+                        self._dataframe, key, bindings
+                    ):
+                        bound_cols.append(bounds[position])
         if not bound_cols:
             return self._dataframe
-        # Quoted binds preserve mixed-case field resolution.
         not_null_flags = [column.isNotNull() for column in bound_cols]
         if thresh is not None:
             non_null_count = not_null_flags[0].cast("int")
@@ -306,6 +383,20 @@ class DataFrameNaFunctions:
             for flag in not_null_flags[1:]:
                 predicate = predicate & flag
         return self._dataframe.filter(predicate)
+
+    def _bound_subset_columns_legacy(self, names: list[str]) -> list[Column]:
+        if self._dataframe._display_names is not None and self._dataframe._engine_names is not None:
+            want = set(names)
+            return [
+                self._dataframe._bind_engine_display_column(display, engine)
+                for display, engine in zip(
+                    self._dataframe._display_names,
+                    self._dataframe._engine_names,
+                    strict=True,
+                )
+                if display in want
+            ]
+        return [self._dataframe._bind_schema_column(name) for name in names]
 
     def replace(
         self,

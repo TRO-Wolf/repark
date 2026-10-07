@@ -15,6 +15,11 @@ C Stream value, type, and laziness behavior.
   refusal, undiscoverable `config_file_pairs(None)` empty). pins: cfg-1/C-027
   **CATALOG-1 (2026-09-26):** the config-driven memory-catalog pin runs under the
   `catalogExtensions` opt-in.
+  **ATTR-ID-1 SJ-3 (2026-10-02):** the `join_on_names` pins stamp both sides and
+  pass lineage nodes, matching the new binding signature.
+  **ATTR-ID-1 SM-2b (2026-10-06):** the three `__arrow_c_stream__` calls pass the new third
+  argument (`None`), matching the binding that renames the stream schema to display names on
+  the Rust side.
 
 ## Contracts pinned
 

@@ -18,12 +18,14 @@ use tokio::runtime::Runtime;
 
 use crate::arrow_export::StreamingBatchReader;
 use crate::column::PyColumn;
+use crate::column::expr_build::unresolved_sort_key;
 use crate::deep_stack::{
-    DEEP_NESTING_DEPTH, PlanDepths, block_on_grown_sized, clone_need_bytes,
+    DEEP_NESTING_DEPTH, PlanDepths, block_on_grown_sized, clone_need_bytes, drive_segment_bytes,
     frame_drive_segment_cached, grown_clone_frame, grown_sync, max_depths, plan_depths,
     refuse_expression_depth, run_grown_if, sql_drive_grown, stack_is_small,
 };
 use crate::fence::{fenced, fenced_span};
+use crate::frame_lineage::PyFrameNode;
 use crate::{datafusion_to_py_err, to_py_err};
 
 const ARROW_STREAM_CAPSULE_NAME: &CStr = c"arrow_array_stream";
@@ -71,14 +73,18 @@ pub struct PyDataFrame {
     pub(crate) df: std::mem::ManuallyDrop<DataFrame>,
     pub(crate) runtime: Arc<Runtime>,
     analyzed_schema: OnceLock<SchemaRef>,
+    executable: OnceLock<DataFrame>,
     depths: PlanDepths,
 }
 
 impl Drop for PyDataFrame {
     fn drop(&mut self) {
         let need = clone_need_bytes(self.depths.plan, self.depths.expression);
-        grown_sync(need, || unsafe {
-            std::mem::ManuallyDrop::drop(&mut self.df);
+        grown_sync(need, || {
+            drop(self.executable.take());
+            unsafe {
+                std::mem::ManuallyDrop::drop(&mut self.df);
+            }
         });
     }
 }
@@ -102,8 +108,32 @@ impl PyDataFrame {
             df: std::mem::ManuallyDrop::new(df),
             runtime,
             analyzed_schema: OnceLock::new(),
+            executable: OnceLock::new(),
             depths,
         }
+    }
+
+    pub(crate) fn executable(&self) -> PyResult<DataFrame> {
+        if let Some(twin) = self.executable.get() {
+            return Ok(grown_clone_frame(twin, &self.depths));
+        }
+        let need = drive_segment_bytes(&self.depths).map_or_else(
+            || clone_need_bytes(self.depths.plan, self.depths.expression),
+            |bytes| bytes.max(clone_need_bytes(self.depths.plan, self.depths.expression)),
+        );
+        let (twin, handed) = grown_sync(need, || {
+            let (state, plan) = grown_clone_frame(self.inner(), &self.depths).into_parts();
+            repark_core::frame_names::strip_for_execution(plan).map(|stripped| {
+                let twin = DataFrame::new(state, stripped);
+                let handed = grown_clone_frame(&twin, &self.depths);
+                (twin, handed)
+            })
+        })
+        .map_err(datafusion_to_py_err)?;
+        if let Err(lost) = self.executable.set(twin) {
+            grown_sync(need, || drop(lost));
+        }
+        Ok(handed)
     }
 
     pub(crate) fn inner(&self) -> &DataFrame {
@@ -123,16 +153,18 @@ impl PyDataFrame {
             return Ok(Arc::clone(schema));
         }
         let segment = frame_drive_segment_cached(&self.depths)?;
-        let df = grown_clone_frame(&self.df, &self.depths);
+        let df = self.executable()?;
         let schema = block_on_grown_sized(
             &self.runtime,
             async {
                 let (state, plan) = df.into_parts();
                 let analyzed = repark_functions::analyze_eagerly(&state, plan);
                 analyzed.map(|analyzed| {
-                    repark_core::strip_tighten_export_metadata(Arc::new(
-                        analyzed.schema().as_arrow().clone(),
-                    ))
+                    repark_core::frame_names::strip_schema_ids(
+                        repark_core::strip_tighten_export_metadata(Arc::new(
+                            analyzed.schema().as_arrow().clone(),
+                        )),
+                    )
                 })
             },
             segment,
@@ -243,8 +275,8 @@ impl PyDataFrame {
     pub fn count(&self, py: Python<'_>) -> PyResult<usize> {
         fenced_span!("py.action", "PyDataFrame.count", {
             let segment = frame_drive_segment_cached(&self.depths)?;
-            let df = grown_clone_frame(&self.df, &self.depths);
-            py.detach(|| block_on_grown_sized(&self.runtime, df.count(), segment))
+            let twin = self.executable()?;
+            py.detach(|| block_on_grown_sized(&self.runtime, twin.count(), segment))
                 .map_err(datafusion_to_py_err)
         })
     }
@@ -334,10 +366,9 @@ impl PyDataFrame {
     pub fn show(&self, py: Python<'_>, n: usize) -> PyResult<String> {
         fenced_span!("py.action", "PyDataFrame.show", {
             let need = clone_need_bytes(self.depths.plan, self.depths.expression);
-            let limited = grown_sync(need, || {
-                grown_clone_frame(self.inner(), &self.depths).limit(0, Some(n))
-            })
-            .map_err(datafusion_to_py_err)?;
+            let twin = self.executable()?;
+            let limited =
+                grown_sync(need, || twin.limit(0, Some(n))).map_err(datafusion_to_py_err)?;
             let depths = grown_child(&self.depths, 1);
             let segment = frame_drive_segment_cached(&depths)?;
             let batches = py.detach(|| {
@@ -351,26 +382,35 @@ impl PyDataFrame {
     }
 
     #[allow(clippy::needless_pass_by_value)]
-    #[pyo3(signature = (requested_schema=None))]
+    #[pyo3(signature = (requested_schema=None, display_names=None))]
     #[allow(clippy::missing_errors_doc)]
     pub fn __arrow_c_stream__<'py>(
         &self,
         py: Python<'py>,
         requested_schema: Option<Bound<'py, PyAny>>,
+        display_names: Option<Vec<String>>,
     ) -> PyResult<Bound<'py, PyCapsule>> {
         fenced_span!("py.action", "PyDataFrame.__arrow_c_stream__", {
             let _ = requested_schema;
             let schema: SchemaRef = self.analyzed_arrow_schema_native()?;
             let schema = crate::arrow_export::coerced_export_schema(&schema);
+            let (schema, rename) = match display_names {
+                Some(names) if names.len() == schema.fields().len() => (
+                    crate::arrow_export::renamed_export_schema(&schema, &names),
+                    true,
+                ),
+                _ => (schema, false),
+            };
             let segment = frame_drive_segment_cached(&self.depths)?;
             let grown = segment.is_some();
-            let df = grown_clone_frame(&self.df, &self.depths);
+            let twin = self.executable()?;
             let stream = py
-                .detach(|| block_on_grown_sized(&self.runtime, df.execute_stream(), segment))
+                .detach(|| block_on_grown_sized(&self.runtime, twin.execute_stream(), segment))
                 .map_err(datafusion_to_py_err)?;
             let reader: Box<dyn RecordBatchReader + Send> = Box::new(
                 StreamingBatchReader::new(Arc::clone(&self.runtime), stream, schema, grown)
-                    .with_refusals(crate::arrow_export::refusal_log(&self.df)),
+                    .with_refusals(crate::arrow_export::refusal_log(&self.df))
+                    .with_renamed_batches(rename),
             );
             let ffi_stream = FFI_ArrowArrayStream::new(reader);
 
@@ -494,7 +534,9 @@ impl PyDataFrame {
                     .collect::<Vec<_>>();
                 let df = grown_clone_frame(self.inner(), &self.depths)
                     .sort(sort_expressions)
-                    .map_err(datafusion_to_py_err)?;
+                    .map_err(|error| {
+                        datafusion_to_py_err(unresolved_sort_key(error, self.df.schema()))
+                    })?;
                 Ok((df, deepest))
             })?;
             let depths = child_depths(&self.depths, bound, &df, carries_plan);
@@ -508,14 +550,18 @@ impl PyDataFrame {
         right: PyRef<'_, PyDataFrame>,
         on: Vec<String>,
         how: &str,
-    ) -> PyResult<Self> {
+        left_node: &PyFrameNode,
+        right_node: &PyFrameNode,
+    ) -> PyResult<(Self, PyFrameNode)> {
         fenced!("PyDataFrame.join_on_names", {
             let join_type = join_type_from_str(how)?;
             let need = frame_clone_need(&self.depths, &right.depths());
-            let df = grown_sync(need, || {
-                crate::dataframe_names::join_on_keys(self, &right, &on, join_type)
+            let (df, node) = grown_sync(need, || {
+                crate::dataframe_names::join_on_keys(
+                    self, &right, &on, join_type, left_node, right_node,
+                )
             })?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            Ok((Self::new(df, Arc::clone(&self.runtime)), node))
         })
     }
 

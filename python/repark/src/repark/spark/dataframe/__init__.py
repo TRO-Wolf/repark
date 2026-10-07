@@ -19,6 +19,11 @@ for _name in dir(_core):
     globals()[_name] = getattr(_core, _name)
 del _name, _core
 
+from repark.spark.dataframe import frame_nodes as _frame_nodes  # noqa: E402
+
+_frame_nodes._bind_frame_node(DataFrame)
+del _frame_nodes
+
 __all__ = [
     "DataFrame",
     "DataFrameNaFunctions",

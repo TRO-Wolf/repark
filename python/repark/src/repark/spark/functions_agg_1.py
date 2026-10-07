@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from repark.spark.column import Column
-from repark.spark.functions import _aggregate_argument, _thread_origin
+from repark.spark.functions import _aggregate_argument
 
 FNPAGG1_EXPORTS: tuple[str, ...] = ("grouping_id",)
 
@@ -47,7 +47,6 @@ def grouping_id(*cols: Column | str) -> Column:
             spark_display=name,
             projection_name=name,
             partition_transform=first._partition_transform,
-            **_thread_origin(first),
         )
     return Column(
         inner,

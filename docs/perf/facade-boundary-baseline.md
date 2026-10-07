@@ -152,8 +152,9 @@ The deferral therefore rests on **correctness, not on the size of the prize**. C
 inlining duplicates an expression subtree every time a new column reads an earlier new column,
 which is exponential in the chain depth (`c[n] = f(c[n-1])`). The safe variant — re-parenting
 onto the previous projection's input only when the new expression reads no computed column —
-never duplicates, but it rewrites plan lineage, and `_origin_plan_id`, the `MISSING_ATTRIBUTES`
-contract and the adjacent-window-layer merge are all defined in terms of that lineage. Trading
+never duplicates, but it rewrites plan lineage, and `Column._attr_id`, the `MISSING_ATTRIBUTES`
+contract and the adjacent-window-layer merge are all defined in terms of that lineage (S4,
+2026-10-02: the `_origin_*` encodings are deleted; lineage is attribute ids). Trading
 a measured 6.76× that is proven correct for a further 5.6× that is not is a scope decision, not
 a rider on a perf unit. Filed as `PERF-FACADE-CHAIN-2` with these numbers.
 

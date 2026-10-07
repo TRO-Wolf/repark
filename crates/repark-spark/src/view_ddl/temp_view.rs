@@ -8,14 +8,16 @@ use datafusion::catalog::{Session, TableProvider};
 use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::datasource::{ViewTable, source_as_provider};
 use datafusion::error::{DataFusionError, Result};
-use datafusion::logical_expr::{Expr, LogicalPlan, TableProviderFilterPushDown, TableType};
+use datafusion::logical_expr::{
+    Expr, LogicalPlan, Projection, TableProviderFilterPushDown, TableScan, TableType,
+};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::TableReference;
 use iceberg::NamespaceIdent;
 use repark_common::spark_error;
 use repark_core::column_resolution::on_grown_stack_with;
-use repark_core::{CatalogRegistry, TempViewSession};
+use repark_core::{CatalogRegistry, TempViewSession, frame_names};
 
 use crate::view_ddl::read::{
     MAX_VIEW_EXPANSION_DEPTH, TempHomes, VIEW_EXPANSION_STACK_RED_ZONE,
@@ -42,7 +44,7 @@ pub(crate) struct ReplanningTempView {
     references: Vec<Vec<String>>,
     dependencies: Vec<Vec<String>>,
     schema: SchemaRef,
-    definition_plan: LogicalPlan,
+    pub(crate) definition_plan: LogicalPlan,
 }
 
 impl ReplanningTempView {
@@ -164,7 +166,7 @@ pub(crate) async fn replanning_temp_view(
     Ok(Arc::new(ReplanningTempView {
         ctx: ctx.clone(),
         catalogs: catalogs.clone(),
-        schema: Arc::new(frame.schema().as_arrow().clone()),
+        schema: frame_names::strip_schema_ids(Arc::new(frame.schema().as_arrow().clone())),
         definition_plan: frame.logical_plan().clone(),
         definition,
         temp_homes,
@@ -234,7 +236,7 @@ pub(crate) fn temp_view_column_comments(
     let Some(plan) = provider.get_logical_plan() else {
         return Ok(None);
     };
-    let LogicalPlan::TableScan(scan) = plan.as_ref() else {
+    let Some(scan) = temp_view_scan(plan.as_ref()) else {
         return Ok(None);
     };
     let inner = source_as_provider(&scan.source)?;
@@ -308,7 +310,7 @@ async fn registered_temp_view(
     let Some(plan) = provider.get_logical_plan() else {
         return Ok(None);
     };
-    let LogicalPlan::TableScan(scan) = plan.as_ref() else {
+    let Some(scan) = temp_view_scan(plan.as_ref()) else {
         return Ok(None);
     };
     let inner = source_as_provider(&scan.source)?;
@@ -323,6 +325,37 @@ fn registered_view_summary(provider: &dyn TableProvider) -> Option<RegisteredTem
             display: view.definition.display.clone(),
             references: view.references.clone(),
         })
+}
+
+fn temp_view_scan(plan: &LogicalPlan) -> Option<&TableScan> {
+    match plan {
+        LogicalPlan::TableScan(scan) => Some(scan),
+        LogicalPlan::Projection(projection) => match projection.input.as_ref() {
+            LogicalPlan::TableScan(scan) if carried_ids_projection(projection) => Some(scan),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn carried_ids_projection(projection: &Projection) -> bool {
+    let below = projection.input.schema();
+    projection.expr.len() == below.fields().len()
+        && projection
+            .expr
+            .iter()
+            .zip(below.iter())
+            .all(|(expr, (qualifier, field))| {
+                let column = match expr {
+                    Expr::Column(column) => column,
+                    Expr::Alias(alias) => match alias.expr.as_ref() {
+                        Expr::Column(column) if alias.name == column.name => column,
+                        _ => return false,
+                    },
+                    _ => return false,
+                };
+                column.name == *field.name() && column.relation.as_ref() == qualifier
+            })
 }
 
 fn direct_temp_view_references(plan: &LogicalPlan) -> Result<Vec<Vec<String>>> {

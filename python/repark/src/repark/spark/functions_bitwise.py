@@ -10,7 +10,6 @@ from repark.spark.functions import (
     _aggregate_argument,
     _as_column_arg,
     _scalar,
-    _thread_origin,
     lit,
 )
 
@@ -37,7 +36,6 @@ def bitwise_not(col: Column | str) -> Column:
         has_free_attribute=column._has_free_attribute,
         has_ungroupable=column._has_ungroupable,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -238,7 +236,6 @@ def bitmap_construct_agg(col: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -254,7 +251,6 @@ def bitmap_or_agg(col: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -270,7 +266,6 @@ def bitmap_and_agg(col: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 

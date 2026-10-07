@@ -162,7 +162,7 @@ fn arrow_c_stream_exports_a_consumable_stream_with_correct_values() {
 
         let capsule = df_cell
             .borrow(py)
-            .__arrow_c_stream__(py, None)
+            .__arrow_c_stream__(py, None, None)
             .expect("stream capsule produced");
 
         let name = capsule
@@ -265,9 +265,12 @@ fn arrow_c_stream_defers_execution_and_does_not_collect_up_front() {
             .expect("plan builds — the CAST error is deferred to execution, not raised at plan time");
         let df_cell: Py<PyDataFrame> = Py::new(py, df).expect("dataframe pyclass");
 
-        let capsule = df_cell.borrow(py).__arrow_c_stream__(py, None).expect(
-            "streaming export returns a capsule WITHOUT materializing (no up-front collect)",
-        );
+        let capsule = df_cell
+            .borrow(py)
+            .__arrow_c_stream__(py, None, None)
+            .expect(
+                "streaming export returns a capsule WITHOUT materializing (no up-front collect)",
+            );
 
         let reader = import_stream(&capsule);
         let drain: Result<Vec<RecordBatch>, ArrowError> = reader.collect();
@@ -285,7 +288,7 @@ fn arrow_c_stream_defers_execution_and_does_not_collect_up_front() {
 fn collect_one_batch(py: Python<'_>, df: &Py<PyDataFrame>) -> RecordBatch {
     let capsule = df
         .borrow(py)
-        .__arrow_c_stream__(py, None)
+        .__arrow_c_stream__(py, None, None)
         .expect("stream capsule produced");
     let reader = import_stream(&capsule);
     let schema = reader.schema();
@@ -560,9 +563,28 @@ fn join_on_names_merges_the_key_column() {
             .borrow(py)
             .sql(py, "SELECT * FROM (VALUES (1, 11), (2, 22)) AS r(k, rv)")
             .expect("right plans");
-        let right_cell = Py::new(py, right).expect("right pyclass");
-        let joined = left
-            .join_on_names(right_cell.borrow(py), vec!["k".to_string()], "inner")
+        let left =
+            _native::dataframe_names::stamp_attribute_ids(Py::new(py, left).expect("left pyclass"))
+                .expect("left stamps");
+        let right = _native::dataframe_names::stamp_attribute_ids(
+            Py::new(py, right).expect("right pyclass"),
+        )
+        .expect("right stamps");
+        let left_bound = left.bind(py);
+        let right_bound = right.bind(py);
+        let left_node =
+            _native::frame_lineage::frame_root(&left_bound.borrow()).expect("left node");
+        let right_node =
+            _native::frame_lineage::frame_root(&right_bound.borrow()).expect("right node");
+        let (joined, _) = left_bound
+            .borrow()
+            .join_on_names(
+                right_bound.borrow(),
+                vec!["k".to_string()],
+                "inner",
+                &left_node,
+                &right_node,
+            )
             .expect("join");
         let joined = Py::new(py, joined).expect("joined pyclass");
         let batch = collect_one_batch(py, &joined);
@@ -588,9 +610,25 @@ fn semi_family_batch(py: Python<'_>, how: &str) -> RecordBatch {
         .borrow(py)
         .sql(py, "SELECT * FROM (VALUES (1, 11), (NULL, 99)) AS r(k, rv)")
         .expect("right plans");
-    let right_cell = Py::new(py, right).expect("right pyclass");
-    let joined = left
-        .join_on_names(right_cell.borrow(py), vec!["k".to_string()], how)
+    let left =
+        _native::dataframe_names::stamp_attribute_ids(Py::new(py, left).expect("left pyclass"))
+            .expect("left stamps");
+    let right =
+        _native::dataframe_names::stamp_attribute_ids(Py::new(py, right).expect("right pyclass"))
+            .expect("right stamps");
+    let left_bound = left.bind(py);
+    let right_bound = right.bind(py);
+    let left_node = _native::frame_lineage::frame_root(&left_bound.borrow()).expect("left node");
+    let right_node = _native::frame_lineage::frame_root(&right_bound.borrow()).expect("right node");
+    let (joined, _) = left_bound
+        .borrow()
+        .join_on_names(
+            right_bound.borrow(),
+            vec!["k".to_string()],
+            how,
+            &left_node,
+            &right_node,
+        )
         .expect("semi-family join plans");
     let joined = Py::new(py, joined).expect("joined pyclass");
     collect_one_batch(py, &joined)
