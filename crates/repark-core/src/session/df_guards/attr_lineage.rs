@@ -168,6 +168,7 @@ fn lineage_passes_through(
         if level == depth {
             return at == position;
         }
+        node = child;
     }
 }
 
@@ -189,10 +190,7 @@ pub fn sort_sourced_twin_engine(
     if !visible_positions(projection.input.schema(), written, rule).is_empty() {
         return None;
     }
-    let Some((depth, position)) = nearest_visible_below(projection.input.as_ref(), written, rule)
-    else {
-        return None;
-    };
+    let (depth, position) = nearest_visible_below(projection.input.as_ref(), written, rule)?;
     let mut found = None;
     for hit in hits {
         if !lineage_passes_through(projection, *hit, depth, position) {
