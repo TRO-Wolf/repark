@@ -429,3 +429,110 @@ verbatim.
 | `python3 scripts/check_docs_links.py` | 0 | clean |
 | `python3 scripts/check_ledger_grammar.py` | 0 | 303 live ledgers clean |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+## 7. C-2b round 2 — TLS and the query pool (2026-10-07)
+
+**Branch:** `feat/c-2b-postgres-connection` from `58003175` (round 1b). **Model:** Claude Opus 5.5
+(`claude-opus-5-5`, high). **Scope:** sketch §2.4 (the TLS config, the session pins, the TLS
+refusal) and §2.5 (the query pool, the checkout guard, the connect timeout and the timeout
+helper the read path uses), plus the round-1b ruling on `fetchsize = 0`. No Postgres server ran:
+the pins drive the pool with fake connections and the connector against loopback listeners that
+speak one byte of the protocol (or a TLS handshake) and nothing else. The read path, discovery,
+`CONNECT-DECL-pg-server-version` and §5.6's live matrix are round 3.
+
+### PROPOSITION LEDGER — C-2b round 2 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-028 | `verify_full_config(sslrootcert)` builds the `verify-full` rustls `ClientConfig`: the system roots (`rustls-native-certs`) plus every certificate in `sslrootcert` when set, rustls's WebPKI verifier (chain and host name), no client certificate, and the crypto provider named explicitly (`rustls::crypto::ring`) through `builder_with_provider`. A leaf signed by the `sslrootcert` CA verifies for the name it carries; another name refuses `NotValidForName`; a CA outside the store refuses `UnknownIssuer`. | `verify_full_trusts_sslrootcert_and_checks_the_host_name` (in-memory handshakes over the static fixtures); mutation m38. | PROVEN | §7.1 m38 red. |
+| C-029 | A bad `sslrootcert` refuses before any connect with `ConnectError::TlsHandshake { kind }`: an unreadable file is `RootCertUnreadable { kind: io::ErrorKind }`; a file with no PEM certificate, a garbled one, or one rustls cannot take as a trust anchor is `RootCertInvalid`; an empty store is `NoTrustedRoots`. The message names `sslrootcert` and never the path; the fold is the operational class (`DataFusion`, PySpark `Base`). | `sslrootcert_must_be_a_readable_pem_ca_bundle`; mutation m40. | PROVEN | §7.1 m40 red. `NoTrustedRoots` has no pin: an empty system store needs `SSL_CERT_FILE`, and setting the environment in a test is `unsafe` under edition 2024, which the workspace forbids. |
+| C-030 | H-CRYPTO holds: one rustls crypto provider. The workspace `cargo tree -e features -i rustls --locked` feature set is the same thirteen features before and after (`ring` and `aws-lc-rs` were both already on). `repark-connect` declares `rustls` with `ring`, `std` and `tls12` and no default features; the `ring` crate was already in its tree under `tokio-postgres-rustls`, and no `aws-lc` crate enters it. `ClientConfig::builder()` is never called, because it cannot pick a process default with both providers compiled in. `cargo deny check` is clean. `Cargo.lock` gains one dependency edge and no package. | §7.3. | PROVEN | §7.3. |
+| C-031 | `QueryPool` (sketch §2.5): a semaphore of `pool_max_size` permits; checkout waits at most `pool_checkout_timeout_ms` for a permit, else `PoolExhausted { waited }`; a checkout reuses the most recent idle connection; on checkout every idle connection that `is_closed()` or has idled past `pool_idle_timeout_ms` is reaped (dropped outside the lock); a connection closed at release is never pooled. A permit is held for the whole lease and released after the connection is idle, so open connections never exceed `pool_max_size`. | `a_clean_release_is_reused_by_the_next_checkout`, `checkout_beyond_pool_max_size_is_pool_exhausted`, `closed_and_idle_expired_connections_are_never_reused`; mutations m42, m43, m44, m45. | PROVEN | §7.1. |
+| C-032 | `PooledClient` returns its connection only through `release_clean()`. Dropped any other way (cancel, error, an early `LIMIT`), its lease aborts the connection's task, so the socket closes and the server ends the backend, and the connection never re-enters the pool. No cleanup task is spawned. The only task is the driver's connection task, spawned once per connection under `#[expect(clippy::disallowed_methods)]` with its lifecycle stated: `PgConnection` holds its handle. | `a_lease_dropped_before_release_aborts_its_connection` (F-2's unit half); mutation m41. | PROVEN | §7.1 m41 red. The live F-2 (`pg_stat_activity`) is round 3. |
+| C-033 | `query_config(settings)` builds the only `Config` the pool connects with: host, port, user, password, database, `application_name`, `connect_timeout`, keepalives on, `ssl_mode` `Disable` for `disable` and `Require` otherwise (verification is rustls's), and the §2.4 session pins in one `-c` options list: `client_encoding=UTF8`, `DateStyle=ISO`, `IntervalStyle=postgres`, `TimeZone=UTC`, `search_path=` (empty), `default_transaction_read_only=on`, `lock_timeout`, `statement_timeout` (= `query_timeout_ms`, `0` unlimited) and `idle_in_transaction_session_timeout` (= `read_timeout_ms`). Nothing in `pool.rs` sets a replication mode. | `query_config_pins_the_session_in_the_startup_packet`; mutations m46, m48. | PROVEN | §7.1. Whether the server honours each pin is round 3's live reading. |
+| C-034 | NS-7 at connect: `PostgresConnector::connect` bounds the whole connect (TCP, the TLS negotiation and handshake, authentication) by `connect_timeout_ms` and refuses with `Timeout { which: TimeoutSetting::Connect }`, whose message names the key. The driver's own TCP timeout classifies the same way. `within(which, limit, work)` is the helper the read path wraps every request and COPY chunk in. | `connect_timeout_bounds_a_server_that_never_answers` (a listener that accepts and never answers, under `disable` and `verify-full`); mutation m47. | PROVEN | §7.1 m47 red (the 3 s guard fires). |
+| C-035 | Connect failures classify without matching driver text: a server that refuses TLS under `verify-full` is `TlsRequired`, which names `sslmode=disable` as the only switch, because the handshake-tracking connector never started; a rustls certificate refusal is `TlsHandshake` with `UntrustedCertificate`, `HostNameMismatch`, `CertificateExpired` or `Handshake`; a host name rustls cannot verify is `ServerName`; any other I/O failure is `Unreachable { kind }`; a server error is `Server { sqlstate, message }`; a connection closed during startup is `Unreachable { UnexpectedEof }`; the rest, which are driver-side authentication failures (no password, SASL), is `AuthenticationFailed`. All fold to the operational class. | `plaintext_server_refuses_under_verify_full`, `verify_full_refuses_an_untrusted_or_misnamed_server_certificate`, `a_refused_port_is_unreachable`; mutations m48, m39, m49, m50. | PROVEN | §7.1. `Server` carries every server error at connect, including SQLSTATE class 28. Round 3 splits off `AuthenticationFailed` and `PermissionDenied` (`42501`) with its live pins. |
+| C-036 | The round-1b Q1 ruling (orchestrator, 2026-10-07, ACCEPT): on the `read_postgres` door, the `fetchsize` alias with the value `0` (any run of zeros) leaves `batch_rows` unset, which is the session batch size. `batch_rows = 0` refuses on both doors, as does `fetchsize = 0` inside a `jdbc:` URL query. No registry row: Spark's `fetchsize` is a round-trip hint and pgjdbc treats `0` as its default, so no row of a result changes. | `fetchsize_zero_is_the_session_batch_default`; mutation m37. | PROVEN | §7.1 m37 red. |
+| C-037 | The error shape stays NS-15's: seven `ConnectError` variants (`TlsRequired`, `TlsHandshake`, `Unreachable`, `Timeout`, `PoolExhausted`, `AuthenticationFailed`, `Server`) exist under the `postgres` feature, each with an enum reason (`TlsFailure`, `TimeoutSetting`, `io::ErrorKind`) or the server's own text, never a setting's value. `ProtocolViolation` moves beside its producer in `copy_binary.rs` and is re-exported from `error.rs`, so its public path is unchanged. The round's files hold their ceilings: `tls.rs` 163/200, `pool.rs` 357/450, `tests/it/tls.rs` 129/200, `error.rs` 235/260, `copy_binary.rs` 469/480, `settings/postgres.rs` 553/560, `tests/it/settings.rs` 599/600. No code comments. Every gate in §7.3 passes. | §7.3. | PROVEN | §7.3. |
+
+### 7.1 Mutations (round 2)
+
+Each mutation was applied alone to the committed code (`c9416531`), the crate's integration
+binary run with the module's filter, and the file restored with `git checkout`. "Red at" is the
+assertion's line; for m38 and m40 the line in `root_refusal` or `handshake`'s caller is the site.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m37 | C-036 | the `fetchsize = 0` arm never fires (`src/settings/postgres.rs`) | RED | `fetchsize_zero_is_the_session_batch_default` (`settings.rs:135`, `parse`'s expect) |
+| m38 | C-028 | `sslrootcert` is ignored (`src/tls.rs`) | RED | `verify_full_trusts_sslrootcert_and_checks_the_host_name` at `tls.rs:72`; `sslrootcert_must_be_a_readable_pem_ca_bundle` at `tls.rs:91` |
+| m39 | C-035 | the tracked connector verifies `localhost` whatever `host` says (`src/tls.rs`) | RED | `verify_full_refuses_an_untrusted_or_misnamed_server_certificate` at `pool.rs:346` |
+| m40 | C-029 | a bundle with no certificate is accepted (`src/tls.rs`) | RED | `sslrootcert_must_be_a_readable_pem_ca_bundle` at `tls.rs:91` |
+| m41 | C-032 | `release_clean` on `Drop`: the lease no longer aborts (`src/pool.rs`) | RED | `a_lease_dropped_before_release_aborts_its_connection` at `pool.rs:114` |
+| m42 | C-031 | `release_clean` drops the connection instead of pooling it (`src/pool.rs`) | RED | `a_clean_release_is_reused_by_the_next_checkout` at `pool.rs:99`; `closed_and_idle_expired_connections_are_never_reused` at `pool.rs:150` |
+| m43 | C-031 | an unbounded semaphore (`src/pool.rs`) | RED | `checkout_beyond_pool_max_size_is_pool_exhausted` at `pool.rs:89` (the second checkout succeeds) |
+| m44 | C-031 | no health check on checkout (`src/pool.rs`) | RED | `closed_and_idle_expired_connections_are_never_reused` at `pool.rs:149` |
+| m45 | C-031 | no idle reap on checkout (`src/pool.rs`) | RED | `closed_and_idle_expired_connections_are_never_reused` at `pool.rs:153` |
+| m46 | C-033 | drop the `default_transaction_read_only` pin (`src/pool.rs`) | RED | `query_config_pins_the_session_in_the_startup_packet` at `pool.rs:186` |
+| m47 | C-034 | no timeout around the connect (`src/pool.rs`) | RED | `connect_timeout_bounds_a_server_that_never_answers` at `pool.rs:91` (hung past the guard) |
+| m48 | C-033, C-035 | `verify-full` maps to the driver's `Prefer` (`src/pool.rs`) | RED | `plaintext_server_refuses_under_verify_full` at `pool.rs:292`; `query_config_pins_the_session_in_the_startup_packet` at `pool.rs:202` |
+| m49 | C-035 | every rustls error classifies as `Handshake` (`src/tls.rs`) | RED | `verify_full_refuses_an_untrusted_or_misnamed_server_certificate` at `pool.rs:346` |
+| m50 | C-035 | every I/O failure is `Unreachable { Other }` (`src/pool.rs`) | RED | `a_refused_port_is_unreachable` at `pool.rs:311` |
+
+All fourteen are red; none survived. The sketch's live mutations for F-2 ("`release_clean` on
+`Drop`") and F-5 ("an unbounded semaphore") were run here against the unit halves as m41 and
+m43; round 3 replays them against the server.
+
+### 7.2 Readings acted on (no halt)
+
+- **The startup pins live in `pool.rs`.** Sketch §7 lists "the startup pins" under
+  `read/postgres.rs` (round 3), but §2.5 makes the pool the only builder of a query-mode
+  `Config`. The pins are part of that `Config`, so `query_config` carries them now and round 3
+  reads them through the pool.
+- **`rustls` is a direct dependency.** The rustls config needs the `rustls` API, and the
+  provider must be named. `rustls` 0.23 (already in the lock) joins `[workspace.dependencies]`
+  with no default features, and `repark-connect` enables `ring`, `std` and `tls12`. The crate
+  also names its `tokio` features (`net`, `rt`, `sync`, `time`), which it had only received
+  through `tokio-postgres`. Both edits are on sketch §7's C-2b file list (`Cargo.toml`,
+  `Cargo.lock`), outside this round's narrower list.
+- **Why `ring`.** The workspace already compiles rustls with both providers, so either is "the
+  one the tree builds". `ring` is already in `repark-connect`'s own tree, so `cargo build -p
+  repark-connect` compiles no new crypto crate; `aws-lc-rs` would add `aws-lc-sys` there.
+- **`disable` connects with `NoTls`.** `tokio-postgres` calls `make_tls_connect` even when TLS
+  is off, and `tokio-postgres-rustls` refuses the empty name a Unix-socket host gives it. With no
+  TLS connector, `sslmode=disable` reaches a socket directory. Under `verify-full` such a host
+  is `TlsHandshake { ServerName }`.
+- **`error.rs` at its ceiling.** Round 1b left `error.rs` at 260/260, and §2.2 puts the
+  connection variants there. The reason enums live with their producers (`TlsFailure` in
+  `tls.rs`, `TimeoutSetting` in `pool.rs`), as round 1b did for the settings reasons, and
+  `ProtocolViolation` moves beside the decoder. The new variants are `#[cfg(feature =
+  "postgres")]`: they arise only from the driver (CC-5).
+- **No source name.** As in round 1b, the connection errors carry no `source`; C-2d adds it at
+  resolution (round-1b Q2 ruling).
+- **Test fixtures.** `rcgen` is not in the lock, so the certificates are static PEM files under
+  `tests/it/fixtures/`, generated once with the local `openssl` (EC P-256, valid to 2126): a CA,
+  a `localhost` leaf it signs (with its private key), and a second CA that signs nothing the
+  tests trust. The key is a test identity and protects nothing.
+
+### 7.3 Gates (round 2)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock; exit codes are
+verbatim.
+
+| command | exit | output |
+|---|---|---|
+| `cargo tree -e features -i rustls --locked \| grep -oE 'rustls feature "[a-z0-9_-]+"' \| sort -u` (before, after) | 0, 0 | the same 13 features: `aws-lc-rs`, `aws_lc_rs`, `default`, `http1`, `http2`, `native-tokio`, `prefer-post-quantum`, `ring`, `rustls-native-certs`, `std`, `tls12`, `webpki-roots`, `webpki-tokio` |
+| `cargo tree -p repark-connect -e features -i rustls --locked` (after) | 0 | `default`, `ring`, `std`, `tls12`; no `aws-lc` crate in the crate's tree |
+| `cargo deny check 2>&1 \| tail -5` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `cargo test -p repark-connect` | 0 | 77 passed, 0 failed (65 at round 1b, plus the `fetchsize` pin, two TLS pins and nine pool pins); the eleven pool and TLS pins ran fifteen times more, all green |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `cargo clippy -p repark-connect --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics, with and without default features |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean; the one `tokio::spawn` carries its `#[expect]` |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1056 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 365 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | 1339 files, 7198 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 303 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |

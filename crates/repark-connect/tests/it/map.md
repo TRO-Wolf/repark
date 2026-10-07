@@ -7,7 +7,8 @@ See [../map.md](../map.md).
 
 ## Contents
 
-- `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings;`.
+- `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings;`, plus
+  `mod pool; mod tls;` under the `postgres` feature.
 - `settings.rs` — C-1 (2026-10-05): absent and explicit `password` (the other props carried,
   `auth_method` dropped from the map); `iam_token` and `kerberos` refuse naming their registry
   rows and fold to the Unsupported class; empty, wrong-case, hyphenated, padded and unknown
@@ -22,9 +23,37 @@ See [../map.md](../map.md).
   `declared_keys_refuse_naming_their_row`, `read_timeout_zero_refuses`,
   `redact_source_prop_masks_url_credentials` and `settings_debug_never_renders_a_value` (C-1's
   C-006 extended to `PostgresSettings` and every new error). A local `summary()` renders every
-  field, so one assertion covers a parsed value.
+  field, so one assertion covers a parsed value. C-2b round 2 (2026-10-07) adds
+  `fetchsize_zero_is_the_session_batch_default` (`fetchsize` `0` and `00` on `read_postgres`
+  leave `batch_rows` unset; `batch_rows` `0` refuses on both doors).
   pins: c-1/C-003, C-004, C-005, C-006 · pins: c-2/C-001, C-018, C-019, C-020, C-021, C-022,
-  C-023, C-024
+  C-023, C-024, C-036
+- `tls.rs` — C-2b round 2 (2026-10-07), behind `postgres`: in-memory rustls handshakes (no
+  socket) between `verify_full_config` and a `ServerConfig` over the fixtures.
+  `verify_full_trusts_sslrootcert_and_checks_the_host_name` (the `localhost` leaf verifies
+  under `ca.pem`; `db.example.com` refuses `NotValidForName`; under `other-ca.pem` it refuses
+  `UnknownIssuer`) and `sslrootcert_must_be_a_readable_pem_ca_bundle` (a missing file, a
+  key-only PEM and a garbled certificate each refuse, naming `sslrootcert` and never the path,
+  in the `Base` class). `fixture` and `server_config` are shared with `pool.rs`.
+  pins: c-2/C-028, C-029
+- `pool.rs` — C-2b round 2 (2026-10-07), behind `postgres`. The pool through `FakeConnector`
+  (each fake connection holds a pending task, so an abort is observable):
+  `a_clean_release_is_reused_by_the_next_checkout`,
+  `a_lease_dropped_before_release_aborts_its_connection` (F-2's unit half),
+  `checkout_beyond_pool_max_size_is_pool_exhausted` (F-5's unit half: 100 ms, then the permit
+  returns) and `closed_and_idle_expired_connections_are_never_reused`. The startup packet:
+  `query_config_pins_the_session_in_the_startup_packet` (every `Config` field and the exact
+  `-c` list, with and without the defaults). The connector against loopback listeners, with no
+  Postgres server: `connect_timeout_bounds_a_server_that_never_answers` (under `disable` and
+  `verify-full`), `plaintext_server_refuses_under_verify_full` (a listener that answers `N`),
+  `a_refused_port_is_unreachable`, and
+  `verify_full_refuses_an_untrusted_or_misnamed_server_certificate` (a thread that answers `S`
+  and completes a rustls handshake as the `localhost` leaf, reached at `127.0.0.1`).
+  pins: c-2/C-031, C-032, C-033, C-034, C-035
+- `fixtures/` — C-2b round 2 (2026-10-07): static PEM test identities, generated once with the
+  local `openssl` (EC P-256, valid to 2126) because `rcgen` is not in the lock: `ca.pem`;
+  `server.pem`, a `localhost` leaf it signs, and `server.key`, its PKCS#8 key; and
+  `other-ca.pem`, a CA that signs nothing the tests trust. The key protects nothing.
 - `ident.rs` — C-2b round 1b (2026-10-07): `identifiers_render_double_quoted_with_quotes_doubled`
   (an embedded `"`, a lone `"`, an injection-shaped name, a qualified relation) and
   `identifiers_refuse_empty_nul_and_more_than_63_bytes` (63 ASCII bytes and 62 bytes of `é` pass;

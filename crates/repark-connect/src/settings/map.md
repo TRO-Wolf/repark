@@ -27,8 +27,10 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
     are seconds, converted to milliseconds (the range is reported in the alias's unit).
     `read_timeout_ms` `0` refuses (NS-7). Network-wait timeouts (connect, read, pool checkout,
     pool idle) start at 1 ms. `query_timeout_ms` `0` means unlimited (`None`), and
-    `lock_timeout_ms` `0` is passed as given. `batch_rows` and `fetchsize` take `1..`, and
-    `fetchsize = 0` refuses. Booleans are `true` or `false`, case-insensitive. Text values
+    `lock_timeout_ms` `0` is passed as given. `batch_rows` takes `1..` on both doors. On the
+    `read_postgres` door the `fetchsize` alias also takes `0` (any run of zeros), which leaves
+    `batch_rows` unset: the session batch size (round-1b Q1, ruled 2026-10-07; inside a `jdbc:`
+    URL query it still refuses). Booleans are `true` or `false`, case-insensitive. Text values
     refuse a NUL byte; `host`, `user`, `database` and `sslrootcert` also refuse empty.
   - **TLS.** `sslmode` defaults to `verify-full`; `disable` is the explicit plaintext option
     (`CONNECT-DIV-pg-sslmode`); `prefer`, `allow`, `require` and `verify-ca` refuse as
@@ -46,7 +48,7 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
     delegates to `repark_common::redaction::redact_value`, which masks a secret-named key whole,
     the URL userinfo password, and a secret-named query parameter.
 
-  pins: c-2/C-018, C-019, C-020, C-021, C-022, C-023, C-024
+  pins: c-2/C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-036
 
 ## Pointers
 
