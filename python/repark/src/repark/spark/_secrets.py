@@ -133,9 +133,10 @@ def _copy_link(link: BaseException, mask: Callable[[str], str]) -> BaseException
 def _carry_attributes(
     link: BaseException, fresh: BaseException, mask: Callable[[str], str]
 ) -> None:
-    attributes = vars(fresh)
-    for key, value in vars(link).items():
-        attributes[key] = mask(value) if isinstance(value, str) else value
+    with contextlib.suppress(TypeError):
+        attributes = vars(fresh)
+        for key, value in vars(link).items():
+            attributes[key] = mask(value) if isinstance(value, str) else value
     for name in _slot_names(type(link)):
         try:
             value = getattr(link, name)
@@ -149,6 +150,8 @@ def _slot_names(cls: type) -> list[str]:
     names: list[str] = []
     for klass in cls.__mro__:
         slots = klass.__dict__.get("__slots__", ())
+        if not isinstance(slots, str | list | tuple | dict):
+            continue
         for name in (slots,) if isinstance(slots, str) else slots:
             if name in ("__dict__", "__weakref__"):
                 continue
@@ -271,9 +274,9 @@ def _masked_stand_in(link: BaseException, mask: Callable[[str], str]) -> BaseExc
 
 def _base_only_stand_in(cls: type[BaseException], text: str) -> BaseException:
     for base in cls.__mro__:
-        if not isinstance(base, type) or not issubclass(base, BaseException):
+        if not issubclass(base, BaseException) or issubclass(base, Exception):
             continue
-        if base.__module__ != "builtins" or issubclass(base, Exception):
+        if base.__module__ != "builtins":
             continue
         try:
             return base(text)
