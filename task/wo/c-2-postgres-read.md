@@ -12,6 +12,8 @@
 > 7. the Spark names used (§6);
 > 8. the divergence rows filed.
 
+**Design sketch:** [c-2-design.md](c-2-design.md) (2026-10-06, Claude Opus 5.5) closes the PENDING items of
+R-5, §2, §4 step 1 and §5, and splits the build into slices C-2a…C-2d.
 
 ## 0. Why, and what is out
 
