@@ -89,11 +89,13 @@ waits in the queue rather than rebasing repeatedly.
   the same-key protection lives (open question Q8 below).
 - **F-APPEND-PIN-BASE-1**
   ([`task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md`](../../roadmap/mid-term/f-append-pin-base-1-2026-10-07.md),
-  filed 2026-10-07 under OQ-4 after DM-6 failed, ruling Q1): `fast_append`
-  and `merge_append` gain `validate_from_snapshot` and
-  `validate_no_concurrent_data`, default off, so a pinned append fails
-  non-retryably instead of re-basing; `replace` excluded, the operation stays
-  `append`. The validation sits on the append action itself (DM-6 C-001 (d)).
+  filed 2026-10-07 under OQ-4 after DM-6 failed, ruling Q1; revised in MB-2c
+  fold 1): `fast_append` and `merge_append` gain `validate_from_snapshot` and
+  `validate_no_concurrent_snapshot_with_summary(key, value)`, default off, so
+  a pinned append fails non-retryably when a newer snapshot on the ref carries
+  this query's `repark.cdc.query-id`, and unrelated writers still land; the
+  operation stays `append`. The validation sits on the append action itself
+  (DM-6 C-001 (d), A′ rejected).
   Consumer: MB-2c's closing slice (step 3, the fence; harness pins 2 and 3;
   the 5-passed gate). The owner's fork work.
 
