@@ -9,6 +9,8 @@ mod pool;
 mod postgres_types;
 #[cfg(feature = "postgres")]
 mod read;
+#[cfg(feature = "postgres")]
+mod scan;
 mod settings;
 #[cfg(feature = "postgres")]
 mod tls;
