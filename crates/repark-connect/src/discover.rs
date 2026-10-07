@@ -19,7 +19,17 @@ const CATALOG: &str = "pg_catalog";
 
 pub const BEGIN_DISCOVERY: &str = "BEGIN READ ONLY; SET LOCAL statement_timeout = 30000";
 
-pub const QUERY_SEARCH_PATH: &str = "SET LOCAL search_path TO \"$user\", public";
+pub const QUERY_SEARCH_PATH: &str = "\
+SELECT pg_catalog.set_config('search_path', COALESCE((
+  SELECT pg_catalog.substr(c.entry, pg_catalog.strpos(c.entry, '=') + 1)
+  FROM pg_catalog.pg_db_role_setting s
+  CROSS JOIN pg_catalog.unnest(s.setconfig) AS c(entry)
+  WHERE s.setrole IN (0, (SELECT r.oid FROM pg_catalog.pg_roles r WHERE r.rolname = session_user))
+    AND s.setdatabase IN (0, (SELECT d.oid FROM pg_catalog.pg_database d
+                              WHERE d.datname = pg_catalog.current_database()))
+    AND pg_catalog.split_part(c.entry, '=', 1) = 'search_path'
+  ORDER BY s.setrole = 0, s.setdatabase = 0
+  LIMIT 1), '\"$user\", public'), true)";
 
 const SERVER_FACTS: &str = "SELECT pg_catalog.current_setting('server_version_num')::pg_catalog.int4, \
      pg_catalog.current_setting('server_encoding')";

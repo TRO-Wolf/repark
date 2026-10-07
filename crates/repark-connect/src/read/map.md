@@ -27,7 +27,8 @@ feature. See [../map.md](../map.md).
     true), …` whose names and values are bound parameters, so no value enters SQL text.
   - **`scan(pool, request, ScanOptions)`** is a `try_unfold` stream. Its first poll checks out a
     client and opens `BEGIN READ ONLY` when a value is pushed or the source is a query; a query
-    adds `QUERY_SEARCH_PATH` in the same batch (fold 1 X6), and a pushed value the bound
+    adds `QUERY_SEARCH_PATH` in the same batch (fold 1 X6; since fold 2 Z1 the login role's
+    configured path, see `discover.rs`), and a pushed value the bound
     `set_config`; then `copy_out`. Each step awaits chunks and feeds `CopyBinaryDecoder`, yielding at most one
     batch. At end of stream it runs `finish()`, `COMMIT` (when a transaction was opened) and
     `release_clean()`, whose reset and pin check decide whether the client is pooled (fold 1
@@ -40,7 +41,7 @@ feature. See [../map.md](../map.md).
     `57014` → `Timeout { Query }`, `25P03` → `Timeout { Read }`, `42P01` with a known relation →
     `RelationNotFound`, class `57P` and a closed or failed socket → `Disconnected`, any other
     server error → `Server`, and any other driver failure → `Protocol(UnexpectedResponse)`.
-  pins: c-2/C-038, C-039, C-040, C-041, C-053, C-054, C-056, C-059
+  pins: c-2/C-038, C-039, C-040, C-041, C-053, C-054, C-056, C-059, C-062
 
 ## Pointers
 

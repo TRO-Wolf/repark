@@ -791,3 +791,45 @@ Run on the finished tree. Each cargo command ran under the build-slot lock.
 | `python3 scripts/check_docs_links.py` | 0 | 1340 files, 7202 links clean |
 | `python3 scripts/check_ledger_grammar.py` | 0 | 303 live ledgers clean |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+## 10. C-2b fold 2 — the re-verify's S2 and S3s (2026-10-07)
+
+**Branch:** `feat/c-2b-postgres-connection` from `e1371a8e` (fold 1, PR #982). **Model:** Claude
+Opus 5.5 (`claude-opus-5-5`, high). **Scope:** the re-verify's PASS verdict on fold 1 and its
+one S2 and four S3s, under the orchestrator's rulings Z1–Z5. The live cells ran against
+`make pg-up` (PostgreSQL 16.15), torn down with `make pg-down` at the end.
+
+### PROPOSITION LEDGER — C-2b fold 2 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-062 | Z1 (S2): query mode honours the configured search path. `QUERY_SEARCH_PATH` is one constant statement in the query's read-only transaction (scan and discovery) that reads the login role's `search_path` from `pg_db_role_setting`, keyed on `session_user` and `current_database()`, in the server's precedence (role in database, role, database, all roles), falls back to the built-in `"$user", public`, and applies it with `set_config('search_path', …, true)`. In a fresh database a role with `ALTER ROLE … SET search_path = app, public` reads `app.vt` over `public.vt` and the database's own `db` path; with no role setting the database's path wins; `ALTER ROLE … IN DATABASE` beats both; with none set the read is `public`'s. Each time query mode returns the rows a plain session as that login returns, and a pushed `int4` compare (`OPERATOR(pg_catalog.=)`) matches one row. | `live_pool.rs::query_mode_reads_the_configured_search_path_as_a_plain_session_does`, `read.rs::query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing`; mutations m86, m87, m88. | PROVEN | §10.1. Supersedes C-056's `"$user", public` statement and FL-16's default (§10.2 R-11). |
+
+### 10.1 Mutations (fold 2)
+
+Each mutation was applied alone to the code, the named pins run with `--include-ignored`
+against the container, and the file restored from a copy taken before the edit.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m86 | C-062 | the built-in `"$user", public` always wins: it is `COALESCE`'s first argument (`src/discover.rs`) | RED | `query_mode_reads_the_configured_search_path_as_a_plain_session_does` (the role reads `public`) |
+| m87 | C-062 | the precedence flipped: database before role (`ORDER BY s.setdatabase = 0, s.setrole = 0`, `src/discover.rs`) | RED | `query_mode_reads_the_configured_search_path_as_a_plain_session_does` (the role reads `db`) |
+| m88 | C-062 | database-scoped rows ignored (`s.setdatabase IN (0)`, `src/discover.rs`) | RED | `query_mode_reads_the_configured_search_path_as_a_plain_session_does` (the database-level path is missed) |
+
+### 10.2 Readings acted on (no halt)
+
+- **R-11, the configured path (Z1).** The ruling's "apply with `SET LOCAL search_path`" is
+  `set_config('search_path', <value>, true)`, the same transaction-local set, because the value
+  comes from the catalog in the same statement and is never spliced into SQL text. The read
+  and the set ride the batch that opens the transaction, so query mode adds no round trip. The
+  statement is constant: the role and database are `session_user` and `current_database()`,
+  which after the reset (C-063's check) are the login role and the configured database.
+  Beside the ruling's three levels it reads the all-roles row (`ALTER ROLE ALL SET`), which the
+  server applies last, before the built-in default. It does not see a server-wide value from
+  `postgresql.conf` or `ALTER SYSTEM`: the startup pin replaces it and `pg_settings.reset_val`
+  then shows the pin; `pg_file_settings` needs superuser. `pg_catalog` stays first unless the
+  configured path names it later, as in a plain session; every generated cast and compare is
+  `pg_catalog`-qualified either way. A pooled connection rereads the path per transaction, so
+  it follows an `ALTER ROLE` made after it connected, where a long-lived plain session keeps
+  its login-time path. The registry rationale (CONNECT-DECL-pg-session-sql) and `map.md` say
+  this, replacing fold 1's "as Spark's `query` resolves" for the built-in path alone.

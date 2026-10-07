@@ -189,14 +189,20 @@ Product code for `repark-connect`. See [../map.md](../map.md).
     resolves empty. A base type outside `pg_catalog` is not a base type here.
   - **Query mode** (`ScanSource::Query`, or a `dbtable` starting with `(`, which becomes
     `SELECT * FROM <dbtable>`): `prepare("SELECT * FROM (<query>) AS repark_q")`, Parse and
-    Describe only, after `QUERY_SEARCH_PATH` (`SET LOCAL search_path TO "$user", public`, fold 1
-    X6) in the discovery transaction, so unqualified names resolve as Spark's `query` does.
-    `ScanSource::search_path()` names that statement for a query and nothing for a relation. Each column takes the RowDescription type and `Column::type_modifier()`
+    Describe only, after `QUERY_SEARCH_PATH` in the discovery transaction. Since fold 2 (Z1)
+    that is one constant catalog statement: it reads the login role's configured `search_path`
+    from `pg_db_role_setting` in the server's precedence (role in database, role, database, all
+    roles; `session_user` and `current_database()`, no text interpolated), falls back to the
+    built-in `"$user", public`, and applies it with `set_config('search_path', …, true)`, which
+    is `SET LOCAL`. So unqualified names resolve as a plain session as that role (pgjdbc, so
+    Spark's `query`) resolves them; a server-wide `postgresql.conf` path is not seen (the startup
+    pin hides it). `ScanSource::search_path()` names that statement for a query and nothing for
+    a relation. Each column takes the RowDescription type and `Column::type_modifier()`
     (H-TYPEMOD did not fire), and is nullable.
   - **`ScanColumn::resolve(name, typname, kind, typmod, nullable)`** pairs C-2a's
     `PlannedColumn` with the column's `CastType`. A catalog cell of the wrong type is
     `Protocol(UnexpectedResponse)`. The server encoding is carried on `ResolvedSource`, unused
-    so far. pins: c-2/C-042, C-043, C-044, C-056
+    so far. pins: c-2/C-042, C-043, C-044, C-056, C-062
 - `read.rs` — C-2b round 3 (2026-10-07): `pub(crate) mod postgres;`.
 - `read/` — [read/map.md](read/map.md): `postgres.rs`, the statement builder, the `set_config`
   carriage and the COPY stream.

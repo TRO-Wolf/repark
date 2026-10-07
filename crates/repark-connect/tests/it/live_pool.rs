@@ -8,10 +8,12 @@ use repark_connect::{
     CompareOp, ConnectError, PostgresSettings, ScanRequest, ScanSource, SettingsDoor,
     TimeoutSetting,
 };
+use tokio_postgres::{Client, NoTls};
 
 use super::live_pg::{Cell, LIVE, Reader, int32s, url};
 
 const PID: &str = "SELECT pg_catalog.pg_backend_pid() AS pid";
+const PASSWORD: &str = "c2-login";
 
 pub(crate) fn texts(batches: &[RecordBatch]) -> Vec<Option<String>> {
     batches
@@ -336,5 +338,128 @@ async fn a_user_operator_cannot_shadow_a_generated_compare() {
     ))
     .await;
     assert_eq!(outcomes, [Ok(1), Ok(1)]);
+    cell.close().await;
+}
+
+fn login(cell: &Cell, user: &str, password: &str, database: &str) -> PostgresSettings {
+    let base = cell.settings(&[]);
+    let props = BTreeMap::from([
+        ("host".to_string(), base.host.clone()),
+        ("port".to_string(), base.port.to_string()),
+        ("database".to_string(), database.to_string()),
+        ("user".to_string(), user.to_string()),
+        ("password".to_string(), password.to_string()),
+        ("sslmode".to_string(), "disable".to_string()),
+        ("application_name".to_string(), cell.app.clone()),
+    ]);
+    PostgresSettings::from_props(&props, SettingsDoor::ReparkToml).expect("login settings")
+}
+
+async fn plain_session(settings: &PostgresSettings) -> Client {
+    let mut config = tokio_postgres::Config::new();
+    config
+        .host(&settings.host)
+        .port(settings.port)
+        .user(&settings.user)
+        .dbname(&settings.database)
+        .application_name(&settings.application_name);
+    if let Some(password) = &settings.password {
+        config.password(password);
+    }
+    let (client, connection) = config.connect(NoTls).await.expect("a plain session");
+    tokio::spawn(async move {
+        let _ = connection.await;
+    });
+    client
+}
+
+async fn both_read(
+    settings: &PostgresSettings,
+) -> (Vec<Option<String>>, Vec<Option<String>>, usize) {
+    let unqualified = "SELECT v, n FROM vt";
+    let plain = plain_session(settings).await;
+    let shown = plain.query(unqualified, &[]).await.expect(unqualified);
+    let shown = shown.iter().map(|row| row.get(0)).collect();
+    let reader = Reader::new(settings);
+    let read = texts(&reader.read_query(unqualified).await.expect(unqualified));
+    let resolved = reader.resolve(ScanSource::query(unqualified)).await;
+    let pushed = ScanRequest::new(resolved.expect(unqualified))
+        .compare(1, CompareOp::Eq, "1".to_string())
+        .expect("a pushed int4");
+    let pushed = reader.read(pushed).await.expect(unqualified);
+    (shown, read, pushed.iter().map(RecordBatch::num_rows).sum())
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn query_mode_reads_the_configured_search_path_as_a_plain_session_does() {
+    let cell = Cell::open().await;
+    let role = format!("{}_r", cell.schema);
+    let database = format!("{}_d", cell.schema);
+    cell.sql(&format!("CREATE ROLE {role} LOGIN PASSWORD '{PASSWORD}'"))
+        .await;
+    cell.sql(&format!("CREATE DATABASE {database}")).await;
+    let admin = cell.settings(&[]);
+    let password = admin.password.clone().expect(LIVE);
+    let as_admin = login(&cell, &admin.user, &password, &database);
+    let as_role = login(&cell, &role, PASSWORD, &database);
+    let owner = plain_session(&as_admin).await;
+    let tables: Vec<String> = [
+        ("app", "role"),
+        ("db", "database"),
+        ("roledb", "role in database"),
+        ("public", "public"),
+    ]
+    .iter()
+    .map(|(schema, label)| {
+        format!(
+            "CREATE SCHEMA IF NOT EXISTS {schema}; GRANT USAGE ON SCHEMA {schema} TO {role}; \
+             CREATE TABLE {schema}.vt (v text, n int4); \
+             INSERT INTO {schema}.vt VALUES ('{label}', 1), ('{label}', 2); \
+             GRANT SELECT ON {schema}.vt TO {role}"
+        )
+    })
+    .collect();
+    owner
+        .batch_execute(&tables.join("; "))
+        .await
+        .expect("the tables");
+    cell.sql(&format!(
+        "ALTER ROLE {role} SET search_path = app, public; \
+         ALTER DATABASE {database} SET search_path = db, public"
+    ))
+    .await;
+    let role_wins = both_read(&as_role).await;
+    let database_only = both_read(&as_admin).await;
+    cell.sql(&format!(
+        "ALTER ROLE {role} IN DATABASE {database} SET search_path = roledb, public"
+    ))
+    .await;
+    let role_in_database = both_read(&as_role).await;
+    cell.sql(&format!(
+        "ALTER ROLE {role} IN DATABASE {database} RESET search_path; \
+         ALTER ROLE {role} RESET search_path; ALTER DATABASE {database} RESET search_path"
+    ))
+    .await;
+    let built_in = both_read(&as_role).await;
+    drop(owner);
+    cell.sql(&format!("DROP DATABASE {database} WITH (FORCE)"))
+        .await;
+    cell.sql(&format!("DROP ROLE {role}")).await;
+    for ((shown, read, pushed), expected) in [
+        (role_wins, "role"),
+        (database_only, "database"),
+        (role_in_database, "role in database"),
+        (built_in, "public"),
+    ] {
+        let expected = Some(expected.to_string());
+        assert_eq!(
+            shown,
+            [expected.clone(), expected.clone()],
+            "the plain session"
+        );
+        assert_eq!(read, shown, "query mode reads as the plain session");
+        assert_eq!(pushed, 1, "{expected:?}");
+    }
     cell.close().await;
 }

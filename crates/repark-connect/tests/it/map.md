@@ -34,7 +34,12 @@ See [../map.md](../map.md).
   does; a scan dropped while the server computes ends within 3 s; the check interval shows
   `1s`), `query_mode_resolves_unqualified_names_through_the_role_search_path` and
   `a_user_operator_cannot_shadow_a_generated_compare` (a `public` `=` on a domain and `<` on
-  `int4`, dropped after the reads). pins: c-2/C-052, C-053, C-054, C-055, C-056
+  `int4`, dropped after the reads). Fold 2:
+  `query_mode_reads_the_configured_search_path_as_a_plain_session_does` (the verifier's
+  `app-schema` shape in a fresh database: a role-level path beats a database-level one, a
+  role-in-database path beats both, and with none the built-in path reads `public`; each time
+  query mode reads the rows a plain session as that login reads, and a pushed compare matches).
+  pins: c-2/C-052, C-053, C-054, C-055, C-056, C-062
 - `scan.rs` — C-2b fold 1 (2026-10-07), behind `postgres`, no Postgres server: a loopback fake
   backend answers the startup, the prepare and a one-row binary COPY.
   `a_copy_stream_without_its_trailer_fails_the_scan` (with the trailer `scan()` reads `[7]`;
@@ -51,7 +56,7 @@ See [../map.md](../map.md).
   `dbtable_parses_exact_qualified_and_quoted_parts`, `servers_older_than_14_are_declared` and
   `read_errors_name_the_relation_and_fold_as_operational`. Fold 1 renders every compare as
   `OPERATOR(pg_catalog.op)` and pins `ScanSource::search_path()` for both modes.
-  pins: c-2/C-038, C-039, C-044, C-045, C-048, C-056
+  pins: c-2/C-038, C-039, C-044, C-045, C-048, C-056, C-062
 - `live_pg.rs` — C-2b round 3 (2026-10-07), behind `postgres`. Every cell is
   `#[ignore = "live: make pg-up, REPARK_PG_URL"]`, panics rather than skips without
   `REPARK_PG_URL`, creates and drops a schema `c2_<tag>`, and names its pool's

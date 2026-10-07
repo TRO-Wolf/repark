@@ -4,8 +4,8 @@ use repark_common::{Error, ErrorClass};
 use repark_connect::postgres::{PgTypeKind, TypeMod};
 use repark_connect::{
     CastType, CompareOp, ConnectError, DEFAULT_SCHEMA, IdentRefusal, MAX_PARAM_SLOTS,
-    MIN_SERVER_VERSION_NUM, ParamSlot, PgIdent, Privilege, QualifiedRelation, ResolvedSource,
-    SERVER_VERSION_ROW, ScanColumn, ScanRequest, ScanSource, check_server_version,
+    MIN_SERVER_VERSION_NUM, ParamSlot, PgIdent, Privilege, QUERY_SEARCH_PATH, QualifiedRelation,
+    ResolvedSource, SERVER_VERSION_ROW, ScanColumn, ScanRequest, ScanSource, check_server_version,
 };
 
 fn ident(name: &str) -> PgIdent {
@@ -144,9 +144,14 @@ fn query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing() {
         "COPY (SELECT FROM (SELECT 1 AS id) AS repark_q) TO STDOUT (FORMAT BINARY)"
     );
     assert_eq!(request.relation(), None);
-    assert_eq!(
-        ScanSource::query("SELECT 1 AS id").search_path(),
-        Some("SET LOCAL search_path TO \"$user\", public")
+    let search_path = ScanSource::query("SELECT 1 AS id").search_path();
+    assert_eq!(search_path, Some(QUERY_SEARCH_PATH));
+    assert!(
+        QUERY_SEARCH_PATH.starts_with("SELECT pg_catalog.set_config('search_path', ")
+            && QUERY_SEARCH_PATH.contains("pg_catalog.pg_db_role_setting")
+            && QUERY_SEARCH_PATH.contains("ORDER BY s.setrole = 0, s.setdatabase = 0")
+            && QUERY_SEARCH_PATH.ends_with("'\"$user\", public'), true)"),
+        "{QUERY_SEARCH_PATH}"
     );
     let dbtable = ScanSource::from_dbtable("s.t").expect("a relation");
     assert_eq!(dbtable.search_path(), None);

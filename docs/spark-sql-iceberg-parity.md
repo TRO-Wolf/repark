@@ -3555,8 +3555,15 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-10-07 (C-2b; sketch §2.3 and §2.4). Each one could override the
   session pins the read relies on (empty `search_path`, read-only transactions, the timeouts) or
   the resolved schema. Retire per key when a unit can admit it without lifting a pin. (Since the
-  C-2b fold 1, 2026-10-07, query mode sets `search_path` to `"$user", public` with `SET LOCAL`
-  inside its own transaction, as Spark's `query` resolves; relation mode keeps the empty pin.)
+  C-2b fold 2, 2026-10-07, query mode resolves unqualified names through the `search_path` a
+  plain session as the login role would get from `ALTER ROLE` and `ALTER DATABASE`: one catalog
+  statement inside the query's own read-only transaction reads `pg_db_role_setting` in the
+  server's precedence (role in database, role, database, all roles) and applies the value with
+  `set_config(…, true)`, which is `SET LOCAL`; with none set it is the built-in
+  `"$user", public`. A server-wide `search_path` in `postgresql.conf` or `ALTER SYSTEM` is not
+  read, because the startup pin hides it; the built-in default stands in. Relation mode keeps
+  the empty pin. Pin:
+  `crates/repark-connect/tests/it/live_pool.rs::query_mode_reads_the_configured_search_path_as_a_plain_session_does`.)
 ### CONNECT-DECL-pg-multi-host — a Postgres source refuses a host list
 - **repark** — a `host` value with a comma, or a `url` whose authority lists hosts
   (`postgresql://h1:5432,h2:5433/db`), refuses with `ConnectError::DeclaredSetting`
