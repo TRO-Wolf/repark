@@ -16,8 +16,10 @@ const SCHEMA_CAPSULE: &CStr = c"arrow_schema";
 
 fn table_error_to_py(error: &TypeTableError) -> PyErr {
     match error {
-        TypeTableError::IntegerOverflow => PyOverflowError::new_err(error.to_string()),
-        _ => PyValueError::new_err(error.to_string()),
+        TypeTableError::IntegerOverflow => {
+            PyOverflowError::new_err(crate::exceptions::mask_user_visible(error.to_string()))
+        }
+        _ => PyValueError::new_err(crate::exceptions::mask_user_visible(error.to_string())),
     }
 }
 
@@ -130,10 +132,10 @@ fn dict_required<'py>(
     key: &Bound<'py, PyString>,
 ) -> PyResult<Bound<'py, PyAny>> {
     dict.get_item(key)?.ok_or_else(|| {
-        PyValueError::new_err(format!(
+        PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
             "type-table descriptor is missing key {:?}",
             key.to_str().unwrap_or_default()
-        ))
+        )))
     })
 }
 
@@ -143,8 +145,8 @@ fn validated_spatial_srid(dict: &Bound<'_, PyDict>, geography: bool) -> PyResult
     if type_table::spatial_srid_supported(geography, srid) {
         Ok(srid)
     } else {
-        Err(PyValueError::new_err(format!(
-            "unsupported spatial SRID {srid}"
+        Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+            format!("unsupported spatial SRID {srid}"),
         )))
     }
 }
@@ -257,8 +259,8 @@ fn spark_type_from_py(obj: &Bound<'_, PyAny>) -> PyResult<SparkDataType> {
         }
         "field" => SparkDataType::Field(Box::new(spark_field_from_py(dict)?)),
         other => {
-            return Err(PyValueError::new_err(format!(
-                "unsupported type-table descriptor kind {other:?}"
+            return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                format!("unsupported type-table descriptor kind {other:?}"),
             )));
         }
     })
@@ -267,23 +269,32 @@ fn spark_type_from_py(obj: &Bound<'_, PyAny>) -> PyResult<SparkDataType> {
 fn arrow_type_from_capsule(capsule: &Bound<'_, PyCapsule>) -> PyResult<ArrowDataType> {
     let pointer = capsule.pointer_checked(Some(SCHEMA_CAPSULE))?;
     let ffi_schema = unsafe { pointer.cast::<FFI_ArrowSchema>().as_ref() };
-    ArrowDataType::try_from(ffi_schema)
-        .map_err(|error| PyValueError::new_err(format!("arrow type import refused: {error}")))
+    ArrowDataType::try_from(ffi_schema).map_err(|error| {
+        PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+            "arrow type import refused: {error}"
+        )))
+    })
 }
 
 fn arrow_schema_from_capsule(capsule: &Bound<'_, PyCapsule>) -> PyResult<Schema> {
     let pointer = capsule.pointer_checked(Some(SCHEMA_CAPSULE))?;
     let ffi_schema = unsafe { pointer.cast::<FFI_ArrowSchema>().as_ref() };
-    Schema::try_from(ffi_schema)
-        .map_err(|error| PyValueError::new_err(format!("arrow schema import refused: {error}")))
+    Schema::try_from(ffi_schema).map_err(|error| {
+        PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+            "arrow schema import refused: {error}"
+        )))
+    })
 }
 
 fn arrow_type_capsule<'py>(
     py: Python<'py>,
     data_type: &ArrowDataType,
 ) -> PyResult<Bound<'py, PyCapsule>> {
-    let ffi_schema = FFI_ArrowSchema::try_from(data_type)
-        .map_err(|error| PyValueError::new_err(format!("arrow type export refused: {error}")))?;
+    let ffi_schema = FFI_ArrowSchema::try_from(data_type).map_err(|error| {
+        PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+            "arrow type export refused: {error}"
+        )))
+    })?;
     PyCapsule::new_with_value_and_destructor(py, ffi_schema, SCHEMA_CAPSULE, |ffi, _ctx| {
         drop(ffi);
     })

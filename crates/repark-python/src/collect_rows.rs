@@ -50,16 +50,16 @@ fn natively_convertible(data_type: &ArrowDataType) -> bool {
 }
 
 fn downcast_miss(array: &ArrayRef) -> PyErr {
-    PyValueError::new_err(format!(
+    PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
         "collect fast path could not downcast a {} column",
         array.data_type()
-    ))
+    )))
 }
 
 fn too_long(kind: &str, length: usize) -> PyErr {
-    PyValueError::new_err(format!(
+    PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
         "collect fast path reached a {kind} of {length} bytes, past this platform's limit"
-    ))
+    )))
 }
 
 fn owned(py: Python<'_>, pointer: *mut ffi::PyObject) -> PyResult<Bound<'_, PyAny>> {
@@ -146,8 +146,8 @@ fn cell_to_python<'py>(
         ArrowDataType::BinaryView => {
             bytes_cell(py, values_of!(array, BinaryViewArray).value(index))
         }
-        other => Err(PyValueError::new_err(format!(
-            "collect fast path reached an unsupported Arrow type: {other}"
+        other => Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+            format!("collect fast path reached an unsupported Arrow type: {other}"),
         ))),
     }
 }
@@ -173,12 +173,13 @@ fn import_record_batch(batch: &Bound<'_, PyAny>) -> PyResult<StructArray> {
             std::ptr::replace(array_pointer, FFI_ArrowArray::empty()),
         )
     };
-    let data = unsafe { from_ffi(array, &schema) }
-        .map_err(|error| PyValueError::new_err(error.to_string()))?;
+    let data = unsafe { from_ffi(array, &schema) }.map_err(|error| {
+        PyValueError::new_err(crate::exceptions::mask_user_visible(error.to_string()))
+    })?;
     if !matches!(data.data_type(), ArrowDataType::Struct(_)) {
-        return Err(PyValueError::new_err(
+        return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
             "collect fast path expected a struct-typed record batch export",
-        ));
+        )));
     }
     Ok(StructArray::from(data))
 }
@@ -218,9 +219,9 @@ fn column_sources<'py>(
         if let Some(values) = supplied.get_item(position)? {
             let values = values.cast_into::<PyList>()?;
             if values.len() != row_count {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "a supplied collect column does not match the batch row count",
-                ));
+                )));
             }
             sources.push(ColumnSource::Supplied(values));
             continue;

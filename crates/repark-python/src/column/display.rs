@@ -257,7 +257,9 @@ fn apply_binary_op(left: &PyColumn, right: &PyColumn, op_method: &str) -> PyResu
         "ge" => Ok((left_expr.gt_eq(right_expr), 1)),
         "and_" => Ok((left_expr.and(right_expr), 1)),
         "or_" => Ok((left_expr.or(right_expr), 1)),
-        other => Err(PyValueError::new_err(format!("unknown binary op {other}"))),
+        other => Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+            format!("unknown binary op {other}"),
+        ))),
     }
 }
 
@@ -273,12 +275,13 @@ fn engine_cast(inner: &PyColumn, engine_type: &str, keyword: &str) -> PyResult<P
         "CAST" => false,
         "TRY_CAST" => true,
         other => {
-            return Err(PyValueError::new_err(format!(
-                "unknown cast keyword {other}"
+            return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                format!("unknown cast keyword {other}"),
             )));
         }
     };
-    let expr = cast_to(inner.expr(), engine_type, try_cast).map_err(AnalysisException::new_err)?;
+    let expr = cast_to(inner.expr(), engine_type, try_cast)
+        .map_err(|err| AnalysisException::new_err(crate::exceptions::mask_user_visible(err)))?;
     Ok(PyColumn::combine_surveyed(expr, [inner]))
 }
 
@@ -398,9 +401,9 @@ impl PyColumnParts {
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.update_fields", {
             if ops.len() != paths.len() {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "update_fields ops and paths must match",
-                ));
+                )));
             }
             let mut args = Vec::with_capacity(1 + ops.len() * 2 + values.len());
             args.push(inner.expr());
@@ -417,11 +420,15 @@ impl PyColumnParts {
                 match op.as_str() {
                     "with" => {
                         let value = pending.next().ok_or_else(|| {
-                            PyValueError::new_err("update_fields 'with' op needs a value")
+                            PyValueError::new_err(crate::exceptions::mask_user_visible(
+                                "update_fields 'with' op needs a value",
+                            ))
                         })?;
                         let (value_display, value_sql, value_join) =
                             value_parts.next().ok_or_else(|| {
-                                PyValueError::new_err("update_fields 'with' op needs value parts")
+                                PyValueError::new_err(crate::exceptions::mask_user_visible(
+                                    "update_fields 'with' op needs value parts",
+                                ))
                             })?;
                         args.push(value.expr());
                         let _ = std::fmt::Write::write_fmt(
@@ -449,8 +456,8 @@ impl PyColumnParts {
                         );
                     }
                     other => {
-                        return Err(PyValueError::new_err(format!(
-                            "update_fields op must be 'with' or 'drop', got {other}"
+                        return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                            format!("update_fields op must be 'with' or 'drop', got {other}"),
                         )));
                     }
                 }
@@ -459,9 +466,9 @@ impl PyColumnParts {
             sql.push(')');
             join.push(')');
             if pending.next().is_some() || value_parts.next().is_some() {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "update_fields value lists must match the 'with' op count",
-                ));
+                )));
             }
             let native = PyColumn::combine_surveyed(
                 repark_core::update_fields_call(args),
@@ -493,7 +500,9 @@ impl PyColumnParts {
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.in_list", {
             if values.len() != right_parts.len() {
-                return Err(PyValueError::new_err("in_list values and parts must match"));
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    "in_list values and parts must match",
+                )));
             }
             let exprs = values.iter().map(PyColumn::expr).collect();
             let native = PyColumn::combine(
@@ -667,14 +676,14 @@ impl PyColumnParts {
                 || display_arms.len() != sql_arms.len()
                 || sql_arms.len() != join_arms.len()
             {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "case_when arm lists must be the same length",
-                ));
+                )));
             }
             if otherwise.is_some() != else_parts.is_some() {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "case_when otherwise and else_parts must both be set or both be omitted",
-                ));
+                )));
             }
             let when_then_expr = when_thens
                 .iter()
@@ -748,8 +757,8 @@ impl PyColumnParts {
                     wrap_index_sql(child_sql, key_sql),
                 ),
                 other => {
-                    return Err(PyValueError::new_err(format!(
-                        "unknown getitem kind {other}"
+                    return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                        format!("unknown getitem kind {other}"),
                     )));
                 }
             };
@@ -788,9 +797,9 @@ impl PyColumnParts {
                 || sql_parts.len() != inners.len()
                 || join_parts.len() != inners.len()
             {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "call_scalar part lists must match the argument count",
-                ));
+                )));
             }
             let exprs = inners.iter().map(PyColumn::expr).collect();
             let inner = PyColumn::combine_surveyed(call_scalar_expr(name, exprs)?, &inners);
@@ -895,7 +904,9 @@ impl PyColumnParts {
     fn cast_type_token(engine_type: &str) -> PyResult<String> {
         fenced!("ColumnParts.cast_type_token", {
             repark_functions::cast_map::map_cast_token(engine_type).ok_or_else(|| {
-                crate::ParseException::new_err(format!("unknown cast type '{engine_type}'"))
+                crate::ParseException::new_err(crate::exceptions::mask_user_visible(format!(
+                    "unknown cast type '{engine_type}'"
+                )))
             })
         })
     }

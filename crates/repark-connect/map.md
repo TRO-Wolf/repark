@@ -15,15 +15,25 @@ gate's drift rule reds a declared edge with no dependency behind it once both cr
 members. C-1 lands no provider, no read path, no pool and no driver dependency.
 pins: c-1/C-001
 
+C-2 (sketch [c-2-design.md](../../task/wo/c-2-design.md), four slices) makes it the Postgres read
+path. **C-2a (2026-10-06)** is the pure half, with no driver and no network: the crate's one error
+enum `ConnectError` (NS-15, C-1's two enums folded in), the COPY BINARY decoder
+`CopyBinaryDecoder`, and the type map's eight newly mapped rows with their codecs, resolution and
+per-value refusals. C-2b adds the driver behind the `postgres` feature (settings keys, TLS, the
+query pool, the COPY read), C-2c the provider, pushdown and EXPLAIN, C-2d the mount in
+`repark-core`. pins: c-2/C-013
+
 ## Contents
 
 - `Cargo.toml` — workspace inheritance for edition, version, license, rust-version, repository,
   publish and lints (the `repark-iceberg` precedent, so `unsafe_code = "forbid"` rides the
   workspace). Dependencies: `repark-common`, `arrow`, `thiserror`, all at workspace versions.
   `tokio-postgres`, `sqlx` and `tiberius` wait for the read and write paths (C-2 onward).
-  pins: c-1/C-011
-- `src/` — [src/map.md](src/map.md): `settings.rs` (the connection settings and the reserved
-  auth-method field) and `types/postgres.rs` (the Postgres ↔ Arrow type map).
+  C-2a added none: the decoder's memory charge is the `buffered_bytes()` seam the C-2c scan
+  reads, so `datafusion` arrives with C-2b. pins: c-1/C-011 · pins: c-2/C-014
+- `src/` — [src/map.md](src/map.md): `error.rs` (`ConnectError`), `copy_binary.rs` (the COPY
+  BINARY decoder), `settings.rs` (the connection settings and the reserved auth-method field)
+  and `types/postgres.rs` (the Postgres ↔ Arrow type map, codecs under `types/postgres/`).
 - `tests/` — [tests/map.md](tests/map.md): the one integration binary `tests/it/main.rs`.
 
 ## Design bars (R-10)
@@ -36,39 +46,57 @@ container are the first measurement), and a row where ADBC and another reading d
 declared, not chosen. **ConnectorX** shapes the partitioned reads; nothing in C-1 reads, so it is
 recorded as not yet (C-2, C-3). pins: c-1/C-010
 
+**C-2a.** ConnectorX shaped the read path: its PostgreSQL source reads `COPY (query) TO STDOUT
+WITH BINARY` over the rust-postgres family into typed Arrow destination columns. C-2a keeps the
+protocol and the typed destination, and replaces ConnectorX's per-row parse through the driver's
+`BinaryCopyOutRow` with per-column appenders over the raw stream, so no value allocates. ADBC
+keeps the ten C-1 rows; for `numeric`, `interval` and `uuid`, ADBC's documented Arrow types
+(string, month-day-nano, fixed-size binary) give way to the types Spark's dialect surfaces,
+because Spark governs the surface (North Star §2). Both bars are documents, not runs; the full
+citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4. pins: c-2/C-013
+
 ## I want to...
 
 | ...do this | go to |
 |---|---|
 | Interpret a new connection key | `src/settings.rs`, in the unit that first consumes it (CC-3: no key is defined ahead of its unit) |
-| Map a declared Postgres type | `src/types/postgres.rs`: flip the row, add its codec arm and a round-trip pin named in the row, retire its registry row |
+| Map a declared Postgres type | `src/types/postgres.rs`: flip the row, add its `ColumnAppender` arm (and a codec under `src/types/postgres/`), a pin named in the row, an oracle cell, and retire its registry row |
+| Decode a COPY BINARY stream | `src/copy_binary.rs`: `CopyBinaryDecoder::new(planned columns, BatchLimits)`, then `decode(&mut chunk)` per chunk and `finish()` at end of stream |
+| Add a decoder error | `src/error.rs`: a `ConnectError` variant with an enum reason, its class in the `repark_common::Error` fold, and a pin |
 | Add the SQL Server map | `src/types/mssql.rs` beside `postgres.rs` (C-5) |
 
 ## Component contract
 
-- **Owns:** connection settings (`ConnectionSettings`, `AuthMethod`) and database-specific type
-  conversion (`postgres::POSTGRES_TYPES` and its wire codec). CC-2's split puts the source
+- **Owns:** connection settings (`ConnectionSettings`, `AuthMethod`), database-specific type
+  conversion (`postgres::POSTGRES_TYPES`, its wire codec and `PlannedColumn` resolution), the
+  COPY BINARY decoder (`CopyBinaryDecoder`) and the crate's error enum (`ConnectError`). CC-2's split puts the source
   identity in `repark-common`, loading and the user-facing handles in `repark-core`.
 - **Does not own:** profile loading, precedence, registration (`repark-core`); the source
   identity (`repark-common::SourceIdentity`); lineage, offsets and capture state (`repark-cdc`,
   1.7); endpoint keys (C-2, CC-3).
 - **Public inputs:** one source's prop map (`BTreeMap<String, String>`, as the core loader
   produces it); Arrow arrays and Postgres binary wire values.
-- **Public outputs:** `ConnectionSettings` or a `SettingsError`; `PostgresTypeRow::encode` /
-  `decode`, or a `TypeMapError`. `SettingsError` folds into `repark_common::Error`:
-  `InvalidAuthMethod` → `Config` (IllegalArgument class, CC-4's invalid specification),
-  `DeclaredAuthMethod` → `NotImplemented` (Unsupported class).
-- **State & lifecycle:** stateless value types and one const table.
+- **Public outputs:** `ConnectionSettings`; `PostgresTypeRow::encode` / `decode`;
+  `PlannedColumn`; Arrow `RecordBatch`es from `CopyBinaryDecoder`; or a `ConnectError`, which
+  folds into `repark_common::Error` by class: `InvalidAuthMethod` → `Config` (IllegalArgument
+  class, CC-4's invalid specification), the declared refusals → `NotImplemented` (Unsupported
+  class), the operational errors → `DataFusion`.
+- **State & lifecycle:** value types, one const table, and one decoder per scan whose only state
+  is its position in the stream, the batch being built and one carry buffer.
 - **Allowed internal deps:** `repark-common` only (declared `normal` in the DAG gate).
-- **Failure model:** typed `thiserror` enums; no panics in product code.
+- **Failure model:** one typed `thiserror` enum with enum reasons; a value the Arrow type cannot
+  hold refuses per value with its registry row, never approximated; no panics in product code.
 - **Extension points:** new auth methods (flip a declared refusal), new type rows, new backends.
-- **Test strategy:** `tests/it/` pins every settings branch and one round trip per mapped type.
-- **Known limitations:** the declared rows (registry `CONNECT-DECL-*`) and no connector yet.
+- **Test strategy:** `tests/it/` pins every settings branch, one round trip or byte-anchor pin
+  per mapped type, and the decoder's stream contract split at every byte offset.
+- **Known limitations:** the declared rows (registry `CONNECT-DECL-*`) and no connection yet
+  (C-2b).
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Ledger: [c-1-ledger.md](../../task/ledgers/staging/c-1-ledger.md)
+- Ledgers: [c-1-ledger.md](../../task/ledgers/staging/c-1-ledger.md),
+  [c-2-ledger.md](../../task/ledgers/staging/c-2-ledger.md)
 - Registry rows: [docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md) §5,
   the `CONNECT-DECL-*` family beside `SES-DECL`. pins: c-1/C-009
 
@@ -78,5 +106,7 @@ recorded as not yet (C-2, C-3). pins: c-1/C-010
 |---|---|
 | `crate-dag` red on a new edge | the edge must be pre-declared in `scripts/check_crate_dag.py`; a tier-1 service never reaches up to `repark-core` |
 | A row's pin is "not a test here" | `type_map_has_one_row_per_type_and_a_live_pin_per_row`: the row's `pin` must name a `fn` in `tests/it/postgres_types.rs` |
+| A scan fails with `Protocol` | the planned columns disagree with the stream: the field count, a NULL in a NOT NULL column, or a codec's wire check (`ProtocolViolation` names which) |
+| A batch differs with chunking | `copy_decode_is_independent_of_chunking`: a field or fixed word that straddles a chunk must go through the carry buffer |
 
 First checks: `cargo test -p repark-connect`. Escalate to: [../map.md#debug](../map.md).

@@ -64,6 +64,13 @@ pub fn mask_value_credentials(value: &str) -> String {
     spans.render(value)
 }
 
+#[must_use]
+pub fn mask_url_userinfo(text: &str) -> String {
+    let mut spans = Spans::default();
+    url_userinfo_spans(text, &mut spans);
+    spans.render(text)
+}
+
 #[derive(Default)]
 struct Spans {
     masked: Vec<(usize, usize)>,

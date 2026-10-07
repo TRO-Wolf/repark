@@ -312,18 +312,18 @@ pub(crate) fn drain_arrow_c_stream(
         obj.clone()
     } else {
         let exporter = obj.getattr("__arrow_c_stream__").map_err(|_| {
-            pyo3::exceptions::PyTypeError::new_err(
+            pyo3::exceptions::PyTypeError::new_err(crate::exceptions::mask_user_visible(
                 "register_arrow_stream_as_temp_view: object is not an Arrow C Stream exporter \
                  (missing __arrow_c_stream__) and is not an arrow_array_stream PyCapsule",
-            )
+            ))
         })?;
         // Call the optional-schema protocol without negotiation and preserve exporter errors.
         exporter.call0()?
     };
     let capsule = capsule_obj.cast::<PyCapsule>().map_err(|error| {
-        pyo3::exceptions::PyTypeError::new_err(format!(
+        pyo3::exceptions::PyTypeError::new_err(crate::exceptions::mask_user_visible(format!(
             "register_arrow_stream_as_temp_view: expected arrow_array_stream PyCapsule: {error}"
-        ))
+        )))
     })?;
 
     let pointer = capsule

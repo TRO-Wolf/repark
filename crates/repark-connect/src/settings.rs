@@ -1,11 +1,9 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use repark_common::Error;
+use crate::error::{ConnectError, Result};
 
 pub const AUTH_METHOD_KEY: &str = "auth_method";
-
-const REGISTRY: &str = "docs/spark-sql-iceberg-parity.md";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuthMethod {
@@ -46,34 +44,6 @@ impl AuthMethod {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-pub enum SettingsError {
-    #[error(
-        "invalid specification: `{AUTH_METHOD_KEY}` is `{value}`; expected one of: {}",
-        AuthMethod::SPELLINGS.join(", ")
-    )]
-    InvalidAuthMethod { value: String },
-
-    #[error(
-        "auth method `{}` is declared but not supported yet: only `password` connects \
-         (registry row {registry_row} in {REGISTRY})",
-        method.spelling()
-    )]
-    DeclaredAuthMethod {
-        method: AuthMethod,
-        registry_row: &'static str,
-    },
-}
-
-impl From<SettingsError> for Error {
-    fn from(error: SettingsError) -> Self {
-        match error {
-            SettingsError::InvalidAuthMethod { .. } => Error::Config(error.to_string()),
-            SettingsError::DeclaredAuthMethod { .. } => Error::NotImplemented(error.to_string()),
-        }
-    }
-}
-
 #[derive(Clone, PartialEq, Eq)]
 pub struct ConnectionSettings {
     auth_method: AuthMethod,
@@ -82,17 +52,17 @@ pub struct ConnectionSettings {
 
 impl ConnectionSettings {
     #[allow(clippy::missing_errors_doc)]
-    pub fn from_props(props: &BTreeMap<String, String>) -> Result<Self, SettingsError> {
+    pub fn from_props(props: &BTreeMap<String, String>) -> Result<Self> {
         let auth_method = match props.get(AUTH_METHOD_KEY) {
             None => AuthMethod::Password,
-            Some(value) => AuthMethod::from_spelling(value).ok_or_else(|| {
-                SettingsError::InvalidAuthMethod {
+            Some(value) => {
+                AuthMethod::from_spelling(value).ok_or_else(|| ConnectError::InvalidAuthMethod {
                     value: value.clone(),
-                }
-            })?,
+                })?
+            }
         };
         if let Some(registry_row) = auth_method.declared_refusal() {
-            return Err(SettingsError::DeclaredAuthMethod {
+            return Err(ConnectError::DeclaredAuthMethod {
                 method: auth_method,
                 registry_row,
             });

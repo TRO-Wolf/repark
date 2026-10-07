@@ -8,18 +8,19 @@ use pyo3::prelude::*;
 pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
     let need = |n: usize| -> PyResult<()> {
         if exprs.len() != n {
-            return Err(PyValueError::new_err(format!(
-                "call_scalar({name}) expects {n} args, got {}",
-                exprs.len()
+            return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                format!("call_scalar({name}) expects {n} args, got {}", exprs.len()),
             )));
         }
         Ok(())
     };
     let need_at_least = |n: usize| -> PyResult<()> {
         if exprs.len() < n {
-            return Err(PyValueError::new_err(format!(
-                "call_scalar({name}) expects at least {n} args, got {}",
-                exprs.len()
+            return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                format!(
+                    "call_scalar({name}) expects at least {n} args, got {}",
+                    exprs.len()
+                ),
             )));
         }
         Ok(())
@@ -112,9 +113,11 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "create_map" => repark_functions::expr_fn::create_map(exprs.clone()),
         "make_timestamp" | "try_make_timestamp" => {
             if !matches!(exprs.len(), 2 | 3 | 6 | 7) {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects 2, 3, 6 or 7 args, got {}",
-                    exprs.len()
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    format!(
+                        "call_scalar({name}) expects 2, 3, 6 or 7 args, got {}",
+                        exprs.len()
+                    ),
                 )));
             }
             match name {
@@ -124,9 +127,11 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "make_timestamp_ltz" | "try_make_timestamp_ltz" => {
             if !matches!(exprs.len(), 2 | 3 | 6 | 7) {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects 2, 3, 6 or 7 args, got {}",
-                    exprs.len()
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    format!(
+                        "call_scalar({name}) expects 2, 3, 6 or 7 args, got {}",
+                        exprs.len()
+                    ),
                 )));
             }
             match name {
@@ -138,9 +143,11 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "make_timestamp_ntz" | "try_make_timestamp_ntz" => {
             if !matches!(exprs.len(), 2 | 6) {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects 2 or 6 args, got {}",
-                    exprs.len()
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    format!(
+                        "call_scalar({name}) expects 2 or 6 args, got {}",
+                        exprs.len()
+                    ),
                 )));
             }
             match name {
@@ -152,27 +159,33 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "make_ym_interval" => {
             if exprs.len() > 2 {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects at most 2 args, got {}",
-                    exprs.len()
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    format!(
+                        "call_scalar({name}) expects at most 2 args, got {}",
+                        exprs.len()
+                    ),
                 )));
             }
             repark_functions::expr_fn::make_ym_interval(exprs.clone())
         }
         "try_make_interval" => {
             if exprs.len() > 7 {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects at most 7 args, got {}",
-                    exprs.len()
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    format!(
+                        "call_scalar({name}) expects at most 7 args, got {}",
+                        exprs.len()
+                    ),
                 )));
             }
             repark_functions::expr_fn::try_make_interval(exprs.clone())
         }
         "months_between" | "convert_timezone" => {
             if !matches!(exprs.len(), 2 | 3) {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects 2 or 3 args, got {}",
-                    exprs.len()
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    format!(
+                        "call_scalar({name}) expects 2 or 3 args, got {}",
+                        exprs.len()
+                    ),
                 )));
             }
             match name {
@@ -197,8 +210,8 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             repark_functions::expr_fn::datediff(exprs[0].clone(), exprs[1].clone())
         }
         other => {
-            return Err(PyValueError::new_err(format!(
-                "call_scalar: unsupported function {other:?}"
+            return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                format!("call_scalar: unsupported function {other:?}"),
             )));
         }
     };

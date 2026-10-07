@@ -11,6 +11,7 @@ use datafusion::logical_expr::{
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
+use crate::AnalysisException;
 use crate::column::PyColumn;
 use crate::dataframe::PyDataFrame;
 use crate::datafusion_to_py_err;
@@ -18,6 +19,7 @@ use crate::deep_stack::{
     DEEP_NESTING_DEPTH, drive_segment_bytes, frame_drive_segment_cached, grown_clone_frame,
     grown_clone_plan, grown_sync, refuse_expression_depth, run_grown_if, stack_is_small,
 };
+use crate::exceptions::mask_user_visible;
 use crate::fence::fenced;
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -121,11 +123,11 @@ pub(crate) fn lateral_join(
             "inner" | "cross" => JoinType::Inner,
             "left" => JoinType::Left,
             other => {
-                return Err(crate::exceptions::AnalysisException::new_err(format!(
+                return Err(AnalysisException::new_err(mask_user_visible(format!(
                     "[UNSUPPORTED_JOIN_TYPE] Unsupported join type '{other}'. Supported join \
                      types include: 'inner', 'leftouter', 'left', 'left_outer', 'cross'. \
                      SQLSTATE: 0A000"
-                )));
+                ))));
             }
         };
         let deepest = on.as_ref().map_or(0, PyColumn::df_depth);

@@ -59,9 +59,11 @@ fn join_type_from_str(how: &str) -> PyResult<JoinType> {
         "full" | "outer" | "fullouter" | "full_outer" => Ok(JoinType::Full),
         "semi" | "left_semi" | "leftsemi" => Ok(JoinType::LeftSemi),
         "anti" | "left_anti" | "leftanti" => Ok(JoinType::LeftAnti),
-        other => Err(PyValueError::new_err(format!(
-            "unsupported join type {other:?} (supported: 'inner', 'left', 'right', 'full', \
+        other => Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+            format!(
+                "unsupported join type {other:?} (supported: 'inner', 'left', 'right', 'full', \
              'leftsemi', 'leftanti')"
+            ),
         ))),
     }
 }
@@ -314,9 +316,9 @@ impl PyDataFrame {
         fenced!("PyDataFrame.analyzed_arrow_schema", {
             let schema = self.analyzed_arrow_schema_native()?;
             let ffi = FFI_ArrowSchema::try_from(schema.as_ref()).map_err(|error| {
-                PyValueError::new_err(format!(
+                PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
                     "failed to export analyzed Arrow schema to C Data Interface: {error}"
-                ))
+                )))
             })?;
             PyCapsule::new_with_value_and_destructor(
                 py,
@@ -511,9 +513,9 @@ impl PyDataFrame {
     ) -> PyResult<Self> {
         fenced!("PyDataFrame.sort", {
             if columns.len() != ascending.len() || columns.len() != nulls_first.len() {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "sort expects columns, ascending, and nulls_first vectors of equal length",
-                ));
+                )));
             }
             let carries_plan = carries_subquery_plan(&columns);
             let (df, bound) = drive_columns(&self.runtime, &self.depths, &columns, || {

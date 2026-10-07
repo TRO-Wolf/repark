@@ -111,9 +111,11 @@ impl PyColumn {
                 let text: String = value.extract()?;
                 return Ok(Self::from_expr(lit(text)));
             }
-            Err(PyValueError::new_err(format!(
-                "lit() supports None, bool, int, float, or str; got {}",
-                value.get_type().name()?
+            Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                format!(
+                    "lit() supports None, bool, int, float, or str; got {}",
+                    value.get_type().name()?
+                ),
             )))
         })
     }
@@ -149,7 +151,9 @@ impl PyColumn {
     ) -> PyResult<Self> {
         fenced!("Column.call_higher_order", {
             let function = repark_functions::higher_order::by_name(name).ok_or_else(|| {
-                PyValueError::new_err(format!("unknown higher-order function {name:?}"))
+                PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+                    "unknown higher-order function {name:?}"
+                )))
             })?;
             let mut args: Vec<Expr> = Vec::with_capacity(value_args.len() + lambdas.len());
             for value in &value_args {
@@ -181,9 +185,9 @@ impl PyColumn {
     pub fn make_struct(fields: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.make_struct", {
             if fields.is_empty() {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "struct() requires at least one field column",
-                ));
+                )));
             }
             // Preserve aliases because DataFusion's struct return type otherwise uses c0, c1, ….
             let mut args: Vec<Expr> = Vec::with_capacity(fields.len() * 2);
@@ -535,8 +539,8 @@ impl PyColumn {
     pub fn ntile(n: i64) -> PyResult<Self> {
         fenced!("Column.ntile", {
             if n <= 0 {
-                return Err(PyValueError::new_err(format!(
-                    "ntile requires a positive integer, got {n}"
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    format!("ntile requires a positive integer, got {n}"),
                 )));
             }
             Ok(Self::window_udwf_i32(ntile_udwf(), vec![lit(n)]))
@@ -592,7 +596,11 @@ impl PyColumn {
     pub fn ta_window(name: &str, args: Vec<PyColumn>, null_prefix: usize) -> PyResult<Self> {
         fenced!("Column.ta_window", {
             let udf = repark_ta::udf::window_udf_with_null_prefix(name, null_prefix).ok_or_else(
-                || PyValueError::new_err(format!("unknown TA window function {name:?}")),
+                || {
+                    PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+                        "unknown TA window function {name:?}"
+                    )))
+                },
             )?;
             let arg_exprs: Vec<Expr> = args.iter().map(PyColumn::expr).collect();
             Ok(Self::combine_surveyed(
@@ -815,7 +823,9 @@ impl PyColumn {
     /// Returns [`AnalysisException`] if `type_spec` is not a recognized cast type string
     pub fn cast(&self, type_spec: &str) -> PyResult<Self> {
         fenced!("Column.cast", {
-            let data_type = parse_data_type(type_spec).map_err(AnalysisException::new_err)?;
+            let data_type = parse_data_type(type_spec).map_err(|err| {
+                AnalysisException::new_err(crate::exceptions::mask_user_visible(err))
+            })?;
             Ok(Self::combine(
                 Expr::Cast(Cast::new(Box::new(self.expr()), data_type)),
                 [self],
@@ -833,7 +843,9 @@ impl PyColumn {
     /// Returns [`AnalysisException`] if `type_spec` is not a recognized cast type string.
     pub fn try_cast(&self, type_spec: &str) -> PyResult<Self> {
         fenced!("Column.try_cast", {
-            let data_type = parse_data_type(type_spec).map_err(AnalysisException::new_err)?;
+            let data_type = parse_data_type(type_spec).map_err(|err| {
+                AnalysisException::new_err(crate::exceptions::mask_user_visible(err))
+            })?;
             Ok(Self::combine(
                 Expr::TryCast(TryCast::new(Box::new(self.expr()), data_type)),
                 [self],
@@ -886,9 +898,9 @@ impl PyColumn {
                 base.null_treatment(NullTreatment::IgnoreNulls)
                     .build()
                     .map_err(|err| {
-                        PyValueError::new_err(format!(
+                        PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
                             "could not build aggregate expression: {err}"
-                        ))
+                        )))
                     })?
             } else {
                 base
@@ -916,8 +928,10 @@ impl PyColumn {
     pub fn approx_percentile_cont(&self, percentile: f64, accuracy: Option<i64>) -> PyResult<Self> {
         fenced!("Column.approx_percentile_cont", {
             if !(0.0..=1.0).contains(&percentile) {
-                return Err(PyValueError::new_err(format!(
-                    "approx_percentile_cont percentile must be in [0, 1], got {percentile}"
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    format!(
+                        "approx_percentile_cont percentile must be in [0, 1], got {percentile}"
+                    ),
                 )));
             }
             let expr = percentile_approx_scalar_expr(self.expr(), percentile, accuracy);
@@ -932,9 +946,9 @@ impl PyColumn {
         fenced!("Column.approx_percentile_list", {
             let out_of_range = |percentage| !(0.0..=1.0).contains(percentage);
             if percentages.iter().any(out_of_range) {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "approx_percentile percentages must be in [0, 1]",
-                ));
+                )));
             }
             let expr = percentile_approx_list_expr(self.expr(), percentages, accuracy);
             Ok(Self::combine_surveyed(expr, [self]))
@@ -949,9 +963,9 @@ impl PyColumn {
     pub fn count_aggregate(columns: Vec<PyColumn>, distinct: bool) -> PyResult<Self> {
         fenced!("Column.count_aggregate", {
             if columns.is_empty() {
-                return Err(PyValueError::new_err(
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "count() requires at least one argument column",
-                ));
+                )));
             }
             let args: Vec<Expr> = columns.iter().map(PyColumn::expr).collect();
             let expr = if distinct {
@@ -961,7 +975,9 @@ impl PyColumn {
                     .distinct()
                     .build()
                     .map_err(|err| {
-                        PyValueError::new_err(format!("could not build count(DISTINCT …): {err}"))
+                        PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+                            "could not build count(DISTINCT …): {err}"
+                        )))
                     })?
             } else {
                 count_udaf().call(args)

@@ -53,8 +53,8 @@ fn numpy_element_type(cast_type: &str) -> PyResult<DataType> {
         "BOOLEAN" => DataType::Boolean,
         "VARCHAR" => DataType::Utf8View,
         other => {
-            return Err(PyValueError::new_err(format!(
-                "unknown array cast type {other}"
+            return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                format!("unknown array cast type {other}"),
             )));
         }
     })

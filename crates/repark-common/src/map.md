@@ -72,7 +72,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
 - `redaction.rs` — **SOURCE-URL-REDACT-1 (2026-10-06):** the shared property redactor. `prop_key_is_secret`
   (moved here unchanged from `repark-core/src/catalog_config.rs`, which re-exports it),
   `redact_value(key, value)` (a secret key gives `***`, any other value goes through
-  `mask_value_credentials`) and `mask_value_credentials(value)`: URL userinfo of any
+  `mask_value_credentials`), `mask_url_userinfo(text)` (the URL-userinfo leg alone, the same render as `mask_value_credentials`; `repark_core::redaction` re-exports the module) and `mask_value_credentials(value)`: URL userinfo of any
   `scheme://` keeps the user and host and masks the password; a userinfo with no colon is
   masked whole; an `@` after `://` with a `:` before it that does not parse cleanly masks the
   whole userinfo (fail closed); a secret-named query parameter or libpq / ODBC keyword

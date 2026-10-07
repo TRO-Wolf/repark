@@ -320,17 +320,19 @@ pub(super) fn collapse_identity_alias_chain(expr: Expr) -> Expr {
 /// Pull the first projection expression out of an analyzed/optimized plan.
 pub(super) fn extract_projection_expr(plan: &LogicalPlan) -> PyResult<Expr> {
     match plan {
-        LogicalPlan::Projection(projection) => projection
-            .expr
-            .first()
-            .cloned()
-            .ok_or_else(|| PyValueError::new_err("expr plan produced an empty projection")),
+        LogicalPlan::Projection(projection) => projection.expr.first().cloned().ok_or_else(|| {
+            PyValueError::new_err(crate::exceptions::mask_user_visible(
+                "expr plan produced an empty projection",
+            ))
+        }),
         other => other
             .inputs()
             .iter()
             .find_map(|input| extract_projection_expr(input).ok())
             .ok_or_else(|| {
-                PyValueError::new_err(format!("expr plan had no projection to extract: {other}"))
+                PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+                    "expr plan had no projection to extract: {other}"
+                )))
             }),
     }
 }
@@ -446,9 +448,9 @@ impl PyColumn {
             base.null_treatment(NullTreatment::IgnoreNulls).build()
         }
         .map_err(|err| {
-            PyValueError::new_err(format!(
+            PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
                 "could not build collect aggregate expression: {err}"
-            ))
+            )))
         })?;
         // DataFusion returns NULL for an empty array_agg; Spark returns an empty array.
         let empty = datafusion::functions_nested::expr_fn::make_array(vec![]);
@@ -476,7 +478,9 @@ impl PyColumn {
     fn count_distinct_argument_inner(args: Vec<Expr>) -> PyResult<Expr> {
         if args.len() == 1 {
             return args.into_iter().next().ok_or_else(|| {
-                PyValueError::new_err("count(DISTINCT …) requires at least one argument column")
+                PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    "count(DISTINCT …) requires at least one argument column",
+                ))
             });
         }
         let packed = datafusion::functions::expr_fn::r#struct(args.clone());
@@ -485,7 +489,9 @@ impl PyColumn {
             .map(Expr::is_not_null)
             .reduce(Expr::and)
             .ok_or_else(|| {
-                PyValueError::new_err("count(DISTINCT …) requires at least one argument column")
+                PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    "count(DISTINCT …) requires at least one argument column",
+                ))
             })?;
         Ok(Expr::Case(Case {
             expr: None,
@@ -605,11 +611,13 @@ pub(super) fn refuse_nested_higher_order(
     position: &str,
 ) -> PyResult<()> {
     if contains_higher_order(argument)? {
-        return Err(crate::UnsupportedOperationException::new_err(format!(
-            "{name}: a higher-order function nested inside another one's {position} is not \
+        return Err(crate::UnsupportedOperationException::new_err(
+            crate::exceptions::mask_user_visible(format!(
+                "{name}: a higher-order function nested inside another one's {position} is not \
              supported through the Column door yet. The Spark SQL door serves nested lambdas; \
              compute the inner result in a separate column first."
-        )));
+            )),
+        ));
     }
     Ok(())
 }

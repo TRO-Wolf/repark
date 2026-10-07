@@ -58,7 +58,9 @@ pub(crate) fn transpose(
             })
             .map_err(|error| match error {
                 repark_core::TransposeError::Spark(spark) => {
-                    let raised = AnalysisException::new_err(spark.message);
+                    let raised = AnalysisException::new_err(crate::exceptions::mask_user_visible(
+                        spark.message,
+                    ));
                     let params = PyDict::new(py);
                     for (key, value) in spark.message_parameters {
                         if let Err(failure) = params.set_item(key, value) {
