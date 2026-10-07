@@ -32,7 +32,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   (registry row `ZONE_ROW`, `CONNECT-DIV-pg-timestamp-zone`, the message naming
   `prefer_timestamp_ntz`), `DDL_ROW` (`CONNECT-DECL-pg-ddl`) and `read_only_ddl(source)`, all
   outside the `postgres` feature so core's guard needs no driver; `lib.rs` re-exports them.
-  pins: c-2/C-091, C-094
+  pins: c-2/C-098, C-101
 - `error.rs` — C-2a (2026-10-06; sketch [c-2-design.md](../../../task/wo/c-2-design.md) §2.2,
   NS-15). The crate's one error enum, `ConnectError` (`thiserror`), and
   `Result<T> = std::result::Result<T, ConnectError>`. C-1's `SettingsError` and `TypeMapError`

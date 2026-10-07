@@ -27,19 +27,19 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   placed in the session zone, kept as the wall clock under `prefer_timestamp_ntz`, and a gap
   wall clock refuses leaving no busy backend; EXPLAIN shows the pushed and residual split
   through `spark.sql`, the DataFrame and `repark.sql` `EXPLAIN VERBOSE` (placeholders, never
-  the value, never the endpoint). pins: c-2/C-098
+  the value, never the endpoint). pins: c-2/C-105
 - `test_c2_federated.py` — **C-2d (2026-10-07):** sketch §5.4: an Iceberg memory-catalog
   table joined with a Postgres table on an integer key and a `timestamptz`, one filter pushed
   and one residual, through `spark.sql` and the DataFrame join, equal to the psycopg + pyarrow
   join; EXPLAIN has one `IcebergTableScan`, one `PostgresScanExec` and the hash join above; the
-  physical plan, normalised, equals the committed expectation. pins: c-2/C-099
+  physical plan, normalised, equals the committed expectation. pins: c-2/C-106
 - `test_c2_credentials.py` — **C-2d (2026-10-07):** sketch §5.7: a role with a random
   32-hex password mounted by key, by URL, with a wrong password, on a closed port and through a
   one-connection pool; a subprocess at `RUST_LOG=trace` with Python logging at `DEBUG` drives
   `sources()`, `ping()`, EXPLAIN (both formats), an authentication failure, an unreachable
   host, a missing relation, a refused `NaN`, a lock timeout, a pool timeout and a `read.jdbc`
   URL with a password; neither password nor any URL form appears on stdout or stderr.
-  pins: c-2/C-100
+  pins: c-2/C-107
 
 ## Pointers
 

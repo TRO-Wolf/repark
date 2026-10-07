@@ -33,7 +33,7 @@ that answers for a registered source name until its connector lands (roadmap 1.1
   `CONNECT-DECL-pg-ddl`; a SQL Server source keeps `1.10`); `source_ping_refuses_until_connector`
   (C-005) by `source_ping_resolves_through_the_mount` (mounted and unmounted sources). New:
   `mounted_postgres_sources_are_read_only_catalogs`. Every other CFG-2 assertion is unchanged.
-  pins: c-2/C-090, C-092, C-094, C-097
+  pins: c-2/C-097, C-099, C-101, C-104
 ## Pointers
 
 - Up: [../map.md](../map.md)

@@ -5402,7 +5402,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_select_under_source_name_raises_connector_refusal` (C-016) becomes
   `test_select_under_source_name_resolves_through_the_mount`: the fixture's `dbname` key
   refuses as `IllegalArgumentException` naming the source and the key, without `1.10` or the
-  password. pins: c-2/C-097
+  password. pins: c-2/C-104
 - `test_source_url_redaction_1.py` — **SOURCE-URL-REDACT-1 (2026-10-06):** the facade pin: a `repark.toml` with a
   per-test random password in a source `url`, a query string, a keyword DSN, an ODBC string, a
   catalog `uri` and a `[conf]` key; the password appears nowhere in `sources()` (`repr` / `str`),

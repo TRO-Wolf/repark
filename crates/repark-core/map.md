@@ -24,7 +24,7 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `Cargo.toml` — **C-2d (2026-10-07):** depends on `repark-connect` (normal; the restored
   `ALLOWED_EDGES` row) and declares `[features] default = ["postgres"]`, `postgres =
   ["repark-connect/postgres"]` (CC-5); `repark-python` enables it explicitly, because the
-  workspace entry is `default-features = false`. pins: c-2/C-089
+  workspace entry is `default-features = false`. pins: c-2/C-096
 - `Cargo.toml` — depends on `repark-common` (error seed), `repark-iceberg` (catalog builders +
   write knob installers), `datafusion`, `arrow` (with the **`chrono-tz` feature declared here**,
   not inherited: `src/session_time_zone.rs` validates IANA zone ids through `arrow`'s `Tz`, which
