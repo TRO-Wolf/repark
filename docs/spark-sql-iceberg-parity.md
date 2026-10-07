@@ -3572,12 +3572,29 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `c numeric(10,2)` holding `NaN`, `1`, `2` and `5`, `SELECT id … WHERE c > 1` returns the
   `NaN` row (`NaN > 1` in Postgres), `c <> 5` returns it too, and `c < 6` leaves it out; each
   refuses with `pushdown_predicate = false`, and `SELECT id, c … WHERE c > 1` refuses pushed.
+  **Which reads refuse** (C-2d fold 1, 2026-10-07). This holds for every per-value refusal:
+  this row's, `CONNECT-DECL-pg-infinite-datetime`'s, `CONNECT-DECL-pg-out-of-range`'s and the
+  gap and overlap of `CONNECT-DIV-pg-timestamp-zone`. The scan emits the rows before a refused
+  value and raises the refusal only when the next batch is pulled, so a read that stops before
+  the refused row succeeds. `LIMIT n`, `limit(n)`, `take`, `head` and Spark-style `show(n)` send
+  the limit to the server when no filter is left for the engine (`pushdown_limit`, on by
+  default), so a later row is never sent. With the limit kept in the engine, a single-partition
+  scan is pulled one batch at a time and stops at the limit. Two reads can still refuse past the
+  rows they return. (1) A filter left above the scan keeps the limit in the engine, and
+  DataFusion's round-robin repartition reads ahead of that filter by about one batch per target
+  partition, so a refused value inside the read-ahead can fail a `LIMIT` the filter would have
+  satisfied. (2) The default display style `polars`, and `duckdb`, shows a head-and-tail
+  preview: `show(n)` counts the frame and reads its last rows, which decodes every row, so any
+  refused value fails it. `repark.display.style = spark` shows only the first `n` rows.
 - **Apache Spark** — the JDBC source reads `numeric` through pgjdbc's `getBigDecimal`, which
   cannot build a `BigDecimal` from `NaN` or an infinity, so the read fails. *(oracle:
   documented — the C-2 sketch's FL-3; no value claim, D-M2 measures it.)*
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::numeric_special_values_refuse`;
   live `crates/repark-connect/tests/it/live_pushdown.rs::a_refused_value_inside_a_pushed_range_follows_postgres_order_live`
-  (the pushed shapes, both ways)
+  (the pushed shapes, both ways);
+  `crates/repark-connect/tests/it/copy_binary.rs::a_refused_value_emits_the_rows_before_it_then_refuses`;
+  live `python/repark-parity/tests/live_db/test_c2_catalog_and_limit.py::test_a_limit_never_reaches_a_refused_value_past_it`,
+  `::test_a_refused_value_fails_only_a_read_that_reaches_its_row`
 - **Rationale** — DECLARED 2026-10-06 (C-2a; card 1.6 "declare, never approximate"; FL-3,
   where Flink and Spark agree). `Decimal128` has no `NaN` and no infinity. RULED 2026-10-07 (the
   C-2c verifier's S2, L2): declare the pushed-filter membership. Retire when an opt-in quarantine (North Star §7)
@@ -3753,10 +3770,18 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   name; the relation is resolved, and a missing one reported, only when a statement names it
   (`SchemaProvider::table` resolves it, and `RelationNotFound` becomes DataFusion's own
   table-not-found). `SHOW TABLES` and `information_schema` therefore show no Postgres table.
-  `repark_connect::LISTING_ROW` names this row.
+  `repark_connect::LISTING_ROW` names this row. **Through the Spark door** (C-2d fold 1,
+  2026-10-07): `SHOW TABLES IN pg.<schema>` and `SHOW SCHEMAS IN pg` return this empty listing;
+  `spark.catalog.tableExists("pg.<schema>.<table>")` resolves the relation, so it answers `True`
+  for one that exists and `False` for one that does not; `writeTo(...).create()` and
+  `write.saveAsTable(...)` refuse with `CONNECT-DECL-pg-ddl`'s read-only text.
+  `spark.catalog.listTables("pg.<schema>")` still answers `SCHEMA_NOT_FOUND`: the facade checks
+  the schema against `SHOW SCHEMAS`, which is empty.
 - **Apache Spark** — the JDBC table catalog lists the server's schemas and tables. *(oracle:
   documented — FL-8; no value claim.)*
-- **Pin** — `crates/repark-connect/tests/it/explain.rs::listing_a_postgres_source_is_empty_and_declared`
+- **Pin** — `crates/repark-connect/tests/it/explain.rs::listing_a_postgres_source_is_empty_and_declared`;
+  `crates/repark-core/src/named_sources/tests.rs::catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog`;
+  live `python/repark-parity/tests/live_db/test_c2_catalog_and_limit.py::test_catalog_apis_answer_for_a_mounted_source`
 - **Rationale** — DECLARED 2026-10-07 (C-2c; FL-8; sketch §2.8). DataFusion's listing hooks are
   synchronous, and building a session does no I/O (CFG-2 D-4). Retire when an asynchronous
   listing lands through the doors' catalog operations, or the 1.7 crawler's read surface (the
@@ -3788,7 +3813,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `database source `<key path>` is read-only: DDL against it is not supported (registry row
   CONNECT-DECL-pg-ddl …)` in the Unsupported class on the native door (the pre-execute guard
   `refuse_source_ddl`, shared by both doors), and the source's schema provider refuses
-  `register_table` and `deregister_table` with the same text. On the Spark door
+  `register_table` and `deregister_table` with the same text, and every catalog operation the
+  session runs against the name (`writeTo`, `saveAsTable`, a listing of Iceberg names) refuses
+  with it too (C-2d fold 1). On the Spark door
   `CREATE TABLE` and `DROP TABLE` answer the P11 read-only text first (`postgres catalogs are
   read-only`), because every mounted Postgres source is in the session's read-only catalog set.
   A DDL statement that names a table resolves it first, as every statement does, so a malformed

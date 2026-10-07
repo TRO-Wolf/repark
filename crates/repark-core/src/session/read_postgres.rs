@@ -43,6 +43,9 @@ impl ReparkSession {
 mod door {
     use std::sync::Arc;
 
+    use datafusion::common::TableReference;
+    use datafusion::datasource::provider_as_source;
+    use datafusion::logical_expr::LogicalPlanBuilder;
     use repark_common::SourceIdentity;
     use repark_common::source::SourceKind;
     use repark_connect::{
@@ -88,10 +91,17 @@ mod door {
             let localiser = Arc::new(self.zone_localiser());
             let source =
                 PostgresSource::new(&identity, props, SettingsDoor::ReadPostgres, localiser);
+            let name = match &target {
+                ScanSource::Relation(relation) => {
+                    TableReference::partial(relation.schema.as_str(), relation.table.as_str())
+                }
+                ScanSource::Query(_) => TableReference::bare(READ_POSTGRES_SOURCE),
+            };
             let table = source.resolve(target).await.map_err(refuse)?;
-            self.context()
-                .read_table(Arc::new(table))
-                .map_err(engine_err)
+            let plan = LogicalPlanBuilder::scan(name, provider_as_source(Arc::new(table)), None)
+                .and_then(LogicalPlanBuilder::build)
+                .map_err(engine_err)?;
+            Ok(DataFrame::new(self.context().state(), plan))
         }
     }
 }

@@ -1561,6 +1561,10 @@ verdict on `23b62ff7` (`FAIL`): two S1s (N1, N2), four S2s (N3..N6) and two S3s,
 | C-111 | S3, the calendar end: a wall clock whose instant falls past chrono's calendar refuses `ValueRefusal::TimestampPastCalendar`, which names `+262142-12-31T23:59:59.999999 UTC` and `CONNECT-DECL-pg-out-of-range`, never a DST gap: `262142-12-31 23:00` in `-12:00` and in New York, and `262143-01-01 00:00` in UTC. In `+12:00` the first is placed. | `zone_localiser/tests.rs::the_end_of_the_calendar_refuses_as_out_of_range_never_as_a_gap`; mutation f3. | PROVEN | §17.1. |
 | C-112 | N2: every DDL that names a mounted Postgres source refuses on the native door with the read-only text and `CONNECT-DECL-pg-ddl`. `refuse_source_ddl` claims `CreateCatalogSchema` by the head of its dotted name (DataFusion creates the schema in that catalog) and `CreateCatalog` by its name or that head, so `CREATE SCHEMA pg.x`, `CREATE SCHEMA IF NOT EXISTS pg.x` and `CREATE DATABASE pg.x` refuse and nothing is created. The sweep of `DdlStatement`'s eleven variants leaves `CreateFunction` and `DropFunction` unclaimed: a function is session-scoped and names no catalog. | `named_sources/tests.rs::configured_source_ddl_refuses_as_read_only` (four new statements); live `test_c2_read.py::test_ddl_and_dml_refuse_through_both_doors` (three new statements, `pg_namespace` unchanged); mutations f4, f5. | PROVEN | §17.1. The gap predates C-2d (CFG-2); the contract it broke is C-101's. |
 | C-113 | N6: each C-2d contract that a verifier mutation left unpinned has a pin that turns red. V1: C-097's duplicate refusal covers a catalog registered on the `SessionContext` alone. V2: C-100's `dbtable` property (any case) is dropped before the settings check. V3: C-101's mounted schema refuses `register_table` and `deregister_table` with the read-only text. V4: `SourceRow` masks through `redact_source_prop`, so a userinfo token and a percent-encoded `pass%77ord` query key are masked. V6 (the zone label) is C-110's. | `named_sources/tests.rs::a_source_named_like_an_engine_catalog_refuses_as_duplicate`, `::a_mounted_schema_refuses_table_registration_as_read_only`, `::sources_listing_masks_a_percent_encoded_url_password_key`; `session/tests/read_postgres.rs::a_dbtable_property_is_the_target_never_a_setting`; mutations V1, V2, V3, V4. | PROVEN | §17.1. The verifier's clause numbers C-090, C-093 and C-094 are C-097, C-100 and C-101 after the renumbering. |
+| C-114 | N4: a per-value refusal fails only a read that reaches its row. The decoder emits the rows of a batch before a refused value and raises the refusal on the next pull (`refuse_after_kept_rows`); the exec does the same for a placement refusal (`place_until_refusal`). `LIMIT n`, `limit(n)` and Spark-style `show(n)` push the limit when no filter is left for the engine (`pushDownLimit` / `pushdown_limit`, on by default). Over the verifier's 200 000-row table with `NaN` at row 150 000, `LIMIT 5` returns 5 rows with `pushed_limit=5`, and `show(3)` and `limit(5)` return 3 and 5 rows with `pushDownLimit` on and off. With the limit kept in the engine, a `NaN` in row 4 and a gap in row 5 leave `limit(3)` and `limit(4)` whole. The residual cases are declared on `CONNECT-DECL-pg-numeric-special`: a filter left above the scan, which DataFusion's round-robin repartition reads ahead of, and the `polars` and `duckdb` display styles' head-and-tail `show(n)`, which reads every row. | `connect/tests/it/copy_binary.rs::a_refused_value_emits_the_rows_before_it_then_refuses`; live `test_c2_catalog_and_limit.py::test_a_limit_never_reaches_a_refused_value_past_it`, `::test_a_refused_value_fails_only_a_read_that_reaches_its_row`; mutations f6, L1, L2. | PROVEN | §17.1, §17.2 R-1. The ruling preferred a per-row lazy refusal; it is per batch boundary, which a limit over a single-partition scan honours, and the read-ahead is declared. |
+| C-115 | N5: the Spark door's catalog APIs answer for a mounted source. `spark.catalog.tableExists("pg.<schema>.<table>")` resolves the relation through the mount (`True` / `False`, never `unknown catalog`); `SHOW TABLES IN pg.<schema>` and `SHOW SCHEMAS IN pg` return the empty listing `CONNECT-DECL-pg-listing` declares; `writeTo(...).create()` and `write.saveAsTable(...)` refuse in the Unsupported class with `read_only_ddl(<key path>)` and `CONNECT-DECL-pg-ddl`, and nothing is created. Core's `check_catalog_refusal` refuses every Iceberg-handle lookup of a source's name the same way. | `named_sources/tests.rs::catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog`; live `test_c2_catalog_and_limit.py::test_catalog_apis_answer_for_a_mounted_source`; mutations f7, f8, L3, L4, L5. | PROVEN | §17.1, §17.2 R-2. `listTables("pg.<schema>")` still answers `SCHEMA_NOT_FOUND`, declared on the listing row (§17.2 R-2). |
+| C-116 | S3, the plan name: a `read_postgres` frame is built under a name, never `?table?`. A `dbtable` relation renders as `TableScan: <schema>.<table>`, with its filters qualified by it, and a `query` renders as `TableScan: jdbc`. | Live `test_c2_catalog_and_limit.py::test_a_read_postgres_frame_names_its_relation_in_the_plan`; mutation L6. | PROVEN | §17.1. |
+| C-117 | Docs and shape (fold 1). The registry updates `CONNECT-DIV-pg-timestamp-zone`, `CONNECT-DECL-pg-out-of-range`, `-pg-numeric-special` (which reads refuse), `-pg-listing` (the Spark door) and `-pg-ddl` (`CREATE SCHEMA`, the catalog operations). Every touched `map.md` moves in lockstep, and `zone_localiser/` gains its own. One new internal edge, `repark-functions` to `repark-common` (`normal`), is declared in `check_crate_dag.py`. `session.rs` holds 999 lines after shedding three comment lines. The new live cells are in `test_c2_catalog_and_limit.py`. No code comments. | §17.3. | PROVEN | |
 
 ### 17.1 Mutations (fold 1)
 
@@ -1579,3 +1583,42 @@ restored from that copy.
 | V2 | C-113 | keep a `dbtable` property (`core/src/session/read_postgres.rs`) | RED | `a_dbtable_property_is_the_target_never_a_setting` |
 | V3 | C-113 | `register_table` answers `Ok(None)` (`connect/src/provider/schema.rs`) | RED | `a_mounted_schema_refuses_table_registration_as_read_only` |
 | V4 | C-113 | `SourceRow` masks through `redact_value` (`named_sources.rs`) | RED | `sources_listing_masks_a_percent_encoded_url_password_key` |
+| f6 | C-114 | a refusal never emits the rows before it (`connect/src/copy_binary.rs`) | RED | `a_refused_value_emits_the_rows_before_it_then_refuses` |
+| L1 | C-114 | as f6, live | RED | `test_a_refused_value_fails_only_a_read_that_reaches_its_row` |
+| L2 | C-114 | a placement refusal never emits the rows before it (`connect/src/provider/scan.rs`) | RED | `test_a_refused_value_fails_only_a_read_that_reaches_its_row` |
+| f7 | C-115 | `table_exists` skips `source_table_exists` (`core/src/session.rs`) | RED | `catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog` |
+| f8 | C-115 | `check_catalog_refusal` skips `source_catalog_refusal` (`core/src/session/late_catalogs.rs`) | RED | `catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog` |
+| L3 | C-115 | the Spark door's `catalog_handle` skips the source text (`spark/src/catalog_ops.rs`) | RED | `test_catalog_apis_answer_for_a_mounted_source` |
+| L4 | C-115 | `SHOW TABLES` scope skips the source arm (`spark/src/use_ddl.rs`) | RED | `test_catalog_apis_answer_for_a_mounted_source` |
+| L5 | C-115 | `SHOW NAMESPACES` skips the source arm (`spark/src/describe_show.rs`) | RED | `test_catalog_apis_answer_for_a_mounted_source` |
+| L6 | C-116 | a `dbtable` frame named `?table?` (`core/src/session/read_postgres.rs`) | RED | `test_a_read_postgres_frame_names_its_relation_in_the_plan` |
+| L7 | C-109 | f1, live (`zone_localiser.rs`) | RED | `test_c2_federated.py::test_a_wall_clock_past_2099_matches_the_timestamp_literal` |
+
+### 17.2 Readings acted on (fold 1)
+
+- **R-1, N4: the verifier's diagnosis and the display style.** The verifier's `show(3)` repro
+  failed in the default display style, `polars`. There, `show(n)` is a head-and-tail preview:
+  it counts the frame and reads its last row through `limit_with_skip`, so it decodes every
+  row, whatever the limit pushdown does. In `repark.display.style = spark`, `show(3)` is
+  `limit(3)`, which never reaches row 150 000, with `pushDownLimit` on or off. The verifier's
+  `LIMIT 5` failure needed a residual filter: a `RepartitionExec` sits between the filter and
+  the scan and reads ahead. A per-row lazy refusal (the ruling's preference) would need the
+  refused value carried as data past the scan, which is a decoder redesign. The decoder and
+  the exec now defer a refusal to the batch boundary, so a single-partition limit is whole.
+  The two residual cases are declared on `CONNECT-DECL-pg-numeric-special`. The pin runs
+  Spark's style. The `polars` preview is a facade decision outside this card, and is put as Q1
+  of the hand-back.
+- **R-2, N5: the listing row, followed.** `CONNECT-DECL-pg-listing` declares an empty listing,
+  so `SHOW TABLES IN pg.<schema>` and `SHOW SCHEMAS IN pg` return it rather than refusing.
+  `tableExists` is not a listing: it names one relation, which the mount resolves.
+  `listTables("pg.<schema>")` is outside the ruled list. It still answers `SCHEMA_NOT_FOUND`,
+  because the facade checks the schema against the empty `SHOW SCHEMAS`; the listing row says
+  so.
+- **R-3, N1: one horizon.** `repark-core` cannot reach `repark-functions` (tier 2 to 3), so the
+  horizon moved down to `repark-common` (tier 0), which both crates read. Nothing was
+  reimplemented: `proxy_year`, `is_leap_year` and `days_from_civil` moved verbatim, and the
+  CAST-TS-STRING-1 pins hold unchanged.
+- **R-4, out of scope, observed.** `repark_common::redaction::mask_value_credentials` does not
+  percent-decode a query key, so `jdbc:postgresql://h/db?pass%77ord=x` passes the generic mask.
+  `SourceRow` uses `redact_source_prop`, which decodes it (C-113, V4); the error path's
+  `to_py_err` uses the generic mask.

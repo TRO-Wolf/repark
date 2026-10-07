@@ -17,6 +17,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 ## Contents
 
+- `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
+  under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
+  `<schema>.<table>`, and a `query` is named `jdbc`. pins: c-2/C-116
 - `read_postgres.rs` — **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
   partitioning }` and `PostgresTarget::{Relation, Query}`, re-exported at the crate root with
   `READ_POSTGRES_SOURCE` (`jdbc`). `ReparkSession::read_postgres` refuses a partitioned read
@@ -278,6 +281,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   the LEGACY clause; `g` padding and the `fast.rs` loops live in the child.
   **Re-verify 2 (2026-09-30):** the compiled pattern carries `has_era`,
   decided once per pattern instead of once per value.
+- `late_catalogs.rs` — **C-2d fold 1 (2026-10-07), N5:** `check_catalog_refusal` asks
+  `source_catalog_refusal` first, so an Iceberg-handle lookup of a mounted source's name refuses
+  with that source's text. pins: c-2/C-115
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

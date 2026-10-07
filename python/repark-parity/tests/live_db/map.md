@@ -34,6 +34,22 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   `test_ddl_and_dml_refuse_through_both_doors` adds `CREATE SCHEMA`, `CREATE SCHEMA IF NOT
   EXISTS` and `CREATE DATABASE` under `pg` on `repark.sql`; no schema reaches Postgres.
   pins: c-2/C-112
+- `test_c2_catalog_and_limit.py` — **C-2d fold 1 (2026-10-07):** a New York session mounting `pg`, and `unpushed`
+  with `pushdown_limit = "false"`, in Spark's display style. A new file, so `test_c2_read.py`
+  stays under its ceiling. pins: c-2/C-117
+  - `test_catalog_apis_answer_for_a_mounted_source` (N5): `tableExists` is `True` for an
+    existing relation and `False` for a missing one; `SHOW TABLES IN pg.<schema>` and `SHOW
+    SCHEMAS IN pg` are empty; `writeTo` and `saveAsTable` refuse with the read-only text and
+    `CONNECT-DECL-pg-ddl`; nothing is created. pins: c-2/C-115
+  - `test_a_limit_never_reaches_a_refused_value_past_it` (N4) uses the verifier's 200 000-row
+    table with `NaN` at row 150 000. `LIMIT 5` returns 5 rows with `pushed_limit=5`, and
+    `show(3)` prints 3 rows and `limit(5)` returns 5, with `pushDownLimit` on and off. A
+    `count(n)` refuses.
+  - `test_a_refused_value_fails_only_a_read_that_reaches_its_row` (N4): with the limit kept in
+    the engine, `limit(3)` over a `NaN` in row 4 and `limit(4)` over a gap wall clock in row 5
+    return their rows, and the full reads refuse naming their rows. pins: c-2/C-114
+  - `test_a_read_postgres_frame_names_its_relation_in_the_plan` (S3): `read.jdbc`'s logical plan
+    names `<schema>.vals` and a `query` frame names `jdbc`, never `?table?`. pins: c-2/C-116
 - `test_c2_federated.py` — **C-2d (2026-10-07):** sketch §5.4: an Iceberg memory-catalog
   table joined with a Postgres table on an integer key and a `timestamptz`, one filter pushed
   and one residual, through `spark.sql` and the DataFrame join, equal to the psycopg + pyarrow
