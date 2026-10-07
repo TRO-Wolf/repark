@@ -29,7 +29,7 @@ use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::output_spec::staging_table;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::partition_overwrite::{PartitionEquality, StaticPartitionOverwrite};
-use crate::write::sink_offsets::SiteStamp;
+use crate::write::sink_offsets::{SCOPE_TOKEN_KEY, SiteStamp};
 use crate::write::summary_collision::EngineSummary;
 use crate::write::writer_props::{target_file_size_with, writer_properties_with};
 
@@ -74,7 +74,7 @@ pub fn summary_with_extras(
     let mut summary = HashMap::from([(OPERATION_ID_PROP.to_string(), operation_id.clone())]);
     for (key, value) in extra {
         let folded = key.to_ascii_lowercase();
-        if folded == "operation" || folded == OPERATION_ID_PROP {
+        if folded == "operation" || folded == OPERATION_ID_PROP || folded == SCOPE_TOKEN_KEY {
             continue;
         }
         engine.refuse_collision(key, value)?;

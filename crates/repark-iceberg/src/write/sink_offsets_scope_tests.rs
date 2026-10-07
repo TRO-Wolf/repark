@@ -538,3 +538,123 @@ async fn resume_reads_a_v1_rollback_after_expiry_by_timestamp() {
     assert_eq!(stamped.sequence_number(), head.sequence_number());
     assert!(stamped.timestamp_ms() > head.timestamp_ms());
 }
+
+fn head_leaks_token(table: &Table, token: &str) -> bool {
+    table
+        .metadata()
+        .current_snapshot()
+        .expect("head")
+        .summary()
+        .additional_properties
+        .iter()
+        .any(|(key, value)| key.eq_ignore_ascii_case(SCOPE_TOKEN_KEY) || value == token)
+}
+
+fn session_extra(guard: &BatchScopeGuard) -> Vec<(String, String)> {
+    let mut options = ConfigOptions::new();
+    assert!(apply_session_write_key(
+        &mut options,
+        &format!("{SESSION_SNAPSHOT_PREFIX}{SCOPE_TOKEN_KEY}"),
+        &guard.token().to_string(),
+    ));
+    let (extra, _) = resolve_write_for_session(
+        &[(String::from("caller-key"), String::from("kept"))],
+        &WriterStagingOverrides::none(),
+        &session_write_conf_from_options(&options),
+    )
+    .expect("resolve");
+    assert!(extra.iter().any(|(key, _)| key == SCOPE_TOKEN_KEY));
+    extra
+}
+
+#[tokio::test]
+async fn the_batch_session_token_never_lands_on_a_replace_or_overwrite_filter_commit() {
+    let (_warehouse, catalog, ident) = fixture("token_choke_point").await;
+    let table = append_plain(&catalog, &ident, &[1]).await;
+    let stamp = stamp_for(2, SinkDoor::ForeachBatch);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let token = guard.token().to_string();
+    let extra = session_extra(&guard);
+    let files = stage(&table, &[5]).await;
+    let replaced = crate::write::write_options::commit_replace_write_with_summary(
+        &catalog, &table, files, &extra,
+    )
+    .await
+    .expect("replace inside the batch");
+    assert!(!head_leaks_token(&replaced, &token));
+    assert!(head_summary_keys(&replaced).contains("caller-key"));
+    assert_unstamped(&replaced);
+    let files = stage(&replaced, &[6]).await;
+    let filtered = crate::write::overwrite_filter::commit_overwrite_by_filter_with_summary(
+        &catalog,
+        &replaced,
+        files,
+        Predicate::AlwaysTrue,
+        None,
+        &extra,
+        crate::write::FilterValidation::default(),
+    )
+    .await
+    .expect("overwrite-filter inside the batch");
+    assert!(!head_leaks_token(&filtered, &token));
+    assert!(head_summary_keys(&filtered).contains("caller-key"));
+    assert_unstamped(&filtered);
+    assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    let files = stage(&filtered, &[7]).await;
+    let committed = commit_append_with_summary(&catalog, &filtered, files, &extra, None)
+        .await
+        .expect("the batch's own stamped commit");
+    assert_stamped_head(&committed, &stamp);
+    assert!(!head_leaks_token(&committed, &token));
+    assert!(matches!(guard.outcome(), ScopeOutcome::Committed { .. }));
+}
+
+#[tokio::test]
+async fn a_replayed_or_case_variant_token_key_never_claims() {
+    let (_warehouse, catalog, ident) = fixture("token_replay").await;
+    let table = append_plain(&catalog, &ident, &[1]).await;
+    let stamp = stamp_for(3, SinkDoor::ForeachBatch);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let token = guard.token().to_string();
+    let files = stage(&table, &[2]).await;
+    let replaced = crate::write::write_options::commit_replace_write_with_summary(
+        &catalog,
+        &table,
+        files,
+        &session_extra(&guard),
+    )
+    .await
+    .expect("replace inside the batch");
+    let foreign = catalog.load_table(&ident).await.expect("foreign load");
+    let replayed: Vec<(String, String)> = foreign
+        .metadata()
+        .current_snapshot()
+        .expect("head")
+        .summary()
+        .additional_properties
+        .iter()
+        .filter(|(key, _)| key.to_ascii_lowercase().starts_with("repark.cdc."))
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
+    assert!(replayed.is_empty(), "{replayed:?}");
+    let mut current = replaced;
+    for key in [
+        SCOPE_TOKEN_KEY.to_ascii_uppercase(),
+        String::from("Repark.Cdc.Scope-Token"),
+    ] {
+        let files = stage(&current, &[3]).await;
+        current =
+            commit_append_with_summary(&catalog, &current, files, &[(key, token.clone())], None)
+                .await
+                .expect("a case-variant key commits as on main");
+        assert!(!head_leaks_token(&current, &token));
+        assert_unstamped(&current);
+        assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    }
+    let files = stage(&current, &[4]).await;
+    let committed = commit_append_with_summary(&catalog, &current, files, &scoped(&guard), None)
+        .await
+        .expect("the batch's own stamped commit");
+    assert_stamped_head(&committed, &stamp);
+    assert_eq!(stamped_snapshots(&committed), 1);
+}

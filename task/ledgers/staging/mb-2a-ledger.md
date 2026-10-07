@@ -69,8 +69,9 @@ rulings V1…V6, adds `write/{sink_offsets_scope_tests.rs, sink_offsets_probe_te
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-020 | Y1 (S2): ruling V2 holds under routine expiry. When the ancestry walk stops at a missing parent, a **retained** stamped snapshot carrying the property's exact record whose sequence number (timestamp on a v1 table) is greater than the oldest reachable ancestor's cannot be an ancestor hidden behind the gap, so it refuses `StampNotInLineage { snapshot }` with `durable: None`; a stamp not newer than the oldest reachable ancestor keeps `StampedSnapshotExpired` with the property durable; a walk that reaches a root reads as before. | The verifier's RV1 shape, ported on a v2 and a v1 sink, and the fold-1 gap pin. | **PROVEN** | 3 pins green: `resume_refuses_a_rollback_past_the_stamp_after_routine_expiry_as_not_in_lineage` (plain P0 `[1]`, plain P1 `[2]`, stamped epoch 0 `[3]`, `rollback_to(P1)`, `expire_snapshot_id(P0)`: the stamped snapshot is retained with a sequence number above the head's, the refusal is `StampNotInLineage` naming it with `durable` `None` and no "expired", live ids `[1, 2]`), `resume_reads_a_v1_rollback_after_expiry_by_timestamp` (the same shape on a v1 sink, where both sequence numbers are equal and the stamped timestamp is later), and `resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback` (unchanged: a stamp behind the gap is older than the oldest reachable ancestor and stays `StampedSnapshotExpired`). Mutations: MY1-G (the gap branch gives up, the fold-1 behaviour) red on both new pins; MY1-S (v1 compares sequence numbers) red on the v1 pin; MY1-A (a gap always reads as a rollback) red on the gap pin. pins: mb-2a/C-020 |
+| C-021 | Y2 (S3): `summary_with_extras`, the one function every caller-extras commit path goes through (the three arms, replace, replace-partitions, overwrite-filter, CTAS, create-table, the writer-properties append and `commit_stamp_only`), drops `repark.cdc.scope-token` matched ASCII case-insensitively, so no path writes the token into a summary. The three arms still read the token from `summary_extra` before the strip, so the batch's own commit claims; the claim matches the key exactly, so a case-variant key never claims, and a replayed summary carries no token to replay. | The replace and overwrite-filter pin, the replay and case-variant pin. | **PROVEN** | 2 pins green: `the_batch_session_token_never_lands_on_a_replace_or_overwrite_filter_commit` (the token installed in the session config as `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token` and resolved through `resolve_write_for_session`: a replace and then an overwrite-filter commit under the batch scope carry no key matching the token key in any case and no value equal to the token, keep the caller's `caller-key`, write no stamp and leave `NotCommitted`; the batch's own append then stamps without the token), `a_replayed_or_case_variant_token_key_never_claims` (a foreign load of the replace head finds no `repark.cdc.*` key to replay; appends carrying the live token under `REPARK.CDC.SCOPE-TOKEN` and `Repark.Cdc.Scope-Token` commit as on main, leak neither key nor value and leave `NotCommitted`; the batch's own commit then claims, one stamped snapshot). Mutations: MY2-S (no strip) red on both pins; MY2-C (strip by exact case only) red on the case-variant pin; MY2-K (the claim folds the key case) red on the case-variant pin. pins: mb-2a/C-021 |
 
-VERDICT: 20 clauses, 20 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 21 clauses, 21 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Dated decision rows
 
@@ -146,7 +147,12 @@ VERDICT: 20 clauses, 20 PROVEN, 0 OPEN, 0 REJECTED.
   properties through `resolve_empty_session_write`. `SiteStamp::extras` strips the key on every
   commit of the three arms, claimed or not, so a token never lands in a summary that another
   reader could replay; a commit that carries a token key therefore differs from main by that one
-  summary entry, which only a scoped session ever sets. `commit_stamp_only` has no options, so
+  summary entry, which only a scoped session ever sets. **Fold 2 (ruling Y2):** the strip moves to the choke
+  point. `summary_with_extras` drops the key, matched ASCII case-insensitively, for every
+  caller-extras commit path, not only the three arms, so "a token never lands in a summary" holds
+  on replace, replace-partitions, overwrite-filter, CTAS, create-table and the writer-properties
+  append too. The arms read the token before the strip; `SiteStamp::extras` keeps its own exact
+  strip as a first layer. `commit_stamp_only` has no options, so
   it takes `Option<&ScopeToken>`; without a matching token it stamps the given record directly
   (D-5's unscoped path). `record_commit` records the outcome only on a claimed entry.
 - **D-10 (2026-10-07, MB-3 seam, ruling V1).** The driver installs the guard's token in the
@@ -155,6 +161,9 @@ VERDICT: 20 clauses, 20 PROVEN, 0 OPEN, 0 REJECTED.
   guard drops. Arms the sketch does not name (D-4's replace and replace-partitions commits)
   would copy that key verbatim into their summary; MB-3 owns keeping the token off those paths
   (strip it in `merged_snapshot_extra`, or scope the config to the body's sink commits).
+  *Amended by fold 2 (ruling Y2, 2026-10-07):* that MB-3 obligation is discharged here. The token
+  is stripped inside `summary_with_extras` (D-9, C-021), so no commit path persists it whatever
+  the session config carries, and MB-3 only installs and removes the key.
 
 - **D-11 (2026-10-07, ruling V4).** The fix sits at the property call site
   (`SinkRecord::from_property`), not inside `canonical_format`: the summary half's version is a
@@ -247,7 +256,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/write/sink_offsets_tests.rs]
     - id: AT-5
       status: ATTACKED
-      evidence: The scope token is an unguessable UUID v4, its Debug prints ScopeToken(..), and the three arms strip it from every summary they write, claimed or not (C-013, C-015, C-019 checks the catalog request); a caller's stamp-namespace key on a stamped commit refuses (C-015). The stamp carries uuids, epochs, generations, snapshot ids, positions and the Bronze table identifier only; no path, location or credential field exists in SinkRecord. Iceberg and DataFusion error texts pass through mask_value_credentials before they enter MicroBatchError::Catalog (D-6).
+      evidence: The scope token is an unguessable UUID v4, its Debug prints ScopeToken(..), and since fold 2 `summary_with_extras` strips it, case-folded, from every summary any commit path writes, claimed or not (C-013, C-015, C-021; C-019 checks the catalog request); a caller's stamp-namespace key on a stamped commit refuses (C-015). The stamp carries uuids, epochs, generations, snapshot ids, positions and the Bronze table identifier only; no path, location or credential field exists in SinkRecord. Iceberg and DataFusion error texts pass through mask_value_credentials before they enter MicroBatchError::Catalog (D-6).
       artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/microbatch/offset.rs]
     - id: AT-6
       status: ATTACKED

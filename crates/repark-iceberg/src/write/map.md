@@ -124,12 +124,16 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
-- `sink_offsets.rs`, `sink_offsets_scope_tests.rs` — **MB-2a fold 2 (2026-10-07, rulings
+- `sink_offsets.rs`, `sink_offsets_scope_tests.rs`, `write_options.rs` — **MB-2a fold 2 (2026-10-07, rulings
   Y1…Y3):** `read_resume_point` keeps ruling V2 under routine expiry. When the ancestry walk
   stops at an expired parent, a retained stamped snapshot newer than the oldest reachable
   ancestor (by sequence number, by timestamp on a v1 table) cannot sit behind the gap, so it
   refuses `StampNotInLineage`; an older one keeps `StampedSnapshotExpired`.
-  pins: mb-2a/C-020
+  `write_options.rs` `summary_with_extras` drops `repark.cdc.scope-token` (ASCII
+  case-insensitive), so no commit path that takes caller extras (replace, overwrite-filter,
+  CTAS, create-table, writer properties, the three arms) writes the token; the arms read it
+  before the strip, and only the exact key claims.
+  pins: mb-2a/C-020, C-021
 - `sink_offsets.rs`, `sink_offsets_tests.rs`, `sink_offsets_scope_tests.rs`,
   `sink_offsets_probe_tests.rs` — **MB-2a fold 1
   (2026-10-07, sketch §3.4 amendment):** a scope is `(sink TableUuid, ScopeToken)`. `enter`
