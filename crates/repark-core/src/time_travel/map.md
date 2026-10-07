@@ -82,6 +82,10 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   pins: mb-1/C-029
   The two caps parse in Spark's `intConf` range; above `i32::MAX` refuses.
   pins: mb-1/C-030
+  FL-9 (ruled KEEP): an `Earliest` or `stream-from-timestamp` start on a
+  zero-added-files `overwrite`/`delete` refuses at `initial_offset` where
+  Spark idles until data arrives; the parity registry's row `MB-1-FL-9`
+  declares it. pins: mb-1/C-031
 - `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
   under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027, C-028, C-029, C-030
 - `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table

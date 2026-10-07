@@ -367,6 +367,7 @@ already takes a `Table` by value.
 | C-028 | (F11) `streaming-skip-overwrite-snapshots` and `streaming-skip-delete-snapshots` set to `false` in any case are accepted as a no-op, since false is Spark's default. Only `true` in any case refuses `SkipOptionRefused` (O-5, MBE-3). Any other value refuses `Catalog` naming the key (D-7). | The F11 pins in `microbatch_source_tests.rs`. | **PROVEN** | 2 pins green: `from_options_refuses_both_skip_keys` (now `true`, `TRUE`, `True` on both keys, byte-exact MBE-3) and `from_options_accepts_skip_keys_set_to_false_as_a_no_op` (`false`, `FALSE`, `False` on both keys and an upper-case key leave the caps and start untouched; `""`, `yes`, `0`, `" false"` refuse byte-exact). pins: mb-1/C-028 |
 | C-029 | (F12) The Iceberg 1.11 `SparkReadOptions` streaming keys RePark does not implement refuse `Catalog` as recognised but unsupported, in any case, never with "fix the spelling": `streaming-snapshot-polling-interval-ms` (the trigger interval governs polling), `async-micro-batch-planning-enabled`, `async-queue-preload-file-limit` and `async-queue-preload-row-limit` (RePark plans synchronously). The list is read from the jar's `SparkReadOptions` constants (D-8). | The F12 pin in `microbatch_source_tests.rs`. | **PROVEN** | 1 pin green: `from_options_refuses_recognised_spark_streaming_keys_it_does_not_support` (all four keys, two in mixed case, each text byte-exact, none containing "fix the spelling"). pins: mb-1/C-029 |
 | C-030 | (F13) `streaming-max-files-per-micro-batch` and `streaming-max-rows-per-micro-batch` parse in Spark's `intConf` range: a value above `i32::MAX` (or at or below zero) refuses `Catalog` naming the key and the bound; `2147483647` and `+2147483647` are accepted, as Java's `Integer.parseInt` accepts them. | The F13 pin in `microbatch_source_tests.rs`. | **PROVEN** | 1 pin green: `from_options_refuses_caps_above_the_spark_int_range` (`3000000000`, `2147483648` and `-2147483648` on both keys refuse byte-exact; the maximum parses on both). pins: mb-1/C-030 |
+| C-031 | (FL-9, ruled KEEP) `docs/spark-sql-iceberg-parity.md` carries the dated DECLARED row `MB-1-FL-9` beside the streaming rows: RePark refuses `NonAppendSnapshot` at `initial_offset` where Spark idles on a zero-added-files `overwrite`/`delete` start until data arrives, then fails the same way. The row states its oracle basis (MB0b-R16 recorded for the overwrite-with-files start; the idle half from the 1.11 bytecode, unmeasured) and cites round A's pin. | The registry row, the docs-link gate and the registry-reading Python suites. | **PROVEN** | The row cites `window_fold_pins.rs::from_timestamp_landing_on_delete_refuses_at_the_initial_offset` (green in round A's C-017); `check_docs_links.py` clean; `test_parity_live.py`, `test_dropin_disclosure.py` and `test_lrs3_registered_divergences.py` 63 passed, 65 skipped. pins: mb-1/C-031 |
 
 ## Dated decision rows — fold 1 round B
 
@@ -387,6 +388,11 @@ already takes a `Table` by value.
   its value, as the ruling's recognised-but-unsupported message reads; Spark's
   default for `async-micro-batch-planning-enabled` is false, so `false` there is
   refused even though it changes nothing.
+- **FL-9 ruled KEEP (orchestrator, 2026-10-07).** Round A's question is answered:
+  `Earliest` and `FromTimestamp` landing on an `overwrite` or `delete` with zero added
+  data files keep refusing `NonAppendSnapshot` at `initial_offset`. The one Spark
+  difference, refusing at start where Spark idles until data arrives, is the dated
+  DECLARED row `MB-1-FL-9` in the parity registry (C-031).
 
 ## Gates — fold 1 round B
 
