@@ -139,3 +139,38 @@ async fn user_types_resolve_after_a_reset() {
     assert_eq!(pid(&reader).await, served_by);
     cell.close().await;
 }
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_pushed_scan_commits_before_its_connection_is_pooled() {
+    let cell = Cell::open().await;
+    let reader = Reader::new(&cell.settings(&[("pool_max_size", "1")]));
+    let sql = "SELECT pg_catalog.pg_backend_pid() AS pid, \
+               pg_catalog.pg_current_xact_id_if_assigned()::pg_catalog.text AS xid, 1 AS one";
+    let resolved = reader.resolve(ScanSource::query(sql)).await.expect(LIVE);
+    let mut served = Vec::new();
+    for _ in 0..2 {
+        let pushed = ScanRequest::new(Arc::clone(&resolved))
+            .compare(2, CompareOp::Eq, "1".to_string())
+            .expect("a pushed value");
+        let batches = reader.read(pushed).await.expect(LIVE);
+        let pid = int32s(&batches)[0].expect("a pid");
+        assert!(batches[0].column(1).is_null(0), "no transaction id");
+        assert_eq!(reader.pool.idle_count(), 1);
+        let state = "SELECT state FROM pg_catalog.pg_stat_activity WHERE pid = $1";
+        let state: Option<String> = cell
+            .admin
+            .query_opt(state, &[&pid])
+            .await
+            .expect(state)
+            .map(|row| row.get(0));
+        assert_eq!(
+            state.as_deref(),
+            Some("idle"),
+            "pooled outside a transaction"
+        );
+        served.push(pid);
+    }
+    assert_eq!(served[0], served[1], "the committed connection is reused");
+    cell.close().await;
+}
