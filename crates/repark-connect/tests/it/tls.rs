@@ -127,3 +127,14 @@ fn sslrootcert_must_be_a_readable_pem_ca_bundle() {
 
     verify_full_config(Some(&fixture("ca.pem"))).expect("a CA bundle loads");
 }
+
+#[test]
+fn a_bundle_with_one_unusable_certificate_refuses() {
+    let ca = std::fs::read_to_string(fixture("ca.pem")).expect("the CA fixture");
+    let unusable = "-----BEGIN CERTIFICATE-----\nAAAAAAAA\n-----END CERTIFICATE-----\n";
+    let mixed = std::env::temp_dir().join(format!("repark-mixed-{}.pem", std::process::id()));
+    std::fs::write(&mixed, format!("{ca}{unusable}")).expect("write the mixed bundle");
+    let mixed_refusal = root_refusal(&mixed);
+    std::fs::remove_file(&mixed).expect("remove the mixed bundle");
+    assert_eq!(mixed_refusal, TlsFailure::RootCertInvalid);
+}
