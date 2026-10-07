@@ -10,7 +10,7 @@ use datafusion::logical_expr::Expr;
 use datafusion::physical_expr::EquivalenceProperties;
 use datafusion::physical_plan::execution_plan::{Boundedness, EmissionType};
 use datafusion::physical_plan::metrics::{
-    BaselineMetrics, ExecutionPlanMetricsSet, MetricBuilder, MetricsSet,
+    BaselineMetrics, ExecutionPlanMetricsSet, MetricBuilder, MetricsSet, RecordOutput,
 };
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::{
@@ -253,9 +253,7 @@ impl ExecutionPlan for PostgresScanExec {
                 .and_then(|batch| place(&plan, &batch))
                 .map_err(external)?;
             reservation.try_resize(batch.get_array_memory_size())?;
-            baseline.record_output(batch.num_rows());
-            baseline.output_batches().add(1);
-            Ok(batch)
+            Ok(batch.record_output(&baseline))
         });
         let schema = Arc::clone(&self.plan.schema);
         Ok(Box::pin(RecordBatchStreamAdapter::new(schema, stream)))

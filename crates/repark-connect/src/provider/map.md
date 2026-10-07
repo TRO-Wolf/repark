@@ -47,11 +47,13 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
   `bound_values=N`, never a value; the tree format gives the same keys a line each. No host,
   port, database, user, URL or prop is ever rendered (CC-1). `execute` builds the
   `scan_metered` stream on first poll (so EXPLAIN opens no connection), places each localised
-  column, charges every batch to a `MemoryReservation` (`PostgresScan`; a refusal is
-  DataFusion's resources-exhausted error) and records `output_rows`, `output_batches`,
+  column, resizes a `MemoryReservation` (`PostgresScan`) to each batch it yields, so it holds
+  the current batch alone and frees it on drop (a refusal is DataFusion's resources-exhausted
+  error), and records, through DataFusion's `RecordOutput`, `output_rows`, `output_bytes`
+  (`get_record_batch_memory_size` per batch, C-2c fold 1), `output_batches`,
   `elapsed_compute` (the decode), `bytes_received` and `time_to_first_byte` in its
   `MetricsSet`, which `EXPLAIN ANALYZE` shows. Accessors (`pushed_filters`, `residual_filters`,
-  `pushed_limit`, `request`) serve the pins. pins: c-2/C-075, C-076, C-077
+  `pushed_limit`, `request`) serve the pins. pins: c-2/C-075, C-076, C-077, C-083, C-084
 
 ## Pointers
 

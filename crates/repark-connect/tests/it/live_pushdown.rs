@@ -4,10 +4,12 @@ use std::sync::Arc;
 use arrow::array::{AsArray, RecordBatch};
 use arrow::datatypes::{DataType, Int64Type, TimeUnit, TimestampMicrosecondType};
 use datafusion::common::ScalarValue;
+use datafusion::common::utils::memory::get_record_batch_memory_size;
 use datafusion::execution::runtime_env::RuntimeEnvBuilder;
 use datafusion::logical_expr::{Expr, col, lit};
 use datafusion::physical_plan::{ExecutionPlan, collect};
 use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
+use futures::StreamExt;
 use repark_common::{SourceIdentity, SourceKind};
 use repark_connect::{MAX_POSTGRES_DAYS, MIN_POSTGRES_DAYS, PostgresSource};
 
@@ -596,6 +598,7 @@ async fn explain_analyze_reports_rows_bytes_and_time_per_scan_live() {
     ] {
         assert!(line.contains(metric), "{metric} missing: {line}");
     }
+    assert!(!line.contains("output_bytes=0.0 B"), "{line}");
     let statement = format!("SELECT id FROM {} WHERE qty > 0", edges.table);
     let plan = edges.on.sql(&statement).await.expect(LIVE);
     let plan = plan.create_physical_plan().await.expect(LIVE);
@@ -657,6 +660,62 @@ async fn a_batch_past_the_memory_pool_is_resources_exhausted_live() {
         .await
         .expect(LIVE);
     assert_eq!(ids(&rows).len(), 50_000);
+    cell.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn the_scan_reserves_each_batch_and_counts_its_bytes_live() {
+    let cell = Cell::open().await;
+    let table = format!("{}.padded", cell.schema);
+    cell.sql(&format!(
+        "CREATE TABLE {table} AS SELECT g::int8 AS id, repeat('x', g % 100) AS pad, \
+         (g % 7)::int4 AS m FROM generate_series(1, 30000) g"
+    ))
+    .await;
+    let runtime = RuntimeEnvBuilder::new()
+        .with_memory_limit(1 << 30, 1.0)
+        .build_arc()
+        .expect("runtime");
+    let pool = Arc::clone(&runtime.memory_pool);
+    let config = SessionConfig::new().with_batch_size(4096);
+    let context = SessionContext::new_with_config_rt(config, runtime);
+    let mounted = mount(&cell, &[], "true");
+    context.register_catalog("pg", mounted.catalog("pg").expect("pg"));
+    let statement = format!("SELECT id, pad FROM pg.{table} WHERE m = 3");
+    let plan = context.sql(&statement).await.expect(LIVE);
+    let plan = plan.create_physical_plan().await.expect(LIVE);
+    let scan = find_scan(&plan).expect("the scan");
+    let mut stream = scan.execute(0, context.task_ctx()).expect("stream");
+    let (mut rows, mut bytes, mut held) = (0, 0, Vec::new());
+    while let Some(batch) = stream.next().await {
+        let batch = batch.expect(LIVE);
+        held.push((batch.get_array_memory_size(), pool.reserved()));
+        rows += batch.num_rows();
+        bytes += get_record_batch_memory_size(&batch);
+    }
+    drop(stream);
+    assert_eq!(pool.reserved(), 0, "the reservation is freed on drop");
+    assert!(held.len() > 1, "{held:?}");
+    assert!(
+        held.iter().all(|(size, reserved)| size == reserved),
+        "{held:?}"
+    );
+    let metrics = scan.metrics().expect("metrics");
+    let sum = |name: &str| {
+        let values = metrics
+            .iter()
+            .filter(|metric| metric.value().name() == name);
+        values
+            .map(|metric| metric.value().as_usize())
+            .sum::<usize>()
+    };
+    assert_eq!(
+        (sum("output_rows"), sum("output_batches")),
+        (rows, held.len())
+    );
+    assert!(bytes > 0);
+    assert_eq!(sum("output_bytes"), bytes, "{metrics}");
     cell.close().await;
 }
 

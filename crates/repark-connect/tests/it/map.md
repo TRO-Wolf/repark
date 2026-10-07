@@ -53,6 +53,9 @@ See [../map.md](../map.md).
   the 19-byte COPY header received and a non-zero time to first byte),
   `a_batch_past_the_memory_pool_is_resources_exhausted_live` (a 16 KiB pool refuses the first
   8192-row batch, naming the `PostgresScan` consumer; the default pool reads all 50 000 rows),
+  `the_scan_reserves_each_batch_and_counts_its_bytes_live` (fold 1: executing the scan alone
+  over two 4096-row batches, the pool holds exactly the current batch's size at each yield and
+  0 after the drop, and `output_bytes` is the batches' `get_record_batch_memory_size` sum),
   `pushdown_limit_is_its_own_switch_live` (fold 1: `pushdown_limit = false` pushes the filter and
   no limit, `pushdown_predicate = false` pushes the limit of an unfiltered read),
   `a_limit_past_i64_max_reads_every_row_live` (fold 1: `LIMIT 9223372036854775807 OFFSET 5`
@@ -60,7 +63,8 @@ See [../map.md](../map.md).
   `a_missing_relation_is_table_not_found_live` (DataFusion's own table-not-found, and a 64-byte
   name refusing with `PgIdent`'s reason) and `pushed_compare_keeps_the_index_live` (D-M3: a pushed
   `id OPERATOR(pg_catalog.=) current_setting('repark.p0')::int4` over one million rows plans as
-  an index-only scan). pins: c-2/C-069, C-071, C-072, C-073, C-076, C-077, C-079, C-081, C-082
+  an index-only scan). pins: c-2/C-069, C-071, C-072, C-073, C-076, C-077, C-079, C-081, C-082,
+  C-083, C-084
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
   verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
   `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and
