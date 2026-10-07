@@ -40,7 +40,7 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   while the private `Window` has room. Per-snapshot append scans list the
   files, sorted by path. The fail-on-non-append scan and the skip builders
   are never called (O-5).
-  pins: mb-1/C-008, C-009, C-010, C-011, C-017, C-018, C-019, C-020, C-023, C-024, C-032
+  pins: mb-1/C-008, C-009, C-010, C-011, C-017, C-018, C-019, C-020, C-023, C-024, C-032, C-034
 - `window_tests.rs` — the `window.rs` pins, split out under `#[path]` when
   the file passed the 1000-line ceiling: the memory-catalog fixture with
   append/overwrite/delete/replace commits plus the 18 start, window, cap,
@@ -48,8 +48,9 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   pins: mb-1/C-008, C-009, C-010, C-011, C-019
 - `window_fold2_pins.rs` — fold 2's window pins, a sibling child of
   `window_tests.rs` that reuses its fixture and fold 1's helpers: the two
-  limits at an overwrite or delete (G1).
-  pins: mb-1/C-032
+  limits at an overwrite or delete (G1) and the position range on a
+  replace or overwrite start (G3).
+  pins: mb-1/C-032, C-034
 - `window_fold_pins.rs` — fold 1's window pins, a child of `window_tests.rs`
   that reuses its fixture: the non-append start snapshot, the timestamp past
   the head, deliver-first refusal, the planning count read through the

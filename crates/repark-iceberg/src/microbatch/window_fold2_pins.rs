@@ -71,3 +71,87 @@ async fn capped_walk_delivers_both_appends_then_refuses_the_non_append() {
         expect_non_append(&error, third, &operation, Some(second), third);
     }
 }
+
+fn expect_out_of_range(error: &MicroBatchError, snapshot: i64, position: u64, files: u64) {
+    match error {
+        MicroBatchError::OffsetPositionOutOfRange {
+            snapshot: refused,
+            position: refused_position,
+            files: refused_files,
+            ..
+        } => {
+            assert_eq!(*refused, SnapshotId::new(snapshot));
+            assert_eq!(*refused_position, FilePosition::new(position));
+            assert_eq!(*refused_files, files);
+        }
+        other => panic!("expected OffsetPositionOutOfRange, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn a_replace_start_past_its_added_files_refuses() {
+    let (_warehouse, catalog, ident) = fixture_table("replace-range").await;
+    let first_file = synthetic_file("a.parquet", 1);
+    commit_append(&catalog, &ident, vec![first_file.clone()]).await;
+    let replace = commit_replace(
+        &catalog,
+        &ident,
+        first_file,
+        synthetic_file("a2.parquet", 1),
+    )
+    .await;
+    let head = commit_append(&catalog, &ident, vec![synthetic_file("c.parquet", 1)]).await;
+    let table = load(&catalog, &ident).await;
+    assert_eq!(operation_of(&table, replace), Operation::Replace);
+    let planner = WindowPlanner::new(table.clone(), uncapped());
+    for limit in [WindowLimit::Capped, WindowLimit::Unbounded] {
+        for position in [2, 99] {
+            let error = planner
+                .next_window(&input_offset(&table, replace, position), limit)
+                .await
+                .expect_err("a position past the replace's one added file must refuse");
+            expect_out_of_range(&error, replace, position, 1);
+        }
+        let plan = planner
+            .next_window(&input_offset(&table, replace, 1), limit)
+            .await
+            .expect("a position equal to the count resumes")
+            .expect("some");
+        assert_eq!(plan.end, input_offset(&table, head, 1));
+    }
+}
+
+#[tokio::test]
+async fn an_overwrite_start_past_its_added_files_refuses() {
+    let (_warehouse, catalog, ident) = fixture_table("overwrite-range").await;
+    let first_file = synthetic_file("a.parquet", 1);
+    commit_append(&catalog, &ident, vec![first_file.clone()]).await;
+    let overwrite = commit_overwrite(
+        &catalog,
+        &ident,
+        vec![
+            synthetic_file("x.parquet", 1),
+            synthetic_file("y.parquet", 1),
+        ],
+        vec![first_file],
+    )
+    .await;
+    let head = commit_append(&catalog, &ident, vec![synthetic_file("d.parquet", 1)]).await;
+    let table = load(&catalog, &ident).await;
+    let planner = WindowPlanner::new(table.clone(), uncapped());
+    for limit in [WindowLimit::Capped, WindowLimit::Unbounded] {
+        for position in [3, 99] {
+            let error = planner
+                .next_window(&input_offset(&table, overwrite, position), limit)
+                .await
+                .expect_err("a position past the overwrite's two added files must refuse");
+            expect_out_of_range(&error, overwrite, position, 2);
+        }
+        let plan = planner
+            .next_window(&input_offset(&table, overwrite, 2), limit)
+            .await
+            .expect("a position equal to the count resumes")
+            .expect("some");
+        assert_eq!(plan.end, input_offset(&table, head, 1));
+    }
+}

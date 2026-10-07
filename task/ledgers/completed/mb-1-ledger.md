@@ -461,6 +461,7 @@ re-verifier**, so G1 is implemented as ruled.
 |---|---|---|---|---|
 | C-032 | (G1) `WindowLimit::Unbounded` refuses `NonAppendSnapshot` at the first `overwrite` or `delete` in `(from, head]` even when the window already holds files, as MB0b-R17 measures for `availableNow`. `WindowLimit::Capped` keeps deliver-first over the same history. | The G1 pins in `window_fold2_pins.rs` plus mutation g1. | **PROVEN** | 2 pins green: `unbounded_walk_refuses_the_first_non_append_before_any_file` (R17's shape, overwrite and delete, uncapped and max-files 1: the refusal names the non-append, `from` = the first append, `to` = the head) and `capped_walk_delivers_both_appends_then_refuses_the_non_append` (ends `(a,1)`, `(b,1)`, then the refusal `from` = b). g1 red. pins: mb-1/C-032 |
 | C-033 | (G2) The read schema is the table's current schema when `MicroBatchSource::open` resolves the table, held for the source's lifetime and passed to `provider_for_plan` on every batch. Under capped windows a rename reads every batch under the new name, a drop and re-add reads `note=null` for the dropped field's file, a promotion reads `Int64`/`Float64` in every batch, and a schema change after open leaves the batch schema as it was. | The G2 pins in `microbatch_source_fold2_tests.rs` plus mutations g2a and g2b. | **PROVEN** | 4 pins green, each at `streaming-max-files-per-micro-batch=1`, the rendered schema and rows byte-exact per batch: `a_rename_before_start_reads_every_batch_under_the_new_name` (k03), `a_drop_and_re_add_never_shows_the_dropped_field` (k04: row 1 `note` empty, never `old`), `a_type_promotion_before_start_reads_every_batch_promoted` (k05) and `a_schema_change_after_open_leaves_the_batch_schema_alone`. g2a and g2b red. pins: mb-1/C-033 |
+| C-034 | (G3) The F6 range contract holds on a non-append start snapshot: a `from.position` above the added data files of a `replace` or an `overwrite` start refuses `OffsetPositionOutOfRange { snapshot, position, files }` under both limits, and a position equal to the count resumes. | The G3 pins in `window_fold2_pins.rs` plus the re-verifier's N8 and g3b. | **PROVEN** | 2 pins green: `a_replace_start_past_its_added_files_refuses` (`(r,2)` and `(r,99)` refuse with `files = 1`; `(r,1)` resumes to the head) and `an_overwrite_start_past_its_added_files_refuses` (`(o,3)` and `(o,99)` refuse with `files = 2`; `(o,2)` resumes). N8 (the replace arm becomes `Ok(())`), which survived 61/61 in the re-verify, is red; g3b (the overwrite arm drops `check_position`) is red. pins: mb-1/C-034 |
 
 ## Dated decision rows — fold 2
 
@@ -490,4 +491,10 @@ test result: FAILED. 20 passed; 4 failed; 0 ignored; 0 measured; 1027 filtered o
 g2b microbatch_source.rs `&self.read_schema` -> the reloaded table's current schema on every call
 test …::microbatch_source_fold2_tests::a_schema_change_after_open_leaves_the_batch_schema_alone ... FAILED
 test result: FAILED. 23 passed; 1 failed; 0 ignored; 0 measured; 1027 filtered out
+N8 window.rs enter_start's `Operation::Replace` arm -> `Ok(())` (no range check)
+test microbatch::window::tests::window_fold2_pins::a_replace_start_past_its_added_files_refuses ... FAILED
+test result: FAILED. 65 passed; 1 failed; 0 ignored; 0 measured; 804 filtered out
+g3b window.rs the overwrite/delete arm drops `self.check_position(from, count)?;`
+test microbatch::window::tests::window_fold2_pins::an_overwrite_start_past_its_added_files_refuses ... FAILED
+test result: FAILED. 65 passed; 1 failed; 0 ignored; 0 measured; 804 filtered out
 ```
