@@ -446,3 +446,95 @@ async fn resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback() {
     assert_eq!(durable, Some(stamp.record));
     assert_eq!(reason, RecoveryReason::StampedSnapshotExpired);
 }
+
+async fn expired(catalog: &Arc<dyn Catalog>, table: &Table, snapshot: i64) -> Table {
+    let tx = Transaction::new(table);
+    let tx = tx
+        .expire_snapshots()
+        .expire_snapshot_id(snapshot)
+        .apply(tx)
+        .expect("apply expiry");
+    tx.commit(catalog.as_ref()).await.expect("expire")
+}
+
+async fn v1_fixture(name: &str) -> (TempDir, Arc<dyn Catalog>, TableIdent) {
+    let warehouse = TempDir::new().expect("warehouse");
+    let catalog = crate::memory_catalog(warehouse.path().to_str().expect("utf8"))
+        .await
+        .expect("catalog");
+    catalog
+        .create_namespace(&NamespaceIdent::new("silver".to_string()), HashMap::new())
+        .await
+        .expect("namespace");
+    let ident = TableIdent::new(NamespaceIdent::new("silver".to_string()), name.to_string());
+    catalog
+        .create_table(
+            ident.namespace(),
+            TableCreation::builder()
+                .name(name.to_string())
+                .schema(id_schema())
+                .format_version(FormatVersion::V1)
+                .build(),
+        )
+        .await
+        .expect("create v1 table");
+    (warehouse, catalog, ident)
+}
+
+async fn rollback_past_the_stamp_after_expiry(
+    catalog: &Arc<dyn Catalog>,
+    ident: &TableIdent,
+) -> (Table, i64) {
+    let pause = std::time::Duration::from_millis(3);
+    let oldest = append_plain(catalog, ident, &[1]).await;
+    let oldest_id = oldest.metadata().current_snapshot_id().expect("oldest id");
+    tokio::time::sleep(pause).await;
+    let kept = append_plain(catalog, ident, &[2]).await;
+    let kept_id = kept.metadata().current_snapshot_id().expect("kept id");
+    tokio::time::sleep(pause).await;
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let stamped = stamped_append(catalog, ident, &stamp, &[3]).await;
+    let stamped_id = stamped
+        .metadata()
+        .current_snapshot_id()
+        .expect("stamped id");
+    let table = rolled_back_to(catalog, &stamped, kept_id).await;
+    let table = expired(catalog, &table, oldest_id).await;
+    assert!(table.metadata().snapshot_by_id(oldest_id).is_none());
+    assert!(table.metadata().snapshot_by_id(stamped_id).is_some());
+    let (epoch, durable, reason, text) =
+        recovery_parts(read_resume_point(&table, query()).expect_err("rolled back"));
+    assert_eq!(epoch, Epoch::new(0));
+    assert_eq!(durable, None);
+    assert_eq!(
+        reason,
+        RecoveryReason::StampNotInLineage {
+            snapshot: SnapshotId::new(stamped_id)
+        }
+    );
+    assert!(!text.contains("expired"), "{text}");
+    assert_eq!(live_ids(&table).await, vec![1, 2]);
+    (table, stamped_id)
+}
+
+#[tokio::test]
+async fn resume_refuses_a_rollback_past_the_stamp_after_routine_expiry_as_not_in_lineage() {
+    let (_warehouse, catalog, ident) = fixture("rollback_after_expiry").await;
+    let (table, stamped_id) = rollback_past_the_stamp_after_expiry(&catalog, &ident).await;
+    let metadata = table.metadata();
+    let head = metadata.current_snapshot().expect("head");
+    let stamped = metadata.snapshot_by_id(stamped_id).expect("stamped");
+    assert!(stamped.sequence_number() > head.sequence_number());
+}
+
+#[tokio::test]
+async fn resume_reads_a_v1_rollback_after_expiry_by_timestamp() {
+    let (_warehouse, catalog, ident) = v1_fixture("v1_rollback_after_expiry").await;
+    let (table, stamped_id) = rollback_past_the_stamp_after_expiry(&catalog, &ident).await;
+    let metadata = table.metadata();
+    assert_eq!(metadata.format_version(), FormatVersion::V1);
+    let head = metadata.current_snapshot().expect("head");
+    let stamped = metadata.snapshot_by_id(stamped_id).expect("stamped");
+    assert_eq!(stamped.sequence_number(), head.sequence_number());
+    assert!(stamped.timestamp_ms() > head.timestamp_ms());
+}

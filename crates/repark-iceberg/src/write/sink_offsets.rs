@@ -4,7 +4,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use datafusion::error::DataFusionError;
-use iceberg::spec::MAIN_BRANCH;
+use iceberg::spec::{FormatVersion, MAIN_BRANCH, Snapshot, SnapshotRef, TableMetadata};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, ErrorKind};
@@ -286,33 +286,38 @@ fn newest_stamp(table: &Table, query: QueryId) -> Result<Option<SinkRecord>, Mic
 }
 
 fn off_lineage_stamp(table: &Table, query: QueryId, property: &SinkRecord) -> Option<SnapshotId> {
-    if !ancestry_reaches_root(table) {
-        return None;
+    let metadata = table.metadata();
+    let stamped = metadata.snapshots().find(|snapshot| {
+        let summary = &snapshot.summary().additional_properties;
+        stamped_by(summary, query)
+            && matches!(SinkRecord::from_summary(summary), Ok(Some(record)) if record == *property)
+    })?;
+    let (oldest, reaches_root) = oldest_reachable_ancestor(metadata)?;
+    if reaches_root || commit_order(metadata, stamped) > commit_order(metadata, oldest) {
+        return Some(SnapshotId::new(stamped.snapshot_id()));
     }
-    table
-        .metadata()
-        .snapshots()
-        .find(|snapshot| {
-            let summary = &snapshot.summary().additional_properties;
-            stamped_by(summary, query)
-                && matches!(SinkRecord::from_summary(summary), Ok(Some(record)) if record == *property)
-        })
-        .map(|snapshot| SnapshotId::new(snapshot.snapshot_id()))
+    None
 }
 
-fn ancestry_reaches_root(table: &Table) -> bool {
-    let metadata = table.metadata();
-    let mut cursor = metadata.current_snapshot();
+fn oldest_reachable_ancestor(metadata: &TableMetadata) -> Option<(&SnapshotRef, bool)> {
+    let mut cursor = metadata.current_snapshot()?;
     for _ in 0..metadata.snapshots().len() {
-        let Some(snapshot) = cursor else {
-            return false;
+        let Some(parent) = cursor.parent_snapshot_id() else {
+            return Some((cursor, true));
         };
-        let Some(parent) = snapshot.parent_snapshot_id() else {
-            return true;
-        };
-        cursor = metadata.snapshot_by_id(parent);
+        match metadata.snapshot_by_id(parent) {
+            Some(next) => cursor = next,
+            None => return Some((cursor, false)),
+        }
     }
-    false
+    None
+}
+
+fn commit_order(metadata: &TableMetadata, snapshot: &Snapshot) -> i64 {
+    match metadata.format_version() {
+        FormatVersion::V1 => snapshot.timestamp_ms(),
+        _ => snapshot.sequence_number(),
+    }
 }
 
 fn stamped_by(summary: &HashMap<String, String>, query: QueryId) -> bool {

@@ -64,7 +64,13 @@ rulings V1…V6, adds `write/{sink_offsets_scope_tests.rs, sink_offsets_probe_te
 | C-018 | V6 (S3): the merge-on-read arm claims before `prepare_row_delta_deletes`, so a claim refusal stages no delete file; the claim stays after the early empty return. The copy-on-write arm receives its files already staged by `merge/mod.rs`, so it has no earlier point to claim at without editing `merge/mod.rs`; its orphans, and the merge-on-read arm's data files, are tolerated on a claim refusal (D-12). | The refused merge-on-read claim pin. | **PROVEN** | 1 pin green (`a_refused_merge_on_read_claim_stages_no_delete_file`): after the batch's one stamped append, a stamped merge-on-read commit refuses `SinkCommittedTwice { epoch: 0 }` with the warehouse's file set unchanged (no delete file written), live ids `[1, 2, 3]`, one stamped snapshot. Mutation MV-O (the claim moved back after `prepare_row_delta_deletes`): that pin red (1 of 27). pins: mb-2a/C-018 |
 | C-019 | The verifier's held probes on #981 stand as unit pins under the token: on all five arms (append, copy-on-write insert-only and delete-and-add, merge-on-read, stamp-only) one `update_table` request carries `AddSnapshot` with the stamp and `SetProperties` with the offset key and never the token; an injected refusal or an unknown outcome that never landed leaves neither half and `NotCommitted`; an unknown outcome that landed holds both halves and resume equals the stamp; three racing appends under snapshot isolation give four attempts, one stamped snapshot and every racer row. A racing stamp of another query keeps both records; interleaved queries each resume their own; a stamp-only chain and a root stamp under three appends resume; a property behind the summary refuses `OffsetMismatch`; the newest stamp expired never falls back to an older one; `format-version` 2 on both halves refuses `UnsupportedOffsetFormat`; a bare empty `merge_append` refuses on an empty and a seeded sink (DM-5). | The ported probes in `sink_offsets_probe_tests.rs`. | **PROVEN** | 11 pins green (38 `write::sink_offsets` pins in all): `one_catalog_request_carries_both_halves_on_every_arm`, `an_injected_failure_lands_neither_half_on_every_arm`, `an_unknown_outcome_that_landed_holds_both_halves_on_every_arm`, `three_racing_appends_still_stamp_exactly_once_on_every_arm`, `a_racing_stamp_of_another_query_keeps_both_records`, `interleaved_queries_each_resume_their_own`, `resume_reads_a_stamp_only_chain_and_a_root_stamp`, `resume_refuses_a_property_behind_the_summary`, `resume_never_falls_back_to_an_older_stamp_when_the_newest_expired`, `resume_refuses_a_newer_format_on_both_halves`, `a_bare_empty_merge_append_refuses_on_an_empty_and_a_seeded_sink`. The probes' `println!` lines are dropped and every arm passes the guard's token. pins: mb-2a/C-019 |
 
-VERDICT: 19 clauses, 19 PROVEN, 0 OPEN, 0 REJECTED.
+### Fold 2 — the re-verify's S2 and S3, under the orchestrator's 2026-10-07 rulings Y1…Y3
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-020 | Y1 (S2): ruling V2 holds under routine expiry. When the ancestry walk stops at a missing parent, a **retained** stamped snapshot carrying the property's exact record whose sequence number (timestamp on a v1 table) is greater than the oldest reachable ancestor's cannot be an ancestor hidden behind the gap, so it refuses `StampNotInLineage { snapshot }` with `durable: None`; a stamp not newer than the oldest reachable ancestor keeps `StampedSnapshotExpired` with the property durable; a walk that reaches a root reads as before. | The verifier's RV1 shape, ported on a v2 and a v1 sink, and the fold-1 gap pin. | **PROVEN** | 3 pins green: `resume_refuses_a_rollback_past_the_stamp_after_routine_expiry_as_not_in_lineage` (plain P0 `[1]`, plain P1 `[2]`, stamped epoch 0 `[3]`, `rollback_to(P1)`, `expire_snapshot_id(P0)`: the stamped snapshot is retained with a sequence number above the head's, the refusal is `StampNotInLineage` naming it with `durable` `None` and no "expired", live ids `[1, 2]`), `resume_reads_a_v1_rollback_after_expiry_by_timestamp` (the same shape on a v1 sink, where both sequence numbers are equal and the stamped timestamp is later), and `resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback` (unchanged: a stamp behind the gap is older than the oldest reachable ancestor and stays `StampedSnapshotExpired`). Mutations: MY1-G (the gap branch gives up, the fold-1 behaviour) red on both new pins; MY1-S (v1 compares sequence numbers) red on the v1 pin; MY1-A (a gap always reads as a rollback) red on the gap pin. pins: mb-2a/C-020 |
+
+VERDICT: 20 clauses, 20 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Dated decision rows
 
@@ -110,7 +116,7 @@ VERDICT: 19 clauses, 19 PROVEN, 0 OPEN, 0 REJECTED.
   on (pin in C-004). The engines differ from the default; filed as owner question OQ-2a-1, not a
   halt (no ruled row changes and no Spark workload returns different rows: 1.7 exposes no branch
   option on the streaming writer).
-- **D-7 (2026-10-07; amended by fold 1, ruling V2).** `read_resume_point`'s mismatch errors carry
+- **D-7 (2026-10-07; amended by fold 1, ruling V2, and fold 2, ruling Y1).** `read_resume_point`'s mismatch errors carry
   `epoch` and `durable` from the authority: the summary record when one exists (R-14), else the
   property's record when the stamped snapshot is gone (the property was written in the same
   commit, so it is durable). Absence from the ancestry is not expiry: when a retained snapshot
@@ -120,6 +126,12 @@ VERDICT: 19 clauses, 19 PROVEN, 0 OPEN, 0 REJECTED.
   missing parent cannot tell a rollback from expired history, so it keeps
   `StampedSnapshotExpired`. The ancestry walk is bounded by the snapshot count and stops at the first
   missing parent.
+  **Fold 2 (ruling Y1):** the walk no longer gives up at a missing parent, which is every sink's
+  steady state under `expire_snapshots`. It returns the oldest reachable ancestor, and a hidden
+  ancestor is always older than it, so a retained stamped snapshot whose sequence number is
+  greater (on a v1 table, where every sequence number is 0, its timestamp) is off the lineage and
+  refuses `StampNotInLineage`; one that is not greater keeps `StampedSnapshotExpired`. A walk that
+  never ends (a parent cycle) or a sink with no current snapshot keeps `StampedSnapshotExpired`.
 - **D-8 (2026-10-07).** Harness pins 2–4 are not added here. The brief adds them only if the
   [harness order](../../wo/microbatch/harness.md) says MB-2a carries them, and it does not: it
   assigns all five scenarios to the harness slice (as corrected by sketch §6 to
