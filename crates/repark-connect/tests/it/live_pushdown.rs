@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use arrow::array::{AsArray, RecordBatch};
-use arrow::datatypes::{DataType, Int64Type, TimeUnit, TimestampMicrosecondType};
+use arrow::datatypes::{DataType, Int32Type, Int64Type, TimeUnit, TimestampMicrosecondType};
 use datafusion::common::ScalarValue;
 use datafusion::common::utils::memory::get_record_batch_memory_size;
 use datafusion::execution::runtime_env::RuntimeEnvBuilder;
@@ -531,6 +531,54 @@ async fn r05_pushdown_predicate_false_pushes_nothing_live() {
         assert_eq!(split.residual.len(), 1, "{filter}");
     }
     edges.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_pushed_filter_sees_the_retyped_value_live() {
+    let cell = Cell::open().await;
+    let table = format!("{}.drift", cell.schema);
+    cell.sql(&format!(
+        "CREATE TABLE {table} (id int8, qty int4); INSERT INTO {table} VALUES (1, 5), (2, 6)"
+    ))
+    .await;
+    let statement = format!("SELECT id, qty FROM pg.{table} WHERE qty = 6");
+    let mut planned = Vec::new();
+    for pushdown in ["true", "false"] {
+        let context = mount(&cell, &[], pushdown);
+        let plan = context.sql(&statement).await.expect(LIVE);
+        let plan = plan.create_physical_plan().await.expect(LIVE);
+        planned.push((Split::of(&plan).pushed.len(), plan, context));
+    }
+    cell.sql(&format!(
+        "ALTER TABLE {table} ALTER COLUMN qty TYPE numeric(10,1); \
+         UPDATE {table} SET qty = 5.5 WHERE id = 1"
+    ))
+    .await;
+    let mut answers = Vec::new();
+    for (pushed, plan, context) in planned {
+        let batches = collect(plan, context.task_ctx()).await.expect(LIVE);
+        let mut rows: Vec<(i64, i32)> = batches
+            .iter()
+            .flat_map(|batch| {
+                let id = batch.column(0).as_primitive::<Int64Type>();
+                let qty = batch.column(1).as_primitive::<Int32Type>();
+                id.values()
+                    .iter()
+                    .copied()
+                    .zip(qty.values().iter().copied())
+            })
+            .collect();
+        rows.sort_unstable();
+        answers.push((pushed, rows));
+    }
+    assert_eq!(answers[0], (1, vec![(2, 6)]), "pushed: 5.5 = 6 is false");
+    assert_eq!(
+        answers[1],
+        (0, vec![(1, 6), (2, 6)]),
+        "above: 5.5 reads as 6"
+    );
+    cell.close().await;
 }
 
 #[tokio::test]

@@ -3701,14 +3701,26 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   fails loud (`22P02`, `22003`, `42703` or `RelationNotFound`), and a narrowing assignment cast
   rounds silently: `int4` → `numeric` or `float8` reads `1.5` and `2.5` as `2`, `numeric(10,2)`
   → `numeric(12,4)` reads `1.2345` as `1.23` and `1.255` as `1.26` (the verifier's VL-DRIFT2,
-  2026-10-07).
+  2026-10-07). A **pushed filter sees the retyped server value**, while the projection casts to
+  the planned type (C-2c fold 1, 2026-10-07): the pushed compare renders the bare column, so
+  that an index on it stays usable, and no cast is added to it. So when DDL races the statement
+  (between planning and the scan's first poll), a row can be chosen by its new value and read
+  back by its old type. Over `(id int8, qty int4)` holding `(1, 5), (2, 6)`, with
+  `WHERE qty = 6` planned and `qty` then retyped `numeric(10,1)` and row 1 set to `5.5`, the
+  pushed scan returns `(2, 6)` alone (the server compares `5.5 = 6`), while with
+  `pushdown_predicate = false` the engine compares the cast value and returns `(1, 6)` and
+  `(2, 6)`.
 - **Apache Spark** — the JDBC source resolves the schema when it plans and sends no cast, so a
   column retyped afterwards reaches the driver's getter for the planned type, which converts or
   fails by pgjdbc's rules. *(oracle: documented — Spark's JDBC data source; no value claim.)*
 - **Pin** — `crates/repark-connect/tests/it/live_pg.rs::schema_drift_between_plan_and_scan_fails_loud_or_stays_typed`
-  (the widening and the loud failures; the rounding is recorded, not pinned)
+  (the widening and the loud failures; the rounding is recorded, not pinned);
+  `crates/repark-connect/tests/it/live_pushdown.rs::a_pushed_filter_sees_the_retyped_value_live`
+  (both answers of the pushed-filter shape)
 - **Rationale** — DECLARED 2026-10-07 (C-2b fold 1, S3; sketch F-7 accepts the cast). The cast
-  keeps the resolved Arrow type true for the whole scan. Retire when a drift check (a
+  keeps the resolved Arrow type true for the whole scan. RULED 2026-10-07 (the C-2c verifier's
+  S2, L1): declare the pushed-filter half rather than cast the pushed column, because the cast
+  would defeat an index on it. Retire when a drift check (a
   `pg_attribute` re-read inside the scan's transaction, or a cast that refuses lost digits)
   lands.
 ### CONNECT-DECL-pg-listing — a Postgres source lists no schemas and no tables
