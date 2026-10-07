@@ -1,5 +1,7 @@
 # map — repark-python/src/dataframe
 
+SOURCE-URL-REDACT-1-FN fold 2 (2026-10-06): dataframe `PyValueError` messages pass through `exceptions::mask_user_visible`.
+
 ## Purpose
 
 `PyDataFrame` is the Python-facing immutable plan plus its shared runtime: lazy

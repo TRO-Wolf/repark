@@ -43,9 +43,9 @@ fn build_over_expression_inner(expr: &Expr, spec: OverSpec) -> PyResult<Expr> {
         frame_end,
     } = spec;
     if order_by.len() != order_ascending.len() || order_by.len() != order_nulls_first.len() {
-        return Err(PyValueError::new_err(
+        return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
             "over expects order_by, order_ascending, and order_nulls_first of equal length",
-        ));
+        )));
     }
     let (inner, cast_type) = match expr {
         Expr::Cast(cast) => (&*cast.expr, Some(cast.field.data_type().clone())),
@@ -60,10 +60,10 @@ fn build_over_expression_inner(expr: &Expr, spec: OverSpec) -> PyResult<Expr> {
         Expr::WindowFunction(_) => target.clone(),
         Expr::AggregateFunction(agg) => window_from_aggregate(agg),
         _ => {
-            return Err(PyValueError::new_err(
+            return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                 "over() applies only to a window or aggregate function column \
                  (e.g. row_number(), sum(...))",
-            ));
+            )));
         }
     };
     let partitions: Vec<Expr> = partition_by.iter().map(PyColumn::expr).collect();
@@ -77,28 +77,38 @@ fn build_over_expression_inner(expr: &Expr, spec: OverSpec) -> PyResult<Expr> {
         .is_empty()
         .then(|| unordered_window_frame(&window_expr))
         .transpose()
-        .map_err(crate::AnalysisException::new_err)?;
+        .map_err(|err| {
+            crate::AnalysisException::new_err(crate::exceptions::mask_user_visible(err))
+        })?;
     let mut builder = window_expr
         .partition_by(partitions)
         .order_by(orderings)
         .null_treatment(inner_null_treatment(target));
     if let Some(units_text) = frame_units.as_deref() {
-        let start = frame_start
-            .ok_or_else(|| PyValueError::new_err("over frame_units requires frame_start"))?;
-        let end = frame_end
-            .ok_or_else(|| PyValueError::new_err("over frame_units requires frame_end"))?;
-        let frame = spark_window_frame(units_text, start, end).map_err(PyValueError::new_err)?;
+        let start = frame_start.ok_or_else(|| {
+            PyValueError::new_err(crate::exceptions::mask_user_visible(
+                "over frame_units requires frame_start",
+            ))
+        })?;
+        let end = frame_end.ok_or_else(|| {
+            PyValueError::new_err(crate::exceptions::mask_user_visible(
+                "over frame_units requires frame_end",
+            ))
+        })?;
+        let frame = spark_window_frame(units_text, start, end)
+            .map_err(|err| PyValueError::new_err(crate::exceptions::mask_user_visible(err)))?;
         builder = builder.window_frame(frame);
     } else if let Some(frame) = unordered_frame {
         builder = builder.window_frame(frame);
     }
     let built = builder.build().map_err(|err| {
-        PyValueError::new_err(format!("could not build window expression: {err}"))
+        PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+            "could not build window expression: {err}"
+        )))
     })?;
     let windowed = match wrapped {
-        Some(_) => {
-            replace_wrapped_aggregate(inner.clone(), &built).map_err(PyValueError::new_err)?
-        }
+        Some(_) => replace_wrapped_aggregate(inner.clone(), &built)
+            .map_err(|err| PyValueError::new_err(crate::exceptions::mask_user_visible(err)))?,
         None => built,
     };
     Ok(match cast_type {

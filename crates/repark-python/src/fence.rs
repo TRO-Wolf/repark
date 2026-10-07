@@ -31,10 +31,9 @@ pub(crate) fn fence<T>(
 ) -> Result<T, PyErr> {
     match catch_unwind(AssertUnwindSafe(body)) {
         Ok(result) => result,
-        Err(payload) => Err(PySparkException::new_err(describe_panic(
-            operation,
-            payload.as_ref(),
-        ))),
+        Err(payload) => Err(PySparkException::new_err(
+            crate::exceptions::mask_user_visible(describe_panic(operation, payload.as_ref())),
+        )),
     }
 }
 

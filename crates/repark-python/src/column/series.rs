@@ -94,6 +94,8 @@ fn warn_series_order(source: &SeriesOrderSource) -> PyResult<()> {
     let Some(text) = series_order_notice(source) else {
         return Ok(());
     };
-    let message = CString::new(text).map_err(|error| PyValueError::new_err(error.to_string()))?;
+    let message = CString::new(text).map_err(|error| {
+        PyValueError::new_err(crate::exceptions::mask_user_visible(error.to_string()))
+    })?;
     Python::attach(|py| PyErr::warn(py, py.get_type::<PyUserWarning>().as_any(), &message, 1))
 }
