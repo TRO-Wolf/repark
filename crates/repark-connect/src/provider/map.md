@@ -9,6 +9,14 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
 
 ## Contents
 
+- **C-2d (2026-10-07):** `catalog.rs` adds `PostgresSource::ping()` (checkout, `SELECT 1`
+  under `read_timeout_ms`, `release_clean`). `schema.rs` names the source on every resolution
+  error (`DataFusionError::Context("database source `<name>`")`) and refuses
+  `register_table` / `deregister_table` with `read_only_ddl`. `scan.rs` fuses the exec stream:
+  the first error (a placement refusal, a refused resize) drops the inner scan, so its lease
+  aborts (cancel, then the connection task) instead of idling inside the read-only transaction
+  until the frame is collected; found by the C-2d live timestamp cell, whose teardown waited 60
+  s on the held lock. pins: c-2/C-092, C-094, C-095, C-096
 - `catalog.rs` — **`PostgresSource`**, one per mounted source: its name, settings door, prop map
   and `WallClockLocaliser`. `PostgresSource::mount(identity, props, localiser)` (the call C-2d's
   `SourceMount` makes) builds it on the `repark.toml` door and returns a **`PostgresCatalog`**

@@ -24,6 +24,16 @@ that answers for a registered source name until its connector lands (roadmap 1.1
   **SOURCE-URL-REDACT-1 (2026-10-06):** `sources_listing_masks_a_password_inside_a_url_shaped_value`: a source's
   `url` and keyword `dsn` list with the password masked and the host and user kept, and the
   `SourceSpec` `Debug` carries no password. pins: source-url-redact-1/C-007
+  **C-2d (2026-10-07):** the three CFG-2 Postgres refusal pins are retired by name and
+  replaced by mount pins: `configured_source_select_refuses_with_connector_message` (C-003)
+  by `configured_source_select_resolves_through_the_postgres_mount` (a source without `user`
+  answers its settings refusal at first resolution, naming the source; no `1.10`);
+  `configured_source_create_table_refuses_with_connector_message` (C-011) by
+  `configured_source_ddl_refuses_as_read_only` (`DROP SCHEMA` and `CREATE DATABASE` answer
+  `CONNECT-DECL-pg-ddl`; a SQL Server source keeps `1.10`); `source_ping_refuses_until_connector`
+  (C-005) by `source_ping_resolves_through_the_mount` (mounted and unmounted sources). New:
+  `mounted_postgres_sources_are_read_only_catalogs`. Every other CFG-2 assertion is unchanged.
+  pins: c-2/C-090, C-092, C-094, C-097
 ## Pointers
 
 - Up: [../map.md](../map.md)

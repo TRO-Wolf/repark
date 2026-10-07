@@ -17,6 +17,23 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 ## Contents
 
+- `read_postgres.rs` — **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
+  partitioning }` and `PostgresTarget::{Relation, Query}`, re-exported at the crate root with
+  `READ_POSTGRES_SOURCE` (`jdbc`). `ReparkSession::read_postgres` refuses a partitioned read
+  first (`CONNECT-DECL-pg-partitioned-read`), parses `dbtable` through
+  `ScanSource::from_dbtable`, drops a `dbtable` property, sets `url`, and resolves an ad-hoc
+  `PostgresSource` on the `ReadPostgres` door whose pool lives as long as the returned frame's
+  provider. `source_error(source, error)` keeps `From<ConnectError>`'s class and prefixes the
+  source. Without the `postgres` feature the method refuses ("not compiled into this build").
+  `note_postgres_catalog_names` fills the session's read-only set. pins: c-2/C-093, C-095
+- `zone_localiser.rs` — **C-2d (2026-10-07):** `SessionZoneLocaliser` holds the session's
+  `runtime_zone` handle; under `postgres` it implements `repark_connect::WallClockLocaliser`:
+  `zone_label()` is the live zone id and `localise` places each wall clock in the zone read at
+  scan time (arrow's chrono-tz `Tz`, as `orc_scan.rs` does). A gap refuses
+  `ValueRefusal::WallClockGap`, an overlap `WallClockOverlap` (both
+  `CONNECT-DIV-pg-timestamp-zone`, naming `prefer_timestamp_ntz`), a wall clock past chrono's
+  calendar `TimestampOutOfRange`. H-TZ did not fire. `session.rs` holds 1000 lines: its two new
+  `mod` lines are paid for by two shed comments. pins: c-2/C-091, C-101
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
   pins: ice-views-1/C-018

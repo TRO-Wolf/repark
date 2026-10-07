@@ -15,6 +15,9 @@ crates; this crate owns the Python boundary and the PyO3/Arrow FFI `unsafe` boun
 
 - [`src/lib.rs`](src/lib.rs) registers the native module and maps engine errors.
 - [`src/session.rs`](src/session.rs) provides synchronous session methods over the shared runtime.
+- `Cargo.toml` — **C-2d (2026-10-07):** `repark-core` with `features = ["postgres"]`, so the
+  standard wheel carries the Postgres connector (the workspace entry has default features
+  off). pins: c-2/C-089
 - [`src/session_runtime.rs`](src/session_runtime.rs) applies one validated runtime conf value
   to the live session (`set_runtime_config`, strict; `restore_runtime_config`, builder-lenient
   for `RESET`). **SET-ANSI-RUNTIME-1 (2026-09-15).** pins: set-ansi-runtime-1/C-001, C-002, C-003

@@ -1219,6 +1219,9 @@ repark-parity slice.
   configured database sources in the one federated namespace, the way it registers Iceberg
   catalogs today") in the change that adds the dependency and mounts the providers.
   pins: c-1/C-001
+  **C-2d (2026-10-07):** the row is restored, `normal`, with that reason verbatim, in the
+  change that adds `repark-core`'s `repark-connect` dependency and mounts the providers; the
+  gate reads the edge as real. pins: c-2/C-089
   Wired into `make check-crate-dag` (in the `make ci` chain),
   `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
   **Dual-wired:** the `crate-DAG layering guard` step in the ci.yml `guards` job mirrors the

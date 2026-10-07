@@ -359,6 +359,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `apply_with_subqueries` (IN / EXISTS / scalar subqueries count as reads) and
   `scan_url_hits_prefix` compares the decoded `ListingTableUrl::prefix` plus
   the `object_store` bucket, so percent-encoded keys refuse self-overwrite.
+- `error_map.rs` — **C-2d (2026-10-07):** `classify_external_tail` downcasts
+  `repark_connect::ConnectError` to `EngineErrorKind::Connect`; `engine_err` takes the class from
+  `From<ConnectError>` (`Config`, `NotImplemented`, else `DataFusion`) and flattens the
+  `Context` chain into one line (`database source `<name>`: <error>`), so a Python message
+  carries the cause. pins: c-2/C-095
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`
@@ -996,6 +1001,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **PR-B hadoop naming (2026-09-24):** also holds `kind_from_bare_catalog_value` (moved from
   `catalog_config.rs`), `is_hadoop_type`, and `with_type_naming`. `with_type_naming` inserts
   the fork's `metadata-naming` key with `hadoop` only when the key is absent.
+- `catalog_state.rs` — **C-2d (2026-10-07):** `SourceMount { specs, zone }` implements
+  `SessionExtension`: `register(ctx)` registers one catalog per auto-registered source —
+  `repark_connect::PostgresSource::mount(identity, props, localiser)` for Postgres (pure, no
+  I/O, no validation; FL-1) and `RefusingSourceCatalogProvider` for SQL Server and Trino. It is
+  not installed in the builder's single extension slot: `register_configured_sources` calls it
+  after build, so H-EXT did not fire. `mounts_postgres(spec)` is the one test of "this name is a
+  Postgres mount". pins: c-2/C-090
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the root resolves once
@@ -1044,6 +1056,18 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **R2 (2026-09-21):** `is_view` returns a `Result` — genuine catalog errors
   propagate (fail-closed); `FeatureUnsupported`/`NamespaceNotFound` stay false.
   pins: ice-views-1/C-006, C-007, C-012
+- `named_sources.rs` — **C-2d (2026-10-07):** `register_configured_sources()` (still the
+  one entry point CFG-2 D-4 named) checks every auto-registered name for a duplicate under the
+  registry lock, runs `SourceMount::register` (`catalog_state.rs`), records the specs, and adds
+  every mounted Postgres name to the session's `postgres_catalog_names`, so the P11 read-only
+  guards see it. `refuse_source_ddl` answers `repark_connect::read_only_ddl(<key path>)`
+  (`CONNECT-DECL-pg-ddl`) for a Postgres source and keeps the pending text for SQL Server and
+  Trino. `RefusingSourceCatalogProvider` is `pub(crate)`; for a Postgres source it only serves a
+  build without the `postgres` feature ("not compiled into this build"). `SourceRow` redacts
+  through `repark_connect::redact_source_prop`. `NamedSource::ping()` is `async`: a Postgres
+  source pings the mounted `PostgresSource` (the context's `PostgresCatalog`, downcast) or, when
+  not auto-registered, one built for the call; a failure names the key path
+  (`session::read_postgres::source_error`). pins: c-2/C-090, C-092, C-094, C-095
 - `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **C-1 (2026-10-05):** reads
   the source name and kind through `SourceSpec.identity` (CC-2; `SourceKind` now imported from
   `repark-common`); every message, row and handle is unchanged. pins: c-1/C-002

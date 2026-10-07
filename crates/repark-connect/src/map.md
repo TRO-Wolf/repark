@@ -28,6 +28,11 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `Rendered`, `ColumnClass`, `MAX_IN_LIST`, `MIN_POSTGRES_DAYS`, `MAX_POSTGRES_DAYS`,
   `TEXT_COLLATION`, `UTF8_ENCODING`, `decimal_text`, `date_text`, `timestamp_text`) and
   `ScanMeter` and `scan_metered`.
+- `error.rs` — **C-2d (2026-10-07):** `ValueRefusal::WallClockGap` and `WallClockOverlap`
+  (registry row `ZONE_ROW`, `CONNECT-DIV-pg-timestamp-zone`, the message naming
+  `prefer_timestamp_ntz`), `DDL_ROW` (`CONNECT-DECL-pg-ddl`) and `read_only_ddl(source)`, all
+  outside the `postgres` feature so core's guard needs no driver; `lib.rs` re-exports them.
+  pins: c-2/C-091, C-094
 - `error.rs` — C-2a (2026-10-06; sketch [c-2-design.md](../../../task/wo/c-2-design.md) §2.2,
   NS-15). The crate's one error enum, `ConnectError` (`thiserror`), and
   `Result<T> = std::result::Result<T, ConnectError>`. C-1's `SettingsError` and `TypeMapError`
