@@ -9,10 +9,10 @@ surface that is NOT a differential row:
    kept iff the right side is non-empty), repark refuses loud — the Cartesian fallback would
    answer a different result set.
 3. An unknown ``how`` must advertise the semi family.
-4. The origin map: after a semi/anti join the right side contributes no columns, so
-   ``select``/``filter``/``withColumn`` of a right-parent Column raise ``MISSING_ATTRIBUTES``
-   and ``drop`` of that Column is a Spark 4.1.2 no-op. ``_spawn`` copies the not-emitted set;
-   a later emitting join of the same right subtracts those ids.
+4. The unemitted-attribute set: after a semi/anti join the right side contributes no
+   columns, so ``select``/``filter``/``withColumn`` of a right-parent Column raise
+   ``MISSING_ATTRIBUTES`` and ``drop`` of that Column is a Spark 4.1.2 no-op. ``_spawn``
+   copies the not-emitted set; a later emitting join of the same right subtracts those ids.
 
 These are repark-only assertions (a refusal has no Spark golden), which is why they are not
 corpus rows.
@@ -164,7 +164,7 @@ def test_right_ref_select_raises_missing_attributes_same_key(
 def test_right_ref_filter_raises_missing_attributes_same_key(
     spark: ReparkSession, how: str, on_mode: str
 ) -> None:
-    """``filter(right["k"] == 1)`` reaches the same origin map as select (not select-only)."""
+    """``filter(right["k"] == 1)`` reaches the same unemitted set as select (not select-only)."""
     _left, right, joined = _semi_family_join(spark, how, on_mode)
     with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
         joined.filter(right["k"] == 1)
@@ -175,7 +175,7 @@ def test_right_ref_filter_raises_missing_attributes_same_key(
 def test_right_ref_with_column_raises_missing_attributes_same_key(
     spark: ReparkSession, how: str, on_mode: str
 ) -> None:
-    """``withColumn("x", right["k"])`` reaches the same origin map as select."""
+    """``withColumn("x", right["k"])`` reaches the same unemitted set as select."""
     _left, right, joined = _semi_family_join(spark, how, on_mode)
     with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
         joined.withColumn("x", right["k"])
@@ -211,7 +211,7 @@ def test_left_refs_still_resolve_after_semi_family(
 @pytest.mark.parametrize("how", ["inner"])
 @pytest.mark.parametrize("on_mode", ["name", "condition"])
 def test_inner_join_right_ref_still_resolves(spark: ReparkSession, how: str, on_mode: str) -> None:
-    """Regression guard: inner-join origin resolution is unchanged by the semi-family map."""
+    """Regression guard: inner-join id resolution is unchanged by the semi-family set."""
     _left, right, joined = _semi_family_join(spark, how, on_mode)
     table = joined.select(right["k"]).to_arrow()
     assert table.column_names == ["k"]
@@ -221,10 +221,10 @@ def test_inner_join_right_ref_still_resolves(spark: ReparkSession, how: str, on_
 
 @pytest.mark.parametrize("on_mode", ["name", "name_list", "condition"])
 def test_semi_then_inner_join_emits_the_same_right(spark: ReparkSession, on_mode: str) -> None:
-    """A later inner join of the same right emits it; ``select(right["k"])`` resolves.
+    """An emitting inner join of the same right resolves by name; by condition it refuses 1182.
 
-    Without the emitting-join subtract of the copied not-emitted set, the select would still
-    raise after the right side is in the output.
+    (``sj4_fail2_sel``, ``sj4_fail2_fil``). Without the emitting-join subtract of the copied
+    not-emitted set, the select would still raise after the right side is in the output.
     """
     _left, right, semi = _semi_family_join(spark, "leftsemi", on_mode)
     if on_mode == "condition":
@@ -233,11 +233,21 @@ def test_semi_then_inner_join_emits_the_same_right(spark: ReparkSession, on_mode
         joined = semi.join(right, on=["k"], how="inner")
     else:
         joined = semi.join(right, on="k", how="inner")
-    table = joined.select(right["k"]).to_arrow()
-    assert table.column_names == ["k"]
-    assert table.to_pydict()["k"] == [1]
-    assert joined.filter(right["k"] == 1).count() == 1
-    # Subtract that right, not clear the whole set: another unemitted origin must still raise.
+    if on_mode == "condition":
+        with pytest.raises(AnalysisException) as refused_sel:
+            joined.select(right["k"]).to_arrow()
+        assert refused_sel.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+        params = refused_sel.value.getMessageParameters()
+        assert params["config"] == "spark.sql.analyzer.failAmbiguousSelfJoin"
+        assert params["ambiguousAttrs"] == "k"
+        with pytest.raises(AnalysisException) as refused_fil:
+            joined.filter(right["k"] == 1).count()
+        assert refused_fil.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    else:
+        table = joined.select(right["k"]).to_arrow()
+        assert table.column_names == ["k"]
+        assert table.to_pydict()["k"] == [1]
+        assert joined.filter(right["k"] == 1).count() == 1
     third = spark.createDataFrame([(1,)], ["k"])
     other_inner = semi.join(third, on="k", how="inner")
     with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
@@ -264,8 +274,8 @@ def test_spawn_descendant_still_refuses_unemitted_right(
 def test_self_semi_exclusive_set_resolves_df_column(spark: ReparkSession, on_mode: str) -> None:
     """``df.join(df, …, "leftsemi").select(df["k"])`` still works.
 
-    Exclusive-set: the right-minus-left plan-id set is empty, so the output *is* that origin;
-    a sloppy "all non-self plan ids" remember would refuse it.
+    Exclusive-set: the right-minus-left attribute-id set is empty, so the output *is* that
+    attribute; a sloppy "all non-self ids" remember would refuse it.
     """
     frame = spark.createDataFrame([(1, "a"), (2, "b")], ["k", "a"])
     if on_mode == "name":
@@ -295,7 +305,6 @@ def test_distinct_name_right_ref_raises_missing_from_input(spark: ReparkSession,
         joined.filter(right["v"] == "x")
     with pytest.raises(AnalysisException, match=_MISSING_ABSENT):
         joined.withColumn("x", right["rk"])
-    # drop of a distinct-name right origin is still a Spark no-op.
     assert joined.drop(right["rk"]).columns == ["k", "a"]
     assert joined.select(left["k"]).columns == ["k"]
 
@@ -321,7 +330,7 @@ def test_right_ref_abs_raises_missing_attributes_same_key(
 def test_left_abs_still_resolves_after_semi_family(
     spark: ReparkSession, how: str, on_mode: str
 ) -> None:
-    """``F.abs(left["k"])`` is the output column — origin thread must not refuse left."""
+    """``F.abs(left["k"])`` is the output column — the token scan must not refuse left."""
     left, _right, joined = _semi_family_join(spark, how, on_mode)
     table = joined.select(F.abs(left["k"]).alias("ak")).to_arrow()
     assert table.column_names == ["ak"]
@@ -336,7 +345,7 @@ def test_left_abs_still_resolves_after_semi_family(
 
 @pytest.mark.parametrize("on_mode", ["name", "condition"])
 def test_inner_join_abs_right_ref_still_resolves(spark: ReparkSession, on_mode: str) -> None:
-    """Regression: origin-thread on ``F.abs`` must not break inner-join right refs."""
+    """Regression: the id-token scan on ``F.abs`` must not break inner-join right refs."""
     _left, right, joined = _semi_family_join(spark, "inner", on_mode)
     table = joined.select(F.abs(right["k"]).alias("ak")).to_arrow()
     assert table.column_names == ["ak"]
@@ -369,10 +378,9 @@ def test_right_ref_lower_raises_missing_attributes_same_key(spark: ReparkSession
 def test_coalesce_left_then_right_still_raises_unemitted_right(
     spark: ReparkSession, how: str
 ) -> None:
-    """``join_sql`` QCOL scan, not first-origin-only: left-then-right coalesce must raise.
+    """``join_sql`` id-token scan: left-then-right coalesce must raise.
 
-    ``_thread_origin`` copies the first origin-bearing arg (the emitted left ``k``); without
-    ``join_sql_expr`` carrying the right QCOL this would silently bind left.
+    Without ``join_sql_expr`` carrying the right attribute token this would silently bind left.
     """
     left, right, joined = _semi_family_join(spark, how, "condition")
     with pytest.raises(AnalysisException, match=_MISSING_APPEAR) as excinfo:
@@ -381,7 +389,7 @@ def test_coalesce_left_then_right_still_raises_unemitted_right(
 
 
 def test_abs_string_name_still_resolves_after_semi(spark: ReparkSession) -> None:
-    """``F.abs("k")`` is a name, not a right-parent origin — still the left ``k``."""
+    """``F.abs("k")`` is a name, not a right-parent attribute — still the left ``k``."""
     _left, _right, joined = _semi_family_join(spark, "leftsemi", "name")
     table = joined.select(F.abs("k").alias("ak")).to_arrow()
     assert table.to_pydict()["ak"] == [1]
@@ -404,8 +412,6 @@ def test_inner_join_abs_keeps_the_abs_on_a_negative_key(spark: ReparkSession, on
     assert table.to_pydict()["ak"] == [3]
     assert joined.filter(F.abs(right["k"]) > 0).count() == 1
 
-
-# Aggregate builders thread origin + join_sql_expr (same hole as F.abs).
 
 _AGG_BUILDERS = (
     ("sum", F.sum),
@@ -431,7 +437,7 @@ def test_right_ref_agg_raises_missing_attributes_same_key(
 ) -> None:
     """``F.<agg>(right["k"])`` after semi/anti raises the same-name MISSING_ATTRIBUTES class.
 
-    Each named builder is its own pin: reverting the origin thread on that builder reds it.
+    Each named builder is its own pin: dropping the token on that builder reds it.
     """
     _left, right, joined = _semi_family_join(spark, how, on_mode)
     with pytest.raises(AnalysisException, match=_MISSING_APPEAR) as excinfo:
@@ -444,7 +450,7 @@ def test_right_ref_agg_raises_missing_attributes_same_key(
 def test_left_agg_still_resolves_after_semi_family(
     spark: ReparkSession, how: str, builder_name: str, builder: object
 ) -> None:
-    """``F.<agg>(left["k"])`` is the output column — origin thread must not refuse left."""
+    """``F.<agg>(left["k"])`` is the output column — the token scan must not refuse left."""
     left, _right, joined = _semi_family_join(spark, how, "name")
     table = joined.select(builder(left["k"]).alias("ak")).to_arrow()  # type: ignore[operator]
     assert table.column_names == ["ak"], builder_name
@@ -452,7 +458,7 @@ def test_left_agg_still_resolves_after_semi_family(
 
 
 def test_inner_join_sum_right_ref_still_resolves(spark: ReparkSession) -> None:
-    """Regression: origin-thread on ``F.sum`` must not break an emitting join.
+    """Regression: the id-token scan on ``F.sum`` must not break an emitting join.
 
     Name-key inner join only: a condition join of two ``k`` columns is DataFusion-ambiguous on
     the native aggregate handle and is not this pin.
@@ -477,7 +483,7 @@ def test_distinct_name_sum_raises_missing_from_input(spark: ReparkSession, how: 
 def test_count_distinct_left_then_right_still_raises_unemitted_right(
     spark: ReparkSession, how: str
 ) -> None:
-    """``join_sql`` QCOL scan: left-then-right ``count_distinct`` must raise on the right."""
+    """``join_sql`` id-token scan: left-then-right ``count_distinct`` must raise on the right."""
     left, right, joined = _semi_family_join(spark, how, "condition")
     with pytest.raises(AnalysisException, match=_MISSING_APPEAR) as excinfo:
         joined.select(F.count_distinct(left["k"], right["k"]))
@@ -485,7 +491,7 @@ def test_count_distinct_left_then_right_still_raises_unemitted_right(
 
 
 def test_sum_string_name_still_resolves_after_semi(spark: ReparkSession) -> None:
-    """``F.sum("k")`` is a name, not a right-parent origin — still the left ``k``."""
+    """``F.sum("k")`` is a name, not a right-parent attribute — still the left ``k``."""
     _left, _right, joined = _semi_family_join(spark, "leftsemi", "name")
     table = joined.select(F.sum("k").alias("sk")).to_arrow()
     assert table.to_pydict()["sk"] == [1]

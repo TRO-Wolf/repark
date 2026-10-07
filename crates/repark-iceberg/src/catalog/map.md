@@ -370,6 +370,9 @@ Source comments retain only API and safety contracts; implementation narration i
   reader's batch onto the declared schema, cast unsafely-lossless, cache the projection per
   batch schema) and `iceberg_predicate_from_filters` (the equality filters worth pushing into
   the Iceberg scan). pins: ice-changelog-1/C-008
+  **MB-1 round 2 (2026-10-07):** the module widened to `pub(crate)` so the
+  micro-batch provider reads through the same `conform_batch`; no signature
+  or behaviour changed. pins: mb-1/C-013
 - `lineage_columns.rs` — **ICE-EVO-DML-1 (2026-09-17):** `scan_lineage_batches` plans the current
   snapshot with the fork's `project_current_schema()` and reads the tasks with
   `ArrowReaderBuilder`, so a `_row_id` read after `ADD COLUMN` / `RENAME COLUMN` with no write
@@ -457,7 +460,8 @@ Source comments retain only API and safety contracts; implementation narration i
   every other pair falls back to the strict cast. Callers: MERGE (`write/merge/mod.rs` write
   schema, `session_staging.rs` store, `conform.rs::promoted_scan_column` target scan), `INSERT
   OVERWRITE` (`write/overwrite.rs`, `write/partition_overwrite.rs`), `metadata_columns.rs`,
-  `scan_batches.rs` (`lineage_columns.rs`, `changelog.rs`, `incremental_append.rs`), and
+  `scan_batches.rs` (`lineage_columns.rs`, `changelog.rs`, `incremental_append.rs`,
+  `microbatch/provider.rs`), and
   repark-spark `describe_column.rs` / `show_table_extended.rs`. pins: u9-types-1/C-013
   **WO U9-TYPES-1 round-3 fixer (2026-09-26):** a `Binary` / `LargeBinary` / `BinaryView`
   source into a `uuid` column is decoded as UTF-8 text (invalid sequences become U+FFFD, as

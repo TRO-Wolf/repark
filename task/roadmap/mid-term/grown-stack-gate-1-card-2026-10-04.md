@@ -54,3 +54,42 @@ The owner's alternative, "grow once per native call instead of per poll", is not
 The PERF-ATTR-STAMP-2 three-run median is re-run against the repaired main, and the stack merges to main when that median is ≤ 1.10.
 
 The stack branch carries main's 34 sites too, through the #932 merge. So the repaired main is merged into the stack before that re-measure, and both sides pay the same cost.
+
+## MAIN-SLOWDOWN-BISECT-1: dev-build findings, closed (2026-10-06)
+
+**What it was.** The bisect unit was opened because GROWN-STACK-GATE-1 recovered only about 0.7 of the roughly 4.1 pt v1.5.1 → v1.5.2 slowdown on the work-equal like set. Its acceptance was declared before any timing:
+- **A1:** the gap G, re-measured in the same quiet-box session as the profile;
+- **A2:** a per-commit profile;
+- **A3:** each candidate step confirmed by a three-run interleaved median against its first parent;
+- **Done** when the confirmed slowing steps sum to at least 75 % of G.
+
+All runs used debug builds, `replay_work.py`, and the same work-equal like set (43,843 cells between adjacent main commits).
+
+- **A1.** G = **4.65 pt** (main `9f41347f` against v1.5.1, median 1.0465, spread 0.89 pt).
+- **A2, the profile steps (one run each).**
+
+  | commit | step |
+  |---|---|
+  | `dc613672` text-write timestamp zone | +0.52 |
+  | `daf9bbaa` DEEP-FILTER-CHAIN-CRASH-1 | +3.48 |
+  | `5d8ee78b` polars-is-duplicated-1 | +1.45 |
+  | `cc68833d` TA-CHAIN-1 | −0.71 |
+  | `d0c50405` release v1.5.2 | +0.56 |
+  | `9f41347f` this unit | −0.21 |
+
+- **A3, confirmed (median of three against the parent; runs and spread).**
+
+  | commit | runs | median | spread |
+  |---|---|---|---|
+  | `dc613672` | 1.0052 / 1.0073 / 1.0085 | **+0.73 pt** | 0.33 |
+  | `daf9bbaa` | 1.0520 / 1.0327 / 1.0382 | **+3.82 pt** | 1.94 |
+  | `5d8ee78b` | 1.0421 / 1.0269 / 1.0354 | **+3.54 pt** | 1.51 |
+  | `d0c50405` | 1.0022 / 1.0117 / 1.0023 | +0.23 pt, within noise | 0.95 |
+
+  Confirmed slowing steps: +8.32 pt, which is 179 % of G. **Accept: met.** The sum overshoots G for two reasons:
+  - the profile also has negative steps (TA-CHAIN-1 at −0.71 and this unit at −0.21);
+  - from about 06:35, the `daf9bbaa`, `5d8ee78b` and `d0c50405` pairs ran beside a niced security-fix build on separate cores, which most likely inflates `5d8ee78b` (+3.54 against +1.45 profiled).
+
+  A 20-second CPU-affinity slip at 06:29 touched one `dc613672` run. These are **dev-build findings**: they inform and never gate.
+
+**Resolution (owner, 2026-10-06).** The unit closes with the PERF-ATTR-STAMP-2 release result as its resolution: work-equal like **1.0989 ≤ 1.10** on release builds (see [the gate record](perf-attr-stamp-2-card-2026-10-03.md)). No per-step cards are filed. `daf9bbaa` (the grown-stack poll cost) and `5d8ee78b` remain the two largest dev-build contributors, should main's own speed be taken up later.

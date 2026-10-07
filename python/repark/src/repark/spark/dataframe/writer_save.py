@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from repark import _native
 from repark.spark._idents import quote_ident
-from repark.spark.dataframe import writer_schema
+from repark.spark.dataframe import writer_layout, writer_schema
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.writer_readwriter import DataFrameWriter
@@ -75,6 +75,7 @@ def write_table(
     if statement == "skip":
         return
     if statement in ("ctas", "rtas"):
+        writer_layout._refuse_duplicate_output_columns(writer._dataframe)
         writer._dataframe._refuse_tightened_iceberg_create()
         writer._run_through_temp_view(
             lambda view: ctas_sql(writer, table_ref, view=view, or_replace=statement == "rtas"),

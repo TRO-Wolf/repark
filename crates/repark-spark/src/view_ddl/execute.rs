@@ -151,7 +151,8 @@ pub(crate) async fn execute_create_temp_view(
         )));
     }
     refuse_recursive_temp_view(ctx, &view).await?;
-    let frame = ctx.read_table(view)?;
+    let provider = Arc::clone(&view);
+    let frame = ctx.read_table(provider)?;
     if crate::spark_door_case_insensitive(ctx.state().config().options()) {
         let names = frame
             .schema()

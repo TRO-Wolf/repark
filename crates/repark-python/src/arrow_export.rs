@@ -50,6 +50,7 @@ pub(crate) struct StreamingBatchReader {
     stream: SendableRecordBatchStream,
     schema: SchemaRef,
     grown_polls: bool,
+    rename_batches: bool,
     refusals: Option<Arc<PoolRefusalLog>>,
     refusals_before: u64,
 }
@@ -66,6 +67,7 @@ impl StreamingBatchReader {
             stream,
             schema,
             grown_polls,
+            rename_batches: false,
             refusals: None,
             refusals_before: 0,
         }
@@ -74,6 +76,11 @@ impl StreamingBatchReader {
     pub(crate) fn with_refusals(mut self, refusals: Option<Arc<PoolRefusalLog>>) -> Self {
         self.refusals_before = refusals.as_ref().map_or(0, |log| log.refusals());
         self.refusals = refusals;
+        self
+    }
+
+    pub(crate) fn with_renamed_batches(mut self, rename_batches: bool) -> Self {
+        self.rename_batches = rename_batches;
         self
     }
 
@@ -117,10 +124,12 @@ impl Iterator for StreamingBatchReader {
             runtime,
             stream,
             grown_polls,
+            rename_batches,
             ..
         } = self;
         let schema = Arc::clone(&self.schema);
         let grown = *grown_polls;
+        let rename = *rename_batches;
         let item = fence_stream_poll("PyDataFrame.__arrow_c_stream__.next", || {
             let no_detach = STREAM_POLL_NO_DETACH.with(Cell::get);
             let polled = if no_detach {
@@ -134,6 +143,13 @@ impl Iterator for StreamingBatchReader {
                 batch
                     .map_err(|error| ArrowError::ExternalError(Box::new(error)))
                     .and_then(|batch| coerce_batch_views(&batch, &schema))
+                    .and_then(|batch| {
+                        if rename {
+                            RecordBatch::try_new(Arc::clone(&schema), batch.columns().to_vec())
+                        } else {
+                            Ok(batch)
+                        }
+                    })
             })
         });
         match item {
@@ -164,6 +180,18 @@ pub(crate) fn coerced_export_schema(schema: &SchemaRef) -> SchemaRef {
             .fields()
             .iter()
             .map(|field| coerce_field_views(field, 0))
+            .collect::<Vec<Field>>(),
+        schema.metadata().clone(),
+    ))
+}
+
+pub(crate) fn renamed_export_schema(schema: &SchemaRef, names: &[String]) -> SchemaRef {
+    Arc::new(Schema::new_with_metadata(
+        schema
+            .fields()
+            .iter()
+            .zip(names.iter())
+            .map(|(field, name)| field.as_ref().clone().with_name(name.clone()))
             .collect::<Vec<Field>>(),
         schema.metadata().clone(),
     ))

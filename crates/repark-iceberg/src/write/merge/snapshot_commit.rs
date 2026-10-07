@@ -14,6 +14,7 @@ use super::dv_close;
 use super::iceberg_err;
 use crate::write::commit_error::commit_err;
 use crate::write::concurrency::WriteConcurrency;
+use crate::write::sink_offsets::SiteStamp;
 
 pub(crate) const WRITE_MERGE_ISOLATION_LEVEL: &str = "write.merge.isolation-level";
 
@@ -166,11 +167,13 @@ pub(crate) async fn commit_overwrite_on_ref(
         return Ok(());
     }
     let new_file_paths = abort::written_file_paths(&new_files);
+    let stamp = SiteStamp::claim(table, branch, summary_extra)?;
+    let summary_extra = stamp.extras(summary_extra)?;
     let engine = crate::write::summary_collision::EngineSummary::for_changes(
         table, &new_files, &affected, branch,
     );
     let (operation_id, summary) =
-        crate::write::write_options::summary_with_extras(summary_extra, &engine)?;
+        crate::write::write_options::summary_with_extras(&summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let tx = if affected.is_empty() {
         let mut action = tx
@@ -211,8 +214,9 @@ pub(crate) async fn commit_overwrite_on_ref(
             });
         action.apply(tx).map_err(iceberg_err)?
     };
+    let tx = stamp.transaction(tx)?;
     match tx.commit(catalog.as_ref()).await {
-        Ok(_) => Ok(()),
+        Ok(committed) => stamp.record(&committed),
         Err(error) => {
             abort::delete_written_files_best_effort(table, &new_file_paths, &error).await;
             Err(commit_err(error, &operation_id))
@@ -374,6 +378,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         return Ok(());
     }
     let data_file_paths = abort::written_file_paths(&data_files);
+    let stamp = SiteStamp::claim(table, branch, summary_extra)?;
     let pair_count = pairs.len() as u64;
     let data_file_count = data_files.len() as u64;
     let mut prepared = dv_close::prepare_row_delta_deletes(
@@ -397,6 +402,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let (added_deletes, removed_deletes) = prepared.delete_file_changes();
     let mut added_files = data_files.clone();
     added_files.extend(added_deletes.iter().cloned());
+    let summary_extra = stamp.extras(summary_extra)?;
     let engine = crate::write::summary_collision::EngineSummary::for_changes(
         table,
         &added_files,
@@ -404,7 +410,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         branch,
     );
     let (operation_id, summary) =
-        crate::write::write_options::summary_with_extras(summary_extra, &engine)?;
+        crate::write::write_options::summary_with_extras(&summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let mut action = tx.row_delta().add_data_files(data_files);
     action = prepared.apply(action);
@@ -429,7 +435,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let action = crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
         action.to_branch(name)
     });
-    let tx = action.apply(tx).map_err(iceberg_err)?;
+    let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
     match tx
         .commit(catalog.as_ref())
         .instrument(tracing::info_span!(
@@ -439,7 +445,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         ))
         .await
     {
-        Ok(_) => Ok(()),
+        Ok(committed) => stamp.record(&committed),
         Err(error) => {
             let mut abort_paths = data_file_paths;
             abort_paths.extend(delete_file_paths);

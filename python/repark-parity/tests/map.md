@@ -1,5 +1,6 @@
 # map — python/repark-parity/tests
 
+ATTR-ID-1 S3b (2026-10-01): CAP-1 mirror row ratcheted down with the code — `dataframe/core.py` 3921 → 3846 (the filter quoter moves to `column_fields.py`). The `check_lib_py.py` exception row moved in the same commit; no row raised. pins: attr-id-1/C-025
 STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): the CAP-1 mirror follows the shrink-only ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277. pins: string-literal-escape-1/C-011
 
 STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30): the CAP-1 mirror follows the shrink-only ratchet `repark-python/src/session.rs` 1122 → 1097. pins: string-literal-escape-1/C-011
@@ -202,6 +203,54 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S4 (2026-10-02):**
+  mirror rows ratchet `spark/column.py` 1527 → 1378 (the sort-marker family
+  moves to `column_sort.py`, the string-predicate family to `column_string.py`)
+  and `dataframe/core.py` 3711 → 3653 (`_select_via_attr_sql` moves to
+  `join_attr_tokens.py` behind a one-line delegate) with the script baseline.
+  pins: attr-id-1/C-042
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-3 (2026-10-02):**
+  the mirror row ratchets `dataframe/core.py` 3595 → 3583 (V-2's siding calls
+  are deleted) with the script baseline. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 PERF-1 (2026-10-03):**
+  mirror row ratchets `dataframe/core.py` 3485 → 3475 (the frame-node and snapshot
+  caches move to `frame_nodes.py`), with the script baseline.
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-5 (2026-10-03):**
+  mirror rows ratchet `dataframe/core.py` 3494 → 3485 and retire the
+  `dataframe/joins_columns.py` row (the pivot family moves to
+  `grouped_pivot.py`, leaving the file under the default ceiling), so the
+  Python exception count drops 30 → 29, with the script baseline.
+  Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
+- `test_cap_1_source_file_line_cap.py` — **CASESENS-2 port (2026-10-03):**
+  the mirror row ratchets `dataframe/core.py` 3485 → 3476 with the script
+  baseline. Pins: `python/repark/tests/test_casesens_2.py`.
+  **PERF-1 merge (2026-10-03):** the mirror row takes the merged head's
+  measured 3466 (PERF-1 3475, port −9) with the script baseline.
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-4 (2026-10-02):**
+  mirror rows ratchet `dataframe/core.py` 3583 → 3494 (the repartition trio
+  moves to `repartition_ops.py`) and `dataframe/joins_columns.py` 1169 → 1119
+  (`_grouped_agg_pandas` moves to `grouped_udf.py`) with the script baseline.
+  Pins: `python/repark/tests/test_attr_id_1_sj4.py`.
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-2 (2026-10-02):**
+  mirror rows ratchet `spark/column.py` 1378 → 1331 (the fragment-render
+  family moves to `column_render.py`) and `dataframe/core.py` 3652 → 3595
+  (the unemitted-id family moves to `unemitted_ids.py`) with the script
+  baseline. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 V-4 (2026-10-02):**
+  mirror row ratchets `dataframe/core.py` 3653 → 3652 with the script baseline
+  (the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`).
+  pins: attr-id-1/C-045
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3e (2026-10-01):**
+  mirror row ratchets `dataframe/core.py` 3803 → 3800 with the script baseline
+  (the `selectExpr` body moves out and the select star arms fold into one
+  delegate). pins: attr-id-1/C-039
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3d (2026-10-01):**
+  mirror row ratchets `dataframe/core.py` 3836 → 3803 with the script baseline
+  (the `drop`/`dropDuplicates` binding moves to `spark/subset_resolve.py`).
+  pins: attr-id-1/C-032
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3c (2026-10-01):**
+  mirror row ratchets `dataframe/core.py` 3846 → 3836 with the script baseline
+  (the lifted duplicate-finals refusal and its docstring). pins: attr-id-1/C-030
 - `test_cap_1_source_file_line_cap.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05):** the mirror
   rows ratchet `repark-ta/src/udf/mod.rs` 1801 → 1791 and `python/repark/src/repark/spark/ta.py`
   1818 → 1795 with the script baselines.
@@ -320,6 +369,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: u11-edge-1/C-024
   Round 6: the `dataframe/core.py` row ratchets 3976 → 3973 with `scripts/check_lib_py.py`.
   pins: u11-edge-1/C-027
+  **ATTR-ID-1 S3a (2026-09-30):** the `dataframe/core.py` row ratchets 3973 → 3921 with
+  `scripts/check_lib_py.py`. pins: attr-id-1/C-024
 - `test_cap_1_source_file_line_cap.py` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
   mirror rows ratchet `crates/repark-iceberg/src/write/append.rs` 1882 → 1819,
   `dataframe/core.py` 4015 → 3991 and `dataframe/writer_readwriter.py` 1101 → 1093

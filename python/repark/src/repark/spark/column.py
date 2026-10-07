@@ -22,6 +22,9 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark.spark import column_fields as _column_fields
+from repark.spark import column_render as _column_render
+from repark.spark import column_sort as _column_sort
+from repark.spark import column_string as _column_string
 from repark.spark._idents import quote_ident as _quote_sql_field_ident
 from repark.spark._idents import sql_string_literal as _sql_string_literal
 
@@ -49,6 +52,8 @@ class Column:
     __slots__ = (
         "_agg_name",
         "_alias_metadata",
+        "_attr_id",
+        "_birth_frame",
         "_g2_range_order_names",
         "_generator",
         "_generator_cast",
@@ -59,11 +64,11 @@ class Column:
         "_is_aggregate_function",
         "_is_foldable",
         "_join_sql_expr",
-        "_origin_field",
-        "_origin_plan_id",
         "_outer",
         "_partition_transform",
         "_projection_name",
+        "_qualifiers",
+        "_repr_display",
         "_sort_ascending",
         "_sort_nulls_first",
         "_spark_display",
@@ -94,8 +99,9 @@ class Column:
         stable_name: bool = False,
         partition_transform: str | None = None,
         sql_expr: str | None = None,
-        origin_plan_id: str | None = None,
-        origin_field: str | None = None,
+        attr_id: str | None = None,
+        birth_frame: Any = None,
+        qualifiers: frozenset[str] | None = None,
         join_sql_expr: str | None = None,
         g2_range_order_names: list[str] | None = None,
         window_spec: WindowSpec | None = None,
@@ -129,10 +135,9 @@ class Column:
         ``[MISSING_GROUP_BY]`` — sticky ``_is_aggregate`` alone is not enough.
 
         ``has_ungroupable`` is sticky non-groupable identity for analytics / generators
-        (window ``.over(...)``, ``F.rand()``) that are neither foldable nor free attrs
+        (window ``.over(...)``, ``F.rand()``) that are neither foldable nor free attrs,
         OR-propagated like free so nested ``sum(x)+row_number().over(...)``
         / ``coalesce(sum, window)`` raise ``[MISSING_GROUP_BY]`` instead of pure_global.
-        Nested compositions also need this marker.
 
         ``is_aggregate_function`` marks a bare AggregateFunction (``F.sum``/… builders)
         acceptable to native ``DataFrame.aggregate``. Preserved only across ``.alias`` /
@@ -159,12 +164,16 @@ class Column:
         Sticky across derived Columns so the transform still fails loud outside
         ``partitionedBy`` (Spark ``PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY``).
 
-        ``origin_plan_id`` / ``origin_field``: set when this Column is a pure
-        schema bind from a DataFrame (``df["x"]`` / ``df.x``). Join conditions and
-        post-join ``select``/``drop`` resolve the correct side via these tokens. Cleared
-        on compound ops (binary/arithmetic); preserved across ``.alias`` / ``for_select``.
+        ``attr_id``: set when this Column binds a frame field (``df["x"]`` / ``df.x``);
+        joins resolve the side through this id.
 
-        ``join_sql_expr`` (H1): composed join-ON SQL with ``__REPARK_QCOL_*`` tokens so
+        ``birth_frame``: the frame this Column was bound against. A select/sort bind keeps
+        the written reference verbatim on the birth frame, rebinding by position elsewhere.
+
+        ``qualifiers``: the bound frame's qualifier names for this attribute, empty when the
+        frame carries none; joins side id-sharing tokens through these names.
+
+        ``join_sql_expr`` (H1): composed join-ON SQL with ``__REPARK_ATTR_*`` tokens so
         ``df1.b == df2.b`` stays side-qualified through binary ops without polluting
         free-SQL ``sql_expr`` (groupBy / MERGE / global-agg).
         """
@@ -203,8 +212,10 @@ class Column:
         # assignments). Distinct from ``spark_display``: string literals are unquoted in
         # display names but must be quoted in SQL. Unset → fall back to spark_display_part().
         self._sql_expr = sql_expr
-        self._origin_plan_id = origin_plan_id
-        self._origin_field = origin_field
+        self._attr_id = attr_id
+        self._birth_frame = birth_frame
+        self._qualifiers = qualifiers if qualifiers is not None else frozenset()
+        self._repr_display = None
         self._join_sql_expr = join_sql_expr
         # Simple ORDER BY column names for value-offset RANGE numeric-type check at select.
         self._g2_range_order_names = list(g2_range_order_names) if g2_range_order_names else None
@@ -212,37 +223,9 @@ class Column:
         self._alias_metadata = dict(alias_metadata) if alias_metadata else None
         self._outer = bool(outer)
 
-    def sql_expr_part(self) -> str:
-        """SQL fragment for embedding this column into a generated SQL statement."""
-        if self._sql_expr is not None:
-            return self._sql_expr
-        return self.spark_display_part()
-
-    def join_sql_part(self) -> str:
-        """SQL fragment for join ON rewrite (H1) — origin-qualified tokens when present."""
-        if self._join_sql_expr is not None:
-            return self._join_sql_expr
-        if self._origin_plan_id is not None and self._origin_field is not None:
-            # Local import-free token: plan_id is hex; field encoded length-safe.
-            field_enc = self._origin_field.replace("\\", "\\\\").replace("\n", "\\n")
-            field_enc = field_enc.replace("__", "\\_\\_")
-            return f"__REPARK_QCOL_{self._origin_plan_id}__{field_enc}__"
-        return self.sql_expr_part()
-
-    def sql_expr_without_alias(self) -> str:
-        """SQL fragment with a trailing NamedExpression ``AS name`` stripped (if present).
-
-        ``Column.alias`` embeds ``… AS name`` into ``sql_expr`` for MERGE/select surfaces.
-        Generator rewrites (``unnest`` / ``WHERE array_length(…)``) need the bare array
-        expression only — never an illegal ``AS`` inside ``unnest(...)``.
-        """
-        text = self.sql_expr_part()
-        if not self._stable_name or self._projection_name is None:
-            return text
-        suffix = f" AS {self._projection_name}"
-        if text.endswith(suffix):
-            return text[: -len(suffix)]
-        return text
+    sql_expr_part = _column_render.sql_expr_part
+    join_sql_part = _column_render.join_sql_part
+    sql_expr_without_alias = _column_render.sql_expr_without_alias
 
     @staticmethod
     def _to_column(value: Column | Scalar) -> Column:
@@ -253,29 +236,8 @@ class Column:
 
         return lit(value)
 
-    def spark_display_part(self) -> str:
-        """PySpark-style name fragment for this expression (aggregate output-name building)."""
-        if self._spark_display is not None:
-            return self._spark_display
-        return self._inner.display_name()
-
-    def spark_wrap_display_part(self) -> str:
-        """Child fragment when this column is embedded inside an outer expression display.
-
-        User ``.alias("v")`` stores ``spark_display`` as ``… AS v`` so aggregate arguments
-        keep Spark's ``sum(x AS y)`` form via :meth:`spark_display_part`. Outer wrappers
-        (``round`` / ``abs`` / arithmetic / cast / ``_scalar``) collapse that NamedExpression
-        to the projection name so ``.alias("v").round(2)`` displays ``round(v, 2)`` rather
-        than ``round((id * 1.234) AS v, 2)``.
-        """
-        if (
-            self._stable_name
-            and self._projection_name is not None
-            and self._spark_display is not None
-            and self._spark_display.endswith(f" AS {self._projection_name}")
-        ):
-            return self._projection_name
-        return self.spark_display_part()
+    spark_display_part = _column_render.spark_display_part
+    spark_wrap_display_part = _column_render.spark_wrap_display_part
 
     def _reject_nested_generator(self, operation: str) -> None:
         """Refuse ops that would drop ``_generator`` and silently skip unnest.
@@ -422,7 +384,7 @@ class Column:
 
     def __repr__(self) -> str:
         """Render as ``Column<'expr'>`` (PySpark ``Column.__repr__``)."""
-        return f"Column<'{self.spark_display_part()}'>"
+        return f"Column<'{self._repr_display or self.spark_display_part()}'>"
 
     # ---- comparison -------------------------------------------------------------------------
 
@@ -512,123 +474,6 @@ class Column:
         left = self._to_column(other)
         left._reject_nested_generator("power")
         return spark_pow(left, self)
-
-    def contains(self, other: Column | Scalar) -> Column:
-        """Substring containment (PySpark ``Column.contains``)."""
-        return self._string_predicate("contains", other)
-
-    def substr(self, startPos: Column | int, length: Column | int) -> Column:  # noqa: N803
-        """Substring slice (PySpark ``Column.substr``).
-
-        Spark 1-based positions; ``startPos=0`` is treated as 1 (owned substring UDF).
-        ``startPos`` and ``length`` must share a type (both int or both Column) — same
-        checks as classic ``Column.__getitem__`` slice path.
-        """
-        self._reject_nested_generator("substr")
-        from repark.spark.functions import lit
-
-        start = startPos
-        stop = length
-        if type(start) is not type(stop):
-            raise PySparkTypeError(
-                errorClass="NOT_SAME_TYPE",
-                messageParameters={
-                    "arg_name1": "startPos",
-                    "arg_name2": "length",
-                    "arg_type1": type(start).__name__,
-                    "arg_type2": type(stop).__name__,
-                },
-            )
-        if isinstance(start, int):
-            start_col = lit(int(start))
-            length_col = lit(int(stop))
-            start_display: Any = start
-            length_display: Any = stop
-        elif isinstance(start, Column):
-            start_col = start
-            length_col = stop  # type: ignore[assignment]
-            start_display = start.spark_wrap_display_part()
-            length_display = length_col.spark_wrap_display_part()
-        else:
-            raise PySparkTypeError(
-                errorClass="NOT_COLUMN_OR_INT",
-                messageParameters={
-                    "arg_name": "startPos",
-                    "arg_type": type(start).__name__,
-                },
-            )
-        parts = _native.PyColumnParts.substr(
-            self._inner,
-            start_col._inner,
-            length_col._inner,
-            (self.spark_wrap_display_part(), str(start_display), str(length_display)),
-            (self.sql_expr_part(), start_col.sql_expr_part(), length_col.sql_expr_part()),
-        )
-        return Column(
-            parts[0],
-            spark_display=parts[1],
-            sql_expr=parts[2],
-            has_free_attribute=self._has_free_attribute,
-            is_foldable=self._is_foldable and not self._is_aggregate,
-            is_aggregate=self._is_aggregate,
-            has_ungroupable=self._has_ungroupable,
-        )
-
-    def startswith(self, other: Column | Scalar) -> Column:
-        """Prefix test (PySpark ``Column.startswith``)."""
-        return self._string_predicate("starts_with", other, display_name="startswith")
-
-    def endswith(self, other: Column | Scalar) -> Column:
-        """Suffix test (PySpark ``Column.endswith``)."""
-        return self._string_predicate("ends_with", other, display_name="endswith")
-
-    def like(self, other: Column | Scalar) -> Column:
-        """SQL ``LIKE`` (PySpark ``Column.like``)."""
-        return self._string_predicate("like", other)
-
-    def ilike(self, other: Column | Scalar) -> Column:
-        """Case-insensitive ``LIKE`` (PySpark ``Column.ilike``)."""
-        return self._string_predicate("ilike", other)
-
-    def rlike(self, other: Column | Scalar) -> Column:
-        """Regex match (PySpark ``Column.rlike``)."""
-        return self._string_predicate("rlike", other)
-
-    def _string_predicate(
-        self,
-        call_name: str,
-        other: Column | Scalar,
-        *,
-        display_name: str | None = None,
-    ) -> Column:
-        """Unary string predicate against a pattern/substring Column-or-scalar."""
-        shown = display_name or call_name
-        self._reject_nested_generator(shown)
-        right = self._to_column(other)
-        right._reject_nested_generator(shown)
-        parts = _native.PyColumnParts.string_predicate(
-            self._inner,
-            right._inner,
-            call_name,
-            shown,
-            (self.spark_wrap_display_part(), right.spark_wrap_display_part()),
-            (self.sql_expr_part(), right.sql_expr_part()),
-        )
-        is_aggregate = self._is_aggregate or right._is_aggregate
-        is_foldable = self._is_foldable and right._is_foldable and not is_aggregate
-        has_free_attribute = self._has_free_attribute or right._has_free_attribute
-        has_ungroupable = self._has_ungroupable or right._has_ungroupable
-        return Column(
-            parts[0],
-            spark_display=parts[1],
-            sql_expr=parts[2],
-            stable_name=False,
-            is_aggregate=is_aggregate,
-            is_foldable=is_foldable,
-            has_free_attribute=has_free_attribute,
-            has_ungroupable=has_ungroupable,
-            partition_transform=self._partition_transform or right._partition_transform,
-        )
 
     def bitwiseAND(self, other: Column | Scalar) -> Column:  # noqa: N802 — PySpark camelCase
         """Bitwise AND (PySpark ``Column.bitwiseAND``)."""
@@ -928,6 +773,8 @@ class Column:
             sql_expr=self.sql_expr_part(),
             projection_name=name,
             stable_name=True,
+            attr_id=self._attr_id,
+            birth_frame=self._birth_frame,
             partition_transform=self._partition_transform,
             is_aggregate=self._is_aggregate,
             is_foldable=self._is_foldable and not self._is_aggregate,
@@ -936,8 +783,6 @@ class Column:
             is_aggregate_function=self._is_aggregate_function,
             generator=self._generator,
             generator_cast=self._generator_cast,
-            origin_plan_id=self._origin_plan_id,
-            origin_field=self._origin_field,
             join_sql_expr=self._join_sql_expr,
             g2_range_order_names=self._g2_range_order_names,
             window_spec=self._window_spec,
@@ -1270,63 +1115,6 @@ class Column:
             window_spec=window,
         )
 
-    def _with_sort_order(self, *, ascending: bool, nulls_first: bool) -> Column:
-        """This column carrying a sort marker, with every other tracked attribute preserved.
-
-        The marker is the ONLY thing that changes. Dropping any of the carried attributes here
-        silently breaks a different subsystem: `sql_expr` keeps free-SQL global-agg from falling
-        back to unquoted display, ``generator`` keeps explode rewrite alive
-        through an ``orderBy`` marker, and the origin fields keep join
-        identity through `orderBy(parent.col.desc())` (H1).
-        """
-        return Column(
-            self._inner,
-            sort_ascending=ascending,
-            sort_nulls_first=nulls_first,
-            spark_display=self._spark_display,
-            projection_name=self._projection_name,
-            stable_name=self._stable_name,
-            agg_name=self._agg_name,
-            is_aggregate=self._is_aggregate,
-            is_foldable=self._is_foldable,
-            has_free_attribute=self._has_free_attribute,
-            has_ungroupable=self._has_ungroupable,
-            is_aggregate_function=self._is_aggregate_function,
-            partition_transform=self._partition_transform,
-            sql_expr=self._sql_expr,
-            generator=self._generator,
-            generator_cast=self._generator_cast,
-            when_pairs=self._when_pairs,
-            origin_plan_id=self._origin_plan_id,
-            origin_field=self._origin_field,
-            join_sql_expr=self._join_sql_expr,
-            **_column_fields.carried_select_attrs(self),
-        )
-
-    def asc(self) -> Column:
-        """Mark this column for ascending order (PySpark ``Column.asc``; nulls first)."""
-        return self._with_sort_order(ascending=True, nulls_first=True)
-
-    def asc_nulls_first(self) -> Column:
-        """Ascending order, nulls first (PySpark ``Column.asc_nulls_first``; same as ``asc``)."""
-        return self._with_sort_order(ascending=True, nulls_first=True)
-
-    def asc_nulls_last(self) -> Column:
-        """Ascending order, nulls LAST (PySpark ``Column.asc_nulls_last``)."""
-        return self._with_sort_order(ascending=True, nulls_first=False)
-
-    def desc(self) -> Column:
-        """Mark this column for descending order (PySpark ``Column.desc``; nulls last)."""
-        return self._with_sort_order(ascending=False, nulls_first=False)
-
-    def desc_nulls_first(self) -> Column:
-        """Descending order, nulls FIRST (PySpark ``Column.desc_nulls_first``)."""
-        return self._with_sort_order(ascending=False, nulls_first=True)
-
-    def desc_nulls_last(self) -> Column:
-        """Descending order, nulls last (PySpark ``Column.desc_nulls_last``; same as ``desc``)."""
-        return self._with_sort_order(ascending=False, nulls_first=False)
-
     def for_select(self) -> Column:
         """Return this column with the native expression aliased to the Spark projection name.
 
@@ -1365,8 +1153,9 @@ class Column:
             stable_name=self._stable_name,
             partition_transform=self._partition_transform,
             sql_expr=self._sql_expr,
-            origin_plan_id=self._origin_plan_id,
-            origin_field=self._origin_field,
+            attr_id=self._attr_id,
+            birth_frame=self._birth_frame,
+            qualifiers=self._qualifiers,
             join_sql_expr=self._join_sql_expr,
             g2_range_order_names=self._g2_range_order_names,
             window_spec=self._window_spec,
@@ -1384,6 +1173,19 @@ class Column:
     outer = _column_fields.outer
     withField = _column_fields.with_field  # noqa: N815 — PySpark camelCase alias
     dropFields = _column_fields.drop_fields  # noqa: N815 — PySpark camelCase alias
+    asc = _column_sort.asc
+    asc_nulls_first = _column_sort.asc_nulls_first
+    asc_nulls_last = _column_sort.asc_nulls_last
+    desc = _column_sort.desc
+    desc_nulls_first = _column_sort.desc_nulls_first
+    desc_nulls_last = _column_sort.desc_nulls_last
+    contains = _column_string.contains
+    substr = _column_string.substr
+    startswith = _column_string.startswith
+    endswith = _column_string.endswith
+    like = _column_string.like
+    ilike = _column_string.ilike
+    rlike = _column_string.rlike
 
 
 def _engine_type_from_cast_arg(data_type: Any) -> str:

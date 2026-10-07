@@ -18,15 +18,15 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 #[pyfunction]
-fn input_files(py: Python<'_>, frame: &PyDataFrame) -> PyResult<Vec<String>> {
+pub(crate) fn input_files(py: Python<'_>, frame: &PyDataFrame) -> PyResult<Vec<String>> {
     fenced_span!("py.action", "plan_introspect.input_files", {
         let segment = frame_drive_segment_cached(&frame.depths())?;
-        let df = crate::deep_stack::grown_clone_frame(&frame.df, &frame.depths());
+        let twin = frame.executable()?;
         py.detach(|| {
             block_on_grown_sized(
                 &frame.runtime,
                 async {
-                    let plan = df.create_physical_plan().await?;
+                    let plan = twin.create_physical_plan().await?;
                     Ok::<_, datafusion::error::DataFusionError>(repark_core::input_files(&plan))
                 },
                 segment,

@@ -48,6 +48,39 @@ def _raise_analysis(
     raise error
 
 
+def _refuse_duplicate_output_columns(frame: Any, *, exact_only: bool = False) -> None:
+    columns = list(frame.columns)
+    sensitive = True if exact_only else bool(_native.frame_case_sensitive(frame._inner))
+    seen: list[str] = []
+    for name in columns:
+        folded = name.lower()
+        for earlier in seen:
+            if earlier == name or (not sensitive and earlier.lower() == folded):
+                reported = folded
+                _raise_analysis(
+                    f"[COLUMN_ALREADY_EXISTS] The column `{reported}` already exists. "
+                    "Choose another name or rename the existing column. SQLSTATE: 42711",
+                    "COLUMN_ALREADY_EXISTS",
+                    {"columnName": reported},
+                    "42711",
+                )
+        seen.append(name)
+
+
+def _registration_frame(dataframe: DataFrame) -> Any:
+    """Return the stripped native frame writers register, renamed to unique display names."""
+    stripped = _native.strip_attribute_ids(dataframe._native_for_registration())
+    return _rename_to_unique_display_names(dataframe, stripped)
+
+
+def _rename_to_unique_display_names(dataframe: DataFrame, native: Any) -> Any:
+    """Rename native output fields to the display names when they differ and are unique."""
+    overlay = dataframe._display_overlay_names()
+    if overlay is None or len(set(overlay)) != len(overlay):
+        return native
+    return _native.rename_output_fields(native, list(overlay))
+
+
 def run_through_temp_view(
     dataframe: DataFrame,
     build_sql: Callable[[str], str],
@@ -61,7 +94,8 @@ def run_through_temp_view(
     dataframe._ensure_alive()
     session = dataframe._session
     view_name = scratch_view_name(session, prefix)
-    session.create_or_replace_temp_view(view_name, dataframe._native_for_registration())
+    registered = _registration_frame(dataframe)
+    session.create_or_replace_temp_view(view_name, registered)
     try:
         _native.session_sql_with_write_options(
             session,

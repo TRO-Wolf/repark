@@ -72,9 +72,10 @@ async fn bare_session_without_extension_scopes_leaf_projection_pushdown() {
         decorrelate_lateral,
         "repark_lateral_projection_hoist".to_string(),
     );
+    expected.insert(0, "repark_strip_attribute_ids".to_string());
     assert_eq!(
         installed, expected,
-        "the DataFusion rule list plus repark's three subquery rules at their pinned slots"
+        "the id strip first, then the DataFusion rule list plus repark's three subquery rules"
     );
     let wrapped = state
         .optimizers()

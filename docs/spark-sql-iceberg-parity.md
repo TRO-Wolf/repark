@@ -2353,9 +2353,33 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   lowercase-data, `orderBy`, `groupBy`, string `filter`) still answer
   (R-CS1-10, descoped to CASESENS-2 — the facade pre-binds them in
   `dataframe/core.py` before Rust sees the written name).
+  **CASESENS-2 S1 (2026-09-28):** R-CS1-10 closed — bare names resolve in Rust,
+  so the six legs plus `df["ID"]` refuse naming the written spelling and total
+  misses refuse the same way; qualified strings bind under `false`
+  (`q.select("t.id")` / `"t.ID"`, the aliased-table shape) naming the output
+  with the written last segment, the exact qualified shape answers under
+  `true`, and the self-join shape refuses naming `` `l`.`ID` ``. The `false`
+  door is otherwise byte-identical (r7 guards, S3 false legs, legacy
+  miss/ambiguity texts, R-19 lazy timing, the quoter battery). Re-homed per
+  the 2026-09-28 ruling, unit ledger: the `r7_selfjoin` condition refuses
+  first (R-CS2-1, join-origin follow-up) and a false-built frame reused under
+  `true` reads its captured rule (R-CS2-2).
+  **CASESENS-2 S2 (2026-09-28):** `withColumn(s)` and renames follow the rule —
+  under `true` a folded key appends and a folded rename no-ops, under `false`
+  `withColumn` replaces (every twin) and renames fan out to twins, and folded
+  `withColumns` keys refuse `[COLUMN_ALREADY_EXISTS]` 42711. The overlay
+  replace set is display-spelled, as before.
+  **CASESENS-2 S3 (2026-09-28):** `na` subsets and `dropDuplicates` follow the
+  rule — under `true` a folded or missing subset name refuses
+  (`[UNRESOLVED_COLUMN.WITH_SUGGESTION]` for `fillna` / `dropna`, Spark's
+  legacy `Cannot resolve column name …` text for `dropDuplicates`), under
+  `false` subsets match ignoring case over the null table and the
+  `dropDuplicates` miss raises the legacy text. The `na` overlay path folds
+  like the plain path.
 - **Apache Spark** — the refusals and answers above. *(oracle: recorded —
   PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
-  (210 steps) beside the facade pin.)*
+  (210 steps) beside the facade pin; 2026-09-28, `casesens_2_spark_oracle.json`
+  (34 steps) beside the S1 pin.)*
 - **Pin** — `python/repark/tests/test_casesens_1.py`
   (`test_s3_dataframe_door_is_exact_under_case_sensitive`,
   `test_s3_dataframe_union_refuses_the_missing_name`,
@@ -2367,6 +2391,26 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`);
   `crates/repark-python/src/column/door_parity_tests.rs::column_keeps_the_written_spelling`.
   pins: casesens-1/C-009, C-010
+  **CASESENS-2 S1 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  (`test_s1_true_door_refuses_bare_names`, `test_s1_true_misses_refuse`,
+  `test_s1_qualified_strings_bind`, `test_s1_false_door_byte_identical`);
+  `crates/repark-core/src/session/df_guards/written_names.rs::tests`
+  (`select_names_bind_and_refuse_by_rule`,
+  `qualified_names_split_on_the_last_dot`,
+  `display_names_fan_out_and_the_subset_text_is_legacy`).
+  pins: casesens-2/C-001, C-002, C-003, C-006
+  **CASESENS-2 S2 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  (`test_s2_withcolumn_follows_the_rule`, `test_s2_renamed_follows_the_rule`,
+  `test_s2_folded_keys_refuse`, `test_s2_overlay_replace_unchanged`);
+  `crates/repark-core/src/session/df_guards/written_names.rs::tests`
+  (`display_match_fans_out_under_ignore_case_and_is_exact_under_exact`).
+  pins: casesens-2/C-002, C-004, C-006
+  **CASESENS-2 S3 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  (`test_s3_fillna_follows_the_rule`, `test_s3_dropna_follows_the_rule`,
+  `test_s3_drop_duplicates_follows_the_rule`);
+  `crates/repark-core/src/session/df_guards/written_names.rs::tests`
+  (`subset_names_fan_out_and_miss_with_the_legacy_text`).
+  pins: casesens-2/C-002, C-005, C-006
 - **Rationale** — FIXED; every true-mode refusal is Spark's measured text, its
   head with the candidate set, or the recorded legacy text, and the default
   session is unchanged.
@@ -3261,6 +3305,45 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   visible (`conf.get` discloses it), and both directions stay under test so a drift in
   either inference path reds.
 
+### FA-5 — csv writes of exact-duplicate display names refuse (Spark writes them)
+
+- **repark** — a frame whose display names hold exact duplicates refuses a csv
+  path write with `[COLUMN_ALREADY_EXISTS]`, naming the first duplicate,
+  before any file is created — the same refusal as the parquet/json/orc/table
+  doors. Case-twin columns (`T`, `t`) write with the raw header, as Spark
+  does (SM-2b narrowing, 2026-10-06).
+- **Apache Spark** — writes the file with the duplicate display header
+  (`id,s,v,id,s,v` on the fold's self-join). *(oracle: live 4.1.2, 2026-10-06,
+  raw header line of the written part file.)*
+- **Pin** — `python/repark/tests/test_attr_id_1_sm2_dupwrites.py::test_csv_write_of_duplicate_display_names_refuses_as_ruled_divergence`
+- **Rationale** — DECLARED as a deliberate divergence (orchestrator, 2026-10-06):
+  the csv rows can only carry the twin engine names today, and writing them
+  would ship a silent wrong answer; the loud refusal holds the line until the
+  physical-only COPY rename lands (follow-up on the v1.5.3 card, 2026-10-06).
+  The pin asserts the refusal, so the rename reds it and forces this row to be
+  re-recorded together with the behavior.
+
+### FA-6 — temp views over exact-duplicate display names refuse (Spark registers them)
+
+- **repark** — a frame whose display names hold exact duplicates refuses
+  `createOrReplaceTempView`, `createTempView`, `createGlobalTempView` and
+  `createOrReplaceGlobalTempView` with `[COLUMN_ALREADY_EXISTS]`, naming the
+  first duplicate (SQLSTATE 42711), before anything is registered. Case-twin
+  columns (`id`, `ID`) register and answer, as Spark does (SM-2b narrowing,
+  2026-10-06). The global doors keep their existing unsupported error for
+  duplicate-free frames.
+- **Apache Spark** — registers the view; `SELECT *`, `spark.table` and
+  `DESCRIBE` all carry the duplicate display names (`id, s, v, id, s, v` on
+  the fold's self-join). *(oracle: live 4.1.2, 2026-10-06, `v_self`/`v_r`.)*
+- **Pin** — `python/repark/tests/test_attr_id_1_sm2_dupviews.py` (11 tests)
+- **Rationale** — DECLARED as a deliberate divergence (orchestrator, 2026-10-06):
+  the engine cannot hold duplicate names in a view schema (a duplicate
+  `(qualifier, name)` pair is unplannable), and registering the twin engine
+  names would ship a silent wrong answer; the loud refusal holds the line
+  until duplicate-name view schemas land (follow-up on the v1.5.3 card,
+  2026-10-06). The pins assert the refusal, so the follow-up reds them and
+  forces this row to be re-recorded together with the behavior.
+
 ### DF-STREAM-1 — `dropDuplicatesWithinWatermark` drops the appended plan dump
 
 - **repark** — raises `AnalysisException` with errorClass `_LEGACY_ERROR_TEMP_3102` at the call,
@@ -3418,6 +3501,27 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   consequence from the `readStream` row applies identically here.
 - Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19; re-pointed to 1.7 on 2026-10-04) →
   [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
+### MB-1-FL-9 — a micro-batch stream starting on an overwrite or delete with no added data files refuses at start; Spark idles while no snapshot follows it
+- **repark** — the micro-batch source (`MicroBatchSource::initial_offset`, MB-1) started with
+  `Earliest` or `stream-from-timestamp`, whose start snapshot is an `overwrite` or `delete`
+  that added zero data files, refuses `NonAppendSnapshot` (`Cannot process delete snapshot:
+  <id>; Bronze is append-only (O-5) …`) at `initial_offset`, before any batch. Once data
+  arrives the answer is the same refusal.
+- **Apache Spark** — `SyncSparkMicroBatchPlanner.planFiles` calls `shouldProcess()` on the start
+  snapshot of every batch, so an `overwrite` or `delete` start fails the query with `Cannot
+  process <operation> snapshot: <id>`. A start snapshot that added no data files has no file to
+  plan, so while it is the head and no snapshot follows it the query idles. Once any snapshot
+  follows it, `latestOffset` walks past it and `planFiles`' `shouldProcess` on the start fails
+  the first batch the same way, so with a later append both engines refuse at once.
+  *(oracle: recorded for an overwrite start that added files — cell MB0b-R16,
+  `STREAM_FAILED` before any batch; the idle half, with the zero-added-files start as the head,
+  is read from the Iceberg 1.11 bytecode and no cell measures it yet. An MB0b cell is the
+  oracle this half awaits.)*
+- **Pin** — `crates/repark-iceberg/src/microbatch/window_fold2_pins.rs::a_delete_as_head_refuses_at_the_initial_offset`
+- **Rationale** — DECLARED 2026-10-07 (MB-1 fold 1, ruling FL-9 KEEP). Both engines refuse
+  the stream; repark refuses at start rather than idling, so the failure lands when the query
+  is launched, not on the first later append (NS-6, refuse loud). The only difference is when
+  the refusal fires.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.
@@ -12664,8 +12768,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   new column reads an earlier new column, which is exponential in the depth
   (`c[n] = f(c[n-1])`). The safe variant re-parents onto the previous projection's input only
   when the new expression reads no computed column — it never duplicates, but it rewrites plan
-  lineage, and `_origin_plan_id`, the `MISSING_ATTRIBUTES` contract and the
-  adjacent-window-layer merge are all defined in terms of that lineage. Wants its own scope
+  lineage, and `Column._attr_id`, the `MISSING_ATTRIBUTES` contract and the
+  adjacent-window-layer merge are all defined in terms of that lineage (S4,
+  2026-10-02: the `_origin_*` encodings are deleted). Wants its own scope
   audit before it is built. Evidence: `docs/perf/facade-boundary-baseline.md` §2.
 - **COLLECT-STRUCT-ROW-1** — surfaced 2026-09-04, PERF-FACADE-1 round-2 review. BACKLOG.
   A `StructType` cell comes back from `collect()` as a `dict`; live PySpark returns a nested
@@ -13333,22 +13438,24 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-18 measurement. The refusal is disclosed
   (R-DF-BATCH2) and pinned in `test_df_batch2.py`; this row records the measured Spark answers
   and keeps the name on the example backlog until the engine grows a row-JSON exporter.
-### EX-DF-18 — `withColumnsRenamed` refuses duplicate final names; Spark answers the duplicate-named frame
+### EX-DF-18 — `withColumnsRenamed` answers duplicate final names — **FIXED 2026-10-01 (ATTR-ID-1 S3c)**
 
-- **repark** — a rename map whose final names collide raises
-  `AnalysisException: withColumnsRenamed produced duplicate column names ['k', 'k', 'v']; repark
-  requires unique column names (Spark allows duplicates — Group F disclosure)`. Non-colliding
-  maps — including a chain applied sequentially in dict order (`{"g": "gg", "k": "g"}` on
-  `[g, k, v]` answers `[gg, g, v]`) — match Spark bit-for-bit on names and values.
+- **repark** — a rename map whose final names collide materializes Spark's duplicate-named
+  frame through the display overlay (unique engine fields beneath shared displays):
+  `withColumnsRenamed({"g": "k", "k": "k"})` on `[g, k, v]` answers `['k', 'k', 'v']`.
+  Non-colliding maps — including a chain applied sequentially in dict order (`{"g": "gg",
+  "k": "g"}` on `[g, k, v]` answers `[gg, g, v]`) — match Spark bit-for-bit on names and
+  values, as before.
 - **Apache Spark** — `withColumnsRenamed({"g": "k", "k": "k"})` on `[g, k, v]` answers the frame
   with duplicate column names `['k', 'k', 'v']`; renames apply sequentially in dict insertion
   order. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19 DataFrame-d batch; one-row
   `g`/`k`/`v` frame.)*
 - **Pin** —
   `python/repark/tests/test_examples_dataframe_d.py::test_with_columns_renamed_duplicate_names_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. The name stays covered by
-  the non-colliding arms, where the engines agree; this row records the colliding-map arm until
-  repark can materialize duplicate column names the way Spark does.
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. The S3c replay showed
+  the refusal moving main-equal cells away from Spark (folded matches newly collide), and the
+  `select` duplicate-display overlay already materializes the shape, so S3c lifts the refusal
+  and every map matches Spark bit-for-bit.
 
 ### EX-DF-19 — `stat.freqItems` answers the frequent-item table — **FIXED 2026-09-15 (DF-RUST-3)**
 
@@ -13364,6 +13471,72 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Pin** — `python/repark/tests/test_examples_dataframe_d.py::test_stat_freq_items_answers`
 - **Rationale** — FIXED 2026-09-15 (DF-RUST-3). History: the name raised the disclosed
   `UnsupportedOperationException` (R-DF-BATCH2) until the Rust `FreqItemCounter` UDAF landed.
+
+### EX-DF-20 — shared-lineage joins refuse ambiguity on the cross-field and compound shapes — **FIXED 2026-10-02 (ATTR-ID-1 SJ-3)**
+
+- **repark** — **FIXED 2026-10-02 (ATTR-ID-1 SJ-3).** `df.join(df, df.a == df.b)`,
+  `l.join(r, (l.x + l.y) == (r.x + r.y))` and `(l.x + r.y) == (l.y + r.x)` raise
+  `_LEGACY_ERROR_TEMP_1182` with Spark's names and template, like Spark. Self-equi
+  `df.join(df, df.x == df.x)` answers the diagonal on both engines and was never
+  part of this row. History: the shapes answered per-side rows through positional
+  token siding until the native condition preparer landed.
+- **Apache Spark** — the cross-field equi and both compound shapes raise
+  `AnalysisException` (`Column … are ambiguous. It's probably because you joined
+  several Datasets together …`). *(oracle: recorded, live PySpark 4.1.2, 2026-10-02,
+  ATTR-ID-1 S4 probes s4-spark-lineage cells a/m/h2 and s4-spark-selfequi.)*
+- **Pin** —
+  `python/repark/tests/test_h2_group_h2.py::test_h2_same_object_self_join_cross_fields`,
+  `python/repark/tests/test_h2_group_h2.py::test_h2_same_object_compound_self_join_refuses_loud`
+  (both halves),
+  `python/repark/tests/test_attr_id_1_s4.py::test_s4_mixed_compound_arms_refuses`
+- **Rationale** — FIXED 2026-10-02 (ATTR-ID-1 SJ-3): the native
+  `prepare_join_condition` resolves ON-clause references against each join side's
+  plan the way Catalyst does, and the positional siding is deleted.
+  SJ-4 (2026-10-02) extends the refusal to post-join references through the
+  13-surface funnel; SJ-5 (2026-10-03) routes `crossJoin` through the same
+  builder and resolves free names against displays (R-SJ5-1). The general
+  refusal is row EX-DF-21.
+
+### EX-DF-21 — self-join references refuse `_LEGACY_ERROR_TEMP_1182` like Spark Classic — **FIXED 2026-10-03 (ATTR-ID-1 SJ-3 to SJ-5)**
+
+- **repark** — **FIXED 2026-10-03 (ATTR-ID-1 SJ-3 to SJ-5).** A column reference
+  whose frame sits on both sides of a join refuses `AnalysisException`
+  `_LEGACY_ERROR_TEMP_1182`, as Spark Classic does: in the join condition
+  (`d.join(f, d.id < f.id)`), where exempt same-id equalities are rewritten by
+  name instead, and after the join at the 13 checking surfaces (`select`,
+  `filter`/`where`, `withColumn(s)`, `repartition`, `orderBy`/`sort`,
+  `groupBy`/`cube`/`rollup`, both `agg` doors) — `s.join(d).select(d.v)` with
+  `s = d.select("id")` refuses where RePark used to answer the left `v`. EQUAL
+  on the condition, the `config` parameter
+  (`spark.sql.analyzer.failAmbiguousSelfJoin`), the verbatim template tail, and
+  the display names sorted with exact multiplicity (RePark has no exprIds, so
+  Spark's `id#0L, id#0L` renders `id, id`). `select('*')`, `count()` and the
+  name-based surfaces (`withColumnRenamed`, `dropDuplicates`, `fillna`,
+  `drop("v")`, `toDF`, `drop(Column)`, window expressions) never check.
+  `spark.sql.analyzer.failAmbiguousSelfJoin=false` turns the check off: every
+  reference binds left by id, and a re-minted id absent from the output raises
+  `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`. History: the
+  shapes answered per-side rows through positional token siding until the
+  native frame-lineage DAG, the condition preparer and the post-join funnel
+  landed.
+- **Apache Spark** — Spark Classic raises `AnalysisException`
+  (`_LEGACY_ERROR_TEMP_1182`, `Column … are ambiguous. It's probably because
+  you joined several Datasets together …`) with `ambiguousAttrs` naming each
+  ambiguous reference as `name#exprId` plus a type suffix and `config` naming
+  `spark.sql.analyzer.failAmbiguousSelfJoin`. *(oracle: recorded, live PySpark
+  4.1.2, 2026-10-02, ATTR-ID-1 selfjoin probes sj1–sj5 and sj2.params.json.)*
+- **Pin** —
+  `python/repark/tests/test_attr_id_1_sj3.py`,
+  `python/repark/tests/test_attr_id_1_sj4.py`,
+  `python/repark/tests/test_attr_id_1_sj5.py`
+- **Rationale** — FIXED 2026-10-03 (ATTR-ID-1 SJ-3 to SJ-5, owner ruling
+  2026-10-02 option A): the native `prepare_join_condition` detects, rewrites
+  and binds ON-clause references the way Catalyst does, and the post-join
+  funnel refuses ambiguous references at every checking surface. Dated
+  residues: the `ambiguousAttrs` order on multi-name refusals (ledger R-18),
+  the `!Join` operator text on MISSING refusals (ledger R-14), and views,
+  checkpoint and never-stamped plans keeping or cutting lineage (cards
+  VIEW-LINEAGE-SELFJOIN-1, LOCAL-CHECKPOINT-NEW-FRAME-1, ledger R-13).
 
 ### PERF-APPROXQUANTILE-1 — `approxQuantile` collects once per frame, not once per column × probability — **FIXED 2026-09-07 (DFCORE-5)**
 

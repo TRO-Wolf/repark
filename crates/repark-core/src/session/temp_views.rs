@@ -29,6 +29,8 @@ impl ReparkSession {
                 ))
             })?
             .schema();
+        let (schema, batches) =
+            super::df_guards::attr_id::strip_record_batches(schema, batches).map_err(engine_err)?;
         let table = MemTable::try_new(schema, vec![batches]).map_err(engine_err)?;
         self.replace_view(name, Arc::new(table))
     }
@@ -74,6 +76,8 @@ impl ReparkSession {
         schema: arrow::datatypes::SchemaRef,
         batches: Vec<RecordBatch>,
     ) -> Result<()> {
+        let (schema, batches) =
+            super::df_guards::attr_id::strip_record_batches(schema, batches).map_err(engine_err)?;
         let partitions = if batches.is_empty() {
             vec![vec![]]
         } else {
@@ -125,6 +129,8 @@ impl ReparkSession {
         crate::sorted_view::verify_batches_sorted(&schema, &batches, keys)?;
         let (schema, batches) =
             crate::sorted_view::apply_declare_nullability(schema, batches, keys, tighten_nulls)?;
+        let (schema, batches) =
+            super::df_guards::attr_id::strip_record_batches(schema, batches).map_err(engine_err)?;
         let partitions = if batches.is_empty() {
             vec![vec![]]
         } else {
@@ -217,6 +223,8 @@ impl ReparkSession {
             &analyzed, schema, batches,
         )?;
         let batches = conform_batches_to_schema(&schema, &batches)?;
+        let (schema, batches) =
+            super::df_guards::attr_id::strip_record_batches(schema, batches).map_err(engine_err)?;
         let (batches, declared) = apply_ordered_cache(
             ordering.as_deref(),
             physical_schema.as_ref(),

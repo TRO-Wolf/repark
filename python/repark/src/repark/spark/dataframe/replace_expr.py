@@ -180,13 +180,18 @@ def _arrow_type_family(arrow_type: Any) -> str:
     return "other"
 
 
-def _bind_qualified_column(frame: DataFrame, display: str, qualifier: str) -> Column:
+def _bind_qualified_column(frame: DataFrame, display: str, qualifier: str, position: int) -> Column:
     """Bind one field through its relation qualifier (join multi-name output)."""
     from repark import _native
     from repark.spark._idents import quote_ident as _quote_ident
 
     quoted = f"{_quote_ident(qualifier)}.{_quote_ident(display)}"
     native = _native.PyColumn.column(quoted)
+    held: list[str | None] = list(_native.attribute_ids(frame._plan()))
+    if None in held:
+        frame._inner = _native.stamp_attribute_ids(frame._inner)
+        held = list(_native.attribute_ids(frame._plan()))
+    attr_id = held[position] if position < len(held) else None
     return Column(
         native.alias(display),
         spark_display=display,
@@ -194,8 +199,8 @@ def _bind_qualified_column(frame: DataFrame, display: str, qualifier: str) -> Co
         stable_name=True,
         has_free_attribute=True,
         sql_expr=quoted,
-        origin_plan_id=frame._plan_id,
-        origin_field=display,
+        attr_id=attr_id,
+        qualifiers=frozenset((frame._frame_qualifiers or {}).get(attr_id) or ()),
     )
 
 
@@ -208,8 +213,10 @@ def _iter_replace_bound_columns(frame: DataFrame) -> list[Column]:
         and len(qualifiers) == len(frame.columns)
     ):
         return [
-            _bind_qualified_column(frame, name, qualifier)
-            for name, qualifier in zip(frame.columns, qualifiers, strict=True)
+            _bind_qualified_column(frame, name, qualifier, position)
+            for position, (name, qualifier) in enumerate(
+                zip(frame.columns, qualifiers, strict=True)
+            )
         ]
     return frame._iter_bound_columns()
 
@@ -220,7 +227,13 @@ def _aliased_join_sides(
     """Alias both join inputs under generated `_repark_jl_*`/`_repark_jr_*` names."""
     left_name = f"_repark_jl_{uuid.uuid4().hex[:12]}"
     right_name = f"_repark_jr_{uuid.uuid4().hex[:12]}"
-    return left.alias(left_name), right.alias(right_name), (left_name, right_name)
+    left_held = left._frame_qualifiers
+    right_held = right._frame_qualifiers
+    rebound_left = left.alias(left_name)
+    rebound_right = right.alias(right_name)
+    rebound_left._frame_qualifiers = dict(left_held) if left_held else None
+    rebound_right._frame_qualifiers = dict(right_held) if right_held else None
+    return rebound_left, rebound_right, (left_name, right_name)
 
 
 def _assign_join_qualifiers(
@@ -234,13 +247,12 @@ def _assign_join_qualifiers(
 
 
 def _inherit_plan_metadata(parent: DataFrame, child: DataFrame) -> DataFrame:
-    """Carry the display/engine overlay, origin map, and join qualifiers to a same-schema child."""
+    """Carry the display/engine overlay and join qualifiers to a same-schema child."""
     if parent._display_names is not None:
         child._display_names = list(parent._display_names)
         child._engine_names = (
             list(parent._engine_names) if parent._engine_names is not None else None
         )
-        child._origin_map = dict(parent._origin_map) if parent._origin_map is not None else None
     if parent._join_qualifiers is not None:
         child._join_qualifiers = list(parent._join_qualifiers)
     return child
@@ -299,20 +311,5 @@ def _replace(
             ]
             replacements_by_type_key[type_key] = replacements
         expression = _replace_case(bound, key_literals, replacements)
-        if bound._origin_plan_id is not None and bound._origin_field is not None:
-            projected.append(
-                Column(
-                    expression._inner.alias(display),
-                    spark_display=display,
-                    projection_name=display,
-                    stable_name=True,
-                    has_free_attribute=True,
-                    origin_plan_id=bound._origin_plan_id,
-                    origin_field=bound._origin_field,
-                    join_sql_expr=expression.join_sql_part(),
-                    sql_expr=expression._sql_expr,
-                )
-            )
-        else:
-            projected.append(expression.alias(display))
+        projected.append(expression.alias(display))
     return frame.select(*projected)

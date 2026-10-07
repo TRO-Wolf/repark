@@ -67,6 +67,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   the `session_window` wrapper the same way (marker call aliased
   `session_window`).
   pins: fnp-win-1/C-001, C-002, C-004, C-008
+  **ATTR-ID-1 S3a (2026-09-30):** `alias` builds through
+  `repark_core::frame_names::alias_with_fresh_id`, so a user `alias()` mints a fresh
+  attribute id in the alias's own metadata. `PyColumn::alias` (the bind/facade path)
+  is untouched: binds keep the field's id.
+  pins: attr-id-1/C-024
   **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated` is one native call
   in the same 4-tuple shape (`is_duplicated(child)` display, SQL and join
   fragments) over the `expr_build::is_duplicated_expr` constructor.
@@ -211,7 +216,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   DoubleType, computed in f64); the multiply coerces f32/int/decimal to f64 while
   bool/string still refuse (no numeric coercion).
   pins: abs-expr-1/C-001, C-002
-- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
+- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds the `grouping_id_column` pyfunction, which `lib.rs` used to register inline; the move pays for `lib.rs`'s two `frame_lineage` lines. **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan when every parsed column is in the frame schema; otherwise `folded_qualifier_predicate` re-parses the canonical text to a SQL AST, runs `frame_names::fold_frame_qualifiers` under `IgnoreCase`, and plans the rewritten tree when a qualifier folded, so an alias qualifier binds in any case now that `subquery_alias` keeps the alias spelling. pins: casesens-2/C-013
   **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated_expr` builds
   `count(1) OVER (PARTITION BY dup_key(receiver)) > 1` through the same
   `count_aggregate` + `build_over_expression` path a user-written window takes
@@ -241,6 +246,14 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `coalesce(array_agg(x) IGNORE NULLS, make_array())`, so `over()` used to refuse them outright;
   the group-by spelling is untouched, and two aggregates in one expression still refuse (there is
   no single window to push). pins: win-slide-1/C-002
+  **CASESENS-2 S1 (2026-09-28), ported 2026-10-03:** `parse_canonical_predicate_exact`
+  refuses a total-miss filter field with `frame_names::unresolved_column` (Spark's
+  `UNRESOLVED_COLUMN` text, every frame field suggested) once the case-only probe
+  passes; the charter's `resolve_df_names` route retired with the matcher.
+  `unresolved_sort_key(error, schema)` maps the engine's `FieldNotFound` from
+  `PyDataFrame.sort` the same way over an unqualified copy of the frame schema, so
+  `orderBy("nope")` refuses as Spark does after the S3b fall-through.
+  pins: casesens-2/C-002, C-010
   **PERF-APPROXPCT-1 (2026-09-05):** `percentile_approx_scalar_expr` (new) and
   `percentile_approx_list_expr` take `Option<i64>` accuracy and build the two- or three-arg
   UDAF call. pins: perf-approxpct-1/C-002
@@ -278,6 +291,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `parse_canonical_predicate_exact` parses a filter fragment against a
   normalization-off clone of the frame state and routes a `FieldNotFound` miss
   through the rule binder for Spark's refusal. pins: casesens-1/C-009
+  **ATTR-ID-1 S3b H-1 (2026-10-01):** `ambiguous_column` reads the relation
+  and name out of a filter-stage `AmbiguousReference` (through `Diagnostic`
+  wrappers) for the `filter_frame_with_sql` reshape. pins: attr-id-1/C-026
   **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):**
   `count_distinct_argument` keeps its name and grows by max argument depth
   around a renamed inner body, so the packed-struct clone of deep arguments runs

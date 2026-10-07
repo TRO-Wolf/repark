@@ -1,5 +1,24 @@
 # map — scripts/
 
+ATTR-ID-1 S4 follow-up (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1527 → 1485 (the sort-marker family moves to `column_sort.py` behind `Column` bindings) and `dataframe/core.py` 3711 → 3653 (`_select_via_attr_sql` moves to `join_attr_tokens.py` behind a one-line delegate), shrink-only. pins: attr-id-1/C-041
+
+ATTR-ID-1 S4 alias fix (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1485 → 1378 (the string-predicate family moves to `column_string.py` behind `Column` bindings), shrink-only. pins: attr-id-1/C-042
+
+ATTR-ID-1 V-4 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3653 → 3652 (the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-045
+
+ATTR-ID-1 SJ-3 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3595 → 3583 (the join-token siding calls are deleted with V-2's positional siding), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+CASESENS-2 port, PERF-1 merge (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` to the merged head's measured 3466 (PERF-1's 3475 less the port's 9-line join-argument move), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_casesens_2.py`.
+CASESENS-2 port (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3485 → 3476 (the join preparer's arguments move to `join_attr_tokens._join_condition_args`), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_casesens_2.py`.
+ATTR-ID-1 PERF-1 (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3485 → 3475 (the frame-node and snapshot caches move to `frame_nodes.py`), shrink-only, with the CAP-1 mirror.
+ATTR-ID-1 SJ-5 (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3494 → 3485 and retires the `dataframe/joins_columns.py` exception (the pivot family moves to `grouped_pivot.py`; the file is 955 lines, under the default ceiling), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
+ATTR-ID-1 SJ-4 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3583 → 3494 (the repartition trio moves to `repartition_ops.py` behind `DataFrame` bindings) and `dataframe/joins_columns.py` 1169 → 1119 (`_grouped_agg_pandas` moves to `grouped_udf.py`), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_attr_id_1_sj4.py`.
+ATTR-ID-1 SJ-2 (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1378 → 1331 (the fragment-render family moves to `column_render.py` behind `Column` bindings) and `dataframe/core.py` 3652 → 3595 (the unemitted-id family moves to `unemitted_ids.py` behind `DataFrame` bindings), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+
+ATTR-ID-1 S3e (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3803 → 3800 (the `selectExpr` body moves to `filter_quote._select_expr_frame` and the select star arms fold into one `qualified_names` delegate), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-039
+
+ATTR-ID-1 S3b (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3921 → 3846 (the filter quoter and its token helpers move to `column_fields.py`, `filter`/`_sort_specs` delegate to it), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-025
+
+ATTR-ID-1 S3a (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3921 (`_column_of` and `_rebind_stable_name_column` become one-line delegates to `column_fields`, `__getitem__`/`__getattr__` route through the resolve rule, the alias overlay restores deduplicated display names), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-024
 TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1801 → 1791 (`make_udf` moves to `udf/glue.rs` beside the native `null_prefix` helpers; `window_udf` delegates to `window_udf_with_null_prefix`) and `check_lib_py.py` ratchets `python/repark/src/repark/spark/ta.py` 1818 → 1795 (the `row_number` + CASE rewrite in `_NullLookbackColumn.over` is gone), shrink-only, with the CAP-1 mirror.
 TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1818 → 1801 (the output copy and the single-series borrow move to the new `udf/glue.rs`), shrink-only, with the CAP-1 mirror.
 TA-CHAIN-1 S1 (2026-10-03): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1821 → 1818 (the four `compute` / `compute_all` calls in `evaluate_all` route through the new `udf/prefix.rs` helpers; the wrapper tests live in `prefix.rs`), shrink-only, integer only (owner amendment R-TC1-6, 2026-10-03).

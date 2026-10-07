@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import traceback
 from collections.abc import Iterator
 from typing import Any
 
@@ -242,3 +243,57 @@ def _iter_apply_in_pandas_group_tables(
     """
     for _key, segments in _iter_apply_in_pandas_keyed_groups(input_batches, key_names):
         yield _apply_in_pandas_table_from_segments(segments)
+
+
+def _grouped_agg_pandas(pdf: Any, *, keys: list[str], specs: list[dict[str, Any]]) -> Any:
+    """Return one output row for a GROUPED_AGG pandas UDF group."""
+    try:
+        import pandas as pd
+    except ImportError as error:
+        raise ImportError(
+            "GROUPED_AGG pandas_udf requires pandas (pip install 'repark[pandas]')"
+        ) from error
+
+    row: dict[str, Any] = {}
+    for key_name in keys:
+        if key_name not in pdf.columns:
+            raise PySparkException(
+                f"GROUPED_AGG pandas_udf missing group key {key_name!r} in group frame"
+            )
+        row[key_name] = pdf[key_name].iloc[0] if len(pdf) > 0 else None
+    for spec in specs:
+        series_args: list[Any] = []
+        for position, input_name in enumerate(spec["input_inter_names"]):
+            if input_name not in pdf.columns:
+                raise PySparkException(
+                    f"GROUPED_AGG pandas_udf input column missing from group frame: {input_name!r}"
+                )
+            series = pdf[input_name]
+            series.name = f"_{position}"
+            series_args.append(series)
+        try:
+            value = spec["user_func"](*series_args)
+        except PySparkException:
+            raise
+        except Exception as error:
+            detail = traceback.format_exc()
+            raise PySparkException(
+                "GROUPED_AGG pandas_udf "
+                f"{spec['function_name']!r} raised {type(error).__name__}: "
+                f"{error}\n{detail}"
+            ) from error
+        if value is None:
+            row[spec["out_name"]] = None
+        elif isinstance(value, pd.Series):
+            raise PySparkException(
+                f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
+                f"scalar; got pandas.Series (length {len(value)})"
+            )
+        elif isinstance(value, pd.DataFrame):
+            raise PySparkException(
+                f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
+                f"scalar; got pandas.DataFrame"
+            )
+        else:
+            row[spec["out_name"]] = value
+    return pd.DataFrame([row], columns=[*keys, *[spec["out_name"] for spec in specs]])

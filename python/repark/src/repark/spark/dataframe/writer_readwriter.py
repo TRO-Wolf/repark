@@ -351,6 +351,8 @@ class DataFrameWriter:
         writer_layout.refuse_bucketed_action(self, "save")
         if self._format == "iceberg":
             return writer_save.save_iceberg(self, path)
+        if self._format == "orc":
+            writer_layout._refuse_duplicate_output_columns(self._dataframe)
         if self._format not in self._PATH_FORMATS:
             _io_declared.refuse_writer_save_format(self)
         if self._format == "text":
@@ -368,6 +370,10 @@ class DataFrameWriter:
         if normalized_mode not in self._PATH_MODES:
             raise AnalysisException(
                 f"path write mode must be one of {self._PATH_MODES}, got {self._mode!r}"
+            )
+        if stored_as in ("PARQUET", "JSON", "CSV"):
+            writer_layout._refuse_duplicate_output_columns(
+                self._dataframe, exact_only=stored_as == "CSV"
             )
         destination = Path(path)
         if _writer_s3.is_s3_url(path):
@@ -847,6 +853,7 @@ class DataFrameWriterV2:
     def append(self) -> None:
         """Append rows to an existing table by column name."""
         session, table_ref = self._existing_table_ref()
+        writer_layout._refuse_duplicate_output_columns(self._dataframe)
         self._run_through_temp_view(
             writer_schema.append_statement(session, self._dataframe, table_ref),
             self._options,
@@ -931,6 +938,7 @@ class DataFrameWriterV2:
 
     def _run_ctas(self, *, or_replace: bool) -> None:
         """Execute the CTAS / CREATE OR REPLACE path through a throwaway temp view."""
+        writer_layout._refuse_duplicate_output_columns(self._dataframe)
         self._run_through_temp_view(
             lambda view: self._ctas_sql(or_replace=or_replace, view=view), self._options
         )

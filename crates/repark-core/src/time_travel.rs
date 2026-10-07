@@ -18,6 +18,7 @@ use crate::illegal_argument_error;
 
 pub mod incremental;
 pub mod metadata_at;
+pub mod microbatch_source;
 mod sql_ast;
 mod sql_eval;
 mod sql_text;
