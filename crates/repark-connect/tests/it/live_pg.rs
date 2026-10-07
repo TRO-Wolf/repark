@@ -628,3 +628,56 @@ async fn mapped_types_round_trip_through_the_scan() {
     }
     cell.close().await;
 }
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn relation_discovery_resolves_domains_nullability_and_collation() {
+    let cell = Cell::open().await;
+    let schema = &cell.schema;
+    cell.sql(&format!(
+        "CREATE DOMAIN {schema}.money2 AS numeric(10,2);
+         CREATE DOMAIN {schema}.positive AS {schema}.money2 CHECK (VALUE > 0);
+         CREATE TABLE {schema}.t (id int4 NOT NULL, gone int4, amount {schema}.money2,
+           price {schema}.positive, label text COLLATE \"C\");
+         ALTER TABLE {schema}.t DROP COLUMN gone;
+         INSERT INTO {schema}.t VALUES (1, 12.5, 3.25, 'a'), (2, NULL, NULL, NULL)"
+    ))
+    .await;
+    let reader = Reader::new(&cell.settings(&[]));
+    let resolved = reader.resolve(cell.relation("t")).await.expect(LIVE);
+    let fields: Vec<String> = resolved
+        .columns
+        .iter()
+        .map(|column| {
+            let field = column.planned.field();
+            format!(
+                "{} {} {}",
+                field.name(),
+                field.data_type(),
+                field.is_nullable()
+            )
+        })
+        .collect();
+    assert_eq!(
+        fields,
+        [
+            "id Int32 false",
+            "amount Decimal128(10, 2) true",
+            "price Decimal128(10, 2) true",
+            "label Utf8 true",
+        ]
+    );
+    let collation = resolved.columns[3].collation.as_ref().expect("a collation");
+    assert_eq!(
+        (collation.name.as_str(), collation.deterministic),
+        ("C", true)
+    );
+    let batches = reader.read(ScanRequest::new(resolved)).await.expect(LIVE);
+    let amounts = batches[0]
+        .column(2)
+        .as_any()
+        .downcast_ref::<Decimal128Array>();
+    let amounts: Vec<Option<i128>> = amounts.expect("decimal").iter().collect();
+    assert_eq!(amounts, [Some(325), None]);
+    cell.close().await;
+}
