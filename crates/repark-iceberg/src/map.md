@@ -38,6 +38,10 @@ Source comments are condensed to API and safety contracts; executable behavior i
   snapshot refs over the owned fork. Named-ref commits use `commit_target` / `to_branch`.
   See [write/map.md](write/map.md).
   pins: rp-5-fork-repin/C-004
+- [microbatch/](microbatch/map.md) — **MB-1 round 1 (2026-10-07):** the
+  micro-batch track's offsets, identifiers, offset JSON, and the track's one
+  error enum (`MicroBatchError`). Round 2 adds the window and provider.
+  pins: mb-1/C-007
 - [view/](view/map.md) — **ICE-VIEWS-1 (2026-09-20):** the view service over the
   fork's `Catalog` view methods (`create_or_replace_view`, `drop_catalog_view`,
   `list_catalog_views`, schema/property/location helpers, `view_read_spec`).
@@ -52,6 +56,7 @@ Source comments are condensed to API and safety contracts; executable behavior i
 |---|---|
 | Catalog wiring | [catalog/map.md](catalog/map.md) |
 | Write paths | [write/map.md](write/map.md) |
+| Micro-batch offsets and errors | [microbatch/map.md](microbatch/map.md) |
 | View service | [view/map.md](view/map.md) |
 | Re-export surface | `lib.rs` |
 | Span-capture in tests records nothing | `tests/tracing.rs` (one global subscriber; install via its accessors, never `set_global_default` directly) |
