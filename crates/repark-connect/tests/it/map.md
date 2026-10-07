@@ -8,8 +8,8 @@ See [../map.md](../map.md).
 ## Contents
 
 - `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings; mod url;`, plus
-  `mod explain; mod live_pg; mod live_pool; mod pool; mod pushdown; mod read; mod scan; mod tls;`
-  under the `postgres` feature.
+  `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
+  mod scan; mod tls;` under the `postgres` feature.
 - `explain.rs` — C-2c (2026-10-07), behind `postgres`, no network: sketch §5.3 over the
   `pushdown.rs` fixture's injected resolution. `explain_renders_pushed_and_residual_per_scan`
   (the exact `PostgresScanExec` line for one pushed and one residual conjunct, and for a pushed
@@ -33,6 +33,22 @@ See [../map.md](../map.md).
   the bound texts; `pushed_values_past_1024_fail_the_plan`; and
   `a_filter_the_optimizer_would_still_rewrite_stays_inexact` (`qty <> NULL` renders but stays
   `Inexact`). pins: c-2/C-070, C-071, C-072, C-073, C-074, C-077, C-078
+- `live_pushdown.rs` — C-2c (2026-10-07), behind `postgres`, live like `live_pg.rs` (whose
+  `Cell` it shares). Each cell seeds `edges`, one table holding every edge sketch §5.2 names
+  (an all-NULL row; the integer extremes; `numeric(10,2)` and unconstrained `numeric` with a
+  value past scale 18; `4714-11-24 BC` and `5874897-12-31`; the earliest and latest instants;
+  `NaN` and `-0` in `float8`; a padded `char(5)`; mixed-case, accented, `%` and `\` text; an ICU
+  `und` column and a case-insensitive nondeterministic one; `uuid`, an enum, `interval`; and
+  twenty rows that make a pushed `LIMIT` visible), mounts it twice through
+  `PostgresSource::mount`, with `pushdown_predicate` on and off, and asserts for every filter
+  that the two return the same ids, that the pushed and residual counts are the expected ones,
+  and that the unpushed half pushed nothing. Sketch §5.2's live halves are
+  `p01_null_tests_push_live` … `r05_pushdown_predicate_false_pushes_nothing_live`; beside them
+  `timestamp_columns_are_placed_in_the_session_zone_live` (the `-05:00` fixture zone moves a
+  wall clock by five hours), `explain_analyze_reports_rows_bytes_and_time_per_scan_live` (the
+  five metrics on the scan line) and `pushed_compare_keeps_the_index_live` (D-M3: a pushed
+  `id OPERATOR(pg_catalog.=) current_setting('repark.p0')::int4` over one million rows plans as
+  an index-only scan). pins: c-2/C-069, C-071, C-072, C-073, C-076, C-077, C-079
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
   verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
   `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and

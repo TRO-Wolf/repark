@@ -3919,7 +3919,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   documented — FL-10; the server's answer under each collation is what the pin's mutation
   reads.)*
 - **Pin** — `crates/repark-connect/tests/it/pushdown.rs::p06_text_comparison_is_code_point_order`,
-  `::p06b_text_equality_ignores_nondeterministic_collation`
+  `::p06b_text_equality_ignores_nondeterministic_collation`;
+  live `crates/repark-connect/tests/it/live_pushdown.rs::p06_text_comparison_is_code_point_order_live`,
+  `::p06b_text_equality_ignores_nondeterministic_collation_live`
 - **Rationale** — DECLARED 2026-10-07 (C-2c; FL-10; the sketch's Q4, ratified 2026-10-06 on its
   lean). Card 1.6's ruled rule outranks both engines: pushdown never changes semantics.
 ### CONNECT-DIV-pg-timestamp-zone — a Postgres `timestamp` surfaces in the session zone, where Spark uses the JVM zone
@@ -3937,7 +3939,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   is to keep the JVM and session zones equal. *(oracle: measured — D-M2 DM2-T11/T12 in
   `python/repark-parity/tests/live_spark/c2_jdbc_oracle.json` for the types; documented — FL-5
   for the zone.)*
-- **Pin** — `crates/repark-connect/tests/it/pushdown.rs::r03_ltz_timestamp_comparisons_stay_residual`
+- **Pin** — `crates/repark-connect/tests/it/pushdown.rs::r03_ltz_timestamp_comparisons_stay_residual`;
+  live `crates/repark-connect/tests/it/live_pushdown.rs::timestamp_columns_are_placed_in_the_session_zone_live`,
+  `::r03_ltz_timestamp_comparisons_stay_residual_live`
 - **Rationale** — DECLARED 2026-10-07 (C-2c; FL-5). The session zone is the one every other
   timestamp in the statement is read in, so a federated compare sees one clock; Spark's JVM zone
   is process state a session cannot set.
