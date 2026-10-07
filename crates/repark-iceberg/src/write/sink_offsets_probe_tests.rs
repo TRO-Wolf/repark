@@ -717,7 +717,8 @@ async fn an_unlanded_unknown_outcome_walks_to_the_durable_record_without_a_resub
     assert!(matches!(
         reason,
         RecoveryReason::CommitOutcomeUnknown {
-            operation_id: Some(_)
+            operation_id: Some(_),
+            resume_refusal: None,
         }
     ));
     assert_eq!(probe.seen().len(), 1);
@@ -794,7 +795,8 @@ async fn the_walk_finds_a_landed_stamp_above_the_base_by_operation_id_then_by_re
     assert_eq!(
         reason,
         RecoveryReason::CommitOutcomeUnknown {
-            operation_id: Some(operation)
+            operation_id: Some(operation),
+            resume_refusal: None,
         }
     );
     assert_eq!(

@@ -57,7 +57,8 @@ async fn a_failed_reload_in_the_walk_refuses_unknown_with_no_durable_record() {
     assert!(matches!(
         reason,
         RecoveryReason::CommitOutcomeUnknown {
-            operation_id: Some(_)
+            operation_id: Some(_),
+            resume_refusal: None,
         }
     ));
     assert_eq!(probe.seen().len(), 1);
@@ -66,7 +67,7 @@ async fn a_failed_reload_in_the_walk_refuses_unknown_with_no_durable_record() {
 }
 
 #[tokio::test]
-async fn a_rolled_back_attempt_stays_unknown_at_its_epoch_with_the_durable_record() {
+async fn a_rolled_back_attempt_stays_unknown_carrying_the_durable_record_and_the_mismatch() {
     let (_warehouse, catalog, ident) = fixture("w_walk_rolled_back").await;
     let durable = stamp_for(0, SinkDoor::Table);
     stamped_append(&catalog, &ident, &durable, &[1]).await;
@@ -104,7 +105,11 @@ async fn a_rolled_back_attempt_stays_unknown_at_its_epoch_with_the_durable_recor
     assert_eq!(
         reason,
         RecoveryReason::CommitOutcomeUnknown {
-            operation_id: Some(operation)
+            operation_id: Some(operation),
+            resume_refusal: Some(Box::new(RecoveryReason::OffsetMismatch {
+                summary_epoch: Some(Epoch::new(0)),
+                property_epoch: Some(Epoch::new(1)),
+            })),
         }
     );
 }

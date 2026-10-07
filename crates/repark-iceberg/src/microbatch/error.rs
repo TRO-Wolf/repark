@@ -135,8 +135,11 @@ pub enum MicroBatchError {
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum RecoveryReason {
-    #[error("commit outcome unknown (operation id: {operation_id_text})", operation_id_text = operation_id.as_deref().unwrap_or("not recorded"))]
-    CommitOutcomeUnknown { operation_id: Option<String> },
+    #[error("commit outcome unknown (operation id: {operation_id_text}){resume_text}", operation_id_text = operation_id.as_deref().unwrap_or("not recorded"), resume_text = resume_refusal.as_ref().map_or_else(String::new, |reason| format!("; resuming will then refuse: {reason}")))]
+    CommitOutcomeUnknown {
+        operation_id: Option<String>,
+        resume_refusal: Option<Box<RecoveryReason>>,
+    },
     #[error("stop timed out after {waited:?}")]
     StopTimeout { waited: Duration },
     #[error("summary epoch {summary_epoch_text} disagrees with property epoch {property_epoch_text}", summary_epoch_text = summary_epoch.map_or_else(|| "none".to_string(), |epoch| epoch.get().to_string()), property_epoch_text = property_epoch.map_or_else(|| "none".to_string(), |epoch| epoch.get().to_string()))]
@@ -280,7 +283,10 @@ mod tests {
     #[test]
     fn every_recovery_reason_renders_a_message() {
         let reasons = [
-            RecoveryReason::CommitOutcomeUnknown { operation_id: None },
+            RecoveryReason::CommitOutcomeUnknown {
+                operation_id: None,
+                resume_refusal: None,
+            },
             RecoveryReason::StopTimeout {
                 waited: Duration::from_secs(30),
             },
@@ -427,15 +433,30 @@ mod tests {
     fn recovery_reasons_render() {
         let unknown = RecoveryReason::CommitOutcomeUnknown {
             operation_id: Some(String::from("op-1")),
+            resume_refusal: None,
         };
         assert_eq!(
             unknown.to_string(),
             "commit outcome unknown (operation id: op-1)"
         );
-        let unknown_missing = RecoveryReason::CommitOutcomeUnknown { operation_id: None };
+        let unknown_missing = RecoveryReason::CommitOutcomeUnknown {
+            operation_id: None,
+            resume_refusal: None,
+        };
         assert_eq!(
             unknown_missing.to_string(),
             "commit outcome unknown (operation id: not recorded)"
+        );
+        let unknown_mismatched = RecoveryReason::CommitOutcomeUnknown {
+            operation_id: Some(String::from("op-2")),
+            resume_refusal: Some(Box::new(RecoveryReason::OffsetMismatch {
+                summary_epoch: Some(Epoch::new(0)),
+                property_epoch: Some(Epoch::new(1)),
+            })),
+        };
+        assert_eq!(
+            unknown_mismatched.to_string(),
+            "commit outcome unknown (operation id: op-2); resuming will then refuse: summary epoch 0 disagrees with property epoch 1"
         );
         let timeout = RecoveryReason::StopTimeout {
             waited: Duration::from_secs(30),

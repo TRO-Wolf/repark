@@ -74,6 +74,9 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   MB-2a fold 1 (ruling V2, 2026-10-07) adds `RecoveryReason::StampNotInLineage`: a sink stamp
   that is retained but off the current lineage (a rollback), naming a new `queryName` or a
   restore; `StampedSnapshotExpired` keeps the stamp that is truly gone.
+  MB-2c fold 2 (2026-10-07) adds `resume_refusal` to `RecoveryReason::CommitOutcomeUnknown`:
+  the walk's reload read a resume point that itself refuses (an `OffsetMismatch` after a
+  rollback), rendered as `; resuming will then refuse: <reason>`.
   MB-2a fold 2 (ruling Y3, 2026-10-07): `SinkCommittedTwice` names the loss (a restart resumes
   after the stamped epoch, so the refused write's rows never land) and the fix (one sink write
   per batch body, or a single combined write); it carries no scope token.

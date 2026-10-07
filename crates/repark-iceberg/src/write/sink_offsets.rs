@@ -467,16 +467,19 @@ pub async fn resolve_unknown_outcome(
     operation_id: Option<&str>,
 ) -> Result<SnapshotId, MicroBatchError> {
     let record = &stamp.record;
-    let unknown = |durable: Option<SinkRecord>| MicroBatchError::RecoveryRequired {
-        query: record.query,
-        epoch: record.epoch,
-        durable: durable.map(Box::new),
-        reason: RecoveryReason::CommitOutcomeUnknown {
-            operation_id: operation_id.map(str::to_string),
-        },
+    let unknown = |durable: Option<Box<SinkRecord>>, resume_refusal: Option<RecoveryReason>| {
+        MicroBatchError::RecoveryRequired {
+            query: record.query,
+            epoch: record.epoch,
+            durable,
+            reason: RecoveryReason::CommitOutcomeUnknown {
+                operation_id: operation_id.map(str::to_string),
+                resume_refusal: resume_refusal.map(Box::new),
+            },
+        }
     };
     let Ok(reloaded) = catalog.load_table(table.identifier()).await else {
-        return Err(unknown(None));
+        return Err(unknown(None, None));
     };
     let base = table.metadata().current_snapshot_id();
     if let Some(snapshot) = landed_attempt(&reloaded, base, record, operation_id) {
@@ -484,10 +487,10 @@ pub async fn resolve_unknown_outcome(
         return Ok(snapshot);
     }
     match read_resume_point(&reloaded, record.query) {
-        Ok(durable) => Err(unknown(durable)),
-        Err(MicroBatchError::RecoveryRequired { durable, .. }) => {
-            Err(unknown(durable.map(|found| *found)))
-        }
+        Ok(durable) => Err(unknown(durable.map(Box::new), None)),
+        Err(MicroBatchError::RecoveryRequired {
+            durable, reason, ..
+        }) => Err(unknown(durable, Some(reason))),
         Err(error) => Err(error),
     }
 }
