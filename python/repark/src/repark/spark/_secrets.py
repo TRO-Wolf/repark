@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import sys
 import traceback
@@ -123,8 +124,38 @@ def _copy_link(link: BaseException, mask: Callable[[str], str]) -> BaseException
         fresh = _rebuild_os_error(link, mask)
     else:
         fresh = _copy_plain_link(link, mask)
+    if type(fresh) is type(link):
+        _carry_attributes(link, fresh, mask)
     _mask_message_parameters(link, fresh, mask)
     return _mask_notes(link, fresh, mask)
+
+
+def _carry_attributes(
+    link: BaseException, fresh: BaseException, mask: Callable[[str], str]
+) -> None:
+    attributes = vars(fresh)
+    for key, value in vars(link).items():
+        attributes[key] = mask(value) if isinstance(value, str) else value
+    for name in _slot_names(type(link)):
+        try:
+            value = getattr(link, name)
+        except Exception:
+            continue
+        with contextlib.suppress(Exception):
+            setattr(fresh, name, mask(value) if isinstance(value, str) else value)
+
+
+def _slot_names(cls: type) -> list[str]:
+    names: list[str] = []
+    for klass in cls.__mro__:
+        slots = klass.__dict__.get("__slots__", ())
+        for name in (slots,) if isinstance(slots, str) else slots:
+            if name in ("__dict__", "__weakref__"):
+                continue
+            if name.startswith("__") and not name.endswith("__"):
+                name = f"_{klass.__name__.lstrip('_')}{name}"
+            names.append(name)
+    return names
 
 
 def _copy_groups(
@@ -161,6 +192,10 @@ def _copy_group(
         fresh: BaseException = type(group)(message, subs)
     except Exception:
         fresh = BaseExceptionGroup(message, subs)
+        if isinstance(fresh, Exception) and not isinstance(group, Exception):
+            fresh = _masked_stand_in(group, mask)
+    if type(fresh) is type(group):
+        _carry_attributes(group, fresh, mask)
     return _mask_notes(group, fresh, mask)
 
 
@@ -226,10 +261,25 @@ def _masked_stand_in(link: BaseException, mask: Callable[[str], str]) -> BaseExc
     from repark.errors import PySparkException
 
     try:
-        text = str(link)
+        text = mask(str(link))
     except Exception:
-        return PySparkException(type(link).__name__)
-    return PySparkException(mask(text))
+        text = type(link).__name__
+    if isinstance(link, Exception):
+        return PySparkException(text)
+    return _base_only_stand_in(type(link), text)
+
+
+def _base_only_stand_in(cls: type[BaseException], text: str) -> BaseException:
+    for base in cls.__mro__:
+        if not isinstance(base, type) or not issubclass(base, BaseException):
+            continue
+        if base.__module__ != "builtins" or issubclass(base, Exception):
+            continue
+        try:
+            return base(text)
+        except Exception:
+            continue
+    return BaseException(text)
 
 
 def _rebuild_os_error(error: OSError, mask: Callable[[str], str]) -> BaseException:

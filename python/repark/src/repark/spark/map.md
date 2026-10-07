@@ -110,6 +110,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: source-url-redact-1/C-032
   **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `scrub_user_failure(error)` returns `(masked format_exc() text, scrub_exception(error))` for the user-callback doors; the raise stays at each call site, after the handler. pins: source-url-redact-1/C-076
   **SOURCE-URL-REDACT-2 fold 4 H2 (2026-10-07):** `scrub_exception` also walks `BaseExceptionGroup.exceptions`, rebuilds a changed group as `type(g)(masked message, scrubbed subs)` (falling back to `BaseExceptionGroup(...)`, which keeps the `Exception` split), masks `__notes__` on every copy, and marks ancestors of a changed link through a parent map in linear time. pins: source-url-redact-1/C-079
+  **SOURCE-URL-REDACT-2 fold 4 H5 (2026-10-07):** the last-resort stand-in keeps the `BaseException`/`Exception` split: an `Exception` link becomes a masked `PySparkException`, a `BaseException`-only link the nearest builtin `BaseException`-only base of its class (else `BaseException`), and an unbuildable non-`Exception` group never falls back to an `ExceptionGroup`. A same-class copy carries `__dict__` and `__slots__` values over (private names mangled), masking `str` values. pins: source-url-redact-1/C-080
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
   **FNP-4B (2026-09-15):** `local_view_name` also strips backtick quoting (handles are
   backticked since the D-2 quoter move). pins: fnp-4b/C-008

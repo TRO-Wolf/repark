@@ -437,3 +437,114 @@ def test_scrub_exception_walks_a_deep_chain_in_linear_time() -> None:
     assert cursor is not root
     assert USERINFO not in str(cursor)
     assert USERINFO in str(root)
+
+
+class _InterruptWithNew(KeyboardInterrupt):
+    def __new__(cls, text: str, code: int) -> _InterruptWithNew:
+        return super().__new__(cls, text, code)
+
+    def __init__(self, text: str, code: int) -> None:
+        super().__init__(text)
+
+
+class _NewOverrideError(Exception):
+    def __new__(cls, text: str, code: int) -> _NewOverrideError:
+        return super().__new__(cls, text, code)
+
+    def __init__(self, text: str, code: int) -> None:
+        super().__init__(text)
+
+
+class _TaggedNewGroup(BaseExceptionGroup):
+    def __new__(cls, tag: str, message: str, subs: list[BaseException]) -> _TaggedNewGroup:
+        return super().__new__(cls, message, subs)
+
+    def __init__(self, tag: str, message: str, subs: list[BaseException]) -> None:
+        super().__init__(message, subs)
+
+
+class _TaggedNewExceptionGroup(ExceptionGroup):
+    def __new__(cls, tag: str, message: str, subs: list[BaseException]) -> _TaggedNewExceptionGroup:
+        return super().__new__(cls, message, subs)
+
+    def __init__(self, tag: str, message: str, subs: list[BaseException]) -> None:
+        super().__init__(message, subs)
+
+
+class _SlottedError(Exception):
+    __slots__ = ("__private", "url")
+
+    def __init__(self, url: str, code: int) -> None:
+        super().__init__(f"connect {url} failed")
+        self.url = url
+        self.__private = url
+
+    def private(self) -> str:
+        return self.__private
+
+
+class _KeywordCodeError(Exception):
+    def __init__(self, message: str, *, code: int, url: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.url = url
+
+
+def test_scrub_exception_base_only_stand_in_is_never_an_exception() -> None:
+    original = _raised(lambda: _InterruptWithNew("stop " + SECRET_URL, 1))
+    scrubbed = scrub_exception(original)
+    assert not isinstance(scrubbed, Exception)
+    assert isinstance(scrubbed, KeyboardInterrupt)
+    assert USERINFO not in _formatted(scrubbed)
+    assert "http://u:***@" in str(scrubbed)
+    assert scrubbed.__traceback__ is original.__traceback__
+
+
+def test_scrub_exception_exception_stand_in_is_a_pyspark_exception() -> None:
+    original = _raised(lambda: _NewOverrideError("bad " + SECRET_URL, 1))
+    scrubbed = scrub_exception(original)
+    assert type(scrubbed) is PySparkException
+    assert USERINFO not in _formatted(scrubbed)
+    assert "http://u:***@" in str(scrubbed)
+
+
+@pytest.mark.parametrize(
+    ("group_class", "subs"),
+    [
+        ("exception_group", [ValueError("plain")]),
+        ("base_group", [ValueError("plain")]),
+        ("base_group", [KeyboardInterrupt("stop")]),
+    ],
+    ids=["exception_group", "base_group_exception_subs", "base_group_base_subs"],
+)
+def test_scrub_exception_unbuildable_group_keeps_the_exception_split(
+    group_class: str, subs: list[BaseException]
+) -> None:
+    cls = _TaggedNewExceptionGroup if group_class == "exception_group" else _TaggedNewGroup
+    original = _raised(lambda: cls("tag", "several " + SECRET_URL, subs))
+    scrubbed = scrub_exception(original)
+    assert isinstance(scrubbed, Exception) is isinstance(original, Exception)
+    assert USERINFO not in _formatted(scrubbed)
+    assert "http://u:***@" in _formatted(scrubbed)
+
+
+def test_scrub_exception_new_copy_carries_slots_masked() -> None:
+    original = _raised(lambda: _SlottedError(SECRET_URL, 7))
+    scrubbed = scrub_exception(original)
+    assert type(scrubbed) is _SlottedError
+    assert isinstance(scrubbed, _SlottedError)
+    assert scrubbed.url == "http://u:***@127.0.0.1:9/x"
+    assert scrubbed.private() == "http://u:***@127.0.0.1:9/x"
+    assert USERINFO not in str(scrubbed)
+    assert USERINFO in original.url
+
+
+def test_scrub_exception_new_copy_carries_keyword_only_attributes_masked() -> None:
+    original = _raised(lambda: _KeywordCodeError("bad " + SECRET_URL, code=3, url=SECRET_URL))
+    scrubbed = scrub_exception(original)
+    assert type(scrubbed) is _KeywordCodeError
+    assert isinstance(scrubbed, _KeywordCodeError)
+    assert scrubbed.code == 3
+    assert scrubbed.url == "http://u:***@127.0.0.1:9/x"
+    assert USERINFO not in str(scrubbed)
+    assert original.url == SECRET_URL
