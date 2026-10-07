@@ -84,42 +84,42 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Clauses C-001..C-013 walked one by one against the sketch (§3.1, §3.2, §3.3, §4, Q4, Q6); every clause carries its proof obligation and pin citation in the verdict tables. Round 2 adds C-008..C-013 for the window and provider.
-      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs]
+      evidence: Clauses C-001..C-016 walked one by one against the sketch (§3.1, §3.2, §3.3, §3.5, §4, Q4, Q6); every clause carries its proof obligation and pin citation in the verdict tables. Round 2 adds C-008..C-013 for the window and provider; round 3 adds C-014..C-016 for the source wrapper and options.
+      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs, task/ledgers/completed/mb-1-ledger.md, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Negative pins cover the empty vector, the repeated table, the absent stamp, the future and unparsable versions, the partial stamp, the corrupt property, and the unknown-table lookup; round 2 adds the unknown start id, the past-head stamp, the empty table, the dangling and replaced from, the mid-snapshot resume past a non-append, and the unknown end snapshot.
-      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-iceberg/src/microbatch/provider.rs]
+      evidence: Negative pins cover the empty vector, the repeated table, the absent stamp, the future and unparsable versions, the partial stamp, the corrupt property, and the unknown-table lookup; round 2 adds the unknown start id, the past-head stamp, the empty table, the dangling and replaced from, the mid-snapshot resume past a non-append, and the unknown end snapshot; round 3 adds the two skip keys, unknown prefixed keys, malformed values, two start keys, unknown catalogs and tables, malformed identifiers, and the empty table.
+      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-iceberg/src/microbatch/provider.rs, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: All 24 variants and 5 reasons render non-empty; the 8 Spark-quoted rows (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15) are pinned byte-exact; round 2 pins the MBE-1/MBE-2 prefixes plus variant fields on the live refusal path.
-      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs]
+      evidence: All 24 variants and 5 reasons render non-empty; the 8 Spark-quoted rows (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15) are pinned byte-exact; round 2 pins the MBE-1/MBE-2 prefixes plus variant fields on the live refusal path; round 3 pins the MBE-3 and MBE-17 texts byte-exact on the live from_options path.
+      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-4
       status: ATTACKED
-      evidence: Round 2 awaits load immutable manifests and plan scans only; no spawn, no lock, no shared mutable state, and the held table is never mutated across an await.
-      artifacts: [crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs]
+      evidence: Round 2 awaits load immutable manifests and plan scans only; no spawn, no lock, no shared mutable state, and the held table is never mutated across an await. Round 3 awaits only the planner, the catalog load and the batch collect, holds no lock across an await, and shares no mutable state.
+      artifacts: [crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-5
       status: ATTACKED
-      evidence: Every stamp key and error text reviewed: identifiers, uuids, and numbers only. No location, DSN, token, or path field exists in the types, so none can reach a summary, a property, or a message. Round 2 names tables by catalog identifier only; file paths stay inside the planned tasks and never render.
-      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs]
+      evidence: Every stamp key and error text reviewed: identifiers, uuids, and numbers only. No location, DSN, token, or path field exists in the types, so none can reach a summary, a property, or a message. Round 2 names tables by catalog identifier only; file paths stay inside the planned tasks and never render. Round 3 names identifiers, option keys and snapshot ids only.
+      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-6
       status: ATTACKED
-      evidence: Spark-verbatim rows pinned against the MB-0 oracle cells; the change is purely additive and the full pre-existing lib suite stays green beside the new pins (round 1: 804 + 26; round 2: 830 + 20). The batch append path keeps its silent skip; the refusal lives only in the new planner.
-      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, python/repark-parity/tests/live_spark/mb0_streaming_oracle.json]
+      evidence: Spark-verbatim rows pinned against the MB-0 oracle cells; the change is purely additive and the full pre-existing lib suite stays green beside the new pins (round 1: 804 + 26; round 2: 830 + 20; round 3: iceberg 850 unchanged from the unmodified baseline, core 1026 + 13). The batch append path keeps its silent skip; the refusal lives only in the new planner. Round 3 pins MBE-3/MBE-17.
+      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, python/repark-parity/tests/live_spark/mb0_streaming_oracle.json, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-7
       status: N/A
       justification: No hot path; offsets are built once per batch, windows are planned once per batch, and no measurement is claimed.
     - id: AT-8
       status: ATTACKED
-      evidence: 11/11 round gates green in both rounds; new files under the default ceiling (round 2 split window.rs at 1013 lines into 364 + 649 with no ceiling raised); every touched map updated in the same commits.
-      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/map.md, crates/repark-iceberg/src/catalog/map.md]
+      evidence: 11/11 round gates green in rounds 1-2, 12/12 in round 3; new files under the default ceiling (round 2 split window.rs at 1013 lines into 364 + 649 with no ceiling raised; round 3 lands microbatch_source.rs at 563); every touched map updated in the same commits; the ledger moves to completed/ in the last commit.
+      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/map.md, crates/repark-iceberg/src/catalog/map.md, task/ledgers/completed/mb-1-ledger.md, crates/repark-core/src/time_travel/map.md]
     - id: AT-9
       status: N/A
       justification: No new log or metric surface; every failure is a typed value with a named fix.
     - id: AT-10
       status: ATTACKED
-      evidence: Round 1: two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift). Round 2: dropping with_fail_on_non_append fails exactly the 2 refusal pins of 46. All restores verified by diff.
-      artifacts: [task/ledgers/staging/mb-1-ledger.md]
+      evidence: Round 1: two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift). Round 2: dropping with_fail_on_non_append fails exactly the 2 refusal pins of 46. Round 3: letting the skip keys pass fails exactly the MBE-3 pin of 13. All restores verified by diff.
+      artifacts: [task/ledgers/staging/mb-1-ledger.md, task/ledgers/completed/mb-1-ledger.md]
 ```
 
 ## PROPOSITION LEDGER — MB-1 round 2 — 2026-10-07
@@ -191,8 +191,9 @@ was raised and no exception added.
 |---|---|---|---|---|
 | C-014 | `SourceOptions::from_options` defaults to unbounded caps and `Earliest`; parses the two cap keys, `stream-from-timestamp` millis and `repark.cdc.start-after-snapshot-id`; refuses the two skip keys `SkipOptionRefused` (MBE-3) and any other `streaming-`/`stream-`/`repark.cdc.` key `UnknownOption` (MBE-17); passes unprefixed keys; and refuses malformed values and two start keys `Catalog` (FL-6, FL-7). | The option pins in `microbatch_source.rs`'s test module. | **PROVEN** | 9 pins green (`from_options_defaults_to_unbounded_earliest`, `from_options_parses_caps`, `from_options_parses_from_timestamp`, `from_options_parses_start_after_snapshot_id`, `from_options_refuses_both_skip_keys`, `from_options_refuses_unknown_keys_under_interpreted_prefixes`, `from_options_passes_unprefixed_keys`, `from_options_refuses_malformed_values`, `from_options_refuses_two_start_keys`). pins: mb-1/C-014 |
 | C-015 | `MicroBatchSource::open` resolves a three-part table (FL-8) and refuses unknown catalogs and tables, malformed identifiers and non-three-part names; `initial_offset` and `next_batch` delegate to the planner; `next_batch` reads exactly the planned files through the new `provider_for_plan` seam (D-4), reports `num_input_rows` per plan, and reads `None` once consumed; an empty table reads `None`. | The source pins in `microbatch_source.rs`'s test module over a memory-catalog two-snapshot fixture. | **PROVEN** | 4 pins green (`open_streams_two_appends_then_reports_none`, `capped_batches_agree_with_their_plans_row_for_row`, `open_refuses_unknown_tables_and_malformed_identifiers`, `initial_offset_on_an_empty_table_reads_none`). pins: mb-1/C-015 |
+| C-016 | The round is wired (the `time_travel.rs` mod line, the `provider_for_plan` seam with the `dead_code` allows lifted, every touched map current, the ledger moved to `completed/`), and the round gate list is green with no neighbour pin changed. | The 12 round gates. | **PROVEN** | 12/12 green: 850 iceberg lib tests pass (identical to the unmodified baseline), 1039 core lib tests pass plus 1 pre-existing ignored (1026 pre-existing plus 13 new), clippy/panic-ban/fmt clean, file-size/lib-rs/crate-dag clean, map-sync/lockstep/ledger-grammar clean, comment-ban `hits=0`. pins: mb-1/C-016 |
 
-VERDICT: 2 clauses, 2 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 3 clauses, 3 PROVEN, 0 OPEN, 0 REJECTED.
 
 - **D-4 (2026-10-07).** Question: `MicroBatchSource::next_batch`
   (core) must return a `DataFrame` over exactly `plan.files`, but the
@@ -221,3 +222,29 @@ VERDICT: 2 clauses, 2 PROVEN, 0 OPEN, 0 REJECTED.
   catalog. North Star default: the three-part `catalog.namespace.table`
   shape `load_iceberg_table` already enforces, refused otherwise with
   the received identifier named. Acted on; pins in C-015.
+
+## Gates — round 3
+
+All exit 0, in brief order: `cargo test -p repark-iceberg --lib` (850 passed,
+0 failed — identical to the unmodified-tree baseline, so no neighbour
+changed), `cargo test -p repark-core --lib` (1039 passed, 0 failed, 1 ignored
+— 1026 pre-existing plus 13 new; the ignored one is the pre-existing silver
+measure printer), `make rust-clippy` (clean first run, including the lifted
+`dead_code` allows), `cargo fmt --check`, `make rust-panic-ban`,
+`python3 scripts/check_rust_file_size.py` (1056 files clean),
+`./scripts/check_lib_rs.sh` (11 roots clean), `./scripts/check_crate_dag.sh`
+(23 edges clean), `python3 scripts/sync_map_md.py --check` (365 maps clean),
+`bash scripts/check_map_md.sh --base origin/main`,
+`python3 scripts/check_ledger_grammar.py` (304 live ledgers clean — green once
+the C-016 row the maps already cited was added), and the comment-ban probe
+(`hits=0`).
+
+One mutation probe, red as required: letting the two skip keys pass
+`from_options` fails exactly `from_options_refuses_both_skip_keys` with the
+other 12 source pins green. The mutant was restored and the restore verified
+by diff plus a green re-run. `microbatch_source.rs` lands at 563 lines and
+`provider.rs` at 349, both under the default ceiling; no ceiling was raised
+and no exception added. `session.rs` untouched. The commit hook rejected the
+first attempt on one ledger typo, fixed before landing.
+After the ledger move to `completed/`, the map-sync and ledger-grammar gates
+re-ran green on the post-move tree.

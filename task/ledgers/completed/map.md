@@ -707,6 +707,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   twelve clauses to `PROVEN` on `docs:` cells. Branch `feat/ledger-reading-1`.
   pins: ledger-reading-1/C-001, C-002, C-003, C-004
 - [maint-policy-1-ledger.md](maint-policy-1-ledger.md) — Unit ledger — MAINT-POLICY-1 step 1 · typed `[<profile>.maintenance]` policy
+- [mb-1-ledger.md](mb-1-ledger.md) — Unit ledger — MB-1 · the batch source over the incremental append scan
 - [neveroom-1-ledger.md](neveroom-1-ledger.md) —
   **NEVEROOM-1 steps 1–3 (2026-09-10/11), in flight:** the spill-coverage matrix
   harness, the full 27-cell run, and the CI golden. Step 3 (S2-18) pins
@@ -1005,17 +1006,6 @@ else. The next pickup's `make ledger-archive` files everything here under
   `percentile_approx` accuracy divergence filed (`WIN-SLIDE-PCT-ACC-1`). `risk_tier: standard`.
   Branch `feat/win-slide-1`.
   pins: win-slide-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [wo-c10-ledger.md](wo-c10-ledger.md) — **WO-C10 (2026-09-23), completed:** every non-hint
-  unclosed bracketed SQL comment reaches Spark's `UNCLOSED_BRACKETED_COMMENT` front-door
-  parser contract; exact Rust and facade pins cover measured failures, near misses, and the
-  multi-statement router near-miss audit. `risk_tier: standard`. Branch `xd/show-create`.
-  pins: wo-c10/C-001, C-002, C-003, C-004
-- [wo-c2-ledger.md](wo-c2-ledger.md) — **WO-C2 (2026-09-23), completed:** critic repair for
-  `SHOW CREATE TABLE`: typed class/condition/SQLSTATE refusal pins, exact near-miss outcomes,
-  and lexer failures that stay on the recognized parse path. `risk_tier: standard`. Branch
-  `xd/show-create`.
-- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 (2026-09-23), completed:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
-- [wo-c5-ledger.md](wo-c5-ledger.md) — **WO-C5 (2026-09-23), completed:** parser refusal pins for multi-statement SQL, unclosed bracket comments after the SHOW CREATE TABLE head, and the refusal-test audit. Its C-003 claim that a comment hiding `TABLE` falls through to the tokenizer error is superseded by WO-C10: the front door answers `UNCLOSED_BRACKETED_COMMENT`. `risk_tier: standard`. Branch `xd/show-create`.
 - [wo-a1b-ledger.md](wo-a1b-ledger.md) —
   **WO-A1b (2026-09-23), completed:** follow-up exactness repair for SHOW TABLE EXTENDED:
   typed lexer and refusal pins, literal PARTITION table resolution, and exact near-miss outcomes.
@@ -1040,6 +1030,17 @@ else. The next pickup's `make ledger-archive` files everything here under
   block-comment failures retain their measured RePark outcomes. `risk_tier: standard`.
   Branch `xd/describe`.
   pins: wo-b6-describe-comments/C-001, C-002, C-003, C-004
+- [wo-c10-ledger.md](wo-c10-ledger.md) — **WO-C10 (2026-09-23), completed:** every non-hint
+  unclosed bracketed SQL comment reaches Spark's `UNCLOSED_BRACKETED_COMMENT` front-door
+  parser contract; exact Rust and facade pins cover measured failures, near misses, and the
+  multi-statement router near-miss audit. `risk_tier: standard`. Branch `xd/show-create`.
+  pins: wo-c10/C-001, C-002, C-003, C-004
+- [wo-c2-ledger.md](wo-c2-ledger.md) — **WO-C2 (2026-09-23), completed:** critic repair for
+  `SHOW CREATE TABLE`: typed class/condition/SQLSTATE refusal pins, exact near-miss outcomes,
+  and lexer failures that stay on the recognized parse path. `risk_tier: standard`. Branch
+  `xd/show-create`.
+- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 (2026-09-23), completed:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
+- [wo-c5-ledger.md](wo-c5-ledger.md) — **WO-C5 (2026-09-23), completed:** parser refusal pins for multi-statement SQL, unclosed bracket comments after the SHOW CREATE TABLE head, and the refusal-test audit. Its C-003 claim that a comment hiding `TABLE` falls through to the tokenizer error is superseded by WO-C10: the front door answers `UNCLOSED_BRACKETED_COMMENT`. `risk_tier: standard`. Branch `xd/show-create`.
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under

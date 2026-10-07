@@ -8,7 +8,7 @@ MB-1 under the [design sketch](../../../../task/wo/microbatch/mb-design-2026-10-
 the [MB-1 order](../../../../task/wo/microbatch/mb-1-source.md), and the
 [North Star](../../../../task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md).
 Round 1 landed `mod.rs`, `offset.rs` and `error.rs`; round 2 adds the
-window and provider. Progress: the [MB-1 ledger](../../../../task/ledgers/staging/mb-1-ledger.md).
+window and provider. Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
 
 ## Contents
 
