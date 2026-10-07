@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use datafusion::error::DataFusionError;
@@ -16,6 +17,11 @@ use crate::microbatch::offset::{
 };
 use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
+
+pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct ScopeToken(Uuid);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommitStamp {
@@ -41,10 +47,12 @@ pub struct BatchScope;
 #[derive(Debug)]
 pub struct BatchScopeGuard {
     sink: TableUuid,
+    token: ScopeToken,
 }
 
 #[derive(Debug)]
 struct ScopeEntry {
+    token: ScopeToken,
     stamp: CommitStamp,
     claimed: bool,
     committed: Option<SnapshotId>,
@@ -58,6 +66,41 @@ fn scopes() -> MutexGuard<'static, HashMap<TableUuid, ScopeEntry>> {
         .unwrap_or_else(PoisonError::into_inner)
 }
 
+impl ScopeToken {
+    fn mint() -> ScopeToken {
+        ScopeToken(Uuid::new_v4())
+    }
+
+    #[must_use]
+    pub fn parse(text: &str) -> Option<ScopeToken> {
+        Uuid::parse_str(text).ok().map(ScopeToken)
+    }
+
+    #[must_use]
+    pub fn summary_entry(&self) -> (String, String) {
+        (SCOPE_TOKEN_KEY.to_string(), self.to_string())
+    }
+
+    fn carried_by(extra: &[(String, String)]) -> Option<ScopeToken> {
+        extra
+            .iter()
+            .find(|(key, _)| key == SCOPE_TOKEN_KEY)
+            .and_then(|(_, value)| ScopeToken::parse(value))
+    }
+}
+
+impl fmt::Display for ScopeToken {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.hyphenated().fmt(formatter)
+    }
+}
+
+impl fmt::Debug for ScopeToken {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("ScopeToken(..)")
+    }
+}
+
 impl BatchScope {
     #[allow(clippy::missing_errors_doc)]
     pub fn enter(sink: TableUuid, stamp: CommitStamp) -> Result<BatchScopeGuard, MicroBatchError> {
@@ -67,21 +110,37 @@ impl BatchScope {
                 sink: sink.to_string(),
             });
         }
+        let token = ScopeToken::mint();
         entries.insert(
             sink,
             ScopeEntry {
+                token: token.clone(),
                 stamp,
                 claimed: false,
                 committed: None,
             },
         );
-        Ok(BatchScopeGuard { sink })
+        Ok(BatchScopeGuard { sink, token })
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn claim(table: &Table) -> Result<Option<ClaimedStamp>, MicroBatchError> {
+    pub fn claim(
+        table: &Table,
+        token: &ScopeToken,
+    ) -> Result<Option<ClaimedStamp>, MicroBatchError> {
+        BatchScope::claim_checked(table, token, |_| Ok(()))
+    }
+
+    fn claim_checked(
+        table: &Table,
+        token: &ScopeToken,
+        check: impl FnOnce(&CommitStamp) -> Result<(), MicroBatchError>,
+    ) -> Result<Option<ClaimedStamp>, MicroBatchError> {
         let mut entries = scopes();
-        let Some(entry) = entries.get_mut(&TableUuid::of(table)) else {
+        let Some(entry) = entries
+            .get_mut(&TableUuid::of(table))
+            .filter(|entry| entry.token == *token)
+        else {
             return Ok(None);
         };
         if entry.claimed {
@@ -89,6 +148,7 @@ impl BatchScope {
                 epoch: entry.stamp.record.epoch,
             });
         }
+        check(&entry.stamp)?;
         entry.claimed = true;
         Ok(Some(ClaimedStamp {
             stamp: entry.stamp.clone(),
@@ -98,6 +158,11 @@ impl BatchScope {
 }
 
 impl BatchScopeGuard {
+    #[must_use]
+    pub fn token(&self) -> &ScopeToken {
+        &self.token
+    }
+
     #[must_use]
     pub fn outcome(&self) -> ScopeOutcome {
         match scopes().get(&self.sink).and_then(|entry| entry.committed) {
@@ -149,6 +214,7 @@ impl ClaimedStamp {
             });
         }
         if let Some(entry) = scopes().get_mut(&TableUuid::of(committed))
+            && entry.claimed
             && entry.stamp == self.stamp
         {
             entry.committed = Some(snapshot);
@@ -231,21 +297,25 @@ pub async fn commit_stamp_only(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
     stamp: &CommitStamp,
+    token: Option<&ScopeToken>,
 ) -> Result<SnapshotId, MicroBatchError> {
-    let claimed = match BatchScope::claim(table)? {
-        Some(claimed) if claimed.stamp == *stamp => claimed,
-        Some(claimed) => {
-            return Err(MicroBatchError::Catalog(format!(
-                "stamp-only commit for epoch {asked} does not match the active batch epoch {active}",
+    let active = match token {
+        Some(token) => BatchScope::claim_checked(table, token, |active| {
+            if active == stamp {
+                return Ok(());
+            }
+            Err(MicroBatchError::Catalog(format!(
+                "stamp-only commit for epoch {asked} does not match the active batch epoch {active_epoch}",
                 asked = stamp.record.epoch,
-                active = claimed.stamp.record.epoch
-            )));
-        }
-        None => ClaimedStamp {
-            stamp: stamp.clone(),
-            base: table.metadata().current_snapshot_id().map(SnapshotId::new),
-        },
+                active_epoch = active.record.epoch
+            )))
+        })?,
+        None => None,
     };
+    let claimed = active.unwrap_or_else(|| ClaimedStamp {
+        stamp: stamp.clone(),
+        base: table.metadata().current_snapshot_id().map(SnapshotId::new),
+    });
     let engine = EngineSummary::for_append(table, &[], None);
     let (operation_id, summary) = summary_with_extras(&claimed.summary_entries()?, &engine)
         .map_err(|error| masked(&error))?;
@@ -288,11 +358,15 @@ impl SiteStamp {
     pub(crate) fn claim(
         table: &Table,
         branch: Option<&str>,
+        extra: &[(String, String)],
     ) -> datafusion::error::Result<SiteStamp> {
         if branch.is_some_and(|name| name != MAIN_BRANCH) {
             return Ok(SiteStamp::default());
         }
-        let claimed = BatchScope::claim(table).map_err(microbatch_error)?;
+        let Some(token) = ScopeToken::carried_by(extra) else {
+            return Ok(SiteStamp::default());
+        };
+        let claimed = BatchScope::claim(table, &token).map_err(microbatch_error)?;
         Ok(SiteStamp { claimed })
     }
 
@@ -300,11 +374,18 @@ impl SiteStamp {
         &self,
         extra: &'extra [(String, String)],
     ) -> datafusion::error::Result<Cow<'extra, [(String, String)]>> {
-        let Some(claimed) = &self.claimed else {
+        let carries_token = extra.iter().any(|(key, _)| key == SCOPE_TOKEN_KEY);
+        if self.claimed.is_none() && !carries_token {
             return Ok(Cow::Borrowed(extra));
-        };
-        let mut stamped = extra.to_vec();
-        stamped.extend(claimed.summary_entries().map_err(microbatch_error)?);
+        }
+        let mut stamped: Vec<(String, String)> = extra
+            .iter()
+            .filter(|(key, _)| key != SCOPE_TOKEN_KEY)
+            .cloned()
+            .collect();
+        if let Some(claimed) = &self.claimed {
+            stamped.extend(claimed.summary_entries().map_err(microbatch_error)?);
+        }
         Ok(Cow::Owned(stamped))
     }
 

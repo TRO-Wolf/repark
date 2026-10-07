@@ -221,9 +221,15 @@ async fn run_epoch(harness: &Harness, run: RunId) -> Option<Epoch> {
         door: SinkDoor::Table,
     };
     let guard = BatchScope::enter(TableUuid::of(&sink), stamp).expect("enter scope");
-    commit_append_with_summary(&harness.catalog, &sink, files, &[], None)
-        .await
-        .expect("stamped sink commit");
+    commit_append_with_summary(
+        &harness.catalog,
+        &sink,
+        files,
+        &[guard.token().summary_entry()],
+        None,
+    )
+    .await
+    .expect("stamped sink commit");
     assert!(matches!(guard.outcome(), ScopeOutcome::Committed { .. }));
     Some(epoch)
 }

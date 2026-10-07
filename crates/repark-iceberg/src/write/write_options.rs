@@ -429,7 +429,7 @@ pub async fn commit_append_with_summary(
     summary_extra: &[(String, String)],
     branch: Option<&str>,
 ) -> Result<Table> {
-    let stamp = SiteStamp::claim(table, branch)?;
+    let stamp = SiteStamp::claim(table, branch, summary_extra)?;
     let summary_extra = stamp.extras(summary_extra)?;
     let engine = EngineSummary::for_append(table, &new_files, branch);
     let (operation_id, summary) = summary_with_extras(&summary_extra, &engine)?;

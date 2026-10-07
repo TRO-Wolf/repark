@@ -29,8 +29,9 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   then commits under a fresh run id, and a third trigger finds no window and commits nothing. The
   sink equals Bronze with each id once, epochs 0 and 1 each appear once in the summary history,
   and the property equals the head's stamp. Pins 2–4 (red until MB-2c) and pin 5 belong to the
-  harness slice and are not here.
-  pins: mb-2a/C-010
+  harness slice and are not here. Fold 1 (2026-10-07): the stamped append passes the guard's
+  `ScopeToken` in its extras, the way MB-3's session config will.
+  pins: mb-2a/C-010, C-013
 - `offset.rs` — the sketch's §3.1. Seven newtypes, each `new`/`get`
   (NS-14), with the sketch's named constructors beside them:
   `TableUuid::of`, `QueryId::derive`, `RunId::fresh`, `Epoch::FIRST`/`next`,

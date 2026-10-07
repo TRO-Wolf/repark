@@ -124,6 +124,18 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `sink_offsets_tests.rs`, `sink_offsets_scope_tests.rs` — **MB-2a fold 1
+  (2026-10-07, sketch §3.4 amendment):** a scope is `(sink TableUuid, ScopeToken)`. `enter`
+  mints an unguessable token (UUID v4, `guard.token()`, `Debug` redacted); an arm claims only
+  when its `summary_extra` carries `repark.cdc.scope-token` equal to the active token, and the
+  key never reaches a summary. A commit with no token or another token never claims and commits
+  as on main, so a foreign writer cannot take the batch's epoch. `commit_stamp_only` takes the
+  token as `Option<&ScopeToken>` and compares the stamps before it marks the entry claimed.
+  **MB-3 seam:** the driver installs the token in the batch's session config as
+  `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token`, which `resolve_*_session_write`
+  already carries into `summary_extra` on all three arms (MERGE included, `merge/mod.rs`
+  unedited). The scope pins sit in the `#[path]` child `sink_offsets_scope_tests.rs`.
+  pins: mb-2a/C-013, C-017
 - `sink_offsets.rs`, `sink_offsets_tests.rs` — **MB-2a (2026-10-07):** the micro-batch sink
   stamp, the sketch's §3.4 (`task/wo/microbatch/mb-design-2026-10-06.md`). `BatchScope` is a
   process-wide map from sink uuid to the active `CommitStamp`; `enter` refuses `SinkBusy`, a

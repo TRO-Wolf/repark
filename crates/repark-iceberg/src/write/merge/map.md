@@ -370,8 +370,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   active micro-batch stamp through `../sink_offsets.rs` (`SiteStamp`) after their early empty
   return, add its summary entries to the extras, add the offset property to the same
   transaction, and record the committed head. With no active scope they commit exactly as
-  before. `mod.rs` is not edited.
-  pins: mb-2a/C-003, C-004
+  before. `mod.rs` is not edited. **Fold 1 (2026-10-07):** the claim needs the batch's
+  `ScopeToken` in `summary_extra` (the session snapshot properties `mod.rs` already resolves);
+  a commit without it never claims.
+  pins: mb-2a/C-003, C-004, C-013
 - `snapshot_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   commit arms take the resolved session write (snapshot properties plus codec)
   and stamp it on the commit they build. **Round 1 (2026-09-19):** both arms

@@ -146,6 +146,10 @@ async fn append_plain(catalog: &Arc<dyn Catalog>, ident: &TableIdent, ids: &[i32
         .expect("plain append")
 }
 
+fn scoped(guard: &BatchScopeGuard) -> Vec<(String, String)> {
+    vec![guard.token().summary_entry()]
+}
+
 fn stamped_snapshots(table: &Table) -> usize {
     table
         .metadata()
@@ -162,6 +166,7 @@ fn stamped_snapshots(table: &Table) -> usize {
 fn assert_stamped_head(table: &Table, stamp: &CommitStamp) {
     let head = table.metadata().current_snapshot().expect("head");
     let summary = &head.summary().additional_properties;
+    assert!(!summary.contains_key(SCOPE_TOKEN_KEY));
     assert_eq!(
         SinkRecord::from_summary(summary).expect("summary stamp"),
         Some(stamp.record.clone())
@@ -278,9 +283,18 @@ async fn dm5_empty_merge_append_commits_one_stamp_only_append_snapshot() {
 async fn scope_holds_one_stamp_per_sink_and_claims_once() {
     let (_warehouse, catalog, ident) = fixture("scope").await;
     let table = append_plain(&catalog, &ident, &[1]).await;
-    assert_eq!(BatchScope::claim(&table).expect("no scope"), None);
+    let stranger = ScopeToken::parse("cccccccc-0000-4000-8000-0000000000c3").expect("token");
+    assert_eq!(
+        BatchScope::claim(&table, &stranger).expect("no scope"),
+        None
+    );
     let sink = TableUuid::of(&table);
     let guard = BatchScope::enter(sink, stamp_for(0, SinkDoor::Table)).expect("enter");
+    assert_ne!(guard.token(), &stranger);
+    assert_eq!(
+        BatchScope::claim(&table, &stranger).expect("wrong token"),
+        None
+    );
     let busy = BatchScope::enter(sink, stamp_for(1, SinkDoor::Table)).expect_err("busy");
     assert_eq!(
         busy,
@@ -288,21 +302,24 @@ async fn scope_holds_one_stamp_per_sink_and_claims_once() {
             sink: sink.to_string()
         }
     );
-    let claimed = BatchScope::claim(&table).expect("claim").expect("stamp");
+    let claimed = BatchScope::claim(&table, guard.token())
+        .expect("claim")
+        .expect("stamp");
     assert_eq!(claimed.stamp, stamp_for(0, SinkDoor::Table));
     assert_eq!(
         claimed.base,
         table.metadata().current_snapshot_id().map(SnapshotId::new)
     );
     assert_eq!(
-        BatchScope::claim(&table).expect_err("second claim"),
+        BatchScope::claim(&table, guard.token()).expect_err("second claim"),
         MicroBatchError::SinkCommittedTwice {
             epoch: Epoch::new(0)
         }
     );
     assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    let token = guard.token().clone();
     drop(guard);
-    assert_eq!(BatchScope::claim(&table).expect("scope gone"), None);
+    assert_eq!(BatchScope::claim(&table, &token).expect("scope gone"), None);
     let again = BatchScope::enter(sink, stamp_for(1, SinkDoor::Table)).expect("re-enter");
     drop(again);
 }
@@ -320,7 +337,8 @@ async fn append_arm_stamps_summary_and_property_in_one_commit_on_both_doors() {
         let stamp = stamp_for(0, door);
         let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
         let files = stage(&table, &[2, 3]).await;
-        let extra = [(String::from("run_id"), String::from("caller"))];
+        let mut extra = scoped(&guard);
+        extra.push((String::from("run_id"), String::from("caller")));
         let committed = commit_append_with_summary(&catalog, &table, files, &extra, None)
             .await
             .expect("stamped append");
@@ -372,7 +390,7 @@ async fn copy_on_write_arm_stamps_both_overwrite_shapes() {
         files,
         &Predicate::AlwaysTrue,
         None,
-        &[],
+        &scoped(&guard),
     )
     .await
     .expect("insert-only overwrite");
@@ -404,7 +422,7 @@ async fn copy_on_write_arm_stamps_both_overwrite_shapes() {
         replacement,
         &Predicate::AlwaysTrue,
         None,
-        &[],
+        &scoped(&guard),
     )
     .await
     .expect("delete-and-add overwrite");
@@ -439,13 +457,18 @@ async fn merge_on_read_arm_stamps_the_row_delta() {
     let base_log = table.metadata().metadata_log().len();
     let added = stage(&table, &[10]).await;
     let pin = table.metadata().current_snapshot_id();
-    crate::write::merge::commit_row_delta(
+    crate::write::merge::commit_row_delta_on_ref_with_partitions(
         &catalog,
         &table,
         pin,
         vec![(target, 0)],
         added,
         WriteConcurrency::new(1).expect("K=1"),
+        &Predicate::AlwaysTrue,
+        None,
+        crate::write::merge::KnownPartitions::new(),
+        &scoped(&guard),
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
     .expect("stamped row delta");
@@ -522,15 +545,16 @@ async fn a_branch_commit_leaves_the_claim_for_main() {
     let stamp = stamp_for(0, SinkDoor::Table);
     let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
     let files = stage(&table, &[2]).await;
-    let table = commit_append_with_summary(&catalog, &table, files, &[], Some("audit"))
+    let table = commit_append_with_summary(&catalog, &table, files, &scoped(&guard), Some("audit"))
         .await
         .expect("branch append");
     assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
     assert_unstamped(&table);
     let files = stage(&table, &[3]).await;
-    let table = commit_append_with_summary(&catalog, &table, files, &[], Some(MAIN_BRANCH))
-        .await
-        .expect("main append");
+    let table =
+        commit_append_with_summary(&catalog, &table, files, &scoped(&guard), Some(MAIN_BRANCH))
+            .await
+            .expect("main append");
     assert_stamped_head(&table, &stamp);
     assert!(matches!(guard.outcome(), ScopeOutcome::Committed { .. }));
 }
@@ -542,11 +566,11 @@ async fn a_second_stamped_commit_in_one_batch_refuses() {
     let guard =
         BatchScope::enter(TableUuid::of(&table), stamp_for(4, SinkDoor::Table)).expect("enter");
     let files = stage(&table, &[2]).await;
-    let table = commit_append_with_summary(&catalog, &table, files, &[], None)
+    let table = commit_append_with_summary(&catalog, &table, files, &scoped(&guard), None)
         .await
         .expect("first");
     let files = stage(&table, &[3]).await;
-    let error = commit_append_with_summary(&catalog, &table, files, &[], None)
+    let error = commit_append_with_summary(&catalog, &table, files, &scoped(&guard), None)
         .await
         .expect_err("second");
     assert_eq!(
@@ -591,7 +615,7 @@ async fn commit_stamp_only_commits_one_append_snapshot_with_both_halves() {
     let base_log = table.metadata().metadata_log().len();
     let stamp = stamp_for(0, SinkDoor::ForeachBatch);
     let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
-    let snapshot = commit_stamp_only(&catalog, &table, &stamp)
+    let snapshot = commit_stamp_only(&catalog, &table, &stamp, Some(guard.token()))
         .await
         .expect("stamp-only");
     let table = catalog.load_table(&ident).await.expect("reload");
@@ -609,7 +633,7 @@ async fn commit_stamp_only_commits_one_append_snapshot_with_both_halves() {
     assert_stamped_head(&table, &stamp);
     assert_eq!(guard.outcome(), ScopeOutcome::Committed { snapshot });
     assert_eq!(live_ids(&table).await, vec![1]);
-    let again = commit_stamp_only(&catalog, &table, &stamp)
+    let again = commit_stamp_only(&catalog, &table, &stamp, Some(guard.token()))
         .await
         .expect_err("claimed");
     assert_eq!(
@@ -620,7 +644,7 @@ async fn commit_stamp_only_commits_one_append_snapshot_with_both_halves() {
     );
     drop(guard);
     let next = stamp_for(1, SinkDoor::ForeachBatch);
-    commit_stamp_only(&catalog, &table, &next)
+    commit_stamp_only(&catalog, &table, &next, None)
         .await
         .expect("unscoped stamp-only");
     let table = catalog.load_table(&ident).await.expect("reload");
@@ -640,7 +664,7 @@ async fn stamped_append(
     let table = catalog.load_table(ident).await.expect("load");
     let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
     let files = stage(&table, ids).await;
-    let committed = commit_append_with_summary(catalog, &table, files, &[], None)
+    let committed = commit_append_with_summary(catalog, &table, files, &scoped(&guard), None)
         .await
         .expect("stamped append");
     assert!(matches!(guard.outcome(), ScopeOutcome::Committed { .. }));
@@ -895,7 +919,7 @@ async fn a_concurrent_unrelated_append_still_commits_both_halves_exactly_once() 
     let stamp = stamp_for(0, SinkDoor::Table);
     let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
     let files = stage(&table, &[2]).await;
-    let committed = commit_append_with_summary(&catalog, &table, files, &[], None)
+    let committed = commit_append_with_summary(&catalog, &table, files, &scoped(&guard), None)
         .await
         .expect("stamped append over a racer");
     assert_eq!(racing.updates.load(Ordering::SeqCst), 2);
@@ -945,3 +969,6 @@ fn site_stamp_without_a_claim_borrows_the_caller_extras() {
         std::borrow::Cow::Borrowed(_)
     ));
 }
+
+#[path = "sink_offsets_scope_tests.rs"]
+mod scope;

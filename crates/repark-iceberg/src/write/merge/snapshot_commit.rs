@@ -167,7 +167,7 @@ pub(crate) async fn commit_overwrite_on_ref(
         return Ok(());
     }
     let new_file_paths = abort::written_file_paths(&new_files);
-    let stamp = SiteStamp::claim(table, branch)?;
+    let stamp = SiteStamp::claim(table, branch, summary_extra)?;
     let summary_extra = stamp.extras(summary_extra)?;
     let engine = crate::write::summary_collision::EngineSummary::for_changes(
         table, &new_files, &affected, branch,
@@ -401,7 +401,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let (added_deletes, removed_deletes) = prepared.delete_file_changes();
     let mut added_files = data_files.clone();
     added_files.extend(added_deletes.iter().cloned());
-    let stamp = SiteStamp::claim(table, branch)?;
+    let stamp = SiteStamp::claim(table, branch, summary_extra)?;
     let summary_extra = stamp.extras(summary_extra)?;
     let engine = crate::write::summary_collision::EngineSummary::for_changes(
         table,

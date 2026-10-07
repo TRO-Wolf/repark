@@ -47,7 +47,15 @@ sink_offsets_tests.rs, mod.rs, map.md}`, the three named commit arms
 | C-011 | Mutations: dropping the property write turns the resume pin red; two further mutants are red on their owning pins. | Three mutation runs, restored by diff. | **PROVEN** | 3 mutants, each red, each restored from a backup and confirmed by `git diff --quiet`. M1 (the brief's): `stamp_transaction` returns the transaction without the property update — 9 of 17 red, among them the resume pin `resume_reads_the_last_offset_from_one_loaded_table` and harness pin 1. M2: `claim` stops marking the entry claimed — 3 red (`scope_holds_one_stamp_per_sink_and_claims_once`, `a_second_stamped_commit_in_one_batch_refuses`, `commit_stamp_only_commits_one_append_snapshot_with_both_halves`). M3: `read_resume_point` returns the summary record without comparing the property — 1 red (`resume_refuses_when_summary_and_property_disagree`). pins: mb-2a/C-011 |
 | C-012 | Every gate in the brief is green and every touched map is current. | The gate list. | **PROVEN** | 12/12 brief gates exit 0 (the Gates section). pins: mb-2a/C-012 |
 
-VERDICT: 12 clauses, 12 PROVEN, 0 OPEN, 0 REJECTED.
+
+### Fold 1 — the verifier's FAIL on #981, under the orchestrator's 2026-10-07 rulings V1…V6
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-013 | V1 (S1, North Star §8 case 3): a scope is `(sink TableUuid, ScopeToken)`. `BatchScope::enter` mints an unguessable token (UUID v4) on the guard; a named arm claims only when its `summary_extra` carries `repark.cdc.scope-token` equal to the active token. A commit with no token, a different token or a malformed one never claims and commits as on main: a foreign, unscoped writer inside an active scope leaves no `repark.cdc.*` key and no property change, the batch commit then lands its rows **and** the stamp, and resume returns the batch epoch with the rows present. At most one scope per sink; `SinkBusy` unchanged. | The verifier's foreign-writer shape, ported; the wrong-token pin; the session-config seam pin; the scope pin. | **PROVEN** | 4 pins green: `a_foreign_writer_inside_the_scope_commits_as_on_main_and_leaves_the_claim` (the foreign append carries the summary key set of a plain append, no stamp, the properties unchanged and no stamped snapshot; the batch append then stamps the head, resume reads epoch 5, live ids `[1, 2, 3, 777]`, one stamped snapshot), `a_writer_with_a_wrong_token_does_not_claim` (a forged token and a non-uuid value each commit unstamped and leave `NotCommitted`; the batch's own token then claims; the token never lands in a summary; `Debug` prints `ScopeToken(..)`), `the_session_snapshot_property_carries_the_token_to_the_arm` (`spark.sql.iceberg.snapshot-property.repark.cdc.scope-token` resolved through `resolve_write_for_session` stamps the append), and `scope_holds_one_stamp_per_sink_and_claims_once` (a stranger token claims `None` and does not consume the claim). Mutation MV-T (claim ignores the token: `SiteStamp::claim` mints a token when none is carried and `claim_checked` drops the token filter): 3 red, the foreign-writer pin among them, plus the wrong-token and scope pins. pins: mb-2a/C-013 |
+| C-017 | V5 (S3): `commit_stamp_only` with a stamp that differs from the active scope's refuses `Catalog` **before** it marks the entry claimed, so the scope's own stamp-only commit still claims. | The mismatched stamp-only pin. | **PROVEN** | 1 pin green (`a_mismatched_stamp_only_commit_leaves_the_claim`): epoch 4 against the epoch-3 scope refuses "does not match", then epoch 3's stamp-only commit claims, `outcome` names its snapshot, one stamped snapshot. Mutation MV-C (mark claimed before the comparison): that pin red (1 of 21). pins: mb-2a/C-017 |
+
+VERDICT: 14 clauses, 14 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Dated decision rows
 
@@ -102,6 +110,24 @@ VERDICT: 12 clauses, 12 PROVEN, 0 OPEN, 0 REJECTED.
   assigns all five scenarios to the harness slice (as corrected by sketch §6 to
   `microbatch/crash_tests.rs`). This unit creates the file with pin 1 only, declared
   `#[cfg(test)] mod crash_tests;` in `microbatch/mod.rs`.
+
+- **D-9 (2026-10-07, orchestrator ruling V1, a dated amendment to sketch §3.4).** The sketch's
+  process-wide map keyed by sink uuid alone let any writer's commit on the sink claim the batch
+  stamp (the verifier's S1). The scope is now `(sink TableUuid, ScopeToken)`. The token rides
+  the arms' existing `summary_extra` under the reserved key `repark.cdc.scope-token`, so no arm
+  signature changed and `merge/mod.rs` stays unedited: MERGE resolves the same session snapshot
+  properties through `resolve_empty_session_write`. `SiteStamp::extras` strips the key on every
+  commit of the three arms, claimed or not, so a token never lands in a summary that another
+  reader could replay; a commit that carries a token key therefore differs from main by that one
+  summary entry, which only a scoped session ever sets. `commit_stamp_only` has no options, so
+  it takes `Option<&ScopeToken>`; without a matching token it stamps the given record directly
+  (D-5's unscoped path). `record_commit` records the outcome only on a claimed entry.
+- **D-10 (2026-10-07, MB-3 seam, ruling V1).** The driver installs the guard's token in the
+  batch's session config (sketch §3.5's config extension) as
+  `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token=<token>`, and removes it when the
+  guard drops. Arms the sketch does not name (D-4's replace and replace-partitions commits)
+  would copy that key verbatim into their summary; MB-3 owns keeping the token off those paths
+  (strip it in `merged_snapshot_extra`, or scope the config to the body's sink commits).
 
 ## Gates — 2026-10-07
 
