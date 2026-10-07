@@ -296,3 +296,42 @@ def test_dataframe_udf_door_scrubs_a_user_raised_pyspark_exception(
     assert (caught.value is _RAISED[-1]) is keeps_identity
     assert USERINFO not in "".join(traceback.format_exception(caught.value))
     assert caught.value.__context__ is None
+
+
+def _boom_series(series: Iterator[Any]) -> Iterator[Any]:
+    for values in series:
+        _boom()
+        yield values
+
+
+def test_scalar_iter_consume_door_formatted_traceback_is_masked() -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        _RAISED.clear()
+        frame = session.createDataFrame([(1.0,), (2.0,)], ["v"])
+        boom = F.pandas_udf(_boom_series, "double", "scalar_iter")
+        with pytest.raises(PySparkException) as caught:
+            frame.select(boom("v")).collect()
+        error = caught.value
+        assert "while consuming SCALAR_ITER output" in str(error)
+        assert "http://u:***@" in str(error)
+        assert USERINFO not in repr(error)
+        assert USERINFO not in "".join(traceback.format_exception(error))
+        assert error.__context__ is None
+    finally:
+        session.stop()
+
+
+def test_scalar_iter_consume_site_masks_its_own_detail() -> None:
+    _RAISED.clear()
+    batch = pa.RecordBatch.from_pydict({"a": [1.0, 2.0]})
+    slot = {"input_inter_names": ["a"], "user_func": _boom_series, "function_name": "f"}
+    with pytest.raises(PySparkException) as caught:
+        udf_bridge._run_pandas_udf_scalar_iter([batch], slot)
+    error = caught.value
+    assert "while consuming SCALAR_ITER output" in str(error)
+    assert "Traceback" in str(error)
+    assert USERINFO not in str(error)
+    assert USERINFO not in "".join(traceback.format_exception(error))
+    assert error.__context__ is None
+    assert error.__cause__ is not _RAISED[-1]

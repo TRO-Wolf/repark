@@ -5305,6 +5305,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `applyInPandas` and `mapInArrow` doors as a masked copy of the same class, and one without a secret
   leaves as the same object with its error class; a direct `_run_python_udf_on_batch` pin holds the
   site on its own. pins: source-url-redact-1/C-077
+  **H4:** the SCALAR_ITER "while consuming output" door, at the door (`reverify3/probes/scalar_iter.py`'s
+  shape) and directly on `_run_pandas_udf_scalar_iter`, which holds the site's own mask.
+  pins: source-url-redact-1/C-078
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default
