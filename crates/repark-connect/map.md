@@ -21,7 +21,9 @@ enum `ConnectError` (NS-15, C-1's two enums folded in), the COPY BINARY decoder
 `CopyBinaryDecoder`, and the type map's eight newly mapped rows with their codecs, resolution and
 per-value refusals. C-2b adds the driver behind the `postgres` feature (settings keys, TLS, the
 query pool, the COPY read), C-2c the provider, pushdown and EXPLAIN, C-2d the mount in
-`repark-core`. C-2b round 1a (2026-10-07) is the feature and the lockfile only. pins: c-2/C-013
+`repark-core`. C-2b round 1a (2026-10-07) is the feature and the lockfile only. C-2b round 1b
+(2026-10-07) adds the Postgres settings keys (`settings/postgres.rs`) and the quoted identifier
+types (`ident.rs`), both pure. pins: c-2/C-013, C-026, C-027
 
 ## Contents
 
@@ -36,8 +38,10 @@ query pool, the COPY read), C-2c the provider, pushdown and EXPLAIN, C-2d the mo
   (C-4 onward). The `repark-core → repark-connect` edge is still absent; C-2d adds it with
   the mount. pins: c-1/C-011 · pins: c-2/C-014
 - `src/` — [src/map.md](src/map.md): `error.rs` (`ConnectError`), `copy_binary.rs` (the COPY
-  BINARY decoder), `settings.rs` (the connection settings and the reserved auth-method field)
-  and `types/postgres.rs` (the Postgres ↔ Arrow type map, codecs under `types/postgres/`).
+  BINARY decoder), `settings.rs` (the connection settings and the reserved auth-method field),
+  `settings/postgres.rs` (the Postgres endpoint keys), `ident.rs` (`PgIdent`,
+  `QualifiedRelation`) and `types/postgres.rs` (the Postgres ↔ Arrow type map, codecs under
+  `types/postgres/`).
 - `tests/` — [tests/map.md](tests/map.md): the one integration binary `tests/it/main.rs`.
 
 ## Design bars (R-10)

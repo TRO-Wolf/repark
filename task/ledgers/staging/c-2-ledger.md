@@ -341,3 +341,91 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-connect/tests/it/postgres_types.rs, crates/repark-connect/tests/it/copy_binary.rs]
   complete: true
 ```
+
+## 6. C-2b round 1b — the settings keys and identifiers (2026-10-07)
+
+**Branch:** `feat/c-2b-postgres-connection` from `6f693f8d` (round 1a). **Model:** Claude Opus 5.5
+(`claude-opus-5-5`, high). **Scope:** sketch §2.3 (keys, aliases, URL parsing, redaction), the §2.2
+identifier newtypes and §5.5's pins, all pure: no driver call, no network. TLS, the pool, the read
+and `CONNECT-DECL-pg-server-version` belong to rounds 2 and 3. The attestation of §5 is the
+Critic's to extend for C-2b; this round does not edit it.
+
+### PROPOSITION LEDGER — C-2b round 1b — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-018 | `PostgresSettings::from_props(props, door)` reads the twenty §2.3 keys (`POSTGRES_KEYS`) with the sketch's defaults (port 5432, database = user, `verify-full`, connect 10 s, read 60 s, query unlimited, lock 10 s, batch = the session's, NTZ off, pushdown on, pool 4, checkout 30 s, idle 300 s, `repark`). `auth_method` still goes through C-1's `ConnectionSettings::from_props`. `url` takes `postgresql://`, `postgres://` and `jdbc:postgresql://`, percent-decoded, a bracketed IPv6 host included. `host` and `user` are required. Integers are ASCII digits in a per-key range. Any key outside the list, the declared keys and `driver` refuses with `InvalidSpecification` / `SpecRefusal::UnknownKey`, which names the key, lists the accepted keys and echoes no value; it folds to IllegalArgument. | `every_endpoint_key_parses_and_unknown_keys_refuse`; mutation m25 (accept unknown keys). | PROVEN | §6.1 m25 red; §6.3 gates. |
+| C-019 | The Spark and pgjdbc aliases (`POSTGRES_ALIASES`) are matched ASCII case-insensitively on the `read_postgres` door and inside a `jdbc:` URL query; `repark.toml` and a libpq URI query take canonical spellings only. One setting given twice (two spellings, a URL part and a key, or one URL parameter twice) refuses with `SpecRefusal::Conflict`, naming both spellings. `connectTimeout`, `socketTimeout` and `queryTimeout` are seconds, converted to milliseconds, with the range reported in seconds. | `aliases_are_case_insensitive_and_conflicts_refuse`, `alias_units_convert`; mutations m26 (last spelling wins), m27 (no unit conversion). | PROVEN | §6.1 m26, m27 red. |
+| C-020 | `sslmode` defaults to `verify-full`, and `disable` is accepted (`CONNECT-DIV-pg-sslmode`). `prefer`, `allow`, `require` and `verify-ca`, as a key or in the `url` query, refuse with `DeclaredSetting::UnverifiedSslmode` naming `CONNECT-DECL-sslmode-unverified` and the `verify-full` + `sslrootcert` fix; they fold to Unsupported. Any other spelling is an invalid specification listing the six. | `sslmode_default_is_verify_full`, `unverified_sslmodes_refuse`; mutations m28 (default to `require`), m36 (accept `require`). | PROVEN | §6.1 m28, m36 red. |
+| C-021 | `sslcert` and `sslkey` refuse under `CONNECT-DECL-pg-client-cert`. `sessionInitStatement`, `customSchema` and `options` (`options` in the URL query too) refuse under `CONNECT-DECL-pg-session-sql`. A host list, from `host` or the URL authority, refuses under `CONNECT-DECL-pg-multi-host`. On the `read_postgres` door only, the five partitioned-read options refuse under `CONNECT-DECL-pg-partitioned-read`; in `repark.toml` they are unknown keys. Each fold is Unsupported. | `declared_keys_refuse_naming_their_row`; mutation m29 (accept `options`). | PROVEN | §6.1 m29 red. The `-pg-partitioned-read` registry row lands with C-2d (sketch §4); the code names it now. |
+| C-022 | `read_timeout_ms = 0`, and `socketTimeout = 0` on the `read_postgres` door or in a `jdbc:` URL, refuse with `SpecRefusal::ZeroReadTimeout`, citing NS-7. | `read_timeout_zero_refuses`; mutation m30 (accept `0`). | PROVEN | §6.1 m30 red. |
+| C-023 | `redact_source_prop(key, value)` is the connect-owned seam for C-2d's `sources()` rows. It delegates to `repark_common::redaction::redact_value`: `postgresql://u:pw@h/db` → `postgresql://u:***@h/db`; a `jdbc:` URL's `password=` parameter → `***`; a `password` key → `***`; a userinfo with no colon is masked whole (CONNECT-DIV-url-userinfo); URLs without a userinfo password are unchanged, including an `@` after the authority. | `redact_source_prop_masks_url_credentials`; mutation m31 (mask the userinfo only when an `@` follows a `:`). | PROVEN | §6.1 m31 red. The sketch's "a URL without a password is unchanged" holds for URLs with no userinfo; `postgresql://u@h` masks `u`, the common redactor's fail-closed reading. |
+| C-024 | No new type renders a value. `PostgresSettings`'s `Debug` prints `auth_method` and `sslmode` only. Each new error's `Display` and `Debug` (unknown key, conflict, integer, boolean, sslmode, driver, URL scheme, escape, query pair, IPv6, multi-host, declared key) carries a spelling and an enum reason, never the URL, a password or a value. This extends C-1's C-006. | `settings_debug_never_renders_a_value`; mutation m32 (print the URL in the URL refusal). | PROVEN | §6.1 m32 red. |
+| C-025 | `PgIdent::new` refuses an empty name, a NUL byte and more than 63 **bytes** with `InvalidIdentifier` (`IdentRefusal`, IllegalArgument). `Display` is the only rendering: double-quoted, each embedded `"` doubled. `QualifiedRelation` renders `"schema"."table"`. | `identifiers_render_double_quoted_with_quotes_doubled`, `identifiers_refuse_empty_nul_and_more_than_63_bytes`; mutations m33 (no quote doubling), m34 (count chars, not bytes). | PROVEN | §6.1 m33, m34 red. |
+| C-026 | The registry gains six dated rows (2026-10-07), each with the four-field shape and a live pin in `tests/it/settings.rs`: `CONNECT-DECL-sslmode-unverified`, `-pg-client-cert`, `-pg-session-sql`, `-pg-multi-host`, `CONNECT-DIV-pg-sslmode` and `-pg-unknown-option`. Each landed in the same commit as its pin. C-1's four pins pass unchanged, and C-1's m3 replays red through the shared parser. | The rows; `python3 scripts/check_docs_links.py`; each cited pin is a `fn` in `tests/it/settings.rs`; m35. | PROVEN | §6.1 m35 red; §6.3. |
+| C-027 | The round's files hold their sketch ceilings: `settings/postgres.rs` 543/560, `ident.rs` 86/200, `tests/it/settings.rs` 591/600. `error.rs` is 260 against C-2a's 260. Beyond the brief's list come `tests/it/ident.rs` (40 lines, the identifier pins) and `src/settings/map.md`, which the new directory needs. No dependency changes, no code comments, and every gate in §6.3 passes. | §6.3. | PROVEN | §6.3. |
+
+### 6.1 Mutations (round 1b)
+
+Each mutation was applied alone to the committed tree (`493f30ca`), the crate's integration binary
+run, and the file restored with `git checkout`. "Red in" names the failing pins. A line inside a
+shared helper (`refusal`'s `expect_err` at `settings.rs:139`) is the panic site for pins that call
+it.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m25 | C-018 | an unknown key returns `Ok` (`src/settings/postgres.rs`) | RED | `every_endpoint_key_parses_and_unknown_keys_refuse`, `aliases_are_case_insensitive_and_conflicts_refuse`, `declared_keys_refuse_naming_their_row`, `settings_debug_never_renders_a_value` (all at `settings.rs:139`) |
+| m26 | C-019 | `give` never sees the first spelling, so the last wins (`src/settings/postgres.rs`) | RED | `aliases_are_case_insensitive_and_conflicts_refuse`, `settings_debug_never_renders_a_value` (`settings.rs:139`) |
+| m27 | C-019 | the seconds scale is 1 (`src/settings/postgres.rs`) | RED | `alias_units_convert` at `settings.rs:414`; `aliases_are_case_insensitive_and_conflicts_refuse` at `settings.rs:339` |
+| m28 | C-020 | an absent `sslmode` resolves to `Require` (`src/settings/postgres.rs`) | RED | `sslmode_default_is_verify_full` at `settings.rs:436`; `every_endpoint_key_parses_and_unknown_keys_refuse` at `settings.rs:294`; `settings_debug_never_renders_a_value` at `settings.rs:563` |
+| m29 | C-021 | `options` returns `Ok` before classification (`src/settings/postgres.rs`) | RED | `declared_keys_refuse_naming_their_row` (`settings.rs:139`) |
+| m30 | C-022 | the zero read-timeout arm never matches (`src/settings/postgres.rs`) | RED | `read_timeout_zero_refuses` (`settings.rs:139`) |
+| m31 | C-023 | `redact_source_prop` masks from the first `:` after `://` to the last `@`, else nothing (`src/settings/postgres.rs`) | RED | `redact_source_prop_masks_url_credentials` at `settings.rs:542` |
+| m32 | C-024 | the URL refusal's spelling is the URL itself (`src/settings/postgres.rs`) | RED | `settings_debug_never_renders_a_value` at `settings.rs:588` |
+| m33 | C-025 | an embedded `"` renders single (`src/ident.rs`) | RED | `identifiers_render_double_quoted_with_quotes_doubled` at `ident.rs:12` |
+| m34 | C-025 | the length test counts chars (`src/ident.rs`) | RED | `identifiers_refuse_empty_nul_and_more_than_63_bytes` at `ident.rs:33` |
+| m35 | C-026 | C-1's m3 replayed: skip the declared auth refusal (`src/settings.rs`) | RED | `iam_token_is_a_declared_refusal` at `settings.rs:48`; `kerberos_is_a_declared_refusal` at `settings.rs:66` |
+| m36 | C-020 | `require` joins the accepted modes (`src/settings/postgres.rs`) | RED | `unverified_sslmodes_refuse` (`settings.rs:139`) |
+
+All twelve are red; none survived. The sketch names one mutation for both sslmode pins. m28 reds the default pin only, so m36 was added for `unverified_sslmodes_refuse`.
+
+### 6.2 Readings acted on (no halt)
+
+- **Alias positions.** The sketch puts aliases on the `read_postgres` door and in a `jdbc:` URL's
+  query. A libpq URI's query takes canonical keys only. On both doors the declared keys follow
+  the same case rule as their position, so `repark.toml` matches them exactly.
+- **`driver`** is accepted only at the top level of the `read_postgres` door. It is a Spark
+  option, so `repark.toml` and the URL refuse it as an unknown key.
+- **Timeout floors.** The network waits (connect, read, pool checkout, pool idle) start at 1 ms.
+  `query_timeout_ms` and `lock_timeout_ms` take `0`: `0` means unlimited for the first and is
+  passed through for the second. Every millisecond value is capped at `i32::MAX`, Postgres's own
+  bound for `statement_timeout` and `lock_timeout`.
+- **`fetchsize = 0` refuses.** Spark's default is `0` (the driver's choice), so a script that
+  sets it explicitly to `0` refuses with the range `1..`. Filed in the hand-back for a ruling.
+- **No source name yet.** Sketch §2.2 puts `source` on every variant. The settings errors carry
+  the spelling and reason only, as C-1's `DeclaredAuthMethod` does, because `from_props` sees
+  props, not the source. C-2d's resolution owns the source name.
+- **Spark relation options.** `dbtable` and `query` are not settings keys. C-2d's door must take
+  them out of the props before `from_props`, or they refuse as unknown.
+- **`+` in a `jdbc:` query** is not decoded as a space (pgjdbc uses `URLDecoder`). Only `%XX`
+  escapes decode, as in libpq.
+
+### 6.3 Gates (round 1b)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock; exit codes are
+verbatim.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-connect` | 0 | 65 passed, 0 failed (54 at round 1a, plus nine §5.5 settings pins and two identifier pins; C-1's seven settings tests unchanged) |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1052 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 365 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 303 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |

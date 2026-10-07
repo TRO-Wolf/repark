@@ -7,14 +7,28 @@ See [../map.md](../map.md).
 
 ## Contents
 
-- `main.rs` — `mod copy_binary; mod postgres_types; mod settings;`.
+- `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings;`.
 - `settings.rs` — C-1 (2026-10-05): absent and explicit `password` (the other props carried,
   `auth_method` dropped from the map); `iam_token` and `kerberos` refuse naming their registry
   rows and fold to the Unsupported class; empty, wrong-case, hyphenated, padded and unknown
   values are invalid specifications folding to the IllegalArgument class; every spelling round
   trips; `Debug` never renders a prop value. Since C-2a (2026-10-06) the errors are
-  `ConnectError`'s; no assertion changed.
-  pins: c-1/C-003, C-004, C-005, C-006 · pins: c-2/C-001
+  `ConnectError`'s; no assertion changed. C-2b round 1b (2026-10-07) adds sketch §5.5 through
+  `PostgresSettings::from_props`: `every_endpoint_key_parses_and_unknown_keys_refuse` (every
+  canonical key, the defaults, the libpq, `postgres://` and `jdbc:` URL forms, the per-key
+  ranges, a misspelt key that lists the accepted keys and echoes no value),
+  `aliases_are_case_insensitive_and_conflicts_refuse`, `alias_units_convert`,
+  `sslmode_default_is_verify_full`, `unverified_sslmodes_refuse`,
+  `declared_keys_refuse_naming_their_row`, `read_timeout_zero_refuses`,
+  `redact_source_prop_masks_url_credentials` and `settings_debug_never_renders_a_value` (C-1's
+  C-006 extended to `PostgresSettings` and every new error). A local `summary()` renders every
+  field, so one assertion covers a parsed value.
+  pins: c-1/C-003, C-004, C-005, C-006 · pins: c-2/C-001, C-018, C-019, C-020, C-021, C-022,
+  C-023, C-024
+- `ident.rs` — C-2b round 1b (2026-10-07): `identifiers_render_double_quoted_with_quotes_doubled`
+  (an embedded `"`, a lone `"`, an injection-shaped name, a qualified relation) and
+  `identifiers_refuse_empty_nul_and_more_than_63_bytes` (63 ASCII bytes and 62 bytes of `é` pass;
+  64 bytes, as 64 ASCII or 32 `é`, refuse with the IllegalArgument class). pins: c-2/C-025
 - `copy_binary.rs` — C-2a (2026-10-06), the stream half of sketch §5.1, through
   `CopyBinaryDecoder` with hand-built streams: `copy_header_is_the_signature_flags_and_extension`
   (every signature byte flipped, low flag bits ignored, the extension skipped),

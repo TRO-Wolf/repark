@@ -6,11 +6,14 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
-- `lib.rs` — `mod copy_binary; mod error; mod settings; mod types;` and the re-exports:
-  `BatchLimits`, `COPY_SIGNATURE`, `CopyBinaryDecoder`, `DEFAULT_BATCH_BYTES`,
+- `lib.rs` — `mod copy_binary; mod error; mod ident; mod settings; mod types;` and the
+  re-exports: `BatchLimits`, `COPY_SIGNATURE`, `CopyBinaryDecoder`, `DEFAULT_BATCH_BYTES`,
   `DEFAULT_BATCH_ROWS`, `MAX_BATCH_BYTES`, `MAX_FIELD_BYTES`; `ConnectError`, `ProtocolViolation`, `Result`, `UNMAPPED_ROW`,
-  `ValueRefusal`; `AUTH_METHOD_KEY`, `AuthMethod`, `ConnectionSettings`; and the `postgres`
-  module.
+  `ValueRefusal`; `IdentRefusal`, `MAX_IDENT_BYTES`, `PgIdent`, `QualifiedRelation`;
+  `AUTH_METHOD_KEY`, `AuthMethod`, `ConnectionSettings`, and the Postgres settings surface
+  (`PostgresSettings`, `SettingsDoor`, `SslMode`, `DeclaredSetting`, `Spelling`, `SpecRefusal`,
+  `UrlViolation`, `POSTGRES_KEYS`, `POSTGRES_ALIASES`, `POSTGRES_DRIVER`, `DEFAULT_PORT`,
+  `redact_source_prop`); and the `postgres` module.
 - `error.rs` — C-2a (2026-10-06; sketch [c-2-design.md](../../../task/wo/c-2-design.md) §2.2,
   NS-15). The crate's one error enum, `ConnectError` (`thiserror`), and
   `Result<T> = std::result::Result<T, ConnectError>`. C-1's `SettingsError` and `TypeMapError`
@@ -29,7 +32,11 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   the decoder is pure and knows columns, not sources. The C-2a F-1 fold (2026-10-06) adds
   `ProtocolViolation::FieldTooLong { length, max }`: a field length past the Postgres maximum,
   refused at the length word before any allocation. `WireLength` did not fit the case: its
-  `expected` is an exact codec width, not a maximum. pins: c-2/C-001, C-015
+  `expected` is an exact codec width, not a maximum. C-2b round 1b (2026-10-07) adds the
+  settings and identifier variants: `InvalidSpecification { key: Spelling, reason: SpecRefusal }`
+  and `InvalidIdentifier { reason: IdentRefusal }` fold to `Config`, `DeclaredSetting { key,
+  declared: DeclaredSetting }` to `NotImplemented`. Each carries the spelling the user gave and
+  an enum reason, never a value. pins: c-2/C-001, C-015, C-018, C-025
 - `copy_binary.rs` — C-2a (2026-10-06; sketch §2.6). `CopyBinaryDecoder`, the resumable state
   machine over `COPY … TO STDOUT (FORMAT BINARY)` chunks, independent of how the server or TLS
   cuts the stream: `Header → HeaderExtension → TupleStart → FieldLength(i) → FieldValue(i, n)
@@ -78,8 +85,17 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   invalid specification and lists the three spellings. `Debug` prints the prop keys only, so a
   `password` value never reaches a log; the core loader's redaction predicate lives in
   `repark-core` and is out of this crate's reach. Since C-2a its errors are `ConnectError`'s
-  (no behaviour change). C-2b adds the endpoint keys beside it in `settings/postgres.rs`.
+  (no behaviour change). C-2b round 1b (2026-10-07) adds `mod postgres;` and re-exports its
+  surface; `ConnectionSettings` keeps its shape and stays the one parser of `auth_method`.
   pins: c-1/C-003, C-004, C-005, C-006
+- `settings/` — [settings/map.md](settings/map.md): `postgres.rs`, the Postgres endpoint keys.
+- `ident.rs` — C-2b round 1b (2026-10-07; sketch §2.2, NS-14). `PgIdent`, built only by
+  `PgIdent::new`, which refuses an empty name, a NUL byte, or more than `MAX_IDENT_BYTES` (63)
+  bytes, counted in bytes since Postgres truncates past `NAMEDATALEN - 1`, with
+  `ConnectError::InvalidIdentifier` and an `IdentRefusal` reason. It renders (`Display`) only as
+  a double-quoted identifier with each embedded `"` doubled; `as_str()` gives the name for exact
+  matching (FL-14). `QualifiedRelation { schema, table }` renders as `"schema"."table"`.
+  Identifiers are quoted and values bound; nothing is concatenated. pins: c-2/C-025
 - `types.rs` — `pub mod postgres;` (`mssql` joins with C-5).
 - `types/` — [types/map.md](types/map.md): the Postgres type map and its codecs.
 
