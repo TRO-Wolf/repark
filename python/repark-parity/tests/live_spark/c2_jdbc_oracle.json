@@ -1,0 +1,1096 @@
+{
+  "cells": [
+    {
+      "error": null,
+      "id": "DM2-T02@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t02",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=Decimal('123456789.987654321000000000'))"
+      ],
+      "schema": "struct<v:decimal(38,18)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t02 (v numeric)",
+        "INSERT INTO dm2.t_t02 (v) VALUES ('123456789.987654321')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T03@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t03",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=Decimal('12345678.90'))"
+      ],
+      "schema": "struct<v:decimal(10,2)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t03 (v numeric(10,2))",
+        "INSERT INTO dm2.t_t03 (v) VALUES ('12345678.90')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T04@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t04",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=Decimal('1234567890123456789012345678.1234567890'))"
+      ],
+      "schema": "struct<v:decimal(38,10)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t04 (v numeric(38,10))",
+        "INSERT INTO dm2.t_t04 (v) VALUES ('1234567890123456789012345678.1234567890')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T05@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t05",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=Decimal('12345678901234567890123456789012345679'))"
+      ],
+      "schema": "struct<v:decimal(38,0)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t05 (v numeric(39,1))",
+        "INSERT INTO dm2.t_t05 (v) VALUES ('12345678901234567890123456789012345678.5')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T06@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t06",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=Decimal('12345678901234567890123456789012345678'))"
+      ],
+      "schema": "struct<v:decimal(38,0)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t06 (v numeric(50,10))",
+        "INSERT INTO dm2.t_t06 (v) VALUES ('12345678901234567890123456789012345678.12')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T07@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t07",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=Decimal('1.123456789012345678901234567890123'))"
+      ],
+      "schema": "struct<v:decimal(38,33)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t07 (v numeric(50,45))",
+        "INSERT INTO dm2.t_t07 (v) VALUES ('1.123456789012345678901234567890123456789012345')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T08@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t08",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=Decimal('2'))"
+      ],
+      "schema": "struct<v:decimal(38,0)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t08 (v numeric(1000,40))",
+        "INSERT INTO dm2.t_t08 (v) VALUES ('1.5')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T09@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t09",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=Decimal('0.00123'))"
+      ],
+      "schema": "struct<v:decimal(5,5)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t09 (v numeric(3,5))",
+        "INSERT INTO dm2.t_t09 (v) VALUES ('0.00123')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": {
+        "class": "pyspark.errors.exceptions.captured.ArithmeticException",
+        "error_class": "NUMERIC_VALUE_OUT_OF_RANGE.WITHOUT_SUGGESTION",
+        "message": "[NUMERIC_VALUE_OUT_OF_RANGE.WITHOUT_SUGGESTION]  The 12300.00000000000000000000000000000000000000 rounded half up from 12300 cannot be represented as Decimal(38, 38). SQLSTATE: 22003",
+        "sqlstate": "22003"
+      },
+      "id": "DM2-T10@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t10",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": null,
+      "schema": "struct<v:decimal(38,38)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t10 (v numeric(5,-2))",
+        "INSERT INTO dm2.t_t10 (v) VALUES ('12300')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T15@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t15",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v='123e4567-e89b-12d3-a456-426614174000')"
+      ],
+      "schema": "struct<v:string>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t15 (v uuid)",
+        "INSERT INTO dm2.t_t15 (v) VALUES ('123e4567-e89b-12d3-a456-426614174000')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T16@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t16",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v='{\"a\":1,\"b\":[true,null],\"s\":\"x\"}')"
+      ],
+      "schema": "struct<v:string>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t16 (v json)",
+        "INSERT INTO dm2.t_t16 (v) VALUES ('{\"a\":1,\"b\":[true,null],\"s\":\"x\"}')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T17@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t17",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v='{\"a\": 1, \"b\": [true, null], \"s\": \"x\"}')"
+      ],
+      "schema": "struct<v:string>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t17 (v jsonb)",
+        "INSERT INTO dm2.t_t17 (v) VALUES ('{\"a\":1,\"b\":[true,null],\"s\":\"x\"}')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T20@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t20",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=1234)"
+      ],
+      "schema": "struct<v:smallint>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t20 (v int2)",
+        "INSERT INTO dm2.t_t20 (v) VALUES (1234)"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T21@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t21",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=123456)"
+      ],
+      "schema": "struct<v:int>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t21 (v int4)",
+        "INSERT INTO dm2.t_t21 (v) VALUES (123456)"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T22@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t22",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=123456789012)"
+      ],
+      "schema": "struct<v:bigint>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t22 (v int8)",
+        "INSERT INTO dm2.t_t22 (v) VALUES (123456789012)"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T23@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t23",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=1.5)"
+      ],
+      "schema": "struct<v:float>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t23 (v float4)",
+        "INSERT INTO dm2.t_t23 (v) VALUES (1.5)"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T24@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t24",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=2.5)"
+      ],
+      "schema": "struct<v:double>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t24 (v float8)",
+        "INSERT INTO dm2.t_t24 (v) VALUES (2.5)"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T25@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t25",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=True)"
+      ],
+      "schema": "struct<v:boolean>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t25 (v bool)",
+        "INSERT INTO dm2.t_t25 (v) VALUES (true)"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T26@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t26",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v='hello')"
+      ],
+      "schema": "struct<v:string>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t26 (v text)",
+        "INSERT INTO dm2.t_t26 (v) VALUES ('hello')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T27@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t27",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v='abcde')"
+      ],
+      "schema": "struct<v:string>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t27 (v varchar(5))",
+        "INSERT INTO dm2.t_t27 (v) VALUES ('abcde')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T28@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t28",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v='ab   ')"
+      ],
+      "schema": "struct<v:string>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t28 (v bpchar(5))",
+        "INSERT INTO dm2.t_t28 (v) VALUES ('ab   ')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T29@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t29",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=b'\\xde\\xad\\xbe\\xef')"
+      ],
+      "schema": "struct<v:binary>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t29 (v bytea)",
+        "INSERT INTO dm2.t_t29 (v) VALUES ('\\xdeadbeef')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T01@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t01",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(1970, 1, 1, 12, 34, 56, 123000))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t01 (v time)",
+        "INSERT INTO dm2.t_t01 (v) VALUES ('12:34:56.123456')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T01@UTC",
+      "read": {
+        "dbtable": "dm2.t_t01",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(1970, 1, 1, 12, 34, 56, 123000))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t01 (v time)",
+        "INSERT INTO dm2.t_t01 (v) VALUES ('12:34:56.123456')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-T11@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t11",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 6, 15, 12, 34, 56, 123456))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t11 (v timestamp)",
+        "INSERT INTO dm2.t_t11 (v) VALUES ('2024-06-15 12:34:56.123456')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T11@UTC",
+      "read": {
+        "dbtable": "dm2.t_t11",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 6, 15, 12, 34, 56, 123456))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t11 (v timestamp)",
+        "INSERT INTO dm2.t_t11 (v) VALUES ('2024-06-15 12:34:56.123456')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-T13@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t13",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 6, 15, 6, 34, 56, 123456))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t13 (v timestamptz)",
+        "INSERT INTO dm2.t_t13 (v) VALUES ('2024-06-15 12:34:56.123456+02:00')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T13@UTC",
+      "read": {
+        "dbtable": "dm2.t_t13",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 6, 15, 6, 34, 56, 123456))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t13 (v timestamptz)",
+        "INSERT INTO dm2.t_t13 (v) VALUES ('2024-06-15 12:34:56.123456+02:00')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-T14@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t14",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v='1 year 2 mons 3 days 04:05:06.789')"
+      ],
+      "schema": "struct<v:string>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t14 (v interval)",
+        "INSERT INTO dm2.t_t14 (v) VALUES ('1 year 2 months 3 days 04:05:06.789')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T14@UTC",
+      "read": {
+        "dbtable": "dm2.t_t14",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v='1 year 2 mons 3 days 04:05:06.789')"
+      ],
+      "schema": "struct<v:string>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t14 (v interval)",
+        "INSERT INTO dm2.t_t14 (v) VALUES ('1 year 2 months 3 days 04:05:06.789')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-T30@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t30",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.date(2024, 6, 15))"
+      ],
+      "schema": "struct<v:date>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t30 (v date)",
+        "INSERT INTO dm2.t_t30 (v) VALUES ('2024-06-15')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T30@UTC",
+      "read": {
+        "dbtable": "dm2.t_t30",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.date(2024, 6, 15))"
+      ],
+      "schema": "struct<v:date>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t30 (v date)",
+        "INSERT INTO dm2.t_t30 (v) VALUES ('2024-06-15')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-T12@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t11",
+        "driver": "org.postgresql.Driver",
+        "options": {
+          "preferTimestampNTZ": "true"
+        },
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 6, 15, 12, 34, 56, 123456))"
+      ],
+      "schema": "struct<v:timestamp_ntz>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t11 (v timestamp)",
+        "INSERT INTO dm2.t_t11 (v) VALUES ('2024-06-15 12:34:56.123456')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T12@UTC",
+      "read": {
+        "dbtable": "dm2.t_t11",
+        "driver": "org.postgresql.Driver",
+        "options": {
+          "preferTimestampNTZ": "true"
+        },
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 6, 15, 12, 34, 56, 123456))"
+      ],
+      "schema": "struct<v:timestamp_ntz>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_t11 (v timestamp)",
+        "INSERT INTO dm2.t_t11 (v) VALUES ('2024-06-15 12:34:56.123456')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-T18@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t18",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v='ok')"
+      ],
+      "schema": "struct<v:string>",
+      "sql_setup": [
+        "CREATE TYPE dm2.mood AS ENUM ('sad', 'ok')",
+        "CREATE TABLE dm2.t_t18 (v dm2.mood)",
+        "INSERT INTO dm2.t_t18 (v) VALUES ('ok')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-T19@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_t19",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=7)"
+      ],
+      "schema": "struct<v:int>",
+      "sql_setup": [
+        "CREATE DOMAIN dm2.pos AS int4 CHECK (VALUE > 0)",
+        "CREATE TABLE dm2.t_t19 (v dm2.pos)",
+        "INSERT INTO dm2.t_t19 (v) VALUES (7)"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V01@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v01",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.date(9999, 12, 30))",
+        "Row(v=datetime.date(1, 1, 2))"
+      ],
+      "schema": "struct<v:date>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v01 (v date)",
+        "INSERT INTO dm2.t_v01 (v) VALUES ('infinity'), ('-infinity')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V01@UTC",
+      "read": {
+        "dbtable": "dm2.t_v01",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.date(9999, 12, 30))",
+        "Row(v=datetime.date(1, 1, 2))"
+      ],
+      "schema": "struct<v:date>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v01 (v date)",
+        "INSERT INTO dm2.t_v01 (v) VALUES ('infinity'), ('-infinity')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-V02@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v02",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(9999, 12, 31, 18, 59, 59, 999000))",
+        "Row(v=datetime.datetime(1, 1, 2, 19, 0))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v02 (v timestamp)",
+        "INSERT INTO dm2.t_v02 (v) VALUES ('infinity'), ('-infinity')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V02@UTC",
+      "read": {
+        "dbtable": "dm2.t_v02",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(9999, 12, 31, 18, 59, 59, 999000))",
+        "Row(v=datetime.datetime(1, 1, 2, 19, 0))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v02 (v timestamp)",
+        "INSERT INTO dm2.t_v02 (v) VALUES ('infinity'), ('-infinity')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-V03@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v03",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(9999, 12, 31, 18, 59, 59, 999000))",
+        "Row(v=datetime.datetime(1, 1, 2, 19, 0))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v03 (v timestamptz)",
+        "INSERT INTO dm2.t_v03 (v) VALUES ('infinity'), ('-infinity')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V03@UTC",
+      "read": {
+        "dbtable": "dm2.t_v03",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(9999, 12, 31, 18, 59, 59, 999000))",
+        "Row(v=datetime.datetime(1, 1, 2, 19, 0))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v03 (v timestamptz)",
+        "INSERT INTO dm2.t_v03 (v) VALUES ('infinity'), ('-infinity')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": {
+        "class": "py4j.protocol.Py4JJavaError",
+        "error_class": null,
+        "message": "An error occurred while calling o475.collectToPython.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 42.0 failed 1 times, most recent failure: Lost task 0.0 in stage 42.0 (TID 42) (localhost executor driver): org.postgresql.util.PSQLException: Bad value for type BigDecimal : NaN\n\tat org.postgresql.jdbc.PgResultSet.toBigDecimal(PgResultSet.java:3543)\n\tat org.po",
+        "sqlstate": null
+      },
+      "id": "DM2-V04@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v04",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": null,
+      "schema": "struct<v:decimal(38,18)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v04 (v numeric)",
+        "INSERT INTO dm2.t_v04 (v) VALUES ('NaN')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": {
+        "class": "py4j.protocol.Py4JJavaError",
+        "error_class": null,
+        "message": "An error occurred while calling o488.collectToPython.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 43.0 failed 1 times, most recent failure: Lost task 0.0 in stage 43.0 (TID 43) (localhost executor driver): org.postgresql.util.PSQLException: Bad value for type BigDecimal : Infinity\n\tat org.postgresql.jdbc.PgResultSet.toBigDecimal(PgResultSet.java:3543)\n\tat o",
+        "sqlstate": null
+      },
+      "id": "DM2-V05@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v05",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": null,
+      "schema": "struct<v:decimal(38,18)>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v05 (v numeric)",
+        "INSERT INTO dm2.t_v05 (v) VALUES ('Infinity'), ('-Infinity')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V06@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v06",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 3, 10, 3, 30))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v06 (v timestamp)",
+        "INSERT INTO dm2.t_v06 (v) VALUES ('2024-03-10 02:30:00')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V06@UTC",
+      "read": {
+        "dbtable": "dm2.t_v06",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 3, 10, 3, 30))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v06 (v timestamp)",
+        "INSERT INTO dm2.t_v06 (v) VALUES ('2024-03-10 02:30:00')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-V07@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v07",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 3, 10, 3, 30))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v07 (v timestamptz)",
+        "INSERT INTO dm2.t_v07 (v) VALUES ('2024-03-10 02:30:00 America/New_York')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V07@UTC",
+      "read": {
+        "dbtable": "dm2.t_v07",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 3, 10, 3, 30))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v07 (v timestamptz)",
+        "INSERT INTO dm2.t_v07 (v) VALUES ('2024-03-10 02:30:00 America/New_York')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-V08@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v08",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 11, 3, 1, 30, fold=1))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v08 (v timestamp)",
+        "INSERT INTO dm2.t_v08 (v) VALUES ('2024-11-03 01:30:00')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V08@UTC",
+      "read": {
+        "dbtable": "dm2.t_v08",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 11, 3, 1, 30, fold=1))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v08 (v timestamp)",
+        "INSERT INTO dm2.t_v08 (v) VALUES ('2024-11-03 01:30:00')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-V09@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v09",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 11, 3, 1, 30, fold=1))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v09 (v timestamptz)",
+        "INSERT INTO dm2.t_v09 (v) VALUES ('2024-11-03 01:30:00 America/New_York')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V09@UTC",
+      "read": {
+        "dbtable": "dm2.t_v09",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(2024, 11, 3, 1, 30, fold=1))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v09 (v timestamptz)",
+        "INSERT INTO dm2.t_v09 (v) VALUES ('2024-11-03 01:30:00 America/New_York')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-V10@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_v10",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(1970, 1, 2, 0, 0))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v10 (v time)",
+        "INSERT INTO dm2.t_v10 (v) VALUES ('24:00:00')"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-V10@UTC",
+      "read": {
+        "dbtable": "dm2.t_v10",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=datetime.datetime(1970, 1, 2, 0, 0))"
+      ],
+      "schema": "struct<v:timestamp>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_v10 (v time)",
+        "INSERT INTO dm2.t_v10 (v) VALUES ('24:00:00')"
+      ],
+      "tz": "UTC"
+    },
+    {
+      "error": null,
+      "id": "DM2-S01@America/New_York",
+      "read": {
+        "dbtable": "dm2.\"MixedCase\"",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=42)"
+      ],
+      "schema": "struct<v:int>",
+      "sql_setup": [
+        "CREATE TABLE dm2.\"MixedCase\" (v int4)",
+        "INSERT INTO dm2.\"MixedCase\" (v) VALUES (42)"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": {
+        "class": "py4j.protocol.Py4JJavaError",
+        "error_class": "JDBC_EXTERNAL_ENGINE_SYNTAX_ERROR.DURING_OUTPUT_SCHEMA_RESOLUTION",
+        "message": "An error occurred while calling o610.load.\n: org.apache.spark.SparkException: [JDBC_EXTERNAL_ENGINE_SYNTAX_ERROR.DURING_OUTPUT_SCHEMA_RESOLUTION] JDBC external engine syntax error. The error was caused by the query SELECT * FROM dm2.MixedCase WHERE 1=0. ERROR: relation \"dm2.mixedcase\" does not exist\n  Position: 15. The error occurred during output schema resolution. SQLSTATE: 42000\n\tat org.apache.",
+        "sqlstate": "42000"
+      },
+      "id": "DM2-S02@America/New_York",
+      "read": {
+        "dbtable": "dm2.MixedCase",
+        "driver": "org.postgresql.Driver",
+        "url": "<pg-url>"
+      },
+      "rows": null,
+      "schema": null,
+      "sql_setup": [
+        "CREATE TABLE dm2.\"MixedCase\" (v int4)",
+        "INSERT INTO dm2.\"MixedCase\" (v) VALUES (42)"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "explain": "== Physical Plan ==\nCollectLimit (2)\n+- * Scan JDBCRelation(dm2.t_limit100) [numPartitions=1]  (1)\n\n\n(1) Scan JDBCRelation(dm2.t_limit100) [numPartitions=1]  [codegen id : 1]\nOutput [1]: [v#56]\nReadSchema: struct<v:int>\nExternal engine query: SELECT \"v\" FROM dm2.t_limit100      \n\n(2) CollectLimit\nInput [1]: [v#56]\nArguments: 3\n\n",
+      "id": "DM2-S03@America/New_York",
+      "push_down_limit": {
+        "jdbc_options_value": true,
+        "plan_shows_pushed_limit": false,
+        "reflection_error": null
+      },
+      "read": {
+        "dbtable": "dm2.t_limit100",
+        "driver": "org.postgresql.Driver",
+        "limit": 3,
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=1)",
+        "Row(v=2)",
+        "Row(v=3)"
+      ],
+      "schema": "struct<v:int>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_limit100 (v int4)",
+        "INSERT INTO dm2.t_limit100 (v) SELECT g FROM generate_series(1, 100) g"
+      ],
+      "tz": "America/New_York"
+    },
+    {
+      "error": null,
+      "id": "DM2-S04@America/New_York",
+      "read": {
+        "dbtable": "dm2.t_s04",
+        "driver": "org.postgresql.Driver",
+        "options": {
+          "noSuchOption": "x"
+        },
+        "url": "<pg-url>"
+      },
+      "rows": [
+        "Row(v=1)"
+      ],
+      "schema": "struct<v:int>",
+      "sql_setup": [
+        "CREATE TABLE dm2.t_s04 (v int4)",
+        "INSERT INTO dm2.t_s04 (v) VALUES (1)"
+      ],
+      "tz": "America/New_York"
+    }
+  ],
+  "date": "2026-10-06",
+  "jvm_timezone": "America/New_York",
+  "pgjdbc_sha256": "6e0e4cc2d8cae902084f8a2b18728b073a6fd9d1f87c9d8bff8f298c18185b93",
+  "pgjdbc_version": "42.7.13",
+  "postgres": "16.15",
+  "setup_preamble": [
+    "DROP SCHEMA IF EXISTS dm2 CASCADE",
+    "CREATE SCHEMA dm2"
+  ],
+  "spark": "4.1.2"
+}
