@@ -464,6 +464,7 @@ re-verifier**, so G1 is implemented as ruled.
 | C-034 | (G3) The F6 range contract holds on a non-append start snapshot: a `from.position` above the added data files of a `replace` or an `overwrite` start refuses `OffsetPositionOutOfRange { snapshot, position, files }` under both limits, and a position equal to the count resumes. | The G3 pins in `window_fold2_pins.rs` plus the re-verifier's N8 and g3b. | **PROVEN** | 2 pins green: `a_replace_start_past_its_added_files_refuses` (`(r,2)` and `(r,99)` refuse with `files = 1`; `(r,1)` resumes to the head) and `an_overwrite_start_past_its_added_files_refuses` (`(o,3)` and `(o,99)` refuse with `files = 2`; `(o,2)` resumes). N8 (the replace arm becomes `Ok(())`), which survived 61/61 in the re-verify, is red; g3b (the overwrite arm drops `check_position`) is red. pins: mb-1/C-034 |
 | C-035 | (G4) The FL-9 divergence is pinned on the shape where Spark idles: a zero-added-files `delete` as the head with nothing after it. `FromTimestamp` landing on it refuses `NonAppendSnapshot` (`from: None`, `to` = the delete) at `initial_offset`, and still refuses (`to` = the new head) once an append follows. `AfterSnapshot(D)` gives `(D, 0)`, reads `None` while nothing follows, then resumes to the append. The registry row `MB-1-FL-9` cites this pin, and its Spark half reads "idles while no snapshot follows it". | The G4 pin in `window_fold2_pins.rs`, the registry row, the docs-link gate, plus mutation g4. | **PROVEN** | 1 pin green: `a_delete_as_head_refuses_at_the_initial_offset` (q10's shape). g4 (the landing refusal drops its zero-added-files test, `&& false`) is red on it and on fold 1's `from_timestamp_landing_on_delete_refuses_at_the_initial_offset`. pins: mb-1/C-035 |
 | C-036 | (G5) A snapshot still in the metadata but not an ancestor of the head refuses `SnapshotNotInLineage { table, snapshot, head }`: `AfterSnapshot(x)` at `initial_offset`, and a resumed `from` at `next_window` under both limits and at any position. The text opens with Spark's `Cannot find snapshot after <id>: not an ancestor of table's current snapshot` and never says "expired". An ancestor still resumes. | The G5 pins in `window_fold2_pins.rs` and `error.rs`, plus mutations g5a and g5b. | **PROVEN** | 2 pins green: `a_snapshot_rolled_out_of_the_lineage_refuses_as_not_an_ancestor` (q09's shape: append s1, append s2, `rollback_to(s1)`, append s3; `AfterSnapshot(s2)`, `(s2,0)` and `(s2,1)` refuse naming s2 and s3; `(s1,1)` resumes to s3) and `lineage_refusal_starts_with_spark_text_and_never_says_expired` (byte-exact). The variant joins `every_error_variant_renders_a_message`. g5a and g5b red. pins: mb-1/C-036 |
+| C-037 | (G6) `FromTimestamp` mirrors `oldestAncestorAfter`: a head below T reads `None`; otherwise the walk from the head returns the snapshot after the first one with `ts < T`, a snapshot with `ts == T` itself, or the oldest ancestor when none is below T. | The G6 pin in `window_fold2_pins.rs` plus mutations g6a and g6b. | **PROVEN** | 1 pin green: `from_timestamp_walks_back_from_the_head_as_oldest_ancestor_after` (a real s1 at offset 0, then skewed snapshots at +50 s, +20 s and +60 s built through `TableMetadataBuilder`: T = +30 s lands on the head where the oldest-first rule gave +50 s; +60 s the head; +20 s the equal snapshot; +10 s the +50 s snapshot; 0 and -1 s s1; +60.001 s `None`; with the +20 s snapshot as head, T = +30 s reads `None` where the old rule landed on +50 s). g6a (the old oldest-first search) and g6b (no head check) red. pins: mb-1/C-037 |
 
 ## Dated decision rows — fold 2
 
@@ -490,6 +491,12 @@ re-verifier**, so G1 is implemented as ruled.
   sketch's §4 table gains no row in this fold; the text is RePark-owned beyond Spark's
   `SnapshotUtil.snapshotAfter` prefix, read from the 1.11 jar with `javap -constants`.
   FL-3 now covers only a `from` that is gone from the metadata.
+- **G6 (2026-10-07).** Read from the 1.11 jar: `determineStartingOffset` returns
+  `START_OFFSET` when `currentSnapshot().timestampMillis() < T`, else
+  `oldestAncestorAfter(table, T)`, and falls back to `oldestAncestor` when that throws
+  for a history whose oldest ancestor has an expired parent. RePark's walk ends on the
+  oldest ancestor in both cases. Supersedes C-018's "(oldest such ancestor, 0)"; the two
+  agree whenever ancestor timestamps grow along the chain.
 
 ## Gates — fold 2
 
@@ -522,4 +529,12 @@ test result: FAILED. 67 passed; 1 failed; 0 ignored; 0 measured; 804 filtered ou
 g5b window.rs next_window's `if self.table.metadata().snapshot_by_id(from_id).is_some() {` -> `if false {`
 test microbatch::window::tests::window_fold2_pins::a_snapshot_rolled_out_of_the_lineage_refuses_as_not_an_ancestor ... FAILED
 test result: FAILED. 67 passed; 1 failed; 0 ignored; 0 measured; 804 filtered out
+g6a window.rs the head-first walk -> `chain.iter().rev().skip_while(ts < T).take(1)` (the oldest ancestor at or after T)
+test microbatch::window::tests::window_fold2_pins::from_timestamp_walks_back_from_the_head_as_oldest_ancestor_after ... FAILED
+test result: FAILED. 68 passed; 1 failed; 0 ignored; 0 measured; 804 filtered out
+g6b window.rs `if head.timestamp_ms() < millis { return Ok(None); }` removed
+test microbatch::window::tests::from_timestamp_past_head_reads_none ... FAILED
+test microbatch::window::tests::window_fold2_pins::from_timestamp_walks_back_from_the_head_as_oldest_ancestor_after ... FAILED
+test microbatch::window::tests::window_fold_pins::from_timestamp_past_head_waits_for_a_snapshot_at_or_after_it ... FAILED
+test result: FAILED. 66 passed; 3 failed; 0 ignored; 0 measured; 804 filtered out
 ```

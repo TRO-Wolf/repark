@@ -273,3 +273,109 @@ async fn a_snapshot_rolled_out_of_the_lineage_refuses_as_not_an_ancestor() {
         .expect("some");
     assert_eq!(plan.end, input_offset(&table, head, 1));
 }
+
+fn with_skewed_snapshots(table: &Table, offsets: &[(i64, i64)]) -> Table {
+    let base = table
+        .metadata()
+        .current_snapshot()
+        .expect("a first snapshot");
+    let start = base.timestamp_ms();
+    let mut parent = base.snapshot_id();
+    let mut sequence = base.sequence_number();
+    let mut builder =
+        iceberg::spec::TableMetadataBuilder::new_from_metadata(table.metadata().clone(), None);
+    for &(snapshot, offset) in offsets {
+        sequence += 1;
+        let added = iceberg::spec::Snapshot::builder()
+            .with_snapshot_id(snapshot)
+            .with_parent_snapshot_id(Some(parent))
+            .with_sequence_number(sequence)
+            .with_timestamp_ms(start + offset)
+            .with_manifest_list(format!(
+                "{}/skew-{snapshot}.avro",
+                table.metadata().location()
+            ))
+            .with_summary(iceberg::spec::Summary {
+                operation: Operation::Append,
+                additional_properties: HashMap::new(),
+            })
+            .with_schema_id(0)
+            .build();
+        builder = builder
+            .add_snapshot(added)
+            .expect("add a skewed snapshot")
+            .set_ref(
+                iceberg::spec::MAIN_BRANCH,
+                iceberg::spec::SnapshotReference::new(
+                    snapshot,
+                    iceberg::spec::SnapshotRetention::branch(None, None, None),
+                ),
+            )
+            .expect("move main");
+        parent = snapshot;
+    }
+    let metadata = builder.build().expect("skewed metadata").metadata;
+    Table::builder()
+        .metadata(metadata)
+        .identifier(table.identifier().clone())
+        .file_io(table.file_io().clone())
+        .metadata_location(table.metadata_location().expect("location").to_string())
+        .build()
+        .expect("skewed table")
+}
+
+#[tokio::test]
+async fn from_timestamp_walks_back_from_the_head_as_oldest_ancestor_after() {
+    let (_warehouse, catalog, ident) = fixture_table("skewed").await;
+    let first = commit_append(&catalog, &ident, vec![synthetic_file("a.parquet", 1)]).await;
+    let table = load(&catalog, &ident).await;
+    let start = snapshot_timestamp(&table, first);
+    let skewed = with_skewed_snapshots(&table, &[(902, 50_000), (903, 20_000), (904, 60_000)]);
+    let stamps: Vec<i64> = [first, 902, 903, 904]
+        .iter()
+        .map(|snapshot| snapshot_timestamp(&skewed, *snapshot) - start)
+        .collect();
+    assert_eq!(stamps, vec![0, 50_000, 20_000, 60_000]);
+    let planner = WindowPlanner::new(skewed.clone(), uncapped());
+    for (target, expected) in [
+        (30_000, 904),
+        (60_000, 904),
+        (20_000, 903),
+        (10_000, 902),
+        (0, first),
+        (-1, first),
+    ] {
+        let offset = planner
+            .initial_offset(&StartPosition::FromTimestamp {
+                millis: start + target,
+            })
+            .await
+            .expect("initial")
+            .expect("the head is at or after T");
+        assert_eq!(
+            offset,
+            input_offset(&skewed, expected, 0),
+            "T = start + {target}"
+        );
+    }
+    assert!(
+        planner
+            .initial_offset(&StartPosition::FromTimestamp {
+                millis: start + 60_001,
+            })
+            .await
+            .expect("idle")
+            .is_none()
+    );
+    let below_head = with_skewed_snapshots(&table, &[(902, 50_000), (903, 20_000)]);
+    let planner = WindowPlanner::new(below_head, uncapped());
+    assert!(
+        planner
+            .initial_offset(&StartPosition::FromTimestamp {
+                millis: start + 30_000,
+            })
+            .await
+            .expect("a head below T reads no start")
+            .is_none()
+    );
+}

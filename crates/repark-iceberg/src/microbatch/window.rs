@@ -89,15 +89,24 @@ impl WindowPlanner {
                 self.landing(oldest, head_id).await.map(Some)
             }
             StartPosition::FromTimestamp { millis } => {
-                let chain = self.ancestry(head_id);
-                match chain
-                    .iter()
-                    .rev()
-                    .find(|snapshot| snapshot.timestamp_ms() >= millis)
-                {
-                    Some(landing) => self.landing(landing, head_id).await.map(Some),
-                    None => Ok(None),
+                if head.timestamp_ms() < millis {
+                    return Ok(None);
                 }
+                let chain = self.ancestry(head_id);
+                let mut after = None;
+                for snapshot in &chain {
+                    if snapshot.timestamp_ms() < millis {
+                        break;
+                    }
+                    after = Some(snapshot);
+                    if snapshot.timestamp_ms() == millis {
+                        break;
+                    }
+                }
+                let Some(landing) = after else {
+                    return Err(self.orphaned_head(head_id));
+                };
+                self.landing(landing, head_id).await.map(Some)
             }
             StartPosition::AfterSnapshot(snapshot) => {
                 let Some(named) = self.table.metadata().snapshot_by_id(snapshot.get()) else {

@@ -40,7 +40,7 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   while the private `Window` has room. Per-snapshot append scans list the
   files, sorted by path. The fail-on-non-append scan and the skip builders
   are never called (O-5).
-  pins: mb-1/C-008, C-009, C-010, C-011, C-017, C-018, C-019, C-020, C-023, C-024, C-032, C-034, C-035, C-036
+  pins: mb-1/C-008, C-009, C-010, C-011, C-017, C-018, C-019, C-020, C-023, C-024, C-032, C-034, C-035, C-036, C-037
 - `window_tests.rs` — the `window.rs` pins, split out under `#[path]` when
   the file passed the 1000-line ceiling: the memory-catalog fixture with
   append/overwrite/delete/replace commits plus the 18 start, window, cap,
@@ -50,8 +50,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `window_tests.rs` that reuses its fixture and fold 1's helpers: the two
   limits at an overwrite or delete (G1) and the position range on a
   replace or overwrite start (G3), and the delete-as-head start that the
-  registry row `MB-1-FL-9` cites (G4), and the lineage refusal (G5).
-  pins: mb-1/C-032, C-034, C-035, C-036
+  registry row `MB-1-FL-9` cites (G4), the lineage refusal (G5), and
+  `FromTimestamp` over a skewed history built through `TableMetadataBuilder`
+  (G6).
+  pins: mb-1/C-032, C-034, C-035, C-036, C-037
 - `window_fold_pins.rs` — fold 1's window pins, a child of `window_tests.rs`
   that reuses its fixture: the non-append start snapshot, the timestamp past
   the head, deliver-first refusal, the planning count read through the
@@ -156,9 +158,14 @@ whose position is below its count refuses `NonAppendSnapshot`, as Spark's
 files for any operation. A delete adds no data files, so `(x, 0)` cannot say
 whether `x` is unread or consumed. `Earliest` and `FromTimestamp` therefore
 refuse at `initial_offset` when they land on an `overwrite` or `delete`
-with no added data files (ledger FL-9). `FromTimestamp` past the head reads
-`None` until a snapshot at or after T exists, then starts there; older
-snapshots never stream (MB0b-R14, fold 1, F4). A `from` gone from the
+with no added data files (ledger FL-9). `FromTimestamp` mirrors Spark's
+`MicroBatchUtils.determineStartingOffset` and `SnapshotUtil.oldestAncestorAfter`
+(fold 2, G6, 2026-10-07): a head below T reads `None`; otherwise the walk goes
+back from the head and lands on the snapshot after the first one below T, or
+on one exactly at T, or on the oldest ancestor when none is below T. Under
+timestamp skew (Iceberg allows a minute backwards) that can start later than
+the oldest ancestor at or after T, never earlier; older snapshots never stream
+(MB0b-R14, fold 1, F4). A `from` gone from the
 metadata still refuses `SourceSnapshotExpired` (FL-3). A `from`, or an
 `AfterSnapshot(x)`, whose snapshot is still in the metadata but is not an
 ancestor of the head (for example after `rollback_to`) refuses
