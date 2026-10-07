@@ -47,7 +47,9 @@ pub enum MicroBatchError {
     SinkUndeclared,
     #[error("sink {sink} already has an active batch; one batch per sink at a time")]
     SinkBusy { sink: String },
-    #[error("sink already holds a commit for epoch {epoch}; refusing a second one")]
+    #[error(
+        "epoch {epoch} already stamped the sink; refusing a second sink write in the same batch: a restart resumes after epoch {epoch}, so this write's rows would never land. Write the sink once per batch body, or combine the writes into a single write"
+    )]
     SinkCommittedTwice { epoch: Epoch },
     #[error("query {query} epoch {epoch} is already committed")]
     AlreadyCommitted { query: QueryId, epoch: Epoch },
@@ -116,8 +118,8 @@ pub enum MicroBatchError {
         position: FilePosition,
         files: u64,
     },
-    #[error("stamped MERGE into {sink} needs write.merge.isolation-level=serializable")]
-    MergeIsolationRefused { sink: String },
+    #[error("stamped write into {sink} needs {property}=serializable")]
+    MergeIsolationRefused { sink: String, property: String },
     #[error("batch {epoch} failed: {cause}")]
     BatchFailed { epoch: Epoch, cause: String },
     #[error("recovery required for query {query} epoch {epoch}: {reason}")]
@@ -133,8 +135,11 @@ pub enum MicroBatchError {
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum RecoveryReason {
-    #[error("commit outcome unknown (operation id: {operation_id_text})", operation_id_text = operation_id.as_deref().unwrap_or("not recorded"))]
-    CommitOutcomeUnknown { operation_id: Option<String> },
+    #[error("commit outcome unknown (operation id: {operation_id_text}){resume_text}", operation_id_text = operation_id.as_deref().unwrap_or("not recorded"), resume_text = resume_refusal.as_ref().map_or_else(String::new, |reason| format!("; resuming will then refuse: {reason}")))]
+    CommitOutcomeUnknown {
+        operation_id: Option<String>,
+        resume_refusal: Option<Box<RecoveryReason>>,
+    },
     #[error("stop timed out after {waited:?}")]
     StopTimeout { waited: Duration },
     #[error("summary epoch {summary_epoch_text} disagrees with property epoch {property_epoch_text}", summary_epoch_text = summary_epoch.map_or_else(|| "none".to_string(), |epoch| epoch.get().to_string()), property_epoch_text = property_epoch.map_or_else(|| "none".to_string(), |epoch| epoch.get().to_string()))]
@@ -144,6 +149,10 @@ pub enum RecoveryReason {
     },
     #[error("stamped snapshot expired; raise history.expire.min-snapshots-to-keep retention")]
     StampedSnapshotExpired,
+    #[error(
+        "stamped snapshot {snapshot} is retained but not in the sink's current lineage: the sink was rolled back past it, so its rows are not live. Start a new query (new queryName), or restore the sink to snapshot {snapshot}"
+    )]
+    StampNotInLineage { snapshot: SnapshotId },
     #[error(
         "sink advanced to snapshot {snapshot} without a stamp; a commit bypassed the batch scope"
     )]
@@ -254,6 +263,7 @@ mod tests {
             },
             MicroBatchError::MergeIsolationRefused {
                 sink: String::from("silver.events"),
+                property: String::from("write.merge.isolation-level"),
             },
             MicroBatchError::BatchFailed {
                 epoch: Epoch::FIRST,
@@ -267,15 +277,16 @@ mod tests {
             },
             MicroBatchError::Catalog(String::from("catalog exploded")),
         ];
-        for error in errors {
-            assert!(!error.to_string().is_empty());
-        }
+        assert!(errors.iter().all(|error| !error.to_string().is_empty()));
     }
 
     #[test]
     fn every_recovery_reason_renders_a_message() {
         let reasons = [
-            RecoveryReason::CommitOutcomeUnknown { operation_id: None },
+            RecoveryReason::CommitOutcomeUnknown {
+                operation_id: None,
+                resume_refusal: None,
+            },
             RecoveryReason::StopTimeout {
                 waited: Duration::from_secs(30),
             },
@@ -284,6 +295,9 @@ mod tests {
                 property_epoch: None,
             },
             RecoveryReason::StampedSnapshotExpired,
+            RecoveryReason::StampNotInLineage {
+                snapshot: SnapshotId::new(12),
+            },
             RecoveryReason::UnstampedSinkCommit {
                 snapshot: SnapshotId::new(11),
             },
@@ -407,10 +421,11 @@ mod tests {
     fn merge_isolation_refusal_names_serializable() {
         let error = MicroBatchError::MergeIsolationRefused {
             sink: String::from("silver.events"),
+            property: String::from("write.update.isolation-level"),
         };
         assert_eq!(
             error.to_string(),
-            "stamped MERGE into silver.events needs write.merge.isolation-level=serializable"
+            "stamped write into silver.events needs write.update.isolation-level=serializable"
         );
     }
 
@@ -418,15 +433,30 @@ mod tests {
     fn recovery_reasons_render() {
         let unknown = RecoveryReason::CommitOutcomeUnknown {
             operation_id: Some(String::from("op-1")),
+            resume_refusal: None,
         };
         assert_eq!(
             unknown.to_string(),
             "commit outcome unknown (operation id: op-1)"
         );
-        let unknown_missing = RecoveryReason::CommitOutcomeUnknown { operation_id: None };
+        let unknown_missing = RecoveryReason::CommitOutcomeUnknown {
+            operation_id: None,
+            resume_refusal: None,
+        };
         assert_eq!(
             unknown_missing.to_string(),
             "commit outcome unknown (operation id: not recorded)"
+        );
+        let unknown_mismatched = RecoveryReason::CommitOutcomeUnknown {
+            operation_id: Some(String::from("op-2")),
+            resume_refusal: Some(Box::new(RecoveryReason::OffsetMismatch {
+                summary_epoch: Some(Epoch::new(0)),
+                property_epoch: Some(Epoch::new(1)),
+            })),
+        };
+        assert_eq!(
+            unknown_mismatched.to_string(),
+            "commit outcome unknown (operation id: op-2); resuming will then refuse: summary epoch 0 disagrees with property epoch 1"
         );
         let timeout = RecoveryReason::StopTimeout {
             waited: Duration::from_secs(30),
@@ -449,6 +479,17 @@ mod tests {
         assert_eq!(
             required.to_string(),
             "recovery required for query 00000000-0000-0000-0000-000000000000 epoch 3: stamped snapshot expired; raise history.expire.min-snapshots-to-keep retention"
+        );
+    }
+
+    #[test]
+    fn sink_committed_twice_names_the_loss_and_the_fix() {
+        let twice = MicroBatchError::SinkCommittedTwice {
+            epoch: Epoch::new(4),
+        };
+        assert_eq!(
+            twice.to_string(),
+            "epoch 4 already stamped the sink; refusing a second sink write in the same batch: a restart resumes after epoch 4, so this write's rows would never land. Write the sink once per batch body, or combine the writes into a single write"
         );
     }
 }

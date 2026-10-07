@@ -3561,22 +3561,39 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **repark** — decoding a `numeric` value whose sign word is `NaN` (`0xC000`), `+Infinity`
   (`0xD000`) or `-Infinity` (`0xF000`) refuses that value with
   `ConnectError::UnrepresentableValue` (reason `NumericNaN` / `NumericInfinity`), naming the
-  column, the row index and this row; it folds to the Unsupported class. Once C-2c pushes
-  filters, a value outside a pushed filter's range is never read, so the scan can succeed where
-  the residual path refuses; the rows returned never differ.
+  column, the row index and this row; it folds to the Unsupported class. **Pushed filters**
+  (C-2c; corrected by the C-2c fold 1, 2026-10-07): the server applies a pushed filter before
+  any value is decoded, so a refused value's membership follows **Postgres's ordering**, in
+  which `NaN` equals itself and sorts above every number, `+Infinity` sorts above every finite
+  number and `-Infinity` below. A value outside the pushed range is never read, so the scan can
+  succeed where the residual path (`pushdown_predicate = false`) refuses. A value inside the
+  range is read and refuses when its column is projected; when it is **not** projected, nothing
+  decodes it, so its row is returned by that ordering, where the residual path refuses. Over
+  `c numeric(10,2)` holding `NaN`, `1`, `2` and `5`, `SELECT id … WHERE c > 1` returns the
+  `NaN` row (`NaN > 1` in Postgres), `c <> 5` returns it too, and `c < 6` leaves it out; each
+  refuses with `pushdown_predicate = false`, and `SELECT id, c … WHERE c > 1` refuses pushed.
 - **Apache Spark** — the JDBC source reads `numeric` through pgjdbc's `getBigDecimal`, which
   cannot build a `BigDecimal` from `NaN` or an infinity, so the read fails. *(oracle:
   documented — the C-2 sketch's FL-3; no value claim, D-M2 measures it.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::numeric_special_values_refuse`
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::numeric_special_values_refuse`;
+  live `crates/repark-connect/tests/it/live_pushdown.rs::a_refused_value_inside_a_pushed_range_follows_postgres_order_live`
+  (the pushed shapes, both ways)
 - **Rationale** — DECLARED 2026-10-06 (C-2a; card 1.6 "declare, never approximate"; FL-3,
-  where Flink and Spark agree). `Decimal128` has no `NaN` and no infinity. Retire when an
-  opt-in quarantine (North Star §7) or a Spark-measured mapping lands.
+  where Flink and Spark agree). `Decimal128` has no `NaN` and no infinity. RULED 2026-10-07 (the
+  C-2c verifier's S2, L2): declare the pushed-filter membership. Retire when an opt-in quarantine (North Star §7)
+  or a Spark-measured mapping lands.
 ### CONNECT-DECL-pg-infinite-datetime — a Postgres `date` or timestamp `±infinity` refuses per value
 - **repark** — decoding a `date` of `infinity` (`0x7FFFFFFF`) or `-infinity` (`0x80000000`), or
   a `timestamp` / `timestamptz` of `±infinity` (`i64::MAX` / `i64::MIN` microseconds), refuses
   that value with `ConnectError::UnrepresentableValue` (reason `InfiniteDate` /
   `InfiniteTimestamp`) naming this row; it folds to the Unsupported class. The pushed-filter
-  note of CONNECT-DECL-pg-numeric-special applies.
+  note of CONNECT-DECL-pg-numeric-special applies: membership follows Postgres's ordering, in
+  which `infinity` sorts after every finite `date` or timestamp and `-infinity` before. Over a
+  `date` and a `timestamptz` column each holding `infinity`, `-infinity`, `2024-01-01` and
+  `2024-01-02`, `SELECT id … WHERE d < DATE '2024-01-02'` returns the `-infinity` row and
+  `d > DATE '2024-01-01'` the `infinity` row (and the same for the `timestamptz` column against
+  an instant), where `pushdown_predicate = false` refuses. A `timestamp` compare pushes only
+  under `prefer_timestamp_ntz` (CONNECT-DIV-pg-timestamp-zone).
 - **Apache Spark** — Spark 4.1.2 over pgjdbc 42.7.13 answers sentinels, not errors: `date`
   `infinity` / `-infinity` read as `9999-12-30` / `0001-01-02`, and `timestamp` / `timestamptz`
   `±infinity` read as `9999-12-31 18:59:59.999` / `0001-01-02 19:00` (America/New_York JVM). These
@@ -3584,8 +3601,11 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `python/repark-parity/tests/live_spark/c2_jdbc_oracle.json` cells `DM2-V01`–`DM2-V03`,
   2026-10-06.)*
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::date_anchors_round_trip`,
-  `::timestamp_ntz_anchors_round_trip`, `::timestamptz_anchors_round_trip`
-- **Rationale** — DECLARED 2026-10-06 (C-2a; FL-4). RULED 2026-10-06 21:45 EDT (Frontier, for the
+  `::timestamp_ntz_anchors_round_trip`, `::timestamptz_anchors_round_trip`; live
+  `crates/repark-connect/tests/it/live_pushdown.rs::a_refused_value_inside_a_pushed_range_follows_postgres_order_live`
+  (the pushed shapes, both ways)
+- **Rationale** — DECLARED 2026-10-06 (C-2a; FL-4). The pushed-filter membership is declared
+  under the same ruling as CONNECT-DECL-pg-numeric-special (L2, 2026-10-07). RULED 2026-10-06 21:45 EDT (Frontier, for the
   owner; the sketch's Q1): keep refusing. `Date32` and `Timestamp(Microsecond)` have no infinity,
   and Spark's sentinels are pgjdbc zone artefacts that would approximate.
 ### CONNECT-DECL-pg-out-of-range — a Postgres value outside its Arrow type's range refuses per value
@@ -3620,6 +3640,144 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-10-06 (C-2a; FL-6; North Star §2 rank 4 until a Spark oracle
   cell confirms a mapping). Adding a type is one row, one codec arm, one pin and one oracle
   cell.
+### CONNECT-DECL-sslmode-unverified — a Postgres source refuses `sslmode` `prefer`, `allow`, `require` and `verify-ca`
+- **repark** — `PostgresSettings::from_props` refuses `sslmode` `prefer` and `allow` (they fall
+  back to plaintext silently) and `require` and `verify-ca` (encryption without a host-name check),
+  given as a key or inside the `url` query, with `ConnectError::DeclaredSetting`
+  (`DeclaredSetting::UnverifiedSslmode`). The message names the mode, this row and the fix,
+  "`verify-full` with `sslrootcert` pointing at your CA bundle", and the error folds to the
+  Unsupported class. Any other spelling (`VERIFY-FULL`, `verify_full`, empty) is an invalid
+  specification listing the six libpq spellings.
+- **Apache Spark** — the JDBC source hands `sslmode` to pgjdbc, which accepts all six libpq modes
+  and by default falls back to plaintext when the server offers no TLS. *(oracle: documented —
+  the C-2 sketch's FL-12, pgjdbc's connection properties; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::unverified_sslmodes_refuse`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; NS §5, TLS by default; FL-12; the sketch's Q5, kept
+  under its lean). A man in the middle defeats every one of the four modes. Retire a mode only by a
+  dated owner decision, for example to admit `require` for cloud connection strings.
+### CONNECT-DECL-pg-client-cert — a Postgres source refuses `sslcert` and `sslkey`
+- **repark** — `PostgresSettings::from_props` refuses `sslcert` and `sslkey`, given as a key or
+  inside the `url` query, with `ConnectError::DeclaredSetting` (`DeclaredSetting::ClientCert`)
+  naming this row; it folds to the Unsupported class. In `repark.toml` the spelling is exact; on
+  the `read_postgres` door and inside a `jdbc:` URL it is matched case-insensitively.
+- **Apache Spark** — the JDBC source forwards both to pgjdbc, which presents the client
+  certificate during the TLS handshake. *(oracle: documented — pgjdbc's connection properties; no
+  value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; ES-1: password auth is the one 1.6 method). Retire in
+  the unit that adds certificate auth to ES-1.
+### CONNECT-DECL-pg-session-sql — a Postgres source refuses `sessionInitStatement`, `customSchema` and `options`
+- **repark** — `PostgresSettings::from_props` refuses the three keys with
+  `ConnectError::DeclaredSetting` (`DeclaredSetting::SessionSql`) naming this row and the fix
+  (select through `query` with casts); it folds to the Unsupported class. `options` also refuses
+  inside the `url` query, and the case rule of CONNECT-DECL-pg-client-cert applies.
+- **Apache Spark** — `sessionInitStatement` runs arbitrary SQL after each session opens,
+  `customSchema` overrides the column types read, and pgjdbc's `options` sends raw startup
+  options. *(oracle: documented — Spark's JDBC data source options and pgjdbc's connection
+  properties; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; sketch §2.3 and §2.4). Each one could override the
+  session pins the read relies on (empty `search_path`, read-only transactions, the timeouts) or
+  the resolved schema. Retire per key when a unit can admit it without lifting a pin. (Since the
+  C-2b fold 2, 2026-10-07, query mode resolves unqualified names through the `search_path` a
+  plain session as the login role would get from `ALTER ROLE` and `ALTER DATABASE`: one catalog
+  statement inside the query's own read-only transaction reads `pg_db_role_setting` in the
+  server's precedence (role in database, role, database, all roles) and applies the value with
+  `set_config(…, true)`, which is `SET LOCAL`; with none set it is the built-in
+  `"$user", public`. A server-wide `search_path` in `postgresql.conf` or `ALTER SYSTEM` is not
+  read, because the startup pin hides it; the built-in default stands in. Relation mode keeps
+  the empty pin. Pin:
+  `crates/repark-connect/tests/it/live_pool.rs::query_mode_reads_the_configured_search_path_as_a_plain_session_does`.)
+### CONNECT-DECL-pg-multi-host — a Postgres source refuses a host list
+- **repark** — a `host` value with a comma, or a `url` whose authority lists hosts
+  (`postgresql://h1:5432,h2:5433/db`), refuses with `ConnectError::DeclaredSetting`
+  (`DeclaredSetting::MultiHost`) naming this row; it folds to the Unsupported class.
+- **Apache Spark** — the JDBC source passes the URL to pgjdbc, which tries the listed hosts in
+  order (libpq does the same). *(oracle: documented — pgjdbc's and libpq's connection strings; no
+  value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; sketch §2.3). A source has one endpoint at 1.6, and
+  failover across hosts is demand-triggered. Retire in the unit that adds host lists.
+### CONNECT-DECL-pg-server-version — a Postgres source refuses servers older than PostgreSQL 14
+- **repark** — every resolution of a Postgres source reads `server_version_num` in its
+  discovery transaction, and a value below `140000` refuses with
+  `ConnectError::DeclaredServerVersion`, naming the number and this row, before any catalog
+  query runs; it folds to the Unsupported class.
+- **Apache Spark** — the JDBC source connects to any server pgjdbc supports, which reaches back
+  to PostgreSQL 8.4. *(oracle: documented — pgjdbc's supported server versions; no value
+  claim.)*
+- **Pin** — `crates/repark-connect/tests/it/read.rs::servers_older_than_14_are_declared`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; sketch §2.4, the server floor). 14 is the oldest
+  community-supported release on 2026-10-06; the read path needs
+  `pg_collation.collisdeterministic` (12) and `numeric` infinities (14). Raise the floor as
+  releases leave support; retire only by a dated owner decision to admit an older server.
+  Since the C-2b fold 1 (2026-10-07) the startup packet also pins
+  `client_connection_check_interval` (new in 14), so an older server refuses at connect with
+  its own `Server { 42704 }` error naming that parameter, before discovery can name this row.
+### CONNECT-DECL-pg-drift-cast — a column retyped after resolution reads through an assignment cast, which may round
+- **repark** — every projected column is cast to the type resolved at planning
+  (`<col>::pg_catalog.<type>`, sketch §2.6, F-7). When the column is retyped between resolution
+  and the scan, the server's cast decides: a widening reads back typed, an incompatible change
+  fails loud (`22P02`, `22003`, `42703` or `RelationNotFound`), and a narrowing assignment cast
+  rounds silently: `int4` → `numeric` or `float8` reads `1.5` and `2.5` as `2`, `numeric(10,2)`
+  → `numeric(12,4)` reads `1.2345` as `1.23` and `1.255` as `1.26` (the verifier's VL-DRIFT2,
+  2026-10-07). A **pushed filter sees the retyped server value**, while the projection casts to
+  the planned type (C-2c fold 1, 2026-10-07): the pushed compare renders the bare column, so
+  that an index on it stays usable, and no cast is added to it. So when DDL races the statement
+  (between planning and the scan's first poll), a row can be chosen by its new value and read
+  back by its old type. Over `(id int8, qty int4)` holding `(1, 5), (2, 6)`, with
+  `WHERE qty = 6` planned and `qty` then retyped `numeric(10,1)` and row 1 set to `5.5`, the
+  pushed scan returns `(2, 6)` alone (the server compares `5.5 = 6`), while with
+  `pushdown_predicate = false` the engine compares the cast value and returns `(1, 6)` and
+  `(2, 6)`.
+- **Apache Spark** — the JDBC source resolves the schema when it plans and sends no cast, so a
+  column retyped afterwards reaches the driver's getter for the planned type, which converts or
+  fails by pgjdbc's rules. *(oracle: documented — Spark's JDBC data source; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/live_pg.rs::schema_drift_between_plan_and_scan_fails_loud_or_stays_typed`
+  (the widening and the loud failures; the rounding is recorded, not pinned);
+  `crates/repark-connect/tests/it/live_pushdown.rs::a_pushed_filter_sees_the_retyped_value_live`
+  (both answers of the pushed-filter shape)
+- **Rationale** — DECLARED 2026-10-07 (C-2b fold 1, S3; sketch F-7 accepts the cast). The cast
+  keeps the resolved Arrow type true for the whole scan. RULED 2026-10-07 (the C-2c verifier's
+  S2, L1): declare the pushed-filter half rather than cast the pushed column, because the cast
+  would defeat an index on it. Retire when a drift check (a
+  `pg_attribute` re-read inside the scan's transaction, or a cast that refuses lost digits)
+  lands.
+### CONNECT-DECL-pg-listing — a Postgres source lists no schemas and no tables
+- **repark** — a mounted Postgres source (`PostgresSource::mount`, `PostgresCatalog`) answers
+  `schema_names()` with an empty list, and each schema's `table_names()` with an empty list and
+  `table_exist` with `false`. `schema(name)` returns a lazy `PostgresSchemaProvider` for any
+  name; the relation is resolved, and a missing one reported, only when a statement names it
+  (`SchemaProvider::table` resolves it, and `RelationNotFound` becomes DataFusion's own
+  table-not-found). `SHOW TABLES` and `information_schema` therefore show no Postgres table.
+  `repark_connect::LISTING_ROW` names this row.
+- **Apache Spark** — the JDBC table catalog lists the server's schemas and tables. *(oracle:
+  documented — FL-8; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/explain.rs::listing_a_postgres_source_is_empty_and_declared`
+- **Rationale** — DECLARED 2026-10-07 (C-2c; FL-8; sketch §2.8). DataFusion's listing hooks are
+  synchronous, and building a session does no I/O (CFG-2 D-4). Retire when an asynchronous
+  listing lands through the doors' catalog operations, or the 1.7 crawler's read surface (the
+  pre-declared `crawler → connect` edge) serves it.
+### CONNECT-DECL-pg-bound-values — a Postgres scan whose pushed filters bind more than 1024 values refuses the plan
+- **repark** — every pushed value rides a `pg_catalog.current_setting('repark.pN')` slot, and a
+  scan binds at most 1024 (`MAX_PARAM_SLOTS`). A single conjunct that would bind past that, and
+  an `IN` list past 256 items, stays above the scan. But the classifier is per conjunct and
+  stateless, so several pushed conjuncts can together pass 1024 (five 256-item `IN` lists on
+  five columns): DataFusion has already removed them from the plan, so the scan cannot hand them
+  back, and `create_physical_plan` refuses with `DataFusionError::Plan`, naming the source, the
+  bound, the workaround and this row. The workaround is `pushdown_predicate = false`
+  (`pushDownPredicate` on the `read_postgres` door), which keeps every filter in the engine, or
+  a narrower filter.
+- **Apache Spark** — the JDBC source compiles a pushed filter into the `WHERE` text with its
+  values inlined as literals, so it has no bound and never refuses. *(oracle: documented —
+  Spark's `JdbcDialect.compileValue` and `JDBCRDD`'s filter compilation; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/pushdown.rs::pushed_values_past_1024_fail_the_plan`
+  (1024 values push; a 1025th refuses, naming the bound, `pushdown_predicate` and this row)
+- **Rationale** — DECLARED 2026-10-07 (C-2c fold 1; the verifier's S2, ruling L5; sketch §0 line
+  5 and the ledger's R-9). Values are bound, never compiled into the SQL text (NS §5, FL-13), and
+  inside COPY each bound value takes one `set_config` slot. Retire when
+  the classifier budgets values across a scan's conjuncts, keeping the excess above the scan
+  instead of refusing.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.
@@ -3653,7 +3811,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::timestamp_ntz_anchors_round_trip`
 - **Rationale** — DECLARED 2026-10-05 (C-1); retired 2026-10-06 (C-2a) and re-declared the same
   day (C-2a fold, round D) on the D-M2 measurement: the NTZ decode is the wall clock, not
-  Spark's default `TimestampType`. Retire when C-2c's localiser places it.
+  Spark's default `TimestampType`. C-2c (2026-10-07) builds the placement in the provider: a
+  `PostgresTable` surfaces `timestamp` in its `WallClockLocaliser`'s zone unless
+  `prefer_timestamp_ntz` is set (CONNECT-DIV-pg-timestamp-zone). No door mounts the provider
+  yet, so retire when C-2d mounts it with core's session-zone localiser.
 
 ### CONNECT-DECL-pg-timestamptz — RETIRED (2026-10-06, C-2a): Postgres `timestamptz` maps to a UTC microsecond timestamp
 
@@ -3744,6 +3905,98 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   displayed, even where Spark displays them (owner, 2026-10-06: "we need security to be
   tight"). Host, port, database and credential-free locations stay visible for debugging.
   Retire the row only if the owner rules that Spark's display wins.
+### CONNECT-DIV-pg-sslmode — a Postgres source verifies TLS by default; `disable` is the explicit plaintext
+- **repark** — a Postgres source with no `sslmode` resolves to `SslMode::VerifyFull`: TLS with the
+  certificate chain and the host name verified. `sslmode = "disable"` is the one plaintext option,
+  and every other mode refuses under CONNECT-DECL-sslmode-unverified. Against a server that offers
+  no TLS, the default refuses at connect with `ConnectError::TlsRequired`, naming `sslmode` as the
+  one switch; every live cell connects with `sslmode = "disable"`.
+- **Apache Spark** — the JDBC source passes `sslmode` to pgjdbc, whose default falls back to
+  plaintext when the server offers no TLS. *(oracle: documented — FL-12; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::sslmode_default_is_verify_full`,
+  `crates/repark-connect/tests/it/live_pg.rs::plaintext_server_refuses_under_the_default`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; NS §5 TLS by default, the plaintext option dated
+  2026-10-06; FL-12; the sketch's Q5). A silent plaintext fallback carries the password in the
+  clear.
+### CONNECT-DIV-pg-unknown-option — a Postgres source refuses unknown keys where Spark forwards them
+- **repark** — `PostgresSettings::from_props` accepts only the sketch's §2.3 keys, its declared
+  keys (each refused under its own row) and, on the `read_postgres` door, `driver` set to
+  `org.postgresql.Driver`. Any other key, given as a key or inside the `url` query, refuses with
+  `ConnectError::InvalidSpecification` (`SpecRefusal::UnknownKey`): the message names the key and
+  lists the accepted keys, never a value, and it folds to the IllegalArgument class. Inside the
+  `url` query the key is named only as "the query key in `url`" (C-2b fold 1, 2026-10-07): a raw
+  `&` in a password splits it, so the key's text may be a password's tail. Canonical
+  spellings are exact in `repark.toml`. The Spark and pgjdbc aliases (`queryTimeout`, `fetchsize`,
+  `socketTimeout`, …) are matched case-insensitively on the `read_postgres` door and inside a
+  `jdbc:` URL query, and refuse as unknown keys in `repark.toml`. One setting given twice, in the
+  URL and as a key or under two spellings, refuses naming both spellings.
+- **Apache Spark** — the JDBC source forwards an unknown option to the driver as a connection
+  property. *(oracle: documented — FL-1; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::every_endpoint_key_parses_and_unknown_keys_refuse`,
+  `::aliases_are_case_insensitive_and_conflicts_refuse`,
+  `crates/repark-connect/tests/it/url.rs::no_userinfo_or_password_text_is_echoed_by_a_refusal`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; NS §5 `deny_unknown_fields`; FL-1; the sketch's Q6,
+  kept under its lean). A misspelt timeout or TLS key would otherwise never take effect.
+### CONNECT-DIV-pg-enum-compare — a pushed compare on a Postgres enum column orders by the label's text, not the enum's order
+- **repark** — an enum column reads as its label (`Utf8`, CONNECT-DECL-pg-unmapped), and a
+  pushed compare on it renders `m::pg_catalog.text OPERATOR(pg_catalog.>)
+  pg_catalog.current_setting('repark.pN')::pg_catalog.text`, so `<`, `<=`, `>` and `>=` order
+  by the label's text under the column's collation. Over `('sad', 'ok', 'happy')`, a pushed
+  `m > 'ok'` returns `sad`, in relation and query mode alike. `=` and `<>` match as the enum
+  does.
+- **Apache Spark** — the JDBC source pushes `"m" > 'ok'`, which the server compares in the enum's
+  declared order and returns `happy`. *(oracle: documented — Spark's JDBC filter pushdown and
+  Postgres enum ordering; the server's own answer is measured in the pin.)*
+- **Pin** — `crates/repark-connect/tests/it/live_pool.rs::a_pushed_enum_compare_orders_by_text`
+- **Rationale** — DECLARED 2026-10-07 (C-2b fold 2, Z5; the re-verify's S3). The pushed result
+  is the one the `Utf8` column compares to after the read, so filtering above the scan gives
+  the same rows; it differs only from Spark's server-side enum order. Retire when the scan
+  pushes an enum compare against the enum type (or declines to push an ordered compare on an
+  enum).
+### CONNECT-DIV-pg-text-collation — a pushed text compare uses code-point order, where Spark's pushdown uses the column's collation
+- **repark** — on a server whose encoding is `UTF8`, a `text` or `varchar` column pushes `=`,
+  `<>`, `<`, `<=`, `>`, `>=`, `IN`, `BETWEEN` and a well-formed `LIKE` as
+  `"c" COLLATE pg_catalog."C" OPERATOR(pg_catalog.op) pg_catalog.current_setting('repark.pN')::pg_catalog.text`
+  (`LIKE` as `OPERATOR(pg_catalog.~~)`, whose escape is the backslash). Under `"C"` a compare
+  is byte order, which for UTF-8 is code-point order, the engine's own order, and equality is
+  byte equality whatever the column's collation, deterministic or not. So the pushed rows equal
+  the rows the engine returns with `pushdown_predicate = false`: `'B' < 'a'`, an ICU column
+  orders `'A' < 'B' < 'a'`, and a case-insensitive nondeterministic column matches
+  `= 'abc'` on `abc` alone. On a server with another encoding, and for `bpchar`, every text
+  compare stays above the scan; so does `ILIKE`, a regular expression and a `LIKE` with another
+  escape or a malformed pattern.
+- **Apache Spark** — the JDBC source compiles the compare into the `WHERE` text with no
+  collation, so the server compares under the column's collation: the ICU column orders
+  `'a' < 'B'`, and the nondeterministic column matches both `abc` and `ABC`. *(oracle:
+  documented — FL-10; the server's answer under each collation is what the pin's mutation
+  reads.)*
+- **Pin** — `crates/repark-connect/tests/it/pushdown.rs::p06_text_comparison_is_code_point_order`,
+  `::p06b_text_equality_ignores_nondeterministic_collation`;
+  live `crates/repark-connect/tests/it/live_pushdown.rs::p06_text_comparison_is_code_point_order_live`,
+  `::p06b_text_equality_ignores_nondeterministic_collation_live`
+- **Rationale** — DECLARED 2026-10-07 (C-2c; FL-10; the sketch's Q4, ratified 2026-10-06 on its
+  lean). Card 1.6's ruled rule outranks both engines: pushdown never changes semantics.
+### CONNECT-DIV-pg-timestamp-zone — a Postgres `timestamp` surfaces in the session zone, where Spark uses the JVM zone
+- **repark** — by default a `timestamp` (without time zone) column of a `PostgresTable`
+  surfaces as `Timestamp(Microsecond, <zone>)`: the scan decodes the wall clock and hands each
+  batch's column to the source's `WallClockLocaliser`, which places it as an instant in the
+  zone whose label it reports. The label is read once per resolution, so one statement sees one
+  zone. Core supplies the localiser over the session's `runtime_zone` (C-2d); until D-M2
+  measures Spark's rule, a wall clock in a DST gap or overlap refuses per value there. With
+  `prefer_timestamp_ntz = true` the column is `Timestamp(Microsecond, None)`, the wall clock. A
+  compare on a placed column never pushes (the placement is not injective across a DST change);
+  on the NTZ column it does.
+- **Apache Spark** — the JDBC source reads `timestamp` as `TimestampType`, the wall clock placed
+  in the JVM default zone, and as `TimestampNTZType` under `preferTimestampNTZ`; Spark's guidance
+  is to keep the JVM and session zones equal. *(oracle: measured — D-M2 DM2-T11/T12 in
+  `python/repark-parity/tests/live_spark/c2_jdbc_oracle.json` for the types; documented — FL-5
+  for the zone.)*
+- **Pin** — `crates/repark-connect/tests/it/pushdown.rs::r03_ltz_timestamp_comparisons_stay_residual`;
+  live `crates/repark-connect/tests/it/live_pushdown.rs::timestamp_columns_are_placed_in_the_session_zone_live`,
+  `::r03_ltz_timestamp_comparisons_stay_residual_live`
+- **Rationale** — DECLARED 2026-10-07 (C-2c; FL-5). The session zone is the one every other
+  timestamp in the statement is read in, so a federated compare sees one clock; Spark's JVM zone
+  is process state a session cannot set.
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
 - **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
   `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition
@@ -4096,18 +4349,44 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   returns `None`; `foreachPartition(f)` calls `f` once per Arrow record batch with an
   iterator of `Row`s (an empty frame still calls `f` once with an empty iterator). A
   non-callable `f` raises `PySparkTypeError` `NOT_CALLABLE` at the call; an exception
-  raised by `f` propagates as that exception class.
+  raised by `f` propagates as that exception class. From 2026-10-07 (FOREACH-WRAP-1) it
+  is `scrub_exception`'s masked copy: a credential in its text, `repr` or formatted
+  traceback shows masked (`http://u:***@…`), and it is raised after the handler, so its
+  `__context__` is None. An exception with no credential is the user's own object, its
+  text byte for byte.
 - **Apache Spark** — runs `f` on executors and wraps both a non-callable `f` and a
   user-raised exception in a Py4J job abort (`Py4JJavaError`). Partition count is the
-  RDD partition count, not the Arrow batch count. *(oracle: recorded — cells
+  RDD partition count, not the Arrow batch count. Spark 4.1.2 shows the user's message,
+  credential included, inside `str()` of that `Py4JJavaError` (no `getErrorClass`, no
+  Python cause, `__context__` None). *(oracle: recorded — cells
   `foreach_return`, `foreach_not_callable`, `foreach_raises`,
-  `foreachPartition_return`.)*
+  `foreachPartition_return`; live 2026-10-07 —
+  `python/repark-parity/tests/live_spark/fw1_callback_oracle.json` cells `FW1-foreach`
+  and `FW1-foreachPartition`, `secret_in_str` true.)*
 - **Pin** — `python/repark/tests/test_df_surface_b_1.py::test_foreach_rejects_non_callable`,
   `…::test_foreach_propagates_user_exception`,
-  `…::test_foreach_partition_empty_frame_calls_once`.
+  `…::test_foreach_partition_empty_frame_calls_once`;
+  `python/repark/tests/test_foreach_wrap_1.py::test_foreach_door_raises_a_masked_copy_of_the_user_class`,
+  `…::test_foreach_door_keeps_a_credential_free_error`.
 - **Rationale** — DECLARED 2026-09-14. repark has no executor/RDD layer; the callable
   runs on the driver over streamed `Row`s. Spark's own `NOT_CALLABLE` class is raised
   at the call instead of a job abort, and the original exception class is preserved.
+  The masking (2026-10-07, FOREACH-WRAP-1) is stricter than Spark by the security
+  ruling "no secret on any door": the user-callback doors SOURCE-URL-REDACT-2 masks all
+  raise a masked copy, and these two now do too.
+### DF-TRANSFORM-1 — `transform` lets the user's own exception through unmasked
+- **repark** — `DataFrame.transform(func, *args, **kwargs)` calls `func` as a plain
+  Python call; an exception `func` raises propagates as that same object, its text
+  unmasked, credential included.
+- **Apache Spark** — the same: a plain Python call, the user's own exception unchanged.
+  *(oracle: live 2026-10-07 —
+  `python/repark-parity/tests/live_spark/fw1_callback_oracle.json` cell
+  `FW1-transform`: `builtins.ValueError`, `is_original` true, `secret_in_str` true.)*
+- **Pin** — `python/repark/tests/test_foreach_wrap_1.py::test_transform_passes_the_user_exception_through`.
+- **Rationale** — DECLARED 2026-10-07 (FOREACH-WRAP-1). The user's own exception from
+  `transform` is not masked because it never crosses an engine boundary: RePark adds no
+  text and runs no engine code between the raise and the caller, which is exactly what
+  Spark does. It is the one user-callback door outside SOURCE-URL-REDACT-2's masking.
 ### DF-OBSERVE-1 — observed metrics are a second aggregation; `get` before an action raises
 - **repark** — `observe` returns a child with the same rows and schema. The first action
   on that child evaluates `agg(*exprs)` once and fills a bound `Observation`; later

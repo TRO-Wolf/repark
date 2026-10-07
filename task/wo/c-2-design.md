@@ -164,7 +164,8 @@ key, or under two spellings, refuses as an invalid specification naming both spe
 | `lock_timeout_ms` | — | `10000` | Server `lock_timeout` |
 | `batch_rows` | `fetchsize` | the session batch size | Rows per Arrow batch: the closest meaning to Spark's rows-per-round-trip |
 | `prefer_timestamp_ntz` | `preferTimestampNTZ` | `false` | §2.7 `timestamp` |
-| `pushdown_predicate` | `pushDownPredicate` | `true` | `false` classes every filter as residual; the differential pins use it |
+| `pushdown_predicate` | `pushDownPredicate` | `true` | `false` classes every filter as residual; the differential pins use it. It does not gate the limit. |
+| `pushdown_limit` | `pushDownLimit` | `true` | `false` pushes no `LIMIT` (P-11), whatever the filters. Spark's two options are separate, and so are these (added by the C-2c fold 1, 2026-10-07). |
 | `pool_max_size` | — | `4` | `1..=64` |
 | `pool_checkout_timeout_ms` | — | `30000` | |
 | `pool_idle_timeout_ms` | — | `300000` | |
@@ -500,8 +501,10 @@ ISO anyway.
 **Values refused before the filter reads them.** A value that would be refused (`NaN`, `infinity`) but sits
 outside a pushed filter's range is never read, so the scan succeeds where the residual path would refuse.
 Spark's JDBC pushdown behaves the same. This is recorded in `CONNECT-DECL-pg-numeric-special` and
-`pg-infinite-datetime`, and it is the one place where pushed and unpushed differ: in whether the query
-succeeds, never in the rows it returns.
+`pg-infinite-datetime`. *(Corrected by the C-2c fold 1, 2026-10-07, the verifier's S2, ruling L2.)* A refused
+value **inside** a pushed range is read and refuses when its column is projected; when it is not projected,
+nothing decodes it, and its row is returned or not by Postgres's ordering of `NaN` and `infinity` (`NaN > 1`
+holds), where the residual path refuses. Both rows declare it.
 
 ### 2.10 The EXPLAIN boundary (CC-1)
 
@@ -514,7 +517,9 @@ PostgresScanExec: source=company_db, relation="public"."orders", projection=[id,
 - `pushed_filters` takes its name from Spark's `PushedFilters` label. Both lists are the DataFusion `Expr`
   displays of the conjuncts the scan actually pushed and actually left, for **this** statement (CC-1:
   "what the statement actually pushed, … not what the connector supports in general").
-- The residual list matches the `FilterExec` DataFusion keeps above the scan. The EXPLAIN pin checks both.
+- The residual list matches the `FilterExec` DataFusion keeps above the scan. The EXPLAIN pin checks both. *(Qualified by the C-2c
+  fold 1, 2026-10-07: they are semantically equal, and textually equal unless common-subexpression elimination
+  rewrites the `FilterExec`, e.g. `COALESCE(qty, 0) > 2` reads `__common_expr_N@0` over a `ProjectionExec`.)*
 - **Verbose format** adds `remote_sql=` with the `current_setting('repark.pN')` placeholders as sent, never
   the bound values, and `bound_values=N`.
 - **Never rendered:** host, port, database, user, URL, `sslmode` or any prop.
@@ -637,6 +642,7 @@ replaces it. **Kept:** `CONNECT-DECL-pg-time` (§2.7), plus C-1's two auth rows,
 | `CONNECT-DECL-pg-server-version` | C-2b | servers older than 14 |
 | `CONNECT-DECL-pg-multi-host` | C-2b | libpq host lists |
 | `CONNECT-DECL-pg-listing` | C-2c | |
+| `CONNECT-DECL-pg-bound-values` | C-2c fold 1 | pushed filters binding more than 1024 values refuse the plan; `pushdown_predicate = false` is the workaround |
 | `CONNECT-DECL-pg-ddl` | C-2d | |
 | `CONNECT-DECL-pg-partitioned-read` | C-2d | C-3 |
 

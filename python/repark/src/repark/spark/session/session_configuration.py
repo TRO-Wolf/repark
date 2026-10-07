@@ -17,7 +17,7 @@ from repark.spark.session.session_state import _config_value_error, _warn_unboun
 from repark.spark.session.session_time_zone import DEFAULT_SESSION_TIME_ZONE, SESSION_TIME_ZONE_KEY
 
 from repark.spark.session.timestamp_type import DEFAULT_TIMESTAMP_TYPE, TIMESTAMP_TYPE_KEY
-from repark.spark._secrets import mask_credentials
+from repark.spark._secrets import mask_credentials, register_config_value
 
 
 if TYPE_CHECKING:
@@ -173,7 +173,7 @@ def _forward_datafusion_conf(session: ReparkSession, key: str, value: str) -> No
     key or when DataFusion rejects the key/value (unknown option, bad capacity string, …).
 
     """
-
+    register_config_value(value)
     if not _is_datafusion_conf_key(key):
         raise IllegalArgumentException(
             f"[INVALID_CONF_VALUE.REQUIREMENT] The value {mask_credentials(value)!r} in the config "
@@ -393,9 +393,10 @@ def lookup_int_entry(
         try:
             parsed = int(value)
         except ValueError as error:
-            raise IllegalArgumentException(
-                f"config key {key!r} must be an integer, got {mask_credentials(value)!r}"
-            ) from error
+            message = f"config key {key!r} must be an integer, got {mask_credentials(value)!r}"
+            if mask_credentials(value) != value:
+                raise IllegalArgumentException(message) from None
+            raise IllegalArgumentException(message) from error
         found.append((key, parsed))
     if not found:
         return None

@@ -365,6 +365,23 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   (comment-free per the owner ban).
 - `mod.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** MERGE staging and
   insert-stream sites take the session write conf through `session_staging`.
+- `snapshot_commit.rs` — **MB-2a (2026-10-07):** both MERGE arms, copy-on-write
+  (`commit_overwrite_on_ref`) and merge-on-read (`commit_row_delta_kind_on_ref`), claim the
+  active micro-batch stamp through `../sink_offsets.rs` (`SiteStamp`) after their early empty
+  return, add its summary entries to the extras, add the offset property to the same
+  transaction, and record the committed head. With no active scope they commit exactly as
+  before. `mod.rs` is not edited. **Fold 1 (2026-10-07):** the claim needs the batch's
+  `ScopeToken` in `summary_extra` (the session snapshot properties `mod.rs` already resolves);
+  a commit without it never claims. The merge-on-read arm claims before
+  `prepare_row_delta_deletes`, so a refused claim writes no delete file; data files staged by
+  `mod.rs` before either arm runs stay orphaned on a refusal, as the sketch's §5 pin 2 allows.
+  pins: mb-2a/C-003, C-004, C-013, C-018
+- `snapshot_commit.rs` — **MB-2c fold 1, K2, MBE-15 (2026-10-07, ruling Q3):** both MERGE arms
+  claim through `SiteStamp::claim_isolated` with their `CommitScope`, so a stamped commit under
+  `snapshot` isolation refuses `MergeIsolationRefused` before anything is written. `CommitScope`
+  carries `isolation_property`: `scoped` and `unscoped` set `write.merge.isolation-level`, and
+  `governed_by` names another property (identity UPDATE and DELETE). An unstamped commit is
+  unchanged. pins: mb-2c/C-007
 - `snapshot_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   commit arms take the resolved session write (snapshot properties plus codec)
   and stamp it on the commit they build. **Round 1 (2026-09-19):** both arms

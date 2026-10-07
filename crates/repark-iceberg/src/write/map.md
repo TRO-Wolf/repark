@@ -124,6 +124,103 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `sink_offsets_isolation_tests.rs`, `sink_offsets_probe_tests.rs`,
+  `predicate_dml.rs` — **MB-2c fold 1, K2, MBE-15 (2026-10-07, ruling Q3):**
+  `SiteStamp::claim_isolated` is the claim at the two MERGE sites in `merge/snapshot_commit.rs`.
+  A stamped claim whose `CommitScope` isolation is not `serializable` refuses
+  `MergeIsolationRefused` before the epoch check and before the scope is claimed, so the scope
+  stays open and nothing latches. The refusal names the scope's isolation property:
+  `write.merge.isolation-level` for MERGE, and the `write.update.isolation-level` or
+  `write.delete.isolation-level` that `predicate_dml.rs` sets on its scope with `governed_by`.
+  An unstamped commit, or one whose token belongs to another table's scope, is untouched. Four
+  pins in the `#[path]` child `sink_offsets_isolation_tests.rs` (under the probe module, so they
+  reuse `ProbeCatalog`): the verifier's race shape refuses before any `update_table` and epoch 1
+  lands once (run A's); stamped UPDATE and DELETE refuse on copy-on-write and merge-on-read;
+  serializable MERGE commits its stamp; unscoped MERGE under snapshot commits unstamped.
+  MB-2a's `three_racing_appends_still_stamp_exactly_once_on_every_arm` now runs under
+  `serializable`, and `run_arm`'s MERGE arms take a conflict filter below the racers' rows
+  (`below_the_racers`), so the three-racer answer holds on every arm (MB-2c D-15, pending Q5).
+  pins: mb-2c/C-007
+- `sink_offsets.rs`, `sink_offsets_epoch_tests.rs`, `sink_offsets_probe_tests.rs`,
+  `sink_offsets_walk_tests.rs`, `sink_offsets_tests.rs` — **MB-2c steps 1 and 2 (2026-10-07, ruling Q2: the split):** the
+  epoch check runs in `claim` on the table the commit starts from, after the
+  `SinkCommittedTwice` guard: a record of another generation refuses `GenerationMismatch`, and
+  an epoch at or below the durable one refuses `AlreadyCommitted` under this run and `Fenced`
+  under another, naming the run whose stamp carries the claimed epoch, or the sink's current
+  owner when there is none or it is the claimant. An unscoped `commit_stamp_only` runs it too. Once a scope
+  has seen its epoch durable (`AlreadyCommitted`, `Fenced` or `GenerationMismatch`), the entry
+  is marked refused and every later claim in that scope returns the same refusal (fold 1, K3),
+  so a stale view cannot re-commit the epoch; fold 2 pins that latch for each of the three. `resolve_unknown_outcome` is the C-008 walk on
+  `commit_stamp_only`'s unknown branch: it reloads once and searches the lineage above the base
+  by `engine.operation-id`, then by the whole stamped record (a same-epoch stamp of another run
+  is not this attempt); absent, it refuses `RecoveryRequired(CommitOutcomeUnknown)` with the
+  durable record. It never re-submits and never commits a replace. Nine epoch pins in the
+  `#[path]` child `sink_offsets_epoch_tests.rs`, three walk pins in `sink_offsets_probe_tests.rs`,
+  and in its `#[path]` child `sink_offsets_walk_tests.rs` (fold 1) the scope is marked committed
+  at the resolved snapshot when the fork's reconcile fails and the walk finds the landed attempt,
+  and a failed walk reload refuses `CommitOutcomeUnknown` with no durable record. When the
+  reload's resume point itself refuses (a rolled-back attempt), the refusal keeps the attempt's
+  epoch and operation-id and carries the durable record and that refusal in `resume_refusal`
+  (fold 2).
+  The append fence (step 3) waits for `F-APPEND-PIN-BASE-1`.
+  pins: mb-2c/C-003, C-004
+- `sink_offsets_tests.rs`, `sink_offsets_fence_tests.rs` — **MB-2c step 0, DM-6 (2026-10-07):**
+  the sketch's Q8 branch A measured on the fork pin `076d5f98`. The stamped `merge_append` plus
+  its property update re-bases past a moved base and lands. An empty `overwrite_files()` with
+  `validate_from_snapshot(H)` and `validate_no_conflicting_data()` beside it fails the raced
+  commit at validation (`DataInvalid`), but refuses every quiet commit (`PreconditionFailed`,
+  an empty snapshot), and with `allow_empty_commit()` the two snapshot producers in one
+  transaction both assert `main` and never commit (`CatalogCommitConflicts`). Branch A is not
+  green; MB-2c halts on order rule 1 until `F-APPEND-PIN-BASE-1` merges. The four
+  measurements sit in the `#[path]` child `sink_offsets_fence_tests.rs`.
+  pins: mb-2c/C-001
+- `sink_offsets.rs`, `sink_offsets_scope_tests.rs`, `write_options.rs` — **MB-2a fold 2 (2026-10-07, rulings
+  Y1…Y3):** `read_resume_point` keeps ruling V2 under routine expiry. When the ancestry walk
+  stops at an expired parent, a retained stamped snapshot newer than the oldest reachable
+  ancestor (by sequence number, by timestamp on a v1 table) cannot sit behind the gap, so it
+  refuses `StampNotInLineage`; an older one keeps `StampedSnapshotExpired`.
+  `write_options.rs` `summary_with_extras` drops `repark.cdc.scope-token` (ASCII
+  case-insensitive), so no commit path that takes caller extras (replace, overwrite-filter,
+  CTAS, create-table, writer properties, the three arms) writes the token; the arms read it
+  before the strip, and only the exact key claims. The fold-2 pins sit in
+  `sink_offsets_scope_tests.rs`, including the live `SinkCommittedTwice` text pin for a second
+  sink write in one batch body (OQ-2a-2 is MB-3's).
+  pins: mb-2a/C-020, C-021, C-022
+- `sink_offsets.rs`, `sink_offsets_tests.rs`, `sink_offsets_scope_tests.rs`,
+  `sink_offsets_probe_tests.rs` — **MB-2a fold 1
+  (2026-10-07, sketch §3.4 amendment):** a scope is `(sink TableUuid, ScopeToken)`. `enter`
+  mints an unguessable token (UUID v4, `guard.token()`, `Debug` redacted); an arm claims only
+  when its `summary_extra` carries `repark.cdc.scope-token` equal to the active token, and the
+  key never reaches a summary. A commit with no token or another token never claims and commits
+  as on main, so a foreign writer cannot take the batch's epoch. `commit_stamp_only` takes the
+  token as `Option<&ScopeToken>` and compares the stamps before it marks the entry claimed.
+  **MB-3 seam:** the driver installs the token in the batch's session config as
+  `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token`, which `resolve_*_session_write`
+  already carries into `summary_extra` on all three arms (MERGE included, `merge/mod.rs`
+  unedited). A stamped commit whose caller extras carry a `repark.cdc.*` or
+  `spark.sql.streaming.*` key refuses before it claims, and the stamp is appended after the
+  caller's extras. `read_resume_point` refuses a property whose stamped snapshot is retained
+  but off the current lineage (a rollback) as `StampNotInLineage` with no durable record, and
+  keeps `StampedSnapshotExpired` for a stamp that is gone. The scope pins sit in the `#[path]`
+  child `sink_offsets_scope_tests.rs`; the verifier's held probes (a `ProbeCatalog` that records
+  each `update_table`, injects failures and unknown outcomes, and races appends) sit in
+  `sink_offsets_probe_tests.rs`.
+  pins: mb-2a/C-013, C-014, C-015, C-017, C-019
+- `sink_offsets.rs`, `sink_offsets_tests.rs` — **MB-2a (2026-10-07):** the micro-batch sink
+  stamp, the sketch's §3.4 (`task/wo/microbatch/mb-design-2026-10-06.md`). `BatchScope` is a
+  process-wide map from sink uuid to the active `CommitStamp`; `enter` refuses `SinkBusy`, a
+  second `claim` refuses `SinkCommittedTwice`, and dropping the guard frees the sink. The three
+  named arms (`write_options.rs` `commit_append_with_summary`, `merge/snapshot_commit.rs`
+  `commit_overwrite_on_ref` and `commit_row_delta_kind_on_ref`) go through the crate-private
+  `SiteStamp`: claim against the starting table (base `H`), add the summary entries to the
+  caller's extras, add `update_table_properties().set(repark.cdc.offsets.<query-id>, …)` to the
+  same transaction, commit, then record the committed head as the scope's outcome. Only a `main`
+  commit claims (a branch commit stays unstamped). Unscoped, every arm commits exactly as before.
+  `commit_stamp_only` commits an empty `merge_append` carrying both halves (DM-5: the fork
+  accepts it as one `append` snapshot). `read_resume_point` reads one loaded table with no IO.
+  The tests sit in the `#[path]` sibling so the module stays under the default ceiling.
+  Mutation-proven: dropping the property write turns the resume pin red (ledger C-011).
+  pins: mb-2a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011, C-012
 - `writer_props.rs`, `write_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `writer_properties_with` takes Java's `parquet.enable.dictionary` default — absent = ON
   (`ParquetProperties.DEFAULT_IS_DICTIONARY_ENABLED = true`, measured by javap on the

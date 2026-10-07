@@ -7,7 +7,6 @@ import functools
 import logging
 import math
 import re
-import traceback
 import uuid
 import warnings
 from collections.abc import Callable

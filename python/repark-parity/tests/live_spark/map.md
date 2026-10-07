@@ -16,6 +16,11 @@ D-M2 (2026-10-06): the Postgres JDBC oracle for the connect track (1.6). It reco
 The C-2 registry takes its Spark halves from these recorded cells, not from
 documentation. Nothing here is collected by pytest, and no RePark code runs.
 
+FOREACH-WRAP-1 (2026-10-07): the user-callback oracle. It records three cells,
+`FW1-foreach`, `FW1-foreachPartition` and `FW1-transform`, on live Spark 4.1.2
+classic, each callback raising `ValueError('fetch failed for http://u:<secret>@h/x')`.
+Nothing here is collected by pytest, and no RePark code runs.
+
 ## Contents
 
 - `mb0_streaming_oracle.py` is the recorder. There is one function per cell, and
@@ -53,6 +58,34 @@ documentation. Nothing here is collected by pytest, and no RePark code runs.
   adds `explain` and `push_down_limit`.
 - `c2_jdbc_oracle.sha256` holds `sha256sum` of the JSON. Check it with
   `sha256sum -c` from this directory.
+- `fw1_callback_oracle.py` is the FOREACH-WRAP-1 recorder. `define_cells` names
+  the three actions and `record_all` prints each entry as one JSON line. Run it
+  through the managed interpreter only; `FW1_WAREHOUSE` points at an empty private
+  directory and `FW1_OUT` redirects the JSON for a re-run comparison. Missing
+  `pyspark` prints `SKIP` and exits 0. pins: foreach-wrap-1/C-004
+- `fw1_callback_oracle.json` is the recording: the Spark, master and date
+  preamble plus the three cells, pretty-printed with sorted keys. Each `error`
+  carries `class`, `mro`, `error_class` (the `getErrorClass` / `getCondition`
+  getters on the exception, then on its `java_exception`), `has_get_error_class`,
+  the JVM cause chain, the Python `__cause__` chain, `context`, `is_original`
+  (the raised object is the user's own `ValueError`), the message head up to
+  `: Job aborted`, whether the secret is in `str` and in `repr`, and every message
+  line carrying it, with the secret written `$SECRET`.
+- `fw1_callback_oracle.sha256` holds `sha256sum` of the JSON. Check it with
+  `sha256sum -c` from this directory.
+
+## FOREACH-WRAP-1 measured notes (2026-10-07, read from the recording)
+
+- `foreach` and `foreachPartition` raise `py4j.protocol.Py4JJavaError`, not a
+  `PySparkException`. It has no `getErrorClass`, and the condition getters on its
+  `java_exception` answer `null`. The JVM chain is `SparkException` over
+  `org.apache.spark.api.python.PythonException`, the Python `__cause__` chain is
+  empty, and `__context__` is `None`. The worker traceback, with the user's
+  message, is inside `str(exc)`, so Spark shows the credential; `repr` does not.
+- `transform` raises the user's own `ValueError` object unchanged: it is a plain
+  Python call on the driver and never crosses the JVM.
+- `local[1]` over a one-partition frame keeps stage and task numbers fixed, and
+  the message head stops before them, so a re-run is byte-identical.
 
 ## Recording choices
 

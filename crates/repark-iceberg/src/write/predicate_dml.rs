@@ -221,7 +221,8 @@ pub async fn execute_predicate_dml(
     let scope = CommitScope::scoped(
         resolve_delete_isolation(&table)?,
         for_identity_dml(&table, &spec.selection_sql, &spec.target_alias),
-    );
+    )
+    .governed_by(WRITE_DELETE_ISOLATION_LEVEL);
     let snapshot_id = spec_snapshot_id(&table, spec);
 
     let scratch = scratch_schema(&write_schema);
@@ -298,7 +299,8 @@ async fn execute_identity_update(
     let scope = CommitScope::scoped(
         resolve_update_isolation(&table)?,
         for_identity_dml(&table, &spec.selection_sql, &spec.target_alias),
-    );
+    )
+    .governed_by(WRITE_UPDATE_ISOLATION_LEVEL);
     let snapshot_id = spec_snapshot_id(&table, spec);
 
     let scratch = scratch_schema_for_table(&write_schema, &table);

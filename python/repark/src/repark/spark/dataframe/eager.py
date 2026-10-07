@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from repark.errors import IllegalArgumentException
+from repark.spark._secrets import scrub_exception
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
@@ -103,10 +104,15 @@ def _eager_materialize(frame: DataFrame) -> DataFrame:
         return sibling
     sibling = frame._identity_child()
     sibling._persist_requested = True
+    failure = None
     try:
         sibling._materialize_cache_if_needed()
     except IllegalArgumentException as error:
-        raise IllegalArgumentException(f".eager() cannot materialize this plan: {error}") from error
+        failure = scrub_exception(error)
+    if failure is not None:
+        raise IllegalArgumentException(
+            f".eager() cannot materialize this plan: {failure}"
+        ) from failure
     sibling._eager_shape = (sibling._action_inner().count(), len(sibling.columns))
     return sibling
 

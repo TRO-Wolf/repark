@@ -14,6 +14,7 @@ from repark.spark.session import (
     reader_support as _reader_support,
     reader_text as _reader_text,
 )
+from repark.spark._secrets import mask_credentials, register_config_value
 from repark.spark.session.session_core import ReparkSession
 from repark.spark.session.reader_support import (
     _ICEBERG_INCREMENTAL_OPTIONS,
@@ -201,14 +202,16 @@ class DataFrameReader:
             elif normalized in {"false", "0", "no", "f", "n"}:
                 header_flag = False
             else:
-                raise AnalysisException(f"smartCsv header expects a boolean, got {header_raw!r}")
+                raise AnalysisException(
+                    f"smartCsv header expects a boolean, got {mask_credentials(header_raw)!r}"
+                )
 
         if resolved_case is not None:
             case_token = str(resolved_case).strip().lower()
             if case_token not in {"lower", "upper", "snake"}:
                 raise AnalysisException(
                     "smartCsv normalizeHeaderCase must be one of "
-                    f"'lower', 'upper', 'snake'; got {resolved_case!r}"
+                    f"'lower', 'upper', 'snake'; got {mask_credentials(resolved_case)!r}"
                 )
             resolved_case = case_token
 
@@ -232,7 +235,8 @@ class DataFrameReader:
                         sampling_int = int(text, 10)
             except (TypeError, ValueError) as exc:
                 raise IllegalArgumentException(
-                    f"smartCsv samplingRows must be an integer, got {resolved_sampling!r}"
+                    f"smartCsv samplingRows must be an integer, "
+                    f"got {mask_credentials(resolved_sampling)!r}"
                 ) from exc
             if sampling_int <= 0:
                 raise IllegalArgumentException(
@@ -246,7 +250,7 @@ class DataFrameReader:
             if not isinstance(resolved_sep, str):
                 raise IllegalArgumentException(
                     "smartCsv sep must be a single character other than newline, "
-                    f"carriage return, or quote, got {resolved_sep!r}"
+                    f"carriage return, or quote, got {mask_credentials(resolved_sep)!r}"
                 )
             try:
                 resolved_sep = _require_single_char_delimiter(resolved_sep, what="smartCsv sep")
@@ -394,6 +398,7 @@ class DataFrameReader:
         for existing in list(self._options):
             if existing.lower() == key_str.lower():
                 del self._options[existing]
+        register_config_value(str(value))
         self._options[key_str] = str(value)
         return self
 
@@ -478,7 +483,7 @@ class DataFrameReader:
         # Truncate hostile/long format strings in the error.
         shown = (self._format or "")[:64]
         raise AnalysisException(
-            f"DATA_SOURCE_NOT_FOUND: Failed to find the data source: {shown!r}. "
+            f"DATA_SOURCE_NOT_FOUND: Failed to find the data source: {mask_credentials(shown)!r}. "
             "Make sure the provider name is correct and the package is properly registered "
             "and compatible with your Spark version."
         )
@@ -643,43 +648,13 @@ class DataFrameReader:
                     return False
                 from repark.errors import AnalysisException
 
-                raise AnalysisException(f"reader option {key!r} expects a boolean, got {value!r}")
+                raise AnalysisException(
+                    f"reader option {key!r} expects a boolean, got {mask_credentials(value)!r}"
+                )
         return default
 
     def _reject_csv_json_parse_options(self, *, is_csv: bool) -> None:
-        """Fail loud on CSV/JSON parse options repark does not honor (no silent default lies)."""
-        from repark.errors import AnalysisException
-
-        denylist = _CSV_UNSUPPORTED_PARSE_OPTIONS if is_csv else _JSON_UNSUPPORTED_PARSE_OPTIONS
-        for key in self._options:
-            lowered = key.lower()
-            if lowered == "path":
-                continue
-            if lowered == "mode":
-                mode = str(self._options[key]).strip().upper()
-                if mode in {"", "PERMISSIVE"}:
-                    continue
-                raise AnalysisException(
-                    f"reader option mode={self._options[key]!r} is not supported by repark yet "
-                    f"(only PERMISSIVE / default; FAILFAST/DROPMALFORMED are unsupported-loud)"
-                )
-            if lowered == "encoding":
-                encoding = str(self._options[key]).strip().lower().replace("-", "")
-                if encoding in {"", "utf8", "utf_8"}:
-                    continue
-                raise AnalysisException(
-                    f"reader option encoding={self._options[key]!r} is not supported (only UTF-8)"
-                )
-            if lowered in denylist:
-                raise AnalysisException(
-                    f"reader option {key!r} is not supported by repark yet "
-                    "(would silently change load semantics if ignored)"
-                )
-            if lowered == "timezone":
-                raise AnalysisException(
-                    f"reader option {key!r} is not supported by repark yet "
-                    "(would silently change load semantics if ignored)"
-                )
+        _reader_support._reject_csv_json_parse_options(self._options, is_csv=is_csv)
 
     def _apply_reader_schema_semantics(
         self, frame: DataFrame, *, infer_schema: bool, header: bool, path: str | None = None

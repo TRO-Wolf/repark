@@ -12,6 +12,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
   **Fold SM-2d (2026-10-07):** C-071 rewritten to the nearest-visible sourced-twin rule.
+- [foreach-wrap-1-ledger.md](foreach-wrap-1-ledger.md) —
+  **FOREACH-WRAP-1 (2026-10-07), security follow-up to SOURCE-URL-REDACT-2:** `foreach` and
+  `foreachPartition` raise `scrub_exception`'s masked copy of the user's class after the
+  handler (C-001), a credential-free error keeps its identity byte for byte (C-002),
+  `transform` stays a passthrough as Spark 4.1.2 does, by the dated row `DF-TRANSFORM-1`
+  (C-003), and the live Spark recording (C-004); `doors4.py` prints `TOTAL 1` in both
+  modes. `risk_tier: high`. Branch `fix/foreach-wrap-1`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
   in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,
@@ -22,6 +29,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   re-verify's findings: raw functional reads, storage paths, Spark's key rule, TNS, spans,
   multi-line documents, mutants, known limits). C-055 closes the boolean-knob follow-up
   without a new crate edge. `risk_tier: high`.
+  **SOURCE-URL-REDACT-2 (2026-10-06):** C-057..C-064 close the re-verify's three S1 classes (registry, boundary, chained-`ValueError`); round B (C-065..C-069) fixes the shape generally (credential-shaped chain cut, masked message parameters, cause-chain scrub, option doors).
 - [c-1-ledger.md](c-1-ledger.md) —
   **C-1, card 1.6 (2026-10-05), in flight:** `crates/repark-connect` lands on its pre-declared
   footprint with the one `connect → common` edge (C-001); the CC-2 move puts `SourceKind` and

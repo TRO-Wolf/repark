@@ -3,6 +3,14 @@ use std::fmt;
 
 use crate::error::{ConnectError, Result};
 
+mod postgres;
+
+pub use postgres::{
+    DEFAULT_PORT, DeclaredSetting, POSTGRES_ALIASES, POSTGRES_DRIVER, POSTGRES_KEYS,
+    PostgresSettings, SettingsDoor, SpecRefusal, Spelling, SslMode, UrlViolation,
+    redact_source_prop,
+};
+
 pub const AUTH_METHOD_KEY: &str = "auth_method";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
