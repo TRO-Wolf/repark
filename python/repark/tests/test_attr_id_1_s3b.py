@@ -407,7 +407,7 @@ def test_orderby_key_missing_past_hidden_intermediate_refuses(ruled_spark: Repar
     assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
 
 
-def test_orderby_key_missing_past_redefined_intermediate_refuses(ruled_spark: ReparkSession) -> None:
+def test_orderby_missing_past_redefined_intermediate_refuses(ruled_spark: ReparkSession) -> None:
     root = _deep_root(ruled_spark)
     dup = (
         root.withColumnRenamed("v", "y")
