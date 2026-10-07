@@ -124,6 +124,20 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `sink_offsets_epoch_tests.rs`, `sink_offsets_probe_tests.rs`,
+  `sink_offsets_tests.rs` — **MB-2c steps 1 and 2 (2026-10-07, ruling Q2: the split):** the
+  epoch check runs in `claim` on the table the commit starts from, after the
+  `SinkCommittedTwice` guard: a record of another generation refuses `GenerationMismatch`, and
+  an epoch at or below the durable one refuses `AlreadyCommitted` under this run and `Fenced`
+  (naming the winner) under another. An unscoped `commit_stamp_only` runs it too, and a refused
+  check leaves the claim open. `resolve_unknown_outcome` is the C-008 walk on
+  `commit_stamp_only`'s unknown branch: it reloads once and searches the lineage above the base
+  by `engine.operation-id`, then by the whole stamped record (a same-epoch stamp of another run
+  is not this attempt); absent, it refuses `RecoveryRequired(CommitOutcomeUnknown)` with the
+  durable record. It never re-submits and never commits a replace. Five epoch pins in the
+  `#[path]` child `sink_offsets_epoch_tests.rs`, three walk pins in `sink_offsets_probe_tests.rs`.
+  The append fence (step 3) waits for `F-APPEND-PIN-BASE-1`.
+  pins: mb-2c/C-003, C-004
 - `sink_offsets_tests.rs`, `sink_offsets_fence_tests.rs` — **MB-2c step 0, DM-6 (2026-10-07):**
   the sketch's Q8 branch A measured on the fork pin `076d5f98`. The stamped `merge_append` plus
   its property update re-bases past a moved base and lands. An empty `overwrite_files()` with

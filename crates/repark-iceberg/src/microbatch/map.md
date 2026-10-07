@@ -20,9 +20,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   pins: mb-1/C-007, mb-1/C-013
 - `crash_tests.rs` — the crash harness of the
   [sketch's §5](../../../../task/wo/microbatch/mb-design-2026-10-06.md), in Rust over the memory
-  catalog (correction H-1): five pins, two green guards and three red until MB-2c. Every pin enters
-  a `BatchScope` and carries the guard's token through the session snapshot property
-  `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token`, as MB-3's driver will (D-10).
+  catalog (correction H-1): five pins, three green and two red until `F-APPEND-PIN-BASE-1` and
+  MB-2c's fence. Every pin enters a `BatchScope` and carries the guard's token through the
+  session snapshot property `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token`, as
+  MB-3's driver will (D-10).
   `FaultCatalog` is the `UnknownOutcomeCatalog` shape over the memory catalog with three faults:
   `Race` commits a stamped racer inside the next `update_table`; `UnknownAfterLanding` lands and
   `UnknownWithoutLanding` drops the commit, and both answer `CommitStateUnknown` and fail the next
@@ -38,16 +39,20 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
     `update_table`, on the append arm and on a copy-on-write `execute_merge`. B's commit must
     fail, epoch 1 and its rows land once, the property names A, and B's claim on the reload must
     be `Fenced { winner: A }`. pins: microbatch-harness/C-003
-  - Pin 4, `test_microbatch_unknown_outcome_reconciles_1` (red): `commit_stamp_only` on the
-    `foreachBatch` door with `commit.status-check.num-retries=0`. A landed stamp must resolve to
-    its snapshot with one `update_table` and no replace; an unlanded one must refuse
+  - Pin 4, `test_microbatch_unknown_outcome_reconciles_1` (**MB-2c, 2026-10-07**, green):
+    `commit_stamp_only` on the `foreachBatch` door with `commit.status-check.num-retries=0`. A
+    landed stamp must resolve to its snapshot with one `update_table` and no replace; an unlanded
+    one must refuse
     `RecoveryRequired(CommitOutcomeUnknown)` carrying epoch 0 as durable.
-    pins: microbatch-harness/C-004
+    pins: microbatch-harness/C-004, mb-2c/C-004
   - Pin 5, `test_microbatch_bronze_overwrite_refuses_1` (green guard, MB-1): R2 overwrite and
     R5 delete refuse `NonAppendSnapshot` naming the snapshot, the sink unchanged; R8's replace is
     skipped and row 4 streams. pins: microbatch-harness/C-005
-  The red pins carry `#[ignore = "red until MB-2c: <scenario>"]`; MB-2c deletes those three
-  lines. Why each red pin has its shape: the [harness ledger](../../../../task/ledgers/staging/microbatch-harness-ledger.md)
+  Pins 2 and 3 carry `#[ignore = "red until F-APPEND-PIN-BASE-1 + MB-2c fence: <scenario>"]`
+  (ruling Q2, the split): with the epoch check in, both still fail where the stamped append
+  re-bases past a moved base, and the closing slice deletes the two lines. The interim gate is
+  3 passed, 2 ignored. pins: mb-2c/C-005
+  Why each red pin has its shape: the [harness ledger](../../../../task/ledgers/staging/microbatch-harness-ledger.md)
   D-1…D-4. pins: microbatch-harness/C-001, C-006
 - `offset.rs` — the sketch's §3.1. Seven newtypes, each `new`/`get`
   (NS-14), with the sketch's named constructors beside them:

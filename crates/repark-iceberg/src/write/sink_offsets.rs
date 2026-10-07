@@ -15,6 +15,7 @@ use crate::microbatch::error::{MicroBatchError, RecoveryReason};
 use crate::microbatch::offset::{
     OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SinkDoor, SinkRecord, SnapshotId, TableUuid,
 };
+use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
 
@@ -413,14 +414,7 @@ pub async fn commit_stamp_only(
     let committed = match tx.commit(catalog.as_ref()).await {
         Ok(committed) => committed,
         Err(error) if error.kind() == ErrorKind::CommitStateUnknown => {
-            return Err(MicroBatchError::RecoveryRequired {
-                query: stamp.record.query,
-                epoch: stamp.record.epoch,
-                durable: None,
-                reason: RecoveryReason::CommitOutcomeUnknown {
-                    operation_id: Some(operation_id),
-                },
-            });
+            return resolve_unknown_outcome(catalog, table, stamp, Some(&operation_id)).await;
         }
         Err(error) => return Err(masked(&error)),
     };
@@ -431,6 +425,71 @@ pub async fn commit_stamp_only(
     claimed.record_commit(&committed)?;
     snapshot
         .ok_or_else(|| MicroBatchError::Catalog(String::from("stamp-only commit left no snapshot")))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn resolve_unknown_outcome(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    stamp: &CommitStamp,
+    operation_id: Option<&str>,
+) -> Result<SnapshotId, MicroBatchError> {
+    let record = &stamp.record;
+    let unknown = |durable: Option<SinkRecord>| MicroBatchError::RecoveryRequired {
+        query: record.query,
+        epoch: record.epoch,
+        durable: durable.map(Box::new),
+        reason: RecoveryReason::CommitOutcomeUnknown {
+            operation_id: operation_id.map(str::to_string),
+        },
+    };
+    let Ok(reloaded) = catalog.load_table(table.identifier()).await else {
+        return Err(unknown(None));
+    };
+    let base = table.metadata().current_snapshot_id();
+    if let Some(snapshot) = landed_attempt(&reloaded, base, record, operation_id) {
+        mark_committed(&reloaded, stamp, snapshot);
+        return Ok(snapshot);
+    }
+    Err(unknown(read_resume_point(&reloaded, record.query)?))
+}
+
+fn landed_attempt(
+    reloaded: &Table,
+    base: Option<i64>,
+    record: &SinkRecord,
+    operation_id: Option<&str>,
+) -> Option<SnapshotId> {
+    let metadata = reloaded.metadata();
+    let mut above_base = Vec::new();
+    let mut cursor = metadata.current_snapshot();
+    while let Some(snapshot) = cursor
+        && Some(snapshot.snapshot_id()) != base
+        && above_base.len() < metadata.snapshots().len()
+    {
+        above_base.push(snapshot);
+        cursor = snapshot
+            .parent_snapshot_id()
+            .and_then(|parent| metadata.snapshot_by_id(parent));
+    }
+    let by_operation = operation_id.and_then(|id| {
+        above_base.iter().find(|snapshot| {
+            snapshot
+                .summary()
+                .additional_properties
+                .get(OPERATION_ID_PROP)
+                .is_some_and(|found| found == id)
+        })
+    });
+    let landed = by_operation.or_else(|| {
+        above_base.iter().find(|snapshot| {
+            matches!(
+                SinkRecord::from_summary(&snapshot.summary().additional_properties),
+                Ok(Some(found)) if found == *record
+            )
+        })
+    })?;
+    Some(SnapshotId::new(landed.snapshot_id()))
 }
 
 #[derive(Debug, Default)]
