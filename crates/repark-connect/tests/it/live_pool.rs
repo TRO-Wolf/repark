@@ -59,6 +59,36 @@ async fn identity(reader: &Reader) -> Vec<Option<String>> {
         .collect()
 }
 
+async fn statements_and_identity_are_reset(cell: &Cell, reader: &Reader, served_by: i32) {
+    let schema = &cell.schema;
+    poison(reader, &format!("SELECT {schema}.prep() AS s"), served_by).await;
+    let prepared = "SELECT pg_catalog.count(*)::pg_catalog.int4 AS n \
+                    FROM pg_catalog.pg_prepared_statements WHERE name IN ('vprep', 'v Prep\"q')";
+    let prepared = int32s(&reader.read_query(prepared).await.expect(prepared));
+    assert_eq!(
+        prepared,
+        [Some(0)],
+        "a function's prepared statements are deallocated"
+    );
+
+    let login = cell.settings(&[]).user;
+    let other = format!("{schema}_o");
+    cell.sql(&format!("CREATE ROLE {other} NOLOGIN")).await;
+    let mut identities = Vec::new();
+    for setting in ["role", "session_authorization"] {
+        let set = format!("SELECT pg_catalog.set_config('{setting}', '{other}', false) AS s");
+        poison(reader, &set, served_by).await;
+        identities.push(identity(reader).await);
+    }
+    cell.sql(&format!("DROP ROLE {other}")).await;
+    let clean = [Some(login.clone()), Some(login), Some("none".to_string())];
+    assert_eq!(
+        identities,
+        [clean.clone(), clean],
+        "role, then session_authorization"
+    );
+}
+
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
 async fn a_pooled_connection_is_reset_before_reuse() {
@@ -73,6 +103,9 @@ async fn a_pooled_connection_is_reset_before_reuse() {
            AS 'INSERT INTO {schema}.w VALUES (1) RETURNING x'; \
          CREATE FUNCTION {schema}.never(int4, int4) RETURNS bool LANGUAGE sql \
            AS 'SELECT false'; \
+         CREATE FUNCTION {schema}.prep() RETURNS int4 LANGUAGE plpgsql AS $$BEGIN \
+           EXECUTE 'PREPARE vprep AS SELECT 1'; \
+           EXECUTE 'PREPARE \"v Prep\"\"q\" AS SELECT 2'; RETURN 1; END$$; \
          CREATE OPERATOR {schema}.= (LEFTARG = int4, RIGHTARG = int4, FUNCTION = {schema}.never)"
     ))
     .await;
@@ -139,22 +172,7 @@ async fn a_pooled_connection_is_reset_before_reuse() {
     assert_eq!(cell.count(&held).await, 0, "the advisory lock is released");
     assert_eq!(pid(&reader).await, served_by);
 
-    let login = cell.settings(&[]).user;
-    let other = format!("{schema}_o");
-    cell.sql(&format!("CREATE ROLE {other} NOLOGIN")).await;
-    let mut identities = Vec::new();
-    for setting in ["role", "session_authorization"] {
-        let set = format!("SELECT pg_catalog.set_config('{setting}', '{other}', false) AS s");
-        poison(&reader, &set, served_by).await;
-        identities.push(identity(&reader).await);
-    }
-    cell.sql(&format!("DROP ROLE {other}")).await;
-    let clean = [Some(login.clone()), Some(login), Some("none".to_string())];
-    assert_eq!(
-        identities,
-        [clean.clone(), clean],
-        "role, then session_authorization"
-    );
+    statements_and_identity_are_reset(&cell, &reader, served_by).await;
     cell.close().await;
 }
 

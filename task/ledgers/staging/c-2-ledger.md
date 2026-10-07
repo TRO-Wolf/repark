@@ -805,6 +805,7 @@ one S2 and four S3s, under the orchestrator's rulings Z1–Z5. The live cells ra
 |---|---|---|---|---|
 | C-062 | Z1 (S2): query mode honours the configured search path. `QUERY_SEARCH_PATH` is one constant statement in the query's read-only transaction (scan and discovery) that reads the login role's `search_path` from `pg_db_role_setting`, keyed on `session_user` and `current_database()`, in the server's precedence (role in database, role, database, all roles), falls back to the built-in `"$user", public`, and applies it with `set_config('search_path', …, true)`. In a fresh database a role with `ALTER ROLE … SET search_path = app, public` reads `app.vt` over `public.vt` and the database's own `db` path; with no role setting the database's path wins; `ALTER ROLE … IN DATABASE` beats both; with none set the read is `public`'s. Each time query mode returns the rows a plain session as that login returns, and a pushed `int4` compare (`OPERATOR(pg_catalog.=)`) matches one row. | `live_pool.rs::query_mode_reads_the_configured_search_path_as_a_plain_session_does`, `read.rs::query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing`; mutations m86, m87, m88. | PROVEN | §10.1. Supersedes C-056's `"$user", public` statement and FL-16's default (§10.2 R-11). |
 | C-063 | Z2 (S3): the reset ends any `role` or `session_authorization` a query set. `RESET_SESSION` runs `SET SESSION AUTHORIZATION DEFAULT; RESET ROLE` (both outside `RESET ALL`, whose reach excludes them), and `SessionPins::hold` also requires `current_user` = `session_user` = the login role (`settings.user`) on every check row. On `pool_max_size = 1` a query-mode `set_config('role', <NOLOGIN role>, false)`, then a `set_config('session_authorization', …, false)` by the superuser login, each leave the next lease on the same backend reading `current_user` = `session_user` = the login and `role` = `none`. | `live_pool.rs::a_pooled_connection_is_reset_before_reuse`; mutations m89, m90, m91. | PROVEN | §10.1. The re-verify's R-M2 survivor is m89, now red. |
+| C-064 | Z3 (S3): a prepared statement the driver did not make is deallocated before the client is pooled. After `RESET_SESSION`, one bound `query_typed` lists every `pg_prepared_statements` name not matching the driver's `^s[0-9]+$`, and one batch runs `DEALLOCATE <name>` per name, quoted through `PgIdent`; the check then counts names outside that form and any count but `0` drops the connection, as does a failed `DEALLOCATE`. On `pool_max_size = 1` a query-mode call of an existing plpgsql function that runs `PREPARE vprep` and `PREPARE "v Prep""q"` leaves the next lease on the same backend with neither statement listed, and the driver's own type-lookup statements survive. | `live_pool.rs::a_pooled_connection_is_reset_before_reuse`, `::user_types_resolve_after_a_reset`; mutations m92, m93, m94, m95. | PROVEN | §10.1. Closes the residue C-052 recorded beside Q1. |
 
 ### 10.1 Mutations (fold 2)
 
@@ -819,6 +820,10 @@ against the container, and the file restored from a copy taken before the edit.
 | m89 | C-063 | the re-verify's R-M2 and the ruling's mutation: drop `SET SESSION AUTHORIZATION DEFAULT` and `RESET ROLE` (`src/pool.rs`) | RED | `a_pooled_connection_is_reset_before_reuse`: the check sees `current_user` = the poisoned role and drops the client, so the next lease runs on another backend |
 | m90 | C-063 | m89, and `hold` no longer compares `current_user` and `session_user` (`src/pool.rs`) | RED | `a_pooled_connection_is_reset_before_reuse` (the next lease reads `current_user` = the poisoned role) |
 | m91 | C-063 | drop `RESET ROLE` alone (`src/pool.rs`) | GREEN (equivalent: `SET SESSION AUTHORIZATION DEFAULT` also sets `role` back to `none`) | — |
+| m92 | C-064 | skip the `DEALLOCATE` batch (`src/pool.rs`) | RED | `a_pooled_connection_is_reset_before_reuse`: the check counts two foreign statements and drops the client, so the next lease runs on another backend |
+| m93 | C-064 | m92, and the check ignores the count (`src/pool.rs`) | RED | `a_pooled_connection_is_reset_before_reuse` (the next lease lists both statements) |
+| m94 | C-064 | `DEALLOCATE` unquoted (`src/pool.rs`) | RED | `a_pooled_connection_is_reset_before_reuse` (`v Prep"q` is a syntax error, the reset fails and the client is dropped) |
+| m95 | C-064 | the driver's form matches nothing (`^$`), so its own statements are deallocated too (`src/pool.rs`) | RED | `user_types_resolve_after_a_reset` (`26000`, as fold 1's m77) |
 
 ### 10.2 Readings acted on (no halt)
 
@@ -842,3 +847,9 @@ against the container, and the file restored from a copy taken before the edit.
   `current_user` is `x`, not the login, so the check drops the connection at every release:
   such a source reads correctly, without pooling. The re-verify saw that setting persist
   consistently across the reset; the ruling's check now trades its reuse for a known identity.
+- **R-13, the statement sweep (Z3).** The list is one `query_typed` round trip (the unnamed
+  statement, so the sweep adds no name of its own), the `DEALLOCATE`s one more only when
+  something is listed; a release now costs three round trips, four after a foreign
+  `PREPARE`. A function-made statement whose name has the driver's form (`s12`) is kept, as
+  the ruling scopes it; its worst effect is the spurious `42P05` the re-verify named, not
+  wrong rows.

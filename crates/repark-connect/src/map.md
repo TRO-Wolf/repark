@@ -145,10 +145,14 @@ Product code for `repark-connect`. See [../map.md](../map.md).
     fold 1 (X2) it first calls `PoolConnection::reset`; `PgConnection` runs `RESET_SESSION`,
     `DISCARD ALL`'s documented sequence less `DEALLOCATE ALL` (the driver keeps its type-lookup
     statements prepared, and `DISCARD ALL` broke them: `26000` on the next user type) with an
-    explicit `RESET ROLE` after `SET SESSION AUTHORIZATION DEFAULT` (fold 2 Z2), then one
-    `pg_settings` read of every startup pin plus `statement_timestamp() =
+    explicit `RESET ROLE` after `SET SESSION AUTHORIZATION DEFAULT` (fold 2 Z2). Since fold 2
+    (Z3) one bound query (`query_typed`, the unnamed statement) lists every
+    `pg_prepared_statements` name outside the driver's own `s<N>` form (`^s[0-9]+$`), such as
+    one an existing SQL function made with `EXECUTE 'PREPARE …'`, and one batch runs a
+    `DEALLOCATE` per name, quoted through `PgIdent`. Then one `pg_settings` read of every startup pin plus `statement_timestamp() =
     transaction_timestamp()`, `current_user` and `session_user`, which must both be the login
-    role (`settings.user`). A mismatch, an open transaction, an error or the read timeout drops
+    role (`settings.user`), and the count of prepared statements still outside the `s<N>` form,
+    which must be `0`. A mismatch, an open transaction, an error or the read timeout drops
     the connection. Its lease holds the permit, the connection task's `AbortHandle` and,
     since fold 1 (X3), a `Canceller`; dropped any other way, the lease fires
     `CancelToken::cancel_query` on a task bounded by `connect_timeout_ms` (the crate's second
@@ -173,7 +177,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
     `AuthenticationFailed` for SQLSTATE class `28` (fold 1 X4) and the driver-side rest.
   - **`within(which, limit, work)`** is the NS-7 wrapper round 3 puts around every request and
     COPY chunk; `TimeoutSetting` names the key that fired.
-  pins: c-2/C-031, C-032, C-033, C-034, C-035, C-052, C-054, C-055, C-063
+  pins: c-2/C-031, C-032, C-033, C-034, C-035, C-052, C-054, C-055, C-063, C-064
 - `discover.rs` — C-2b round 3 (2026-10-07; sketch §2.4, §2.8), behind `postgres`.
   `discover(pool, &ScanSource, read_timeout)` resolves one source afresh on every call (FL-7):
   it checks out a client, opens `BEGIN_DISCOVERY` (`BEGIN READ ONLY` with a 30 s local

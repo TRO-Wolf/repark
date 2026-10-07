@@ -10,10 +10,12 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task::{AbortHandle, JoinHandle};
 use tokio_postgres::config::SslMode as WireSslMode;
+use tokio_postgres::types::{ToSql, Type};
 use tokio_postgres::{CancelToken, Client, Config, NoTls, SimpleQueryMessage};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
 use crate::error::{ConnectError, Result};
+use crate::ident::PgIdent;
 use crate::settings::{PostgresSettings, SslMode};
 use crate::tls::{self, TlsFailure, TrackedTls};
 
@@ -249,6 +251,11 @@ pub const RESET_SESSION: &str = "CLOSE ALL; SET SESSION AUTHORIZATION DEFAULT; R
      RESET ALL; UNLISTEN *; SELECT pg_catalog.pg_advisory_unlock_all(); DISCARD PLANS; DISCARD TEMP; \
      DISCARD SEQUENCES";
 
+const DRIVER_STATEMENT: &str = "^s[0-9]+$";
+
+const FOREIGN_STATEMENTS: &str =
+    "SELECT name FROM pg_catalog.pg_prepared_statements WHERE name OPERATOR(pg_catalog.!~) $1";
+
 struct SessionPins {
     pins: Vec<(&'static str, String)>,
     login: String,
@@ -263,7 +270,9 @@ impl SessionPins {
         let check = format!(
             "SELECT name, setting, \
              pg_catalog.statement_timestamp() = pg_catalog.transaction_timestamp(), \
-             current_user::pg_catalog.text, session_user::pg_catalog.text \
+             current_user::pg_catalog.text, session_user::pg_catalog.text, \
+             (SELECT pg_catalog.count(*) FROM pg_catalog.pg_prepared_statements p \
+              WHERE p.name OPERATOR(pg_catalog.!~) '{DRIVER_STATEMENT}') \
              FROM pg_catalog.pg_settings WHERE name IN ({})",
             names.join(", ")
         );
@@ -282,7 +291,10 @@ impl SessionPins {
             .filter_map(|message| match message {
                 SimpleQueryMessage::Row(row) => {
                     let cell = |index: usize| row.try_get(index).ok().flatten();
-                    let settled = cell(2) == Some("t") && cell(3) == login && cell(4) == login;
+                    let settled = cell(2) == Some("t")
+                        && cell(3) == login
+                        && cell(4) == login
+                        && cell(5) == Some("0");
                     Some((cell(0)?, cell(1)?, settled))
                 }
                 _ => None,
@@ -359,6 +371,19 @@ impl PoolConnection for PgConnection {
         let session = &self.session;
         let reset = async {
             self.client.batch_execute(RESET_SESSION).await?;
+            let pattern: [(&(dyn ToSql + Sync), Type); 1] = [(&DRIVER_STATEMENT, Type::TEXT)];
+            let foreign = self
+                .client
+                .query_typed(FOREIGN_STATEMENTS, &pattern)
+                .await?;
+            let deallocate: Vec<String> = foreign
+                .iter()
+                .filter_map(|row| PgIdent::new(row.try_get::<_, String>(0).ok()?).ok())
+                .map(|name| format!("DEALLOCATE {name}"))
+                .collect();
+            if !deallocate.is_empty() {
+                self.client.batch_execute(&deallocate.join("; ")).await?;
+            }
             self.client.simple_query(&session.check).await
         };
         match tokio::time::timeout(session.timeout, reset).await {
