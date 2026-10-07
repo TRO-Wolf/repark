@@ -465,6 +465,7 @@ re-verifier**, so G1 is implemented as ruled.
 | C-035 | (G4) The FL-9 divergence is pinned on the shape where Spark idles: a zero-added-files `delete` as the head with nothing after it. `FromTimestamp` landing on it refuses `NonAppendSnapshot` (`from: None`, `to` = the delete) at `initial_offset`, and still refuses (`to` = the new head) once an append follows. `AfterSnapshot(D)` gives `(D, 0)`, reads `None` while nothing follows, then resumes to the append. The registry row `MB-1-FL-9` cites this pin, and its Spark half reads "idles while no snapshot follows it". | The G4 pin in `window_fold2_pins.rs`, the registry row, the docs-link gate, plus mutation g4. | **PROVEN** | 1 pin green: `a_delete_as_head_refuses_at_the_initial_offset` (q10's shape). g4 (the landing refusal drops its zero-added-files test, `&& false`) is red on it and on fold 1's `from_timestamp_landing_on_delete_refuses_at_the_initial_offset`. pins: mb-1/C-035 |
 | C-036 | (G5) A snapshot still in the metadata but not an ancestor of the head refuses `SnapshotNotInLineage { table, snapshot, head }`: `AfterSnapshot(x)` at `initial_offset`, and a resumed `from` at `next_window` under both limits and at any position. The text opens with Spark's `Cannot find snapshot after <id>: not an ancestor of table's current snapshot` and never says "expired". An ancestor still resumes. | The G5 pins in `window_fold2_pins.rs` and `error.rs`, plus mutations g5a and g5b. | **PROVEN** | 2 pins green: `a_snapshot_rolled_out_of_the_lineage_refuses_as_not_an_ancestor` (q09's shape: append s1, append s2, `rollback_to(s1)`, append s3; `AfterSnapshot(s2)`, `(s2,0)` and `(s2,1)` refuse naming s2 and s3; `(s1,1)` resumes to s3) and `lineage_refusal_starts_with_spark_text_and_never_says_expired` (byte-exact). The variant joins `every_error_variant_renders_a_message`. g5a and g5b red. pins: mb-1/C-036 |
 | C-037 | (G6) `FromTimestamp` mirrors `oldestAncestorAfter`: a head below T reads `None`; otherwise the walk from the head returns the snapshot after the first one with `ts < T`, a snapshot with `ts == T` itself, or the oldest ancestor when none is below T. | The G6 pin in `window_fold2_pins.rs` plus mutations g6a and g6b. | **PROVEN** | 1 pin green: `from_timestamp_walks_back_from_the_head_as_oldest_ancestor_after` (a real s1 at offset 0, then skewed snapshots at +50 s, +20 s and +60 s built through `TableMetadataBuilder`: T = +30 s lands on the head where the oldest-first rule gave +50 s; +60 s the head; +20 s the equal snapshot; +10 s the +50 s snapshot; 0 and -1 s s1; +60.001 s `None`; with the +20 s snapshot as head, T = +30 s reads `None` where the old rule landed on +50 s). g6a (the old oldest-first search) and g6b (no head check) red. pins: mb-1/C-037 |
+| C-038 | (G7) After the ASCII fold, a key containing any non-ASCII character whose Unicode lowercase starts with `streaming-`, `stream-` or `repark.cdc.` refuses `Catalog` naming the key, so the Kelvin-sign `repar\u{212A}.cdc.start-after-snapshot-id` can no longer pass as an ignored key and silently replay from `Earliest`. A non-ASCII key outside the prefixes still passes. Two spellings of a skip key compare as booleans: `false`/`FALSE` are accepted, `TRUE`/`true` refuse MBE-3, and `false`/`TRUE` or `false`/`0` refuse as different values; every other key keeps the exact comparison. | The G7 pins in `microbatch_source_fold2_tests.rs` plus mutations g7a and g7b. | **PROVEN** | 2 pins green: `a_key_that_folds_to_a_streaming_prefix_only_under_unicode_refuses` (four keys byte-exact, two non-prefixed keys pass) and `boolean_twins_compare_by_meaning`. g7a and g7b red. pins: mb-1/C-038 |
 
 ## Dated decision rows — fold 2
 
@@ -497,6 +498,11 @@ re-verifier**, so G1 is implemented as ruled.
   for a history whose oldest ancestor has an expired parent. RePark's walk ends on the
   oldest ancestor in both cases. Supersedes C-018's "(oldest such ancestor, 0)"; the two
   agree whenever ancestor timestamps grow along the chain.
+- **G7 (2026-10-07).** The fold stays ASCII (F3's ruling). Java's
+  `toLowerCase(Locale.ROOT)` folds U+212A to `k`, so Spark would read the Kelvin key as
+  the option; RePark refuses it loud instead of guessing either way. Rust's
+  `to_lowercase` is the probe. Supersedes C-027's "with equal values they are accepted"
+  for the skip keys, which now compare by meaning.
 
 ## Gates — fold 2
 
@@ -537,4 +543,10 @@ test microbatch::window::tests::from_timestamp_past_head_reads_none ... FAILED
 test microbatch::window::tests::window_fold2_pins::from_timestamp_walks_back_from_the_head_as_oldest_ancestor_after ... FAILED
 test microbatch::window::tests::window_fold_pins::from_timestamp_past_head_waits_for_a_snapshot_at_or_after_it ... FAILED
 test result: FAILED. 66 passed; 3 failed; 0 ignored; 0 measured; 804 filtered out
+g7a microbatch_source.rs `if !key.is_ascii() && has_interpreted_prefix(…)` -> `if false && …`
+test time_travel::microbatch_source::tests::microbatch_source_fold2_tests::a_key_that_folds_to_a_streaming_prefix_only_under_unicode_refuses ... FAILED
+test result: FAILED. 25 passed; 1 failed; 0 ignored; 0 measured; 1027 filtered out
+g7b microbatch_source.rs `|| (boolean && …)` -> `|| (false && …)` (exact twin comparison)
+test time_travel::microbatch_source::tests::microbatch_source_fold2_tests::boolean_twins_compare_by_meaning ... FAILED
+test result: FAILED. 25 passed; 1 failed; 0 ignored; 0 measured; 1027 filtered out
 ```

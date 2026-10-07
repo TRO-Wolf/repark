@@ -114,13 +114,24 @@ fn fold_key_case(
 ) -> Result<BTreeMap<String, (&str, &str)>, MicroBatchError> {
     let mut folded: BTreeMap<String, (&str, &str)> = BTreeMap::new();
     for (key, value) in options {
-        match folded.entry(key.to_ascii_lowercase()) {
+        if !key.is_ascii() && has_interpreted_prefix(&key.to_lowercase()) {
+            return Err(MicroBatchError::Catalog(format!(
+                "streaming option {key:?} names a streaming key only under Unicode case folding; option keys match ASCII case-insensitively, so spell it in ASCII"
+            )));
+        }
+        let folded_key = key.to_ascii_lowercase();
+        let boolean = matches!(folded_key.as_str(), SKIP_OVERWRITE_KEY | SKIP_DELETE_KEY);
+        match folded.entry(folded_key) {
             Entry::Vacant(slot) => {
                 slot.insert((key.as_str(), value.as_str()));
             }
             Entry::Occupied(slot) => {
                 let (first, seen) = *slot.get();
-                if seen != value.as_str() {
+                let same = seen == value.as_str()
+                    || (boolean
+                        && boolean_flag(seen)
+                            .is_some_and(|flag| boolean_flag(value) == Some(flag)));
+                if !same {
                     return Err(MicroBatchError::Catalog(format!(
                         "streaming options {first} and {key} are the same key in different case with different values; pass it once"
                     )));
@@ -137,16 +148,20 @@ fn has_interpreted_prefix(key: &str) -> bool {
         || key.starts_with(REPARK_CDC_PREFIX)
 }
 
-fn parse_skip_flag(option: &str, raw: &str) -> Result<bool, MicroBatchError> {
+fn boolean_flag(raw: &str) -> Option<bool> {
     if raw.eq_ignore_ascii_case("true") {
-        Ok(true)
+        Some(true)
     } else if raw.eq_ignore_ascii_case("false") {
-        Ok(false)
+        Some(false)
     } else {
-        Err(MicroBatchError::Catalog(format!(
-            "{option} needs true or false, got {raw:?}"
-        )))
+        None
     }
+}
+
+fn parse_skip_flag(option: &str, raw: &str) -> Result<bool, MicroBatchError> {
+    boolean_flag(raw).ok_or_else(|| {
+        MicroBatchError::Catalog(format!("{option} needs true or false, got {raw:?}"))
+    })
 }
 
 fn parse_file_cap(raw: &str) -> Result<NonZeroUsize, MicroBatchError> {

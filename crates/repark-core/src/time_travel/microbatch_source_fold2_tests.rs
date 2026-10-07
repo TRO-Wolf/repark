@@ -249,3 +249,73 @@ async fn a_schema_change_after_open_leaves_the_batch_schema_alone() {
         ]
     );
 }
+
+fn parse(pairs: &[(&str, &str)]) -> Result<SourceOptions, MicroBatchError> {
+    SourceOptions::from_options(
+        &pairs
+            .iter()
+            .map(|(key, value)| (key.to_string(), value.to_string()))
+            .collect(),
+    )
+}
+
+#[test]
+fn a_key_that_folds_to_a_streaming_prefix_only_under_unicode_refuses() {
+    for key in [
+        "repar\u{212A}.cdc.start-after-snapshot-id",
+        "streaming-s\u{212A}ip-overwrite-snapshots",
+        "STREAMING-MAX-FILES-PER-MICRO-BATCH\u{212A}",
+        "Stream-From-Timestamp-\u{00E9}",
+    ] {
+        let error = parse(&[(key, "5")]).expect_err("a Unicode-folded streaming key must refuse");
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "streaming option {key:?} names a streaming key only under Unicode case folding; option keys match ASCII case-insensitively, so spell it in ASCII"
+            )
+        );
+    }
+    for key in [
+        "\u{0130}STREAMING-MAX-FILES-PER-MICRO-BATCH",
+        "note-\u{212A}",
+    ] {
+        let options = parse(&[(key, "1")]).expect("a non-ASCII key outside the prefixes passes");
+        assert_eq!(options.caps, ReadCaps::default());
+        assert_eq!(options.start, StartPosition::Earliest);
+    }
+}
+
+#[test]
+fn boolean_twins_compare_by_meaning() {
+    for (first, second) in [("false", "FALSE"), ("False", "false")] {
+        let options = parse(&[
+            ("Streaming-Skip-Overwrite-Snapshots", first),
+            ("streaming-skip-overwrite-snapshots", second),
+        ])
+        .expect("twins that both mean false must parse");
+        assert_eq!(options.caps, ReadCaps::default());
+    }
+    let error = parse(&[
+        ("STREAMING-SKIP-DELETE-SNAPSHOTS", "TRUE"),
+        ("streaming-skip-delete-snapshots", "true"),
+    ])
+    .expect_err("twins that both mean true refuse the skip");
+    assert!(matches!(error, MicroBatchError::SkipOptionRefused { .. }));
+    for (first, second) in [("false", "TRUE"), ("false", "0")] {
+        let error = parse(&[
+            ("Streaming-Skip-Overwrite-Snapshots", first),
+            ("streaming-skip-overwrite-snapshots", second),
+        ])
+        .expect_err("twins that differ in meaning must refuse");
+        assert_eq!(
+            error.to_string(),
+            "streaming options Streaming-Skip-Overwrite-Snapshots and streaming-skip-overwrite-snapshots are the same key in different case with different values; pass it once"
+        );
+    }
+    let error = parse(&[
+        ("Stream-From-Timestamp", "AbC"),
+        ("stream-from-timestamp", "abc"),
+    ])
+    .expect_err("a non-boolean key keeps the exact comparison");
+    assert!(error.to_string().contains("different values"), "{error}");
+}
