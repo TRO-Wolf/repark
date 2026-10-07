@@ -18,20 +18,37 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `pub mod offset;`, `pub mod provider;` and `pub mod window;`. No
   re-exports: callers use full paths. MB-2a adds `#[cfg(test)] mod crash_tests;`.
   pins: mb-1/C-007, mb-1/C-013
-- `crash_tests.rs` — **MB-2a (2026-10-07):** the crash harness of the
+- `crash_tests.rs` — the crash harness of the
   [sketch's §5](../../../../task/wo/microbatch/mb-design-2026-10-06.md), in Rust over the memory
-  catalog (correction H-1). It holds pin 1, `test_microbatch_kill_after_commit_resumes_1`, the
-  green guard that resume-from-sink alone holds: Bronze takes two appends; epoch 0 plans the
-  window, reads it through `provider_for_plan`, stages it into the empty sink and commits through
-  the stamped append arm under a `BatchScope`; every in-memory value drops (kill point c). A
-  reload and `read_resume_point` resume epoch 0's offset; epoch 1's window is planned and read,
-  then dropped before staging (kill point a), and the next reload still reads epoch 0. Epoch 1
-  then commits under a fresh run id, and a third trigger finds no window and commits nothing. The
-  sink equals Bronze with each id once, epochs 0 and 1 each appear once in the summary history,
-  and the property equals the head's stamp. Pins 2–4 (red until MB-2c) and pin 5 belong to the
-  harness slice and are not here. Fold 1 (2026-10-07): the stamped append passes the guard's
-  `ScopeToken` in its extras, the way MB-3's session config will.
-  pins: mb-2a/C-010, C-013
+  catalog (correction H-1): five pins, two green guards and three red until MB-2c. Every pin enters
+  a `BatchScope` and carries the guard's token through the session snapshot property
+  `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token`, as MB-3's driver will (D-10).
+  `FaultCatalog` is the `UnknownOutcomeCatalog` shape over the memory catalog with three faults:
+  `Race` commits a stamped racer inside the next `update_table`; `UnknownAfterLanding` lands and
+  `UnknownWithoutLanding` drops the commit, and both answer `CommitStateUnknown` and fail the next
+  reload once.
+  - Pin 1, `test_microbatch_kill_after_commit_resumes_1` (**MB-2a, 2026-10-07**, green guard):
+    kill points (a) and (c); the sink equals Bronze, epochs 0 and 1 stamped once, the property
+    equals the head's stamp. pins: mb-2a/C-010, C-013
+  - Pin 2, `test_microbatch_duplicate_delivery_skips_1` (**harness, 2026-10-07**, red): kill
+    point (b) leaves staged files in no snapshot; epoch 0 re-delivered with its original stamp
+    against the pre-commit `Table` must not commit, and a claim on the reloaded sink must return
+    `AlreadyCommitted`. pins: microbatch-harness/C-002
+  - Pin 3, `test_microbatch_two_drivers_one_sink_1` (red): run A commits epoch 1 inside run B's
+    `update_table`, on the append arm and on a copy-on-write `execute_merge`. B's commit must
+    fail, epoch 1 and its rows land once, the property names A, and B's claim on the reload must
+    be `Fenced { winner: A }`. pins: microbatch-harness/C-003
+  - Pin 4, `test_microbatch_unknown_outcome_reconciles_1` (red): `commit_stamp_only` on the
+    `foreachBatch` door with `commit.status-check.num-retries=0`. A landed stamp must resolve to
+    its snapshot with one `update_table` and no replace; an unlanded one must refuse
+    `RecoveryRequired(CommitOutcomeUnknown)` carrying epoch 0 as durable.
+    pins: microbatch-harness/C-004
+  - Pin 5, `test_microbatch_bronze_overwrite_refuses_1` (green guard, MB-1): R2 overwrite and
+    R5 delete refuse `NonAppendSnapshot` naming the snapshot, the sink unchanged; R8's replace is
+    skipped and row 4 streams. pins: microbatch-harness/C-005
+  The red pins carry `#[ignore = "red until MB-2c: <scenario>"]`; MB-2c deletes those three
+  lines. Why each red pin has its shape: the [harness ledger](../../../../task/ledgers/staging/microbatch-harness-ledger.md)
+  D-1…D-4. pins: microbatch-harness/C-001, C-006
 - `offset.rs` — the sketch's §3.1. Seven newtypes, each `new`/`get`
   (NS-14), with the sketch's named constructors beside them:
   `TableUuid::of`, `QueryId::derive`, `RunId::fresh`, `Epoch::FIRST`/`next`,
