@@ -1534,7 +1534,7 @@ class ReparkSession:
         except UnsupportedOperationException:
             raise
         except Exception as error:
-            raise _sql_udf_clean_exception(error) from error
+            raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
 
     def _sql_with_udfs_in_with_statement(
         self,
@@ -1780,7 +1780,7 @@ class ReparkSession:
                 "Use DataFrame F.udf / spark.udf.register + select/withColumn. "
                 "SQL-embedded UDF rewrite supports SELECT-list, WHERE, GROUP BY, and "
                 "HAVING scalar forms (U9/U10)."
-            ) from error
+            ) from _scrub_exception(error)
         if rewritten is None:
             raise UnsupportedOperationException(
                 "registered Python UDF in SQL is not supported for this statement shape "
@@ -1794,7 +1794,7 @@ class ReparkSession:
         try:
             base_frame = self.sql(trivia + base_sql if trivia else base_sql)
         except Exception as error:
-            raise _sql_udf_clean_exception(error) from error
+            raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
 
         from repark.spark.functions import col as f_col
 
@@ -1821,7 +1821,7 @@ class ReparkSession:
             try:
                 frame = frame.select(*select_items)
             except Exception as error:
-                raise _sql_udf_clean_exception(error) from error
+                raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
 
         # WHERE residual filter before user projection (may reference base + UDF temps).
         where_sql = materialize_plan.get("where_sql")
@@ -1829,7 +1829,7 @@ class ReparkSession:
             try:
                 frame = frame.filter(where_sql)
             except Exception as error:
-                raise _sql_udf_clean_exception(error) from error
+                raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
 
         # Final user-visible projection (residual expressions + aliases).
         final_exprs: list[str] = materialize_plan["final_exprs"]
@@ -1837,7 +1837,7 @@ class ReparkSession:
             if final_exprs:
                 frame = frame.selectExpr(*final_exprs)
         except Exception as error:
-            raise _sql_udf_clean_exception(error) from error
+            raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
 
         # GROUP BY on SELECT-list aliases / planned keys (post user projection).
         group_by_keys = materialize_plan.get("group_by_keys")
@@ -1849,7 +1849,7 @@ class ReparkSession:
                 project_names = materialize_plan.get("user_out_names") or group_by_keys
                 frame = grouped.count().select(*project_names)
             except Exception as error:
-                raise _sql_udf_clean_exception(error) from error
+                raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
 
         # HAVING residual (post-group filter on user-visible names).
         having_sql = materialize_plan.get("having_sql")
@@ -1857,7 +1857,7 @@ class ReparkSession:
             try:
                 frame = frame.filter(having_sql)
             except Exception as error:
-                raise _sql_udf_clean_exception(error) from error
+                raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
 
         if materialize_plan.get("distinct"):
             frame = frame.distinct()
@@ -1878,7 +1878,7 @@ class ReparkSession:
                     "after materialization in repark v1 "
                     f"({_sql_udf_public_error_text(error)}). Order by the SELECT-list "
                     "output alias only, or use DataFrame.orderBy after select."
-                ) from error
+                ) from _scrub_exception(error)
 
         limit_n = materialize_plan.get("limit")
         if limit_n is not None:

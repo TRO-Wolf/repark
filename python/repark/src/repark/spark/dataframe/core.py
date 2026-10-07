@@ -27,6 +27,7 @@ from repark.errors import (
 )
 from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
+from repark.spark._secrets import scrub_exception
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
 from repark.spark.column_fields import column_window_spec as _column_window_spec
@@ -3776,8 +3777,7 @@ class DataFrame:
         try:
             table = pa.table(self)
         except pa.lib.ArrowException as arrow_error:
-            raise _export_engine_error(arrow_error) from arrow_error
-            raise PySparkException(str(arrow_error)) from arrow_error
+            raise _export_engine_error(scrubbed := scrub_exception(arrow_error)) from scrubbed
         return self._apply_export_display_names(table)
 
     def to_arrow_batches(self) -> Iterator[Any]:
@@ -3793,7 +3793,7 @@ class DataFrame:
         try:
             reader = pa.RecordBatchReader.from_stream(self)
         except pa.lib.ArrowException as arrow_error:
-            raise _export_engine_error(arrow_error) from arrow_error
+            raise _export_engine_error(scrubbed := scrub_exception(arrow_error)) from scrubbed
         stream_schema = reader.schema
         yielded_batch = False
         try:
@@ -3801,7 +3801,7 @@ class DataFrame:
                 yielded_batch = True
                 yield self._apply_export_display_names(batch)
         except pa.lib.ArrowException as arrow_error:
-            raise _export_engine_error(arrow_error) from arrow_error
+            raise _export_engine_error(scrubbed := scrub_exception(arrow_error)) from scrubbed
         if not yielded_batch:
             empty = pa.RecordBatch.from_pylist([], schema=stream_schema)
             yield self._apply_export_display_names(empty)

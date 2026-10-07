@@ -360,7 +360,7 @@ EXPECTED_SYMBOL_HASHES = {
         "a8d7beee8e9f9f7a07b3190b75eb0f125487a1ea2a97184ea27e2ea3496585ef"
     ),
     "_sql_udf_public_error_text": (
-        "cc7eb644d47bcbeb4e350752f2883726e663bb28af44f9565efb1ca813aef4fc"
+        "ac881fd5c6a3e9321afc6e918c48df22a2674ac15327e25a6df18dd097cba4c3"
     ),
     "_sql_where_residual_base_projections": (
         "3ed9fe9841bf681c43959aa2b613358706133ae296227c650684a8dd0922d0e8"

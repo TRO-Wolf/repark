@@ -251,8 +251,9 @@ def _sql_plan_order_by_aliases(
 
 def _sql_udf_public_error_text(error: BaseException) -> str:
     """Strip internal ``__repark_sql_udf_*`` names from error text (U9 Q13)."""
+    from repark.spark._secrets import scrub_exception
 
-    text = str(error)
+    text = str(scrub_exception(error))
 
     if "__repark_sql_udf" not in text:
         return text

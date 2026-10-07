@@ -272,6 +272,7 @@ def test_sql_udf_user_url_is_masked() -> None:
         rendered = str(caught.value)
         assert USERINFO not in rendered
         assert "***" in rendered
+        assert USERINFO not in "".join(traceback.format_exception(caught.value))
     finally:
         session.stop()
 
@@ -545,8 +546,49 @@ def test_export_engine_error_masks_url() -> None:
     assert USERINFO not in str(mapped)
     assert "***" in str(mapped)
     assert USERINFO in str(error)
+    assert USERINFO not in "".join(traceback.format_exception(mapped))
 
 
 def test_export_engine_error_keeps_user_text() -> None:
     mapped = _export_engine_error(RuntimeError(UDF_USER_TEXT))
     assert UDF_USER_TEXT in str(mapped)
+
+
+CAST_ACTIONS = ["collect", "toArrow", "toPandas", "to_arrow_batches"]
+
+
+def _run_export_action(frame: object, action: str) -> None:
+    if action == "to_arrow_batches":
+        list(frame.to_arrow_batches())
+        return
+    getattr(frame, action)()
+
+
+@pytest.mark.parametrize("action", CAST_ACTIONS)
+def test_collect_cast_error_traceback_is_masked(action: str) -> None:
+    if action == "toPandas":
+        pytest.importorskip("pandas")
+    session = SparkSession.builder.config("spark.sql.ansi.enabled", "true").getOrCreate()
+    try:
+        rows = [("1",), ("http://u:" + MARK + "@h/x",)]
+        session.createDataFrame(rows, ["v"]).createOrReplaceTempView("t")
+        frame = session.sql("SELECT CAST(v AS INT) FROM t")
+        with pytest.raises(PySparkException) as caught:
+            _run_export_action(frame, action)
+        assert MARK not in "".join(traceback.format_exception(caught.value))
+    finally:
+        session.stop()
+
+
+def test_registered_dsn_traceback_is_masked() -> None:
+    secret = "RegPw" + "0042"
+    dsn = "host=h user=u password=" + secret
+    builder = SparkSession.builder.config("spark.sql.ansi.enabled", "true")
+    session = builder.config("spark.repark.test.dsn", dsn).getOrCreate()
+    try:
+        session.createDataFrame([("1",), (dsn,)], ["v"]).createOrReplaceTempView("t")
+        with pytest.raises(PySparkException) as caught:
+            session.sql("SELECT CAST(v AS INT) FROM t").collect()
+        assert secret not in "".join(traceback.format_exception(caught.value))
+    finally:
+        session.stop()
