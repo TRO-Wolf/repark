@@ -94,8 +94,26 @@ def _link_text_changes(link: BaseException, mask: Callable[[str], str]) -> bool:
 
 def _copy_link(link: BaseException, mask: Callable[[str], str]) -> BaseException:
     if isinstance(link, OSError):
-        return _rebuild_os_error(link, mask)
-    return _copy_plain_link(link, mask)
+        fresh = _rebuild_os_error(link, mask)
+    else:
+        fresh = _copy_plain_link(link, mask)
+    _mask_message_parameters(link, fresh, mask)
+    return fresh
+
+
+def _mask_message_parameters(
+    link: BaseException, fresh: BaseException, mask: Callable[[str], str]
+) -> None:
+    from repark.errors import _PySparkErrorMixin
+
+    if not isinstance(link, _PySparkErrorMixin) or not isinstance(fresh, _PySparkErrorMixin):
+        return
+    params = getattr(link, "_message_parameters", None)
+    if params is not None:
+        fresh._message_parameters = {
+            key: mask(value) if isinstance(value, str) else value for key, value in params.items()
+        }
+    fresh._contexts = list(getattr(link, "_contexts", []))
 
 
 def _copy_plain_link(link: BaseException, mask: Callable[[str], str]) -> BaseException:

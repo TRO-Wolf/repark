@@ -8,7 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from repark.errors import AnalysisException, IllegalArgumentException, PySparkException
+from repark.errors import (
+    AnalysisException,
+    IllegalArgumentException,
+    PySparkException,
+    PySparkValueError,
+)
 from repark.spark import SparkSession
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark._secrets import scrub_exception
@@ -703,3 +708,25 @@ def test_writer_append_merge_os_error_is_masked(
         assert MARK not in "".join(traceback.format_exception(caught.value))
     finally:
         session.stop()
+
+
+def test_scrub_exception_masks_message_parameters_on_the_copy() -> None:
+    original = PySparkValueError(
+        "bad " + SECRET_URL, errorClass="X_Y", messageParameters={"url": SECRET_URL}
+    )
+    scrubbed = scrub_exception(original)
+    assert isinstance(scrubbed, PySparkValueError)
+    assert MARK not in str(scrubbed.getMessageParameters())
+    assert "***" in scrubbed.getMessageParameters()["url"]
+    assert original.getMessageParameters() == {"url": SECRET_URL}
+    assert scrubbed.getErrorClass() == "X_Y"
+    assert scrubbed._message_parameters is not original._message_parameters
+    assert scrubbed._contexts is not original._contexts
+
+
+def test_scrub_exception_carries_the_traceback() -> None:
+    original = _raised(lambda: ValueError("fetch failed for " + SECRET_URL))
+    scrubbed = scrub_exception(original)
+    assert scrubbed is not original
+    assert original.__traceback__ is not None
+    assert scrubbed.__traceback__ is original.__traceback__
