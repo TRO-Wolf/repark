@@ -278,10 +278,16 @@ def _mask_message_parameters(
 def _copy_plain_link(link: BaseException, mask: Callable[[str], str]) -> BaseException:
     masked_args = tuple(mask(item) if isinstance(item, str) else item for item in link.args)
     try:
-        fresh = copy.copy(link)
+        return _with_args(type(link)(*masked_args), masked_args)
     except Exception:
-        return _fallback_copy(link, mask, masked_args)
-    fresh.args = masked_args
+        try:
+            return _with_args(copy.copy(link), masked_args)
+        except Exception:
+            return _fallback_copy(link, mask, masked_args)
+
+
+def _with_args(fresh: BaseException, args: tuple[object, ...]) -> BaseException:
+    fresh.args = args
     return fresh
 
 

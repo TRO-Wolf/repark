@@ -714,3 +714,40 @@ def test_scrub_exception_masks_tuple_notes() -> None:
     assert scrubbed.__notes__ == ["tuple note http://u:***@127.0.0.1:9/x", "plain"]
     assert USERINFO not in _formatted(scrubbed)
     assert original.__notes__ is notes
+
+
+_INIT_CALLS: list[object] = []
+
+
+class _RecordingInterrupt(KeyboardInterrupt):
+    def __init__(self, message: str, code: int) -> None:
+        _INIT_CALLS.append(message)
+        super().__init__(message, code)
+
+
+class _RecordingError(ValueError):
+    def __init__(self, message: str) -> None:
+        _INIT_CALLS.append(message)
+        super().__init__(message)
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: _RecordingInterrupt("stop " + SECRET_URL, 1),
+        lambda: _RecordingError("v " + SECRET_URL),
+    ],
+    ids=["base_only", "exception"],
+)
+def test_scrub_exception_never_reruns_init_with_raw_args(
+    factory: Callable[[], BaseException],
+) -> None:
+    original = _raised(factory)
+    _INIT_CALLS.clear()
+    scrubbed = scrub_exception(original)
+    assert type(scrubbed) is type(original)
+    assert USERINFO not in _formatted(scrubbed)
+    assert len(_INIT_CALLS) == 1
+    assert all(USERINFO not in str(call) for call in _INIT_CALLS)
+    assert "http://u:***@" in str(_INIT_CALLS[0])
+    assert USERINFO in str(original)
