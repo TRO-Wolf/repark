@@ -19,7 +19,7 @@ from repark.errors import (
     PySparkTypeError,
     UnsupportedOperationException,
 )
-from repark.spark._secrets import scrub_user_failure
+from repark.spark._secrets import scrub_exception, scrub_user_failure
 
 _LATERAL_BLOCKED_MESSAGE = (
     "LATERAL / correlated UDTF is not supported in repark v1: DataFusion has no "
@@ -257,13 +257,17 @@ def _map_udtf_batches(
                         batch.column(column_index)[row_index].as_py()
                         for column_index in range(arg_count)
                     )
-                failure = None
+                failure = passthrough = None
                 try:
                     result = handler.eval(*python_args)
-                except PySparkException:
-                    raise
+                except PySparkException as error:
+                    passthrough = scrub_exception(error)
+                    if passthrough is error:
+                        raise
                 except Exception as error:
                     detail, failure = scrub_user_failure(error)
+                if passthrough is not None:
+                    raise passthrough
                 if failure is not None:
                     raise PySparkException(
                         f"UDTF {surface} eval() raised "
@@ -322,13 +326,17 @@ def _map_arrow_udtf_batches(
 
         for batch in batches:
             arrays = tuple(batch.column(index) for index in range(arg_count))
-            failure = None
+            failure = passthrough = None
             try:
                 tables = handler._eval_batch(field_names, arrow_schema, surface, *arrays)
-            except PySparkException:
-                raise
+            except PySparkException as error:
+                passthrough = scrub_exception(error)
+                if passthrough is error:
+                    raise
             except Exception as error:
                 detail, failure = scrub_user_failure(error)
+            if passthrough is not None:
+                raise passthrough
             if failure is not None:
                 raise PySparkException(
                     f"UDTF {surface} eval() raised {type(failure).__name__}: {failure}\n{detail}"

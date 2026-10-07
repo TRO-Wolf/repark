@@ -711,6 +711,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** the scalar and Arrow UDTF `start`/`eval`/`terminate`
   doors mask through `_secrets.scrub_user_failure` and raise after the handler; it now also hosts
   `_refuse_udtf_as_scalar_udf` (moved from `functions_udf.py`). pins: source-url-redact-1/C-076
+  **H3 (2026-10-07):** the UDTF `eval` doors here and in `table_arg.py` scrub a user-raised
+  `PySparkException` (identity kept when nothing masks). pins: source-url-redact-1/C-077
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and
   partition expressions.
 

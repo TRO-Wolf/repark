@@ -19,7 +19,7 @@ from repark.errors import (
     PySparkTypeError,
     UnsupportedOperationException,
 )
-from repark.spark._secrets import scrub_user_failure
+from repark.spark._secrets import scrub_exception, scrub_user_failure
 from repark.spark.udtf import (
     _TABLE_ARG_BLOCKED_MESSAGE,
     _build_output_batch,
@@ -211,13 +211,17 @@ def _map_table_udtf_batches(
                 python_args = tuple(
                     row if kind == "table" else scalars[int(index)] for kind, index in layout
                 )
-                failure = None
+                failure = passthrough = None
                 try:
                     result = handler.eval(*python_args)
-                except PySparkException:
-                    raise
+                except PySparkException as error:
+                    passthrough = scrub_exception(error)
+                    if passthrough is error:
+                        raise
                 except Exception as error:
                     detail, failure = scrub_user_failure(error)
+                if passthrough is not None:
+                    raise passthrough
                 if failure is not None:
                     raise PySparkException(
                         f"UDTF {surface} eval() raised "

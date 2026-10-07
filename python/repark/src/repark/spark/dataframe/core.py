@@ -520,7 +520,7 @@ class DataFrame:
             ) from error
 
         rows_kept = 0
-        failure = None
+        failure = passthrough = None
         try:
             output = func(iter(input_reader))
             if output is None:
@@ -557,8 +557,10 @@ class DataFrame:
                         break
                 else:
                     yield aligned
-        except PySparkException:
-            raise
+        except PySparkException as error:
+            passthrough = scrub_exception(error)
+            if passthrough is error:
+                raise
         except Exception as error:
             failure = scrub_exception(error)
             detail = _native.mask_user_visible(traceback.format_exc())
@@ -567,6 +569,8 @@ class DataFrame:
             if callable(close):
                 with contextlib.suppress(Exception):
                     close()
+        if passthrough is not None:
+            raise passthrough
         if failure is not None:
             raise PySparkException(
                 f"mapInArrow user function raised {type(failure).__name__}: {failure}\n{detail}"

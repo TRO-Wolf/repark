@@ -698,6 +698,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `(detail, failure)` from `_secrets.scrub_user_failure`; `_grouped_agg_pandas` (non-windowed and
   unbounded-window GROUPED_AGG) moved here from `joins_columns.py` beside its ordered-window sibling.
   pins: source-url-redact-1/C-076
+  **SOURCE-URL-REDACT-2 fold 4 H3 (2026-10-07):** a user-raised `PySparkException` is scrubbed
+  too: re-raised in place when `scrub_exception` returns it unchanged, else its masked copy is
+  raised after the handler. `grouped_arrow.py`, `core.py`'s mapInArrow handler and the UDTF `eval`
+  doors carry the same clause. pins: source-url-redact-1/C-077
 - `io_declared.py` owns the orc-write / xml declared-refusal bodies and the `jdbc` reader-writer
   surface (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1).
   **IO-ORC-1 (2026-09-16):** the orc reader refusal is deleted (the read side is a real

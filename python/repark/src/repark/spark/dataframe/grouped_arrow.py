@@ -28,7 +28,7 @@ from repark.spark._integral import (
     _attached_message_parameters,
     _attached_sql_state,
 )
-from repark.spark._secrets import scrub_user_failure
+from repark.spark._secrets import scrub_exception, scrub_user_failure
 from repark.spark.dataframe.udf_schema import _coerce_map_in_arrow_schema
 
 if TYPE_CHECKING:
@@ -53,13 +53,17 @@ def _raise_with_spark_class(
 
 def _call_grouped_user_func(user_func: Callable[..., Any], api_name: str, *args: Any) -> Any:
     """Invoke a grouped map callback, wrapping non-PySpark failures."""
-    failure = None
+    failure = passthrough = None
     try:
         return user_func(*args)
-    except PySparkException:
-        raise
+    except PySparkException as error:
+        passthrough = scrub_exception(error)
+        if passthrough is error:
+            raise
     except Exception as error:
         detail, failure = scrub_user_failure(error)
+    if passthrough is not None:
+        raise passthrough
     raise PySparkException(
         f"{api_name} user function raised {type(failure).__name__}: {failure}\n{detail}"
     ) from failure
@@ -307,7 +311,7 @@ def _verify_arrow_batch_result(batch: Any, expected_arrow: Any) -> None:
 
 def _iter_apply_in_arrow_results(result: Any, expected_arrow: Any) -> Iterator[Any]:
     """Verify and reorder each yielded batch from an iterator-form callback."""
-    failure = None
+    failure = passthrough = None
     try:
         for batch in result:
             _verify_arrow_batch_result(batch, expected_arrow)
@@ -316,10 +320,14 @@ def _iter_apply_in_arrow_results(result: Any, expected_arrow: Any) -> Iterator[A
             if list(batch.schema.names) != list(expected_arrow.names):
                 batch = batch.select(list(expected_arrow.names))
             yield batch
-    except PySparkException:
-        raise
+    except PySparkException as error:
+        passthrough = scrub_exception(error)
+        if passthrough is error:
+            raise
     except Exception as error:
         detail, failure = scrub_user_failure(error)
+    if passthrough is not None:
+        raise passthrough
     if failure is not None:
         raise PySparkException(
             f"applyInArrow user function raised {type(failure).__name__}: {failure}\n{detail}"

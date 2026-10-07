@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import functools
 import traceback
 from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
 
-from repark.errors import PySparkException, PySparkTypeError
+from repark.errors import PySparkException, PySparkTypeError, PySparkValueError
 from repark.spark import SparkSession
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+from repark.spark.dataframe import udf_bridge
 from repark.spark.functions import arrow_udtf, udtf
 from repark.spark.window import Window
 
@@ -196,3 +198,101 @@ def test_user_callback_door_formatted_traceback_is_masked(door: str) -> None:
         assert error.__cause__ is not _RAISED[-1]
     finally:
         session.stop()
+
+
+def _raise_pyspark_url(*args: object) -> Any:
+    error = PySparkValueError("bad " + SECRET_URL)
+    _RAISED.append(error)
+    raise error
+
+
+def _raise_pyspark_plain(*args: object) -> Any:
+    error = PySparkValueError(errorClass="CANNOT_BE_NONE", messageParameters={"arg_name": "x"})
+    _RAISED.append(error)
+    raise error
+
+
+def _raise_pyspark_batches(batches: Iterator[Any], *, raiser: Callable[..., Any]) -> Iterator[Any]:
+    for batch in batches:
+        raiser()
+        yield batch
+
+
+def _pyspark_dataframe_udf(session: SparkSession, raiser: Callable[..., Any]) -> None:
+    session.range(2).select(F.udf(raiser, "string")("id")).collect()
+
+
+def _pyspark_pandas_udf(session: SparkSession, raiser: Callable[..., Any]) -> None:
+    session.range(2).select(F.pandas_udf(raiser, "string")("id")).collect()
+
+
+def _pyspark_apply_in_pandas(session: SparkSession, raiser: Callable[..., Any]) -> None:
+    _frame(session).groupBy("k").applyInPandas(raiser, "k long, v double").collect()
+
+
+def _pyspark_map_in_arrow(session: SparkSession, raiser: Callable[..., Any]) -> None:
+    mapper = functools.partial(_raise_pyspark_batches, raiser=raiser)
+    _frame(session).mapInArrow(mapper, "k long, v double").collect()
+
+
+PYSPARK_DOORS: dict[str, Callable[[SparkSession, Callable[..., Any]], None]] = {
+    "dataframe_udf": _pyspark_dataframe_udf,
+    "pandas_udf": _pyspark_pandas_udf,
+    "applyInPandas": _pyspark_apply_in_pandas,
+    "mapInArrow": _pyspark_map_in_arrow,
+}
+
+
+@pytest.mark.parametrize("door", sorted(PYSPARK_DOORS))
+def test_user_raised_pyspark_exception_is_scrubbed(door: str) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        _RAISED.clear()
+        with pytest.raises(PySparkValueError) as caught:
+            PYSPARK_DOORS[door](session, _raise_pyspark_url)
+        error = caught.value
+        assert USERINFO in str(_RAISED[-1])
+        assert error is not _RAISED[-1]
+        assert type(error) is PySparkValueError
+        assert "http://u:***@" in str(error)
+        assert USERINFO not in str(error)
+        assert USERINFO not in repr(error)
+        assert USERINFO not in "".join(traceback.format_exception(error))
+        assert error.__context__ is None
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize("door", sorted(PYSPARK_DOORS))
+def test_user_raised_pyspark_exception_without_a_secret_keeps_identity(door: str) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        _RAISED.clear()
+        with pytest.raises(PySparkValueError) as caught:
+            PYSPARK_DOORS[door](session, _raise_pyspark_plain)
+        assert caught.value is _RAISED[-1]
+        assert caught.value.getErrorClass() == "CANNOT_BE_NONE"
+    finally:
+        session.stop()
+
+
+def _call_python_udf_door(raiser: Callable[..., Any]) -> None:
+    batch = pa.RecordBatch.from_pydict({"a": [1, 2]})
+    slot = {"input_inter_names": ["a"], "user_func": raiser, "function_name": "f"}
+    udf_bridge._run_python_udf_on_batch(batch, slot)
+
+
+@pytest.mark.parametrize(
+    ("raiser", "keeps_identity"),
+    [(_raise_pyspark_url, False), (_raise_pyspark_plain, True)],
+    ids=["secret", "plain"],
+)
+def test_dataframe_udf_door_scrubs_a_user_raised_pyspark_exception(
+    raiser: Callable[..., Any], keeps_identity: bool
+) -> None:
+    _RAISED.clear()
+    with pytest.raises(PySparkValueError) as caught:
+        _call_python_udf_door(raiser)
+    assert (caught.value is _RAISED[-1]) is keeps_identity
+    assert USERINFO not in "".join(traceback.format_exception(caught.value))
+    assert caught.value.__context__ is None

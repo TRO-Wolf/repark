@@ -5301,6 +5301,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   consume, UDTF `eval`/`start`/`terminate`, table-argument and Arrow UDTF `eval`, a duck-typed
   `simpleString()` return type): `str`, `repr` and `format_exception` carry no userinfo, `__context__` is
   None and `__cause__` is not the raw original. pins: source-url-redact-1/C-076
+  **H3:** a user-raised `PySparkValueError` carrying a secret leaves the DataFrame UDF, pandas UDF,
+  `applyInPandas` and `mapInArrow` doors as a masked copy of the same class, and one without a secret
+  leaves as the same object with its error class; a direct `_run_python_udf_on_batch` pin holds the
+  site on its own. pins: source-url-redact-1/C-077
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default
