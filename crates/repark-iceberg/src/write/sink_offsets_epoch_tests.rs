@@ -193,32 +193,73 @@ async fn a_refused_epoch_check_refuses_every_later_claim_in_the_scope() {
     );
 }
 
-#[tokio::test]
-async fn a_stale_view_after_a_refused_claim_does_not_commit_the_epoch_twice() {
-    let (_warehouse, catalog, ident) = fixture("epoch_stale_after_refusal").await;
+async fn stale_view_after_a_refused_claim(
+    name: &str,
+    claimant: &CommitStamp,
+    refused: &MicroBatchError,
+) {
+    let (_warehouse, catalog, ident) = fixture(name).await;
     let seeded = append_plain(&catalog, &ident, &[1]).await;
-    let stamp = stamp_for(0, SinkDoor::Table);
-    stamped_append(&catalog, &ident, &stamp, &[2]).await;
+    stamped_append(&catalog, &ident, &stamp_for(0, SinkDoor::Table), &[2]).await;
     let fresh = catalog.load_table(&ident).await.expect("load");
-    let guard = BatchScope::enter(TableUuid::of(&fresh), stamp.clone()).expect("enter");
-    let refused = MicroBatchError::AlreadyCommitted {
-        query: query(),
-        epoch: Epoch::new(0),
-    };
+    let snapshots = fresh.metadata().snapshots().count();
+    let guard = BatchScope::enter(TableUuid::of(&fresh), claimant.clone()).expect("enter");
     assert_eq!(
-        BatchScope::claim(&fresh, guard.token()),
-        Err(refused.clone())
+        BatchScope::claim(&fresh, guard.token()).as_ref().err(),
+        Some(refused)
     );
-    let files = stage(&seeded, &[2]).await;
+    let files = stage(&seeded, &[3]).await;
     let error = commit_append_with_summary(&catalog, &seeded, files, &scoped(&guard), None)
         .await
-        .expect_err("the stale view must not commit epoch 0 again");
-    assert_eq!(microbatch_cause(&error), &refused);
+        .expect_err("the stale view must not commit past a durable refusal");
+    assert_eq!(microbatch_cause(&error), refused);
     assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
     drop(guard);
     let after = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(after.metadata().snapshots().count(), snapshots);
     assert_eq!(stamps_at(&after, 0), 1);
     assert_eq!(live_ids(&after).await, vec![1, 2]);
+}
+
+#[tokio::test]
+async fn a_stale_view_after_a_refused_claim_does_not_commit_the_epoch_twice() {
+    stale_view_after_a_refused_claim(
+        "epoch_stale_after_refusal",
+        &stamp_for(0, SinkDoor::Table),
+        &MicroBatchError::AlreadyCommitted {
+            query: query(),
+            epoch: Epoch::new(0),
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_stale_view_after_a_fenced_claim_does_not_commit_the_epoch_again() {
+    stale_view_after_a_refused_claim(
+        "epoch_stale_after_fenced",
+        &stamp_of(0, run_b(), 1),
+        &MicroBatchError::Fenced {
+            query: query(),
+            epoch: Epoch::new(0),
+            winner: stamp_for(0, SinkDoor::Table).record.run,
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_stale_view_after_a_generation_mismatch_does_not_commit_under_the_old_generation() {
+    stale_view_after_a_refused_claim(
+        "epoch_stale_after_generation",
+        &stamp_of(1, run_b(), 2),
+        &MicroBatchError::GenerationMismatch {
+            query: query(),
+            resumed: Generation::new(2).expect("generation"),
+            stamped: Generation::new(1).expect("generation"),
+        },
+    )
+    .await;
 }
 
 fn run_of(tag: u8) -> RunId {

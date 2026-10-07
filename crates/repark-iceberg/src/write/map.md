@@ -150,11 +150,11 @@ repark-core's error map.
   owner when there is none or it is the claimant. An unscoped `commit_stamp_only` runs it too. Once a scope
   has seen its epoch durable (`AlreadyCommitted`, `Fenced` or `GenerationMismatch`), the entry
   is marked refused and every later claim in that scope returns the same refusal (fold 1, K3),
-  so a stale view cannot re-commit the epoch. `resolve_unknown_outcome` is the C-008 walk on
+  so a stale view cannot re-commit the epoch; fold 2 pins that latch for each of the three. `resolve_unknown_outcome` is the C-008 walk on
   `commit_stamp_only`'s unknown branch: it reloads once and searches the lineage above the base
   by `engine.operation-id`, then by the whole stamped record (a same-epoch stamp of another run
   is not this attempt); absent, it refuses `RecoveryRequired(CommitOutcomeUnknown)` with the
-  durable record. It never re-submits and never commits a replace. Six epoch pins in the
+  durable record. It never re-submits and never commits a replace. Nine epoch pins in the
   `#[path]` child `sink_offsets_epoch_tests.rs`, three walk pins in `sink_offsets_probe_tests.rs`,
   and in its `#[path]` child `sink_offsets_walk_tests.rs` (fold 1) the scope is marked committed
   at the resolved snapshot when the fork's reconcile fails and the walk finds the landed attempt,
