@@ -856,6 +856,669 @@
     },
     {
       "answer": {
+        "later_landing": {
+          "after_landing": {
+            "batches": [
+              {
+                "batch": 1,
+                "rows": [
+                  [
+                    12,
+                    "k0"
+                  ]
+                ]
+              }
+            ],
+            "error": null,
+            "offsets": [
+              {
+                "batch": 0,
+                "position": -1,
+                "scan_all_files": false,
+                "snapshot_ordinal": null
+              },
+              {
+                "batch": 1,
+                "position": 1,
+                "scan_all_files": false,
+                "snapshot_ordinal": 2
+              }
+            ],
+            "progress_batches": [
+              {
+                "batchId": 1,
+                "numInputRows": 1
+              }
+            ]
+          },
+          "before_landing": {
+            "batches": [
+              {
+                "batch": 0,
+                "rows": []
+              }
+            ],
+            "error": null,
+            "offsets": [
+              {
+                "batch": 0,
+                "position": -1,
+                "scan_all_files": false,
+                "snapshot_ordinal": null
+              }
+            ],
+            "progress_batches": [
+              {
+                "batchId": 0,
+                "numInputRows": 0
+              }
+            ]
+          },
+          "below_t": [
+            true,
+            true,
+            false
+          ],
+          "operations": [
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            }
+          ]
+        },
+        "past_head": {
+          "below_t": [
+            true,
+            true
+          ],
+          "fresh_after_append": {
+            "batches": [
+              {
+                "batch": 0,
+                "rows": []
+              }
+            ],
+            "error": null,
+            "offsets": [
+              {
+                "batch": 0,
+                "position": -1,
+                "scan_all_files": false,
+                "snapshot_ordinal": null
+              }
+            ],
+            "progress_batches": [
+              {
+                "batchId": 0,
+                "numInputRows": 0
+              }
+            ]
+          },
+          "operations": [
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            }
+          ],
+          "resumed_after_append": {
+            "batches": [],
+            "error": null,
+            "offsets": [
+              {
+                "batch": 0,
+                "position": -1,
+                "scan_all_files": false,
+                "snapshot_ordinal": null
+              }
+            ],
+            "progress_batches": [
+              {
+                "batchId": 1,
+                "numInputRows": 0
+              }
+            ]
+          },
+          "started_before_append": {
+            "batches": [
+              {
+                "batch": 0,
+                "rows": []
+              }
+            ],
+            "error": null,
+            "offsets": [
+              {
+                "batch": 0,
+                "position": -1,
+                "scan_all_files": false,
+                "snapshot_ordinal": null
+              }
+            ],
+            "progress_batches": [
+              {
+                "batchId": 0,
+                "numInputRows": 0
+              }
+            ]
+          }
+        }
+      },
+      "cell": "MB0b-R14",
+      "field": "read.from_timestamp_past_head.rows",
+      "kind": "rows",
+      "statement": "def cell_r14(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"r14\")\n    append(bench, source, [1])\n    future = snapshot_millis(bench, source)[-1] + FUTURE_MS\n    options = {\"stream-from-timestamp\": str(future)}\n    checkpoint = bench.checkpoint(\"r14\")\n    before_append = option_run(bench, source, checkpoint, options)\n    append(bench, source, [2])\n    resumed = option_run(bench, source, checkpoint, options)\n    fresh = option_run(bench, source, bench.checkpoint(\"r14-fresh\"), options)\n    landing = create_source(bench, \"r14_landing\")\n    append(bench, landing, [10])\n    target = snapshot_millis(bench, landing)[-1] + LANDING_MS\n    landing_options = {\"stream-from-timestamp\": str(target)}\n    landing_checkpoint = bench.checkpoint(\"r14-landing\")\n    append(bench, landing, [11])\n    before_landing = option_run(bench, landing, landing_checkpoint, landing_options)\n    wait_past(target)\n    append(bench, landing, [12])\n    after_landing = option_run(bench, landing, landing_checkpoint, landing_options)\n    return \"rows\", {\n        \"past_head\": {\n            \"below_t\": [stamp < future for stamp in snapshot_millis(bench, source)],\n            \"operations\": operations(bench, source),\n            \"started_before_append\": before_append,\n            \"resumed_after_append\": resumed,\n            \"fresh_after_append\": fresh,\n        },\n        \"later_landing\": {\n            \"below_t\": [stamp < target for stamp in snapshot_millis(bench, landing)],\n            \"operations\": operations(bench, landing),\n            \"before_landing\": before_landing,\n            \"after_landing\": after_landing,\n        },\n    }\n\ndef option_run(\n    bench: Bench, source: str, checkpoint: str, options: dict[str, str]\n) -> dict[str, Any]:\n    collect = Collect()\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = await_query(query)\n    return {\n        \"error\": error,\n        \"batches\": collect.batches,\n        \"progress_batches\": progress_batches(query),\n        \"offsets\": offset_positions(bench, source, checkpoint),\n    }\n\ndef offset_positions(bench: Bench, table: str, checkpoint: str) -> list[dict[str, Any]]:\n    ordinals = {snapshot: index for index, snapshot in enumerate(snapshot_ids(bench, table))}\n    ends = []\n    for name in checkpoint_logs(checkpoint, \"offsets\"):\n        lines = (Path(checkpoint) / \"offsets\" / name).read_text().splitlines()\n        offset = json.loads(lines[-1])\n        ends.append(\n            {\n                \"batch\": int(name),\n                \"snapshot_ordinal\": ordinals.get(offset[\"snapshot_id\"]),\n                \"position\": offset[\"position\"],\n                \"scan_all_files\": offset[\"scan_all_files\"],\n            }\n        )\n    return ends\n\ndef snapshot_millis(bench: Bench, table: str) -> list[int]:\n    return [\n        row[0]\n        for row in bench.spark.sql(\n            f\"SELECT unix_millis(committed_at) FROM {table}.snapshots ORDER BY committed_at\"\n        ).collect()\n    ]\n\ndef wait_past(millis: int) -> None:\n    while time.time() * 1000 <= millis + 500:\n        time.sleep(0.1)\n"
+    },
+    {
+      "answer": {
+        "one_snapshot_max_rows_3": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  1,
+                  "k1"
+                ],
+                [
+                  2,
+                  "k0"
+                ],
+                [
+                  3,
+                  "k1"
+                ],
+                [
+                  4,
+                  "k0"
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": [
+                [
+                  5,
+                  "k1"
+                ],
+                [
+                  6,
+                  "k0"
+                ]
+              ]
+            }
+          ],
+          "error": null,
+          "offsets": [
+            {
+              "batch": 0,
+              "position": 2,
+              "scan_all_files": false,
+              "snapshot_ordinal": 0
+            },
+            {
+              "batch": 1,
+              "position": 3,
+              "scan_all_files": false,
+              "snapshot_ordinal": 0
+            }
+          ],
+          "progress_batches": [
+            {
+              "batchId": 0,
+              "numInputRows": 4
+            },
+            {
+              "batchId": 1,
+              "numInputRows": 2
+            }
+          ]
+        },
+        "one_snapshot_max_rows_4": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  1,
+                  "k1"
+                ],
+                [
+                  2,
+                  "k0"
+                ],
+                [
+                  3,
+                  "k1"
+                ],
+                [
+                  4,
+                  "k0"
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": [
+                [
+                  5,
+                  "k1"
+                ],
+                [
+                  6,
+                  "k0"
+                ]
+              ]
+            }
+          ],
+          "error": null,
+          "offsets": [
+            {
+              "batch": 0,
+              "position": 2,
+              "scan_all_files": false,
+              "snapshot_ordinal": 0
+            },
+            {
+              "batch": 1,
+              "position": 3,
+              "scan_all_files": false,
+              "snapshot_ordinal": 0
+            }
+          ],
+          "progress_batches": [
+            {
+              "batchId": 0,
+              "numInputRows": 4
+            },
+            {
+              "batchId": 1,
+              "numInputRows": 2
+            }
+          ]
+        },
+        "one_snapshot_max_rows_5": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  1,
+                  "k1"
+                ],
+                [
+                  2,
+                  "k0"
+                ],
+                [
+                  3,
+                  "k1"
+                ],
+                [
+                  4,
+                  "k0"
+                ],
+                [
+                  5,
+                  "k1"
+                ],
+                [
+                  6,
+                  "k0"
+                ]
+              ]
+            }
+          ],
+          "error": null,
+          "offsets": [
+            {
+              "batch": 0,
+              "position": 3,
+              "scan_all_files": false,
+              "snapshot_ordinal": 0
+            }
+          ],
+          "progress_batches": [
+            {
+              "batchId": 0,
+              "numInputRows": 6
+            }
+          ]
+        },
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          }
+        ],
+        "single_snapshot_operations": [
+          {
+            "added-data-files": "3",
+            "added-records": "6",
+            "operation": "append"
+          }
+        ],
+        "three_snapshots_max_rows_3": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  1,
+                  "k1"
+                ],
+                [
+                  2,
+                  "k0"
+                ],
+                [
+                  3,
+                  "k1"
+                ],
+                [
+                  4,
+                  "k0"
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": [
+                [
+                  5,
+                  "k1"
+                ],
+                [
+                  6,
+                  "k0"
+                ]
+              ]
+            }
+          ],
+          "error": null,
+          "offsets": [
+            {
+              "batch": 0,
+              "position": 1,
+              "scan_all_files": false,
+              "snapshot_ordinal": 1
+            },
+            {
+              "batch": 1,
+              "position": 1,
+              "scan_all_files": false,
+              "snapshot_ordinal": 2
+            }
+          ],
+          "progress_batches": [
+            {
+              "batchId": 0,
+              "numInputRows": 4
+            },
+            {
+              "batchId": 1,
+              "numInputRows": 2
+            }
+          ]
+        },
+        "three_snapshots_max_rows_4": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  1,
+                  "k1"
+                ],
+                [
+                  2,
+                  "k0"
+                ],
+                [
+                  3,
+                  "k1"
+                ],
+                [
+                  4,
+                  "k0"
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": [
+                [
+                  5,
+                  "k1"
+                ],
+                [
+                  6,
+                  "k0"
+                ]
+              ]
+            }
+          ],
+          "error": null,
+          "offsets": [
+            {
+              "batch": 0,
+              "position": 1,
+              "scan_all_files": false,
+              "snapshot_ordinal": 1
+            },
+            {
+              "batch": 1,
+              "position": 1,
+              "scan_all_files": false,
+              "snapshot_ordinal": 2
+            }
+          ],
+          "progress_batches": [
+            {
+              "batchId": 0,
+              "numInputRows": 4
+            },
+            {
+              "batchId": 1,
+              "numInputRows": 2
+            }
+          ]
+        },
+        "three_snapshots_max_rows_5": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  1,
+                  "k1"
+                ],
+                [
+                  2,
+                  "k0"
+                ],
+                [
+                  3,
+                  "k1"
+                ],
+                [
+                  4,
+                  "k0"
+                ],
+                [
+                  5,
+                  "k1"
+                ],
+                [
+                  6,
+                  "k0"
+                ]
+              ]
+            }
+          ],
+          "error": null,
+          "offsets": [
+            {
+              "batch": 0,
+              "position": 1,
+              "scan_all_files": false,
+              "snapshot_ordinal": 2
+            }
+          ],
+          "progress_batches": [
+            {
+              "batchId": 0,
+              "numInputRows": 6
+            }
+          ]
+        }
+      },
+      "cell": "MB0b-R15",
+      "field": "read.max_rows_crossing.batches",
+      "kind": "rows",
+      "statement": "def cell_r15(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"r15\")\n    for ids in ([1, 2], [3, 4], [5, 6]):\n        append(bench, source, ids)\n    single = create_source(bench, \"r15_single\")\n    append(bench, single, [1, 2, 3, 4, 5, 6], files=3)\n    answer: dict[str, Any] = {\n        \"operations\": operations(bench, source),\n        \"single_snapshot_operations\": operations(bench, single),\n    }\n    for rows in (\"3\", \"4\", \"5\"):\n        options = {\"streaming-max-rows-per-micro-batch\": rows}\n        answer[f\"three_snapshots_max_rows_{rows}\"] = option_run(\n            bench, source, bench.checkpoint(f\"r15-three-{rows}\"), options\n        )\n        answer[f\"one_snapshot_max_rows_{rows}\"] = option_run(\n            bench, single, bench.checkpoint(f\"r15-one-{rows}\"), options\n        )\n    return \"rows\", answer\n\ndef option_run(\n    bench: Bench, source: str, checkpoint: str, options: dict[str, str]\n) -> dict[str, Any]:\n    collect = Collect()\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = await_query(query)\n    return {\n        \"error\": error,\n        \"batches\": collect.batches,\n        \"progress_batches\": progress_batches(query),\n        \"offsets\": offset_positions(bench, source, checkpoint),\n    }\n\ndef offset_positions(bench: Bench, table: str, checkpoint: str) -> list[dict[str, Any]]:\n    ordinals = {snapshot: index for index, snapshot in enumerate(snapshot_ids(bench, table))}\n    ends = []\n    for name in checkpoint_logs(checkpoint, \"offsets\"):\n        lines = (Path(checkpoint) / \"offsets\" / name).read_text().splitlines()\n        offset = json.loads(lines[-1])\n        ends.append(\n            {\n                \"batch\": int(name),\n                \"snapshot_ordinal\": ordinals.get(offset[\"snapshot_id\"]),\n                \"position\": offset[\"position\"],\n                \"scan_all_files\": offset[\"scan_all_files\"],\n            }\n        )\n    return ends\n"
+    },
+    {
+      "answer": {
+        "batches": [],
+        "causes": [
+          "org.apache.spark.sql.streaming.StreamingQueryException",
+          "java.lang.IllegalStateException"
+        ],
+        "class": "STREAM_FAILED",
+        "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+        "offsets": [
+          {
+            "batch": 0,
+            "position": 1,
+            "scan_all_files": false,
+            "snapshot_ordinal": 1
+          }
+        ],
+        "operations": [
+          {
+            "added-data-files": "2",
+            "added-records": "2",
+            "operation": "overwrite"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "progress_batches": [],
+        "sqlstate": "XXKST",
+        "text": "[STREAM_FAILED] Query [id = 9c45a36f-8179-40eb-a6a2-9dfa68a19c72, runId = 469ec6ae-e337-4a43-b1ff-7bd0c2310189] terminated with exception: Cannot process overwrite snapshot: 6852299854076712856, to ignore overwrites, set streaming-skip-overwrite-snapshots=true SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = 9c45a36f-8179-40eb-a6a2-9dfa68a19c72, runId = 469ec6ae-e337-4a43-b1ff-7bd0c2310189]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {org.apache.iceberg.spark.source.SparkMicroBatchStream@5d80d2cc: Streaming Offset[995516600878579819: position (1) scan_all_files (false)]}\n\nCurrent State: ACTIVE\nThread State: RUNNABLE\n\nLogical Plan:\n~WriteToMicroBatchDataSourceV1 ForeachBatchSink, 9c45a36f-8179-40eb-a6a2-9dfa68a19c72, [checkpointLocation=$CHECKPOINTS/r16], Append\n+- ~StreamingDataSourceV2ScanRelation[id#337L, k#338] local.mb0.r16\n"
+      },
+      "cell": "MB0b-R16",
+      "field": "read.first_snapshot_overwrite.answer",
+      "kind": "error",
+      "statement": "def cell_r16(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"r16\")\n    bench.spark.sql(f\"INSERT OVERWRITE {source} VALUES (1, 'k1'), (2, 'k0')\")\n    append(bench, source, [3])\n    run = option_run(bench, source, bench.checkpoint(\"r16\"), {})\n    context = {\n        \"operations\": operations(bench, source),\n        \"batches\": run[\"batches\"],\n        \"progress_batches\": run[\"progress_batches\"],\n        \"offsets\": run[\"offsets\"],\n    }\n    if run[\"error\"]:\n        return \"error\", {**run[\"error\"], **context}\n    return \"rows\", context\n\ndef option_run(\n    bench: Bench, source: str, checkpoint: str, options: dict[str, str]\n) -> dict[str, Any]:\n    collect = Collect()\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = await_query(query)\n    return {\n        \"error\": error,\n        \"batches\": collect.batches,\n        \"progress_batches\": progress_batches(query),\n        \"offsets\": offset_positions(bench, source, checkpoint),\n    }\n"
+    },
+    {
+      "answer": {
+        "r17": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.streaming.StreamingQueryException",
+              "java.lang.IllegalStateException"
+            ],
+            "class": "STREAM_FAILED",
+            "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+            "sqlstate": "XXKST",
+            "text": "[STREAM_FAILED] Query [id = 750aca10-4f3d-4da7-94bd-6b0ebb895f7c, runId = e76a3328-49c9-4ae0-84ac-d7bd56250862] terminated with exception: Cannot process overwrite snapshot: 5911067929755415775, to ignore overwrites, set streaming-skip-overwrite-snapshots=true SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = 750aca10-4f3d-4da7-94bd-6b0ebb895f7c, runId = e76a3328-49c9-4ae0-84ac-d7bd56250862]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {}\n\nCurrent State: INITIALIZING\nThread State: RUNNABLE"
+          },
+          "offsets": [],
+          "operations": [
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "added-data-files": "1",
+              "added-records": "2",
+              "deleted-data-files": "2",
+              "deleted-records": "2",
+              "operation": "overwrite"
+            }
+          ],
+          "progress_batches": []
+        },
+        "r17_delete": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.streaming.StreamingQueryException",
+              "java.lang.IllegalStateException"
+            ],
+            "class": "STREAM_FAILED",
+            "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+            "sqlstate": "XXKST",
+            "text": "[STREAM_FAILED] Query [id = f084f2ff-b0a5-4354-8b80-bfd83b996aac, runId = 89f576a4-04cf-43b8-b38a-7f5fb0748eb6] terminated with exception: Cannot process delete snapshot: 4604532933730133205, to ignore deletes, set streaming-skip-delete-snapshots=true SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = f084f2ff-b0a5-4354-8b80-bfd83b996aac, runId = 89f576a4-04cf-43b8-b38a-7f5fb0748eb6]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {}\n\nCurrent State: INITIALIZING\nThread State: RUNNABLE"
+          },
+          "offsets": [],
+          "operations": [
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "deleted-data-files": "1",
+              "deleted-records": "1",
+              "operation": "delete"
+            }
+          ],
+          "progress_batches": []
+        }
+      },
+      "cell": "MB0b-R17",
+      "field": "read.available_now_capped_overwrite.answer",
+      "kind": "rows",
+      "statement": "def cell_r17(bench: Bench) -> tuple[str, dict[str, Any]]:\n    answer: dict[str, Any] = {}\n    for name, mutate in ((\"r17\", overwrite_snapshot), (\"r17_delete\", delete_snapshot)):\n        source = create_source(bench, name)\n        append(bench, source, [1])\n        append(bench, source, [2])\n        mutate(bench, source)\n        options = {\"streaming-max-files-per-micro-batch\": \"1\"}\n        run = option_run(bench, source, bench.checkpoint(name), options)\n        answer[name] = {\"operations\": operations(bench, source), **run}\n    return \"rows\", answer\n\ndef option_run(\n    bench: Bench, source: str, checkpoint: str, options: dict[str, str]\n) -> dict[str, Any]:\n    collect = Collect()\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = await_query(query)\n    return {\n        \"error\": error,\n        \"batches\": collect.batches,\n        \"progress_batches\": progress_batches(query),\n        \"offsets\": offset_positions(bench, source, checkpoint),\n    }\n\ndef offset_positions(bench: Bench, table: str, checkpoint: str) -> list[dict[str, Any]]:\n    ordinals = {snapshot: index for index, snapshot in enumerate(snapshot_ids(bench, table))}\n    ends = []\n    for name in checkpoint_logs(checkpoint, \"offsets\"):\n        lines = (Path(checkpoint) / \"offsets\" / name).read_text().splitlines()\n        offset = json.loads(lines[-1])\n        ends.append(\n            {\n                \"batch\": int(name),\n                \"snapshot_ordinal\": ordinals.get(offset[\"snapshot_id\"]),\n                \"position\": offset[\"position\"],\n                \"scan_all_files\": offset[\"scan_all_files\"],\n            }\n        )\n    return ends\n\ndef overwrite_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"INSERT OVERWRITE {table} SELECT id + 10, k FROM {table}\")\n\ndef delete_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"DELETE FROM {table} WHERE id = 1\")\n"
+    },
+    {
+      "answer": {
         "keys": [
           "added-data-files",
           "added-files-size",

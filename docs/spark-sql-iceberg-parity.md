@@ -3418,6 +3418,27 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   consequence from the `readStream` row applies identically here.
 - Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19; re-pointed to 1.7 on 2026-10-04) →
   [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
+### MB-1-FL-9 — a micro-batch stream starting on an overwrite or delete with no added data files refuses at start; Spark idles while no snapshot follows it
+- **repark** — the micro-batch source (`MicroBatchSource::initial_offset`, MB-1) started with
+  `Earliest` or `stream-from-timestamp`, whose start snapshot is an `overwrite` or `delete`
+  that added zero data files, refuses `NonAppendSnapshot` (`Cannot process delete snapshot:
+  <id>; Bronze is append-only (O-5) …`) at `initial_offset`, before any batch. Once data
+  arrives the answer is the same refusal.
+- **Apache Spark** — `SyncSparkMicroBatchPlanner.planFiles` calls `shouldProcess()` on the start
+  snapshot of every batch, so an `overwrite` or `delete` start fails the query with `Cannot
+  process <operation> snapshot: <id>`. A start snapshot that added no data files has no file to
+  plan, so while it is the head and no snapshot follows it the query idles. Once any snapshot
+  follows it, `latestOffset` walks past it and `planFiles`' `shouldProcess` on the start fails
+  the first batch the same way, so with a later append both engines refuse at once.
+  *(oracle: recorded for an overwrite start that added files — cell MB0b-R16,
+  `STREAM_FAILED` before any batch; the idle half, with the zero-added-files start as the head,
+  is read from the Iceberg 1.11 bytecode and no cell measures it yet. An MB0b cell is the
+  oracle this half awaits.)*
+- **Pin** — `crates/repark-iceberg/src/microbatch/window_fold2_pins.rs::a_delete_as_head_refuses_at_the_initial_offset`
+- **Rationale** — DECLARED 2026-10-07 (MB-1 fold 1, ruling FL-9 KEEP). Both engines refuse
+  the stream; repark refuses at start rather than idling, so the failure lands when the query
+  is launched, not on the first later append (NS-6, refuse loud). The only difference is when
+  the refusal fires.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.

@@ -2094,3 +2094,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   confound filed.
   `risk_tier: standard`. Branch `fix/grown-stack-gate-1`.
   pins: grown-stack-gate-1/C-001, C-002, C-003, C-004
+- [mb-1-ledger.md](../completed/mb-1-ledger.md) —
+  **MB-1, card 1.7 (2026-10-07), in flight:** the batch source over the
+  incremental append scan, three rounds. Round 1: the sketch's §3.1 offsets
+  (seven newtypes `new`/`get` per NS-14, C-001; `QueryId::derive` with
+  independent vectors, C-002; the `OffsetVector` contract, C-003; the
+  summary/property round trips and refusals, C-004; the Spark offset JSON,
+  C-005) and §3.2 errors (every `MicroBatchError` variant, verbatim §4 rows,
+  C-006), wired per §6 with the `Cargo.toml` lines (C-007, D-1). FL-1 and FL-2
+  close the sketch's two open refusal shapes; D-2 records the two
+  saturations. `risk_tier: standard`. Branch `feat/mb-1-source`.
+  pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-006
