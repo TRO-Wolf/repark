@@ -150,7 +150,7 @@ fn refuse_one(name: &str, value: &str, door: SettingsDoor) -> ConnectError {
 fn summary(s: &PostgresSettings) -> String {
     format!(
         "{}:{:?}@{}:{}/{} {:?} {:?} {:?} connect={:?} read={:?} query={:?} lock={:?} batch={:?} \
-         ntz={} pushdown={} pool={} checkout={:?} idle={:?} app={}",
+         ntz={} pushdown={} limit={} pool={} checkout={:?} idle={:?} app={}",
         s.user,
         s.password,
         s.host,
@@ -166,6 +166,7 @@ fn summary(s: &PostgresSettings) -> String {
         s.batch_rows,
         s.prefer_timestamp_ntz,
         s.pushdown_predicate,
+        s.pushdown_limit,
         s.pool_max_size,
         s.pool_checkout_timeout,
         s.pool_idle_timeout,
@@ -223,6 +224,7 @@ fn values_refuse_naming_the_key() {
     rejects("lock_timeout_ms", "1.5", TOML, int(0, max));
     rejects("query_timeout_ms", "+5", TOML, int(0, max));
     rejects("pushdown_predicate", "yes", TOML, SpecRefusal::Boolean);
+    rejects("pushdown_limit", "1", TOML, SpecRefusal::Boolean);
     is_invalid(
         &refusal(&[("user", "app")], TOML),
         key("host"),
@@ -273,6 +275,7 @@ fn every_endpoint_key_parses_and_unknown_keys_refuse() {
         ("batch_rows", "1000"),
         ("prefer_timestamp_ntz", "true"),
         ("pushdown_predicate", "false"),
+        ("pushdown_limit", "false"),
         ("pool_max_size", "64"),
         ("pool_checkout_timeout_ms", "100"),
         ("pool_idle_timeout_ms", "200"),
@@ -286,11 +289,11 @@ fn every_endpoint_key_parses_and_unknown_keys_refuse() {
     assert_eq!(untested, [&"url"]);
     let every = "app:Some(\"pw\")@db.example.com:6543/sales Password Disable Some(\"/etc/ssl/ca.pem\") \
                  connect=1.5s read=2.5s query=Some(3.5s) lock=0ns batch=Some(1000) ntz=true \
-                 pushdown=false pool=64 checkout=100ms idle=200ms app=etl";
+                 pushdown=false limit=false pool=64 checkout=100ms idle=200ms app=etl";
     assert_eq!(summary(&parse(&every_key, TOML)), every);
     let defaults = "app:None@h:5432/app Password VerifyFull None connect=10s read=60s query=None \
-                    lock=10s batch=None ntz=false pushdown=true pool=4 checkout=30s idle=300s \
-                    app=repark";
+                    lock=10s batch=None ntz=false pushdown=true limit=true pool=4 checkout=30s \
+                    idle=300s app=repark";
     assert_eq!(
         summary(&parse(&[("host", "h"), ("user", "app")], TOML)),
         defaults
@@ -348,6 +351,10 @@ fn aliases_are_case_insensitive_and_conflicts_refuse() {
     );
     assert!(one("preferTimestampNtz", "TRUE", SPARK).prefer_timestamp_ntz);
     assert!(!one("PUSHDOWNPREDICATE", "false", SPARK).pushdown_predicate);
+    assert!(!one("pushdownlimit", "false", SPARK).pushdown_limit);
+    assert!(one("PUSHDOWNLIMIT", "false", SPARK).pushdown_predicate);
+    let toml = refuse_one("pushDownLimit", "false", TOML);
+    is_invalid(&toml, key("pushDownLimit"), unknown());
     assert_eq!(one("applicationname", "etl", SPARK).application_name, "etl");
     assert_eq!(one("SSLMODE", "disable", SPARK).sslmode, SslMode::Disable);
     assert_eq!(

@@ -34,6 +34,15 @@ floor (`discover.rs`), and the COPY statement, the `set_config` carriage and the
 under the read timeout (`read/postgres.rs`), both behind `postgres`, with sketch §5.6's live
 crash matrix under `make pg-up`. pins: c-2/C-046, C-048
 
+C-2c (2026-10-07) adds the DataFusion provider and the pushdown, both behind `postgres`:
+`PostgresSource` with its catalog, schema and table providers and `PostgresScanExec`
+(`provider.rs`, `provider/`), and the classifier and renderer of sketch §2.9 (`pushdown.rs`).
+A conjunct pushes exactly or stays above the scan, and EXPLAIN shows, per scan, what this
+statement pushed and what it left (CC-1). D-M6 measured DataFusion 54.1 first: it hands
+`Inexact` filters to `scan` and withholds `limit` while a filter remains above, so H-DF did not
+fire. The crate gains `async-trait` (already in the tree), optional under `postgres`.
+pins: c-2/C-068, C-075, C-080, C-088
+
 ## Contents
 
 - `Cargo.toml` — workspace inheritance for edition, version, license, rust-version, repository,
@@ -42,7 +51,8 @@ crash matrix under `make pg-up`. pins: c-2/C-046, C-048
   unconditional), `arrow`, `thiserror`, all at workspace versions. The `postgres` feature
   (default on, the `repark-distributed` `default = ["local"]` precedent) pulls the six
   optional driver deps (`tokio-postgres 0.7`, `tokio-postgres-rustls 0.13`,
-  `rustls-native-certs 0.8`, `tokio`, `futures`, `bytes`) and, since C-2b round 2, `rustls`
+  `rustls-native-certs 0.8`, `tokio`, `futures`, `bytes`; since C-2c `async-trait`, for the
+  provider traits) and, since C-2b round 2, `rustls`
   0.23 with `ring`, `std` and `tls12` and no default features, so the TLS config names its one
   crypto provider (H-CRYPTO); `tokio` names `net`, `rt`, `sync` and `time`.
   `--no-default-features` keeps the pure C-2a half with no driver. `sqlx` and `tiberius` wait for the read and write paths
@@ -53,8 +63,10 @@ crash matrix under `make pg-up`. pins: c-2/C-046, C-048
   `settings/postgres.rs` (the Postgres endpoint keys), `ident.rs` (`PgIdent`,
   `QualifiedRelation`), `tls.rs` (the `verify-full` rustls config), `pool.rs` (`QueryPool`,
   `PooledClient`, `PostgresConnector`), `discover.rs` (relation and query discovery),
-  `read/postgres.rs` (the COPY statement, the `set_config` carriage, the stream) and
-  `types/postgres.rs` (the Postgres ↔ Arrow type map, codecs under `types/postgres/`).
+  `read/postgres.rs` (the COPY statement, the `set_config` carriage, the stream),
+  `pushdown.rs` (the classifier and renderer), `provider.rs` with `provider/` (the catalog,
+  schema and table providers, `PostgresScanExec`) and `types/postgres.rs` (the Postgres ↔ Arrow
+  type map, codecs under `types/postgres/`).
 - `tests/` — [tests/map.md](tests/map.md): the one integration binary `tests/it/main.rs`.
 
 ## Design bars (R-10)
@@ -88,6 +100,8 @@ citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
 | Bound a network wait | `src/pool.rs`: `within(TimeoutSetting::…, limit, work)` gives `Timeout { which }` |
 | Resolve a Postgres relation or query | `src/discover.rs`: `discover(&pool, &ScanSource, read_timeout)` gives a `ResolvedSource` (columns, casts, nullability, collations) |
 | Read a resolved source | `src/read/postgres.rs`: `scan(pool, ScanRequest::new(resolved), ScanOptions::from_settings(&settings))`; push a value with `compare`, never by editing SQL text |
+| Mount a Postgres source | `src/provider/catalog.rs`: `PostgresSource::mount(&identity, props, localiser)` gives the `Arc<dyn CatalogProvider>`; `PostgresSource::table(resolved)` builds a table from an injected resolution, with no network |
+| Push a new predicate shape | `src/pushdown.rs`: a `render` arm that is exact for every eligible column, a pin with its live half (rows equal with `pushdown_predicate = false`), and the mutation that turns it red |
 | Add the SQL Server map | `src/types/mssql.rs` beside `postgres.rs` (C-5) |
 
 ## Component contract
@@ -122,9 +136,10 @@ citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
   per mapped type, the decoder's stream contract split at every byte offset, the TLS config by
   in-memory handshakes, the pool and connector against fakes and loopback listeners, and the
   read path's crash matrix live against `make pg-up`.
-- **Known limitations:** the declared rows (registry `CONNECT-DECL-*`); no DataFusion provider,
-  pushdown classifier or memory reservation yet (C-2c); the error variants carry no source name
-  until C-2d.
+- **Known limitations:** the declared rows (registry `CONNECT-DECL-*`, listing among them); no
+  door mounts the provider until C-2d, which also brings core's session-zone localiser; the
+  memory reservation charges each finished batch, not the builders as they grow; the error
+  variants carry no source name until C-2d.
 
 ## Pointers
 

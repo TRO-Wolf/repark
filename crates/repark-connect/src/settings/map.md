@@ -11,7 +11,8 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
   [c-2-design.md](../../../../task/wo/c-2-design.md) §2.3, §2.4). `PostgresSettings::from_props(props,
   door)` parses one source's props into a typed value. It first runs C-1's
   `ConnectionSettings::from_props`, so `auth_method` keeps one parser and its declared refusals.
-  It then reads the twenty `POSTGRES_KEYS`.
+  It then reads the twenty-one `POSTGRES_KEYS` (the C-2c fold 1 added `pushdown_limit`, alias
+  `pushDownLimit`, default `true`).
   - **Doors.** `SettingsDoor::ReparkToml` takes the canonical snake_case keys, exact and
     case-sensitive. `SettingsDoor::ReadPostgres` also takes the Spark and pgjdbc aliases
     (`POSTGRES_ALIASES`), matched ASCII case-insensitively, the declared partitioned-read keys,
@@ -58,7 +59,7 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
     (fold 1 X7: `pass%77ord`); then, as for every other value, it delegates to
     `repark_common::redaction::redact_value`, which masks a secret-named key whole.
 
-  pins: c-2/C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-036, C-049, C-050, C-051, C-065
+  pins: c-2/C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-036, C-049, C-050, C-051, C-065, C-082
 
 ## Pointers
 

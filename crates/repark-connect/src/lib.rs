@@ -6,6 +6,10 @@ mod ident;
 #[cfg(feature = "postgres")]
 mod pool;
 #[cfg(feature = "postgres")]
+mod provider;
+#[cfg(feature = "postgres")]
+mod pushdown;
+#[cfg(feature = "postgres")]
 mod read;
 mod settings;
 #[cfg(feature = "postgres")]
@@ -31,9 +35,19 @@ pub use pool::{
     query_config, within,
 };
 #[cfg(feature = "postgres")]
+pub use provider::{
+    LISTING_ROW, PostgresCatalog, PostgresScanExec, PostgresSchemaProvider, PostgresSource,
+    PostgresTable, WallClockLocaliser,
+};
+#[cfg(feature = "postgres")]
+pub use pushdown::{
+    ColumnClass, MAX_IN_LIST, MAX_POSTGRES_DAYS, MIN_POSTGRES_DAYS, Pushdown, Rendered,
+    TEXT_COLLATION, UTF8_ENCODING, date_text, decimal_text, timestamp_text,
+};
+#[cfg(feature = "postgres")]
 pub use read::postgres::{
-    BEGIN_SCAN, CompareOp, MAX_PARAM_SLOTS, ParamSlot, ScanOptions, ScanRequest, ScanStatement,
-    scan,
+    BEGIN_SCAN, CompareOp, MAX_PARAM_SLOTS, ParamSlot, ScanMeter, ScanOptions, ScanRequest,
+    ScanStatement, scan, scan_metered,
 };
 pub use settings::{
     AUTH_METHOD_KEY, AuthMethod, ConnectionSettings, DEFAULT_PORT, DeclaredSetting,

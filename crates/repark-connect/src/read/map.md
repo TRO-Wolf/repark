@@ -41,7 +41,15 @@ feature. See [../map.md](../map.md).
     `57014` → `Timeout { Query }`, `25P03` → `Timeout { Read }`, `42P01` with a known relation →
     `RelationNotFound`, class `57P` and a closed or failed socket → `Disconnected`, any other
     server error → `Server`, and any other driver failure → `Protocol(UnexpectedResponse)`.
-  pins: c-2/C-038, C-039, C-040, C-041, C-053, C-054, C-056, C-059, C-062
+  - **C-2c (2026-10-07).** `ScanRequest` also carries the classifier's rendered conjuncts:
+    `filter(sql, values)` (crate-private, so only `pushdown.rs` writes SQL here) appends one,
+    its values taking the next slots, and refuses past `MAX_PARAM_SLOTS`; `bound_values()`
+    counts them. `statement()` ANDs the compares and the conjuncts and binds every value in slot
+    order. `scan_metered(pool, request, options, ScanMeter)` is `scan` with the provider's
+    metrics: `bytes_received` (every chunk), `time_to_first_byte` (from the first poll to the
+    first chunk) and `decode` (the time inside `CopyBinaryDecoder::decode`); `scan` passes a
+    fresh meter.
+  pins: c-2/C-038, C-039, C-040, C-041, C-053, C-054, C-056, C-059, C-062, C-074, C-076
 
 ## Pointers
 
