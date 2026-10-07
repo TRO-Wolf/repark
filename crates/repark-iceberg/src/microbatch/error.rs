@@ -47,7 +47,9 @@ pub enum MicroBatchError {
     SinkUndeclared,
     #[error("sink {sink} already has an active batch; one batch per sink at a time")]
     SinkBusy { sink: String },
-    #[error("sink already holds a commit for epoch {epoch}; refusing a second one")]
+    #[error(
+        "epoch {epoch} already stamped the sink; refusing a second sink write in the same batch: a restart resumes after epoch {epoch}, so this write's rows would never land. Write the sink once per batch body, or combine the writes into a single write"
+    )]
     SinkCommittedTwice { epoch: Epoch },
     #[error("query {query} epoch {epoch} is already committed")]
     AlreadyCommitted { query: QueryId, epoch: Epoch },
@@ -144,6 +146,10 @@ pub enum RecoveryReason {
     },
     #[error("stamped snapshot expired; raise history.expire.min-snapshots-to-keep retention")]
     StampedSnapshotExpired,
+    #[error(
+        "stamped snapshot {snapshot} is retained but not in the sink's current lineage: the sink was rolled back past it, so its rows are not live. Start a new query (new queryName), or restore the sink to snapshot {snapshot}"
+    )]
+    StampNotInLineage { snapshot: SnapshotId },
     #[error(
         "sink advanced to snapshot {snapshot} without a stamp; a commit bypassed the batch scope"
     )]
@@ -284,6 +290,9 @@ mod tests {
                 property_epoch: None,
             },
             RecoveryReason::StampedSnapshotExpired,
+            RecoveryReason::StampNotInLineage {
+                snapshot: SnapshotId::new(12),
+            },
             RecoveryReason::UnstampedSinkCommit {
                 snapshot: SnapshotId::new(11),
             },
@@ -449,6 +458,17 @@ mod tests {
         assert_eq!(
             required.to_string(),
             "recovery required for query 00000000-0000-0000-0000-000000000000 epoch 3: stamped snapshot expired; raise history.expire.min-snapshots-to-keep retention"
+        );
+    }
+
+    #[test]
+    fn sink_committed_twice_names_the_loss_and_the_fix() {
+        let twice = MicroBatchError::SinkCommittedTwice {
+            epoch: Epoch::new(4),
+        };
+        assert_eq!(
+            twice.to_string(),
+            "epoch 4 already stamped the sink; refusing a second sink write in the same batch: a restart resumes after epoch 4, so this write's rows would never land. Write the sink once per batch body, or combine the writes into a single write"
         );
     }
 }
