@@ -451,4 +451,6 @@ def test_orderby_case_twin_ambiguous_names_written_spelling(spark: ReparkSession
     assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
     assert "Reference `id` is ambiguous, could be: [`id`, `id`]" in str(caught.value)
     spark.conf.set("spark.sql.caseSensitive", "true")
-    assert _rows(dup.orderBy("id")) == [(1, 1)]
+    fresh = spark.createDataFrame([(1, "x")], "ID INT, data STRING")
+    fresh_dup = fresh.select("ID", functions.col("ID").alias("id"))
+    assert _rows(fresh_dup.orderBy("id")) == [(1, 1)]
