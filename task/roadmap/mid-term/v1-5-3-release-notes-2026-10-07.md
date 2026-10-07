@@ -33,8 +33,9 @@ section says.
   a re-raised error chains to a masked copy, never the original. Errors raised from user code
   in UDFs, pandas and Arrow UDFs, UDTFs, `applyInPandas` / `applyInArrow` and
   `mapInPandas` / `mapInArrow` mask the same way. Text without a credential is unchanged, byte
-  for byte. One known limit: an exception class with its own `__str__` is not rewritten
-  (ledger C-070, open).
+  for byte. Known limits: an exception class with its own `__str__` is not rewritten
+  (ledger C-070, open), and `foreach`, `foreachPartition` and `transform` pass the user's own
+  exception through unchanged (follow-up FOREACH-WRAP-1).
 
 Ledger:
 [source-url-redact-1-ledger.md](../../ledgers/staging/source-url-redact-1-ledger.md).
