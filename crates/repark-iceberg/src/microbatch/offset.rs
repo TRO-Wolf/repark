@@ -262,9 +262,16 @@ pub struct SinkRecord {
 }
 
 impl SinkRecord {
-    #[must_use]
-    pub fn summary_entries(&self, door: SinkDoor) -> Vec<(String, String)> {
-        let offsets = serde_json::to_string(&offsets_json(&self.offsets)).unwrap_or_default();
+    #[allow(clippy::missing_errors_doc)]
+    pub fn summary_entries(
+        &self,
+        door: SinkDoor,
+    ) -> Result<Vec<(String, String)>, MicroBatchError> {
+        let offsets = serde_json::to_string(&offsets_json(&self.offsets)).map_err(|error| {
+            MicroBatchError::Catalog(format!(
+                "repark.cdc stamp value for {OFFSETS_KEY} cannot be written: {error}"
+            ))
+        })?;
         let mut entries = Vec::from([
             (
                 FORMAT_VERSION_KEY.to_string(),
@@ -283,11 +290,11 @@ impl SinkRecord {
             entries.push((SPARK_QUERY_ID_KEY.to_string(), self.query.get().to_string()));
             entries.push((SPARK_EPOCH_ID_KEY.to_string(), self.epoch.get().to_string()));
         }
-        entries
+        Ok(entries)
     }
 
-    #[must_use]
-    pub fn property(&self) -> (String, String) {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn property(&self) -> Result<(String, String), MicroBatchError> {
         let key = format!("{OFFSETS_PROPERTY_PREFIX}{query}", query = self.query);
         let mut fields = serde_json::Map::new();
         fields.insert(
@@ -307,8 +314,12 @@ impl SinkRecord {
             serde_json::Value::from(self.generation.get().get()),
         );
         fields.insert(STAMP_INPUTS_KEY.to_string(), offsets_json(&self.offsets));
-        let value = serde_json::to_string(&serde_json::Value::Object(fields)).unwrap_or_default();
-        (key, value)
+        let value = serde_json::to_string(&serde_json::Value::Object(fields)).map_err(|error| {
+            MicroBatchError::Catalog(format!(
+                "repark.cdc stamp property {key} cannot be written: {error}"
+            ))
+        })?;
+        Ok((key, value))
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -318,22 +329,7 @@ impl SinkRecord {
         let Some(version_text) = summary.get(FORMAT_VERSION_KEY) else {
             return Ok(None);
         };
-        let format = match version_text.parse::<u32>() {
-            Ok(version) if version == OffsetFormatVersion::CURRENT.get() => {
-                OffsetFormatVersion::CURRENT
-            }
-            Ok(version) => {
-                return Err(MicroBatchError::UnsupportedOffsetFormat {
-                    found: version,
-                    supported: OffsetFormatVersion::CURRENT.get(),
-                });
-            }
-            Err(_) => {
-                return Err(MicroBatchError::Catalog(format!(
-                    "repark.cdc stamp value for {FORMAT_VERSION_KEY} is not a number: {version_text:?}"
-                )));
-            }
-        };
+        let format = canonical_format(version_text)?;
         let query = QueryId::new(parse_stamp_uuid(
             stamp_text(summary, QUERY_ID_KEY)?,
             QUERY_ID_KEY,
@@ -381,15 +377,7 @@ impl SinkRecord {
         let parsed: serde_json::Value = serde_json::from_str(value).map_err(|error| {
             MicroBatchError::Catalog(format!("repark.cdc stamp is not JSON: {error}"))
         })?;
-        let format_raw = stamp_u64(&parsed, STAMP_FORMAT_KEY)?;
-        let format = if format_raw == u64::from(OffsetFormatVersion::CURRENT.get()) {
-            OffsetFormatVersion::CURRENT
-        } else {
-            return Err(MicroBatchError::UnsupportedOffsetFormat {
-                found: u32::try_from(format_raw).unwrap_or(u32::MAX),
-                supported: OffsetFormatVersion::CURRENT.get(),
-            });
-        };
+        let format = canonical_format(&stamp_member(&parsed, STAMP_FORMAT_KEY)?.to_string())?;
         let run = RunId::new(parse_stamp_uuid(
             stamp_str(&parsed, STAMP_RUN_KEY)?,
             STAMP_RUN_KEY,
@@ -459,6 +447,16 @@ fn input_offset_json(offset: &InputOffset) -> serde_json::Value {
 #[must_use]
 fn offsets_json(offsets: &OffsetVector) -> serde_json::Value {
     serde_json::Value::Array(offsets.inputs().iter().map(input_offset_json).collect())
+}
+
+fn canonical_format(found: &str) -> Result<OffsetFormatVersion, MicroBatchError> {
+    if found == OffsetFormatVersion::CURRENT.get().to_string() {
+        return Ok(OffsetFormatVersion::CURRENT);
+    }
+    Err(MicroBatchError::UnsupportedOffsetFormat {
+        found: found.to_string(),
+        supported: OffsetFormatVersion::CURRENT.get(),
+    })
 }
 
 fn stamp_text<'stamp>(
@@ -584,7 +582,11 @@ mod tests {
     }
 
     fn summary_map(record: &SinkRecord, door: SinkDoor) -> HashMap<String, String> {
-        record.summary_entries(door).into_iter().collect()
+        record
+            .summary_entries(door)
+            .expect("summary entries")
+            .into_iter()
+            .collect()
     }
 
     #[test]
@@ -731,7 +733,9 @@ mod tests {
     #[test]
     fn summary_entries_round_trip_on_both_doors() {
         let record = sink_record();
-        let table_entries = record.summary_entries(SinkDoor::Table);
+        let table_entries = record
+            .summary_entries(SinkDoor::Table)
+            .expect("table entries");
         assert_eq!(table_entries.len(), 8);
         let table_summary: HashMap<String, String> = table_entries.into_iter().collect();
         assert_eq!(
@@ -751,7 +755,9 @@ mod tests {
             .expect("stamp present");
         assert_eq!(back, record);
 
-        let batch_entries = record.summary_entries(SinkDoor::ForeachBatch);
+        let batch_entries = record
+            .summary_entries(SinkDoor::ForeachBatch)
+            .expect("batch entries");
         assert_eq!(batch_entries.len(), 6);
         let batch_summary: HashMap<String, String> = batch_entries.into_iter().collect();
         assert!(!batch_summary.contains_key(SPARK_QUERY_ID_KEY));
@@ -765,7 +771,7 @@ mod tests {
     #[test]
     fn property_round_trip_through_from_property() {
         let record = sink_record();
-        let (key, value) = record.property();
+        let (key, value) = record.property().expect("property");
         assert_eq!(
             key,
             format!("{OFFSETS_PROPERTY_PREFIX}{query}", query = record.query)
@@ -793,15 +799,9 @@ mod tests {
         assert!(matches!(
             SinkRecord::from_summary(&future),
             Err(MicroBatchError::UnsupportedOffsetFormat {
-                found: 2,
+                ref found,
                 supported: 1
-            })
-        ));
-        let garbage: HashMap<String, String> =
-            HashMap::from([(FORMAT_VERSION_KEY.to_string(), String::from("abc"))]);
-        assert!(matches!(
-            SinkRecord::from_summary(&garbage),
-            Err(MicroBatchError::Catalog(message)) if message.contains(FORMAT_VERSION_KEY)
+            }) if found == "2"
         ));
         let mut partial = summary_map(&sink_record(), SinkDoor::Table);
         partial.remove(EPOCH_KEY).expect("epoch present");
@@ -833,6 +833,70 @@ mod tests {
             missing,
             Err(MicroBatchError::Catalog(message)) if message.contains("inputs")
         ));
+    }
+
+    #[test]
+    fn from_summary_accepts_only_the_canonical_version_text() {
+        let base = summary_map(&sink_record(), SinkDoor::Table);
+        for version in [
+            "+1",
+            "01",
+            "-1",
+            "0",
+            "2",
+            "",
+            " 1",
+            "1.0",
+            "abc",
+            "4294967296",
+            "999999999999999999999",
+        ] {
+            let mut summary = base.clone();
+            summary.insert(FORMAT_VERSION_KEY.to_string(), version.to_string());
+            match SinkRecord::from_summary(&summary) {
+                Err(MicroBatchError::UnsupportedOffsetFormat { found, supported }) => {
+                    assert_eq!(found, version);
+                    assert_eq!(supported, 1);
+                }
+                other => panic!("version {version:?} gave {other:?}"),
+            }
+        }
+        let canonical = SinkRecord::from_summary(&base)
+            .expect("canonical stamp")
+            .expect("stamp present");
+        assert_eq!(canonical.format, OffsetFormatVersion::CURRENT);
+    }
+
+    #[test]
+    fn from_property_reports_the_version_it_found() {
+        let record = sink_record();
+        let (_, value) = record.property().expect("property");
+        let canonical = r#""format-version":1,"#;
+        assert!(value.contains(canonical));
+        for (format, found) in [
+            ("2", "2"),
+            ("0", "0"),
+            ("-1", "-1"),
+            ("1.5", "1.5"),
+            ("1.0", "1.0"),
+            ("\"1\"", "\"1\""),
+            ("4294967296", "4294967296"),
+            ("18446744073709551615", "18446744073709551615"),
+            ("null", "null"),
+        ] {
+            let forged = value.replace(canonical, &format!(r#""format-version":{format},"#));
+            match SinkRecord::from_property(record.query, &forged) {
+                Err(error @ MicroBatchError::UnsupportedOffsetFormat { .. }) => {
+                    assert!(
+                        error
+                            .to_string()
+                            .contains(&format!("offset format version {found} is not supported")),
+                        "format {format} rendered {error}"
+                    );
+                }
+                other => panic!("format {format} gave {other:?}"),
+            }
+        }
     }
 
     #[test]

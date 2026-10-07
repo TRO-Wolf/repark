@@ -4,7 +4,9 @@ use iceberg::spec::Operation;
 use repark_common::Generation;
 use thiserror::Error;
 
-use crate::microbatch::offset::{Epoch, QueryId, RunId, SinkRecord, SnapshotId, TableUuid};
+use crate::microbatch::offset::{
+    Epoch, FilePosition, QueryId, RunId, SinkRecord, SnapshotId, TableUuid,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[non_exhaustive]
@@ -96,7 +98,16 @@ pub enum MicroBatchError {
     #[error(
         "Cannot resume: offset format version {found} is not supported by this build (supports {supported}); upgrade to a build that reads it"
     )]
-    UnsupportedOffsetFormat { found: u32, supported: u32 },
+    UnsupportedOffsetFormat { found: String, supported: u32 },
+    #[error(
+        "Cannot resume: offset position {position_value} is past the {files} added files of snapshot {snapshot} in table {table}; the stored offset is corrupt. Start a new query (new queryName)", position_value = position.get()
+    )]
+    OffsetPositionOutOfRange {
+        table: String,
+        snapshot: SnapshotId,
+        position: FilePosition,
+        files: u64,
+    },
     #[error("stamped MERGE into {sink} needs write.merge.isolation-level=serializable")]
     MergeIsolationRefused { sink: String },
     #[error("batch {epoch} failed: {cause}")]
@@ -225,7 +236,7 @@ mod tests {
                 missing_parent: SnapshotId::new(8),
             },
             MicroBatchError::UnsupportedOffsetFormat {
-                found: 2,
+                found: String::from("2"),
                 supported: 1,
             },
             MicroBatchError::MergeIsolationRefused {
@@ -296,6 +307,20 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "Cannot process delete snapshot: 456; Bronze is append-only (O-5) and the stream does not skip it. Start a new query (new queryName) with repark.cdc.start-after-snapshot-id=456"
+        );
+    }
+
+    #[test]
+    fn offset_position_refusal_names_position_count_and_snapshot() {
+        let error = MicroBatchError::OffsetPositionOutOfRange {
+            table: String::from("bronze.events"),
+            snapshot: SnapshotId::new(7),
+            position: FilePosition::new(99),
+            files: 2,
+        };
+        assert_eq!(
+            error.to_string(),
+            "Cannot resume: offset position 99 is past the 2 added files of snapshot 7 in table bronze.events; the stored offset is corrupt. Start a new query (new queryName)"
         );
     }
 
