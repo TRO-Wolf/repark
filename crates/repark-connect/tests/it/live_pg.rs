@@ -238,17 +238,23 @@ async fn stream_dropped_mid_copy_closes_the_backend() {
 async fn idle_read_timeout_fires() {
     let cell = Cell::open().await;
     let reader = Reader::new(&cell.settings(&[("read_timeout_ms", "500")]));
-    let started = Instant::now();
-    let outcome = reader
-        .read_query("SELECT 1 AS one FROM pg_catalog.pg_sleep(3)")
-        .await;
-    assert_eq!(
-        outcome,
-        Err(ConnectError::Timeout {
-            which: TimeoutSetting::Read
-        })
-    );
-    assert!(started.elapsed() < Duration::from_secs(3));
+    let stalls = [
+        "SELECT 1 AS one FROM pg_catalog.pg_sleep(3)",
+        "SELECT pg_catalog.generate_series(1, 100000) AS one \
+         UNION ALL SELECT 1 FROM pg_catalog.pg_sleep(3)",
+    ];
+    for stall in stalls {
+        let started = Instant::now();
+        let outcome = reader.read_query(stall).await;
+        assert_eq!(
+            outcome,
+            Err(ConnectError::Timeout {
+                which: TimeoutSetting::Read
+            }),
+            "{stall}"
+        );
+        assert!(started.elapsed() < Duration::from_secs(3), "{stall}");
+    }
     cell.close().await;
 }
 
@@ -313,7 +319,8 @@ async fn schema_drift_between_plan_and_scan_fails_loud_or_stays_typed() {
     let schema = &cell.schema;
     cell.sql(&format!(
         "CREATE TABLE {schema}.widened (v int4); INSERT INTO {schema}.widened VALUES (1), (2), (NULL);
-         CREATE TABLE {schema}.retyped (v int4); INSERT INTO {schema}.retyped VALUES (7)"
+         CREATE TABLE {schema}.retyped (v int4);
+         INSERT INTO {schema}.retyped SELECT pg_catalog.generate_series(1, 100000)"
     ))
     .await;
     let reader = Reader::new(&cell.settings(&[]));
@@ -321,7 +328,8 @@ async fn schema_drift_between_plan_and_scan_fails_loud_or_stays_typed() {
     let retyped = reader.resolve(cell.relation("retyped")).await.expect(LIVE);
     cell.sql(&format!(
         "ALTER TABLE {schema}.widened ALTER COLUMN v TYPE int8;
-         ALTER TABLE {schema}.retyped ALTER COLUMN v TYPE text USING 'seven'"
+         ALTER TABLE {schema}.retyped ALTER COLUMN v TYPE text
+           USING CASE WHEN v < 100000 THEN v::text ELSE 'seven' END"
     ))
     .await;
     let batches = reader
@@ -329,10 +337,29 @@ async fn schema_drift_between_plan_and_scan_fails_loud_or_stays_typed() {
         .await
         .expect("an int widened then cast back stays typed");
     assert_eq!(int32s(&batches), [Some(1), Some(2), None]);
-    let outcome = reader.read(ScanRequest::new(retyped)).await;
+    assert_eq!(reader.pool.idle_count(), 1);
+    let mut stream = reader.open(ScanRequest::new(retyped));
+    let mut rows = 0;
+    let outcome = loop {
+        match stream.next().await {
+            Some(Ok(batch)) => rows += batch.num_rows(),
+            Some(Err(error)) => break error,
+            None => panic!("a value that no longer casts must fail the scan"),
+        }
+    };
     assert!(
-        matches!(&outcome, Err(ConnectError::Server { sqlstate, .. }) if sqlstate == "22P02"),
+        matches!(&outcome, ConnectError::Server { sqlstate, .. } if sqlstate == "22P02"),
         "{outcome:?}"
+    );
+    assert!(
+        rows > 0,
+        "the error arrived mid-stream, after typed batches"
+    );
+    drop(stream);
+    assert_eq!(
+        reader.pool.idle_count(),
+        0,
+        "a failed scan's client is never pooled"
     );
     cell.close().await;
 }
