@@ -40,7 +40,7 @@ from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
 _HERE = Path(__file__).resolve().parent
 _TRUTH_PATH = _HERE / "ice_sorted_insert_2_spark_oracle.json"
-_CATALOG = "sc"
+_CATALOG = "ice_sorted_insert_2_live"
 _NAMESPACE = "w"
 _EXTENSIONS = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
 _ORACLE_NOTE = (

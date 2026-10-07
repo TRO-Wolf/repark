@@ -1,3 +1,6 @@
+use iceberg::expr::Reference;
+use iceberg::spec::Datum;
+
 use super::*;
 use crate::write::write_options::WriterStagingOverrides;
 
@@ -7,6 +10,8 @@ enum ProbeMode {
     FailBeforeLanding,
     UnknownAfterLanding,
     UnknownWithoutLanding,
+    LandedThenReconcileFails,
+    UnknownThenLoadsFail,
 }
 
 struct ProbeCatalog {
@@ -15,6 +20,7 @@ struct ProbeCatalog {
     seen: Mutex<Vec<String>>,
     racers: Mutex<Vec<Vec<DataFile>>>,
     stamped_racer: Mutex<Option<(CommitStamp, Vec<DataFile>)>>,
+    failing_loads: AtomicUsize,
 }
 
 impl std::fmt::Debug for ProbeCatalog {
@@ -31,6 +37,7 @@ impl ProbeCatalog {
             seen: Mutex::new(Vec::new()),
             racers: Mutex::new(Vec::new()),
             stamped_racer: Mutex::new(None),
+            failing_loads: AtomicUsize::new(0),
         }
     }
 
@@ -122,6 +129,18 @@ impl Catalog for ProbeCatalog {
     }
 
     async fn load_table(&self, table: &TableIdent) -> iceberg::Result<Table> {
+        if self
+            .failing_loads
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |left| {
+                left.checked_sub(1)
+            })
+            .is_ok()
+        {
+            return Err(iceberg::Error::new(
+                iceberg::ErrorKind::Unexpected,
+                "injected: the catalog refused the load",
+            ));
+        }
         self.inner.load_table(table).await
     }
 
@@ -166,6 +185,21 @@ impl Catalog for ProbeCatalog {
                 iceberg::ErrorKind::CommitStateUnknown,
                 "injected: not landed, outcome unknown",
             )),
+            ProbeMode::LandedThenReconcileFails => {
+                self.inner.update_table(commit).await?;
+                self.failing_loads.store(1, Ordering::SeqCst);
+                Err(iceberg::Error::new(
+                    iceberg::ErrorKind::CommitStateUnknown,
+                    "injected: landed, outcome unknown, the reconcile reload fails",
+                ))
+            }
+            ProbeMode::UnknownThenLoadsFail => {
+                self.failing_loads.store(usize::MAX, Ordering::SeqCst);
+                Err(iceberg::Error::new(
+                    iceberg::ErrorKind::CommitStateUnknown,
+                    "injected: not landed, outcome unknown, the catalog then refuses loads",
+                ))
+            }
         }
     }
 }
@@ -225,6 +259,10 @@ async fn seed(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> (Table, Vec<Dat
     (table, files)
 }
 
+fn below_the_racers() -> Predicate {
+    Reference::new("id").less_than(Datum::int(50))
+}
+
 async fn run_arm(
     arm: Arm,
     catalog: &Arc<dyn Catalog>,
@@ -255,7 +293,7 @@ async fn run_arm(
                 pin,
                 affected,
                 files,
-                &Predicate::AlwaysTrue,
+                &below_the_racers(),
                 None,
                 &extra,
             )
@@ -271,7 +309,7 @@ async fn run_arm(
                 vec![(target, 0)],
                 files,
                 WriteConcurrency::new(1).expect("K=1"),
-                &Predicate::AlwaysTrue,
+                &below_the_racers(),
                 None,
                 crate::write::merge::KnownPartitions::new(),
                 &extra,
@@ -414,8 +452,8 @@ async fn three_racing_appends_still_stamp_exactly_once_on_every_arm() {
         let (_warehouse, memory, ident) = fixture_with(
             &name,
             &[
-                ("write.merge.isolation-level", "snapshot"),
-                ("write.delete.isolation-level", "snapshot"),
+                ("write.merge.isolation-level", "serializable"),
+                ("write.delete.isolation-level", "serializable"),
             ],
         )
         .await;
@@ -653,3 +691,128 @@ async fn a_bare_empty_merge_append_refuses_on_an_empty_and_a_seeded_sink() {
     assert_eq!(table.metadata().snapshots().count(), 1);
     assert_eq!(live_ids(&table).await, vec![1]);
 }
+
+#[tokio::test]
+async fn an_unlanded_unknown_outcome_walks_to_the_durable_record_without_a_resubmit() {
+    let (_warehouse, memory, ident) = fixture("p_walk_unlanded").await;
+    let durable = stamp_for(0, SinkDoor::Table);
+    stamped_append(&memory, &ident, &durable, &[1]).await;
+    let table = memory.load_table(&ident).await.expect("load");
+    let snapshots = table.metadata().snapshots().count();
+    let probe = Arc::new(ProbeCatalog::new(
+        Arc::clone(&memory),
+        ProbeMode::UnknownWithoutLanding,
+    ));
+    let catalog: Arc<dyn Catalog> = Arc::clone(&probe) as Arc<dyn Catalog>;
+    let stamp = stamp_for(1, SinkDoor::ForeachBatch);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let refused = commit_stamp_only(&catalog, &table, &stamp, Some(guard.token()))
+        .await
+        .expect_err("an unlanded stamp never resolves");
+    assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    drop(guard);
+    let (epoch, found, reason) = recovery_reason(refused);
+    assert_eq!(epoch, Epoch::new(1));
+    assert_eq!(found, Some(durable.record));
+    assert!(matches!(
+        reason,
+        RecoveryReason::CommitOutcomeUnknown {
+            operation_id: Some(_),
+            resume_refusal: None,
+        }
+    ));
+    assert_eq!(probe.seen().len(), 1);
+    let reloaded = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(reloaded.metadata().snapshots().count(), snapshots);
+}
+
+#[tokio::test]
+async fn a_same_epoch_stamp_of_another_run_is_not_the_landed_attempt() {
+    let (_warehouse, memory, ident) = fixture("p_walk_other_run").await;
+    stamped_append(&memory, &ident, &stamp_for(0, SinkDoor::Table), &[1]).await;
+    let table = memory.load_table(&ident).await.expect("load");
+    let probe = Arc::new(ProbeCatalog::new(
+        Arc::clone(&memory),
+        ProbeMode::UnknownWithoutLanding,
+    ));
+    let mut racer = stamp_for(1, SinkDoor::Table);
+    racer.record.run =
+        RunId::new(Uuid::parse_str("ffffffff-0000-4000-8000-0000000000f6").expect("uuid"));
+    let racer_files = stage(&table, &[70]).await;
+    *probe.stamped_racer.lock().expect("stamped") = Some((racer.clone(), racer_files));
+    let catalog: Arc<dyn Catalog> = Arc::clone(&probe) as Arc<dyn Catalog>;
+    let stamp = stamp_for(1, SinkDoor::ForeachBatch);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let refused = commit_stamp_only(&catalog, &table, &stamp, Some(guard.token()))
+        .await
+        .expect_err("the racer's stamp is not this attempt");
+    assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    drop(guard);
+    let (epoch, found, reason) = recovery_reason(refused);
+    assert_eq!(epoch, Epoch::new(1));
+    assert_eq!(found, Some(racer.record));
+    assert!(matches!(
+        reason,
+        RecoveryReason::CommitOutcomeUnknown { .. }
+    ));
+}
+
+#[tokio::test]
+async fn the_walk_finds_a_landed_stamp_above_the_base_by_operation_id_then_by_record() {
+    let (_warehouse, catalog, ident) = fixture("p_walk_direct").await;
+    let base = append_plain(&catalog, &ident, &[1]).await;
+    let stamp = stamp_for(0, SinkDoor::ForeachBatch);
+    let head = commit_stamp_only(&catalog, &base, &stamp, None)
+        .await
+        .expect("stamp-only");
+    let landed = catalog.load_table(&ident).await.expect("reload");
+    let operation = landed
+        .metadata()
+        .current_snapshot()
+        .expect("head")
+        .summary()
+        .additional_properties
+        .get(OPERATION_ID_PROP)
+        .cloned()
+        .expect("operation id");
+    for operation_id in [
+        Some(operation.as_str()),
+        Some("00000000-0000-4000-8000-000000000000"),
+        None,
+    ] {
+        assert_eq!(
+            resolve_unknown_outcome(&catalog, &base, &stamp, operation_id).await,
+            Ok(head),
+            "{operation_id:?}"
+        );
+    }
+    let below = resolve_unknown_outcome(&catalog, &landed, &stamp, Some(&operation))
+        .await
+        .expect_err("a stamp at or below the base is not this attempt");
+    let (epoch, found, reason) = recovery_reason(below);
+    assert_eq!(epoch, Epoch::new(0));
+    assert_eq!(found, Some(stamp.record));
+    assert_eq!(
+        reason,
+        RecoveryReason::CommitOutcomeUnknown {
+            operation_id: Some(operation),
+            resume_refusal: None,
+        }
+    );
+    assert_eq!(
+        catalog
+            .load_table(&ident)
+            .await
+            .expect("reload")
+            .metadata()
+            .snapshots()
+            .count(),
+        landed.metadata().snapshots().count()
+    );
+}
+
+#[path = "sink_offsets_walk_tests.rs"]
+mod walk;
+
+#[path = "sink_offsets_isolation_tests.rs"]
+mod isolation;
