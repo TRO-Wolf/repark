@@ -11,10 +11,15 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = ["postgres"]
+postgres = ["repark-connect/postgres"]
+
 [dependencies]
 # The error seed (v1 `repark-core`, renamed): `Error` / `ErrorClass` / `Result`, re-exported at
 # this crate's root so bindings and doors import one crate.
 repark-common.workspace = true
+repark-connect.workspace = true
 serde.workspace = true
 toml.workspace = true
 # Catalog builders + provider registration (catalog half) and the write-knob ConfigExtension
