@@ -14,7 +14,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   re-verify's findings: raw functional reads, storage paths, Spark's key rule, TNS, spans,
   multi-line documents, mutants, known limits). C-055 closes the boolean-knob follow-up
   without a new crate edge. `risk_tier: high`.
-  **SOURCE-URL-REDACT-2 (2026-10-06):** C-057..C-064 close the re-verify's three S1 classes (registry, boundary, chained-`ValueError`).
+  **SOURCE-URL-REDACT-2 (2026-10-06):** C-057..C-064 close the re-verify's three S1 classes (registry, boundary, chained-`ValueError`); round B (C-065..C-069) fixes the shape generally (credential-shaped chain cut, masked message parameters, cause-chain scrub, option doors).
 - [c-1-ledger.md](c-1-ledger.md) —
   **C-1, card 1.6 (2026-10-05), in flight:** `crates/repark-connect` lands on its pre-declared
   footprint with the one `connect → common` edge (C-001); the CC-2 move puts `SourceKind` and

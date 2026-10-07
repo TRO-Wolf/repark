@@ -288,6 +288,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   engine message. The extractor prefers the longest non-noise candidate and strips the
   leading `External error: ` shell DataFusion adds on the Arrow boundary. Error classes,
   chaining, and the memory advice text are unchanged. pins: dfcore-1/C-005
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** `_export_engine_error` scrubs the
+  cause chain first, covering the three live `core.py` export sites without touching that
+  file's exact baseline. pins: source-url-redact-1/C-067
   **FNP-MATH-1 WO-6b R3 (2026-09-21):** `_export_engine_error` re-raises a mid-stream
   message carrying `[ARITHMETIC_OVERFLOW]` as `ArithmeticException` with the structured
   payload (cut at the SQLSTATE token), never the longest `to_string()` candidate; every
@@ -532,6 +535,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `[INVALID_CONF_VALUE.REQUIREMENT]` message family for both keys; `_resolve_cache_budgets`
   returns the `(max_bytes, max_total_bytes)` pair `core.py` forwards to the native
   materialize call), and the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`.
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the materialize refusal scrubs the
+  cause before re-raising. pins: source-url-redact-1/C-067
   `eager()` materializes
   the plan through the existing cache-view call on an `_identity_child` sibling (the source
   frame is untouched), then fills `_eager_shape` once with a count over the built MemTable
@@ -697,7 +702,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   non-PostgreSQL drivers need the JVM driver layer — refusals, a restored connector
   delegation, not compute. pins: io-declared-1/C-001, C-002, C-003, C-007
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
-  helpers. **U7 PR2 (2026-09-24):** `DataFrameWriterV2.option` stores a `branch` or `tag` key
+  helpers. **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** both `option` methods
+  register the stored value, and the overwrite re-raise scrubs the cause first.
+  pins: source-url-redact-1/C-067, C-068
+  **U7 PR2 (2026-09-24):** `DataFrameWriterV2.option` stores a `branch` or `tag` key
   like any other option (the refusal is gone); no writer reads it, so the write lands on main
   as Spark's does (`check_lib_py.py` 1039 → 1033). pins: u7-write-df-2/C-005
   `DataFrameWriterV2.overwrite(condition)` runs `writer_schema.replace_where_statement`
@@ -872,6 +880,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   shared attach helper, and a failed write removes staging even when the
   destination is absent.
   pins: io-text-1/C-002, C-003, T-6, T-9, U-1, U-2, U-10, U-11
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the append/overwrite re-raises
+  scrub the cause first. pins: source-url-redact-1/C-067
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`

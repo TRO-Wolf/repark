@@ -5292,6 +5292,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `getDatabase` path while `DESCRIBE NAMESPACE` stays masked. pins: source-url-redact-1/C-040
 - `test_source_url_redact_2.py` — **SOURCE-URL-REDACT-2 (2026-10-06):** the 48-cell pin (three credential shapes × builder / `conf.set` / SQL `SET` / `repark.toml` × four knobs): the full traceback never carries the marker and the exception class matches the base run.
   pins: source-url-redact-1/C-063, C-064
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** round-B pins — the escaped/long integer-guard cut, the ORC params mask, the REST/reader chain pins, the writer-option pin. pins: source-url-redact-1/C-069
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

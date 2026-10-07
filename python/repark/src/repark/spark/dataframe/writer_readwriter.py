@@ -24,6 +24,7 @@ from repark.errors import (
 )
 from repark.spark._idents import escape_sql_single_quotes
 from repark.spark._idents import quote_ident as _quote_ident_sql
+from repark.spark._secrets import register_config_value, scrub_exception
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.dataframe import io_declared as _io_declared
@@ -116,6 +117,7 @@ class DataFrameWriter:
 
     def option(self, key: str, value: Any) -> DataFrameWriter:
         """Set a single writer option (PySpark ``DataFrameWriter.option``); chains."""
+        register_config_value(str(value))
         writer_layout.store_writer_option(self._options, key, value)
         return self
 
@@ -430,6 +432,7 @@ class DataFrameWriter:
                     else:
                         destination.unlink()
                 except OSError as exc:
+                    scrub_exception(exc)
                     raise AnalysisException(f"cannot overwrite path {path!r}: {exc}") from exc
             staging.rename(destination)
         except AnalysisException:
@@ -869,6 +872,7 @@ class DataFrameWriterV2:
 
     def option(self, key: str, value: Any) -> DataFrameWriterV2:
         """Set an option that rides the action SQL; a ``branch`` or ``tag`` key is ignored."""
+        register_config_value(str(value))
         writer_layout.store_writer_option(self._options, str(key), str(value))
         return self
 

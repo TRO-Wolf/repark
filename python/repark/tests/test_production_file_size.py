@@ -354,7 +354,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_sql_udf_arg_is_simple": ("db0b84f0ee3d3410bbb660ac228ab85a8be365f5d17f4ba9623fc7d7ff982bce"),
     "_sql_udf_call_match_key": ("e5d8292341262271b9099a26080982055c0ca1a77274f75f738e458a1e045e99"),
     "_sql_udf_clean_exception": (
-        "3d2e48861e6677d9508e4a253bd812e655169979a54584ac69d0c8c15d686499"
+        "e359ee579dbcf25040a9bcdc711bc02cf82914885af34c1f0930aa74c1771b97"
     ),
     "_sql_udf_in_nested_subquery": (
         "a8d7beee8e9f9f7a07b3190b75eb0f125487a1ea2a97184ea27e2ea3496585ef"

@@ -387,7 +387,7 @@ def lookup_int_entry(
             parsed = int(value)
         except ValueError as error:
             message = f"config key {key!r} must be an integer, got {mask_credentials(value)!r}"
-            if value in str(error):
+            if mask_credentials(value) != value:
                 raise IllegalArgumentException(message) from None
             raise IllegalArgumentException(message) from error
         found.append((key, parsed))

@@ -14,6 +14,7 @@ from repark.spark.session import (
     reader_support as _reader_support,
     reader_text as _reader_text,
 )
+from repark.spark._secrets import register_config_value
 from repark.spark.session.session_core import ReparkSession
 from repark.spark.session.reader_support import (
     _ICEBERG_INCREMENTAL_OPTIONS,
@@ -394,6 +395,7 @@ class DataFrameReader:
         for existing in list(self._options):
             if existing.lower() == key_str.lower():
                 del self._options[existing]
+        register_config_value(str(value))
         self._options[key_str] = str(value)
         return self
 

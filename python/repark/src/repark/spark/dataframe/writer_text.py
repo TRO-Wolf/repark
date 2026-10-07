@@ -7,6 +7,8 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from repark.spark._secrets import scrub_exception
+
 if TYPE_CHECKING:
     from repark.spark.dataframe.writer_readwriter import DataFrameWriter
 
@@ -89,6 +91,7 @@ def write_text_path(writer: Any, path: str) -> None:
             try:
                 _merge_path_write_tree(staging, destination)
             except (FileExistsError, OSError, shutil.Error) as exc:
+                scrub_exception(exc)
                 raise AnalysisException(f"path mode('append') failed for {path!r}: {exc}") from exc
             if staging.exists():
                 if staging.is_dir():
@@ -108,6 +111,7 @@ def write_text_path(writer: Any, path: str) -> None:
                 else:
                     destination.unlink()
             except OSError as exc:
+                scrub_exception(exc)
                 raise AnalysisException(f"cannot overwrite path {path!r}: {exc}") from exc
         staging.rename(destination)
     except AnalysisException:

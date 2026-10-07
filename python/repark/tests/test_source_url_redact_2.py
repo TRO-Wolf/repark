@@ -7,6 +7,7 @@ import pytest
 
 from repark.errors import AnalysisException, IllegalArgumentException, PySparkException
 from repark.spark import SparkSession
+from repark.spark._secrets import scrub_exception
 
 MARK = "S3cr3tPw"
 
@@ -20,6 +21,21 @@ KNOBS = [SHUFFLE, MAX_ARRAY, DF_BATCH, WRITE_FILES]
 SHAPES = ["jdbc", "dsn", "odbc"]
 
 DOORS = ["builder", "toml", "confset", "sqlset"]
+
+GUARD_KNOBS = [
+    SHUFFLE,
+    "repark.memory.limit.gb",
+    "spark.sql.execution.arrow.maxRecordsPerBatch",
+]
+
+USERINFO = "u" + ":pw@"
+
+
+def _guard_value(kind: str) -> str:
+    if kind == "backslash":
+        return f"Driver=x;Uid=u;Pwd={MARK}\\9;"
+    return f"Driver=x;Uid=u;Pwd={MARK};" + "Database=" + "d" * 300 + ";"
+
 
 EXPECTED: dict[tuple[str, str], type[BaseException] | None] = {
     ("builder", SHUFFLE): IllegalArgumentException,
@@ -112,3 +128,95 @@ def test_config_value_never_echoes_a_credential(
         assert "***" in rendered
     else:
         assert expected is None
+
+
+@pytest.mark.parametrize("knob", GUARD_KNOBS)
+@pytest.mark.parametrize("kind", ["backslash", "long"])
+def test_credential_shaped_integer_refusal_cuts_the_chain(knob: str, kind: str) -> None:
+    try:
+        SparkSession.builder.config(knob, _guard_value(kind)).getOrCreate()
+    except BaseException as error:
+        assert type(error) is IllegalArgumentException
+        assert error.__cause__ is None
+        rendered = "".join(traceback.format_exception(error))
+        assert MARK not in rendered
+        assert "***" in rendered
+    else:
+        pytest.fail(f"{knob} accepted a non-integer")
+
+
+@pytest.mark.parametrize("scheme", ["file", "hdfs"])
+def test_orc_message_parameters_mask_url_userinfo(scheme: str) -> None:
+    host = "localhost/tmp/nope/x" if scheme == "file" else "h/x"
+    url = scheme + "://" + USERINFO + host
+    session = SparkSession.builder.getOrCreate()
+    try:
+        session.read.orc(url).collect()
+    except BaseException as error:
+        assert type(error) is AnalysisException
+        params = error.getMessageParameters()
+        assert set(params) == {"path"}
+        assert USERINFO not in repr(params)
+    else:
+        pytest.fail(f"orc read of a {scheme} userinfo path unexpectedly succeeded")
+    finally:
+        session.stop()
+
+
+def test_rest_catalog_uri_chain_carries_no_userinfo() -> None:
+    uri = "http://" + USERINFO + "127.0.0.1:9/"
+    session = (
+        SparkSession.builder.config("spark.sql.catalog.c", "org.apache.iceberg.spark.SparkCatalog")
+        .config("spark.sql.catalog.c.type", "rest")
+        .config("spark.sql.catalog.c.uri", uri)
+        .getOrCreate()
+    )
+    try:
+        session.sql("SHOW NAMESPACES IN c").collect()
+    except BaseException as error:
+        rendered = "".join(traceback.format_exception(error))
+        assert USERINFO not in rendered
+    else:
+        pytest.fail("rest catalog read unexpectedly succeeded")
+    finally:
+        session.stop()
+
+
+def test_scrub_exception_masks_cause_chain_args() -> None:
+    cause = ValueError("http://" + USERINFO + "127.0.0.1:9/refused")
+    context = RuntimeError("during catalog read")
+    context.__cause__ = cause
+    outer = AnalysisException("listNamespaces failed")
+    outer.__context__ = context
+    scrub_exception(outer)
+    assert USERINFO not in repr(cause.args)
+    assert USERINFO not in "".join(traceback.format_exception(outer))
+
+
+def test_reader_path_chain_carries_no_userinfo() -> None:
+    url = "file://" + USERINFO + "localhost/tmp/nope/x"
+    session = SparkSession.builder.getOrCreate()
+    try:
+        session.read.parquet(url).collect()
+    except BaseException as error:
+        rendered = "".join(traceback.format_exception(error))
+        assert USERINFO not in rendered
+    else:
+        pytest.fail("parquet read unexpectedly succeeded")
+    finally:
+        session.stop()
+
+
+def test_writer_option_value_never_echoes(tmp_path: Path) -> None:
+    value = f"host=h user=u password={MARK}W4"
+    session = SparkSession.builder.getOrCreate()
+    try:
+        session.range(2).write.option("compression", value).parquet(str(tmp_path / "w"))
+    except BaseException as error:
+        rendered = "".join(traceback.format_exception(error))
+        assert MARK not in rendered
+        assert "***" in rendered
+    else:
+        pytest.fail("writer option refusal unexpectedly succeeded")
+    finally:
+        session.stop()

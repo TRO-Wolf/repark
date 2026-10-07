@@ -9,6 +9,8 @@
               the whole crate (p3c ledger P-4/P-5)."
 )]
 use pyo3::exceptions::PyRuntimeError;
+use pyo3::prelude::*;
+use pyo3::types::PyDict;
 
 pyo3::create_exception!(
     repark._native,
@@ -83,4 +85,15 @@ pyo3::create_exception!(
 pub(crate) fn mask_user_visible(message: impl AsRef<str>) -> String {
     let registered = repark_core::redaction::mask_registered_values(message.as_ref());
     repark_core::redaction::mask_url_userinfo(&registered)
+}
+
+#[must_use]
+pub(crate) fn masked_message_params(py: Python<'_>, pairs: &[(&str, &str)]) -> Bound<'_, PyDict> {
+    let params = PyDict::new(py);
+    for &(key, value) in pairs {
+        if let Err(failure) = params.set_item(key, mask_user_visible(value)) {
+            tracing::warn!(error = %failure, "message params set failed");
+        }
+    }
+    params
 }

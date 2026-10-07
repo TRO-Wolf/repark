@@ -279,7 +279,9 @@ def _sql_udf_clean_exception(error: BaseException) -> BaseException:
     """
 
     from repark.errors import PySparkException, UnsupportedOperationException
+    from repark.spark._secrets import scrub_exception
 
+    scrub_exception(error)
     text = str(error)
 
     if "__repark_sql_udf" in text:
