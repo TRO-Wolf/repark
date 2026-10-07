@@ -936,3 +936,36 @@ fn registered_values_mask_after_an_ansi_csi_sequence() {
         assert_eq!(&mask_registered_values(case), case);
     }
 }
+
+#[test]
+fn registered_values_mask_after_an_ecma_48_csi_sequence() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let dsn = "host=h user=u password=CsiPw03";
+    register_config_value(dsn);
+    let csi = [
+        format!("\u{1b}[?25h{dsn}"),
+        format!("\u{1b}[38:5:196m{dsn}"),
+        format!("\u{1b}[1 q{dsn}"),
+        format!("\u{9b}31m{dsn}"),
+        format!("\u{1b}[m{dsn}"),
+        format!("\u{1b}[;;;m{dsn}"),
+        format!("\u{1b}\u{1b}[31m{dsn}"),
+    ];
+    for case in &csi {
+        let masked = mask_registered_values(case);
+        assert!(!masked.contains("CsiPw"), "{case:?} -> {masked:?}");
+        assert!(masked.contains("***"), "{case:?} -> {masked:?}");
+    }
+    let plain = [
+        format!("\u{1b}]0;titlex{dsn}"),
+        format!("[?25h{dsn}"),
+        format!("38:5:196m{dsn}"),
+        format!("1 q{dsn}"),
+        format!("\u{9c}31m{dsn}"),
+    ];
+    for case in &plain {
+        assert_eq!(&mask_registered_values(case), case);
+    }
+}

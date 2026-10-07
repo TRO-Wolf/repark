@@ -72,7 +72,7 @@ fn replace_whole_tokens(text: &str, needle: &str, replacement: &str) -> String {
                 .chars()
                 .next_back()
                 .is_none_or(|edge| !is_token_char(edge))
-            || ends_with_csi(&text[..start]);
+            || ends_with_csi(&text[cursor..start]);
         let after_ok = !needle_last
             || text[end..]
                 .chars()
@@ -96,15 +96,23 @@ fn replace_whole_tokens(text: &str, needle: &str, replacement: &str) -> String {
 }
 
 fn ends_with_csi(prefix: &str) -> bool {
-    let mut bytes = prefix.bytes().rev();
-    if !bytes
-        .next()
-        .is_some_and(|last| (0x40..=0x7E).contains(&last))
-    {
+    let Some((last, rest)) = prefix.as_bytes().split_last() else {
+        return false;
+    };
+    if !(0x40..=0x7E).contains(last) {
         return false;
     }
-    let mut rest = bytes.skip_while(|byte| byte.is_ascii_digit() || *byte == b';');
-    rest.next() == Some(b'[') && rest.next() == Some(0x1b)
+    let rest = trim_end_bytes(rest, 0x20..=0x2F);
+    let rest = trim_end_bytes(rest, 0x30..=0x3F);
+    rest.ends_with(&[0x1b, b'[']) || rest.ends_with("\u{9b}".as_bytes())
+}
+
+fn trim_end_bytes(bytes: &[u8], class: std::ops::RangeInclusive<u8>) -> &[u8] {
+    let kept = bytes
+        .iter()
+        .rposition(|byte| !class.contains(byte))
+        .map_or(0, |index| index + 1);
+    &bytes[..kept]
 }
 
 fn is_token_char(edge: char) -> bool {
