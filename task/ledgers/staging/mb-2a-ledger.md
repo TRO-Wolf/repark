@@ -35,11 +35,11 @@ sink_offsets_tests.rs, mod.rs, map.md}`, the three named commit arms
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-001 | DM-5: the fork at `076d5f98` accepts an empty `merge_append` carrying only snapshot properties, in one transaction with `update_table_properties`, as one new metadata version holding one `append` snapshot with no added files, the summary key and the property; a second stamp-only commit chains on the first. | The DM-5 pin in `sink_offsets_tests.rs`. | **PROVEN** | 1 pin green (`dm5_empty_merge_append_commits_one_stamp_only_append_snapshot`), on the committed and the reloaded table. An empty batch therefore stamps (sketch §3.4, R-18). pins: mb-2a/C-001 |
-| C-002 | `BatchScope` holds at most one stamp per sink (`enter` twice refuses `SinkBusy`, MBE-13); `claim` returns `None` for a table with no scope and the stamp with base `H = current_snapshot_id` inside one; a second claim in one scope refuses `SinkCommittedTwice` (MBE-13); dropping the guard clears the entry. | Scope pins in `sink_offsets_tests.rs`. | **OPEN** (step 2) | — |
-| C-003 | Every arm the sketch names stamps the six `repark.cdc.*` keys (plus the two Spark keys on the `Table` door only) and the property in the **same** commit — one new metadata version, one new snapshot: the append arm (`commit_append_with_summary`), the MERGE copy-on-write arm (`commit_overwrite_on_ref`, both its insert-only and its delete-and-add overwrite) and the merge-on-read arm (`commit_row_delta_kind_on_ref`); the stamps read back equal to the claimed record through `SinkRecord::from_summary` and `from_property`. | Arm pins in `sink_offsets_tests.rs`. | **OPEN** (step 2) | — |
-| C-004 | With no scope entered, the three arms commit exactly as before: no `repark.cdc.*` or Spark streaming key, no `repark.cdc.offsets.` property; the existing MERGE and write-options pins keep their answers. | The unscoped arm pin plus the full `repark-iceberg` lib suite. | **OPEN** (step 2) | — |
-| C-005 | `ClaimedStamp::record_commit` records the committed snapshot id as the scope's outcome (`ScopeOutcome::Committed`), and a committed head that does not carry the stamp yields `RecoveryRequired(UnstampedSinkCommit)` (MBE-14). | Outcome pins in `sink_offsets_tests.rs`. | **OPEN** (step 2) | — |
-| C-006 | `commit_stamp_only` commits one stamp-only `append` snapshot carrying the summary keys and the property in one metadata version, and records the scope outcome. | The stamp-only pin. | **OPEN** (step 2) | — |
+| C-002 | `BatchScope` holds at most one stamp per sink (`enter` twice refuses `SinkBusy`, MBE-13); `claim` returns `None` for a table with no scope and the stamp with base `H = current_snapshot_id` inside one; a second claim in one scope refuses `SinkCommittedTwice` (MBE-13); dropping the guard clears the entry. | Scope pins in `sink_offsets_tests.rs`. | **PROVEN** | 1 pin green (`scope_holds_one_stamp_per_sink_and_claims_once`): `SinkBusy` names the sink uuid, the claim carries the stamp and `H`, the second claim refuses `SinkCommittedTwice { epoch: 0 }`, the dropped guard frees the sink. The live arm refuses the second stamped commit too (`a_second_stamped_commit_in_one_batch_refuses`: the error's cause downcasts to `SinkCommittedTwice`, one stamped snapshot, the rows of the first commit only). pins: mb-2a/C-002 |
+| C-003 | Every arm the sketch names stamps the six `repark.cdc.*` keys (plus the two Spark keys on the `Table` door only) and the property in the **same** commit — one new metadata version, one new snapshot: the append arm (`commit_append_with_summary`), the MERGE copy-on-write arm (`commit_overwrite_on_ref`, both its insert-only and its delete-and-add overwrite) and the merge-on-read arm (`commit_row_delta_kind_on_ref`); the stamps read back equal to the claimed record through `SinkRecord::from_summary` and `from_property`. | Arm pins in `sink_offsets_tests.rs`. | **PROVEN** | 3 pins green (`append_arm_stamps_summary_and_property_in_one_commit_on_both_doors`, `copy_on_write_arm_stamps_both_overwrite_shapes`, `merge_on_read_arm_stamps_the_row_delta`): each asserts `metadata_log + 1`, the summary record and the property record equal to the claimed stamp on the committed and the reloaded table, the Spark keys present on the `Table` door only, and the live rows. A caller's own summary extra rides beside the stamp. The insert-only copy-on-write commit records operation `append` and the delete-and-add one `overwrite` (fork behaviour, measured; D-4). pins: mb-2a/C-003 |
+| C-004 | With no scope entered, the three arms commit exactly as before: no `repark.cdc.*` or Spark streaming key, no `repark.cdc.offsets.` property; the existing MERGE and write-options pins keep their answers. | The unscoped arm pin plus the full `repark-iceberg` lib suite. | **PROVEN** | 1 pin green (`unscoped_arms_commit_without_any_stamp`: the append, the copy-on-write and the merge-on-read arms with no scope leave no `repark.cdc.*` or Spark streaming key and no `repark.cdc.offsets.` property, and resume reads `None`); the branch pin (`a_branch_commit_leaves_the_claim_for_main`) shows a non-main commit inside a scope stays unstamped and the claim waits for main (FL-1). The full lib suite stays green (889 passed at the step-4 head, 873 before the unit): no MERGE or write-options pin changed its answer (halt rule 4 not met). pins: mb-2a/C-004 |
+| C-005 | `ClaimedStamp::record_commit` records the committed snapshot id as the scope's outcome (`ScopeOutcome::Committed`), and a committed head that does not carry the stamp yields `RecoveryRequired(UnstampedSinkCommit)` (MBE-14). | Outcome pins in `sink_offsets_tests.rs`. | **PROVEN** | 2 pins green: the arm pins read `ScopeOutcome::Committed { snapshot }` equal to the new head; `record_commit_refuses_a_head_without_the_stamp` gets `RecoveryRequired { reason: UnstampedSinkCommit { snapshot: head }, durable: None }`. pins: mb-2a/C-005 |
+| C-006 | `commit_stamp_only` commits one stamp-only `append` snapshot carrying the summary keys and the property in one metadata version, and records the scope outcome. | The stamp-only pin. | **PROVEN** | 1 pin green (`commit_stamp_only_commits_one_append_snapshot_with_both_halves`): inside a scope it adds one `append` snapshot (`metadata_log + 1`) with both halves and no rows, records the outcome, and a second call refuses `SinkCommittedTwice`; outside a scope it stamps the given record directly and resume reads it back. pins: mb-2a/C-006 |
 | C-007 | `read_resume_point` returns the last committed record from one loaded `Table` with no catalog call of its own: the newest stamped snapshot of the query in the current ancestry, equal to the property; `None` on a sink with neither. | Resume pins in `sink_offsets_tests.rs`. | **OPEN** (step 3) | — |
 | C-008 | A concurrent unrelated append landing between the stamped commit's load and its catalog update forces a retry, and the retried commit still carries both halves exactly once (one stamped snapshot, the property once, the racer's file live). | The racing-catalog pin. | **OPEN** (step 4) | — |
 | C-009 | The property-versus-summary guard (Q10, R-14): a summary record and a property that disagree refuse `RecoveryRequired(OffsetMismatch)` with the summary as the durable record; a property with no stamped snapshot retained refuses `RecoveryRequired(StampedSnapshotExpired)`; a stamp of another query is passed over; a format above 1 refuses `UnsupportedOffsetFormat`. | Guard pins in `sink_offsets_tests.rs`. | **OPEN** (step 4) | — |
@@ -55,3 +55,39 @@ sink_offsets_tests.rs, mod.rs, map.md}`, the three named commit arms
   and the stamp is never empty. The commit is one metadata version, operation `append`, no
   `added-data-files`, scan plans no task. So the sketch's `commit_stamp_only` is buildable on
   the existing action, with no fork ask.
+- **D-1 (2026-10-07).** `ClaimedStamp.base` is `Option<SnapshotId>`, not the sketch's
+  `SnapshotId`: `H = current_snapshot_id()` is absent on an empty sink, which is exactly harness
+  pin 1's starting state. MB-2c's fence reads `None` as "no base to pin".
+- **D-2 (2026-10-07).** `ClaimedStamp::summary_entries` returns `Result`, following MB-1 fold 1,
+  which made `SinkRecord::summary_entries` and `property` fallible.
+- **D-3 (2026-10-07).** The three arms call one `pub(crate)` adapter, `SiteStamp`
+  (`claim` → `extras` → `transaction` → `record`), which maps a `MicroBatchError` to
+  `DataFusionError::External`, so a caller downcasts the cause and the arms keep their
+  DataFusion error type. Each arm claims after its early empty return, so an empty MERGE consumes
+  no claim and the driver's stamp-only commit (R-18) still can. Unscoped, `extras` borrows the
+  caller's slice (no copy on the ordinary write path).
+- **D-4 (2026-10-07, measured).** The copy-on-write arm with nothing to delete commits operation
+  `append`; with deletes, `overwrite`. The sketch's "overwrite" arm is this one arm, both shapes
+  stamped. `INSERT OVERWRITE` and replace-partitions commits (`commit_replace_write_with_summary`,
+  `commit_overwrite_replace_all_with_summary`, `commit_replace_partitions_with_summary`) are not
+  named by the sketch and are not stamped: `complete` mode refuses in 1.7 (Q3), so no streaming
+  door reaches them, and a `foreachBatch` body that uses one leaves the head unstamped, which
+  MB-2c/MB-3 report as `UnstampedSinkCommit`.
+- **D-5 (2026-10-07).** `commit_stamp_only` claims the active scope when one exists (a second
+  claim refuses, and a stamp that differs from the scope's refuses `Catalog`), and stamps the
+  given record directly when none does. A `CommitStateUnknown` becomes
+  `RecoveryRequired(CommitOutcomeUnknown { operation_id })` with `durable: None`; resolving it is
+  MB-2c's walk.
+- **D-6 (2026-10-07).** Iceberg and DataFusion error texts pass through
+  `repark_common::redaction::mask_value_credentials` before they enter `MicroBatchError::Catalog`
+  (sketch §0 row 6). The scope registry recovers a poisoned mutex (`PoisonError::into_inner`):
+  every critical section is one map read or write and cannot leave the map torn.
+- **FL-1 (2026-10-07).** Question: does a stamped scope stamp a commit to a non-main branch of
+  the sink? Flink: the Iceberg Flink sink commits to its configured branch and stamps that
+  branch's snapshot. Spark: the Iceberg Spark write commits to the write's branch when one is set
+  (`toBranch`), stamping there. North Star default: the sketch's resume reads the current
+  snapshot's ancestry, which is `main`, so only a `main` commit (`branch` absent or `main`)
+  claims; a branch commit inside a scope stays unstamped and leaves the claim for `main`. Acted
+  on (pin in C-004). The engines differ from the default; filed as owner question OQ-2a-1, not a
+  halt (no ruled row changes and no Spark workload returns different rows: 1.7 exposes no branch
+  option on the streaming writer).

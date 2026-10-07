@@ -29,6 +29,7 @@ use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::output_spec::staging_table;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::partition_overwrite::{PartitionEquality, StaticPartitionOverwrite};
+use crate::write::sink_offsets::SiteStamp;
 use crate::write::summary_collision::EngineSummary;
 use crate::write::writer_props::{target_file_size_with, writer_properties_with};
 
@@ -428,16 +429,20 @@ pub async fn commit_append_with_summary(
     summary_extra: &[(String, String)],
     branch: Option<&str>,
 ) -> Result<Table> {
+    let stamp = SiteStamp::claim(table, branch)?;
+    let summary_extra = stamp.extras(summary_extra)?;
     let engine = EngineSummary::for_append(table, &new_files, branch);
-    let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
+    let (operation_id, summary) = summary_with_extras(&summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let action = tx
         .merge_append()
         .add_data_files(new_files)
         .set_snapshot_properties(summary);
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
+    let committed = commit_result(tx.commit(catalog.as_ref()).await, &operation_id)?;
+    stamp.record(&committed)?;
+    Ok(committed)
 }
 
 #[allow(clippy::missing_errors_doc)]

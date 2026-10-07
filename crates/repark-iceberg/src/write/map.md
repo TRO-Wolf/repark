@@ -125,12 +125,19 @@ repark-core's error map.
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
 - `sink_offsets.rs`, `sink_offsets_tests.rs` — **MB-2a (2026-10-07):** the micro-batch sink
-  stamp, the sketch's §3.4 (`task/wo/microbatch/mb-design-2026-10-06.md`). Step 1 lands the
-  DM-5 measurement only: an empty `merge_append` with snapshot properties, plus
-  `update_table_properties`, commits as one stamp-only `append` snapshot in one metadata
-  version, so an empty batch can stamp. The tests sit in the `#[path]` sibling so the module
-  stays under the default ceiling.
-  pins: mb-2a/C-001
+  stamp, the sketch's §3.4 (`task/wo/microbatch/mb-design-2026-10-06.md`). `BatchScope` is a
+  process-wide map from sink uuid to the active `CommitStamp`; `enter` refuses `SinkBusy`, a
+  second `claim` refuses `SinkCommittedTwice`, and dropping the guard frees the sink. The three
+  named arms (`write_options.rs` `commit_append_with_summary`, `merge/snapshot_commit.rs`
+  `commit_overwrite_on_ref` and `commit_row_delta_kind_on_ref`) go through the crate-private
+  `SiteStamp`: claim against the starting table (base `H`), add the summary entries to the
+  caller's extras, add `update_table_properties().set(repark.cdc.offsets.<query-id>, …)` to the
+  same transaction, commit, then record the committed head as the scope's outcome. Only a `main`
+  commit claims (a branch commit stays unstamped). Unscoped, every arm commits exactly as before.
+  `commit_stamp_only` commits an empty `merge_append` carrying both halves (DM-5: the fork
+  accepts it as one `append` snapshot). `read_resume_point` reads one loaded table with no IO.
+  The tests sit in the `#[path]` sibling so the module stays under the default ceiling.
+  pins: mb-2a/C-001, C-002, C-003, C-004, C-005, C-006
 - `writer_props.rs`, `write_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `writer_properties_with` takes Java's `parquet.enable.dictionary` default — absent = ON
   (`ParquetProperties.DEFAULT_IS_DICTIONARY_ENABLED = true`, measured by javap on the
