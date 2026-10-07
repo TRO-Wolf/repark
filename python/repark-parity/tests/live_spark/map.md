@@ -5,7 +5,8 @@
 MB-0 (2026-10-06): the streaming oracle for the micro-batch track (1.7). It records
 24 cells, MB0-R1…R13, W1…W8 and T1…T3, on live Spark 4.1.2 + Iceberg 1.11.0 over a
 local Hadoop catalog. MB-0b (2026-10-07, MB-1 fold 1) adds three read cells,
-MB0b-R14…R16, and MB-1 fold 2 adds MB0b-R17, so the recording holds 28. The micro-batch design sketch answers packet Q1–Q4 from these
+MB0b-R14…R16, MB-1 fold 2 adds MB0b-R17, and MB-3 (2026-10-07) adds MB0b-R18, R17's
+shape under a processing-time trigger, so the recording holds 29. The micro-batch design sketch answers packet Q1–Q4 from these
 recorded cells, not from documentation. Order:
 [mb-0-oracle.md](../../../../task/wo/microbatch/mb-0-oracle.md). Nothing here is
 collected by pytest, and no RePark code runs.
@@ -37,12 +38,15 @@ Nothing here is collected by pytest, and no RePark code runs.
   `Collect`, the table and snapshot-log helpers, and the stream error and progress
   readers. Cell functions and the helpers named in a cell's `statement` stay in the
   recorder, so every recorded `statement` is unchanged.
-- `mb0_streaming_oracle.json` is the recording: `{"preamble": …, "cells": [28 entries]}`,
+- `mb0_streaming_oracle.json` is the recording: `{"preamble": …, "cells": [29 entries]}`,
   pretty-printed with sorted keys. Each entry carries exactly `cell`, `statement`, `kind`,
   `answer` and `field`. The preamble names the versions and the catalog (`hadoop`).
 - `mb0_streaming_oracle.sha256` holds `sha256sum` of the JSON. Check it with
   `sha256sum -c` from this directory.
   pins: mb-1/C-025
+- MB0b-R18 is the processing-time look-ahead cell (MB-1 fold-2 Q1): R17's shape under
+  `trigger(processingTime="0 seconds")`, measured before MB-3 built its capped trigger.
+  pins: mb-3/C-001
 - `c2_jdbc_oracle.py` is the D-M2 recorder. Cells are data (`define_cells`),
   one entry per `(code, tz)` id, and `record_all` prints each entry as one
   JSON line. Run it through the managed interpreter only (brief step 2),

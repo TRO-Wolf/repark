@@ -3522,6 +3522,27 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   the stream; repark refuses at start rather than idling, so the failure lands when the query
   is launched, not on the first later append (NS-6, refuse loud). The only difference is when
   the refusal fires.
+### MB-3-LOOKAHEAD-1 — a capped processing-time stream delivers every append before a non-append; Spark stops one batch earlier when the files cap fills on a snapshot's last file
+- **repark** — under a processing-time trigger with `streaming-max-files-per-micro-batch`, the
+  window (`WindowLimit::Capped`, MB-1) takes each append's files up to the cap and never looks
+  past the window's last file. Two one-file appends `a` and `b`, then an `overwrite` (or a
+  `delete`), at max-files 1 deliver `a` in batch 0 and `b` in batch 1, and the next trigger
+  refuses `NonAppendSnapshot` (`Cannot process overwrite snapshot: <id>; Bronze is append-only
+  (O-5) …`). Every row before the non-append lands, so a restart after the documented
+  `repark.cdc.start-after-snapshot-id=<id>` advice loses nothing.
+- **Apache Spark** — the capped `latestOffset` checks the files cap only before adding the next
+  file inside a snapshot, so a window that fills exactly on a snapshot's last file still calls
+  `nextValidSnapshot`, which throws at the following `overwrite` or `delete`. The same history
+  delivers `a` (batch 0, offset `(a, 0)`) and then fails `STREAM_FAILED` / `XXKST`, `Cannot
+  process overwrite snapshot: <id>, to ignore overwrites, set
+  streaming-skip-overwrite-snapshots=true`; `b` is never delivered, and the delete twin is the
+  same. *(oracle: cell MB0b-R18, `trigger(processingTime="0 seconds")`, recorded 2026-10-07.)*
+- **Pin** — `crates/repark-iceberg/src/microbatch/window_fold2_pins.rs::capped_walk_delivers_both_appends_then_refuses_the_non_append`
+- **Rationale** — DECLARED 2026-10-07 (MB-3, beside MB-1 ledger D-5; MB-1 fold-2 ruling Q1
+  KEEP deliver-first). Both engines refuse the stream at the non-append; repark delivers the
+  appends ahead of it first, so the refusal lands one batch later and no appended row is held
+  back behind a snapshot the stream refuses anyway. Under `availableNow` and `Once` the two
+  agree (MB0b-R17): both refuse before batch 0.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.

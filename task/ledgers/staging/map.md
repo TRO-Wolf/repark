@@ -19,6 +19,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `transform` stays a passthrough as Spark 4.1.2 does, by the dated row `DF-TRANSFORM-1`
   (C-003), and the live Spark recording (C-004); `doors4.py` prints `TOTAL 1` in both
   modes. `risk_tier: high`. Branch `fix/foreach-wrap-1`.
+- [mb-3-ledger.md](mb-3-ledger.md) —
+  **MB-3 (2026-10-07), the Session-owned micro-batch driver, round 1:** MB0b-R18 measured before
+  the capped trigger (C-001), the `toTable` door's racing-driver guarantee left open on
+  `F-APPEND-PIN-BASE-1` (C-002), and the driver slices that follow. `risk_tier: standard`.
+  Branch `feat/mb-3-driver`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
   in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,
