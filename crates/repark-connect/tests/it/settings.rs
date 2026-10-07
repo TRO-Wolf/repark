@@ -326,7 +326,7 @@ fn every_endpoint_key_parses_and_unknown_keys_refuse() {
     assert!(!message.contains(secret), "{message}");
     let url = format!("postgresql://h/db?colour={secret}");
     let error = refusal(&[("url", &url), ("user", "app")], TOML);
-    is_invalid(&error, query("colour"), unknown());
+    is_invalid(&error, Spelling::UrlPart("query key"), unknown());
     assert!(!error.to_string().contains(secret), "{error}");
 
     values_refuse_naming_the_key();
@@ -406,7 +406,7 @@ fn aliases_are_case_insensitive_and_conflicts_refuse() {
         ],
         SPARK,
     );
-    is_invalid(&error, query("ApplicationName"), unknown());
+    is_invalid(&error, Spelling::UrlPart("query key"), unknown());
 }
 
 #[test]

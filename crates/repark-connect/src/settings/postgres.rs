@@ -335,10 +335,17 @@ fn take_entry(given: &mut Givens, name: &str, value: &str, position: Position) -
         }),
         None if driver && value == POSTGRES_DRIVER => Ok(()),
         None if driver => Err(invalid(spelling, SpecRefusal::Driver)),
-        None => Err(invalid(
-            spelling,
-            SpecRefusal::UnknownKey { aliases: spark },
-        )),
+        None => {
+            let spelling = if in_url {
+                Spelling::UrlPart("query key")
+            } else {
+                spelling
+            };
+            Err(invalid(
+                spelling,
+                SpecRefusal::UnknownKey { aliases: spark },
+            ))
+        }
     }
 }
 
@@ -387,12 +394,13 @@ fn take_url(given: &mut Givens, spelling: &Spelling, url: &str) -> Result<()> {
                 .ok_or_else(|| refuse(UrlViolation::Scheme))?,
         ),
     };
-    let (before_query, query) = rest.split_once('?').unwrap_or((rest, ""));
-    let (authority, path) = before_query.split_once('/').unwrap_or((before_query, ""));
-    let (userinfo, hostport) = match authority.rsplit_once('@') {
-        Some((userinfo, hostport)) => (Some(userinfo), hostport),
-        None => (None, authority),
+    let authority_end = rest.find('/').unwrap_or(rest.len());
+    let (userinfo, rest) = match rest.get(..authority_end).and_then(|head| head.rfind('@')) {
+        Some(at) => (rest.get(..at), rest.get(at + 1..).unwrap_or_default()),
+        None => (None, rest),
     };
+    let (before_query, query) = rest.split_once('?').unwrap_or((rest, ""));
+    let (hostport, path) = before_query.split_once('/').unwrap_or((before_query, ""));
     let (host, port) = split_host_port(hostport).ok_or_else(|| refuse(UrlViolation::Ipv6Host))?;
     let mut parts = vec![("host", host), ("port", port), ("database", path)];
     match userinfo.map(|userinfo| userinfo.split_once(':').ok_or(userinfo)) {
@@ -412,7 +420,7 @@ fn take_url(given: &mut Givens, spelling: &Spelling, url: &str) -> Result<()> {
             .split_once('=')
             .ok_or_else(|| refuse(UrlViolation::QueryPair))?;
         let name = percent_decode(name, spelling)?;
-        let value = percent_decode(value, &Spelling::UrlQuery(name.clone()))?;
+        let value = percent_decode(value, &Spelling::UrlPart("query"))?;
         take_entry(given, &name, &value, Position::UrlQuery { jdbc })?;
     }
     Ok(())
