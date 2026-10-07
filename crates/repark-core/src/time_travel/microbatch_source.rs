@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
-use std::num::{NonZeroU64, NonZeroUsize};
+use std::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -149,25 +149,29 @@ fn parse_skip_flag(option: &str, raw: &str) -> Result<bool, MicroBatchError> {
 }
 
 fn parse_file_cap(raw: &str) -> Result<NonZeroUsize, MicroBatchError> {
-    raw.parse::<usize>()
-        .ok()
-        .and_then(NonZeroUsize::new)
-        .ok_or_else(|| {
-            MicroBatchError::Catalog(format!(
-                "{MAX_FILES_KEY} needs a positive integer file count, got {raw:?}"
-            ))
-        })
+    parse_int_cap(raw)
+        .and_then(|cap| NonZeroUsize::try_from(cap).ok())
+        .ok_or_else(|| cap_refusal(MAX_FILES_KEY, "file", raw))
 }
 
 fn parse_row_cap(raw: &str) -> Result<NonZeroU64, MicroBatchError> {
-    raw.parse::<u64>()
+    parse_int_cap(raw)
+        .map(NonZeroU64::from)
+        .ok_or_else(|| cap_refusal(MAX_ROWS_KEY, "row", raw))
+}
+
+fn parse_int_cap(raw: &str) -> Option<NonZeroU32> {
+    raw.parse::<i32>()
         .ok()
-        .and_then(NonZeroU64::new)
-        .ok_or_else(|| {
-            MicroBatchError::Catalog(format!(
-                "{MAX_ROWS_KEY} needs a positive integer row count, got {raw:?}"
-            ))
-        })
+        .and_then(|cap| u32::try_from(cap).ok())
+        .and_then(NonZeroU32::new)
+}
+
+fn cap_refusal(key: &str, noun: &str, raw: &str) -> MicroBatchError {
+    MicroBatchError::Catalog(format!(
+        "{key} needs a positive integer {noun} count no larger than {}, got {raw:?}",
+        i32::MAX
+    ))
 }
 
 fn parse_timestamp_millis(raw: &str) -> Result<i64, MicroBatchError> {

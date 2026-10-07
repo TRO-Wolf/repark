@@ -196,6 +196,32 @@ fn from_options_refuses_malformed_values() {
 }
 
 #[test]
+fn from_options_refuses_caps_above_the_spark_int_range() {
+    for (key, noun) in [
+        ("streaming-max-files-per-micro-batch", "file"),
+        ("streaming-max-rows-per-micro-batch", "row"),
+    ] {
+        for value in ["3000000000", "2147483648", "-2147483648"] {
+            let error = SourceOptions::from_options(&options_of(&[(key, value)]))
+                .expect_err("a cap outside the int range must refuse");
+            assert_eq!(
+                error.to_string(),
+                format!(
+                    "{key} needs a positive integer {noun} count no larger than 2147483647, got {value:?}"
+                )
+            );
+        }
+    }
+    let options = SourceOptions::from_options(&options_of(&[
+        ("streaming-max-files-per-micro-batch", "2147483647"),
+        ("streaming-max-rows-per-micro-batch", "+2147483647"),
+    ]))
+    .expect("caps at the int maximum must parse");
+    assert_eq!(options.caps.max_files, NonZeroUsize::new(2_147_483_647));
+    assert_eq!(options.caps.max_rows, NonZeroU64::new(2_147_483_647));
+}
+
+#[test]
 fn from_options_refuses_two_start_keys() {
     let error = SourceOptions::from_options(&options_of(&[
         ("stream-from-timestamp", "1724720185000"),
