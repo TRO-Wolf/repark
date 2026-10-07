@@ -22,10 +22,10 @@ source wrapper (§3.5). No other file is touched; `session.rs` is not touched.
 | C-003 | `OffsetVector::single`/`get`/`inputs` behave; `try_from_inputs` sorts by table uuid and refuses an empty vector or a repeated table, loud (FL-1). | The vector pins in `offset.rs`'s test module. | **PROVEN** | 3 pins green (`offset_vector_single_get_inputs`, `offset_vector_try_from_inputs_sorts_by_table_uuid`, `offset_vector_try_from_inputs_refuses_empty_and_duplicates`). pins: mb-1/C-003 |
 | C-004 | `summary_entries` on both doors and `property` round-trip through `from_summary`/`from_property`; the spark keys ride the `Table` door only; an absent stamp reads `None`; a bad version or partial stamp refuses (FL-2). | The stamp pins in `offset.rs`'s test module. | **PROVEN** | 5 pins green (`summary_entries_round_trip_on_both_doors`, `property_round_trip_through_from_property`, `from_summary_returns_none_without_stamp`, `from_summary_refuses_bad_version_and_partial_stamp`, `from_property_refuses_corrupt_value`). pins: mb-1/C-004 |
 | C-005 | `spark_source_offset_json` renders Spark's exact Iceberg JSON shape byte for byte. | The rendering pin in `offset.rs`'s test module. | **PROVEN** | 1 pin green (`spark_source_offset_json_matches_spark_shape`). pins: mb-1/C-005 |
-| C-006 | `MicroBatchError` carries every §3.2 variant and `RecoveryReason` carries every reason; every display text is non-empty, and the §4-quoted rows render verbatim (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15). | The display pins in `error.rs`'s test module. | **PROVEN** | 10 pins green (one per quoted row plus `every_variant_renders_a_message` and `recovery_reasons_render`). pins: mb-1/C-006 |
-| C-007 | The module is wired (`mod.rs` headed by `#![forbid(unsafe_code)]`, the `lib.rs` line, the `Cargo.toml` lines per D-1), every touched map is current, and the round gate list is green. | The 11 round gates. | **OPEN** (gates run after this commit; evidence lands in the round's closing commit) | Wiring complete; gate evidence pending. |
+| C-006 | `MicroBatchError` carries every §3.2 variant and `RecoveryReason` carries every reason; every display text is non-empty, and the §4-quoted rows render verbatim (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15). | The display pins in `error.rs`'s test module. | **PROVEN** | 11 pins green (one per quoted row plus `every_error_variant_renders_a_message`, `every_recovery_reason_renders_a_message` and `recovery_reasons_render`). pins: mb-1/C-006 |
+| C-007 | The module is wired (`mod.rs` headed by `#![forbid(unsafe_code)]`, the `lib.rs` line, the `Cargo.toml` lines per D-1), every touched map is current, and the round gate list is green. | The 11 round gates. | **PROVEN** | 11/11 green: 830 lib tests pass, clippy/panic-ban/fmt clean, file-size/lib-rs/crate-dag clean, map-sync/lockstep/ledger-grammar clean, comment-ban `hits=0`. pins: mb-1/C-007 |
 
-VERDICT: 7 clauses, 6 PROVEN, 1 OPEN, 0 REJECTED.
+VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Dated decision rows
 
@@ -60,11 +60,63 @@ VERDICT: 7 clauses, 6 PROVEN, 1 OPEN, 0 REJECTED.
 
 ## Gates
 
-The round gate list, in brief order: `cargo test -p repark-iceberg --lib`,
-`make rust-clippy`, `cargo fmt --check`, `make rust-panic-ban`,
-`python3 scripts/check_rust_file_size.py`, `./scripts/check_lib_rs.sh`,
-`./scripts/check_crate_dag.sh`, `python3 scripts/sync_map_md.py --check`,
+All exit 0, in brief order: `cargo test -p repark-iceberg --lib` (830 passed,
+0 failed — 804 pre-existing plus 26 new pins), `make rust-clippy` (clean
+after inlining six const args and splitting one 112-line test),
+`cargo fmt --check`, `make rust-panic-ban`,
+`python3 scripts/check_rust_file_size.py` (1052 files clean),
+`./scripts/check_lib_rs.sh` (11 roots clean), `./scripts/check_crate_dag.sh`
+(23 edges clean), `python3 scripts/sync_map_md.py --check` (365 maps clean),
 `bash scripts/check_map_md.sh --base origin/main`,
-`python3 scripts/check_ledger_grammar.py`, and the comment-ban probe with
-`hits=0`. Results land here in the round's closing commit, when C-007 flips
-to PROVEN and the attestation is filed.
+`python3 scripts/check_ledger_grammar.py` (304 live ledgers clean), and the
+comment-ban probe (`hits=0`).
+
+Two mutation probes, both red as required: dropping the duplicate-table check
+in `try_from_inputs` fails
+`offset_vector_try_from_inputs_refuses_empty_and_duplicates`; drifting the
+`Cannot process` prefix fails exactly the two verbatim pins. Both mutants
+were restored and the restore verified by diff.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: mb-1
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-001..C-007 walked one by one against the sketch (§3.1, §3.2, §4, Q6); every clause carries its proof obligation and pin citation in the verdict table.
+      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Negative pins cover the empty vector, the repeated table, the absent stamp, the future and unparsable versions, the partial stamp, the corrupt property, and the unknown-table lookup.
+      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: All 24 variants and 5 reasons render non-empty; the 8 Spark-quoted rows (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15) are pinned byte-exact.
+      artifacts: [crates/repark-iceberg/src/microbatch/error.rs]
+    - id: AT-4
+      status: N/A
+      justification: Pure synchronous code; no spawn, no lock, no shared mutable state, no await point.
+    - id: AT-5
+      status: ATTACKED
+      evidence: Every stamp key and error text reviewed: identifiers, uuids, and numbers only. No location, DSN, token, or path field exists in the types, so none can reach a summary, a property, or a message.
+      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Spark-verbatim rows pinned against the MB-0 oracle cells; the change is purely additive and the full pre-existing lib suite (804 tests) stays green beside the 26 new pins.
+      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, python/repark-parity/tests/live_spark/mb0_streaming_oracle.json]
+    - id: AT-7
+      status: N/A
+      justification: No hot path; offsets are built once per batch and no measurement is claimed.
+    - id: AT-8
+      status: ATTACKED
+      evidence: 11/11 round gates green; new files under the default ceiling; every touched map updated in the same commits.
+      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/map.md]
+    - id: AT-9
+      status: N/A
+      justification: No new log or metric surface; every failure is a typed value with a named fix.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift); restores verified by diff.
+      artifacts: [task/ledgers/staging/mb-1-ledger.md]
+```

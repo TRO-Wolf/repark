@@ -330,8 +330,7 @@ impl SinkRecord {
             }
             Err(_) => {
                 return Err(MicroBatchError::Catalog(format!(
-                    "repark.cdc stamp value for {key} is not a number: {version_text:?}",
-                    key = FORMAT_VERSION_KEY
+                    "repark.cdc stamp value for {FORMAT_VERSION_KEY} is not a number: {version_text:?}"
                 )));
             }
         };
@@ -351,22 +350,19 @@ impl SinkRecord {
             parse_stamp_number(stamp_text(summary, GENERATION_KEY)?, GENERATION_KEY)?;
         let generation = Generation::new(generation_raw).ok_or_else(|| {
             MicroBatchError::Catalog(format!(
-                "repark.cdc stamp value for {key} must be positive",
-                key = GENERATION_KEY
+                "repark.cdc stamp value for {GENERATION_KEY} must be positive"
             ))
         })?;
         let offsets_text = stamp_text(summary, OFFSETS_KEY)?;
         let offsets_value: serde_json::Value =
             serde_json::from_str(offsets_text).map_err(|error| {
                 MicroBatchError::Catalog(format!(
-                    "repark.cdc stamp value for {key} is not JSON: {error}",
-                    key = OFFSETS_KEY
+                    "repark.cdc stamp value for {OFFSETS_KEY} is not JSON: {error}"
                 ))
             })?;
         let Some(entries) = offsets_value.as_array() else {
             return Err(MicroBatchError::Catalog(format!(
-                "repark.cdc stamp value for {key} is not an array",
-                key = OFFSETS_KEY
+                "repark.cdc stamp value for {OFFSETS_KEY} is not an array"
             )));
         };
         let offsets = parse_stamp_inputs(entries)?;
@@ -402,15 +398,13 @@ impl SinkRecord {
         let generation_raw = stamp_u64(&parsed, STAMP_GENERATION_KEY)?;
         let generation = Generation::new(generation_raw).ok_or_else(|| {
             MicroBatchError::Catalog(format!(
-                "repark.cdc stamp value for {key} must be positive",
-                key = STAMP_GENERATION_KEY
+                "repark.cdc stamp value for {STAMP_GENERATION_KEY} must be positive"
             ))
         })?;
         let inputs_member = stamp_member(&parsed, STAMP_INPUTS_KEY)?;
         let Some(entries) = inputs_member.as_array() else {
             return Err(MicroBatchError::Catalog(format!(
-                "repark.cdc stamp value for {key} is not an array",
-                key = STAMP_INPUTS_KEY
+                "repark.cdc stamp value for {STAMP_INPUTS_KEY} is not an array"
             )));
         };
         let offsets = parse_stamp_inputs(entries)?;

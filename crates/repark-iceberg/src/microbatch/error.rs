@@ -150,7 +150,7 @@ mod tests {
     }
 
     #[test]
-    fn every_variant_renders_a_message() {
+    fn every_error_variant_renders_a_message() {
         let query = query_id();
         let table = table_uuid();
         let errors = [
@@ -246,6 +246,10 @@ mod tests {
         for error in errors {
             assert!(!error.to_string().is_empty());
         }
+    }
+
+    #[test]
+    fn every_recovery_reason_renders_a_message() {
         let reasons = [
             RecoveryReason::CommitOutcomeUnknown { operation_id: None },
             RecoveryReason::StopTimeout {
