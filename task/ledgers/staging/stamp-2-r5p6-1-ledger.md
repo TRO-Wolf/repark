@@ -80,6 +80,11 @@ guard. The sort lineage trace and twin search were already lazy (C-004); this un
 | Sort grid (`reverify2/sort4`, 394 cells) | 394/394 equal to `s4_orch.json` and `s4_sm2d.json` |
 | `cargo test -p repark-core --lib` | 1,246 passed, 1 ignored |
 | Like-set membership in the pre-measure | 26,032 / 12,272 cells, unchanged — no outcome class moved |
+| Fold 1: the verifier's 2,294-cell probe grid (`verify/probe/cells*.py`) on `b64dc2d5` against `13de60e1`'s facade, same runner and native build | 0 differences on schema (with metadata), rows, display/engine names, id sharing, downstream rows and error text; 1 cell (`cells3:coal.expr`) differs only by its random scratch-view name, as two head runs do; 530 cells take the native route |
+| Fold 1: attr-id and sort suites (27 files, `-n 8`) | 869 passed, 9 skipped, 3 xfailed, unchanged |
+| Fold 1: fill suites (13 files, `-n 8`) | 486 passed, 65 skipped, 3 xfailed, unchanged; the unit's 10 pins pass |
+| Fold 1: sort grid (`reverify2/sort4`, 394 cells) | 394/394 equal to `s4_orch.json` and `s4_sm2d.json` |
+| Fold 1: `cargo test -p repark-core --lib attr_id` | 98 passed |
 
 ## Mutations (red-first)
 
@@ -111,6 +116,11 @@ interleaved main / head / fix, two rounds, `l4l_gate.py`'s method:
 | head, 2 | 1.1034 | 1.1779 | 1.167 |
 | **fix, 1** | **1.0668** | **1.1312** | 1.066 |
 | **fix, 2** | **1.0766** | **1.1243** | 1.076 |
+
+| **fold 1 (`b64dc2d5`), 1** | **1.0729** | **1.1289** | 1.111 |
+
+Fold 1 is one interleaved main/fold round (`fold1/pre`, same method); the CAST whitelist and
+the fallback leave the win in place (like membership 26,032 cells, unchanged).
 
 Per-cell medians of both rounds: whole like set 1.1035 → **1.0717**; r5p6 1.182 → 1.128
 (−0.95 s); r5p6t −0.12 s; r5p7 −0.10 s. This is a pre-measure; the gate record is the
@@ -158,6 +168,14 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Every added branch has a pinned input that changes its output (M1–M5); guards whose removal changed no output (outer, sort marker, alias metadata, token locality) were probed and deleted.
       artifacts: [python/repark/tests/test_stamp_2_r5p6_1.py, crates/repark-core/src/session/tests/attr_id_s3b.rs]
-  reattested: []
+  reattested:
+    - id: AT-2
+      evidence: Fold 1 measured every CAST target on both routes at 0, 1 and 999999999 (same-type twins and a 13-type twin matrix) and pinned the bounds on both arms (C-007, C-009).
+    - id: AT-3
+      evidence: Fold 1 makes a raising native attempt a miss (C-008); the verifier's 117 refusal cells now carry head's text.
+    - id: AT-6
+      evidence: Fold 1 re-ran the verifier's 2,294-cell grid against head's facade with 0 differences.
+    - id: AT-10
+      evidence: Fold 1 mutations M6–M14 each red a pin.
   complete: true
 ```
