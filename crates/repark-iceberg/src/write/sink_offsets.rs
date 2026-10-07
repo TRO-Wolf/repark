@@ -483,7 +483,13 @@ pub async fn resolve_unknown_outcome(
         mark_committed(&reloaded, stamp, snapshot);
         return Ok(snapshot);
     }
-    Err(unknown(read_resume_point(&reloaded, record.query)?))
+    match read_resume_point(&reloaded, record.query) {
+        Ok(durable) => Err(unknown(durable)),
+        Err(MicroBatchError::RecoveryRequired { durable, .. }) => {
+            Err(unknown(durable.map(|found| *found)))
+        }
+        Err(error) => Err(error),
+    }
 }
 
 fn landed_attempt(
