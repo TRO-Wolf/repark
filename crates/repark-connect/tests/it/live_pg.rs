@@ -260,6 +260,24 @@ async fn idle_read_timeout_fires() {
 
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn query_timeout_is_the_server_statement_timeout() {
+    let cell = Cell::open().await;
+    let reader =
+        Reader::new(&cell.settings(&[("query_timeout_ms", "200"), ("read_timeout_ms", "5000")]));
+    let outcome = reader
+        .read_query("SELECT 1 AS one FROM pg_catalog.pg_sleep(2)")
+        .await;
+    assert_eq!(
+        outcome,
+        Err(ConnectError::Timeout {
+            which: TimeoutSetting::Query
+        })
+    );
+    cell.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
 async fn lock_timeout_fires() {
     let cell = Cell::open().await;
     let schema = &cell.schema;
@@ -360,6 +378,13 @@ async fn schema_drift_between_plan_and_scan_fails_loud_or_stays_typed() {
         reader.pool.idle_count(),
         0,
         "a failed scan's client is never pooled"
+    );
+    let dropped = reader.resolve(cell.relation("widened")).await.expect(LIVE);
+    cell.sql(&format!("DROP TABLE {schema}.widened")).await;
+    let outcome = reader.read(ScanRequest::new(dropped)).await;
+    assert!(
+        matches!(outcome, Err(ConnectError::RelationNotFound { .. })),
+        "{outcome:?}"
     );
     cell.close().await;
 }
