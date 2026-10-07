@@ -60,7 +60,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive method family behind re-export bindings.",
     ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        3464,
+        3462,
         "The DataFrame facade still combines many plan-building method families.",
         "Extract one existing method region when a charter changes that responsibility.",
     ),
@@ -75,7 +75,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split string, collection, or predicate expression families.",
     ),
     "python/repark/src/repark/spark/functions_udf.py": (
-        1300,
+        1287,
         "Python UDF and pandas UDF facade paths share one module.",
         "Split scalar UDF declarations from pandas UDF batch contracts.",
     ),

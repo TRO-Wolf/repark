@@ -5,7 +5,10 @@ from __future__ import annotations
 import logging
 import warnings
 import weakref
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from repark.spark.dataframe.core import DataFrame
 
 from repark import _native
 
@@ -160,3 +163,12 @@ def _warn_storage_level_cosmetic_once(
         stacklevel=stacklevel,
     )
     alive_token["storage_level_cosmetic_warned"] = True
+
+
+def _register_cache_frame(alive_token: dict[str, Any], frame: DataFrame) -> None:
+    """Track a DataFrame marked for cache/persist so :meth:`Catalog.clearCache` can drop it."""
+    registry = alive_token.get("cache_frames")
+    if not isinstance(registry, weakref.WeakSet):
+        registry = weakref.WeakSet()
+        alive_token["cache_frames"] = registry
+    registry.add(frame)

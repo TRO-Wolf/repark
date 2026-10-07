@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import traceback
 from collections.abc import Iterator
 from typing import Any
 
 from repark.errors import PySparkException
+from repark.spark._secrets import scrub_exception, scrub_user_failure
 
 _APPLY_IN_PANDAS_KEY_MISSING: object = object()
 
@@ -271,17 +271,23 @@ def _grouped_agg_pandas(pdf: Any, *, keys: list[str], specs: list[dict[str, Any]
             series = pdf[input_name]
             series.name = f"_{position}"
             series_args.append(series)
+        failure = passthrough = None
         try:
             value = spec["user_func"](*series_args)
-        except PySparkException:
-            raise
+        except PySparkException as error:
+            passthrough = scrub_exception(error)
+            if passthrough is error:
+                raise
         except Exception as error:
-            detail = traceback.format_exc()
+            detail, failure = scrub_user_failure(error)
+        if passthrough is not None:
+            raise passthrough
+        if failure is not None:
             raise PySparkException(
                 "GROUPED_AGG pandas_udf "
-                f"{spec['function_name']!r} raised {type(error).__name__}: "
-                f"{error}\n{detail}"
-            ) from error
+                f"{spec['function_name']!r} raised {type(failure).__name__}: "
+                f"{failure}\n{detail}"
+            ) from failure
         if value is None:
             row[spec["out_name"]] = None
         elif isinstance(value, pd.Series):

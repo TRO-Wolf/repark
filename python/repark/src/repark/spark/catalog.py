@@ -22,6 +22,7 @@ from repark.errors import (
 from repark.spark._idents import quote_ident_if_needed as _quote_ident
 from repark.spark._idents import quote_multipart as _quote_multipart_ssot
 from repark.spark._idents import sql_string_literal
+from repark.spark._secrets import scrub_exception
 
 if TYPE_CHECKING:
     from repark.spark.session import ReparkSession
@@ -346,10 +347,15 @@ class Catalog:
         if pattern is not None:
             pattern = _require_str(pattern, "pattern")
             sql = f"{sql} LIKE {sql_string_literal(pattern)}"
+        failure = None
         try:
             table = self._session._sql_built(sql).to_arrow()
         except Exception as exc:
-            raise AnalysisException(f"listDatabases failed for catalog `{catalog}`: {exc}") from exc
+            failure = scrub_exception(exc)
+        if failure is not None:
+            raise AnalysisException(
+                f"listDatabases failed for catalog `{catalog}`: {failure}"
+            ) from failure
         out: list[Any] = []
         for row in table.to_pylist():
             rendered = row["namespace"]

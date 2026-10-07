@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
 use repark_core::writer_layout::{
     TableWriteRequest, WriterAction, WriterLayout, WriterRefusal, missing_column_message,
     missing_column_name,
@@ -18,13 +17,9 @@ fn missing_column_error(py: Python<'_>, column: &str, tree: &str) -> PyErr {
         missing_column_message(column, tree),
     ));
     let value = raised.value(py);
-    let params = PyDict::new(py);
     let name = missing_column_name(column);
-    for (key, item) in [("i", name.as_str()), ("schema", tree)] {
-        if let Err(failure) = params.set_item(key, item) {
-            tracing::warn!(error = %failure, "writer plan param set failed");
-        }
-    }
+    let params =
+        crate::exceptions::masked_message_params(py, &[("i", name.as_str()), ("schema", tree)]);
     if let Err(failure) = value.setattr("_spark_error_class", "_LEGACY_ERROR_TEMP_3060") {
         tracing::warn!(error = %failure, "writer plan condition setattr failed");
     }

@@ -407,6 +407,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   runtime `SET` of a dead 54.1 key (`coalesce_batches`), so the refusal holds on
   both SQL doors. Pins: `tests/conf_unread.rs`.
   pins: conf-unread-1/C-003
+  **SOURCE-URL-REDACT-2 (2026-10-06):** `maybe_apply_runtime_set` registers the parsed `SET` value before dispatch, so engine-direct `SET datafusion.*` errors mask it at the boundary. pins: source-url-redact-1/C-058
 - `df_guards/window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer
   rule, installed by `df_guards.rs` on EVERY core session (a DataFusion-54.1 capability guard, like the
   two beside it, so an extension-less session gets it too). DataFusion evaluates a non-ever-expanding

@@ -59,6 +59,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   test). `core.py` re-imports every moved private name, so the package export surface is
   unchanged; the `PySparkNotImplementedError` import stays because it is part of that surface.
   pins: dfcore-1/C-001, C-002, C-004, C-005, C-006
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the export doors keep the
+  `scrub_exception` copy in `failure` and raise after the handler, so `__context__` is None.
+  pins: source-url-redact-1/C-071
   DML-A: `mergeInto` `whenNotMatchedBySource` DELETE/UPDATE execute.
   NULLABILITY-2 (2026-09-05): the `schema` property maps the `timestamp`/`timestamp_ntz`
   type keys through `ReparkDataType.fromDDL` — `fromDDL("timestamp")` equals the old
@@ -290,6 +293,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   unpivot, and explain run through the native `sql_built` method; `selectExpr` stays on `sql`
   (user text follows the flag). The set-op wrap plus its dict join ratchet the
   baseline 3973 → 3971. pins: string-literal-escape-1/C-011
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `_iter_map_in_arrow_output` (`mapInArrow`,
+  `mapInPandas`) keeps one user-failure handler (the redundant inner one around the call is
+  gone; same message), masks it and raises after the `finally`; 3971 → 3965 in `check_lib_py.py`.
+  pins: source-url-redact-1/C-076
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -430,6 +437,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   engine message. The extractor prefers the longest non-noise candidate and strips the
   leading `External error: ` shell DataFusion adds on the Arrow boundary. Error classes,
   chaining, and the memory advice text are unchanged. pins: dfcore-1/C-005
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** `_export_engine_error` scrubs the
+  cause chain first, covering the three live `core.py` export sites without touching that
+  file's exact baseline. pins: source-url-redact-1/C-067
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `_export_engine_error` maps the message
+  from the scrubbed copy the narrow scrub returns.
   **FNP-MATH-1 WO-6b R3 (2026-09-21):** `_export_engine_error` re-raises a mid-stream
   message carrying `[ARITHMETIC_OVERFLOW]` as `ArithmeticException` with the structured
   payload (cut at the SQLSTATE token), never the longest `to_string()` candidate; every
@@ -456,6 +468,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pins: attr-id-1/C-063
   **ATTR-ID-1 SJ-4 (2026-10-02):** `_grouped_agg_pandas` moves here from
   `joins_columns.py` (pure move at the size ceiling).
+  **SOURCE-URL-REDACT-2 merge of main (2026-10-07):** the GROUPED_AGG user-exception door takes
+  `(detail, failure)` from `_secrets.scrub_user_failure`, scrubs a user-raised `PySparkException`
+  through `scrub_exception`, and raises after the handler `from` the copy.
+  pins: source-url-redact-1/C-076, C-077
 - `grouped_arrow.py` owns the grouped map bridges bound on `GroupedData` (GROUPED-SURFACE-1,
   2026-09-14): `apply` accepts only a GROUPED_MAP pandas marker and delegates to
   `applyInPandas` behind Spark's deprecation `UserWarning`; `applyInArrow` routes
@@ -469,6 +485,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   state stores; registry `GROUPED-DECL-*`). The pandas bridge
   `_apply_in_pandas_arrow_batches` moved here unchanged-in-behavior to keep
   `joins_columns.py` under its ceiling. pins: grouped-surface-1/C-001, C-002, C-003, C-006
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `_call_grouped_user_func` (`applyInPandas`,
+  `applyInArrow`, both cogroup forms) and `_iter_apply_in_arrow_results` mask the user failure
+  through `_secrets.scrub_user_failure` and raise after the handler. pins: source-url-redact-1/C-076
   **ATTR-ID-1 SJ-5 (2026-10-03):** the pandas terminals funnel the raw group
   keys instead of the rebound ones.
 - `grouped_pivot.py` — **ATTR-ID-1 SJ-5 (2026-10-03):** the twelve `_pivot_*`
@@ -689,6 +708,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `[INVALID_CONF_VALUE.REQUIREMENT]` message family for both keys; `_resolve_cache_budgets`
   returns the `(max_bytes, max_total_bytes)` pair `core.py` forwards to the native
   materialize call), and the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`.
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the materialize refusal scrubs the
+  cause before re-raising. pins: source-url-redact-1/C-067
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the materialize refusal re-raises from
+  the scrubbed copy the narrow scrub returns.
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the materialize refusal raises after the handler from
+  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
   `eager()` materializes
   the plan through the existing cache-view call on an `_identity_child` sibling (the source
   frame is untouched), then fills `_eager_shape` once with a count over the built MemTable
@@ -733,6 +758,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_warn_storage_level_cosmetic_once` moved here unchanged and is re-imported by
   `core`, keeping the frozen surfaces. pins: eager-own-1/C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-010, C-011
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** `_register_cache_frame` moved here
+  unchanged and is re-imported by `core`, paying for the export doors' raise-after-handler
+  shape inside `core.py`'s exact baseline. pins: source-url-redact-1/C-071
   CATALOG-SURFACE-1 critic round 1 (2026-09-14): `bind_registered_view` notes the
   materialize-time identity token (`catalog_surface._note_frame_cached`) for
   `spark.table(name)` frames, so the catalog overlay can tell a still-current
@@ -809,6 +837,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   row retires under the default ceiling).
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built agg SQL runs
   through the native `sql_built` method. pins: string-literal-escape-1/C-011
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `_grouped_agg_pandas` moved to `udf_bridge.py`
+  (pure move, re-imported; 1169 → 1117 in `check_lib_py.py`); the merge of main imports it from
+  `grouped_udf.py`, its SJ-4 home. pins: source-url-redact-1/C-076
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show
@@ -934,6 +965,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
   projection rewrites moved out. pins: dfcore-2/C-005
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the classic and pandas UDF user-exception
+  doors interpolate the `scrub_exception` copy, mask the `format_exc()` detail through
+  `_native.mask_user_visible`, and raise after the handler from the copy. pins: source-url-redact-1/C-073
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** every user-callback door here takes
+  `(detail, failure)` from `_secrets.scrub_user_failure`; `_grouped_agg_pandas` (non-windowed and
+  unbounded-window GROUPED_AGG) lives in `grouped_udf.py` after the merge of main, with the same scrub.
+  pins: source-url-redact-1/C-076
+  **SOURCE-URL-REDACT-2 fold 4 H3 (2026-10-07):** a user-raised `PySparkException` is scrubbed
+  too: re-raised in place when `scrub_exception` returns it unchanged, else its masked copy is
+  raised after the handler. `grouped_arrow.py`, `core.py`'s mapInArrow handler and the UDTF `eval`
+  doors carry the same clause. pins: source-url-redact-1/C-077
+  **SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07):** `core.py`'s mapInArrow handler takes
+  `(detail, failure)` from `_secrets.scrub_user_failure` like the other doors, so a lone surrogate
+  in the user's text no longer raises `UnicodeEncodeError` there. pins: source-url-redact-1/C-082
   **Fold SM-2 R4 (2026-10-06):** `_pandas_udf_series_args_for_slot` names each
   input Series by its positional slot (`_0`, `_1`, …), as Spark 4.1.2 does, so
   the `__repark_pudf_in_*` intermediate never reaches user code.
@@ -964,13 +1009,26 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   the caller's spelling — and `_is_postgres_url` adds libpq's `postgres://` alias
   (case-insensitive after stripping leading whitespace, URL forwarded verbatim;
   `jdbc:postgres://` keeps refusing). The methods bind on the
-  classes from `reader.py` and `writer_readwriter.py`, both at exact line ceilings.
+  classes from `reader.py` and `writer_readwriter.py` (both sat at exact line ceilings
+  until SOURCE-URL-REDACT-2 fold 2 moved one method out of each).
   Python is correct here under the Rust-first instruction: a Rust ORC or XML
   reader/writer needs a new crate (owner question Q-15B-1), JDBC writes and
   non-PostgreSQL drivers need the JVM driver layer — refusals, a restored connector
   delegation, not compute. pins: io-declared-1/C-001, C-002, C-003, C-007
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the `DATA_SOURCE_NOT_FOUND` format echo
+  and the JDBC `INVALID_SAVE_MODE` echo mask the value through `mask_credentials`.
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
-  helpers. **U7 PR2 (2026-09-24):** `DataFrameWriterV2.option` stores a `branch` or `tag` key
+  helpers. **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** both `option` methods
+  register the stored value, and the overwrite re-raise scrubs the cause first.
+  pins: source-url-redact-1/C-067, C-068
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `_materialize_empty_path_write` moved to
+  `writer_layout._materialize_empty_path_write` (pure move; the method delegates), freeing
+  ceiling room for the F2-3/F2-4 masks. The save-mode/format/provider refusals echo the
+  value through `mask_credentials`, the path echoes through `mask_url_userinfo`, and the
+  overwrite re-raise re-raises from the scrubbed `OSError` copy.
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the append and overwrite refusals raise after the handler from
+  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
+  **U7 PR2 (2026-09-24):** `DataFrameWriterV2.option` stores a `branch` or `tag` key
   like any other option (the refusal is gone); no writer reads it, so the write lands on main
   as Spark's does (`check_lib_py.py` 1039 → 1033). pins: u7-write-df-2/C-005
   `DataFrameWriterV2.overwrite(condition)` runs `writer_schema.replace_where_statement`
@@ -1060,6 +1118,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   static by-name `overwrite` arm now serves `save(name)` only.
   pins: u7-write-df-2/C-002
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the two compression refusals
+  echo the value through `mask_credentials`. pins: source-url-redact-1/C-068
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
   `numBuckets` at the call, list first columns flattened), the action-time checks —
   path saves refuse `_LEGACY_ERROR_TEMP_1312` and `SORT_BY_WITHOUT_BUCKETING`,
@@ -1075,6 +1135,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_sql_option_escape`, `_normalize_write_compression`,
   `_normalize_parquet_write_compression` and `_merge_path_write_tree` (re-imported by
   `writer_readwriter`, so `core.py`'s import surface is unchanged).
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** hosts `_materialize_empty_path_write`
+  (pure move from `writer_readwriter.py`; the method delegates).
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** `_dynamic_partition_sql` is gone:
   `writeTo(t).overwritePartitions()` sends `INSERT OVERWRITE t (cols) SELECT …` with the
   dynamic intent and no `PARTITION` clause, so Rust replaces the staged partitions of any spec
@@ -1152,6 +1214,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   shared attach helper, and a failed write removes staging even when the
   destination is absent.
   pins: io-text-1/C-002, C-003, T-6, T-9, U-1, U-2, U-10, U-11
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the append/overwrite re-raises
+  scrub the cause first. pins: source-url-redact-1/C-067
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the mode refusal masks through
+  `mask_credentials`, every path echo through `mask_url_userinfo`, and both re-raises
+  re-raise from the scrubbed copy.
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the append and overwrite refusals raise after the handler from
+  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`

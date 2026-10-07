@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
 use pyo3::wrap_pyfunction;
 
 use crate::dataframe::PyDataFrame;
@@ -61,12 +60,12 @@ pub(crate) fn transpose(
                     let raised = AnalysisException::new_err(crate::exceptions::mask_user_visible(
                         spark.message,
                     ));
-                    let params = PyDict::new(py);
-                    for (key, value) in spark.message_parameters {
-                        if let Err(failure) = params.set_item(key, value) {
-                            tracing::warn!(error = %failure, "transpose param set failed");
-                        }
-                    }
+                    let pairs: Vec<(&str, &str)> = spark
+                        .message_parameters
+                        .iter()
+                        .map(|pair| (pair.0.as_str(), pair.1.as_str()))
+                        .collect();
+                    let params = crate::exceptions::masked_message_params(py, &pairs);
                     for (name, value) in [
                         ("_spark_error_class", spark.error_class),
                         ("_spark_sql_state", spark.sql_state),
