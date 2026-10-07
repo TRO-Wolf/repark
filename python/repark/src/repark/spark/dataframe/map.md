@@ -696,7 +696,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   the caller's spelling — and `_is_postgres_url` adds libpq's `postgres://` alias
   (case-insensitive after stripping leading whitespace, URL forwarded verbatim;
   `jdbc:postgres://` keeps refusing). The methods bind on the
-  classes from `reader.py` and `writer_readwriter.py`, both at exact line ceilings.
+  classes from `reader.py` and `writer_readwriter.py` (both sat at exact line ceilings
+  until SOURCE-URL-REDACT-2 fold 2 moved one method out of each).
   Python is correct here under the Rust-first instruction: a Rust ORC or XML
   reader/writer needs a new crate (owner question Q-15B-1), JDBC writes and
   non-PostgreSQL drivers need the JVM driver layer — refusals, a restored connector
@@ -705,6 +706,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   helpers. **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** both `option` methods
   register the stored value, and the overwrite re-raise scrubs the cause first.
   pins: source-url-redact-1/C-067, C-068
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `_materialize_empty_path_write` moved to
+  `writer_layout._materialize_empty_path_write` (pure move; the method delegates), freeing
+  ceiling room for the F2-3/F2-4 masks.
   **U7 PR2 (2026-09-24):** `DataFrameWriterV2.option` stores a `branch` or `tag` key
   like any other option (the refusal is gone); no writer reads it, so the write lands on main
   as Spark's does (`check_lib_py.py` 1039 → 1033). pins: u7-write-df-2/C-005
@@ -812,6 +816,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_sql_option_escape`, `_normalize_write_compression`,
   `_normalize_parquet_write_compression` and `_merge_path_write_tree` (re-imported by
   `writer_readwriter`, so `core.py`'s import surface is unchanged).
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** hosts `_materialize_empty_path_write`
+  (pure move from `writer_readwriter.py`; the method delegates).
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** `_dynamic_partition_sql` is gone:
   `writeTo(t).overwritePartitions()` sends `INSERT OVERWRITE t (cols) SELECT …` with the
   dynamic intent and no `PARTITION` clause, so Rust replaces the staged partitions of any spec

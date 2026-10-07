@@ -662,41 +662,13 @@ class DataFrameWriter:
         return " OPTIONS (" + ", ".join(pairs) + ")"
 
     def _materialize_empty_path_write(self, staging: Any, *, stored_as: str) -> None:
-        """Create a schema-carrying part file when empty ``COPY`` creates no output."""
-
-        staging_path = Path(staging)
-        if not staging_path.is_dir():
-            return
-        if stored_as == "PARQUET":
-            if any(staging_path.rglob("*.parquet")):
-                return
-            if self._partition_columns and any(staging_path.iterdir()):
-                return
-            import pyarrow.parquet as pa_pq
-
-            empty_table = self._dataframe.limit(0).to_arrow()
-            pa_pq.write_table(empty_table, staging_path / "part-00000.parquet")
-            return
-        if stored_as == "CSV":
-            if any(staging_path.rglob("*.csv")) or any(staging_path.iterdir()):
-                return
-            header_on = True
-            separator = ","
-            for key, value in self._options.items():
-                lowered = key.lower()
-                if lowered == "header":
-                    header_on = str(value).strip().lower() in {"true", "1", "yes", "t", "y"}
-                elif lowered in {"sep", "delimiter"}:
-                    separator = str(value)
-            columns = list(self._dataframe.columns)
-            content = (separator.join(columns) + "\n") if header_on and columns else ""
-            (staging_path / "part-00000.csv").write_text(content, encoding="utf-8")
-            return
-        if stored_as == "JSON":
-            if any(staging_path.rglob("*.json")) or any(staging_path.iterdir()):
-                return
-            (staging_path / "part-00000.json").write_text("", encoding="utf-8")
-            return
+        writer_layout._materialize_empty_path_write(
+            self._dataframe,
+            self._options,
+            self._partition_columns,
+            staging,
+            stored_as=stored_as,
+        )
 
     def _by_name_projection(
         self, session: Any, table_ref: str, *, display_name: str

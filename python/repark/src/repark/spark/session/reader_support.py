@@ -558,3 +558,38 @@ def _schema_fields(schema: Any) -> list[dict[str, Any]]:
         f"DataFrameReader.schema expects StructType, DDL string, or StructField list; "
         f"got {type(schema).__name__}"
     )
+
+
+def _reject_csv_json_parse_options(options: dict[str, str], *, is_csv: bool) -> None:
+    from repark.errors import AnalysisException
+
+    denylist = _CSV_UNSUPPORTED_PARSE_OPTIONS if is_csv else _JSON_UNSUPPORTED_PARSE_OPTIONS
+    for key in options:
+        lowered = key.lower()
+        if lowered == "path":
+            continue
+        if lowered == "mode":
+            mode = str(options[key]).strip().upper()
+            if mode in {"", "PERMISSIVE"}:
+                continue
+            raise AnalysisException(
+                f"reader option mode={options[key]!r} is not supported by repark yet "
+                f"(only PERMISSIVE / default; FAILFAST/DROPMALFORMED are unsupported-loud)"
+            )
+        if lowered == "encoding":
+            encoding = str(options[key]).strip().lower().replace("-", "")
+            if encoding in {"", "utf8", "utf_8"}:
+                continue
+            raise AnalysisException(
+                f"reader option encoding={options[key]!r} is not supported (only UTF-8)"
+            )
+        if lowered in denylist:
+            raise AnalysisException(
+                f"reader option {key!r} is not supported by repark yet "
+                "(would silently change load semantics if ignored)"
+            )
+        if lowered == "timezone":
+            raise AnalysisException(
+                f"reader option {key!r} is not supported by repark yet "
+                "(would silently change load semantics if ignored)"
+            )

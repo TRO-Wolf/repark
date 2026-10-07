@@ -649,39 +649,7 @@ class DataFrameReader:
         return default
 
     def _reject_csv_json_parse_options(self, *, is_csv: bool) -> None:
-        """Fail loud on CSV/JSON parse options repark does not honor (no silent default lies)."""
-        from repark.errors import AnalysisException
-
-        denylist = _CSV_UNSUPPORTED_PARSE_OPTIONS if is_csv else _JSON_UNSUPPORTED_PARSE_OPTIONS
-        for key in self._options:
-            lowered = key.lower()
-            if lowered == "path":
-                continue
-            if lowered == "mode":
-                mode = str(self._options[key]).strip().upper()
-                if mode in {"", "PERMISSIVE"}:
-                    continue
-                raise AnalysisException(
-                    f"reader option mode={self._options[key]!r} is not supported by repark yet "
-                    f"(only PERMISSIVE / default; FAILFAST/DROPMALFORMED are unsupported-loud)"
-                )
-            if lowered == "encoding":
-                encoding = str(self._options[key]).strip().lower().replace("-", "")
-                if encoding in {"", "utf8", "utf_8"}:
-                    continue
-                raise AnalysisException(
-                    f"reader option encoding={self._options[key]!r} is not supported (only UTF-8)"
-                )
-            if lowered in denylist:
-                raise AnalysisException(
-                    f"reader option {key!r} is not supported by repark yet "
-                    "(would silently change load semantics if ignored)"
-                )
-            if lowered == "timezone":
-                raise AnalysisException(
-                    f"reader option {key!r} is not supported by repark yet "
-                    "(would silently change load semantics if ignored)"
-                )
+        _reader_support._reject_csv_json_parse_options(self._options, is_csv=is_csv)
 
     def _apply_reader_schema_semantics(
         self, frame: DataFrame, *, infer_schema: bool, header: bool, path: str | None = None
