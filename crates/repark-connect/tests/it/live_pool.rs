@@ -225,12 +225,14 @@ async fn ends_within(cell: &Cell, limit: Duration) {
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
 async fn a_timeout_or_a_drop_ends_the_server_work() {
     let cell = Cell::open().await;
-    let reader = Reader::new(&cell.settings(&[("read_timeout_ms", "500")]));
+    let reader = Reader::new(&cell.settings(&[("read_timeout_ms", "300")]));
     let sleeps = "SELECT 1 AS one FROM pg_catalog.pg_sleep(20)";
-    let timed_out = reader.read_query(sleeps).await.map(|_| ());
-    let read = TimeoutSetting::Read;
-    assert_eq!(timed_out, Err(ConnectError::Timeout { which: read }));
-    ends_within(&cell, Duration::from_secs(3)).await;
+    for _ in 0..3 {
+        let timed_out = reader.read_query(sleeps).await.map(|_| ());
+        let read = TimeoutSetting::Read;
+        assert_eq!(timed_out, Err(ConnectError::Timeout { which: read }));
+        ends_within(&cell, Duration::from_millis(400)).await;
+    }
 
     let reader = Reader::new(&cell.settings(&[("batch_rows", "1000")]));
     let shown = "SELECT pg_catalog.current_setting('client_connection_check_interval') AS s";
