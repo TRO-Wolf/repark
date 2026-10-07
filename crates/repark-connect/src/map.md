@@ -239,7 +239,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   unchanged (`exact`): the optimizer keeps simplifying pushed filters after it has removed them,
   and `qty NOT IN (1, NULL)` became a pushed `qty <> NULL` that later simplified to `NULL`,
   which nothing applied. `split` and `push` serve `scan`. With `pushdown_predicate = false`
-  nothing renders. pins: c-2/C-070, C-071, C-072, C-073, C-074, C-078
+  nothing renders; the limit is `pushdown_limit`'s, in `provider/table.rs`. pins: c-2/C-070, C-071, C-072, C-073, C-074, C-078
 - `provider.rs` — C-2c (2026-10-07): `mod catalog; mod scan; mod schema; mod table;` and their
   re-exports.
 - `provider/` — [provider/map.md](provider/map.md): `PostgresSource`, the catalog, schema and

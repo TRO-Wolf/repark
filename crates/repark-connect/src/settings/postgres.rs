@@ -14,7 +14,7 @@ pub const POSTGRES_DRIVER: &str = "org.postgresql.Driver";
 const DRIVER_KEY: &str = "driver";
 const MAX_MILLIS: u64 = 2_147_483_647;
 
-pub const POSTGRES_KEYS: [&str; 20] = [
+pub const POSTGRES_KEYS: [&str; 21] = [
     "url",
     "host",
     "port",
@@ -31,13 +31,14 @@ pub const POSTGRES_KEYS: [&str; 20] = [
     "batch_rows",
     "prefer_timestamp_ntz",
     "pushdown_predicate",
+    "pushdown_limit",
     "pool_max_size",
     "pool_checkout_timeout_ms",
     "pool_idle_timeout_ms",
     "application_name",
 ];
 
-pub const POSTGRES_ALIASES: [(&str, &str); 12] = [
+pub const POSTGRES_ALIASES: [(&str, &str); 13] = [
     ("url", "url"),
     ("user", "user"),
     ("password", "password"),
@@ -49,6 +50,7 @@ pub const POSTGRES_ALIASES: [(&str, &str); 12] = [
     ("fetchsize", "batch_rows"),
     ("preferTimestampNTZ", "prefer_timestamp_ntz"),
     ("pushDownPredicate", "pushdown_predicate"),
+    ("pushDownLimit", "pushdown_limit"),
     ("ApplicationName", "application_name"),
 ];
 
@@ -270,6 +272,7 @@ pub struct PostgresSettings {
     pub batch_rows: Option<NonZeroUsize>,
     pub prefer_timestamp_ntz: bool,
     pub pushdown_predicate: bool,
+    pub pushdown_limit: bool,
     pub pool_max_size: usize,
     pub pool_checkout_timeout: Duration,
     pub pool_idle_timeout: Duration,
@@ -604,6 +607,7 @@ impl PostgresSettings {
             batch_rows: batch_rows(&mut given)?,
             prefer_timestamp_ntz: boolean(&mut given, "prefer_timestamp_ntz", false)?,
             pushdown_predicate: boolean(&mut given, "pushdown_predicate", true)?,
+            pushdown_limit: boolean(&mut given, "pushdown_limit", true)?,
             pool_max_size: count(&mut given, "pool_max_size", 64)?.map_or(4, NonZeroUsize::get),
             pool_checkout_timeout: millis(&mut given, "pool_checkout_timeout_ms", 1, 30_000)?,
             pool_idle_timeout: millis(&mut given, "pool_idle_timeout_ms", 1, 300_000)?,

@@ -164,7 +164,8 @@ key, or under two spellings, refuses as an invalid specification naming both spe
 | `lock_timeout_ms` | — | `10000` | Server `lock_timeout` |
 | `batch_rows` | `fetchsize` | the session batch size | Rows per Arrow batch: the closest meaning to Spark's rows-per-round-trip |
 | `prefer_timestamp_ntz` | `preferTimestampNTZ` | `false` | §2.7 `timestamp` |
-| `pushdown_predicate` | `pushDownPredicate` | `true` | `false` classes every filter as residual; the differential pins use it |
+| `pushdown_predicate` | `pushDownPredicate` | `true` | `false` classes every filter as residual; the differential pins use it. It does not gate the limit. |
+| `pushdown_limit` | `pushDownLimit` | `true` | `false` pushes no `LIMIT` (P-11), whatever the filters. Spark's two options are separate, and so are these (added by the C-2c fold 1, 2026-10-07). |
 | `pool_max_size` | — | `4` | `1..=64` |
 | `pool_checkout_timeout_ms` | — | `30000` | |
 | `pool_idle_timeout_ms` | — | `300000` | |

@@ -631,6 +631,29 @@ async fn p11_limit_pushes_only_without_residual() {
 }
 
 #[tokio::test]
+async fn pushdown_limit_gates_the_limit_and_pushdown_predicate_the_filters() {
+    let limit_of = |plan: &Arc<dyn ExecutionPlan>| {
+        let scan = find_scan(plan).expect("the scan");
+        (scan.pushed_limit(), split_of(scan).pushed.len())
+    };
+    for (extra, bare, filtered) in [
+        (&[][..], (Some(7), 0), (Some(7), 1)),
+        (
+            &[("pushdown_predicate", "false")][..],
+            (Some(7), 0),
+            (None, 0),
+        ),
+        (&[("pushdown_limit", "false")][..], (None, 0), (None, 1)),
+    ] {
+        let context = context(extra, "UTF8");
+        let plan = physical(&context, "SELECT id FROM orders LIMIT 7").await;
+        assert_eq!(limit_of(&plan), bare, "{extra:?}");
+        let plan = physical(&context, "SELECT id FROM orders WHERE qty > 1 LIMIT 7").await;
+        assert_eq!(limit_of(&plan), filtered, "{extra:?}");
+    }
+}
+
+#[tokio::test]
 async fn a_limit_past_i64_max_never_pushes() {
     let context = context(&[], "UTF8");
     let past = physical(

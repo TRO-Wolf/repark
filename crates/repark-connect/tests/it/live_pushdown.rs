@@ -417,6 +417,32 @@ async fn p11_limit_pushes_only_without_residual_live() {
 
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn pushdown_limit_is_its_own_switch_live() {
+    let edges = Edges::open(&[]).await;
+    let unlimited = mount(&edges.cell, &[("pushdown_limit", "false")], "true");
+    for (context, filter, limit, pushed) in [
+        (&unlimited, "WHERE qty > 0", None, 1),
+        (&unlimited, "", None, 0),
+        (&edges.off, "", Some(3), 0),
+        (&edges.off, "WHERE qty > 0", None, 0),
+    ] {
+        let statement = format!("SELECT id FROM {} {filter} LIMIT 3", edges.table);
+        let plan = context.sql(&statement).await.expect(LIVE);
+        let plan = plan.create_physical_plan().await.expect(LIVE);
+        let split = Split::of(&plan);
+        assert_eq!(
+            (split.limit, split.pushed.len()),
+            (limit, pushed),
+            "{statement}"
+        );
+        let batches = collect(plan, context.task_ctx()).await.expect(LIVE);
+        assert_eq!(ids(&batches).len(), 3, "{statement}");
+    }
+    edges.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
 async fn a_limit_past_i64_max_reads_every_row_live() {
     let cell = Cell::open().await;
     let table = format!("{}.thirty", cell.schema);
