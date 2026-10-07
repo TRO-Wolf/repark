@@ -520,17 +520,9 @@ class DataFrame:
             ) from error
 
         rows_kept = 0
+        failure = None
         try:
-            try:
-                output = func(iter(input_reader))
-            except PySparkException:
-                raise
-            except Exception as error:
-                detail = traceback.format_exc()
-                raise PySparkException(
-                    f"mapInArrow user function raised {type(error).__name__}: {error}\n{detail}"
-                ) from error
-
+            output = func(iter(input_reader))
             if output is None:
                 raise PySparkException(
                     "mapInArrow user function must return an iterator of "
@@ -568,15 +560,17 @@ class DataFrame:
         except PySparkException:
             raise
         except Exception as error:
-            detail = traceback.format_exc()
-            raise PySparkException(
-                f"mapInArrow user function raised {type(error).__name__}: {error}\n{detail}"
-            ) from error
+            failure = scrub_exception(error)
+            detail = _native.mask_user_visible(traceback.format_exc())
         finally:
             close = getattr(input_reader, "close", None)
             if callable(close):
                 with contextlib.suppress(Exception):
                     close()
+        if failure is not None:
+            raise PySparkException(
+                f"mapInArrow user function raised {type(failure).__name__}: {failure}\n{detail}"
+            ) from failure
 
     def _consume_map_in_arrow_batches(
         self,

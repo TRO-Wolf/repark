@@ -19,6 +19,7 @@ from repark.errors import (
     PySparkTypeError,
     UnsupportedOperationException,
 )
+from repark.spark._secrets import scrub_user_failure
 
 _LATERAL_BLOCKED_MESSAGE = (
     "LATERAL / correlated UDTF is not supported in repark v1: DataFusion has no "
@@ -220,8 +221,6 @@ def _map_udtf_batches(
     surface: str,
 ) -> Iterator[Any]:
     """Expand one UDTF handler across streamed argument batches (mapInArrow body)."""
-    import traceback
-
     if getattr(handler_cls, "_repark_arrow_udtf", False):
         yield from _map_arrow_udtf_batches(
             batches,
@@ -239,13 +238,15 @@ def _map_udtf_batches(
     try:
         start = getattr(handler, "start", None)
         if callable(start):
+            failure = None
             try:
                 start()
             except Exception as error:
-                detail = traceback.format_exc()
+                detail, failure = scrub_user_failure(error)
+            if failure is not None:
                 raise PySparkException(
-                    f"UDTF {surface} start() raised {type(error).__name__}: {error}\n{detail}"
-                ) from error
+                    f"UDTF {surface} start() raised {type(failure).__name__}: {failure}\n{detail}"
+                ) from failure
 
         for batch in batches:
             for row_index in range(batch.num_rows):
@@ -256,15 +257,18 @@ def _map_udtf_batches(
                         batch.column(column_index)[row_index].as_py()
                         for column_index in range(arg_count)
                     )
+                failure = None
                 try:
                     result = handler.eval(*python_args)
                 except PySparkException:
                     raise
                 except Exception as error:
-                    detail = traceback.format_exc()
+                    detail, failure = scrub_user_failure(error)
+                if failure is not None:
                     raise PySparkException(
-                        f"UDTF {surface} eval() raised {type(error).__name__}: {error}\n{detail}"
-                    ) from error
+                        f"UDTF {surface} eval() raised "
+                        f"{type(failure).__name__}: {failure}\n{detail}"
+                    ) from failure
                 out_rows.extend(
                     _normalize_eval_rows(
                         result,
@@ -275,13 +279,16 @@ def _map_udtf_batches(
     finally:
         terminate = getattr(handler, "terminate", None)
         if callable(terminate):
+            failure = None
             try:
                 terminate()
             except Exception as error:
-                detail = traceback.format_exc()
+                detail, failure = scrub_user_failure(error)
+            if failure is not None:
                 raise PySparkException(
-                    f"UDTF {surface} terminate() raised {type(error).__name__}: {error}\n{detail}"
-                ) from error
+                    f"UDTF {surface} terminate() raised "
+                    f"{type(failure).__name__}: {failure}\n{detail}"
+                ) from failure
 
     yield _build_output_batch(out_rows, field_names, arrow_schema)
 
@@ -296,8 +303,6 @@ def _map_arrow_udtf_batches(
     surface: str,
 ) -> Iterator[Any]:
     """Expand one Arrow UDTF handler batch-wise (eval once per RecordBatch)."""
-    import traceback
-
     import pyarrow as pa
 
     handler = handler_cls()
@@ -305,36 +310,43 @@ def _map_arrow_udtf_batches(
     try:
         start = getattr(handler, "start", None)
         if callable(start):
+            failure = None
             try:
                 start()
             except Exception as error:
-                detail = traceback.format_exc()
+                detail, failure = scrub_user_failure(error)
+            if failure is not None:
                 raise PySparkException(
-                    f"UDTF {surface} start() raised {type(error).__name__}: {error}\n{detail}"
-                ) from error
+                    f"UDTF {surface} start() raised {type(failure).__name__}: {failure}\n{detail}"
+                ) from failure
 
         for batch in batches:
             arrays = tuple(batch.column(index) for index in range(arg_count))
+            failure = None
             try:
                 tables = handler._eval_batch(field_names, arrow_schema, surface, *arrays)
             except PySparkException:
                 raise
             except Exception as error:
-                detail = traceback.format_exc()
+                detail, failure = scrub_user_failure(error)
+            if failure is not None:
                 raise PySparkException(
-                    f"UDTF {surface} eval() raised {type(error).__name__}: {error}\n{detail}"
-                ) from error
+                    f"UDTF {surface} eval() raised {type(failure).__name__}: {failure}\n{detail}"
+                ) from failure
             produced.extend(tables)
     finally:
         terminate = getattr(handler, "terminate", None)
         if callable(terminate):
+            failure = None
             try:
                 terminate()
             except Exception as error:
-                detail = traceback.format_exc()
+                detail, failure = scrub_user_failure(error)
+            if failure is not None:
                 raise PySparkException(
-                    f"UDTF {surface} terminate() raised {type(error).__name__}: {error}\n{detail}"
-                ) from error
+                    f"UDTF {surface} terminate() raised "
+                    f"{type(failure).__name__}: {failure}\n{detail}"
+                ) from failure
 
     if not produced:
         yield _build_output_batch([], field_names, arrow_schema)
@@ -873,3 +885,20 @@ __all__ = [
     "try_sql_registered_udtf",
     "udtf",
 ]
+
+
+def _refuse_udtf_as_scalar_udf(user_func: Any, *, surface: str) -> None:
+    """Refuse wrapping a table UDTF as a classic scalar UDF.
+
+    ``UserDefinedTableFunction`` is callable (a scalar-argument call produces a DataFrame in
+    the FROM path). Without this gate ``F.udf(udtf_obj)`` /
+    ``spark.udf.register(name, udtf_obj)``
+    would half-wire a table function as a scalar UDF.
+    """
+    if isinstance(user_func, UserDefinedTableFunction):
+        raise PySparkTypeError(
+            f"{surface} does not accept UserDefinedTableFunction (table UDTF). "
+            "Use spark.udtf.register / @udtf for table functions (U12 scalar-arg "
+            "core via mapInArrow), or pass a scalar Python callable to F.udf / "
+            "spark.udf.register."
+        )

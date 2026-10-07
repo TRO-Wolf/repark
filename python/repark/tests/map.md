@@ -5295,6 +5295,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** round-B pins — the escaped/long integer-guard cut, the ORC params mask, the REST/reader chain pins, the writer-option pin. pins: source-url-redact-1/C-069
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** fold-2 pins — the SQL/DataFrame UDF user-text identity and UDF-URL mask, the no-mutation copy contract, the reader mode/format/jdbc/orc/text echoes plus the writer-format echo, the `OSError` rebuilds (filename, strerror, `filename2`), the writer/text overwrite `OSError` doors, and one scrub-site pin per calling module including the injected REST cause chain.
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** one raise-after-handler pin per scrub-site module (export doors, SQL-UDF door, `listDatabases`, `eager`, the readwriter and text overwrite/append doors: `__context__` is None, `__cause__` is the scrubbed copy, the formatted traceback is clean) plus the DataFrame-UDF and pandas-UDF formatted-traceback pins. pins: source-url-redact-1/C-071, C-073
+- `test_source_url_redact_2_doors.py` — **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** one formatted-traceback
+  pin per user-callback door (GROUPED_AGG plain and unbounded-window, `applyInPandas`, cogroup `applyInPandas`,
+  `applyInArrow` table and iterator forms, cogroup `applyInArrow`, `mapInPandas`, `mapInArrow` call and
+  consume, UDTF `eval`/`start`/`terminate`, table-argument and Arrow UDTF `eval`, a duck-typed
+  `simpleString()` return type): `str`, `repr` and `format_exception` carry no userinfo, `__context__` is
+  None and `__cause__` is not the raw original. pins: source-url-redact-1/C-076
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

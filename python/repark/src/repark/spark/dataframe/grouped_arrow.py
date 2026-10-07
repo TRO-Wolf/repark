@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import functools
 import inspect
-import traceback
 import typing
 import warnings
 from collections.abc import Callable, Iterator
@@ -29,6 +28,7 @@ from repark.spark._integral import (
     _attached_message_parameters,
     _attached_sql_state,
 )
+from repark.spark._secrets import scrub_user_failure
 from repark.spark.dataframe.udf_schema import _coerce_map_in_arrow_schema
 
 if TYPE_CHECKING:
@@ -53,15 +53,16 @@ def _raise_with_spark_class(
 
 def _call_grouped_user_func(user_func: Callable[..., Any], api_name: str, *args: Any) -> Any:
     """Invoke a grouped map callback, wrapping non-PySpark failures."""
+    failure = None
     try:
         return user_func(*args)
     except PySparkException:
         raise
     except Exception as error:
-        detail = traceback.format_exc()
-        raise PySparkException(
-            f"{api_name} user function raised {type(error).__name__}: {error}\n{detail}"
-        ) from error
+        detail, failure = scrub_user_failure(error)
+    raise PySparkException(
+        f"{api_name} user function raised {type(failure).__name__}: {failure}\n{detail}"
+    ) from failure
 
 
 def _pandas_result_to_arrow_batches(
@@ -306,6 +307,7 @@ def _verify_arrow_batch_result(batch: Any, expected_arrow: Any) -> None:
 
 def _iter_apply_in_arrow_results(result: Any, expected_arrow: Any) -> Iterator[Any]:
     """Verify and reorder each yielded batch from an iterator-form callback."""
+    failure = None
     try:
         for batch in result:
             _verify_arrow_batch_result(batch, expected_arrow)
@@ -317,10 +319,11 @@ def _iter_apply_in_arrow_results(result: Any, expected_arrow: Any) -> Iterator[A
     except PySparkException:
         raise
     except Exception as error:
-        detail = traceback.format_exc()
+        detail, failure = scrub_user_failure(error)
+    if failure is not None:
         raise PySparkException(
-            f"applyInArrow user function raised {type(error).__name__}: {error}\n{detail}"
-        ) from error
+            f"applyInArrow user function raised {type(failure).__name__}: {failure}\n{detail}"
+        ) from failure
 
 
 def _apply_in_arrow_group_batches(

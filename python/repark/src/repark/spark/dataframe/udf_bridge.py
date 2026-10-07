@@ -6,13 +6,11 @@ User exceptions become ``PySparkException`` values with traceback text.
 
 from __future__ import annotations
 
-import traceback
 from collections.abc import Callable, Iterator
 from typing import Any
 
-from repark import _native
 from repark.errors import PySparkException
-from repark.spark._secrets import scrub_exception
+from repark.spark._secrets import scrub_user_failure
 from repark.spark.types import StructField
 
 
@@ -153,8 +151,7 @@ def _run_pandas_udf_scalar_on_batch(batch: Any, slot: dict[str, Any]) -> Any:
     except PySparkException:
         raise
     except Exception as error:
-        failure = scrub_exception(error)
-        detail = _native.mask_user_visible(traceback.format_exc())
+        detail, failure = scrub_user_failure(error)
     if failure is not None:
         raise PySparkException(
             f"pandas_udf {slot['function_name']!r} raised {type(failure).__name__}: "
@@ -188,8 +185,7 @@ def _run_pandas_udf_scalar_iter(batch_list: list[Any], slot: dict[str, Any]) -> 
     except PySparkException:
         raise
     except Exception as error:
-        failure = scrub_exception(error)
-        detail = _native.mask_user_visible(traceback.format_exc())
+        detail, failure = scrub_user_failure(error)
     if failure is not None:
         raise PySparkException(
             f"pandas_udf {slot['function_name']!r} raised {type(failure).__name__}: "
@@ -205,8 +201,7 @@ def _run_pandas_udf_scalar_iter(batch_list: list[Any], slot: dict[str, Any]) -> 
     except PySparkException:
         raise
     except Exception as error:
-        failure = scrub_exception(error)
-        detail = _native.mask_user_visible(traceback.format_exc())
+        detail, failure = scrub_user_failure(error)
     if failure is not None:
         raise PySparkException(
             "pandas_udf "
@@ -335,8 +330,7 @@ def _run_python_udf_on_batch(batch: Any, slot: dict[str, Any]) -> list[Any]:
     except PySparkException:
         raise
     except Exception as error:
-        failure = scrub_exception(error)
-        detail = _native.mask_user_visible(traceback.format_exc())
+        detail, failure = scrub_user_failure(error)
     if failure is not None:
         raise PySparkException(
             f"udf {function_name!r} raised {type(failure).__name__}: {failure}\n{detail}"
@@ -466,8 +460,7 @@ def _apply_ordered_window_pandas_udf(
             except PySparkException:
                 raise
             except Exception as error:
-                failure = scrub_exception(error)
-                detail = _native.mask_user_visible(traceback.format_exc())
+                detail, failure = scrub_user_failure(error)
             if failure is not None:
                 raise PySparkException(
                     "windowed GROUPED_AGG pandas_udf "
@@ -487,3 +480,57 @@ def _apply_ordered_window_pandas_udf(
             results.append(value)
         pdf[spec["out_name"]] = results
     return pdf[[field.name for field in struct_fields]]
+
+
+def _grouped_agg_pandas(pdf: Any, *, keys: list[str], specs: list[dict[str, Any]]) -> Any:
+    """Return one output row for a GROUPED_AGG pandas UDF group."""
+    try:
+        import pandas as pd
+    except ImportError as error:
+        raise ImportError(
+            "GROUPED_AGG pandas_udf requires pandas (pip install 'repark[pandas]')"
+        ) from error
+
+    row: dict[str, Any] = {}
+    for key_name in keys:
+        if key_name not in pdf.columns:
+            raise PySparkException(
+                f"GROUPED_AGG pandas_udf missing group key {key_name!r} in group frame"
+            )
+        row[key_name] = pdf[key_name].iloc[0] if len(pdf) > 0 else None
+    for spec in specs:
+        series_args: list[Any] = []
+        for input_name in spec["input_inter_names"]:
+            if input_name not in pdf.columns:
+                raise PySparkException(
+                    f"GROUPED_AGG pandas_udf input column missing from group frame: {input_name!r}"
+                )
+            series_args.append(pdf[input_name])
+        failure = None
+        try:
+            value = spec["user_func"](*series_args)
+        except PySparkException:
+            raise
+        except Exception as error:
+            detail, failure = scrub_user_failure(error)
+        if failure is not None:
+            raise PySparkException(
+                "GROUPED_AGG pandas_udf "
+                f"{spec['function_name']!r} raised {type(failure).__name__}: "
+                f"{failure}\n{detail}"
+            ) from failure
+        if value is None:
+            row[spec["out_name"]] = None
+        elif isinstance(value, pd.Series):
+            raise PySparkException(
+                f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
+                f"scalar; got pandas.Series (length {len(value)})"
+            )
+        elif isinstance(value, pd.DataFrame):
+            raise PySparkException(
+                f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
+                f"scalar; got pandas.DataFrame"
+            )
+        else:
+            row[spec["out_name"]] = value
+    return pd.DataFrame([row], columns=[*keys, *[spec["out_name"] for spec in specs]])

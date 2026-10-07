@@ -169,6 +169,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   unpivot, and explain run through the native `sql_built` method; `selectExpr` stays on `sql`
   (user text follows the flag). The set-op wrap plus its dict join ratchet the
   baseline 3973 → 3971. pins: string-literal-escape-1/C-011
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `_iter_map_in_arrow_output` (`mapInArrow`,
+  `mapInPandas`) keeps one user-failure handler (the redundant inner one around the call is
+  gone; same message), masks it and raises after the `finally`; 3971 → 3965 in `check_lib_py.py`.
+  pins: source-url-redact-1/C-076
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -329,6 +333,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   state stores; registry `GROUPED-DECL-*`). The pandas bridge
   `_apply_in_pandas_arrow_batches` moved here unchanged-in-behavior to keep
   `joins_columns.py` under its ceiling. pins: grouped-surface-1/C-001, C-002, C-003, C-006
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `_call_grouped_user_func` (`applyInPandas`,
+  `applyInArrow`, both cogroup forms) and `_iter_apply_in_arrow_results` mask the user failure
+  through `_secrets.scrub_user_failure` and raise after the handler. pins: source-url-redact-1/C-076
 - `cogroup.py` owns `GroupedData.cogroup` and `PandasCogroupedOps` (GROUPED-SURFACE-1,
   2026-09-14). Both sides sort by their key names in the engine and merge-walk the two
   keyed-group segment streams — one group's segments buffered per side, so memory stays
@@ -650,6 +657,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007; pins: logical-width-1/C-013
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built agg SQL runs
   through the native `sql_built` method. pins: string-literal-escape-1/C-011
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `_grouped_agg_pandas` moved to `udf_bridge.py`
+  (pure move, re-imported; 1169 → 1117 in `check_lib_py.py`). pins: source-url-redact-1/C-076
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show
@@ -685,6 +694,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the classic and pandas UDF user-exception
   doors interpolate the `scrub_exception` copy, mask the `format_exc()` detail through
   `_native.mask_user_visible`, and raise after the handler from the copy. pins: source-url-redact-1/C-073
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** every user-callback door here takes
+  `(detail, failure)` from `_secrets.scrub_user_failure`; `_grouped_agg_pandas` (non-windowed and
+  unbounded-window GROUPED_AGG) moved here from `joins_columns.py` beside its ordered-window sibling.
+  pins: source-url-redact-1/C-076
 - `io_declared.py` owns the orc-write / xml declared-refusal bodies and the `jdbc` reader-writer
   surface (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1).
   **IO-ORC-1 (2026-09-16):** the orc reader refusal is deleted (the read side is a real

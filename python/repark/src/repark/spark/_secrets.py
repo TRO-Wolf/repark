@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import sys
+import traceback
 from collections.abc import Callable
 
 
@@ -66,6 +67,12 @@ def scrub_exception(error: BaseException) -> BaseException:
         fresh.__traceback__ = link.__traceback__
         fresh.__suppress_context__ = link.__suppress_context__
     return copies[id(error)]
+
+
+def scrub_user_failure(error: BaseException) -> tuple[str, BaseException]:
+    from repark import _native
+
+    return _native.mask_user_visible(traceback.format_exc()), scrub_exception(error)
 
 
 def _chain_links(error: BaseException) -> list[BaseException]:
@@ -192,4 +199,10 @@ def _copy_os_fields_link(
     return fresh
 
 
-__all__ = ["mask_credentials", "mask_url_userinfo", "register_config_value", "scrub_exception"]
+__all__ = [
+    "mask_credentials",
+    "mask_url_userinfo",
+    "register_config_value",
+    "scrub_exception",
+    "scrub_user_failure",
+]

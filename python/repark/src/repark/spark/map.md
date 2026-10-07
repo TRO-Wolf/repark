@@ -108,6 +108,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** `scrub_exception(error)` walks the `__cause__`/`__context__` chain and rewrites each link's string args through `_native.mask_value_credentials`. pins: source-url-redact-1/C-067
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `scrub_exception` masks through `_native.mask_user_visible` only and never mutates: it returns the same object when no link changes, else a rebuilt chain of copies (traceback, cause, context and the suppress flag carried over); `OSError` links rebuild as `type(error)(errno, masked_strerror, masked_filename)` with `filename2`/`winerror` kept. `mask_url_userinfo(value)` forwards to the native URL leg for the writer path echoes.
   pins: source-url-redact-1/C-032
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `scrub_user_failure(error)` returns `(masked format_exc() text, scrub_exception(error))` for the user-callback doors; the raise stays at each call site, after the handler. pins: source-url-redact-1/C-076
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
   **FNP-4B (2026-09-15):** `local_view_name` also strips backtick quoting (handles are
   backticked since the D-2 quoter move). pins: fnp-4b/C-008
@@ -559,6 +560,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `pandas_udf` docstring cross-reference follows the scalar rewrite to its new home,
   `dataframe/udf_projection.py` (line-count neutral; ceiling stays 1300).
   pins: dfcore-2/C-004
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** a duck-typed `returnType.simpleString()` failure
+  echoes the scrubbed copy and raises after the handler; `_refuse_udtf_as_scalar_udf` moved to
+  `udtf.py` (pure move, re-imported; 1300 → 1287 in `check_lib_py.py`). pins: source-url-redact-1/C-076
 - `functions_url.py` — URL parsing and encoding wrappers.
 - `functions_window.py` — window function wrappers, plus the thin `window(...)`
   wrapper and its tail-install row (**FNP-WIN-1**, 2026-09-15); step 3 adds the
@@ -694,6 +698,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   handler instances, `orderBy` sorts in-partition ascending nulls-first, and scalar
   call args broadcast as lit-appended columns through `mapInArrow`.
   pins: df-subquery-1/C-005
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** the table-argument `start`/`eval`/`terminate` doors
+  mask through `_secrets.scrub_user_failure` and raise after the handler. pins: source-url-redact-1/C-076
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion. Round 2 adds the additive `_map_arrow_udtf_batches` branch
   (arrow handlers run batch-wise; the plain path is unchanged). **DF-SUBQUERY-1
@@ -702,6 +708,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   [PARTITION BY …] [ORDER BY …] [WITH SINGLE PARTITION]` call arguments so the SQL
   door reaches the same path.
   pins: fnp-misc-1/F-1; df-subquery-1/C-005
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** the scalar and Arrow UDTF `start`/`eval`/`terminate`
+  doors mask through `_secrets.scrub_user_failure` and raise after the handler; it now also hosts
+  `_refuse_udtf_as_scalar_udf` (moved from `functions_udf.py`). pins: source-url-redact-1/C-076
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and
   partition expressions.
 
