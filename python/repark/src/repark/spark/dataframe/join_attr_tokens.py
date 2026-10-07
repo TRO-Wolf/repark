@@ -20,6 +20,10 @@ if TYPE_CHECKING:
 _ATTR_TOKEN_RE = re.compile(
     r"__REPARK_ATTR_([A-Za-z0-9]+)__F(\d+)__([\w\\|]*?)(?:__D([0-9A-Fa-f]*))?__"
 )
+_ENGINE_UNSAFE = (" ", "(", ")", "+", "-", "*", "/")
+_EXACT_SHAPE = re.compile(
+    r"\x00|coalesce\(\x00, (?:\d{1,9}|CAST\(\d{1,9} AS [A-Z]+(?:\(\d+(?:, ?\d+)?\))?\))\)"
+)
 
 
 def _token_leaf_display(match: re.Match[str]) -> str | None:
@@ -169,12 +173,7 @@ def _select_via_attr_sql(
         }:
             engine = f"__repark_sel_{position}"
         else:
-            if display.startswith("CAST(") or any(
-                ch in display for ch in (" ", "(", ")", "+", "-", "*", "/")
-            ):
-                engine = f"__repark_sel_{position}"
-            else:
-                engine = display
+            engine = display if _display_is_engine(display) else f"__repark_sel_{position}"
         while engine in used_engines:
             engine = f"{engine}_"
         used_engines.add(engine)
@@ -182,25 +181,87 @@ def _select_via_attr_sql(
         display_names.append(display)
         engine_names.append(engine)
 
-    view = scratch_view_name(frame._session, "_repark_h1_sel_")
-    frame._session.create_or_replace_temp_view(view, _native.attribute_copies(frame._plan()))
-    try:
-        planned = frame._session.sql_built(f"SELECT {', '.join(proj_parts)} FROM {view}")
-        child = frame._spawn(planned)
-        if h1_display_names is not None:
-            child._display_names = h1_display_names
-            child._engine_names = h1_engine_names
-        else:
-            pairs = zip(display_names, engine_names, strict=True)
-            needs_identity = len(display_names) != len(set(display_names)) or any(
-                display != engine for display, engine in pairs
-            )
-            if needs_identity:
-                child._display_names = display_names
-                child._engine_names = engine_names
+    child = _attr_exact_child(frame, projected, engine_names)
+    if child is None:
+        view = scratch_view_name(frame._session, "_repark_h1_sel_")
+        frame._session.create_or_replace_temp_view(view, _native.attribute_copies(frame._plan()))
+        try:
+            planned = frame._session.sql_built(f"SELECT {', '.join(proj_parts)} FROM {view}")
+            child = frame._spawn(planned)
+        finally:
+            frame._session.drop_temp_view(view)
+    if h1_display_names is not None:
+        child._display_names = h1_display_names
+        child._engine_names = h1_engine_names
         return child
-    finally:
-        frame._session.drop_temp_view(view)
+    pairs = zip(display_names, engine_names, strict=True)
+    needs_identity = len(display_names) != len(set(display_names)) or any(
+        display != engine for display, engine in pairs
+    )
+    if needs_identity:
+        child._display_names = display_names
+        child._engine_names = engine_names
+    return child
+
+
+def _display_is_engine(display: str) -> bool:
+    return not display.startswith("CAST(") and not any(ch in display for ch in _ENGINE_UNSAFE)
+
+
+def _attr_exact(column: Column, held: list[str | None], engines: list[str]) -> bool:
+    join_sql = column.join_sql_part()
+    spelled: list[str] = []
+    shape: list[str] = []
+    last = 0
+    for match in _ATTR_TOKEN_RE.finditer(join_sql):
+        attr_id = match.group(1)
+        if attr_id not in held:
+            return False
+        text = join_sql[last : match.start()]
+        spelled += [text, _quote_ident_sql(engines[held.index(attr_id)])]
+        shape += [text, "\x00"]
+        last = match.end()
+    spelled.append(join_sql[last:])
+    shape.append(join_sql[last:])
+    if _EXACT_SHAPE.fullmatch("".join(shape)) is None:
+        return False
+    return "".join(spelled) == column._sql_expr
+
+
+def _attr_exact_child(
+    frame: DataFrame, projected: list[Column], engine_names: list[str]
+) -> DataFrame | None:
+    held, engines = _column_fields._stamped_ids_and_engines(frame)
+    if not all(_attr_exact(column, held, engines) for column in projected):
+        return None
+    planned = frame._plan().select([column._inner for column in projected])
+    if list(_native.logical_column_names(planned)) != engine_names:
+        return None
+    return frame._spawn(planned)
+
+
+def _attr_route_sources(frame: DataFrame, bounds: list[Column]) -> list[Column] | None:
+    if frame._display_names is None or frame._engine_names is None:
+        return None
+    held, engines = _column_fields._stamped_ids_and_engines(frame)
+    if len(held) != len(bounds):
+        return None
+    sources: list[Column] = []
+    for position, bound in enumerate(bounds):
+        attr_id = bound._attr_id
+        if attr_id is None:
+            return None
+        first = held.index(attr_id)
+        if first == position:
+            sources.append(bound)
+            continue
+        display = (
+            bound._projection_name
+            if bound._projection_name is not None
+            else bound.spark_display_part()
+        )
+        sources.append(frame._bind_engine_display_column(display, engines[first]))
+    return sources
 
 
 def _emit_join_side_columns(

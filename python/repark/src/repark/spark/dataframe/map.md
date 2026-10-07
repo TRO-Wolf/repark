@@ -315,6 +315,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   dead `_fill_expr` goes away while `_type_keys` stays as a schema reader pinned by
   `test_mapinarrow_unpersist_action_then_plan_child`. The cast texts unpack as one
   nested unit. pins: logical-width-1/C-012
+  **STAMP-2-R5P6-1 (2026-10-07):** `fill` (scalar and mapping) builds every
+  position from `_fill_sources`. When a target carries an attribute id and
+  the frame takes the attribute-token select route,
+  `join_attr_tokens._attr_route_sources` returns each position's bound column
+  at the first position holding its id, the field that route reads, so the
+  select stays exact and skips the SQL re-plan. Otherwise the frame's own
+  bound columns are used unchanged. pins: stamp-2-r5p6-1/C-001, C-002
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
   same-type-group `MIXED_TYPE_REPLACEMENT`, subset resolution through
@@ -851,6 +858,28 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   unset); `_join_condition_attr_names` falls back to the decoded leaf when the
   birth frame is dead or no longer emits the id. Only a token with neither
   stays out of the map. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+  **STAMP-2-R5P6-1 (2026-10-07):** `_select_via_attr_sql` plans natively,
+  skipping the scratch view and `sql_built` (~1.5 ms a call), when the
+  projection is attribute-exact (`_attr_exact_child`). Every token in a
+  column's join SQL must be held by this frame. The join SQL must be a bare
+  token or `coalesce(token, <0..999999999 or CAST(<that> AS T)>)`, the two
+  shapes whose SQL typing equals the native typing (a decimal or negative
+  literal types differently through the Spark door and keeps the SQL route).
+  Replacing each token by the engine the SQL route binds (the first position
+  holding the id) must reproduce the column's `_sql_expr`, so both routes read
+  the same fields. The native output names must equal the names the SQL route
+  assigns (a lone `alias("a b")` is `__repark_sel_0` there). Any miss keeps the
+  SQL route unchanged. Outer, sort-marked and metadata-carrying columns were
+  probed and answer identically on both routes, so they carry no guard. Why: S4
+  swapped main's `__REPARK_QCOL_` trigger for `__REPARK_ATTR_`, which every
+  id-bound column emits, so every `fillna` over a display-name frame re-planned
+  through SQL. `_attr_route_sources` gives `fill` each position's bound column
+  at the first position holding its id, the field the SQL route reads, so twin
+  fills pass the exactness check with the SQL route's answers (a union whose
+  later input differs at the twin positions included). The attribution and the
+  pre-measure (r5p6 1.182 → 1.128 against main `575f57ca`) are in the unit ledger.
+  Pins: `python/repark/tests/test_stamp_2_r5p6_1.py`.
+  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-005, C-006
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
   unemitted-id family (`_remember_unemitted_right_ids`/`_raise_if_id_not_emitted`/
   `_raise_unemitted_attr_tokens`/`_refuse_unemitted_ids`), split out of `core.py`

@@ -13,6 +13,7 @@ from repark.errors import (
 )
 from repark.spark.column import Column
 from repark.spark.dataframe.core import DataFrame, _normalize_subset
+from repark.spark.dataframe.join_attr_tokens import _attr_route_sources
 from repark.spark.dataframe.replace_expr import _NO_VALUE
 from repark.spark.types import DataType, StructField, StructType
 
@@ -74,7 +75,7 @@ class DataFrameNaFunctions:
         }
 
     def _fill_expr_for_bound(
-        self, bound: Column, value: Any, field_name: str, fallback_name: str
+        self, bound: Column, value: Any, field_name: str, fallback_name: str, source: Column
     ) -> Column:
         """Build a fill expression while preserving origin identity across projections."""
         from repark import _native
@@ -83,7 +84,7 @@ class DataFrameNaFunctions:
         probe = F.lit(value)
         filled_inner, cast_literal = _native.fill_expr_for_column(
             self._dataframe._inner,
-            bound._inner,
+            source._inner,
             field_name,
             fallback_name,
             probe._inner,
@@ -105,7 +106,7 @@ class DataFrameNaFunctions:
                 join_sql_expr=join,
                 is_foldable=True,
             )
-        filled = F.coalesce(bound, literal)
+        filled = F.coalesce(source, literal)
         display = bound._projection_name or bound.spark_display_part()
         if bound._attr_id is None:
             return filled.alias(display) if display else filled
@@ -116,7 +117,7 @@ class DataFrameNaFunctions:
             stable_name=False,
             has_free_attribute=True,
             sql_expr=filled._sql_expr,
-            join_sql_expr=(f"coalesce({bound.join_sql_part()}, {literal.join_sql_part()})"),
+            join_sql_expr=(f"coalesce({source.join_sql_part()}, {literal.join_sql_part()})"),
         )
 
     def _fill_dict(self, replacements: dict[str, Any]) -> DataFrame:
@@ -144,36 +145,50 @@ class DataFrameNaFunctions:
                     self._dataframe, column_name, bindings
                 ):
                     values[position] = replacement
+        sources = self._fill_sources(bounds, values)
         projections: list[Column | str] = []
         for position, bound in enumerate(bounds):
             display = bound._projection_name or bound.spark_display_part()
             if position not in values:
-                projections.append(bound)
+                projections.append(sources[position])
                 continue
             engine = None
             if bound._sql_expr is not None and bound._sql_expr.startswith('"'):
                 engine = bound._sql_expr.strip('"').replace('""', '"')
             projections.append(
-                self._fill_expr_for_bound(bound, values[position], engine or display, display)
+                self._fill_expr_for_bound(
+                    bound, values[position], engine or display, display, sources[position]
+                )
             )
         return self._dataframe.select(*projections)
 
     def _fill_scalar(self, value: Any, subset: list[str] | None) -> DataFrame:
         """Fill scalar-compatible columns in one projection."""
         target_positions = self._columns_for_fill_value(value, subset)
+        bounds = self._dataframe._iter_bound_columns()
+        sources = self._fill_sources(bounds, target_positions)
         projections: list[Column] = []
-        for position, bound in enumerate(self._dataframe._iter_bound_columns()):
+        for position, bound in enumerate(bounds):
             display = bound._projection_name or bound.spark_display_part()
             engine = None
             if bound._sql_expr is not None and bound._sql_expr.startswith('"'):
                 engine = bound._sql_expr.strip('"').replace('""', '"')
             if position in target_positions:
                 projections.append(
-                    self._fill_expr_for_bound(bound, value, engine or display, display)
+                    self._fill_expr_for_bound(
+                        bound, value, engine or display, display, sources[position]
+                    )
                 )
             else:
-                projections.append(bound)
+                projections.append(sources[position])
         return self._dataframe.select(*projections)
+
+    def _fill_sources(self, bounds: list[Column], targets: Any) -> list[Column]:
+        if any(bounds[position]._attr_id is not None for position in targets):
+            sources = _attr_route_sources(self._dataframe, bounds)
+            if sources is not None:
+                return sources
+        return bounds
 
     def _columns_for_fill_value(self, value: Any, subset: list[str] | None) -> set[int]:
         """Return positions whose type family accepts ``value``.

@@ -9658,3 +9658,18 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   format and the global doors stay unsupported. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-067, C-068
+- [test_stamp_2_r5p6_1.py](test_stamp_2_r5p6_1.py) — **STAMP-2-R5P6-1
+  (2026-10-07):** `fillna` (scalar and mapping) over twin, star, appended,
+  union-of-a-different-input and self-join frames answers the same columns,
+  dtypes, rows, display/engine names and id-sharing pattern on the native route
+  as with the SQL route forced, and takes the native route wherever it answers
+  (the self-join refuses on both). A decimal fill literal and a decimal
+  `coalesce` keep the SQL route with equal answers, an integer `coalesce`
+  takes the native one, and a `coalesce` over the second twin of a union keeps
+  the SQL route (it reads the first twin). A unique sort key binds without any
+  `_native.sort_*` trace door while an ambiguous one calls them. Mutations:
+  dropping the first-held fill binding reds both fill-route pins, dropping the
+  literal-shape check reds the decimal pins, and dropping the
+  binding-equivalence check reds the second-twin pin. No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
+  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004
