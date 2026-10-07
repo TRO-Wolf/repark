@@ -41,7 +41,10 @@ from repark.spark.dataframe import (
     surface_a,
     surface_b,
 )
-from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
+from repark.spark.dataframe.cache_handle import (
+    _register_cache_frame,
+    _warn_storage_level_cosmetic_once,
+)
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
     _apply_ordered_window_pandas_udf,
@@ -182,17 +185,6 @@ def _reset_dropin_warnings_for_tests() -> None:
 
 
 _CACHE_VIEW_PREFIX = "__repark_cache_"
-
-
-def _register_cache_frame(alive_token: dict[str, Any], frame: DataFrame) -> None:
-    """Track a DataFrame marked for cache/persist so :meth:`Catalog.clearCache` can drop it."""
-    import weakref
-
-    registry = alive_token.get("cache_frames")
-    if not isinstance(registry, weakref.WeakSet):
-        registry = weakref.WeakSet()
-        alive_token["cache_frames"] = registry
-    registry.add(frame)
 
 
 def _is_numeric_type_key(type_key: str) -> bool:
@@ -3774,10 +3766,13 @@ class DataFrame:
         from repark.spark._pyarrow import require_pyarrow
 
         pa = require_pyarrow()
+        failure = None
         try:
             table = pa.table(self)
         except pa.lib.ArrowException as arrow_error:
-            raise _export_engine_error(scrubbed := scrub_exception(arrow_error)) from scrubbed
+            failure = scrub_exception(arrow_error)
+        if failure is not None:
+            raise _export_engine_error(failure) from failure
         return self._apply_export_display_names(table)
 
     def to_arrow_batches(self) -> Iterator[Any]:
@@ -3790,10 +3785,13 @@ class DataFrame:
         from repark.spark._pyarrow import require_pyarrow
 
         pa = require_pyarrow()
+        failure = None
         try:
             reader = pa.RecordBatchReader.from_stream(self)
         except pa.lib.ArrowException as arrow_error:
-            raise _export_engine_error(scrubbed := scrub_exception(arrow_error)) from scrubbed
+            failure = scrub_exception(arrow_error)
+        if failure is not None:
+            raise _export_engine_error(failure) from failure
         stream_schema = reader.schema
         yielded_batch = False
         try:
@@ -3801,7 +3799,9 @@ class DataFrame:
                 yielded_batch = True
                 yield self._apply_export_display_names(batch)
         except pa.lib.ArrowException as arrow_error:
-            raise _export_engine_error(scrubbed := scrub_exception(arrow_error)) from scrubbed
+            failure = scrub_exception(arrow_error)
+        if failure is not None:
+            raise _export_engine_error(failure) from failure
         if not yielded_batch:
             empty = pa.RecordBatch.from_pylist([], schema=stream_schema)
             yield self._apply_export_display_names(empty)

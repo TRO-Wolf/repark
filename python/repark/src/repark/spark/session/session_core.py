@@ -1297,32 +1297,7 @@ class ReparkSession:
         self._ensure_alive().register_memory_catalog(name, str(warehouse))
         self._note_registered_catalog(name)
 
-    def _register_auto_memory_catalog(self) -> None:
-        """Auto-register the session-scoped ``spark_catalog`` memory catalog (R-AUTO-MEMCAT).
-
-        The ``duckdb.connect(":memory:")`` analogue: a bare ``builder.getOrCreate()`` gets a
-        working default catalog + ``default`` namespace so first-session bare-name flows
-        work with zero config. Data files live in a session-scoped temp warehouse removed on
-        :meth:`stop`; the catalog's table *metadata* is process-memory already. Registration
-        failure is non-fatal (warn + continue): a session without a default catalog is the
-        pre-existing behavior, not a broken session.
-        """
-        import tempfile
-
-        try:
-            tmpdir = tempfile.TemporaryDirectory(prefix="repark-spark-catalog-")
-            self.register_memory_catalog(DEFAULT_CATALOG_NAME, tmpdir.name)
-            # Tie warehouse lifetime to the session; stop() cleans it (R-AUTO-MEMCAT).
-            self._alive_token["auto_catalog_warehouse"] = tmpdir
-            # Spark's `default` database always exists — seed it so first writes work.
-            self.create_namespace(DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME)
-        except Exception as error:  # pragma: no cover — engine/filesystem edge
-            warnings.warn(
-                f"repark could not auto-register the default memory catalog: {error}; "
-                "register one explicitly (register_memory_catalog / spark.sql.catalog.*)",
-                UserWarning,
-                stacklevel=2,
-            )
+    _register_auto_memory_catalog = _session_surface.register_auto_memory_catalog
 
     def read_iceberg_table(
         self,
@@ -1534,7 +1509,8 @@ class ReparkSession:
         except UnsupportedOperationException:
             raise
         except Exception as error:
-            raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
+            failure = _scrub_exception(error)
+        raise _sql_udf_clean_exception(failure) from failure
 
     def _sql_with_udfs_in_with_statement(
         self,
@@ -1765,6 +1741,7 @@ class ReparkSession:
                 f"UDF via DataFrame.select / withColumn. Matched as {matched_text!r}."
             )
 
+        failure = None
         try:
             rewritten = _try_rewrite_select_list_python_udfs(
                 body_for_scan,
@@ -1774,13 +1751,15 @@ class ReparkSession:
         except UnsupportedOperationException:
             raise
         except Exception as error:
+            failure = _scrub_exception(error)
+        if failure is not None:
             raise UnsupportedOperationException(
                 "registered Python UDF in SQL could not be rewritten in repark v1 "
-                f"({type(error).__name__}: {_sql_udf_public_error_text(error)}). "
+                f"({type(failure).__name__}: {_sql_udf_public_error_text(failure)}). "
                 "Use DataFrame F.udf / spark.udf.register + select/withColumn. "
                 "SQL-embedded UDF rewrite supports SELECT-list, WHERE, GROUP BY, and "
                 "HAVING scalar forms (U9/U10)."
-            ) from _scrub_exception(error)
+            ) from failure
         if rewritten is None:
             raise UnsupportedOperationException(
                 "registered Python UDF in SQL is not supported for this statement shape "
@@ -1791,10 +1770,13 @@ class ReparkSession:
             )
 
         base_sql, materialize_plan = rewritten
+        failure = None
         try:
             base_frame = self.sql(trivia + base_sql if trivia else base_sql)
         except Exception as error:
-            raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
+            failure = _scrub_exception(error)
+        if failure is not None:
+            raise _sql_udf_clean_exception(failure) from failure
 
         from repark.spark.functions import col as f_col
 
@@ -1818,30 +1800,40 @@ class ReparkSession:
                     )
                 args = [f_col(input_name) for input_name in projection["input_names"]]
                 select_items.append(user_defined(*args).alias(projection["out_name"]))
+            failure = None
             try:
                 frame = frame.select(*select_items)
             except Exception as error:
-                raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
+                failure = _scrub_exception(error)
+            if failure is not None:
+                raise _sql_udf_clean_exception(failure) from failure
 
         # WHERE residual filter before user projection (may reference base + UDF temps).
         where_sql = materialize_plan.get("where_sql")
         if where_sql:
+            failure = None
             try:
                 frame = frame.filter(where_sql)
             except Exception as error:
-                raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
+                failure = _scrub_exception(error)
+            if failure is not None:
+                raise _sql_udf_clean_exception(failure) from failure
 
         # Final user-visible projection (residual expressions + aliases).
         final_exprs: list[str] = materialize_plan["final_exprs"]
+        failure = None
         try:
             if final_exprs:
                 frame = frame.selectExpr(*final_exprs)
         except Exception as error:
-            raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
+            failure = _scrub_exception(error)
+        if failure is not None:
+            raise _sql_udf_clean_exception(failure) from failure
 
         # GROUP BY on SELECT-list aliases / planned keys (post user projection).
         group_by_keys = materialize_plan.get("group_by_keys")
         if group_by_keys:
+            failure = None
             try:
                 grouped = frame.groupBy(*group_by_keys)
                 # Keys-only GROUP BY (no aggregates in SELECT) ≡ distinct on keys.
@@ -1849,21 +1841,27 @@ class ReparkSession:
                 project_names = materialize_plan.get("user_out_names") or group_by_keys
                 frame = grouped.count().select(*project_names)
             except Exception as error:
-                raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
+                failure = _scrub_exception(error)
+            if failure is not None:
+                raise _sql_udf_clean_exception(failure) from failure
 
         # HAVING residual (post-group filter on user-visible names).
         having_sql = materialize_plan.get("having_sql")
         if having_sql:
+            failure = None
             try:
                 frame = frame.filter(having_sql)
             except Exception as error:
-                raise _sql_udf_clean_exception(scrubbed := _scrub_exception(error)) from scrubbed
+                failure = _scrub_exception(error)
+            if failure is not None:
+                raise _sql_udf_clean_exception(failure) from failure
 
         if materialize_plan.get("distinct"):
             frame = frame.distinct()
 
         order_by = materialize_plan.get("order_by")
         if order_by:
+            failure = None
             try:
                 from repark.spark.functions import col as order_col
 
@@ -1873,12 +1871,14 @@ class ReparkSession:
                     order_items.append(column.asc() if ascending else column.desc())
                 frame = frame.orderBy(*order_items)
             except Exception as error:
+                failure = _scrub_exception(error)
+            if failure is not None:
                 raise UnsupportedOperationException(
                     "registered Python UDF SELECT with ORDER BY could not be applied "
                     "after materialization in repark v1 "
-                    f"({_sql_udf_public_error_text(error)}). Order by the SELECT-list "
+                    f"({_sql_udf_public_error_text(failure)}). Order by the SELECT-list "
                     "output alias only, or use DataFrame.orderBy after select."
-                ) from _scrub_exception(error)
+                ) from failure
 
         limit_n = materialize_plan.get("limit")
         if limit_n is not None:

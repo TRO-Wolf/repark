@@ -90,13 +90,15 @@ def write_text_path(writer: Any, path: str) -> None:
             staged_marker = staging / "_SUCCESS"
             if (destination / "_SUCCESS").exists() and staged_marker.exists():
                 staged_marker.unlink()
+            failure = None
             try:
                 _merge_path_write_tree(staging, destination)
             except (FileExistsError, OSError, shutil.Error) as exc:
-                exc = scrub_exception(exc)
+                failure = scrub_exception(exc)
+            if failure is not None:
                 raise AnalysisException(
-                    f"path mode('append') failed for {mask_url_userinfo(path)!r}: {exc}"
-                ) from exc
+                    f"path mode('append') failed for {mask_url_userinfo(path)!r}: {failure}"
+                ) from failure
             if staging.exists():
                 if staging.is_dir():
                     shutil.rmtree(staging)
@@ -110,16 +112,18 @@ def write_text_path(writer: Any, path: str) -> None:
                     "destination is a symbolic link "
                     "(refuse-loud; repark will not rmtree/unlink a symlink destination)"
                 )
+            failure = None
             try:
                 if destination.is_dir():
                     shutil.rmtree(destination)
                 else:
                     destination.unlink()
             except OSError as exc:
-                exc = scrub_exception(exc)
+                failure = scrub_exception(exc)
+            if failure is not None:
                 raise AnalysisException(
-                    f"cannot overwrite path {mask_url_userinfo(path)!r}: {exc}"
-                ) from exc
+                    f"cannot overwrite path {mask_url_userinfo(path)!r}: {failure}"
+                ) from failure
         staging.rename(destination)
     except AnalysisException:
         if staging.exists():

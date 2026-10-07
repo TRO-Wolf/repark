@@ -730,3 +730,163 @@ def test_scrub_exception_carries_the_traceback() -> None:
     assert scrubbed is not original
     assert original.__traceback__ is not None
     assert scrubbed.__traceback__ is original.__traceback__
+
+
+_RAISED: list[BaseException] = []
+
+
+def _record(error: BaseException) -> BaseException:
+    _RAISED.append(error)
+    return error
+
+
+def _assert_cause_is_the_scrubbed_copy(caught: BaseException, original: BaseException) -> None:
+    assert caught.__context__ is None
+    assert caught.__cause__ is not None
+    assert caught.__cause__ is not original
+    assert type(caught.__cause__) is type(original)
+    assert USERINFO not in str(caught.__cause__)
+    assert USERINFO in str(original)
+    assert USERINFO not in "".join(traceback.format_exception(caught))
+
+
+def _raise_arrow_stream(self: object, requested_schema: object = None) -> object:
+    import pyarrow as pa
+
+    raise _record(pa.lib.ArrowInvalid("stream failed for " + "http://" + USERINFO + "h/x"))
+
+
+@pytest.mark.parametrize("action", ["to_arrow", "to_arrow_batches"])
+def test_export_door_raises_outside_the_handler(
+    action: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        frame = session.range(2)
+        monkeypatch.setattr(type(frame), "__arrow_c_stream__", _raise_arrow_stream)
+        with pytest.raises(PySparkException) as caught:
+            _run_export_action(frame, action)
+        _assert_cause_is_the_scrubbed_copy(caught.value, _RAISED[-1])
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize("action", CAST_ACTIONS)
+def test_export_cast_error_context_is_none(action: str) -> None:
+    if action == "toPandas":
+        pytest.importorskip("pandas")
+    session = SparkSession.builder.config("spark.sql.ansi.enabled", "true").getOrCreate()
+    try:
+        rows = [("1",), ("http://u:" + MARK + "@h/x",)]
+        session.createDataFrame(rows, ["v"]).createOrReplaceTempView("t")
+        with pytest.raises(PySparkException) as caught:
+            _run_export_action(session.sql("SELECT CAST(v AS INT) FROM t"), action)
+        assert caught.value.__context__ is None
+        assert MARK not in str(caught.value.__cause__)
+    finally:
+        session.stop()
+
+
+def _raise_rewrite_url(self: object, *args: object) -> object:
+    raise _record(RuntimeError("rewrite failed for " + "http://" + USERINFO + "h/x"))
+
+
+def test_sql_udf_door_raises_outside_the_handler(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        session.udf.register("boom", _boom_user_text, "string")
+        monkeypatch.setattr(type(session), "_sql_rewrite_select_with_udfs", _raise_rewrite_url)
+        with pytest.raises(PySparkException) as caught:
+            session.sql("SELECT boom(id) FROM range(2)")
+        _assert_cause_is_the_scrubbed_copy(caught.value, _RAISED[-1])
+    finally:
+        session.stop()
+
+
+def test_list_databases_raises_outside_the_handler(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        monkeypatch.setattr(type(session), "_sql_built", _raise_rest_chain)
+        with pytest.raises(AnalysisException) as caught:
+            session.catalog.listDatabases()
+        assert caught.value.__context__ is None
+        assert caught.value.__cause__ is not _REST_CHAIN_FAILURE
+        assert caught.value.__cause__.__cause__ is not _REST_CHAIN_CAUSE
+        assert USERINFO not in "".join(traceback.format_exception(caught.value))
+    finally:
+        session.stop()
+
+
+def _raise_recorded_materialize(self: object) -> None:
+    raise _record(IllegalArgumentException("read failed for " + "http://" + USERINFO + "h/x"))
+
+
+def test_eager_door_raises_outside_the_handler(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        frame = session.range(2)
+        monkeypatch.setattr(
+            type(frame), "_materialize_cache_if_needed", _raise_recorded_materialize
+        )
+        with pytest.raises(IllegalArgumentException) as caught:
+            frame.eager()
+        _assert_cause_is_the_scrubbed_copy(caught.value, _RAISED[-1])
+    finally:
+        session.stop()
+
+
+def _raise_recorded_rmtree(path: object, *args: object, **kwargs: object) -> None:
+    if Path(str(path)).name == "out":
+        raise _record(OSError(errno.EACCES, "denied", "http://" + USERINFO + "127.0.0.1:9/x"))
+    _REAL_RMTREE(path, *args, **kwargs)
+
+
+def _raise_recorded_merge(source: object, destination: object) -> None:
+    raise _record(OSError(errno.EACCES, "denied", "/tmp/x/http://" + USERINFO + "h/x"))
+
+
+def _write_overwrite_parquet(frame: object, target: Path) -> None:
+    frame.write.mode("overwrite").parquet(str(target))
+
+
+def _write_overwrite_text(frame: object, target: Path) -> None:
+    frame.selectExpr("CAST(id AS STRING) AS v").write.mode("overwrite").text(str(target))
+
+
+def _write_append_parquet(frame: object, target: Path) -> None:
+    frame.write.mode("append").parquet(str(target))
+
+
+def _write_append_text(frame: object, target: Path) -> None:
+    frame.selectExpr("CAST(id AS STRING) AS v").write.mode("append").text(str(target))
+
+
+WRITER_DOORS = {
+    "readwriter_overwrite": (_write_overwrite_parquet, "rmtree"),
+    "readwriter_append": (_write_append_parquet, "merge"),
+    "text_overwrite": (_write_overwrite_text, "rmtree"),
+    "text_append": (_write_append_text, "merge"),
+}
+
+
+@pytest.mark.parametrize("door", sorted(WRITER_DOORS))
+def test_writer_doors_raise_outside_the_handler(
+    door: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import repark.spark.dataframe.writer_readwriter as writer_readwriter
+
+    write, failing = WRITER_DOORS[door]
+    target = tmp_path / "out"
+    session = SparkSession.builder.getOrCreate()
+    try:
+        frame = session.range(2)
+        write(frame, target)
+        if failing == "rmtree":
+            monkeypatch.setattr(shutil, "rmtree", _raise_recorded_rmtree)
+        else:
+            monkeypatch.setattr(writer_readwriter, "_merge_path_write_tree", _raise_recorded_merge)
+        with pytest.raises(AnalysisException) as caught:
+            write(frame, target)
+        _assert_cause_is_the_scrubbed_copy(caught.value, _RAISED[-1])
+    finally:
+        session.stop()

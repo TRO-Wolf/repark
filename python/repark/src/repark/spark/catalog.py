@@ -347,11 +347,15 @@ class Catalog:
         if pattern is not None:
             pattern = _require_str(pattern, "pattern")
             sql = f"{sql} LIKE {sql_string_literal(pattern)}"
+        failure = None
         try:
             table = self._session._sql_built(sql).to_arrow()
         except Exception as exc:
-            exc = scrub_exception(exc)
-            raise AnalysisException(f"listDatabases failed for catalog `{catalog}`: {exc}") from exc
+            failure = scrub_exception(exc)
+        if failure is not None:
+            raise AnalysisException(
+                f"listDatabases failed for catalog `{catalog}`: {failure}"
+            ) from failure
         out: list[Any] = []
         for row in table.to_pylist():
             rendered = row["namespace"]
