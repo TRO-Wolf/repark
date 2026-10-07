@@ -603,3 +603,50 @@ fn null_rows_charge_their_builder_bytes() {
         "one million all-NULL rows flush more than once, got {batches}"
     );
 }
+
+#[test]
+fn a_refused_value_emits_the_rows_before_it_then_refuses() {
+    let nan = vec![0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00];
+    let zero = vec![0, 0, 0, 0, 0, 0, 0, 0];
+    let tuples: Vec<Vec<Field>> = (1..=4_i32)
+        .map(|id| {
+            let amount = if id == 3 { nan.clone() } else { zero.clone() };
+            vec![Some(id.to_be_bytes().to_vec()), Some(amount)]
+        })
+        .collect();
+    let columns = vec![
+        base("id", "int4").with_nullable(false),
+        base("amount", "numeric"),
+    ];
+    let mut decoder = decoder(columns);
+    let bytes = stream(&tuples);
+    let mut rest: &[u8] = &bytes;
+    let kept = decoder
+        .decode(&mut rest)
+        .expect("the rows before the refused value")
+        .expect("a batch");
+    assert_eq!(kept.num_rows(), 2);
+    let ids = kept.column(0).as_primitive::<Int32Type>();
+    assert_eq!(ids.values().to_vec(), vec![1, 2]);
+    assert_eq!(kept.column(1).len(), 2);
+    let refusal = ConnectError::UnrepresentableValue {
+        column: Arc::from("amount"),
+        postgres_type: "numeric",
+        index: 2,
+        reason: ValueRefusal::NumericNaN,
+    };
+    assert_eq!(decoder.decode(&mut rest), Err(refusal.clone()));
+    assert_eq!(decoder.finish(), Err(refusal));
+    let first = stream(&tuples[2..]);
+    let error = decode_all(vec![base("id", "int4"), base("amount", "numeric")], &first)
+        .expect_err("a refused first row has nothing to emit");
+    assert_eq!(
+        error,
+        ConnectError::UnrepresentableValue {
+            column: Arc::from("amount"),
+            postgres_type: "numeric",
+            index: 0,
+            reason: ValueRefusal::NumericNaN,
+        }
+    );
+}

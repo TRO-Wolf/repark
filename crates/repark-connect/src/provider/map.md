@@ -46,6 +46,10 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
   scan's own re-check) and the limit, DataFusion's `skip + fetch`, fits `i64` (Postgres's `LIMIT` is a
   `bigint`; past it no limit pushes), takes `batch_rows` or else the session batch size under the 64 MiB cap, and
   returns a `PostgresScanExec`. pins: c-2/C-070, C-072, C-074, C-077, C-081, C-082, C-087
+- `scan.rs` — **C-2d fold 1 (2026-10-07), N4:** `place_until_refusal` gives the localiser's per-value refusals
+  the decoder's rule. When the localiser refuses row `k > 0` of a batch, the exec emits rows
+  `0..k`, placed, and then the refusal. The stream still ends at its first error, so the lease
+  aborts as before (C-103). pins: c-2/C-114
 - `scan.rs` — **`WallClockLocaliser`** (`localise(&TimestampMicrosecondArray)`, `zone_label()`;
   the trait sits here with no zone dependency, NS-10) and **`PostgresScanExec`**, one partition.
   `DisplayAs` renders, per scan, `PostgresScanExec: source=<name>, relation=<schema.table>` (or

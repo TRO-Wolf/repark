@@ -198,6 +198,29 @@ fn place(plan: &ScanPlan, batch: &RecordBatch) -> crate::error::Result<RecordBat
     )
 }
 
+fn place_until_refusal(
+    plan: &ScanPlan,
+    batch: crate::error::Result<RecordBatch>,
+) -> Vec<crate::error::Result<RecordBatch>> {
+    let mut batch = match batch {
+        Ok(batch) => batch,
+        Err(error) => return vec![Err(error)],
+    };
+    let mut refusal = None;
+    loop {
+        match place(plan, &batch) {
+            Ok(placed) => return [Ok(placed)].into_iter().chain(refusal.map(Err)).collect(),
+            Err(error @ ConnectError::UnrepresentableValue { index, .. })
+                if index > 0 && index < batch.num_rows() =>
+            {
+                batch = batch.slice(0, index);
+                refusal = Some(error);
+            }
+            Err(error) => return vec![Err(error)],
+        }
+    }
+}
+
 impl ExecutionPlan for PostgresScanExec {
     fn name(&self) -> &'static str {
         "PostgresScanExec"
@@ -248,13 +271,14 @@ impl ExecutionPlan for PostgresScanExec {
             plan.options,
             meter,
         );
-        let placed = Box::pin(rows.map(move |batch| {
-            let batch = batch
-                .and_then(|batch| place(&plan, &batch))
-                .map_err(external)?;
-            reservation.try_resize(batch.get_array_memory_size())?;
-            Ok(batch.record_output(&baseline))
-        }));
+        let placed = rows
+            .flat_map(move |batch| futures::stream::iter(place_until_refusal(&plan, batch)))
+            .map(move |batch| {
+                let batch = batch.map_err(external)?;
+                reservation.try_resize(batch.get_array_memory_size())?;
+                Ok(batch.record_output(&baseline))
+            });
+        let placed = Box::pin(placed);
         let stream = futures::stream::unfold(Some(placed), |state| async move {
             let mut placed = state?;
             let next = placed.next().await?;

@@ -73,6 +73,12 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   field needs. It carries no value, and it takes the file to 264, four lines past the sketch
   ceiling (the 1000-line gate is the mechanical one).
   pins: c-2/C-001, C-015, C-018, C-025, C-037, C-048, C-093
+- `copy_binary.rs` — **C-2d fold 1 (2026-10-07), N4:** a value refusal (`ConnectError::UnrepresentableValue`)
+  in a batch that already holds rows does not discard them. `refuse_after_kept_rows` slices
+  every builder to the rows before the refused tuple, so the half-appended tuple is dropped. It
+  returns those rows as a batch and poisons the decoder with the refusal, which the next
+  `decode` or `finish` returns. A refusal in a batch's first row, and every protocol error,
+  still fail at once. pins: c-2/C-114
 - `copy_binary.rs` — C-2a (2026-10-06; sketch §2.6). `CopyBinaryDecoder`, the resumable state
   machine over `COPY … TO STDOUT (FORMAT BINARY)` chunks, independent of how the server or TLS
   cuts the stream: `Header → HeaderExtension → TupleStart → FieldLength(i) → FieldValue(i, n)
