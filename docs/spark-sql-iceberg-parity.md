@@ -3565,6 +3565,19 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`
 - **Rationale** — DECLARED 2026-10-07 (C-2b; sketch §2.3). A source has one endpoint at 1.6, and
   failover across hosts is demand-triggered. Retire in the unit that adds host lists.
+### CONNECT-DECL-pg-server-version — a Postgres source refuses servers older than PostgreSQL 14
+- **repark** — every resolution of a Postgres source reads `server_version_num` in its
+  discovery transaction, and a value below `140000` refuses with
+  `ConnectError::DeclaredServerVersion`, naming the number and this row, before any catalog
+  query runs; it folds to the Unsupported class.
+- **Apache Spark** — the JDBC source connects to any server pgjdbc supports, which reaches back
+  to PostgreSQL 8.4. *(oracle: documented — pgjdbc's supported server versions; no value
+  claim.)*
+- **Pin** — `crates/repark-connect/tests/it/read.rs::servers_older_than_14_are_declared`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; sketch §2.4, the server floor). 14 is the oldest
+  community-supported release on 2026-10-06; the read path needs
+  `pg_collation.collisdeterministic` (12) and `numeric` infinities (14). Raise the floor as
+  releases leave support; retire only by a dated owner decision to admit an older server.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.

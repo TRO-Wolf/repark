@@ -407,6 +407,7 @@ pub enum ProtocolViolation {
     NumericSign { sign: u16 },
     NumericDigit { digit: i16 },
     JsonbVersion { found: Option<u8> },
+    UnexpectedResponse,
 }
 
 impl fmt::Display for ProtocolViolation {
@@ -460,6 +461,9 @@ impl fmt::Display for ProtocolViolation {
                     f,
                     "a `jsonb` value has version {version}; only version 1 is known"
                 )
+            }
+            ProtocolViolation::UnexpectedResponse => {
+                f.write_str("the server answered a request with an unexpected message")
             }
             ProtocolViolation::JsonbVersion { found: None } => {
                 f.write_str("a `jsonb` value is empty, with no version byte")

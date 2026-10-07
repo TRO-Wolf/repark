@@ -9,6 +9,7 @@ pub enum IdentRefusal {
     Empty,
     Nul,
     TooLong { bytes: usize },
+    Qualification,
 }
 
 impl fmt::Display for IdentRefusal {
@@ -20,6 +21,10 @@ impl fmt::Display for IdentRefusal {
                 f,
                 "is {bytes} bytes, past the {MAX_IDENT_BYTES}-byte limit beyond which Postgres \
                  truncates names"
+            ),
+            IdentRefusal::Qualification => f.write_str(
+                "is not `table` or `schema.table`, each part bare or double-quoted with `\"\"` \
+                 for a quote",
             ),
         }
     }
@@ -76,6 +81,52 @@ impl QualifiedRelation {
     #[must_use]
     pub fn new(schema: PgIdent, table: PgIdent) -> Self {
         Self { schema, table }
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn parse(dbtable: &str) -> Result<Self> {
+        let malformed = || ConnectError::InvalidIdentifier {
+            reason: IdentRefusal::Qualification,
+        };
+        let mut parts = Vec::new();
+        let mut rest = dbtable;
+        loop {
+            let (part, after) = split_part(rest).ok_or_else(malformed)?;
+            parts.push(PgIdent::new(part)?);
+            match after.strip_prefix('.') {
+                Some(next) => rest = next,
+                None if after.is_empty() => break,
+                None => return Err(malformed()),
+            }
+        }
+        let mut parts = parts.into_iter();
+        match (parts.next(), parts.next(), parts.next()) {
+            (Some(table), None, None) => Ok(Self::new(PgIdent::new(DEFAULT_SCHEMA)?, table)),
+            (Some(schema), Some(table), None) => Ok(Self::new(schema, table)),
+            _ => Err(malformed()),
+        }
+    }
+}
+
+pub const DEFAULT_SCHEMA: &str = "public";
+
+fn split_part(text: &str) -> Option<(String, &str)> {
+    let Some(mut quoted) = text.strip_prefix('"') else {
+        let end = text.find(['.', '"']).unwrap_or(text.len());
+        return Some((text.get(..end)?.to_string(), text.get(end..)?));
+    };
+    let mut part = String::new();
+    loop {
+        let close = quoted.find('"')?;
+        part.push_str(quoted.get(..close)?);
+        let after = quoted.get(close + 1..)?;
+        match after.strip_prefix('"') {
+            Some(next) => {
+                part.push('"');
+                quoted = next;
+            }
+            None => return Some((part, after)),
+        }
     }
 }
 
