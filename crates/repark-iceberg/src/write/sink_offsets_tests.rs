@@ -1,6 +1,8 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
+use async_trait::async_trait;
 use datafusion::arrow::array::{Int32Array, RecordBatch};
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::error::DataFusionError;
@@ -9,7 +11,7 @@ use iceberg::expr::Predicate;
 use iceberg::spec::{DataFile, NestedField, Operation, PrimitiveType, Schema, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
+use iceberg::{Catalog, Namespace, NamespaceIdent, TableCommit, TableCreation, TableIdent};
 use repark_common::Generation;
 use tempfile::TempDir;
 use uuid::Uuid;
@@ -671,6 +673,267 @@ async fn resume_reads_the_last_offset_from_one_loaded_table() {
         read_resume_point(&table, other).expect("other query"),
         Some(foreign.record)
     );
+}
+
+#[tokio::test]
+async fn resume_refuses_when_summary_and_property_disagree() {
+    let (_warehouse, catalog, ident) = fixture("mismatch").await;
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let table = stamped_append(&catalog, &ident, &stamp, &[1]).await;
+    let (key, _) = stamp.record.property().expect("property");
+    let (_, ahead) = stamp_for(1, SinkDoor::Table)
+        .record
+        .property()
+        .expect("ahead");
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .update_table_properties()
+        .set(key.clone(), ahead)
+        .apply(tx)
+        .expect("apply");
+    let table = tx.commit(catalog.as_ref()).await.expect("drift property");
+    match read_resume_point(&table, query()).expect_err("mismatch") {
+        MicroBatchError::RecoveryRequired {
+            epoch,
+            durable,
+            reason:
+                RecoveryReason::OffsetMismatch {
+                    summary_epoch,
+                    property_epoch,
+                },
+            ..
+        } => {
+            assert_eq!(epoch, Epoch::new(0));
+            assert_eq!(durable.as_deref(), Some(&stamp.record));
+            assert_eq!(summary_epoch, Some(Epoch::new(0)));
+            assert_eq!(property_epoch, Some(Epoch::new(1)));
+        }
+        other => panic!("expected OffsetMismatch, got {other:?}"),
+    }
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .update_table_properties()
+        .remove(key)
+        .apply(tx)
+        .expect("apply");
+    let table = tx.commit(catalog.as_ref()).await.expect("drop property");
+    assert!(matches!(
+        read_resume_point(&table, query()),
+        Err(MicroBatchError::RecoveryRequired {
+            reason: RecoveryReason::OffsetMismatch {
+                summary_epoch: Some(_),
+                property_epoch: None,
+            },
+            ..
+        })
+    ));
+}
+
+#[tokio::test]
+async fn resume_refuses_a_property_whose_stamped_snapshot_expired() {
+    let (_warehouse, catalog, ident) = fixture("expired").await;
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let stamped = stamped_append(&catalog, &ident, &stamp, &[1]).await;
+    let stamped_id = stamped.metadata().current_snapshot_id().expect("stamped");
+    let table = append_plain(&catalog, &ident, &[2]).await;
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .expire_snapshots()
+        .expire_snapshot_id(stamped_id)
+        .apply(tx)
+        .expect("apply expire");
+    let table = tx.commit(catalog.as_ref()).await.expect("expire");
+    assert!(table.metadata().snapshot_by_id(stamped_id).is_none());
+    match read_resume_point(&table, query()).expect_err("expired") {
+        MicroBatchError::RecoveryRequired {
+            epoch,
+            durable,
+            reason: RecoveryReason::StampedSnapshotExpired,
+            ..
+        } => {
+            assert_eq!(epoch, Epoch::new(0));
+            assert_eq!(durable.as_deref(), Some(&stamp.record));
+        }
+        other => panic!("expected StampedSnapshotExpired, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn resume_refuses_a_newer_offset_format() {
+    let (_warehouse, catalog, ident) = fixture("format").await;
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let table = stamped_append(&catalog, &ident, &stamp, &[1]).await;
+    let (key, value) = stamp.record.property().expect("property");
+    let future = value.replace("\"format-version\":1", "\"format-version\":2");
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .update_table_properties()
+        .set(key, future)
+        .apply(tx)
+        .expect("apply");
+    let table = tx.commit(catalog.as_ref()).await.expect("future property");
+    assert!(matches!(
+        read_resume_point(&table, query()),
+        Err(MicroBatchError::UnsupportedOffsetFormat { ref found, supported: 1 }) if found == "2"
+    ));
+}
+
+#[derive(Debug)]
+struct RacingCatalog {
+    inner: Arc<dyn Catalog>,
+    loads: AtomicUsize,
+    updates: AtomicUsize,
+    racer: Mutex<Option<Vec<DataFile>>>,
+}
+
+impl RacingCatalog {
+    fn new(inner: Arc<dyn Catalog>, racer: Vec<DataFile>) -> Self {
+        Self {
+            inner,
+            loads: AtomicUsize::new(0),
+            updates: AtomicUsize::new(0),
+            racer: Mutex::new(Some(racer)),
+        }
+    }
+}
+
+#[async_trait]
+impl Catalog for RacingCatalog {
+    async fn list_namespaces(
+        &self,
+        parent: Option<&NamespaceIdent>,
+    ) -> iceberg::Result<Vec<NamespaceIdent>> {
+        self.inner.list_namespaces(parent).await
+    }
+
+    async fn create_namespace(
+        &self,
+        namespace: &NamespaceIdent,
+        properties: HashMap<String, String>,
+    ) -> iceberg::Result<Namespace> {
+        self.inner.create_namespace(namespace, properties).await
+    }
+
+    async fn get_namespace(&self, namespace: &NamespaceIdent) -> iceberg::Result<Namespace> {
+        self.inner.get_namespace(namespace).await
+    }
+
+    async fn namespace_exists(&self, namespace: &NamespaceIdent) -> iceberg::Result<bool> {
+        self.inner.namespace_exists(namespace).await
+    }
+
+    async fn update_namespace(
+        &self,
+        namespace: &NamespaceIdent,
+        properties: HashMap<String, String>,
+    ) -> iceberg::Result<()> {
+        self.inner.update_namespace(namespace, properties).await
+    }
+
+    async fn drop_namespace(&self, namespace: &NamespaceIdent) -> iceberg::Result<()> {
+        self.inner.drop_namespace(namespace).await
+    }
+
+    async fn list_tables(&self, namespace: &NamespaceIdent) -> iceberg::Result<Vec<TableIdent>> {
+        self.inner.list_tables(namespace).await
+    }
+
+    async fn create_table(
+        &self,
+        namespace: &NamespaceIdent,
+        creation: TableCreation,
+    ) -> iceberg::Result<Table> {
+        self.inner.create_table(namespace, creation).await
+    }
+
+    async fn load_table(&self, table: &TableIdent) -> iceberg::Result<Table> {
+        self.loads.fetch_add(1, Ordering::SeqCst);
+        self.inner.load_table(table).await
+    }
+
+    async fn drop_table(&self, table: &TableIdent) -> iceberg::Result<()> {
+        self.inner.drop_table(table).await
+    }
+
+    async fn table_exists(&self, table: &TableIdent) -> iceberg::Result<bool> {
+        self.inner.table_exists(table).await
+    }
+
+    async fn rename_table(&self, src: &TableIdent, dest: &TableIdent) -> iceberg::Result<()> {
+        self.inner.rename_table(src, dest).await
+    }
+
+    async fn register_table(
+        &self,
+        table: &TableIdent,
+        metadata_location: String,
+    ) -> iceberg::Result<Table> {
+        self.inner.register_table(table, metadata_location).await
+    }
+
+    async fn update_table(&self, commit: TableCommit) -> iceberg::Result<Table> {
+        self.updates.fetch_add(1, Ordering::SeqCst);
+        let racer = self.racer.lock().expect("racer lock").take();
+        if let Some(files) = racer {
+            let current = self.inner.load_table(commit.identifier()).await?;
+            let tx = Transaction::new(&current);
+            let tx = tx.fast_append().add_data_files(files).apply(tx)?;
+            tx.commit(self.inner.as_ref()).await?;
+        }
+        self.inner.update_table(commit).await
+    }
+}
+
+#[tokio::test]
+async fn a_concurrent_unrelated_append_still_commits_both_halves_exactly_once() {
+    let (_warehouse, memory, ident) = fixture("race").await;
+    let table = append_plain(&memory, &ident, &[1]).await;
+    let racer_files = stage(&table, &[99]).await;
+    let racing = Arc::new(RacingCatalog::new(Arc::clone(&memory), racer_files));
+    let catalog: Arc<dyn Catalog> = Arc::clone(&racing) as Arc<dyn Catalog>;
+    let base_snapshots = table.metadata().snapshots().count();
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let files = stage(&table, &[2]).await;
+    let committed = commit_append_with_summary(&catalog, &table, files, &[], None)
+        .await
+        .expect("stamped append over a racer");
+    assert_eq!(racing.updates.load(Ordering::SeqCst), 2);
+    let reloaded = memory.load_table(&ident).await.expect("reload");
+    for view in [&committed, &reloaded] {
+        assert_eq!(view.metadata().snapshots().count(), base_snapshots + 2);
+        assert_eq!(stamped_snapshots(view), 1);
+        assert_stamped_head(view, &stamp);
+        let head = view.metadata().current_snapshot().expect("head");
+        let parent = view
+            .metadata()
+            .snapshot_by_id(head.parent_snapshot_id().expect("parent"))
+            .expect("racer snapshot");
+        assert!(
+            !parent
+                .summary()
+                .additional_properties
+                .contains_key(QUERY_ID_KEY)
+        );
+        assert_eq!(
+            parent.parent_snapshot_id(),
+            table.metadata().current_snapshot_id()
+        );
+    }
+    assert_eq!(live_ids(&reloaded).await, vec![1, 2, 99]);
+    assert_eq!(
+        guard.outcome(),
+        ScopeOutcome::Committed {
+            snapshot: SnapshotId::new(reloaded.metadata().current_snapshot_id().expect("head"))
+        }
+    );
+    let loads_before = racing.loads.load(Ordering::SeqCst);
+    let resumed = catalog.load_table(&ident).await.expect("one read");
+    assert_eq!(
+        read_resume_point(&resumed, query()).expect("resume"),
+        Some(stamp.record)
+    );
+    assert_eq!(racing.loads.load(Ordering::SeqCst), loads_before + 1);
 }
 
 #[test]
