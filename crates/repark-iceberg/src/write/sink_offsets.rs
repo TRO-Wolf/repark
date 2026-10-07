@@ -271,11 +271,36 @@ fn epoch_check(table: &Table, stamp: &CommitStamp) -> Result<(), MicroBatchError
             epoch: record.epoch,
         });
     }
+    let winner = stamp_at_epoch(table, record)
+        .map(|committer| committer.run)
+        .filter(|run| *run != record.run)
+        .unwrap_or(durable.run);
     Err(MicroBatchError::Fenced {
         query: record.query,
         epoch: record.epoch,
-        winner: durable.run,
+        winner,
     })
+}
+
+fn stamp_at_epoch(table: &Table, record: &SinkRecord) -> Option<SinkRecord> {
+    main_lineage(table.metadata())
+        .filter_map(|snapshot| {
+            let summary = &snapshot.summary().additional_properties;
+            stamped_by(summary, record.query)
+                .then(|| SinkRecord::from_summary(summary).ok().flatten())
+                .flatten()
+        })
+        .take_while(|stamped| stamped.epoch.get() >= record.epoch.get())
+        .find(|stamped| stamped.epoch == record.epoch)
+}
+
+fn main_lineage(metadata: &TableMetadata) -> impl Iterator<Item = &SnapshotRef> {
+    std::iter::successors(metadata.current_snapshot(), |snapshot| {
+        snapshot
+            .parent_snapshot_id()
+            .and_then(|parent| metadata.snapshot_by_id(parent))
+    })
+    .take(metadata.snapshots().len())
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -315,27 +340,18 @@ pub fn read_resume_point(
 }
 
 fn newest_stamp(table: &Table, query: QueryId) -> Result<Option<SinkRecord>, MicroBatchError> {
-    let metadata = table.metadata();
-    let mut cursor = metadata.current_snapshot();
-    for _ in 0..metadata.snapshots().len() {
-        let Some(snapshot) = cursor else {
-            return Ok(None);
-        };
-        let summary = &snapshot.summary().additional_properties;
-        if stamped_by(summary, query) {
-            return match SinkRecord::from_summary(summary)? {
-                Some(record) => Ok(Some(record)),
-                None => Err(MicroBatchError::Catalog(format!(
-                    "repark.cdc stamp of query {query} on snapshot {id} misses its format version",
-                    id = snapshot.snapshot_id()
-                ))),
-            };
-        }
-        cursor = snapshot
-            .parent_snapshot_id()
-            .and_then(|parent| metadata.snapshot_by_id(parent));
+    let Some(snapshot) = main_lineage(table.metadata())
+        .find(|snapshot| stamped_by(&snapshot.summary().additional_properties, query))
+    else {
+        return Ok(None);
+    };
+    match SinkRecord::from_summary(&snapshot.summary().additional_properties)? {
+        Some(record) => Ok(Some(record)),
+        None => Err(MicroBatchError::Catalog(format!(
+            "repark.cdc stamp of query {query} on snapshot {id} misses its format version",
+            id = snapshot.snapshot_id()
+        ))),
     }
-    Ok(None)
 }
 
 fn off_lineage_stamp(table: &Table, query: QueryId, property: &SinkRecord) -> Option<SnapshotId> {

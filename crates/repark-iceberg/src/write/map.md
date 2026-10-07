@@ -129,7 +129,8 @@ repark-core's error map.
   epoch check runs in `claim` on the table the commit starts from, after the
   `SinkCommittedTwice` guard: a record of another generation refuses `GenerationMismatch`, and
   an epoch at or below the durable one refuses `AlreadyCommitted` under this run and `Fenced`
-  (naming the winner) under another. An unscoped `commit_stamp_only` runs it too. Once a scope
+  under another, naming the run whose stamp carries the claimed epoch, or the sink's current
+  owner when there is none or it is the claimant. An unscoped `commit_stamp_only` runs it too. Once a scope
   has seen its epoch durable (`AlreadyCommitted`, `Fenced` or `GenerationMismatch`), the entry
   is marked refused and every later claim in that scope returns the same refusal (fold 1, K3),
   so a stale view cannot re-commit the epoch. `resolve_unknown_outcome` is the C-008 walk on

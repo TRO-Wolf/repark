@@ -220,3 +220,48 @@ async fn a_stale_view_after_a_refused_claim_does_not_commit_the_epoch_twice() {
     assert_eq!(stamps_at(&after, 0), 1);
     assert_eq!(live_ids(&after).await, vec![1, 2]);
 }
+
+fn run_of(tag: u8) -> RunId {
+    RunId::new(
+        Uuid::parse_str(&format!(
+            "{tag:02x}{tag:02x}{tag:02x}{tag:02x}-0000-4000-8000-000000000000"
+        ))
+        .expect("uuid"),
+    )
+}
+
+#[tokio::test]
+async fn fenced_names_the_committer_of_the_claimed_epoch_and_otherwise_the_owner() {
+    let (_warehouse, catalog, ident) = fixture("epoch_fenced_committer").await;
+    stamped_append(&catalog, &ident, &stamp_of(1, run_of(0x11), 1), &[1]).await;
+    stamped_append(&catalog, &ident, &stamp_of(2, run_of(0x22), 1), &[2]).await;
+    let table = catalog.load_table(&ident).await.expect("load");
+    let fenced = |epoch: u64, winner: u8| MicroBatchError::Fenced {
+        query: query(),
+        epoch: Epoch::new(epoch),
+        winner: run_of(winner),
+    };
+    assert_eq!(
+        claim_once(&table, &stamp_of(1, run_of(0x33), 1)),
+        Err(fenced(1, 0x11))
+    );
+    assert_eq!(
+        claim_once(&table, &stamp_of(1, run_of(0x11), 1)),
+        Err(fenced(1, 0x22))
+    );
+    assert_eq!(
+        claim_once(&table, &stamp_of(2, run_of(0x33), 1)),
+        Err(fenced(2, 0x22))
+    );
+    assert_eq!(
+        claim_once(&table, &stamp_of(0, run_of(0x33), 1)),
+        Err(fenced(0, 0x22))
+    );
+    assert_eq!(
+        claim_once(&table, &stamp_of(2, run_of(0x22), 1)),
+        Err(MicroBatchError::AlreadyCommitted {
+            query: query(),
+            epoch: Epoch::new(2),
+        })
+    );
+}
