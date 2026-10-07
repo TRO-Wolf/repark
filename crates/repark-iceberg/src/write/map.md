@@ -137,7 +137,8 @@ repark-core's error map.
   `commit_stamp_only` commits an empty `merge_append` carrying both halves (DM-5: the fork
   accepts it as one `append` snapshot). `read_resume_point` reads one loaded table with no IO.
   The tests sit in the `#[path]` sibling so the module stays under the default ceiling.
-  pins: mb-2a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  Mutation-proven: dropping the property write turns the resume pin red (ledger C-011).
+  pins: mb-2a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011, C-012
 - `writer_props.rs`, `write_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `writer_properties_with` takes Java's `parquet.enable.dictionary` default — absent = ON
   (`ParquetProperties.DEFAULT_IS_DICTIONARY_ENABLED = true`, measured by javap on the

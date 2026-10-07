@@ -44,8 +44,10 @@ sink_offsets_tests.rs, mod.rs, map.md}`, the three named commit arms
 | C-008 | A concurrent unrelated append landing between the stamped commit's load and its catalog update forces a retry, and the retried commit still carries both halves exactly once (one stamped snapshot, the property once, the racer's file live). | The racing-catalog pin. | **PROVEN** | 1 pin green (`a_concurrent_unrelated_append_still_commits_both_halves_exactly_once`): a test catalog commits a racer's `fast_append` inside the stamped commit's first `update_table`, so the append arm retries (2 update calls). The committed and the reloaded table each hold `base + 2` snapshots, exactly one stamped snapshot (the head), the property once and equal to the summary, the racer's unstamped snapshot as the head's parent on top of the original base, and live rows `[1, 2, 99]`; the scope outcome names the head. Resume afterwards costs one counted `load_table`. pins: mb-2a/C-008 |
 | C-009 | The property-versus-summary guard (Q10, R-14): a summary record and a property that disagree refuse `RecoveryRequired(OffsetMismatch)` with the summary as the durable record; a property with no stamped snapshot retained refuses `RecoveryRequired(StampedSnapshotExpired)`; a stamp of another query is passed over; a format above 1 refuses `UnsupportedOffsetFormat`. | Guard pins in `sink_offsets_tests.rs`. | **PROVEN** | 3 pins green: `resume_refuses_when_summary_and_property_disagree` (a property drifted to epoch 1 over a summary at epoch 0 gives `OffsetMismatch { summary_epoch: Some(0), property_epoch: Some(1) }` with the summary as `durable`; the property removed gives `property_epoch: None`), `resume_refuses_a_property_whose_stamped_snapshot_expired` (a real `expire_snapshots` of the stamped snapshot gives `StampedSnapshotExpired` with the property as `durable`), `resume_refuses_a_newer_offset_format` (`UnsupportedOffsetFormat { found: "2", supported: 1 }`). Another query's stamp is passed over in the C-007 pin. pins: mb-2a/C-009 |
 | C-010 | Harness pin 1 `test_microbatch_kill_after_commit_resumes_1` (sketch §5) is green: epoch 0 commits through the stamped append arm, every in-memory value drops, a reload and `read_resume_point` resume epoch 1 after a Bronze append; the sink equals Bronze with each id once, epochs 0 and 1 each appear once in the summary history, and the property equals the newest stamped summary. | `cargo test -p repark-iceberg --lib microbatch::crash_tests`. | **PROVEN** | `cargo test -p repark-iceberg --lib microbatch::crash_tests`: 1 passed. Real Parquet on both sides: the window is read through `provider_for_plan` and DataFusion, the sink scanned through the fork's reader. Kill point (c) is the end of `run_epoch`, where the planner, the scope guard and every `Table` drop; kill point (a) plans and reads epoch 1 and drops it before staging. The assertions are the sketch's: sink ids `[1, 2, 3]` equal Bronze's, stamped epochs `["0", "1"]` once each, the property equals the head's summary record, and the last offset names Bronze's head; a third trigger plans no window and commits nothing (R-18). pins: mb-2a/C-010 |
-| C-011 | Mutations: dropping the property write turns the resume pin red; two further mutants are red on their owning pins. | Three mutation runs, restored by diff. | **OPEN** (step 6) | — |
-| C-012 | Every gate in the brief is green and every touched map is current. | The gate list. | **OPEN** (step 6) | — |
+| C-011 | Mutations: dropping the property write turns the resume pin red; two further mutants are red on their owning pins. | Three mutation runs, restored by diff. | **PROVEN** | 3 mutants, each red, each restored from a backup and confirmed by `git diff --quiet`. M1 (the brief's): `stamp_transaction` returns the transaction without the property update — 9 of 17 red, among them the resume pin `resume_reads_the_last_offset_from_one_loaded_table` and harness pin 1. M2: `claim` stops marking the entry claimed — 3 red (`scope_holds_one_stamp_per_sink_and_claims_once`, `a_second_stamped_commit_in_one_batch_refuses`, `commit_stamp_only_commits_one_append_snapshot_with_both_halves`). M3: `read_resume_point` returns the summary record without comparing the property — 1 red (`resume_refuses_when_summary_and_property_disagree`). pins: mb-2a/C-011 |
+| C-012 | Every gate in the brief is green and every touched map is current. | The gate list. | **PROVEN** | 12/12 brief gates exit 0 (the Gates section). pins: mb-2a/C-012 |
+
+VERDICT: 12 clauses, 12 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Dated decision rows
 
@@ -100,3 +102,69 @@ sink_offsets_tests.rs, mod.rs, map.md}`, the three named commit arms
   assigns all five scenarios to the harness slice (as corrected by sketch §6 to
   `microbatch/crash_tests.rs`). This unit creates the file with pin 1 only, declared
   `#[cfg(test)] mod crash_tests;` in `microbatch/mod.rs`.
+
+## Gates — 2026-10-07
+
+All exit 0, in brief order, on the step-6 tree: `cargo test -p repark-iceberg --lib` (890 passed,
+0 failed: 873 before the unit plus 16 `sink_offsets` pins and harness pin 1),
+`cargo test -p repark-iceberg --lib microbatch::crash_tests` (1 passed), `make rust-clippy`,
+`cargo fmt --check`, `make rust-panic-ban`, `python3 scripts/check_rust_file_size.py`,
+`./scripts/check_lib_rs.sh`, `python3 scripts/sync_map_md.py --check`,
+`bash scripts/check_map_md.sh --base origin/main`, `python3 scripts/check_docs_links.py`,
+`python3 scripts/check_ledger_grammar.py`, and the comment-ban probe (`hits=0`).
+`sink_offsets.rs` lands at 336 lines and `sink_offsets_tests.rs` at 947, both under the default
+ceiling; `write_options.rs` and `merge/snapshot_commit.rs` grow by 5 and 6 lines (net) inside the
+named functions only; `merge/mod.rs` is untouched.
+
+## Owner questions (none halts)
+
+- **OQ-2a-1 (FL-1).** Should a stamped scope stamp a commit to a non-`main` branch of the sink,
+  as both engines' Iceberg sinks do for their configured branch, with resume reading that
+  branch? The default acted on stamps `main` only, because the sketch's resume reads the current
+  snapshot's ancestry and 1.7 exposes no branch option on the streaming writer.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: mb-2a
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-001..C-012 walked against the order's steps and the sketch's §3.4 signatures, Q6, Q9, Q10, MBE-13, MBE-14, §5 pin 1 and DM-5; each carries its pin citation. Deviations from §3.4 are dated (D-1 base is Option, D-2 summary_entries returns Result, D-3 the crate-private SiteStamp adapter).
+      artifacts: [task/ledgers/staging/mb-2a-ledger.md, crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/write/sink_offsets_tests.rs, crates/repark-iceberg/src/microbatch/crash_tests.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Negative pins cover the busy sink, the second claim on the live arm and on the stamp-only path, a head without the stamp, a branch commit inside a scope, a property drifted ahead of the summary, a removed property, an expired stamped snapshot, a newer offset format, another query's stamp in the ancestry, and an empty sink.
+      artifacts: [crates/repark-iceberg/src/write/sink_offsets_tests.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Every refusal is a typed MicroBatchError variant from MB-1's enum (SinkBusy, SinkCommittedTwice, RecoveryRequired with OffsetMismatch, StampedSnapshotExpired, UnstampedSinkCommit, CommitOutcomeUnknown, UnsupportedOffsetFormat); the arms surface it as DataFusionError::External and the pin downcasts the cause rather than matching text.
+      artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/write/sink_offsets_tests.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The scope registry is one process-wide mutex; every critical section is a single map read or write, no guard is held across an await (claim and record run before and after the commit future, never inside it), and a poisoned lock is recovered because no section can leave the map torn. Tests key the registry by fresh table uuids, so parallel tests never share an entry. The retry path is proven under a racing catalog (C-008).
+      artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/write/sink_offsets_tests.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: The stamp carries uuids, epochs, generations, snapshot ids, positions and the Bronze table identifier only; no path, location or credential field exists in SinkRecord. Iceberg and DataFusion error texts pass through mask_value_credentials before they enter MicroBatchError::Catalog (D-6).
+      artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/microbatch/offset.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: The change is additive behind the scope; unscoped arms commit as before (C-004) and the full repark-iceberg lib suite stays green (873 pre-existing pins unchanged beside 17 new). The MB-0 W7 and W4 cells agree with the stamped key sets on the two doors.
+      artifacts: [crates/repark-iceberg/src/write/sink_offsets_tests.rs, python/repark-parity/tests/live_spark/mb0_streaming_oracle.json]
+    - id: AT-7
+      status: ATTACKED
+      evidence: One catalog commit per batch is kept: the property rides the data commit's transaction, never a second commit. Unscoped, the arms add one uncontended map lookup and borrow the caller's extras without a copy (Cow::Borrowed, pinned).
+      artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/write/sink_offsets_tests.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: 12/12 gates green; new files under the default ceiling (336 and 947 lines, the tests in a #[path] sibling); write/map.md, write/merge/map.md and microbatch/map.md updated in the same commits as their files.
+      artifacts: [task/ledgers/staging/mb-2a-ledger.md, crates/repark-iceberg/src/write/map.md, crates/repark-iceberg/src/write/merge/map.md, crates/repark-iceberg/src/microbatch/map.md]
+    - id: AT-9
+      status: N/A
+      justification: No new log or metric surface; every outcome is a typed value (ScopeOutcome) or a typed error.
+    - id: AT-10
+      status: ATTACKED
+      evidence: M1 (property write dropped) turns the resume pin and harness pin 1 red among 9; M2 (claim not marked) turns its 3 owning pins red; M3 (no summary-property comparison) turns the guard pin red. Each restored from a backup and confirmed clean by git diff --quiet.
+      artifacts: [task/ledgers/staging/mb-2a-ledger.md]
+```
