@@ -412,7 +412,7 @@ def test_scrub_exception_rebuilds_os_error_strerror() -> None:
     original = OSError(2, "connect " + "http://" + USERINFO + "h/db failed")
     scrubbed = scrub_exception(original)
     assert scrubbed is not original
-    assert type(scrubbed) is OSError
+    assert type(scrubbed) is type(original)
     assert scrubbed.errno == 2
     assert USERINFO in str(original)
     assert USERINFO not in str(scrubbed)
@@ -482,14 +482,14 @@ _REST_CHAIN_FAILURE = RuntimeError("catalog read failed")
 _REST_CHAIN_FAILURE.__cause__ = _REST_CHAIN_CAUSE
 
 
-def _raise_rest_chain(sql: object) -> object:
+def _raise_rest_chain(self: object, sql: object) -> object:
     raise _REST_CHAIN_FAILURE
 
 
 def test_list_databases_scrubs_cause_chain(monkeypatch: pytest.MonkeyPatch) -> None:
     session = SparkSession.builder.getOrCreate()
     try:
-        monkeypatch.setattr(session, "_sql_built", _raise_rest_chain)
+        monkeypatch.setattr(type(session), "_sql_built", _raise_rest_chain)
         with pytest.raises(AnalysisException) as caught:
             session.catalog.listDatabases()
         rendered = "".join(traceback.format_exception(caught.value))
