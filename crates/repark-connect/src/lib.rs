@@ -25,8 +25,9 @@ pub use error::{ConnectError, ProtocolViolation, Result, UNMAPPED_ROW, ValueRefu
 pub use ident::{DEFAULT_SCHEMA, IdentRefusal, MAX_IDENT_BYTES, PgIdent, QualifiedRelation};
 #[cfg(feature = "postgres")]
 pub use pool::{
-    Connect, PgConnection, PoolConnection, PoolLimits, PooledClient, PostgresConnector,
-    PostgresPool, QueryPool, TimeoutSetting, query_config, within,
+    CONNECTION_CHECK_INTERVAL, Canceller, Connect, PgConnection, PoolConnection, PoolLimits,
+    PooledClient, PostgresConnector, PostgresPool, QueryPool, RESET_SESSION, TimeoutSetting,
+    query_config, within,
 };
 #[cfg(feature = "postgres")]
 pub use read::postgres::{

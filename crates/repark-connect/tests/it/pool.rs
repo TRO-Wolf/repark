@@ -189,7 +189,8 @@ fn query_config_pins_the_session_in_the_startup_packet() {
         Some(
             "-c client_encoding=UTF8 -c DateStyle=ISO -c IntervalStyle=postgres -c TimeZone=UTC \
              -c search_path= -c default_transaction_read_only=on -c lock_timeout=5000 \
-             -c statement_timeout=9000 -c idle_in_transaction_session_timeout=7000"
+             -c statement_timeout=9000 -c idle_in_transaction_session_timeout=7000 \
+             -c client_connection_check_interval=1000"
         )
     );
     assert_eq!(config.get_hosts(), [Host::Tcp("db.internal".to_string())]);
@@ -215,7 +216,8 @@ fn query_config_pins_the_session_in_the_startup_packet() {
     assert!(
         options.ends_with(
             "-c lock_timeout=10000 -c statement_timeout=0 \
-             -c idle_in_transaction_session_timeout=60000"
+             -c idle_in_transaction_session_timeout=60000 \
+             -c client_connection_check_interval=1000"
         ),
         "{options}"
     );

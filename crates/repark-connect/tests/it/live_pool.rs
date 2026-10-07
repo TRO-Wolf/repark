@@ -1,9 +1,12 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use arrow::array::{AsArray, RecordBatch};
+use futures::StreamExt;
 use repark_connect::{
     CompareOp, ConnectError, PostgresSettings, ScanRequest, ScanSource, SettingsDoor,
+    TimeoutSetting,
 };
 
 use super::live_pg::{Cell, LIVE, Reader, int32s, url};
@@ -199,5 +202,56 @@ async fn a_wrong_password_is_authentication_failed() {
     assert_eq!(refused, Err(ConnectError::AuthenticationFailed));
     let message = refused.expect_err("refused").to_string();
     assert!(!message.contains("not-the-password"), "{message}");
+    cell.close().await;
+}
+
+async fn ends_within(cell: &Cell, limit: Duration) {
+    let busy = format!(
+        "SELECT count(*) FROM pg_catalog.pg_stat_activity \
+         WHERE application_name = '{}' AND state <> 'idle'",
+        cell.app
+    );
+    let deadline = Instant::now() + limit;
+    while cell.count(&busy).await > 0 {
+        assert!(
+            Instant::now() < deadline,
+            "the server work outlived the scan"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_timeout_or_a_drop_ends_the_server_work() {
+    let cell = Cell::open().await;
+    let reader = Reader::new(&cell.settings(&[("read_timeout_ms", "500")]));
+    let sleeps = "SELECT 1 AS one FROM pg_catalog.pg_sleep(20)";
+    let timed_out = reader.read_query(sleeps).await.map(|_| ());
+    let read = TimeoutSetting::Read;
+    assert_eq!(timed_out, Err(ConnectError::Timeout { which: read }));
+    ends_within(&cell, Duration::from_secs(3)).await;
+
+    let reader = Reader::new(&cell.settings(&[("batch_rows", "1000")]));
+    let shown = "SELECT pg_catalog.current_setting('client_connection_check_interval') AS s";
+    let shown = texts(&reader.read_query(shown).await.expect(LIVE));
+    assert_eq!(shown, [Some("1s".to_string())]);
+    let computes = "SELECT g::pg_catalog.int8 AS g \
+                    FROM pg_catalog.generate_series(1, 10) g, pg_catalog.pg_sleep(20)";
+    let resolved = reader
+        .resolve(ScanSource::query(computes))
+        .await
+        .expect(LIVE);
+    let mut stream = reader.open(ScanRequest::new(resolved));
+    let first = tokio::time::timeout(Duration::from_millis(500), stream.next()).await;
+    assert!(first.is_err(), "the server is still computing");
+    let busy = format!(
+        "SELECT count(*) FROM pg_catalog.pg_stat_activity \
+         WHERE application_name = '{}' AND state = 'active'",
+        cell.app
+    );
+    assert_eq!(cell.count(&busy).await, 1);
+    drop(stream);
+    ends_within(&cell, Duration::from_secs(3)).await;
     cell.close().await;
 }

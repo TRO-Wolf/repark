@@ -10,7 +10,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task::{AbortHandle, JoinHandle};
 use tokio_postgres::config::SslMode as WireSslMode;
-use tokio_postgres::{Client, Config, NoTls, SimpleQueryMessage};
+use tokio_postgres::{CancelToken, Client, Config, NoTls, SimpleQueryMessage};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
 use crate::error::{ConnectError, Result};
@@ -61,6 +61,40 @@ pub trait PoolConnection: Send + 'static {
 
     fn reset(&self) -> impl Future<Output = bool> + Send {
         std::future::ready(true)
+    }
+
+    fn canceller(&self) -> Option<Canceller> {
+        None
+    }
+}
+
+#[derive(Clone)]
+pub struct Canceller {
+    token: CancelToken,
+    tls: Option<MakeRustlsConnect>,
+    limit: Duration,
+}
+
+impl Canceller {
+    fn fire(self) {
+        if tokio::runtime::Handle::try_current().is_err() {
+            return;
+        }
+        let Canceller { token, tls, limit } = self;
+        let cancel = async move {
+            match tls {
+                Some(tls) => token.cancel_query(tls).await,
+                None => token.cancel_query(NoTls).await,
+            }
+        };
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the cancel request holds no client, lock or permit and is bounded by \
+                      connect_timeout_ms; it outlives the abandoned lease so the server stops"
+        )]
+        let _cancel = tokio::spawn(async move {
+            let _ = tokio::time::timeout(limit, cancel).await;
+        });
     }
 }
 
@@ -127,6 +161,7 @@ impl<C: Connect> QueryPool<C> {
             lease: Lease {
                 pool: Arc::clone(self),
                 abort: Some(connection.abort_handle()),
+                cancel: connection.canceller(),
                 _permit: permit,
             },
             connection,
@@ -167,12 +202,16 @@ impl<C: Connect> QueryPool<C> {
 struct Lease<C: Connect> {
     pool: Arc<QueryPool<C>>,
     abort: Option<AbortHandle>,
+    cancel: Option<Canceller>,
     _permit: OwnedSemaphorePermit,
 }
 
 impl<C: Connect> Drop for Lease<C> {
     fn drop(&mut self) {
         if let Some(abort) = self.abort.take() {
+            if let Some(cancel) = self.cancel.take() {
+                cancel.fire();
+            }
             abort.abort();
         }
     }
@@ -193,6 +232,7 @@ impl<C: Connect> PooledClient<C> {
             connection,
         } = self;
         lease.abort = None;
+        lease.cancel = None;
         lease.pool.put_idle(connection);
     }
 }
@@ -266,6 +306,7 @@ pub struct PgConnection {
     client: Client,
     task: JoinHandle<()>,
     session: Arc<SessionPins>,
+    cancel: Canceller,
 }
 
 impl PgConnection {
@@ -273,6 +314,7 @@ impl PgConnection {
         client: Client,
         connection: tokio_postgres::Connection<S, T>,
         session: Arc<SessionPins>,
+        cancel: Canceller,
     ) -> Self
     where
         S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
@@ -290,6 +332,7 @@ impl PgConnection {
             client,
             task,
             session,
+            cancel,
         }
     }
 
@@ -319,7 +362,13 @@ impl PoolConnection for PgConnection {
             _ => false,
         }
     }
+
+    fn canceller(&self) -> Option<Canceller> {
+        Some(self.cancel.clone())
+    }
 }
+
+pub const CONNECTION_CHECK_INTERVAL: Duration = Duration::from_secs(1);
 
 fn session_pins(settings: &PostgresSettings) -> Vec<(&'static str, String)> {
     let millis = |limit: Duration| limit.as_millis().to_string();
@@ -338,6 +387,10 @@ fn session_pins(settings: &PostgresSettings) -> Vec<(&'static str, String)> {
         (
             "idle_in_transaction_session_timeout",
             millis(settings.read_timeout),
+        ),
+        (
+            "client_connection_check_interval",
+            millis(CONNECTION_CHECK_INTERVAL),
         ),
     ]
 }
@@ -437,19 +490,29 @@ impl PostgresConnector {
         })
     }
 
+    fn canceller(&self, client: &Client) -> Canceller {
+        Canceller {
+            token: client.cancel_token(),
+            tls: self.tls.clone(),
+            limit: self.connect_timeout,
+        }
+    }
+
     async fn open(&self) -> Result<PgConnection> {
         let Some(tls) = &self.tls else {
             let connecting = self.config.connect(NoTls).await;
             let (client, connection) = connecting.map_err(|error| classify(&error, None))?;
             let session = Arc::clone(&self.session);
-            return Ok(PgConnection::spawn(client, connection, session));
+            let cancel = self.canceller(&client);
+            return Ok(PgConnection::spawn(client, connection, session, cancel));
         };
         let tracked = TrackedTls::new(tls.clone());
         let connecting = self.config.connect(tracked.clone()).await;
         let (client, connection) =
             connecting.map_err(|error| classify(&error, Some(tracked.handshake_attempted())))?;
         let session = Arc::clone(&self.session);
-        Ok(PgConnection::spawn(client, connection, session))
+        let cancel = self.canceller(&client);
+        Ok(PgConnection::spawn(client, connection, session, cancel))
     }
 }
 
