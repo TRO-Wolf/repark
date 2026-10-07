@@ -60,19 +60,23 @@ fn replace_whole_tokens(text: &str, needle: &str, replacement: &str) -> String {
     if needle.is_empty() {
         return text.to_string();
     }
+    let needle_first = needle.chars().next().is_some_and(is_token_char);
+    let needle_last = needle.chars().next_back().is_some_and(is_token_char);
     let mut out = String::with_capacity(text.len());
     let mut cursor = 0;
     while let Some(offset) = text[cursor..].find(needle) {
         let start = cursor + offset;
         let end = start + needle.len();
-        let before_ok = text[..start]
-            .chars()
-            .next_back()
-            .is_none_or(|edge| !is_token_char(edge));
-        let after_ok = text[end..]
-            .chars()
-            .next()
-            .is_none_or(|edge| !is_token_char(edge));
+        let before_ok = !needle_first
+            || text[..start]
+                .chars()
+                .next_back()
+                .is_none_or(|edge| !is_token_char(edge));
+        let after_ok = !needle_last
+            || text[end..]
+                .chars()
+                .next()
+                .is_none_or(|edge| !is_token_char(edge));
         out.push_str(&text[cursor..start]);
         if before_ok && after_ok {
             out.push_str(replacement);

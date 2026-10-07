@@ -891,3 +891,26 @@ fn registered_values_keep_letter_or_digit_neighbours() {
     let digits = "got 2host=h user=u password=TailPw072 for key";
     assert_eq!(mask_registered_values(digits), digits);
 }
+
+#[test]
+fn registered_values_mask_when_their_own_edge_is_punctuation() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let trailing = "Driver=x;Uid=u;Pwd=BndPw01;";
+    let leading = ";Driver=x;Uid=u;Pwd=BndPw03";
+    register_config_value(trailing);
+    register_config_value(leading);
+    let cases = [
+        format!("{trailing}Encrypt=yes"),
+        format!("{trailing}9"),
+        format!("Encrypt=yes{leading}"),
+        format!("7{leading}"),
+        format!("\u{1b}[31m{leading}\u{1b}[0m"),
+    ];
+    for case in &cases {
+        let masked = mask_registered_values(case);
+        assert!(!masked.contains("BndPw"), "{case:?} -> {masked:?}");
+        assert!(masked.contains("***"), "{case:?} -> {masked:?}");
+    }
+}
