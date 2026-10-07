@@ -10,6 +10,8 @@ mod live_pool;
 mod pool;
 mod postgres_types;
 #[cfg(feature = "postgres")]
+mod pushdown;
+#[cfg(feature = "postgres")]
 mod read;
 #[cfg(feature = "postgres")]
 mod scan;

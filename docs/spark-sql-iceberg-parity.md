@@ -3711,6 +3711,21 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   keeps the resolved Arrow type true for the whole scan. Retire when a drift check (a
   `pg_attribute` re-read inside the scan's transaction, or a cast that refuses lost digits)
   lands.
+### CONNECT-DECL-pg-listing — a Postgres source lists no schemas and no tables
+- **repark** — a mounted Postgres source (`PostgresSource::mount`, `PostgresCatalog`) answers
+  `schema_names()` with an empty list, and each schema's `table_names()` with an empty list and
+  `table_exist` with `false`. `schema(name)` returns a lazy `PostgresSchemaProvider` for any
+  name; the relation is resolved, and a missing one reported, only when a statement names it
+  (`SchemaProvider::table` resolves it, and `RelationNotFound` becomes DataFusion's own
+  table-not-found). `SHOW TABLES` and `information_schema` therefore show no Postgres table.
+  `repark_connect::LISTING_ROW` names this row.
+- **Apache Spark** — the JDBC table catalog lists the server's schemas and tables. *(oracle:
+  documented — FL-8; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/explain.rs::listing_a_postgres_source_is_empty_and_declared`
+- **Rationale** — DECLARED 2026-10-07 (C-2c; FL-8; sketch §2.8). DataFusion's listing hooks are
+  synchronous, and building a session does no I/O (CFG-2 D-4). Retire when an asynchronous
+  listing lands through the doors' catalog operations, or the 1.7 crawler's read surface (the
+  pre-declared `crawler → connect` edge) serves it.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.
@@ -3744,7 +3759,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::timestamp_ntz_anchors_round_trip`
 - **Rationale** — DECLARED 2026-10-05 (C-1); retired 2026-10-06 (C-2a) and re-declared the same
   day (C-2a fold, round D) on the D-M2 measurement: the NTZ decode is the wall clock, not
-  Spark's default `TimestampType`. Retire when C-2c's localiser places it.
+  Spark's default `TimestampType`. C-2c (2026-10-07) builds the placement in the provider: a
+  `PostgresTable` surfaces `timestamp` in its `WallClockLocaliser`'s zone unless
+  `prefer_timestamp_ntz` is set (CONNECT-DIV-pg-timestamp-zone). No door mounts the provider
+  yet, so retire when C-2d mounts it with core's session-zone localiser.
 
 ### CONNECT-DECL-pg-timestamptz — RETIRED (2026-10-06, C-2a): Postgres `timestamptz` maps to a UTC microsecond timestamp
 
@@ -3883,6 +3901,46 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   the same rows; it differs only from Spark's server-side enum order. Retire when the scan
   pushes an enum compare against the enum type (or declines to push an ordered compare on an
   enum).
+### CONNECT-DIV-pg-text-collation — a pushed text compare uses code-point order, where Spark's pushdown uses the column's collation
+- **repark** — on a server whose encoding is `UTF8`, a `text` or `varchar` column pushes `=`,
+  `<>`, `<`, `<=`, `>`, `>=`, `IN`, `BETWEEN` and a well-formed `LIKE` as
+  `"c" COLLATE pg_catalog."C" OPERATOR(pg_catalog.op) pg_catalog.current_setting('repark.pN')::pg_catalog.text`
+  (`LIKE` as `OPERATOR(pg_catalog.~~)`, whose escape is the backslash). Under `"C"` a compare
+  is byte order, which for UTF-8 is code-point order, the engine's own order, and equality is
+  byte equality whatever the column's collation, deterministic or not. So the pushed rows equal
+  the rows the engine returns with `pushdown_predicate = false`: `'B' < 'a'`, an ICU column
+  orders `'A' < 'B' < 'a'`, and a case-insensitive nondeterministic column matches
+  `= 'abc'` on `abc` alone. On a server with another encoding, and for `bpchar`, every text
+  compare stays above the scan; so does `ILIKE`, a regular expression and a `LIKE` with another
+  escape or a malformed pattern.
+- **Apache Spark** — the JDBC source compiles the compare into the `WHERE` text with no
+  collation, so the server compares under the column's collation: the ICU column orders
+  `'a' < 'B'`, and the nondeterministic column matches both `abc` and `ABC`. *(oracle:
+  documented — FL-10; the server's answer under each collation is what the pin's mutation
+  reads.)*
+- **Pin** — `crates/repark-connect/tests/it/pushdown.rs::p06_text_comparison_is_code_point_order`,
+  `::p06b_text_equality_ignores_nondeterministic_collation`
+- **Rationale** — DECLARED 2026-10-07 (C-2c; FL-10; the sketch's Q4, ratified 2026-10-06 on its
+  lean). Card 1.6's ruled rule outranks both engines: pushdown never changes semantics.
+### CONNECT-DIV-pg-timestamp-zone — a Postgres `timestamp` surfaces in the session zone, where Spark uses the JVM zone
+- **repark** — by default a `timestamp` (without time zone) column of a `PostgresTable`
+  surfaces as `Timestamp(Microsecond, <zone>)`: the scan decodes the wall clock and hands each
+  batch's column to the source's `WallClockLocaliser`, which places it as an instant in the
+  zone whose label it reports. The label is read once per resolution, so one statement sees one
+  zone. Core supplies the localiser over the session's `runtime_zone` (C-2d); until D-M2
+  measures Spark's rule, a wall clock in a DST gap or overlap refuses per value there. With
+  `prefer_timestamp_ntz = true` the column is `Timestamp(Microsecond, None)`, the wall clock. A
+  compare on a placed column never pushes (the placement is not injective across a DST change);
+  on the NTZ column it does.
+- **Apache Spark** — the JDBC source reads `timestamp` as `TimestampType`, the wall clock placed
+  in the JVM default zone, and as `TimestampNTZType` under `preferTimestampNTZ`; Spark's guidance
+  is to keep the JVM and session zones equal. *(oracle: measured — D-M2 DM2-T11/T12 in
+  `python/repark-parity/tests/live_spark/c2_jdbc_oracle.json` for the types; documented — FL-5
+  for the zone.)*
+- **Pin** — `crates/repark-connect/tests/it/pushdown.rs::r03_ltz_timestamp_comparisons_stay_residual`
+- **Rationale** — DECLARED 2026-10-07 (C-2c; FL-5). The session zone is the one every other
+  timestamp in the statement is read in, so a federated compare sees one clock; Spark's JVM zone
+  is process state a session cannot set.
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
 - **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
   `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition

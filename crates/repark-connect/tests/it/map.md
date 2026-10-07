@@ -8,13 +8,31 @@ See [../map.md](../map.md).
 ## Contents
 
 - `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings; mod url;`, plus
-  `mod explain; mod live_pg; mod live_pool; mod pool; mod read; mod scan; mod tls;` under the
-  `postgres` feature.
-- `explain.rs` — C-2c (2026-10-07), behind `postgres`, no network. D-M6's pin,
+  `mod explain; mod live_pg; mod live_pool; mod pool; mod pushdown; mod read; mod scan; mod tls;`
+  under the `postgres` feature.
+- `explain.rs` — C-2c (2026-10-07), behind `postgres`, no network: sketch §5.3 over the
+  `pushdown.rs` fixture's injected resolution. `explain_renders_pushed_and_residual_per_scan`
+  (the exact `PostgresScanExec` line for one pushed and one residual conjunct, and for a pushed
+  limit), `explain_verbose_shows_placeholders_never_values` (`remote_sql` carries
+  `current_setting('repark.p0')` and `bound_values=1`, never the literal; the default format
+  has no `remote_sql`), `explain_never_renders_endpoint` (default, verbose and tree formats and
+  `Debug` hold no host, port, database, user, password or `sslmode`) and
+  `explain_residual_matches_filter_exec_above` (the `FilterExec` above the scan is the physical
+  form of `residual_filters`; an exact filter leaves none). D-M6's pin,
   `datafusion_hands_inexact_filters_to_scan_and_withholds_limit`, drives DataFusion 54.1 with a
-  recording provider that classes column `a` `Exact` and the rest `Inexact`: every `Inexact`
-  conjunct reaches `scan`, and `limit` reaches it only when no filter remains above.
-  pins: c-2/C-068
+  recording provider. `listing_a_postgres_source_is_empty_and_declared` pins
+  `CONNECT-DECL-pg-listing` and a missing endpoint refusing at first resolution.
+  pins: c-2/C-068, C-069, C-075
+- `pushdown.rs` — C-2c (2026-10-07), behind `postgres`, no network. The fixture: an `orders`
+  resolution with every mapped type, a `PostgresSource` whose props hold a fake endpoint and
+  password, and `FixedZone`, a fixed-offset `WallClockLocaliser` (`-05:00`); `split` plans a
+  statement through DataFusion, so each pin reads the coerced shape a real query hands the
+  provider. Sketch §5.2's unit halves: `p01_null_tests_push` … `p11_limit_pushes_only_without_residual`
+  (with `p06b_…` and `p06c_…`) and `r01_float_comparisons_stay_residual` …
+  `r05_pushdown_predicate_false_pushes_nothing`, each asserting the class, the rendered SQL and
+  the bound texts; `pushed_values_past_1024_fail_the_plan`; and
+  `a_filter_the_optimizer_would_still_rewrite_stays_inexact` (`qty <> NULL` renders but stays
+  `Inexact`). pins: c-2/C-070, C-071, C-072, C-073, C-074, C-077, C-078
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
   verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
   `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and

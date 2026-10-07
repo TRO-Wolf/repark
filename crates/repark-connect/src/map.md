@@ -21,7 +21,13 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `ResolvedSource`, `ScanColumn`, `ScanSource`, `CastType`, `ColumnCollation`, `Privilege`,
   `check_server_version`, `MIN_SERVER_VERSION_NUM`, `SERVER_VERSION_ROW`, `BEGIN_DISCOVERY`,
   `QUERY_ALIAS`) and the read surface (`scan`, `ScanRequest`, `ScanStatement`, `ScanOptions`,
-  `CompareOp`, `ParamSlot`, `MAX_PARAM_SLOTS`, `BEGIN_SCAN`); and the `postgres` module.
+  `CompareOp`, `ParamSlot`, `MAX_PARAM_SLOTS`, `BEGIN_SCAN`); and the `postgres` module. C-2c
+  (2026-10-07) adds `mod provider; mod pushdown;` under `postgres` and re-exports the provider
+  (`PostgresSource`, `PostgresCatalog`, `PostgresSchemaProvider`, `PostgresTable`,
+  `PostgresScanExec`, `WallClockLocaliser`, `LISTING_ROW`), the classifier (`Pushdown`,
+  `Rendered`, `ColumnClass`, `MAX_IN_LIST`, `MIN_POSTGRES_DAYS`, `MAX_POSTGRES_DAYS`,
+  `TEXT_COLLATION`, `UTF8_ENCODING`, `decimal_text`, `date_text`, `timestamp_text`) and
+  `ScanMeter` and `scan_metered`.
 - `error.rs` — C-2a (2026-10-06; sketch [c-2-design.md](../../../task/wo/c-2-design.md) §2.2,
   NS-15). The crate's one error enum, `ConnectError` (`thiserror`), and
   `Result<T> = std::result::Result<T, ConnectError>`. C-1's `SettingsError` and `TypeMapError`
@@ -209,6 +215,35 @@ Product code for `repark-connect`. See [../map.md](../map.md).
     `PlannedColumn` with the column's `CastType`. A catalog cell of the wrong type is
     `Protocol(UnexpectedResponse)`. The server encoding is carried on `ResolvedSource`, unused
     so far. pins: c-2/C-042, C-043, C-044, C-056, C-062
+- `pushdown.rs` — C-2c (2026-10-07; sketch §2.9), behind `postgres`: the classifier and
+  renderer. `Pushdown::new(resolved, schema, pushdown_predicate)` gives each column a
+  `ColumnClass` from its mapping, cast and surfaced type: `Boolean`, `Integer`, `Decimal`
+  (`rounded` when the Arrow type is not the column's own `(p,s)`, so the operand is cast to the
+  Arrow type and Postgres rounds as the decoder does), `Date`, `Timestamp` (NTZ only),
+  `Timestamptz`, `Text` (`text`/`varchar` on a `UTF8` server) and `NullTestOnly` (float, `bpchar`,
+  `bytea`, the text-rendered types, enums, a placed `timestamp`). `render(filter, base)` gives
+  the SQL and the value texts of P-1…P-10 or `None`: null tests on any column; boolean columns
+  and the `IS [NOT] TRUE/FALSE/UNKNOWN` tests; `=`, `<>`, `<`, `<=`, `>`, `>=` against a literal
+  on either side (flipped), a widening integer or lossless decimal cast on the column dropped, as
+  `<operand> OPERATOR(pg_catalog.op) pg_catalog.current_setting('repark.pN')::pg_catalog.<type>`
+  (the literal's own width for integers, so `int2 = 100000` binds `int8`); `IS [NOT] DISTINCT
+  FROM` as `(… = …) IS [NOT] TRUE`, or the null test against a NULL literal; `IN` of at most
+  `MAX_IN_LIST` (256) literals as a disjunction of qualified `=`, a NULL item kept as
+  `NULL::<type>`; `BETWEEN` as `>=` and `<=`; `LIKE` with the default escape and a well-formed
+  pattern as `OPERATOR(pg_catalog.~~)`; and `AND`, `OR`, `NOT` over children that each render.
+  Text compares carry `TEXT_COLLATION` (`COLLATE pg_catalog."C"`). Literal texts are exact:
+  `decimal_text` at the literal's scale, `date_text` (` BC` for years ≤ 0), `timestamp_text`
+  (six fractional digits, `+00` for `timestamptz`); a temporal literal outside Postgres's range
+  (`MIN_POSTGRES_DAYS`…`MAX_POSTGRES_DAYS`) and a text with a NUL byte stay residual. `support`
+  answers `Exact` only for a filter that renders **and** that DataFusion's simplifier leaves
+  unchanged (`exact`): the optimizer keeps simplifying pushed filters after it has removed them,
+  and `qty NOT IN (1, NULL)` became a pushed `qty <> NULL` that later simplified to `NULL`,
+  which nothing applied. `split` and `push` serve `scan`. With `pushdown_predicate = false`
+  nothing renders. pins: c-2/C-070, C-071, C-072, C-073, C-074, C-078
+- `provider.rs` — C-2c (2026-10-07): `mod catalog; mod scan; mod schema; mod table;` and their
+  re-exports.
+- `provider/` — [provider/map.md](provider/map.md): `PostgresSource`, the catalog, schema and
+  table providers, `PostgresScanExec` and `WallClockLocaliser`.
 - `read.rs` — C-2b round 3 (2026-10-07): `pub(crate) mod postgres;`.
 - `read/` — [read/map.md](read/map.md): `postgres.rs`, the statement builder, the `set_config`
   carriage and the COPY stream.
