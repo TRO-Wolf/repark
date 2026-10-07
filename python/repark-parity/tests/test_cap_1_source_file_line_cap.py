@@ -61,11 +61,9 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark-parity/bench/tpch/runner.py", 1773),
     ("python/repark-parity/compat/runner.py", 1279),
     ("python/repark-parity/tests/test_compat_harness.py", 1021),
-    ("python/repark/src/repark/spark/column.py", 1529),
-    ("python/repark/src/repark/spark/dataframe/core.py", 3967),
-    ("python/repark/src/repark/spark/dataframe/joins_columns.py", 1117),
-    ("python/repark/src/repark/spark/dataframe/plan_collapse.py", 1054),
-    ("python/repark/src/repark/spark/functions.py", 1938),
+    ("python/repark/src/repark/spark/column.py", 1331),
+    ("python/repark/src/repark/spark/dataframe/core.py", 3462),
+    ("python/repark/src/repark/spark/functions.py", 1908),
     ("python/repark/src/repark/spark/functions_expr.py", 2171),
     ("python/repark/src/repark/spark/functions_udf.py", 1287),
     ("python/repark/src/repark/spark/ml/feature/_transformers.py", 2717),
@@ -176,7 +174,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert rust_debt == rust_approved
     assert python_debt == python_approved
     assert len(rust_approved) == 34
-    assert len(python_approved) == 31
+    assert len(python_approved) == 29
 
 
 def test_cap_1_growth_above_exact_baseline_fails(
@@ -508,9 +506,7 @@ def test_cap_1_prose_and_navigation_name_the_generalized_gate() -> None:
     assert "Python source-size and facade thinness guard" in script_map
     assert "Python source-size + facade thinness" in workflow_map
     assert "`check_lib_py` exception baseline" in session_map
-    assert (
-        "Under CAP-1, `core.py` and `plan_collapse.py` carry exact exception rows" in dataframe_map
-    )
+    assert "Under CAP-1, `core.py` carries an exact exception row" in dataframe_map
     assert "CAP-1 records the file again at its exact source-size baseline" in core_session_map
     assert "beyond its exact\n`check_rust_file_size` baseline" in call_map
     assert "CAP-1 (2026-08-26) lowers the\ncurrent default" in function_design

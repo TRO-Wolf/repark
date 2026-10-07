@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from repark.errors import AnalysisException, PySparkTypeError
+from repark.spark import column_fields as _column_fields
 from repark.spark.column import Column
 from repark.spark.functions import _column_argument
 
@@ -109,7 +110,13 @@ def _select_with_stack(frame: Any, expanded: list[Any], call: StackCall) -> Any:
     bound_args = [
         frame._column_of(item) if not isinstance(item, FrameColumn) else item for item in call.args
     ]
-    bound_args = [frame._rebind_origin_column(item) for item in bound_args]
+    rebound_args = [
+        (item, _column_fields._bind_stable_id_column(frame, item)) for item in bound_args
+    ]
+    bound_args = [
+        frame._refuse_unemitted_ids(rebound if rebound is not None else item)
+        for item, rebound in rebound_args
+    ]
     passthrough_count = len(bound_passthrough)
     current_names = list(frame.columns)
     arg_names = [column._projection_name or column.spark_display_part() for column in bound_args]

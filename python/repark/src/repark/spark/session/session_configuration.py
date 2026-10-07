@@ -36,6 +36,11 @@ SPARK_SQL_CASE_SENSITIVE_KEY = "spark.sql.caseSensitive"
 DEFAULT_CATALOG_KEY = "spark.sql.defaultCatalog"
 
 
+SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY = "spark.sql.analyzer.failAmbiguousSelfJoin"
+
+SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY = "spark.sql.selfJoinAutoResolveAmbiguity"
+
+
 WAP_BRANCH_KEY = "spark.wap.branch"
 
 WAP_ID_KEY = "spark.wap.id"
@@ -65,6 +70,8 @@ _SQLCONF_DEFAULTS: dict[str, str] = {
     SESSION_TIME_ZONE_KEY: DEFAULT_SESSION_TIME_ZONE,
     SPARK_SQL_ANSI_ENABLED_KEY: "true",
     SPARK_SQL_CASE_SENSITIVE_KEY: "false",
+    SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY: "true",
+    SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY: "true",
     # Default TIMESTAMP_LTZ (current LTZ behavior).
     TIMESTAMP_TYPE_KEY: DEFAULT_TIMESTAMP_TYPE,
 }

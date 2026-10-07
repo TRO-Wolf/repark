@@ -245,6 +245,63 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Re-verify (2026-09-28):** `test_nested_cast_of_a_column_keeps_the_written_child_name`
   (RC-3) and `test_describe_resolves_display_names_under_case_sensitive` (RC-4).
   pins: casesens-1/C-009, C-010
+- [test_cs2p1_alias_qualifier.py](test_cs2p1_alias_qualifier.py) —
+  **R-CS2P-1 (2026-10-03):** sixteen alias-qualifier shapes, each pinned under
+  both `caseSensitive` rules against live Spark 4.1.2 (probe `cs2p1/probe.py`,
+  measured 2026-10-03): the six R-CS2P-1 cells (`rc2_1`, `rc3_1`, `j1_col_l`,
+  `j1_fstrl`, `pred_join_j8`, `selfjoin_filter_S1`) beside right-case,
+  upper-case, backticked and struct-path controls. Answers compare names and
+  rows; refusals assert `UNRESOLVED_COLUMN.WITH_SUGGESTION` and the written
+  reference. pins: casesens-2/C-013
+- [test_casesens_2.py](test_casesens_2.py) + `casesens_2_spark_oracle.json` —
+  **WO CASESENS-2 slice 1 (2026-09-28):** the R-CS1-10 true-door refusals plus
+  getitem (class, condition, SQLSTATE, head, candidate set per leg), the five
+  true-mode p6 misses, the qualified-string legs (R-11 answer, exact-qualified
+  answers under `true`, the self-join shape refuses naming `` `l`.`ID` ``),
+  and the false-door guards (r7 legs, S3 false legs, legacy miss text, R-19
+  lazy timing, quoter spot). `qs_sel_t_id_true` stays unpinned (re-homed
+  per the 2026-09-28 ruling); `r7_selfjoin` pins in slice 4. p1/p4 legs
+  read `casesens_1_spark_oracle.json`.
+  pins: casesens-2/C-001, C-002, C-003, C-006
+  **WO CASESENS-2 slice 2 (2026-09-28):** `withColumn(s)` and renames follow
+  the rule (folded keys append and folded renames no-op under `true`; replace
+  and twin fan-out under `false`), folded keys refuse 42711, and the overlay
+  replace set pins display-spelled (R7).
+  pins: casesens-2/C-002, C-004, C-006
+  **WO CASESENS-2 slice 3 (2026-09-28):** `fillna` / `dropna` subsets and
+  `dropDuplicates` follow the rule (folded or missing subset names refuse
+  under `true`; subsets fold under `false` over the null table and the
+  `dropDuplicates` miss raises the legacy text, type plus message per R8),
+  with the `na` overlay path pinned beside the plain path. The sweep and
+  replay evidence below covers the no-regressions clause.
+  pins: casesens-2/C-002, C-005, C-006, C-008
+  **WO CASESENS-2 slice 4 (2026-09-28):** DataFrame-alias qualified names
+  bind in join conditions and on the join child (`r7_selfjoin` and
+  `r18_alias_join` answer, `selfjoin_true` refuses, wrong-case alias
+  qualifier refuses 42703), and the nine p10 non-join overlay cells pin
+  the two `true` qualified misses, the R4 facade refusals, and the three
+  R-CS2-7 answer-gaps. The oracle gains the p10 keys (existing keys
+  byte-equal).
+  pins: casesens-2/C-003, C-008
+  **CASESENS-2 port (2026-10-03):** on the ATTR-ID-1 stack five charter pins
+  move to live Spark 4.1.2's answers, each re-measured that day: the `false`
+  `select("nope")` refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` (not the legacy
+  facade text), the overlay `dropna(subset=["id"])` and twin
+  `fillna("z", subset=["x"])` refuse `AMBIGUOUS_REFERENCE` (not fan-out
+  answers), and the six `false` p10 shapes plus `p10/alias_dupe_sel_true` replay
+  the oracle in full through `_assert_df_step` (R-CS2-7 closed: the stack keeps
+  the alias qualifier, so the three answer-gaps answer and the refusals carry
+  Spark's head and candidates). The tests are renamed
+  `test_s4_probe10_false_shapes_answer_as_spark` and
+  `test_s4_probe10_true_multi_hit_answers_as_spark`. The twin `filter("id > 0")`
+  echo keeps `` [`id`, `ID`] `` (Spark echoes `` [`id`, `id`] ``): that is the
+  recorded divergence `test_filter_predicate_rewrite.py` pins, not a port
+  conflict. pins: casesens-2/C-006, C-011
+  **Phase 2 (2026-10-03):** `test_port_sort_twins_from_one_join_refuse_as_spark`
+  pins the replay's join-twin sort cells (`r5p10.*|j_ab|*|ob`, `r5p6.*|dd|j_alias|*|ob`)
+  under both rules, as Spark refuses them, plus the `colF_expr` control that
+  Spark answers. Mutation: skipping the walker reds it.
+  pins: casesens-2/C-012
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
@@ -3355,7 +3412,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the 17 moved names on core and on the package IS the leaf module's object, not a copy.
   IO-BUCKET-CLUSTER-1 (2026-09-14): `EXPECTED_NEW_PACKAGE_SUBMODULES` gains
   `writer_layout`. pins: io-bucket-cluster-1/C-005
+  ATTR-ID-1 PERF-1 (2026-10-03): `EXPECTED_DATAFRAME_SLOTS` loses exactly
+  `_frame_node` (now a lazily-built property); the dir table is unchanged.
   pins: dfcore-1/C-001, C-002, C-003, C-008
+  ATTR-ID-1 S3d (2026-10-01): core and the package each gain exactly
+  `_subset_resolve` (the new S3d binding home, bound by `core`'s module import).
+  pins: attr-id-1/C-032
   DFCORE-2 (2026-09-07): the class dir loses exactly the four moved helpers; core and the
   package each gain exactly the two new module names; `MOVED_SELECT_HELPERS` pins each
   helper as its new home's own frame-first function. `test_pandas_udf.py`'s plan-time
@@ -3403,6 +3465,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and `semanticHash` (one-line bindings over `plan_introspect.py`); package and
   core each gain exactly `plan_introspect` behind the new module import.
   pins: df-plan-introspect-1/C-004
+  ATTR-ID-1 SJ-2 (2026-10-02): slots and dir gain exactly `_frame_node`; both
+  new-submodule sets gain `unemitted_ids` (same-named class bindings, so no alias
+  rows); core and the package lose `_ATTR_TOKEN_RE`. `test_production_file_size.py`
+  re-pins the `_SQLCONF_DEFAULTS` hash for the two self-join conf defaults.
+  ATTR-ID-1 SJ-3 (2026-10-02): both surface lists lose the three deleted siding
+  names and gain `_join_condition_attr_names` plus `weakref`;
+  `_emit_join_side_columns` moves behind the same re-export (no surface change).
+  The merge keeps SJ-2's same-named bindings and strict alias scan.
+  ATTR-ID-1 SJ-4 (2026-10-02): dir gains the funnel `_refuse_self_join_refs`;
+  both new-submodule sets gain `repartition_ops` (trio move behind same-named
+  bindings).
+  ATTR-ID-1 SJ-5 (2026-10-03): native set loses `remint_cross_collisions`
+  and gains `join_shared_remint`; no expected table tracks native names.
+  CASESENS-2 port (2026-10-03): core and the package each swap
+  `_join_condition_attr_names` for `_join_condition_args`. pins: casesens-2/C-009
+  PERF-1 merge into the CASESENS-2 port (2026-10-03): the docstring keeps both
+  dated lines (PERF-1's lazy `_frame_node` and `frame_nodes`; the port's
+  `_join_condition_args` swap); the expected tables merged without conflict.
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -3743,10 +3823,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **octo C1:** sampleBy fraction [0,1]+NaN; approxQuantile relativeError; join no-alias
   when column sets disjoint; **octo C2:** relativeError NaN; probability domain ValueError;
   **octo C3:** join(on=[]) crossJoin gate.
+  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** the H1-C4 describe pin flips to Spark's
+  measured `AMBIGUOUS_REFERENCE` naming ``b`` twice.
 - `test_h2_group_h2.py` — **H2 r22** Group H long tail: non-origin dup projection multi-name
   map (cast/year/`sum,sum` display overlay); same-object self-join equi sugar + multi-token
   arm loud refuse + alias workaround; `Column.round` / wrap-display collapse;
   `spark.app.name==repark` bare getOrCreate verify pin (critic-octo C1 pins).
+  **ATTR-ID-1 SJ-3 (2026-10-02):** the cross-field and compound self-join pins
+  refuse `_LEGACY_ERROR_TEMP_1182` with Spark's names (`P_h2_cross_fields`,
+  `P_h2_compound_same`, `P_h2_compound_alias`); the free-name compound answer
+  (`F.col("l.x")` strings, Spark answers 3 both rules) carries strict xfail —
+  qualified free names do not resolve in join conditions (R-18, pre-existing).
+  **CASESENS-2 port (2026-10-03):** the strict xfail is removed: alias-qualified
+  free names bind in join conditions through `resolve`, so the compound alias
+  join answers Spark's 3 rows (R-18 closed). pins: casesens-2/C-009
 - `test_f1_errorclass.py` — F1 true-EC residual: array.array unsupported →
   CANNOT_INFER_TYPE_FOR_FIELD; make_interval collect → PySparkNotImplementedError;
   `_merge_type` / `_make_type_verifier` class+param keys.
@@ -4081,6 +4171,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_facade_2_group2_no_python_assembly.py` — **FACADE-2 step 2 (2026-09-12):**
   AST walk of the named Group-2 methods on `column.py`; f-string / concat / `format` /
   `join` of display/SQL/join text is refused (refusals and raises are allowed).
+  ATTR-ID-1 S4 split the sort and string families into `column_sort.py` and
+  `column_string.py`; the walk follows every `_column_fields` / `_column_sort` /
+  `_column_string` binding on `Column` and the split modules' Group-2 helpers (2026-10-02).
   pins: facade-2/C-009, C-010, C-012
 - `test_facade_3_create_dataframe_goldens.py` + `facade_3_create_dataframe_goldens.json`
   — **FACADE-3 step 1 (2026-09-13):** byte-identical `schema.simpleString()` /
@@ -4472,6 +4565,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   shapes), plus limit/desc-nulls-last/3-key/sortWithinPartitions shapes, a
   repartition set check and a groupBy over the mask column.
   pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **Stack merge of main d0c50405+ (2026-10-04):** the `keep.dir_names` cell is
+  re-measured on the merged surface: the stack's `Column` carries `_attr_id`,
+  `_birth_frame` and `_qualifiers` where base carried `_origin_field`,
+  `_origin_plan_id`, `_string_predicate` and `_with_sort_order`, so the
+  `dir` delta still pins `is_duplicated` as the only addition. The polars
+  cells are unchanged.
+  **Fold SM-2 R7 (2026-10-06, pins: attr-id-1/C-065):** the baseline gains the
+  intentional private `_repr_display` slot (the qualified-getitem repr
+  display), so the `dir` delta still pins `is_duplicated` as the only
+  addition over the documented baseline.
 - `test_pg_jdbc_options.py` — PG2 offline option pins (jdbc overloads, format aliases, XOR/caps).
   Ported minus **one** node (EC-4): `test_jdbc_num_partitions_above_cap_is_unsupported` — the
   `read_postgres` refuse-arm pre-empts the engine's cap error. The other offline pins raise their
@@ -6043,7 +6146,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_filter_predicate_rewrite.py` — **audit G2**: the SQL-string filter-predicate identifier
   rewriter. FNP-4B critic: double-quoted span is a STRING literal (renamed pin
   `test_explicitly_double_quoted_span_is_a_string_literal`). pins: fnp-4b/C-018
-  rewriter (`DataFrame._quote_filter_sql_identifiers`), pinned through BOTH entry points
+  rewriter (`column_fields._quote_filter_sql_identifiers` since ATTR-ID-1 S3b), pinned
+  through BOTH entry points
   (`.filter` and `.where`, parametrized) on the `to_arrow` path, value AND Arrow type. Four
   behaviours + their discriminators: (1) a casefold collision (`id`/`ID`) refuses **at the
   reference** — `filter("other > 0")` on that frame still runs (the over-refusal regression),
@@ -6053,7 +6157,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `year` column, and the **case-differing** shape (column `YEAR`, call `year(ts)`) is the true
   discriminator since DataFusion resolves function names case-sensitively (`"YEAR"(ts)` →
   `Invalid function`), while bare `year`/`YEAR` on the same frame still rewrites (P5C5-Q-001);
-  (3) **all three** members of `_SQL_LITERAL_KEYWORDS` keep their grammar meaning against a frame
+  (3) **all three** members of `filter_quote._SQL_LITERAL_KEYWORDS` keep their grammar meaning against a frame
   that actually carries a column of that name — `["true","b"]`, `["false","b"]`, `["null","b"]` —
   each with the suppressed rewrite asserted to fail (`"true"` / `"false"` → non-boolean predicate;
   `b IS NOT "null"` → `ParseException`);
@@ -6574,7 +6678,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   ride-along (`F.lower`). **W-4 / A6 Q-002:** `F.sum` / `F.count` / `F.avg` /
   `F.min` / `F.max` / `F.count_distinct` / `F.first` / `F.last` after semi raise
   the same classes (`test_right_ref_agg_*`, left / inner / distinct-name /
-  `count_distinct` left-then-right). Ledger: `task/y5-origin-map-ledger.md`,
+  `count_distinct` left-then-right); aggregate builders carry the attribute token
+  in `join_sql_expr` like `F.abs`, so the same refusal fires. Ledger: `task/y5-origin-map-ledger.md`,
   `task/z4-residuals-ledger.md`, `task/w4-z-residuals-ledger.md`. Live-Spark
   behaviour for the conditionless divergence is recorded in
   `task/g4b-join-widening-ledger.md`.
@@ -7831,7 +7936,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a decimal128 / overflow differential row | `test_decimal128_parity.py` (`G2_ROWS` / `G13_ROWS` / `CTAS_ROWS`; record the Spark half with `_record_decimal128_goldens.py`, never by hand) |
 | Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
-| Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals + G4b-R2 origin-map pins; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
+| Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals + G4b-R2 unemitted-id pins; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
 | Pin semi/anti right-origin refuse / drop no-op | `test_g4b_semi_join.py` (`test_right_ref_*`, `test_left_refs_*`, `test_inner_join_right_ref_*`, `test_semi_then_inner_join_emits_the_same_right`, `test_spawn_descendant_still_refuses_unemitted_right`, `test_self_semi_exclusive_set_resolves_df_column`, `test_distinct_name_*`, `test_right_ref_abs_*`, `test_left_abs_*`, `test_inner_join_abs_*`, `test_distinct_name_abs_*`, `test_right_ref_lower_*`, `test_coalesce_left_then_right_*`, `test_abs_string_name_*`, `test_right_ref_agg_*`, `test_left_agg_*`, `test_inner_join_sum_*`, `test_distinct_name_sum_*`, `test_count_distinct_left_then_right_*`, `test_sum_string_name_*`,
   `test_inner_join_abs_keeps_the_abs_on_a_negative_key`) |
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
@@ -7927,11 +8032,11 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | joins budget pin reds | G4 must stay 20–30 rows, min 14 equalities, max 8 disclosures/splits, ≥4 `*null_keys_*` (every join type), ≥2 `*duplicate_keys_*`, ≥2 `*type_mismatch_*`, ≥2 `*nullable*`, ≥6 DF content rows, and (G4b) the DF semi family on both the name/list-key and Column-condition paths plus both NULL-key edges; restore the name-gated families rather than greening them with controls. |
 | a `df_left_semi_*` / `df_left_anti_*` row reds | the G4b DataFrame semi binding regressed. Localize in Rust first (`crates/repark-python/tests/bindings.rs` `join_on_names_left_semi_*` / `_left_anti_*` / `_semi_family_never_merges_a_key_column`), then the facade alias map + `_join_on_condition_h1` left-only projection in `python/repark/src/repark/dataframe/core.py`. Re-splitting the row to green it is a laundered regression, and `test_join_row_set_covers_g4_budget` reds on it. |
 | `test_g4b_semi_join.py` conditionless test reds | the semi/anti `on=None` / `on=[]` guard stopped firing, so a conditionless semi join now falls through to the Cartesian path and answers an m×n cross join instead of Spark's rows. Restore the `_SEMI_JOIN_HOWS` guard in `DataFrame.join`; do not relax the test. |
-| `test_right_ref_select_*` reds with left `k` values | the G4b-R2 origin map lost join-type awareness — `select(right["k"])` name-fell-back to the left column. Restore `_remember_unemitted_right_origins` on both the name-key and H1 condition paths; do not special-case `select` alone. |
-| `test_semi_then_inner_join_emits_the_same_right` reds | `_spawn` copied `_origin_not_emitted` onto the inner-join child and the emitting path did not subtract. Restore `left_only=False` on non-semi `_remember_unemitted_right_origins`. |
-| `test_spawn_descendant_still_refuses_unemitted_right` reds with left `k` | the `_spawn` copy line was deleted; filter/select children name-fall-back. Restore `child._origin_not_emitted = self._origin_not_emitted`. |
-| `test_self_semi_exclusive_set_resolves_df_column` reds | exclusive-set remember started recording the shared self plan id. Keep `right.ids - left.ids`. |
-| `test_right_ref_drop_is_spark_noop` reds by dropping `k` | `drop(right["k"])` fell through to name-drop of the left column. The unemitted-origin branch must `continue` (Spark 4.1.2 no-op), not raise and not name-drop. |
+| `test_right_ref_select_*` reds with left `k` values | the G4b-R2 unemitted-id set lost join-type awareness — `select(right["k"])` name-fell-back to the left column. Restore `_remember_unemitted_right_ids` on both the name-key and H1 condition paths; do not special-case `select` alone. |
+| `test_semi_then_inner_join_emits_the_same_right` reds | `_spawn` copied `_unemitted_attr_ids` onto the inner-join child and the emitting path did not subtract. Restore `left_only=False` on non-semi `_remember_unemitted_right_ids`. |
+| `test_spawn_descendant_still_refuses_unemitted_right` reds with left `k` | the `_spawn` copy line was deleted; filter/select children name-fall-back. Restore `child._unemitted_attr_ids = dict(self._unemitted_attr_ids)`. |
+| `test_self_semi_exclusive_set_resolves_df_column` reds | exclusive-set remember started recording the shared self attribute id. Keep `held_id not in left_ids`. |
+| `test_right_ref_drop_is_spark_noop` reds by dropping `k` | `drop(right["k"])` fell through to name-drop of the left column. The unemitted-id branch must `continue` (Spark 4.1.2 no-op), not raise and not name-drop. |
 | a `test_cast_failure_parity.py` row reds saying CONVERGED | repark now matches Spark (shared raise, or success golden): do NOT delete — flip to content/error equality and record the convergence. |
 | a cast-failure row reds saying regression | re-derive both halves with `_record_cast_failure_goldens.py` before touching the pin. |
 | cast-failure budget pin reds | G6 must stay 8–10 rows, min 3 equality-class, min 3 shared-raise errors, ≥2 `try_cast_*`, ≥1 DF `Column.cast` row, name-gated malformed-numeric / malformed-temporal / overflow families; do not invent divergences under ANSI ON. |
@@ -9202,3 +9307,419 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
     `…_an_accept_any_table`) also wipes a plain table with an empty `BY NAME`
     overwrite, with or without a NULL column (C-018).
   pins: u6-write-refusals/C-013, C-015, C-016, C-017, C-018
+- [test_perf_attr_stamp_2_o1.py](test_perf_attr_stamp_2_o1.py) — **PERF-ATTR-STAMP-2 O-1
+  (2026-10-03, ruling R-O1-1, option A):** the facade pins for the per-handle executable twin.
+  - `collect`, `count`, `show`, `explain`, `toPandas`, `columns` and `schema` leave a frame's
+    stamped ids unchanged and `df.select(df["v"])` resolving, over a source, an aggregate and a
+    join child. Goes red when `inner()` returns the twin.
+  - `pa.table(df)`, `pa.table(df._inner)`, a native `RecordBatchReader` and
+    `to_arrow_batches` carry no `repark.attr` with the facade strip deleted. Goes red when the
+    analyzed schema reads the stamped plan.
+  - Temp views and SQL frames keep the source ids, as Spark 4.1.2 measured: `table()` read
+    twice, `SELECT *`, `SELECT v`; V1, V2, V8, V11, V13, V14. Goes red when view registration
+    takes the twin.
+  - Condition joins, a condition join with a select, `crossJoin`, and V5, V6 and V16 over views
+    answer. These are the cells the analyzer placement broke; the pin goes red under that
+    placement.
+  - No file outside the four id readers mentions the attribute key (a grep pin). Goes red when
+    a fallback reader is added.
+  - O-1 fold V-1 (2026-10-04): `test_export_schema_is_clean_over_sql_defined_views`. Over a
+    SQL-defined temp view, the frame from `table`, `SELECT *`, select, filter, `withColumn`,
+    a join, a SQL join and a nested view exports no `repark.attr` through `toArrow`, `pa.table`
+    (facade frame and native handle) and `to_arrow_batches`, and answers. Goes red when the
+    native schema strip is removed.
+  pins: attr-id-1/C-052, C-053
+- [test_attr_id_1_s2.py](test_attr_id_1_s2.py) — **ATTR-ID-1 S2 (2026-09-30):** the seam pins.
+  Every spawned frame carries an id on every output field (`createDataFrame`, `sql`,
+  `select`/`filter`/`withColumn` children, a join child, a parquet re-read); the bind sites
+  (`df["x"]`, `df.x`, `_column_of`) set `Column._attr_id` at the field's position while
+  `F.col` stays `None`; a written parquet footer's field and file metadata, written CSV/JSON
+  bytes, an Iceberg CTAS's stored metadata JSON plus data-file footers, and MERGE data-file
+  footers carry no `repark.attr`; `toArrow`/`to_arrow`/`to_arrow_batches` schemas are clean,
+  `schema` fields carry no attr metadata, and `printSchema`/`repr`/`collect` show no key; a
+  USING self-join keeps the key and left ids with a fresh right id; a cached frame stays
+  bindable with byte-identical ids across cache/unpersist/checkpoint (V-4 continuity,
+  2026-10-02); an `EXPLAIN` frame binds with `_attr_id` `None` and still collects; deep
+  select chains, join outputs, cached frames, and `IN`/scalar-subquery sources all write
+  clean parquet footers. No module
+  docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-007, C-008, C-009, C-010, C-011, C-014
+- [test_attr_id_1_s3a.py](test_attr_id_1_s3a.py) — **ATTR-ID-1 S3a (2026-09-30):** the
+  cutover pins, each under both case rules unless noted. `select`/`__getitem__`/
+  `__getattr__` of one twin display binds the one attribute; two attributes under one
+  display refuse; a folded spelling binds exact only when sensitive (an
+  insensitive-born twin stays ambiguous, a sensitive-born twin binds); a quoted dup
+  display misses as before (the old path matches the raw written text); a unicode
+  spelling binds by casefold when insensitive and refuses unresolved when sensitive;
+  parent Columns bind after filter and after drop; `alias()` mints a fresh id; a
+  qualified select binds one join side and a qualified miss refuses unresolved; the
+  live case rule decides after creation. No module docstring: the lane's no-comments
+  ruling covers the new file; the contract lives here. pins: attr-id-1/C-024
+- [test_attr_id_1_s3b.py](test_attr_id_1_s3b.py) — **ATTR-ID-1 S3b (2026-10-01):** the
+  filter/sort cutover pins, each under both case rules unless noted. `filter(str)`
+  of a one-attribute twin pair binds; of two attributes sharing a name refuses;
+  a qualified predicate binds one join side; `filter(Column)` binds the one
+  attribute and refuses the twin join; an exact spelling with a folded rival
+  follows the live rule (binds sensitive, refuses insensitive); `orderBy` by a
+  string and by a parent Column sorts a twin frame (SORT-PARENT-COLUMN-1); a
+  Project dup routes through the projection input (SM-2c round B; the S3b
+  oldest-id pin is rewritten); a join dup is unresolved; an aggregate display
+  rebinds; a missing key skips to the join grandchild when bound there; the
+  live case rule decides after creation. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-025
+  **Fold SM-2d (2026-10-07):** a key hidden past a renamed or redefined
+  intermediate refuses `AMBIGUOUS_REFERENCE` (M1/M5), a key with no
+  intermediate sorts by the source column (M6), a self-join projection
+  duplicate refuses `UNRESOLVED_COLUMN` on both doors, and the case-twin
+  refusal names the written spelling. pins: attr-id-1/C-071
+  **Fold SM-2c round B (2026-10-06):** the renamed input-route pin on
+  non-monotonic twins plus one pin per door (exact-dup `F.col`, exact-dup
+  string, insensitive twin-expression refusal, sensitive per-twin rows) and
+  a sourced-twin expression pin over a reminted select.
+  pins: attr-id-1/C-069, C-071
+  **ATTR-ID-1 S3b H-1 (2026-10-01):** the §9e pins (C-026): aliased-join and
+  corpus-cross-join dups refuse on both doors under both rules; the missing
+  sort key falls through in output order; the three lambda shapes bind under
+  `caseSensitive=true`; struct access, the facade-held qualifier (main's
+  raise), the qualifier-first tie and the tie coincidence. Every row
+  expectation is live-Spark verbatim (h1/h1d/h1e probes).
+  pins: attr-id-1/C-026
+  **S3b H-1 follow-up (2026-10-01):** the nested-lambda case-collision pins
+  (C-027): four nested `X`/`x` and `T`/`t` shapes fold to no rows under the
+  insensitive rule (S0 spark.json) and stay distinct (`[1, 5]`) under the
+  exact rule (live-Spark probe); the reverse nesting and one single-level
+  folded reference fold insensitive. pins: attr-id-1/C-027
+  **Gate narrowing (2026-10-01):** the stays-on-binder pins (C-028): a
+  backticked declaration with a folded reference, a dotted folded head, and
+  a nested scope pair without a parameter collision all keep binder rows
+  under the insensitive rule, each expectation measured on live Spark 4.1.2.
+  pins: attr-id-1/C-028
+  **Gate j_cross (2026-10-01):** the alias-dup pins (C-029): a one-id join
+  dup refuses past `alias` plus `withColumn` and on the qualified door,
+  under both rules (S0 spark.json). pins: attr-id-1/C-029
+  **ATTR-ID-1 S3e (2026-10-01):** the facade-held-qualifier filter pin
+  changes contract (R-4 closure): with the facade qualifiers in `resolve`,
+  the single-id twin pair binds instead of falling through to the engine's
+  raise, matching the select door on main; renamed to
+  `test_filter_facade_held_qualifier_binds_single_id`. The one-id join dup
+  still refuses (C-029, kept). pins: attr-id-1/C-039
+- [test_attr_id_1_s3c.py](test_attr_id_1_s3c.py) — **ATTR-ID-1 S3c (2026-10-01):** the
+  `withColumn(s)`/`withColumn(s)Renamed` cutover pins, each under both case rules
+  unless noted. `withColumn` replaces a twin pair of one attribute and two
+  attributes sharing a display, then refuses `filter`/`select(str)`/`select(col)`
+  as ambiguous; a bare-value replacement mints per position too; a case-variant
+  name replaces insensitive and appends sensitive; folded rivals replace both
+  insensitive and the exact one sensitive. `withColumnRenamed` renames a twin
+  pair and a two-attribute display, no-ops a miss, and renamed twins refuse
+  `filter`/`select(str)`/`select(col)` (singular and plural — the §9f fresh-id
+  ruling). `withColumns` replaces hits and appends misses in order, keeps
+  last-wins folded keys insensitive, and replaces plus appends sensitive;
+  `withColumnsRenamed` matches folded keys sequentially and materializes
+  duplicate finals (exact chain and folded match — EX-DF-18 FIXED); the live
+  rule decides after the frame was built. The insensitive fold is Java's, not
+  `casefold`'s: `STRASSE` misses `straße`, `ẞ` hits `ß`, `id` hits `İd`
+  (live-Spark s3c5 probes). Every row expectation is live-Spark 4.1.2 verbatim
+  (s3c probes, banner in `spark_banner.out`).
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-031
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** 2 more pins: `ıd` replaces and
+  renames `İd` insensitive (the native lower-of-uppers fix restores the S3c
+  `U+0130 read as I` behavior exactly; probe s3d16).
+  pins: attr-id-1/C-037
+  **CASESENS-2 port (2026-10-03):** the insensitive folded-keys pin flips to
+  live Spark 4.1.2's answer, measured that day:
+  `withColumns({"v": lit(1), "V": lit(2)})` refuses `COLUMN_ALREADY_EXISTS` 42711
+  naming `` `v` `` (the S3c "last key wins" row was not a Spark measurement);
+  the test is renamed `test_with_columns_folded_keys_refuse_insensitive`.
+  pins: casesens-2/C-004, C-011
+- [test_attr_id_1_s3d.py](test_attr_id_1_s3d.py) — **ATTR-ID-1 S3d (2026-10-01):** the
+  `drop`/`dropDuplicates`/`fillna`/`dropna` cutover pins, each under both case rules
+  unless noted. `drop(str)` drops a twin pair of one attribute and a two-attribute
+  display, no-ops a miss, and drops a variant insensitive while missing sensitive;
+  `drop(F.col)` drops one-attribute twins but refuses two attributes, and no-ops a
+  miss; a parent Column drops only its id positions (one side of a self-join, both
+  of one-attribute twins); compounds, literals, aliases, and other-frame Columns
+  are no-ops; the live rule decides after the frame was built. `dropDuplicates`
+  runs on twins and two-attribute displays, misses with `_LEGACY_ERROR_TEMP_1201`,
+  and follows the live rule on variants. `fillna` (subset and dict) and `dropna`
+  fan out over one-attribute twins, refuse two attributes and join dups, miss with
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION`, follow the live rule on variants, take the
+  last of folded dict keys, and count each twin position under `thresh`. Every row
+  expectation is live-Spark 4.1.2 verbatim (s3d probes).
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-032, C-033
+  **ATTR-ID-1 S3d follow-up (2026-10-01):** 19 more pins over the same file:
+  fold-decisive expansion/newer-script/Deseret pairs, sensitive id-closure
+  and exact-only distinct ids, union first-only (subset, dict order,
+  `dropna`, free-Column `drop`), union `drop(str)` fan-out, distinct-id
+  union and reversed-order refusals (probes s3d8..11).
+  pins: attr-id-1/C-034
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** 9 more pins: project twins
+  fan out without a union, `dropDuplicates` fans out to divergent twins,
+  U+0130 variants miss under `fillna`/`dropna`/free-Column `drop` but hit
+  under `drop(str)`/`dropDuplicates`, and final-sigma folds hit while the
+  U+0130 expansion misses (probes s3d16..17).
+  pins: attr-id-1/C-037
+  **ATTR-ID-1 S3d follow-up 4 (2026-10-01):** 2 union-twins pins bind
+  first-only for both spellings on a single-id (select-dup) union and refuse
+  both spellings on a multi-id (alias-dup) union; a creation-dup union is
+  unbuildable in RePark (`createDataFrame` refuses dup names, probe s3d18
+  measures the Spark side).
+  pins: attr-id-1/C-038
+- [test_attr_id_1_s3e.py](test_attr_id_1_s3e.py) — **ATTR-ID-1 S3e (2026-10-01):** the
+  qualified-name cutover pins, each under both case rules unless noted.
+  Self-join `a.v`/`b.v` in select, getitem, free Column, filter, orderBy,
+  Column drop (str drop is a no-op), withColumn, star (`select` and
+  `F.col`), and single-token selectExpr; qualifier-case folds insensitive
+  and refuses sensitive; misses raise `UNRESOLVED_COLUMN.WITH_SUGGESTION`;
+  twins refuse `AMBIGUOUS_REFERENCE` in select and drop but raise
+  unresolved in sort; struct heads keep main's path (filter binds,
+  select/sort raise, pinned as divergences); a struct named like a
+  qualifier prefers the qualifier; re-alias drops old qualifiers; the live
+  rule decides after the frame was built; cross sides bind; qualifiers
+  survive select/filter but not recompute. Every row expectation is
+  live-Spark 4.1.2 verbatim (s3e probes 1–6). Mutations M1–M3 (the
+  ledger's record) red the family pins. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-039
+- [test_attr_id_1_s4.py](test_attr_id_1_s4.py) — **ATTR-ID-1 S4 (2026-10-02):** the
+  deletion pins, each under both case rules unless noted. Origin slots gone from
+  `Column`/`DataFrame`; join tokens carry attribute ids, never QCOL; reversed-order
+  and mixed aliased/unaliased joins side exactly; lineage-sharing simple equi-joins
+  keep the diagonal; lineage-sharing compound arms refuse (Spark reports ambiguity
+  too); mixed compound arms refused as a divergence until SJ-3 closed it (Spark
+  raises); a token whose id sits on neither join side reaches the engine unsided
+  and refuses (SJ-3: `MISSING_ATTRIBUTES` from the preparer);
+  duplicate select outputs take positional `__repark_sel_{n}` engine names; a parent
+  ref through `fillna`/`replace` binds its own side's output on duplicate names;
+  `eqNullSafe` sides a shared-lineage self-join; a parent ref past an arithmetic
+  output resolves by engine name on single names and raises on duplicate names;
+  a same-frame twin getitem stays the written ref and refuses; an unheld marked
+  sort key refuses over same-name twins while the plain parent ref refuses;
+  twin parent refs refuse on pass-through children (**V-5 (2026-10-02)** flips the
+  S4 bind to the Spark refusal) and bind on join sides and duplicate
+  select outputs; a rename that drops the name refuses while a case-only rename
+  binds and a same-name replacement reads the new value; marked sort keys and
+  SQL-twin and compound refs refuse on their own frame (marked sort keys refuse
+  `AMBIGUOUS_REFERENCE` per live Spark, V-5); parent refs onto
+  duplicate engine names keep the shaped `AMBIGUOUS_REFERENCE` condition; an
+  aliased side ref on a condition join binds its own side.
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-040
+  **ATTR-ID-1 SJ-3 (2026-10-02):** the compound pins refuse
+  `_LEGACY_ERROR_TEMP_1182` with Spark's names; `test_s4_mixed_compound_arms_divergence`
+  is renamed `..._refuses` (divergence closed, EX-DF-20 fixed); the third-frame pin
+  expects `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`.
+  **ATTR-ID-1 SM-1 (2026-10-06):** `test_s4_unheld_sort_marker_funnels_to_oldest`
+  is renamed `..._over_same_name_twins_refuses` and asserts `AMBIGUOUS_REFERENCE`
+  on both twin orders and both sort directions. pins: attr-id-1/C-055
+- [test_attr_id_1_sj2.py](test_attr_id_1_sj2.py) — **ATTR-ID-1 SJ-2 (2026-10-02):**
+  the seam pins. Every token-bearing bind site renders `F<id>` of its birth
+  node; frameless tokens render `F0` and free names carry no id; children mint
+  fresh node ids and checkpoint re-roots; the two self-join confs forward
+  through the native setter, default `true` (live Spark 4.1.2), refuse invalid
+  values before storing; twin sorts on pass-through children and the
+  overlay-born sibling sort keep their base answers. **R-SJ2-3 (2026-10-02):**
+  describe/summary answer through inert empty roots (never renewing, no
+  outputs); a relation child of describe gets a non-empty node. No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here. **ATTR-ID-1 SJ-3 R-SJ3-2 (2026-10-02):** the frameless exact-form
+  pin renders the leaf field (`__D78__`). pins: attr-id-1/C-047
+- [test_attr_id_1_sj3.py](test_attr_id_1_sj3.py) — **ATTR-ID-1 SJ-3 (2026-10-02):**
+  the condition-path pins, each named after its probe cell and EQUAL to live
+  Spark 4.1.2 under both case rules: the `B_*`/`D_*`/`E_parent_alias_*`/`G_eq3_*`
+  rows, `I_rewrite_name_missing`, `P_s4_third_frame`, `K_off_cond_missing`,
+  `F_left_anti_gt`, `I_rewrite_case` (getattr refuses at access on both engines,
+  so no preparer change), the conf-off `H_off_*` condition guards, and the
+  verifier `P_v_single_shared_token` siding pin. Three post-join pins
+  (`D_self_eq_sel_d`, `P_v_left_join_right_parent`, `P_v_anti_idiom`) carry
+  strict xfail until SJ-4 wires the refusal funnel. No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
+  **ATTR-ID-1 SJ-3 R-SJ3-1/R-SJ3-2 (2026-10-02):** the accepted corpus pins
+  `r3.cp_{al1,al1id,al_al,wcr}_join_parent` (× both case rules, each Spark's
+  `MISSING_ATTRIBUTES` naming `v`), `r3.cp_x_join_self` (dead birth still names
+  `v`; the bare-`PySparkException` internal error cannot fire), and the token
+  leaf-hex render pin (ASCII plus non-ASCII).
+  **ATTR-ID-1 SJ-4 (2026-10-02):** the three funnel pins un-xfail (the funnel
+  is wired). pins: attr-id-1/C-046, C-047, C-049
+- [test_attr_id_1_sj4.py](test_attr_id_1_sj4.py) — **ATTR-ID-1 SJ-4 (2026-10-02):**
+  the post-join detector pins, each named after its cell and EQUAL to live
+  Spark 4.1.2: the §4 `A_*`/`F_*`/`I_*`/`J_*`/`K_*` rows and every `H_off_*`
+  (1182 pins assert class, config, verbatim template, and names; answers pin
+  rows; name-based surfaces pin no-check), the four measured uncovered-surface
+  shapes (`sj4_range_f`, `sj4_cube_f`, `sj4_rollup_f`, `sj4_dfagg_f`), the
+  renewed-absent wiring evidence (`sj4_k_*_on` prefer 1182, `sj4_k_drop_*`
+  miss without the appear clause), and strict xfails for the
+  two V-1 shapes (Spark answers/misses via V-3 resolution, card
+  MISSING-REF-RESOLVE-1), plus `I_checkpoint_sel_d` (Spark answers, RePark
+  refuses because `localCheckpoint` returns the same frame; card
+  LOCAL-CHECKPOINT-NEW-FRAME-1, ruled R-SJ4-1 on 2026-10-02). No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here.
+  **ATTR-ID-1 SJ-5 (2026-10-03):** `A_inner_agg_f` un-xfails (keys and
+  aggregate references refuse once, in Spark's multiplicity) with two
+  deferral variants (`SJ5_agg_two`, `SJ5_agg_litkey`); `H_off_xj_sel_parent`
+  flips to Spark's measured answer (left `v`, 9 rows). pins: attr-id-1/C-046, C-047, C-049
+- [test_attr_id_1_sj5.py](test_attr_id_1_sj5.py) — **ATTR-ID-1 SJ-5 (2026-10-03):**
+  the cross-join pins, each named after its cell and EQUAL to live Spark
+  4.1.2 under both case rules: the §4 `C_*` rows (answers pin columns and
+  rows; refusals pin class, config, verbatim template, and names with
+  `#<n>L` stripped) and the 14 p1 cross 1182 cells, plus the over-fire
+  guards (name-based cross shapes must answer). No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
+  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** ten free-name pins per case rule, one
+  cross cell plus one inner twin for each of filter-text, selectExpr,
+  withColumn-compound, summary, and qualified-filter, each asserting the
+  class, the `name`/`referenceNames` parameters, and the message; plus the
+  window pair (aliased dropDuplicates answers, user window refuses).
+  **ATTR-ID-1 SJ-5 F2 (2026-10-03):** one backquoted-qualified filter pin
+  (`` `q`.`v` `` over an aliased cross join refuses, EQUAL to Spark).
+  pins: attr-id-1/C-047, C-048
+- [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
+  the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
+  The ported `test_v5` pin plus the 13 remaining F_ cells refuse
+  `AMBIGUOUS_REFERENCE` under `caseSensitive=false`; all 16 T_ cells bind with
+  Spark's rows under `caseSensitive=true`. **V-4 (2026-10-02):** the ported
+  `test_v4` cache pins plus unpersist and `localCheckpoint` variants measured
+  from `p7_cache`, and a byte-continuity pin over cache/unpersist/checkpoint.
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-044, C-045
+- [test_attr_view_semantics_1.py](test_attr_view_semantics_1.py) — **ATTR-VIEW-SEMANTICS-1
+  item (d) (2026-10-05):** a SQL temp view over a stamped frame answers Spark on
+  the parquet-write door (V-3a, rows read back) and the groupBy-count door (V-3b);
+  one combined pin runs both plus the in-scope siblings (OR REPLACE, projected and
+  join views, SQL-read groupBy, saveAsTable, csv, json) with no internal error;
+  V9 keeps its pre-existing answer. Every pin holds the seeded source frame:
+  releasing it drops the createDataFrame scratch view the SQL view's re-plan
+  resolves by name (pre-existing lifecycle, identical on the unmodified stack).
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here.
+  Fold F-1 (#951, 2026-10-05): two pins over the stamped frame hold the
+  `temp_view_scan` Projection arm — DESCRIBE of a commented SQL view over `tv`
+  keeps both alias comments with Spark 4.1.2's rows and dtypes (measured
+  2026-10-05: identical), and a REPLACE closing the `a`/`b` cycle through the
+  stamped view refuses RECURSIVE_VIEW with Spark's text, condition and SQLSTATE
+  while `a` keeps its old rows; both go red when the arm reverts to a bare
+  TableScan. `createOrReplaceTempView` takes no comment, so the DESCRIBE pin
+  spells the comments as SQL aliases.
+  Item (a) (2026-10-05): the Q02 self-join over two `sv` reads answers
+  `[(10, 10), (20, 20)]`; two `sv` reads mint pairwise-distinct ids fresh
+  against `tv` while two `tv` reads carry the source ids; the M20-M28 mint rows
+  pin Spark's new-id answer per read shape. pins: attr-id-1/C-054
+  See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
+- [test_attr_id_1_sm2_r1.py](test_attr_id_1_sm2_r1.py) — **Fold SM-2 R1
+  (2026-10-06):** the nested `WRITE ORDERED BY` pin. Under
+  `caseSensitive=false` the second ALTER replaces the sort key, so the
+  metadata source-id moves 2 (`cat`) then 4 (`s.a`), equal to Spark 4.1.2's
+  recorded `so_false_nested_A_meta`. The DIFF-PROBE row that named this a
+  regression misread the metadata: commits v2 and v3 landed in one timestamp
+  tick and the probe's mtime pick returned v2. The pin selects the metadata
+  file by version number, never mtime.
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-060
+- [_sm2_shared.py](_sm2_shared.py) — **Fold SM-2 shared pins (2026-10-06):**
+  session/join builders plus refusal-shape and no-`__repark_`-bytes helpers for
+  the fold's pin files. No module docstring: the lane's no-comments ruling
+  covers the new file; the contract lives here. pins: attr-id-1/C-061
+- [test_attr_id_1_sm2_dupwrites.py](test_attr_id_1_sm2_dupwrites.py) — **Fold
+  SM-2 R2 (2026-10-06):** duplicate-display-name writes refuse
+  `COLUMN_ALREADY_EXISTS` with Spark's exact text, condition and SQLSTATE, and
+  create no file or table (parquet, json, csv, orc, saveAsTable, V2 create and
+  V2 append); `insertInto` writes positionally as Spark does; folded-only
+  duplicates report the folded name. The csv refusal is the ruled divergence
+  FA-5 (Spark writes the duplicate header). SM-2b narrowing: csv refuses
+  exact duplicates only (case-twins write the raw header, pinned), and a
+  case-sensitive parquet twin pin holds the per-flag rule. No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here. pins: attr-id-1/C-061
+- [test_attr_id_1_sm2_dupexport.py](test_attr_id_1_sm2_dupexport.py) — **Fold
+  SM-2 R3 (2026-10-06):** `pa.table(J)` over a duplicate-display-name join
+  carries the display names, equal to `J.toArrow()` and to Spark's
+  `arrow_dup`: the native Arrow C stream export renames schema and batches
+  to the overlay names (Arrow allows duplicate field names; SM-2b item 3
+  moved the rename to Rust, pyarrow-free); a non-duplicate twin frame still
+  exports its engine names. Raw polars consumers of a duplicate-name frame
+  get polars' own `DuplicateError` (SM-2c Q2, 2026-10-06); `to_polars()`
+  disambiguates with `__1` suffixes. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-062
+- [test_attr_id_1_sm2_duppandas.py](test_attr_id_1_sm2_duppandas.py) — **Fold
+  SM-2 R4 (2026-10-06):** `mapInPandas`/`mapInArrow` over duplicate-display
+  frames with distinct attribute ids refuse `AMBIGUOUS_REFERENCE` with
+  Spark's exact text, condition, SQLSTATE 42704 and message params (self,
+  mixed, USING `s`, cross, qualified select, star, literals, folded-ID
+  spelling; the refusal fires at the call, before the function runs);
+  same-origin duplicates still run; scalar and grouped-agg pandas UDF input
+  Series are positional (`_0`, …); `toPandas` carries the display names. One
+  named divergence pin: same-origin duplicate map inputs keep `(id, id)`
+  where Spark shows `(id_0, id_1)`. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-063
+- [test_attr_id_1_sm2_dupviews.py](test_attr_id_1_sm2_dupviews.py) — **Fold
+  SM-2 R5 (2026-10-06):** the four temp-view doors over exact-duplicate-
+  display frames refuse `COLUMN_ALREADY_EXISTS` with Spark's exact text,
+  condition and SQLSTATE 42711, naming the first duplicate, and register
+  nothing (self, mixed, USING `s`); the folded pin registers and answers
+  (SM-2b narrowing); guards pin plain register/read/describe, replace,
+  EXPLAIN-over-twins, and globals-still-unsupported. The refusal is the
+  ruled divergence FA-6 (Spark registers the view). No module docstring:
+  the lane's no-comments ruling covers the new file; the contract lives
+  here. pins: attr-id-1/C-064
+- [test_attr_id_1_sm2_r7.py](test_attr_id_1_sm2_r7.py) — **Fold SM-2 R7
+  (2026-10-06):** a qualified `DataFrame.__getitem__` repr keeps the
+  qualifier (`Column<'r.t'>`, `Column<'b.v'>`, alias `Column<'x.id'>`,
+  folded `Column<'r.T'>`, USING side `Column<'l.id'>`), equal to Spark
+  4.1.2; guards pin bare projections/compounds and unchanged `F.col`
+  reprs. No module docstring: the lane's no-comments ruling covers the
+  new file; the contract lives here. pins: attr-id-1/C-065
+- [test_attr_id_1_sm2_r6.py](test_attr_id_1_sm2_r6.py) — **Fold SM-2 R6
+  (2026-10-06, R-R6-1…5):** DataFrame `USING` joins keep the left key
+  physically (left-side references answer Spark-exact on every join type;
+  `semi`/`anti` `42703` on the missing side; mixed-type keys follow main);
+  right-side references answer on `inner` and refuse explicit on
+  `left`/`right`/`full` on every choke (select, getitem, compound, sort,
+  filter, selectExpr, join condition) plus stale pre-join right keys, with
+  literal/unqualified/no-alias guards. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-066
+- [test_attr_id_1_sm2c_leak.py](test_attr_id_1_sm2c_leak.py) — **Fold SM-2c
+  C-3 (2026-10-06):** a frame whose display names are unique but whose
+  engine fields are twin names (a dropped self-join side, C-067; a dropped
+  join key, C-068) writes the display names to every door — parquet, csv,
+  json, `saveAsTable` new/append, `writeTo` create/replace/append (the
+  append is by-name over a reordered target), positional `insertInto`,
+  temp views (`SELECT id` answers) — with Spark's values; text writes
+  values and reports the display column name; orc still refuses the
+  format and the global doors stay unsupported. No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-067, C-068
+- [test_stamp_2_r5p6_1.py](test_stamp_2_r5p6_1.py) — **STAMP-2-R5P6-1
+  (2026-10-07):** `fillna` (scalar and mapping) over twin, star, appended,
+  union-of-a-different-input and self-join frames answers the same columns,
+  dtypes, rows, display/engine names and id-sharing pattern on the native route
+  as with the SQL route forced, and takes the native route wherever it answers
+  (the self-join refuses on both). A decimal fill literal and a decimal
+  `coalesce` keep the SQL route with equal answers, an integer `coalesce`
+  takes the native one, and a `coalesce` over the second twin of a union keeps
+  the SQL route (it reads the first twin). `coalesce(twin, CAST(n AS T))`
+  takes the native route with equal answers for each whitelisted `T` at `0`,
+  `1` and `999999999`, and keeps the SQL route with head's seconds answer for
+  `CAST(n AS TIMESTAMP)` over TIMESTAMP, DATE, TIMESTAMP_NTZ and void twins
+  (deleting the CAST arm or admitting `TIMESTAMP` reds one of the two). A
+  `coalesce` over Boolean twins whose native probe raises falls back and
+  refuses with the SQL route's `coalesce(Boolean, Int64)` text. `1000000000`,
+  `-1` and `1.5`, bare and cast to `BIGINT`, keep the SQL route (a sign, a
+  tenth digit or a fraction admitted on either arm reds it). `DECIMAL(38,0)`,
+  `DECIMAL(38,38)` and `DECIMAL(1,0)` take the native route with equal answers.
+  `DECIMAL(39,0)` and `DECIMAL(5,6)` keep the SQL route and raise head's
+  `AnalysisException` text at head's call, `.schema` or the `select`; the
+  regex-only arm or a dropped bound reds this pin. A unique sort key binds without any
+  `_native.sort_*` trace door while an ambiguous one calls them; the spy names
+  all four lineage doors and asserts `sort_output_carries_twice` stays
+  unexported. Mutations:
+  dropping the first-held fill binding reds both fill-route pins, dropping the
+  literal-shape check reds the decimal pins, and dropping the
+  binding-equivalence check reds the second-twin pin. No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
+  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011

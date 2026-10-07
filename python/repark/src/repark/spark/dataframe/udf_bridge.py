@@ -90,13 +90,15 @@ def _arrow_array_to_pandas_series(array: Any) -> Any:
 def _pandas_udf_series_args_for_slot(batch: Any, slot: dict[str, Any]) -> list[Any]:
     """Build pandas Series arguments for one UDF slot and Arrow batch."""
     series_args: list[Any] = []
-    for input_name in slot["input_inter_names"]:
+    for position, input_name in enumerate(slot["input_inter_names"]):
         if input_name not in batch.schema.names:
             raise PySparkException(
                 "pandas_udf input column missing from streamed batch: "
                 f"{input_name!r}; batch fields={list(batch.schema.names)}"
             )
-        series_args.append(_arrow_array_to_pandas_series(batch.column(input_name)))
+        series = _arrow_array_to_pandas_series(batch.column(input_name))
+        series.name = f"_{position}"
+        series_args.append(series)
     return series_args
 
 
@@ -500,61 +502,3 @@ def _apply_ordered_window_pandas_udf(
             results.append(value)
         pdf[spec["out_name"]] = results
     return pdf[[field.name for field in struct_fields]]
-
-
-def _grouped_agg_pandas(pdf: Any, *, keys: list[str], specs: list[dict[str, Any]]) -> Any:
-    """Return one output row for a GROUPED_AGG pandas UDF group."""
-    try:
-        import pandas as pd
-    except ImportError as error:
-        raise ImportError(
-            "GROUPED_AGG pandas_udf requires pandas (pip install 'repark[pandas]')"
-        ) from error
-
-    row: dict[str, Any] = {}
-    for key_name in keys:
-        if key_name not in pdf.columns:
-            raise PySparkException(
-                f"GROUPED_AGG pandas_udf missing group key {key_name!r} in group frame"
-            )
-        row[key_name] = pdf[key_name].iloc[0] if len(pdf) > 0 else None
-    for spec in specs:
-        series_args: list[Any] = []
-        for input_name in spec["input_inter_names"]:
-            if input_name not in pdf.columns:
-                raise PySparkException(
-                    f"GROUPED_AGG pandas_udf input column missing from group frame: {input_name!r}"
-                )
-            series_args.append(pdf[input_name])
-        failure = passthrough = None
-        try:
-            value = spec["user_func"](*series_args)
-        except PySparkException as error:
-            passthrough = scrub_exception(error)
-            if passthrough is error:
-                raise
-        except Exception as error:
-            detail, failure = scrub_user_failure(error)
-        if passthrough is not None:
-            raise passthrough
-        if failure is not None:
-            raise PySparkException(
-                "GROUPED_AGG pandas_udf "
-                f"{spec['function_name']!r} raised {type(failure).__name__}: "
-                f"{failure}\n{detail}"
-            ) from failure
-        if value is None:
-            row[spec["out_name"]] = None
-        elif isinstance(value, pd.Series):
-            raise PySparkException(
-                f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
-                f"scalar; got pandas.Series (length {len(value)})"
-            )
-        elif isinstance(value, pd.DataFrame):
-            raise PySparkException(
-                f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
-                f"scalar; got pandas.DataFrame"
-            )
-        else:
-            row[spec["out_name"]] = value
-    return pd.DataFrame([row], columns=[*keys, *[spec["out_name"] for spec in specs]])

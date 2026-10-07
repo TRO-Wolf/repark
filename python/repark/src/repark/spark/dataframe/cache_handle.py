@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
 
+from repark import _native
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -101,6 +103,7 @@ def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
     """Point ``frame`` at a freshly registered cache view and adopt its handle."""
     try:
         frame._inner = frame._session.sql_built(f"SELECT * FROM {view_name}")
+        frame._inner = _native.copy_attribute_ids(frame._inner, lineage)
     except Exception:
         frame._session.drop_temp_view(view_name)
         raise
@@ -112,6 +115,13 @@ def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
     from repark.spark.catalog_surface import _note_frame_cached
 
     _note_frame_cached(frame)
+
+
+def bind_checkpoint_scan(frame: Any, view_name: str, lineage: Any) -> None:
+    """Point ``frame`` at a freshly materialized checkpoint view, keeping its ids."""
+    frame._session.materialize_as_temp_view(view_name, lineage)
+    fresh = frame._session.sql_built(f"SELECT * FROM {view_name}")
+    frame._inner = _native.copy_attribute_ids(fresh, lineage)
 
 
 def release_view_hold(frame: Any, view_name: str) -> None:
@@ -157,8 +167,6 @@ def _warn_storage_level_cosmetic_once(
 
 def _register_cache_frame(alive_token: dict[str, Any], frame: DataFrame) -> None:
     """Track a DataFrame marked for cache/persist so :meth:`Catalog.clearCache` can drop it."""
-    import weakref
-
     registry = alive_token.get("cache_frames")
     if not isinstance(registry, weakref.WeakSet):
         registry = weakref.WeakSet()

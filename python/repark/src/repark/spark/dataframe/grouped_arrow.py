@@ -156,6 +156,7 @@ def grouped_apply(grouped: GroupedData, udf: Any) -> Any:
     from repark.spark.column import Column
     from repark.spark.functions import PandasUDFType
 
+    grouped._dataframe._refuse_self_join_refs(grouped._raw_key_columns())
     eval_type = getattr(udf, "evalType", getattr(udf, "_function_type", None))
     user_func = getattr(udf, "func", getattr(udf, "_user_func", None))
     if isinstance(udf, Column) or user_func is None or eval_type != PandasUDFType.GROUPED_MAP:
@@ -384,6 +385,7 @@ def apply_in_arrow(
 
     pins: grouped-surface-1/C-002, grouped-surface-1/C-003
     """
+    grouped._dataframe._refuse_self_join_refs(grouped._raw_key_columns())
     if grouped._sql_group_clause is not None:
         raise AnalysisException(
             "applyInArrow after cube/rollup/grouping sets is not supported; "

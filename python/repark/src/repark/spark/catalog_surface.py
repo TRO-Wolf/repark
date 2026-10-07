@@ -306,9 +306,13 @@ def _note_view_registered(inner: Any, token: dict[str, Any], name: str, registra
     registrations[_join_table_identifier_segments(list(home))] = registration
 
 
-def _register_temp_view(frame: DataFrame, name: str) -> None:
+def _register_temp_view(frame: DataFrame, name: str, *, rename_fields: bool = True) -> None:
     """Register a temp view and note its object identity. pins: catalog-surface-1/C-009"""
+    from repark.spark.dataframe.writer_layout import _rename_to_unique_display_names
+
     registration = frame._native_for_registration()
+    if rename_fields:
+        registration = _rename_to_unique_display_names(frame, registration)
     frame._session.create_or_replace_temp_view(name, registration)
     _note_view_registered(frame._session, frame._alive_token, name, registration)
 

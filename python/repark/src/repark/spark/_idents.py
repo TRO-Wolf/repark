@@ -167,11 +167,48 @@ def assert_spark_injection_probe_is_single_token(probe: str) -> str:
     return quoted
 
 
+def escape_attr_token_quals(quals: frozenset[str]) -> str:
+    """Encode qualifier names as one attribute-token payload segment.
+
+    Names join on ``|``; backslash, bar, and underscore escape so the payload holds no
+    ``__`` pair and the token regex always ends the segment at the true terminator.
+    """
+    parts: list[str] = []
+    for name in sorted(quals):
+        parts.append(name.replace("\\", "\\\\").replace("_", "\\_").replace("|", "\\|"))
+    return "|".join(parts)
+
+
+def unescape_attr_token_quals(payload: str) -> frozenset[str]:
+    """Decode an attribute-token qualifier payload (inverse of the escape)."""
+    if payload == "":
+        return frozenset()
+    names: list[str] = []
+    current: list[str] = []
+    index = 0
+    while index < len(payload):
+        char = payload[index]
+        if char == "\\" and index + 1 < len(payload):
+            current.append(payload[index + 1])
+            index += 2
+            continue
+        if char == "|":
+            names.append("".join(current))
+            current = []
+            index += 1
+            continue
+        current.append(char)
+        index += 1
+    names.append("".join(current))
+    return frozenset(names)
+
+
 __all__ = [
     "INJECTION_PROBES",
     "PATH_ESCAPE_PROBES",
     "PATH_ESCAPE_SAFE",
     "assert_spark_injection_probe_is_single_token",
+    "escape_attr_token_quals",
     "escape_sql_single_quotes",
     "is_plain_ident",
     "path_escape_kind",
@@ -181,4 +218,5 @@ __all__ = [
     "quote_multipart",
     "reject_path_escape_segment",
     "sql_string_literal",
+    "unescape_attr_token_quals",
 ]

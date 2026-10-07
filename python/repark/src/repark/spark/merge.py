@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from repark import _native
 from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
 from repark.spark._idents import is_plain_ident
 from repark.spark._idents import quote_ident as _quote_ident
@@ -153,7 +154,8 @@ class MergeIntoWriter:
         session = self._dataframe._session
         # Fill pending mapInArrow + cache so MERGE source is real rows, not the empty
         view_name = scratch_view_name(session, "__repark_merge_src_")
-        session.create_or_replace_temp_view(view_name, self._dataframe._native_for_registration())
+        source = _native.strip_attribute_ids(self._dataframe._native_for_registration())
+        session.create_or_replace_temp_view(view_name, source)
         try:
             sql = self._render_sql(view_name)
             # MERGE is eager at sql(); discard the returned handle (same as CTAS writers).

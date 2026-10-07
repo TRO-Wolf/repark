@@ -14,9 +14,16 @@ use repark_common::Error;
 
 use crate::extension::SessionExtension;
 
+pub(crate) mod attr_id;
+pub(crate) mod attr_lineage;
 pub mod case_bind;
+pub(crate) mod frame_lineage;
+mod predicate_names;
+pub(crate) mod self_join;
+pub(crate) mod sort_names;
 pub(super) mod subquery;
 mod window_rescan;
+mod written_names;
 
 /// DataFusion's own name for the pass-2 leaf-projection rule.
 const LEAF_PUSHDOWN_RULE_NAME: &str = "push_down_leaf_projections";
@@ -86,7 +93,8 @@ pub(super) fn analyzer_rules_with_df_54_1_rule_guards() -> Vec<Arc<dyn AnalyzerR
 
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.
 fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
-    let mut rules: Vec<Arc<dyn OptimizerRule + Send + Sync>> = Vec::new();
+    let mut rules: Vec<Arc<dyn OptimizerRule + Send + Sync>> =
+        vec![Arc::new(attr_id::StripAttributeIds)];
     for rule in Optimizer::new().rules {
         match rule.name() {
             "scalar_subquery_to_join" => {

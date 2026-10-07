@@ -60,6 +60,9 @@ def _summary(
         else:
             target_pairs = _native.resolve_frame_names(plan, list(_columns))
     elif frame._display_names is not None and frame._engine_names is not None:
+        from repark.spark.filter_quote import _refuse_ambiguous_free_names
+
+        _refuse_ambiguous_free_names(frame, names=list(frame._display_names))
         target_pairs = list(zip(frame._display_names, frame._engine_names, strict=True))
     else:
         target_pairs = [(name, name) for name in frame.columns]

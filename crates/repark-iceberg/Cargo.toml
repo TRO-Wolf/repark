@@ -35,11 +35,13 @@ parquet.workspace = true
 async-trait.workspace = true
 # Scan-stream collection + unique scratch-table/file/operation-id names.
 futures.workspace = true
-uuid.workspace = true
+uuid = { workspace = true, features = ["v5"] }
 # Catalog-edge spans; failed MERGE scratch-table deregister surfaces via `tracing::warn!`.
 tracing.workspace = true
 bytes.workspace = true
 serde.workspace = true
+thiserror.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 # In-memory Iceberg catalog + temp warehouse for AWS-free CTAS/read + transaction tests.

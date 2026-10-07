@@ -126,8 +126,50 @@ member, slot, alias, or core-surface name changes.
 U11-EDGE-1 (2026-09-26) binds ``_native`` at module level on ``core`` for the DataFrame-door
 attribute binder (``attribute_column`` / ``attribute_copies``), so ``EXPECTED_NEW_CORE_SUBMODULES``
 and ``EXPECTED_NEW_PACKAGE_SUBMODULES`` each gain exactly ``_native``.
+ATTR-ID-1 S4 (2026-10-01): the origin encodings are deleted after every reader moves to
+attribute ids. ``EXPECTED_DATAFRAME_SLOTS`` loses ``_origin_map`` / ``_origin_not_emitted``
+and gains ``_unemitted_attr_ids``; ``EXPECTED_DATAFRAME_DIR`` loses those two plus
+``_origin_plan_ids`` / ``_raise_if_origin_not_emitted`` / ``_raise_unemitted_qcol_tokens`` /
+``_rebind_origin_column`` / ``_remember_unemitted_right_origins`` / ``_select_via_qcol_sql``
+and gains ``_raise_if_id_not_emitted`` / ``_raise_unemitted_attr_tokens`` /
+``_refuse_unemitted_ids`` / ``_remember_unemitted_right_ids`` / ``_select_via_attr_sql`` /
+``_unemitted_attr_ids``; ``core`` and the package each lose ``_decode_qcol_field`` and
+rename the five remaining QCOL helpers to their ``_attr_`` spellings. The same edit
+repairs the S3e mirror misses (red since ce53287a): the ``_frame_qualifiers`` slot in
+``EXPECTED_DATAFRAME_SLOTS`` / ``EXPECTED_DATAFRAME_DIR``, and ``_filter_quote`` /
+``_qualified_names`` in both new-submodule sets. The join-token siding block moves to
+``join_attr_tokens.py`` (CAP-1 split), so the package set gains exactly that name.
+ATTR-ID-1 SJ-2 (2026-10-02): every frame carries its lineage node, so
+``EXPECTED_DATAFRAME_SLOTS`` and ``EXPECTED_DATAFRAME_DIR`` each gain exactly ``_frame_node``;
+the unemitted-id family moves to ``unemitted_ids.py`` behind same-named class bindings (CAP-1
+split), so both new-submodule sets gain exactly ``unemitted_ids`` and ``core`` and the package
+each lose ``_ATTR_TOKEN_RE``.
+ATTR-ID-1 SJ-3 (2026-10-02): the siding block is deleted, so ``core`` and the
+package each lose ``_ATTR_SIDE_BOUNDARY_RE`` / ``_rewrite_join_attr_sql`` /
+``_same_object_attr_alternation_safe`` and gain ``_join_condition_attr_names``
+plus ``weakref`` (the frame-registry import, listed like ``functools``);
+``_emit_join_side_columns`` moves to ``join_attr_tokens.py`` behind the same
+re-export, so neither surface list changes for it.
+ATTR-ID-1 SJ-4 (2026-10-02): ``EXPECTED_DATAFRAME_DIR`` gains the post-join
+funnel ``_refuse_self_join_refs``; the repartition trio moves to
+``repartition_ops.py`` behind same-named bindings, so both new-submodule sets
+gain exactly ``repartition_ops``.
+ATTR-ID-1 SJ-5 (2026-10-03): the native set loses ``remint_cross_collisions``
+and gains ``join_shared_remint``; no expected table tracks native names, so no
+table changes for that. The pivot helper family moves to ``grouped_pivot.py``
+behind same-named imports, so ``EXPECTED_NEW_PACKAGE_SUBMODULES`` gains
+exactly ``grouped_pivot``.
+CASESENS-2 port (2026-10-03): ``core`` and the package each swap
+``_join_condition_attr_names`` for ``_join_condition_args``.
+ATTR-ID-1 PERF-1 (2026-10-03): ``_frame_node`` leaves the slots for a
+lazily-built property of the same name, so ``EXPECTED_DATAFRAME_SLOTS``
+loses exactly that name and ``EXPECTED_DATAFRAME_DIR`` is unchanged. The
+builder moves to ``frame_nodes.py`` behind a same-named import, so the
+package set gains exactly ``frame_nodes``.
 SOURCE-URL-REDACT-2 fold 3 (2026-10-07): ``core`` imports ``scrub_exception`` for the export
 doors, so the frozen ``core`` and package surfaces each gain exactly that one name.
+SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07): ``core``'s mapInArrow handler imports
+``scrub_user_failure``, so the frozen ``core`` and package surfaces each gain exactly that name.
 """
 
 from __future__ import annotations

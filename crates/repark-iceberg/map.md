@@ -30,15 +30,19 @@ v1 crate-root re-export lists.
   counting `Storage` names `bytes::Bytes` and implements `serde::Serialize`, which the fork's
   `typetag` storage traits require; both crates were already in the lockfile). Dev-deps `tokio` + `tempfile` +
   `tracing-subscriber` (registry) + `serde_json` (ICE-OCC-SCOPED-1's race pin reads a Spark
-  recording). The `iceberg*` family is sourced from the owned fork via the
+  recording). MB-1 round 1 (2026-10-07) promotes `serde_json` to `[dependencies]`
+  for the offset-stamp readers and writers, adds `thiserror`, and enables the `v5`
+  feature on `uuid` for `QueryId::derive`; no version moved, lockfile edges only.
+  The `iceberg*` family is sourced from the owned fork via the
   workspace `[patch.crates-io]`.
-- `src/lib.rs` — thin manifest: `pub mod catalog; pub mod write;` + the union re-export lists
-  (+ the file-backed `#[cfg(test)] mod tests;`).
+- `src/lib.rs` — thin manifest: `pub mod catalog; pub mod microbatch; pub mod view; pub
+  mod write;` + the union re-export lists (+ the file-backed `#[cfg(test)] mod tests;`). The
+  `microbatch` line is MB-1 round 1 (2026-10-07).
 - `src/tests/tracing.rs` — shared test-only tracing harness (forced-edit class 6): ONE global
   subscriber carrying both v1 capture layers (catalog span-field capture + merge span-name
   recorder), installed once via a tolerant `Once`; accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.
-- `src/catalog/`, `src/write/` — see [src/map.md](src/map.md) and the per-module maps.
+- `src/catalog/`, `src/microbatch/`, `src/write/` — see [src/map.md](src/map.md) and the per-module maps.
 
 ## I want to...
 

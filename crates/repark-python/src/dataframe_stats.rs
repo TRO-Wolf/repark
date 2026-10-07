@@ -37,7 +37,7 @@ fn freq_items(
 }
 
 #[pyfunction]
-fn transpose(
+pub(crate) fn transpose(
     frame: &PyDataFrame,
     py: Python<'_>,
     index_column: &str,
@@ -46,7 +46,7 @@ fn transpose(
 ) -> PyResult<(PyDataFrame, Vec<String>)> {
     fenced!("transpose", {
         let segment = frame_drive_segment_cached(&frame.depths())?;
-        let source = crate::deep_stack::grown_clone_frame(&frame.df, &frame.depths());
+        let source = frame.executable()?;
         let outcome = py
             .detach(|| {
                 block_on_grown_sized(

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::common::tree_node::{Transformed, TreeNode};
-use datafusion::common::{Column, JoinConstraint, NullEquality, Spans};
+use datafusion::common::{Column, JoinConstraint, NullEquality, Spans, TableReference};
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::expr::Exists;
 use datafusion::logical_expr::{
@@ -85,14 +85,15 @@ fn exists_subquery(frame: &PyDataFrame) -> PyResult<PyColumn> {
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 #[pyfunction]
-fn subquery_alias(frame: &PyDataFrame, alias: &str) -> PyResult<PyDataFrame> {
+pub(crate) fn subquery_alias(frame: &PyDataFrame, alias: &str) -> PyResult<PyDataFrame> {
     fenced!("subquery.subquery_alias", {
         let depths = frame.depths();
         let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
         let (state, aliased) = grown_sync(need, || {
             let (state, plan) = grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
             let aliased = LogicalPlan::SubqueryAlias(
-                SubqueryAlias::try_new(Arc::new(plan), alias).map_err(datafusion_to_py_err)?,
+                SubqueryAlias::try_new(Arc::new(plan), TableReference::bare(alias))
+                    .map_err(datafusion_to_py_err)?,
             );
             Ok::<_, PyErr>((state, aliased))
         })?;
@@ -110,7 +111,7 @@ fn subquery_alias(frame: &PyDataFrame, alias: &str) -> PyResult<PyDataFrame> {
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 #[pyfunction]
-fn lateral_join(
+pub(crate) fn lateral_join(
     left: &PyDataFrame,
     right: &PyDataFrame,
     join_type: &str,
@@ -210,12 +211,21 @@ fn lateral_join(
                 }
                 None => join_plan,
             };
+            let output = remint_lateral_collisions(output, left.inner().schema().fields().len())?;
             Ok(PyDataFrame::new(
                 DataFrame::new(state, output),
                 left.runtime_handle(),
             ))
         })
     })
+}
+
+fn remint_lateral_collisions(output: LogicalPlan, left_width: usize) -> PyResult<LogicalPlan> {
+    let shared = repark_core::frame_names::join_collisions(&output, left_width)
+        .map_err(datafusion_to_py_err)?;
+    repark_core::frame_names::remint_shared(output, left_width, &shared)
+        .map(|(output, _)| output)
+        .map_err(datafusion_to_py_err)
 }
 
 #[cfg(test)]

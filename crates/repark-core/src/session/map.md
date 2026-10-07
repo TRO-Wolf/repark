@@ -55,6 +55,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `ReparkSession` by delegating to the inherent `create_or_replace_temp_view_from`,
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names` and `drop_temp_view`.
   pins: ice-views-1/C-018
+  **ATTR-ID-1 S2 (2026-09-30):** all four `MemTable` constructors
+  (`create_or_replace_temp_view`, `register_record_batches_as_temp_view`,
+  `register_collected_memtable`, `declare_temp_view_sorted`) run their schema and batches
+  through `df_guards::attr_id::strip_record_batches`, so materialized views are born
+  without the key (cache reads mint fresh ids — S3 resolve must cope, ledger R-5).
+  pins: attr-id-1/C-009
   **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
   the choke-point fix pushed that file past its ceiling. The old exception then retired under the
   prior default; CAP-1 records the file again at its exact source-size baseline. Holds
@@ -338,6 +344,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   recommended-rule order. `session.rs` re-exports `resolve_bound_expr` /
   `resolve_scoped_expr` / `resolve_subquery_plan` for the binding layer.
   pins: df-subquery-1/C-001, C-002, C-004
+  **CASESENS-2 port (2026-10-03):** declares the private `predicate_names`
+  module (the join-condition qualifier binder). pins: casesens-2/C-009
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `dead_datafusion_54_1_refusal` and the new `invalid_datafusion_config` echo
   the value masked; `spill.rs`'s `memory_limit` refusal likewise. pins: source-url-redact-1/C-017
 - `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
@@ -345,6 +353,23 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   (row in `df_guards/map.md`). pins: u11-edge-1/C-015
   Round 2 (2026-09-26): `case_bind` is `pub` and `session.rs` re-exports it as
   `frame_names`. pins: u11-edge-1/C-017, C-018, C-019, C-020
+  **ATTR-ID-1 S1 (2026-09-30):** `df_guards.rs` also declares the private
+  `df_guards/attr_id.rs`, whose public items leave through `frame_names` (row in
+  `df_guards/map.md`). pins: attr-id-1/C-002
+  **ATTR-ID-1 S2b (2026-09-30):** `unnest_safe_optimizer_rules` puts
+  `attr_id::StripAttributeIds` first in every core session's optimizer, so no optimized or
+  physical plan carries `repark.attr` (row in `df_guards/map.md`); `tests/df_guard.rs`'s
+  rule-order pin expects it first. pins: attr-id-1/C-015
+  **ATTR-ID-1 S4 (2026-10-02):** `df_guards.rs` also declares the private
+  `df_guards/attr_lineage.rs`, a pure move of the projection lineage out of
+  `attr_id.rs` (row in `df_guards/map.md`). pins: attr-id-1/C-040
+  **ATTR-ID-1 SJ-1a (2026-10-02):** `df_guards.rs` also declares the private
+  `df_guards/frame_lineage.rs`, the self-join lineage core (`FrameNode` and the
+  ambiguity walk), whose public items leave through `frame_names` (row in
+  `df_guards/map.md`). No facade calls it yet.
+  **ATTR-ID-1 SJ-1b (2026-10-02):** it also declares the private `df_guards/self_join.rs`,
+  the self-join condition preparer and post-join reference check (row in
+  `df_guards/map.md`); its items leave through `frame_names`. No facade calls it yet.
 - `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config

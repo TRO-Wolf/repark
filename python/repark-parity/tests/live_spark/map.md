@@ -4,7 +4,8 @@
 
 MB-0 (2026-10-06): the streaming oracle for the micro-batch track (1.7). It records
 24 cells, MB0-R1…R13, W1…W8 and T1…T3, on live Spark 4.1.2 + Iceberg 1.11.0 over a
-local Hadoop catalog. The micro-batch design sketch answers packet Q1–Q4 from these
+local Hadoop catalog. MB-0b (2026-10-07, MB-1 fold 1) adds three read cells,
+MB0b-R14…R16, and MB-1 fold 2 adds MB0b-R17, so the recording holds 28. The micro-batch design sketch answers packet Q1–Q4 from these
 recorded cells, not from documentation. Order:
 [mb-0-oracle.md](../../../../task/wo/microbatch/mb-0-oracle.md). Nothing here is
 collected by pytest, and no RePark code runs.
@@ -22,12 +23,21 @@ documentation. Nothing here is collected by pytest, and no RePark code runs.
   JSON line. Run it through the managed interpreter only (order §4 step 2), with
   `MB0_WAREHOUSE` and `MB0_CHECKPOINTS` pointing at empty private directories.
   `MB0_OUT` redirects the JSON for a re-run comparison, and `MB0_ICEBERG_JAR`
-  overrides the jar search under `~/.ivy2` and `~/.m2`.
-- `mb0_streaming_oracle.json` is the recording: `{"preamble": …, "cells": [24 entries]}`,
+  overrides the jar search under `~/.ivy2` and `~/.m2`. `MB0_CELLS` (a comma list
+  of cell ids) records only those cells and merges them into the existing JSON at
+  the output path; every other entry and the preamble stay byte-identical, and the
+  run refuses if Spark, Iceberg, the catalog or the master moved.
+- `mb0_bench.py` is the recorder's plumbing, split out when MB-0b took the recorder
+  past the 1000-line ceiling (2026-10-07): the jar search, the Spark session, `Bench`,
+  `Collect`, the table and snapshot-log helpers, and the stream error and progress
+  readers. Cell functions and the helpers named in a cell's `statement` stay in the
+  recorder, so every recorded `statement` is unchanged.
+- `mb0_streaming_oracle.json` is the recording: `{"preamble": …, "cells": [28 entries]}`,
   pretty-printed with sorted keys. Each entry carries exactly `cell`, `statement`, `kind`,
   `answer` and `field`. The preamble names the versions and the catalog (`hadoop`).
 - `mb0_streaming_oracle.sha256` holds `sha256sum` of the JSON. Check it with
   `sha256sum -c` from this directory.
+  pins: mb-1/C-025
 - `c2_jdbc_oracle.py` is the D-M2 recorder. Cells are data (`define_cells`),
   one entry per `(code, tz)` id, and `record_all` prints each entry as one
   JSON line. Run it through the managed interpreter only (brief step 2),
@@ -66,6 +76,19 @@ documentation. Nothing here is collected by pytest, and no RePark code runs.
 - R10 records two timestamps, midway between the first two commits and exactly at
   the second commit. T1 also records `streaming-max-files-per-micro-batch=1` under
   `once`.
+- The MB0b read cells run through `option_run`, which records the batches, the
+  progress rows and each checkpoint offset as `(snapshot_ordinal, position)`, the
+  ordinal being the snapshot's index in commit order (`null` for Spark's
+  `START_OFFSET`, snapshot `-1`). R14 sets `stream-from-timestamp` one hour past
+  the head, then appends below it: once before the append, once resumed from the
+  same checkpoint after it, and once fresh. Its later-landing half sets the
+  timestamp six seconds past the head, appends below it, waits past it, and
+  appends again. R15 runs `streaming-max-rows-per-micro-batch` at 3, 4 and 5 over
+  three one-file 2-row snapshots and over one 3-file snapshot of 2-row files. R16's
+  first snapshot is an `INSERT OVERWRITE` on the empty table. R17 (fold 2) appends
+  two one-file snapshots, then commits an `INSERT OVERWRITE` (table `r17`) or a
+  `DELETE` of one whole file (table `r17_delete`), then runs `availableNow` with
+  `streaming-max-files-per-micro-batch=1`.
 
 ## D-M2 recording choices
 
@@ -124,6 +147,8 @@ An MB-0 re-run is byte-identical except for these fields:
 - query ids and run ids, plus the snapshot ids inside every error text
   (R2, R4, R5, R7, W6);
 - R13: the checkpoint `metadata` id, `batchTimestampMs`, and `snapshot_id` in each offset;
+- R16: the snapshot id and the `SparkMicroBatchStream@<hash>` identity in the error text;
+- R17: the query ids, run ids and snapshot ids in both error texts;
 - W6: the `SparkMicroBatchStream@<hash>` object identity;
 - W7: `app-id`, `spark.app.id` and `spark.sql.streaming.queryId`;
 - T3: `id`, `runId`, `timestamp`, `batchDuration`, every `durationMs.*`, both
