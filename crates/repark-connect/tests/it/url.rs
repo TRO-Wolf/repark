@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use repark_connect::{
     ConnectError, PostgresSettings, SettingsDoor, SpecRefusal, Spelling, UrlViolation,
+    redact_source_prop,
 };
 
 const TOML: SettingsDoor = SettingsDoor::ReparkToml;
@@ -155,4 +156,54 @@ fn a_percent_escape_needs_two_hex_digits() {
     assert!(settings.is_err(), "%aa is not UTF-8 alone");
     let settings = from_url("postgresql://u:%2b%2F%41%c3%a9@h/db", TOML).expect("hex either case");
     assert_eq!(settings.password.as_deref(), Some("+/Aé"));
+}
+
+#[test]
+fn redaction_masks_every_password_the_parser_takes() {
+    for (url, door, masked) in [
+        (
+            "postgresql://h/db?user=u&pass%77ord=S3CRETpw",
+            TOML,
+            "postgresql://h/db?user=u&pass%77ord=***",
+        ),
+        (
+            "jdbc:postgresql://h/db?user=u&PASS%57ORD=S3CRETpw&sslmode=disable",
+            SPARK,
+            "jdbc:postgresql://h/db?user=u&PASS%57ORD=***&sslmode=disable",
+        ),
+        (
+            "postgresql://u:S3CRET?leakedfragment=1@h/db",
+            TOML,
+            "postgresql://u:***@h/db",
+        ),
+        (
+            "postgresql://u:S3@CRET:pw@h/db?application_name=a@b",
+            TOML,
+            "postgresql://u:***@h/db?application_name=a@b",
+        ),
+        ("postgresql://u:S3CRET#pw@h", TOML, "postgresql://u:***@h"),
+        ("postgresql://S3CRET?pw@h/db", TOML, "postgresql://***@h/db"),
+        (
+            "jdbc:postgresql://u:S3CRETpw@h/db?sslmode=disable",
+            SPARK,
+            "jdbc:postgresql://u:***@h/db?sslmode=disable",
+        ),
+    ] {
+        let taken = from_url(url, door).expect(url);
+        let redacted = redact_source_prop("url", url);
+        assert_eq!(redacted, masked, "{url}");
+        assert!(
+            !redacted.contains(SECRET) && !redacted.contains("leaked"),
+            "{redacted}"
+        );
+        let secrets = [taken.password.as_deref(), Some(taken.user.as_str())];
+        let password = secrets
+            .into_iter()
+            .flatten()
+            .find(|text| text.starts_with("S3"));
+        assert!(
+            password.is_some_and(|text| !redacted.contains(text)),
+            "{url}"
+        );
+    }
 }

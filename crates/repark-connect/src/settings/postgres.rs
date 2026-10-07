@@ -282,7 +282,60 @@ impl fmt::Debug for PostgresSettings {
 
 #[must_use]
 pub fn redact_source_prop(key: &str, value: &str) -> String {
-    redaction::redact_value(key, value)
+    let Some((scheme, _, rest)) = split_scheme(value) else {
+        return redaction::redact_value(key, value);
+    };
+    let (userinfo, rest) = split_userinfo(rest);
+    let mut masked = scheme.to_string();
+    if let Some(userinfo) = userinfo {
+        if let Some((user, _)) = userinfo.split_once(':') {
+            masked.push_str(user);
+            masked.push(':');
+        }
+        masked.push_str(redaction::REDACTED);
+        masked.push('@');
+    }
+    let (before_query, query) = rest.split_once('?').unwrap_or((rest, ""));
+    masked.push_str(before_query);
+    if rest.len() > before_query.len() {
+        let pairs: Vec<String> = query
+            .split('&')
+            .map(|pair| match pair.split_once('=') {
+                Some((name, _)) if secret_query_name(name) => {
+                    format!("{name}={}", redaction::REDACTED)
+                }
+                _ => pair.to_string(),
+            })
+            .collect();
+        masked.push('?');
+        masked.push_str(&pairs.join("&"));
+    }
+    redaction::redact_value(key, &masked)
+}
+
+fn secret_query_name(name: &str) -> bool {
+    percent_decode(name, &Spelling::UrlPart("query key"))
+        .map_or(true, |name| redaction::prop_key_is_secret(&name))
+}
+
+const URL_SCHEMES: [(&str, bool); 3] = [
+    ("jdbc:postgresql://", true),
+    ("postgresql://", false),
+    ("postgres://", false),
+];
+
+fn split_scheme(url: &str) -> Option<(&'static str, bool, &str)> {
+    URL_SCHEMES
+        .iter()
+        .find_map(|(scheme, jdbc)| Some((*scheme, *jdbc, url.strip_prefix(scheme)?)))
+}
+
+fn split_userinfo(rest: &str) -> (Option<&str>, &str) {
+    let authority_end = rest.find('/').unwrap_or(rest.len());
+    match rest.get(..authority_end).and_then(|head| head.rfind('@')) {
+        Some(at) => (rest.get(..at), rest.get(at + 1..).unwrap_or_default()),
+        None => (None, rest),
+    }
 }
 
 type Givens = BTreeMap<&'static str, (Spelling, String)>;
@@ -388,20 +441,8 @@ fn split_host_port(hostport: &str) -> Option<(&str, &str)> {
 
 fn take_url(given: &mut Givens, spelling: &Spelling, url: &str) -> Result<()> {
     let refuse = |violation| invalid(spelling.clone(), SpecRefusal::Url(violation));
-    let (jdbc, rest) = match url.strip_prefix("jdbc:postgresql://") {
-        Some(rest) => (true, rest),
-        None => (
-            false,
-            url.strip_prefix("postgresql://")
-                .or_else(|| url.strip_prefix("postgres://"))
-                .ok_or_else(|| refuse(UrlViolation::Scheme))?,
-        ),
-    };
-    let authority_end = rest.find('/').unwrap_or(rest.len());
-    let (userinfo, rest) = match rest.get(..authority_end).and_then(|head| head.rfind('@')) {
-        Some(at) => (rest.get(..at), rest.get(at + 1..).unwrap_or_default()),
-        None => (None, rest),
-    };
+    let (_, jdbc, rest) = split_scheme(url).ok_or_else(|| refuse(UrlViolation::Scheme))?;
+    let (userinfo, rest) = split_userinfo(rest);
     let (before_query, query) = rest.split_once('?').unwrap_or((rest, ""));
     let (hostport, path) = before_query.split_once('/').unwrap_or((before_query, ""));
     let (host, port) = split_host_port(hostport).ok_or_else(|| refuse(UrlViolation::Ipv6Host))?;
