@@ -890,3 +890,36 @@ def test_writer_doors_raise_outside_the_handler(
         _assert_cause_is_the_scrubbed_copy(caught.value, _RAISED[-1])
     finally:
         session.stop()
+
+
+def _boom_recorded_url(value: object) -> str:
+    raise _record(ValueError("fetch failed for " + "http://" + USERINFO + "127.0.0.1:9/x"))
+
+
+def test_dataframe_udf_door_formatted_traceback_is_masked() -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        frame = session.range(2).select(F.udf(_boom_recorded_url, "string")("id"))
+        with pytest.raises(PySparkException) as caught:
+            frame.collect()
+        assert "***" in str(caught.value)
+        _assert_cause_is_the_scrubbed_copy(caught.value, _RAISED[-1])
+    finally:
+        session.stop()
+
+
+def _pandas_boom_recorded_url(values: object) -> object:
+    raise _record(ValueError("fetch failed for " + "http://" + USERINFO + "127.0.0.1:9/x"))
+
+
+def test_pandas_udf_door_formatted_traceback_is_masked() -> None:
+    pytest.importorskip("pandas")
+    session = SparkSession.builder.getOrCreate()
+    try:
+        boom = F.pandas_udf(_pandas_boom_recorded_url, "string")
+        with pytest.raises(PySparkException) as caught:
+            session.range(2).select(boom("id")).collect()
+        assert "***" in str(caught.value)
+        _assert_cause_is_the_scrubbed_copy(caught.value, _RAISED[-1])
+    finally:
+        session.stop()

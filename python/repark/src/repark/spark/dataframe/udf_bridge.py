@@ -10,7 +10,9 @@ import traceback
 from collections.abc import Callable, Iterator
 from typing import Any
 
+from repark import _native
 from repark.errors import PySparkException
+from repark.spark._secrets import scrub_exception
 from repark.spark.types import StructField
 
 
@@ -145,15 +147,19 @@ def _pandas_udf_series_to_arrow(result: Any, slot: dict[str, Any], expected_arro
 def _run_pandas_udf_scalar_on_batch(batch: Any, slot: dict[str, Any]) -> Any:
     """Run one scalar pandas UDF on an Arrow batch."""
     series_args = _pandas_udf_series_args_for_slot(batch, slot)
+    failure = None
     try:
         result = slot["user_func"](*series_args)
     except PySparkException:
         raise
     except Exception as error:
-        detail = traceback.format_exc()
+        failure = scrub_exception(error)
+        detail = _native.mask_user_visible(traceback.format_exc())
+    if failure is not None:
         raise PySparkException(
-            f"pandas_udf {slot['function_name']!r} raised {type(error).__name__}: {error}\n{detail}"
-        ) from error
+            f"pandas_udf {slot['function_name']!r} raised {type(failure).__name__}: "
+            f"{failure}\n{detail}"
+        ) from failure
     return _validate_pandas_udf_series_result(
         result,
         function_name=slot["function_name"],
@@ -176,15 +182,19 @@ def _pandas_udf_scalar_iter_inputs(
 
 def _run_pandas_udf_scalar_iter(batch_list: list[Any], slot: dict[str, Any]) -> list[Any]:
     """Run and validate one SCALAR_ITER pandas UDF."""
+    failure = None
     try:
         out_iter = slot["user_func"](_pandas_udf_scalar_iter_inputs(batch_list, slot))
     except PySparkException:
         raise
     except Exception as error:
-        detail = traceback.format_exc()
+        failure = scrub_exception(error)
+        detail = _native.mask_user_visible(traceback.format_exc())
+    if failure is not None:
         raise PySparkException(
-            f"pandas_udf {slot['function_name']!r} raised {type(error).__name__}: {error}\n{detail}"
-        ) from error
+            f"pandas_udf {slot['function_name']!r} raised {type(failure).__name__}: "
+            f"{failure}\n{detail}"
+        ) from failure
     if out_iter is None:
         raise PySparkException(
             f"pandas_udf {slot['function_name']!r} (SCALAR_ITER) must return "
@@ -195,12 +205,14 @@ def _run_pandas_udf_scalar_iter(batch_list: list[Any], slot: dict[str, Any]) -> 
     except PySparkException:
         raise
     except Exception as error:
-        detail = traceback.format_exc()
+        failure = scrub_exception(error)
+        detail = _native.mask_user_visible(traceback.format_exc())
+    if failure is not None:
         raise PySparkException(
             "pandas_udf "
-            f"{slot['function_name']!r} raised {type(error).__name__} while "
-            f"consuming SCALAR_ITER output: {error}\n{detail}"
-        ) from error
+            f"{slot['function_name']!r} raised {type(failure).__name__} while "
+            f"consuming SCALAR_ITER output: {failure}\n{detail}"
+        ) from failure
     if len(results) != len(batch_list):
         raise PySparkException(
             f"pandas_udf {slot['function_name']!r} (SCALAR_ITER) yielded "
@@ -311,6 +323,7 @@ def _run_python_udf_on_batch(batch: Any, slot: dict[str, Any]) -> list[Any]:
     user_func = slot["user_func"]
     function_name = slot["function_name"]
     results: list[Any] = []
+    failure = None
     try:
         if not input_columns:
             for _ in range(row_count):
@@ -322,10 +335,12 @@ def _run_python_udf_on_batch(batch: Any, slot: dict[str, Any]) -> list[Any]:
     except PySparkException:
         raise
     except Exception as error:
-        detail = traceback.format_exc()
+        failure = scrub_exception(error)
+        detail = _native.mask_user_visible(traceback.format_exc())
+    if failure is not None:
         raise PySparkException(
-            f"udf {function_name!r} raised {type(error).__name__}: {error}\n{detail}"
-        ) from error
+            f"udf {function_name!r} raised {type(failure).__name__}: {failure}\n{detail}"
+        ) from failure
     if len(results) != row_count:
         raise PySparkException(
             f"udf {function_name!r} produced {len(results)} values; "
@@ -445,17 +460,20 @@ def _apply_ordered_window_pandas_udf(
                         f"windowed pandas_udf input column missing from frame: {input_name!r}"
                     )
                 series_args.append(frame_pdf[input_name])
+            failure = None
             try:
                 value = spec["user_func"](*series_args)
             except PySparkException:
                 raise
             except Exception as error:
-                detail = traceback.format_exc()
+                failure = scrub_exception(error)
+                detail = _native.mask_user_visible(traceback.format_exc())
+            if failure is not None:
                 raise PySparkException(
                     "windowed GROUPED_AGG pandas_udf "
-                    f"{spec['function_name']!r} raised {type(error).__name__}: "
-                    f"{error}\n{detail}"
-                ) from error
+                    f"{spec['function_name']!r} raised {type(failure).__name__}: "
+                    f"{failure}\n{detail}"
+                ) from failure
             if isinstance(value, pd.Series):
                 raise PySparkException(
                     f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
