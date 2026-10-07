@@ -37,6 +37,12 @@ that answers for a registered source name until its connector lands (roadmap 1.1
   **Fold 1, N2:** `configured_source_ddl_refuses_as_read_only` adds `CREATE SCHEMA`,
   `CREATE SCHEMA IF NOT EXISTS` and `CREATE DATABASE`, each `IF NOT EXISTS` or not, naming
   `company_db.fresh`. pins: c-2/C-112
+  **Fold 1, N6:** three pins for the verifier's surviving mutations.
+  `a_source_named_like_an_engine_catalog_refuses_as_duplicate` covers a catalog registered on
+  the `SessionContext` alone (V1). `a_mounted_schema_refuses_table_registration_as_read_only`
+  covers `register_table` and `deregister_table` on a mounted schema (V3).
+  `sources_listing_masks_a_percent_encoded_url_password_key` covers a userinfo token and a
+  `pass%77ord` query key, which only `redact_source_prop` decodes (V4). pins: c-2/C-113
 ## Pointers
 
 - Up: [../map.md](../map.md)

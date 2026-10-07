@@ -240,3 +240,86 @@ fn unknown_source_handle_refuses_naming_declared_sources() {
     assert!(message.contains("nope"), "{message}");
     assert!(message.contains("company_db"), "{message}");
 }
+
+#[test]
+fn a_source_named_like_an_engine_catalog_refuses_as_duplicate() {
+    let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
+    session.context().register_catalog(
+        "company_db",
+        std::sync::Arc::new(datafusion::catalog::MemoryCatalogProvider::new()),
+    );
+    let error = session
+        .register_configured_sources()
+        .expect_err("a source over an engine catalog's name must refuse");
+    assert!(
+        error
+            .to_string()
+            .contains("catalog 'company_db' is already registered"),
+        "{error}"
+    );
+    let catalog = session
+        .context()
+        .catalog("company_db")
+        .expect("the engine catalog");
+    assert!(
+        catalog
+            .downcast_ref::<repark_connect::PostgresCatalog>()
+            .is_none()
+    );
+    assert!(session.postgres_catalog_names_snapshot().is_empty());
+}
+
+#[test]
+fn a_mounted_schema_refuses_table_registration_as_read_only() {
+    let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
+    session
+        .register_configured_sources()
+        .expect("source registration");
+    let schema = session
+        .context()
+        .catalog("company_db")
+        .and_then(|catalog| catalog.schema("public"))
+        .expect("a mounted schema");
+    let table = std::sync::Arc::new(datafusion::datasource::empty::EmptyTable::new(
+        std::sync::Arc::new(arrow::datatypes::Schema::empty()),
+    ));
+    let registered = schema
+        .register_table("fresh".to_string(), table)
+        .expect_err("registering a table under a Postgres source must refuse");
+    let deregistered = schema
+        .deregister_table("t")
+        .expect_err("deregistering a table under a Postgres source must refuse");
+    for error in [registered, deregistered] {
+        let message = error.to_string();
+        assert!(
+            message.contains("database source `company_db` is read-only"),
+            "{message}"
+        );
+        assert!(message.contains("CONNECT-DECL-pg-ddl"), "{message}");
+    }
+}
+
+#[test]
+fn sources_listing_masks_a_percent_encoded_url_password_key() {
+    let (_directory, session) = session_with_source(
+        "[default.database.postgres.acme]\n\
+         url = \"postgresql://T0kenOnly@db.example.com:5432/sales\"\n\
+         [default.database.postgres.query]\n\
+         url = \"jdbc:postgresql://db.example.com/sales?user=app&pass%77ord=Qu3rySecret\"\n",
+    );
+    let rows = session.sources();
+    let url = |name: &str| {
+        rows.iter()
+            .find(|row| row.name == name)
+            .and_then(|row| row.properties.get("url").cloned())
+            .expect("a listed url")
+    };
+    assert_eq!(url("acme"), "postgresql://***@db.example.com:5432/sales");
+    assert_eq!(
+        url("query"),
+        "jdbc:postgresql://db.example.com/sales?user=app&pass%77ord=***"
+    );
+    let rendered = format!("{rows:?}");
+    assert!(!rendered.contains("T0kenOnly"), "{rendered}");
+    assert!(!rendered.contains("Qu3rySecret"), "{rendered}");
+}
