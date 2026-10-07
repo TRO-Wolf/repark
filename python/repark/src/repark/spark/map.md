@@ -460,6 +460,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `AMBIGUOUS_REFERENCE` with main's text. Stable `F.col` keys pass
   `is_column_key=True` so the reminted shapes keep main's passthrough.
   pins: attr-id-1/C-069, C-070, C-071
+  **Fold SM-2d (2026-10-07):** the Project arm refuses `UNRESOLVED_COLUMN`
+  when `_native.sort_input_carries_twice` fires, before the sourced twin;
+  the sourced twin now binds only through the nearest visible column
+  (C-071 rewritten). pins: attr-id-1/C-071
 - `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
   family, split out of `column.py` at the size ceiling (pure move; `Column`
   binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column
@@ -673,6 +677,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   keys over reminted outputs, where main refuses at the getitem. No
   docstring: the lane's no-comments ruling covers the new helper; the
   contract lives here. pins: attr-id-1/C-069, C-070, C-071
+  **Fold SM-2d (2026-10-07):** the route still pushes through the input when
+  the input carries the name once, but binds the written spelling, not the
+  input's — the refusal then names the reference as written, as main does.
+  pins: attr-id-1/C-071
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

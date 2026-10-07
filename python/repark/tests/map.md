@@ -9328,6 +9328,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   live case rule decides after creation. No module docstring: the lane's
   no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-025
+  **Fold SM-2d (2026-10-07):** a key hidden past a renamed or redefined
+  intermediate refuses `AMBIGUOUS_REFERENCE` (M1/M5), a key with no
+  intermediate sorts by the source column (M6), a self-join projection
+  duplicate refuses `UNRESOLVED_COLUMN` on both doors, and the case-twin
+  refusal names the written spelling. pins: attr-id-1/C-071
   **Fold SM-2c round B (2026-10-06):** the renamed input-route pin on
   non-monotonic twins plus one pin per door (exact-dup `F.col`, exact-dup
   string, insensitive twin-expression refusal, sensitive per-twin rows) and

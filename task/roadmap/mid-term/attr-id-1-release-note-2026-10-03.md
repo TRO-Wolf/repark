@@ -131,6 +131,17 @@ s2.join(d).select(d.v)
 answers four rows, as Spark does; v1.5.2 raised `AMBIGUOUS_REFERENCE`.
 Probe `R2.off.s2_join_d_select_dv`.
 
+(h) A sort over exact-duplicate projection outputs answers by the source column
+(fold SM-2c, 2026-10-06):
+
+```python
+dup = f0.select((f0.v * -1).alias("v"), (f0.v + 1).alias("v"), f0.id)
+dup.orderBy("v")
+```
+
+answers Spark's source-column rows; v1.5.2 raised `AMBIGUOUS_REFERENCE`.
+Probe `cs_sort2.py` `sel_dup_exact` string cells.
+
 ## A sort by an unheld id over twins refuses, as v1.5.2 did
 
 ```python
@@ -156,10 +167,15 @@ The join stays the same cross join; only the reference changes. Where v1.5.2 rai
 
 A self-join whose two sides carry the same column names answers under this
 release, where main could not plan it. The internal twin names
-(`__repark_l_*`, `__repark_r_*`) never escape the engine (fold SM-2,
-2026-10-06; SM-2c C-3, 2026-10-06, closes the drop-then-write leak, so a
-frame whose duplicate display name was dropped writes its display names to
-files, tables and views):
+(`__repark_l_*`, `__repark_r_*`) never reach durable surfaces or exports
+(fold SM-2, 2026-10-06; SM-2c C-3, 2026-10-06, closes the drop-then-write
+leak, so a frame whose duplicate display name was dropped writes its display
+names to files, tables and views). Two pre-existing shapes still show engine
+names, exactly as on main: `EXPLAIN` prints the true engine plan (deliberate),
+and some error texts name engine fields — the `bucketBy` lookup's
+`Couldn't find column` listing and `F.col('id')` after
+`l.join(r, l.id == r.id).drop(r.id)` raising a schema error over
+`__repark_l_*` fields:
 
 - Writes of duplicate display names refuse with Spark's exact
   `[COLUMN_ALREADY_EXISTS] The column `<name>` already exists. Choose another
@@ -193,6 +209,12 @@ files, tables and views):
   engine names. Case-twin columns register and answer. This is a deliberate
   divergence (row FA-6 in `docs/spark-sql-iceberg-parity.md` §5): Spark
   registers the view, which the engine cannot plan over yet.
+- `freqItems`, `describe` and `transpose` frames written to parquet,
+  `saveAsTable` or a temp view carry Spark's names (`id_freqItems`;
+  `summary,id,s,v`; `key,a,b`), where v1.5.2 wrote `__repark_freq_items_0`,
+  `f0/f1/f2` and `__repark_transpose_N` (fold SM-2c C-3, 2026-10-06, a fix
+  in passing from the registration-boundary rename). Probe `c3.py`
+  `freqItems|*`, `describe|*`, `transpose|*`.
 - DataFrame `USING` joins keep the left key: left-side qualified key
   references answer on every join type, and right-side references answer
   on `inner` but refuse loudly on `left`/`right`/`full` instead of

@@ -387,3 +387,68 @@ def test_filter_str_of_qualified_alias_dup_is_ambiguous(ruled_spark: ReparkSessi
     with pytest.raises(AnalysisException) as caught:
         framed.filter("q.v > 15")
     assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
+
+
+def _deep_root(spark: ReparkSession) -> Any:
+    return spark.createDataFrame(
+        [(1, 30, 7), (2, None, 5), (3, 10, 9), (4, 20, 1)], "id INT, v INT, x INT"
+    )
+
+
+def test_orderby_key_missing_past_hidden_intermediate_refuses(ruled_spark: ReparkSession) -> None:
+    base = _deep_root(ruled_spark).select(
+        functions.col("x").alias("v"), functions.col("v").alias("y"), "id"
+    )
+    dup = base.withColumnRenamed("v", "w").select(
+        functions.col("y").alias("v"), (functions.col("w") * -1).alias("v"), "id"
+    )
+    with pytest.raises(AnalysisException) as caught:
+        dup.orderBy("v")
+    assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
+
+
+def test_orderby_key_missing_past_redefined_intermediate_refuses(ruled_spark: ReparkSession) -> None:
+    root = _deep_root(ruled_spark)
+    dup = (
+        root.withColumnRenamed("v", "y")
+        .withColumn("v", functions.col("x"))
+        .drop("v")
+        .select(functions.col("y").alias("v"), (functions.col("y") * -1).alias("v"), "id")
+    )
+    with pytest.raises(AnalysisException) as caught:
+        dup.orderBy("v")
+    assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
+
+
+def test_orderby_missing_without_intermediate_sorts_by_source(ruled_spark: ReparkSession) -> None:
+    root = _deep_root(ruled_spark)
+    dup = root.select(functions.col("v").alias("y"), "x", "id").select(
+        functions.col("y").alias("v"), (functions.col("x") * -1).alias("v"), "id"
+    )
+    assert _rows(dup.orderBy("v")) == [(None, -5, 2), (10, -9, 3), (20, -1, 4), (30, -7, 1)]
+
+
+def test_orderby_self_join_projection_duplicate_is_unresolved(ruled_spark: ReparkSession) -> None:
+    f0 = _deep_root(ruled_spark)
+    joined = f0.alias("l").join(f0.alias("r"), functions.col("l.id") == functions.col("r.id"))
+    dup = joined.select("l.v", (functions.col("r.x") * -1).alias("v"), "l.id")
+    with pytest.raises(AnalysisException) as caught:
+        dup.orderBy("v")
+    assert caught.value.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+    assert caught.value.getSqlState() == "42703"
+    with pytest.raises(AnalysisException) as caught:
+        dup.orderBy(functions.col("v"))
+    assert caught.value.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+    assert caught.value.getSqlState() == "42703"
+
+
+def test_orderby_case_twin_ambiguous_names_written_spelling(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, "x")], "ID INT, data STRING")
+    dup = frame.select("ID", functions.col("ID").alias("id"))
+    with pytest.raises(AnalysisException) as caught:
+        dup.orderBy("id")
+    assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    assert "Reference `id` is ambiguous, could be: [`id`, `id`]" in str(caught.value)
+    spark.conf.set("spark.sql.caseSensitive", "true")
+    assert _rows(dup.orderBy("id")) == [(1, 1)]

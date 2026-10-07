@@ -27,7 +27,8 @@ pub use super::attr_id::{
     join_collisions, plan_is_relation, plan_is_stamped, remint_shared, remint_with_map, resolve,
 };
 pub use super::attr_lineage::{
-    projection_source_ids, sort_hits_meet_at_join, sort_sourced_twin_engine,
+    projection_source_ids, sort_hits_meet_at_join, sort_input_carries_twice,
+    sort_sourced_twin_engine,
 };
 pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
 pub use super::frame_lineage::{all_ids, ambiguous, ambiguous_images, renewed_absent, shared_ids};

@@ -42,6 +42,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
     module.add_function(wrap_pyfunction!(projection_source_ids, module)?)?;
     module.add_function(wrap_pyfunction!(sort_hits_meet_at_join, module)?)?;
+    module.add_function(wrap_pyfunction!(sort_input_carries_twice, module)?)?;
     module.add_function(wrap_pyfunction!(sort_project_input_spelling, module)?)?;
     module.add_function(wrap_pyfunction!(sort_sourced_twin_engine, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
@@ -601,6 +602,15 @@ pub(crate) fn sort_project_input_spelling(
     exact: bool,
 ) -> Option<String> {
     repark_core::frame_names::project_input_spelling(
+        frame.inner().logical_plan(),
+        written,
+        NameRule::from_case_sensitive(exact),
+    )
+}
+
+#[pyfunction]
+pub(crate) fn sort_input_carries_twice(frame: &PyDataFrame, written: &str, exact: bool) -> bool {
+    repark_core::frame_names::sort_input_carries_twice(
         frame.inner().logical_plan(),
         written,
         NameRule::from_case_sensitive(exact),

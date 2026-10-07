@@ -223,12 +223,12 @@ fn bind_free_names_sort_routes_project_dup_through_input() {
 }
 
 #[test]
-fn bind_free_names_sort_respells_case_mismatched_key_to_input() {
+fn bind_free_names_sort_keeps_written_spelling_on_ambiguous_key() {
     let (_context, frame) = dup_schema();
     let plan = frame.logical_plan();
     let written = Expr::Column(Column::from_name("V"));
     let bound = bind_free_names(written, plan, IgnoreCase, &["v".into(), "v".into()], true);
-    assert_eq!(bound_name(bound.unwrap()), "v");
+    assert_eq!(bound_name(bound.unwrap()), "V");
 }
 
 #[test]
@@ -293,6 +293,67 @@ fn bind_free_names_sort_binds_sourced_twin_over_reminted_input() {
         true,
     );
     assert_eq!(bound_name(bound.unwrap()), "o1");
+}
+
+#[test]
+fn bind_free_names_sort_leaves_key_unbound_when_lineage_misses_nearest_visible() {
+    let context = SessionContext::new();
+    let base = source(&context)
+        .select(vec![
+            col("w").alias_with_metadata("v", Some(tag("b1"))),
+            col("v").alias_with_metadata("y", Some(tag("b2"))),
+            col("id").alias_with_metadata("id", Some(tag("b0"))),
+        ])
+        .unwrap();
+    let mid = base.select(vec![col("y"), col("id")]).unwrap();
+    let outer = mid
+        .select(vec![
+            col("y").alias_with_metadata("o1", Some(tag("c1"))),
+            (col("y") * lit(-1)).alias_with_metadata("o2", Some(tag("c2"))),
+            col("id"),
+        ])
+        .unwrap();
+    let plan = outer.logical_plan().clone();
+    assert_eq!(sort_shape(&plan), SortShape::Project);
+    let bound = bind_free_names(
+        col("v"),
+        &plan,
+        IgnoreCase,
+        &["v".into(), "v".into(), "id".into()],
+        true,
+    );
+    assert_eq!(bound_name(bound.unwrap()), "v");
+}
+
+#[test]
+fn bind_free_names_sort_is_unresolved_when_join_input_carries_visible_twice() {
+    let context = SessionContext::new();
+    let renamed = tagged_joined(&context)
+        .select(vec![
+            col("l.v").alias_with_metadata("__repark_l_abcdef012345_1_v", Some(tag("l2"))),
+            col("r.v").alias_with_metadata("__repark_r_abcdef012345_4_v", Some(tag("r2"))),
+            col("l.id").alias_with_metadata("id", Some(tag("k1"))),
+        ])
+        .unwrap();
+    let picked = renamed
+        .select(vec![
+            col("__repark_l_abcdef012345_1_v").alias_with_metadata("o1", Some(tag("l2"))),
+            (col("__repark_r_abcdef012345_4_v") * lit(-1))
+                .alias_with_metadata("o2", Some(tag("n9"))),
+            col("id"),
+        ])
+        .unwrap();
+    let plan = picked.logical_plan().clone();
+    assert_eq!(sort_shape(&plan), SortShape::Project);
+    let err = bind_free_names(
+        col("v"),
+        &plan,
+        IgnoreCase,
+        &["v".into(), "v".into(), "id".into()],
+        true,
+    );
+    let message = format!("{:?}", err.unwrap_err());
+    assert!(message.contains("UNRESOLVED_COLUMN"), "{message}");
 }
 
 #[test]

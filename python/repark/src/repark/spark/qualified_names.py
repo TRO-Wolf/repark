@@ -314,7 +314,7 @@ def _route_sort_key_through_input(
     spelling: str | None = _native.sort_project_input_spelling(native, name, exact)
     if spelling is not None:
         return Column(
-            _native.PyColumn.column(_quote_ident(spelling)),
+            _native.PyColumn.column(_quote_ident(name)),
             spark_display=name,
             projection_name=name,
             stable_name=True,

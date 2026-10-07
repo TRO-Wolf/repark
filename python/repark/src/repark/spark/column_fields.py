@@ -868,6 +868,8 @@ def _resolve_sort_name(frame: Any, written: str, is_column_key: bool = False) ->
     if _native.sort_child_shape(native) == "project":
         if _native.sort_hits_meet_at_join(native, hits):
             _raise_unresolved_name(None, name, displays)
+        if _native.sort_input_carries_twice(native, name, exact):
+            _raise_unresolved_name(None, name, displays)
         engine = _native.sort_sourced_twin_engine(native, hits, name, exact)
         if engine is not None:
             position = engine_names.index(engine)

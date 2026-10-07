@@ -197,6 +197,17 @@ wrapped optimizer rule) and declares this directory.
   the projection input carries no column of the name — the
   computed-twin-over-reminted shape, where Spark sorts by the source column
   through both levels. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-071
+  **Fold SM-2d (2026-10-07):** the deepest-name trace is replaced by the
+  nearest-visible rule (C-071 rewritten): the walk descends from the
+  projection input to the first level whose schema carries the written name
+  under the session rule — join engine names count by the display suffix of
+  the facade's `__repark_{l,r}_…` shape, every other engine name counts
+  as-is — and binds only the one hit whose pass-through lineage runs through
+  that column. Zero or two passing hits return unbound, so both doors refuse
+  with main's text. `sort_input_carries_twice` reports a projection input
+  carrying the name twice by the same visible count, for the
+  `UNRESOLVED_COLUMN` both doors raise there. Pins: `../tests/attr_id_s3b.rs`.
+  pins: attr-id-1/C-071
 - `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
   ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,
   option A; design sketch `attr-id-1-selfjoin-design.md` §2.1–§2.2). Spark tags every
@@ -627,6 +638,12 @@ wrapped optimizer rule) and declares this directory.
   doors run them in the same order. `project_input_spelling` exposes the
   input walk to the facade. Pins: `../tests/attr_id_s3b.rs`.
   pins: attr-id-1/C-069, C-070, C-071
+  **Fold SM-2d (2026-10-07):** the ambiguous arm refuses `UNRESOLVED_COLUMN`
+  when `sort_input_carries_twice` fires (a projection input carrying the
+  name twice by visible count, e.g. a self-join input behind a
+  plain-plus-expression twin pair, as Spark does), and the input-casing
+  respell is deleted, so the refusal names the reference as written, as
+  main does. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-071
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

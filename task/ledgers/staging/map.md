@@ -11,6 +11,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   alone (C-001), `stamp` with Spark's first-input union rule (C-002), the join re-mint
   (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
+  **Fold SM-2d (2026-10-07):** C-071 rewritten to the nearest-visible sourced-twin rule.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
   in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,
