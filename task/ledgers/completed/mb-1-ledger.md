@@ -308,11 +308,19 @@ VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
   data files refuse `NonAppendSnapshot` (`from: None`) at `initial_offset`.
   `AfterSnapshot(D)` gives `(D, 0)`, which the window reads as consumed. Acted on;
   pins in C-017. This is surfaced to the orchestrator as a ruling question.
-- **D-5 (2026-10-07).** F5's deliver-first walk departs from Spark in one case. With
-  no cap, Spark's `latestOffset` throws on reaching the overwrite through
-  `nextValidSnapshot`, so it fails the trigger without delivering the earlier appends.
-  RePark delivers them, then refuses. The ruling chose this so the restart advice is
-  lossless. Under caps the two agree (p17).
+- **D-5 (2026-10-07, rewritten in fold 2, G1).** The answer depends on the trigger.
+  Under `Trigger.AvailableNow` and `Trigger.Once`, Spark's
+  `prepareForTriggerAvailableNow` fixes the end offset with an uncapped
+  `latestOffset` walk, and `nextValidSnapshot` throws at the first `overwrite` or
+  `delete` before batch 0, whatever the caps. MB0b-R17 measures it: two one-file
+  appends, then an overwrite (or a delete), then `availableNow` with
+  `streaming-max-files-per-micro-batch=1` runs no batch and writes no offset. RePark's
+  `WindowLimit::Unbounded`, the walk that fixes an AvailableNow/Once target, now
+  refuses the same way (C-032). Under processing-time triggers with caps, Spark plans
+  each batch up to the cap and delivers the appends ahead of the snapshot.
+  `WindowLimit::Capped` keeps deliver-first, so the restart advice stays lossless. The
+  fold-1 text, "Under caps the two agree (p17)", cited a RePark probe rather than a
+  Spark cell and is withdrawn.
 - **D-6 (2026-10-07).** An append's added-file count comes from the same
   incremental-append listing the window delivers, so positions and counts cannot
   disagree. It is the same set as the snapshot's ADDED manifest entries. Every other
@@ -426,3 +434,37 @@ origin/main`, `python3 scripts/check_docs_links.py`,
 `python3 scripts/check_ledger_grammar.py`, and the comment-ban probe (`hits=0`). The
 full `cargo test -p repark-core --lib` is 1046 passed, 1 ignored (1039 before plus
 the 7 new pins); no neighbour pin changed.
+
+## Fold 2 — 2026-10-07 — the re-verify's S2s and S3s
+
+**Model:** claude-opus-5-5 (opus-worker build lane). **Evidence:** the re-verifier's
+`verdict.json` (PASS: 13 CLOSED, 2 CHANGED, 3 S2, 5 S3), its probe modules
+`rv_probes` and `rv_core_probes`, and its mutation N8, ported here as pins. The
+rulings G1–G8 are the orchestrator's. Every mutation below was applied from a backup,
+run, and restored.
+
+### Step 0 — MB0b-R17 measured before changing behaviour
+
+`MB0_CELLS=MB0b-R17` on Spark 4.1.2 + Iceberg 1.11.0. The 27 earlier entries and the
+preamble stayed byte-identical (parsed comparison), and the SHA-256 is rewritten. Two
+one-file appends, then an `INSERT OVERWRITE` (table `r17`) or a whole-file `DELETE`
+(table `r17_delete`), then `availableNow` with `streaming-max-files-per-micro-batch=1`:
+`batches: []`, `offsets: []`, and `STREAM_FAILED` / `IllegalStateException` with
+`Cannot process overwrite snapshot: <id>, to ignore overwrites, set
+streaming-skip-overwrite-snapshots=true` (and the delete twin), thrown from
+`prepareForTriggerAvailableNow` while the query is `INITIALIZING`. **Agrees with the
+re-verifier**, so G1 is implemented as ruled.
+
+## PROPOSITION LEDGER — MB-1 fold 2 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-032 | (G1) `WindowLimit::Unbounded` refuses `NonAppendSnapshot` at the first `overwrite` or `delete` in `(from, head]` even when the window already holds files, as MB0b-R17 measures for `availableNow`. `WindowLimit::Capped` keeps deliver-first over the same history. | The G1 pins in `window_fold2_pins.rs` plus mutation g1. | **PROVEN** | 2 pins green: `unbounded_walk_refuses_the_first_non_append_before_any_file` (R17's shape, overwrite and delete, uncapped and max-files 1: the refusal names the non-append, `from` = the first append, `to` = the head) and `capped_walk_delivers_both_appends_then_refuses_the_non_append` (ends `(a,1)`, `(b,1)`, then the refusal `from` = b). g1 red. pins: mb-1/C-032 |
+
+## Gates — fold 2
+
+```
+g1 window.rs `|| limit == WindowLimit::Unbounded` removed (Unbounded delivers first again)
+test microbatch::window::tests::window_fold2_pins::unbounded_walk_refuses_the_first_non_append_before_any_file ... FAILED
+test result: FAILED. 62 passed; 1 failed; 0 ignored; 0 measured; 804 filtered out
+```

@@ -40,12 +40,16 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   while the private `Window` has room. Per-snapshot append scans list the
   files, sorted by path. The fail-on-non-append scan and the skip builders
   are never called (O-5).
-  pins: mb-1/C-008, C-009, C-010, C-011, C-017, C-018, C-019, C-020, C-023, C-024
+  pins: mb-1/C-008, C-009, C-010, C-011, C-017, C-018, C-019, C-020, C-023, C-024, C-032
 - `window_tests.rs` — the `window.rs` pins, split out under `#[path]` when
   the file passed the 1000-line ceiling: the memory-catalog fixture with
   append/overwrite/delete/replace commits plus the 18 start, window, cap,
   fail-loud and guard pins.
   pins: mb-1/C-008, C-009, C-010, C-011, C-019
+- `window_fold2_pins.rs` — fold 2's window pins, a sibling child of
+  `window_tests.rs` that reuses its fixture and fold 1's helpers: the two
+  limits at an overwrite or delete (G1).
+  pins: mb-1/C-032
 - `window_fold_pins.rs` — fold 1's window pins, a child of `window_tests.rs`
   that reuses its fixture: the non-append start snapshot, the timestamp past
   the head, deliver-first refusal, the planning count read through the
@@ -124,6 +128,18 @@ without planning. An `overwrite` or `delete` ends a non-empty window just
 before it, so the appends ahead of it are delivered. A window that would
 start by entering one refuses `NonAppendSnapshot`. The restart advice,
 `start-after-snapshot-id=<id>`, therefore loses nothing.
+
+The two limits differ at an `overwrite` or `delete` (fold 2, G1, 2026-10-07).
+`WindowLimit::Unbounded` is the walk the MB-3 driver uses to fix an
+AvailableNow or Once target, and it refuses at the first `overwrite` or
+`delete` in `(from, head]` even when the window already holds files. That is
+Spark's `prepareForTriggerAvailableNow`, which precomputes the end offset
+with an uncapped `latestOffset` walk and throws before batch 0 (MB0b-R17:
+two appends, then an overwrite or a delete, `availableNow` with
+`streaming-max-files-per-micro-batch=1`, no batch and no offset).
+`WindowLimit::Capped` keeps deliver-first: it ends a non-empty window just
+before the snapshot, as Spark's processing-time triggers with caps deliver
+the appends ahead of it. Ledger D-5 states both.
 
 The start snapshot (fold 1, F1 and F6). An append start lists its files and
 resumes at `from.position`. Any other start counts the ADDED data entries in

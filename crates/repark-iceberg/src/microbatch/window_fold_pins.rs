@@ -1,10 +1,10 @@
 use super::*;
 
-fn pause() {
+pub(super) fn pause() {
     std::thread::sleep(std::time::Duration::from_millis(20));
 }
 
-fn expect_non_append(
+pub(super) fn expect_non_append(
     error: &MicroBatchError,
     snapshot: i64,
     operation: &Operation,
@@ -28,7 +28,7 @@ fn expect_non_append(
     }
 }
 
-async fn drain(planner: &WindowPlanner, from: InputOffset) -> Vec<WindowPlan> {
+pub(super) async fn drain(planner: &WindowPlanner, from: InputOffset) -> Vec<WindowPlan> {
     let mut plans = Vec::new();
     let mut cursor = from;
     while let Some(plan) = planner
@@ -42,7 +42,7 @@ async fn drain(planner: &WindowPlanner, from: InputOffset) -> Vec<WindowPlan> {
     plans
 }
 
-fn shape(plans: &[WindowPlan]) -> Vec<(u64, i64, u64)> {
+pub(super) fn shape(plans: &[WindowPlan]) -> Vec<(u64, i64, u64)> {
     plans
         .iter()
         .map(|plan| {

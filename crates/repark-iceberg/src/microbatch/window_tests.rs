@@ -656,3 +656,5 @@ async fn replaced_table_refuses_before_any_scan() {
 }
 
 mod window_fold_pins;
+
+mod window_fold2_pins;

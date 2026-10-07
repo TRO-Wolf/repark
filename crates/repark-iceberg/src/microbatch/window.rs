@@ -182,7 +182,7 @@ impl WindowPlanner {
                 }
                 Operation::Replace => {}
                 Operation::Overwrite | Operation::Delete => {
-                    if window.files.is_empty() {
+                    if window.files.is_empty() || limit == WindowLimit::Unbounded {
                         return Err(self.non_append(snapshot, Some(from.snapshot), head_id));
                     }
                     break;
