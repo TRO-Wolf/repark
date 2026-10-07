@@ -316,12 +316,14 @@ impl PyReparkSession {
     ) -> PyResult<PyDataFrame> {
         fenced_span!("py.read", "PyReparkSession.read_postgres", {
             let target = match (dbtable, query) {
-                (Some(dbtable), None) => repark_core::PostgresTarget::Relation(dbtable.to_owned()),
-                (None, Some(query)) => repark_core::PostgresTarget::Query(query.to_owned()),
+                (Some(dbtable), None) => {
+                    repark_core::PostgresTarget::Relation(String::from(dbtable))
+                }
+                (None, Some(query)) => repark_core::PostgresTarget::Query(String::from(query)),
                 _ => {
-                    return Err(to_py_err(repark_core::Error::Config(
-                        "read_postgres takes exactly one of `dbtable` and `query`".to_owned(),
-                    )));
+                    return Err(to_py_err(repark_core::Error::Config(String::from(
+                        "read_postgres takes exactly one of `dbtable` and `query`",
+                    ))));
                 }
             };
             let partitioning = [
@@ -335,7 +337,7 @@ impl PyReparkSession {
             .filter_map(|(key, given)| given.then_some(key))
             .collect();
             let read = repark_core::PostgresRead {
-                url: url.to_owned(),
+                url: String::from(url),
                 target,
                 properties: properties.unwrap_or_default().into_iter().collect(),
                 partitioning,
