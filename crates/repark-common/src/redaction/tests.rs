@@ -914,3 +914,25 @@ fn registered_values_mask_when_their_own_edge_is_punctuation() {
         assert!(masked.contains("***"), "{case:?} -> {masked:?}");
     }
 }
+
+#[test]
+fn registered_values_mask_after_an_ansi_csi_sequence() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let dsn = "host=h user=u password=CsiPw02";
+    register_config_value(dsn);
+    let colored = [
+        format!("\u{1b}[31m{dsn}\u{1b}[0m"),
+        format!("\u{1b}[1;31m{dsn}\u{1b}[0m"),
+    ];
+    for case in &colored {
+        let masked = mask_registered_values(case);
+        assert!(!masked.contains("CsiPw"), "{case:?} -> {masked:?}");
+        assert!(masked.contains("***"), "{case:?} -> {masked:?}");
+    }
+    let plain = [format!("m{dsn}"), format!("[31m{dsn}")];
+    for case in &plain {
+        assert_eq!(&mask_registered_values(case), case);
+    }
+}

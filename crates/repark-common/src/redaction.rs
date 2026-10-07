@@ -71,7 +71,8 @@ fn replace_whole_tokens(text: &str, needle: &str, replacement: &str) -> String {
             || text[..start]
                 .chars()
                 .next_back()
-                .is_none_or(|edge| !is_token_char(edge));
+                .is_none_or(|edge| !is_token_char(edge))
+            || ends_with_csi(&text[..start]);
         let after_ok = !needle_last
             || text[end..]
                 .chars()
@@ -92,6 +93,18 @@ fn replace_whole_tokens(text: &str, needle: &str, replacement: &str) -> String {
     }
     out.push_str(&text[cursor..]);
     out
+}
+
+fn ends_with_csi(prefix: &str) -> bool {
+    let mut bytes = prefix.bytes().rev();
+    if !bytes
+        .next()
+        .is_some_and(|last| (0x40..=0x7E).contains(&last))
+    {
+        return false;
+    }
+    let mut rest = bytes.skip_while(|byte| byte.is_ascii_digit() || *byte == b';');
+    rest.next() == Some(b'[') && rest.next() == Some(0x1b)
 }
 
 fn is_token_char(edge: char) -> bool {
