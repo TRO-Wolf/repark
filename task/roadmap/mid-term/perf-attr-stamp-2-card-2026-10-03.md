@@ -159,7 +159,7 @@ or O-4 together with O-1).** This is *inferred* from the measured buckets.
 | D-3 | If the step 1 median for O-1 is not under 1.10x, the design sketch rules between O-3 and O-4+O-1 on step 0's data. Python-side O-5 and O-6 only top up a native fix; they are never the plan of record. |
 | D-4 | Whichever carrier is chosen, a frame or column with no id raises the existing internal error (`column_fields.py`: "internal error: stamped field … has no attribute id"). It never falls back to a name, position or side. |
 | D-5 | Every cache (stripped twin, lazy memo, side table) is keyed on the native handle and re-derived whenever `_inner` is reassigned. Never key on the Python frame object. |
-| D-6 | **Re-based to release builds (owner, 2026-10-06).** The gate is the **work-equal like ratio, median of three, at or under 1.10x, read on release builds of both sides** (`maturin develop --release`, with the codegen-units override recorded in the gate record below). Over the gate is a halt to the owner, with no carve-out. Two runs never pass. Every ratio and the spread are reported. *Work-equal like set:* the cells whose outcome class is the same on both sides; a cell's work is its `fn()` build plus `collect()`, timed by `replay_work.py`. Debug-build numbers stay in this card as dated history labelled **dev**; they inform and never pass or fail the gate. **History.** 2026-10-03 afternoon (owner delegate, Q2): the primary gate was the C-012 `replay.py` wall clock, median of three, ≤ 1.10x of a same-day main run, measured 1.375x on `5e4a0084` (main 498.99 / 499.30 / 497.40 s, head 687.03 / 685.95 / 683.86 s, dev), with like-for-like 1.2344x (1.2366 / 1.2344 / 1.2338 on 26003 cells, dev) as the second gate. 2026-10-03 evening (owner): the wall-clock gate is unreachable by construction, because 7,532 cells now answer where main errored early; the gate was re-based to the work-equal like set ≤ 1.10x, median of three (dev), with the plan-build-only ratio and the full wall clock reported beside it. 2026-10-06 (owner): the build profile was re-based to release; the number did not move. |
+| D-6 | **Re-based to release builds (owner, 2026-10-06).** The gate is the **work-equal like ratio, median of three, at or under 1.10x, read on release builds of both sides** (`maturin develop --release`, with the codegen-units override recorded in the gate record below). Over the gate is a halt to the owner, with no carve-out. Two runs never pass. Every ratio and the spread are reported. *Work-equal like set:* the cells whose outcome class is the same on both sides; a cell's work is its `fn()` build plus `collect()`, timed by `replay_work.py`. Debug-build numbers stay in this card as dated history labelled **dev**; they inform and never pass or fail the gate. **History.** 2026-10-03 afternoon (owner delegate, Q2): the primary gate was the C-012 `replay.py` wall clock, median of three, ≤ 1.10x of a same-day main run, measured 1.375x on `5e4a0084` (main 498.99 / 499.30 / 497.40 s, head 687.03 / 685.95 / 683.86 s, dev), with like-for-like 1.2344x (1.2366 / 1.2344 / 1.2338 on 26003 cells, dev) as the second gate. 2026-10-03 evening (owner): the wall-clock gate is unreachable by construction, because 7,532 cells now answer where main errored early; the gate was re-based to the work-equal like set ≤ 1.10x, median of three (dev), with the plan-build-only ratio and the full wall clock reported beside it. 2026-10-06 (owner): the build profile was re-based to release; the number did not move. 2026-10-07: the final-head confirmation measured 1.1053 (HALT); the owner ruled no carve-out; STAMP-2-R5P6-1 (#980) brought the final head to 1.0812 (MET, gate record 2026-10-07). |
 
 ## Steps
 
@@ -193,6 +193,27 @@ or O-4 together with O-1).** This is *inferred* from the measured buckets.
   --lib`, clippy `-D warnings`, `cargo fmt --check`, `make rust-panic-ban`.
 - **The comment ban at 0 hits.**
 - **Scheduled before 1.6.**
+
+## Gate record (2026-10-07, final head, release builds)
+
+**Result: MET at 1.0812.** This is the confirmation the Frontier ruling (2026-10-06 21:45) requires on the final merge head. Under the owner ruling of 2026-10-07 (no carve-out), it lands through STAMP-2-R5P6-1 (#980).
+
+**The pair.** Main `575f57ca` against stack `6bcc46b5`: #968's head `13de60e1`, with main merged in, plus #980. The stack's native build is `f8fc8fa0`, whose `crates/` tree is identical to `6bcc46b5`'s. The facade is the editable checkout at `6bcc46b5`. Both sides are release builds (`uvx maturin@1.14.1 develop --release`, `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`). The box was quiet: no lanes ran, the build lock was held through the runs, and the run started after a 300 s settle. The harness is the 10-06 harness: three interleaved `replay_work.py` runs over r5p6 and 23 families, scored on the work-equal like set.
+
+| run | main work (s) | stack work (s) | work-equal like | plan-build only |
+|---|---|---|---|---|
+| 1 | 39.2 | 41.9 | 1.0710 | 1.1106 |
+| 2 | 38.8 | 42.0 | 1.0812 | 1.1230 |
+| 3 | 39.0 | 42.4 | 1.0851 | 1.1315 |
+| **median** | | | **1.0812** | 1.1230 |
+
+- **Spread:** 1.41 pt, over 26,032 cells. Summing per-cell medians of the three runs gives 1.0768.
+- **Per family:** r5p6 carries 2.32 s of the 2.97 s excess (ratio 1.135, down from 1.184). Next are r3 at 1.080 (0.38 s) and r5p7 at 1.178 (0.35 s).
+- **The first confirmation, on `13de60e1`** (2026-10-07 05:56, the same harness): **1.1053** (1.1031 / 1.1155 / 1.1053), a HALT to the owner. The owner ruled no carve-out and opened STAMP-2-R5P6-1.
+  - Its attribution (`task/ledgers/staging/stamp-2-r5p6-1-ledger.md` C-005) found that no stack code carries the 0.64 pt between the 10-06 record and the first confirmation.
+  - The r5p6 excess was 85 % construction. Its largest block was S4's ATTR-token select trigger re-planning every `fillna` over a display-name frame.
+  - #980 plans attribute-exact projections natively, with answers unchanged: 2,294-cell and 1,703-cell attack grids show 0 diffs against `13de60e1`, after an Opus verify, two folds and an Opus re-verify.
+- **Remaining excess** (out of scope here, recorded in C-005 §6): the join doors' SQL re-plans, the per-frame stamp, and the binding layer.
 
 ## Gate record (2026-10-06, release builds)
 
