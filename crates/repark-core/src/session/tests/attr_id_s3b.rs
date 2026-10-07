@@ -242,8 +242,8 @@ fn bind_free_names_sort_keeps_written_spelling_when_engines_are_twins() {
         .unwrap();
     let outer = inner
         .select(vec![
-            col("ID").alias_with_metadata("ID", Some(tag("b8"))),
-            col("ID").alias_with_metadata("id", Some(tag("b9"))),
+            col("\"ID\"").alias_with_metadata("ID", Some(tag("b8"))),
+            col("\"ID\"").alias_with_metadata("id", Some(tag("b9"))),
         ])
         .unwrap();
     let plan = outer.logical_plan();
