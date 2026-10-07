@@ -766,6 +766,71 @@ fn unregistered_text_without_credentials_is_byte_identical() {
 }
 
 #[test]
+fn overlapping_registered_values_mask_longest_first() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    register_config_value("password=S3");
+    let long = "host=h user=u password=S3cr3tPw";
+    register_config_value(long);
+    let message =
+        format!("config `repark.sql.maxArrayElements` must be a positive integer (got {long:?})");
+    let masked = mask_registered_values(&message);
+    assert!(!masked.contains("S3cr3tPw"), "{masked}");
+    assert!(!masked.contains("cr3tPw"), "{masked}");
+    let nested = "password=S3 password=S3cr3tPw";
+    register_config_value(nested);
+    let nested_message =
+        format!("config `repark.sql.maxArrayElements` must be a positive integer (got {nested:?})");
+    let nested_masked = mask_registered_values(&nested_message);
+    assert!(!nested_masked.contains("S3cr3tPw"), "{nested_masked}");
+}
+
+#[test]
+fn re_registering_a_value_refreshes_its_recency() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let dsn = "host=h user=u password=S3cr3tPw";
+    register_config_value(dsn);
+    for index in 0..255 {
+        register_config_value(&format!("host=h user=u password=FillerPw{index:03}"));
+    }
+    register_config_value(dsn);
+    register_config_value("host=h user=u password=FreshPw001");
+    let masked = mask_registered_values(dsn);
+    assert!(!masked.contains("S3cr3tPw"), "{masked}");
+}
+
+#[test]
+fn registered_values_mask_only_whole_token_occurrences() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    register_config_value("pw=a");
+    let unrelated = "Cannot cast string 'cpw=abc' to int";
+    assert_eq!(mask_registered_values(unrelated), unrelated);
+    let quoted = "config `repark.sql.maxArrayElements` must be a positive integer (got 'pw=a')";
+    let masked = mask_registered_values(quoted);
+    assert!(!masked.contains("pw=a"), "{masked}");
+    assert!(masked.contains("pw=***"), "{masked}");
+}
+
+#[test]
+fn a_debug_escaped_value_masks_through_its_quoted_inner_form() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let value = "Driver=x;Uid=u;Pwd=S3cr3tPw\\9;";
+    register_config_value(value);
+    let message =
+        format!("config `repark.sql.maxArrayElements` must be a positive integer (got {value:?})");
+    assert!(!message.contains(value));
+    let masked = mask_registered_values(&message);
+    assert!(!masked.contains("S3cr3tPw"), "{masked}");
+}
+
+#[test]
 fn the_registry_holds_256_values_and_evicts_the_oldest() {
     let _held = REGISTRY_TEST_LOCK
         .lock()

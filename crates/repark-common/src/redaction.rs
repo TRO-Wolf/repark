@@ -16,10 +16,9 @@ pub fn register_config_value(value: &str) {
     let mut stored = REGISTERED_CONFIG_VALUES
         .lock()
         .unwrap_or_else(PoisonError::into_inner);
-    if stored.iter().any(|(known, _)| known == value) {
-        return;
-    }
-    if stored.len() >= REGISTERED_VALUE_BOUND {
+    if let Some(index) = stored.iter().position(|(known, _)| known == value) {
+        stored.remove(index);
+    } else if stored.len() >= REGISTERED_VALUE_BOUND {
         stored.pop_front();
     }
     stored.push_back((value.to_string(), masked));
@@ -33,22 +32,65 @@ pub fn register_config_map<S: BuildHasher>(config: &HashMap<String, String, S>) 
 
 #[must_use]
 pub fn mask_registered_values(text: &str) -> String {
-    let stored = REGISTERED_CONFIG_VALUES
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner);
+    let snapshot: Vec<(String, String)> = {
+        let stored = REGISTERED_CONFIG_VALUES
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        stored.iter().cloned().collect()
+    };
+    let mut ordered = snapshot;
+    ordered.sort_by(|left, right| right.0.len().cmp(&left.0.len()));
     let mut masked = text.to_string();
-    for (value, replacement) in stored.iter() {
+    for (value, replacement) in &ordered {
         let quoted = format!("{value:?}");
         let inner = quoted
             .strip_prefix('"')
             .and_then(|rest| rest.strip_suffix('"'))
             .unwrap_or(quoted.as_str());
         if inner != value {
-            masked = masked.replace(inner, replacement);
+            masked = replace_whole_tokens(&masked, inner, replacement);
         }
-        masked = masked.replace(value.as_str(), replacement);
+        masked = replace_whole_tokens(&masked, value, replacement);
     }
     masked
+}
+
+fn replace_whole_tokens(text: &str, needle: &str, replacement: &str) -> String {
+    if needle.is_empty() {
+        return text.to_string();
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut cursor = 0;
+    while let Some(offset) = text[cursor..].find(needle) {
+        let start = cursor + offset;
+        let end = start + needle.len();
+        let before_ok = text[..start]
+            .chars()
+            .next_back()
+            .is_none_or(|edge| !is_token_char(edge));
+        let after_ok = text[end..]
+            .chars()
+            .next()
+            .is_none_or(|edge| !is_token_char(edge));
+        out.push_str(&text[cursor..start]);
+        if before_ok && after_ok {
+            out.push_str(replacement);
+            cursor = end;
+        } else {
+            let next = text[start..]
+                .chars()
+                .next()
+                .map_or(end, |edge| start + edge.len_utf8());
+            out.push_str(&text[start..next]);
+            cursor = next;
+        }
+    }
+    out.push_str(&text[cursor..]);
+    out
+}
+
+fn is_token_char(edge: char) -> bool {
+    edge.is_ascii_alphanumeric() || matches!(edge, '_' | '=' | '.' | '-')
 }
 
 #[must_use]
