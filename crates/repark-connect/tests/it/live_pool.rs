@@ -512,3 +512,52 @@ async fn query_mode_reads_the_configured_search_path_as_a_plain_session_does() {
     }
     cell.close().await;
 }
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_pushed_enum_compare_orders_by_text() {
+    let cell = Cell::open().await;
+    let schema = cell.schema.clone();
+    cell.sql(&format!(
+        "CREATE TYPE {schema}.mood AS ENUM ('sad', 'ok', 'happy'); \
+         CREATE TABLE {schema}.moods (m {schema}.mood); \
+         INSERT INTO {schema}.moods VALUES ('sad'), ('ok'), ('happy')"
+    ))
+    .await;
+    let enum_order = format!("SELECT m::text FROM {schema}.moods WHERE m > 'ok'");
+    let enum_order: Vec<Option<String>> = cell
+        .admin
+        .query(&enum_order, &[])
+        .await
+        .expect(&enum_order)
+        .iter()
+        .map(|row| row.get(0))
+        .collect();
+    let reader = Reader::new(&cell.settings(&[]));
+    let query = format!("SELECT m FROM {schema}.moods");
+    let mut pushed = Vec::new();
+    for source in [cell.relation("moods"), ScanSource::query(&query)] {
+        let resolved = reader.resolve(source).await.expect(LIVE);
+        for (op, value) in [(CompareOp::Gt, "ok"), (CompareOp::Eq, "happy")] {
+            let request = ScanRequest::new(Arc::clone(&resolved))
+                .compare(0, op, value.to_string())
+                .expect("a pushed enum");
+            pushed.push(texts(&reader.read(request).await.expect(LIVE)));
+        }
+    }
+    cell.close().await;
+    assert_eq!(
+        enum_order,
+        [Some("happy".to_string())],
+        "the server's enum order"
+    );
+    let (sad, happy) = (
+        vec![Some("sad".to_string())],
+        vec![Some("happy".to_string())],
+    );
+    assert_eq!(
+        pushed,
+        [sad.clone(), happy.clone(), sad, happy],
+        "text order"
+    );
+}

@@ -46,8 +46,11 @@ See [../map.md](../map.md).
   `query_mode_reads_the_configured_search_path_as_a_plain_session_does` (the verifier's
   `app-schema` shape in a fresh database: a role-level path beats a database-level one, a
   role-in-database path beats both, and with none the built-in path reads `public`; each time
-  query mode reads the rows a plain session as that login reads, and a pushed compare matches).
-  pins: c-2/C-052, C-053, C-054, C-055, C-056, C-062, C-063, C-064
+  query mode reads the rows a plain session as that login reads, and a pushed compare matches)
+  and `a_pushed_enum_compare_orders_by_text` (Z5, CONNECT-DIV-pg-enum-compare: over `('sad',
+  'ok', 'happy')` a pushed `> 'ok'` returns `sad` in relation and query mode, where the server's
+  enum order returns `happy`).
+  pins: c-2/C-052, C-053, C-054, C-055, C-056, C-062, C-063, C-064, C-066
 - `scan.rs` — C-2b fold 1 (2026-10-07), behind `postgres`, no Postgres server: a loopback fake
   backend answers the startup, the prepare and a one-row binary COPY.
   `a_copy_stream_without_its_trailer_fails_the_scan` (with the trailer `scan()` reads `[7]`;

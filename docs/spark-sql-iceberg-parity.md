@@ -3763,6 +3763,22 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `crates/repark-connect/tests/it/url.rs::no_userinfo_or_password_text_is_echoed_by_a_refusal`
 - **Rationale** — DECLARED 2026-10-07 (C-2b; NS §5 `deny_unknown_fields`; FL-1; the sketch's Q6,
   kept under its lean). A misspelt timeout or TLS key would otherwise never take effect.
+### CONNECT-DIV-pg-enum-compare — a pushed compare on a Postgres enum column orders by the label's text, not the enum's order
+- **repark** — an enum column reads as its label (`Utf8`, CONNECT-DECL-pg-unmapped), and a
+  pushed compare on it renders `m::pg_catalog.text OPERATOR(pg_catalog.>)
+  pg_catalog.current_setting('repark.pN')::pg_catalog.text`, so `<`, `<=`, `>` and `>=` order
+  by the label's text under the column's collation. Over `('sad', 'ok', 'happy')`, a pushed
+  `m > 'ok'` returns `sad`, in relation and query mode alike. `=` and `<>` match as the enum
+  does.
+- **Apache Spark** — the JDBC source pushes `"m" > 'ok'`, which the server compares in the enum's
+  declared order and returns `happy`. *(oracle: documented — Spark's JDBC filter pushdown and
+  Postgres enum ordering; the server's own answer is measured in the pin.)*
+- **Pin** — `crates/repark-connect/tests/it/live_pool.rs::a_pushed_enum_compare_orders_by_text`
+- **Rationale** — DECLARED 2026-10-07 (C-2b fold 2, Z5; the re-verify's S3). The pushed result
+  is the one the `Utf8` column compares to after the read, so filtering above the scan gives
+  the same rows; it differs only from Spark's server-side enum order. Retire when the scan
+  pushes an enum compare against the enum type (or declines to push an ordered compare on an
+  enum).
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
 - **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
   `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition
