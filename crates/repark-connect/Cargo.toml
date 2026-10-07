@@ -11,7 +11,27 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = ["postgres"]
+postgres = [
+  "dep:bytes",
+  "dep:futures",
+  "dep:rustls",
+  "dep:rustls-native-certs",
+  "dep:tokio",
+  "dep:tokio-postgres",
+  "dep:tokio-postgres-rustls",
+]
+
 [dependencies]
 repark-common.workspace = true
+datafusion.workspace = true
 arrow.workspace = true
 thiserror.workspace = true
+bytes = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+rustls = { workspace = true, optional = true, features = ["ring", "std", "tls12"] }
+rustls-native-certs = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["net", "rt", "sync", "time"] }
+tokio-postgres = { workspace = true, optional = true }
+tokio-postgres-rustls = { workspace = true, optional = true }
