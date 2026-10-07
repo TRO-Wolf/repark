@@ -87,6 +87,15 @@ waits in the queue rather than rebasing repeatedly.
   in one transaction) under retry, fix it only if it fails, and measure the
   same-key race. Consumers: MB-2a and MB-2c. Measurement (3) decides where
   the same-key protection lives (open question Q8 below).
+- **F-APPEND-PIN-BASE-1**
+  ([`task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md`](../../roadmap/mid-term/f-append-pin-base-1-2026-10-07.md),
+  filed 2026-10-07 under OQ-4 after DM-6 failed, ruling Q1): `fast_append`
+  and `merge_append` gain `validate_from_snapshot` and
+  `validate_no_concurrent_data`, default off, so a pinned append fails
+  non-retryably instead of re-basing; `replace` excluded, the operation stays
+  `append`. The validation sits on the append action itself (DM-6 C-001 (d)).
+  Consumer: MB-2c's closing slice (step 3, the fence; harness pins 2 and 3;
+  the 5-passed gate). The owner's fork work.
 
 ## 5. Open decisions the design sketch must close
 
