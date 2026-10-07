@@ -248,12 +248,18 @@ impl ExecutionPlan for PostgresScanExec {
             plan.options,
             meter,
         );
-        let stream = rows.map(move |batch| {
+        let placed = Box::pin(rows.map(move |batch| {
             let batch = batch
                 .and_then(|batch| place(&plan, &batch))
                 .map_err(external)?;
             reservation.try_resize(batch.get_array_memory_size())?;
             Ok(batch.record_output(&baseline))
+        }));
+        let stream = futures::stream::unfold(Some(placed), |state| async move {
+            let mut placed = state?;
+            let next = placed.next().await?;
+            let rest = next.is_ok().then_some(placed);
+            Some((next, rest))
         });
         let schema = Arc::clone(&self.plan.schema);
         Ok(Box::pin(RecordBatchStreamAdapter::new(schema, stream)))
