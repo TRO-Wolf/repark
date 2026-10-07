@@ -117,6 +117,10 @@ its `mid-term/map.md` row, the [packet](../../wo/microbatch/packet.md) §4 row, 
   epoch and operation-id. The walk now keeps `CommitOutcomeUnknown` at the attempt's epoch with
   its operation-id and attaches the refusal's durable record. Errors that are not a recovery
   refusal (a catalog error, an unsupported format) still propagate unchanged.
+- **D-11 (2026-10-07). Fold 1: an epoch gap is admitted.** The epoch check refuses only an epoch
+  at or below the durable one, so durable 0 and a claim of 5 claims. MB-3's driver assigns
+  contiguous epochs, as Spark's does. The sink check stays offset-based, because windows are
+  planned from offsets and a gap loses no rows. The code is unchanged.
 
 ## Mutations — 2026-10-07
 
