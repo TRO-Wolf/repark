@@ -415,3 +415,34 @@ async fn a_refused_merge_on_read_claim_stages_no_delete_file() {
     assert_eq!(live_ids(&reloaded).await, vec![1, 2, 3]);
     assert_eq!(stamped_snapshots(&reloaded), 1);
 }
+
+#[tokio::test]
+async fn resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback() {
+    let (_warehouse, catalog, ident) = fixture("ancestry_gap").await;
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let stamped = stamped_append(&catalog, &ident, &stamp, &[1]).await;
+    let stamped_id = stamped
+        .metadata()
+        .current_snapshot_id()
+        .expect("stamped id");
+    let middle = append_plain(&catalog, &ident, &[2]).await;
+    let middle_id = middle.metadata().current_snapshot_id().expect("middle id");
+    let table = append_plain(&catalog, &ident, &[3]).await;
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .expire_snapshots()
+        .expire_snapshot_id(middle_id)
+        .apply(tx)
+        .expect("apply");
+    let table = tx
+        .commit(catalog.as_ref())
+        .await
+        .expect("expire the middle");
+    assert!(table.metadata().snapshot_by_id(stamped_id).is_some());
+    assert!(table.metadata().snapshot_by_id(middle_id).is_none());
+    let (epoch, durable, reason, _) =
+        recovery_parts(read_resume_point(&table, query()).expect_err("gap"));
+    assert_eq!(epoch, Epoch::new(0));
+    assert_eq!(durable, Some(stamp.record));
+    assert_eq!(reason, RecoveryReason::StampedSnapshotExpired);
+}

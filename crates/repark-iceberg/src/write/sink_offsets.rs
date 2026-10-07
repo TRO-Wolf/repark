@@ -286,6 +286,9 @@ fn newest_stamp(table: &Table, query: QueryId) -> Result<Option<SinkRecord>, Mic
 }
 
 fn off_lineage_stamp(table: &Table, query: QueryId, property: &SinkRecord) -> Option<SnapshotId> {
+    if !ancestry_reaches_root(table) {
+        return None;
+    }
     table
         .metadata()
         .snapshots()
@@ -295,6 +298,21 @@ fn off_lineage_stamp(table: &Table, query: QueryId, property: &SinkRecord) -> Op
                 && matches!(SinkRecord::from_summary(summary), Ok(Some(record)) if record == *property)
         })
         .map(|snapshot| SnapshotId::new(snapshot.snapshot_id()))
+}
+
+fn ancestry_reaches_root(table: &Table) -> bool {
+    let metadata = table.metadata();
+    let mut cursor = metadata.current_snapshot();
+    for _ in 0..metadata.snapshots().len() {
+        let Some(snapshot) = cursor else {
+            return false;
+        };
+        let Some(parent) = snapshot.parent_snapshot_id() else {
+            return true;
+        };
+        cursor = metadata.snapshot_by_id(parent);
+    }
+    false
 }
 
 fn stamped_by(summary: &HashMap<String, String>, query: QueryId) -> bool {
