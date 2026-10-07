@@ -7,6 +7,8 @@ enum ProbeMode {
     FailBeforeLanding,
     UnknownAfterLanding,
     UnknownWithoutLanding,
+    LandedThenReconcileFails,
+    UnknownThenLoadsFail,
 }
 
 struct ProbeCatalog {
@@ -15,6 +17,7 @@ struct ProbeCatalog {
     seen: Mutex<Vec<String>>,
     racers: Mutex<Vec<Vec<DataFile>>>,
     stamped_racer: Mutex<Option<(CommitStamp, Vec<DataFile>)>>,
+    failing_loads: AtomicUsize,
 }
 
 impl std::fmt::Debug for ProbeCatalog {
@@ -31,6 +34,7 @@ impl ProbeCatalog {
             seen: Mutex::new(Vec::new()),
             racers: Mutex::new(Vec::new()),
             stamped_racer: Mutex::new(None),
+            failing_loads: AtomicUsize::new(0),
         }
     }
 
@@ -122,6 +126,18 @@ impl Catalog for ProbeCatalog {
     }
 
     async fn load_table(&self, table: &TableIdent) -> iceberg::Result<Table> {
+        if self
+            .failing_loads
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |left| {
+                left.checked_sub(1)
+            })
+            .is_ok()
+        {
+            return Err(iceberg::Error::new(
+                iceberg::ErrorKind::Unexpected,
+                "injected: the catalog refused the load",
+            ));
+        }
         self.inner.load_table(table).await
     }
 
@@ -166,6 +182,21 @@ impl Catalog for ProbeCatalog {
                 iceberg::ErrorKind::CommitStateUnknown,
                 "injected: not landed, outcome unknown",
             )),
+            ProbeMode::LandedThenReconcileFails => {
+                self.inner.update_table(commit).await?;
+                self.failing_loads.store(1, Ordering::SeqCst);
+                Err(iceberg::Error::new(
+                    iceberg::ErrorKind::CommitStateUnknown,
+                    "injected: landed, outcome unknown, the reconcile reload fails",
+                ))
+            }
+            ProbeMode::UnknownThenLoadsFail => {
+                self.failing_loads.store(usize::MAX, Ordering::SeqCst);
+                Err(iceberg::Error::new(
+                    iceberg::ErrorKind::CommitStateUnknown,
+                    "injected: not landed, outcome unknown, the catalog then refuses loads",
+                ))
+            }
         }
     }
 }
@@ -770,3 +801,6 @@ async fn the_walk_finds_a_landed_stamp_above_the_base_by_operation_id_then_by_re
         landed.metadata().snapshots().count()
     );
 }
+
+#[path = "sink_offsets_walk_tests.rs"]
+mod walk;

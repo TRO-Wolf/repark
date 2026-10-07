@@ -125,7 +125,7 @@ repark-core's error map.
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
 - `sink_offsets.rs`, `sink_offsets_epoch_tests.rs`, `sink_offsets_probe_tests.rs`,
-  `sink_offsets_tests.rs` — **MB-2c steps 1 and 2 (2026-10-07, ruling Q2: the split):** the
+  `sink_offsets_walk_tests.rs`, `sink_offsets_tests.rs` — **MB-2c steps 1 and 2 (2026-10-07, ruling Q2: the split):** the
   epoch check runs in `claim` on the table the commit starts from, after the
   `SinkCommittedTwice` guard: a record of another generation refuses `GenerationMismatch`, and
   an epoch at or below the durable one refuses `AlreadyCommitted` under this run and `Fenced`
@@ -137,7 +137,10 @@ repark-core's error map.
   by `engine.operation-id`, then by the whole stamped record (a same-epoch stamp of another run
   is not this attempt); absent, it refuses `RecoveryRequired(CommitOutcomeUnknown)` with the
   durable record. It never re-submits and never commits a replace. Six epoch pins in the
-  `#[path]` child `sink_offsets_epoch_tests.rs`, three walk pins in `sink_offsets_probe_tests.rs`.
+  `#[path]` child `sink_offsets_epoch_tests.rs`, three walk pins in `sink_offsets_probe_tests.rs`,
+  and in its `#[path]` child `sink_offsets_walk_tests.rs` (fold 1) the scope is marked committed
+  at the resolved snapshot when the fork's reconcile fails and the walk finds the landed attempt,
+  and a failed walk reload refuses `CommitOutcomeUnknown` with no durable record.
   The append fence (step 3) waits for `F-APPEND-PIN-BASE-1`.
   pins: mb-2c/C-003, C-004
 - `sink_offsets_tests.rs`, `sink_offsets_fence_tests.rs` — **MB-2c step 0, DM-6 (2026-10-07):**
