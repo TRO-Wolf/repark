@@ -391,16 +391,13 @@ pub async fn commit_stamp_only(
         })?,
         None => None,
     };
-    let claimed = match active {
-        Some(claimed) => claimed,
-        None => {
-            epoch_check(table, stamp)?;
-            ClaimedStamp {
-                stamp: stamp.clone(),
-                base: table.metadata().current_snapshot_id().map(SnapshotId::new),
-            }
-        }
-    };
+    if active.is_none() {
+        epoch_check(table, stamp)?;
+    }
+    let claimed = active.unwrap_or_else(|| ClaimedStamp {
+        stamp: stamp.clone(),
+        base: table.metadata().current_snapshot_id().map(SnapshotId::new),
+    });
     let engine = EngineSummary::for_append(table, &[], None);
     let (operation_id, summary) = summary_with_extras(&claimed.summary_entries()?, &engine)
         .map_err(|error| masked(&error))?;
