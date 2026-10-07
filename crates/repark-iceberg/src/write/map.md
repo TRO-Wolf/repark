@@ -136,8 +136,11 @@ repark-core's error map.
   already carries into `summary_extra` on all three arms (MERGE included, `merge/mod.rs`
   unedited). A stamped commit whose caller extras carry a `repark.cdc.*` or
   `spark.sql.streaming.*` key refuses before it claims, and the stamp is appended after the
-  caller's extras. The scope pins sit in the `#[path]` child `sink_offsets_scope_tests.rs`.
-  pins: mb-2a/C-013, C-015, C-017
+  caller's extras. `read_resume_point` refuses a property whose stamped snapshot is retained
+  but off the current lineage (a rollback) as `StampNotInLineage` with no durable record, and
+  keeps `StampedSnapshotExpired` for a stamp that is gone. The scope pins sit in the `#[path]`
+  child `sink_offsets_scope_tests.rs`.
+  pins: mb-2a/C-013, C-014, C-015, C-017
 - `sink_offsets.rs`, `sink_offsets_tests.rs` — **MB-2a (2026-10-07):** the micro-batch sink
   stamp, the sketch's §3.4 (`task/wo/microbatch/mb-design-2026-10-06.md`). `BatchScope` is a
   process-wide map from sink uuid to the active `CommitStamp`; `enter` refuses `SinkBusy`, a

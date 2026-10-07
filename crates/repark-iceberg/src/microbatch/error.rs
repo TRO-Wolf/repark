@@ -145,6 +145,10 @@ pub enum RecoveryReason {
     #[error("stamped snapshot expired; raise history.expire.min-snapshots-to-keep retention")]
     StampedSnapshotExpired,
     #[error(
+        "stamped snapshot {snapshot} is retained but not in the sink's current lineage: the sink was rolled back past it, so its rows are not live. Start a new query (new queryName), or restore the sink to snapshot {snapshot}"
+    )]
+    StampNotInLineage { snapshot: SnapshotId },
+    #[error(
         "sink advanced to snapshot {snapshot} without a stamp; a commit bypassed the batch scope"
     )]
     UnstampedSinkCommit { snapshot: SnapshotId },
@@ -284,6 +288,9 @@ mod tests {
                 property_epoch: None,
             },
             RecoveryReason::StampedSnapshotExpired,
+            RecoveryReason::StampNotInLineage {
+                snapshot: SnapshotId::new(12),
+            },
             RecoveryReason::UnstampedSinkCommit {
                 snapshot: SnapshotId::new(11),
             },

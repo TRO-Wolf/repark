@@ -236,3 +236,80 @@ fn site_stamp_extras_put_the_stamp_last_and_drop_the_token() {
         Some("7")
     );
 }
+
+fn recovery_parts(error: MicroBatchError) -> (Epoch, Option<SinkRecord>, RecoveryReason, String) {
+    let text = error.to_string();
+    match error {
+        MicroBatchError::RecoveryRequired {
+            epoch,
+            durable,
+            reason,
+            ..
+        } => (epoch, durable.map(|record| *record), reason, text),
+        other => panic!("expected RecoveryRequired, got {other:?}"),
+    }
+}
+
+async fn rolled_back_to(catalog: &Arc<dyn Catalog>, table: &Table, snapshot: i64) -> Table {
+    let tx = Transaction::new(table);
+    let tx = tx
+        .manage_snapshots()
+        .rollback_to(snapshot)
+        .apply(tx)
+        .expect("apply rollback");
+    tx.commit(catalog.as_ref()).await.expect("rollback")
+}
+
+#[tokio::test]
+async fn resume_refuses_a_rollback_before_every_stamp_as_not_in_lineage() {
+    let (_warehouse, catalog, ident) = fixture("rollback_all").await;
+    let plain = append_plain(&catalog, &ident, &[1]).await;
+    let plain_id = plain.metadata().current_snapshot_id().expect("plain id");
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let stamped = stamped_append(&catalog, &ident, &stamp, &[2]).await;
+    let stamped_id = stamped
+        .metadata()
+        .current_snapshot_id()
+        .expect("stamped id");
+    let table = rolled_back_to(&catalog, &stamped, plain_id).await;
+    assert!(table.metadata().snapshot_by_id(stamped_id).is_some());
+    let (epoch, durable, reason, text) =
+        recovery_parts(read_resume_point(&table, query()).expect_err("rolled back"));
+    assert_eq!(epoch, Epoch::new(0));
+    assert_eq!(durable, None);
+    assert_eq!(
+        reason,
+        RecoveryReason::StampNotInLineage {
+            snapshot: SnapshotId::new(stamped_id)
+        }
+    );
+    for phrase in ["rolled back", "new queryName", "restore the sink"] {
+        assert!(text.contains(phrase), "{phrase}: {text}");
+    }
+    assert!(!text.contains("expired"), "{text}");
+}
+
+#[tokio::test]
+async fn resume_refuses_a_rollback_between_stamps_with_the_summary_as_authority() {
+    let (_warehouse, catalog, ident) = fixture("rollback_mid").await;
+    let first = stamp_for(0, SinkDoor::Table);
+    let second = stamp_for(1, SinkDoor::Table);
+    let after_first = stamped_append(&catalog, &ident, &first, &[1]).await;
+    let first_id = after_first
+        .metadata()
+        .current_snapshot_id()
+        .expect("first id");
+    let table = stamped_append(&catalog, &ident, &second, &[2]).await;
+    let table = rolled_back_to(&catalog, &table, first_id).await;
+    let (epoch, durable, reason, _) =
+        recovery_parts(read_resume_point(&table, query()).expect_err("rolled back"));
+    assert_eq!(epoch, Epoch::new(0));
+    assert_eq!(durable, Some(first.record));
+    assert_eq!(
+        reason,
+        RecoveryReason::OffsetMismatch {
+            summary_epoch: Some(Epoch::new(0)),
+            property_epoch: Some(Epoch::new(1)),
+        }
+    );
+}

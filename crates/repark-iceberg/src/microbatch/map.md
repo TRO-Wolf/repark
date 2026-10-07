@@ -45,7 +45,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `thiserror`, `#[non_exhaustive]` (NS-15), plus `RecoveryReason`. Fold 1
   adds `OffsetPositionOutOfRange`, and `UnsupportedOffsetFormat.found`
   becomes the version text as read. Fold 2 adds `SnapshotNotInLineage` (G5).
-  pins: mb-1/C-006, C-020, C-024, C-036
+  MB-2a fold 1 (ruling V2, 2026-10-07) adds `RecoveryReason::StampNotInLineage`: a sink stamp
+  that is retained but off the current lineage (a rollback), naming a new `queryName` or a
+  restore; `StampedSnapshotExpired` keeps the stamp that is truly gone.
+  pins: mb-1/C-006, C-020, C-024, C-036, mb-2a/C-014
 - `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
   `WindowLimit`, `PlannedFile`, `WindowPlan`, and
   `WindowPlanner::{new, named, initial_offset, next_window}` over a held

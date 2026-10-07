@@ -235,12 +235,20 @@ pub fn read_resume_point(
     match (summary, property) {
         (None, None) => Ok(None),
         (Some(summary), Some(property)) if summary == property => Ok(Some(summary)),
-        (None, Some(property)) => Err(MicroBatchError::RecoveryRequired {
-            query,
-            epoch: property.epoch,
-            durable: Some(Box::new(property)),
-            reason: RecoveryReason::StampedSnapshotExpired,
-        }),
+        (None, Some(property)) => match off_lineage_stamp(table, query, &property) {
+            Some(snapshot) => Err(MicroBatchError::RecoveryRequired {
+                query,
+                epoch: property.epoch,
+                durable: None,
+                reason: RecoveryReason::StampNotInLineage { snapshot },
+            }),
+            None => Err(MicroBatchError::RecoveryRequired {
+                query,
+                epoch: property.epoch,
+                durable: Some(Box::new(property)),
+                reason: RecoveryReason::StampedSnapshotExpired,
+            }),
+        },
         (Some(summary), property) => Err(MicroBatchError::RecoveryRequired {
             query,
             epoch: summary.epoch,
@@ -275,6 +283,18 @@ fn newest_stamp(table: &Table, query: QueryId) -> Result<Option<SinkRecord>, Mic
             .and_then(|parent| metadata.snapshot_by_id(parent));
     }
     Ok(None)
+}
+
+fn off_lineage_stamp(table: &Table, query: QueryId, property: &SinkRecord) -> Option<SnapshotId> {
+    table
+        .metadata()
+        .snapshots()
+        .find(|snapshot| {
+            let summary = &snapshot.summary().additional_properties;
+            stamped_by(summary, query)
+                && matches!(SinkRecord::from_summary(summary), Ok(Some(record)) if record == *property)
+        })
+        .map(|snapshot| SnapshotId::new(snapshot.snapshot_id()))
 }
 
 fn stamped_by(summary: &HashMap<String, String>, query: QueryId) -> bool {
