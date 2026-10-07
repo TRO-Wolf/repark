@@ -84,19 +84,19 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Clauses C-001..C-016 walked one by one against the sketch (§3.1, §3.2, §3.3, §3.5, §4, Q4, Q6); every clause carries its proof obligation and pin citation in the verdict tables. Round 2 adds C-008..C-013 for the window and provider; round 3 adds C-014..C-016 for the source wrapper and options; fold 1 round A adds C-017..C-025, round B C-026..C-031.
-      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs, task/ledgers/completed/mb-1-ledger.md, crates/repark-core/src/time_travel/microbatch_source.rs]
+      evidence: Clauses C-001..C-016 walked one by one against the sketch (§3.1, §3.2, §3.3, §3.5, §4, Q4, Q6); every clause carries its proof obligation and pin citation in the verdict tables. Round 2 adds C-008..C-013 for the window and provider; round 3 adds C-014..C-016 for the source wrapper and options; fold 1 round A adds C-017..C-025, round B C-026..C-031. Fold 2 adds C-032..C-039 for the re-verify's G1–G8 rulings.
+      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs, task/ledgers/completed/mb-1-ledger.md, crates/repark-core/src/time_travel/microbatch_source.rs, crates/repark-iceberg/src/microbatch/window_fold2_pins.rs, crates/repark-core/src/time_travel/microbatch_source_fold2_tests.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Negative pins cover the empty vector, the repeated table, the absent stamp, the future and unparsable versions, the partial stamp, the corrupt property, and the unknown-table lookup; round 2 adds the unknown start id, the past-head stamp, the empty table, the dangling and replaced from, the mid-snapshot resume past a non-append, and the unknown end snapshot; round 3 adds the two skip keys, unknown prefixed keys, malformed values, two start keys, unknown catalogs and tables, malformed identifiers, and the empty table; fold 1 adds the non-append start snapshot, the timestamp past the head, the out-of-range position, real expiry, non-canonical versions, and the missing record count; round B adds the table replaced under a live source, mixed-case skip and unknown keys, case twins with different values, non-boolean skip values, the four unsupported Iceberg streaming keys, and caps outside the int range.
-      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-iceberg/src/microbatch/window_fold_pins.rs, crates/repark-iceberg/src/microbatch/provider.rs, crates/repark-core/src/time_travel/microbatch_source.rs, crates/repark-core/src/time_travel/microbatch_source_tests.rs]
+      evidence: Negative pins cover the empty vector, the repeated table, the absent stamp, the future and unparsable versions, the partial stamp, the corrupt property, and the unknown-table lookup; round 2 adds the unknown start id, the past-head stamp, the empty table, the dangling and replaced from, the mid-snapshot resume past a non-append, and the unknown end snapshot; round 3 adds the two skip keys, unknown prefixed keys, malformed values, two start keys, unknown catalogs and tables, malformed identifiers, and the empty table; fold 1 adds the non-append start snapshot, the timestamp past the head, the out-of-range position, real expiry, non-canonical versions, and the missing record count; round B adds the table replaced under a live source, mixed-case skip and unknown keys, case twins with different values, non-boolean skip values, the four unsupported Iceberg streaming keys, and caps outside the int range. Fold 2 adds the Unbounded walk over an overwrite or delete, positions past a replace or overwrite start, the delete as head, a snapshot rolled out of the lineage, a head below T under skewed timestamps, Unicode-folded keys, and boolean twins that differ in meaning.
+      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-iceberg/src/microbatch/window_fold_pins.rs, crates/repark-iceberg/src/microbatch/provider.rs, crates/repark-core/src/time_travel/microbatch_source.rs, crates/repark-core/src/time_travel/microbatch_source_tests.rs, crates/repark-iceberg/src/microbatch/window_fold2_pins.rs, crates/repark-core/src/time_travel/microbatch_source_fold2_tests.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: All 24 variants and 5 reasons render non-empty; the 8 Spark-quoted rows (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15) are pinned byte-exact; round 2 pins the MBE-1/MBE-2 prefixes plus variant fields on the live refusal path; round 3 pins the MBE-3 and MBE-17 texts byte-exact on the live from_options path.
-      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-core/src/time_travel/microbatch_source.rs]
+      evidence: All 24 variants and 5 reasons render non-empty; the 8 Spark-quoted rows (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15) are pinned byte-exact; round 2 pins the MBE-1/MBE-2 prefixes plus variant fields on the live refusal path; round 3 pins the MBE-3 and MBE-17 texts byte-exact on the live from_options path. Fold 2 adds `SnapshotNotInLineage` (25 variants), pinned byte-exact with Spark's `snapshotAfter` prefix and checked never to say "expired"; the Unicode-key refusal and the `SourceReplaced` text under the opened name are pinned byte-exact.
+      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-core/src/time_travel/microbatch_source.rs, crates/repark-iceberg/src/microbatch/window_fold2_pins.rs, crates/repark-core/src/time_travel/microbatch_source_fold2_tests.rs]
     - id: AT-4
       status: ATTACKED
-      evidence: Round 2 awaits load immutable manifests and plan scans only; no spawn, no lock, no shared mutable state, and the held table is never mutated across an await. Round 3 awaits only the planner, the catalog load and the batch collect, holds no lock across an await, and shares no mutable state. Fold 1 round B reloads the table at the top of each call into a local; the source keeps only the catalog handle and identifier, so no table state crosses calls and two concurrent calls each plan over their own load.
+      evidence: Round 2 awaits load immutable manifests and plan scans only; no spawn, no lock, no shared mutable state, and the held table is never mutated across an await. Round 3 awaits only the planner, the catalog load and the batch collect, holds no lock across an await, and shares no mutable state. Fold 1 round B reloads the table at the top of each call into a local; the source keeps only the catalog handle and identifier, so no table state crosses calls and two concurrent calls each plan over their own load. Fold 2's read schema is an immutable `SchemaRef` captured once at `open` and only cloned into each provider; the planner's name is an owned string set before any await.
       artifacts: [crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-5
       status: ATTACKED
@@ -104,21 +104,21 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-6
       status: ATTACKED
-      evidence: Spark-verbatim rows pinned against the MB-0 oracle cells; the change is purely additive and the full pre-existing lib suite stays green beside the new pins (round 1: 804 + 26; round 2: 830 + 20; round 3: iceberg 850 unchanged from the unmodified baseline, core 1026 + 13). The batch append path keeps its silent skip; the refusal lives only in the new planner. Round 3 pins MBE-3/MBE-17.
-      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, python/repark-parity/tests/live_spark/mb0_streaming_oracle.json, crates/repark-core/src/time_travel/microbatch_source.rs]
+      evidence: Spark-verbatim rows pinned against the MB-0 oracle cells; the change is purely additive and the full pre-existing lib suite stays green beside the new pins (round 1: 804 + 26; round 2: 830 + 20; round 3: iceberg 850 unchanged from the unmodified baseline, core 1026 + 13). The batch append path keeps its silent skip; the refusal lives only in the new planner. Round 3 pins MBE-3/MBE-17. Fold 2: MB0b-R17 recorded with the 27 earlier entries byte-identical; the full lib suites stay green beside the new pins (iceberg 873 = 804 + 69, core 1053 + 1 ignored = 1046 + 7).
+      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, python/repark-parity/tests/live_spark/mb0_streaming_oracle.json, crates/repark-core/src/time_travel/microbatch_source.rs, crates/repark-iceberg/src/microbatch/window_fold2_pins.rs, crates/repark-core/src/time_travel/microbatch_source_fold2_tests.rs]
     - id: AT-7
       status: N/A
       justification: No hot path; offsets are built once per batch, windows are planned once per batch, and no measurement is claimed.
     - id: AT-8
       status: ATTACKED
-      evidence: 11/11 round gates green in rounds 1-2, 12/12 in round 3; new files under the default ceiling (round 2 split window.rs at 1013 lines into 364 + 649 with no ceiling raised; round 3 lands microbatch_source.rs at 563; fold 1 round B splits its tests under #[path], leaving 297 + 622); every touched map updated in the same commits; the ledger moves to completed/ in the last commit.
+      evidence: 11/11 round gates green in rounds 1-2, 12/12 in round 3; new files under the default ceiling (round 2 split window.rs at 1013 lines into 364 + 649 with no ceiling raised; round 3 lands microbatch_source.rs at 563; fold 1 round B splits its tests under #[path], leaving 297 + 622); every touched map updated in the same commits; the ledger moves to completed/ in the last commit. Fold 2 lands its pins in two new #[path] children rather than growing the fold-1 files.
       artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/map.md, crates/repark-iceberg/src/catalog/map.md, task/ledgers/completed/mb-1-ledger.md, crates/repark-core/src/time_travel/map.md]
     - id: AT-9
       status: N/A
       justification: No new log or metric surface; every failure is a typed value with a named fix.
     - id: AT-10
       status: ATTACKED
-      evidence: Round 1: two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift). Round 2: dropping with_fail_on_non_append fails exactly the 2 refusal pins of 46. Round 3: letting the skip keys pass fails exactly the MBE-3 pin of 13. Fold 1: m1, m2, m5, m6 and m7 are red on exactly their owning pins (the tails are in the fold-1 gates); round B: m8 (no per-call reload) and m9 (no lowercase step) are red on exactly their two pins each. All restores were verified by diff, and fold 1's by cmp.
+      evidence: Round 1: two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift). Round 2: dropping with_fail_on_non_append fails exactly the 2 refusal pins of 46. Round 3: letting the skip keys pass fails exactly the MBE-3 pin of 13. Fold 1: m1, m2, m5, m6 and m7 are red on exactly their owning pins (the tails are in the fold-1 gates); round B: m8 (no per-call reload) and m9 (no lowercase step) are red on exactly their two pins each. All restores were verified by diff, and fold 1's by cmp. Fold 2: g1, g2a, g2b, N8, g3b, g4, g5a, g5b, g6a, g6b, g7a, g7b and g8 are red on their owning pins (the tails are in the fold-2 gates), each restored from a backup and confirmed clean by `git status`.
       artifacts: [task/ledgers/staging/mb-1-ledger.md, task/ledgers/completed/mb-1-ledger.md]
 ```
 
@@ -468,6 +468,8 @@ re-verifier**, so G1 is implemented as ruled.
 | C-038 | (G7) After the ASCII fold, a key containing any non-ASCII character whose Unicode lowercase starts with `streaming-`, `stream-` or `repark.cdc.` refuses `Catalog` naming the key, so the Kelvin-sign `repar\u{212A}.cdc.start-after-snapshot-id` can no longer pass as an ignored key and silently replay from `Earliest`. A non-ASCII key outside the prefixes still passes. Two spellings of a skip key compare as booleans: `false`/`FALSE` are accepted, `TRUE`/`true` refuse MBE-3, and `false`/`TRUE` or `false`/`0` refuse as different values; every other key keeps the exact comparison. | The G7 pins in `microbatch_source_fold2_tests.rs` plus mutations g7a and g7b. | **PROVEN** | 2 pins green: `a_key_that_folds_to_a_streaming_prefix_only_under_unicode_refuses` (four keys byte-exact, two non-prefixed keys pass) and `boolean_twins_compare_by_meaning`. g7a and g7b red. pins: mb-1/C-038 |
 | C-039 | (G8) Planner errors name the table as the source was opened: `MicroBatchSource` builds both planners with `WindowPlanner::named(self.name)`, so `SourceReplaced` reads `source table ice.sales.orders was replaced (…)`. The offsets keep the table identifier (`sales.orders`) in `table_name`. | The G8 pin in `microbatch_source_fold2_tests.rs` plus mutation g8. | **PROVEN** | 1 pin green: `planner_errors_name_the_table_as_the_source_was_opened` (k07's shape: drain, drop, re-create; the text byte-exact with both uuids; the drained offset's `table_name` is `sales.orders`). g8 red. pins: mb-1/C-039 |
 
+VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
+
 ## Dated decision rows — fold 2
 
 - **G2 (2026-10-07).** Supersedes F8's end-snapshot schema (C-022's "under the end
@@ -508,6 +510,20 @@ re-verifier**, so G1 is implemented as ruled.
   the table identifier, because offsets are stamped into the sink and read back by
   later runs; a display-only change must not move stored bytes. A planner built
   without `named` keeps the identifier.
+- **Superseded (2026-10-07).** C-019's "refuses only an empty window entering it" by
+  C-032 for `WindowLimit::Unbounded`. C-022's end-snapshot schema by C-033. C-018's
+  "(oldest such ancestor, 0)" by C-037. C-027's equal-value rule for the skip keys by
+  C-038. C-031's registry pin by C-035. C-008/C-009's `SourceSnapshotExpired` for an
+  off-ancestry snapshot still in the metadata by C-036.
+- **Observed, not acted on (2026-10-07).** Spark's capped `latestOffset`
+  (`SyncSparkMicroBatchPlanner`, 1.11 bytecode) checks the files cap only before adding
+  the next file inside a snapshot. When a window fills `max-files` exactly on a
+  snapshot's last file, the walk still calls `nextValidSnapshot`, which throws if the
+  next snapshot is an `overwrite` or `delete`. So under a processing-time trigger at
+  `max-files`, Spark refuses one batch earlier than RePark's `Capped` window in that case
+  (for R17's shape at max-files 1 it delivers `a` only, where RePark delivers `a` then
+  `b`). The rows cap stops without that look-ahead, as RePark's does. The G1 ruling keeps
+  deliver-first for `Capped`; this is unmeasured and is handed back for a ruling.
 
 ## Gates — fold 2
 
@@ -558,3 +574,16 @@ g8 microbatch_source.rs next_batch's planner drops `.named(self.name.clone())`
 test time_travel::microbatch_source::tests::microbatch_source_fold2_tests::planner_errors_name_the_table_as_the_source_was_opened ... FAILED
 test result: FAILED. 26 passed; 1 failed; 0 ignored; 0 measured; 1027 filtered out
 ```
+
+All exit 0, in brief order, on the fold-2 tree: `cargo test -p repark-iceberg --lib
+microbatch` (69 passed: 61 before plus 8 new), `cargo test -p repark-core --lib
+time_travel::microbatch` (27 passed: 20 before plus 7 new), `make rust-clippy`,
+`cargo fmt --check`, `make rust-panic-ban`, `python3 scripts/check_rust_file_size.py`
+(1060 files clean), `./scripts/check_lib_rs.sh`, `python3 scripts/sync_map_md.py
+--check`, `bash scripts/check_map_md.sh --base origin/main`,
+`python3 scripts/check_docs_links.py`, `python3 scripts/check_ledger_grammar.py`, ruff
+check and format on `mb0_streaming_oracle.py` and `mb0_bench.py`, and the comment-ban
+probe (`hits=0`). The full lib suites are iceberg 873 passed and core 1053 passed, 1
+ignored; no neighbour pin changed. The registry-reading suites
+(`test_parity_live.py`, `test_dropin_disclosure.py`,
+`test_lrs3_registered_divergences.py`) are 63 passed, 65 skipped after the G4 row edit.
