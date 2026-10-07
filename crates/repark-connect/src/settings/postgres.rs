@@ -357,7 +357,10 @@ fn percent_decode(text: &str, spelling: &Spelling) -> Result<String> {
     let mut index = 0;
     while let Some(&byte) = bytes.get(index) {
         if byte == b'%' {
-            let pair = bytes.get(index + 1..index + 3).ok_or_else(refuse)?;
+            let pair = bytes
+                .get(index + 1..index + 3)
+                .filter(|pair| pair.iter().all(u8::is_ascii_hexdigit))
+                .ok_or_else(refuse)?;
             let hex = std::str::from_utf8(pair).map_err(|_| refuse())?;
             out.push(u8::from_str_radix(hex, 16).map_err(|_| refuse())?);
             index += 3;

@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use repark_connect::{ConnectError, PostgresSettings, SettingsDoor, SpecRefusal, Spelling};
+use repark_connect::{
+    ConnectError, PostgresSettings, SettingsDoor, SpecRefusal, Spelling, UrlViolation,
+};
 
 const TOML: SettingsDoor = SettingsDoor::ReparkToml;
 const SPARK: SettingsDoor = SettingsDoor::ReadPostgres;
@@ -110,4 +112,47 @@ fn no_userinfo_or_password_text_is_echoed_by_a_refusal() {
         !debug.contains(SECRET) && !debug.contains("leaked"),
         "{debug}"
     );
+}
+
+#[test]
+fn a_percent_escape_needs_two_hex_digits() {
+    let malformed = SpecRefusal::Url(UrlViolation::PercentEncoding);
+    for (url, part) in [
+        (
+            "postgresql://u:S3CRET%+Apw@h/db",
+            Spelling::UrlPart("password"),
+        ),
+        (
+            "postgresql://u:S3CRET%-1pw@h/db",
+            Spelling::UrlPart("password"),
+        ),
+        (
+            "postgresql://u:S3CRET% Apw@h/db",
+            Spelling::UrlPart("password"),
+        ),
+        (
+            "postgresql://u:S3CRET%A@h/db",
+            Spelling::UrlPart("password"),
+        ),
+        ("postgresql://u%g0@h/db", Spelling::UrlPart("user")),
+        (
+            "postgresql://h/db?user=u&password=S3CRET%+A",
+            Spelling::UrlPart("query"),
+        ),
+    ] {
+        let error = from_url(url, TOML).expect_err(url);
+        assert_eq!(
+            error,
+            ConnectError::InvalidSpecification {
+                key: part,
+                reason: malformed.clone(),
+            },
+            "{url}"
+        );
+        echoes_nothing(&error, &[SECRET, "pw"]);
+    }
+    let settings = from_url("postgresql://u:%2b%2F%aa%41@h/db", TOML);
+    assert!(settings.is_err(), "%aa is not UTF-8 alone");
+    let settings = from_url("postgresql://u:%2b%2F%41%c3%a9@h/db", TOML).expect("hex either case");
+    assert_eq!(settings.password.as_deref(), Some("+/Aé"));
 }
