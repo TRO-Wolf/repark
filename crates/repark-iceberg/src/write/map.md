@@ -124,6 +124,16 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets_tests.rs`, `sink_offsets_fence_tests.rs` — **MB-2c step 0, DM-6 (2026-10-07):**
+  the sketch's Q8 branch A measured on the fork pin `076d5f98`. The stamped `merge_append` plus
+  its property update re-bases past a moved base and lands. An empty `overwrite_files()` with
+  `validate_from_snapshot(H)` and `validate_no_conflicting_data()` beside it fails the raced
+  commit at validation (`DataInvalid`), but refuses every quiet commit (`PreconditionFailed`,
+  an empty snapshot), and with `allow_empty_commit()` the two snapshot producers in one
+  transaction both assert `main` and never commit (`CatalogCommitConflicts`). Branch A is not
+  green; MB-2c halts on order rule 1 until `F-APPEND-PIN-BASE-1` merges. The four
+  measurements sit in the `#[path]` child `sink_offsets_fence_tests.rs`.
+  pins: mb-2c/C-001
 - `sink_offsets.rs`, `sink_offsets_scope_tests.rs`, `write_options.rs` — **MB-2a fold 2 (2026-10-07, rulings
   Y1…Y3):** `read_resume_point` keeps ruling V2 under routine expiry. When the ancestry walk
   stops at an expired parent, a retained stamped snapshot newer than the oldest reachable
