@@ -88,7 +88,10 @@ pub(crate) fn mask_user_visible(message: impl AsRef<str>) -> String {
 }
 
 #[must_use]
-pub(crate) fn masked_message_params(py: Python<'_>, pairs: &[(&str, &str)]) -> Bound<'_, PyDict> {
+pub(crate) fn masked_message_params<'py>(
+    py: Python<'py>,
+    pairs: &[(&str, &str)],
+) -> Bound<'py, PyDict> {
     let params = PyDict::new(py);
     for &(key, value) in pairs {
         if let Err(failure) = params.set_item(key, mask_user_visible(value)) {
