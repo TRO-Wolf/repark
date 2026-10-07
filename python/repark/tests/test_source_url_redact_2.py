@@ -10,18 +10,14 @@ from repark.spark import SparkSession
 
 MARK = "S3cr3tPw"
 
-JDBC = f"jdbc:postgresql://h/db?user=u&password={MARK}"
-DSN = f"host=h user=u password={MARK}"
-ODBC = f"Driver=x;Server=h;Uid=u;Pwd={MARK};"
-
-SHAPES = [JDBC, DSN, ODBC]
-
 SHUFFLE = "spark.sql.shuffle.partitions"
 MAX_ARRAY = "repark.sql.maxArrayElements"
 DF_BATCH = "datafusion.execution.batch_size"
 WRITE_FILES = "repark.write.max-concurrent-files"
 
 KNOBS = [SHUFFLE, MAX_ARRAY, DF_BATCH, WRITE_FILES]
+
+SHAPES = ["jdbc", "dsn", "odbc"]
 
 DOORS = ["builder", "toml", "confset", "sqlset"]
 
@@ -43,6 +39,14 @@ EXPECTED: dict[tuple[str, str], type[BaseException] | None] = {
     ("sqlset", DF_BATCH): PySparkException,
     ("sqlset", WRITE_FILES): None,
 }
+
+
+def _shape_value(shape: str, token: str) -> str:
+    if shape == "jdbc":
+        return f"jdbc:postgresql://h/db?user=u&password={token}"
+    if shape == "dsn":
+        return f"host=h user=u password={token}"
+    return f"Driver=x;Server=h;Uid=u;Pwd={token};"
 
 
 def _attempt_builder(key: str, value: str) -> None:
@@ -88,19 +92,23 @@ def _attempt_sql_set(key: str, value: str) -> None:
 def test_config_value_never_echoes_a_credential(
     door: str, knob: str, shape: str, tmp_path: Path
 ) -> None:
+    token = f"{MARK}{DOORS.index(door)}{KNOBS.index(knob)}{SHAPES.index(shape)}"
+    value = _shape_value(shape, token)
     expected = EXPECTED[(door, knob)]
     try:
         if door == "builder":
-            _attempt_builder(knob, shape)
+            _attempt_builder(knob, value)
         elif door == "toml":
-            _attempt_toml(knob, shape, tmp_path)
+            _attempt_toml(knob, value, tmp_path)
         elif door == "confset":
-            _attempt_conf_set(knob, shape)
+            _attempt_conf_set(knob, value)
         else:
-            _attempt_sql_set(knob, shape)
+            _attempt_sql_set(knob, value)
     except BaseException as error:
         assert expected is not None
         assert type(error) is expected
-        assert MARK not in "".join(traceback.format_exception(error))
+        rendered = "".join(traceback.format_exception(error))
+        assert MARK not in rendered
+        assert "***" in rendered
     else:
         assert expected is None

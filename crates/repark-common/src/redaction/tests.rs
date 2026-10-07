@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, PoisonError};
 
 use super::{
     column_name_is_secret_shaped, mask_registered_values, mask_url_userinfo,
@@ -736,7 +736,7 @@ fn a_bare_login_password_holding_an_at_and_a_paren_masks_to_the_last_host() {
 fn registered_config_values_mask_every_shape_and_plain_values_stay_out() {
     let _held = REGISTRY_TEST_LOCK
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+        .unwrap_or_else(PoisonError::into_inner);
     let jdbc = "jdbc:postgresql://h/db?user=u&password=ShapePw1001";
     let dsn = "host=h user=u password=ShapePw1002";
     let odbc = "Driver=x;Server=h;Uid=u;Pwd=ShapePw1003;";
@@ -759,7 +759,7 @@ fn registered_config_values_mask_every_shape_and_plain_values_stay_out() {
 fn unregistered_text_without_credentials_is_byte_identical() {
     let _held = REGISTRY_TEST_LOCK
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+        .unwrap_or_else(PoisonError::into_inner);
     let message = "invalid DataFusion session config 'datafusion.execution.batch_size' = \
                    '4096x': Error parsing '4096x' as usize";
     assert_eq!(mask_registered_values(message), message);
@@ -769,7 +769,7 @@ fn unregistered_text_without_credentials_is_byte_identical() {
 fn the_registry_holds_256_values_and_evicts_the_oldest() {
     let _held = REGISTRY_TEST_LOCK
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+        .unwrap_or_else(PoisonError::into_inner);
     let oldest = "jdbc:postgresql://h/db?user=evict001&password=EvictPw001";
     register_config_value(oldest);
     for index in 2..=257 {

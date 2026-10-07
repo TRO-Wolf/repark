@@ -1,5 +1,6 @@
 use std::collections::{HashMap, VecDeque};
-use std::sync::Mutex;
+use std::hash::BuildHasher;
+use std::sync::{Mutex, PoisonError};
 
 pub const REDACTED: &str = "***";
 
@@ -14,7 +15,7 @@ pub fn register_config_value(value: &str) {
     }
     let mut stored = REGISTERED_CONFIG_VALUES
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+        .unwrap_or_else(PoisonError::into_inner);
     if stored.iter().any(|(known, _)| known == value) {
         return;
     }
@@ -24,7 +25,7 @@ pub fn register_config_value(value: &str) {
     stored.push_back((value.to_string(), masked));
 }
 
-pub fn register_config_map(config: &HashMap<String, String>) {
+pub fn register_config_map<S: BuildHasher>(config: &HashMap<String, String, S>) {
     for value in config.values() {
         register_config_value(value);
     }
@@ -34,7 +35,7 @@ pub fn register_config_map(config: &HashMap<String, String>) {
 pub fn mask_registered_values(text: &str) -> String {
     let stored = REGISTERED_CONFIG_VALUES
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+        .unwrap_or_else(PoisonError::into_inner);
     let mut masked = text.to_string();
     for (value, replacement) in stored.iter() {
         let quoted = format!("{value:?}");

@@ -71,9 +71,10 @@ pub fn mask_value_credentials(value: &str) -> PyResult<String> {
 }
 
 #[pyfunction]
-pub fn register_config_value(value: &str) {
+pub fn register_config_value(value: &str) -> PyResult<()> {
     fenced!("session_sources.register_config_value", {
         repark_core::redaction::register_config_value(value);
+        Ok(())
     })
 }
 
