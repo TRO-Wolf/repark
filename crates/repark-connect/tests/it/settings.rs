@@ -410,6 +410,14 @@ fn aliases_are_case_insensitive_and_conflicts_refuse() {
 }
 
 #[test]
+fn fetchsize_zero_is_the_session_batch_default() {
+    assert_eq!(one("fetchsize", "0", SPARK).batch_rows, None);
+    assert_eq!(one("FetchSize", "00", SPARK).batch_rows, None);
+    rejects("batch_rows", "0", SPARK, int(1, 2_147_483_647));
+    rejects("batch_rows", "0", TOML, int(1, 2_147_483_647));
+}
+
+#[test]
 fn alias_units_convert() {
     assert_eq!(
         one("socketTimeout", "5", SPARK).read_timeout.as_millis(),

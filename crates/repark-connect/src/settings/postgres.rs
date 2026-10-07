@@ -493,6 +493,16 @@ fn count(given: &mut Givens, key: &'static str, max: u64) -> Result<Option<NonZe
     Ok(value.and_then(|value| usize::try_from(value).ok().and_then(NonZeroUsize::new)))
 }
 
+fn batch_rows(given: &mut Givens) -> Result<Option<NonZeroUsize>> {
+    let session_default = matches!(given.get("batch_rows"), Some((Spelling::Key(name), value))
+        if name.eq_ignore_ascii_case("fetchsize") && !value.is_empty() && value.bytes().all(|byte| byte == b'0'));
+    if session_default {
+        given.remove("batch_rows");
+        return Ok(None);
+    }
+    count(given, "batch_rows", MAX_MILLIS)
+}
+
 impl PostgresSettings {
     #[allow(clippy::missing_errors_doc)]
     pub fn from_props(props: &BTreeMap<String, String>, door: SettingsDoor) -> Result<Self> {
@@ -530,7 +540,7 @@ impl PostgresSettings {
             read_timeout: millis(&mut given, "read_timeout_ms", 0, 60_000)?,
             query_timeout: Some(query_timeout).filter(|timeout| !timeout.is_zero()),
             lock_timeout: millis(&mut given, "lock_timeout_ms", 0, 10_000)?,
-            batch_rows: count(&mut given, "batch_rows", MAX_MILLIS)?,
+            batch_rows: batch_rows(&mut given)?,
             prefer_timestamp_ntz: boolean(&mut given, "prefer_timestamp_ntz", false)?,
             pushdown_predicate: boolean(&mut given, "pushdown_predicate", true)?,
             pool_max_size: count(&mut given, "pool_max_size", 64)?.map_or(4, NonZeroUsize::get),
