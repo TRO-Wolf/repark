@@ -666,3 +666,40 @@ def test_scrub_exception_returns_a_masked_stand_in_when_the_walk_raises() -> Non
     assert "http://u:***@" in str(scrubbed)
     assert USERINFO not in _formatted(scrubbed)
     assert scrubbed.__traceback__ is original.__traceback__
+
+
+class _UrlNote:
+    def __str__(self) -> str:
+        return "object note " + SECRET_URL
+
+
+class _RefusingNote:
+    def __str__(self) -> str:
+        raise RuntimeError("str refuses")
+
+
+def _with_notes(notes: object) -> BaseException:
+    error = ValueError("plain")
+    error.__notes__ = notes
+    return error
+
+
+@pytest.mark.parametrize(
+    ("notes", "expected"),
+    [
+        ([_UrlNote()], ["object note http://u:***@127.0.0.1:9/x"]),
+        ([b"bytes note " + SECRET_URL.encode()], ["b'bytes note http://u:***@127.0.0.1:9/x'"]),
+        ("string notes " + SECRET_URL, "string notes http://u:***@127.0.0.1:9/x"),
+        ([_RefusingNote(), "at " + SECRET_URL], ["_RefusingNote", "at http://u:***@127.0.0.1:9/x"]),
+    ],
+    ids=["object", "bytes", "str_notes", "refusing_str"],
+)
+def test_scrub_exception_masks_non_str_note_carriers(notes: object, expected: object) -> None:
+    original = _raised(lambda: _with_notes(notes))
+    assert USERINFO in _formatted(original)
+    scrubbed = scrub_exception(original)
+    assert scrubbed is not original
+    assert type(scrubbed) is ValueError
+    assert scrubbed.__notes__ == expected
+    assert USERINFO not in _formatted(scrubbed)
+    assert original.__notes__ is notes

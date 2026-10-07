@@ -133,18 +133,32 @@ def _link_text_changes(link: BaseException, mask: Callable[[str], str]) -> bool:
             return True
     if isinstance(link, BaseExceptionGroup) and mask(link.message) != link.message:
         return True
-    notes = _link_notes(link) or []
-    if any(isinstance(note, str) and mask(note) != note for note in notes):
+    notes = _link_notes(link)
+    if isinstance(notes, str):
+        if mask(notes) != notes:
+            return True
+    elif notes is not None and any(mask(text) != text for text in map(_note_text, notes)):
         return True
     return any(isinstance(item, str) and mask(item) != item for item in link.args)
 
 
-def _link_notes(link: BaseException) -> list[object] | None:
+def _link_notes(link: BaseException) -> list[object] | str | None:
     try:
         notes = getattr(link, "__notes__", None)
     except Exception:
         return None
+    if isinstance(notes, str):
+        return notes
     return list(notes) if isinstance(notes, list | tuple) else None
+
+
+def _note_text(note: object) -> str:
+    if isinstance(note, str):
+        return note
+    try:
+        return str(note)
+    except Exception:
+        return type(note).__name__
 
 
 def _copy_link(link: BaseException, mask: Callable[[str], str]) -> BaseException:
@@ -236,7 +250,7 @@ def _mask_notes(
     notes = _link_notes(link)
     if notes is None:
         return fresh
-    masked = [mask(note) if isinstance(note, str) else note for note in notes]
+    masked = mask(notes) if isinstance(notes, str) else [mask(_note_text(note)) for note in notes]
     try:
         fresh.__notes__ = masked
     except Exception:

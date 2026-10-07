@@ -5321,6 +5321,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `__context__` None; direct cells hold `scrub_exception` on a surrogate message and an `OSError`
   filename, `scrub_user_failure`, a clean surrogate message's identity, the three mask entry points,
   and the masked stand-in when the walk itself raises. pins: source-url-redact-1/C-082
+  **Fold 5 K2:** an object note, a bytes note, a `str` `__notes__` and a note whose `__str__` raises
+  are masked on the copy (the last as its type name). pins: source-url-redact-1/C-083
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default
