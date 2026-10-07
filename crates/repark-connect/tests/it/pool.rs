@@ -95,13 +95,13 @@ async fn checkout_error<C: Connect>(pool: &Arc<QueryPool<C>>) -> ConnectError {
 #[tokio::test]
 async fn a_clean_release_is_reused_by_the_next_checkout() {
     let (pool, opened) = fake_pool(2, 1000, 60_000);
-    pool.checkout().await.expect("first").release_clean();
+    pool.checkout().await.expect("first").release_clean().await;
     assert_eq!(pool.idle_count(), 1);
     let again: PooledClient<FakeConnector> = pool.checkout().await.expect("reuse");
     assert_eq!(opened.count(), 1);
     assert_eq!(pool.idle_count(), 0);
     assert!(!again.is_closed());
-    again.release_clean();
+    again.release_clean().await;
     tokio::task::yield_now().await;
     assert!(!opened.finished(0), "a clean release keeps the connection");
 }
@@ -113,7 +113,7 @@ async fn a_lease_dropped_before_release_aborts_its_connection() {
     tokio::time::sleep(Duration::from_millis(20)).await;
     assert!(opened.finished(0), "the connection task was aborted");
     assert_eq!(pool.idle_count(), 0);
-    pool.checkout().await.expect("fresh").release_clean();
+    pool.checkout().await.expect("fresh").release_clean().await;
     assert_eq!(opened.count(), 2, "the dropped connection was not reused");
 }
 
@@ -133,19 +133,20 @@ async fn checkout_beyond_pool_max_size_is_pool_exhausted() {
         "{error}"
     );
     assert_eq!(Error::from(error).exception_class(), ErrorClass::Base);
-    held.release_clean();
+    held.release_clean().await;
     pool.checkout()
         .await
         .expect("the permit came back")
-        .release_clean();
+        .release_clean()
+        .await;
 }
 
 #[tokio::test]
 async fn closed_and_idle_expired_connections_are_never_reused() {
     let (pool, opened) = fake_pool(2, 1000, 50);
-    pool.checkout().await.expect("first").release_clean();
+    pool.checkout().await.expect("first").release_clean().await;
     opened.close(0);
-    pool.checkout().await.expect("second").release_clean();
+    pool.checkout().await.expect("second").release_clean().await;
     assert_eq!(opened.count(), 2, "a closed connection is not reused");
     assert_eq!(pool.idle_count(), 1);
     tokio::time::sleep(Duration::from_millis(80)).await;
@@ -153,7 +154,7 @@ async fn closed_and_idle_expired_connections_are_never_reused() {
     assert_eq!(opened.count(), 3, "an idle-expired connection is reaped");
     assert_eq!(pool.idle_count(), 0);
     opened.close(2);
-    third.release_clean();
+    third.release_clean().await;
     assert_eq!(
         pool.idle_count(),
         0,

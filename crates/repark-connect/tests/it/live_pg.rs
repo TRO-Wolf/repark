@@ -13,16 +13,17 @@ use repark_connect::{
 };
 use tokio_postgres::{Client, NoTls};
 
-const LIVE: &str = "live: make pg-up, REPARK_PG_URL";
-const SERIES: &str = "SELECT pg_catalog.generate_series(1, 200000000)::pg_catalog.int8 AS g";
+pub(crate) const LIVE: &str = "live: make pg-up, REPARK_PG_URL";
+pub(crate) const SERIES: &str =
+    "SELECT pg_catalog.generate_series(1, 200000000)::pg_catalog.int8 AS g";
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
-fn url() -> String {
+pub(crate) fn url() -> String {
     std::env::var("REPARK_PG_URL").expect("live cells need REPARK_PG_URL: run make pg-up")
 }
 
-fn tag() -> String {
+pub(crate) fn tag() -> String {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("clock")
@@ -31,7 +32,7 @@ fn tag() -> String {
     format!("{:08x}{count:02x}", nanos ^ std::process::id())
 }
 
-async fn admin() -> Client {
+pub(crate) async fn admin() -> Client {
     let (client, connection) = tokio_postgres::connect(&url(), NoTls)
         .await
         .expect("the fixture connects");
@@ -41,14 +42,14 @@ async fn admin() -> Client {
     client
 }
 
-struct Cell {
-    admin: Client,
-    schema: String,
-    app: String,
+pub(crate) struct Cell {
+    pub(crate) admin: Client,
+    pub(crate) schema: String,
+    pub(crate) app: String,
 }
 
 impl Cell {
-    async fn open() -> Cell {
+    pub(crate) async fn open() -> Cell {
         let tag = tag();
         let cell = Cell {
             admin: admin().await,
@@ -59,11 +60,11 @@ impl Cell {
         cell
     }
 
-    async fn sql(&self, sql: &str) {
+    pub(crate) async fn sql(&self, sql: &str) {
         self.admin.batch_execute(sql).await.expect(sql);
     }
 
-    async fn count(&self, sql: &str) -> i64 {
+    pub(crate) async fn count(&self, sql: &str) -> i64 {
         self.admin
             .query_one(sql, &[])
             .await
@@ -71,19 +72,19 @@ impl Cell {
             .get::<_, i64>(0)
     }
 
-    async fn backends(&self) -> i64 {
+    pub(crate) async fn backends(&self) -> i64 {
         let sql = "SELECT count(*) FROM pg_stat_activity WHERE application_name = $1";
         let row = self.admin.query_one(sql, &[&self.app]).await.expect(sql);
         row.get(0)
     }
 
-    fn relation(&self, table: &str) -> ScanSource {
+    pub(crate) fn relation(&self, table: &str) -> ScanSource {
         let schema = PgIdent::new(self.schema.as_str()).expect("schema");
         let table = PgIdent::new(table).expect("table");
         ScanSource::Relation(QualifiedRelation::new(schema, table))
     }
 
-    fn settings(&self, extra: &[(&str, &str)]) -> PostgresSettings {
+    pub(crate) fn settings(&self, extra: &[(&str, &str)]) -> PostgresSettings {
         let mut props = BTreeMap::from([
             ("url".to_string(), url()),
             ("sslmode".to_string(), "disable".to_string()),
@@ -96,37 +97,40 @@ impl Cell {
         PostgresSettings::from_props(&props, SettingsDoor::ReparkToml).expect("live settings")
     }
 
-    async fn close(self) {
+    pub(crate) async fn close(self) {
         self.sql(&format!("DROP SCHEMA {} CASCADE", self.schema))
             .await;
     }
 }
 
-fn pool(settings: &PostgresSettings) -> Arc<PostgresPool> {
+pub(crate) fn pool(settings: &PostgresSettings) -> Arc<PostgresPool> {
     let connector = PostgresConnector::new(settings).expect("connector");
     QueryPool::new(connector, PoolLimits::from_settings(settings))
 }
 
-struct Reader {
-    pool: Arc<PostgresPool>,
-    options: ScanOptions,
+pub(crate) struct Reader {
+    pub(crate) pool: Arc<PostgresPool>,
+    pub(crate) options: ScanOptions,
 }
 
 impl Reader {
-    fn new(settings: &PostgresSettings) -> Reader {
+    pub(crate) fn new(settings: &PostgresSettings) -> Reader {
         Reader {
             pool: pool(settings),
             options: ScanOptions::from_settings(settings),
         }
     }
 
-    async fn resolve(&self, source: ScanSource) -> Result<Arc<ResolvedSource>, ConnectError> {
+    pub(crate) async fn resolve(
+        &self,
+        source: ScanSource,
+    ) -> Result<Arc<ResolvedSource>, ConnectError> {
         discover(&self.pool, &source, self.options.read_timeout)
             .await
             .map(Arc::new)
     }
 
-    fn open(
+    pub(crate) fn open(
         &self,
         request: ScanRequest,
     ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<RecordBatch, ConnectError>> + Send>>
@@ -134,17 +138,20 @@ impl Reader {
         Box::pin(scan(Arc::clone(&self.pool), request, self.options))
     }
 
-    async fn read(&self, request: ScanRequest) -> Result<Vec<RecordBatch>, ConnectError> {
+    pub(crate) async fn read(
+        &self,
+        request: ScanRequest,
+    ) -> Result<Vec<RecordBatch>, ConnectError> {
         self.open(request).try_collect().await
     }
 
-    async fn read_query(&self, sql: &str) -> Result<Vec<RecordBatch>, ConnectError> {
+    pub(crate) async fn read_query(&self, sql: &str) -> Result<Vec<RecordBatch>, ConnectError> {
         let resolved = self.resolve(ScanSource::query(sql)).await?;
         self.read(ScanRequest::new(resolved)).await
     }
 }
 
-fn int32s(batches: &[RecordBatch]) -> Vec<Option<i32>> {
+pub(crate) fn int32s(batches: &[RecordBatch]) -> Vec<Option<i32>> {
     batches
         .iter()
         .flat_map(|batch| batch.column(0).as_primitive::<Int32Type>().iter())
@@ -607,7 +614,7 @@ async fn server_bytes_are_the_wire_anchors() {
         let field = &stream[25..25 + usize::try_from(length).expect("not NULL")];
         assert_eq!(field, unhex(anchor), "{literal}");
     }
-    pooled.release_clean();
+    pooled.release_clean().await;
     cell.close().await;
 }
 

@@ -10,7 +10,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task::{AbortHandle, JoinHandle};
 use tokio_postgres::config::SslMode as WireSslMode;
-use tokio_postgres::{Client, Config, NoTls};
+use tokio_postgres::{Client, Config, NoTls, SimpleQueryMessage};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
 use crate::error::{ConnectError, Result};
@@ -58,6 +58,10 @@ pub trait PoolConnection: Send + 'static {
     fn is_closed(&self) -> bool;
 
     fn abort_handle(&self) -> AbortHandle;
+
+    fn reset(&self) -> impl Future<Output = bool> + Send {
+        std::future::ready(true)
+    }
 }
 
 pub trait Connect: Send + Sync + 'static {
@@ -180,7 +184,10 @@ pub struct PooledClient<C: Connect> {
 }
 
 impl<C: Connect> PooledClient<C> {
-    pub fn release_clean(self) {
+    pub async fn release_clean(self) {
+        if !self.connection.reset().await {
+            return;
+        }
         let PooledClient {
             mut lease,
             connection,
@@ -198,13 +205,75 @@ impl<C: Connect> Deref for PooledClient<C> {
     }
 }
 
+pub const RESET_SESSION: &str = "CLOSE ALL; SET SESSION AUTHORIZATION DEFAULT; RESET ALL; \
+     UNLISTEN *; SELECT pg_catalog.pg_advisory_unlock_all(); DISCARD PLANS; DISCARD TEMP; \
+     DISCARD SEQUENCES";
+
+struct SessionPins {
+    pins: Vec<(&'static str, String)>,
+    check: String,
+    timeout: Duration,
+}
+
+impl SessionPins {
+    fn new(settings: &PostgresSettings) -> Self {
+        let pins = session_pins(settings);
+        let names: Vec<String> = pins.iter().map(|(key, _)| format!("'{key}'")).collect();
+        let check = format!(
+            "SELECT name, setting, \
+             pg_catalog.statement_timestamp() = pg_catalog.transaction_timestamp() \
+             FROM pg_catalog.pg_settings WHERE name IN ({})",
+            names.join(", ")
+        );
+        Self {
+            pins,
+            check,
+            timeout: settings.read_timeout,
+        }
+    }
+
+    fn hold(&self, shown: &[SimpleQueryMessage]) -> bool {
+        let rows: Vec<(&str, &str, &str)> = shown
+            .iter()
+            .filter_map(|message| match message {
+                SimpleQueryMessage::Row(row) => Some((
+                    row.try_get(0).ok()??,
+                    row.try_get(1).ok()??,
+                    row.try_get(2).ok()??,
+                )),
+                _ => None,
+            })
+            .collect();
+        rows.len() == self.pins.len()
+            && rows.iter().all(|(_, _, autocommit)| *autocommit == "t")
+            && self.pins.iter().all(|(key, value)| {
+                rows.iter().any(|(name, setting, _)| {
+                    name.eq_ignore_ascii_case(key) && as_set(key, setting) == value
+                })
+            })
+    }
+}
+
+fn as_set<'a>(key: &str, setting: &'a str) -> &'a str {
+    match (key, setting) {
+        ("DateStyle", _) => setting.split(',').next().unwrap_or_default(),
+        ("search_path", "\"\"") => "",
+        _ => setting,
+    }
+}
+
 pub struct PgConnection {
     client: Client,
     task: JoinHandle<()>,
+    session: Arc<SessionPins>,
 }
 
 impl PgConnection {
-    fn spawn<S, T>(client: Client, connection: tokio_postgres::Connection<S, T>) -> Self
+    fn spawn<S, T>(
+        client: Client,
+        connection: tokio_postgres::Connection<S, T>,
+        session: Arc<SessionPins>,
+    ) -> Self
     where
         S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
         T: AsyncRead + AsyncWrite + Unpin + Send + 'static,
@@ -217,7 +286,11 @@ impl PgConnection {
         let task = tokio::spawn(async move {
             let _ = connection.await;
         });
-        Self { client, task }
+        Self {
+            client,
+            task,
+            session,
+        }
     }
 
     #[must_use]
@@ -234,6 +307,39 @@ impl PoolConnection for PgConnection {
     fn abort_handle(&self) -> AbortHandle {
         self.task.abort_handle()
     }
+
+    async fn reset(&self) -> bool {
+        let session = &self.session;
+        let reset = async {
+            self.client.batch_execute(RESET_SESSION).await?;
+            self.client.simple_query(&session.check).await
+        };
+        match tokio::time::timeout(session.timeout, reset).await {
+            Ok(Ok(shown)) => session.hold(&shown),
+            _ => false,
+        }
+    }
+}
+
+fn session_pins(settings: &PostgresSettings) -> Vec<(&'static str, String)> {
+    let millis = |limit: Duration| limit.as_millis().to_string();
+    vec![
+        ("client_encoding", "UTF8".to_string()),
+        ("DateStyle", "ISO".to_string()),
+        ("IntervalStyle", "postgres".to_string()),
+        ("TimeZone", "UTC".to_string()),
+        ("search_path", String::new()),
+        ("default_transaction_read_only", "on".to_string()),
+        ("lock_timeout", millis(settings.lock_timeout)),
+        (
+            "statement_timeout",
+            millis(settings.query_timeout.unwrap_or_default()),
+        ),
+        (
+            "idle_in_transaction_session_timeout",
+            millis(settings.read_timeout),
+        ),
+    ]
 }
 
 #[must_use]
@@ -242,16 +348,10 @@ pub fn query_config(settings: &PostgresSettings) -> Config {
         SslMode::Disable => WireSslMode::Disable,
         _ => WireSslMode::Require,
     };
-    let options = format!(
-        "-c client_encoding=UTF8 -c DateStyle=ISO -c IntervalStyle=postgres -c TimeZone=UTC \
-         -c search_path= -c default_transaction_read_only=on -c lock_timeout={} \
-         -c statement_timeout={} -c idle_in_transaction_session_timeout={}",
-        settings.lock_timeout.as_millis(),
-        settings
-            .query_timeout
-            .map_or(0, |timeout| timeout.as_millis()),
-        settings.read_timeout.as_millis(),
-    );
+    let options: Vec<String> = session_pins(settings)
+        .iter()
+        .map(|(key, value)| format!("-c {key}={value}"))
+        .collect();
     let mut config = Config::new();
     config
         .host(&settings.host)
@@ -259,7 +359,7 @@ pub fn query_config(settings: &PostgresSettings) -> Config {
         .user(&settings.user)
         .dbname(&settings.database)
         .application_name(&settings.application_name)
-        .options(options)
+        .options(options.join(" "))
         .connect_timeout(settings.connect_timeout)
         .keepalives(true)
         .ssl_mode(wire_sslmode);
@@ -314,6 +414,7 @@ pub struct PostgresConnector {
     config: Config,
     tls: Option<MakeRustlsConnect>,
     connect_timeout: Duration,
+    session: Arc<SessionPins>,
 }
 
 impl PostgresConnector {
@@ -329,6 +430,7 @@ impl PostgresConnector {
             config: query_config(settings),
             tls,
             connect_timeout: settings.connect_timeout,
+            session: Arc::new(SessionPins::new(settings)),
         })
     }
 
@@ -336,13 +438,15 @@ impl PostgresConnector {
         let Some(tls) = &self.tls else {
             let connecting = self.config.connect(NoTls).await;
             let (client, connection) = connecting.map_err(|error| classify(&error, None))?;
-            return Ok(PgConnection::spawn(client, connection));
+            let session = Arc::clone(&self.session);
+            return Ok(PgConnection::spawn(client, connection, session));
         };
         let tracked = TrackedTls::new(tls.clone());
         let connecting = self.config.connect(tracked.clone()).await;
         let (client, connection) =
             connecting.map_err(|error| classify(&error, Some(tracked.handshake_attempted())))?;
-        Ok(PgConnection::spawn(client, connection))
+        let session = Arc::clone(&self.session);
+        Ok(PgConnection::spawn(client, connection, session))
     }
 }
 

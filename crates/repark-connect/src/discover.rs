@@ -235,7 +235,7 @@ pub async fn discover(
         ScanSource::Query(_) => query_columns(client, source, read_timeout).await?,
     };
     request(read_timeout, relation, client.batch_execute("COMMIT")).await?;
-    pooled.release_clean();
+    pooled.release_clean().await;
     Ok(ResolvedSource {
         source: source.clone(),
         columns,

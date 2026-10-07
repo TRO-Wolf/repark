@@ -366,7 +366,7 @@ impl Copying {
             let commit = pooled.client().batch_execute("COMMIT");
             request(read_timeout, relation.as_ref(), commit).await?;
         }
-        pooled.release_clean();
+        pooled.release_clean().await;
         Ok(())
     }
 }
