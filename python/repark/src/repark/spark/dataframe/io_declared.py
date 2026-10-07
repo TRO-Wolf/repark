@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from repark.errors import AnalysisException, PySparkNotImplementedError
+from repark.spark._secrets import mask_credentials
 from repark.spark.dataframe.streaming_batch import _raise_analysis
 
 if TYPE_CHECKING:
@@ -49,9 +50,9 @@ def _refuse_missing_row_tag() -> NoReturn:
 def _refuse_invalid_jdbc_mode(mode: str) -> NoReturn:
     """Raise Spark's ``INVALID_SAVE_MODE`` refusal for one JDBC write mode."""
     _raise_analysis(
-        _INVALID_SAVE_MODE_MESSAGE.format(mode=mode),
+        _INVALID_SAVE_MODE_MESSAGE.format(mode=mask_credentials(mode)),
         "INVALID_SAVE_MODE",
-        message_parameters={"mode": f'"{mode}"'},
+        message_parameters={"mode": f'"{mask_credentials(mode)}"'},
         sql_state="42000",
     )
 
@@ -228,7 +229,7 @@ def refuse_writer_save_format(writer: DataFrameWriter) -> NoReturn:
         _refuse("xml")
     shown = (writer._format or "")[:64]
     raise AnalysisException(
-        f"DATA_SOURCE_NOT_FOUND: Failed to find the data source: {shown!r}. "
+        f"DATA_SOURCE_NOT_FOUND: Failed to find the data source: {mask_credentials(shown)!r}. "
         "repark path writes support format('parquet'|'csv'|'json') via COPY TO "
         "(orc/other formats are not supported)."
     )

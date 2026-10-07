@@ -23,6 +23,7 @@ from repark.errors import (
     PySparkTypeError,
     PySparkValueError,
 )
+from repark.spark.catalog import DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
 from repark.spark.column import Column
 
 if TYPE_CHECKING:
@@ -97,6 +98,32 @@ def _refuse_profile_type() -> NoReturn:
         errorClass="VALUE_NOT_ALLOWED",
         messageParameters={"arg_name": "type", "allowed_values": str(["perf", "memory"])},
     )
+
+
+def register_auto_memory_catalog(session: ReparkSession) -> None:
+    """Auto-register the session-scoped ``spark_catalog`` memory catalog (R-AUTO-MEMCAT).
+
+    The ``duckdb.connect(":memory:")`` analogue: a bare ``builder.getOrCreate()`` gets a
+    working default catalog + ``default`` namespace so first-session bare-name flows
+    work with zero config. Data files live in a session-scoped temp warehouse removed on
+    :meth:`stop`; the catalog's table *metadata* is process-memory already. Registration
+    failure is non-fatal (warn + continue): a session without a default catalog is the
+    pre-existing behavior, not a broken session.
+    """
+    import tempfile
+
+    try:
+        tmpdir = tempfile.TemporaryDirectory(prefix="repark-spark-catalog-")
+        session.register_memory_catalog(DEFAULT_CATALOG_NAME, tmpdir.name)
+        session._alive_token["auto_catalog_warehouse"] = tmpdir
+        session.create_namespace(DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME)
+    except Exception as error:  # pragma: no cover
+        warnings.warn(
+            f"repark could not auto-register the default memory catalog: {error}; "
+            "register one explicitly (register_memory_catalog / spark.sql.catalog.*)",
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 def add_tag(session: ReparkSession, tag: str) -> None:

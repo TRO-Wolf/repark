@@ -4,10 +4,11 @@ use std::future::Future;
 use std::io;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use arrow::array::RecordBatch;
 use bytes::{Buf, Bytes};
+use datafusion::physical_plan::metrics::{Count, Time};
 use futures::{Stream, StreamExt, stream};
 use tokio_postgres::CopyOutStream;
 use tokio_postgres::types::ToSql;
@@ -78,6 +79,7 @@ pub struct ScanRequest {
     resolved: Arc<ResolvedSource>,
     projection: Vec<usize>,
     comparisons: Vec<Comparison>,
+    filters: Vec<String>,
     values: Vec<String>,
     limit: Option<u64>,
 }
@@ -96,6 +98,7 @@ impl ScanRequest {
             resolved,
             projection,
             comparisons: Vec::new(),
+            filters: Vec::new(),
             values: Vec::new(),
             limit: None,
         }
@@ -120,6 +123,20 @@ impl ScanRequest {
         self.comparisons.push(Comparison { column, op, slot });
         self.values.push(value);
         Some(self)
+    }
+
+    pub(crate) fn filter(mut self, sql: String, values: Vec<String>) -> Option<ScanRequest> {
+        if self.values.len() + values.len() > usize::from(MAX_PARAM_SLOTS) {
+            return None;
+        }
+        self.filters.push(sql);
+        self.values.extend(values);
+        Some(self)
+    }
+
+    #[must_use]
+    pub fn bound_values(&self) -> usize {
+        self.values.len()
     }
 
     #[must_use]
@@ -160,6 +177,7 @@ impl ScanRequest {
                     column.cast.unconstrained()
                 ))
             })
+            .chain(self.filters.iter().cloned())
             .collect::<Vec<_>>();
         if !predicates.is_empty() {
             copy.push_str(" WHERE ");
@@ -170,11 +188,10 @@ impl ScanRequest {
             copy.push_str(&limit.to_string());
         }
         copy.push_str(") TO STDOUT (FORMAT BINARY)");
-        let settings = self
-            .comparisons
-            .iter()
+        let settings = (0..MAX_PARAM_SLOTS)
+            .filter_map(ParamSlot::new)
             .zip(&self.values)
-            .map(|(comparison, value)| (comparison.slot.setting_name(), value.clone()))
+            .map(|(slot, value)| (slot.setting_name(), value.clone()))
             .collect();
         ScanStatement { copy, settings }
     }
@@ -215,6 +232,13 @@ impl ScanStatement {
             .join(", ");
         Some(format!("SELECT {calls}"))
     }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ScanMeter {
+    pub bytes_received: Count,
+    pub time_to_first_byte: Time,
+    pub decode: Time,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -292,6 +316,8 @@ struct Copying {
     in_transaction: bool,
     read_timeout: Duration,
     relation: Option<QualifiedRelation>,
+    meter: ScanMeter,
+    opened: Option<Instant>,
 }
 
 impl Copying {
@@ -299,7 +325,9 @@ impl Copying {
         pool: &Arc<PostgresPool>,
         scan: &ScanRequest,
         options: ScanOptions,
+        meter: ScanMeter,
     ) -> Result<Self> {
+        let opened = Some(Instant::now());
         let statement = scan.statement();
         let decoder = scan.decoder(options.batch)?;
         let relation = scan.relation().cloned();
@@ -335,6 +363,8 @@ impl Copying {
             in_transaction,
             read_timeout: timeout,
             relation,
+            meter,
+            opened,
         })
     }
 
@@ -342,7 +372,9 @@ impl Copying {
         loop {
             if !self.pending.is_empty() {
                 let mut rest: &[u8] = &self.pending;
+                let timer = self.meter.decode.timer();
                 let decoded = self.decoder.decode(&mut rest);
+                timer.done();
                 let consumed = self.pending.len() - rest.len();
                 self.pending.advance(consumed);
                 if let Some(batch) = decoded? {
@@ -356,6 +388,10 @@ impl Copying {
                 self.decoder.finish()?;
                 return Ok(None);
             };
+            if let Some(opened) = self.opened.take() {
+                self.meter.time_to_first_byte.add_elapsed(opened);
+            }
+            self.meter.bytes_received.add(chunk.len());
             self.pending = chunk;
         }
     }
@@ -384,6 +420,7 @@ enum Scan {
         pool: Arc<PostgresPool>,
         request: ScanRequest,
         options: ScanOptions,
+        meter: ScanMeter,
     },
     Copying(Box<Copying>),
 }
@@ -395,7 +432,8 @@ impl Scan {
                 pool,
                 request,
                 options,
-            } => Box::new(Copying::open(&pool, &request, options).await?),
+                meter,
+            } => Box::new(Copying::open(&pool, &request, options, meter).await?),
             Scan::Copying(copying) => copying,
         };
         let Some(batch) = copying.next_batch().await? else {
@@ -411,10 +449,20 @@ pub fn scan(
     request: ScanRequest,
     options: ScanOptions,
 ) -> impl Stream<Item = Result<RecordBatch>> + Send + 'static {
+    scan_metered(pool, request, options, ScanMeter::default())
+}
+
+pub fn scan_metered(
+    pool: Arc<PostgresPool>,
+    request: ScanRequest,
+    options: ScanOptions,
+    meter: ScanMeter,
+) -> impl Stream<Item = Result<RecordBatch>> + Send + 'static {
     let start = Scan::Pending {
         pool,
         request,
         options,
+        meter,
     };
     stream::try_unfold(start, Scan::step)
 }

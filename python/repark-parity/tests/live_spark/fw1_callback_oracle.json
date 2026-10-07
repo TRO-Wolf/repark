@@ -1,0 +1,88 @@
+{
+ "cells": [
+  {
+   "cell": "FW1-foreach",
+   "error": {
+    "class": "py4j.protocol.Py4JJavaError",
+    "context": null,
+    "error_class": null,
+    "has_get_error_class": false,
+    "is_original": false,
+    "java_chain": [
+     "org.apache.spark.SparkException",
+     "org.apache.spark.api.python.PythonException"
+    ],
+    "message_head": "An error occurred while calling z:org.apache.spark.api.python.PythonRDD.collectAndServe.\n: org.apache.spark.SparkException",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "python_cause_chain": [],
+    "secret_in_repr": false,
+    "secret_in_str": true,
+    "user_lines": [
+     "ValueError: fetch failed for http://u:$SECRET@h/x"
+    ]
+   }
+  },
+  {
+   "cell": "FW1-foreachPartition",
+   "error": {
+    "class": "py4j.protocol.Py4JJavaError",
+    "context": null,
+    "error_class": null,
+    "has_get_error_class": false,
+    "is_original": false,
+    "java_chain": [
+     "org.apache.spark.SparkException",
+     "org.apache.spark.api.python.PythonException"
+    ],
+    "message_head": "An error occurred while calling z:org.apache.spark.api.python.PythonRDD.collectAndServe.\n: org.apache.spark.SparkException",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "python_cause_chain": [],
+    "secret_in_repr": false,
+    "secret_in_str": true,
+    "user_lines": [
+     "ValueError: fetch failed for http://u:$SECRET@h/x"
+    ]
+   }
+  },
+  {
+   "cell": "FW1-transform",
+   "error": {
+    "class": "builtins.ValueError",
+    "context": null,
+    "error_class": null,
+    "has_get_error_class": false,
+    "is_original": true,
+    "java_chain": [],
+    "message_head": "fetch failed for http://u:$SECRET@h/x",
+    "mro": [
+     "ValueError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "python_cause_chain": [],
+    "secret_in_repr": true,
+    "secret_in_str": true,
+    "user_lines": [
+     "fetch failed for http://u:$SECRET@h/x"
+    ]
+   }
+  }
+ ],
+ "date": "2026-10-07",
+ "master": "local[1]",
+ "message": "fetch failed for http://u:$SECRET@h/x",
+ "spark": "4.1.2"
+}

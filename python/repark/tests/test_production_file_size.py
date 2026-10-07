@@ -182,7 +182,7 @@ EXPECTED_SYMBOL_HASHES = {
         "1d2e344dee78ff621e20d878701fd3da50599e3c4879c76485ef9dc93a71f9ff"
     ),
     "_forward_datafusion_conf": (
-        "0924ab2fdc14786580cc1584a74674c49e292574b415a475525437771cfcfa3c"
+        "a02937da7a9d8c9f987cdec538cc27eb124488c579e9880901443369b3f73e1f"
     ),
     "_infer_arrow_type_from_python_sample": (
         "03a76e73c5c2a06d49feb91028fd9ee2bf68b22cf12716700fbaaa741a38f157"
@@ -249,7 +249,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_parse_create_dataframe_schema": (
         "21e22aa6258c57cfaa589197c112e2d76e73d8d9debfe604ae2f0f45b3dba75f"
     ),
-    "_parse_jdbc_int_option": ("3c2424b29ab3021d9d50d77b7a894ca61008974ad896a9d5705240a9807c4ebc"),
+    "_parse_jdbc_int_option": ("f648900e08ca509266221e8f4bdd82eaa6dbfd19b1e4db9cf68e5d3705b32a78"),
     "_parse_schema_ddl": ("f85655a15284092b9ba36ffad12139d4a802702274775be232aa769b1a37410f"),
     "_parse_simple_sql_udf_call": (
         "1487ad6ad0fd8406e55a935574d1af0dc7d65f3e808e6bbf55b0a1ee0e65d3ba"
@@ -354,13 +354,13 @@ EXPECTED_SYMBOL_HASHES = {
     "_sql_udf_arg_is_simple": ("db0b84f0ee3d3410bbb660ac228ab85a8be365f5d17f4ba9623fc7d7ff982bce"),
     "_sql_udf_call_match_key": ("e5d8292341262271b9099a26080982055c0ca1a77274f75f738e458a1e045e99"),
     "_sql_udf_clean_exception": (
-        "3d2e48861e6677d9508e4a253bd812e655169979a54584ac69d0c8c15d686499"
+        "603a9c7f7ffcdf5b6747c2022c4d07a28d6dfaf7ee1a843eba7c91a2ef8d8054"
     ),
     "_sql_udf_in_nested_subquery": (
         "a8d7beee8e9f9f7a07b3190b75eb0f125487a1ea2a97184ea27e2ea3496585ef"
     ),
     "_sql_udf_public_error_text": (
-        "cc7eb644d47bcbeb4e350752f2883726e663bb28af44f9565efb1ca813aef4fc"
+        "ac881fd5c6a3e9321afc6e918c48df22a2674ac15327e25a6df18dd097cba4c3"
     ),
     "_sql_where_residual_base_projections": (
         "3ed9fe9841bf681c43959aa2b613358706133ae296227c650684a8dd0922d0e8"

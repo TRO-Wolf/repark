@@ -1,7 +1,11 @@
+use std::sync::{Mutex, PoisonError};
+
 use super::{
-    column_name_is_secret_shaped, mask_url_userinfo, mask_value_credentials, prop_key_is_secret,
-    redact_value,
+    column_name_is_secret_shaped, mask_registered_values, mask_url_userinfo,
+    mask_value_credentials, prop_key_is_secret, redact_value, register_config_value,
 };
+
+static REGISTRY_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 fn masked(value: &str) -> String {
     mask_value_credentials(value)
@@ -726,4 +730,242 @@ fn a_bare_login_password_holding_an_at_and_a_paren_masks_to_the_last_host() {
         "alice:QZX338633|-@ß(：KQV@db.example.com:5432",
         "alice:***@db.example.com:5432",
     )]);
+}
+
+#[test]
+fn registered_config_values_mask_every_shape_and_plain_values_stay_out() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let jdbc = "jdbc:postgresql://h/db?user=u&password=ShapePw1001";
+    let dsn = "host=h user=u password=ShapePw1002";
+    let odbc = "Driver=x;Server=h;Uid=u;Pwd=ShapePw1003;";
+    for value in [jdbc, dsn, odbc] {
+        register_config_value(value);
+    }
+    for value in [jdbc, dsn, odbc] {
+        assert_eq!(mask_registered_values(value), mask_value_credentials(value));
+    }
+    let quoted = format!("planning failed (got {jdbc:?})");
+    let masked_quoted = mask_registered_values(&quoted);
+    assert!(!masked_quoted.contains("ShapePw1001"));
+    assert!(masked_quoted.contains('"'));
+    let plain = "4096";
+    register_config_value(plain);
+    assert_eq!(mask_registered_values(plain), plain);
+}
+
+#[test]
+fn unregistered_text_without_credentials_is_byte_identical() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let message = "invalid DataFusion session config 'datafusion.execution.batch_size' = \
+                   '4096x': Error parsing '4096x' as usize";
+    assert_eq!(mask_registered_values(message), message);
+}
+
+#[test]
+fn overlapping_registered_values_mask_longest_first() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    register_config_value("password=S3");
+    let long = "host=h user=u password=S3cr3tPw";
+    register_config_value(long);
+    let message =
+        format!("config `repark.sql.maxArrayElements` must be a positive integer (got {long:?})");
+    let masked = mask_registered_values(&message);
+    assert!(!masked.contains("S3cr3tPw"), "{masked}");
+    assert!(!masked.contains("cr3tPw"), "{masked}");
+    let nested = "password=S3 password=S3cr3tPw";
+    register_config_value(nested);
+    let nested_message =
+        format!("config `repark.sql.maxArrayElements` must be a positive integer (got {nested:?})");
+    let nested_masked = mask_registered_values(&nested_message);
+    assert!(!nested_masked.contains("S3cr3tPw"), "{nested_masked}");
+}
+
+#[test]
+fn re_registering_a_value_refreshes_its_recency() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let dsn = "host=h user=u password=S3cr3tPw";
+    register_config_value(dsn);
+    for index in 0..255 {
+        register_config_value(&format!("host=h user=u password=FillerPw{index:03}"));
+    }
+    register_config_value(dsn);
+    register_config_value("host=h user=u password=FreshPw001");
+    let masked = mask_registered_values(dsn);
+    assert!(!masked.contains("S3cr3tPw"), "{masked}");
+}
+
+#[test]
+fn registered_values_mask_only_whole_token_occurrences() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    register_config_value("pw=a");
+    let unrelated = "Cannot cast string 'cpw=abc' to int";
+    assert_eq!(mask_registered_values(unrelated), unrelated);
+    let quoted = "config `repark.sql.maxArrayElements` must be a positive integer (got 'pw=a')";
+    let masked = mask_registered_values(quoted);
+    assert!(!masked.contains("pw=a"), "{masked}");
+    assert!(masked.contains("pw=***"), "{masked}");
+}
+
+#[test]
+fn a_debug_escaped_value_masks_through_its_quoted_inner_form() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let value = "Driver=x;Uid=u;Pwd=S3cr3tPw\\9;";
+    register_config_value(value);
+    let message =
+        format!("config `repark.sql.maxArrayElements` must be a positive integer (got {value:?})");
+    assert!(!message.contains(value));
+    let masked = mask_registered_values(&message);
+    assert!(!masked.contains("S3cr3tPw"), "{masked}");
+}
+
+#[test]
+fn the_registry_holds_256_values_and_evicts_the_oldest() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let oldest = "jdbc:postgresql://h/db?user=evict001&password=EvictPw001";
+    register_config_value(oldest);
+    for index in 2..=257 {
+        register_config_value(&format!(
+            "jdbc:postgresql://h/db?user=evict{index:03}&password=EvictPw{index:03}"
+        ));
+    }
+    assert_eq!(mask_registered_values(oldest), oldest);
+    let newest = "jdbc:postgresql://h/db?user=evict257&password=EvictPw257";
+    assert_eq!(
+        mask_registered_values(newest),
+        mask_value_credentials(newest)
+    );
+}
+
+#[test]
+fn registered_values_mask_at_punctuation_boundaries() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let jdbc = "jdbc:postgresql://h/db?user=u&password=EdgePw01";
+    let dsn = "host=h user=u password=EdgePw02";
+    let odbc = "Driver=x;Uid=u;Pwd=EdgePw03;";
+    register_config_value(jdbc);
+    register_config_value(dsn);
+    register_config_value(odbc);
+    let cases = [
+        format!("invalid options: url={jdbc}"),
+        format!("connection failed for {dsn}."),
+        format!("bad value: {dsn}, retry"),
+        format!("{{\"url\": \"{jdbc}\"}}"),
+        format!("{{\"dsn\":\"{odbc}\"}}"),
+        format!("url={jdbc};timeout=5"),
+        format!("conn_{odbc}"),
+        format!("got [{dsn}]"),
+    ];
+    for case in &cases {
+        let masked = mask_registered_values(case);
+        assert!(!masked.contains("EdgePw"), "{case} -> {masked}");
+        assert!(masked.contains("***"), "{case} -> {masked}");
+    }
+}
+
+#[test]
+fn registered_values_keep_letter_or_digit_neighbours() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    register_config_value("host=h user=u password=TailPw07");
+    let trailing = "got host=h user=u password=TailPw07x for key";
+    assert_eq!(mask_registered_values(trailing), trailing);
+    let leading = "got xhost=h user=u password=TailPw07 for key";
+    assert_eq!(mask_registered_values(leading), leading);
+    let digits = "got 2host=h user=u password=TailPw072 for key";
+    assert_eq!(mask_registered_values(digits), digits);
+}
+
+#[test]
+fn registered_values_mask_when_their_own_edge_is_punctuation() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let trailing = "Driver=x;Uid=u;Pwd=BndPw01;";
+    let leading = ";Driver=x;Uid=u;Pwd=BndPw03";
+    register_config_value(trailing);
+    register_config_value(leading);
+    let cases = [
+        format!("{trailing}Encrypt=yes"),
+        format!("{trailing}9"),
+        format!("Encrypt=yes{leading}"),
+        format!("7{leading}"),
+        format!("\u{1b}[31m{leading}\u{1b}[0m"),
+    ];
+    for case in &cases {
+        let masked = mask_registered_values(case);
+        assert!(!masked.contains("BndPw"), "{case:?} -> {masked:?}");
+        assert!(masked.contains("***"), "{case:?} -> {masked:?}");
+    }
+}
+
+#[test]
+fn registered_values_mask_after_an_ansi_csi_sequence() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let dsn = "host=h user=u password=CsiPw02";
+    register_config_value(dsn);
+    let colored = [
+        format!("\u{1b}[31m{dsn}\u{1b}[0m"),
+        format!("\u{1b}[1;31m{dsn}\u{1b}[0m"),
+    ];
+    for case in &colored {
+        let masked = mask_registered_values(case);
+        assert!(!masked.contains("CsiPw"), "{case:?} -> {masked:?}");
+        assert!(masked.contains("***"), "{case:?} -> {masked:?}");
+    }
+    let plain = [format!("m{dsn}"), format!("[31m{dsn}")];
+    for case in &plain {
+        assert_eq!(&mask_registered_values(case), case);
+    }
+}
+
+#[test]
+fn registered_values_mask_after_an_ecma_48_csi_sequence() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let dsn = "host=h user=u password=CsiPw03";
+    register_config_value(dsn);
+    let csi = [
+        format!("\u{1b}[?25h{dsn}"),
+        format!("\u{1b}[38:5:196m{dsn}"),
+        format!("\u{1b}[1 q{dsn}"),
+        format!("\u{9b}31m{dsn}"),
+        format!("\u{1b}[m{dsn}"),
+        format!("\u{1b}[;;;m{dsn}"),
+        format!("\u{1b}\u{1b}[31m{dsn}"),
+    ];
+    for case in &csi {
+        let masked = mask_registered_values(case);
+        assert!(!masked.contains("CsiPw"), "{case:?} -> {masked:?}");
+        assert!(masked.contains("***"), "{case:?} -> {masked:?}");
+    }
+    let plain = [
+        format!("\u{1b}]0;titlex{dsn}"),
+        format!("[?25h{dsn}"),
+        format!("38:5:196m{dsn}"),
+        format!("1 q{dsn}"),
+        format!("\u{9c}31m{dsn}"),
+    ];
+    for case in &plain {
+        assert_eq!(&mask_registered_values(case), case);
+    }
 }

@@ -20,6 +20,7 @@ from repark.spark._integral import (
     _attached_message_parameters,
     _attached_sql_state,
 )
+from repark.spark._secrets import scrub_exception
 from repark.spark.column import Column
 from repark.spark.observation import Observation
 
@@ -98,16 +99,28 @@ def foreach(frame: DataFrame, f: object) -> None:
     """Call ``f`` once per row through ``toLocalIterator``. pins: df-surface-b-1/C-001"""
     _require_callable(f)
     frame._ensure_alive()
-    for row in frame.toLocalIterator():
-        f(row)
+    failure = None
+    try:
+        for row in frame.toLocalIterator():
+            f(row)
+    except Exception as error:
+        failure = scrub_exception(error)
+    if failure is not None:
+        raise failure
 
 
 def foreachPartition(frame: DataFrame, f: object) -> None:  # noqa: N802
     """Call ``f`` once per record batch with a Row iterator. pins: df-surface-b-1/C-002"""
     _require_callable(f)
     frame._ensure_alive()
-    for batch in frame.to_arrow_batches():
-        f(iter(frame._iter_rows_from_record_batch(batch)))
+    failure = None
+    try:
+        for batch in frame.to_arrow_batches():
+            f(iter(frame._iter_rows_from_record_batch(batch)))
+    except Exception as error:
+        failure = scrub_exception(error)
+    if failure is not None:
+        raise failure
 
 
 def observe(frame: DataFrame, observation: object, *exprs: object) -> DataFrame:

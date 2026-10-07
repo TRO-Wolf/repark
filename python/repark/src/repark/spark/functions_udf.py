@@ -14,9 +14,10 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
+from repark.spark._secrets import scrub_exception
 from repark.spark.column import Column
 from repark.spark.functions import col
-from repark.spark.udtf import UserDefinedTableFunction
+from repark.spark.udtf import _refuse_udtf_as_scalar_udf
 
 
 class PandasUDFType:
@@ -855,12 +856,15 @@ def _normalize_python_udf_return_type_sql(return_type: Any) -> str:
     # Duck-typed DataType (e.g. pyspark.sql.types.LongType instance).
     simple = getattr(return_type, "simpleString", None)
     if callable(simple) and not isinstance(return_type, type):
+        failure = None
         try:
             text = str(simple()).strip()
         except Exception as error:
+            failure = scrub_exception(error)
+        if failure is not None:
             raise PySparkTypeError(
-                f"udf returnType {type(return_type).__name__} simpleString() failed: {error}"
-            ) from error
+                f"udf returnType {type(return_type).__name__} simpleString() failed: {failure}"
+            ) from failure
         if not text:
             raise PySparkTypeError("udf returnType simpleString() must be non-empty")
         try:
@@ -1183,23 +1187,6 @@ class UserDefinedFunction:
         """Mark the UDF nondeterministic (Spark parity flag; no codegen path in repark)."""
         self._deterministic = False
         return self
-
-
-def _refuse_udtf_as_scalar_udf(user_func: Any, *, surface: str) -> None:
-    """Refuse wrapping a table UDTF as a classic scalar UDF.
-
-    ``UserDefinedTableFunction`` is callable (a scalar-argument call produces a DataFrame in
-    the FROM path). Without this gate ``F.udf(udtf_obj)`` /
-    ``spark.udf.register(name, udtf_obj)``
-    would half-wire a table function as a scalar UDF.
-    """
-    if isinstance(user_func, UserDefinedTableFunction):
-        raise PySparkTypeError(
-            f"{surface} does not accept UserDefinedTableFunction (table UDTF). "
-            "Use spark.udtf.register / @udtf for table functions (U12 scalar-arg "
-            "core via mapInArrow), or pass a scalar Python callable to F.udf / "
-            "spark.udf.register."
-        )
 
 
 def _build_python_udf(

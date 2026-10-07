@@ -93,6 +93,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `c2_jdbc_oracle.py`, its 58 cells on Spark 4.1.2 + Postgres 16.15 through
   pgjdbc 42.7.13 (`c2_jdbc_oracle.json`) and their SHA-256. It needs `psql`
   and `DM2_PG_URL`, and is likewise run by hand, never collected.
+  **FOREACH-WRAP-1 (2026-10-07):** the user-callback oracle. The recorder
+  `fw1_callback_oracle.py`, its 3 cells on Spark 4.1.2 (`fw1_callback_oracle.json`)
+  and their SHA-256; run by hand, never collected.
 - [spill/](spill/map.md) — **NEVEROOM-1 steps 1–3 (2026-09-10/11):** the spill-coverage
   matrix harness, the full-tier run, and the CI golden: the subprocess-per-cell runner
   with an address-space cap, the in-engine `range()` generators sized to the limit
@@ -203,6 +206,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** the mirror
+  rows ratchet `dataframe/core.py` 3971 → 3965, `dataframe/joins_columns.py` 1169 → 1117 and
+  `functions_udf.py` 1300 → 1287 with the script baselines; H3 then sets `core.py` 3965 → 3969
+  (still below the 3971 base). **Fold 5 K1:** `core.py` ratchets 3969 → 3967.
+  pins: source-url-redact-1/C-082
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S4 (2026-10-02):**
   mirror rows ratchet `spark/column.py` 1527 → 1378 (the sort-marker family
   moves to `column_sort.py`, the string-predicate family to `column_string.py`)

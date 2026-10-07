@@ -71,6 +71,28 @@ pub fn mask_value_credentials(value: &str) -> PyResult<String> {
 }
 
 #[pyfunction]
+pub fn mask_user_visible(value: &str) -> PyResult<String> {
+    fenced!("session_sources.mask_user_visible", {
+        Ok(crate::exceptions::mask_user_visible(value))
+    })
+}
+
+#[pyfunction]
+pub fn mask_url_userinfo(value: &str) -> PyResult<String> {
+    fenced!("session_sources.mask_url_userinfo", {
+        Ok(repark_core::redaction::mask_url_userinfo(value))
+    })
+}
+
+#[pyfunction]
+pub fn register_config_value(value: &str) -> PyResult<()> {
+    fenced!("session_sources.register_config_value", {
+        repark_core::redaction::register_config_value(value);
+        Ok(())
+    })
+}
+
+#[pyfunction]
 pub fn read_iceberg_incremental(
     py: Python<'_>,
     session: PyRef<'_, PyReparkSession>,
@@ -121,6 +143,9 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_source_ping, module)?)?;
     module.add_function(wrap_pyfunction!(redact_property_value, module)?)?;
     module.add_function(wrap_pyfunction!(mask_value_credentials, module)?)?;
+    module.add_function(wrap_pyfunction!(mask_user_visible, module)?)?;
+    module.add_function(wrap_pyfunction!(mask_url_userinfo, module)?)?;
+    module.add_function(wrap_pyfunction!(register_config_value, module)?)?;
     module.add_function(wrap_pyfunction!(read_iceberg_incremental, module)?)?;
     module.add_function(wrap_pyfunction!(read_iceberg_path, module)?)?;
     Ok(())

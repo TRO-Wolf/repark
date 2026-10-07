@@ -897,3 +897,263 @@ Run on the finished tree. Each cargo command ran under the build-slot lock.
 The search-path pin creates a database and a role and drops both before its assertions; a
 cell that panics earlier (as the mutation runs did) leaves them, with its schema, in the
 disposable container, which `make pg-down` removes with its volume.
+
+## 11. C-2c — the provider, pushdown and the EXPLAIN boundary (2026-10-07)
+
+**Branch:** `feat/c-2c-pushdown-explain` from `cdca8173` (C-2b merged). **Model:** Claude Opus
+5.5 (`claude-opus-5-5`, high). **Scope:** sketch §2.9 (pushdown), §2.10 (the EXPLAIN boundary,
+CC-1), §4's C-2c rows, §5.2, §5.3, §7's C-2c slice and §8 D-M6. D-M6 ran first, before any
+provider code.
+
+### PROPOSITION LEDGER — C-2c — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-068 | D-M6 (sketch §8, halt rule H-DF): DataFusion 54.1 hands every conjunct a provider classes `Inexact` to `TableProvider::scan` while keeping it in a `FilterExec` above the scan, and passes `limit` to `scan` only when no filter remains above it. A conjunct classed `Exact` reaches `scan` and leaves no filter. | `explain.rs::datafusion_hands_inexact_filters_to_scan_and_withholds_limit`, a recording provider (column `a` `Exact`, the rest `Inexact`): `a > 1 AND b = 'x' LIMIT 5` → `scan([a > 1, b = 'x'], None)`; `b = 'x' LIMIT 5` → `scan([b = 'x'], None)`; `a > 1 LIMIT 5` → `scan([a > 1], Some(5))`. | PROVEN | §11.1. H-DF did not fire. |
+| C-069 | The provider (sketch §2.8, §2.11, FL-1, FL-7, FL-8): `PostgresSource::mount(identity, props, localiser)` returns a `PostgresCatalog` with no I/O and no validation; the first resolution parses the props on the source's door, builds the connector and the source's one `QueryPool`, and memoises the outcome, a refusal included; `PostgresSchemaProvider::table` quotes both names through `PgIdent`, runs discovery afresh, answers `Ok(None)` for `RelationNotFound` and `DataFusionError::External(ConnectError)` otherwise; listing is empty (`CONNECT-DECL-pg-listing`); `PostgresSource::table(resolved)` builds a table from an injected resolution with no network; `Debug` shows no prop. | `explain.rs::listing_a_postgres_source_is_empty_and_declared`, `::explain_never_renders_endpoint`; live: every `live_pushdown.rs` cell mounts through `PostgresSource::mount` and reads `pg.<schema>.edges` through the schema provider; `::a_missing_relation_is_table_not_found_live`. | PROVEN | §11.3 m129, m130; §11.4. |
+| C-070 | The classifier (sketch §2.9, P-1…P-10 and the residual list): a column's class follows its mapping, cast and surfaced type; the null tests push on every mapped column; booleans, integers (the literal's own width; a widening cast dropped), exact decimals (a lossless widening dropped; a column whose Arrow type is not its own `(p,s)` compares cast to the Arrow type), dates, `timestamptz`, NTZ `timestamp` and UTF8 `text`/`varchar` (`COLLATE pg_catalog."C"`) push `=`, `<>`, `<`, `<=`, `>`, `>=` and `IS [NOT] DISTINCT FROM` against a literal on either side, `IN` up to 256 items, `BETWEEN`, well-formed `LIKE` and `AND`/`OR`/`NOT` over pushable children; every compare is `OPERATOR(pg_catalog.op)` and every value rides `pg_catalog.current_setting('repark.pN')::pg_catalog.<type>`; float, `bpchar`, `bytea`, the text-rendered types, enums, a placed `timestamp`, functions, arithmetic, other casts, `CASE`, `COALESCE`, `ILIKE`, regular expressions, a temporal literal outside Postgres's range and a text holding NUL stay residual. | `pushdown.rs::p01_null_tests_push` … `::p10_logic_pushes_only_exact_children`, `::r01_float_comparisons_stay_residual` … `::r04_functions_arithmetic_and_casts_stay_residual`; their live halves in `live_pushdown.rs`. | PROVEN | §11.3 m101–m117; §11.4. |
+| C-071 | A filter is classed `Exact` only when it renders and DataFusion's simplifier leaves it unchanged. DataFusion keeps simplifying a scan's filters after it has removed the `Exact` ones from the plan: `qty NOT IN (1, NULL)` became a pushed `qty <> NULL`, later simplified to `NULL`, which the scan could not render and nothing applied, so the pushed scan returned five rows where the engine returns none. | `pushdown.rs::a_filter_the_optimizer_would_still_rewrite_stays_inexact`; live `live_pushdown.rs::p07_in_list_three_valued_live` (`qty NOT IN (1, NULL)` is empty both ways). | PROVEN | §11.3 m118; §11.2 R-1; §11.4. |
+| C-072 | P-11: `scan` pushes `LIMIT n` only when none of the filters it receives is residual, whatever `limit` DataFusion passes. | `pushdown.rs::p11_limit_pushes_only_without_residual` (a direct `scan` call with a residual filter and `Some(5)` pushes no limit); live `::p11_limit_pushes_only_without_residual_live` (`score > 1 LIMIT 5` returns five rows over fifteen rows the filter drops first). | PROVEN | §11.3 m112 (red in the unit pin; the live half stays green because DataFusion already withholds the limit, C-068); §11.4. |
+| C-073 | `pushdown_predicate = false` classes every conjunct `Inexact`: no filter pushes, and the rows are the engine's. *(Corrected by the C-2c fold 1, 2026-10-07: as first written it also said "no limit pushes"; the limit was gated on an empty residual alone, so an unfiltered `LIMIT 7` pushed. The limit now has its own switch, `pushdown_limit`, C-082; with `pushdown_predicate = false` a limit pushes only when the statement has no filter.)* | `pushdown.rs::r05_pushdown_predicate_false_pushes_nothing`; live `::r05_pushdown_predicate_false_pushes_nothing_live`, and every live cell asserts its unpushed half pushed nothing. | PROVEN | §11.3 m117; §11.4. |
+| C-074 | The bounds (sketch §0 line 5): a conjunct whose rendering would bind past `MAX_PARAM_SLOTS` stays residual, an `IN` past 256 items stays residual, and a scan whose `Exact` conjuncts together bind more than 1024 values refuses the plan, naming the bound and `pushdown_predicate`, rather than drop a filter DataFusion has already removed. | `pushdown.rs::p07_in_list_three_valued` (256 bind, 257 stay residual), `::pushed_values_past_1024_fail_the_plan`. | PROVEN | §11.3 m125. |
+| C-075 | The EXPLAIN boundary (sketch §2.10, §5.3, CC-1): per scan, `PostgresScanExec: source=…, relation=…` (or `query=…`), `projection=[…]`, `pushed_filters=[…]`, `residual_filters=[…]`, `pushed_limit=…`, the filter lists being what this statement pushed and left; `Verbose` adds `remote_sql=` with placeholders and `bound_values=N`, never a value; no format renders host, port, database, user, URL or a prop; the residual list is semantically equal to the `FilterExec` above the scan, and textually equal (the physical form of the list's conjunction) unless DataFusion's common-subexpression elimination rewrites that filter. *(Qualified by the C-2c fold 1, 2026-10-07, the verifier's S3: `COALESCE(qty, 0) > 2` lists `CASE WHEN CAST(qty AS Int64) IS NOT NULL …` while the `FilterExec` reads `CASE WHEN __common_expr_3@0 …` over a `ProjectionExec`; the rows match.)* | `explain.rs::explain_renders_pushed_and_residual_per_scan`, `::explain_verbose_shows_placeholders_never_values`, `::explain_never_renders_endpoint`, `::explain_residual_matches_filter_exec_above`. | PROVEN | §11.3 m121–m124. |
+| C-076 | Metrics and memory (sketch §2.6, §2.10, CC-7): `PostgresScanExec` registers `output_rows`, `output_batches`, `elapsed_compute` (the decode), `bytes_received` and `time_to_first_byte`, which `EXPLAIN ANALYZE` shows, and charges every batch it yields to a `MemoryReservation` named `PostgresScan`. The scan's first poll opens the connection, so EXPLAIN opens none. | Live `live_pushdown.rs::explain_analyze_reports_rows_bytes_and_time_per_scan_live`, `::a_batch_past_the_memory_pool_is_resources_exhausted_live`; the EXPLAIN pins run with no server. | PROVEN | §11.3 m126, m127; §11.4. |
+| C-077 | The localiser (sketch §2.7, §2.11): `WallClockLocaliser` is declared in connect; by default a `timestamp` column surfaces as `Timestamp(Microsecond, <zone_label>)`, read once per resolution, and each batch's wall clocks are placed by `localise`; `prefer_timestamp_ntz` keeps the wall clock; a compare on a placed column never pushes (`CONNECT-DIV-pg-timestamp-zone`). | `pushdown.rs::r03_ltz_timestamp_comparisons_stay_residual`; live `::timestamp_columns_are_placed_in_the_session_zone_live`, `::r03_ltz_timestamp_comparisons_stay_residual_live`. | PROVEN | §11.3 m115, m128; §11.4; §11.2 R-7. |
+| C-078 | Text compares push under `COLLATE pg_catalog."C"` on a `UTF8` server only (`CONNECT-DIV-pg-text-collation`): code-point order and byte equality, whatever the column's collation; another encoding keeps them residual. | `pushdown.rs::p06_text_comparison_is_code_point_order`, `::p06b_text_equality_ignores_nondeterministic_collation`, `::p06c_nul_literal_stays_residual`; live halves over an ICU column and a nondeterministic one. | PROVEN | §11.3 m106, m107; §11.4. |
+| C-079 | Sketch §5.2's live halves (§6), under `make pg-up`: over one seeded table holding every edge §5.2 names, every class and residual pin returns the same rows with `pushdown_predicate` on and off, with the expected pushed and residual split, including `int2 = 100000` (no error, no row), a literal past scale 18 against unconstrained `numeric`, `4714-11-24 BC` and `5874897-12-31` pushed as `date` text, the first instant pushed and one µs earlier residual, `'B' < 'a'` and the ICU and nondeterministic columns, `_` against `é`, `\%`, `-0 = 0` in `float8`, padded `char(5)` and `i64::MAX + 1`. D-M3: a pushed `current_setting` compare keeps a btree index (an index-only scan over one million rows). | The twenty-three `live_pushdown.rs` cells. | PROVEN | §11.4; every live mutation of §11.3 is red in its live half or named as unit-only. |
+| C-080 | Shape and files: `src/provider.rs` and `provider/{catalog,schema,table,scan}.rs`, `src/pushdown.rs`, `tests/it/pushdown.rs`, `tests/it/explain.rs` and `tests/it/live_pushdown.rs` hold the ceilings of sketch §7; `read/postgres.rs` gains the crate-private `filter`, `bound_values`, `ScanMeter` and `scan_metered`, nothing else public changes; `async-trait` is the one dependency added; no code comments; every gate in §11.5 passes. | §11.5. | PROVEN | §11.5. |
+
+### 11.1 D-M6, measured (2026-10-07)
+
+| id | date | measurement | result | decides |
+|---|---|---|---|---|
+| D-M6 | 2026-10-07 | A minimal DataFusion 54.1 probe (`SessionContext`, one recording `TableProvider`, `EXPLAIN` and the physical plan of `SELECT a FROM t WHERE … LIMIT 5`): does `scan` receive `Inexact` filters, and does it receive `limit` while a filter remains above? | Yes to the first: the logical plan reads `TableScan: t projection=[a, b], full_filters=[t.a > Int32(1)], partial_filters=[t.b = Utf8("x")]` and `scan` receives both, unqualified. No to the second: with an `Inexact` conjunct the plan is `Limit` over `Filter` over `TableScan`, the physical `FilterExec: b@1 = x, projection=[a@0], fetch=5` carries the limit and `scan` sees `limit = None`; with only `Exact` conjuncts `scan` sees `Some(5)` and no filter remains. `OR` of two `Exact`-classed columns is one conjunct, classed as a whole. | The EXPLAIN boundary of sketch §2.10 holds: `scan` sees the full conjunct list, so it can list the residual filters, and P-11's limit arrives only when no residual remains (the scan re-checks anyway). H-DF does not fire. |
+
+### 11.2 Readings acted on (no halt)
+
+- **R-1, the optimizer rewrites pushed filters (C-071).** The first live run of
+  `p07_in_list_three_valued_live` returned five rows pushed and none unpushed for
+  `qty NOT IN (1, NULL)`. DataFusion's simplifier rewrote it to `qty <> 1 AND qty <> NULL`;
+  `push_down_filter` offered both conjuncts, and both rendered (`NULL::pg_catalog.int4`), so
+  both were classed `Exact` and left the plan. A later `simplify_expressions` pass, which maps a
+  `TableScan`'s filters too, turned `qty <> NULL` into `NULL`; `scan` could not render that, so
+  it listed it as residual while no `FilterExec` held it. The fix classes a filter `Exact` only
+  when it renders **and** DataFusion's `ExprSimplifier` (over the table's unqualified schema)
+  leaves it unchanged, so an `Exact` filter is a fixed point of the rewrite that runs after it.
+  A filter that is not yet settled stays `Inexact`; the optimizer re-offers its settled form
+  on the next pass. The guard relies on the simplifier being the only rule that rewrites a
+  `TableScan`'s filters in DataFusion 54.1 (`SimplifyExpressions::optimize_internal` is; no
+  other rule in the 54.1 optimizer maps them). A DataFusion upgrade re-reads that.
+- **R-2, pushdown sits behind `postgres`.** Sketch §2.1 keeps the classifier outside the
+  feature. It reads `ResolvedSource`, `ScanColumn` and `CastType`, which C-2b put in
+  `discover.rs` behind the feature, and renders into `ScanRequest`. Moving those types out is a
+  C-2b refactor this slice does not need; the classifier is still pinned with no driver
+  connection and no network.
+- **R-3, files outside the slice's list.** `read/postgres.rs` gains the crate-private
+  `ScanRequest::filter` (the one way rendered SQL reaches the statement), `bound_values`,
+  `ScanMeter` and `scan_metered` (the metrics need the chunk loop). `Cargo.toml` gains
+  `async-trait` for the provider traits, already in the lock. Nothing else outside §7's C-2c
+  rows changed.
+- **R-4, `PostgresSource` lives at the crate root.** Sketch §2.11 writes
+  `repark_connect::postgres::PostgresSource`; `repark_connect::postgres` is the type-map module.
+  C-2d calls `repark_connect::PostgresSource::mount(&identity, props, localiser)`.
+- **R-5, `LIKE` renders as `OPERATOR(pg_catalog.~~)`.** The `LIKE … ESCAPE '\'` keyword form
+  resolves `~~` through the search path, which query mode sets to the role's; the qualified
+  operator cannot be shadowed, and its escape is the backslash, as the keyword form's default
+  is. So the sketch's p09 mutation, "omit `ESCAPE`", would be equivalent; m110 disables the
+  escape instead (`like_escape(pattern, '')`). DataFusion 54.1 also treats the backslash as the
+  escape and an escaped ordinary character as itself (`'ab' LIKE 'a\b'` is true in both). A
+  pattern is pushed only when every backslash escapes `%`, `_` or a backslash; `LIKE … ESCAPE`
+  with another character is refused by DataFusion itself.
+- **R-6, decimals the Arrow type rounds.** An unconstrained `numeric` (and `numeric(p > 38)`)
+  decodes rounded HALF_UP to its Arrow scale, so comparing the stored value would push a
+  different predicate from the one the engine applies (`5e-19` reads as `1e-18`). Such a column
+  compares as `"c"::pg_catalog.numeric(P,S)`, the Arrow type, which rounds the same way
+  (`round_var`, half away from zero, C-009). A constrained `numeric(p ≤ 38, s)` compares bare,
+  so its index stays usable. A value past the Arrow precision fails the cast in Postgres where
+  the decoder would refuse it: a failure either way, with different text.
+- **R-7, the localiser.** Core's session-zone localiser and its gap and overlap refusals are
+  C-2d's (`session/zone_localiser.rs`); C-2c declares the trait, places each batch and names the
+  column on a refusal it returns. The pins use `FixedZone` (`-05:00`), so the DST edge of r03
+  is replaced by a fixed offset that moves every wall clock by five hours. `CONNECT-DECL-pg-timestamp`
+  stays open, its rationale now naming C-2d as the retirement, because no door mounts the
+  provider yet.
+- **R-8, the memory charge is per batch.** The scan resizes its `PostgresScan` reservation to
+  each batch it yields, not to the builders as they grow (C-006's `buffered_bytes()` seam would
+  need the decoder inside the exec). A refused resize is DataFusion's resources-exhausted error
+  naming the consumer, not the column. The metric names are DataFusion's `BaselineMetrics`
+  (`output_rows`, `output_batches`, `elapsed_compute`) plus `bytes_received` and
+  `time_to_first_byte`; the sketch's `batches` is `output_batches`.
+- **R-9, bound values per scan.** A conjunct that would bind past 1024 values stays residual,
+  but the classifier is per conjunct and stateless (DataFusion re-offers a subset on later
+  passes, so a running budget would class one conjunct two ways). A scan whose `Exact`
+  conjuncts together bind more than 1024 values therefore refuses the plan, naming the bound
+  and `pushdown_predicate`, rather than drop a filter the optimizer has already removed.
+- **R-10, EXPLAIN text.** `pushed_filters` shows the conjuncts' own displays, literals
+  included, as the sketch's example does; the bound values never appear in `remote_sql`. A
+  query-mode source renders `query=<the query>`.
+- **R-11, D-M3.** On PostgreSQL 16, `EXPLAIN SELECT id FROM wide WHERE id OPERATOR(pg_catalog.=)
+  pg_catalog.current_setting('repark.p0')::pg_catalog.int4` over one million rows plans
+  `Index Only Scan using wide_id_idx on wide (cost=0.43..8.45 rows=1 width=4)` with
+  `Index Cond: (id = (current_setting('repark.p0'::text))::integer)`: the carriage keeps the
+  index, so Q2's lean (keep the carriage) needs nothing from the owner.
+- **R-12, out of scope, observed.** DataFusion 54.1's unwrap-cast simplification rewrites
+  `CAST(x AS BIGINT) > 1` on a `Decimal128(10,2)` column to `x > 1.00`, and
+  `CAST(x AS DECIMAL(5,1)) > 1.5` to `x > 1.50`: over `1.50` and `1.54` the engine returns both
+  rows where the cast values (`1`, `1.5`) exclude them. It happens before any provider sees the
+  filter, so pushdown returns the engine's rows; it is an engine defect, not a C-2c one.
+
+### 11.3 Mutations (C-2c)
+
+Each mutation was applied alone to the committed code, the named pins run with
+`--include-ignored` against the container, and the file restored from a copy taken before the
+edit. In `live_pushdown.rs`, line 129 is the cell's `collect` failing on a server error, 136
+the rows differing between pushdown on and off, and 138 the pushed and residual counts; in
+`pushdown.rs`, 209 is `assert_residual` finding a pushed filter. Thirty are red; none is
+equivalent.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m101 | C-070 P-1 | render `= NULL` for `IS NULL` (`src/pushdown.rs`) | RED | `p01_null_tests_push` at `pushdown.rs:234`; live at `live_pushdown.rs:136` |
+| m102 | C-070 P-2 | render `NOT c` for `IS NOT TRUE` (`src/pushdown.rs`) | RED | `p02_boolean_tests_push` at `pushdown.rs:258`; live at `:136` |
+| m103 | C-070 P-3 | cast the parameter to the column's width (`src/pushdown.rs`) | RED | `p03_integer_comparison_pushes_cross_width` at `pushdown.rs:277`; live at `:129` (`22003`, smallint out of range) |
+| m104 | C-070 P-4 | render the literal at the column's scale, truncating (`src/pushdown.rs`) | RED | `p04_decimal_comparison_pushes` at `pushdown.rs:334`; live at `:136` |
+| m105 | C-070 P-5 | push out-of-range literals (`src/pushdown.rs`) | RED | `p05_temporal_comparison_pushes_inside_range` at `pushdown.rs:209`; live at `:129` (date out of range) |
+| m106 | C-078 P-6 | drop `COLLATE "C"` (`src/pushdown.rs`) | RED | `p06_text_comparison_is_code_point_order` at `pushdown.rs:424`, `p06b_text_equality_ignores_nondeterministic_collation` at `:464`; both live at `:136` |
+| m107 | C-078 P-6 | push a literal holding NUL (`src/pushdown.rs`) | RED | `p06c_nul_literal_stays_residual` at `pushdown.rs:209`; live at `:129` |
+| m108 | C-070 P-7 | drop NULL items from `IN` (`src/pushdown.rs`) | RED | `p07_in_list_three_valued` at `pushdown.rs:490`; green live, where DataFusion simplifies the NULL item away before the provider |
+| m109 | C-070 P-8 | render `>` / `<` for `BETWEEN` (`src/pushdown.rs`) | RED | `p08_between_renders_inclusive` at `pushdown.rs:522`; green live, where DataFusion splits `BETWEEN` into two compares first |
+| m110 | C-070 P-9 | disable the escape, `like_escape(pattern, '')` (`src/pushdown.rs`; R-5) | RED | `p09_like_pushes_well_formed_patterns` at `pushdown.rs:558`; live at `:136` |
+| m111 | C-070 P-10 | push the exact half of an `OR` (`src/pushdown.rs`) | RED | `p10_logic_pushes_only_exact_children` at `pushdown.rs:209`; live at `:136` |
+| m112 | C-072 P-11 | push the limit regardless (`src/provider/table.rs`) | RED | `p11_limit_pushes_only_without_residual` at `pushdown.rs:625`; green live (C-068: DataFusion withholds the limit itself) |
+| m113 | C-070 | class `float8` eligible (`src/pushdown.rs`) | RED | `r01_float_comparisons_stay_residual` at `pushdown.rs:209`; live at `:136` (`-0 = 0`) |
+| m114 | C-070 | class `bpchar` as text (`src/pushdown.rs`) | RED | `r02_bpchar_comparisons_stay_residual` at `pushdown.rs:209`; live at `:136` |
+| m115 | C-077 | class a placed `timestamp` eligible, as an instant (`src/pushdown.rs`) | RED | `r03_ltz_timestamp_comparisons_stay_residual` at `pushdown.rs:663`; live at `:136` |
+| m116 | C-070 | push arithmetic: `big + 1` reads as `big` (`src/pushdown.rs`) | RED | `r04_functions_arithmetic_and_casts_stay_residual` at `pushdown.rs:698`; live at `:136` |
+| m117 | C-073 | ignore `pushdown_predicate` (`src/pushdown.rs`) | RED | `r05_pushdown_predicate_false_pushes_nothing` at `pushdown.rs:708`; live at `live_pushdown.rs:471` |
+| m118 | C-071 | class `Exact` whatever the simplifier would do (`src/pushdown.rs`) | RED | `a_filter_the_optimizer_would_still_rewrite_stays_inexact` at `pushdown.rs:757`; `p07_in_list_three_valued_live` at `live_pushdown.rs:339` (five rows against none) |
+| m121 | C-075 | render every filter as pushed, the classifier's general support (`src/provider/scan.rs`) | RED | `explain_renders_pushed_and_residual_per_scan` at `explain.rs:58` |
+| m122 | C-075 | render the bound values into `remote_sql` (`src/provider/scan.rs`) | RED | `explain_verbose_shows_placeholders_never_values` at `explain.rs:82` |
+| m123 | C-075 | add `host=` to the display (`src/provider/table.rs`) | RED | `explain_never_renders_endpoint` at `explain.rs:112` |
+| m124 | C-075 | class a residual `Unsupported`, so the scan never sees it (`src/provider/table.rs`) | RED | `explain_residual_matches_filter_exec_above` at `explain.rs:145` |
+| m125 | C-074 | past 1024 values, scan with no pushed filter instead of refusing (`src/provider/table.rs`) | RED | `pushed_values_past_1024_fail_the_plan` at `pushdown.rs:742` |
+| m126 | C-076 | count no bytes received (`src/read/postgres.rs`) | RED | `explain_analyze_reports_rows_bytes_and_time_per_scan_live` at `live_pushdown.rs:560` |
+| m127 | C-076 | never resize the reservation (`src/provider/scan.rs`) | RED | `a_batch_past_the_memory_pool_is_resources_exhausted_live` at `live_pushdown.rs:593` |
+| m128 | C-077 | never place `timestamp` (`src/provider/table.rs`) | RED | `r03_ltz_timestamp_comparisons_stay_residual` at `pushdown.rs:662`; live `r03_…_live` at `:138`, `timestamp_columns_are_placed_in_the_session_zone_live` at `:501` |
+| m129 | C-069 | list a schema (`src/provider/catalog.rs`) | RED | `listing_a_postgres_source_is_empty_and_declared` at `explain.rs:251` |
+| m130 | C-069 | `RelationNotFound` as an error, not `None` (`src/provider/schema.rs`) | RED | `a_missing_relation_is_table_not_found_live` at `live_pushdown.rs:613` |
+
+Every sketch §5.2 and §5.3 mutation is red in at least one pin. Three are red in the unit half
+alone (m108, m109, m112): DataFusion simplifies `NOT IN (…, NULL)` and splits `BETWEEN` before
+the provider sees them, and withholds the limit itself, so the live half cannot reach the
+mutated arm.
+
+### 11.4 The live run (2026-10-07)
+
+`make pg-up` (PostgreSQL 16, rootless Docker, a private `XDG_RUNTIME_DIR`), then
+`cargo test -p repark-connect --test it -- --ignored`: 46 passed (C-2b's 23 and the 23
+`live_pushdown.rs` cells), on three full runs of the final cells. Each cell creates and drops a
+`c2_<tag>` schema, with its enum type and its two ICU collations; `make pg-down` removed the
+container and its volume at the end. D-M3 is R-11.
+
+### 11.5 Gates (C-2c)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock.
+
+| command | exit | output |
+|---|---|---|
+| `cargo deny check 2>&1 \| tail -5` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `cargo test -p repark-connect` | 0 | 117 passed, 46 ignored (the live cells), 0 failed (91 at C-2b fold 2, plus `explain.rs`'s 6 and `pushdown.rs`'s 20) |
+| `cargo test -p repark-connect --test it -- --ignored` under `make pg-up` | 0 | 46 passed |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `cargo clippy -p repark-connect --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics, with and without default features |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean; no new spawn |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1111 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 368 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | 1352 files, 7284 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 308 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+File sizes against sketch §7's ceilings: `provider.rs` 9/20, `provider/catalog.rs` 133/220,
+`provider/schema.rs` 52/260, `provider/table.rs` 156/420, `provider/scan.rs` 267/460,
+`pushdown.rs` 544/820, `tests/it/pushdown.rs` 780/900, `tests/it/explain.rs` 276/320,
+`tests/it/live_pushdown.rs` 655/900 (split out of `live_pg.rs`, which stays at 742).
+`read/postgres.rs` is 468 of C-2b's 600.
+
+## 12. C-2c fold 1 — the verifier's S2s and S3s (2026-10-07)
+
+**Branch:** `feat/c-2c-pushdown-explain` from `2c24647c` (PR #984). **Model:** Claude Opus 5.5
+(`claude-opus-5-5`, high). **Scope:** the verifier's PASS verdict on C-2c and its five S2s and
+three S3s, under the orchestrator's rulings L1–L5 and the S3 rulings. The live cells ran against
+`make pg-up` (PostgreSQL 16), torn down with `make pg-down` at the end.
+
+### PROPOSITION LEDGER — C-2c fold 1 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-081 | L3 (S2): `scan` never pushes a `LIMIT` above `i64::MAX`. DataFusion hands `scan` the sum `skip + fetch`; a sum that does not fit `i64` (a checked conversion) pushes no limit, so `LIMIT 9223372036854775807 OFFSET 5` over thirty rows returns twenty-five rows with `pushed_limit=None`, with pushdown on and off, where the statement used to fail with `22003` (`bigint out of range`). `LIMIT 9223372036854775807` alone still pushes. | `pushdown.rs::a_limit_past_i64_max_never_pushes` (the SQL shapes, and `scan` called with `usize::MAX`, `2^63` and `2^63 - 1`); live `live_pushdown.rs::a_limit_past_i64_max_reads_every_row_live`. | PROVEN | §12.1 m131. |
+| C-082 | L4 (S2): the limit has its own switch. `pushdown_limit` (alias `pushDownLimit` on the `read_postgres` door and in a `jdbc:` URL; default `true`; a boolean) is the twenty-first `POSTGRES_KEYS` entry, and P-11 pushes `LIMIT n` only when it is set and no residual conjunct remains; `pushdown_predicate` gates the filters alone, as Spark's separate `pushDownPredicate` and `pushDownLimit` options do. `pushdown_limit = false` pushes `qty > 0` and no limit; `pushdown_predicate = false` pushes the limit of an unfiltered read and none past a residual filter. `pushDownLimit` refuses as an unknown key in `repark.toml`. | `pushdown.rs::pushdown_limit_gates_the_limit_and_pushdown_predicate_the_filters`; live `live_pushdown.rs::pushdown_limit_is_its_own_switch_live`; `settings.rs::every_endpoint_key_parses_and_unknown_keys_refuse` (its `values_refuse_naming_the_key` step refuses `pushdown_limit = 1`), `::aliases_are_case_insensitive_and_conflicts_refuse`. | PROVEN | §12.1 m132, m133, m134. Corrects C-073. |
+| C-083 | S3: `output_bytes` is filled. The scan records each batch through DataFusion's `RecordOutput`, which adds the batch's rows, its `get_record_batch_memory_size` and one batch, so `EXPLAIN ANALYZE` no longer shows `output_bytes=0.0 B` and the `MetricsSet`'s `output_bytes` equals the sum over the batches the stream yields. | Live `live_pushdown.rs::the_scan_reserves_each_batch_and_counts_its_bytes_live`, `::explain_analyze_reports_rows_bytes_and_time_per_scan_live`. | PROVEN | §12.1 m136. Extends C-076. |
+| C-084 | S3 (R-8 pinned): the `PostgresScan` reservation holds the current batch alone. Executing the scan with no operator above it over a 1 GiB pool, `pool.reserved()` equals the yielded batch's `get_array_memory_size()` at every yield (two batches of a 4096-row session size), and `0` once the stream is dropped. | Live `live_pushdown.rs::the_scan_reserves_each_batch_and_counts_its_bytes_live`. | PROVEN | §12.1 m135, the verifier's V3, which survived every repo pin before. |
+| C-085 | L1 (S2), declared: a pushed filter sees the retyped server value while the projection casts to the planned type. Over `(id int8, qty int4)` holding `(1, 5), (2, 6)`, `SELECT id, qty … WHERE qty = 6` planned on two mounts, then `ALTER COLUMN qty TYPE numeric(10,1)` and row 1 set to `5.5` before the first poll: pushed, one `Exact` conjunct, the scan returns `(2, 6)`; with `pushdown_predicate = false` it returns `(1, 6)` and `(2, 6)`. The pushed column stays bare (no cast), so its index is usable; `CONNECT-DECL-pg-drift-cast` states both answers. | Live `live_pushdown.rs::a_pushed_filter_sees_the_retyped_value_live`; registry row `CONNECT-DECL-pg-drift-cast`. | PROVEN | §12.1 m137 (the rejected alternative, red). Needs DDL racing the statement. |
+| C-086 | L2 (S2), declared: a refused value inside a pushed filter's range whose column is not projected is never decoded, so its membership follows Postgres's ordering (`NaN` above every number and equal to itself; `infinity` after every finite value, `-infinity` before). Over `c numeric(10,2)`, `d date` and `t timestamptz` holding `NaN` / `infinity` (id 1), `5` / `2024-01-01` (2), `1` / `-infinity` (3) and `2` / `2024-01-02` (4), `SELECT id` pushed returns `[1, 2, 4]` for `c > 1`, `[1, 3, 4]` for `c <> 5`, `[2, 3, 4]` for `c < 6`, `[2, 3]` for `d < DATE '2024-01-02'` and `t <` that instant, `[1, 4]` for `d > DATE '2024-01-01'` and `t >` that instant; each refuses with `pushdown_predicate = false`, naming `CONNECT-DECL-pg-numeric-special` or `CONNECT-DECL-pg-infinite-datetime`. Projected, `c > 1` refuses pushed and `c < 6` reads `[2, 3, 4]`. Both registry rows and sketch §2.9 state it. | Live `live_pushdown.rs::a_refused_value_inside_a_pushed_range_follows_postgres_order_live`; registry rows `CONNECT-DECL-pg-numeric-special`, `CONNECT-DECL-pg-infinite-datetime`. | PROVEN | §12.1 m138, m139. |
+| C-087 | L5 (S2): the 1024-bound-values plan refusal (C-074, R-9) is declared. Registry row `CONNECT-DECL-pg-bound-values` names the bound (`MAX_PARAM_SLOTS`, 1024), the `pushdown_predicate` workaround and Spark's answer (the JDBC source inlines values and never refuses), and the refusal's text names the row. | `pushdown.rs::pushed_values_past_1024_fail_the_plan` (four 256-item lists bind 1024; a fifth refuses with a message holding `more than 1024 values`, `` `pushdown_predicate` to false `` and `CONNECT-DECL-pg-bound-values`). | PROVEN | §12.1 m140; m125 still covers the refusal itself. |
+| C-088 | Shape and files: `src/provider/table.rs` (the `i64` check, the `pushdown_limit` gate, the row in the refusal), `src/provider/scan.rs` (`RecordOutput`) and `src/settings/postgres.rs` (`pushdown_limit`, its alias; `POSTGRES_KEYS` 21, `POSTGRES_ALIASES` 13) are the code changes; `PostgresSettings` gains the public field `pushdown_limit`, under its existing `#[non_exhaustive]`; nothing else public changes; no dependency changes; no code comments. Sizes: `table.rs` 158/420, `scan.rs` 265/460, `settings/postgres.rs` 618, `tests/it/pushdown.rs` 841/900, `tests/it/live_pushdown.rs` 891/900, `tests/it/settings.rs` 606. Every gate in §12.3 passes. | §12.3. | PROVEN | — |
+
+### 12.1 Mutations (fold 1)
+
+Each mutation was applied alone to the code, the named pins run with `--include-ignored`
+against the container, and the file restored from a copy taken before the edit.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m131 | C-081 | push any limit that fits `u64`: drop the `i64` check (`src/provider/table.rs`) | RED | `a_limit_past_i64_max_never_pushes` (pushed `Some(9223372036854775812)`); live `a_limit_past_i64_max_reads_every_row_live` |
+| m132 | C-082 | ignore `pushdown_limit`: gate the limit on the residual alone (`src/provider/table.rs`) | RED | `pushdown_limit_gates_the_limit_and_pushdown_predicate_the_filters` at `pushdown.rs:650`; live `pushdown_limit_is_its_own_switch_live` at `live_pushdown.rs:433` |
+| m133 | C-082 | C-073 as first written: gate the limit on `pushdown_predicate` too (`src/provider/table.rs`) | RED | `pushdown_limit_gates_the_limit_and_pushdown_predicate_the_filters` at `pushdown.rs:650`; live `pushdown_limit_is_its_own_switch_live` at `:433`, `a_limit_past_i64_max_reads_every_row_live` at `:466` |
+| m134 | C-082 | default `pushdown_limit` to `false` (`src/settings/postgres.rs`) | RED | `every_endpoint_key_parses_and_unknown_keys_refuse` at `settings.rs:297`; the limit pins in `pushdown.rs` (`:608`, `:650`, `:669`) and live (`:412`, `:433`, `:466`) |
+| m135 | C-084 | the verifier's V3: `try_resize` → `try_grow`, accumulating across batches (`src/provider/scan.rs`) | RED | `the_scan_reserves_each_batch_and_counts_its_bytes_live` at `live_pushdown.rs:700` (the second batch reads the sum of both) |
+| m136 | C-083 | record rows and batches by hand, no bytes, as before the fold (`src/provider/scan.rs`) | RED | `explain_analyze_reports_rows_bytes_and_time_per_scan_live` at `live_pushdown.rs:601` (`output_bytes=0.0 B`); `the_scan_reserves_each_batch_and_counts_its_bytes_live` at `:718` |
+| m137 | C-085 | the alternative L1 rejected: cast a pushed integer column to the planned type, `"qty"::pg_catalog.int4` (`src/pushdown.rs`) | RED | `a_pushed_filter_sees_the_retyped_value_live` at `live_pushdown.rs:575` (pushed now returns both rows) |
+| m138 | C-086 | stop pushing `numeric` compares: class the column `NullTestOnly` (`src/pushdown.rs`) | RED | `a_refused_value_inside_a_pushed_range_follows_postgres_order_live` at `live_pushdown.rs:637` (`c > 1` refuses pushed) |
+| m139 | C-086 | stop pushing `date` compares: class the column `NullTestOnly` (`src/pushdown.rs`) | RED | `a_refused_value_inside_a_pushed_range_follows_postgres_order_live` at `live_pushdown.rs:637` (`d < DATE '2024-01-02'` refuses pushed) |
+| m140 | C-087 | the refusal names another row (`CONNECT-DECL-pg-listing`, `src/provider/table.rs`) | RED | `pushed_values_past_1024_fail_the_plan` at `pushdown.rs:806` |
+
+Ten are red; none is equivalent. m137, m138 and m139 mutate toward the alternatives L1 and L2
+declined (cast the pushed column; keep the compare above the scan), so each declared pin is
+shown to read the behaviour it declares.
+
+### 12.2 The live run (2026-10-07)
+
+`make pg-up` (PostgreSQL 16.15, rootless Docker), then
+`cargo test -p repark-connect --test it -- --ignored`: 51 passed (C-2c's 46 and fold 1's five
+new cells: `a_limit_past_i64_max_reads_every_row_live`, `pushdown_limit_is_its_own_switch_live`,
+`the_scan_reserves_each_batch_and_counts_its_bytes_live`,
+`a_pushed_filter_sees_the_retyped_value_live` and
+`a_refused_value_inside_a_pushed_range_follows_postgres_order_live`), on three full runs of the
+finished tree. `make pg-down` removed the container and its volume at the end.
+
+### 12.3 Gates (fold 1)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock.
+
+| command | exit | output |
+|---|---|---|
+| `cargo deny check 2>&1 \| tail -5` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `cargo test -p repark-connect` | 0 | 119 passed, 51 ignored (the live cells), 0 failed |
+| `cargo test -p repark-connect --test it -- --ignored` under `make pg-up` | 0 | 51 passed |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `cargo clippy -p repark-connect --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics, with and without default features |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1111 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 368 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | 1352 files, 7284 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 308 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |

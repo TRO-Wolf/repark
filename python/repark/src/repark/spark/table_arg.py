@@ -19,6 +19,7 @@ from repark.errors import (
     PySparkTypeError,
     UnsupportedOperationException,
 )
+from repark.spark._secrets import scrub_exception, scrub_user_failure
 from repark.spark.udtf import (
     _TABLE_ARG_BLOCKED_MESSAGE,
     _build_output_batch,
@@ -153,8 +154,6 @@ def _map_table_udtf_batches(
     group ascending nulls-first. Buffering is inherent — a table arg feeds every row to
     the handler anyway.
     """
-    import traceback
-
     from repark.spark.row import Row
 
     table_width = len(table_field_names)
@@ -197,27 +196,37 @@ def _map_table_udtf_batches(
         try:
             start = getattr(handler, "start", None)
             if callable(start):
+                failure = None
                 try:
                     start()
                 except Exception as error:
-                    detail = traceback.format_exc()
+                    detail, failure = scrub_user_failure(error)
+                if failure is not None:
                     raise PySparkException(
-                        f"UDTF {surface} start() raised {type(error).__name__}: {error}\n{detail}"
-                    ) from error
+                        f"UDTF {surface} start() raised "
+                        f"{type(failure).__name__}: {failure}\n{detail}"
+                    ) from failure
             for values, scalars in rows:
                 row = Row(**dict(zip(table_field_names, values, strict=True)))
                 python_args = tuple(
                     row if kind == "table" else scalars[int(index)] for kind, index in layout
                 )
+                failure = passthrough = None
                 try:
                     result = handler.eval(*python_args)
-                except PySparkException:
-                    raise
+                except PySparkException as error:
+                    passthrough = scrub_exception(error)
+                    if passthrough is error:
+                        raise
                 except Exception as error:
-                    detail = traceback.format_exc()
+                    detail, failure = scrub_user_failure(error)
+                if passthrough is not None:
+                    raise passthrough
+                if failure is not None:
                     raise PySparkException(
-                        f"UDTF {surface} eval() raised {type(error).__name__}: {error}\n{detail}"
-                    ) from error
+                        f"UDTF {surface} eval() raised "
+                        f"{type(failure).__name__}: {failure}\n{detail}"
+                    ) from failure
                 out_rows.extend(
                     _normalize_eval_rows(
                         result,
@@ -228,14 +237,16 @@ def _map_table_udtf_batches(
         finally:
             terminate = getattr(handler, "terminate", None)
             if callable(terminate):
+                failure = None
                 try:
                     terminate()
                 except Exception as error:
-                    detail = traceback.format_exc()
+                    detail, failure = scrub_user_failure(error)
+                if failure is not None:
                     raise PySparkException(
                         f"UDTF {surface} terminate() raised "
-                        f"{type(error).__name__}: {error}\n{detail}"
-                    ) from error
+                        f"{type(failure).__name__}: {failure}\n{detail}"
+                    ) from failure
 
     yield _build_output_batch(out_rows, field_names, arrow_schema)
 

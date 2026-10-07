@@ -451,6 +451,8 @@ from repark.spark.session.sql_udf_discovery import (
 
 from repark.spark.session.sql_udf_residual import _sql_where_residual_base_projections
 
+from repark.spark._secrets import scrub_exception as _scrub_exception
+
 from repark.spark.session.sql_udf_materialization import (
     _sql_materialize_expr_udfs,
     _sql_plan_order_by_aliases,
