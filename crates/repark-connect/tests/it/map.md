@@ -8,7 +8,39 @@ See [../map.md](../map.md).
 ## Contents
 
 - `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings;`, plus
-  `mod pool; mod tls;` under the `postgres` feature.
+  `mod live_pg; mod pool; mod read; mod tls;` under the `postgres` feature.
+- `read.rs` — C-2b round 3 (2026-10-07), behind `postgres`, pure (no server):
+  `statement_casts_every_column_and_server_text_to_text` (the exact `COPY` text for `int4`,
+  `numeric(8,3)`, `interval`, `jsonb`, an enum, unconstrained `numeric` and a negative-scale
+  `numeric(5,-2)` under a quote-bearing name; `interval` and the enum cast to
+  `pg_catalog.text`), `pushed_values_ride_set_config_never_the_statement_text` (a projection,
+  two values, one injection-shaped, and a `LIMIT`; the values appear only in the settings and
+  the bound `set_config` call), `param_slots_stop_at_1024_and_bad_indexes_refuse`,
+  `query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing`,
+  `dbtable_parses_exact_qualified_and_quoted_parts`, `servers_older_than_14_are_declared` and
+  `read_errors_name_the_relation_and_fold_as_operational`.
+  pins: c-2/C-038, C-039, C-044, C-045, C-048
+- `live_pg.rs` — C-2b round 3 (2026-10-07), behind `postgres`. Every cell is
+  `#[ignore = "live: make pg-up, REPARK_PG_URL"]`, panics rather than skips without
+  `REPARK_PG_URL`, creates and drops a schema `c2_<tag>`, and names its pool's
+  `application_name` `repark_<tag>`, so `pg_stat_activity` sees only the cell's backends. The
+  cells connect with `sslmode = disable` (CONNECT-DIV-pg-sslmode). Sketch §5.6:
+  `backend_killed_mid_copy_is_disconnected` (F-1), `stream_dropped_mid_copy_closes_the_backend`
+  (F-2), `idle_read_timeout_fires` (F-3, a stall before the first row and one mid-stream),
+  `query_timeout_is_the_server_statement_timeout`, `lock_timeout_fires` (F-4),
+  `pool_exhaustion_times_out` (F-5),
+  `schema_drift_between_plan_and_scan_fails_loud_or_stays_typed` (F-7: a widened column read
+  back typed, a retyped one failing `22P02` mid-stream with the client never pooled, a dropped
+  table `RelationNotFound`), `scan_is_read_only_and_idempotent` (F-8),
+  `query_pool_connections_are_never_replication_connections`,
+  `missing_select_grant_names_the_privilege` and
+  `plaintext_server_refuses_under_the_default`. The server-generated round trips:
+  `server_bytes_are_the_wire_anchors` (the eleven sketch §2.7 anchors read back from
+  `COPY (SELECT <literal>) TO STDOUT (FORMAT BINARY)`) and
+  `mapped_types_round_trip_through_the_scan`; plus
+  `relation_discovery_resolves_domains_nullability_and_collation`. The long streams use
+  `generate_series` in the target list, which streams; in `FROM` it materialises first.
+  pins: c-2/C-040, C-041, C-042, C-043, C-046, C-047
 - `settings.rs` — C-1 (2026-10-05): absent and explicit `password` (the other props carried,
   `auth_method` dropped from the map); `iam_token` and `kerberos` refuse naming their registry
   rows and fold to the Unsupported class; empty, wrong-case, hyphenated, padded and unknown

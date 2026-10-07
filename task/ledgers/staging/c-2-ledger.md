@@ -536,3 +536,129 @@ verbatim.
 | `python3 scripts/check_docs_links.py` | 0 | 1339 files, 7198 links clean |
 | `python3 scripts/check_ledger_grammar.py` | 0 | 303 live ledgers clean |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+## 8. C-2b round 3 — the read path, discovery and the live cells (2026-10-07)
+
+**Branch:** `feat/c-2b-postgres-connection` from `1e603495` (round 2). **Model:** Claude Opus 5.5
+(`claude-opus-5-5`, high). **Scope:** sketch §2.4 (the `set_config` carriage, the server floor),
+§2.6 (the COPY statement and stream), §2.8 (discovery), §5.6 (the live crash matrix) and §6 (the
+Rust live cells), plus C-2a F-8 (the `::text` cast) and the last C-2b registry row. The live
+cells ran against `make pg-up` (PostgreSQL 16, rootless Docker under `repark.slice`), torn down
+with `make pg-down` at the end.
+
+### PROPOSITION LEDGER — C-2b round 3 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-038 | The statement builder (sketch §2.6, C-2a F-8): `ScanRequest::statement()` renders `COPY (SELECT <col>::<cast>, … FROM <source> [WHERE …] [LIMIT n]) TO STDOUT (FORMAT BINARY)` with a cast on every projected column. `interval`, every `ServerText` mapping and enums cast to `pg_catalog.text`; a `numeric` with a modifier casts to `pg_catalog.numeric(p,s)` (a negative scale included); every other mapped type casts to `pg_catalog.<row name>`. An empty projection is `SELECT FROM`; a `query` source is `(…) AS repark_q`; a `dbtable` starting with `(` is `SELECT * FROM <dbtable>` in query mode. Identifiers render through `PgIdent`. | `statement_casts_every_column_and_server_text_to_text`, `query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing`, live `mapped_types_round_trip_through_the_scan` and `schema_drift_between_plan_and_scan_fails_loud_or_stays_typed`; mutations m56, m60. | PROVEN | §8.1. |
+| C-039 | The `set_config` carriage (sketch §2.4, FL-13): a pushed value takes the next `ParamSlot` (`repark.p0` … `repark.p1023`); the predicate reads it back as `pg_catalog.current_setting('repark.pN')::<the column's cast without its modifier>`, comparing a text-cast column as text; the values reach the server only as bound parameters of one `SELECT pg_catalog.set_config($1, $2, true), …` inside `BEGIN READ ONLY`, never in SQL text. A scan with no value sends no transaction. A 1025th value or an out-of-range column answers `None`. The same pushed scan run twice returns identical batches. | `pushed_values_ride_set_config_never_the_statement_text`, `param_slots_stop_at_1024_and_bad_indexes_refuse`, live `scan_is_read_only_and_idempotent`; mutation m61. | PROVEN | §8.1. `compare` is the seed C-2c's classifier extends; the caller renders the value text (sketch §2.9). |
+| C-040 | The stream (sketch §2.5, §2.6): `scan` returns a `try_unfold` stream whose first poll checks out the client, opens the transaction and sends the `set_config` call and the COPY, so building the stream does no I/O. Each step feeds chunks to `CopyBinaryDecoder` and yields at most one batch. After the decoder's `finish()` the scan commits (when a transaction is open) and calls `release_clean()`. Any error, and any drop before the end, aborts the lease: the client is never pooled and the backend ends. | Live `backend_killed_mid_copy_is_disconnected` (F-1), `stream_dropped_mid_copy_closes_the_backend` (F-2), `schema_drift_between_plan_and_scan_fails_loud_or_stays_typed` (an error mid-stream leaves the idle count at 0), `scan_is_read_only_and_idempotent` (a clean scan returns its client); mutations m51, m52. | PROVEN | §8.1. m51 is green in F-1 alone: the pool's `put_idle` drops a closed client (C-031, m44). It is red in F-7, where the connection survives a server error. |
+| C-041 | NS-7 and the request classification: every request (`BEGIN`, `set_config`, `copy_out`, `COMMIT`, the discovery queries and `prepare`) and every COPY chunk runs under `within(TimeoutSetting::Read, read_timeout_ms, …)`. Driver errors classify by SQLSTATE, never by text: `55P03` → `Timeout { Lock }`, `57014` → `Timeout { Query }`, `25P03` → `Timeout { Read }`; with a known relation, `42501` → `PermissionDenied { relation, Select }` and `42P01` → `RelationNotFound`; class `57P` and a closed or failed socket → `Disconnected`; any other server error → `Server`; any other driver failure → `Protocol(UnexpectedResponse)`. | Live `idle_read_timeout_fires` (F-3), `query_timeout_is_the_server_statement_timeout`, `lock_timeout_fires` (F-4), `backend_killed_mid_copy_is_disconnected`, `missing_select_grant_names_the_privilege`, `schema_drift_between_plan_and_scan_fails_loud_or_stays_typed`; mutations m53, m54, m58, m67, m68. | PROVEN | §8.1. In query mode the relation is unknown, so `42501` stays `Server` with the server's text (§8.2). |
+| C-042 | Relation discovery (sketch §2.8): one bound catalog query per resolution, in `BEGIN READ ONLY` with a 30 s local `statement_timeout`, keyed on `nspname = $1`, `relname = $2`, `relkind IN ('r','v','m','f','p')`. A miss is `RelationNotFound`; a missing schema `USAGE` or any-column `SELECT` privilege is `PermissionDenied`, naming the relation and the privilege; columns are `attnum > 0`, not dropped, in `attnum` order; nullability follows `attnotnull`; a domain resolves through every level to its base type, the innermost `typtypmod` standing in when the column has none; a base type counts only in `pg_catalog`; enums read as labels; each column carries its collation and `collisdeterministic`. No cache (FL-7). | Live `relation_discovery_resolves_domains_nullability_and_collation` (a domain over a domain over `numeric(10,2)`, a dropped column, `NOT NULL`, `COLLATE "C"`), `missing_select_grant_names_the_privilege`; mutations m63, m64, m65, m66. | PROVEN | §8.1. m65 (keep dropped columns) is equivalent: a dropped column's `atttypid` is `0`, so the type join already excludes it. The filter stays as the sketch's stated intent. |
+| C-043 | Query discovery (sketch §2.8, D-M7): the wrapped statement `SELECT * FROM (<query>) AS repark_q` is `prepare`d (Parse and Describe, no execution). Each column takes the RowDescription type, `Column::type_modifier()` and nullable `true`; the server reports a domain column as its base type. H-TYPEMOD did not fire: `tokio-postgres` 0.7.18 exposes the modifier, so `numeric(8,3)` in a query reads as `Decimal128(8,3)`. | Live `mapped_types_round_trip_through_the_scan` (query mode, `numeric(8,3)` and `numeric(2,1)` keep their scale), `idle_read_timeout_fires`. | PROVEN | §8.1. |
+| C-044 | The server floor (sketch §2.4): discovery reads `server_version_num` before any catalog query; below `140000` it refuses with `ConnectError::DeclaredServerVersion`, naming the number and `CONNECT-DECL-pg-server-version`, in the Unsupported class. The registry row lands in the same commit as its pin. | `servers_older_than_14_are_declared`; mutation m62. | PROVEN | §8.1. No live pin: the container is PostgreSQL 16. Every scan resolves first (FL-7) through the same pool, so the check needs no round trip at connect. |
+| C-045 | `dbtable` parsing (sketch §2.8, FL-14, FL-15): `QualifiedRelation::parse` takes one or two `.`-separated parts, each bare and taken exactly, or double-quoted with `""` for a quote. One part takes schema `public`. Three parts, an unterminated quote or text after a quoted part refuse with `IdentRefusal::Qualification`; an empty part refuses `Empty`. | `dbtable_parses_exact_qualified_and_quoted_parts`. | PROVEN | §8.1. FL-15 is new (§8.3). |
+| C-046 | Sketch §5.6, live under `make pg-up`. F-1: `pg_terminate_backend` after the first batch gives `Disconnected`, the idle count stays 0, and the next scan runs on a different backend. F-2: dropping the stream after one batch leaves no backend with the cell's `application_name` within the read timeout (5 s), and nothing pooled. F-3: a stall before the first row and one mid-stream each give `Timeout { Read }` within 3 s at `read_timeout_ms = 500`. F-4: `ACCESS EXCLUSIVE` held by the fixture gives `Timeout { Lock }`. F-5: `pool_max_size = 1` with one scan held gives `PoolExhausted` after 300 ms. F-7: an `int4` widened to `int8` reads back typed; one retyped to `text` fails `22P02` mid-stream. F-8: a SQL function that deletes refuses `25006` and the row count and `n_tup_del` are unchanged. Every pooled backend is a `client backend` under the configured `application_name`. A role without `SELECT` gets `PermissionDenied { Select }` at discovery and at the scan. A plaintext server under the default is `TlsRequired`. The cells panic without `REPARK_PG_URL`. | The fourteen `live_pg.rs` cells, six full runs green; mutations m51–m59, m63, m67, m68. | PROVEN | §8.1, §8.4. |
+| C-047 | The anchors are the server's bytes: the eleven sketch §2.7 anchors, read back by `COPY (SELECT <literal>) TO STDOUT (FORMAT BINARY)` from PostgreSQL 16, equal the hand-computed bytes. Every mapped C-2a type reads through the scan to its §2.7 Arrow value: `date`, `timestamp`, `timestamptz`, both `numeric` anchors, `interval` as the server's `1 day 02:00:00`, `uuid`, `jsonb`, `json` byte for byte, an enum label and `int8`. `infinity` dates and `NaN` refuse per value with their `ValueRefusal`. | Live `server_bytes_are_the_wire_anchors`, `mapped_types_round_trip_through_the_scan`; mutation m60. | PROVEN | §8.1. |
+| C-048 | Shape and files: three `ConnectError` variants under `postgres`, `PermissionDenied { relation: QualifiedRelation, privilege: Privilege }`, `RelationNotFound { relation }` and `DeclaredServerVersion { server_version_num }`, plus `ProtocolViolation::UnexpectedResponse` and `IdentRefusal::Qualification`, each an enum or a typed field, never a value. Ceilings: `read.rs` 1/20, `read/postgres.rs` 412/600, `discover.rs` 340/380, `tests/it/live_pg.rs` 735/900, `error.rs` 260/260, `copy_binary.rs` 473/480, `ident.rs` 137/200. No dependency change. No code comments. Every gate in §8.4 passes. | `read_errors_name_the_relation_and_fold_as_operational`, `servers_older_than_14_are_declared`; §8.4. | PROVEN | §8.4. |
+
+### 8.1 Mutations (round 3)
+
+Each mutation was applied alone to the committed code (`49aea45a`), the named pins run (the
+live ones with `--include-ignored` against the container), and the file restored with
+`git checkout`. "Red at" is the failing assertion's line.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m51 | C-040, F-1 | return the client to the pool on error (`src/read/postgres.rs`) | RED | `schema_drift_between_plan_and_scan_fails_loud_or_stays_typed` at `live_pg.rs:377`; green in `backend_killed_mid_copy_is_disconnected`, where the pool's health check drops the dead client |
+| m52 | C-040, F-2 | `release_clean` on `Drop`: the lease never aborts (`src/pool.rs`) | RED | `stream_dropped_mid_copy_closes_the_backend` at `live_pg.rs:222` |
+| m53 | C-041, F-3 | no timeout around the chunk await (`src/read/postgres.rs`) | RED | `idle_read_timeout_fires` at `live_pg.rs:249` (the mid-stream stall completes) |
+| m54 | C-041, F-4 | drop the `lock_timeout` startup pin (`src/pool.rs`) | RED | `lock_timeout_fires` at `live_pg.rs:299` (`Timeout { Read }`) |
+| m55 | C-046, F-5 | an unbounded semaphore (`src/pool.rs`) | RED | `pool_exhaustion_times_out` at `live_pg.rs:323` |
+| m56 | C-038, F-7 | drop the per-column cast (`src/read/postgres.rs`) | RED | `schema_drift_between_plan_and_scan_fails_loud_or_stays_typed` at `live_pg.rs:356`; `statement_casts_every_column_and_server_text_to_text` at `read.rs:54` |
+| m57 | C-046, F-8 | drop `default_transaction_read_only` (`src/pool.rs`) | RED | `scan_is_read_only_and_idempotent` at `live_pg.rs:408` |
+| m58 | C-041 | map `42501` to `Server` (`src/read/postgres.rs`) | RED | `missing_select_grant_names_the_privilege` at `live_pg.rs:526` |
+| m59 | C-046 | default `sslmode` to `disable` (`src/settings/postgres.rs`) | RED | `plaintext_server_refuses_under_the_default` at `live_pg.rs:551` |
+| m60 | C-038, C-047 | `interval` not cast to text (`src/discover.rs`) | RED | `statement_casts_every_column_and_server_text_to_text` at `read.rs:54`; `mapped_types_round_trip_through_the_scan` at `live_pg.rs:639` |
+| m61 | C-039 | the setting name is off by one (`src/read/postgres.rs`) | RED | `pushed_values_ride_set_config_never_the_statement_text` at `read.rs:96`; `scan_is_read_only_and_idempotent` at `live_pg.rs:431` |
+| m62 | C-044 | the floor at 13 (`src/discover.rs`) | RED | `servers_older_than_14_are_declared` at `read.rs:185` |
+| m63 | C-042 | discovery ignores the `SELECT` privilege (`src/discover.rs`) | RED | `missing_select_grant_names_the_privilege` at `live_pg.rs:508` |
+| m64 | C-042 | discovery ignores `attnotnull` (`src/discover.rs`) | RED | `relation_discovery_resolves_domains_nullability_and_collation` at `live_pg.rs:713` |
+| m65 | C-042 | discovery keeps dropped columns (`src/discover.rs`) | GREEN (equivalent) | a dropped column's `atttypid` is `0`, so the type join already excludes it |
+| m66 | C-042 | the domain walk stops at the first level (`src/discover.rs`) | RED | `relation_discovery_resolves_domains_nullability_and_collation` at `live_pg.rs:713` |
+| m67 | C-041 | `57014` classifies as `Server` (`src/read/postgres.rs`) | RED | `query_timeout_is_the_server_statement_timeout` at `live_pg.rs:270` |
+| m68 | C-041 | `42P01` classifies as `Server` (`src/read/postgres.rs`) | RED | `schema_drift_between_plan_and_scan_fails_loud_or_stays_typed` at `live_pg.rs:385` |
+
+Seventeen are red and one, m65, is an equivalent mutant. Every sketch §5.6 mutation is red in at
+least one pin. The first runs turned up two surviving mutants. m53 survived because the server
+buffers `CopyOutResponse` until its first flush, so a stall before any row trips the `copy_out`
+timeout instead of the chunk timeout; F-3 now stalls mid-stream as well. m51 survived F-1 for
+the reason given above; F-7 now fails mid-stream as well. Both pins were strengthened before
+this table was taken.
+
+### 8.2 Readings acted on (no halt)
+
+- **Files beyond the round's list.** `error.rs` (the three variants, as round 2 did for its
+  own), `copy_binary.rs` (`ProtocolViolation::UnexpectedResponse`), `ident.rs`
+  (`QualifiedRelation::parse`, a C-2b file) and `tests/it/read.rs` (the pure pins, so
+  `live_pg.rs` holds only live cells) sit outside the brief's narrow list. Sketch §2.2 assigns
+  the variants to `error.rs`. `error.rs` sits at its 260-line ceiling, so the server-version
+  message is one line and `PermissionDenied` carries a relation, not an `Option`.
+- **`42501` in query mode stays `Server`.** The scan cannot name a relation of the user's SQL,
+  and the server's text names it. Relation mode checks both privileges at discovery, as Spark's
+  schema probe fails at resolution, and maps a scan-time `42501` (a grant revoked after
+  planning) to `PermissionDenied { Select }`.
+- **The server floor lives in discovery.** Sketch §2.4 says the version is read "on connect".
+  The startup packet does not carry `server_version_num`, so reading it there costs a query per
+  connection. Every scan resolves first (FL-7) through the same pool, so the discovery
+  transaction reads it with the encoding in the same round trip.
+- **F-3's statement.** The sketch's `SELECT pg_sleep(3), 1` refuses at resolution, because
+  `pg_sleep` returns `void`, which is unmapped. The cell uses `SELECT 1 AS one FROM
+  pg_catalog.pg_sleep(3)` and a stall after 100 000 streamed rows.
+- **F-8's write.** A `query` of `DELETE … RETURNING` never executes. Wrapped as
+  `(…) AS repark_q` it is a syntax error at discovery, so it cannot reach the read-only check.
+  The pin keeps that refusal and adds a SQL function that deletes, which executes inside the
+  scan and refuses `25006` under `default_transaction_read_only`.
+- **Streaming fixtures.** `generate_series` in `FROM` materialises the whole set before the
+  first row, which kept a dropped scan's backend alive for about 20 s after its socket closed. The cells
+  call it in the target list, which streams.
+- **Discovery's lock wait** stays the session's `lock_timeout_ms`. Only `statement_timeout`
+  is raised to 30 s for the transaction. A `query` whose parse waits on a lock times out like a
+  scan.
+- **No source name and no memory reservation.** As in rounds 1b and 2, errors carry no
+  source (C-2d). The `MemoryReservation` around `buffered_bytes()` is C-2c's
+  `PostgresScanExec`. The stream yields plain batches.
+
+### 8.3 Four-line record (2026-10-07)
+
+| id | date | question | Flink | Spark | default acted on |
+|---|---|---|---|---|---|
+| FL-15 | 2026-10-07 | Which schema does an unqualified `dbtable` name? | The Postgres JDBC catalog's table path defaults the schema to `public`. | The name goes into the SQL text and the server's `search_path` resolves it (by default `"$user"`, then `public`). | `public`. The read path pins an empty `search_path` (§2.4), so the server cannot resolve it, and a role-dependent lookup is hidden state. The name is matched exactly (FL-14). |
+
+### 8.4 Gates (round 3)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock; exit codes are
+verbatim.
+
+| command | exit | output |
+|---|---|---|
+| `cargo deny check 2>&1 \| tail -5` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `cargo test -p repark-connect` | 0 | 84 passed, 14 ignored (the live cells), 0 failed (77 at round 2, plus the seven `read.rs` pins) |
+| `cargo test -p repark-connect --test it live_pg -- --ignored` under `make pg-up` | 0 | 14 passed, on six runs of the final cells (three before the docs commit, three on it) |
+| `cargo test -p repark-connect --test it live_pg::idle -- --ignored` without `REPARK_PG_URL` | 101 | the cell panics: "live cells need REPARK_PG_URL: run make pg-up" |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `cargo clippy -p repark-connect --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics, with and without default features |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean; no new spawn |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1061 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 366 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output (on the docs commit) |
+| `python3 scripts/check_docs_links.py` | 0 | 1340 files, 7202 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 303 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+A cell that panics leaves its `c2_<tag>` schema (and the grant cell's role) behind. The mutation
+runs left seventy schemas and eight roles in the container, which `make pg-down` removes with
+its volume. The cells never touch another schema.

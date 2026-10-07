@@ -7,7 +7,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 ## Contents
 
 - `lib.rs` — `mod copy_binary; mod error; mod ident; mod settings; mod types;`, plus
-  `mod pool; mod tls;` under the `postgres` feature, and the
+  `mod discover; mod pool; mod read; mod tls;` under the `postgres` feature, and the
   re-exports: `BatchLimits`, `COPY_SIGNATURE`, `CopyBinaryDecoder`, `DEFAULT_BATCH_BYTES`,
   `DEFAULT_BATCH_ROWS`, `MAX_BATCH_BYTES`, `MAX_FIELD_BYTES`; `ConnectError`, `ProtocolViolation`, `Result`, `UNMAPPED_ROW`,
   `ValueRefusal`; `IdentRefusal`, `MAX_IDENT_BYTES`, `PgIdent`, `QualifiedRelation`;
@@ -16,8 +16,12 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `UrlViolation`, `POSTGRES_KEYS`, `POSTGRES_ALIASES`, `POSTGRES_DRIVER`, `DEFAULT_PORT`,
   `redact_source_prop`); under `postgres`, `Connect`, `PgConnection`, `PoolConnection`,
   `PoolLimits`, `PooledClient`, `PostgresConnector`, `PostgresPool`, `QueryPool`,
-  `TimeoutSetting`, `query_config`, `within`, `TlsFailure` and `verify_full_config`; and the
-  `postgres` module.
+  `TimeoutSetting`, `query_config`, `within`, `TlsFailure` and `verify_full_config`; since
+  C-2b round 3, `DEFAULT_SCHEMA` and, under `postgres`, the discovery surface (`discover`,
+  `ResolvedSource`, `ScanColumn`, `ScanSource`, `CastType`, `ColumnCollation`, `Privilege`,
+  `check_server_version`, `MIN_SERVER_VERSION_NUM`, `SERVER_VERSION_ROW`, `BEGIN_DISCOVERY`,
+  `QUERY_ALIAS`) and the read surface (`scan`, `ScanRequest`, `ScanStatement`, `ScanOptions`,
+  `CompareOp`, `ParamSlot`, `MAX_PARAM_SLOTS`, `BEGIN_SCAN`); and the `postgres` module.
 - `error.rs` — C-2a (2026-10-06; sketch [c-2-design.md](../../../task/wo/c-2-design.md) §2.2,
   NS-15). The crate's one error enum, `ConnectError` (`thiserror`), and
   `Result<T> = std::result::Result<T, ConnectError>`. C-1's `SettingsError` and `TypeMapError`
@@ -46,7 +50,12 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   TimeoutSetting }`, `PoolExhausted { waited }`, `AuthenticationFailed` and `Server { sqlstate,
   message }` (the server's own text). All fold to `DataFusion`. Their reason enums live with
   their producers (`tls.rs`, `pool.rs`), and `ProtocolViolation` moves to `copy_binary.rs`,
-  re-exported here so its path is unchanged. pins: c-2/C-001, C-015, C-018, C-025, C-037
+  re-exported here so its path is unchanged. C-2b round 3 (2026-10-07) adds, under
+  `postgres`, `PermissionDenied { relation, privilege: Privilege }` and `RelationNotFound {
+  relation }` (both `DataFusion`) and `DeclaredServerVersion { server_version_num }`
+  (`NotImplemented`, row `CONNECT-DECL-pg-server-version`). The file is at its 260-line
+  ceiling, so the server-version message is one line.
+  pins: c-2/C-001, C-015, C-018, C-025, C-037, C-048
 - `copy_binary.rs` — C-2a (2026-10-06; sketch §2.6). `CopyBinaryDecoder`, the resumable state
   machine over `COPY … TO STDOUT (FORMAT BINARY)` chunks, independent of how the server or TLS
   cuts the stream: `Header → HeaderExtension → TupleStart → FieldLength(i) → FieldValue(i, n)
@@ -83,7 +92,8 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   C-2a F-7 fold (2026-10-06) poisons the decoder: the first error from `decode` or `finish`
   is kept, and every later `decode`, `finish` or flush answers it without reading input;
   `finish` takes `&mut self`. Since C-2b round 2 (2026-10-07) the file also holds
-  `ProtocolViolation`, the decoder's reason enum, with its `Display`.
+  `ProtocolViolation`, the decoder's reason enum, with its `Display`; C-2b round 3 adds
+  `UnexpectedResponse`, a driver answer the read path cannot use.
   pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
 - `settings.rs` — C-1 (2026-10-05). `ConnectionSettings::from_props` reads one source's props
   (the core loader's `SourceSpec.props`). It interprets only `auth_method` (R-5, CC-3) and
@@ -106,7 +116,11 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `ConnectError::InvalidIdentifier` and an `IdentRefusal` reason. It renders (`Display`) only as
   a double-quoted identifier with each embedded `"` doubled; `as_str()` gives the name for exact
   matching (FL-14). `QualifiedRelation { schema, table }` renders as `"schema"."table"`.
-  Identifiers are quoted and values bound; nothing is concatenated. pins: c-2/C-025
+  Identifiers are quoted and values bound; nothing is concatenated. C-2b round 3 (2026-10-07)
+  adds `QualifiedRelation::parse(dbtable)`: one or two parts split on `.`, each bare (taken
+  exactly, FL-14) or double-quoted with `""` for a quote; a single part takes
+  `DEFAULT_SCHEMA` (`public`, FL-15); anything else refuses with
+  `IdentRefusal::Qualification`. pins: c-2/C-025, C-045
 - `tls.rs` — C-2b round 2 (2026-10-07; sketch §2.4), behind `postgres`.
   `verify_full_config(sslrootcert)` builds the rustls `ClientConfig` for `sslmode=verify-full`:
   the system roots (`rustls-native-certs`) plus every certificate in `sslrootcert`, rustls's
@@ -148,6 +162,32 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   - **`within(which, limit, work)`** is the NS-7 wrapper round 3 puts around every request and
     COPY chunk; `TimeoutSetting` names the key that fired.
   pins: c-2/C-031, C-032, C-033, C-034, C-035
+- `discover.rs` — C-2b round 3 (2026-10-07; sketch §2.4, §2.8), behind `postgres`.
+  `discover(pool, &ScanSource, read_timeout)` resolves one source afresh on every call (FL-7):
+  it checks out a client, opens `BEGIN_DISCOVERY` (`BEGIN READ ONLY` with a 30 s local
+  `statement_timeout`), reads `server_version_num` and `server_encoding`, refuses a server
+  below `MIN_SERVER_VERSION_NUM` (140000) with `DeclaredServerVersion`, resolves the columns,
+  commits and releases. Every request runs under the read timeout through `read/postgres.rs`'s
+  `request`.
+  - **Relation mode** (`ScanSource::Relation`): one bound catalog query keyed on `nspname` and
+    `relname` over `relkind` `r v m f p`. It returns the schema `USAGE` and any-column
+    `SELECT` privileges (a missing one is `PermissionDenied`, naming the relation and the
+    privilege), then each live column (`attnum > 0`, not dropped, by `attnum`) with
+    `attnotnull`, its collation (`ColumnCollation { name, deterministic }`) and its type after
+    a recursive walk through domains to the base type, the domain's `typtypmod` standing in
+    when the column has none. No row is `RelationNotFound`; a relation with no columns
+    resolves empty. A base type outside `pg_catalog` is not a base type here.
+  - **Query mode** (`ScanSource::Query`, or a `dbtable` starting with `(`, which becomes
+    `SELECT * FROM <dbtable>`): `prepare("SELECT * FROM (<query>) AS repark_q")`, Parse and
+    Describe only. Each column takes the RowDescription type and `Column::type_modifier()`
+    (H-TYPEMOD did not fire), and is nullable.
+  - **`ScanColumn::resolve(name, typname, kind, typmod, nullable)`** pairs C-2a's
+    `PlannedColumn` with the column's `CastType`. A catalog cell of the wrong type is
+    `Protocol(UnexpectedResponse)`. The server encoding is carried on `ResolvedSource`, unused
+    so far. pins: c-2/C-042, C-043, C-044
+- `read.rs` — C-2b round 3 (2026-10-07): `pub(crate) mod postgres;`.
+- `read/` — [read/map.md](read/map.md): `postgres.rs`, the statement builder, the `set_config`
+  carriage and the COPY stream.
 - `types.rs` — `pub mod postgres;` (`mssql` joins with C-5).
 - `types/` — [types/map.md](types/map.md): the Postgres type map and its codecs.
 

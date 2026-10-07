@@ -29,6 +29,11 @@ C-2b round 2 (2026-10-07) adds the `verify-full` TLS config (`tls.rs`) and the q
 its Postgres connector, the session pins and the connect timeout (`pool.rs`), both behind
 `postgres`. pins: c-2/C-030, C-037
 
+C-2b round 3 (2026-10-07) adds the read path: relation and query discovery with the server
+floor (`discover.rs`), and the COPY statement, the `set_config` carriage and the COPY stream
+under the read timeout (`read/postgres.rs`), both behind `postgres`, with sketch §5.6's live
+crash matrix under `make pg-up`. pins: c-2/C-046, C-048
+
 ## Contents
 
 - `Cargo.toml` — workspace inheritance for edition, version, license, rust-version, repository,
@@ -47,8 +52,9 @@ its Postgres connector, the session pins and the connect timeout (`pool.rs`), bo
   BINARY decoder), `settings.rs` (the connection settings and the reserved auth-method field),
   `settings/postgres.rs` (the Postgres endpoint keys), `ident.rs` (`PgIdent`,
   `QualifiedRelation`), `tls.rs` (the `verify-full` rustls config), `pool.rs` (`QueryPool`,
-  `PooledClient`, `PostgresConnector`) and `types/postgres.rs` (the Postgres ↔ Arrow type map,
-  codecs under `types/postgres/`).
+  `PooledClient`, `PostgresConnector`), `discover.rs` (relation and query discovery),
+  `read/postgres.rs` (the COPY statement, the `set_config` carriage, the stream) and
+  `types/postgres.rs` (the Postgres ↔ Arrow type map, codecs under `types/postgres/`).
 - `tests/` — [tests/map.md](tests/map.md): the one integration binary `tests/it/main.rs`.
 
 ## Design bars (R-10)
@@ -80,6 +86,8 @@ citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
 | Add a decoder error | `src/error.rs`: a `ConnectError` variant with an enum reason, its class in the `repark_common::Error` fold, and a pin |
 | Connect to a Postgres source | `src/pool.rs`: `QueryPool::new(PostgresConnector::new(&settings)?, PoolLimits::from_settings(&settings))`, then `checkout()`; call `release_clean()` only after the COPY trailer and `COMMIT`, and let any other path drop the lease |
 | Bound a network wait | `src/pool.rs`: `within(TimeoutSetting::…, limit, work)` gives `Timeout { which }` |
+| Resolve a Postgres relation or query | `src/discover.rs`: `discover(&pool, &ScanSource, read_timeout)` gives a `ResolvedSource` (columns, casts, nullability, collations) |
+| Read a resolved source | `src/read/postgres.rs`: `scan(pool, ScanRequest::new(resolved), ScanOptions::from_settings(&settings))`; push a value with `compare`, never by editing SQL text |
 | Add the SQL Server map | `src/types/mssql.rs` beside `postgres.rs` (C-5) |
 
 ## Component contract
@@ -96,7 +104,8 @@ citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
   produces it); Arrow arrays and Postgres binary wire values; a `PostgresSettings` for the
   pool and its connector.
 - **Public outputs:** `ConnectionSettings`; `PostgresTypeRow::encode` / `decode`;
-  `PlannedColumn`; Arrow `RecordBatch`es from `CopyBinaryDecoder`; or a `ConnectError`, which
+  `PlannedColumn`; Arrow `RecordBatch`es from `CopyBinaryDecoder` and from `scan`'s stream;
+  `ResolvedSource` from `discover`; or a `ConnectError`, which
   folds into `repark_common::Error` by class: `InvalidAuthMethod` → `Config` (IllegalArgument
   class, CC-4's invalid specification), the declared refusals → `NotImplemented` (Unsupported
   class), the operational errors → `DataFusion`.
@@ -111,9 +120,11 @@ citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
 - **Extension points:** new auth methods (flip a declared refusal), new type rows, new backends.
 - **Test strategy:** `tests/it/` pins every settings branch, one round trip or byte-anchor pin
   per mapped type, the decoder's stream contract split at every byte offset, the TLS config by
-  in-memory handshakes, and the pool and connector against fakes and loopback listeners.
-- **Known limitations:** the declared rows (registry `CONNECT-DECL-*`); no read path yet, and
-  the connector does not yet check the server version (C-2b round 3).
+  in-memory handshakes, the pool and connector against fakes and loopback listeners, and the
+  read path's crash matrix live against `make pg-up`.
+- **Known limitations:** the declared rows (registry `CONNECT-DECL-*`); no DataFusion provider,
+  pushdown classifier or memory reservation yet (C-2c); the error variants carry no source name
+  until C-2d.
 
 ## Pointers
 
