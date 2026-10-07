@@ -48,6 +48,8 @@ See [../map.md](../map.md).
   wall clock by five hours), `explain_analyze_reports_rows_bytes_and_time_per_scan_live` (the
   five metrics on the scan line, and from the executed plan's `MetricsSet` six rows, more than
   the 19-byte COPY header received and a non-zero time to first byte),
+  `a_batch_past_the_memory_pool_is_resources_exhausted_live` (a 16 KiB pool refuses the first
+  8192-row batch, naming the `PostgresScan` consumer; the default pool reads all 50 000 rows),
   `a_missing_relation_is_table_not_found_live` (DataFusion's own table-not-found, and a 64-byte
   name refusing with `PgIdent`'s reason) and `pushed_compare_keeps_the_index_live` (D-M3: a pushed
   `id OPERATOR(pg_catalog.=) current_setting('repark.p0')::int4` over one million rows plans as

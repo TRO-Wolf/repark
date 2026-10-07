@@ -4,9 +4,10 @@ use std::sync::Arc;
 use arrow::array::{AsArray, RecordBatch};
 use arrow::datatypes::{DataType, Int64Type, TimeUnit, TimestampMicrosecondType};
 use datafusion::common::ScalarValue;
+use datafusion::execution::runtime_env::RuntimeEnvBuilder;
 use datafusion::logical_expr::{Expr, col, lit};
 use datafusion::physical_plan::{ExecutionPlan, collect};
-use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
 use repark_common::{SourceIdentity, SourceKind};
 use repark_connect::{MAX_POSTGRES_DAYS, MIN_POSTGRES_DAYS, PostgresSource};
 
@@ -565,6 +566,42 @@ async fn explain_analyze_reports_rows_bytes_and_time_per_scan_live() {
         "{metrics}"
     );
     edges.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_batch_past_the_memory_pool_is_resources_exhausted_live() {
+    let cell = Cell::open().await;
+    let table = format!("{}.many", cell.schema);
+    cell.sql(&format!(
+        "CREATE TABLE {table} AS SELECT g::int8 AS id FROM generate_series(1, 50000) g"
+    ))
+    .await;
+    let runtime = RuntimeEnvBuilder::new()
+        .with_memory_limit(16 * 1024, 1.0)
+        .build_arc()
+        .expect("runtime");
+    let context = SessionContext::new_with_config_rt(SessionConfig::new(), runtime);
+    let mounted = mount(&cell, &[], "true");
+    let catalog = mounted.catalog("pg").expect("pg");
+    context.register_catalog("pg", catalog);
+    let statement = format!("SELECT id FROM pg.{table}");
+    let frame = context.sql(&statement).await.expect(LIVE);
+    let error = frame
+        .collect()
+        .await
+        .expect_err("an 8192-row batch exceeds 16 KiB");
+    assert!(error.to_string().contains("PostgresScan"), "{error}");
+    let roomy = mount(&cell, &[], "true");
+    let rows = roomy
+        .sql(&statement)
+        .await
+        .expect(LIVE)
+        .collect()
+        .await
+        .expect(LIVE);
+    assert_eq!(ids(&rows).len(), 50_000);
+    cell.close().await;
 }
 
 #[tokio::test]
