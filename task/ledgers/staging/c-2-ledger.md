@@ -1102,6 +1102,7 @@ three S3s, under the orchestrator's rulings L1–L5 and the S3 rulings. The live
 | C-085 | L1 (S2), declared: a pushed filter sees the retyped server value while the projection casts to the planned type. Over `(id int8, qty int4)` holding `(1, 5), (2, 6)`, `SELECT id, qty … WHERE qty = 6` planned on two mounts, then `ALTER COLUMN qty TYPE numeric(10,1)` and row 1 set to `5.5` before the first poll: pushed, one `Exact` conjunct, the scan returns `(2, 6)`; with `pushdown_predicate = false` it returns `(1, 6)` and `(2, 6)`. The pushed column stays bare (no cast), so its index is usable; `CONNECT-DECL-pg-drift-cast` states both answers. | Live `live_pushdown.rs::a_pushed_filter_sees_the_retyped_value_live`; registry row `CONNECT-DECL-pg-drift-cast`. | PROVEN | §12.1 m137 (the rejected alternative, red). Needs DDL racing the statement. |
 | C-086 | L2 (S2), declared: a refused value inside a pushed filter's range whose column is not projected is never decoded, so its membership follows Postgres's ordering (`NaN` above every number and equal to itself; `infinity` after every finite value, `-infinity` before). Over `c numeric(10,2)`, `d date` and `t timestamptz` holding `NaN` / `infinity` (id 1), `5` / `2024-01-01` (2), `1` / `-infinity` (3) and `2` / `2024-01-02` (4), `SELECT id` pushed returns `[1, 2, 4]` for `c > 1`, `[1, 3, 4]` for `c <> 5`, `[2, 3, 4]` for `c < 6`, `[2, 3]` for `d < DATE '2024-01-02'` and `t <` that instant, `[1, 4]` for `d > DATE '2024-01-01'` and `t >` that instant; each refuses with `pushdown_predicate = false`, naming `CONNECT-DECL-pg-numeric-special` or `CONNECT-DECL-pg-infinite-datetime`. Projected, `c > 1` refuses pushed and `c < 6` reads `[2, 3, 4]`. Both registry rows and sketch §2.9 state it. | Live `live_pushdown.rs::a_refused_value_inside_a_pushed_range_follows_postgres_order_live`; registry rows `CONNECT-DECL-pg-numeric-special`, `CONNECT-DECL-pg-infinite-datetime`. | PROVEN | §12.1 m138, m139. |
 | C-087 | L5 (S2): the 1024-bound-values plan refusal (C-074, R-9) is declared. Registry row `CONNECT-DECL-pg-bound-values` names the bound (`MAX_PARAM_SLOTS`, 1024), the `pushdown_predicate` workaround and Spark's answer (the JDBC source inlines values and never refuses), and the refusal's text names the row. | `pushdown.rs::pushed_values_past_1024_fail_the_plan` (four 256-item lists bind 1024; a fifth refuses with a message holding `more than 1024 values`, `` `pushdown_predicate` to false `` and `CONNECT-DECL-pg-bound-values`). | PROVEN | §12.1 m140; m125 still covers the refusal itself. |
+| C-088 | Shape and files: `src/provider/table.rs` (the `i64` check, the `pushdown_limit` gate, the row in the refusal), `src/provider/scan.rs` (`RecordOutput`) and `src/settings/postgres.rs` (`pushdown_limit`, its alias; `POSTGRES_KEYS` 21, `POSTGRES_ALIASES` 13) are the code changes; `PostgresSettings` gains the public field `pushdown_limit`, under its existing `#[non_exhaustive]`; nothing else public changes; no dependency changes; no code comments. Sizes: `table.rs` 158/420, `scan.rs` 265/460, `settings/postgres.rs` 618, `tests/it/pushdown.rs` 841/900, `tests/it/live_pushdown.rs` 891/900, `tests/it/settings.rs` 606. Every gate in §12.3 passes. | §12.3. | PROVEN | — |
 
 ### 12.1 Mutations (fold 1)
 
@@ -1120,3 +1121,39 @@ against the container, and the file restored from a copy taken before the edit.
 | m138 | C-086 | stop pushing `numeric` compares: class the column `NullTestOnly` (`src/pushdown.rs`) | RED | `a_refused_value_inside_a_pushed_range_follows_postgres_order_live` at `live_pushdown.rs:637` (`c > 1` refuses pushed) |
 | m139 | C-086 | stop pushing `date` compares: class the column `NullTestOnly` (`src/pushdown.rs`) | RED | `a_refused_value_inside_a_pushed_range_follows_postgres_order_live` at `live_pushdown.rs:637` (`d < DATE '2024-01-02'` refuses pushed) |
 | m140 | C-087 | the refusal names another row (`CONNECT-DECL-pg-listing`, `src/provider/table.rs`) | RED | `pushed_values_past_1024_fail_the_plan` at `pushdown.rs:806` |
+
+Ten are red; none is equivalent. m137, m138 and m139 mutate toward the alternatives L1 and L2
+declined (cast the pushed column; keep the compare above the scan), so each declared pin is
+shown to read the behaviour it declares.
+
+### 12.2 The live run (2026-10-07)
+
+`make pg-up` (PostgreSQL 16.15, rootless Docker), then
+`cargo test -p repark-connect --test it -- --ignored`: 51 passed (C-2c's 46 and fold 1's five
+new cells: `a_limit_past_i64_max_reads_every_row_live`, `pushdown_limit_is_its_own_switch_live`,
+`the_scan_reserves_each_batch_and_counts_its_bytes_live`,
+`a_pushed_filter_sees_the_retyped_value_live` and
+`a_refused_value_inside_a_pushed_range_follows_postgres_order_live`), on three full runs of the
+finished tree. `make pg-down` removed the container and its volume at the end.
+
+### 12.3 Gates (fold 1)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock.
+
+| command | exit | output |
+|---|---|---|
+| `cargo deny check 2>&1 \| tail -5` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `cargo test -p repark-connect` | 0 | 119 passed, 51 ignored (the live cells), 0 failed |
+| `cargo test -p repark-connect --test it -- --ignored` under `make pg-up` | 0 | 51 passed |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `cargo clippy -p repark-connect --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics, with and without default features |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1111 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 368 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | 1352 files, 7284 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 308 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |

@@ -41,7 +41,7 @@ A conjunct pushes exactly or stays above the scan, and EXPLAIN shows, per scan, 
 statement pushed and what it left (CC-1). D-M6 measured DataFusion 54.1 first: it hands
 `Inexact` filters to `scan` and withholds `limit` while a filter remains above, so H-DF did not
 fire. The crate gains `async-trait` (already in the tree), optional under `postgres`.
-pins: c-2/C-068, C-075, C-080
+pins: c-2/C-068, C-075, C-080, C-088
 
 ## Contents
 
