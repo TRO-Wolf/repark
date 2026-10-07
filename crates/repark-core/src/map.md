@@ -168,6 +168,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   once per call through `object_store_s3` (parquet and csv resolve inside their
   reader bodies, so this file grows by one line and stays under its ceiling).
   pins: s3-path-write-1/C-013
+  **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** re-exports
+  `repark_common::java_case::{fold_a_equal, fold_b_equal}` for the binding
+  (the Python crate reaches the tier-0 folds only through here).
+  pins: attr-id-1/C-032
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** `fold_a_equal` is
+  `string_lower_equal` (length plus `String.toLowerCase`).
+  pins: attr-id-1/C-037
   **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** declares
   `session/text_write_format.rs` and registers its UDF at session build.
   pins: text-write-timestamp-zone-1/C-001
@@ -275,6 +282,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list at
   the exact 155-line baseline; the stale half-comment above the `error_map` re-export
   (its note is already carried by `session.rs`'s own line) was the line shed for it.
+  **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** `fold_a_equal` / `fold_b_equal`
+  join the `session` re-export list (reflowed in place: still 155 lines).
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** `fold_a_equal` is
+  `string_lower_equal` (the `Session` alias merged into the list: still 155
+  lines).
   **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the
   binding's path to the redactor (no new crate edge). pins: source-url-redact-1/C-014
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +

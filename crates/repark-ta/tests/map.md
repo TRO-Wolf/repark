@@ -88,7 +88,14 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   `WindowAggExec`, no `BoundedWindowAggExec`, and compares every column's `to_bits`, validity,
   name and order. `parallel_window_multi_output_siblings_bit_identical` interleaves BBANDS
   upper/middle/lower, MACD/signal and STOCH slowk/slowd so siblings are not adjacent.
+  `stamped_frame_parallel_window_matches_serial_answer` stamps one TA level (SMA 10/20, EMA5)
+  with attribute ids, strips the twin for execution, and compares the parallel answer
+  bit-identically with the serial answer.
   pins: ta-series-s2b/C-001, C-002
+  **ATTR-ID-1 SM-1 (2026-10-06):** `stamped_plan_through_optimizer_reaches_executors_stripped`
+  plans a stamped frame through the optimizer with no hand strip and asserts no `repark.attr`
+  on the optimized plan, any physical node, or batch schema with both parallel executors present.
+  pins: attr-id-1/C-056
 
 ## Pointers
 

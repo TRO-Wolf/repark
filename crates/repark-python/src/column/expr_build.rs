@@ -49,17 +49,43 @@ pub(crate) fn parse_canonical_predicate(
 ) -> datafusion::error::Result<Expr> {
     let verbatim = frame_verbatim(frame.inner());
     let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
-    frame
-        .inner()
-        .parse_sql_expr(canonical.as_ref())
-        .map_err(|error| {
-            repark_spark::spark_literals::translate_downstream_error_verbatim(
-                predicate,
-                canonical.as_ref(),
-                error,
-                verbatim,
-            )
-        })
+    let schema = frame.inner().schema();
+    let parsed = match frame.inner().parse_sql_expr(canonical.as_ref()) {
+        Ok(expr)
+            if expr
+                .column_refs()
+                .iter()
+                .all(|column| schema.has_column(column)) =>
+        {
+            Ok(expr)
+        }
+        first => folded_qualifier_predicate(frame, canonical.as_ref()).unwrap_or(first),
+    };
+    parsed.map_err(|error| {
+        repark_spark::spark_literals::translate_downstream_error_verbatim(
+            predicate,
+            canonical.as_ref(),
+            error,
+            verbatim,
+        )
+    })
+}
+
+fn folded_qualifier_predicate(
+    frame: &crate::dataframe::PyDataFrame,
+    canonical: &str,
+) -> Option<datafusion::error::Result<Expr>> {
+    let (state, _) =
+        crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
+    let schema = frame.inner().schema();
+    let dialect = state.config().options().sql_parser.dialect;
+    let mut parsed = state.sql_to_expr_with_alias(canonical, &dialect).ok()?;
+    repark_core::frame_names::fold_frame_qualifiers(
+        &mut parsed.expr,
+        schema,
+        repark_core::frame_names::NameRule::IgnoreCase,
+    )
+    .then(|| state.create_logical_expr_from_sql_expr(parsed, schema))
 }
 
 pub(crate) fn parse_canonical_predicate_exact(
@@ -79,12 +105,16 @@ pub(crate) fn parse_canonical_predicate_exact(
         Ok(expr) => Ok(expr),
         Err(error) => {
             if let Some((relation, name)) = missing_column(&error) {
-                let probe = Expr::Column(Column::new(relation, name));
+                let column = Column::new(relation, name);
                 repark_core::frame_names::resolve_bound_expr_with(
-                    probe,
+                    Expr::Column(column.clone()),
                     frame.inner().schema(),
                     repark_core::frame_names::NameRule::Exact,
                 )?;
+                return Err(repark_core::frame_names::unresolved_column(
+                    &column,
+                    frame.inner().schema(),
+                ));
             }
             Err(
                 repark_spark::spark_literals::translate_downstream_error_verbatim(
@@ -158,6 +188,36 @@ fn missing_column(
             _ => None,
         },
         datafusion::error::DataFusionError::Diagnostic(_, inner) => missing_column(inner),
+        _ => None,
+    }
+}
+
+pub(crate) fn unresolved_sort_key(
+    error: datafusion::error::DataFusionError,
+    frame_schema: &DFSchema,
+) -> datafusion::error::DataFusionError {
+    let Some((relation, name)) = missing_column(&error) else {
+        return error;
+    };
+    match DFSchema::from_unqualified_fields(frame_schema.fields().clone(), HashMap::new()) {
+        Ok(unqualified) => {
+            repark_core::frame_names::unresolved_column(&Column::new(relation, name), &unqualified)
+        }
+        Err(_) => error,
+    }
+}
+
+pub(crate) fn ambiguous_column(
+    error: &datafusion::error::DataFusionError,
+) -> Option<(Option<TableReference>, String)> {
+    match error {
+        datafusion::error::DataFusionError::SchemaError(inner, _) => match inner.as_ref() {
+            SchemaError::AmbiguousReference { field } => {
+                Some((field.relation.clone(), field.name.clone()))
+            }
+            _ => None,
+        },
+        datafusion::error::DataFusionError::Diagnostic(_, inner) => ambiguous_column(inner),
         _ => None,
     }
 }
@@ -439,6 +499,10 @@ impl PyColumn {
             else_expr: None,
         }))
     }
+}
+
+pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    module.add_function(wrap_pyfunction!(grouping_id_column, module)?)
 }
 
 #[pyfunction]

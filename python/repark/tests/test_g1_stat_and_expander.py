@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from repark.errors import (
+    AnalysisException,
     IllegalArgumentException,
     PySparkTypeError,
     PySparkValueError,
@@ -306,13 +307,16 @@ def test_h1_drop_by_column_correct_side(spark: ReparkSession) -> None:
 
 
 def test_h1_select_parent_columns_both_sides(spark: ReparkSession) -> None:
-    """joined.select(left['b'], right['b']) yields both bare display names."""
+    """Parent columns from both sides refuse 1182 (``sj4_fail3_both_sel``)."""
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
-    both = joined.select(left["b"], frame["b"])
-    assert both.columns == ["b", "b"]
-    assert both.count() == 2
+    with pytest.raises(AnalysisException) as refused:
+        joined.select(left["b"], frame["b"]).collect()
+    assert refused.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    params = refused.value.getMessageParameters()
+    assert params["config"] == "spark.sql.analyzer.failAmbiguousSelfJoin"
+    assert params["ambiguousAttrs"] == "b"
 
 
 def test_h1_select_join_keys_all_how(spark: ReparkSession) -> None:
@@ -380,7 +384,11 @@ def test_h1_select_cast_parent_column(spark: ReparkSession) -> None:
 
 
 def test_h1_rename_dropna_fillna_when_multi_name(spark: ReparkSession) -> None:
-    """Rename / na / when on multi-name condition joins."""
+    """Rename / na / when on multi-name condition joins.
+
+    The filled select refuses missing (``sj4_fail1_fill_sel``); the unfilled
+    ``when`` still answers.
+    """
     from repark import functions as functions_mod
 
     frame = spark.createDataFrame([(1, 2), (3, None)], ["a", "b"])
@@ -392,9 +400,12 @@ def test_h1_rename_dropna_fillna_when_multi_name(spark: ReparkSession) -> None:
     assert joined.dropna().count() == 1
     filled = joined.fillna(0)
     assert filled.columns == ["aa", "b", "a", "b"]
-    # Both sides' b filled; row with null→0.
-    left_b_vals = [row[0] for row in filled.select(left["b"]).collect()]
-    assert 0 in left_b_vals
+    with pytest.raises(AnalysisException) as refused:
+        filled.select(left["b"]).collect()
+    assert (
+        refused.value.getCondition() == "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+    )
+    assert '"b"' in str(refused.value)
     flags = joined.select(functions_mod.when(left["b"] > 0, 1).otherwise(0).alias("f")).collect()
     assert [row[0] for row in flags] == [1, 0]
 
@@ -418,17 +429,24 @@ def test_h1_todf_alias_union_sample_multi_name(spark: ReparkSession) -> None:
 
 
 def test_h1_withcolumns_describe_dropdup_multi_name(spark: ReparkSession) -> None:
-    """withColumns / describe / dropDuplicates on multi-name joins."""
+    """withColumns / describe / dropDuplicates on multi-name joins.
+
+    Flipped SJ-5 F1: live Spark 4.1.2 refuses the describe with
+    ``AMBIGUOUS_REFERENCE`` naming ``b`` twice.
+    """
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
     widened = joined.withColumns({"z": left["b"]})
     assert widened.columns == ["aa", "b", "a", "b", "z"]
     assert widened.count() == 2
-    described = joined.describe()
-    assert described.columns[0] == "summary"
-    assert described.columns[1:] == ["aa", "b", "a", "b"]
-    assert described.count() == 5
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE") as refused:
+        joined.describe()
+    assert refused.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    assert refused.value.getMessageParameters() == {
+        "name": "`b`",
+        "referenceNames": "[`b`, `b`]",
+    }
     deduped = joined.dropDuplicates(["b"])
     assert deduped.columns == ["aa", "b", "a", "b"]
     assert deduped.count() == 2

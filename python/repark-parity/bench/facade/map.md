@@ -82,7 +82,7 @@ definition has to be exact or the deferral rests on a number nobody can reproduc
 
 It is a *shape*, not an implementation: it shows what a perfect collapse would cost, and
 deliberately skips every correctness obligation a real one carries (plan lineage,
-`_origin_plan_id`, `MISSING_ATTRIBUTES`, the adjacent-window-layer merge). Read it as an upper
+`_attr_id`, `MISSING_ATTRIBUTES`, the adjacent-window-layer merge). Read it as an upper
 bound on the prize, never as evidence that the change is safe.
 
 ## Contents

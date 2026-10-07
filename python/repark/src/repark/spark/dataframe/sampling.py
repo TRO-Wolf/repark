@@ -125,7 +125,6 @@ def _sample(
         if frame._display_names is not None and frame._engine_names is not None:
             child._display_names = list(frame._display_names)
             child._engine_names = list(frame._engine_names)
-            child._origin_map = dict(frame._origin_map) if frame._origin_map is not None else None
         return child
     finally:
         frame._session.drop_temp_view(view)
@@ -192,9 +191,6 @@ def _random_split(
                 if frame._display_names is not None and frame._engine_names is not None:
                     child._display_names = list(frame._display_names)
                     child._engine_names = list(frame._engine_names)
-                    child._origin_map = (
-                        dict(frame._origin_map) if frame._origin_map is not None else None
-                    )
                 frames.append(child)
                 lower = upper
             return frames

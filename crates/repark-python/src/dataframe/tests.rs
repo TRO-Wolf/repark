@@ -158,7 +158,7 @@ fn arrow_c_stream_export_is_lazy_and_does_not_materialize_up_front() {
         let py_dataframe = PyDataFrame::new(dataframe, reader_test_runtime());
 
         let capsule = py_dataframe
-            .__arrow_c_stream__(python, None)
+            .__arrow_c_stream__(python, None, None)
             .expect("streaming export returns a capsule");
         assert_eq!(
             produced.load(Ordering::SeqCst),
@@ -323,7 +323,7 @@ fn drive_panicking_stream_export_child() {
         let py_dataframe = PyDataFrame::new(dataframe, reader_test_runtime());
 
         let capsule = py_dataframe
-            .__arrow_c_stream__(python, None)
+            .__arrow_c_stream__(python, None, None)
             .expect("export returns a capsule (execute_stream is lazy — no poll yet)");
         let mut reader = import_capsule_stream(&capsule);
 
@@ -432,6 +432,28 @@ fn assert_frame_depths(frame: &PyDataFrame, label: &str) {
     );
 }
 
+fn key_join(py: Python<'_>, left: &Py<PyDataFrame>, right: &Py<PyDataFrame>) -> PyDataFrame {
+    let stamped_left = crate::dataframe_names::stamp_attribute_ids(left.clone_ref(py))
+        .expect("the left side stamps");
+    let stamped_right = crate::dataframe_names::stamp_attribute_ids(right.clone_ref(py))
+        .expect("the right side stamps");
+    let left_node =
+        crate::frame_lineage::frame_root(&stamped_left.borrow(py)).expect("a left node");
+    let right_node =
+        crate::frame_lineage::frame_root(&stamped_right.borrow(py)).expect("a right node");
+    let (joined, _) = stamped_left
+        .borrow(py)
+        .join_on_names(
+            stamped_right.borrow(py),
+            vec!["id".to_string()],
+            "inner",
+            &left_node,
+            &right_node,
+        )
+        .expect("a key join builds");
+    joined
+}
+
 #[test]
 fn cached_frame_levels_match_a_fresh_survey() {
     let id = || PyColumn::column("id").expect("a column builds");
@@ -511,11 +533,7 @@ fn cached_frame_levels_match_a_fresh_survey() {
             .union_by_name(right.borrow(py), false)
             .expect("a union_by_name builds");
         assert_frame_depths(&named, "union_by_name");
-        let joined = left
-            .borrow(py)
-            .join_on_names(right.borrow(py), vec!["id".to_string()], "inner")
-            .expect("a key join builds");
-        assert_frame_depths(&joined, "join_on_names");
+        assert_frame_depths(&key_join(py, &left, &right), "join_on_names");
         let renamed = left
             .borrow(py)
             .with_column_renamed("id", "lid")

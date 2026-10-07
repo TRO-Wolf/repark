@@ -10,11 +10,12 @@ mod collect_rows;
 mod column;
 mod dataframe;
 mod dataframe_fill;
-mod dataframe_names;
+pub mod dataframe_names;
 mod dataframe_stack;
 mod dataframe_stats;
 mod deep_stack;
 mod fence;
+pub mod frame_lineage;
 mod is_duplicated;
 mod logical_names;
 mod ml;
@@ -158,10 +159,8 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     dataframe_names::register(module)?;
     dataframe_stack::register(module)?;
     dataframe_stats::register(module)?;
-    module.add_function(wrap_pyfunction!(
-        column::expr_build::grouping_id_column,
-        module
-    )?)?;
+    frame_lineage::register(module)?;
+    column::expr_build::register(module)?;
     cache_budget::register(module)?;
     catalog_census::register(module)?;
     cdf_infer::register(module)?;

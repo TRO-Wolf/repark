@@ -70,7 +70,7 @@ pub(crate) fn shared_runtime() -> PyResult<Arc<Runtime>> {
 pub struct PyReparkSession {
     pub(crate) session: ReparkSession,
     pub(crate) runtime: Arc<Runtime>,
-    deep_view_levels: AtomicUsize,
+    pub(crate) deep_view_levels: AtomicUsize,
 }
 
 impl PyReparkSession {
@@ -386,7 +386,7 @@ impl PyReparkSession {
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.materialize_as_temp_view", {
             let segment = frame_drive_segment_cached(&frame.depths())?;
-            let frame = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
+            let frame = frame.executable()?;
             py.detach(|| {
                 let materialized = self.session.materialize_dataframe_as_temp_view(name, frame);
                 block_on_grown_sized(&self.runtime, materialized, segment)
@@ -407,7 +407,7 @@ impl PyReparkSession {
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.materialize_as_cache_view", {
             let segment = frame_drive_segment_cached(&frame.depths())?;
-            let frame = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
+            let frame = frame.executable()?;
             py.detach(|| {
                 let materialized = self
                     .session

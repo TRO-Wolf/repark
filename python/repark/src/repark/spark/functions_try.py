@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from repark.spark.column import Column
-from repark.spark.functions import _aggregate_argument, _scalar, _thread_origin
+from repark.spark.functions import _aggregate_argument, _scalar
 
 
 def try_divide(left: Column | str | float, right: Column | str | float) -> Column:
@@ -94,7 +94,6 @@ def try_sum(col: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -110,7 +109,6 @@ def try_avg(col: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 

@@ -1,6 +1,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
 use std::ops::ControlFlow;
+use std::sync::Arc;
 
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::tree_node::{Transformed, TreeNode};
@@ -16,10 +17,38 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
+use super::attr_id::same_relation;
+
+pub use super::attr_id::{
+    AttrId, Resolution, alias_with_fresh_id, attribute_ids, copy_attribute_ids, stamp, strip,
+    strip_for_execution, strip_schema_ids,
+};
+pub use super::attr_id::{
+    join_collisions, plan_is_relation, plan_is_stamped, remint_shared, remint_with_map, resolve,
+};
+pub use super::attr_lineage::{
+    projection_source_ids, sort_hits_meet_at_join, sort_input_carries_twice,
+    sort_output_carries_twice, sort_sourced_twin_engine,
+};
+pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
+pub use super::frame_lineage::{all_ids, ambiguous, ambiguous_images, renewed_absent, shared_ids};
+pub use super::predicate_names::fold_frame_qualifiers;
+pub use super::self_join::{AttrRefText, JoinSide, Prepared, PreparedCondition, Refusal};
+pub use super::self_join::{SELF_JOIN_CONDITION, SelfJoinRules, check_refs, missing_condition};
+pub use super::self_join::{missing_message, parse_attr_refs, prepare_join_condition};
+pub use super::self_join::{quoted_names, self_join_message};
+pub use super::sort_names::{FreeNameOffense, free_expr_names, refuse_free_names};
+pub use super::sort_names::{SortShape, bind_free_names, bind_qualified_free_refs};
+pub use super::sort_names::{engine_field_is_unique, grandchild_key, grandchild_qualified_key};
+pub use super::sort_names::{join_dup_below_wrappers, join_output_sources};
+pub use super::sort_names::{
+    project_input_spelling, qualifier_star_positions, sort_shape, union_dup_below_wrappers,
+};
 pub use super::subquery::resolve_bound_expr_with;
+pub use super::written_names::refuse_folded_duplicate_keys;
 pub use repark_common::names::{NameHit, NameRule};
 
-type Hit<'a> = (Option<&'a TableReference>, &'a Field);
+pub(crate) type Hit<'a> = (Option<&'a TableReference>, &'a Field);
 
 const ATTRIBUTE_MARK: Location = Location {
     line: u64::MAX,
@@ -78,6 +107,26 @@ pub fn with_attribute_copies(frame: DataFrame) -> Result<DataFrame> {
     frame.select(projection)
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub fn rename_output_fields(frame: DataFrame, names: &[String]) -> Result<DataFrame> {
+    let schema = frame.schema();
+    if names.len() != schema.fields().len() {
+        return plan_err!(
+            "rename needs one name per output field: {} fields, {} names",
+            schema.fields().len(),
+            names.len()
+        );
+    }
+    let projection = schema
+        .iter()
+        .zip(names.iter())
+        .map(|((qualifier, field), name)| {
+            Expr::Column(Column::new(qualifier.cloned(), field.name())).alias(name)
+        })
+        .collect::<Vec<_>>();
+    frame.select(projection)
+}
+
 #[must_use]
 pub fn is_scratch_relation(table: &str) -> bool {
     table.starts_with("_repark_") || table.starts_with("__repark_")
@@ -87,7 +136,7 @@ fn is_attribute(column: &Column) -> bool {
     column.spans.iter().any(|span| span.start == ATTRIBUTE_MARK)
 }
 
-pub(super) fn bind_names(expr: Expr, frame_schema: &DFSchema, rule: NameRule) -> Result<Expr> {
+pub(crate) fn bind_names(expr: Expr, frame_schema: &DFSchema, rule: NameRule) -> Result<Expr> {
     expr.transform(|node| {
         Ok(match node {
             Expr::Column(column) if is_attribute(&column) => Transformed::no(Expr::Column(column)),
@@ -162,7 +211,7 @@ fn sql_id(relation: Option<&TableReference>, name: &str) -> String {
         .join(".")
 }
 
-fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
+pub(crate) fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
     let mut options = hits
         .iter()
         .map(|(qualifier, _)| sql_id(*qualifier, &column.name))
@@ -178,7 +227,8 @@ fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
     )
 }
 
-fn unresolved_column(column: &Column, frame_schema: &DFSchema) -> DataFusionError {
+#[must_use]
+pub fn unresolved_column(column: &Column, frame_schema: &DFSchema) -> DataFusionError {
     let reference = sql_id(column.relation.as_ref(), &column.name);
     let suggestions = frame_schema
         .iter()
@@ -261,6 +311,146 @@ pub fn refuse_ambiguous_condition(condition_sql: &str, sides: &[&DFSchema]) -> R
         ControlFlow::Break(error) => Err(error),
         ControlFlow::Continue(()) => Ok(()),
     }
+}
+
+#[must_use]
+pub fn free_sql_names(sql: &str, select_item: bool) -> Vec<(Vec<String>, String)> {
+    if select_item {
+        if let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, &format!("SELECT {sql}")) {
+            return sql_statement_names(&statements);
+        }
+        return Vec::new();
+    }
+    if let Ok(parsed) = Parser::new(&DatabricksDialect {})
+        .try_with_sql(sql)
+        .and_then(|mut parser| parser.parse_expr())
+    {
+        return sql_expr_names(&parsed);
+    }
+    if let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, &format!("SELECT ({sql})")) {
+        return sql_statement_names(&statements);
+    }
+    Vec::new()
+}
+
+fn sql_statement_names(
+    statements: &[datafusion::sql::sqlparser::ast::Statement],
+) -> Vec<(Vec<String>, String)> {
+    use datafusion::sql::sqlparser::ast::{SetExpr, Statement};
+    for statement in statements {
+        let Statement::Query(query) = statement else {
+            return Vec::new();
+        };
+        if query.with.is_some() {
+            return Vec::new();
+        }
+        let SetExpr::Select(select) = query.body.as_ref() else {
+            return Vec::new();
+        };
+        if !select.from.is_empty() {
+            return Vec::new();
+        }
+    }
+    let mut names = Vec::new();
+    let mut nested = false;
+    for statement in statements {
+        let _: ControlFlow<()> = visit_expressions(statement, |node| {
+            collect_sql_ident(node, &mut names, &mut nested);
+            ControlFlow::<()>::Continue(())
+        });
+    }
+    if nested { Vec::new() } else { names }
+}
+
+fn sql_expr_names(parsed: &SqlExpr) -> Vec<(Vec<String>, String)> {
+    let mut names = Vec::new();
+    let mut nested = false;
+    let _: ControlFlow<()> = visit_expressions(parsed, |node| {
+        collect_sql_ident(node, &mut names, &mut nested);
+        ControlFlow::<()>::Continue(())
+    });
+    if nested { Vec::new() } else { names }
+}
+
+fn collect_sql_ident(node: &SqlExpr, names: &mut Vec<(Vec<String>, String)>, nested: &mut bool) {
+    match node {
+        SqlExpr::Identifier(ident) => {
+            names.push((Vec::new(), ident.value.clone()));
+        }
+        SqlExpr::CompoundIdentifier(parts) => {
+            if let Some((last, head)) = parts.split_last() {
+                names.push((
+                    head.iter().map(|part| part.value.clone()).collect(),
+                    last.value.clone(),
+                ));
+            }
+        }
+        SqlExpr::Subquery(_) | SqlExpr::Exists { .. } | SqlExpr::InSubquery { .. } => {
+            *nested = true;
+        }
+        _ => (),
+    }
+}
+
+#[must_use]
+pub fn sql_mentions_duplicate(sql: &str, displays: &[String], rule: NameRule) -> bool {
+    let dups = displays
+        .iter()
+        .filter(|display| {
+            displays
+                .iter()
+                .filter(|other| rule.matches(other, display))
+                .count()
+                > 1
+        })
+        .collect::<Vec<_>>();
+    if dups.is_empty() {
+        return false;
+    }
+    if dups.iter().any(|display| {
+        !display
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+    }) {
+        return true;
+    }
+    sql_text_tokens(sql)
+        .iter()
+        .any(|token| dups.iter().any(|display| rule.matches(token, display)))
+}
+
+fn sql_text_tokens(sql: &str) -> Vec<&str> {
+    let bytes = sql.as_bytes();
+    let mut tokens = Vec::new();
+    let mut word: Option<usize> = None;
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'`' {
+            if let Some(begin) = word.take() {
+                tokens.push(&sql[begin..index]);
+            }
+            match sql[index + 1..].find('`') {
+                Some(end) => {
+                    tokens.push(&sql[index + 1..index + 1 + end]);
+                    index += end + 2;
+                }
+                None => index += 1,
+            }
+            continue;
+        }
+        if bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_' {
+            if word.is_none() {
+                word = Some(index);
+            }
+        } else if let Some(begin) = word.take() {
+            tokens.push(&sql[begin..index]);
+        }
+        index += 1;
+    }
+    if let Some(begin) = word {
+        tokens.push(&sql[begin..]);
+    }
+    tokens
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -373,21 +563,6 @@ fn unique_case_match(column: &Column, frame_schema: &DFSchema) -> Option<Column>
         .then_some(first)
 }
 
-fn same_relation(written: &TableReference, held: &TableReference, rule: NameRule) -> bool {
-    let written_parts = [written.catalog(), written.schema(), Some(written.table())];
-    let held_parts = [held.catalog(), held.schema(), Some(held.table())];
-    written_parts
-        .iter()
-        .zip(held_parts.iter())
-        .all(
-            |(written_part, held_part)| match (written_part, held_part) {
-                (Some(written_part), Some(held_part)) => rule.matches(written_part, held_part),
-                (Some(_), None) => false,
-                (None, _) => true,
-            },
-        )
-}
-
 fn bind_name(schema: &DFSchema, name: &str, rule: NameRule) -> Column {
     let bare = Column::new_unqualified(name);
     if schema.has_column_with_unqualified_name(name) {
@@ -442,7 +617,9 @@ pub fn join_on_named_keys(
     keys: &[String],
     join_type: JoinType,
     rule: NameRule,
-) -> Result<DataFrame> {
+    left_node: Arc<FrameNode>,
+    right_node: Arc<FrameNode>,
+) -> Result<(DataFrame, Arc<FrameNode>)> {
     if matches!(rule, NameRule::Exact) {
         for key in keys {
             if !left.schema().has_column_with_unqualified_name(key) {
@@ -461,6 +638,12 @@ pub fn join_on_named_keys(
         .iter()
         .map(|key| bind_name(right.schema(), key, rule))
         .collect();
+    let left_schema = left.schema().clone();
+    let right_outputs = attribute_ids(right.schema())
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    let shared = shared_ids(&left_node, &right_outputs);
     let (state, left_plan) = left.into_parts();
     let plan = LogicalPlanBuilder::from(left_plan)
         .join(
@@ -472,19 +655,33 @@ pub fn join_on_named_keys(
         .build()?;
     let joined = DataFrame::new(state, plan);
     if matches!(join_type, JoinType::LeftSemi | JoinType::LeftAnti) {
-        return Ok(joined);
+        let remint = shared
+            .iter()
+            .map(|id| (id.clone(), AttrId::mint()))
+            .collect();
+        let node = FrameNode::join(joined.schema(), left_node, right_node, remint, false)?;
+        return Ok((joined, node));
     }
     let mut seen: HashSet<String> = HashSet::new();
+    let mut right_kept = 0usize;
     let projection: Vec<Expr> = joined
         .schema()
         .iter()
-        .filter(|(_, field)| {
+        .enumerate()
+        .filter(|(index, (_, field))| {
             let matched = keys.iter().find(|key| rule.matches(key, field.name()));
-            matched.is_none_or(|key| seen.insert(key.clone()))
+            let keep = matched.is_none_or(|key| seen.insert(key.clone()));
+            right_kept += usize::from(keep && *index >= left_schema.fields().len());
+            keep
         })
-        .map(|(qualifier, field)| Expr::Column(Column::new(qualifier.cloned(), field.name())))
+        .map(|(_, (qualifier, field))| Expr::Column(Column::new(qualifier.cloned(), field.name())))
         .collect();
-    joined.select(projection)
+    let right_start = projection.len() - right_kept;
+    let (state, plan) = joined.select(projection)?.into_parts();
+    let (plan, remint) = remint_shared(plan, right_start, &shared)?;
+    let schema = plan.schema().clone();
+    let node = FrameNode::join(&schema, left_node, right_node, remint, true)?;
+    Ok((DataFrame::new(state, plan), node))
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -549,452 +746,4 @@ fn field_names(frame: &DataFrame) -> BTreeSet<String> {
         .iter()
         .map(|field| field.name().clone())
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use datafusion::arrow::datatypes::{DataType, Field};
-    use datafusion::common::{Column, DFSchema, JoinType, TableReference};
-    use datafusion::dataframe::DataFrame;
-    use datafusion::logical_expr::{Expr, col, lit};
-    use datafusion::prelude::SessionContext;
-
-    use super::{
-        NameRule::{Exact, IgnoreCase},
-        attribute_reference, bind_names, bind_projection_expr, drop_named_columns,
-        join_on_named_keys, refuse_ambiguous_condition, requalify_join_sides, union_by_folded_name,
-    };
-
-    fn frame(names: &[(&str, &str)]) -> DFSchema {
-        let fields = names
-            .iter()
-            .map(|(qualifier, name)| {
-                (
-                    Some((*qualifier).into()),
-                    Arc::new(Field::new(*name, DataType::Int64, true)),
-                )
-            })
-            .collect::<Vec<_>>();
-        DFSchema::new_with_metadata(fields, std::collections::HashMap::new()).unwrap()
-    }
-
-    #[test]
-    fn folded_reference_binds_the_single_spelled_field() {
-        let schema = frame(&[("t", "ID"), ("t", "data")]);
-        let bound = bind_names(col("ID").gt(lit(1i64)), &schema, IgnoreCase).unwrap();
-        assert_eq!(
-            bound,
-            Expr::Column(Column::new(Some("t"), "ID")).gt(lit(1i64))
-        );
-    }
-
-    fn refusal(expr: Expr, schema: &DFSchema) -> String {
-        bind_names(expr, schema, IgnoreCase)
-            .unwrap_err()
-            .to_string()
-    }
-
-    fn ambiguous(reference: &str, options: &str) -> String {
-        format!(
-            "Error during planning: [AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, \
-             could be: [{options}]. SQLSTATE: 42704"
-        )
-    }
-
-    fn unresolved(reference: &str, options: &str) -> String {
-        format!(
-            "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
-             function parameter with name {reference} cannot be resolved. Did you mean one of the \
-             following? [{options}]. SQLSTATE: 42703"
-        )
-    }
-
-    #[test]
-    fn exact_and_ambiguous_references_stay() {
-        let schema = frame(&[("t", "id"), ("u", "ID")]);
-        assert_eq!(
-            refusal(col("id"), &schema),
-            ambiguous("`id`", "`t`.`id`, `u`.`id`")
-        );
-        let twins = frame(&[("t", "Id"), ("u", "ID")]);
-        assert_eq!(
-            refusal(col("id"), &twins),
-            ambiguous("`id`", "`t`.`id`, `u`.`id`")
-        );
-        let qualified = Expr::Column(Column::new(Some("t"), "id"));
-        let exact = frame(&[("t", "id"), ("t", "ID")]);
-        assert_eq!(
-            refusal(qualified, &exact),
-            ambiguous("`t`.`id`", "`t`.`id`, `t`.`id`")
-        );
-    }
-
-    #[test]
-    fn ambiguous_candidates_render_sorted_like_spark() {
-        let joined = frame(&[("a", "id"), ("b", "ID")]);
-        assert_eq!(
-            refusal(col("id"), &joined),
-            ambiguous("`id`", "`a`.`id`, `b`.`id`")
-        );
-        assert_eq!(
-            refusal(
-                Expr::Column(Column::new_unqualified("ID")).gt(lit(1i64)),
-                &joined
-            ),
-            ambiguous("`ID`", "`a`.`ID`, `b`.`ID`")
-        );
-        let scratch = frame(&[("__repark_cdf_54fd", "id"), ("__repark_cdf_54fd", "ID")]);
-        assert_eq!(
-            refusal(col("id"), &scratch),
-            ambiguous("`id`", "`id`, `id`")
-        );
-        let reversed = frame(&[("b", "id"), ("a", "ID")]);
-        assert_eq!(
-            refusal(col("id"), &reversed),
-            ambiguous("`id`", "`a`.`id`, `b`.`id`")
-        );
-        let narrowed = Expr::Column(Column::new(Some("a"), "Id"));
-        assert_eq!(
-            bind_names(narrowed, &joined, IgnoreCase).unwrap(),
-            Expr::Column(Column::new(Some("a"), "id"))
-        );
-    }
-
-    fn sides() -> (DFSchema, DFSchema) {
-        let held = TableReference::full("sc", "ns", "t_vz_1");
-        let left = DFSchema::new_with_metadata(
-            vec![
-                (
-                    Some(held.clone()),
-                    Arc::new(Field::new("ID", DataType::Int32, true)),
-                ),
-                (
-                    Some(held),
-                    Arc::new(Field::new("data", DataType::Utf8, true)),
-                ),
-            ],
-            std::collections::HashMap::new(),
-        )
-        .unwrap();
-        let right = DFSchema::from_unqualified_fields(
-            vec![
-                Field::new("id", DataType::Int64, false),
-                Field::new("w", DataType::Utf8, false),
-            ]
-            .into(),
-            std::collections::HashMap::new(),
-        )
-        .unwrap();
-        (left, right)
-    }
-
-    #[test]
-    fn unqualified_and_catalog_candidates_render_like_spark() {
-        let (left, right) = sides();
-        let joined = left.join(&right).unwrap();
-        assert_eq!(
-            refusal(col("id"), &joined),
-            ambiguous("`id`", "`id`, `sc`.`ns`.`t_vz_1`.`id`")
-        );
-        assert_eq!(
-            refuse_ambiguous_condition("(`ID` = `id`)", &[&left, &right])
-                .unwrap_err()
-                .to_string(),
-            ambiguous("`ID`", "`ID`, `sc`.`ns`.`t_vz_1`.`ID`")
-        );
-        assert_eq!(
-            refuse_ambiguous_condition("(`id` = `ID`)", &[&right, &left])
-                .unwrap_err()
-                .to_string(),
-            ambiguous("`id`", "`id`, `sc`.`ns`.`t_vz_1`.`id`")
-        );
-        assert!(refuse_ambiguous_condition("(l.`ID` = r.`id`)", &[&left, &right]).is_ok());
-        assert!(refuse_ambiguous_condition("(`data` = `w`)", &[&left, &right]).is_ok());
-    }
-
-    #[tokio::test]
-    async fn requalified_join_carries_each_side_relation() {
-        let context = SessionContext::new();
-        let left = context
-            .sql(r#"SELECT "ID", data FROM (SELECT 1 AS "ID", 'a' AS data) t"#)
-            .await
-            .unwrap();
-        let right = context.sql("SELECT 1 AS id, 'q' AS w").await.unwrap();
-        let joined = context
-            .sql(r#"SELECT l."ID", l.data, r.id, r.w FROM (SELECT 1 AS "ID", 'a' AS data) l CROSS JOIN (SELECT 1 AS id, 'q' AS w) r"#)
-            .await
-            .unwrap();
-        let requalified = requalify_join_sides(joined, &[left.schema(), right.schema()]).unwrap();
-        let qualifiers = requalified
-            .schema()
-            .iter()
-            .map(|(qualifier, field)| (qualifier.map(ToString::to_string), field.name().clone()))
-            .collect::<Vec<_>>();
-        assert_eq!(
-            qualifiers,
-            vec![
-                (Some("t".to_string()), "ID".to_string()),
-                (Some("t".to_string()), "data".to_string()),
-                (None, "id".to_string()),
-                (None, "w".to_string()),
-            ]
-        );
-        assert_eq!(
-            refusal(col("id"), requalified.schema()),
-            ambiguous("`id`", "`id`, `t`.`id`")
-        );
-    }
-
-    #[test]
-    fn qualified_reference_binds_through_its_relation() {
-        let schema = frame(&[("t", "ID"), ("t", "data")]);
-        let written = Expr::Column(Column::new(Some("t"), "id"));
-        assert_eq!(
-            bind_names(written, &schema, IgnoreCase).unwrap(),
-            Expr::Column(Column::new(Some("t"), "ID"))
-        );
-        let other = Expr::Column(Column::new(Some("x"), "id"));
-        assert_eq!(
-            bind_names(other.clone(), &schema, IgnoreCase).unwrap(),
-            other
-        );
-    }
-
-    #[test]
-    fn qualified_alias_names_the_written_segment() {
-        let schema = frame(&[("t", "ID")]);
-        let aliased = Expr::Column(Column::new(Some("t"), "id")).alias("t.ID");
-        assert_eq!(
-            bind_names(aliased, &schema, IgnoreCase).unwrap(),
-            Expr::Column(Column::new(Some("t"), "ID")).alias("ID")
-        );
-        let chosen = Expr::Column(Column::new(Some("t"), "id")).alias("other");
-        assert_eq!(
-            bind_names(chosen, &schema, IgnoreCase).unwrap(),
-            Expr::Column(Column::new(Some("t"), "ID")).alias("other")
-        );
-    }
-
-    #[test]
-    fn projection_keeps_the_written_spelling() {
-        let schema = frame(&[("t", "ID")]);
-        assert_eq!(
-            bind_projection_expr(col("id"), &schema, IgnoreCase).unwrap(),
-            Expr::Column(Column::new(Some("t"), "ID")).alias_qualified(Some("t"), "id")
-        );
-        let held = Expr::Column(Column::new(Some("t"), "ID"));
-        assert_eq!(
-            bind_projection_expr(held.clone(), &schema, IgnoreCase).unwrap(),
-            held
-        );
-    }
-
-    #[test]
-    fn attribute_reference_binds_exactly_where_a_written_one_refuses() {
-        let twins = frame(&[("t", "id"), ("t", "ID")]);
-        let attribute = attribute_reference("ID");
-        assert_eq!(
-            bind_names(attribute.clone(), &twins, IgnoreCase).unwrap(),
-            attribute
-        );
-        assert_eq!(
-            bind_projection_expr(attribute.clone(), &twins, IgnoreCase).unwrap(),
-            attribute
-        );
-        assert_eq!(
-            refusal(Expr::Column(Column::new_unqualified("ID")), &twins),
-            ambiguous("`ID`", "`t`.`ID`, `t`.`ID`")
-        );
-    }
-
-    async fn spelled(sql: &str) -> DataFrame {
-        SessionContext::new().sql(sql).await.unwrap()
-    }
-
-    fn names(frame: &DataFrame) -> Vec<String> {
-        frame
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| field.name().clone())
-            .collect()
-    }
-
-    async fn row_count(frame: DataFrame) -> usize {
-        frame.count().await.unwrap()
-    }
-
-    #[tokio::test]
-    async fn drop_removes_every_folded_match() {
-        let frame = spelled(r#"SELECT 1 AS "ID", 'a' AS data"#).await;
-        let dropped =
-            drop_named_columns(frame.clone(), &["id".to_string()], &[], &[], IgnoreCase).unwrap();
-        assert_eq!(names(&dropped), vec!["data".to_string()]);
-        let both = ["ID".to_string(), "DATA".to_string()];
-        assert!(
-            names(&drop_named_columns(frame.clone(), &both, &[], &[], IgnoreCase).unwrap())
-                .is_empty()
-        );
-        let absent =
-            drop_named_columns(frame, &["nope".to_string()], &[], &[], IgnoreCase).unwrap();
-        assert_eq!(names(&absent), vec!["ID".to_string(), "data".to_string()]);
-    }
-
-    #[tokio::test]
-    async fn qualified_drop_binds_through_its_relation() {
-        let frame = spelled(r#"SELECT "ID", data FROM (SELECT 1 AS "ID", 'a' AS data) t"#).await;
-        let whole = vec!["ID".to_string(), "data".to_string()];
-        for written in ["t.ID", "t.id", "T.Id"] {
-            let dropped =
-                drop_named_columns(frame.clone(), &[], &[written.to_string()], &[], IgnoreCase)
-                    .unwrap();
-            assert_eq!(names(&dropped), vec!["data".to_string()]);
-        }
-        for written in ["t.ID", "u.id"] {
-            let named =
-                drop_named_columns(frame.clone(), &[written.to_string()], &[], &[], IgnoreCase)
-                    .unwrap();
-            assert_eq!(names(&named), whole);
-        }
-        let unmatched =
-            drop_named_columns(frame, &[], &["u.id".to_string()], &[], IgnoreCase).unwrap();
-        assert_eq!(names(&unmatched), whole);
-        let joined = spelled(
-            r#"SELECT a.id, b."ID" FROM (SELECT 1 AS id, 1 AS "ID") a JOIN (SELECT 1 AS id, 1 AS "ID") b ON a.id = b.id"#,
-        )
-        .await;
-        let right = drop_named_columns(joined.clone(), &[], &["b.id".to_string()], &[], IgnoreCase)
-            .unwrap();
-        assert_eq!(names(&right), vec!["id".to_string()]);
-        let left = drop_named_columns(joined, &[], &["A.ID".to_string()], &[], IgnoreCase).unwrap();
-        assert_eq!(names(&left), vec!["ID".to_string()]);
-    }
-
-    #[tokio::test]
-    async fn attribute_drop_is_exact_and_a_two_hit_reference_refuses() {
-        let twins = spelled(r#"SELECT 1 AS id, 2 AS "ID""#).await;
-        let exact =
-            drop_named_columns(twins.clone(), &[], &[], &["ID".to_string()], IgnoreCase).unwrap();
-        assert_eq!(names(&exact), vec!["id".to_string()]);
-        let error = drop_named_columns(twins.clone(), &[], &["id".to_string()], &[], IgnoreCase)
-            .unwrap_err()
-            .to_string();
-        assert_eq!(error, ambiguous("`id`", "`id`, `id`"));
-        let named = drop_named_columns(twins, &["id".to_string()], &[], &[], IgnoreCase).unwrap();
-        assert!(names(&named).is_empty());
-    }
-
-    #[tokio::test]
-    async fn join_binds_each_side_and_keeps_one_key() {
-        let left = spelled(r#"SELECT 1 AS "ID", 'a' AS data"#).await;
-        let right = spelled("SELECT 1 AS id, 'q' AS w").await;
-        let keys = ["Id".to_string()];
-        let joined = join_on_named_keys(
-            left.clone(),
-            right.clone(),
-            &keys,
-            JoinType::Inner,
-            IgnoreCase,
-        )
-        .unwrap();
-        assert_eq!(
-            names(&joined),
-            vec!["ID".to_string(), "data".to_string(), "w".to_string()]
-        );
-        assert_eq!(row_count(joined).await, 1);
-        let semi = join_on_named_keys(left, right, &keys, JoinType::LeftSemi, IgnoreCase).unwrap();
-        assert_eq!(names(&semi), vec!["ID".to_string(), "data".to_string()]);
-    }
-
-    #[tokio::test]
-    async fn union_respells_the_right_and_refuses_a_mismatch() {
-        let left = spelled(r#"SELECT 1 AS "ID", 'a' AS data"#).await;
-        let right = spelled(r#"SELECT 2 AS id, 'b' AS "Data""#).await;
-        let unioned = union_by_folded_name(left.clone(), right, false, IgnoreCase).unwrap();
-        assert_eq!(names(&unioned), vec!["ID".to_string(), "data".to_string()]);
-        assert_eq!(row_count(unioned).await, 2);
-        let narrow = spelled("SELECT 2 AS id").await;
-        let error = union_by_folded_name(left.clone(), narrow.clone(), false, IgnoreCase)
-            .unwrap_err()
-            .to_string();
-        assert!(error.ends_with("mismatched columns: ['data']"), "{error}");
-        let filled = union_by_folded_name(left, narrow, true, IgnoreCase).unwrap();
-        assert_eq!(names(&filled), vec!["ID".to_string(), "data".to_string()]);
-        assert_eq!(row_count(filled).await, 2);
-    }
-
-    #[test]
-    fn exact_rule_refuses_a_case_only_match() {
-        let schema = frame(&[("t", "id"), ("t", "Data"), ("t", "s")]);
-        let written = Expr::Column(Column::from_qualified_name_ignore_case("ID"));
-        let error = bind_names(written, &schema, Exact).unwrap_err().to_string();
-        assert_eq!(error, unresolved("`ID`", "`id`, `Data`, `s`"));
-        let qualified = Expr::Column(Column::from_qualified_name_ignore_case("T.id"));
-        let error = bind_names(qualified, &schema, Exact)
-            .unwrap_err()
-            .to_string();
-        assert_eq!(error, unresolved("`T`.`id`", "`id`, `Data`, `s`"));
-        let held = Expr::Column(Column::new(Some("t"), "Data"));
-        assert_eq!(bind_names(held.clone(), &schema, Exact).unwrap(), held);
-        let unknown = col("nope");
-        assert_eq!(
-            bind_names(unknown.clone(), &schema, Exact).unwrap(),
-            unknown
-        );
-    }
-
-    #[test]
-    fn ignore_case_rule_is_unchanged() {
-        let schema = frame(&[("t", "ID"), ("t", "data")]);
-        let held = Expr::Column(Column::new(Some("t"), "ID"));
-        assert_eq!(bind_names(held.clone(), &schema, IgnoreCase).unwrap(), held);
-        assert_eq!(
-            bind_names(col("id"), &schema, IgnoreCase).unwrap(),
-            Expr::Column(Column::new(Some("t"), "ID"))
-        );
-        let twins = frame(&[("t", "id"), ("t", "ID")]);
-        assert_eq!(
-            bind_names(col("id"), &twins, IgnoreCase)
-                .unwrap_err()
-                .to_string(),
-            ambiguous("`id`", "`t`.`id`, `t`.`id`")
-        );
-    }
-
-    #[tokio::test]
-    async fn frame_functions_follow_the_rule() {
-        let frame = spelled(r#"SELECT 1 AS "ID", 'a' AS data"#).await;
-        let kept = drop_named_columns(frame.clone(), &["id".to_string()], &[], &[], Exact).unwrap();
-        assert_eq!(names(&kept), vec!["ID".to_string(), "data".to_string()]);
-        let dropped = drop_named_columns(frame, &["id".to_string()], &[], &[], IgnoreCase).unwrap();
-        assert_eq!(names(&dropped), vec!["data".to_string()]);
-        let left = spelled(r#"SELECT 1 AS id, 'a' AS "Data""#).await;
-        let right = spelled(r#"SELECT 1 AS "ID", 'q' AS w"#).await;
-        let error = join_on_named_keys(
-            left.clone(),
-            right.clone(),
-            &["ID".to_string()],
-            JoinType::Inner,
-            Exact,
-        )
-        .unwrap_err()
-        .to_string();
-        assert_eq!(
-            error,
-            "Error during planning: [UNRESOLVED_USING_COLUMN_FOR_JOIN] USING column `ID` cannot \
-             be resolved on the left side of the join. The left-side columns: [`Data`, `id`]. \
-             SQLSTATE: 42703"
-        );
-        let wide = spelled(r#"SELECT 1 AS "ID""#).await;
-        let narrow = spelled("SELECT 2 AS id").await;
-        let error = union_by_folded_name(wide, narrow, false, Exact)
-            .unwrap_err()
-            .to_string();
-        assert_eq!(
-            error,
-            "Error during planning: Cannot resolve column name \"ID\" among (id)."
-        );
-    }
 }
