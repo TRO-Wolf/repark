@@ -70,8 +70,9 @@ rulings V1…V6, adds `write/{sink_offsets_scope_tests.rs, sink_offsets_probe_te
 |---|---|---|---|---|
 | C-020 | Y1 (S2): ruling V2 holds under routine expiry. When the ancestry walk stops at a missing parent, a **retained** stamped snapshot carrying the property's exact record whose sequence number (timestamp on a v1 table) is greater than the oldest reachable ancestor's cannot be an ancestor hidden behind the gap, so it refuses `StampNotInLineage { snapshot }` with `durable: None`; a stamp not newer than the oldest reachable ancestor keeps `StampedSnapshotExpired` with the property durable; a walk that reaches a root reads as before. | The verifier's RV1 shape, ported on a v2 and a v1 sink, and the fold-1 gap pin. | **PROVEN** | 3 pins green: `resume_refuses_a_rollback_past_the_stamp_after_routine_expiry_as_not_in_lineage` (plain P0 `[1]`, plain P1 `[2]`, stamped epoch 0 `[3]`, `rollback_to(P1)`, `expire_snapshot_id(P0)`: the stamped snapshot is retained with a sequence number above the head's, the refusal is `StampNotInLineage` naming it with `durable` `None` and no "expired", live ids `[1, 2]`), `resume_reads_a_v1_rollback_after_expiry_by_timestamp` (the same shape on a v1 sink, where both sequence numbers are equal and the stamped timestamp is later), and `resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback` (unchanged: a stamp behind the gap is older than the oldest reachable ancestor and stays `StampedSnapshotExpired`). Mutations: MY1-G (the gap branch gives up, the fold-1 behaviour) red on both new pins; MY1-S (v1 compares sequence numbers) red on the v1 pin; MY1-A (a gap always reads as a rollback) red on the gap pin. pins: mb-2a/C-020 |
 | C-021 | Y2 (S3): `summary_with_extras`, the one function every caller-extras commit path goes through (the three arms, replace, replace-partitions, overwrite-filter, CTAS, create-table, the writer-properties append and `commit_stamp_only`), drops `repark.cdc.scope-token` matched ASCII case-insensitively, so no path writes the token into a summary. The three arms still read the token from `summary_extra` before the strip, so the batch's own commit claims; the claim matches the key exactly, so a case-variant key never claims, and a replayed summary carries no token to replay. | The replace and overwrite-filter pin, the replay and case-variant pin. | **PROVEN** | 2 pins green: `the_batch_session_token_never_lands_on_a_replace_or_overwrite_filter_commit` (the token installed in the session config as `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token` and resolved through `resolve_write_for_session`: a replace and then an overwrite-filter commit under the batch scope carry no key matching the token key in any case and no value equal to the token, keep the caller's `caller-key`, write no stamp and leave `NotCommitted`; the batch's own append then stamps without the token), `a_replayed_or_case_variant_token_key_never_claims` (a foreign load of the replace head finds no `repark.cdc.*` key to replay; appends carrying the live token under `REPARK.CDC.SCOPE-TOKEN` and `Repark.Cdc.Scope-Token` commit as on main, leak neither key nor value and leave `NotCommitted`; the batch's own commit then claims, one stamped snapshot). Mutations: MY2-S (no strip) red on both pins; MY2-C (strip by exact case only) red on the case-variant pin; MY2-K (the claim folds the key case) red on the case-variant pin. pins: mb-2a/C-021 |
+| C-022 | Y3 (S2, no design change): a second sink write in one batch body still refuses `SinkCommittedTwice` at the second write, and its text names the consequence (a restart resumes after the stamped epoch, so the refused write's rows never land) and the fix (one sink write per batch body, or a single combined write), never the scope token. The design question is OQ-2a-2, for MB-3. | The text pin in `microbatch/error.rs` and the verifier's RV3 shape, ported. | **PROVEN** | 2 pins green: `sink_committed_twice_names_the_loss_and_the_fix` (the exact text for epoch 4), `a_second_sink_write_in_one_batch_names_the_loss_and_the_fix` (two appends sharing the batch session's token on the `foreachBatch` door: the second's cause is `SinkCommittedTwice { epoch: 4 }`, its text and `Debug` carry "a restart resumes after epoch 4", "rows would never land", "once per batch body" and "a single write" and not the token; after the guard drops, resume reads epoch 4 and live ids are `[1, 2]`, the loss the text names). Mutation MY3 (the fold-1 text restored): both pins red. pins: mb-2a/C-022 |
 
-VERDICT: 21 clauses, 21 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 22 clauses, 22 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Dated decision rows
 
@@ -232,6 +233,19 @@ mutated), restored from a backup and confirmed byte-equal with `cmp`:
   as both engines' Iceberg sinks do for their configured branch, with resume reading that
   branch? The default acted on stamps `main` only, because the sketch's resume reads the current
   snapshot's ancestry and 1.7 exposes no branch option on the streaming writer.
+- **OQ-2a-2 (2026-10-07, ruling Y3; for the Frontier and the owner, decided in MB-3).**
+  - **The question:** where the epoch stamp goes when a batch body writes the sink more than once.
+  - **Flink:** two-phase commit, so the stamp is atomic with all writes.
+  - **Spark:** `foreachBatch` is at-least-once, and a user's multi-write body replays.
+  - **The NS default:** refuse loud at the second write, which is the current behaviour
+    (`SinkCommittedTwice`, C-022). The first write has already stamped the epoch, so a restart
+    resumes after it and the refused write's rows never land; the refusal text says so and names
+    the fix.
+
+  Lean: the MB-3 `foreachBatch` door stamps once, through a trailing `commit_stamp_only` after
+  the body returns. Data commits inside the body stay unstamped, which is at-least-once on
+  multi-write bodies, matching Spark's contract. The `toTable` door keeps the single stamped
+  commit, which is exactly-once.
 
 ```
 COVERAGE_ATTESTATION:

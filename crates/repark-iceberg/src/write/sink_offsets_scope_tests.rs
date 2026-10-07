@@ -658,3 +658,45 @@ async fn a_replayed_or_case_variant_token_key_never_claims() {
     assert_stamped_head(&committed, &stamp);
     assert_eq!(stamped_snapshots(&committed), 1);
 }
+
+#[tokio::test]
+async fn a_second_sink_write_in_one_batch_names_the_loss_and_the_fix() {
+    let (_warehouse, catalog, ident) = fixture("two_writes_one_batch").await;
+    let table = append_plain(&catalog, &ident, &[1]).await;
+    let stamp = stamp_for(4, SinkDoor::ForeachBatch);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let token = guard.token().to_string();
+    let extra = session_extra(&guard);
+    let files = stage(&table, &[2]).await;
+    let table = commit_append_with_summary(&catalog, &table, files, &extra, None)
+        .await
+        .expect("the batch's first sink write");
+    let files = stage(&table, &[3]).await;
+    let error = commit_append_with_summary(&catalog, &table, files, &extra, None)
+        .await
+        .expect_err("a second sink write in one batch");
+    let cause = microbatch_cause(&error);
+    assert_eq!(
+        cause,
+        &MicroBatchError::SinkCommittedTwice {
+            epoch: Epoch::new(4)
+        }
+    );
+    let text = format!("{error} {cause:?}");
+    assert!(!text.contains(&token), "{text}");
+    for phrase in [
+        "a restart resumes after epoch 4",
+        "rows would never land",
+        "once per batch body",
+        "a single write",
+    ] {
+        assert!(text.contains(phrase), "{phrase}: {text}");
+    }
+    drop(guard);
+    let reloaded = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(
+        read_resume_point(&reloaded, query()).expect("resume"),
+        Some(stamp.record)
+    );
+    assert_eq!(live_ids(&reloaded).await, vec![1, 2]);
+}

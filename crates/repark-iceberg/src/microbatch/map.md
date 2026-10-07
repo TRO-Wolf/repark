@@ -52,8 +52,11 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   MB-2a fold 1 (ruling V2, 2026-10-07) adds `RecoveryReason::StampNotInLineage`: a sink stamp
   that is retained but off the current lineage (a rollback), naming a new `queryName` or a
   restore; `StampedSnapshotExpired` keeps the stamp that is truly gone.
+  MB-2a fold 2 (ruling Y3, 2026-10-07): `SinkCommittedTwice` names the loss (a restart resumes
+  after the stamped epoch, so the refused write's rows never land) and the fix (one sink write
+  per batch body, or a single combined write); it carries no scope token.
   pins: mb-1/C-006, C-020, C-024, C-036
-  pins: mb-2a/C-014
+  pins: mb-2a/C-014, C-022
 - `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
   `WindowLimit`, `PlannedFile`, `WindowPlan`, and
   `WindowPlanner::{new, named, initial_offset, next_window}` over a held
