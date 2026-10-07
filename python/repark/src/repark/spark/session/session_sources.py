@@ -38,7 +38,7 @@ class NamedSource:
         return self._key_path
 
     def ping(self) -> None:
-        """Refuse with the connector-pending message until the connector lands."""
+        """Run ``SELECT 1`` on a pooled connection of this source, under its timeouts."""
         inner = self._session._ensure_alive()
         from repark import _native
 
