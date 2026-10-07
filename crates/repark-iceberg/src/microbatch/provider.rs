@@ -13,6 +13,7 @@ use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
 use futures::TryStreamExt;
 use iceberg::arrow::ArrowReaderBuilder;
 use iceberg::scan::FileScanTask;
+use iceberg::spec::SchemaRef as IcebergSchemaRef;
 use iceberg::table::Table;
 
 use crate::catalog::scan_batches::conform_batch;
@@ -29,16 +30,19 @@ pub(crate) struct MicroBatchTableProvider {
 
 impl MicroBatchTableProvider {
     #[allow(clippy::missing_errors_doc)]
-    pub(crate) fn try_new(table: Table, plan: &WindowPlan) -> Result<Self> {
-        let metadata = table.metadata();
+    pub(crate) fn try_new(
+        table: Table,
+        plan: &WindowPlan,
+        read_schema: &IcebergSchemaRef,
+    ) -> Result<Self> {
         let end = plan.end.snapshot.get();
-        let snapshot = metadata.snapshot_by_id(end).ok_or_else(|| {
-            iceberg_to_datafusion(iceberg::Error::new(
+        if table.metadata().snapshot_by_id(end).is_none() {
+            return Err(iceberg_to_datafusion(iceberg::Error::new(
                 iceberg::ErrorKind::DataInvalid,
                 format!("Cannot find the end snapshot: {end}"),
-            ))
-        })?;
-        let schema = snapshot.schema(metadata).map_err(iceberg_to_datafusion)?;
+            )));
+        }
+        let schema = Arc::clone(read_schema);
         let arrow = presented_arrow_schema(&schema).map_err(iceberg_to_datafusion)?;
         let field_ids: Arc<[i32]> = schema
             .as_struct()
@@ -65,8 +69,16 @@ impl MicroBatchTableProvider {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn provider_for_plan(table: Table, plan: &WindowPlan) -> Result<Arc<dyn TableProvider>> {
-    Ok(Arc::new(MicroBatchTableProvider::try_new(table, plan)?))
+pub fn provider_for_plan(
+    table: Table,
+    plan: &WindowPlan,
+    read_schema: &IcebergSchemaRef,
+) -> Result<Arc<dyn TableProvider>> {
+    Ok(Arc::new(MicroBatchTableProvider::try_new(
+        table,
+        plan,
+        read_schema,
+    )?))
 }
 
 #[async_trait]
@@ -290,7 +302,9 @@ mod tests {
             .expect("window")
             .expect("some");
         assert_eq!(plan.files.len(), 2);
-        let provider = MicroBatchTableProvider::try_new(table, &plan).expect("provider");
+        let read_schema = table.metadata().current_schema().clone();
+        let provider =
+            MicroBatchTableProvider::try_new(table, &plan, &read_schema).expect("provider");
         let ctx = SessionContext::new();
         ctx.register_table("reads", Arc::new(provider))
             .expect("register");
@@ -416,7 +430,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn provider_reads_older_files_under_the_end_schema_by_field_id() {
+    async fn provider_reads_older_files_under_the_read_schema_by_field_id() {
         let (_warehouse, table) = evolved_table().await;
         let planner = WindowPlanner::new(table.clone(), ReadCaps::default());
         let from = planner
@@ -430,7 +444,8 @@ mod tests {
             .expect("window")
             .expect("some");
         assert_eq!(plan.files.len(), 3);
-        let provider = provider_for_plan(table, &plan).expect("provider");
+        let read_schema = table.metadata().current_schema().clone();
+        let provider = provider_for_plan(table, &plan, &read_schema).expect("provider");
         let ctx = SessionContext::new();
         ctx.register_table("evolve", provider).expect("register");
         let batches = ctx
@@ -508,7 +523,9 @@ mod tests {
             files: Vec::new(),
             num_input_rows: 0,
         };
-        let error = MicroBatchTableProvider::try_new(table, &plan).expect_err("must refuse");
+        let read_schema = table.metadata().current_schema().clone();
+        let error =
+            MicroBatchTableProvider::try_new(table, &plan, &read_schema).expect_err("must refuse");
         assert!(
             error
                 .to_string()

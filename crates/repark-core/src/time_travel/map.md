@@ -86,8 +86,17 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   zero-added-files `overwrite`/`delete` refuses at `initial_offset` where
   Spark idles until data arrives; the parity registry's row `MB-1-FL-9`
   declares it. pins: mb-1/C-031
+  **MB-1 fold 2 (2026-10-07):** `open` captures the table's current schema
+  as the run's read schema and passes it to every `provider_for_plan` call,
+  so each batch of one source has the same columns and types, whatever the
+  window's end snapshot or a later schema change (G2).
+  pins: mb-1/C-033
 - `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
   under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027, C-028, C-029, C-030
+- `microbatch_source_fold2_tests.rs` — fold 2's source pins, a child of
+  `microbatch_source_tests.rs`: the per-run read schema over a rename, a drop
+  and re-add, a type promotion and a change after open.
+  pins: mb-1/C-033
 - `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table
   AS OF decision both doors share. `provider_for_spec` is the #802
   `prepare_metadata_as_of` body moved down from `repark-spark` (refuse/serve-current/

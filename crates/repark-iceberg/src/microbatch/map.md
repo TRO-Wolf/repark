@@ -67,7 +67,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   Fold 1: every task is re-stamped with the end snapshot's schema and its
   top-level field ids, so older files read under the end schema, matched by
   field id, with null for a column a file lacks.
-  pins: mb-1/C-012, C-015, C-016, C-022
+  Fold 2 (G2, 2026-10-07): the caller passes the read schema, and the end
+  snapshot is only checked to exist. Every task is re-stamped with that
+  schema and its top-level field ids.
+  pins: mb-1/C-012, C-015, C-016, C-022, C-033
 
 ## Design notes
 
@@ -155,6 +158,17 @@ with no added data files (ledger FL-9). `FromTimestamp` past the head reads
 `None` until a snapshot at or after T exists, then starts there; older
 snapshots never stream (MB0b-R14, fold 1, F4). An off-ancestry `from`
 still refuses `SourceSnapshotExpired` (FL-3). FL-4 and FL-5 are superseded.
+
+The read schema (fold 2, G2, 2026-10-07) supersedes fold 1's end-snapshot
+schema. It is the table's current schema when the source first resolves its
+start, which is `MicroBatchSource::open` in `repark-core`, and the source
+holds it for its lifetime. Every batch of a run therefore has one column set
+and one type set, as Spark's `SparkScan.toMicroBatchStream` hands the scan's
+`expectedSchema` to the stream once. Files are projected by field id, with
+null for a field id a file lacks: a field dropped and re-added under the same
+name never shows the dropped field's values. A schema change committed after
+the source opened does not change the batch schema; a new column stays
+unread and a renamed one keeps the name it had at open.
 
 The provider struct stays `pub(crate)` per the sketch, so its
 `#[allow(dead_code)]` stood until round 3 wired a caller. `catalog/mod.rs`

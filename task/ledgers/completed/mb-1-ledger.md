@@ -460,6 +460,20 @@ re-verifier**, so G1 is implemented as ruled.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-032 | (G1) `WindowLimit::Unbounded` refuses `NonAppendSnapshot` at the first `overwrite` or `delete` in `(from, head]` even when the window already holds files, as MB0b-R17 measures for `availableNow`. `WindowLimit::Capped` keeps deliver-first over the same history. | The G1 pins in `window_fold2_pins.rs` plus mutation g1. | **PROVEN** | 2 pins green: `unbounded_walk_refuses_the_first_non_append_before_any_file` (R17's shape, overwrite and delete, uncapped and max-files 1: the refusal names the non-append, `from` = the first append, `to` = the head) and `capped_walk_delivers_both_appends_then_refuses_the_non_append` (ends `(a,1)`, `(b,1)`, then the refusal `from` = b). g1 red. pins: mb-1/C-032 |
+| C-033 | (G2) The read schema is the table's current schema when `MicroBatchSource::open` resolves the table, held for the source's lifetime and passed to `provider_for_plan` on every batch. Under capped windows a rename reads every batch under the new name, a drop and re-add reads `note=null` for the dropped field's file, a promotion reads `Int64`/`Float64` in every batch, and a schema change after open leaves the batch schema as it was. | The G2 pins in `microbatch_source_fold2_tests.rs` plus mutations g2a and g2b. | **PROVEN** | 4 pins green, each at `streaming-max-files-per-micro-batch=1`, the rendered schema and rows byte-exact per batch: `a_rename_before_start_reads_every_batch_under_the_new_name` (k03), `a_drop_and_re_add_never_shows_the_dropped_field` (k04: row 1 `note` empty, never `old`), `a_type_promotion_before_start_reads_every_batch_promoted` (k05) and `a_schema_change_after_open_leaves_the_batch_schema_alone`. g2a and g2b red. pins: mb-1/C-033 |
+
+## Dated decision rows — fold 2
+
+- **G2 (2026-10-07).** Supersedes F8's end-snapshot schema (C-022's "under the end
+  snapshot's schema"). The read schema is the table's current schema when the source
+  first resolves its start. `open` always runs first and already loads the table, so
+  it captures the schema there, before `initial_offset` and for a resumed run alike.
+  `SparkScan.toMicroBatchStream` hands the scan's `expectedSchema` to the stream in the
+  same way. A schema change committed after the source opened does not change the batch
+  schema: a column added later stays unread, a renamed column keeps its name at open,
+  and only a new source (a new run) reads the new schema. The provider pin is renamed
+  `provider_reads_older_files_under_the_read_schema_by_field_id` and passes the
+  table's current schema.
 
 ## Gates — fold 2
 
@@ -467,4 +481,13 @@ re-verifier**, so G1 is implemented as ruled.
 g1 window.rs `|| limit == WindowLimit::Unbounded` removed (Unbounded delivers first again)
 test microbatch::window::tests::window_fold2_pins::unbounded_walk_refuses_the_first_non_append_before_any_file ... FAILED
 test result: FAILED. 62 passed; 1 failed; 0 ignored; 0 measured; 804 filtered out
+g2a provider.rs `let schema = Arc::clone(read_schema);` -> the end snapshot's schema when it resolves (fold 1's per-window schema)
+test …::microbatch_source_fold2_tests::a_type_promotion_before_start_reads_every_batch_promoted ... FAILED
+test …::microbatch_source_fold2_tests::a_rename_before_start_reads_every_batch_under_the_new_name ... FAILED
+test …::microbatch_source_fold2_tests::a_schema_change_after_open_leaves_the_batch_schema_alone ... FAILED
+test …::microbatch_source_fold2_tests::a_drop_and_re_add_never_shows_the_dropped_field ... FAILED
+test result: FAILED. 20 passed; 4 failed; 0 ignored; 0 measured; 1027 filtered out
+g2b microbatch_source.rs `&self.read_schema` -> the reloaded table's current schema on every call
+test …::microbatch_source_fold2_tests::a_schema_change_after_open_leaves_the_batch_schema_alone ... FAILED
+test result: FAILED. 23 passed; 1 failed; 0 ignored; 0 measured; 1027 filtered out
 ```

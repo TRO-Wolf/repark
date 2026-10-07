@@ -4,6 +4,7 @@ use std::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 
 use datafusion::prelude::{DataFrame, SessionContext};
+use iceberg::spec::SchemaRef;
 use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_iceberg::microbatch::error::MicroBatchError;
@@ -204,6 +205,19 @@ pub struct MicroBatchSource {
     name: String,
     caps: ReadCaps,
     start: StartPosition,
+    read_schema: SchemaRef,
+}
+
+async fn load_table(
+    catalog: &Arc<dyn Catalog>,
+    ident: &TableIdent,
+    name: &str,
+) -> Result<Table, MicroBatchError> {
+    catalog.load_table(ident).await.map_err(|error| {
+        MicroBatchError::Catalog(format!(
+            "microbatch source cannot open table {name:?}: {error}"
+        ))
+    })
 }
 
 impl MicroBatchSource {
@@ -232,25 +246,21 @@ impl MicroBatchSource {
                     "microbatch source cannot open table {table:?}: catalog {catalog_name:?} is not registered"
                 ))
             })?;
-        let source = Self {
+        let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone());
+        let opened = load_table(&catalog, &ident, table).await?;
+        Ok(Self {
             context: session.context().clone(),
             catalog,
-            ident: TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone()),
+            ident,
             name: table.to_string(),
             caps: options.caps,
             start: options.start,
-        };
-        source.load().await?;
-        Ok(source)
+            read_schema: opened.metadata().current_schema().clone(),
+        })
     }
 
     async fn load(&self) -> Result<Table, MicroBatchError> {
-        self.catalog.load_table(&self.ident).await.map_err(|error| {
-            MicroBatchError::Catalog(format!(
-                "microbatch source cannot open table {:?}: {error}",
-                self.name
-            ))
-        })
+        load_table(&self.catalog, &self.ident, &self.name).await
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -273,7 +283,7 @@ impl MicroBatchSource {
             return Ok(None);
         };
         let end_snapshot = plan.end.snapshot.get();
-        let provider = provider_for_plan(table, &plan).map_err(|error| {
+        let provider = provider_for_plan(table, &plan, &self.read_schema).map_err(|error| {
             MicroBatchError::Catalog(format!(
                 "microbatch source cannot read the batch ending at snapshot {end_snapshot}: {error}"
             ))

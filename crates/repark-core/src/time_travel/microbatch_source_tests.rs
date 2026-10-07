@@ -620,3 +620,5 @@ async fn the_same_source_refuses_a_table_replaced_under_its_name() {
         other => panic!("expected SourceReplaced, got {other:?}"),
     }
 }
+
+mod microbatch_source_fold2_tests;
