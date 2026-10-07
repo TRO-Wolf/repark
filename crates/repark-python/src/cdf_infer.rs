@@ -65,8 +65,11 @@ pub(crate) fn read_schema(schema_obj: &Bound<'_, PyAny>) -> PyResult<Option<Sche
     let capsule = capsule.cast::<PyCapsule>()?;
     let pointer = capsule.pointer_checked(Some(SCHEMA_CAPSULE))?;
     let ffi_schema = unsafe { pointer.cast::<FFI_ArrowSchema>().as_ref() };
-    let schema = Schema::try_from(ffi_schema)
-        .map_err(|err| PyValueError::new_err(format!("cdf schema import refused: {err}")))?;
+    let schema = Schema::try_from(ffi_schema).map_err(|err| {
+        PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+            "cdf schema import refused: {err}"
+        )))
+    })?;
     Ok(Some(Arc::new(schema)))
 }
 

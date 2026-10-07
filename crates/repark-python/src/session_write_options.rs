@@ -28,7 +28,9 @@ pub fn session_sql_with_write_options(
         (false, true) => repark_core::OverwriteIntent::Dynamic,
         (true, true) => {
             return Err(pyo3::exceptions::PyValueError::new_err(
-                "force_static_overwrite and force_dynamic_overwrite are mutually exclusive",
+                crate::exceptions::mask_user_visible(
+                    "force_static_overwrite and force_dynamic_overwrite are mutually exclusive",
+                ),
             ));
         }
     };

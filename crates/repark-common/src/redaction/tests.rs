@@ -1,9 +1,25 @@
 use super::{
-    column_name_is_secret_shaped, mask_value_credentials, prop_key_is_secret, redact_value,
+    column_name_is_secret_shaped, mask_url_userinfo, mask_value_credentials, prop_key_is_secret,
+    redact_value,
 };
 
 fn masked(value: &str) -> String {
     mask_value_credentials(value)
+}
+
+#[test]
+fn mask_url_userinfo_masks_a_url_password_and_leaves_other_text() {
+    let sentence = "saw postgresql://u:pw@h/db in the message";
+    assert_eq!(
+        mask_url_userinfo(sentence),
+        "saw postgresql://u:***@h/db in the message"
+    );
+    let iceberg = "Multiple entries with same key: deleted-records=3 and deleted-records=5";
+    assert_eq!(mask_url_userinfo(iceberg), iceberg);
+    let names = "Multiple entries with same key: 1=ID and 1=id";
+    assert_eq!(mask_url_userinfo(names), names);
+    let storage = "s3://bucket@x/path";
+    assert_eq!(mask_url_userinfo(storage), storage);
 }
 
 #[test]

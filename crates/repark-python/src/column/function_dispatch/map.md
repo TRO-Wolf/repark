@@ -1,5 +1,7 @@
 # map — repark-python/src/column/function_dispatch
 
+SOURCE-URL-REDACT-1-FN fold 2 (2026-10-06): scalar-dispatch `PyValueError` messages pass through `value_err`, which masks with `exceptions::mask_user_visible`. The parent file stays under its 1000-line ceiling.
+
 ## Purpose
 
 Child modules of [`function_dispatch.rs`](../function_dispatch.rs). The parent's arm table sat at
