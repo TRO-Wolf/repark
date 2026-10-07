@@ -132,8 +132,10 @@ repark-core's error map.
   `write_options.rs` `summary_with_extras` drops `repark.cdc.scope-token` (ASCII
   case-insensitive), so no commit path that takes caller extras (replace, overwrite-filter,
   CTAS, create-table, writer properties, the three arms) writes the token; the arms read it
-  before the strip, and only the exact key claims.
-  pins: mb-2a/C-020, C-021
+  before the strip, and only the exact key claims. The fold-2 pins sit in
+  `sink_offsets_scope_tests.rs`, including the live `SinkCommittedTwice` text pin for a second
+  sink write in one batch body (OQ-2a-2 is MB-3's).
+  pins: mb-2a/C-020, C-021, C-022
 - `sink_offsets.rs`, `sink_offsets_tests.rs`, `sink_offsets_scope_tests.rs`,
   `sink_offsets_probe_tests.rs` — **MB-2a fold 1
   (2026-10-07, sketch §3.4 amendment):** a scope is `(sink TableUuid, ScopeToken)`. `enter`

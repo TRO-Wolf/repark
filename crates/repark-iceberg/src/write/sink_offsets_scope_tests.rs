@@ -626,7 +626,7 @@ async fn a_replayed_or_case_variant_token_key_never_claims() {
     .await
     .expect("replace inside the batch");
     let foreign = catalog.load_table(&ident).await.expect("foreign load");
-    let replayed: Vec<(String, String)> = foreign
+    let replayable: Vec<(String, String)> = foreign
         .metadata()
         .current_snapshot()
         .expect("head")
@@ -636,7 +636,7 @@ async fn a_replayed_or_case_variant_token_key_never_claims() {
         .filter(|(key, _)| key.to_ascii_lowercase().starts_with("repark.cdc."))
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();
-    assert!(replayed.is_empty(), "{replayed:?}");
+    assert!(replayable.is_empty(), "{replayable:?}");
     let mut current = replaced;
     for key in [
         SCOPE_TOKEN_KEY.to_ascii_uppercase(),

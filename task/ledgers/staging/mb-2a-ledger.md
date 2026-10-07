@@ -19,6 +19,11 @@ sink_offsets_tests.rs, mod.rs, map.md}`, the three named commit arms
 rulings V1…V6, adds `write/{sink_offsets_scope_tests.rs, sink_offsets_probe_tests.rs}`, the
 `RecoveryReason::StampNotInLineage` arm in `microbatch/error.rs`, the property-version guard in
 `microbatch/offset.rs`, and the dated §3.4 / §6 amendment in the design sketch.
+**Fold 2 (2026-10-07)**, after the re-verify's PASS with two S2 and one S3
+(`/tmp/oc-worker/direct/wo/microbatch/mb2a/reverify/verdict.json`), under rulings Y1…Y3, edits
+`write/sink_offsets.rs` (the off-lineage reading under expiry), `write/write_options.rs`
+(`summary_with_extras` strips the token), `microbatch/error.rs` (the `SinkCommittedTwice` text)
+and adds its pins to `write/sink_offsets_scope_tests.rs`.
 
 ## Halt checks — 2026-10-07
 
@@ -226,6 +231,30 @@ mutated), restored from a backup and confirmed byte-equal with `cmp`:
 | MV-G | the whole-ancestry guard dropped (a gap reads as a rollback) | red: 1 (`resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback`) |
 | MV-F | the property's integer guard dropped | red: 2 (`from_property_refuses_a_non_integer_version_as_corrupt`, `resume_refuses_a_malformed_property_version_as_corrupt`) |
 | MV-O | the merge-on-read claim moved back after `prepare_row_delta_deletes` | red: 1 (`a_refused_merge_on_read_claim_stages_no_delete_file`) |
+
+**Fold 2 — 2026-10-07.** All exit 0, in brief order, on the fold-2 tree:
+`cargo test -p repark-iceberg --lib` (919 passed, 0 failed: the 913 above plus two Y1, two Y2
+and one Y3 pin in `write::sink_offsets` and the Y3 text pin in `microbatch::error`),
+`cargo test -p repark-iceberg --lib microbatch::crash_tests` (1 passed), `make rust-clippy`,
+`cargo fmt --check`, `make rust-panic-ban`, `python3 scripts/check_rust_file_size.py`,
+`./scripts/check_lib_rs.sh`, `python3 scripts/sync_map_md.py --check`,
+`bash scripts/check_map_md.sh --base origin/main`, `python3 scripts/check_docs_links.py`,
+`python3 scripts/check_ledger_grammar.py`, and the comment-ban probe (`hits=0`). Sizes:
+`sink_offsets.rs` 485, `sink_offsets_scope_tests.rs` 702, `microbatch/error.rs` 474,
+`write_options.rs` 637 (2 lines changed), all under the default ceiling.
+
+**Fold 2 mutations.** Each applied to the fold-2 tree, run against `write::sink_offsets` (and
+`microbatch::error` for MY3), restored from a backup and confirmed byte-equal with `cmp`:
+
+| id | mutation | result |
+|---|---|---|
+| MY1-G | the gap branch gives up (the fold-1 behaviour) | red: 2 (both rollback-after-expiry pins) |
+| MY1-S | a v1 table compares sequence numbers, not timestamps | red: 1 (`resume_reads_a_v1_rollback_after_expiry_by_timestamp`) |
+| MY1-A | a gap always reads as a rollback | red: 1 (`resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback`) |
+| MY2-S | `summary_with_extras` keeps the token key | red: 2 (both Y2 pins) |
+| MY2-C | the strip matches the exact case only | red: 1 (`a_replayed_or_case_variant_token_key_never_claims`) |
+| MY2-K | the claim matches the token key case-insensitively | red: 1 (`a_replayed_or_case_variant_token_key_never_claims`) |
+| MY3 | the fold-1 `SinkCommittedTwice` text restored | red: 2 (both Y3 pins) |
 
 ## Owner questions (none halts)
 
