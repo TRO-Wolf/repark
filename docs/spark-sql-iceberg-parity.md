@@ -3705,11 +3705,13 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 ### CONNECT-DIV-pg-sslmode — a Postgres source verifies TLS by default; `disable` is the explicit plaintext
 - **repark** — a Postgres source with no `sslmode` resolves to `SslMode::VerifyFull`: TLS with the
   certificate chain and the host name verified. `sslmode = "disable"` is the one plaintext option,
-  and every other mode refuses under CONNECT-DECL-sslmode-unverified. C-2b's later rounds build the
-  TLS connector that enforces the setting, with its live pin against a plaintext server.
+  and every other mode refuses under CONNECT-DECL-sslmode-unverified. Against a server that offers
+  no TLS, the default refuses at connect with `ConnectError::TlsRequired`, naming `sslmode` as the
+  one switch; every live cell connects with `sslmode = "disable"`.
 - **Apache Spark** — the JDBC source passes `sslmode` to pgjdbc, whose default falls back to
   plaintext when the server offers no TLS. *(oracle: documented — FL-12; no value claim.)*
-- **Pin** — `crates/repark-connect/tests/it/settings.rs::sslmode_default_is_verify_full`
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::sslmode_default_is_verify_full`,
+  `crates/repark-connect/tests/it/live_pg.rs::plaintext_server_refuses_under_the_default`
 - **Rationale** — DECLARED 2026-10-07 (C-2b; NS §5 TLS by default, the plaintext option dated
   2026-10-06; FL-12; the sketch's Q5). A silent plaintext fallback carries the password in the
   clear.
