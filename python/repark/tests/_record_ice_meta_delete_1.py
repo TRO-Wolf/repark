@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
 ORACLE_FILE = Path(__file__).with_name("ice_meta_delete_1_spark_oracle.json")
-CATALOG = "sc"
+CATALOG = "ice_meta_delete_1_live"
 NAMESPACE = "ns"
 UNPART = "(id INT, cat STRING, v STRING)"
 SEED2 = (

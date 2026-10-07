@@ -1190,6 +1190,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Driver-side callable execution and the second aggregation pass are DECLARED
   (`DF-FOREACH-1`, `DF-OBSERVE-1`).
   pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-007
+  **FOREACH-WRAP-1 (2026-10-07):** `foreach` and `foreachPartition` catch an `Exception`
+  from the loop, keep `scrub_exception(error)` and raise it after the handler, so
+  `__context__` is None. A credential in the user's exception leaves as a masked copy
+  of the same class (`DF-FOREACH-1`); one with none leaves as the user's own object,
+  byte for byte. Spark 4.1.2 shows the credential inside its `Py4JJavaError`; RePark
+  is stricter by the security ruling. `transform` keeps its plain passthrough, as
+  Spark does (`DF-TRANSFORM-1`). pins: foreach-wrap-1/C-001, C-002, C-003
   **Re-check (2026-09-15):** a thread-local suppression keeps plan-only work from filling an Observation — `register_view_without_fill` (temp views, EXPLAIN's scratch view) and `rows_without_fill` (EXPLAIN's rows); `empty_rows_after_fill` answers `tail(0)`. `core.py` swaps its three call sites line for line; writers register through the session method directly and still fill.
   Path-write notes (moved from the class docstring, IO-TEXT-1): table writes use CTAS or
   INSERT paths and creation rejects tightened frames; CSV/JSON/Parquet path writes run

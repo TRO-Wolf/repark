@@ -137,6 +137,9 @@ pub enum ConnectError {
     #[error("the COPY BINARY stream ended before its trailer: the connection was lost")]
     Disconnected,
 
+    #[error("a COPY BINARY field could not be buffered: the allocator refused its memory")]
+    FieldBuffer,
+
     #[error("an Arrow batch could not be built: {message}")]
     Arrow { message: String },
 
@@ -267,6 +270,7 @@ impl From<ConnectError> for Error {
             | ConnectError::InvalidUtf8 { .. }
             | ConnectError::Protocol { .. }
             | ConnectError::Disconnected
+            | ConnectError::FieldBuffer
             | ConnectError::Arrow { .. } => Error::DataFusion(error.to_string()),
             #[cfg(feature = "postgres")]
             ConnectError::TlsRequired

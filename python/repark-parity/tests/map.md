@@ -93,6 +93,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `c2_jdbc_oracle.py`, its 58 cells on Spark 4.1.2 + Postgres 16.15 through
   pgjdbc 42.7.13 (`c2_jdbc_oracle.json`) and their SHA-256. It needs `psql`
   and `DM2_PG_URL`, and is likewise run by hand, never collected.
+  **FOREACH-WRAP-1 (2026-10-07):** the user-callback oracle. The recorder
+  `fw1_callback_oracle.py`, its 3 cells on Spark 4.1.2 (`fw1_callback_oracle.json`)
+  and their SHA-256; run by hand, never collected.
 - [spill/](spill/map.md) — **NEVEROOM-1 steps 1–3 (2026-09-10/11):** the spill-coverage
   matrix harness, the full-tier run, and the CI golden: the subprocess-per-cell runner
   with an address-space cap, the in-engine `range()` generators sized to the limit

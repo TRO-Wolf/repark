@@ -146,16 +146,21 @@ four-line records.
   `ServerText` mapping) to `::text`, and a pin asserts the cast.** `ServerText` decode keeps
   bytes verbatim, which is only correct for server-rendered text; a raw binary interval is
   usually valid UTF-8 and would decode silently without the cast.
-- **Open item (2026-10-06, re-verify S3): the straddling-field peak is still about 3x the
-  field.** The carry grows by `Vec` doubling from the first partial chunk, so its capacity nears
-  twice the field before the builder copy (re-verify `memory.rs`, 512–1023 MiB fields). Reserving
-  the carry at the declared field length on the first partial chunk would bring it to about 2x.
-  Non-blocking; C-3 owns the gated memory benchmark.
-- **Open item (2026-10-06, re-verify S3): three accounting mutations survive.** They are
+- **CLOSED (2026-10-07, §13, C-089): the straddling-field peak is still about 3x the field.**
+  The carry grew by `Vec` doubling from the first partial chunk, so its capacity neared twice
+  the field before the builder copy (re-verify `memory.rs`, 512–1023 MiB fields). Since fold 1
+  (§14, C-092) the carry grows geometrically as bytes arrive, fallibly, and never past the
+  declared length, and the peak is 2.00x (§14.2). The open items' first shape, an up-front
+  reservation of the declared length (C-089), failed verification and is rejected. Pin:
+  `copy_accounting.rs::carry_growth_stops_at_the_declared_length`. C-3 still owns the gated
+  memory benchmark.
+- **CLOSED (2026-10-07, §13, C-090): three accounting mutations survive.** They were
   `buffered_bytes()` without the carry (r11), a variable-width NULL charged 0 (r13), and
   variable-width values charged with no offset bytes (r15)
-  (the re-verify's `mutate_rv.py`). Each needs an exact-count pin on `buffered_bytes()`.
-  Non-blocking.
+  (the re-verify's `mutate_rv.py`). Exact-count pins now kill each one (§13.1 m142–m144):
+  `copy_accounting.rs::buffered_bytes_counts_a_mid_field_carry`,
+  `::variable_width_nulls_charge_their_offset_slot` and
+  `::variable_width_values_charge_bytes_and_offset`.
 - **D-M1, the dependency measurement (2026-10-07, C-2b round 1a, branch
   `feat/c-2b-postgres-connection` from main `575f57ca`).** Round 1a is dependencies and the
   feature only: the root `[workspace.dependencies]` gains `tokio-postgres 0.7` (locked 0.7.18),
@@ -1158,34 +1163,252 @@ Run on the finished tree. Each cargo command ran under the build-slot lock.
 | `python3 scripts/check_ledger_grammar.py` | 0 | 308 live ledgers clean |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
 
-## 13. C-2d — the mount, both stubs retired, the Python door, the federated cells (2026-10-07)
+## 13. C-2a open items — the straddling-field peak and three accounting pins (2026-10-07)
+
+**Branch:** `fix/c-2a-open-items` from main `930ccbf3`. **Model:** Claude Opus 5.5
+(`claude-opus-5-5`, high). **Scope:** the two §3 open items the C-2a re-verify left (S3, both
+non-blocking): the carry's `Vec` doubling, and its surviving mutations r11, r13 and r15. No
+live cell changes, so no container ran.
+
+### PROPOSITION LEDGER — C-2a open items — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-089 | (Rejected by fold 1, §14.) The carry is reserved once. On a field's first partial chunk (the first chunk that holds any of the field's bytes, with the carry empty) `CopyBinaryDecoder` calls `reserve_exact(length.min(MAX_FIELD_BYTES))`, so the carry's capacity equals the declared length and never grows by doubling. A 4096-byte `text` field opened with 100 bytes reads `buffered_bytes()` = 4096 (no row is buffered, so the whole charge is the carry), and still 4096 after 1000 more bytes. The re-verify's `memory.rs` shape (one `text` field of 512, 513, 700 and 1023 MiB, fed in 64 KiB chunks) peaks at 2.00x the field, down from 3.00x (2.46x at 700 MiB). Fed whole, the field still peaks at 1.00x. A length past `MAX_FIELD_BYTES` still refuses at the length word with `FieldTooLong` before any reservation (C-015 unchanged); the `min` bounds the reservation even so. | `copy_accounting.rs::carry_reserves_the_declared_length_on_the_first_partial_chunk` (removed in fold 1); mutation m141; §13.2. | REJECTED (fold 1, the verifier's S1: a declared length alone allocated up to 1 GiB per scan, infallibly, before any byte arrived; C-092 and C-093 replace it) | §13.1 m141 red; §13.2 before and after. Under `ulimit -v` 4 GiB, eight scans with a 1 GiB length word and 16 bytes aborted the process (SIGABRT, `memory allocation of 1073741824 bytes failed`); §14.3. |
+| C-090 | `buffered_bytes()` is exact for the three shapes the re-verify's survivors touched. Each expected count comes from the decoder's accounting model, not Arrow's per-column layout: pooled validity bits, ceil(rows x columns / 8), and one `i32` offset slot (4 bytes) per variable-width row, value or NULL; the stored bytes of a variable-width value; the fixed width per fixed-width row (`int4` 4); plus the carry's capacity. Arrow's own buffers for the two multi-column batches are 47 and 40 bytes (per-column validity, n + 1 offsets, no validity buffer without NULLs), against 38 and 33 here; the model under-counts by O(columns) bytes a batch (fold 1, the verifier's S3). One buffered `abc` row and a 64-byte `text` field opened with 10 bytes read 3 + 4 + 1 + 10 = 18 since fold 1, where the carry holds what arrived (72 before, with the up-front reservation). Three all-NULL `text, bytea, int4` rows read 3 x (4 + 4 + 4) + ceil(9 / 8) = 38. The rows (`abc`, five bytes, `7`) and (empty, empty, `8`) read (3 + 4) + (5 + 4) + 4 + 4 + 4 + 4 + ceil(6 / 8) = 33. | `copy_accounting.rs::buffered_bytes_counts_a_mid_field_carry`, `::variable_width_nulls_charge_their_offset_slot`, `::variable_width_values_charge_bytes_and_offset`; mutations m142 (r11), m143 (r13), m144 (r15). | PROVEN | §13.1: all three re-verify survivors are now red. Extends C-016 and C-017 from bounds to exact counts. |
+| C-091 | Shape and files: `src/copy_binary.rs` is the only product change (three lines, the reservation), at 476/480. The new `tests/it/copy_accounting.rs` (98 lines) holds the four pins and borrows `copy_binary.rs`'s stream builders (`Field`, `base`, `header_with`, `tuple`, now `pub(crate)`), so `tests/it/copy_binary.rs` stays at 605/700. No public signature changes, no dependency changes, no code comments. Every gate in §13.4 passes. | §13.4. | PROVEN | At `f25ca81e`. Fold 1's shape is C-095. |
+
+### 13.1 Mutations (open items)
+
+Each mutation was applied alone to the finished tree, the crate's tests run
+(`cargo test -p repark-connect --no-fail-fast`) and the file restored from the copy taken before
+the edit (`mutate_open.py`, the re-verify's `mutate_rv.py` shape). The tree's diff was the same
+before and after the four runs.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m141 | C-089 | grow the carry by `Vec` doubling again: drop the reservation (`src/copy_binary.rs`) | RED | `carry_reserves_the_declared_length_on_the_first_partial_chunk` at `copy_accounting.rs:43`; `buffered_bytes_counts_a_mid_field_carry` at `:56` |
+| m142 | C-090 | r11: `buffered_bytes()` leaves out the carry's capacity (`src/copy_binary.rs`) | RED | `carry_reserves_the_declared_length_on_the_first_partial_chunk` at `copy_accounting.rs:43`; `buffered_bytes_counts_a_mid_field_carry` at `:56` |
+| m143 | C-090 | r13: a variable-width NULL charges 0, fixed widths kept (`src/types/postgres.rs`) | RED | `variable_width_nulls_charge_their_offset_slot` at `copy_accounting.rs:70` |
+| m144 | C-090 | r15: a variable-width value charges no offset bytes (`src/types/postgres.rs`) | RED | `variable_width_values_charge_bytes_and_offset` at `copy_accounting.rs:94`; `buffered_bytes_counts_a_mid_field_carry` at `:56` |
+
+All four are red, and none is equivalent. Before this unit, r11, r13 and r15 were green in
+every repo pin (the re-verify's `mutations.json`).
+
+### 13.2 The peak, measured (2026-10-07)
+
+The re-verify's probe (`memory.rs`, a counting global allocator, release build), copied with its
+`common` module and pointed at this clone, ran under `ulimit -v 67108864` and the build-slot
+lock. Each row is one `text` field between two one-byte rows, under the default limits. Peak
+growth is measured from the decoder's creation.
+
+| field | chunk | before (main `930ccbf3`) | after |
+|---|---|---|---|
+| 512 MiB | 64 KiB | 1535.8 MiB (3.00x) | 1024.0 MiB (2.00x) |
+| 513 MiB | 64 KiB | 1536.8 MiB (3.00x) | 1026.0 MiB (2.00x) |
+| 700 MiB | 64 KiB | 1723.8 MiB (2.46x) | 1400.0 MiB (2.00x) |
+| 1023 MiB (`(1 << 30) - 64`) | 64 KiB | 3071.5 MiB (3.00x) | 2048.0 MiB (2.00x) |
+| each of the four | whole | 1.00x | 1.00x |
+
+Before, the carry's first extend was the chunk's remainder (65 504 bytes after the header, the
+first row and the field's two words), and doubling from there passes 512 MiB only at about 1023.5 MiB, so the carry
+alone nearly doubled the field. After, the carry holds the field once and the builder copy holds
+it again. Every other probe line is unchanged: the `i32::MAX` length word refuses with 0 bytes
+of growth, the carry is released after the flush (0.0 MiB retained), and the tiny-row and
+all-NULL runs flush as before.
+
+### 13.3 Readings acted on (no halt)
+
+- **R-1, the up-front charge. RETRACTED by fold 1 (the verifier's S2): its last sentence is
+  false.** `buffered_bytes()` has no production caller, and nothing charges the decoder to the
+  pool before it allocates; the C-2c scan resizes its `MemoryReservation` only after a batch
+  exists, to that batch's array size (§14, C-094). The reading as first written: a stream that
+  declares a length of up to `MAX_FIELD_BYTES` and sends its first byte now reserves that length
+  at once, where before the carry grew only as bytes arrived. The brief's guard is the cap: a
+  lying length reserves at most 1 GiB, the bound the length word already enforces, and the
+  reservation is untouched virtual memory until bytes fill it. `buffered_bytes()` reports it
+  from that chunk on, so the C-2c scan's `MemoryReservation` is resized to the full field before
+  its bytes arrive and refuses early when the pool cannot hold it, rather than mid-field.
+- **R-2, the `min`.** Moot since fold 1, whose growth is capped by the declared length itself.
+  As first written: `field_length` refuses any length past `MAX_FIELD_BYTES` before
+  `FieldValue` is entered, so `length.min(MAX_FIELD_BYTES)` always equals `length`. It stays
+  as the brief's stated guard, which keeps the reservation bounded if the length check ever
+  moves; its removal is an equivalent mutation and was not run.
+- **R-3, no reservation on an empty chunk.** A chunk that ends just after the length word
+  enters `FieldValue` with no bytes available. The reservation waits for the first byte, so
+  `copy_field_at_postgres_max_is_accepted` (the maximum length with no payload) still reserves
+  nothing. Unpinned here (the verifier's MA survived); fold 1 pins it,
+  `copy_accounting.rs::a_length_word_ending_the_chunk_reserves_nothing`.
+- **R-4, a reused carry.** A carry kept from an earlier field (cleared, capacity within the
+  byte cap, C-016) whose capacity already covers the new length keeps that capacity, because
+  `reserve_exact` never shrinks. The pins run on a fresh decoder, where the capacity is exactly
+  the declared length.
+
+### 13.4 Gates (open items)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock and `ulimit -v`.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-connect` | 0 | 123 passed, 51 ignored (the live cells), 0 failed |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1112 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 368 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | 1354 files, 7295 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 309 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2ao origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+## 14. C-2a open items fold 1 — the reservation never aborts (2026-10-07)
+
+**Branch:** `fix/c-2a-open-items` from `f25ca81e` (PR #989). **Model:** Claude Opus 5.5
+(`claude-opus-5-5`, high). **Scope:** the verifier's FAIL verdict on #989 under the
+orchestrator's rulings M1 (S1), M2 (S2) and M3 (S3), and the verifier's unpinned MA (R-3). No
+live cell changes, so no container ran.
+
+### PROPOSITION LEDGER — C-2a open items fold 1 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-092 | M1 (S1): the carry grows as bytes arrive, geometrically and never past the declared length. `grow_carry`, a free function in `src/copy_binary.rs`, runs before each straddling field's bytes are copied into the carry. When the bytes a chunk gives a straddling field do not fit the carry's capacity, the carry grows to `want = min(length, max(carry.len() + taken, carry.capacity() * 2))`, where `taken` is the chunk's bytes for the field (its `available`, capped at what the field still needs); a carry with room does not grow. A declared length alone allocates nothing: a 1 GiB length word that ends its chunk leaves `buffered_bytes()` at 0 (the verifier's MA, R-3), and with 16 bytes after it charges 16, then 116 after 100 more, then 232 after 10 more. A 4096-byte field opened with 100 bytes charges 100, then 1100, 2200 and 4096 after each further 1000 bytes, never 4400. The re-verify's `memory.rs` peaks stay at 2.00x the field for 512, 513, 700 and 1023 MiB fields in 64 KiB chunks, and 1.00x fed whole. | `copy_accounting.rs::a_length_word_ending_the_chunk_reserves_nothing`, `::a_hostile_length_charges_only_the_bytes_received`, `::carry_growth_stops_at_the_declared_length`, `::buffered_bytes_counts_a_mid_field_carry`; mutations m145, m147, m148, m149; §14.2, §14.3. | PROVEN | §14.1 all red; §14.2 before and after; §14.3, eight scans under 4 GiB exit 0 where `f25ca81e` aborted. |
+| C-093 | M1 (S1): an allocation failure is an error, never an abort. The growth calls `try_reserve_exact` and maps a refusal to `ConnectError::FieldBuffer` ("a COPY BINARY field could not be buffered: the allocator refused its memory"), which carries no value, folds to `repark_common::Error::DataFusion` (class `Base`) and poisons the decoder like any decode error. On Linux, a 1 GiB field fed in 1 MiB chunks under a 512 MiB address-space limit ends in `Err(FieldBuffer)` and the process exits cleanly. | `copy_accounting.rs::carry_allocation_failure_is_an_error_not_an_abort`; mutation m146; §14.3. | PROVEN | §14.1 m146 red (the child aborts). How the failure is forced: §14.4 R-2. |
+| C-094 | M2 (S2): §13.3 R-1 is retracted. `buffered_bytes()` has no production caller (`grep -rn buffered_bytes --include=*.rs crates/` finds the definition and `tests/it` alone), and nothing charges the decoder's builders or carry to the DataFusion pool before they allocate: `provider/scan.rs` resizes the scan's `MemoryReservation` to each batch's `get_array_memory_size()` after the batch is emitted (C-084). The bound on a hostile stream is C-092's: memory follows the bytes received. Charging the decoder carry to the pool before growth is a follow-up for C-3, which owns the gated memory benchmark. | The grep; `src/map.md`'s `copy_binary.rs` entry says it plainly; §13.3 R-1 marked retracted. | PROVEN | Corrects §13.3 R-1 and the C-2a wording in `src/map.md` that the C-2c scan resizes its reservation to `buffered_bytes()`. |
+| C-095 | Shape and files: `src/copy_binary.rs` (`grow_carry` and its one call, replacing the up-front reservation; 483, three past the sketch's 480) and `src/error.rs` (`FieldBuffer`, its message and its fold; 264, four past the sketch's 260) are the product changes (§14.4 R-4). `tests/it/copy_accounting.rs` (165 lines) replaces the rejected pin with four: the empty-chunk pin, the hostile-length pin, the growth-cap pin and the refusal pin; the mid-field pin's count moves from 72 to 18. M3: C-090 and `tests/it/map.md` now say the pins follow the decoder's accounting model, not Arrow's per-column layout. One public addition, the `FieldBuffer` variant; no signature or dependency changes; no code comments. Every gate in §14.5 passes. | §14.5. | PROVEN | — |
+
+### 14.1 Mutations (fold 1)
+
+Each mutation was applied alone to the finished `src/copy_binary.rs`, the crate's tests run
+(`cargo test -p repark-connect --no-fail-fast`) and the file restored from the copy taken before
+the edit (`fold1/mutate.py`); `cmp` against that copy matched after the five runs.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m145 | C-092, C-093 | `f25ca81e`'s shape: reserve the declared length up front on the first byte, infallibly (`src/copy_binary.rs`) | RED | `a_hostile_length_charges_only_the_bytes_received`, `carry_growth_stops_at_the_declared_length`, `buffered_bytes_counts_a_mid_field_carry`, `carry_allocation_failure_is_an_error_not_an_abort` |
+| m146 | C-093 | the same growth through the infallible `reserve_exact` (`src/copy_binary.rs`) | RED | `carry_allocation_failure_is_an_error_not_an_abort` (the child aborts: `memory allocation of 536870912 bytes failed`) |
+| m147 | C-092, C-093 | no growth step (`grow_carry` called with nothing taken), so `extend_from_slice` grows by `Vec` doubling (`src/copy_binary.rs`) | RED | `carry_growth_stops_at_the_declared_length` (4400), `carry_allocation_failure_is_an_error_not_an_abort` |
+| m148 | C-092 | no cap at the declared length (`src/copy_binary.rs`) | RED | `carry_growth_stops_at_the_declared_length` |
+| m149 | C-092 | no doubling: grow to exactly what is needed (`src/copy_binary.rs`) | RED | `a_hostile_length_charges_only_the_bytes_received`, `carry_growth_stops_at_the_declared_length` |
+
+All five are red, and none is equivalent. The verifier's MA (drop the empty-chunk guard) has no
+counterpart in this shape: with no bytes the carry needs nothing, so it cannot grow, and
+`a_length_word_ending_the_chunk_reserves_nothing` holds that at 0.
+
+### 14.2 The peak, measured (2026-10-07)
+
+The re-verify's probe (`memory.rs`, a counting global allocator, release build, the crate at
+`path = "/tmp/xc2ao/crates/repark-connect"`), run under `ulimit -v 67108864` and the build-slot
+lock, before (`f25ca81e`) and after this fold.
+
+| field | chunk | before (`f25ca81e`) | after |
+|---|---|---|---|
+| 512 MiB | 64 KiB | 1024.0 MiB (2.00x) | 1024.0 MiB (2.00x) |
+| 513 MiB | 64 KiB | 1026.0 MiB (2.00x) | 1026.0 MiB (2.00x) |
+| 700 MiB | 64 KiB | 1400.0 MiB (2.00x) | 1400.0 MiB (2.00x) |
+| 1023 MiB (`(1 << 30) - 64`) | 64 KiB | 2048.0 MiB (2.00x) | 2048.0 MiB (2.00x) |
+| each of the four | whole | 1.00x | 1.00x |
+
+The peak is still the completed carry and the builder copy. Growth stops at the declared
+length, so the last step is at most half the field to the field, under the builder copy that
+follows. Every other probe line is unchanged: the `i32::MAX` length word refuses with 0 bytes
+of growth, nothing is retained after the flush, and the tiny-row and all-NULL runs flush as
+before.
+
+### 14.3 The hostile length, measured (2026-10-07)
+
+The verifier's `probe.rs` (a 1 GiB length word and N bytes, then a stall, per scan), built in
+release against this clone, run under `ulimit -v 4194304` (4 GiB).
+
+| scans | bytes sent | before (`f25ca81e`) | after |
+|---|---|---|---|
+| 8 | 16 | `memory allocation of 1073741824 bytes failed`, SIGABRT, exit 134 | `buffered_bytes` 128 in total, VmSize +268 kB, exit 0 |
+| 1 | 16 | — | 16, +0 kB, exit 0 |
+| 32 | 16 | — | 512, +964 kB, exit 0 |
+| 16 | 65 536 | — | 1 048 576, +1620 kB, exit 0 |
+
+### 14.4 Readings acted on (no halt)
+
+- **R-1, a carry with room does not grow.** The ruling's `want` applies at a growth step. The
+  step runs only when `carry.len() + taken` passes the capacity; otherwise `capacity * 2` would
+  double a carry that already fits, on every chunk.
+- **R-2, forcing the failure.** The workspace sets `unsafe_code = "forbid"`, so no test can
+  install a refusing `#[global_allocator]`, and `try_reserve_exact` refuses on its own only past
+  `isize::MAX`, which no length up to `MAX_FIELD_BYTES` reaches. The pin re-executes its own
+  test binary, filtered to itself, through `sh -c 'ulimit -v 524288 && exec "$0" --exact …'`,
+  marked by `REPARK_CONNECT_CARRY_LIMITED`. A 1 GiB carry cannot fit under 512 MiB, so the child
+  either sees `FieldBuffer` or aborts; the parent asserts a clean exit and `1 passed`. It is
+  `#[cfg(target_os = "linux")]`: `ulimit -v` is not enforced on macOS.
+- **R-3, what stays infallible.** `take_fixed` still extends the carry with
+  `extend_from_slice`, bounded by the 19-byte header. The builders' appends are infallible too,
+  but they copy bytes that have already arrived, so a declared length alone cannot reach them.
+  An abort there needs the whole field received under memory exhaustion; out of scope here, and
+  the pool charge (C-094, C-3) is its fix.
+- **R-4, two files pass their sketch ceilings.** The sketch (c-2-design.md §7) calls its line
+  ceilings hard limits, and this fold passes two by a few lines, as §9.2 R-9 did. `error.rs`
+  was at its 260 (C-048), and M1 says to add a variant if needed. No `ConnectError` fits an
+  allocator refusal (`Arrow` carries a message string; `Protocol` is a malformed stream, which
+  this is not), so `FieldBuffer` takes the file to 264. `copy_binary.rs` was at 476 of 480;
+  inline, the growth step took `run` to 104 lines, past clippy's `too_many_lines` (100), so it
+  moved to `grow_carry`, and the file is at 483. The mechanical gate is 1000 lines
+  (`check_rust_file_size.py`), and it passes. Raised in the hand-back for a ruling on the two
+  ceilings.
+- **R-5, a reused carry.** A carry kept from an earlier field (cleared, capacity within the byte
+  cap, C-016) whose capacity already covers the bytes taken does not grow (R-1). One that does
+  not cover them grows from its capacity, still capped by the new field's length.
+
+### 14.5 Gates (fold 1)
+
+Run on the finished tree. Each cargo command and probe ran under the build-slot lock and
+`ulimit -v 67108864`.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-connect` | 0 | 126 passed, 51 ignored (the live cells), 0 failed |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1112 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 368 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | 1354 files, 7295 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 309 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2ao origin/main HEAD` | 0 | `comment-ban hits=0` |
+| the verifier's `probe.rs`, 8 scans, `ulimit -v 4194304` | 0 | §14.3 |
+| the re-verify's `memory.rs` | 0 | §14.2, 2.00x |
+
+## 15. C-2d — the mount, both stubs retired, the Python door, the federated cells (2026-10-07)
 
 **Branch:** `feat/c-2d-mount-python` from `930ccbf3` (C-2a, C-2b and C-2c merged). **Model:** Claude
 Opus 5.5 (`claude-opus-5-5`, high). **Scope:** sketch §2.11 (the edge, `SourceMount`, both
 stubs, the localiser), §2.10 through both doors, §4's C-2d rows, §5.3, §5.4, §5.7, §6's Python
 cells and §7 C-2d with its halt rules. The live cells ran against `make pg-up` (PostgreSQL 16,
 rootless Docker, a private `XDG_RUNTIME_DIR`), torn down with `make pg-down` at the end.
-**Halt rules:** H-EXT, H-TZ and H-CFG2 did not fire (§13.2 R-1, R-2, R-3).
+**Halt rules:** H-EXT, H-TZ and H-CFG2 did not fire (§15.2 R-1, R-2, R-3).
 
 ### PROPOSITION LEDGER — C-2d — 2026-10-07
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-089 | The edge (sketch §2.11, R-14): `repark-core` depends on `repark-connect` (`normal`), with `[features] default = ["postgres"]`, `postgres = ["repark-connect/postgres"]`; the root `[workspace.dependencies]` gains `repark-connect` (path, default features off); `repark-python` asks for `repark-core`'s `postgres`, so the standard wheel carries the connector; `ALLOWED_EDGES` holds `("repark-core", "repark-connect")` with R-14's reason verbatim. `repark-python` gains no `connect` edge. Without the feature, core builds and a Postgres source mounts the refusing provider ("not compiled into this build"). | `./scripts/check_crate_dag.sh`, `./scripts/check_manifest.sh`, `cargo check -p repark-core --no-default-features`, `cargo build -p repark-connect --no-default-features`. | PROVEN | §13.4: the gate counts 24 internal edges, clean, with no stale row; both no-default builds are clean. |
-| C-090 | The mount (sketch §2.11, FL-1, CFG-2 D-4): `catalog_state.rs`'s `SourceMount { specs, zone }` implements `SessionExtension`; `register(ctx)` registers `PostgresSource::mount(identity, props, localiser)` for each auto-registered Postgres source and `RefusingSourceCatalogProvider` for SQL Server and Trino. `register_configured_sources()` stays the one entry point: it refuses a duplicate name under the registry lock before mounting anything, runs `SourceMount::register`, records the specs, and adds every mounted Postgres name to `postgres_catalog_names`. Building and registering does no I/O. | `named_sources/tests.rs::configured_source_select_resolves_through_the_postgres_mount`, `::mounted_postgres_sources_are_read_only_catalogs`, and CFG-2's unchanged `::source_registration_opens_no_connection`, `::catalog_named_like_source_refuses_as_duplicate`, `::auto_register_false_lists_but_does_not_register`; mutations mH, mL. | PROVEN | §13.1. |
-| C-091 | The localiser (sketch §2.7, §2.11; D-M2 still open): `session/zone_localiser.rs`'s `SessionZoneLocaliser` reads the session's `runtime_zone` when the scan runs; `zone_label()` is its id; a wall clock is placed through arrow's chrono-tz `Tz`; a gap refuses `ValueRefusal::WallClockGap`, an overlap `WallClockOverlap` (both `CONNECT-DIV-pg-timestamp-zone`, the message naming `prefer_timestamp_ntz`), a wall clock past chrono's calendar `TimestampOutOfRange`. `CONNECT-DECL-pg-timestamp` retires (registry §6). Live, a New York session reads `2024-01-15 12:00` and `2024-07-15 12:00` as instants 17:00 and 16:00 UTC, `prefer_timestamp_ntz` keeps the wall clock as `timestamp_ntz`, and `2024-03-10 02:30` refuses. | `zone_localiser.rs::tests::a_wall_clock_is_placed_at_the_zone_offset_of_its_date`, `::gap_and_overlap_wall_clocks_refuse_naming_the_zone_row`; live `test_c2_read.py::test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock`; mutation mJ. | PROVEN | §13.1. H-TZ did not fire: `orc_scan.rs` already places wall clocks with the same `Tz`. |
-| C-092 | `ping()` goes live (sketch §2.11): `PostgresSource::ping()` checks out one pooled connection, runs `SELECT 1` under `read_timeout_ms` and releases it clean; `NamedSource::ping()` is `async` and pings the mounted source (the context's `PostgresCatalog`, downcast) or, for a source not auto-registered, one built for the call; a failure names the key path; `session_source_ping` blocks on the binding's shared runtime with the GIL released. SQL Server and Trino keep the pending refusal. | `named_sources/tests.rs::source_ping_resolves_through_the_mount`; facade `test_session_sources.py::test_source_ping_resolves_through_the_mount`; live `test_c2_read.py::test_ping_reaches_the_server_and_names_the_source_on_failure`, `test_c2_credentials.py` (the four ping surfaces); mutation mP. | PROVEN | §13.1. |
-| C-093 | `read_postgres` goes live (sketch §2.11, the second stub): core's `ReparkSession::read_postgres(PostgresRead { url, target, properties, partitioning })` refuses any partitioned-read argument first (`CONNECT-DECL-pg-partitioned-read`), takes `dbtable` through `ScanSource::from_dbtable` or `query`, drops a `dbtable` property, sets `url`, and resolves an ad-hoc `PostgresSource` on the `ReadPostgres` door (`source=jdbc`), whose pool lives as long as the frame's provider. The Python door maps the five Spark arguments by name and blocks on the shared runtime; `deferred_reader_error` names Excel alone. | `session_tests.rs::read_postgres_refusals_name_their_row_and_never_echo_credentials`; live `test_c2_read.py::test_read_jdbc_and_format_postgres_match_the_mount`, `::test_a_partitioned_read_refuses_naming_its_row`, `::test_unknown_keys_and_a_bad_url_refuse_before_any_connection`; facade `-k "source or postgres or toml or named"`; mutation mN. | PROVEN | §13.1. |
-| C-094 | Read-only DDL (sketch §2.11, `CONNECT-DECL-pg-ddl`): `refuse_source_ddl` answers `read_only_ddl(<key path>)` for a Postgres source and keeps the pending text for SQL Server and Trino; the Postgres schema provider refuses `register_table` and `deregister_table` with the same text; the Spark door's P11 guards refuse `CREATE TABLE` and `DROP TABLE` as read-only; `INSERT`, `UPDATE` and `DELETE` refuse as not implemented; nothing is written. | `named_sources/tests.rs::configured_source_ddl_refuses_as_read_only`; live `test_c2_read.py::test_ddl_and_dml_refuse_through_both_doors`; mutation mK. | PROVEN | §13.1; §13.2 R-4, R-5. |
-| C-095 | Errors name their source (sketch §0 line 6; C-2b's deferral to C-2d "at resolution"): a resolution error carries `database source `<name>`` as `DataFusionError::Context`; `ping` and `read_postgres` prefix the key path or `jdbc` keeping `From<ConnectError>`'s class; `engine_err` downcasts `ConnectError`, takes its class (`Config`, `NotImplemented`, else `DataFusion`) and flattens the context chain into one line, so a Python message carries the cause. | `named_sources/tests.rs::configured_source_select_resolves_through_the_postgres_mount` (`Error::Config`, the source and the key); facade `test_session_sources.py::test_select_under_source_name_resolves_through_the_mount`; live `test_c2_credentials.py` (the `auth` surface reads `authentication failed`); mutation mM. | PROVEN | §13.1. Scan-time errors keep C-2c's text; the source is in the statement and in EXPLAIN. |
-| C-096 | A placement refusal drops the scan's lease: `PostgresScanExec`'s stream ends at its first error and drops the inner scan, so the lease aborts (cancel, then the connection task) instead of idling inside the read-only transaction holding `AccessShareLock`. Live, after the gap refusal of a pushed scan no backend under the cell's `application_name` is busy within three seconds. | Live `test_c2_read.py::test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock` (`_busy_backends` is `0`); mutation mI. | PROVEN | §13.2 R-6. Found by the cell: its teardown's `DROP SCHEMA` waited 60 s on the held lock. |
-| C-097 | H-CFG2: CFG-2's assertions are unchanged except the Postgres refusal pins this card retires by name, each replaced by a mount pin: Rust C-003 `configured_source_select_refuses_with_connector_message`, C-005 `source_ping_refuses_until_connector`, C-011 `configured_source_create_table_refuses_with_connector_message`; facade C-014 `test_source_ping_raises_connector_refusal`, C-016 `test_select_under_source_name_raises_connector_refusal`. C-001, C-002, C-004, C-006…C-010, C-012, C-013, C-015, C-017…C-019 hold as written, and SOURCE-URL-REDACT-1's `test_ping_refusal_never_carries_the_password` holds unchanged (it now answers the settings refusal naming `acme`). | `cargo test -p repark-core named_sources config_file`; the facade subset; `git diff origin/main -- crates/repark-core/src/config_file python/repark/tests/test_config_mirror.py` is empty. | PROVEN | §13.2 R-3. |
-| C-098 | Sketch §5.3 re-pinned through both doors: `spark.sql("EXPLAIN …")`, the DataFrame's plan and `repark.sql("EXPLAIN VERBOSE …")` each show `PostgresScanExec: source=pg` with the pushed `n > Decimal128(Some(10000),10,2)`, the residual `lower(t) = Utf8("x")` and the `FilterExec` above; none shows the host, the port, the user, the password or `sslmode`; the verbose form shows `current_setting('repark.p0')` and `bound_values=1` and never the bound `100.00`. | Live `test_c2_read.py::test_explain_shows_the_boundary_through_both_doors`; mutations mA, mB, mC, mD. | PROVEN | §13.1. |
-| C-099 | Sketch §5.4: `ice.db.customers` (a private memory catalog) joined with the cell's `orders` on `cust = id` and `placed = since` (`timestamptz` against Iceberg `timestamp`, one written at `-05`), with `amount > 100` pushed and `lower(note) = 'b'` residual, returns orders 2 and 5 through `spark.sql` and the DataFrame join, equal to psycopg's filtered rows joined in pyarrow; EXPLAIN shows one `IcebergTableScan`, one `PostgresScanExec` with that split, and the hash join above both; the physical plan, normalised for attribute ids, the fan-out and the cell tag, equals the committed expectation; the two clocks render equal in a New York session. | Live `test_c2_federated.py::test_federated_iceberg_postgres_join`, `::test_federated_join_explain_boundary`, `::test_federated_join_sees_one_clock_across_zones`; mutations mA, mD, mE, mF. | PROVEN | §13.1. The Spark-oracle half waits on D-M2's pgjdbc environment; the reference is the independent expectation (sketch §5.4). |
-| C-100 | Sketch §5.7: a role with a random 32-hex password, mounted by key, by URL, with a different random wrong password, on a closed port and through a one-connection pool, driven in a subprocess at `RUST_LOG=trace` with Python logging at `DEBUG` across `sources()` and its `repr`, the four pings, `explain()` and `EXPLAIN VERBOSE`, an authentication failure, an unreachable host, a missing relation, a refused `NaN`, a lock timeout, a pool timeout and a `read.jdbc` URL carrying the password: neither password, nor any URL form, appears on stdout or stderr, and each surface answers its own error. | Live `test_c2_credentials.py::test_no_credential_reaches_any_surface`; mutations mG, mG2, mG3, mG4. | PROVEN | §13.1, §13.2 R-7. |
-| C-101 | Docs and shape: `docs/guide/repark-toml.md` gains "Postgres source keys" (the 21 keys and defaults, the `read_postgres` spellings, `sslmode`, the three `GRANT`s, `pushdown_limit`); the registry adds `CONNECT-DECL-pg-ddl` and `-pg-partitioned-read`, retires `-pg-timestamp`, updates `CONNECT-DIV-pg-timestamp-zone` and rewrites IO-JDBC-1; every touched `map.md` moves in lockstep. Sizes: `catalog_state.rs` 524/640, `named_sources.rs` 295/380, `session/read_postgres.rs` 111/260, `session/zone_localiser.rs` 142/160, the live cells 339, 185 and 172 of 400; `session.rs` holds 1000 (two comment lines shed for its two `mod` lines), `lib.rs` 154/155. No code comments. | §13.4. | PROVEN | §13.2 R-8. |
+| C-096 | The edge (sketch §2.11, R-14): `repark-core` depends on `repark-connect` (`normal`), with `[features] default = ["postgres"]`, `postgres = ["repark-connect/postgres"]`; the root `[workspace.dependencies]` gains `repark-connect` (path, default features off); `repark-python` asks for `repark-core`'s `postgres`, so the standard wheel carries the connector; `ALLOWED_EDGES` holds `("repark-core", "repark-connect")` with R-14's reason verbatim. `repark-python` gains no `connect` edge. Without the feature, core builds and a Postgres source mounts the refusing provider ("not compiled into this build"). | `./scripts/check_crate_dag.sh`, `./scripts/check_manifest.sh`, `cargo check -p repark-core --no-default-features`, `cargo build -p repark-connect --no-default-features`. | PROVEN | §15.4: the gate counts 24 internal edges, clean, with no stale row; both no-default builds are clean. |
+| C-097 | The mount (sketch §2.11, FL-1, CFG-2 D-4): `catalog_state.rs`'s `SourceMount { specs, zone }` implements `SessionExtension`; `register(ctx)` registers `PostgresSource::mount(identity, props, localiser)` for each auto-registered Postgres source and `RefusingSourceCatalogProvider` for SQL Server and Trino. `register_configured_sources()` stays the one entry point: it refuses a duplicate name under the registry lock before mounting anything, runs `SourceMount::register`, records the specs, and adds every mounted Postgres name to `postgres_catalog_names`. Building and registering does no I/O. | `named_sources/tests.rs::configured_source_select_resolves_through_the_postgres_mount`, `::mounted_postgres_sources_are_read_only_catalogs`, and CFG-2's unchanged `::source_registration_opens_no_connection`, `::catalog_named_like_source_refuses_as_duplicate`, `::auto_register_false_lists_but_does_not_register`; mutations mH, mL. | PROVEN | §15.1. |
+| C-098 | The localiser (sketch §2.7, §2.11; D-M2 still open): `session/zone_localiser.rs`'s `SessionZoneLocaliser` reads the session's `runtime_zone` when the scan runs; `zone_label()` is its id; a wall clock is placed through arrow's chrono-tz `Tz`; a gap refuses `ValueRefusal::WallClockGap`, an overlap `WallClockOverlap` (both `CONNECT-DIV-pg-timestamp-zone`, the message naming `prefer_timestamp_ntz`), a wall clock past chrono's calendar `TimestampOutOfRange`. `CONNECT-DECL-pg-timestamp` retires (registry §6). Live, a New York session reads `2024-01-15 12:00` and `2024-07-15 12:00` as instants 17:00 and 16:00 UTC, `prefer_timestamp_ntz` keeps the wall clock as `timestamp_ntz`, and `2024-03-10 02:30` refuses. | `zone_localiser.rs::tests::a_wall_clock_is_placed_at_the_zone_offset_of_its_date`, `::gap_and_overlap_wall_clocks_refuse_naming_the_zone_row`; live `test_c2_read.py::test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock`; mutation mJ. | PROVEN | §15.1. H-TZ did not fire: `orc_scan.rs` already places wall clocks with the same `Tz`. |
+| C-099 | `ping()` goes live (sketch §2.11): `PostgresSource::ping()` checks out one pooled connection, runs `SELECT 1` under `read_timeout_ms` and releases it clean; `NamedSource::ping()` is `async` and pings the mounted source (the context's `PostgresCatalog`, downcast) or, for a source not auto-registered, one built for the call; a failure names the key path; `session_source_ping` blocks on the binding's shared runtime with the GIL released. SQL Server and Trino keep the pending refusal. | `named_sources/tests.rs::source_ping_resolves_through_the_mount`; facade `test_session_sources.py::test_source_ping_resolves_through_the_mount`; live `test_c2_read.py::test_ping_reaches_the_server_and_names_the_source_on_failure`, `test_c2_credentials.py` (the four ping surfaces); mutation mP. | PROVEN | §15.1. |
+| C-100 | `read_postgres` goes live (sketch §2.11, the second stub): core's `ReparkSession::read_postgres(PostgresRead { url, target, properties, partitioning })` refuses any partitioned-read argument first (`CONNECT-DECL-pg-partitioned-read`), takes `dbtable` through `ScanSource::from_dbtable` or `query`, drops a `dbtable` property, sets `url`, and resolves an ad-hoc `PostgresSource` on the `ReadPostgres` door (`source=jdbc`), whose pool lives as long as the frame's provider. The Python door maps the five Spark arguments by name and blocks on the shared runtime; `deferred_reader_error` names Excel alone. | `session_tests.rs::read_postgres_refusals_name_their_row_and_never_echo_credentials`; live `test_c2_read.py::test_read_jdbc_and_format_postgres_match_the_mount`, `::test_a_partitioned_read_refuses_naming_its_row`, `::test_unknown_keys_and_a_bad_url_refuse_before_any_connection`; facade `-k "source or postgres or toml or named"`; mutation mN. | PROVEN | §15.1. |
+| C-101 | Read-only DDL (sketch §2.11, `CONNECT-DECL-pg-ddl`): `refuse_source_ddl` answers `read_only_ddl(<key path>)` for a Postgres source and keeps the pending text for SQL Server and Trino; the Postgres schema provider refuses `register_table` and `deregister_table` with the same text; the Spark door's P11 guards refuse `CREATE TABLE` and `DROP TABLE` as read-only; `INSERT`, `UPDATE` and `DELETE` refuse as not implemented; nothing is written. | `named_sources/tests.rs::configured_source_ddl_refuses_as_read_only`; live `test_c2_read.py::test_ddl_and_dml_refuse_through_both_doors`; mutation mK. | PROVEN | §15.1; §15.2 R-4, R-5. |
+| C-102 | Errors name their source (sketch §0 line 6; C-2b's deferral to C-2d "at resolution"): a resolution error carries `database source `<name>`` as `DataFusionError::Context`; `ping` and `read_postgres` prefix the key path or `jdbc` keeping `From<ConnectError>`'s class; `engine_err` downcasts `ConnectError`, takes its class (`Config`, `NotImplemented`, else `DataFusion`) and flattens the context chain into one line, so a Python message carries the cause. | `named_sources/tests.rs::configured_source_select_resolves_through_the_postgres_mount` (`Error::Config`, the source and the key); facade `test_session_sources.py::test_select_under_source_name_resolves_through_the_mount`; live `test_c2_credentials.py` (the `auth` surface reads `authentication failed`); mutation mM. | PROVEN | §15.1. Scan-time errors keep C-2c's text; the source is in the statement and in EXPLAIN. |
+| C-103 | A placement refusal drops the scan's lease: `PostgresScanExec`'s stream ends at its first error and drops the inner scan, so the lease aborts (cancel, then the connection task) instead of idling inside the read-only transaction holding `AccessShareLock`. Live, after the gap refusal of a pushed scan no backend under the cell's `application_name` is busy within three seconds. | Live `test_c2_read.py::test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock` (`_busy_backends` is `0`); mutation mI. | PROVEN | §15.2 R-6. Found by the cell: its teardown's `DROP SCHEMA` waited 60 s on the held lock. |
+| C-104 | H-CFG2: CFG-2's assertions are unchanged except the Postgres refusal pins this card retires by name, each replaced by a mount pin: Rust C-003 `configured_source_select_refuses_with_connector_message`, C-005 `source_ping_refuses_until_connector`, C-011 `configured_source_create_table_refuses_with_connector_message`; facade C-014 `test_source_ping_raises_connector_refusal`, C-016 `test_select_under_source_name_raises_connector_refusal`. C-001, C-002, C-004, C-006…C-010, C-012, C-013, C-015, C-017…C-019 hold as written, and SOURCE-URL-REDACT-1's `test_ping_refusal_never_carries_the_password` holds unchanged (it now answers the settings refusal naming `acme`). | `cargo test -p repark-core named_sources config_file`; the facade subset; `git diff origin/main -- crates/repark-core/src/config_file python/repark/tests/test_config_mirror.py` is empty. | PROVEN | §15.2 R-3. |
+| C-105 | Sketch §5.3 re-pinned through both doors: `spark.sql("EXPLAIN …")`, the DataFrame's plan and `repark.sql("EXPLAIN VERBOSE …")` each show `PostgresScanExec: source=pg` with the pushed `n > Decimal128(Some(10000),10,2)`, the residual `lower(t) = Utf8("x")` and the `FilterExec` above; none shows the host, the port, the user, the password or `sslmode`; the verbose form shows `current_setting('repark.p0')` and `bound_values=1` and never the bound `100.00`. | Live `test_c2_read.py::test_explain_shows_the_boundary_through_both_doors`; mutations mA, mB, mC, mD. | PROVEN | §15.1. |
+| C-106 | Sketch §5.4: `ice.db.customers` (a private memory catalog) joined with the cell's `orders` on `cust = id` and `placed = since` (`timestamptz` against Iceberg `timestamp`, one written at `-05`), with `amount > 100` pushed and `lower(note) = 'b'` residual, returns orders 2 and 5 through `spark.sql` and the DataFrame join, equal to psycopg's filtered rows joined in pyarrow; EXPLAIN shows one `IcebergTableScan`, one `PostgresScanExec` with that split, and the hash join above both; the physical plan, normalised for attribute ids, the fan-out and the cell tag, equals the committed expectation; the two clocks render equal in a New York session. | Live `test_c2_federated.py::test_federated_iceberg_postgres_join`, `::test_federated_join_explain_boundary`, `::test_federated_join_sees_one_clock_across_zones`; mutations mA, mD, mE, mF. | PROVEN | §15.1. The Spark-oracle half waits on D-M2's pgjdbc environment; the reference is the independent expectation (sketch §5.4). |
+| C-107 | Sketch §5.7: a role with a random 32-hex password, mounted by key, by URL, with a different random wrong password, on a closed port and through a one-connection pool, driven in a subprocess at `RUST_LOG=trace` with Python logging at `DEBUG` across `sources()` and its `repr`, the four pings, `explain()` and `EXPLAIN VERBOSE`, an authentication failure, an unreachable host, a missing relation, a refused `NaN`, a lock timeout, a pool timeout and a `read.jdbc` URL carrying the password: neither password, nor any URL form, appears on stdout or stderr, and each surface answers its own error. | Live `test_c2_credentials.py::test_no_credential_reaches_any_surface`; mutations mG, mG2, mG3, mG4. | PROVEN | §15.1, §15.2 R-7. |
+| C-108 | Docs and shape: `docs/guide/repark-toml.md` gains "Postgres source keys" (the 21 keys and defaults, the `read_postgres` spellings, `sslmode`, the three `GRANT`s, `pushdown_limit`); the registry adds `CONNECT-DECL-pg-ddl` and `-pg-partitioned-read`, retires `-pg-timestamp`, updates `CONNECT-DIV-pg-timestamp-zone` and rewrites IO-JDBC-1; every touched `map.md` moves in lockstep. Sizes: `catalog_state.rs` 524/640, `named_sources.rs` 295/380, `session/read_postgres.rs` 111/260, `session/zone_localiser.rs` 142/160, the live cells 339, 185 and 172 of 400; `session.rs` holds 1000 (two comment lines shed for its two `mod` lines), `lib.rs` 154/155. No code comments. | §15.4. | PROVEN | §15.2 R-8. |
 
-### 13.1 Mutations (C-2d)
+### 15.1 Mutations (C-2d)
 
 Each mutation was applied alone, the named cells run (the Python ones against a rebuilt debug
 wheel and the container), and the file restored with `git checkout`. Seventeen are red; mG2 is
@@ -1193,26 +1416,26 @@ caught by an existing layer, not by this card's cell (R-7).
 
 | id | clause | mutation (file) | red? | red in |
 |---|---|---|---|---|
-| mA | C-098, C-099 (§5.3 `explain_renders_pushed_and_residual_per_scan`) | list every filter as pushed, the classifier's general support (`connect/src/provider/scan.rs`) | RED | `test_c2_read.py::test_explain_shows_the_boundary_through_both_doors`, `test_c2_federated.py::test_federated_join_explain_boundary`, `::test_federated_iceberg_postgres_join` |
-| mB | C-098 (§5.3 `explain_verbose_shows_placeholders_never_values`) | render the bound values into `remote_sql` (`scan.rs`) | RED | `test_explain_shows_the_boundary_through_both_doors` |
-| mC | C-098 (§5.3 `explain_never_renders_endpoint`) | add `host=` to the scan's source label (`connect/src/provider/table.rs`) | RED | `test_explain_shows_the_boundary_through_both_doors` (the credentials cell stays green: a host is not a credential) |
-| mD | C-098, C-099 (§5.3 `explain_residual_matches_filter_exec_above`) | class a residual `Unsupported`, so the scan never sees it (`connect/src/pushdown.rs`) | RED | `test_explain_shows_the_boundary_through_both_doors`, `test_federated_join_explain_boundary` |
-| mE | C-099 (§5.4 "push the join predicate into the scan") | class every conjunct `Exact`, so the scan claims the residual and nothing applies it (`pushdown.rs`) | RED | `test_federated_iceberg_postgres_join` (order 4 joins) |
-| mF | C-099 (§5.4 "mislabel the timestamp zone") | the Postgres epoch one hour late (`connect/src/types/postgres/temporal.rs`) | RED | `test_federated_iceberg_postgres_join`, `::test_federated_join_sees_one_clock_across_zones` |
-| mG | C-100 (§5.7, the sketch's literal mutation) | an unreachable connect answers `Server` with the URL as its message (`connect/src/pool.rs`) | RED | `test_no_credential_reaches_any_surface`, at the `unreachable` surface check, before the credential grep |
-| mG2 | C-100 | as mG, keeping "unreachable" in the text so only the grep can catch it | GREEN (caught upstream) | the binding's `to_py_err` masks URL userinfo (SOURCE-URL-REDACT-1-FN) before Python sees it; R-7 |
-| mG3 | C-100 | as mG2, with the bare password in the message instead of the URL | RED | `test_no_credential_reaches_any_surface`, at the credential grep over stdout |
-| mG4 | C-100 | write the URL to stderr on an unreachable connect | RED | `test_no_credential_reaches_any_surface`, at the credential grep over stderr |
-| mH | C-090 | mount the refusing provider for Postgres too (`core/src/catalog_state.rs`) | RED | `named_sources/tests.rs::configured_source_select_resolves_through_the_postgres_mount`, `::mounted_postgres_sources_are_read_only_catalogs` at `tests.rs:99` |
-| mI | C-096 | keep the inner scan after an error (`scan.rs`) | RED | `test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock` (a busy backend; 60 s teardown) |
-| mJ | C-091 | take the earlier instant on an overlap (`core/src/session/zone_localiser.rs`) | RED | `zone_localiser.rs::tests::gap_and_overlap_wall_clocks_refuse_naming_the_zone_row` at `zone_localiser.rs:133` |
-| mK | C-094 | keep the pending text for Postgres DDL (`core/src/named_sources.rs`) | RED | `configured_source_ddl_refuses_as_read_only` at `tests.rs:66` |
-| mL | C-090 | never fill `postgres_catalog_names` (`named_sources.rs`) | RED | `mounted_postgres_sources_are_read_only_catalogs` at `tests.rs:93` |
-| mM | C-095 | keep the context chain as DataFusion renders it (`core/src/error_map.rs`) | RED | `test_no_credential_reaches_any_surface` (the `auth` surface reads only `database source `wrong``) |
-| mN | C-093 | skip the partitioned-read refusal (`core/src/session/read_postgres.rs`) | RED | `test_a_partitioned_read_refuses_naming_its_row` |
-| mP | C-092 | `ping` drops the key path from its error (`named_sources.rs`) | RED | `source_ping_resolves_through_the_mount` at `tests.rs:138` |
+| mA | C-105, C-106 (§5.3 `explain_renders_pushed_and_residual_per_scan`) | list every filter as pushed, the classifier's general support (`connect/src/provider/scan.rs`) | RED | `test_c2_read.py::test_explain_shows_the_boundary_through_both_doors`, `test_c2_federated.py::test_federated_join_explain_boundary`, `::test_federated_iceberg_postgres_join` |
+| mB | C-105 (§5.3 `explain_verbose_shows_placeholders_never_values`) | render the bound values into `remote_sql` (`scan.rs`) | RED | `test_explain_shows_the_boundary_through_both_doors` |
+| mC | C-105 (§5.3 `explain_never_renders_endpoint`) | add `host=` to the scan's source label (`connect/src/provider/table.rs`) | RED | `test_explain_shows_the_boundary_through_both_doors` (the credentials cell stays green: a host is not a credential) |
+| mD | C-105, C-106 (§5.3 `explain_residual_matches_filter_exec_above`) | class a residual `Unsupported`, so the scan never sees it (`connect/src/pushdown.rs`) | RED | `test_explain_shows_the_boundary_through_both_doors`, `test_federated_join_explain_boundary` |
+| mE | C-106 (§5.4 "push the join predicate into the scan") | class every conjunct `Exact`, so the scan claims the residual and nothing applies it (`pushdown.rs`) | RED | `test_federated_iceberg_postgres_join` (order 4 joins) |
+| mF | C-106 (§5.4 "mislabel the timestamp zone") | the Postgres epoch one hour late (`connect/src/types/postgres/temporal.rs`) | RED | `test_federated_iceberg_postgres_join`, `::test_federated_join_sees_one_clock_across_zones` |
+| mG | C-107 (§5.7, the sketch's literal mutation) | an unreachable connect answers `Server` with the URL as its message (`connect/src/pool.rs`) | RED | `test_no_credential_reaches_any_surface`, at the `unreachable` surface check, before the credential grep |
+| mG2 | C-107 | as mG, keeping "unreachable" in the text so only the grep can catch it | GREEN (caught upstream) | the binding's `to_py_err` masks URL userinfo (SOURCE-URL-REDACT-1-FN) before Python sees it; R-7 |
+| mG3 | C-107 | as mG2, with the bare password in the message instead of the URL | RED | `test_no_credential_reaches_any_surface`, at the credential grep over stdout |
+| mG4 | C-107 | write the URL to stderr on an unreachable connect | RED | `test_no_credential_reaches_any_surface`, at the credential grep over stderr |
+| mH | C-097 | mount the refusing provider for Postgres too (`core/src/catalog_state.rs`) | RED | `named_sources/tests.rs::configured_source_select_resolves_through_the_postgres_mount`, `::mounted_postgres_sources_are_read_only_catalogs` at `tests.rs:99` |
+| mI | C-103 | keep the inner scan after an error (`scan.rs`) | RED | `test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock` (a busy backend; 60 s teardown) |
+| mJ | C-098 | take the earlier instant on an overlap (`core/src/session/zone_localiser.rs`) | RED | `zone_localiser.rs::tests::gap_and_overlap_wall_clocks_refuse_naming_the_zone_row` at `zone_localiser.rs:133` |
+| mK | C-101 | keep the pending text for Postgres DDL (`core/src/named_sources.rs`) | RED | `configured_source_ddl_refuses_as_read_only` at `tests.rs:66` |
+| mL | C-097 | never fill `postgres_catalog_names` (`named_sources.rs`) | RED | `mounted_postgres_sources_are_read_only_catalogs` at `tests.rs:93` |
+| mM | C-102 | keep the context chain as DataFusion renders it (`core/src/error_map.rs`) | RED | `test_no_credential_reaches_any_surface` (the `auth` surface reads only `database source `wrong``) |
+| mN | C-100 | skip the partitioned-read refusal (`core/src/session/read_postgres.rs`) | RED | `test_a_partitioned_read_refuses_naming_its_row` |
+| mP | C-099 | `ping` drops the key path from its error (`named_sources.rs`) | RED | `source_ping_resolves_through_the_mount` at `tests.rs:138` |
 
-### 13.2 Readings acted on (no halt)
+### 15.2 Readings acted on (no halt)
 
 - **R-1, H-EXT.** `SourceMount` implements `SessionExtension`, but it is not installed in the
   builder's single extension slot (which `repark_spark::SparkExtension` holds on the Python
@@ -1224,7 +1447,7 @@ caught by an existing layer, not by this card's cell (R-7).
   `SET` of the zone between planning and execution places in the new zone under the old label.
 - **R-3, H-CFG2.** "The Postgres refusal pins this card retires by name" is read as the five
   CFG-2 pins that assert the connector-pending refusal for a Postgres source (C-003, C-005,
-  C-011, C-014, C-016); each is renamed, and every other CFG-2 assertion is untouched (C-097).
+  C-011, C-014, C-016); each is renamed, and every other CFG-2 assertion is untouched (C-104).
   The Rust DDL replacement uses `DROP SCHEMA` and `CREATE DATABASE`: DataFusion resolves a
   `CREATE TABLE` or `DROP TABLE` target before the pre-execute guard runs, so a malformed source
   answers its settings refusal first and a live one opens a connection. The live cell pins the
@@ -1244,7 +1467,7 @@ caught by an existing layer, not by this card's cell (R-7).
   `repark-python/Cargo.toml` (the feature), `repark-python/src/session_tests.rs` (the
   deferred-refusal pin replaced) and the facade's `session_sources.py` docstring. Each is the
   smallest edit a sketch item needs.
-- **R-6, the lease after a placement refusal (C-096).** The exec mapped each batch through
+- **R-6, the lease after a placement refusal (C-103).** The exec mapped each batch through
   `place`, so an error raised there left the inner scan stream alive; on a pushed scan it held
   its read-only transaction until Python released the stream. The fuse is three lines; C-2c's
   pins are unchanged (the connect suite and its 51 live cells pass).
@@ -1261,7 +1484,7 @@ caught by an existing layer, not by this card's cell (R-7).
   suite, run as CI's isolated `py-test` job does (no wheel installed), collects the live cells
   through `pytest.importorskip` and skips them.
 
-### 13.3 The live run (2026-10-07)
+### 15.3 The live run (2026-10-07)
 
 `make pg-up` (PostgreSQL 16, rootless Docker, a private `XDG_RUNTIME_DIR`), then the Python
 live cells: `pytest python/repark-parity/tests/live_db/` — 13 passed and C-0's five strict
@@ -1271,7 +1494,7 @@ The C-2d cells are `test_c2_read.py` (8), `test_c2_federated.py` (3) and
 --include-ignored`, 170 passed (C-2c fold 1's 119 and 51). `make pg-down` removed the container
 and its volume at the end.
 
-### 13.4 Gates (C-2d)
+### 15.4 Gates (C-2d)
 
 Run on the finished tree. Each cargo command ran under the build-slot lock.
 
@@ -1298,7 +1521,7 @@ Run on the finished tree. Each cargo command ran under the build-slot lock.
 | `python3 scripts/check_ledger_grammar.py` | 0 | clean |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
 
-## 14. Close (C-2, 2026-10-07)
+## 16. Close (C-2, 2026-10-07)
 
 C-2a…C-2d are built: the decoder and the type map, the connection, the provider with Exact
 pushdown and the EXPLAIN boundary, and now the mount, both doors and the federated statement.
@@ -1312,9 +1535,9 @@ oracle half), D-M8's TLS profile, and C-3's partitioned reads.
 
 **C-2d coverage, by category** (the ledger's one attestation block stays C-2a's, §5):
 
-- **AT-1** (attacked): Sketch §7 C-2d's file list, §2.11's mount, both stubs and the localiser, §4's C-2d rows, §5.3, §5.4 and §5.7 each map to a clause (C-089..C-101); the files beyond the list are R-5.
+- **AT-1** (attacked): Sketch §7 C-2d's file list, §2.11's mount, both stubs and the localiser, §4's C-2d rows, §5.3, §5.4 and §5.7 each map to a clause (C-096..C-108); the files beyond the list are R-5.
 - **AT-2** (attacked): Every mapped type and a NULL row through the mount and through both read_postgres forms (a schema-qualified dbtable, a query); DST gap and overlap wall clocks; a fixed offset; an Iceberg timestamp joined against a Postgres value written at another offset; a source without user, with an unknown key and on a closed port.
-- **AT-3** (attacked): Each refusal is typed and classed (Config, NotImplemented, DataFusion) through the downcast in engine_err; a placement error ends the stream and aborts the lease (C-096); settings refusals precede any connection.
+- **AT-3** (attacked): Each refusal is typed and classed (Config, NotImplemented, DataFusion) through the downcast in engine_err; a placement error ends the stream and aborts the lease (C-103); settings refusals precede any connection.
 - **AT-4** (attacked): Registration checks every name under the registry write lock before mounting; the localiser reads the live zone through the session's RwLock; ping and scans share the source's one pool; a one-connection pool times out a second statement while the first waits on a lock.
 - **AT-5** (attacked): A per-test random password and a wrong one, by key and by URL, across sources(), ping, EXPLAIN in both formats, every error class and trace-level stderr, are never seen; mG3 and mG4 prove the grep live on both streams.
 - **AT-6** (attacked): The federated join equals an independent psycopg plus pyarrow join; mE and mF (a dropped residual, a shifted epoch) turn the rows red; nothing is written by DDL or DML.

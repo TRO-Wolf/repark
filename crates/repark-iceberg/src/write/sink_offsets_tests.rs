@@ -975,3 +975,9 @@ mod scope;
 
 #[path = "sink_offsets_probe_tests.rs"]
 mod probe;
+
+#[path = "sink_offsets_fence_tests.rs"]
+mod fence;
+
+#[path = "sink_offsets_epoch_tests.rs"]
+mod epoch;

@@ -65,8 +65,11 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `postgres`, `PermissionDenied { relation, privilege: Privilege }` and `RelationNotFound {
   relation }` (both `DataFusion`) and `DeclaredServerVersion { server_version_num }`
   (`NotImplemented`, row `CONNECT-DECL-pg-server-version`). The file is at its 260-line
-  ceiling, so the server-version message is one line.
-  pins: c-2/C-001, C-015, C-018, C-025, C-037, C-048
+  ceiling, so the server-version message is one line. The C-2a open items fold 1 (2026-10-07)
+  adds `FieldBuffer`, folded to `DataFusion`: the allocator refused the carry a straddling
+  field needs. It carries no value, and it takes the file to 264, four lines past the sketch
+  ceiling (the 1000-line gate is the mechanical one).
+  pins: c-2/C-001, C-015, C-018, C-025, C-037, C-048, C-093
 - `copy_binary.rs` — C-2a (2026-10-06; sketch §2.6). `CopyBinaryDecoder`, the resumable state
   machine over `COPY … TO STDOUT (FORMAT BINARY)` chunks, independent of how the server or TLS
   cuts the stream: `Header → HeaderExtension → TupleStart → FieldLength(i) → FieldValue(i, n)
@@ -82,8 +85,10 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   straddles a chunk boundary copies into the one reusable carry buffer. Batches flush at
   `BatchLimits::rows` (the session batch size, default 8192) or at `bytes` of builder growth
   (default 64 MiB), whichever comes first; a tuple is never split, so one value larger than the
-  cap forms a one-row batch. `buffered_bytes()` is the memory-charge seam: the C-2c scan
-  resizes its DataFusion `MemoryReservation` to it, so C-2a adds no dependency. The C-2a F-1
+  cap forms a one-row batch. `buffered_bytes()` is the memory-charge seam, but nothing in
+  production reads it yet: the C-2c scan resizes its `MemoryReservation` to each emitted
+  batch's array size, after the batch exists, so neither the builders nor the carry are
+  charged to the pool before they allocate; charging the decoder is a C-3 follow-up. The C-2a F-1
   fold (2026-10-06) bounds the builders against Arrow offset overflow: a field length past
   `MAX_FIELD_BYTES` (1 GiB, the largest field Postgres sends) refuses with
   `ProtocolViolation::FieldTooLong` at the length word, before any allocation or carry; and
@@ -94,7 +99,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   ceiling. The C-2a F-4 fold (2026-10-06) bounds the carry: when a straddling field completes,
   a carry whose capacity exceeds the batch byte cap is dropped for a fresh `Vec`, while a
   smaller one stays cleared for reuse; `buffered_bytes()` reports builder bytes plus the carry
-  capacity, so the C-2c reservation seam sees the retained allocation. The C-2a F-5 fold
+  capacity, so the reservation seam sees the retained allocation. The C-2a F-5 fold
   (2026-10-06) charges what the builders hold: `ColumnAppender::arrow_width` is the one width
   table (bool 1, int2 2, int4/float4/date 4, int8/float8/timestamps 8, numeric 16), charged for
   values and NULLs; variable values charge stored bytes plus 4 offset bytes (`jsonb` the
@@ -104,8 +109,18 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   is kept, and every later `decode`, `finish` or flush answers it without reading input;
   `finish` takes `&mut self`. Since C-2b round 2 (2026-10-07) the file also holds
   `ProtocolViolation`, the decoder's reason enum, with its `Display`; C-2b round 3 adds
-  `UnexpectedResponse`, a driver answer the read path cannot use.
-  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
+  `UnexpectedResponse`, a driver answer the read path cannot use. The C-2a open items fold 1
+  (2026-10-07) grows the carry as bytes arrive, fallibly, in `grow_carry`. When a chunk's
+  bytes for a straddling field do not fit the carry, it grows to the declared length or to the
+  larger of what it must now hold and twice its capacity, whichever is smaller, through
+  `try_reserve_exact`; a refusal is `ConnectError::FieldBuffer`, never an abort. A declared
+  length alone allocates nothing: the first growth is what arrived, a field whose length word
+  ends a chunk holds nothing, and growth never passes the declared length, so a straddling
+  field still peaks at twice its size (the carry and the builder copy). The open items' first
+  shape, one up-front reservation of the declared length, let a hostile length word allocate
+  1 GiB per scan before any byte arrived, and aborted the process when that failed.
+  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017, C-091, C-092, C-093,
+  C-094, C-095
 - `settings.rs` — C-1 (2026-10-05). `ConnectionSettings::from_props` reads one source's props
   (the core loader's `SourceSpec.props`). It interprets only `auth_method` (R-5, CC-3) and
   carries every other prop through untouched; the interpreted `auth_method` key leaves the

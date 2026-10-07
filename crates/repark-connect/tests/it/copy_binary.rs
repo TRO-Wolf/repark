@@ -10,17 +10,17 @@ use repark_connect::{
     DEFAULT_BATCH_ROWS, MAX_BATCH_BYTES, MAX_FIELD_BYTES, ProtocolViolation, ValueRefusal,
 };
 
-type Field = Option<Vec<u8>>;
+pub(crate) type Field = Option<Vec<u8>>;
 
 fn planned(name: &str, typname: &str, kind: PgTypeKind, typmod: TypeMod) -> PlannedColumn {
     PlannedColumn::resolve(Arc::from(name), typname, kind, typmod).expect("a mapped column")
 }
 
-fn base(name: &str, typname: &str) -> PlannedColumn {
+pub(crate) fn base(name: &str, typname: &str) -> PlannedColumn {
     planned(name, typname, PgTypeKind::Base, TypeMod::NONE)
 }
 
-fn header_with(flags: u32, extension: &[u8]) -> Vec<u8> {
+pub(crate) fn header_with(flags: u32, extension: &[u8]) -> Vec<u8> {
     let mut stream = COPY_SIGNATURE.to_vec();
     stream.extend_from_slice(&flags.to_be_bytes());
     let length = i32::try_from(extension.len()).expect("extension length");
@@ -29,7 +29,7 @@ fn header_with(flags: u32, extension: &[u8]) -> Vec<u8> {
     stream
 }
 
-fn tuple(fields: &[Field]) -> Vec<u8> {
+pub(crate) fn tuple(fields: &[Field]) -> Vec<u8> {
     let count = i16::try_from(fields.len()).expect("field count");
     let mut bytes = count.to_be_bytes().to_vec();
     for field in fields {

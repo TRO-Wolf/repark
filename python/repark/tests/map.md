@@ -475,6 +475,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   re-derives the fixture with the recorder's `--check` mode.
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005
   PARITY-LIVE-STOP-1 (2026-10-04): the recorder leaves the shared live-oracle session running.
+  **PARITY-LIVE-STOP-1 (2026-10-07):** the recorder's Spark catalog is module-private
+  (`ice_meta_delete_1_live`) and the replay registers its memory catalog under the same
+  `CATALOG`; the generic `sc` it shared with procs-route and sorted-insert-2 bound to whichever
+  module ran first. pins: parity-live-stop-1/C-001, C-002, C-003
   **ICE-META-DELETE-1 (2026-09-19, step 6):** the clause citations of this unit's pins live in this map, not in the source — the owner's comment ban covers doc comments too.
 
 - [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) +
@@ -1682,6 +1686,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   to clear the fork's `min_input_files = 5` default.
   pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
   PARITY-LIVE-STOP-1 (2026-10-04): the recorder leaves the shared live-oracle session running.
+  **PARITY-LIVE-STOP-1 (2026-10-07):** the recorder's Spark catalog is module-private
+  (`ice_sorted_insert_2_live`); on the shared `sc` it wrote into procs-route's warehouse when
+  procs-route ran first (red: `FileNotFoundError` under `live-wh/`).
+  pins: parity-live-stop-1/C-001, C-002, C-003
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
   D-2 oracle cells measured on live PySpark 4.1.2 through the facade on the Arrow
@@ -5028,6 +5036,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-procs-route-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
   PARITY-LIVE-STOP-1 (2026-10-04): the recorder leaves the shared live-oracle session running.
+  **PARITY-LIVE-STOP-1 (2026-10-07):** `sc` and `hc` are this recorder's alone on the live
+  tier (its fixture records `sc.ns` SQL); meta-delete and sorted-insert-2 moved to private names.
+  pins: parity-live-stop-1/C-001, C-002, C-003
   Round 1 routing (2026-09-19): the facade pins go green against the release
   native (25 passed, 2 strict xfails for the version range), and the live
   re-derivation passes on fresh randomness (canonicalized run-stamped tails).
@@ -5198,6 +5209,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `pyspark` is imported, it fails the test that left the oracle's `_jsc` stopped or swapped.
   `spark_engine` no longer stops its session at teardown for the same reason; `ReparkSession.stop()`
   (no JVM) is unaffected. pins: nightly-live-1/C-001, C-002, C-003, C-004
+  **PARITY-LIVE-STOP-1 (2026-10-07):** measured over the full nightly command with the guard
+  live, no collected test stops, replaces or rebuilds the shared context (0 guard hits, one
+  `SparkContext` per run); the two recorders that shared the generic `sc` catalog now bind
+  private names. pins: parity-live-stop-1/C-001, C-002, C-003, C-004
   **DISPLAY-POLARS-1 step 1 (2026-09-09):** pins `spark` at import via
   `os.environ.setdefault("REPARK_DISPLAY_STYLE", "spark")`, before any session exists, so the
   flipped `polars` default changes no existing expectation. pins: display-polars-1/C-002
@@ -5405,6 +5420,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** round-B pins — the escaped/long integer-guard cut, the ORC params mask, the REST/reader chain pins, the writer-option pin. pins: source-url-redact-1/C-069
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** fold-2 pins — the SQL/DataFrame UDF user-text identity and UDF-URL mask, the no-mutation copy contract, the reader mode/format/jdbc/orc/text echoes plus the writer-format echo, the `OSError` rebuilds (filename, strerror, `filename2`), the writer/text overwrite `OSError` doors, and one scrub-site pin per calling module including the injected REST cause chain.
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** one raise-after-handler pin per scrub-site module (export doors, SQL-UDF door, `listDatabases`, `eager`, the readwriter and text overwrite/append doors: `__context__` is None, `__cause__` is the scrubbed copy, the formatted traceback is clean) plus the DataFrame-UDF and pandas-UDF formatted-traceback pins. pins: source-url-redact-1/C-071, C-073
+- `test_foreach_wrap_1.py` — **FOREACH-WRAP-1 (2026-10-07):** the `foreach` and `foreachPartition`
+  doors, plain and lone-surrogate messages: the user's class is kept, the raised object is a masked
+  copy, `str`, `repr` and `format_exception` carry no userinfo, and `__context__` and `__cause__` are
+  None; a credential-free error leaves as the user's own object with its text byte for byte.
+  `transform` passes the user's own exception through unmasked, as the live `FW1-transform` cell
+  records for Spark (`DF-TRANSFORM-1`). The Spark halves read
+  `../../repark-parity/tests/live_spark/fw1_callback_oracle.json`.
+  pins: foreach-wrap-1/C-001, C-002, C-003
 - `test_source_url_redact_2_doors.py` — **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** one formatted-traceback
   pin per user-callback door (GROUPED_AGG plain and unbounded-window, `applyInPandas`, cogroup `applyInPandas`,
   `applyInArrow` table and iterator forms, cogroup `applyInArrow`, `mapInPandas`, `mapInArrow` call and

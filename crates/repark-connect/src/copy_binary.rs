@@ -235,6 +235,7 @@ impl CopyBinaryDecoder {
                         self.append_value(column, bytes)?;
                     } else {
                         let taken = (length - self.carry.len()).min(available);
+                        grow_carry(&mut self.carry, length, taken)?;
                         self.carry
                             .extend_from_slice(input.get(*pos..*pos + taken).unwrap_or_default());
                         *pos += taken;
@@ -358,6 +359,15 @@ impl CopyBinaryDecoder {
             actual: i16::MAX,
         })
     }
+}
+
+fn grow_carry(carry: &mut Vec<u8>, length: usize, taken: usize) -> Result<()> {
+    let needed = carry.len() + taken;
+    let want = length.min(needed.max(carry.capacity() * 2));
+    if needed > carry.capacity() && carry.try_reserve_exact(want - carry.len()).is_err() {
+        return Err(ConnectError::FieldBuffer);
+    }
+    Ok(())
 }
 
 fn field_length(length: i32) -> Result<usize> {
