@@ -3561,22 +3561,39 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **repark** — decoding a `numeric` value whose sign word is `NaN` (`0xC000`), `+Infinity`
   (`0xD000`) or `-Infinity` (`0xF000`) refuses that value with
   `ConnectError::UnrepresentableValue` (reason `NumericNaN` / `NumericInfinity`), naming the
-  column, the row index and this row; it folds to the Unsupported class. Once C-2c pushes
-  filters, a value outside a pushed filter's range is never read, so the scan can succeed where
-  the residual path refuses; the rows returned never differ.
+  column, the row index and this row; it folds to the Unsupported class. **Pushed filters**
+  (C-2c; corrected by the C-2c fold 1, 2026-10-07): the server applies a pushed filter before
+  any value is decoded, so a refused value's membership follows **Postgres's ordering**, in
+  which `NaN` equals itself and sorts above every number, `+Infinity` sorts above every finite
+  number and `-Infinity` below. A value outside the pushed range is never read, so the scan can
+  succeed where the residual path (`pushdown_predicate = false`) refuses. A value inside the
+  range is read and refuses when its column is projected; when it is **not** projected, nothing
+  decodes it, so its row is returned by that ordering, where the residual path refuses. Over
+  `c numeric(10,2)` holding `NaN`, `1`, `2` and `5`, `SELECT id … WHERE c > 1` returns the
+  `NaN` row (`NaN > 1` in Postgres), `c <> 5` returns it too, and `c < 6` leaves it out; each
+  refuses with `pushdown_predicate = false`, and `SELECT id, c … WHERE c > 1` refuses pushed.
 - **Apache Spark** — the JDBC source reads `numeric` through pgjdbc's `getBigDecimal`, which
   cannot build a `BigDecimal` from `NaN` or an infinity, so the read fails. *(oracle:
   documented — the C-2 sketch's FL-3; no value claim, D-M2 measures it.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::numeric_special_values_refuse`
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::numeric_special_values_refuse`;
+  live `crates/repark-connect/tests/it/live_pushdown.rs::a_refused_value_inside_a_pushed_range_follows_postgres_order_live`
+  (the pushed shapes, both ways)
 - **Rationale** — DECLARED 2026-10-06 (C-2a; card 1.6 "declare, never approximate"; FL-3,
-  where Flink and Spark agree). `Decimal128` has no `NaN` and no infinity. Retire when an
-  opt-in quarantine (North Star §7) or a Spark-measured mapping lands.
+  where Flink and Spark agree). `Decimal128` has no `NaN` and no infinity. RULED 2026-10-07 (the
+  C-2c verifier's S2, L2): declare the pushed-filter membership. Retire when an opt-in quarantine (North Star §7)
+  or a Spark-measured mapping lands.
 ### CONNECT-DECL-pg-infinite-datetime — a Postgres `date` or timestamp `±infinity` refuses per value
 - **repark** — decoding a `date` of `infinity` (`0x7FFFFFFF`) or `-infinity` (`0x80000000`), or
   a `timestamp` / `timestamptz` of `±infinity` (`i64::MAX` / `i64::MIN` microseconds), refuses
   that value with `ConnectError::UnrepresentableValue` (reason `InfiniteDate` /
   `InfiniteTimestamp`) naming this row; it folds to the Unsupported class. The pushed-filter
-  note of CONNECT-DECL-pg-numeric-special applies.
+  note of CONNECT-DECL-pg-numeric-special applies: membership follows Postgres's ordering, in
+  which `infinity` sorts after every finite `date` or timestamp and `-infinity` before. Over a
+  `date` and a `timestamptz` column each holding `infinity`, `-infinity`, `2024-01-01` and
+  `2024-01-02`, `SELECT id … WHERE d < DATE '2024-01-02'` returns the `-infinity` row and
+  `d > DATE '2024-01-01'` the `infinity` row (and the same for the `timestamptz` column against
+  an instant), where `pushdown_predicate = false` refuses. A `timestamp` compare pushes only
+  under `prefer_timestamp_ntz` (CONNECT-DIV-pg-timestamp-zone).
 - **Apache Spark** — Spark 4.1.2 over pgjdbc 42.7.13 answers sentinels, not errors: `date`
   `infinity` / `-infinity` read as `9999-12-30` / `0001-01-02`, and `timestamp` / `timestamptz`
   `±infinity` read as `9999-12-31 18:59:59.999` / `0001-01-02 19:00` (America/New_York JVM). These
@@ -3584,8 +3601,11 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `python/repark-parity/tests/live_spark/c2_jdbc_oracle.json` cells `DM2-V01`–`DM2-V03`,
   2026-10-06.)*
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::date_anchors_round_trip`,
-  `::timestamp_ntz_anchors_round_trip`, `::timestamptz_anchors_round_trip`
-- **Rationale** — DECLARED 2026-10-06 (C-2a; FL-4). RULED 2026-10-06 21:45 EDT (Frontier, for the
+  `::timestamp_ntz_anchors_round_trip`, `::timestamptz_anchors_round_trip`; live
+  `crates/repark-connect/tests/it/live_pushdown.rs::a_refused_value_inside_a_pushed_range_follows_postgres_order_live`
+  (the pushed shapes, both ways)
+- **Rationale** — DECLARED 2026-10-06 (C-2a; FL-4). The pushed-filter membership is declared
+  under the same ruling as CONNECT-DECL-pg-numeric-special (L2, 2026-10-07). RULED 2026-10-06 21:45 EDT (Frontier, for the
   owner; the sketch's Q1): keep refusing. `Date32` and `Timestamp(Microsecond)` have no infinity,
   and Spark's sentinels are pgjdbc zone artefacts that would approximate.
 ### CONNECT-DECL-pg-out-of-range — a Postgres value outside its Arrow type's range refuses per value

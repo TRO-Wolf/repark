@@ -501,8 +501,10 @@ ISO anyway.
 **Values refused before the filter reads them.** A value that would be refused (`NaN`, `infinity`) but sits
 outside a pushed filter's range is never read, so the scan succeeds where the residual path would refuse.
 Spark's JDBC pushdown behaves the same. This is recorded in `CONNECT-DECL-pg-numeric-special` and
-`pg-infinite-datetime`, and it is the one place where pushed and unpushed differ: in whether the query
-succeeds, never in the rows it returns.
+`pg-infinite-datetime`. *(Corrected by the C-2c fold 1, 2026-10-07, the verifier's S2, ruling L2.)* A refused
+value **inside** a pushed range is read and refuses when its column is projected; when it is not projected,
+nothing decodes it, and its row is returned or not by Postgres's ordering of `NaN` and `infinity` (`NaN > 1`
+holds), where the residual path refuses. Both rows declare it.
 
 ### 2.10 The EXPLAIN boundary (CC-1)
 

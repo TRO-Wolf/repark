@@ -50,6 +50,9 @@ See [../map.md](../map.md).
   `a_pushed_filter_sees_the_retyped_value_live` (fold 1, `CONNECT-DECL-pg-drift-cast`: a
   `qty = 6` planned over `int4`, then `qty` retyped `numeric(10,1)` and one row set to `5.5`,
   returns one row pushed and two above the scan, both reading `6`),
+  `a_refused_value_inside_a_pushed_range_follows_postgres_order_live` (fold 1: `NaN` and
+  `±infinity` in unprojected `numeric(10,2)`, `date` and `timestamptz` columns are chosen by
+  Postgres's ordering when pushed, and refuse naming their row with pushdown off),
   `timestamp_columns_are_placed_in_the_session_zone_live` (the `-05:00` fixture zone moves a
   wall clock by five hours), `explain_analyze_reports_rows_bytes_and_time_per_scan_live` (the
   five metrics on the scan line, and from the executed plan's `MetricsSet` six rows, more than
@@ -67,7 +70,7 @@ See [../map.md](../map.md).
   name refusing with `PgIdent`'s reason) and `pushed_compare_keeps_the_index_live` (D-M3: a pushed
   `id OPERATOR(pg_catalog.=) current_setting('repark.p0')::int4` over one million rows plans as
   an index-only scan). pins: c-2/C-069, C-071, C-072, C-073, C-076, C-077, C-079, C-081, C-082,
-  C-083, C-084, C-085
+  C-083, C-084, C-085, C-086
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
   verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
   `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and

@@ -581,6 +581,79 @@ async fn a_pushed_filter_sees_the_retyped_value_live() {
     cell.close().await;
 }
 
+async fn pushed_ids(
+    context: &SessionContext,
+    statement: &str,
+) -> (usize, Result<Vec<i64>, String>) {
+    let plan = context.sql(statement).await.expect(LIVE);
+    let plan = plan.create_physical_plan().await.expect(LIVE);
+    let pushed = Split::of(&plan).pushed.len();
+    let rows = collect(plan, context.task_ctx()).await;
+    let mut rows = rows
+        .map(|batches| ids(&batches))
+        .map_err(|error| error.to_string());
+    if let Ok(rows) = rows.as_mut() {
+        rows.sort_unstable();
+    }
+    (pushed, rows)
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_refused_value_inside_a_pushed_range_follows_postgres_order_live() {
+    let cell = Cell::open().await;
+    let table = format!("{}.special", cell.schema);
+    cell.sql(&format!(
+        "CREATE TABLE {table} (id int8, c numeric(10,2), d date, t timestamptz); \
+         INSERT INTO {table} VALUES (1, 'NaN', 'infinity', 'infinity'), \
+         (2, 5, '2024-01-01', '2024-01-01 00:00:00+00'), \
+         (3, 1, '-infinity', '-infinity'), (4, 2, '2024-01-02', '2024-01-02 00:00:00+00')"
+    ))
+    .await;
+    let (numeric, datetime) = (
+        "CONNECT-DECL-pg-numeric-special",
+        "CONNECT-DECL-pg-infinite-datetime",
+    );
+    let instant = |at: &str| format!("CAST('{at}T00:00:00Z' AS TIMESTAMP WITH TIME ZONE)");
+    for (filter, pushed, row) in [
+        ("c > 1".to_string(), vec![1, 2, 4], numeric),
+        ("c <> 5".to_string(), vec![1, 3, 4], numeric),
+        ("c < 6".to_string(), vec![2, 3, 4], numeric),
+        ("d < DATE '2024-01-02'".to_string(), vec![2, 3], datetime),
+        ("d > DATE '2024-01-01'".to_string(), vec![1, 4], datetime),
+        (
+            format!("t < {}", instant("2024-01-02")),
+            vec![2, 3],
+            datetime,
+        ),
+        (
+            format!("t > {}", instant("2024-01-01")),
+            vec![1, 4],
+            datetime,
+        ),
+    ] {
+        let statement = format!("SELECT id FROM pg.{table} WHERE {filter}");
+        let on = pushed_ids(&mount(&cell, &[], "true"), &statement).await;
+        assert_eq!(on, (1, Ok(pushed)), "{filter}");
+        let (unpushed, off) = pushed_ids(&mount(&cell, &[], "false"), &statement).await;
+        assert_eq!(unpushed, 0, "{filter}");
+        assert!(
+            off.as_ref().is_err_and(|error| error.contains(row)),
+            "{filter}: {off:?}"
+        );
+    }
+    let projected = format!("SELECT id, c FROM pg.{table} WHERE c > 1");
+    let (_, inside) = pushed_ids(&mount(&cell, &[], "true"), &projected).await;
+    assert!(
+        inside.as_ref().is_err_and(|error| error.contains(numeric)),
+        "{inside:?}"
+    );
+    let projected = format!("SELECT id, c FROM pg.{table} WHERE c < 6");
+    let outside = pushed_ids(&mount(&cell, &[], "true"), &projected).await;
+    assert_eq!(outside, (1, Ok(vec![2, 3, 4])));
+    cell.close().await;
+}
+
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
 async fn timestamp_columns_are_placed_in_the_session_zone_live() {
