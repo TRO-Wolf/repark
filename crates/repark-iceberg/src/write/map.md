@@ -124,6 +124,56 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `sink_offsets_isolation_tests.rs`, `sink_offsets_probe_tests.rs`,
+  `predicate_dml.rs` — **MB-2c fold 1, K2, MBE-15 (2026-10-07, ruling Q3):**
+  `SiteStamp::claim_isolated` is the claim at the two MERGE sites in `merge/snapshot_commit.rs`.
+  A stamped claim whose `CommitScope` isolation is not `serializable` refuses
+  `MergeIsolationRefused` before the epoch check and before the scope is claimed, so the scope
+  stays open and nothing latches. The refusal names the scope's isolation property:
+  `write.merge.isolation-level` for MERGE, and the `write.update.isolation-level` or
+  `write.delete.isolation-level` that `predicate_dml.rs` sets on its scope with `governed_by`.
+  An unstamped commit, or one whose token belongs to another table's scope, is untouched. Four
+  pins in the `#[path]` child `sink_offsets_isolation_tests.rs` (under the probe module, so they
+  reuse `ProbeCatalog`): the verifier's race shape refuses before any `update_table` and epoch 1
+  lands once (run A's); stamped UPDATE and DELETE refuse on copy-on-write and merge-on-read;
+  serializable MERGE commits its stamp; unscoped MERGE under snapshot commits unstamped.
+  MB-2a's `three_racing_appends_still_stamp_exactly_once_on_every_arm` now runs under
+  `serializable`, and `run_arm`'s MERGE arms take a conflict filter below the racers' rows
+  (`below_the_racers`), so the three-racer answer holds on every arm (MB-2c D-15, pending Q5).
+  pins: mb-2c/C-007
+- `sink_offsets.rs`, `sink_offsets_epoch_tests.rs`, `sink_offsets_probe_tests.rs`,
+  `sink_offsets_walk_tests.rs`, `sink_offsets_tests.rs` — **MB-2c steps 1 and 2 (2026-10-07, ruling Q2: the split):** the
+  epoch check runs in `claim` on the table the commit starts from, after the
+  `SinkCommittedTwice` guard: a record of another generation refuses `GenerationMismatch`, and
+  an epoch at or below the durable one refuses `AlreadyCommitted` under this run and `Fenced`
+  under another, naming the run whose stamp carries the claimed epoch, or the sink's current
+  owner when there is none or it is the claimant. An unscoped `commit_stamp_only` runs it too. Once a scope
+  has seen its epoch durable (`AlreadyCommitted`, `Fenced` or `GenerationMismatch`), the entry
+  is marked refused and every later claim in that scope returns the same refusal (fold 1, K3),
+  so a stale view cannot re-commit the epoch; fold 2 pins that latch for each of the three. `resolve_unknown_outcome` is the C-008 walk on
+  `commit_stamp_only`'s unknown branch: it reloads once and searches the lineage above the base
+  by `engine.operation-id`, then by the whole stamped record (a same-epoch stamp of another run
+  is not this attempt); absent, it refuses `RecoveryRequired(CommitOutcomeUnknown)` with the
+  durable record. It never re-submits and never commits a replace. Nine epoch pins in the
+  `#[path]` child `sink_offsets_epoch_tests.rs`, three walk pins in `sink_offsets_probe_tests.rs`,
+  and in its `#[path]` child `sink_offsets_walk_tests.rs` (fold 1) the scope is marked committed
+  at the resolved snapshot when the fork's reconcile fails and the walk finds the landed attempt,
+  and a failed walk reload refuses `CommitOutcomeUnknown` with no durable record. When the
+  reload's resume point itself refuses (a rolled-back attempt), the refusal keeps the attempt's
+  epoch and operation-id and carries the durable record and that refusal in `resume_refusal`
+  (fold 2).
+  The append fence (step 3) waits for `F-APPEND-PIN-BASE-1`.
+  pins: mb-2c/C-003, C-004
+- `sink_offsets_tests.rs`, `sink_offsets_fence_tests.rs` — **MB-2c step 0, DM-6 (2026-10-07):**
+  the sketch's Q8 branch A measured on the fork pin `076d5f98`. The stamped `merge_append` plus
+  its property update re-bases past a moved base and lands. An empty `overwrite_files()` with
+  `validate_from_snapshot(H)` and `validate_no_conflicting_data()` beside it fails the raced
+  commit at validation (`DataInvalid`), but refuses every quiet commit (`PreconditionFailed`,
+  an empty snapshot), and with `allow_empty_commit()` the two snapshot producers in one
+  transaction both assert `main` and never commit (`CatalogCommitConflicts`). Branch A is not
+  green; MB-2c halts on order rule 1 until `F-APPEND-PIN-BASE-1` merges. The four
+  measurements sit in the `#[path]` child `sink_offsets_fence_tests.rs`.
+  pins: mb-2c/C-001
 - `sink_offsets.rs`, `sink_offsets_scope_tests.rs`, `write_options.rs` — **MB-2a fold 2 (2026-10-07, rulings
   Y1…Y3):** `read_resume_point` keeps ruling V2 under routine expiry. When the ancestry walk
   stops at an expired parent, a retained stamped snapshot newer than the oldest reachable

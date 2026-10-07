@@ -628,7 +628,7 @@ async fn test_microbatch_kill_after_commit_resumes_1() {
 }
 
 #[tokio::test]
-#[ignore = "red until MB-2c: duplicate delivery of a committed epoch from a stale view"]
+#[ignore = "red until F-APPEND-PIN-BASE-1 + MB-2c fence: duplicate delivery of a committed epoch from a stale view"]
 async fn test_microbatch_duplicate_delivery_skips_1() {
     let harness = harness().await;
     bronze_append(&harness, &[1]).await;
@@ -775,7 +775,7 @@ async fn two_drivers_one_sink(door: Door) {
 }
 
 #[tokio::test]
-#[ignore = "red until MB-2c: two drivers race one sink for the same epoch"]
+#[ignore = "red until F-APPEND-PIN-BASE-1 + MB-2c fence: two drivers race one sink for the same epoch"]
 async fn test_microbatch_two_drivers_one_sink_1() {
     two_drivers_one_sink(Door::Append).await;
     two_drivers_one_sink(Door::CopyOnWrite).await;
@@ -844,7 +844,6 @@ fn assert_no_replace(sink: &Table) {
 }
 
 #[tokio::test]
-#[ignore = "red until MB-2c: an unknown commit outcome is reconciled by the sink walk"]
 async fn test_microbatch_unknown_outcome_reconciles_1() {
     let UnknownOutcome {
         harness,

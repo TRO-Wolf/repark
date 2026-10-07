@@ -15,6 +15,7 @@ use crate::microbatch::error::{MicroBatchError, RecoveryReason};
 use crate::microbatch::offset::{
     OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SinkDoor, SinkRecord, SnapshotId, TableUuid,
 };
+use crate::write::merge::{CommitScope, IsolationLevel, OPERATION_ID_PROP};
 use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
 
@@ -58,6 +59,7 @@ struct ScopeEntry {
     stamp: CommitStamp,
     claimed: bool,
     committed: Option<SnapshotId>,
+    refused: Option<MicroBatchError>,
 }
 
 fn scopes() -> MutexGuard<'static, HashMap<TableUuid, ScopeEntry>> {
@@ -120,6 +122,7 @@ impl BatchScope {
                 stamp,
                 claimed: false,
                 committed: None,
+                refused: None,
             },
         );
         Ok(BatchScopeGuard { sink, token })
@@ -150,7 +153,16 @@ impl BatchScope {
                 epoch: entry.stamp.record.epoch,
             });
         }
+        if let Some(refused) = &entry.refused {
+            return Err(refused.clone());
+        }
         check(&entry.stamp)?;
+        if let Err(error) = epoch_check(table, &entry.stamp) {
+            if durable_refusal(&error) {
+                entry.refused = Some(error.clone());
+            }
+            return Err(error);
+        }
         entry.claimed = true;
         Ok(Some(ClaimedStamp {
             stamp: entry.stamp.clone(),
@@ -215,14 +227,80 @@ impl ClaimedStamp {
                 reason: RecoveryReason::UnstampedSinkCommit { snapshot },
             });
         }
-        if let Some(entry) = scopes().get_mut(&TableUuid::of(committed))
-            && entry.claimed
-            && entry.stamp == self.stamp
-        {
-            entry.committed = Some(snapshot);
-        }
+        mark_committed(committed, &self.stamp, snapshot);
         Ok(())
     }
+}
+
+fn mark_committed(sink: &Table, stamp: &CommitStamp, snapshot: SnapshotId) {
+    if let Some(entry) = scopes().get_mut(&TableUuid::of(sink))
+        && entry.claimed
+        && entry.stamp == *stamp
+    {
+        entry.committed = Some(snapshot);
+    }
+}
+
+fn durable_refusal(error: &MicroBatchError) -> bool {
+    matches!(
+        error,
+        MicroBatchError::AlreadyCommitted { .. }
+            | MicroBatchError::Fenced { .. }
+            | MicroBatchError::GenerationMismatch { .. }
+    )
+}
+
+fn epoch_check(table: &Table, stamp: &CommitStamp) -> Result<(), MicroBatchError> {
+    let record = &stamp.record;
+    let Some(durable) = read_resume_point(table, record.query)? else {
+        return Ok(());
+    };
+    if durable.generation != record.generation {
+        return Err(MicroBatchError::GenerationMismatch {
+            query: record.query,
+            resumed: record.generation,
+            stamped: durable.generation,
+        });
+    }
+    if durable.epoch.get() < record.epoch.get() {
+        return Ok(());
+    }
+    if durable.run == record.run {
+        return Err(MicroBatchError::AlreadyCommitted {
+            query: record.query,
+            epoch: record.epoch,
+        });
+    }
+    let winner = stamp_at_epoch(table, record)
+        .map(|committer| committer.run)
+        .filter(|run| *run != record.run)
+        .unwrap_or(durable.run);
+    Err(MicroBatchError::Fenced {
+        query: record.query,
+        epoch: record.epoch,
+        winner,
+    })
+}
+
+fn stamp_at_epoch(table: &Table, record: &SinkRecord) -> Option<SinkRecord> {
+    main_lineage(table.metadata())
+        .filter_map(|snapshot| {
+            let summary = &snapshot.summary().additional_properties;
+            stamped_by(summary, record.query)
+                .then(|| SinkRecord::from_summary(summary).ok().flatten())
+                .flatten()
+        })
+        .take_while(|stamped| stamped.epoch.get() >= record.epoch.get())
+        .find(|stamped| stamped.epoch == record.epoch)
+}
+
+fn main_lineage(metadata: &TableMetadata) -> impl Iterator<Item = &SnapshotRef> {
+    std::iter::successors(metadata.current_snapshot(), |snapshot| {
+        snapshot
+            .parent_snapshot_id()
+            .and_then(|parent| metadata.snapshot_by_id(parent))
+    })
+    .take(metadata.snapshots().len())
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -262,27 +340,18 @@ pub fn read_resume_point(
 }
 
 fn newest_stamp(table: &Table, query: QueryId) -> Result<Option<SinkRecord>, MicroBatchError> {
-    let metadata = table.metadata();
-    let mut cursor = metadata.current_snapshot();
-    for _ in 0..metadata.snapshots().len() {
-        let Some(snapshot) = cursor else {
-            return Ok(None);
-        };
-        let summary = &snapshot.summary().additional_properties;
-        if stamped_by(summary, query) {
-            return match SinkRecord::from_summary(summary)? {
-                Some(record) => Ok(Some(record)),
-                None => Err(MicroBatchError::Catalog(format!(
-                    "repark.cdc stamp of query {query} on snapshot {id} misses its format version",
-                    id = snapshot.snapshot_id()
-                ))),
-            };
-        }
-        cursor = snapshot
-            .parent_snapshot_id()
-            .and_then(|parent| metadata.snapshot_by_id(parent));
+    let Some(snapshot) = main_lineage(table.metadata())
+        .find(|snapshot| stamped_by(&snapshot.summary().additional_properties, query))
+    else {
+        return Ok(None);
+    };
+    match SinkRecord::from_summary(&snapshot.summary().additional_properties)? {
+        Some(record) => Ok(Some(record)),
+        None => Err(MicroBatchError::Catalog(format!(
+            "repark.cdc stamp of query {query} on snapshot {id} misses its format version",
+            id = snapshot.snapshot_id()
+        ))),
     }
-    Ok(None)
 }
 
 fn off_lineage_stamp(table: &Table, query: QueryId, property: &SinkRecord) -> Option<SnapshotId> {
@@ -357,6 +426,9 @@ pub async fn commit_stamp_only(
         })?,
         None => None,
     };
+    if active.is_none() {
+        epoch_check(table, stamp)?;
+    }
     let claimed = active.unwrap_or_else(|| ClaimedStamp {
         stamp: stamp.clone(),
         base: table.metadata().current_snapshot_id().map(SnapshotId::new),
@@ -374,14 +446,7 @@ pub async fn commit_stamp_only(
     let committed = match tx.commit(catalog.as_ref()).await {
         Ok(committed) => committed,
         Err(error) if error.kind() == ErrorKind::CommitStateUnknown => {
-            return Err(MicroBatchError::RecoveryRequired {
-                query: stamp.record.query,
-                epoch: stamp.record.epoch,
-                durable: None,
-                reason: RecoveryReason::CommitOutcomeUnknown {
-                    operation_id: Some(operation_id),
-                },
-            });
+            return resolve_unknown_outcome(catalog, table, stamp, Some(&operation_id)).await;
         }
         Err(error) => return Err(masked(&error)),
     };
@@ -392,6 +457,80 @@ pub async fn commit_stamp_only(
     claimed.record_commit(&committed)?;
     snapshot
         .ok_or_else(|| MicroBatchError::Catalog(String::from("stamp-only commit left no snapshot")))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn resolve_unknown_outcome(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    stamp: &CommitStamp,
+    operation_id: Option<&str>,
+) -> Result<SnapshotId, MicroBatchError> {
+    let record = &stamp.record;
+    let unknown = |durable: Option<Box<SinkRecord>>, resume_refusal: Option<RecoveryReason>| {
+        MicroBatchError::RecoveryRequired {
+            query: record.query,
+            epoch: record.epoch,
+            durable,
+            reason: RecoveryReason::CommitOutcomeUnknown {
+                operation_id: operation_id.map(str::to_string),
+                resume_refusal: resume_refusal.map(Box::new),
+            },
+        }
+    };
+    let Ok(reloaded) = catalog.load_table(table.identifier()).await else {
+        return Err(unknown(None, None));
+    };
+    let base = table.metadata().current_snapshot_id();
+    if let Some(snapshot) = landed_attempt(&reloaded, base, record, operation_id) {
+        mark_committed(&reloaded, stamp, snapshot);
+        return Ok(snapshot);
+    }
+    match read_resume_point(&reloaded, record.query) {
+        Ok(durable) => Err(unknown(durable.map(Box::new), None)),
+        Err(MicroBatchError::RecoveryRequired {
+            durable, reason, ..
+        }) => Err(unknown(durable, Some(reason))),
+        Err(error) => Err(error),
+    }
+}
+
+fn landed_attempt(
+    reloaded: &Table,
+    base: Option<i64>,
+    record: &SinkRecord,
+    operation_id: Option<&str>,
+) -> Option<SnapshotId> {
+    let metadata = reloaded.metadata();
+    let mut above_base = Vec::new();
+    let mut cursor = metadata.current_snapshot();
+    while let Some(snapshot) = cursor
+        && Some(snapshot.snapshot_id()) != base
+        && above_base.len() < metadata.snapshots().len()
+    {
+        above_base.push(snapshot);
+        cursor = snapshot
+            .parent_snapshot_id()
+            .and_then(|parent| metadata.snapshot_by_id(parent));
+    }
+    let by_operation = operation_id.and_then(|id| {
+        above_base.iter().find(|snapshot| {
+            snapshot
+                .summary()
+                .additional_properties
+                .get(OPERATION_ID_PROP)
+                .is_some_and(|found| found == id)
+        })
+    });
+    let landed = by_operation.or_else(|| {
+        above_base.iter().find(|snapshot| {
+            matches!(
+                SinkRecord::from_summary(&snapshot.summary().additional_properties),
+                Ok(Some(found)) if found == *record
+            )
+        })
+    })?;
+    Some(SnapshotId::new(landed.snapshot_id()))
 }
 
 #[derive(Debug, Default)]
@@ -405,15 +544,41 @@ impl SiteStamp {
         branch: Option<&str>,
         extra: &[(String, String)],
     ) -> datafusion::error::Result<SiteStamp> {
+        Self::claim_with(table, branch, extra, || Ok(()))
+    }
+
+    pub(crate) fn claim_isolated(
+        table: &Table,
+        branch: Option<&str>,
+        extra: &[(String, String)],
+        scope: &CommitScope,
+    ) -> datafusion::error::Result<SiteStamp> {
+        Self::claim_with(table, branch, extra, || match scope.isolation {
+            IsolationLevel::Serializable => Ok(()),
+            IsolationLevel::Snapshot => Err(MicroBatchError::MergeIsolationRefused {
+                sink: table.identifier().to_string(),
+                property: scope.isolation_property.to_string(),
+            }),
+        })
+    }
+
+    fn claim_with(
+        table: &Table,
+        branch: Option<&str>,
+        extra: &[(String, String)],
+        isolation: impl FnOnce() -> Result<(), MicroBatchError>,
+    ) -> datafusion::error::Result<SiteStamp> {
         if branch.is_some_and(|name| name != MAIN_BRANCH) {
             return Ok(SiteStamp::default());
         }
         let Some(token) = ScopeToken::carried_by(extra) else {
             return Ok(SiteStamp::default());
         };
-        let claimed =
-            BatchScope::claim_checked(table, &token, |stamp| refuse_stamp_keys(extra, stamp))
-                .map_err(microbatch_error)?;
+        let claimed = BatchScope::claim_checked(table, &token, |stamp| {
+            refuse_stamp_keys(extra, stamp)?;
+            isolation()
+        })
+        .map_err(microbatch_error)?;
         Ok(SiteStamp { claimed })
     }
 
