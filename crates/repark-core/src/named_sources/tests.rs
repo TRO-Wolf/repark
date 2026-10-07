@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use tempfile::TempDir;
 
-use crate::ReparkSession;
 use crate::session::ReparkSessionBuilder;
+use crate::{Error, ReparkSession};
 
 const UNROUTABLE_SOURCE: &str = "[default.database.postgres.company_db]\nhost = \"203.0.113.1\"\n";
 
@@ -24,7 +24,7 @@ fn session_with_source(text: &str) -> (TempDir, ReparkSession) {
 }
 
 #[tokio::test]
-async fn configured_source_select_refuses_with_connector_message() {
+async fn configured_source_select_resolves_through_the_postgres_mount() {
     let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
     session
         .register_configured_sources()
@@ -32,35 +32,76 @@ async fn configured_source_select_refuses_with_connector_message() {
     let error = session
         .sql("SELECT * FROM company_db.public.t")
         .await
-        .expect_err("using an unimplemented source must refuse");
+        .expect_err("a source without `user` refuses at its first resolution");
+    assert!(matches!(error, Error::Config(_)), "{error:?}");
     let message = error.to_string();
-    assert!(message.contains("company_db"), "{message}");
-    assert!(message.contains("postgres"), "{message}");
-    assert!(message.contains("1.10"), "{message}");
+    assert!(
+        message.contains("database source `company_db`"),
+        "{message}"
+    );
+    assert!(message.contains("`user` is required"), "{message}");
+    assert!(!message.contains("1.10"), "{message}");
     assert!(!message.contains("not found"), "{message}");
     assert!(!message.contains("does not exist"), "{message}");
 }
 
 #[tokio::test]
-async fn configured_source_create_table_refuses_with_connector_message() {
-    let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
+async fn configured_source_ddl_refuses_as_read_only() {
+    let (_directory, session) = session_with_source(
+        "[default.database.postgres.company_db]\nhost = \"203.0.113.1\"\n\
+         [default.database.sqlserver.ms_db]\nhost = \"203.0.113.1\"\n",
+    );
     session
         .register_configured_sources()
         .expect("source registration");
     for sql in [
-        "CREATE TABLE company_db.public.t (a INT)",
-        "DROP TABLE company_db.public.t",
+        "DROP SCHEMA company_db.public",
+        "CREATE DATABASE company_db",
     ] {
         let error = session
             .sql(sql)
             .await
-            .expect_err("a write shape under a source name must refuse");
+            .expect_err("DDL under a Postgres source must refuse");
         let message = error.to_string();
-        assert!(message.contains("company_db"), "{sql}: {message}");
-        assert!(message.contains("postgres"), "{sql}: {message}");
-        assert!(message.contains("1.10"), "{sql}: {message}");
+        assert!(
+            message.contains("database source `default.database.postgres.company_db` is read-only"),
+            "{sql}: {message}"
+        );
+        assert!(message.contains("CONNECT-DECL-pg-ddl"), "{sql}: {message}");
+        assert!(!message.contains("1.10"), "{sql}: {message}");
         assert!(!message.contains("not found"), "{sql}: {message}");
     }
+    let error = session
+        .sql("DROP SCHEMA ms_db.dbo")
+        .await
+        .expect_err("DDL under a SQL Server source keeps the pending refusal");
+    assert!(error.to_string().contains("1.10"), "{error}");
+}
+
+#[tokio::test]
+async fn mounted_postgres_sources_are_read_only_catalogs() {
+    let (_directory, session) = session_with_source(
+        "[default.database.postgres.company_db]\nhost = \"203.0.113.1\"\n\
+         [default.database.postgres.parked]\nhost = \"203.0.113.1\"\nauto_register = false\n\
+         [default.database.sqlserver.ms_db]\nhost = \"203.0.113.1\"\n",
+    );
+    assert!(session.postgres_catalog_names_snapshot().is_empty());
+    session
+        .register_configured_sources()
+        .expect("source registration");
+    let names = session.postgres_catalog_names_snapshot();
+    assert_eq!(names.len(), 1, "{names:?}");
+    assert!(names.contains("company_db"), "{names:?}");
+    let catalog = session
+        .context()
+        .catalog("company_db")
+        .expect("the source is mounted");
+    assert!(
+        catalog
+            .downcast_ref::<repark_connect::PostgresCatalog>()
+            .is_some()
+    );
+    assert!(session.context().catalog("parked").is_none());
 }
 
 #[test]
@@ -74,19 +115,33 @@ fn source_registration_opens_no_connection() {
     assert_eq!(rows[0].name, "company_db");
 }
 
-#[test]
-fn source_ping_refuses_until_connector() {
-    let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
-    let source = session
-        .source("company_db")
-        .expect("declared source handle");
-    let error = source
-        .ping()
-        .expect_err("ping must refuse until connectors land");
-    let message = error.to_string();
-    assert!(message.contains("company_db"), "{message}");
-    assert!(message.contains("postgres"), "{message}");
-    assert!(message.contains("1.10"), "{message}");
+#[tokio::test]
+async fn source_ping_resolves_through_the_mount() {
+    let (_directory, session) = session_with_source(
+        "[default.database.postgres.company_db]\nhost = \"203.0.113.1\"\n\
+         [default.database.postgres.parked]\nhost = \"203.0.113.1\"\nauto_register = false\n",
+    );
+    session
+        .register_configured_sources()
+        .expect("source registration");
+    for (name, key_path) in [
+        ("company_db", "default.database.postgres.company_db"),
+        ("parked", "default.database.postgres.parked"),
+    ] {
+        let source = session.source(name).expect("declared source handle");
+        let error = source
+            .ping()
+            .await
+            .expect_err("a source without `user` refuses before any connection");
+        assert!(matches!(error, Error::Config(_)), "{error:?}");
+        let message = error.to_string();
+        assert!(
+            message.contains(&format!("database source `{key_path}`")),
+            "{message}"
+        );
+        assert!(message.contains("`user` is required"), "{message}");
+        assert!(!message.contains("1.10"), "{message}");
+    }
 }
 
 #[test]

@@ -18,17 +18,16 @@ use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
 use crate::dialect::{DataFusionDialect, SqlDialect};
+#[cfg(test)]
+pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
+#[cfg(test)]
+pub(crate) use crate::idents::reject_path_escape_segment;
 use crate::parallel_window::with_parallel_single_partition;
 use crate::session_owner::{session_owner_snapshot, with_session_owner};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::temp_view::{TempViewHome, build_temp_view_home};
 use crate::time_travel::{self, TimeTravelOpts, metadata_at};
-// Test-only re-exports follow the production imports.
-#[cfg(test)]
-pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
-#[cfg(test)]
-pub(crate) use crate::idents::reject_path_escape_segment;
 use crate::{
     OverwriteIntent, engine_err, iceberg_err, json_read_options_from_map, object_store_s3,
     parse_table_identifier_segments, resolve_s3_region_override,
@@ -40,12 +39,14 @@ mod iceberg_caches;
 mod late_catalogs;
 mod memory_catalog;
 mod path_write;
+pub mod read_postgres;
 mod session_catalog;
 pub(crate) mod spill;
 mod temp_views;
 mod text_write_format;
 mod write_options;
 pub mod writer_layout;
+pub(crate) mod zone_localiser;
 
 pub use df_guards::case_bind as frame_names;
 pub use df_guards::subquery::{resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan};
@@ -269,7 +270,6 @@ impl ReparkSessionBuilder {
                 .map_err(|error| Error::Config(error.to_string()))?;
         let session_write_conf =
             repark_iceberg::write::session_write_conf_from_config_map(&self.config);
-        // The extension hooks run at fixed positions in this construction order.
         let ext: Arc<dyn SessionExtension> = self
             .extension
             .clone()

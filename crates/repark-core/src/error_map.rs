@@ -30,6 +30,7 @@ pub(crate) enum EngineErrorKind<'a> {
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
     Iceberg(&'a iceberg::Error),
     CommitStateUnknown(&'a CommitStateUnknownError),
+    Connect(&'a repark_connect::ConnectError),
     Other,
 }
 
@@ -110,6 +111,9 @@ fn classify_external_tail<'a>(
     }
     if let Some(marker) = inner.downcast_ref::<UnsupportedMarker>() {
         return EngineErrorKind::UnsupportedMarked(marker);
+    }
+    if let Some(connect) = inner.downcast_ref::<repark_connect::ConnectError>() {
+        return EngineErrorKind::Connect(connect);
     }
     match inner.downcast_ref::<iceberg::Error>() {
         Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
@@ -193,6 +197,11 @@ pub fn engine_err(err: DataFusionError) -> Error {
         EngineErrorKind::CommitStateUnknown(stamped) => Error::CommitStateUnknown {
             message: stamped.inner().to_string(),
             operation_id: Some(stamped.operation_id().to_string()),
+        },
+        EngineErrorKind::Connect(connect) => match Error::from(connect.clone()) {
+            Error::Config(_) => Error::Config(err.to_string()),
+            Error::NotImplemented(_) => Error::NotImplemented(err.to_string()),
+            _ => Error::DataFusion(err.to_string()),
         },
         EngineErrorKind::Other => Error::DataFusion(err.to_string()),
     }

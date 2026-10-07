@@ -22,6 +22,18 @@ pub(crate) const REGISTRY: &str = "docs/spark-sql-iceberg-parity.md";
 
 pub const UNMAPPED_ROW: &str = "CONNECT-DECL-pg-unmapped";
 
+pub const DDL_ROW: &str = "CONNECT-DECL-pg-ddl";
+
+pub const ZONE_ROW: &str = "CONNECT-DIV-pg-timestamp-zone";
+
+#[must_use]
+pub fn read_only_ddl(source: &str) -> String {
+    format!(
+        "database source `{source}` is read-only: DDL against it is not supported (registry \
+         row {DDL_ROW} in {REGISTRY})"
+    )
+}
+
 pub type Result<T> = std::result::Result<T, ConnectError>;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -190,6 +202,8 @@ pub enum ValueRefusal {
     InfiniteTimestamp,
     DateOutOfRange,
     TimestampOutOfRange,
+    WallClockGap,
+    WallClockOverlap,
 }
 
 impl ValueRefusal {
@@ -205,6 +219,7 @@ impl ValueRefusal {
             ValueRefusal::NumericOutOfRange
             | ValueRefusal::DateOutOfRange
             | ValueRefusal::TimestampOutOfRange => "CONNECT-DECL-pg-out-of-range",
+            ValueRefusal::WallClockGap | ValueRefusal::WallClockOverlap => ZONE_ROW,
         }
     }
 }
@@ -220,6 +235,14 @@ impl fmt::Display for ValueRefusal {
             ValueRefusal::DateOutOfRange => "a date beyond the 32-bit day count since 1970",
             ValueRefusal::TimestampOutOfRange => {
                 "a timestamp after 294247-01-10, beyond microseconds since 1970 in 64 bits"
+            }
+            ValueRefusal::WallClockGap => {
+                "a wall clock that a daylight-saving gap skips in the session zone; set \
+                 `prefer_timestamp_ntz` to read the wall clock"
+            }
+            ValueRefusal::WallClockOverlap => {
+                "a wall clock that a daylight-saving overlap repeats in the session zone; set \
+                 `prefer_timestamp_ntz` to read the wall clock"
             }
         })
     }
