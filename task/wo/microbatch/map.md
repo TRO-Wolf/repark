@@ -16,6 +16,12 @@ oracle later.
   grade B** (Opus 5.5, in the ATTR-ID-1 design-order shape). Closes every
   open decision, names every type and signature, fixes the error classes
   from MB-0, specifies the crash harness scenarios as test names.
+- [mb-design-2026-10-06.md](mb-design-2026-10-06.md) — **the design sketch
+  itself (Opus 5.5, 2026-10-06)**, read by the owner before MB-1 and MB-2a
+  open: the North Star §7 checklist, W8 ruled, Q1…Q11 closed from the MB-0
+  cells, every type and signature, the MBE error-class registry, the five
+  harness pins, the slice corrections, the four-line records R-1…R-18 and
+  the owner questions.
 - [mb-1-source.md](mb-1-source.md) — **MB-1, grade B:** the batch source over
   the incremental append scan. Muse at max, beside C-1.
 - [mb-2a-sink-offsets.md](mb-2a-sink-offsets.md) — **MB-2a, grade B:** summary

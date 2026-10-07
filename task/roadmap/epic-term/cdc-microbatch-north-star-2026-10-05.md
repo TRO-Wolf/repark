@@ -123,6 +123,9 @@ The rules this yields:
 - Configuration structs carry `deny_unknown_fields`; a misspelt option refuses at start, never at batch 400.
 - Every summary key the driver writes is namespaced `repark.` and carries `repark.cdc.format-version`; a
   newer version than the running build understands refuses to resume and names the version.
+  **Amended 2026-10-06 (Frontier, MB-design OQ-6):** RePark-owned keys are `repark.`-namespaced; keys that
+  Iceberg's own Spark sink writes (`spark.sql.streaming.queryId`, `spark.sql.streaming.epochId`) are mirrored
+  verbatim on the `toTable` door.
 - Retention guard: resuming from a start snapshot that `expire_snapshots` has removed refuses, naming
   the oldest snapshot still available and the `expire_snapshots` policy to fix it. The docs state the rule
   that retention must exceed the longest expected lag.
