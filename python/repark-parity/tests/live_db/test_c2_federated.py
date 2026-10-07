@@ -8,14 +8,17 @@ import re
 from collections.abc import Iterator
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pyarrow as pa
 import pytest
 
-from repark import ReparkSession
-from repark.spark import functions
-from repark.spark.session import _reset_active_session_for_tests
+if TYPE_CHECKING:
+    from repark import ReparkSession
+
+repark = pytest.importorskip("repark")
+functions = pytest.importorskip("repark.spark.functions")
+facade_session = pytest.importorskip("repark.spark.session")
 
 UTC = dt.UTC
 CUSTOMERS = [
@@ -71,9 +74,9 @@ def federated(
         'sslmode = "disable"\n',
         encoding="utf-8",
     )
-    _reset_active_session_for_tests()
+    facade_session._reset_active_session_for_tests()
     session = (
-        ReparkSession.builder.configFile(str(path))
+        repark.ReparkSession.builder.configFile(str(path))
         .config("spark.sql.session.timeZone", "America/New_York")
         .getOrCreate()
     )
@@ -88,7 +91,7 @@ def federated(
         yield session, conn, schema
     finally:
         session.stop()
-        _reset_active_session_for_tests()
+        facade_session._reset_active_session_for_tests()
 
 
 def _expected(conn: Any, schema: str) -> list[tuple[int, str, Decimal]]:

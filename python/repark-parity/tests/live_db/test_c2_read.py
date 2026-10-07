@@ -7,18 +7,16 @@ import os
 import time
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import repark
-from repark import ReparkSession
-from repark.errors import (
-    IllegalArgumentException,
-    PySparkException,
-    UnsupportedOperationException,
-)
-from repark.spark.session import _reset_active_session_for_tests
+if TYPE_CHECKING:
+    from repark import ReparkSession
+
+repark = pytest.importorskip("repark")
+errors = pytest.importorskip("repark.errors")
+facade_session = pytest.importorskip("repark.spark.session")
 
 TYPED_COLUMNS = (
     "id int8 PRIMARY KEY, i2 int2, i4 int4, b bool, f8 float8, n numeric(10,2), nu numeric, "
@@ -52,12 +50,13 @@ def _write_config(tmp_path: Path, *sources: str) -> Path:
 
 
 @pytest.fixture
-def spark(tmp_path: Path) -> Iterator[ReparkSession]:
-    """A UTC session mounting the container as `pg`."""
-    _reset_active_session_for_tests()
+def spark(tmp_path: Path, pg_live: tuple[Any, dict[str, str]]) -> Iterator[ReparkSession]:
+    """A UTC session mounting the container as `pg`, after the live cell skips or opens."""
+    assert pg_live
+    facade_session._reset_active_session_for_tests()
     path = _write_config(tmp_path, "[default.database.postgres.pg]")
     session = (
-        ReparkSession.builder.configFile(str(path))
+        repark.ReparkSession.builder.configFile(str(path))
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
@@ -65,7 +64,7 @@ def spark(tmp_path: Path) -> Iterator[ReparkSession]:
         yield session
     finally:
         session.stop()
-        _reset_active_session_for_tests()
+        facade_session._reset_active_session_for_tests()
 
 
 def _typed_table(conn: Any, names: dict[str, str]) -> str:
@@ -171,7 +170,7 @@ def test_a_partitioned_read_refuses_naming_its_row(
         ),
     ]
     for attempt in attempts:
-        with pytest.raises(UnsupportedOperationException) as excinfo:
+        with pytest.raises(errors.UnsupportedOperationException) as excinfo:
             attempt()
         message = str(excinfo.value)
         assert "CONNECT-DECL-pg-partitioned-read" in message
@@ -199,13 +198,13 @@ def test_ddl_and_dml_refuse_through_both_doors(
         f"UPDATE {qualified} SET i4 = 0",
         f"DELETE FROM {qualified}",
     ):
-        with pytest.raises(UnsupportedOperationException) as excinfo:
+        with pytest.raises(errors.UnsupportedOperationException) as excinfo:
             spark.sql(statement).collect()
         assert "not implemented" in str(excinfo.value).lower(), statement
     monkeypatch.setenv("REPARK_CONFIG", str(tmp_path / "repark.toml"))
     monkeypatch.setattr(repark, "_ANSI_NATIVE", None)
     for statement in (f"DROP TABLE {qualified}", f"DROP SCHEMA pg.{names['schema']}"):
-        with pytest.raises(UnsupportedOperationException) as excinfo:
+        with pytest.raises(errors.UnsupportedOperationException) as excinfo:
             repark.sql(statement).collect()
         message = str(excinfo.value)
         assert "database source `default.database.postgres.pg` is read-only" in message
@@ -219,7 +218,7 @@ def test_ddl_and_dml_refuse_through_both_doors(
 def test_ping_reaches_the_server_and_names_the_source_on_failure(
     tmp_path: Path, pg_live: tuple[Any, dict[str, str]]
 ) -> None:
-    _reset_active_session_for_tests()
+    facade_session._reset_active_session_for_tests()
     path = _write_config(tmp_path, "[default.database.postgres.pg]")
     with path.open("a", encoding="utf-8") as handle:
         handle.write(
@@ -227,14 +226,14 @@ def test_ping_reaches_the_server_and_names_the_source_on_failure(
             'host = "127.0.0.1"\nport = "1"\nuser = "postgres"\nsslmode = "disable"\n'
             'connect_timeout_ms = "2000"\n'
         )
-    session = ReparkSession.builder.configFile(str(path)).getOrCreate()
+    session = repark.ReparkSession.builder.configFile(str(path)).getOrCreate()
     try:
         assert session.source("pg").ping() is None
         with pytest.raises(Exception) as excinfo:
             session.source("closed").ping()
     finally:
         session.stop()
-        _reset_active_session_for_tests()
+        facade_session._reset_active_session_for_tests()
     assert "database source `default.database.postgres.closed`" in str(excinfo.value)
     assert "unreachable" in str(excinfo.value)
 
@@ -248,7 +247,7 @@ def test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock(
         f'INSERT INTO "{names["schema"]}".clock VALUES '
         "(1, '2024-01-15 12:00:00'), (2, '2024-07-15 12:00:00'), (3, '2024-03-10 02:30:00')"
     )
-    _reset_active_session_for_tests()
+    facade_session._reset_active_session_for_tests()
     path = _write_config(
         tmp_path, "[default.database.postgres.pg]", "[default.database.postgres.ntz]"
     )
@@ -264,7 +263,7 @@ def test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock(
         encoding="utf-8",
     )
     session = (
-        ReparkSession.builder.configFile(str(path))
+        repark.ReparkSession.builder.configFile(str(path))
         .config("spark.sql.session.timeZone", "America/New_York")
         .getOrCreate()
     )
@@ -276,12 +275,12 @@ def test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock(
         wall = session.sql(f"SELECT ts FROM ntz.{names['schema']}.clock ORDER BY id")
         ntz_type = wall.schema["ts"].dataType.simpleString()
         ntz_rows = [row[0] for row in wall.collect()]
-        with pytest.raises(PySparkException) as excinfo:
+        with pytest.raises(errors.PySparkException) as excinfo:
             session.sql(f"SELECT ts FROM pg.{names['schema']}.clock WHERE id = 3").collect()
         lingering = _busy_backends(conn, names["schema"])
     finally:
         session.stop()
-        _reset_active_session_for_tests()
+        facade_session._reset_active_session_for_tests()
     utc = dt.UTC
     assert [(row[0], row[1]) for row in placed] == [
         (1, "2024-01-15 12:00:00"),
@@ -331,7 +330,7 @@ def test_explain_shows_the_boundary_through_both_doors(
 
 
 def test_unknown_keys_and_a_bad_url_refuse_before_any_connection(spark: ReparkSession) -> None:
-    with pytest.raises(IllegalArgumentException) as excinfo:
+    with pytest.raises(errors.IllegalArgumentException) as excinfo:
         spark.read.format("postgres").option("url", _url()).option("dbtable", "t").option(
             "bogusKey", "sentinel-value"
         ).load()
