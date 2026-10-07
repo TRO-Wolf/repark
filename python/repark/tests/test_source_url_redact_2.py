@@ -195,9 +195,10 @@ def test_scrub_exception_masks_cause_chain_args() -> None:
     context.__cause__ = cause
     outer = AnalysisException("listNamespaces failed")
     outer.__context__ = context
-    scrub_exception(outer)
-    assert USERINFO not in repr(cause.args)
-    assert USERINFO not in "".join(traceback.format_exception(outer))
+    scrubbed = scrub_exception(outer)
+    assert USERINFO in repr(cause.args)
+    assert USERINFO in "".join(traceback.format_exception(outer))
+    assert USERINFO not in "".join(traceback.format_exception(scrubbed))
 
 
 def test_reader_path_chain_carries_no_userinfo() -> None:
