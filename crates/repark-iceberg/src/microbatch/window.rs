@@ -114,6 +114,13 @@ impl WindowPlanner {
                         oldest: SnapshotId::new(oldest),
                     });
                 };
+                if !self
+                    .ancestry(head_id)
+                    .iter()
+                    .any(|entry| entry.snapshot_id() == snapshot.get())
+                {
+                    return Err(self.not_in_lineage(snapshot, head_id));
+                }
                 let count = self.added_file_count(named).await?;
                 Ok(Some(self.offset(snapshot.get(), count)))
             }
@@ -148,6 +155,9 @@ impl WindowPlanner {
             .iter()
             .find(|snapshot| snapshot.snapshot_id() == from_id)
         else {
+            if self.table.metadata().snapshot_by_id(from_id).is_some() {
+                return Err(self.not_in_lineage(from.snapshot, head_id));
+            }
             let Some(oldest) = chain.last().map(|entry| entry.snapshot_id()) else {
                 return Err(self.orphaned_head(head_id));
             };
@@ -256,6 +266,14 @@ impl WindowPlanner {
             });
         }
         Ok(())
+    }
+
+    fn not_in_lineage(&self, snapshot: SnapshotId, head: i64) -> MicroBatchError {
+        MicroBatchError::SnapshotNotInLineage {
+            table: self.table_name(),
+            snapshot,
+            head: SnapshotId::new(head),
+        }
     }
 
     fn non_append(

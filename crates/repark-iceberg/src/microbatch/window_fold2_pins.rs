@@ -215,3 +215,61 @@ async fn a_delete_as_head_refuses_at_the_initial_offset() {
         .expect("some");
     assert_eq!(plan.end, input_offset(&table, head, 1));
 }
+
+fn expect_not_in_lineage(error: &MicroBatchError, snapshot: i64, head: i64) {
+    match error {
+        MicroBatchError::SnapshotNotInLineage {
+            snapshot: refused,
+            head: refused_head,
+            ..
+        } => {
+            assert_eq!(*refused, SnapshotId::new(snapshot));
+            assert_eq!(*refused_head, SnapshotId::new(head));
+        }
+        other => panic!("expected SnapshotNotInLineage, got {other:?}"),
+    }
+    let text = error.to_string();
+    assert!(
+        text.starts_with(&format!(
+            "Cannot find snapshot after {snapshot}: not an ancestor of table's current snapshot {head}"
+        )),
+        "{text}"
+    );
+    assert!(!text.contains("expired"), "{text}");
+}
+
+#[tokio::test]
+async fn a_snapshot_rolled_out_of_the_lineage_refuses_as_not_an_ancestor() {
+    let (_warehouse, catalog, ident) = fixture_table("rolled-back").await;
+    let first = commit_append(&catalog, &ident, vec![synthetic_file("a.parquet", 1)]).await;
+    let orphan = commit_append(&catalog, &ident, vec![synthetic_file("b.parquet", 1)]).await;
+    let table = load(&catalog, &ident).await;
+    let tx = Transaction::new(&table);
+    let action = tx.manage_snapshots().rollback_to(first);
+    let tx = action.apply(tx).expect("apply rollback");
+    tx.commit(catalog.as_ref()).await.expect("commit rollback");
+    let head = commit_append(&catalog, &ident, vec![synthetic_file("c.parquet", 1)]).await;
+    let table = load(&catalog, &ident).await;
+    assert!(table.metadata().snapshot_by_id(orphan).is_some());
+    let planner = WindowPlanner::new(table.clone(), uncapped());
+    let error = planner
+        .initial_offset(&StartPosition::AfterSnapshot(SnapshotId::new(orphan)))
+        .await
+        .expect_err("a start after a snapshot outside the lineage must refuse");
+    expect_not_in_lineage(&error, orphan, head);
+    for position in [0, 1] {
+        for limit in [WindowLimit::Capped, WindowLimit::Unbounded] {
+            let error = planner
+                .next_window(&input_offset(&table, orphan, position), limit)
+                .await
+                .expect_err("a resume from a snapshot outside the lineage must refuse");
+            expect_not_in_lineage(&error, orphan, head);
+        }
+    }
+    let plan = planner
+        .next_window(&input_offset(&table, first, 1), WindowLimit::Capped)
+        .await
+        .expect("an ancestor still resumes")
+        .expect("some");
+    assert_eq!(plan.end, input_offset(&table, head, 1));
+}

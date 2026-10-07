@@ -88,6 +88,14 @@ pub enum MicroBatchError {
         oldest: SnapshotId,
     },
     #[error(
+        "Cannot find snapshot after {snapshot}: not an ancestor of table's current snapshot {head} in table {table}; it left the current lineage (for example through rollback_to). Start a new query (new queryName) with repark.cdc.start-after-snapshot-id set to an ancestor of {head}"
+    )]
+    SnapshotNotInLineage {
+        table: String,
+        snapshot: SnapshotId,
+        head: SnapshotId,
+    },
+    #[error(
         "Cannot resume: table {table} history is truncated at snapshot {oldest} (parent {missing_parent} expired); start a new query with repark.cdc.start-after-snapshot-id"
     )]
     TruncatedHistory {
@@ -230,6 +238,11 @@ mod tests {
                 snapshot: SnapshotId::new(7),
                 oldest: SnapshotId::new(9),
             },
+            MicroBatchError::SnapshotNotInLineage {
+                table: String::from("bronze.events"),
+                snapshot: SnapshotId::new(7),
+                head: SnapshotId::new(9),
+            },
             MicroBatchError::TruncatedHistory {
                 table: String::from("bronze.events"),
                 oldest: SnapshotId::new(9),
@@ -354,6 +367,21 @@ mod tests {
             error.to_string(),
             "Cannot resume: start snapshot 7 expired; oldest available is 9; see expire_snapshots retention"
         );
+    }
+
+    #[test]
+    fn lineage_refusal_starts_with_spark_text_and_never_says_expired() {
+        let error = MicroBatchError::SnapshotNotInLineage {
+            table: String::from("ice.bronze.events"),
+            snapshot: SnapshotId::new(7),
+            head: SnapshotId::new(9),
+        };
+        let text = error.to_string();
+        assert_eq!(
+            text,
+            "Cannot find snapshot after 7: not an ancestor of table's current snapshot 9 in table ice.bronze.events; it left the current lineage (for example through rollback_to). Start a new query (new queryName) with repark.cdc.start-after-snapshot-id set to an ancestor of 9"
+        );
+        assert!(!text.contains("expired"));
     }
 
     #[test]
