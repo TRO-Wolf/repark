@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::{HashMap, VecDeque};
 use std::hash::BuildHasher;
 use std::sync::{Mutex, PoisonError};
@@ -39,7 +40,7 @@ pub fn mask_registered_values(text: &str) -> String {
         stored.iter().cloned().collect()
     };
     let mut ordered = snapshot;
-    ordered.sort_by(|left, right| right.0.len().cmp(&left.0.len()));
+    ordered.sort_by_key(|entry| Reverse(entry.0.len()));
     let mut masked = text.to_string();
     for (value, replacement) in &ordered {
         let quoted = format!("{value:?}");
