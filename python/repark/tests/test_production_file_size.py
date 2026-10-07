@@ -182,7 +182,7 @@ EXPECTED_SYMBOL_HASHES = {
         "1d2e344dee78ff621e20d878701fd3da50599e3c4879c76485ef9dc93a71f9ff"
     ),
     "_forward_datafusion_conf": (
-        "0924ab2fdc14786580cc1584a74674c49e292574b415a475525437771cfcfa3c"
+        "a02937da7a9d8c9f987cdec538cc27eb124488c579e9880901443369b3f73e1f"
     ),
     "_infer_arrow_type_from_python_sample": (
         "03a76e73c5c2a06d49feb91028fd9ee2bf68b22cf12716700fbaaa741a38f157"
