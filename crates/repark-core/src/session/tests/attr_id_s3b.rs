@@ -223,12 +223,34 @@ fn bind_free_names_sort_routes_project_dup_through_input() {
 }
 
 #[test]
-fn bind_free_names_sort_keeps_written_spelling_on_ambiguous_key() {
+fn bind_free_names_sort_respells_case_mismatched_key_to_input() {
     let (_context, frame) = dup_schema();
     let plan = frame.logical_plan();
     let written = Expr::Column(Column::from_name("V"));
     let bound = bind_free_names(written, plan, IgnoreCase, &["v".into(), "v".into()], true);
-    assert_eq!(bound_name(bound.unwrap()), "V");
+    assert_eq!(bound_name(bound.unwrap()), "v");
+}
+
+#[test]
+fn bind_free_names_sort_keeps_written_spelling_when_engines_are_twins() {
+    let context = SessionContext::new();
+    let inner = source(&context)
+        .select(vec![
+            col("id").alias_with_metadata("ID", Some(tag("a8"))),
+            col("v").alias_with_metadata("v", Some(tag("a9"))),
+        ])
+        .unwrap();
+    let outer = inner
+        .select(vec![
+            col("ID").alias_with_metadata("ID", Some(tag("b8"))),
+            col("ID").alias_with_metadata("id", Some(tag("b9"))),
+        ])
+        .unwrap();
+    let plan = outer.logical_plan();
+    assert_eq!(sort_shape(plan), SortShape::Project);
+    let written = Expr::Column(Column::from_name("id"));
+    let bound = bind_free_names(written, plan, IgnoreCase, &["ID".into(), "id".into()], true);
+    assert_eq!(bound_name(bound.unwrap()), "id");
 }
 
 #[test]

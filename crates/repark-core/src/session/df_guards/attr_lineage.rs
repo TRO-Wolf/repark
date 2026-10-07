@@ -180,6 +180,17 @@ pub fn sort_input_carries_twice(plan: &LogicalPlan, written: &str, rule: NameRul
 }
 
 #[must_use]
+pub fn sort_output_carries_twice(plan: &LogicalPlan, written: &str, rule: NameRule) -> bool {
+    plan.schema()
+        .fields()
+        .iter()
+        .filter(|field| rule.matches(written, field.name()))
+        .take(2)
+        .count()
+        > 1
+}
+
+#[must_use]
 pub fn sort_sourced_twin_engine(
     plan: &LogicalPlan,
     hits: &[usize],

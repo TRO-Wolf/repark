@@ -206,7 +206,9 @@ wrapped optimizer rule) and declares this directory.
   that column. Zero or two passing hits return unbound, so both doors refuse
   with main's text. `sort_input_carries_twice` reports a projection input
   carrying the name twice by the same visible count, for the
-  `UNRESOLVED_COLUMN` both doors raise there. Pins: `../tests/attr_id_s3b.rs`.
+  `UNRESOLVED_COLUMN` both doors raise there. `sort_output_carries_twice`
+  reports twin output engines by plain count, gating the input-casing
+  respell. Pins: `../tests/attr_id_s3b.rs`.
   pins: attr-id-1/C-071
 - `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
   ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,
@@ -642,8 +644,11 @@ wrapped optimizer rule) and declares this directory.
   when `sort_input_carries_twice` fires (a projection input carrying the
   name twice by visible count, e.g. a self-join input behind a
   plain-plus-expression twin pair, as Spark does), and the input-casing
-  respell is deleted, so the refusal names the reference as written, as
-  main does. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-071
+  respell applies only when the output engines are not twins
+  (`sort_output_carries_twice` is false): over twin engines the key keeps
+  the written spelling, so the refusal names the reference as written, as
+  main does, while the pushdown case keeps the input casing it resolves
+  under. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-071
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

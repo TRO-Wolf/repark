@@ -313,8 +313,13 @@ def _route_sort_key_through_input(
 
     spelling: str | None = _native.sort_project_input_spelling(native, name, exact)
     if spelling is not None:
+        exact_hits, folded_hits = _unqualified_candidates(name, engine_names)
+        matched: int = len(exact_hits)
+        if not exact:
+            matched += len(folded_hits)
+        spelled: str = name if matched > 1 else spelling
         return Column(
-            _native.PyColumn.column(_quote_ident(name)),
+            _native.PyColumn.column(_quote_ident(spelled)),
             spark_display=name,
             projection_name=name,
             stable_name=True,

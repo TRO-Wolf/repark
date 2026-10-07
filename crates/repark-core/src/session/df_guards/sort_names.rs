@@ -11,7 +11,8 @@ use repark_common::names::NameRule;
 use super::attr_id::{AttrId, Resolution, qualifier_matches_position, resolve};
 use super::case_bind::{
     ambiguous_reference, attribute_reference, is_scratch_relation, sort_hits_meet_at_join,
-    sort_input_carries_twice, sort_sourced_twin_engine, unresolved_column,
+    sort_input_carries_twice, sort_output_carries_twice, sort_sourced_twin_engine,
+    unresolved_column,
 };
 
 #[must_use]
@@ -306,9 +307,9 @@ fn bind_free_column(
             if !for_sort {
                 return ambiguous_for_hits(&column, schema, &hits);
             }
-            if project_input_schema(plan).is_none() {
+            let Some(input) = project_input_schema(plan) else {
                 return Err(unresolved_column(&column, schema));
-            }
+            };
             if sort_hits_meet_at_join(plan, &hits) {
                 return Err(unresolved_column(&column, schema));
             }
@@ -318,7 +319,13 @@ fn bind_free_column(
             if let Some(engine) = sort_sourced_twin_engine(plan, &hits, &column.name, rule) {
                 return Ok(attribute_reference(&engine));
             }
-            Ok(Expr::Column(column))
+            let twin_engines = sort_output_carries_twice(plan, &column.name, rule);
+            match unique_spelling(input, &column.name, rule) {
+                Some(spelling) if !twin_engines && spelling != column.name => {
+                    Ok(Expr::Column(Column::from_name(spelling)))
+                }
+                _ => Ok(Expr::Column(column)),
+            }
         }
         Resolution::Missing => Ok(Expr::Column(column)),
     }

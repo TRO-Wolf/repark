@@ -678,9 +678,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   docstring: the lane's no-comments ruling covers the new helper; the
   contract lives here. pins: attr-id-1/C-069, C-070, C-071
   **Fold SM-2d (2026-10-07):** the route still pushes through the input when
-  the input carries the name once, but binds the written spelling, not the
-  input's — the refusal then names the reference as written, as main does.
-  pins: attr-id-1/C-071
+  the input carries the name once, but binds the written spelling when the
+  output engines are twins — the refusal then names the reference as
+  written, as main does — and keeps the input casing otherwise, which the
+  pushdown resolves under. pins: attr-id-1/C-071
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

@@ -99,10 +99,11 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pin, a pass-through pin for a non-unique input, an unresolved pin for twins
   meeting at a join, and a sourced-twin pin over a reminted input.
   pins: attr-id-1/C-069, C-070, C-071
-  **Fold SM-2d (2026-10-07):** the respell pin now asserts the written
-  spelling (`V`); new pins leave the key unbound when no twin lineage runs
-  through the nearest visible column, and refuse `UNRESOLVED_COLUMN` when a
-  join input carries the visible name twice. pins: attr-id-1/C-071
+  **Fold SM-2d (2026-10-07):** new pins leave the key unbound when no twin
+  lineage runs through the nearest visible column, refuse
+  `UNRESOLVED_COLUMN` when a join input carries the visible name twice, and
+  keep the written spelling only when the output engines are twins (the
+  respell pin still asserts the input casing). pins: attr-id-1/C-071
 - `attr_id_seam.rs` — **ATTR-ID-1 S2b (2026-09-30):** the logical/physical seam. A core
   session's optimizer starts with `repark_strip_attribute_ids` and its analyzer does not carry
   it, so an analyzed plan (the Spark SQL door's eager analysis) keeps its ids. An Aggregate
