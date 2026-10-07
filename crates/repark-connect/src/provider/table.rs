@@ -117,6 +117,7 @@ impl TableProvider for PostgresTable {
         })?;
         let limit = limit
             .filter(|_| residual.is_empty())
+            .and_then(|limit| i64::try_from(limit).ok())
             .and_then(|limit| u64::try_from(limit).ok());
         let request = match limit {
             Some(limit) => request.limit(limit),

@@ -417,6 +417,36 @@ async fn p11_limit_pushes_only_without_residual_live() {
 
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_limit_past_i64_max_reads_every_row_live() {
+    let cell = Cell::open().await;
+    let table = format!("{}.thirty", cell.schema);
+    cell.sql(&format!(
+        "CREATE TABLE {table} AS SELECT g::int8 AS id FROM generate_series(1, 30) g"
+    ))
+    .await;
+    for pushdown in ["true", "false"] {
+        let context = mount(&cell, &[], pushdown);
+        for (tail, rows, pushed) in [
+            ("LIMIT 9223372036854775807 OFFSET 5", 25, None),
+            (
+                "LIMIT 9223372036854775807",
+                30,
+                Some(9_223_372_036_854_775_807),
+            ),
+        ] {
+            let statement = format!("SELECT id FROM pg.{table} {tail}");
+            let plan = context.sql(&statement).await.expect(LIVE);
+            let plan = plan.create_physical_plan().await.expect(LIVE);
+            assert_eq!(Split::of(&plan).limit, pushed, "{pushdown}: {tail}");
+            let batches = collect(plan, context.task_ctx()).await.expect(LIVE);
+            assert_eq!(ids(&batches).len(), rows, "{pushdown}: {tail}");
+        }
+    }
+    cell.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
 async fn r01_float_comparisons_stay_residual_live() {
     let edges = Edges::open(&[]).await;
     assert_eq!(edges.sql("score = 0", 0, 1).await, [4]);

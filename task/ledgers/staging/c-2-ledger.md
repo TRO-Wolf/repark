@@ -1083,3 +1083,25 @@ File sizes against sketch §7's ceilings: `provider.rs` 9/20, `provider/catalog.
 `pushdown.rs` 544/820, `tests/it/pushdown.rs` 780/900, `tests/it/explain.rs` 276/320,
 `tests/it/live_pushdown.rs` 655/900 (split out of `live_pg.rs`, which stays at 742).
 `read/postgres.rs` is 468 of C-2b's 600.
+
+## 12. C-2c fold 1 — the verifier's S2s and S3s (2026-10-07)
+
+**Branch:** `feat/c-2c-pushdown-explain` from `2c24647c` (PR #984). **Model:** Claude Opus 5.5
+(`claude-opus-5-5`, high). **Scope:** the verifier's PASS verdict on C-2c and its five S2s and
+three S3s, under the orchestrator's rulings L1–L5 and the S3 rulings. The live cells ran against
+`make pg-up` (PostgreSQL 16), torn down with `make pg-down` at the end.
+
+### PROPOSITION LEDGER — C-2c fold 1 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-081 | L3 (S2): `scan` never pushes a `LIMIT` above `i64::MAX`. DataFusion hands `scan` the sum `skip + fetch`; a sum that does not fit `i64` (a checked conversion) pushes no limit, so `LIMIT 9223372036854775807 OFFSET 5` over thirty rows returns twenty-five rows with `pushed_limit=None`, with pushdown on and off, where the statement used to fail with `22003` (`bigint out of range`). `LIMIT 9223372036854775807` alone still pushes. | `pushdown.rs::a_limit_past_i64_max_never_pushes` (the SQL shapes, and `scan` called with `usize::MAX`, `2^63` and `2^63 - 1`); live `live_pushdown.rs::a_limit_past_i64_max_reads_every_row_live`. | PROVEN | §12.1 m131. |
+
+### 12.1 Mutations (fold 1)
+
+Each mutation was applied alone to the code, the named pins run with `--include-ignored`
+against the container, and the file restored from a copy taken before the edit.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m131 | C-081 | push any limit that fits `u64`: drop the `i64` check (`src/provider/table.rs`) | RED | `a_limit_past_i64_max_never_pushes` (pushed `Some(9223372036854775812)`); live `a_limit_past_i64_max_reads_every_row_live` |

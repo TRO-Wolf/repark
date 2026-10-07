@@ -30,9 +30,10 @@ See [../map.md](../map.md).
   provider. Sketch §5.2's unit halves: `p01_null_tests_push` … `p11_limit_pushes_only_without_residual`
   (with `p06b_…` and `p06c_…`) and `r01_float_comparisons_stay_residual` …
   `r05_pushdown_predicate_false_pushes_nothing`, each asserting the class, the rendered SQL and
-  the bound texts; `pushed_values_past_1024_fail_the_plan`; and
+  the bound texts; `pushed_values_past_1024_fail_the_plan`; `a_limit_past_i64_max_never_pushes`
+  (fold 1: `skip + fetch` past `i64::MAX` pushes no limit); and
   `a_filter_the_optimizer_would_still_rewrite_stays_inexact` (`qty <> NULL` renders but stays
-  `Inexact`). pins: c-2/C-070, C-071, C-072, C-073, C-074, C-077, C-078
+  `Inexact`). pins: c-2/C-070, C-071, C-072, C-073, C-074, C-077, C-078, C-081
 - `live_pushdown.rs` — C-2c (2026-10-07), behind `postgres`, live like `live_pg.rs` (whose
   `Cell` it shares). Each cell seeds `edges`, one table holding every edge sketch §5.2 names
   (an all-NULL row; the integer extremes; `numeric(10,2)` and unconstrained `numeric` with a
@@ -50,10 +51,12 @@ See [../map.md](../map.md).
   the 19-byte COPY header received and a non-zero time to first byte),
   `a_batch_past_the_memory_pool_is_resources_exhausted_live` (a 16 KiB pool refuses the first
   8192-row batch, naming the `PostgresScan` consumer; the default pool reads all 50 000 rows),
+  `a_limit_past_i64_max_reads_every_row_live` (fold 1: `LIMIT 9223372036854775807 OFFSET 5`
+  over thirty rows reads twenty-five, pushdown on and off),
   `a_missing_relation_is_table_not_found_live` (DataFusion's own table-not-found, and a 64-byte
   name refusing with `PgIdent`'s reason) and `pushed_compare_keeps_the_index_live` (D-M3: a pushed
   `id OPERATOR(pg_catalog.=) current_setting('repark.p0')::int4` over one million rows plans as
-  an index-only scan). pins: c-2/C-069, C-071, C-072, C-073, C-076, C-077, C-079
+  an index-only scan). pins: c-2/C-069, C-071, C-072, C-073, C-076, C-077, C-079, C-081
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
   verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
   `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and

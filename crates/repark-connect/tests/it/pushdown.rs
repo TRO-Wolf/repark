@@ -631,6 +631,40 @@ async fn p11_limit_pushes_only_without_residual() {
 }
 
 #[tokio::test]
+async fn a_limit_past_i64_max_never_pushes() {
+    let context = context(&[], "UTF8");
+    let past = physical(
+        &context,
+        "SELECT id FROM orders LIMIT 9223372036854775807 OFFSET 5",
+    )
+    .await;
+    let scan = find_scan(&past).expect("the scan");
+    assert_eq!(scan.pushed_limit(), None);
+    assert!(!split_of(scan).copy.contains("LIMIT"));
+    let at = physical(&context, "SELECT id FROM orders LIMIT 9223372036854775807").await;
+    let scan = find_scan(&at).expect("the scan");
+    assert_eq!(scan.pushed_limit(), Some(9_223_372_036_854_775_807));
+    let table = table(&[], "UTF8");
+    let state = context.state();
+    for (limit, pushed) in [
+        (usize::MAX, None),
+        (1 << 63, None),
+        ((1 << 63) - 1, Some(i64::MAX)),
+    ] {
+        let plan = table
+            .scan(&state, None, &[], Some(limit))
+            .await
+            .expect("scan");
+        let pushed = pushed.and_then(|limit| u64::try_from(limit).ok());
+        assert_eq!(
+            find_scan(&plan).expect("the scan").pushed_limit(),
+            pushed,
+            "{limit}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn r01_float_comparisons_stay_residual() {
     let context = context(&[], "UTF8");
     for filter in ["score > 1.0", "score = 0", "score IN (1.0, 2.0, 3.0, 4.0)"] {
