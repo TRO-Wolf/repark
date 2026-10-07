@@ -972,3 +972,6 @@ fn site_stamp_without_a_claim_borrows_the_caller_extras() {
 
 #[path = "sink_offsets_scope_tests.rs"]
 mod scope;
+
+#[path = "sink_offsets_probe_tests.rs"]
+mod probe;
