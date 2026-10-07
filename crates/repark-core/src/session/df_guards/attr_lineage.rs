@@ -1,8 +1,10 @@
 use datafusion::common::Column;
 use datafusion::logical_expr::expr::{Alias, Case};
 use datafusion::logical_expr::{Distinct, Expr, LogicalPlan, Operator};
+use repark_common::names::NameRule;
 
 use super::attr_id::{ATTR_KEY, AttrId};
+use super::sort_names::below_transparent;
 
 #[must_use]
 pub fn sort_hits_meet_at_join(plan: &LogicalPlan, positions: &[usize]) -> bool {
@@ -44,6 +46,85 @@ pub fn sort_hits_meet_at_join(plan: &LogicalPlan, positions: &[usize]) -> bool {
 }
 
 fn plain_source(expr: &Expr) -> Option<&Column> {
+    let mut node = expr;
+    loop {
+        match node {
+            Expr::Column(column) => return Some(column),
+            Expr::Alias(alias) => node = alias.expr.as_ref(),
+            _ => return None,
+        }
+    }
+}
+
+#[must_use]
+pub fn sort_sourced_twin_engine(
+    plan: &LogicalPlan,
+    hits: &[usize],
+    written: &str,
+    rule: NameRule,
+) -> Option<String> {
+    let mut node = plan;
+    let projection = loop {
+        let below = below_transparent(node);
+        if !std::ptr::eq(below, node) {
+            node = below;
+            continue;
+        }
+        if let LogicalPlan::Projection(projection) = node {
+            break projection;
+        }
+        return None;
+    };
+    if projection
+        .input
+        .schema()
+        .fields()
+        .iter()
+        .any(|field| rule.matches(written, field.name()))
+    {
+        return None;
+    }
+    let mut found = None;
+    for hit in hits {
+        let Some(name) = traced_column_name(node, *hit) else {
+            continue;
+        };
+        if !rule.matches(written, &name) {
+            continue;
+        }
+        if found.is_some() {
+            return None;
+        }
+        found = Some(projection.schema.fields().get(*hit)?.name().clone());
+    }
+    found
+}
+
+fn traced_column_name(plan: &LogicalPlan, mut position: usize) -> Option<String> {
+    let mut node = plan;
+    let mut name = None;
+    loop {
+        if let LogicalPlan::Projection(projection) = node {
+            let column = plain_projection_source(projection.expr.get(position)?)?;
+            name = Some(column.name.clone());
+            node = projection.input.as_ref();
+            position = node.schema().maybe_index_of_column(column)?;
+            continue;
+        }
+        node = match node {
+            LogicalPlan::Filter(filter) => filter.input.as_ref(),
+            LogicalPlan::Sort(sort) => sort.input.as_ref(),
+            LogicalPlan::Limit(limit) => limit.input.as_ref(),
+            LogicalPlan::Repartition(repartition) => repartition.input.as_ref(),
+            LogicalPlan::Distinct(Distinct::All(input)) => input.as_ref(),
+            LogicalPlan::Distinct(Distinct::On(on)) => on.input.as_ref(),
+            LogicalPlan::SubqueryAlias(alias) => alias.input.as_ref(),
+            _ => return name,
+        };
+    }
+}
+
+fn plain_projection_source(expr: &Expr) -> Option<&Column> {
     let mut node = expr;
     loop {
         match node {

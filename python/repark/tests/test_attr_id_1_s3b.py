@@ -99,11 +99,54 @@ def test_orderby_str_and_parent_column_on_twin_frame(ruled_spark: ReparkSession)
     assert _rows(twins.orderBy(frame.v)) == [(10, 10), (20, 20), (30, 30)]
 
 
-def test_orderby_binds_oldest_on_project_dup(ruled_spark: ReparkSession) -> None:
+def test_orderby_routes_ambiguous_project_key_through_input(ruled_spark: ReparkSession) -> None:
     frame = _frame(ruled_spark)
-    mixed = frame.select(frame.id.alias("v"), frame.v)
-    assert _rows(mixed.orderBy("v")) == [(2, 10), (3, 20), (1, 30)]
-    assert _rows(mixed.orderBy(functions.desc("v"))) == [(1, 30), (3, 20), (2, 10)]
+    flipped = frame.select((frame.v * -1).alias("v"), (frame.v + 1).alias("v"), frame.id)
+    assert _rows(flipped.orderBy("v")) == [(-10, 11, 2), (-20, 21, 3), (-30, 31, 1)]
+    assert _rows(flipped.orderBy(functions.desc("v"))) == [
+        (-30, 31, 1),
+        (-20, 21, 3),
+        (-10, 11, 2),
+    ]
+
+
+def test_orderby_fcol_over_exact_project_dup_sorts_by_input(ruled_spark: ReparkSession) -> None:
+    frame = _frame(ruled_spark)
+    flipped = frame.select((frame.v * -1).alias("v"), (frame.v + 1).alias("v"), frame.id)
+    assert _rows(flipped.orderBy(functions.col("v"))) == [(-10, 11, 2), (-20, 21, 3), (-30, 31, 1)]
+
+
+def test_orderby_string_over_exact_project_dup_sorts_by_input(ruled_spark: ReparkSession) -> None:
+    frame = _frame(ruled_spark)
+    flipped = frame.select((frame.v * -1).alias("v"), (frame.v + 1).alias("v"), frame.id)
+    assert _rows(flipped.sort("v")) == [(-10, 11, 2), (-20, 21, 3), (-30, 31, 1)]
+    assert _rows(flipped.sort("v", ascending=False)) == [(-30, 31, 1), (-20, 21, 3), (-10, 11, 2)]
+
+
+def test_orderby_expr_over_computed_twin_sorts_by_source(ruled_spark: ReparkSession) -> None:
+    frame = _frame(ruled_spark)
+    computed = frame.select(frame.id, frame.v, (frame.v - 15).alias("v"))
+    ordered = computed.withColumn("w", functions.lit(1)).orderBy(functions.col("v") + 0)
+    assert _rows(ordered) == [(2, 10, -5, 1), (3, 20, 5, 1), (1, 30, 15, 1)]
+
+
+def test_orderby_expr_over_case_twins_is_ambiguous_insensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = _frame(spark)
+    twins = frame.select((frame.v * -1).alias("V"), (frame.v + 1).alias("v"), frame.id)
+    with pytest.raises(AnalysisException) as caught:
+        twins.orderBy(functions.col("v") + 0)
+    assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
+
+
+def test_orderby_case_twins_bind_own_column_sensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "true")
+    frame = _frame(spark)
+    twins = frame.select((frame.v * -1).alias("V"), (frame.v + 1).alias("v"), frame.id)
+    assert _rows(twins.orderBy("v")) == [(-10, 11, 2), (-20, 21, 3), (-30, 31, 1)]
+    assert _rows(twins.orderBy("V")) == [(-30, 31, 1), (-20, 21, 3), (-10, 11, 2)]
+    assert _rows(twins.orderBy(functions.col("v"))) == [(-10, 11, 2), (-20, 21, 3), (-30, 31, 1)]
+    assert _rows(twins.orderBy(functions.col("V"))) == [(-30, 31, 1), (-20, 21, 3), (-10, 11, 2)]
 
 
 def test_orderby_of_join_dup_is_unresolved(ruled_spark: ReparkSession) -> None:

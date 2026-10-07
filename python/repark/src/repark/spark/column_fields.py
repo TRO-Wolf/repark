@@ -41,6 +41,7 @@ from repark.spark.qualified_names import (
     _refuse_using_key_text,
     _resolve_sort_qualified_name,
     _rewrap_rebound_column,
+    _route_sort_key_through_input,
     _stamped_frame_id_snapshot,
     _using_mark,
 )
@@ -824,7 +825,7 @@ def _checked_sort_position(
     return engine_field
 
 
-def _resolve_sort_name(frame: Any, written: str) -> Any:
+def _resolve_sort_name(frame: Any, written: str, is_column_key: bool = False) -> Any:
     from repark.spark.column import Column
 
     split = _split_written_name(written)
@@ -867,10 +868,12 @@ def _resolve_sort_name(frame: Any, written: str) -> Any:
     if _native.sort_child_shape(native) == "project":
         if _native.sort_hits_meet_at_join(native, hits):
             _raise_unresolved_name(None, name, displays)
-        ranked = [position for position in hits if held[position] is not None]
-        position = min(ranked, key=held.__getitem__) if ranked else hits[0]
-        engine = _checked_sort_position(frame, native, engine_names, held, position)
-        return _build_sort_bound_column(frame, engine, displays[position], name, held[position])
+        engine = _native.sort_sourced_twin_engine(native, hits, name, exact)
+        if engine is not None:
+            position = engine_names.index(engine)
+            bound = _checked_sort_position(frame, native, engine_names, held, position)
+            return _build_sort_bound_column(frame, bound, name, name, held[position])
+        return _route_sort_key_through_input(native, name, hits, exact, engine_names, is_column_key)
     _raise_unresolved_name(None, name, displays)
 
 
@@ -890,14 +893,15 @@ def _bind_sort_key(frame: Any, item: Any) -> Any:
                 return item
             name = item._projection_name
             if name is not None and name != "" and name != "*" and item._spark_display == name:
-                return _rewrap_with_markers(item, _resolve_sort_name(frame, name))
+                bound = _resolve_sort_name(frame, name, is_column_key=True)
+                return _rewrap_with_markers(item, bound)
         if item._is_aggregate and _native.sort_child_shape(frame._plan()) == "aggregate":
             display = item._projection_name
             if display is None:
                 display = item._spark_display
             if display is not None and display != "":
                 try:
-                    bound = _resolve_sort_name(frame, display)
+                    bound = _resolve_sort_name(frame, display, is_column_key=True)
                 except AnalysisException:
                     pass
                 else:

@@ -87,12 +87,18 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   to the join); `grandchild_key` binding a shared using-key id, refusing
   folded rivals, missing an absent name, and declining a non-Projection root;
   `bind_free_names` rewriting a display to its engine field, refusing an
-  ambiguity with an exact spelling present on the filter path, binding the
-  oldest id on a Project sort, refusing unresolved on a join sort, leaving a
+  ambiguity with an exact spelling present on the filter path, routing a
+  Project sort through the projection input (SM-2c round B; the S3b oldest-id
+  pin is rewritten), refusing unresolved on a join sort, leaving a
   miss and a qualified token untouched, and binding the outer query of
   `Exists`/`InSubquery` without entering the subplan. Mutation: skipping
-  `resolve` on the filter path reds the 4 filter pins and leaves the 11
-  sort/shape pins green. pins: attr-id-1/C-025
+  `resolve` on the filter path reds the 4 filter pins and leaves the sort/shape
+  pins green. pins: attr-id-1/C-025
+  **Fold SM-2c round B (2026-10-06):** the Project-sort pin now asserts the
+  input spelling (`v`, not the oldest engine), plus a case-mismatched respell
+  pin, a pass-through pin for a non-unique input, an unresolved pin for twins
+  meeting at a join, and a sourced-twin pin over a reminted input.
+  pins: attr-id-1/C-069, C-070, C-071
 - `attr_id_seam.rs` — **ATTR-ID-1 S2b (2026-09-30):** the logical/physical seam. A core
   session's optimizer starts with `repark_strip_attribute_ids` and its analyzer does not carry
   it, so an analyzed plan (the Spark SQL door's eager analysis) keeps its ids. An Aggregate

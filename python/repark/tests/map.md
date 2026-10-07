@@ -9321,12 +9321,18 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   a qualified predicate binds one join side; `filter(Column)` binds the one
   attribute and refuses the twin join; an exact spelling with a folded rival
   follows the live rule (binds sensitive, refuses insensitive); `orderBy` by a
-  string and by a parent Column sorts a twin frame (SORT-PARENT-COLUMN-1); the
-  oldest id wins a Project dup; a join dup is unresolved; an aggregate display
+  string and by a parent Column sorts a twin frame (SORT-PARENT-COLUMN-1); a
+  Project dup routes through the projection input (SM-2c round B; the S3b
+  oldest-id pin is rewritten); a join dup is unresolved; an aggregate display
   rebinds; a missing key skips to the join grandchild when bound there; the
   live case rule decides after creation. No module docstring: the lane's
   no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-025
+  **Fold SM-2c round B (2026-10-06):** the renamed input-route pin on
+  non-monotonic twins plus one pin per door (exact-dup `F.col`, exact-dup
+  string, insensitive twin-expression refusal, sensitive per-twin rows) and
+  a sourced-twin expression pin over a reminted select.
+  pins: attr-id-1/C-069, C-071
   **ATTR-ID-1 S3b H-1 (2026-10-01):** the §9e pins (C-026): aliased-join and
   corpus-cross-join dups refuse on both doors under both rules; the missing
   sort key falls through in output order; the three lambda shapes bind under

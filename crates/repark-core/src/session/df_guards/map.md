@@ -189,6 +189,14 @@ wrapped optimizer rule) and declares this directory.
   the unary children, so twins that meet at one join cannot resolve. Pin:
   `../tests/join_qualifiers.rs` (`sort_twins_from_two_join_positions_meet_at_the_join`).
   pins: casesens-2/C-012
+  **Fold SM-2c round B (2026-10-06):** `sort_sourced_twin_engine(plan, hits,
+  written, rule)` binds the one ambiguous twin whose plain-column expression
+  chain traces down through projections to a column of the written name
+  (sharing `sort_names::below_transparent` for the top walk; scans carry no
+  attribute ids, so the trace reads expressions, never ids), and only when
+  the projection input carries no column of the name — the
+  computed-twin-over-reminted shape, where Spark sorts by the source column
+  through both levels. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-071
 - `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
   ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,
   option A; design sketch `attr-id-1-selfjoin-design.md` §2.1–§2.2). Spark tags every
@@ -548,7 +556,8 @@ wrapped optimizer rule) and declares this directory.
   with no join below). `bind_free_names` rewrites each unqualified `Column`
   (qualified tokens and subquery plans pass through): one id binds the engine
   field as an attribute reference, several refuse — `AMBIGUOUS_REFERENCE` on the
-  filter path, the oldest id on a Project sort, `UNRESOLVED_COLUMN` on any other
+  filter path, the projection-input route on a Project sort (SM-2c round B
+  below; the S3b oldest-id rule was wrong), `UNRESOLVED_COLUMN` on any other
   sort — and a miss passes through for the engine. No exact-preference anywhere:
   Spark refuses an exact spelling among folded rivals on both filter doors
   (`test_filter_predicate_rewrite.py`), and the S3a inline exact bind stays a
@@ -604,6 +613,20 @@ wrapped optimizer rule) and declares this directory.
   display with a non-word character always parses. Pins:
   `../tests/case_bind.rs`.
   pins: attr-id-1/C-039
+  **Fold SM-2c round B (2026-10-06):** the Project-sort arm no longer binds the
+  oldest id (`oldest_field` is deleted: an oldest twin that is not the source
+  column sorts rows neither Spark nor main produces). `bind_free_column` takes
+  the plan; on ambiguity it refuses `UNRESOLVED_COLUMN` when the hits meet at
+  a join (the string route's check, shared), binds the sourced twin when one
+  hit traces to the written name, else returns the key unbound, respelled to
+  the input's casing when the projection input carries exactly one column of
+  the name under the session rule, so DataFusion's missing-sort-column
+  pushdown sorts by that input column. Otherwise the unbound key flows to the
+  engine, which refuses or pushes deeper exactly as on main. The spelling and
+  sourced checks are mutually exclusive (one input match versus none), so both
+  doors run them in the same order. `project_input_spelling` exposes the
+  input walk to the facade. Pins: `../tests/attr_id_s3b.rs`.
+  pins: attr-id-1/C-069, C-070, C-071
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

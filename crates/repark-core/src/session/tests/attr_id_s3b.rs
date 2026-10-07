@@ -214,12 +214,42 @@ fn bind_free_names_filter_refuses_exact_among_folded_rivals() {
 }
 
 #[test]
-fn bind_free_names_sort_binds_oldest_on_project() {
+fn bind_free_names_sort_routes_project_dup_through_input() {
     let (_context, frame) = dup_schema();
     let plan = frame.logical_plan();
     assert_eq!(sort_shape(plan), SortShape::Project);
     let bound = bind_free_names(col("v"), plan, IgnoreCase, &["v".into(), "v".into()], true);
-    assert_eq!(bound_name(bound.unwrap()), "e2");
+    assert_eq!(bound_name(bound.unwrap()), "v");
+}
+
+#[test]
+fn bind_free_names_sort_respells_case_mismatched_key_to_input() {
+    let (_context, frame) = dup_schema();
+    let plan = frame.logical_plan();
+    let written = Expr::Column(Column::from_name("V"));
+    let bound = bind_free_names(written, plan, IgnoreCase, &["v".into(), "v".into()], true);
+    assert_eq!(bound_name(bound.unwrap()), "v");
+}
+
+#[test]
+fn bind_free_names_sort_passes_through_when_input_is_not_unique() {
+    let context = SessionContext::new();
+    let inner = source(&context)
+        .select(vec![
+            (col("v") + lit(1)).alias_with_metadata("e1", Some(tag("a4"))),
+            (col("v") + lit(2)).alias_with_metadata("e2", Some(tag("a5"))),
+        ])
+        .unwrap();
+    let doubled = inner
+        .select(vec![
+            col("e1").alias_with_metadata("o1", Some(tag("a6"))),
+            col("e2").alias_with_metadata("o2", Some(tag("a7"))),
+        ])
+        .unwrap();
+    let plan = doubled.logical_plan();
+    assert_eq!(sort_shape(plan), SortShape::Project);
+    let bound = bind_free_names(col("v"), plan, IgnoreCase, &["v".into(), "v".into()], true);
+    assert_eq!(bound_name(bound.unwrap()), "v");
 }
 
 #[test]
@@ -231,6 +261,59 @@ fn bind_free_names_sort_is_unresolved_on_join() {
         .map(str::to_string)
         .collect::<Vec<_>>();
     let err = bind_free_names(col("v"), &plan, IgnoreCase, &displays, true);
+    let message = format!("{:?}", err.unwrap_err());
+    assert!(message.contains("UNRESOLVED_COLUMN"), "{message}");
+}
+
+#[test]
+fn bind_free_names_sort_binds_sourced_twin_over_reminted_input() {
+    let context = SessionContext::new();
+    let computed = source(&context)
+        .select(vec![
+            col("id").alias_with_metadata("id", Some(tag("a0"))),
+            col("v").alias_with_metadata("e1", Some(tag("a2"))),
+            (col("v") - lit(15)).alias_with_metadata("e2", Some(tag("a3"))),
+        ])
+        .unwrap();
+    let outer = computed
+        .select(vec![
+            col("id"),
+            col("e1").alias_with_metadata("o1", Some(tag("a2"))),
+            col("e2").alias_with_metadata("o2", Some(tag("a3"))),
+            lit(1).alias("w"),
+        ])
+        .unwrap();
+    let plan = outer.logical_plan().clone();
+    assert_eq!(sort_shape(&plan), SortShape::Project);
+    let bound = bind_free_names(
+        col("v"),
+        &plan,
+        IgnoreCase,
+        &["id".into(), "v".into(), "v".into(), "w".into()],
+        true,
+    );
+    assert_eq!(bound_name(bound.unwrap()), "o1");
+}
+
+#[test]
+fn bind_free_names_sort_is_unresolved_when_twins_meet_at_join() {
+    let context = SessionContext::new();
+    let picked = tagged_joined(&context)
+        .select(vec![
+            col("l.id").alias_with_metadata("id", Some(tag("k1"))),
+            col("l.v").alias_with_metadata("e1", Some(tag("l2"))),
+            col("r.v").alias_with_metadata("e2", Some(tag("r2"))),
+        ])
+        .unwrap();
+    let plan = picked.logical_plan().clone();
+    assert_eq!(sort_shape(&plan), SortShape::Project);
+    let err = bind_free_names(
+        col("v"),
+        &plan,
+        IgnoreCase,
+        &["id".into(), "v".into(), "v".into()],
+        true,
+    );
     let message = format!("{:?}", err.unwrap_err());
     assert!(message.contains("UNRESOLVED_COLUMN"), "{message}");
 }

@@ -26,7 +26,9 @@ pub use super::attr_id::{
 pub use super::attr_id::{
     join_collisions, plan_is_relation, plan_is_stamped, remint_shared, remint_with_map, resolve,
 };
-pub use super::attr_lineage::{projection_source_ids, sort_hits_meet_at_join};
+pub use super::attr_lineage::{
+    projection_source_ids, sort_hits_meet_at_join, sort_sourced_twin_engine,
+};
 pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
 pub use super::frame_lineage::{all_ids, ambiguous, ambiguous_images, renewed_absent, shared_ids};
 pub use super::predicate_names::fold_frame_qualifiers;
@@ -38,7 +40,9 @@ pub use super::sort_names::{FreeNameOffense, free_expr_names, refuse_free_names}
 pub use super::sort_names::{SortShape, bind_free_names, bind_qualified_free_refs};
 pub use super::sort_names::{engine_field_is_unique, grandchild_key, grandchild_qualified_key};
 pub use super::sort_names::{join_dup_below_wrappers, join_output_sources};
-pub use super::sort_names::{qualifier_star_positions, sort_shape, union_dup_below_wrappers};
+pub use super::sort_names::{
+    project_input_spelling, qualifier_star_positions, sort_shape, union_dup_below_wrappers,
+};
 pub use super::subquery::resolve_bound_expr_with;
 pub use super::written_names::refuse_folded_duplicate_keys;
 pub use repark_common::names::{NameHit, NameRule};
