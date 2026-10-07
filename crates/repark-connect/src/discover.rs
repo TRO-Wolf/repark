@@ -19,6 +19,8 @@ const CATALOG: &str = "pg_catalog";
 
 pub const BEGIN_DISCOVERY: &str = "BEGIN READ ONLY; SET LOCAL statement_timeout = 30000";
 
+pub const QUERY_SEARCH_PATH: &str = "SET LOCAL search_path TO \"$user\", public";
+
 const SERVER_FACTS: &str = "SELECT pg_catalog.current_setting('server_version_num')::pg_catalog.int4, \
      pg_catalog.current_setting('server_encoding')";
 
@@ -99,6 +101,14 @@ impl ScanSource {
         match self {
             ScanSource::Relation(relation) => Some(relation),
             ScanSource::Query(_) => None,
+        }
+    }
+
+    #[must_use]
+    pub fn search_path(&self) -> Option<&'static str> {
+        match self {
+            ScanSource::Relation(_) => None,
+            ScanSource::Query(_) => Some(QUERY_SEARCH_PATH),
         }
     }
 
@@ -220,12 +230,11 @@ pub async fn discover(
     let pooled = pool.checkout().await?;
     let client = pooled.client();
     let relation = source.relation();
-    request(
-        read_timeout,
-        relation,
-        client.batch_execute(BEGIN_DISCOVERY),
-    )
-    .await?;
+    let begin = match source.search_path() {
+        Some(search_path) => format!("{BEGIN_DISCOVERY}; {search_path}"),
+        None => BEGIN_DISCOVERY.to_string(),
+    };
+    request(read_timeout, relation, client.batch_execute(&begin)).await?;
     let facts = request(read_timeout, relation, client.query_one(SERVER_FACTS, &[])).await?;
     let server_version_num: i32 = cell(&facts, 0)?;
     check_server_version(server_version_num)?;

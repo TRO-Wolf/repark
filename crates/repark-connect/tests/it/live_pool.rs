@@ -257,3 +257,84 @@ async fn a_timeout_or_a_drop_ends_the_server_work() {
     ends_within(&cell, Duration::from_secs(3)).await;
     cell.close().await;
 }
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn query_mode_resolves_unqualified_names_through_the_role_search_path() {
+    let cell = Cell::open().await;
+    let table = format!("vq_{}", cell.schema);
+    cell.sql(&format!(
+        "CREATE TABLE public.{table} (x int4); INSERT INTO public.{table} VALUES (1), (2)"
+    ))
+    .await;
+    let reader = Reader::new(&cell.settings(&[("pool_max_size", "1")]));
+    let sql = format!("SELECT x FROM {table} WHERE x > 0");
+    let unqualified = reader.read_query(&sql).await;
+    let resolved = reader.resolve(ScanSource::query(&sql)).await;
+    let pushed = resolved.map(|resolved| {
+        ScanRequest::new(resolved)
+            .compare(0, CompareOp::Eq, "2".to_string())
+            .expect("a pushed value")
+    });
+    let pushed = match pushed {
+        Ok(pushed) => reader.read(pushed).await,
+        Err(error) => Err(error),
+    };
+    let shown = "SELECT pg_catalog.current_setting('search_path') AS s";
+    let shown = texts(&reader.read_query(shown).await.expect(LIVE));
+    let relation = reader.resolve(cell.relation("missing")).await;
+    cell.sql(&format!("DROP TABLE public.{table}")).await;
+    assert_eq!(int32s(&unqualified.expect(&sql)), [Some(1), Some(2)]);
+    assert_eq!(int32s(&pushed.expect(&sql)), [Some(2)]);
+    assert_eq!(shown, [Some("\"$user\", public".to_string())]);
+    assert!(
+        matches!(relation, Err(ConnectError::RelationNotFound { .. })),
+        "{relation:?}"
+    );
+    cell.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_user_operator_cannot_shadow_a_generated_compare() {
+    let cell = Cell::open().await;
+    let tag = &cell.schema;
+    let objects = format!(
+        "CREATE DOMAIN public.dom_{tag} AS int4; \
+         CREATE FUNCTION public.never_{tag}(public.dom_{tag}, int4) RETURNS bool \
+           LANGUAGE sql AS 'SELECT false'; \
+         CREATE OPERATOR public.= (LEFTARG = public.dom_{tag}, RIGHTARG = int4, \
+           FUNCTION = public.never_{tag}); \
+         CREATE FUNCTION public.never_{tag}(int4, int4) RETURNS bool \
+           LANGUAGE sql AS 'SELECT false'; \
+         CREATE OPERATOR public.< (LEFTARG = int4, RIGHTARG = int4, \
+           FUNCTION = public.never_{tag})"
+    );
+    cell.sql(&objects).await;
+    let reader = Reader::new(&cell.settings(&[]));
+    let sql = format!("SELECT 1::public.dom_{tag} AS d, 1 AS i");
+    let resolved = reader.resolve(ScanSource::query(&sql)).await;
+    let mut outcomes = Vec::new();
+    for (column, op, value) in [(0, CompareOp::Eq, "1"), (1, CompareOp::Lt, "2")] {
+        let pushed = match &resolved {
+            Ok(resolved) => {
+                let request = ScanRequest::new(Arc::clone(resolved));
+                let request = request
+                    .compare(column, op, value.to_string())
+                    .expect("pushed");
+                reader.read(request).await
+            }
+            Err(error) => Err(error.clone()),
+        };
+        outcomes
+            .push(pushed.map(|batches| batches.iter().map(RecordBatch::num_rows).sum::<usize>()));
+    }
+    cell.sql(&format!(
+        "DROP OPERATOR public.= (public.dom_{tag}, int4); DROP OPERATOR public.< (int4, int4); \
+         DROP FUNCTION public.never_{tag}(public.dom_{tag}, int4); \
+         DROP FUNCTION public.never_{tag}(int4, int4); DROP DOMAIN public.dom_{tag}"
+    ))
+    .await;
+    assert_eq!(outcomes, [Ok(1), Ok(1)]);
+    cell.close().await;
+}

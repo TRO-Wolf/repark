@@ -56,12 +56,12 @@ pub enum CompareOp {
 impl CompareOp {
     fn sql(self) -> &'static str {
         match self {
-            CompareOp::Eq => "=",
-            CompareOp::NotEq => "<>",
-            CompareOp::Lt => "<",
-            CompareOp::LtEq => "<=",
-            CompareOp::Gt => ">",
-            CompareOp::GtEq => ">=",
+            CompareOp::Eq => "OPERATOR(pg_catalog.=)",
+            CompareOp::NotEq => "OPERATOR(pg_catalog.<>)",
+            CompareOp::Lt => "OPERATOR(pg_catalog.<)",
+            CompareOp::LtEq => "OPERATOR(pg_catalog.<=)",
+            CompareOp::Gt => "OPERATOR(pg_catalog.>)",
+            CompareOp::GtEq => "OPERATOR(pg_catalog.>=)",
         }
     }
 }
@@ -307,8 +307,16 @@ impl Copying {
         let pooled = pool.checkout().await?;
         let client = pooled.client();
         let set_config = statement.set_config_sql();
+        let search_path = scan.resolved.source.search_path();
+        let in_transaction = set_config.is_some() || search_path.is_some();
+        if in_transaction {
+            let begin = match search_path {
+                Some(search_path) => format!("{BEGIN_SCAN}; {search_path}"),
+                None => BEGIN_SCAN.to_string(),
+            };
+            request(timeout, relation.as_ref(), client.batch_execute(&begin)).await?;
+        }
         if let Some(set_config) = &set_config {
-            request(timeout, relation.as_ref(), client.batch_execute(BEGIN_SCAN)).await?;
             let params: Vec<&(dyn ToSql + Sync)> = statement
                 .settings
                 .iter()
@@ -324,7 +332,7 @@ impl Copying {
             copy: Box::pin(copy),
             decoder,
             pending: Bytes::new(),
-            in_transaction: set_config.is_some(),
+            in_transaction,
             read_timeout: timeout,
             relation,
         })

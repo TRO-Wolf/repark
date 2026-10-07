@@ -88,8 +88,9 @@ fn pushed_values_ride_set_config_never_the_statement_text() {
     assert_eq!(
         statement.copy,
         "COPY (SELECT \"id\"::pg_catalog.int4, \"iv\"::pg_catalog.text FROM \"s\".\"t\" WHERE \
-         \"amount\" > pg_catalog.current_setting('repark.p0')::pg_catalog.numeric AND \
-         \"iv\"::pg_catalog.text = pg_catalog.current_setting('repark.p1')::pg_catalog.text \
+         \"amount\" OPERATOR(pg_catalog.>) pg_catalog.current_setting('repark.p0')::pg_catalog.numeric \
+         AND \"iv\"::pg_catalog.text OPERATOR(pg_catalog.=) \
+         pg_catalog.current_setting('repark.p1')::pg_catalog.text \
          LIMIT 10) TO STDOUT (FORMAT BINARY)"
     );
     assert!(!statement.copy.contains("12.5") && !statement.copy.contains("DROP"));
@@ -143,6 +144,12 @@ fn query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing() {
         "COPY (SELECT FROM (SELECT 1 AS id) AS repark_q) TO STDOUT (FORMAT BINARY)"
     );
     assert_eq!(request.relation(), None);
+    assert_eq!(
+        ScanSource::query("SELECT 1 AS id").search_path(),
+        Some("SET LOCAL search_path TO \"$user\", public")
+    );
+    let dbtable = ScanSource::from_dbtable("s.t").expect("a relation");
+    assert_eq!(dbtable.search_path(), None);
     assert_eq!(
         ScanSource::from_dbtable(" (SELECT 1) AS q").expect("subquery dbtable"),
         ScanSource::query("SELECT * FROM  (SELECT 1) AS q")

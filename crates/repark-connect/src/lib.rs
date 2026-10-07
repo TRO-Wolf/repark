@@ -19,7 +19,8 @@ pub use copy_binary::{
 #[cfg(feature = "postgres")]
 pub use discover::{
     BEGIN_DISCOVERY, CastType, ColumnCollation, MIN_SERVER_VERSION_NUM, Privilege, QUERY_ALIAS,
-    ResolvedSource, SERVER_VERSION_ROW, ScanColumn, ScanSource, check_server_version, discover,
+    QUERY_SEARCH_PATH, ResolvedSource, SERVER_VERSION_ROW, ScanColumn, ScanSource,
+    check_server_version, discover,
 };
 pub use error::{ConnectError, ProtocolViolation, Result, UNMAPPED_ROW, ValueRefusal};
 pub use ident::{DEFAULT_SCHEMA, IdentRefusal, MAX_IDENT_BYTES, PgIdent, QualifiedRelation};
