@@ -34,6 +34,9 @@ that answers for a registered source name until its connector lands (roadmap 1.1
   (C-005) by `source_ping_resolves_through_the_mount` (mounted and unmounted sources). New:
   `mounted_postgres_sources_are_read_only_catalogs`. Every other CFG-2 assertion is unchanged.
   pins: c-2/C-097, C-099, C-101, C-104
+  **Fold 1, N2:** `configured_source_ddl_refuses_as_read_only` adds `CREATE SCHEMA`,
+  `CREATE SCHEMA IF NOT EXISTS` and `CREATE DATABASE`, each `IF NOT EXISTS` or not, naming
+  `company_db.fresh`. pins: c-2/C-112
 ## Pointers
 
 - Up: [../map.md](../map.md)

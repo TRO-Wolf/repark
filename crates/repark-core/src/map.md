@@ -1068,6 +1068,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   source pings the mounted `PostgresSource` (the context's `PostgresCatalog`, downcast) or, when
   not auto-registered, one built for the call; a failure names the key path
   (`session::read_postgres::source_error`). pins: c-2/C-097, C-099, C-101, C-102
+  **Fold 1, N2:** `refuse_source_ddl` claims `CreateCatalogSchema` by the head of its dotted
+  name, the catalog DataFusion would create the schema in, and `CreateCatalog` by its name or
+  that head, so `CREATE SCHEMA [IF NOT EXISTS] pg.x` and `CREATE DATABASE pg.x` refuse as
+  read-only. The sweep of `DdlStatement`'s eleven variants leaves only `CreateFunction` and
+  `DropFunction` unclaimed: functions are session-scoped and never name a catalog.
+  pins: c-2/C-112
 - `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **C-1 (2026-10-05):** reads
   the source name and kind through `SourceSpec.identity` (CC-2; `SourceKind` now imported from
   `repark-common`); every message, row and handle is unchanged. pins: c-1/C-002

@@ -3783,7 +3783,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   instead of refusing.
 ### CONNECT-DECL-pg-ddl — a Postgres source is read-only: DDL against it refuses
 - **repark** — `CREATE TABLE`, `DROP TABLE`, `CREATE VIEW`, `DROP VIEW`, `CREATE INDEX`,
-  `DROP SCHEMA` and `CREATE DATABASE` naming a mounted Postgres source refuse with
+  `CREATE SCHEMA [IF NOT EXISTS]`, `DROP SCHEMA` and `CREATE DATABASE` (bare or dotted, as
+  `pg.x`) naming a mounted Postgres source refuse with
   `database source `<key path>` is read-only: DDL against it is not supported (registry row
   CONNECT-DECL-pg-ddl …)` in the Unsupported class on the native door (the pre-execute guard
   `refuse_source_ddl`, shared by both doors), and the source's schema provider refuses

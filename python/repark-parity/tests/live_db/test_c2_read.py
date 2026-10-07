@@ -203,12 +203,22 @@ def test_ddl_and_dml_refuse_through_both_doors(
         assert "not implemented" in str(excinfo.value).lower(), statement
     monkeypatch.setenv("REPARK_CONFIG", str(tmp_path / "repark.toml"))
     monkeypatch.setattr(repark, "_ANSI_NATIVE", None)
-    for statement in (f"DROP TABLE {qualified}", f"DROP SCHEMA pg.{names['schema']}"):
+    fresh = f"{names['schema']}_fresh"
+    for statement in (
+        f"DROP TABLE {qualified}",
+        f"DROP SCHEMA pg.{names['schema']}",
+        f"CREATE SCHEMA pg.{fresh}",
+        f"CREATE SCHEMA IF NOT EXISTS pg.{fresh}",
+        f"CREATE DATABASE pg.{fresh}",
+    ):
         with pytest.raises(errors.UnsupportedOperationException) as excinfo:
             repark.sql(statement).collect()
         message = str(excinfo.value)
-        assert "database source `default.database.postgres.pg` is read-only" in message
-        assert "CONNECT-DECL-pg-ddl" in message
+        assert "database source `default.database.postgres.pg` is read-only" in message, statement
+        assert "CONNECT-DECL-pg-ddl" in message, statement
+    assert conn.execute(
+        "SELECT count(*) FROM pg_namespace WHERE nspname = %s", (fresh,)
+    ).fetchone() == (0,)
     assert conn.execute(f"SELECT count(*) FROM {table}").fetchone() == (2,)
     assert conn.execute(
         "SELECT count(*) FROM pg_tables WHERE schemaname = %s", (names["schema"],)

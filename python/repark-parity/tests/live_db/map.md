@@ -31,6 +31,9 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   **Fold 1 (2026-10-07):** `test_a_java_form_session_zone_places_the_wall_clock_at_its_offset`
   (six cells: `Z`, `UT`, `GMT+8`, `UTC+05:30`, `-8`, `+3`) places a wall clock at the
   canonical offset, equal to the `TIMESTAMP` literal. pins: c-2/C-110
+  `test_ddl_and_dml_refuse_through_both_doors` adds `CREATE SCHEMA`, `CREATE SCHEMA IF NOT
+  EXISTS` and `CREATE DATABASE` under `pg` on `repark.sql`; no schema reaches Postgres.
+  pins: c-2/C-112
 - `test_c2_federated.py` — **C-2d (2026-10-07):** sketch §5.4: an Iceberg memory-catalog
   table joined with a Postgres table on an integer key and a `timestamptz`, one filter pushed
   and one residual, through `spark.sql` and the DataFrame join, equal to the psycopg + pyarrow

@@ -36,14 +36,14 @@ pub(crate) fn refuse_source_ddl(
         DdlStatement::CreateIndex(create) => claimed(create.table.catalog()),
         DdlStatement::DropTable(drop) => claimed(drop.name.catalog()),
         DdlStatement::DropView(drop) => claimed(drop.name.catalog()),
-        DdlStatement::CreateCatalog(create) => claimed(Some(create.catalog_name.as_str())),
+        DdlStatement::CreateCatalog(create) => claimed(Some(create.catalog_name.as_str()))
+            .or_else(|| claimed(dotted_head(&create.catalog_name))),
+        DdlStatement::CreateCatalogSchema(create) => claimed(dotted_head(&create.schema_name)),
         DdlStatement::DropCatalogSchema(drop) => match &drop.name {
             SchemaReference::Full { catalog, .. } => claimed(Some(catalog.as_ref())),
             SchemaReference::Bare { .. } => None,
         },
-        DdlStatement::CreateCatalogSchema(_)
-        | DdlStatement::CreateFunction(_)
-        | DdlStatement::DropFunction(_) => None,
+        DdlStatement::CreateFunction(_) | DdlStatement::DropFunction(_) => None,
     };
     if let Some(spec) = spec {
         let message = match spec.identity.kind {
@@ -53,6 +53,10 @@ pub(crate) fn refuse_source_ddl(
         return Err(DataFusionError::NotImplemented(message));
     }
     Ok(())
+}
+
+fn dotted_head(name: &str) -> Option<&str> {
+    name.split_once('.').map(|(head, _)| head)
 }
 
 fn source_refusal(spec: &SourceSpec) -> String {

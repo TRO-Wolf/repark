@@ -57,6 +57,10 @@ async fn configured_source_ddl_refuses_as_read_only() {
     for sql in [
         "DROP SCHEMA company_db.public",
         "CREATE DATABASE company_db",
+        "CREATE SCHEMA company_db.fresh",
+        "CREATE SCHEMA IF NOT EXISTS company_db.fresh",
+        "CREATE DATABASE company_db.fresh",
+        "CREATE DATABASE IF NOT EXISTS company_db.fresh",
     ] {
         let error = session
             .sql(sql)
