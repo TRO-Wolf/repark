@@ -124,6 +124,53 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `sink_offsets_scope_tests.rs`, `write_options.rs` — **MB-2a fold 2 (2026-10-07, rulings
+  Y1…Y3):** `read_resume_point` keeps ruling V2 under routine expiry. When the ancestry walk
+  stops at an expired parent, a retained stamped snapshot newer than the oldest reachable
+  ancestor (by sequence number, by timestamp on a v1 table) cannot sit behind the gap, so it
+  refuses `StampNotInLineage`; an older one keeps `StampedSnapshotExpired`.
+  `write_options.rs` `summary_with_extras` drops `repark.cdc.scope-token` (ASCII
+  case-insensitive), so no commit path that takes caller extras (replace, overwrite-filter,
+  CTAS, create-table, writer properties, the three arms) writes the token; the arms read it
+  before the strip, and only the exact key claims. The fold-2 pins sit in
+  `sink_offsets_scope_tests.rs`, including the live `SinkCommittedTwice` text pin for a second
+  sink write in one batch body (OQ-2a-2 is MB-3's).
+  pins: mb-2a/C-020, C-021, C-022
+- `sink_offsets.rs`, `sink_offsets_tests.rs`, `sink_offsets_scope_tests.rs`,
+  `sink_offsets_probe_tests.rs` — **MB-2a fold 1
+  (2026-10-07, sketch §3.4 amendment):** a scope is `(sink TableUuid, ScopeToken)`. `enter`
+  mints an unguessable token (UUID v4, `guard.token()`, `Debug` redacted); an arm claims only
+  when its `summary_extra` carries `repark.cdc.scope-token` equal to the active token, and the
+  key never reaches a summary. A commit with no token or another token never claims and commits
+  as on main, so a foreign writer cannot take the batch's epoch. `commit_stamp_only` takes the
+  token as `Option<&ScopeToken>` and compares the stamps before it marks the entry claimed.
+  **MB-3 seam:** the driver installs the token in the batch's session config as
+  `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token`, which `resolve_*_session_write`
+  already carries into `summary_extra` on all three arms (MERGE included, `merge/mod.rs`
+  unedited). A stamped commit whose caller extras carry a `repark.cdc.*` or
+  `spark.sql.streaming.*` key refuses before it claims, and the stamp is appended after the
+  caller's extras. `read_resume_point` refuses a property whose stamped snapshot is retained
+  but off the current lineage (a rollback) as `StampNotInLineage` with no durable record, and
+  keeps `StampedSnapshotExpired` for a stamp that is gone. The scope pins sit in the `#[path]`
+  child `sink_offsets_scope_tests.rs`; the verifier's held probes (a `ProbeCatalog` that records
+  each `update_table`, injects failures and unknown outcomes, and races appends) sit in
+  `sink_offsets_probe_tests.rs`.
+  pins: mb-2a/C-013, C-014, C-015, C-017, C-019
+- `sink_offsets.rs`, `sink_offsets_tests.rs` — **MB-2a (2026-10-07):** the micro-batch sink
+  stamp, the sketch's §3.4 (`task/wo/microbatch/mb-design-2026-10-06.md`). `BatchScope` is a
+  process-wide map from sink uuid to the active `CommitStamp`; `enter` refuses `SinkBusy`, a
+  second `claim` refuses `SinkCommittedTwice`, and dropping the guard frees the sink. The three
+  named arms (`write_options.rs` `commit_append_with_summary`, `merge/snapshot_commit.rs`
+  `commit_overwrite_on_ref` and `commit_row_delta_kind_on_ref`) go through the crate-private
+  `SiteStamp`: claim against the starting table (base `H`), add the summary entries to the
+  caller's extras, add `update_table_properties().set(repark.cdc.offsets.<query-id>, …)` to the
+  same transaction, commit, then record the committed head as the scope's outcome. Only a `main`
+  commit claims (a branch commit stays unstamped). Unscoped, every arm commits exactly as before.
+  `commit_stamp_only` commits an empty `merge_append` carrying both halves (DM-5: the fork
+  accepts it as one `append` snapshot). `read_resume_point` reads one loaded table with no IO.
+  The tests sit in the `#[path]` sibling so the module stays under the default ceiling.
+  Mutation-proven: dropping the property write turns the resume pin red (ledger C-011).
+  pins: mb-2a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011, C-012
 - `writer_props.rs`, `write_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `writer_properties_with` takes Java's `parquet.enable.dictionary` default — absent = ON
   (`ParquetProperties.DEFAULT_IS_DICTIONARY_ENABLED = true`, measured by javap on the

@@ -1,10 +1,22 @@
 use std::fmt;
 use std::sync::Arc;
+#[cfg(feature = "postgres")]
+use std::{io, time::Duration};
 
 use arrow::datatypes::DataType;
 use repark_common::Error;
 
-use crate::settings::{AUTH_METHOD_KEY, AuthMethod};
+pub use crate::copy_binary::ProtocolViolation;
+#[cfg(feature = "postgres")]
+use crate::discover::{Privilege, SERVER_VERSION_ROW};
+use crate::ident::IdentRefusal;
+#[cfg(feature = "postgres")]
+use crate::ident::QualifiedRelation;
+#[cfg(feature = "postgres")]
+use crate::pool::TimeoutSetting;
+use crate::settings::{AUTH_METHOD_KEY, AuthMethod, DeclaredSetting, SpecRefusal, Spelling};
+#[cfg(feature = "postgres")]
+use crate::tls::TlsFailure;
 
 pub(crate) const REGISTRY: &str = "docs/spark-sql-iceberg-parity.md";
 
@@ -29,6 +41,21 @@ pub enum ConnectError {
         method: AuthMethod,
         registry_row: &'static str,
     },
+
+    #[error("invalid specification: {key} {reason}")]
+    InvalidSpecification { key: Spelling, reason: SpecRefusal },
+
+    #[error(
+        "{key} is declared but not supported yet: {declared} (registry row {} in {REGISTRY})",
+        declared.registry_row()
+    )]
+    DeclaredSetting {
+        key: Spelling,
+        declared: DeclaredSetting,
+    },
+
+    #[error("invalid specification: a Postgres identifier {reason}")]
+    InvalidIdentifier { reason: IdentRefusal },
 
     #[error(
         "Postgres type `{postgres_name}` has no Arrow mapping: declared \
@@ -100,6 +127,58 @@ pub enum ConnectError {
 
     #[error("an Arrow batch could not be built: {message}")]
     Arrow { message: String },
+
+    #[cfg(feature = "postgres")]
+    #[error(
+        "the Postgres server does not offer TLS and `sslmode` is `verify-full`; only \
+         `sslmode=disable` connects in plaintext (registry row CONNECT-DIV-pg-sslmode in {REGISTRY})"
+    )]
+    TlsRequired,
+
+    #[cfg(feature = "postgres")]
+    #[error("TLS to the Postgres server failed: {kind}")]
+    TlsHandshake { kind: TlsFailure },
+
+    #[cfg(feature = "postgres")]
+    #[error("the Postgres server is unreachable: {kind}")]
+    Unreachable { kind: io::ErrorKind },
+
+    #[cfg(feature = "postgres")]
+    #[error("a Postgres wait exceeded `{which}`")]
+    Timeout { which: TimeoutSetting },
+
+    #[cfg(feature = "postgres")]
+    #[error(
+        "no pooled Postgres connection came free within `pool_checkout_timeout_ms` ({} ms); \
+         raise it or `pool_max_size`",
+        waited.as_millis()
+    )]
+    PoolExhausted { waited: Duration },
+
+    #[cfg(feature = "postgres")]
+    #[error("Postgres authentication failed: check `user`, `password` and `auth_method`")]
+    AuthenticationFailed,
+
+    #[cfg(feature = "postgres")]
+    #[error("the Postgres server refused: {message} (SQLSTATE {sqlstate})")]
+    Server { sqlstate: String, message: String },
+
+    #[cfg(feature = "postgres")]
+    #[error("the Postgres role lacks the {privilege} privilege that reading {relation} needs")]
+    PermissionDenied {
+        relation: QualifiedRelation,
+        privilege: Privilege,
+    },
+
+    #[cfg(feature = "postgres")]
+    #[error("Postgres relation {relation} does not exist (tables, views and foreign tables)")]
+    RelationNotFound { relation: QualifiedRelation },
+
+    #[cfg(feature = "postgres")]
+    #[error(
+        "Postgres server_version_num {server_version_num} < 140000: declared, {SERVER_VERSION_ROW}"
+    )]
+    DeclaredServerVersion { server_version_num: i32 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -146,96 +225,36 @@ impl fmt::Display for ValueRefusal {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ProtocolViolation {
-    Signature,
-    OidColumns,
-    CriticalFlags { flags: u32 },
-    HeaderExtension { length: i32 },
-    FieldCount { expected: usize, actual: i16 },
-    FieldLength { length: i32 },
-    FieldTooLong { length: usize, max: usize },
-    NullInNotNullColumn { column: usize },
-    TrailingBytes,
-    NumericSign { sign: u16 },
-    NumericDigit { digit: i16 },
-    JsonbVersion { found: Option<u8> },
-}
-
-impl fmt::Display for ProtocolViolation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProtocolViolation::Signature => f.write_str("the header signature is not PGCOPY"),
-            ProtocolViolation::OidColumns => {
-                f.write_str("the header flags include OIDs (bit 16), which no scan requests")
-            }
-            ProtocolViolation::CriticalFlags { flags } => {
-                write!(
-                    f,
-                    "the header sets reserved critical flag bits ({flags:#010x})"
-                )
-            }
-            ProtocolViolation::HeaderExtension { length } => {
-                write!(f, "the header extension length is negative ({length})")
-            }
-            ProtocolViolation::FieldCount { expected, actual } => {
-                write!(
-                    f,
-                    "a tuple has {actual} fields; the scan planned {expected}"
-                )
-            }
-            ProtocolViolation::FieldLength { length } => {
-                write!(
-                    f,
-                    "a field length is negative ({length}) and not the NULL marker"
-                )
-            }
-            ProtocolViolation::FieldTooLong { length, max } => {
-                write!(
-                    f,
-                    "a field declares length {length}, beyond the {max}-byte maximum"
-                )
-            }
-            ProtocolViolation::NullInNotNullColumn { column } => {
-                write!(f, "a NULL arrived in planned NOT NULL column {column}")
-            }
-            ProtocolViolation::TrailingBytes => f.write_str("bytes follow the trailer"),
-            ProtocolViolation::NumericSign { sign } => {
-                write!(f, "a `numeric` sign word is {sign:#06x}")
-            }
-            ProtocolViolation::NumericDigit { digit } => {
-                write!(f, "a `numeric` base-10000 digit is {digit}")
-            }
-            ProtocolViolation::JsonbVersion {
-                found: Some(version),
-            } => {
-                write!(
-                    f,
-                    "a `jsonb` value has version {version}; only version 1 is known"
-                )
-            }
-            ProtocolViolation::JsonbVersion { found: None } => {
-                f.write_str("a `jsonb` value is empty, with no version byte")
-            }
-        }
-    }
-}
-
 impl From<ConnectError> for Error {
     fn from(error: ConnectError) -> Self {
         match error {
-            ConnectError::InvalidAuthMethod { .. } => Error::Config(error.to_string()),
+            ConnectError::InvalidAuthMethod { .. }
+            | ConnectError::InvalidSpecification { .. }
+            | ConnectError::InvalidIdentifier { .. } => Error::Config(error.to_string()),
             ConnectError::DeclaredAuthMethod { .. }
+            | ConnectError::DeclaredSetting { .. }
             | ConnectError::Declared { .. }
             | ConnectError::UnmappedType { .. }
             | ConnectError::UnrepresentableValue { .. }
             | ConnectError::EncodeNotBuilt { .. } => Error::NotImplemented(error.to_string()),
+            #[cfg(feature = "postgres")]
+            ConnectError::DeclaredServerVersion { .. } => Error::NotImplemented(error.to_string()),
             ConnectError::ArrowType { .. }
             | ConnectError::WireLength { .. }
             | ConnectError::InvalidUtf8 { .. }
             | ConnectError::Protocol { .. }
             | ConnectError::Disconnected
             | ConnectError::Arrow { .. } => Error::DataFusion(error.to_string()),
+            #[cfg(feature = "postgres")]
+            ConnectError::TlsRequired
+            | ConnectError::TlsHandshake { .. }
+            | ConnectError::Unreachable { .. }
+            | ConnectError::Timeout { .. }
+            | ConnectError::PoolExhausted { .. }
+            | ConnectError::AuthenticationFailed
+            | ConnectError::Server { .. }
+            | ConnectError::PermissionDenied { .. }
+            | ConnectError::RelationNotFound { .. } => Error::DataFusion(error.to_string()),
         }
     }
 }
