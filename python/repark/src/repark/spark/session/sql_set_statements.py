@@ -312,7 +312,7 @@ def _type_mismatch_error(key: str, value: str, expected: str) -> str:
 def _requirement_error(key: str, value: str) -> str:
     """Spark's ``INVALID_CONF_VALUE.REQUIREMENT`` message for a non-positive int."""
     return (
-        f"[INVALID_CONF_VALUE.REQUIREMENT] The value '{value}' in the config "
+        f"[INVALID_CONF_VALUE.REQUIREMENT] The value '{mask_credentials(value)}' in the config "
         f'"{key}" is invalid. The value of {key} must be positive'
         f"{_SQLSTATE_INVALID_CONF}"
     )

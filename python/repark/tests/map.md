@@ -5290,6 +5290,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `*_conn` key, since a `*_url` key is now whole-value redacted. pins: source-url-redact-1/C-017, C-019
   **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `test_get_database_returns_the_stored_location_and_comment` pins the raw
   `getDatabase` path while `DESCRIBE NAMESPACE` stays masked. pins: source-url-redact-1/C-040
+- `test_source_url_redact_2.py` — **SOURCE-URL-REDACT-2 (2026-10-06):** the 48-cell pin (three credential shapes × builder / `conf.set` / SQL `SET` / `repark.toml` × four knobs): the full traceback never carries the marker and the exception class matches the base run.
+  pins: source-url-redact-1/C-063
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

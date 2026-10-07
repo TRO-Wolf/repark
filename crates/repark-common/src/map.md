@@ -96,6 +96,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   masked. pins: source-url-redact-1/C-041, C-043, C-044, C-045, C-046
   **SOURCE-URL-REDACT-1 fold 4 (2026-10-06):** `host_text` ends a follower host at `" ' ( ) ] { } , < >`
   too, so an embedded URL fails closed. pins: source-url-redact-1/C-052
+  **SOURCE-URL-REDACT-2 (2026-10-06):** the config-value registry: `register_config_value(value)` keeps the value only when `mask_value_credentials` changes it (256 entries, oldest evicted, poison-safe `Mutex`), `register_config_map` registers a whole map for the builder door, and `mask_registered_values(text)` swaps each kept value and its `{:?}` inner form for its masked render. pins: source-url-redact-1/C-057
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
   (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,

@@ -104,6 +104,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_native.mask_value_credentials`; the session modules' conf refusals echo through it.
   pins: source-url-redact-1/C-017
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the `prop_key_is_secret` mirror is deleted; only `mask_credentials` remains.
+  **SOURCE-URL-REDACT-2 (2026-10-06):** `register_config_value(value)` no-ops non-strings and forwards strings to `_native.register_config_value`. pins: source-url-redact-1/C-059
   pins: source-url-redact-1/C-032
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
   **FNP-4B (2026-09-15):** `local_view_name` also strips backtick quoting (handles are

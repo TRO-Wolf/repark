@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from typing import Any
 
 from repark import _native
+from repark.spark._secrets import register_config_value
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_configuration import (
     DEFAULT_CATALOG_KEY,
@@ -214,6 +215,7 @@ class RuntimeConfig:
             )
         if value is None:
             raise IllegalArgumentException(f"value cannot be None for config key {key!r}")
+        register_config_value(value)
         if key in _SQLCONF_STATIC_KEYS:
             raise Exception(f"Cannot modify the value of static config: {key}")
         if key.lower() == _RETAINED_CACHE_BYTES_KEY:

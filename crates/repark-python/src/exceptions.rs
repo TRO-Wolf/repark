@@ -81,5 +81,6 @@ pyo3::create_exception!(
 
 #[must_use]
 pub(crate) fn mask_user_visible(message: impl AsRef<str>) -> String {
-    repark_core::redaction::mask_url_userinfo(message.as_ref())
+    let registered = repark_core::redaction::mask_registered_values(message.as_ref());
+    repark_core::redaction::mask_url_userinfo(&registered)
 }

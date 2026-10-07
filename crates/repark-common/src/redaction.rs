@@ -1,4 +1,54 @@
+use std::collections::{HashMap, VecDeque};
+use std::sync::Mutex;
+
 pub const REDACTED: &str = "***";
+
+const REGISTERED_VALUE_BOUND: usize = 256;
+
+static REGISTERED_CONFIG_VALUES: Mutex<VecDeque<(String, String)>> = Mutex::new(VecDeque::new());
+
+pub fn register_config_value(value: &str) {
+    let masked = mask_value_credentials(value);
+    if masked == value {
+        return;
+    }
+    let mut stored = REGISTERED_CONFIG_VALUES
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if stored.iter().any(|(known, _)| known == value) {
+        return;
+    }
+    if stored.len() >= REGISTERED_VALUE_BOUND {
+        stored.pop_front();
+    }
+    stored.push_back((value.to_string(), masked));
+}
+
+pub fn register_config_map(config: &HashMap<String, String>) {
+    for value in config.values() {
+        register_config_value(value);
+    }
+}
+
+#[must_use]
+pub fn mask_registered_values(text: &str) -> String {
+    let stored = REGISTERED_CONFIG_VALUES
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut masked = text.to_string();
+    for (value, replacement) in stored.iter() {
+        let quoted = format!("{value:?}");
+        let inner = quoted
+            .strip_prefix('"')
+            .and_then(|rest| rest.strip_suffix('"'))
+            .unwrap_or(quoted.as_str());
+        if inner != value {
+            masked = masked.replace(inner, replacement);
+        }
+        masked = masked.replace(value.as_str(), replacement);
+    }
+    masked
+}
 
 #[must_use]
 pub fn prop_key_is_secret(key: &str) -> bool {

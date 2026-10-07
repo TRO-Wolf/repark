@@ -233,6 +233,7 @@ impl ReparkSessionBuilder {
     /// Returns `Error::DataFusion` if the DataFusion runtime fails to build.
     pub fn build(mut self) -> Result<ReparkSession> {
         let conf_dump = self.prepare_build_state()?;
+        repark_common::redaction::register_config_map(&self.config);
         let pool_bytes =
             spill::resolve_build_time_pool_bytes(self.memory_limit_bytes, &self.config)?;
 

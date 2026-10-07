@@ -20,6 +20,7 @@ See [../map.md](../map.md).
   host-likeness rules and both sides of the fail-closed leg (C-034); the `\t` / `\n` value end
   and the empty userinfo that killed the verifier's surviving mutants M-13 and M-18 (C-028).
   pins: source-url-redact-1/C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-034
+  **SOURCE-URL-REDACT-2 (2026-10-06):** three registry pins run under one test lock (the store is process-wide): every shape masks after registering while a plain value stays out, unregistered credential-free text is byte-identical, and the 257th value evicts the first. pins: source-url-redact-1/C-057
 - `corpus.rs` — the permanent fixed-seed corpus: a hand-rolled LCG generates 6,000 shaped
   inputs over 12 classes (half with the hard characters `@ : / ? # & ; = space \n \t " ' { } \`),
   each with a marker password, and 3,000 garbage inputs; no marker survives, `catch_unwind`

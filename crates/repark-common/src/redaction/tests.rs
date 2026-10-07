@@ -1,7 +1,11 @@
+use std::sync::Mutex;
+
 use super::{
-    column_name_is_secret_shaped, mask_url_userinfo, mask_value_credentials, prop_key_is_secret,
-    redact_value,
+    column_name_is_secret_shaped, mask_registered_values, mask_url_userinfo,
+    mask_value_credentials, prop_key_is_secret, redact_value, register_config_value,
 };
+
+static REGISTRY_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 fn masked(value: &str) -> String {
     mask_value_credentials(value)
@@ -726,4 +730,57 @@ fn a_bare_login_password_holding_an_at_and_a_paren_masks_to_the_last_host() {
         "alice:QZX338633|-@ß(：KQV@db.example.com:5432",
         "alice:***@db.example.com:5432",
     )]);
+}
+
+#[test]
+fn registered_config_values_mask_every_shape_and_plain_values_stay_out() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let jdbc = "jdbc:postgresql://h/db?user=u&password=ShapePw1001";
+    let dsn = "host=h user=u password=ShapePw1002";
+    let odbc = "Driver=x;Server=h;Uid=u;Pwd=ShapePw1003;";
+    for value in [jdbc, dsn, odbc] {
+        register_config_value(value);
+    }
+    for value in [jdbc, dsn, odbc] {
+        assert_eq!(mask_registered_values(value), mask_value_credentials(value));
+    }
+    let quoted = format!("planning failed (got {jdbc:?})");
+    let masked_quoted = mask_registered_values(&quoted);
+    assert!(!masked_quoted.contains("ShapePw1001"));
+    assert!(masked_quoted.contains('"'));
+    let plain = "4096";
+    register_config_value(plain);
+    assert_eq!(mask_registered_values(plain), plain);
+}
+
+#[test]
+fn unregistered_text_without_credentials_is_byte_identical() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let message = "invalid DataFusion session config 'datafusion.execution.batch_size' = \
+                   '4096x': Error parsing '4096x' as usize";
+    assert_eq!(mask_registered_values(message), message);
+}
+
+#[test]
+fn the_registry_holds_256_values_and_evicts_the_oldest() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let oldest = "jdbc:postgresql://h/db?user=evict001&password=EvictPw001";
+    register_config_value(oldest);
+    for index in 2..=257 {
+        register_config_value(&format!(
+            "jdbc:postgresql://h/db?user=evict{index:03}&password=EvictPw{index:03}"
+        ));
+    }
+    assert_eq!(mask_registered_values(oldest), oldest);
+    let newest = "jdbc:postgresql://h/db?user=evict257&password=EvictPw257";
+    assert_eq!(
+        mask_registered_values(newest),
+        mask_value_credentials(newest)
+    );
 }
