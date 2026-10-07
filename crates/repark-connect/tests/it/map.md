@@ -46,7 +46,10 @@ See [../map.md](../map.md).
   `p01_null_tests_push_live` … `r05_pushdown_predicate_false_pushes_nothing_live`; beside them
   `timestamp_columns_are_placed_in_the_session_zone_live` (the `-05:00` fixture zone moves a
   wall clock by five hours), `explain_analyze_reports_rows_bytes_and_time_per_scan_live` (the
-  five metrics on the scan line) and `pushed_compare_keeps_the_index_live` (D-M3: a pushed
+  five metrics on the scan line, and from the executed plan's `MetricsSet` six rows, more than
+  the 19-byte COPY header received and a non-zero time to first byte),
+  `a_missing_relation_is_table_not_found_live` (DataFusion's own table-not-found, and a 64-byte
+  name refusing with `PgIdent`'s reason) and `pushed_compare_keeps_the_index_live` (D-M3: a pushed
   `id OPERATOR(pg_catalog.=) current_setting('repark.p0')::int4` over one million rows plans as
   an index-only scan). pins: c-2/C-069, C-071, C-072, C-073, C-076, C-077, C-079
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the

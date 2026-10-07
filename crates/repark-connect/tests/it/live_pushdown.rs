@@ -539,6 +539,52 @@ async fn explain_analyze_reports_rows_bytes_and_time_per_scan_live() {
     ] {
         assert!(line.contains(metric), "{metric} missing: {line}");
     }
+    let statement = format!("SELECT id FROM {} WHERE qty > 0", edges.table);
+    let plan = edges.on.sql(&statement).await.expect(LIVE);
+    let plan = plan.create_physical_plan().await.expect(LIVE);
+    collect(Arc::clone(&plan), edges.on.task_ctx())
+        .await
+        .expect(LIVE);
+    let scan = find_scan(&plan).expect("the scan");
+    let metrics = scan.metrics().expect("metrics");
+    let sum = |name: &str| {
+        let values = metrics
+            .iter()
+            .filter(|metric| metric.value().name() == name);
+        values
+            .map(|metric| metric.value().as_usize())
+            .reduce(|a, b| a + b)
+    };
+    assert_eq!(sum("output_rows"), Some(6), "{metrics}");
+    assert!(
+        sum("bytes_received").is_some_and(|bytes| bytes > 19),
+        "{metrics}"
+    );
+    assert!(
+        sum("time_to_first_byte").is_some_and(|nanos| nanos > 0),
+        "{metrics}"
+    );
+    edges.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_missing_relation_is_table_not_found_live() {
+    let edges = Edges::open(&[]).await;
+    let missing = format!("SELECT * FROM pg.{}.absent", edges.cell.schema);
+    let error = edges.on.sql(&missing).await.expect_err("no such relation");
+    assert!(error.to_string().contains("not found"), "{error}");
+    let refused = format!(
+        "SELECT * FROM pg.{}.\"{}\"",
+        edges.cell.schema,
+        "x".repeat(64)
+    );
+    let error = edges
+        .on
+        .sql(&refused)
+        .await
+        .expect_err("a 64-byte name refuses");
+    assert!(error.to_string().contains("63-byte limit"), "{error}");
     edges.close().await;
 }
 
