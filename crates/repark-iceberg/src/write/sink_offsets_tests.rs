@@ -629,6 +629,50 @@ async fn commit_stamp_only_commits_one_append_snapshot_with_both_halves() {
     );
 }
 
+async fn stamped_append(
+    catalog: &Arc<dyn Catalog>,
+    ident: &TableIdent,
+    stamp: &CommitStamp,
+    ids: &[i32],
+) -> Table {
+    let table = catalog.load_table(ident).await.expect("load");
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let files = stage(&table, ids).await;
+    let committed = commit_append_with_summary(catalog, &table, files, &[], None)
+        .await
+        .expect("stamped append");
+    assert!(matches!(guard.outcome(), ScopeOutcome::Committed { .. }));
+    committed
+}
+
+#[tokio::test]
+async fn resume_reads_the_last_offset_from_one_loaded_table() {
+    let (_warehouse, catalog, ident) = fixture("resume").await;
+    let empty = catalog.load_table(&ident).await.expect("load");
+    assert_eq!(read_resume_point(&empty, query()).expect("first run"), None);
+    for epoch in 0..3 {
+        let id = i32::try_from(epoch).expect("id");
+        stamped_append(&catalog, &ident, &stamp_for(epoch, SinkDoor::Table), &[id]).await;
+    }
+    append_plain(&catalog, &ident, &[50]).await;
+    let other =
+        QueryId::new(Uuid::parse_str("cccccccc-0000-4000-8000-0000000000c3").expect("uuid"));
+    let foreign = CommitStamp {
+        record: record_for(other, 9, 900),
+        door: SinkDoor::Table,
+    };
+    stamped_append(&catalog, &ident, &foreign, &[60]).await;
+    let table = catalog.load_table(&ident).await.expect("one read");
+    assert_eq!(
+        read_resume_point(&table, query()).expect("resume"),
+        Some(stamp_for(2, SinkDoor::Table).record)
+    );
+    assert_eq!(
+        read_resume_point(&table, other).expect("other query"),
+        Some(foreign.record)
+    );
+}
+
 #[test]
 fn site_stamp_without_a_claim_borrows_the_caller_extras() {
     let extra = [(String::from("k"), String::from("v"))];
