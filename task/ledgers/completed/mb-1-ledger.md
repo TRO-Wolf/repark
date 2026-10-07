@@ -364,6 +364,16 @@ already takes a `Table` by value.
 |---|---|---|---|---|
 | C-026 | (F2) `MicroBatchSource` holds the catalog handle and the `TableIdent`, never a frozen `Table`. `initial_offset` and `next_batch` reload the table on every call and build the `WindowPlanner` from the fresh table, as Spark's `latestOffset` calls `table.refresh()` every trigger. One source sees a snapshot committed after it opened, and refuses `SourceReplaced` when the table is dropped and re-created under the same name between two `next_batch` calls. | The F2 pins in `microbatch_source_tests.rs` plus the reload mutation. | **PROVEN** | 2 pins green: `the_same_source_sees_appends_committed_after_open` (c02: open, drain 5 rows, INSERT `(6),(7)`, the same source returns exactly `[6, 7]`, then `None`) and `the_same_source_refuses_a_table_replaced_under_its_name` (drop, re-create, insert, then `SourceReplaced` with the recorded and the new uuid). The reload mutation is red on both. pins: mb-1/C-026 |
 | C-027 | (F3) Every streaming option key matches ASCII case-insensitively, as Spark's `CaseInsensitiveStringMap` does: the Iceberg Spark keys, the skip keys and the `repark.cdc.` prefix. Each key is lowercased once at parse; values keep their case; an unknown prefixed key refuses under the spelling the user passed. Two spellings of one key with different values refuse `Catalog` naming both spellings and no value; with equal values they are accepted. | The F3 pins in `microbatch_source_tests.rs` plus the lowercase mutation. | **PROVEN** | 2 pins green: `from_options_matches_keys_ascii_case_insensitively` (c01: the mixed-case caps, `Stream-From-Timestamp` and `Repark.CDC.start-after-snapshot-id` apply; `STREAMING-SKIP-OVERWRITE-SNAPSHOTS=true` and `Streaming-Skip-Delete-Snapshots=true` refuse MBE-3; `Streaming-Bogus` refuses MBE-17 under its own spelling) and `from_options_refuses_case_twins_with_different_values` (the text byte-exact, then equal twins parse). The lowercase mutation is red on both. pins: mb-1/C-027 |
+| C-028 | (F11) `streaming-skip-overwrite-snapshots` and `streaming-skip-delete-snapshots` set to `false` in any case are accepted as a no-op, since false is Spark's default. Only `true` in any case refuses `SkipOptionRefused` (O-5, MBE-3). Any other value refuses `Catalog` naming the key (D-7). | The F11 pins in `microbatch_source_tests.rs`. | **PROVEN** | 2 pins green: `from_options_refuses_both_skip_keys` (now `true`, `TRUE`, `True` on both keys, byte-exact MBE-3) and `from_options_accepts_skip_keys_set_to_false_as_a_no_op` (`false`, `FALSE`, `False` on both keys and an upper-case key leave the caps and start untouched; `""`, `yes`, `0`, `" false"` refuse byte-exact). pins: mb-1/C-028 |
+
+## Dated decision rows — fold 1 round B
+
+- **D-7 (2026-10-07).** A skip key's value is `true` or `false` in any ASCII case.
+  Spark reads it through `SparkConfParser$BooleanConfParser`, which calls
+  `Boolean.parseBoolean`, so `yes`, `0` or `" false"` read as false there and change
+  nothing. RePark refuses them `Catalog` instead, as FL-6 refuses every other
+  malformed value. Either answer leaves the stream unskipped, so the only cost is a
+  loud start on a value Spark would ignore.
 
 ## Gates — fold 1 round B
 

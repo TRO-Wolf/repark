@@ -45,7 +45,9 @@ impl SourceOptions {
                     } else {
                         SKIP_DELETE_KEY
                     };
-                    return Err(MicroBatchError::SkipOptionRefused { option });
+                    if parse_skip_flag(option, value)? {
+                        return Err(MicroBatchError::SkipOptionRefused { option });
+                    }
                 }
                 MAX_FILES_KEY => {
                     caps.max_files = Some(parse_file_cap(value)?);
@@ -106,6 +108,18 @@ fn has_interpreted_prefix(key: &str) -> bool {
     key.starts_with(STREAMING_PREFIX)
         || key.starts_with(STREAM_PREFIX)
         || key.starts_with(REPARK_CDC_PREFIX)
+}
+
+fn parse_skip_flag(option: &str, raw: &str) -> Result<bool, MicroBatchError> {
+    if raw.eq_ignore_ascii_case("true") {
+        Ok(true)
+    } else if raw.eq_ignore_ascii_case("false") {
+        Ok(false)
+    } else {
+        Err(MicroBatchError::Catalog(format!(
+            "{option} needs true or false, got {raw:?}"
+        )))
+    }
 }
 
 fn parse_file_cap(raw: &str) -> Result<NonZeroUsize, MicroBatchError> {

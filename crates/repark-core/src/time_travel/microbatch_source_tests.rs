@@ -67,12 +67,43 @@ fn from_options_refuses_both_skip_keys() {
         "streaming-skip-overwrite-snapshots",
         "streaming-skip-delete-snapshots",
     ] {
-        let error = SourceOptions::from_options(&options_of(&[(key, "true")]))
-            .expect_err("a skip key must refuse");
-        assert!(matches!(error, MicroBatchError::SkipOptionRefused { .. }));
+        for value in ["true", "TRUE", "True"] {
+            let error = SourceOptions::from_options(&options_of(&[(key, value)]))
+                .expect_err("a skip key set to true must refuse");
+            assert!(matches!(error, MicroBatchError::SkipOptionRefused { .. }));
+            assert_eq!(
+                error.to_string(),
+                format!("{key} is not accepted: Bronze is append-only (O-5)")
+            );
+        }
+    }
+}
+
+#[test]
+fn from_options_accepts_skip_keys_set_to_false_as_a_no_op() {
+    for key in [
+        "streaming-skip-overwrite-snapshots",
+        "streaming-skip-delete-snapshots",
+        "STREAMING-SKIP-DELETE-SNAPSHOTS",
+    ] {
+        for value in ["false", "FALSE", "False"] {
+            let options = SourceOptions::from_options(&options_of(&[
+                (key, value),
+                ("streaming-max-files-per-micro-batch", "2"),
+            ]))
+            .expect("a skip key set to false must parse");
+            assert_eq!(options.caps.max_files, NonZeroUsize::new(2));
+            assert_eq!(options.caps.max_rows, None);
+            assert_eq!(options.start, StartPosition::Earliest);
+        }
+    }
+    for value in ["", "yes", "0", " false"] {
+        let error =
+            SourceOptions::from_options(&options_of(&[("streaming-skip-delete-snapshots", value)]))
+                .expect_err("a skip key set to neither true nor false must refuse");
         assert_eq!(
             error.to_string(),
-            format!("{key} is not accepted: Bronze is append-only (O-5)")
+            format!("streaming-skip-delete-snapshots needs true or false, got {value:?}")
         );
     }
 }
