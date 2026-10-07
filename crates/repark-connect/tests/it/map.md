@@ -13,14 +13,18 @@ See [../map.md](../map.md).
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
   verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
   `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and
-  percent-encoded, with and without a path and query; `%2F` for `/`),
+  percent-encoded, with and without a path and query; `%2F` for `/`; since fold 2 a raw `?`
+  or `=` without a path refuses), `a_userinfo_holding_a_query_mark_without_a_path_refuses`
+  (fold 2 Z4: the re-verify's `postgresql://h?user=u&password=S3@CRETpw`, on both doors,
+  refuses `AmbiguousUserinfo` naming only "the userinfo in `url`"; with a path, `%3F` and `%3D`,
+  or a bare `@` it parses),
   `no_userinfo_or_password_text_is_echoed_by_a_refusal` (a raw `/` in a password, malformed
   escapes, a conflict, an unknown query key after a `password=` value on the `jdbc:` door; no
   fragment of the userinfo or a password in `Display` or `Debug`),
   `a_percent_escape_needs_two_hex_digits` (`%+A`, `%-1`, `% A`, `%A@`, `%g0`, in the password,
   the user and a query value) and `redaction_masks_every_password_the_parser_takes`
   (`pass%77ord`, `PASS%57ORD`, the leaked-fragment userinfo, a userinfo without `:`).
-  pins: c-2/C-049, C-050, C-051
+  pins: c-2/C-049, C-050, C-051, C-065
 - `live_pool.rs` — C-2b fold 1 (2026-10-07), behind `postgres`, live like `live_pg.rs` (whose
   harness it shares). `a_pooled_connection_is_reset_before_reuse` (the verifier's four poison
   shapes on `pool_max_size = 1`: `IntervalStyle`, `default_transaction_read_only`,

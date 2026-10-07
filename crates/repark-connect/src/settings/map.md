@@ -19,7 +19,10 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
   - **`url`.** Three schemes: `postgresql://`, `postgres://` and `jdbc:postgresql://`. The
     userinfo ends at the last `@` before the first `/`, as in libpq, and is split off before the
     query is looked for (fold 1 X1), so a password holding `?`, `@`, `#` or `:` stays a
-    password. User, password, host (a bracketed IPv6 literal included), port, database and
+    password. Since fold 2 (Z4) a URL with no `/` after the scheme whose userinfo holds `?` or
+    `=` refuses `UrlViolation::AmbiguousUserinfo`, named only as `UrlPart("userinfo")`: there
+    the split may have taken a query's `password=` tail (`postgresql://h?user=u&password=a@b`
+    reads host `b`); with a path, or with `%3F` and `%3D`, it parses. User, password, host (a bracketed IPv6 literal included), port, database and
     every query name and value are percent-decoded; an escape needs two hex digits, so `%+A`
     refuses `UrlViolation::PercentEncoding` (fold 1). The query string takes canonical keys
     under a libpq URI and canonical keys plus aliases under a `jdbc:` URL. `url` and
@@ -55,7 +58,7 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
     (fold 1 X7: `pass%77ord`); then, as for every other value, it delegates to
     `repark_common::redaction::redact_value`, which masks a secret-named key whole.
 
-  pins: c-2/C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-036, C-049, C-050, C-051
+  pins: c-2/C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-036, C-049, C-050, C-051, C-065
 
 ## Pointers
 

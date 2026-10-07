@@ -182,6 +182,7 @@ pub enum UrlViolation {
     PercentEncoding,
     QueryPair,
     Ipv6Host,
+    AmbiguousUserinfo,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -242,6 +243,10 @@ impl fmt::Display for SpecRefusal {
                 UrlViolation::PercentEncoding => "has a `%` escape that is malformed or not UTF-8",
                 UrlViolation::QueryPair => "has a query parameter without `=`",
                 UrlViolation::Ipv6Host => "has a malformed bracketed IPv6 host",
+                UrlViolation::AmbiguousUserinfo => {
+                    "holds `?` or `=` in a URL without a path; percent-encode them \
+                     (`%3F`, `%3D`) or add the `/database`"
+                }
             }),
         }
     }
@@ -443,6 +448,10 @@ fn take_url(given: &mut Givens, spelling: &Spelling, url: &str) -> Result<()> {
     let refuse = |violation| invalid(spelling.clone(), SpecRefusal::Url(violation));
     let (_, jdbc, rest) = split_scheme(url).ok_or_else(|| refuse(UrlViolation::Scheme))?;
     let (userinfo, rest) = split_userinfo(rest);
+    if !rest.contains('/') && userinfo.is_some_and(|userinfo| userinfo.contains(['?', '='])) {
+        let reason = SpecRefusal::Url(UrlViolation::AmbiguousUserinfo);
+        return Err(invalid(Spelling::UrlPart("userinfo"), reason));
+    }
     let (before_query, query) = rest.split_once('?').unwrap_or((rest, ""));
     let (hostport, path) = before_query.split_once('/').unwrap_or((before_query, ""));
     let (host, port) = split_host_port(hostport).ok_or_else(|| refuse(UrlViolation::Ipv6Host))?;

@@ -52,9 +52,13 @@ fn the_userinfo_ends_at_the_last_at_before_the_first_slash() {
                 "{written}"
             );
             let bare = format!("postgresql://u:{written}@h");
-            let settings = from_url(&bare, TOML).expect(written);
+            let settings = from_url(&bare, TOML);
+            if written.contains(['?', '=']) {
+                assert_eq!(settings, Err(ambiguous()), "{written}");
+                continue;
+            }
             assert_eq!(
-                endpoint(&settings),
+                endpoint(&settings.expect(written)),
                 ("u", Some(raw), "h", 5432, "u", "repark"),
                 "{written}"
             );
@@ -65,6 +69,61 @@ fn the_userinfo_ends_at_the_last_at_before_the_first_slash() {
         endpoint(&slash),
         ("u", Some("S3CRET/pw"), "h", 5432, "db", "repark")
     );
+}
+
+fn ambiguous() -> ConnectError {
+    ConnectError::InvalidSpecification {
+        key: Spelling::UrlPart("userinfo"),
+        reason: SpecRefusal::Url(UrlViolation::AmbiguousUserinfo),
+    }
+}
+
+#[test]
+fn a_userinfo_holding_a_query_mark_without_a_path_refuses() {
+    for (url, door) in [
+        ("postgresql://h?user=u&password=S3@CRETpw", TOML),
+        ("postgresql://h:5432?user=u&password=S3@CRETpw", TOML),
+        ("postgresql://u:S3CRET?leaked=1@h", TOML),
+        ("postgresql://u:S3CRET=pw@h:6543", TOML),
+        ("postgres://u?S3CRET@h", TOML),
+        ("jdbc:postgresql://h?user=u&password=S3@CRETpw", SPARK),
+    ] {
+        let error = from_url(url, door).expect_err(url);
+        assert_eq!(error, ambiguous(), "{url}");
+        echoes_nothing(&error, &[SECRET, "S3", "CRET", "leaked", "password=", "h?"]);
+        assert!(
+            error.to_string().contains("the userinfo in `url`"),
+            "{error}"
+        );
+    }
+    for (url, password, host, database) in [
+        (
+            "postgresql://h/db?user=u&password=S3@CRETpw",
+            "S3@CRETpw",
+            "h",
+            "db",
+        ),
+        (
+            "postgresql://u:S3CRET?leaked=1@h/",
+            "S3CRET?leaked=1",
+            "h",
+            "u",
+        ),
+        (
+            "postgresql://u:S3CRET%3Fleaked%3D1@h",
+            "S3CRET?leaked=1",
+            "h",
+            "u",
+        ),
+        ("postgresql://u:S3@CRET@h", "S3@CRET", "h", "u"),
+    ] {
+        let settings = from_url(url, TOML).expect(url);
+        assert_eq!(settings.password.as_deref(), Some(password), "{url}");
+        assert_eq!(
+            (settings.host.as_str(), settings.database.as_str()),
+            (host, database)
+        );
+    }
 }
 
 #[test]
