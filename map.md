@@ -44,6 +44,13 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **ICE-MIXED-CASE-1 run 22b (2026-09-18, Q-22b-MC-1):** `stacker 0.1.25` — already in the lock
   under DataFusion's `recursive` — is declared for `repark-core`'s column repair, which runs
   each poll of Spark-door planning on a stack grown to the statement's nesting depth.
+  **C-2b round 1a (2026-10-07):** `tokio-postgres 0.7`, `tokio-postgres-rustls 0.13` and
+  `rustls-native-certs 0.8` (already in the lock transitive) for the Postgres read path,
+  consumed only behind `repark-connect`'s default-on `postgres` feature; D-M1 in the
+  [C-2 ledger](task/ledgers/staging/c-2-ledger.md).
+  **C-2b round 2 (2026-10-07):** `rustls 0.23` (already in the lock) with no default features,
+  so `repark-connect` can name its crypto provider (`ring`, already in its tree) for the
+  `verify-full` TLS config; H-CRYPTO in the same ledger, §7.
   The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);
   each dedicated bump is one row in the [docs/fork-sync.md](docs/fork-sync.md) pin-history table.
   **RP-1 (2026-08-23):** `5e7b2e4` (F-0 / F-1 / F-2 / F-8a); DataFusion family frozen.
