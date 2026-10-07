@@ -3554,7 +3554,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`
 - **Rationale** — DECLARED 2026-10-07 (C-2b; sketch §2.3 and §2.4). Each one could override the
   session pins the read relies on (empty `search_path`, read-only transactions, the timeouts) or
-  the resolved schema. Retire per key when a unit can admit it without lifting a pin.
+  the resolved schema. Retire per key when a unit can admit it without lifting a pin. (Since the
+  C-2b fold 1, 2026-10-07, query mode sets `search_path` to `"$user", public` with `SET LOCAL`
+  inside its own transaction, as Spark's `query` resolves; relation mode keeps the empty pin.)
 ### CONNECT-DECL-pg-multi-host — a Postgres source refuses a host list
 - **repark** — a `host` value with a comma, or a `url` whose authority lists hosts
   (`postgresql://h1:5432,h2:5433/db`), refuses with `ConnectError::DeclaredSetting`
@@ -3578,6 +3580,26 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   community-supported release on 2026-10-06; the read path needs
   `pg_collation.collisdeterministic` (12) and `numeric` infinities (14). Raise the floor as
   releases leave support; retire only by a dated owner decision to admit an older server.
+  Since the C-2b fold 1 (2026-10-07) the startup packet also pins
+  `client_connection_check_interval` (new in 14), so an older server refuses at connect with
+  its own `Server { 42704 }` error naming that parameter, before discovery can name this row.
+### CONNECT-DECL-pg-drift-cast — a column retyped after resolution reads through an assignment cast, which may round
+- **repark** — every projected column is cast to the type resolved at planning
+  (`<col>::pg_catalog.<type>`, sketch §2.6, F-7). When the column is retyped between resolution
+  and the scan, the server's cast decides: a widening reads back typed, an incompatible change
+  fails loud (`22P02`, `22003`, `42703` or `RelationNotFound`), and a narrowing assignment cast
+  rounds silently: `int4` → `numeric` or `float8` reads `1.5` and `2.5` as `2`, `numeric(10,2)`
+  → `numeric(12,4)` reads `1.2345` as `1.23` and `1.255` as `1.26` (the verifier's VL-DRIFT2,
+  2026-10-07).
+- **Apache Spark** — the JDBC source resolves the schema when it plans and sends no cast, so a
+  column retyped afterwards reaches the driver's getter for the planned type, which converts or
+  fails by pgjdbc's rules. *(oracle: documented — Spark's JDBC data source; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/live_pg.rs::schema_drift_between_plan_and_scan_fails_loud_or_stays_typed`
+  (the widening and the loud failures; the rounding is recorded, not pinned)
+- **Rationale** — DECLARED 2026-10-07 (C-2b fold 1, S3; sketch F-7 accepts the cast). The cast
+  keeps the resolved Arrow type true for the whole scan. Retire when a drift check (a
+  `pg_attribute` re-read inside the scan's transaction, or a cast that refuses lost digits)
+  lands.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.
@@ -3720,7 +3742,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   keys (each refused under its own row) and, on the `read_postgres` door, `driver` set to
   `org.postgresql.Driver`. Any other key, given as a key or inside the `url` query, refuses with
   `ConnectError::InvalidSpecification` (`SpecRefusal::UnknownKey`): the message names the key and
-  lists the accepted keys, never a value, and it folds to the IllegalArgument class. Canonical
+  lists the accepted keys, never a value, and it folds to the IllegalArgument class. Inside the
+  `url` query the key is named only as "the query key in `url`" (C-2b fold 1, 2026-10-07): a raw
+  `&` in a password splits it, so the key's text may be a password's tail. Canonical
   spellings are exact in `repark.toml`. The Spark and pgjdbc aliases (`queryTimeout`, `fetchsize`,
   `socketTimeout`, …) are matched case-insensitively on the `read_postgres` door and inside a
   `jdbc:` URL query, and refuse as unknown keys in `repark.toml`. One setting given twice, in the
@@ -3728,7 +3752,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — the JDBC source forwards an unknown option to the driver as a connection
   property. *(oracle: documented — FL-1; no value claim.)*
 - **Pin** — `crates/repark-connect/tests/it/settings.rs::every_endpoint_key_parses_and_unknown_keys_refuse`,
-  `::aliases_are_case_insensitive_and_conflicts_refuse`
+  `::aliases_are_case_insensitive_and_conflicts_refuse`,
+  `crates/repark-connect/tests/it/url.rs::no_userinfo_or_password_text_is_echoed_by_a_refusal`
 - **Rationale** — DECLARED 2026-10-07 (C-2b; NS §5 `deny_unknown_fields`; FL-1; the sketch's Q6,
   kept under its lean). A misspelt timeout or TLS key would otherwise never take effect.
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only

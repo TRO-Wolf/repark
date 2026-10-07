@@ -17,8 +17,11 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
     (`POSTGRES_ALIASES`), matched ASCII case-insensitively, the declared partitioned-read keys,
     and `driver`, which is accepted only as `org.postgresql.Driver` and has no effect.
   - **`url`.** Three schemes: `postgresql://`, `postgres://` and `jdbc:postgresql://`. The
-    authority's userinfo ends at its last `@`; user, password, host (a bracketed IPv6 literal
-    included), port and database are percent-decoded. The query string takes canonical keys
+    userinfo ends at the last `@` before the first `/`, as in libpq, and is split off before the
+    query is looked for (fold 1 X1), so a password holding `?`, `@`, `#` or `:` stays a
+    password. User, password, host (a bracketed IPv6 literal included), port, database and
+    every query name and value are percent-decoded; an escape needs two hex digits, so `%+A`
+    refuses `UrlViolation::PercentEncoding` (fold 1). The query string takes canonical keys
     under a libpq URI and canonical keys plus aliases under a `jdbc:` URL. `url` and
     `auth_method` never nest inside it.
   - **Conflicts.** One setting given twice (two spellings, or a URL part and a key) refuses with
@@ -41,14 +44,18 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
     `read_postgres` door (`CONNECT-DECL-pg-partitioned-read`, whose registry row lands with
     C-2d).
   - **Unknown keys.** Any other key refuses with `SpecRefusal::UnknownKey`, which lists the
-    accepted keys and never echoes a value (`CONNECT-DIV-pg-unknown-option`).
+    accepted keys and never echoes a value (`CONNECT-DIV-pg-unknown-option`). Inside the `url`
+    query the key is named only as `Spelling::UrlPart("query key")`, and a malformed query value
+    as `UrlPart("query")`, so no text of the URL (a raw `&` can split a password) is echoed.
   - **Redaction and `Debug`.** The struct is `#[non_exhaustive]` with public fields, so it is
     read anywhere and built only here. `Debug` prints `auth_method` and `sslmode` only.
-    `redact_source_prop(key, value)` is the owner seam that C-2d's `sources()` rows call: it
-    delegates to `repark_common::redaction::redact_value`, which masks a secret-named key whole,
-    the URL userinfo password, and a secret-named query parameter.
+    `redact_source_prop(key, value)` is the owner seam that C-2d's `sources()` rows call. On a
+    Postgres URL it masks the userinfo where the parser splits it (the password, or the whole
+    userinfo when it has no `:`) and every query value whose key, percent-decoded, is secret
+    (fold 1 X7: `pass%77ord`); then, as for every other value, it delegates to
+    `repark_common::redaction::redact_value`, which masks a secret-named key whole.
 
-  pins: c-2/C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-036
+  pins: c-2/C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-036, C-049, C-050, C-051
 
 ## Pointers
 

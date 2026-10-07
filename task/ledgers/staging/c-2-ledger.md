@@ -448,10 +448,10 @@ speak one byte of the protocol (or a TLS handshake) and nothing else. The read p
 | C-029 | A bad `sslrootcert` refuses before any connect with `ConnectError::TlsHandshake { kind }`: an unreadable file is `RootCertUnreadable { kind: io::ErrorKind }`; a file with no PEM certificate, a garbled one, or one rustls cannot take as a trust anchor is `RootCertInvalid`; an empty store is `NoTrustedRoots`. The message names `sslrootcert` and never the path; the fold is the operational class (`DataFusion`, PySpark `Base`). | `sslrootcert_must_be_a_readable_pem_ca_bundle`; mutation m40. | PROVEN | §7.1 m40 red. `NoTrustedRoots` has no pin: an empty system store needs `SSL_CERT_FILE`, and setting the environment in a test is `unsafe` under edition 2024, which the workspace forbids. |
 | C-030 | H-CRYPTO holds: one rustls crypto provider. The workspace `cargo tree -e features -i rustls --locked` feature set is the same thirteen features before and after (`ring` and `aws-lc-rs` were both already on). `repark-connect` declares `rustls` with `ring`, `std` and `tls12` and no default features; the `ring` crate was already in its tree under `tokio-postgres-rustls`, and no `aws-lc` crate enters it. `ClientConfig::builder()` is never called, because it cannot pick a process default with both providers compiled in. `cargo deny check` is clean. `Cargo.lock` gains one dependency edge and no package. | §7.3. | PROVEN | §7.3. |
 | C-031 | `QueryPool` (sketch §2.5): a semaphore of `pool_max_size` permits; checkout waits at most `pool_checkout_timeout_ms` for a permit, else `PoolExhausted { waited }`; a checkout reuses the most recent idle connection; on checkout every idle connection that `is_closed()` or has idled past `pool_idle_timeout_ms` is reaped (dropped outside the lock); a connection closed at release is never pooled. A permit is held for the whole lease and released after the connection is idle, so open connections never exceed `pool_max_size`. | `a_clean_release_is_reused_by_the_next_checkout`, `checkout_beyond_pool_max_size_is_pool_exhausted`, `closed_and_idle_expired_connections_are_never_reused`; mutations m42, m43, m44, m45. | PROVEN | §7.1. |
-| C-032 | `PooledClient` returns its connection only through `release_clean()`. Dropped any other way (cancel, error, an early `LIMIT`), its lease aborts the connection's task, so the socket closes and the server ends the backend, and the connection never re-enters the pool. No cleanup task is spawned. The only task is the driver's connection task, spawned once per connection under `#[expect(clippy::disallowed_methods)]` with its lifecycle stated: `PgConnection` holds its handle. | `a_lease_dropped_before_release_aborts_its_connection` (F-2's unit half); mutation m41. | PROVEN | §7.1 m41 red. The live F-2 (`pg_stat_activity`) is round 3. |
+| C-032 | `PooledClient` returns its connection only through `release_clean()`. Dropped any other way (cancel, error, an early `LIMIT`), its lease aborts the connection's task, so the socket closes and the server ends the backend, and the connection never re-enters the pool. No cleanup task is spawned. The only task is the driver's connection task, spawned once per connection under `#[expect(clippy::disallowed_methods)]` with its lifecycle stated: `PgConnection` holds its handle. | `a_lease_dropped_before_release_aborts_its_connection` (F-2's unit half); mutation m41. | PROVEN | §7.1 m41 red. The live F-2 (`pg_stat_activity`) is round 3. Since fold 1 (C-054) an abandoned lease also spawns one bounded task, the cancel request. |
 | C-033 | `query_config(settings)` builds the only `Config` the pool connects with: host, port, user, password, database, `application_name`, `connect_timeout`, keepalives on, `ssl_mode` `Disable` for `disable` and `Require` otherwise (verification is rustls's), and the §2.4 session pins in one `-c` options list: `client_encoding=UTF8`, `DateStyle=ISO`, `IntervalStyle=postgres`, `TimeZone=UTC`, `search_path=` (empty), `default_transaction_read_only=on`, `lock_timeout`, `statement_timeout` (= `query_timeout_ms`, `0` unlimited) and `idle_in_transaction_session_timeout` (= `read_timeout_ms`). Nothing in `pool.rs` sets a replication mode. | `query_config_pins_the_session_in_the_startup_packet`; mutations m46, m48. | PROVEN | §7.1. Whether the server honours each pin is round 3's live reading. |
 | C-034 | NS-7 at connect: `PostgresConnector::connect` bounds the whole connect (TCP, the TLS negotiation and handshake, authentication) by `connect_timeout_ms` and refuses with `Timeout { which: TimeoutSetting::Connect }`, whose message names the key. The driver's own TCP timeout classifies the same way. `within(which, limit, work)` is the helper the read path wraps every request and COPY chunk in. | `connect_timeout_bounds_a_server_that_never_answers` (a listener that accepts and never answers, under `disable` and `verify-full`); mutation m47. | PROVEN | §7.1 m47 red (the 3 s guard fires). |
-| C-035 | Connect failures classify without matching driver text: a server that refuses TLS under `verify-full` is `TlsRequired`, which names `sslmode=disable` as the only switch, because the handshake-tracking connector never started; a rustls certificate refusal is `TlsHandshake` with `UntrustedCertificate`, `HostNameMismatch`, `CertificateExpired` or `Handshake`; a host name rustls cannot verify is `ServerName`; any other I/O failure is `Unreachable { kind }`; a server error is `Server { sqlstate, message }`; a connection closed during startup is `Unreachable { UnexpectedEof }`; the rest, which are driver-side authentication failures (no password, SASL), is `AuthenticationFailed`. All fold to the operational class. | `plaintext_server_refuses_under_verify_full`, `verify_full_refuses_an_untrusted_or_misnamed_server_certificate`, `a_refused_port_is_unreachable`; mutations m48, m39, m49, m50. | PROVEN | §7.1. `Server` carries every server error at connect, including SQLSTATE class 28. Round 3 splits off `AuthenticationFailed` and `PermissionDenied` (`42501`) with its live pins. |
+| C-035 | Connect failures classify without matching driver text: a server that refuses TLS under `verify-full` is `TlsRequired`, which names `sslmode=disable` as the only switch, because the handshake-tracking connector never started; a rustls certificate refusal is `TlsHandshake` with `UntrustedCertificate`, `HostNameMismatch`, `CertificateExpired` or `Handshake`; a host name rustls cannot verify is `ServerName`; any other I/O failure is `Unreachable { kind }`; a server error is `Server { sqlstate, message }`; a connection closed during startup is `Unreachable { UnexpectedEof }`; the rest, which are driver-side authentication failures (no password, SASL), is `AuthenticationFailed`. All fold to the operational class. | `plaintext_server_refuses_under_verify_full`, `verify_full_refuses_an_untrusted_or_misnamed_server_certificate`, `a_refused_port_is_unreachable`; mutations m48, m39, m49, m50. | PROVEN | §7.1. `Server` carried every server error at connect, including SQLSTATE class 28. Corrected by fold 1 (2026-10-07): round 3 split off only `PermissionDenied` (`42501`), and a wrong password stayed `Server { 28P01 }`; fold 1 maps class 28 to `AuthenticationFailed` with a live pin (C-055). |
 | C-036 | The round-1b Q1 ruling (orchestrator, 2026-10-07, ACCEPT): on the `read_postgres` door, the `fetchsize` alias with the value `0` (any run of zeros) leaves `batch_rows` unset, which is the session batch size. `batch_rows = 0` refuses on both doors, as does `fetchsize = 0` inside a `jdbc:` URL query. No registry row: Spark's `fetchsize` is a round-trip hint and pgjdbc treats `0` as its default, so no row of a result changes. | `fetchsize_zero_is_the_session_batch_default`; mutation m37. | PROVEN | §7.1 m37 red. |
 | C-037 | The error shape stays NS-15's: seven `ConnectError` variants (`TlsRequired`, `TlsHandshake`, `Unreachable`, `Timeout`, `PoolExhausted`, `AuthenticationFailed`, `Server`) exist under the `postgres` feature, each with an enum reason (`TlsFailure`, `TimeoutSetting`, `io::ErrorKind`) or the server's own text, never a setting's value. `ProtocolViolation` moves beside its producer in `copy_binary.rs` and is re-exported from `error.rs`, so its public path is unchanged. The round's files hold their ceilings: `tls.rs` 163/200, `pool.rs` 357/450, `tests/it/tls.rs` 129/200, `error.rs` 235/260, `copy_binary.rs` 469/480, `settings/postgres.rs` 553/560, `tests/it/settings.rs` 599/600. No code comments. Every gate in §7.3 passes. | §7.3. | PROVEN | §7.3. |
 
@@ -662,3 +662,132 @@ verbatim.
 A cell that panics leaves its `c2_<tag>` schema (and the grant cell's role) behind. The mutation
 runs left seventy schemas and eight roles in the container, which `make pg-down` removes with
 its volume. The cells never touch another schema.
+
+## 9. C-2b fold 1 — the verifier's S1s and S2s (2026-10-07)
+
+**Branch:** `feat/c-2b-postgres-connection` from `a8a90081` (round 3, PR #982). **Model:** Claude
+Opus 5.5 (`claude-opus-5-5`, high). **Scope:** the verifier's FAIL verdict on #982 under the
+orchestrator's pre-made rulings X1–X7 and the S3 items. The live cells ran against `make pg-up`
+(PostgreSQL 16) under a private `XDG_RUNTIME_DIR`, torn down with `make pg-down` at the end.
+
+### PROPOSITION LEDGER — C-2b fold 1 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-049 | X1 (S1): `take_url` splits the userinfo off at the last `@` before the first `/` after the scheme, before it looks for `?`, as libpq does. A password holding `?`, `@`, `#` or `:`, raw or percent-encoded, parses as that password with the host, port, database and query intact; `/` must be `%2F`. No refusal or `Debug` echoes userinfo or value text: an unknown key inside the `url` query refuses as `Spelling::UrlPart("query key")` and a malformed query value as `UrlPart("query")`. | `url.rs::the_userinfo_ends_at_the_last_at_before_the_first_slash`, `::no_userinfo_or_password_text_is_echoed_by_a_refusal` (the verifier's leaked-fragment URL and its `jdbc:` `password=…&leakedtail=x`); mutations m69, m70. | PROVEN | §9.1. |
+| C-050 | X7: `redact_source_prop` masks every password the parser takes. On a Postgres URL it masks the userinfo where `take_url` splits it (the password, or the whole userinfo without `:`) and every query value whose key, percent-decoded, is secret (`pass%77ord`); then `redact_value` runs as before. | `url.rs::redaction_masks_every_password_the_parser_takes`; mutations m72, m73. | PROVEN | §9.1. |
+| C-051 | S3: a `%` escape needs two ASCII hex digits, checked with `is_ascii_hexdigit` before parsing, so `%+A`, `%-1`, `% A` and a short escape refuse `UrlViolation::PercentEncoding` in the userinfo, a URL part or a query value, echoing nothing. | `url.rs::a_percent_escape_needs_two_hex_digits`; mutation m71. | PROVEN | §9.1. |
+| C-052 | X2 (S1): `release_clean().await` resets the session before pooling: `RESET_SESSION` (`CLOSE ALL; SET SESSION AUTHORIZATION DEFAULT; RESET ALL; UNLISTEN *; SELECT pg_catalog.pg_advisory_unlock_all(); DISCARD PLANS; DISCARD TEMP; DISCARD SEQUENCES`), then one simple query reading every startup pin from `pg_settings` with `statement_timestamp() = transaction_timestamp()`. Any mismatch, an open transaction, an error or the read timeout drops the connection. On `pool_max_size = 1`, after each verifier poison (`IntervalStyle`, `default_transaction_read_only`, `search_path`, an advisory lock) the next lease runs on the same backend with the interval as `1 day 02:00:00`, the pushed compare matching, the writer refused `25006` with nothing written, and the lock released. | `live_pool.rs::a_pooled_connection_is_reset_before_reuse`, `::user_types_resolve_after_a_reset`; mutations m74–m77. | PROVEN | §9.1. The ruling named `DISCARD ALL`; its `DEALLOCATE ALL` breaks the driver (§9.2 R-1, question Q1 in the hand-back). |
+| C-053 | X5: a pushed scan's client is pooled only after `COMMIT`. On `pool_max_size = 1` two pushed query-mode scans run on one backend, each sees `pg_current_xact_id_if_assigned()` NULL, and between them `pg_stat_activity` shows that backend `idle`, not `idle in transaction`. | `live_pool.rs::a_pushed_scan_commits_before_its_connection_is_pooled`; V-M2 red. | PROVEN | §9.1. The xid is NULL in any read-only transaction; the state and the backend identity are the teeth (§9.2 R-7). |
+| C-054 | X3: a lease dropped without `release_clean` (a `within()` timeout, an error, a dropped scan) fires `CancelToken::cancel_query` on a spawned task bounded by `connect_timeout_ms`, under the connector's TLS, and aborts the connection task. The startup packet adds `client_connection_check_interval = 1000` (`CONNECTION_CHECK_INTERVAL`; PostgreSQL 14 is the floor), which the release check reads too. Live: three read timeouts at 300 ms each leave no busy backend within 400 ms; a scan dropped while the server computes leaves none within 3 s; `SHOW` gives `1s`. | `live_pool.rs::a_timeout_or_a_drop_ends_the_server_work`, `pool.rs::query_config_pins_the_session_in_the_startup_packet`; mutations m79, m80, m81. | PROVEN | §9.1. Measured: the cancel ends the backend in 3–16 ms; the check interval alone in about 700 ms at a 300 ms timeout. |
+| C-055 | X4: at connect, a server error in SQLSTATE class `28` (`28P01`, `28000`) classifies as `AuthenticationFailed`, before the `Server` fallback; the refusal echoes no password. | `live_pool.rs::a_wrong_password_is_authentication_failed`; mutation m78. | PROVEN | §9.1. Corrects C-035's note. |
+| C-056 | X6: query mode resolves unqualified names as Spark's `query` does. A query-mode scan always opens `BEGIN READ ONLY` and, in the same batch, `QUERY_SEARCH_PATH` (`SET LOCAL search_path TO "$user", public`); query discovery adds it to `BEGIN_DISCOVERY`. Relation mode and the session keep the empty pin. Every generated compare is `OPERATOR(pg_catalog.op)` and every cast stays `pg_catalog`-qualified, so a user `=` on a domain and a user `<` on `int4` in `public` change no pushed result. | `live_pool.rs::query_mode_resolves_unqualified_names_through_the_role_search_path`, `::a_user_operator_cannot_shadow_a_generated_compare`, `read.rs::pushed_values_ride_set_config_never_the_statement_text`, `::query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing`; mutations m82–m85. | PROVEN | §9.1. The plain `=` returned 0 rows under the query path (§9.2 R-2). |
+| C-057 | S3, recorded (no code): a column retyped between resolution and scan reads through the per-column assignment cast, which rounds silently on a narrowing (`1.5` → `2` into `int4`, `1.2345` → `1.23` into `numeric(10,2)`), as sketch F-7 accepts. Registry row `CONNECT-DECL-pg-drift-cast` declares it. | The registry row; `live_pg.rs::schema_drift_between_plan_and_scan_fails_loud_or_stays_typed` pins the widening and the loud failures. | PROVEN | The rounding itself is the verifier's VL-DRIFT2 reading, recorded, not pinned. |
+| C-058 | S3: an `sslrootcert` bundle with one valid CA and one certificate rustls cannot take as a trust anchor refuses `RootCertInvalid` (`ignored > 0`). | `tls.rs::a_bundle_with_one_unusable_certificate_refuses`; V-M7 red. | PROVEN | §9.1. |
+| C-059 | S3: the scan checks the COPY trailer. Through `scan()` against a loopback fake backend, a one-row binary COPY with its trailer reads `[7]`, and the same stream without it fails `Disconnected`. | `scan.rs::a_copy_stream_without_its_trailer_fails_the_scan`; V-M4 red. | PROVEN | §9.1. The fake refuses the release query, so neither client is pooled. |
+| C-060 | S3, recorded (no code): an idle connection whose backend dies just before checkout is handed out, because the health check is `is_closed()` alone; the scan fails `Disconnected` (the verifier's `vl_health_current_thread`). Accepted under FL-11: nothing retries inside a scan, and the failure is retryable. | FL-11 (§2); `pool.rs::closed_and_idle_expired_connections_are_never_reused` pins what the check does catch. | PROVEN | A validation round trip at checkout would close the race at a round trip per lease. |
+| C-061 | Shape and files: `PoolConnection` gains `reset` (default `true`) and `canceller` (default `None`); `Canceller`, `RESET_SESSION`, `CONNECTION_CHECK_INTERVAL` and `QUERY_SEARCH_PATH` are public; `release_clean` is `async`; no `ConnectError` variant changes. File sizes: `settings/postgres.rs` 605, `pool.rs` 527, `read/postgres.rs` 420, `discover.rs` 349, `tests/it/live_pg.rs` 742, `live_pool.rs` 340, `url.rs` 209, `scan.rs` 144, all under the 1000-line gate. No dependency change. No code comments. Every gate in §9.4 passes. | §9.4. | PROVEN | `settings/postgres.rs` and `pool.rs` pass their round-1b and round-2 brief ceilings (560, 450); the mechanical gate is 1000 (§9.2 R-9). |
+
+### 9.1 Mutations (fold 1)
+
+Each mutation was applied alone to the committed code, the named pins run (the live ones with
+`--include-ignored` against the container), and the file restored with `git checkout`. The
+verifier's survivors keep their ids.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m69 | C-049 | the round-3 split order: `?` first, then the authority (`src/settings/postgres.rs`) | RED | `the_userinfo_ends_at_the_last_at_before_the_first_slash`, `no_userinfo_or_password_text_is_echoed_by_a_refusal` |
+| m70 | C-049 | an unknown `url` query key echoes its name (`src/settings/postgres.rs`) | RED | `no_userinfo_or_password_text_is_echoed_by_a_refusal` (the `leakedtail` refusal) |
+| m71 | C-051 | drop the `is_ascii_hexdigit` check (`src/settings/postgres.rs`) | RED | `a_percent_escape_needs_two_hex_digits` (`%+A` accepted) |
+| m72 | C-050 | match the raw query key, not decoded (`src/settings/postgres.rs`) | RED | `redaction_masks_every_password_the_parser_takes` (`pass%77ord`) |
+| m73 | C-050 | the round-3 seam, `redact_value` alone (`src/settings/postgres.rs`) | RED | `redaction_masks_every_password_the_parser_takes` |
+| m74 | C-052 | skip the reset batch, keep the check (`src/pool.rs`) | RED | `a_pooled_connection_is_reset_before_reuse`: the check drops the poisoned client, so the next lease runs on another backend |
+| m75 | C-052 | neither reset nor check: release always pools (`src/pool.rs`) | RED | `a_pooled_connection_is_reset_before_reuse` (the interval reads in `sql_standard`) |
+| m76 | C-052 | reset, then pool without the check (`src/pool.rs`) | GREEN on C-052's pins (equivalent there: the reset restores every pin) | RED with V-M2 in `a_pushed_scan_commits_before_its_connection_is_pooled` (`idle in transaction`) |
+| m77 | C-052 | the ruling's literal `DISCARD ALL` (`src/pool.rs`) | RED | `user_types_resolve_after_a_reset`: `26000 prepared statement "s7" does not exist` |
+| V-M2 | C-053 | `finish()` skips `COMMIT` (`src/read/postgres.rs`) | RED | `a_pushed_scan_commits_before_its_connection_is_pooled` (the release check drops the client: idle count 0); with the check's transaction column removed too, RED at the `idle` state |
+| m78 | C-055 | class `28` not split: `Server` (`src/pool.rs`) | RED | `a_wrong_password_is_authentication_failed` |
+| m79 | C-054 | no cancel: the lease drops its `Canceller` (`src/pool.rs`) | RED | `a_timeout_or_a_drop_ends_the_server_work` at the 400 ms bound (green under a 3 s bound alone, which the check interval meets in about 700 ms; the pin was tightened before this table was taken) |
+| m80 | C-054 | no `client_connection_check_interval` pin (`src/pool.rs`) | RED | `a_timeout_or_a_drop_ends_the_server_work` (`SHOW` is not `1s`), `query_config_pins_the_session_in_the_startup_packet` |
+| m81 | C-054 | neither the cancel nor the check pin (`src/pool.rs`) | RED | `a_timeout_or_a_drop_ends_the_server_work` (the backend sleeps on) |
+| m82 | C-056 | no `SET LOCAL search_path` in the scan (`src/read/postgres.rs`) | RED | `query_mode_resolves_unqualified_names_through_the_role_search_path` (`42P01`) |
+| m83 | C-056 | no `SET LOCAL search_path` in query discovery (`src/discover.rs`) | RED | `query_mode_resolves_unqualified_names_through_the_role_search_path` (`42P01`) |
+| m84 | C-056 | a plain `=` for `CompareOp::Eq` (`src/read/postgres.rs`) | RED | `a_user_operator_cannot_shadow_a_generated_compare` (0 rows), `pushed_values_ride_set_config_never_the_statement_text` |
+| m85 | C-056 | the query search path in relation mode too (`src/discover.rs`) | RED | `query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing`; every live cell green, since the compares are qualified |
+| V-M4 | C-059 | the scan ignores `decoder.finish()` (`src/read/postgres.rs`) | RED | `a_copy_stream_without_its_trailer_fails_the_scan` (the scan ends cleanly, the row missing) |
+| V-M7 | C-058 | `trusted_roots` drops `\|\| ignored > 0` (`src/tls.rs`) | RED | `a_bundle_with_one_unusable_certificate_refuses` |
+
+Nineteen are red, and one, m76, is equivalent on its own clause's pins and red under V-M2. Every
+verifier survivor (V-M2, V-M4, V-M7) is red.
+
+### 9.2 Readings acted on (no halt)
+
+- **R-1, `DISCARD ALL` (X2).** The ruling's `DISCARD ALL` runs `DEALLOCATE ALL`, which drops the
+  named statements `tokio-postgres` 0.7.18 keeps for type lookups (`typeinfo`,
+  `typeinfo_enum`, `typeinfo_composite`), and the client has no call to forget them. The next
+  query-mode discovery of a type the client has not cached failed `26000 prepared statement
+  "s7" does not exist` (m77). The fold runs the documented `DISCARD ALL` sequence without
+  `DEALLOCATE ALL`, and the check's `statement_timestamp() = transaction_timestamp()` keeps the
+  ruling's "outside any transaction" (a multi-statement batch inside an open transaction would
+  otherwise reset in place). Pins come back, advisory locks are released, temp objects,
+  sequences state, cursors and plans are dropped; a prepared statement survives only if
+  something made one by name, which user SQL wrapped in `SELECT * FROM (…)` cannot. Asked as
+  Q1 in the hand-back, lean: keep.
+- **R-2, qualified operators (X6).** Under `"$user", public` a `public` `=` on a domain shadowed
+  the generated compare (0 rows instead of 1): an exact match on the domain type beats
+  `pg_catalog`'s base-type operator. Same-signature operators did not shadow. Every compare now
+  names `OPERATOR(pg_catalog.op)`, in relation mode too.
+- **R-3, query key names (X1).** The ruling bars echoing any value. A raw `&` in a password
+  (`password=abc&leakedtail=x`) makes its tail a key name, which libpq and pgjdbc split the
+  same way; the refusal now names "the query key in `url`" and lists the accepted keys. Two
+  `settings.rs` expectations changed with it.
+- **R-4, a URL with no `/`.** The userinfo rule scans to the first `/` or the end, so
+  `postgresql://h?application_name=a@b` reads `h?application_name=a` as userinfo, as libpq's
+  look-ahead (to `@` or `/`) does. A URL with a path is unaffected.
+- **R-5, servers older than 14.** `client_connection_check_interval` is new in 14, so an older
+  server now refuses at connect with its own `Server { 42704 }` error naming the parameter,
+  before discovery can name `CONNECT-DECL-pg-server-version`. The registry row says so; the
+  pure pin `servers_older_than_14_are_declared` holds.
+- **R-6, the cancel task.** The crate's second `tokio::spawn`, under `#[expect]` with its
+  lifecycle stated: it holds no client, lock or permit, and `connect_timeout_ms` bounds it. It
+  is skipped when no runtime is current (a drop outside one).
+- **R-7, X5's transaction id.** `pg_current_xact_id_if_assigned()` is NULL in any read-only
+  transaction, open or not, so the pin's teeth are the backend's `idle` state between scans
+  and the reuse of one backend.
+- **R-8, the release check's forms.** `pg_settings.setting` shows `DateStyle` as `ISO, MDY` and
+  an empty `search_path` as `""`; the check compares the first `DateStyle` field and reads `""`
+  as empty. Each release costs two round trips.
+- **R-9, files.** `settings/postgres.rs` (605) and `pool.rs` (527) pass the round-1b and round-2
+  brief ceilings; the mechanical gate is 1000. The fold's pins sit in new files (`url.rs`,
+  `live_pool.rs`, `scan.rs`) so `settings.rs` stays at 599 and `live_pg.rs` at 742.
+- **R-10, shared objects.** The X6 pins create a domain, two functions and two operators in
+  `public` with the cell's tag and drop them after the reads; a panicking cell leaves them in
+  the disposable container.
+
+### 9.3 Four-line record (2026-10-07)
+
+| id | date | question | Flink | Spark | default acted on |
+|---|---|---|---|---|---|
+| FL-16 | 2026-10-07 | Through which `search_path` does a `query` read resolve? | The JDBC connector sends the query as given; the session's path resolves it. | The `query` option is wrapped and run on the session, so the role's `search_path` (`"$user", public` by default) resolves it. | `"$user", public`, set with `SET LOCAL` inside the query's own read-only transaction (ruling X6); relation mode keeps the empty pin (FL-15). |
+
+### 9.4 Gates (fold 1)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock.
+
+| command | exit | output |
+|---|---|---|
+| `cargo deny check 2>&1 \| tail -5` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `cargo test -p repark-connect` | 0 | 90 passed, 21 ignored (the live cells), 0 failed (84 at round 3, plus `url.rs`'s four, `scan.rs`'s one and `tls.rs`'s one) |
+| `cargo test -p repark-connect --test it live_ -- --ignored` under `make pg-up` | 0 | 21 passed (round 3's 14 and `live_pool.rs`'s 7), on six full runs of the final cells |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `cargo clippy -p repark-connect --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics, with and without default features |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean; the cancel spawn carries its `#[expect]` |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1064 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 366 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output (on the docs commit) |
+| `python3 scripts/check_docs_links.py` | 0 | 1340 files, 7202 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 303 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |

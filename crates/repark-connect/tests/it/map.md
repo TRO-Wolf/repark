@@ -7,8 +7,39 @@ See [../map.md](../map.md).
 
 ## Contents
 
-- `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings;`, plus
-  `mod live_pg; mod pool; mod read; mod tls;` under the `postgres` feature.
+- `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings; mod url;`, plus
+  `mod live_pg; mod live_pool; mod pool; mod read; mod scan; mod tls;` under the `postgres`
+  feature.
+- `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
+  verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
+  `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and
+  percent-encoded, with and without a path and query; `%2F` for `/`),
+  `no_userinfo_or_password_text_is_echoed_by_a_refusal` (a raw `/` in a password, malformed
+  escapes, a conflict, an unknown query key after a `password=` value on the `jdbc:` door; no
+  fragment of the userinfo or a password in `Display` or `Debug`),
+  `a_percent_escape_needs_two_hex_digits` (`%+A`, `%-1`, `% A`, `%A@`, `%g0`, in the password,
+  the user and a query value) and `redaction_masks_every_password_the_parser_takes`
+  (`pass%77ord`, `PASS%57ORD`, the leaked-fragment userinfo, a userinfo without `:`).
+  pins: c-2/C-049, C-050, C-051
+- `live_pool.rs` — C-2b fold 1 (2026-10-07), behind `postgres`, live like `live_pg.rs` (whose
+  harness it shares). `a_pooled_connection_is_reset_before_reuse` (the verifier's four poison
+  shapes on `pool_max_size = 1`: `IntervalStyle`, `default_transaction_read_only`,
+  `search_path` with a schema operator, an advisory lock; each next lease runs on the same
+  backend with clean answers), `user_types_resolve_after_a_reset` (two enums in query mode on
+  one reused connection; `DISCARD ALL` fails it with `26000`),
+  `a_pushed_scan_commits_before_its_connection_is_pooled` (V-M2's pin: the backend is `idle`,
+  not `idle in transaction`, between two pushed scans on one backend),
+  `a_wrong_password_is_authentication_failed`, `a_timeout_or_a_drop_ends_the_server_work`
+  (three read timeouts at 300 ms each end the backend within 400 ms, which only the cancel
+  does; a scan dropped while the server computes ends within 3 s; the check interval shows
+  `1s`), `query_mode_resolves_unqualified_names_through_the_role_search_path` and
+  `a_user_operator_cannot_shadow_a_generated_compare` (a `public` `=` on a domain and `<` on
+  `int4`, dropped after the reads). pins: c-2/C-052, C-053, C-054, C-055, C-056
+- `scan.rs` — C-2b fold 1 (2026-10-07), behind `postgres`, no Postgres server: a loopback fake
+  backend answers the startup, the prepare and a one-row binary COPY.
+  `a_copy_stream_without_its_trailer_fails_the_scan` (with the trailer `scan()` reads `[7]`;
+  without it the scan fails `Disconnected`; the fake refuses the release query, so nothing is
+  pooled). pins: c-2/C-059
 - `read.rs` — C-2b round 3 (2026-10-07), behind `postgres`, pure (no server):
   `statement_casts_every_column_and_server_text_to_text` (the exact `COPY` text for `int4`,
   `numeric(8,3)`, `interval`, `jsonb`, an enum, unconstrained `numeric` and a negative-scale
@@ -18,8 +49,9 @@ See [../map.md](../map.md).
   the bound `set_config` call), `param_slots_stop_at_1024_and_bad_indexes_refuse`,
   `query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing`,
   `dbtable_parses_exact_qualified_and_quoted_parts`, `servers_older_than_14_are_declared` and
-  `read_errors_name_the_relation_and_fold_as_operational`.
-  pins: c-2/C-038, C-039, C-044, C-045, C-048
+  `read_errors_name_the_relation_and_fold_as_operational`. Fold 1 renders every compare as
+  `OPERATOR(pg_catalog.op)` and pins `ScanSource::search_path()` for both modes.
+  pins: c-2/C-038, C-039, C-044, C-045, C-048, C-056
 - `live_pg.rs` — C-2b round 3 (2026-10-07), behind `postgres`. Every cell is
   `#[ignore = "live: make pg-up, REPARK_PG_URL"]`, panics rather than skips without
   `REPARK_PG_URL`, creates and drops a schema `c2_<tag>`, and names its pool's
@@ -39,8 +71,10 @@ See [../map.md](../map.md).
   `COPY (SELECT <literal>) TO STDOUT (FORMAT BINARY)`) and
   `mapped_types_round_trip_through_the_scan`; plus
   `relation_discovery_resolves_domains_nullability_and_collation`. The long streams use
-  `generate_series` in the target list, which streams; in `FROM` it materialises first.
-  pins: c-2/C-040, C-041, C-042, C-043, C-046, C-047
+  `generate_series` in the target list, which streams; in `FROM` it materialises first. Since
+  fold 1 the harness (`Cell`, `Reader`, `url`, `int32s`) is `pub(crate)` for `live_pool.rs`,
+  and the drift cell stands for `CONNECT-DECL-pg-drift-cast` (a narrowing cast rounds,
+  recorded, not pinned). pins: c-2/C-040, C-041, C-042, C-043, C-046, C-047, C-057
 - `settings.rs` — C-1 (2026-10-05): absent and explicit `password` (the other props carried,
   `auth_method` dropped from the map); `iam_token` and `kerberos` refuse naming their registry
   rows and fold to the Unsupported class; empty, wrong-case, hyphenated, padded and unknown
@@ -57,7 +91,8 @@ See [../map.md](../map.md).
   C-006 extended to `PostgresSettings` and every new error). A local `summary()` renders every
   field, so one assertion covers a parsed value. C-2b round 2 (2026-10-07) adds
   `fetchsize_zero_is_the_session_batch_default` (`fetchsize` `0` and `00` on `read_postgres`
-  leave `batch_rows` unset; `batch_rows` `0` refuses on both doors).
+  leave `batch_rows` unset; `batch_rows` `0` refuses on both doors). Fold 1 (2026-10-07) changes
+  two expectations: an unknown key in the `url` query refuses as `UrlPart("query key")`.
   pins: c-1/C-003, C-004, C-005, C-006 · pins: c-2/C-001, C-018, C-019, C-020, C-021, C-022,
   C-023, C-024, C-036
 - `tls.rs` — C-2b round 2 (2026-10-07), behind `postgres`: in-memory rustls handshakes (no
@@ -66,8 +101,9 @@ See [../map.md](../map.md).
   under `ca.pem`; `db.example.com` refuses `NotValidForName`; under `other-ca.pem` it refuses
   `UnknownIssuer`) and `sslrootcert_must_be_a_readable_pem_ca_bundle` (a missing file, a
   key-only PEM and a garbled certificate each refuse, naming `sslrootcert` and never the path,
-  in the `Base` class). `fixture` and `server_config` are shared with `pool.rs`.
-  pins: c-2/C-028, C-029
+  in the `Base` class). `fixture` and `server_config` are shared with `pool.rs`. Fold 1 adds
+  `a_bundle_with_one_unusable_certificate_refuses` (the CA fixture plus a block rustls ignores;
+  V-M7's pin). pins: c-2/C-028, C-029, C-058
 - `pool.rs` — C-2b round 2 (2026-10-07), behind `postgres`. The pool through `FakeConnector`
   (each fake connection holds a pending task, so an abort is observable):
   `a_clean_release_is_reused_by_the_next_checkout`,
@@ -75,13 +111,15 @@ See [../map.md](../map.md).
   `checkout_beyond_pool_max_size_is_pool_exhausted` (F-5's unit half: 100 ms, then the permit
   returns) and `closed_and_idle_expired_connections_are_never_reused`. The startup packet:
   `query_config_pins_the_session_in_the_startup_packet` (every `Config` field and the exact
-  `-c` list, with and without the defaults). The connector against loopback listeners, with no
+  `-c` list, with and without the defaults; fold 1 adds `client_connection_check_interval`). The connector against loopback listeners, with no
   Postgres server: `connect_timeout_bounds_a_server_that_never_answers` (under `disable` and
   `verify-full`), `plaintext_server_refuses_under_verify_full` (a listener that answers `N`),
   `a_refused_port_is_unreachable`, and
   `verify_full_refuses_an_untrusted_or_misnamed_server_certificate` (a thread that answers `S`
-  and completes a rustls handshake as the `localhost` leaf, reached at `127.0.0.1`).
-  pins: c-2/C-031, C-032, C-033, C-034, C-035
+  and completes a rustls handshake as the `localhost` leaf, reached at `127.0.0.1`). Fold 1
+  awaits `release_clean()`; the fakes take `reset`'s and `canceller`'s defaults. An idle
+  backend that dies just before checkout is still handed out (FL-11, accepted).
+  pins: c-2/C-031, C-032, C-033, C-034, C-035, C-060, C-061
 - `fixtures/` — C-2b round 2 (2026-10-07): static PEM test identities, generated once with the
   local `openssl` (EC P-256, valid to 2126) because `rcgen` is not in the lock: `ca.pem`;
   `server.pem`, a `localhost` leaf it signs, and `server.key`, its PKCS#8 key; and

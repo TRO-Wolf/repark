@@ -128,21 +128,30 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   through `builder_with_provider` (H-CRYPTO: the workspace compiles rustls with two providers,
   so `ClientConfig::builder()` could not choose). A bad bundle refuses with
   `TlsHandshake { kind }`: `RootCertUnreadable { kind }`, `RootCertInvalid` (no PEM
-  certificate, a garbled one, or one rustls cannot take as a trust anchor) or `NoTrustedRoots`;
+  certificate, a garbled one, or one rustls cannot take as a trust anchor, even beside a good
+  one: fold 1 pins that bundle) or `NoTrustedRoots`;
   the message names `sslrootcert`, never the path. `failure_of` maps a rustls certificate
   refusal to `UntrustedCertificate`, `HostNameMismatch`, `CertificateExpired` or `Handshake`.
   `TrackedTls` wraps `MakeRustlsConnect` and records whether the handshake began, so the
   connector can tell a server that refused TLS from every later failure without reading driver
-  text. pins: c-2/C-028, C-029, C-030
+  text. pins: c-2/C-028, C-029, C-030, C-058
 - `pool.rs` — C-2b round 2 (2026-10-07; sketch §2.5, NS-7), behind `postgres`.
   - **`QueryPool<C: Connect>`**, one per mounted source: a semaphore of `pool_max_size` permits;
     `checkout()` waits at most `pool_checkout_timeout_ms` for one (else `PoolExhausted`), reaps
     every idle connection that is closed or idle past `pool_idle_timeout_ms` (dropped outside
     the lock), reuses the most recent survivor, or connects. `idle_count()` is the F-1 seam.
   - **`PooledClient`** derefs to the connection and returns it only through
-    `release_clean()`, which the scan calls after the COPY trailer and `COMMIT`. Its lease
-    holds the permit and the connection task's `AbortHandle`; dropped any other way, the lease
-    aborts the task, so the socket closes and the connection is never reused. No cleanup task.
+    `release_clean().await`, which the scan calls after the COPY trailer and `COMMIT`. Since
+    fold 1 (X2) it first calls `PoolConnection::reset`; `PgConnection` runs `RESET_SESSION`,
+    `DISCARD ALL`'s documented sequence less `DEALLOCATE ALL` (the driver keeps its type-lookup
+    statements prepared, and `DISCARD ALL` broke them: `26000` on the next user type), then one
+    `pg_settings` read of every startup pin plus `statement_timestamp() =
+    transaction_timestamp()`. A mismatch, an open transaction, an error or the read timeout
+    drops the connection. Its lease holds the permit, the connection task's `AbortHandle` and,
+    since fold 1 (X3), a `Canceller`; dropped any other way, the lease fires
+    `CancelToken::cancel_query` on a task bounded by `connect_timeout_ms` (the crate's second
+    spawn, under `#[expect]`) and aborts the connection task, so the server stops and the
+    connection is never reused.
   - **`Connect` and `PoolConnection`** are the seams the pins drive with fakes; the product
     implementation is `PostgresConnector` / `PgConnection` (`PostgresPool` names the pair).
   - **`query_config(settings)`** is the only `Config` the pool builds: host, port, user,
@@ -150,7 +159,8 @@ Product code for `repark-connect`. See [../map.md](../map.md).
     (`Disable` or `Require`), and §2.4's session pins in one `-c` options list
     (`client_encoding`, `DateStyle`, `IntervalStyle`, `TimeZone=UTC`, an empty `search_path`,
     `default_transaction_read_only=on`, `lock_timeout`, `statement_timeout` from
-    `query_timeout_ms`, `idle_in_transaction_session_timeout` from `read_timeout_ms`). Nothing
+    `query_timeout_ms`, `idle_in_transaction_session_timeout` from `read_timeout_ms`, and since
+    fold 1 `client_connection_check_interval` = `CONNECTION_CHECK_INTERVAL`, 1000 ms). Nothing
     here sets replication (CC-2).
   - **`PostgresConnector::connect`** bounds the whole connect by `connect_timeout_ms`
     (`Timeout { which: Connect }`), connects with `NoTls` under `disable` and the tracked
@@ -158,10 +168,10 @@ Product code for `repark-connect`. See [../map.md](../map.md).
     under `#[expect]`, its handle held by `PgConnection`), and classifies failures: `Server`
     for a server error, `TlsHandshake` for a rustls refusal or an unverifiable host name,
     `Unreachable { kind }` for I/O, `TlsRequired` when TLS never began under `verify-full`,
-    `AuthenticationFailed` for the driver-side rest.
+    `AuthenticationFailed` for SQLSTATE class `28` (fold 1 X4) and the driver-side rest.
   - **`within(which, limit, work)`** is the NS-7 wrapper round 3 puts around every request and
     COPY chunk; `TimeoutSetting` names the key that fired.
-  pins: c-2/C-031, C-032, C-033, C-034, C-035
+  pins: c-2/C-031, C-032, C-033, C-034, C-035, C-052, C-054, C-055
 - `discover.rs` — C-2b round 3 (2026-10-07; sketch §2.4, §2.8), behind `postgres`.
   `discover(pool, &ScanSource, read_timeout)` resolves one source afresh on every call (FL-7):
   it checks out a client, opens `BEGIN_DISCOVERY` (`BEGIN READ ONLY` with a 30 s local
@@ -179,12 +189,14 @@ Product code for `repark-connect`. See [../map.md](../map.md).
     resolves empty. A base type outside `pg_catalog` is not a base type here.
   - **Query mode** (`ScanSource::Query`, or a `dbtable` starting with `(`, which becomes
     `SELECT * FROM <dbtable>`): `prepare("SELECT * FROM (<query>) AS repark_q")`, Parse and
-    Describe only. Each column takes the RowDescription type and `Column::type_modifier()`
+    Describe only, after `QUERY_SEARCH_PATH` (`SET LOCAL search_path TO "$user", public`, fold 1
+    X6) in the discovery transaction, so unqualified names resolve as Spark's `query` does.
+    `ScanSource::search_path()` names that statement for a query and nothing for a relation. Each column takes the RowDescription type and `Column::type_modifier()`
     (H-TYPEMOD did not fire), and is nullable.
   - **`ScanColumn::resolve(name, typname, kind, typmod, nullable)`** pairs C-2a's
     `PlannedColumn` with the column's `CastType`. A catalog cell of the wrong type is
     `Protocol(UnexpectedResponse)`. The server encoding is carried on `ResolvedSource`, unused
-    so far. pins: c-2/C-042, C-043, C-044
+    so far. pins: c-2/C-042, C-043, C-044, C-056
 - `read.rs` — C-2b round 3 (2026-10-07): `pub(crate) mod postgres;`.
 - `read/` — [read/map.md](read/map.md): `postgres.rs`, the statement builder, the `set_config`
   carriage and the COPY stream.
