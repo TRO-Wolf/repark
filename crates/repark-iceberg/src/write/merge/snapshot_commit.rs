@@ -378,6 +378,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         return Ok(());
     }
     let data_file_paths = abort::written_file_paths(&data_files);
+    let stamp = SiteStamp::claim(table, branch, summary_extra)?;
     let pair_count = pairs.len() as u64;
     let data_file_count = data_files.len() as u64;
     let mut prepared = dv_close::prepare_row_delta_deletes(
@@ -401,7 +402,6 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let (added_deletes, removed_deletes) = prepared.delete_file_changes();
     let mut added_files = data_files.clone();
     added_files.extend(added_deletes.iter().cloned());
-    let stamp = SiteStamp::claim(table, branch, summary_extra)?;
     let summary_extra = stamp.extras(summary_extra)?;
     let engine = crate::write::summary_collision::EngineSummary::for_changes(
         table,

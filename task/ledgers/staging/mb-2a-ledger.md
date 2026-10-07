@@ -57,8 +57,9 @@ sink_offsets_tests.rs, mod.rs, map.md}`, the three named commit arms
 | C-015 | V3 (S2): a caller-supplied `repark.cdc.*` or `spark.sql.streaming.*` extra can never displace the stamp on a stamped commit: the claim refuses `Catalog` naming the key (prefix folded to lowercase, the reserved token key exempt) before it marks the entry claimed, and nothing is committed; `SiteStamp::extras` appends the stamp after the caller's extras as a second layer. An unscoped commit keeps such a key verbatim, as on main. | The live refusal pin (the verifier's `verify_caller_extras_cannot_override_the_stamp`, ported and tightened to the refusal) and the ordering unit pin. | **PROVEN** | 2 pins green: `caller_extras_cannot_displace_the_stamp` (`repark.cdc.epoch=99`, `spark.sql.streaming.epochId=99`, `Repark.CDC.Epoch=99` and `repark.cdc.offsets.other` each refuse with the key in the message, no snapshot lands, `NotCommitted`; the batch's own commit then stamps; an unscoped commit keeps `repark.cdc.note`), `site_stamp_extras_put_the_stamp_last_and_drop_the_token` (folded last-write-wins, the extras give the stamp's record and Spark epoch `7`, keep `run_id`, and drop the token). Mutations: MV6 as the verifier wrote it (caller extras after the stamp): the ordering pin red; the refusal dropped alone: the live pin red; both together: 2 red. pins: mb-2a/C-015 |
 | C-016 | V4 (S3): only a JSON integer in the offset property's `format-version` is a version (`offset.rs` `from_property`, ahead of `canonical_format`); the JSON string `"1"`, `1.0`, `1.5`, `null`, `true`, an array or an object refuses `Catalog` ("is not an integer"), not `UnsupportedOffsetFormat`; an integer other than 1 still refuses `UnsupportedOffsetFormat` with the text as read; the summary half is unchanged. | The offset unit pins and the resume pin (the verifier's `verify_malformed_and_newer_property_classes`, ported). | **PROVEN** | 2 pins green: `from_property_refuses_a_non_integer_version_as_corrupt` (seven shapes, each `Catalog` naming `format-version`), `resume_refuses_a_malformed_property_version_as_corrupt` (through `read_resume_point`: `"1"`, `1.0` and not-JSON give `Catalog`, `2` gives `UnsupportedOffsetFormat { found: "2", supported: 1 }`). MB-1's offset pins stay green; `from_property_reports_the_version_it_found` keeps its five integer rows and its four non-integer rows move to the corrupt pin (D-11). Mutation MV-F (the integer guard dropped): 2 red, both new pins. pins: mb-2a/C-016 |
 | C-017 | V5 (S3): `commit_stamp_only` with a stamp that differs from the active scope's refuses `Catalog` **before** it marks the entry claimed, so the scope's own stamp-only commit still claims. | The mismatched stamp-only pin. | **PROVEN** | 1 pin green (`a_mismatched_stamp_only_commit_leaves_the_claim`): epoch 4 against the epoch-3 scope refuses "does not match", then epoch 3's stamp-only commit claims, `outcome` names its snapshot, one stamped snapshot. Mutation MV-C (mark claimed before the comparison): that pin red (1 of 21). pins: mb-2a/C-017 |
+| C-018 | V6 (S3): the merge-on-read arm claims before `prepare_row_delta_deletes`, so a claim refusal stages no delete file; the claim stays after the early empty return. The copy-on-write arm receives its files already staged by `merge/mod.rs`, so it has no earlier point to claim at without editing `merge/mod.rs`; its orphans, and the merge-on-read arm's data files, are tolerated on a claim refusal (D-12). | The refused merge-on-read claim pin. | **PROVEN** | 1 pin green (`a_refused_merge_on_read_claim_stages_no_delete_file`): after the batch's one stamped append, a stamped merge-on-read commit refuses `SinkCommittedTwice { epoch: 0 }` with the warehouse's file set unchanged (no delete file written), live ids `[1, 2, 3]`, one stamped snapshot. Mutation MV-O (the claim moved back after `prepare_row_delta_deletes`): that pin red (1 of 27). pins: mb-2a/C-018 |
 
-VERDICT: 17 clauses, 17 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 18 clauses, 18 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Dated decision rows
 
@@ -144,6 +145,15 @@ VERDICT: 17 clauses, 17 PROVEN, 0 OPEN, 0 REJECTED.
   reclassifies as corrupt; those four rows move to `from_property_refuses_a_non_integer_version_as_corrupt`
   and the pin keeps its five integer rows (`2`, `0`, `-1`, `4294967296`, `18446744073709551615`).
   An integer past `u64::MAX` parses as a float and refuses as corrupt.
+
+- **D-12 (2026-10-07, ruling V6).** The merge-on-read arm now claims before it writes its delete
+  files (D-3's "after its early empty return" still holds). Claiming before the **data** files
+  are staged is not reachable without editing `merge/mod.rs`, which stages them before calling
+  either arm, so on a claim refusal (`SinkCommittedTwice`, a token-matched commit carrying a
+  caller stamp key) those data files stay orphaned: no snapshot references them, which the
+  sketch's §5 pin 2 tolerates, and an orphan-file sweep reclaims them. No code change in the
+  copy-on-write arm. A claim taken before `prepare_row_delta_deletes` fails is consumed; the
+  batch has failed by then and the scope drops with it.
 
 ## Gates — 2026-10-07
 

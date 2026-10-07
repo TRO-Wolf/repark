@@ -355,3 +355,63 @@ async fn resume_refuses_a_malformed_property_version_as_corrupt() {
         }
     }
 }
+
+fn warehouse_files(root: &std::path::Path) -> BTreeSet<std::path::PathBuf> {
+    let mut files = BTreeSet::new();
+    let mut pending = vec![root.to_path_buf()];
+    while let Some(directory) = pending.pop() {
+        for entry in std::fs::read_dir(&directory).expect("read dir") {
+            let path = entry.expect("entry").path();
+            if path.is_dir() {
+                pending.push(path);
+            } else {
+                files.insert(path);
+            }
+        }
+    }
+    files
+}
+
+#[tokio::test]
+async fn a_refused_merge_on_read_claim_stages_no_delete_file() {
+    let (warehouse, catalog, ident) = fixture("mor_claim_first").await;
+    let table = catalog.load_table(&ident).await.expect("load");
+    let seeded = stage(&table, &[1, 2]).await;
+    let target: Arc<str> = Arc::from(seeded[0].file_path());
+    let table = commit_append_with_summary(&catalog, &table, seeded, &[], None)
+        .await
+        .expect("seed");
+    let stamp = stamp_for(0, SinkDoor::ForeachBatch);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let files = stage(&table, &[3]).await;
+    let table = commit_append_with_summary(&catalog, &table, files, &scoped(&guard), None)
+        .await
+        .expect("the batch's one stamped commit");
+    let added = stage(&table, &[10]).await;
+    let before = warehouse_files(warehouse.path());
+    let error = crate::write::merge::commit_row_delta_on_ref_with_partitions(
+        &catalog,
+        &table,
+        table.metadata().current_snapshot_id(),
+        vec![(target, 0)],
+        added,
+        WriteConcurrency::new(1).expect("K=1"),
+        &Predicate::AlwaysTrue,
+        None,
+        crate::write::merge::KnownPartitions::new(),
+        &scoped(&guard),
+        &WriterStagingOverrides::none(),
+    )
+    .await
+    .expect_err("a second stamped commit in one batch");
+    assert_eq!(
+        microbatch_cause(&error),
+        &MicroBatchError::SinkCommittedTwice {
+            epoch: Epoch::new(0)
+        }
+    );
+    assert_eq!(warehouse_files(warehouse.path()), before);
+    let reloaded = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(live_ids(&reloaded).await, vec![1, 2, 3]);
+    assert_eq!(stamped_snapshots(&reloaded), 1);
+}
