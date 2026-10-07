@@ -377,7 +377,13 @@ impl SinkRecord {
         let parsed: serde_json::Value = serde_json::from_str(value).map_err(|error| {
             MicroBatchError::Catalog(format!("repark.cdc stamp is not JSON: {error}"))
         })?;
-        let format = canonical_format(&stamp_member(&parsed, STAMP_FORMAT_KEY)?.to_string())?;
+        let format_member = stamp_member(&parsed, STAMP_FORMAT_KEY)?;
+        if !(format_member.is_u64() || format_member.is_i64()) {
+            return Err(MicroBatchError::Catalog(format!(
+                "repark.cdc stamp value for {STAMP_FORMAT_KEY} is not an integer: {format_member}"
+            )));
+        }
+        let format = canonical_format(&format_member.to_string())?;
         let run = RunId::new(parse_stamp_uuid(
             stamp_str(&parsed, STAMP_RUN_KEY)?,
             STAMP_RUN_KEY,
@@ -877,12 +883,8 @@ mod tests {
             ("2", "2"),
             ("0", "0"),
             ("-1", "-1"),
-            ("1.5", "1.5"),
-            ("1.0", "1.0"),
-            ("\"1\"", "\"1\""),
             ("4294967296", "4294967296"),
             ("18446744073709551615", "18446744073709551615"),
-            ("null", "null"),
         ] {
             let forged = value.replace(canonical, &format!(r#""format-version":{format},"#));
             match SinkRecord::from_property(record.query, &forged) {
@@ -892,6 +894,25 @@ mod tests {
                             .to_string()
                             .contains(&format!("offset format version {found} is not supported")),
                         "format {format} rendered {error}"
+                    );
+                }
+                other => panic!("format {format} gave {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn from_property_refuses_a_non_integer_version_as_corrupt() {
+        let record = sink_record();
+        let (_, value) = record.property().expect("property");
+        let canonical = r#""format-version":1,"#;
+        for format in ["\"1\"", "1.0", "1.5", "null", "true", "[1]", "{}"] {
+            let forged = value.replace(canonical, &format!(r#""format-version":{format},"#));
+            match SinkRecord::from_property(record.query, &forged) {
+                Err(MicroBatchError::Catalog(message)) => {
+                    assert!(
+                        message.contains("format-version") && message.contains("not an integer"),
+                        "format {format} rendered {message}"
                     );
                 }
                 other => panic!("format {format} gave {other:?}"),

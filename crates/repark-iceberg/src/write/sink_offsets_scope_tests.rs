@@ -313,3 +313,45 @@ async fn resume_refuses_a_rollback_between_stamps_with_the_summary_as_authority(
         }
     );
 }
+
+#[tokio::test]
+async fn resume_refuses_a_malformed_property_version_as_corrupt() {
+    let (_warehouse, catalog, ident) = fixture("malformed_version").await;
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let table = stamped_append(&catalog, &ident, &stamp, &[1]).await;
+    let (key, value) = stamp.record.property().expect("property");
+    let canonical = "\"format-version\":1";
+    for (label, text, newer) in [
+        (
+            "string",
+            value.replace(canonical, "\"format-version\":\"1\""),
+            false,
+        ),
+        (
+            "float",
+            value.replace(canonical, "\"format-version\":1.0"),
+            false,
+        ),
+        ("not-json", String::from("{not json"), false),
+        (
+            "newer",
+            value.replace(canonical, "\"format-version\":2"),
+            true,
+        ),
+    ] {
+        let tx = Transaction::new(&table);
+        let tx = tx
+            .update_table_properties()
+            .set(key.clone(), text)
+            .apply(tx)
+            .expect("apply");
+        let drifted = tx.commit(catalog.as_ref()).await.expect("drift");
+        match read_resume_point(&drifted, query()) {
+            Err(MicroBatchError::UnsupportedOffsetFormat { found, supported }) if newer => {
+                assert_eq!((found.as_str(), supported), ("2", 1));
+            }
+            Err(MicroBatchError::Catalog(_)) if !newer => {}
+            other => panic!("{label} gave {other:?}"),
+        }
+    }
+}

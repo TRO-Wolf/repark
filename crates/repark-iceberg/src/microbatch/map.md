@@ -40,7 +40,11 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `SinkDoor`, `spark_source_offset_json`, and the nine key constants.
   Fold 1: the writers return `Result`, and both readers accept only the
   canonical version text `1`.
+  MB-2a fold 1 (ruling V4, 2026-10-07): only a JSON integer in the property's
+  `format-version` is a version; a string, a float, `null` or any other shape refuses
+  `Catalog` as a corrupt stamp, not `UnsupportedOffsetFormat`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-024
+  pins: mb-2a/C-016
 - `error.rs` — the sketch's §3.2: `MicroBatchError` with every variant,
   `thiserror`, `#[non_exhaustive]` (NS-15), plus `RecoveryReason`. Fold 1
   adds `OffsetPositionOutOfRange`, and `UnsupportedOffsetFormat.found`
@@ -48,7 +52,8 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   MB-2a fold 1 (ruling V2, 2026-10-07) adds `RecoveryReason::StampNotInLineage`: a sink stamp
   that is retained but off the current lineage (a rollback), naming a new `queryName` or a
   restore; `StampedSnapshotExpired` keeps the stamp that is truly gone.
-  pins: mb-1/C-006, C-020, C-024, C-036, mb-2a/C-014
+  pins: mb-1/C-006, C-020, C-024, C-036
+  pins: mb-2a/C-014
 - `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
   `WindowLimit`, `PlannedFile`, `WindowPlan`, and
   `WindowPlanner::{new, named, initial_offset, next_window}` over a held
