@@ -4,7 +4,8 @@ use std::sync::Arc;
 use arrow::datatypes::DataType;
 use repark_common::Error;
 
-use crate::settings::{AUTH_METHOD_KEY, AuthMethod};
+use crate::ident::IdentRefusal;
+use crate::settings::{AUTH_METHOD_KEY, AuthMethod, DeclaredSetting, SpecRefusal, Spelling};
 
 pub(crate) const REGISTRY: &str = "docs/spark-sql-iceberg-parity.md";
 
@@ -29,6 +30,21 @@ pub enum ConnectError {
         method: AuthMethod,
         registry_row: &'static str,
     },
+
+    #[error("invalid specification: {key} {reason}")]
+    InvalidSpecification { key: Spelling, reason: SpecRefusal },
+
+    #[error(
+        "{key} is declared but not supported yet: {declared} (registry row {} in {REGISTRY})",
+        declared.registry_row()
+    )]
+    DeclaredSetting {
+        key: Spelling,
+        declared: DeclaredSetting,
+    },
+
+    #[error("invalid specification: a Postgres identifier {reason}")]
+    InvalidIdentifier { reason: IdentRefusal },
 
     #[error(
         "Postgres type `{postgres_name}` has no Arrow mapping: declared \
@@ -224,8 +240,11 @@ impl fmt::Display for ProtocolViolation {
 impl From<ConnectError> for Error {
     fn from(error: ConnectError) -> Self {
         match error {
-            ConnectError::InvalidAuthMethod { .. } => Error::Config(error.to_string()),
+            ConnectError::InvalidAuthMethod { .. }
+            | ConnectError::InvalidSpecification { .. }
+            | ConnectError::InvalidIdentifier { .. } => Error::Config(error.to_string()),
             ConnectError::DeclaredAuthMethod { .. }
+            | ConnectError::DeclaredSetting { .. }
             | ConnectError::Declared { .. }
             | ConnectError::UnmappedType { .. }
             | ConnectError::UnrepresentableValue { .. }

@@ -3516,6 +3516,55 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-10-06 (C-2a; FL-6; North Star §2 rank 4 until a Spark oracle
   cell confirms a mapping). Adding a type is one row, one codec arm, one pin and one oracle
   cell.
+### CONNECT-DECL-sslmode-unverified — a Postgres source refuses `sslmode` `prefer`, `allow`, `require` and `verify-ca`
+- **repark** — `PostgresSettings::from_props` refuses `sslmode` `prefer` and `allow` (they fall
+  back to plaintext silently) and `require` and `verify-ca` (encryption without a host-name check),
+  given as a key or inside the `url` query, with `ConnectError::DeclaredSetting`
+  (`DeclaredSetting::UnverifiedSslmode`). The message names the mode, this row and the fix,
+  "`verify-full` with `sslrootcert` pointing at your CA bundle", and the error folds to the
+  Unsupported class. Any other spelling (`VERIFY-FULL`, `verify_full`, empty) is an invalid
+  specification listing the six libpq spellings.
+- **Apache Spark** — the JDBC source hands `sslmode` to pgjdbc, which accepts all six libpq modes
+  and by default falls back to plaintext when the server offers no TLS. *(oracle: documented —
+  the C-2 sketch's FL-12, pgjdbc's connection properties; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::unverified_sslmodes_refuse`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; NS §5, TLS by default; FL-12; the sketch's Q5, kept
+  under its lean). A man in the middle defeats every one of the four modes. Retire a mode only by a
+  dated owner decision, for example to admit `require` for cloud connection strings.
+### CONNECT-DECL-pg-client-cert — a Postgres source refuses `sslcert` and `sslkey`
+- **repark** — `PostgresSettings::from_props` refuses `sslcert` and `sslkey`, given as a key or
+  inside the `url` query, with `ConnectError::DeclaredSetting` (`DeclaredSetting::ClientCert`)
+  naming this row; it folds to the Unsupported class. In `repark.toml` the spelling is exact; on
+  the `read_postgres` door and inside a `jdbc:` URL it is matched case-insensitively.
+- **Apache Spark** — the JDBC source forwards both to pgjdbc, which presents the client
+  certificate during the TLS handshake. *(oracle: documented — pgjdbc's connection properties; no
+  value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; ES-1: password auth is the one 1.6 method). Retire in
+  the unit that adds certificate auth to ES-1.
+### CONNECT-DECL-pg-session-sql — a Postgres source refuses `sessionInitStatement`, `customSchema` and `options`
+- **repark** — `PostgresSettings::from_props` refuses the three keys with
+  `ConnectError::DeclaredSetting` (`DeclaredSetting::SessionSql`) naming this row and the fix
+  (select through `query` with casts); it folds to the Unsupported class. `options` also refuses
+  inside the `url` query, and the case rule of CONNECT-DECL-pg-client-cert applies.
+- **Apache Spark** — `sessionInitStatement` runs arbitrary SQL after each session opens,
+  `customSchema` overrides the column types read, and pgjdbc's `options` sends raw startup
+  options. *(oracle: documented — Spark's JDBC data source options and pgjdbc's connection
+  properties; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; sketch §2.3 and §2.4). Each one could override the
+  session pins the read relies on (empty `search_path`, read-only transactions, the timeouts) or
+  the resolved schema. Retire per key when a unit can admit it without lifting a pin.
+### CONNECT-DECL-pg-multi-host — a Postgres source refuses a host list
+- **repark** — a `host` value with a comma, or a `url` whose authority lists hosts
+  (`postgresql://h1:5432,h2:5433/db`), refuses with `ConnectError::DeclaredSetting`
+  (`DeclaredSetting::MultiHost`) naming this row; it folds to the Unsupported class.
+- **Apache Spark** — the JDBC source passes the URL to pgjdbc, which tries the listed hosts in
+  order (libpq does the same). *(oracle: documented — pgjdbc's and libpq's connection strings; no
+  value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; sketch §2.3). A source has one endpoint at 1.6, and
+  failover across hosts is demand-triggered. Retire in the unit that adds host lists.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.
@@ -3640,6 +3689,33 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   displayed, even where Spark displays them (owner, 2026-10-06: "we need security to be
   tight"). Host, port, database and credential-free locations stay visible for debugging.
   Retire the row only if the owner rules that Spark's display wins.
+### CONNECT-DIV-pg-sslmode — a Postgres source verifies TLS by default; `disable` is the explicit plaintext
+- **repark** — a Postgres source with no `sslmode` resolves to `SslMode::VerifyFull`: TLS with the
+  certificate chain and the host name verified. `sslmode = "disable"` is the one plaintext option,
+  and every other mode refuses under CONNECT-DECL-sslmode-unverified. C-2b's later rounds build the
+  TLS connector that enforces the setting, with its live pin against a plaintext server.
+- **Apache Spark** — the JDBC source passes `sslmode` to pgjdbc, whose default falls back to
+  plaintext when the server offers no TLS. *(oracle: documented — FL-12; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::sslmode_default_is_verify_full`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; NS §5 TLS by default, the plaintext option dated
+  2026-10-06; FL-12; the sketch's Q5). A silent plaintext fallback carries the password in the
+  clear.
+### CONNECT-DIV-pg-unknown-option — a Postgres source refuses unknown keys where Spark forwards them
+- **repark** — `PostgresSettings::from_props` accepts only the sketch's §2.3 keys, its declared
+  keys (each refused under its own row) and, on the `read_postgres` door, `driver` set to
+  `org.postgresql.Driver`. Any other key, given as a key or inside the `url` query, refuses with
+  `ConnectError::InvalidSpecification` (`SpecRefusal::UnknownKey`): the message names the key and
+  lists the accepted keys, never a value, and it folds to the IllegalArgument class. Canonical
+  spellings are exact in `repark.toml`. The Spark and pgjdbc aliases (`queryTimeout`, `fetchsize`,
+  `socketTimeout`, …) are matched case-insensitively on the `read_postgres` door and inside a
+  `jdbc:` URL query, and refuse as unknown keys in `repark.toml`. One setting given twice, in the
+  URL and as a key or under two spellings, refuses naming both spellings.
+- **Apache Spark** — the JDBC source forwards an unknown option to the driver as a connection
+  property. *(oracle: documented — FL-1; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::every_endpoint_key_parses_and_unknown_keys_refuse`,
+  `::aliases_are_case_insensitive_and_conflicts_refuse`
+- **Rationale** — DECLARED 2026-10-07 (C-2b; NS §5 `deny_unknown_fields`; FL-1; the sketch's Q6,
+  kept under its lean). A misspelt timeout or TLS key would otherwise never take effect.
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
 - **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
   `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition
