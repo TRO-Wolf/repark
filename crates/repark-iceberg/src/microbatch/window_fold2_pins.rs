@@ -1,4 +1,4 @@
-use super::window_fold_pins::expect_non_append;
+use super::window_fold_pins::{expect_non_append, pause};
 use super::*;
 
 async fn appends_then(
@@ -154,4 +154,64 @@ async fn an_overwrite_start_past_its_added_files_refuses() {
             .expect("some");
         assert_eq!(plan.end, input_offset(&table, head, 1));
     }
+}
+
+#[tokio::test]
+async fn a_delete_as_head_refuses_at_the_initial_offset() {
+    let (_warehouse, catalog, ident) = fixture_table("delete-head").await;
+    let first_file = synthetic_file("a.parquet", 2);
+    commit_append(&catalog, &ident, vec![first_file.clone()]).await;
+    pause();
+    let delete = commit_delete(&catalog, &ident, vec![first_file]).await;
+    let table = load(&catalog, &ident).await;
+    assert_eq!(operation_of(&table, delete), Operation::Delete);
+    assert_eq!(
+        table
+            .metadata()
+            .current_snapshot()
+            .expect("head")
+            .snapshot_id(),
+        delete
+    );
+    let start = StartPosition::FromTimestamp {
+        millis: snapshot_timestamp(&table, delete),
+    };
+    let planner = WindowPlanner::new(table.clone(), uncapped());
+    let error = planner
+        .initial_offset(&start)
+        .await
+        .expect_err("a delete as the head with nothing after it must refuse");
+    expect_non_append(&error, delete, &Operation::Delete, None, delete);
+    assert!(
+        error
+            .to_string()
+            .starts_with(&format!("Cannot process delete snapshot: {delete}"))
+    );
+    let after = planner
+        .initial_offset(&StartPosition::AfterSnapshot(SnapshotId::new(delete)))
+        .await
+        .expect("after")
+        .expect("some");
+    assert_eq!(after, input_offset(&table, delete, 0));
+    assert!(
+        planner
+            .next_window(&after, WindowLimit::Capped)
+            .await
+            .expect("nothing follows the delete")
+            .is_none()
+    );
+    let head = commit_append(&catalog, &ident, vec![synthetic_file("b.parquet", 1)]).await;
+    let table = load(&catalog, &ident).await;
+    let planner = WindowPlanner::new(table.clone(), uncapped());
+    let error = planner
+        .initial_offset(&start)
+        .await
+        .expect_err("data after the delete keeps the refusal");
+    expect_non_append(&error, delete, &Operation::Delete, None, head);
+    let plan = planner
+        .next_window(&after, WindowLimit::Capped)
+        .await
+        .expect("resume past the delete")
+        .expect("some");
+    assert_eq!(plan.end, input_offset(&table, head, 1));
 }

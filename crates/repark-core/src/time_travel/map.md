@@ -84,8 +84,8 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   pins: mb-1/C-030
   FL-9 (ruled KEEP): an `Earliest` or `stream-from-timestamp` start on a
   zero-added-files `overwrite`/`delete` refuses at `initial_offset` where
-  Spark idles until data arrives; the parity registry's row `MB-1-FL-9`
-  declares it. pins: mb-1/C-031
+  Spark idles while no snapshot follows it; the parity registry's row
+  `MB-1-FL-9` declares it. pins: mb-1/C-031, C-035
   **MB-1 fold 2 (2026-10-07):** `open` captures the table's current schema
   as the run's read schema and passes it to every `provider_for_plan` call,
   so each batch of one source has the same columns and types, whatever the

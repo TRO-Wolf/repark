@@ -462,6 +462,7 @@ re-verifier**, so G1 is implemented as ruled.
 | C-032 | (G1) `WindowLimit::Unbounded` refuses `NonAppendSnapshot` at the first `overwrite` or `delete` in `(from, head]` even when the window already holds files, as MB0b-R17 measures for `availableNow`. `WindowLimit::Capped` keeps deliver-first over the same history. | The G1 pins in `window_fold2_pins.rs` plus mutation g1. | **PROVEN** | 2 pins green: `unbounded_walk_refuses_the_first_non_append_before_any_file` (R17's shape, overwrite and delete, uncapped and max-files 1: the refusal names the non-append, `from` = the first append, `to` = the head) and `capped_walk_delivers_both_appends_then_refuses_the_non_append` (ends `(a,1)`, `(b,1)`, then the refusal `from` = b). g1 red. pins: mb-1/C-032 |
 | C-033 | (G2) The read schema is the table's current schema when `MicroBatchSource::open` resolves the table, held for the source's lifetime and passed to `provider_for_plan` on every batch. Under capped windows a rename reads every batch under the new name, a drop and re-add reads `note=null` for the dropped field's file, a promotion reads `Int64`/`Float64` in every batch, and a schema change after open leaves the batch schema as it was. | The G2 pins in `microbatch_source_fold2_tests.rs` plus mutations g2a and g2b. | **PROVEN** | 4 pins green, each at `streaming-max-files-per-micro-batch=1`, the rendered schema and rows byte-exact per batch: `a_rename_before_start_reads_every_batch_under_the_new_name` (k03), `a_drop_and_re_add_never_shows_the_dropped_field` (k04: row 1 `note` empty, never `old`), `a_type_promotion_before_start_reads_every_batch_promoted` (k05) and `a_schema_change_after_open_leaves_the_batch_schema_alone`. g2a and g2b red. pins: mb-1/C-033 |
 | C-034 | (G3) The F6 range contract holds on a non-append start snapshot: a `from.position` above the added data files of a `replace` or an `overwrite` start refuses `OffsetPositionOutOfRange { snapshot, position, files }` under both limits, and a position equal to the count resumes. | The G3 pins in `window_fold2_pins.rs` plus the re-verifier's N8 and g3b. | **PROVEN** | 2 pins green: `a_replace_start_past_its_added_files_refuses` (`(r,2)` and `(r,99)` refuse with `files = 1`; `(r,1)` resumes to the head) and `an_overwrite_start_past_its_added_files_refuses` (`(o,3)` and `(o,99)` refuse with `files = 2`; `(o,2)` resumes). N8 (the replace arm becomes `Ok(())`), which survived 61/61 in the re-verify, is red; g3b (the overwrite arm drops `check_position`) is red. pins: mb-1/C-034 |
+| C-035 | (G4) The FL-9 divergence is pinned on the shape where Spark idles: a zero-added-files `delete` as the head with nothing after it. `FromTimestamp` landing on it refuses `NonAppendSnapshot` (`from: None`, `to` = the delete) at `initial_offset`, and still refuses (`to` = the new head) once an append follows. `AfterSnapshot(D)` gives `(D, 0)`, reads `None` while nothing follows, then resumes to the append. The registry row `MB-1-FL-9` cites this pin, and its Spark half reads "idles while no snapshot follows it". | The G4 pin in `window_fold2_pins.rs`, the registry row, the docs-link gate, plus mutation g4. | **PROVEN** | 1 pin green: `a_delete_as_head_refuses_at_the_initial_offset` (q10's shape). g4 (the landing refusal drops its zero-added-files test, `&& false`) is red on it and on fold 1's `from_timestamp_landing_on_delete_refuses_at_the_initial_offset`. pins: mb-1/C-035 |
 
 ## Dated decision rows — fold 2
 
@@ -475,6 +476,13 @@ re-verifier**, so G1 is implemented as ruled.
   and only a new source (a new run) reads the new schema. The provider pin is renamed
   `provider_reads_older_files_under_the_read_schema_by_field_id` and passes the
   table's current schema.
+
+- **G4 (2026-10-07).** C-031's registry pin moves from
+  `from_timestamp_landing_on_delete_refuses_at_the_initial_offset`, whose fixture has an
+  append after the delete (there Spark's walk passes the delete and `shouldProcess` fails
+  batch 0, so both engines refuse at once), to the delete-as-head pin of C-035. The Spark
+  half now reads "idles while no snapshot follows it"; its idle half stays unmeasured, as
+  the row says.
 
 ## Gates — fold 2
 
@@ -497,4 +505,8 @@ test result: FAILED. 65 passed; 1 failed; 0 ignored; 0 measured; 804 filtered ou
 g3b window.rs the overwrite/delete arm drops `self.check_position(from, count)?;`
 test microbatch::window::tests::window_fold2_pins::an_overwrite_start_past_its_added_files_refuses ... FAILED
 test result: FAILED. 65 passed; 1 failed; 0 ignored; 0 measured; 804 filtered out
+g4 window.rs landing `) && self.added_file_count(snapshot).await? == 0` -> `) && false`
+test microbatch::window::tests::window_fold2_pins::a_delete_as_head_refuses_at_the_initial_offset ... FAILED
+test microbatch::window::tests::window_fold_pins::from_timestamp_landing_on_delete_refuses_at_the_initial_offset ... FAILED
+test result: FAILED. 64 passed; 2 failed; 0 ignored; 0 measured; 804 filtered out
 ```
