@@ -137,6 +137,72 @@ fn from_options_refuses_two_start_keys() {
     );
 }
 
+#[test]
+fn from_options_matches_keys_ascii_case_insensitively() {
+    let options = SourceOptions::from_options(&options_of(&[
+        ("Streaming-Max-Files-Per-Micro-Batch", "1"),
+        ("STREAMING-MAX-ROWS-PER-MICRO-BATCH", "1"),
+        ("Stream-From-Timestamp", "1724720185000"),
+    ]))
+    .expect("mixed-case keys must parse");
+    assert_eq!(options.caps.max_files, NonZeroUsize::new(1));
+    assert_eq!(options.caps.max_rows, NonZeroU64::new(1));
+    assert_eq!(
+        options.start,
+        StartPosition::FromTimestamp {
+            millis: 1_724_720_185_000
+        }
+    );
+    let options =
+        SourceOptions::from_options(&options_of(&[("Repark.CDC.start-after-snapshot-id", "5")]))
+            .expect("a mixed-case start key must parse");
+    assert_eq!(
+        options.start,
+        StartPosition::AfterSnapshot(SnapshotId::new(5))
+    );
+    for (key, option) in [
+        (
+            "STREAMING-SKIP-OVERWRITE-SNAPSHOTS",
+            "streaming-skip-overwrite-snapshots",
+        ),
+        (
+            "Streaming-Skip-Delete-Snapshots",
+            "streaming-skip-delete-snapshots",
+        ),
+    ] {
+        let error = SourceOptions::from_options(&options_of(&[(key, "true")]))
+            .expect_err("a mixed-case skip key must refuse");
+        assert_eq!(error, MicroBatchError::SkipOptionRefused { option });
+    }
+    let error = SourceOptions::from_options(&options_of(&[("Streaming-Bogus", "1")]))
+        .expect_err("a mixed-case unknown key must refuse");
+    assert_eq!(
+        error,
+        MicroBatchError::UnknownOption {
+            key: String::from("Streaming-Bogus")
+        }
+    );
+}
+
+#[test]
+fn from_options_refuses_case_twins_with_different_values() {
+    let error = SourceOptions::from_options(&options_of(&[
+        ("stream-from-timestamp", "1724720185000"),
+        ("Stream-From-Timestamp", "1"),
+    ]))
+    .expect_err("case twins with different values must refuse");
+    assert_eq!(
+        error.to_string(),
+        "streaming options Stream-From-Timestamp and stream-from-timestamp are the same key in different case with different values; pass it once"
+    );
+    let options = SourceOptions::from_options(&options_of(&[
+        ("streaming-max-files-per-micro-batch", "2"),
+        ("STREAMING-MAX-FILES-PER-MICRO-BATCH", "2"),
+    ]))
+    .expect("case twins with equal values must parse");
+    assert_eq!(options.caps.max_files, NonZeroUsize::new(2));
+}
+
 async fn session_with_two_appends() -> (TempDir, Session) {
     let warehouse = TempDir::new().expect("a scratch warehouse must build");
     let root = warehouse

@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 
@@ -36,10 +37,10 @@ impl SourceOptions {
         let mut start = StartPosition::Earliest;
         let mut timestamp_seen = false;
         let mut snapshot_seen = false;
-        for (key, value) in options {
-            match key.as_str() {
+        for (folded, (key, value)) in fold_key_case(options)? {
+            match folded.as_str() {
                 SKIP_OVERWRITE_KEY | SKIP_DELETE_KEY => {
-                    let option = if key.as_str() == SKIP_OVERWRITE_KEY {
+                    let option = if folded == SKIP_OVERWRITE_KEY {
                         SKIP_OVERWRITE_KEY
                     } else {
                         SKIP_DELETE_KEY
@@ -62,8 +63,10 @@ impl SourceOptions {
                     start = StartPosition::AfterSnapshot(parse_snapshot_id(value)?);
                     snapshot_seen = true;
                 }
-                _ if has_interpreted_prefix(key) => {
-                    return Err(MicroBatchError::UnknownOption { key: key.clone() });
+                _ if has_interpreted_prefix(&folded) => {
+                    return Err(MicroBatchError::UnknownOption {
+                        key: key.to_string(),
+                    });
                 }
                 _ => {}
             }
@@ -75,6 +78,28 @@ impl SourceOptions {
         }
         Ok(Self { caps, start })
     }
+}
+
+fn fold_key_case(
+    options: &BTreeMap<String, String>,
+) -> Result<BTreeMap<String, (&str, &str)>, MicroBatchError> {
+    let mut folded: BTreeMap<String, (&str, &str)> = BTreeMap::new();
+    for (key, value) in options {
+        match folded.entry(key.to_ascii_lowercase()) {
+            Entry::Vacant(slot) => {
+                slot.insert((key.as_str(), value.as_str()));
+            }
+            Entry::Occupied(slot) => {
+                let (first, seen) = *slot.get();
+                if seen != value.as_str() {
+                    return Err(MicroBatchError::Catalog(format!(
+                        "streaming options {first} and {key} are the same key in different case with different values; pass it once"
+                    )));
+                }
+            }
+        }
+    }
+    Ok(folded)
 }
 
 fn has_interpreted_prefix(key: &str) -> bool {

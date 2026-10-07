@@ -66,8 +66,14 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   snapshots and can refuse `SourceReplaced`. `open` still loads once to
   refuse a missing table up front.
   pins: mb-1/C-026
+  **MB-1 fold 1 round B (2026-10-07):** option keys match ASCII
+  case-insensitively, as Spark's `CaseInsensitiveStringMap` does; each key is
+  lowercased once at parse and values keep their case. Two spellings of one
+  key with different values refuse `Catalog` naming both spellings and no
+  value, so an unprefixed credential never renders.
+  pins: mb-1/C-027
 - `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
-  under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026
+  under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027
 - `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table
   AS OF decision both doors share. `provider_for_spec` is the #802
   `prepare_metadata_as_of` body moved down from `repark-spark` (refuse/serve-current/

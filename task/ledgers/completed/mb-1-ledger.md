@@ -363,6 +363,7 @@ already takes a `Table` by value.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-026 | (F2) `MicroBatchSource` holds the catalog handle and the `TableIdent`, never a frozen `Table`. `initial_offset` and `next_batch` reload the table on every call and build the `WindowPlanner` from the fresh table, as Spark's `latestOffset` calls `table.refresh()` every trigger. One source sees a snapshot committed after it opened, and refuses `SourceReplaced` when the table is dropped and re-created under the same name between two `next_batch` calls. | The F2 pins in `microbatch_source_tests.rs` plus the reload mutation. | **PROVEN** | 2 pins green: `the_same_source_sees_appends_committed_after_open` (c02: open, drain 5 rows, INSERT `(6),(7)`, the same source returns exactly `[6, 7]`, then `None`) and `the_same_source_refuses_a_table_replaced_under_its_name` (drop, re-create, insert, then `SourceReplaced` with the recorded and the new uuid). The reload mutation is red on both. pins: mb-1/C-026 |
+| C-027 | (F3) Every streaming option key matches ASCII case-insensitively, as Spark's `CaseInsensitiveStringMap` does: the Iceberg Spark keys, the skip keys and the `repark.cdc.` prefix. Each key is lowercased once at parse; values keep their case; an unknown prefixed key refuses under the spelling the user passed. Two spellings of one key with different values refuse `Catalog` naming both spellings and no value; with equal values they are accepted. | The F3 pins in `microbatch_source_tests.rs` plus the lowercase mutation. | **PROVEN** | 2 pins green: `from_options_matches_keys_ascii_case_insensitively` (c01: the mixed-case caps, `Stream-From-Timestamp` and `Repark.CDC.start-after-snapshot-id` apply; `STREAMING-SKIP-OVERWRITE-SNAPSHOTS=true` and `Streaming-Skip-Delete-Snapshots=true` refuse MBE-3; `Streaming-Bogus` refuses MBE-17 under its own spelling) and `from_options_refuses_case_twins_with_different_values` (the text byte-exact, then equal twins parse). The lowercase mutation is red on both. pins: mb-1/C-027 |
 
 ## Gates — fold 1 round B
 
@@ -373,4 +374,8 @@ m8 microbatch_source.rs: `open` keeps the first loaded `Table` and `load` return
 test time_travel::microbatch_source::tests::the_same_source_refuses_a_table_replaced_under_its_name ... FAILED
 test time_travel::microbatch_source::tests::the_same_source_sees_appends_committed_after_open ... FAILED
 test result: FAILED. 13 passed; 2 failed; 0 ignored; 0 measured; 1027 filtered out
+m9 microbatch_source.rs: `folded.entry(key.to_ascii_lowercase())` -> `folded.entry(key.clone())` (no lowercase step)
+test time_travel::microbatch_source::tests::from_options_refuses_case_twins_with_different_values ... FAILED
+test time_travel::microbatch_source::tests::from_options_matches_keys_ascii_case_insensitively ... FAILED
+test result: FAILED. 15 passed; 2 failed; 0 ignored; 0 measured; 1027 filtered out
 ```
