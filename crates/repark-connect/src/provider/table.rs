@@ -111,7 +111,8 @@ impl TableProvider for PostgresTable {
         let request = self.pushdown.push(&pushed, request).ok_or_else(|| {
             DataFusionError::Plan(format!(
                 "the filters pushed to Postgres source `{}` bind more than {MAX_PARAM_SLOTS} \
-                 values; narrow the filter or set `pushdown_predicate` to false",
+                 values; narrow the filter or set `pushdown_predicate` to false (registry row \
+                 CONNECT-DECL-pg-bound-values in docs/spark-sql-iceberg-parity.md)",
                 self.source.name()
             ))
         })?;

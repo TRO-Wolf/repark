@@ -3758,6 +3758,26 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   synchronous, and building a session does no I/O (CFG-2 D-4). Retire when an asynchronous
   listing lands through the doors' catalog operations, or the 1.7 crawler's read surface (the
   pre-declared `crawler → connect` edge) serves it.
+### CONNECT-DECL-pg-bound-values — a Postgres scan whose pushed filters bind more than 1024 values refuses the plan
+- **repark** — every pushed value rides a `pg_catalog.current_setting('repark.pN')` slot, and a
+  scan binds at most 1024 (`MAX_PARAM_SLOTS`). A single conjunct that would bind past that, and
+  an `IN` list past 256 items, stays above the scan. But the classifier is per conjunct and
+  stateless, so several pushed conjuncts can together pass 1024 (five 256-item `IN` lists on
+  five columns): DataFusion has already removed them from the plan, so the scan cannot hand them
+  back, and `create_physical_plan` refuses with `DataFusionError::Plan`, naming the source, the
+  bound, the workaround and this row. The workaround is `pushdown_predicate = false`
+  (`pushDownPredicate` on the `read_postgres` door), which keeps every filter in the engine, or
+  a narrower filter.
+- **Apache Spark** — the JDBC source compiles a pushed filter into the `WHERE` text with its
+  values inlined as literals, so it has no bound and never refuses. *(oracle: documented —
+  Spark's `JdbcDialect.compileValue` and `JDBCRDD`'s filter compilation; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/pushdown.rs::pushed_values_past_1024_fail_the_plan`
+  (1024 values push; a 1025th refuses, naming the bound, `pushdown_predicate` and this row)
+- **Rationale** — DECLARED 2026-10-07 (C-2c fold 1; the verifier's S2, ruling L5; sketch §0 line
+  5 and the ledger's R-9). Values are bound, never compiled into the SQL text (NS §5, FL-13), and
+  inside COPY each bound value takes one `set_config` slot. Retire when
+  the classifier budgets values across a scan's conjuncts, keeping the excess above the scan
+  instead of refusing.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.

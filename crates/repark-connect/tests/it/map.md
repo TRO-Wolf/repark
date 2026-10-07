@@ -30,12 +30,13 @@ See [../map.md](../map.md).
   provider. Sketch §5.2's unit halves: `p01_null_tests_push` … `p11_limit_pushes_only_without_residual`
   (with `p06b_…` and `p06c_…`) and `r01_float_comparisons_stay_residual` …
   `r05_pushdown_predicate_false_pushes_nothing`, each asserting the class, the rendered SQL and
-  the bound texts; `pushed_values_past_1024_fail_the_plan`; `a_limit_past_i64_max_never_pushes`
+  the bound texts; `pushed_values_past_1024_fail_the_plan` (the refusal names
+  `CONNECT-DECL-pg-bound-values` since fold 1); `a_limit_past_i64_max_never_pushes`
   (fold 1: `skip + fetch` past `i64::MAX` pushes no limit);
   `pushdown_limit_gates_the_limit_and_pushdown_predicate_the_filters` (fold 1: each switch gates
   its own push); and
   `a_filter_the_optimizer_would_still_rewrite_stays_inexact` (`qty <> NULL` renders but stays
-  `Inexact`). pins: c-2/C-070, C-071, C-072, C-073, C-074, C-077, C-078, C-081, C-082
+  `Inexact`). pins: c-2/C-070, C-071, C-072, C-073, C-074, C-077, C-078, C-081, C-082, C-087
 - `live_pushdown.rs` — C-2c (2026-10-07), behind `postgres`, live like `live_pg.rs` (whose
   `Cell` it shares). Each cell seeds `edges`, one table holding every edge sketch §5.2 names
   (an all-NULL row; the integer extremes; `numeric(10,2)` and unconstrained `numeric` with a

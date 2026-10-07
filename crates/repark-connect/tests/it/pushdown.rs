@@ -797,10 +797,14 @@ async fn pushed_values_past_1024_fail_the_plan() {
         .create_physical_plan()
         .await
         .expect_err("a 1025th value refuses");
-    assert!(
-        error.to_string().contains("more than 1024 values"),
-        "{error}"
-    );
+    let message = error.to_string();
+    for part in [
+        "more than 1024 values",
+        "`pushdown_predicate` to false",
+        "CONNECT-DECL-pg-bound-values",
+    ] {
+        assert!(message.contains(part), "{message}");
+    }
 }
 
 #[tokio::test]

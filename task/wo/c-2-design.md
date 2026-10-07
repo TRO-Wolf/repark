@@ -640,6 +640,7 @@ replaces it. **Kept:** `CONNECT-DECL-pg-time` (§2.7), plus C-1's two auth rows,
 | `CONNECT-DECL-pg-server-version` | C-2b | servers older than 14 |
 | `CONNECT-DECL-pg-multi-host` | C-2b | libpq host lists |
 | `CONNECT-DECL-pg-listing` | C-2c | |
+| `CONNECT-DECL-pg-bound-values` | C-2c fold 1 | pushed filters binding more than 1024 values refuse the plan; `pushdown_predicate = false` is the workaround |
 | `CONNECT-DECL-pg-ddl` | C-2d | |
 | `CONNECT-DECL-pg-partitioned-read` | C-2d | C-3 |
 

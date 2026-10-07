@@ -32,12 +32,12 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
   `supports_filters_pushdown` answers each conjunct through `Pushdown::support`: `Exact` or
   `Inexact`, never `Unsupported`, so `scan` sees every conjunct (D-M6). `scan` splits the
   filters again with the same rule, renders the pushed ones into the `ScanRequest`
-  (`Pushdown::push`; past 1024 bound values it refuses the plan, naming the bound and
-  `pushdown_predicate`), pushes `limit` only when `pushdown_limit` is set (the default; Spark's
+  (`Pushdown::push`; past 1024 bound values it refuses the plan, naming the bound,
+  `pushdown_predicate` and `CONNECT-DECL-pg-bound-values`), pushes `limit` only when `pushdown_limit` is set (the default; Spark's
   `pushDownLimit`, separate from `pushdown_predicate`), no residual conjunct remains (P-11, the
   scan's own re-check) and the limit, DataFusion's `skip + fetch`, fits `i64` (Postgres's `LIMIT` is a
   `bigint`; past it no limit pushes), takes `batch_rows` or else the session batch size under the 64 MiB cap, and
-  returns a `PostgresScanExec`. pins: c-2/C-070, C-072, C-074, C-077, C-081, C-082
+  returns a `PostgresScanExec`. pins: c-2/C-070, C-072, C-074, C-077, C-081, C-082, C-087
 - `scan.rs` — **`WallClockLocaliser`** (`localise(&TimestampMicrosecondArray)`, `zone_label()`;
   the trait sits here with no zone dependency, NS-10) and **`PostgresScanExec`**, one partition.
   `DisplayAs` renders, per scan, `PostgresScanExec: source=<name>, relation=<schema.table>` (or
