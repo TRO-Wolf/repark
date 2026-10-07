@@ -99,8 +99,14 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   is kept, and every later `decode`, `finish` or flush answers it without reading input;
   `finish` takes `&mut self`. Since C-2b round 2 (2026-10-07) the file also holds
   `ProtocolViolation`, the decoder's reason enum, with its `Display`; C-2b round 3 adds
-  `UnexpectedResponse`, a driver answer the read path cannot use.
-  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
+  `UnexpectedResponse`, a driver answer the read path cannot use. The C-2a open items
+  (2026-10-07) reserve the carry once: on a field's first partial chunk (the first that holds
+  any of its bytes) an empty carry reserves exactly the declared length, capped at
+  `MAX_FIELD_BYTES`, so it never grows by `Vec` doubling and a straddling field peaks near
+  twice its size (the carry and the builder copy) rather than three times. The length word has
+  already refused anything past `MAX_FIELD_BYTES`; the cap keeps the reservation bounded even
+  so. A field whose length word ends a chunk reserves nothing until its first byte arrives.
+  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017, C-089, C-091
 - `settings.rs` — C-1 (2026-10-05). `ConnectionSettings::from_props` reads one source's props
   (the core loader's `SourceSpec.props`). It interprets only `auth_method` (R-5, CC-3) and
   carries every other prop through untouched; the interpreted `auth_method` key leaves the

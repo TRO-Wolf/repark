@@ -146,16 +146,19 @@ four-line records.
   `ServerText` mapping) to `::text`, and a pin asserts the cast.** `ServerText` decode keeps
   bytes verbatim, which is only correct for server-rendered text; a raw binary interval is
   usually valid UTF-8 and would decode silently without the cast.
-- **Open item (2026-10-06, re-verify S3): the straddling-field peak is still about 3x the
-  field.** The carry grows by `Vec` doubling from the first partial chunk, so its capacity nears
-  twice the field before the builder copy (re-verify `memory.rs`, 512–1023 MiB fields). Reserving
-  the carry at the declared field length on the first partial chunk would bring it to about 2x.
-  Non-blocking; C-3 owns the gated memory benchmark.
-- **Open item (2026-10-06, re-verify S3): three accounting mutations survive.** They are
+- **CLOSED (2026-10-07, §13, C-089): the straddling-field peak is still about 3x the field.**
+  The carry grew by `Vec` doubling from the first partial chunk, so its capacity neared twice
+  the field before the builder copy (re-verify `memory.rs`, 512–1023 MiB fields). The carry now
+  reserves the declared field length on the first partial chunk, and the peak is 2.00x
+  (§13.2). Pin: `copy_accounting.rs::carry_reserves_the_declared_length_on_the_first_partial_chunk`.
+  C-3 still owns the gated memory benchmark.
+- **CLOSED (2026-10-07, §13, C-090): three accounting mutations survive.** They were
   `buffered_bytes()` without the carry (r11), a variable-width NULL charged 0 (r13), and
   variable-width values charged with no offset bytes (r15)
-  (the re-verify's `mutate_rv.py`). Each needs an exact-count pin on `buffered_bytes()`.
-  Non-blocking.
+  (the re-verify's `mutate_rv.py`). Exact-count pins now kill each one (§13.1 m142–m144):
+  `copy_accounting.rs::buffered_bytes_counts_a_mid_field_carry`,
+  `::variable_width_nulls_charge_their_offset_slot` and
+  `::variable_width_values_charge_bytes_and_offset`.
 - **D-M1, the dependency measurement (2026-10-07, C-2b round 1a, branch
   `feat/c-2b-postgres-connection` from main `575f57ca`).** Round 1a is dependencies and the
   feature only: the root `[workspace.dependencies]` gains `tokio-postgres 0.7` (locked 0.7.18),
@@ -1157,3 +1160,98 @@ Run on the finished tree. Each cargo command ran under the build-slot lock.
 | `python3 scripts/check_docs_links.py` | 0 | 1352 files, 7284 links clean |
 | `python3 scripts/check_ledger_grammar.py` | 0 | 308 live ledgers clean |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+## 13. C-2a open items — the straddling-field peak and three accounting pins (2026-10-07)
+
+**Branch:** `fix/c-2a-open-items` from main `930ccbf3`. **Model:** Claude Opus 5.5
+(`claude-opus-5-5`, high). **Scope:** the two §3 open items the C-2a re-verify left (S3, both
+non-blocking): the carry's `Vec` doubling, and its surviving mutations r11, r13 and r15. No
+live cell changes, so no container ran.
+
+### PROPOSITION LEDGER — C-2a open items — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-089 | The carry is reserved once. On a field's first partial chunk (the first chunk that holds any of the field's bytes, with the carry empty) `CopyBinaryDecoder` calls `reserve_exact(length.min(MAX_FIELD_BYTES))`, so the carry's capacity equals the declared length and never grows by doubling. A 4096-byte `text` field opened with 100 bytes reads `buffered_bytes()` = 4096 (no row is buffered, so the whole charge is the carry), and still 4096 after 1000 more bytes. The re-verify's `memory.rs` shape (one `text` field of 512, 513, 700 and 1023 MiB, fed in 64 KiB chunks) peaks at 2.00x the field, down from 3.00x (2.46x at 700 MiB). Fed whole, the field still peaks at 1.00x. A length past `MAX_FIELD_BYTES` still refuses at the length word with `FieldTooLong` before any reservation (C-015 unchanged); the `min` bounds the reservation even so. | `copy_accounting.rs::carry_reserves_the_declared_length_on_the_first_partial_chunk`; mutation m141; §13.2. | PROVEN | §13.1 m141 red; §13.2 before and after. The `min` cannot fire behind the length word, so its removal is an equivalent mutation (§13.3 R-2). |
+| C-090 | `buffered_bytes()` is exact for the three shapes the re-verify's survivors touched. Each expected count comes from the Arrow layout the builders hold: one `i32` offset slot (4 bytes) per variable-width row, value or NULL; the stored bytes of a variable-width value; the fixed width per fixed-width row (`int4` 4); and one validity bit per slot, ceil(rows x columns / 8); plus the carry's capacity. One buffered `abc` row and a 64-byte `text` field opened with 10 bytes read 3 + 4 + 1 + 64 = 72. Three all-NULL `text, bytea, int4` rows read 3 x (4 + 4 + 4) + ceil(9 / 8) = 38. The rows (`abc`, five bytes, `7`) and (empty, empty, `8`) read (3 + 4) + (5 + 4) + 4 + 4 + 4 + 4 + ceil(6 / 8) = 33. | `copy_accounting.rs::buffered_bytes_counts_a_mid_field_carry`, `::variable_width_nulls_charge_their_offset_slot`, `::variable_width_values_charge_bytes_and_offset`; mutations m142 (r11), m143 (r13), m144 (r15). | PROVEN | §13.1: all three re-verify survivors are now red. Extends C-016 and C-017 from bounds to exact counts. |
+| C-091 | Shape and files: `src/copy_binary.rs` is the only product change (three lines, the reservation), at 476/480. The new `tests/it/copy_accounting.rs` (98 lines) holds the four pins and borrows `copy_binary.rs`'s stream builders (`Field`, `base`, `header_with`, `tuple`, now `pub(crate)`), so `tests/it/copy_binary.rs` stays at 605/700. No public signature changes, no dependency changes, no code comments. Every gate in §13.4 passes. | §13.4. | PROVEN | — |
+
+### 13.1 Mutations (open items)
+
+Each mutation was applied alone to the finished tree, the crate's tests run
+(`cargo test -p repark-connect --no-fail-fast`) and the file restored from the copy taken before
+the edit (`mutate_open.py`, the re-verify's `mutate_rv.py` shape). The tree's diff was the same
+before and after the four runs.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m141 | C-089 | grow the carry by `Vec` doubling again: drop the reservation (`src/copy_binary.rs`) | RED | `carry_reserves_the_declared_length_on_the_first_partial_chunk` at `copy_accounting.rs:43`; `buffered_bytes_counts_a_mid_field_carry` at `:56` |
+| m142 | C-090 | r11: `buffered_bytes()` leaves out the carry's capacity (`src/copy_binary.rs`) | RED | `carry_reserves_the_declared_length_on_the_first_partial_chunk` at `copy_accounting.rs:43`; `buffered_bytes_counts_a_mid_field_carry` at `:56` |
+| m143 | C-090 | r13: a variable-width NULL charges 0, fixed widths kept (`src/types/postgres.rs`) | RED | `variable_width_nulls_charge_their_offset_slot` at `copy_accounting.rs:70` |
+| m144 | C-090 | r15: a variable-width value charges no offset bytes (`src/types/postgres.rs`) | RED | `variable_width_values_charge_bytes_and_offset` at `copy_accounting.rs:94`; `buffered_bytes_counts_a_mid_field_carry` at `:56` |
+
+All four are red, and none is equivalent. Before this unit, r11, r13 and r15 were green in
+every repo pin (the re-verify's `mutations.json`).
+
+### 13.2 The peak, measured (2026-10-07)
+
+The re-verify's probe (`memory.rs`, a counting global allocator, release build), copied with its
+`common` module and pointed at this clone, ran under `ulimit -v 67108864` and the build-slot
+lock. Each row is one `text` field between two one-byte rows, under the default limits. Peak
+growth is measured from the decoder's creation.
+
+| field | chunk | before (main `930ccbf3`) | after |
+|---|---|---|---|
+| 512 MiB | 64 KiB | 1535.8 MiB (3.00x) | 1024.0 MiB (2.00x) |
+| 513 MiB | 64 KiB | 1536.8 MiB (3.00x) | 1026.0 MiB (2.00x) |
+| 700 MiB | 64 KiB | 1723.8 MiB (2.46x) | 1400.0 MiB (2.00x) |
+| 1023 MiB (`(1 << 30) - 64`) | 64 KiB | 3071.5 MiB (3.00x) | 2048.0 MiB (2.00x) |
+| each of the four | whole | 1.00x | 1.00x |
+
+Before, the carry's first extend was the chunk's remainder (65 504 bytes after the header, the
+first row and the field's two words), and doubling from there passes 512 MiB only at about 1023.5 MiB, so the carry
+alone nearly doubled the field. After, the carry holds the field once and the builder copy holds
+it again. Every other probe line is unchanged: the `i32::MAX` length word refuses with 0 bytes
+of growth, the carry is released after the flush (0.0 MiB retained), and the tiny-row and
+all-NULL runs flush as before.
+
+### 13.3 Readings acted on (no halt)
+
+- **R-1, the up-front charge.** A stream that declares a length of up to `MAX_FIELD_BYTES` and
+  sends its first byte now reserves that length at once, where before the carry grew only as
+  bytes arrived. The brief's guard is the cap: a lying length reserves at most 1 GiB, the
+  bound the length word already enforces, and the reservation is untouched virtual memory until
+  bytes fill it. `buffered_bytes()` reports it from that chunk on, so the C-2c scan's
+  `MemoryReservation` is resized to the full field before its bytes arrive and refuses early
+  when the pool cannot hold it, rather than mid-field.
+- **R-2, the `min`.** `field_length` refuses any length past `MAX_FIELD_BYTES` before
+  `FieldValue` is entered, so `length.min(MAX_FIELD_BYTES)` always equals `length`. It stays
+  as the brief's stated guard, which keeps the reservation bounded if the length check ever
+  moves; its removal is an equivalent mutation and was not run.
+- **R-3, no reservation on an empty chunk.** A chunk that ends just after the length word
+  enters `FieldValue` with no bytes available. The reservation waits for the first byte, so
+  `copy_field_at_postgres_max_is_accepted` (the maximum length with no payload) still reserves
+  nothing.
+- **R-4, a reused carry.** A carry kept from an earlier field (cleared, capacity within the
+  byte cap, C-016) whose capacity already covers the new length keeps that capacity, because
+  `reserve_exact` never shrinks. The pins run on a fresh decoder, where the capacity is exactly
+  the declared length.
+
+### 13.4 Gates (open items)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock and `ulimit -v`.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-connect` | 0 | 123 passed, 51 ignored (the live cells), 0 failed |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1112 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 368 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | 1354 files, 7295 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 309 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2ao origin/main HEAD` | 0 | `comment-ban hits=0` |

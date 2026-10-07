@@ -7,7 +7,7 @@ See [../map.md](../map.md).
 
 ## Contents
 
-- `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings; mod url;`, plus
+- `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod postgres_types; mod settings; mod url;`, plus
   `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
   mod scan; mod tls;` under the `postgres` feature.
 - `explain.rs` — C-2c (2026-10-07), behind `postgres`, no network: sketch §5.3 over the
@@ -234,6 +234,18 @@ See [../map.md](../map.md).
   `decoder_is_poisoned_after_an_error` (an OID refusal, then a valid chunk answers the same
   error unread, and so does `finish`).
   pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
+- `copy_accounting.rs` — C-2a open items (2026-10-07): exact counts on
+  `CopyBinaryDecoder::buffered_bytes()`, each derived from the Arrow layout the builders hold (an
+  `i32` offset slot per variable-width row, the fixed width per `int4` row, one validity bit per
+  slot) under the default limits, so nothing flushes. `carry_reserves_the_declared_length_on_the_first_partial_chunk`
+  (a 4096-byte `text` field opened with 100 bytes charges exactly 4096, and still 4096 after
+  1000 more), `buffered_bytes_counts_a_mid_field_carry` (one buffered `abc` row plus a 64-byte
+  field opened with 10 bytes charges 3 + 4 + 1 + 64), `variable_width_nulls_charge_their_offset_slot`
+  (three all-NULL `text, bytea, int4` rows charge 3 x (4 + 4 + 4) + ceil(9 / 8)) and
+  `variable_width_values_charge_bytes_and_offset` (`abc`, five bytes, `7`, then two empty
+  values and `8`, charge (3 + 4) + (5 + 4) + 4 + 4 + 4 + 4 + ceil(6 / 8)). It borrows
+  `copy_binary.rs`'s stream builders, which are `pub(crate)` for it.
+  pins: c-2/C-089, C-090
 - `postgres_types.rs` — C-1 (2026-10-05): one round-trip pin per mapped row, named in the row
   (`bool_round_trips` … `bytea_round_trips`): Arrow array → wire values → Arrow array, equal,
   over NULLs and boundary values (`MIN` / `MAX`, `-0.0`, the infinities and NaN compared by bit

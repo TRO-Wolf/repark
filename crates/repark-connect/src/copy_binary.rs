@@ -234,6 +234,9 @@ impl CopyBinaryDecoder {
                         *pos += length;
                         self.append_value(column, bytes)?;
                     } else {
+                        if self.carry.is_empty() && available > 0 {
+                            self.carry.reserve_exact(length.min(MAX_FIELD_BYTES));
+                        }
                         let taken = (length - self.carry.len()).min(available);
                         self.carry
                             .extend_from_slice(input.get(*pos..*pos + taken).unwrap_or_default());

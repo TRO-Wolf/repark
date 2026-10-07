@@ -1,3 +1,4 @@
+mod copy_accounting;
 mod copy_binary;
 #[cfg(feature = "postgres")]
 mod explain;
