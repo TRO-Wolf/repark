@@ -88,8 +88,8 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs, task/ledgers/completed/mb-1-ledger.md, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Negative pins cover the empty vector, the repeated table, the absent stamp, the future and unparsable versions, the partial stamp, the corrupt property, and the unknown-table lookup; round 2 adds the unknown start id, the past-head stamp, the empty table, the dangling and replaced from, the mid-snapshot resume past a non-append, and the unknown end snapshot; round 3 adds the two skip keys, unknown prefixed keys, malformed values, two start keys, unknown catalogs and tables, malformed identifiers, and the empty table.
-      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-iceberg/src/microbatch/provider.rs, crates/repark-core/src/time_travel/microbatch_source.rs]
+      evidence: Negative pins cover the empty vector, the repeated table, the absent stamp, the future and unparsable versions, the partial stamp, the corrupt property, and the unknown-table lookup; round 2 adds the unknown start id, the past-head stamp, the empty table, the dangling and replaced from, the mid-snapshot resume past a non-append, and the unknown end snapshot; round 3 adds the two skip keys, unknown prefixed keys, malformed values, two start keys, unknown catalogs and tables, malformed identifiers, and the empty table; fold 1 adds the non-append start snapshot, the timestamp past the head, the out-of-range position, real expiry, non-canonical versions, and the missing record count.
+      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-iceberg/src/microbatch/window_fold_pins.rs, crates/repark-iceberg/src/microbatch/provider.rs, crates/repark-core/src/time_travel/microbatch_source.rs]
     - id: AT-3
       status: ATTACKED
       evidence: All 24 variants and 5 reasons render non-empty; the 8 Spark-quoted rows (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15) are pinned byte-exact; round 2 pins the MBE-1/MBE-2 prefixes plus variant fields on the live refusal path; round 3 pins the MBE-3 and MBE-17 texts byte-exact on the live from_options path.
@@ -118,7 +118,7 @@ COVERAGE_ATTESTATION:
       justification: No new log or metric surface; every failure is a typed value with a named fix.
     - id: AT-10
       status: ATTACKED
-      evidence: Round 1: two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift). Round 2: dropping with_fail_on_non_append fails exactly the 2 refusal pins of 46. Round 3: letting the skip keys pass fails exactly the MBE-3 pin of 13. All restores verified by diff.
+      evidence: Round 1: two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift). Round 2: dropping with_fail_on_non_append fails exactly the 2 refusal pins of 46. Round 3: letting the skip keys pass fails exactly the MBE-3 pin of 13. Fold 1: m1, m2, m5, m6 and m7 are red on exactly their owning pins (the tails are in the fold-1 gates). All restores were verified by diff, and fold 1's by cmp.
       artifacts: [task/ledgers/staging/mb-1-ledger.md, task/ledgers/completed/mb-1-ledger.md]
 ```
 
@@ -248,3 +248,103 @@ and no exception added. `session.rs` untouched. The commit hook rejected the
 first attempt on one ledger typo, fixed before landing.
 After the ledger move to `completed/`, the map-sync and ledger-grammar gates
 re-ran green on the post-move tree.
+
+## Fold 1 — 2026-10-07 — verifier FAIL on PR #979, round A (`microbatch/` in `repark-iceberg`)
+
+**Model:** claude-opus-5-5 (opus-worker build lane). **Evidence:** the verifier's
+`verdict.json` (FAIL: 4 S1, 6 S2, 5 S3) and its probe modules `verify_probes` and
+`verify_core_probes`, ported here as pins rather than copied. Round B owns the core
+wrapper (the table refresh, case-insensitive keys, the option S3s), and nothing in
+`microbatch_source.rs` changed here. MB-0 cells R3, R6 and R9 still differ by
+ruling O-5.
+
+### Step 0 — MB-0b measured before changing behaviour
+
+Three cells were recorded on Spark 4.1.2 + Iceberg 1.11.0 through `MB0_CELLS`. The
+24 MB-0 entries and the preamble stayed byte-identical: compared as parsed JSON, and
+every recorded `statement` re-derived unchanged after the recorder split. The answers
+are tabled in [mb-0-oracle.md](../../wo/microbatch/mb-0-oracle.md) §4.
+
+- **MB0b-R14 (FL-4).** Nothing streams while no snapshot has a timestamp at or after T.
+  This holds before the append below T, on a resume after it, and from a fresh
+  checkpoint. Once a snapshot at or after T lands, only that snapshot streams.
+  **Agrees with the verifier's bytecode reading.**
+- **MB0b-R15 (max rows).** A file is added, then the batch stops once its rows reach the
+  cap (`>=`). Over three 2-row files, max 3 gives `[4][2]`, max 4 gives `[4][2]` and
+  max 5 gives `[6]`, in one snapshot and across three. Max 4 was measured beyond the
+  brief to settle the equality boundary that m2 needs. **Agrees with the verifier.**
+- **MB0b-R16 (first snapshot overwrite).** `STREAM_FAILED` with the cause `Cannot
+  process overwrite snapshot: <first id>, to ignore overwrites, set
+  streaming-skip-overwrite-snapshots=true`. No batch runs. **Agrees with the verifier.**
+
+The measurement and the verifier's reading never disagree, so every ruling below
+implements the measured answer as written.
+
+## PROPOSITION LEDGER — MB-1 fold 1 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-017 | (F1) A window whose start snapshot is an `overwrite` or `delete` with `from.position` below its added-data-file count refuses `NonAppendSnapshot` (`from` = the start). That count is the ADDED data entries in the snapshot's own manifests. `AfterSnapshot(x)` positions past `x`'s files, so the restart advice resumes. `Earliest` and `FromTimestamp` landing on a non-append with no added data files refuse at `initial_offset` (FL-9). | The F1 pins in `window_fold_pins.rs` plus mutation m5. | **PROVEN** | 3 pins green: `earliest_on_first_snapshot_overwrite_refuses_then_after_snapshot_resumes` (p14), `from_timestamp_landing_on_overwrite_refuses_in_the_window` (p12, including the mid-snapshot position and `AfterSnapshot` = 2), and `from_timestamp_landing_on_delete_refuses_at_the_initial_offset` (the delete twin). m5 red. pins: mb-1/C-017 |
+| C-018 | (F4) `FromTimestamp` reads `None` while no ancestor has a timestamp at or after T, including after an append below T. Once one lands, it starts at `(oldest such ancestor, 0)`, and the snapshot below T never streams. | The F4 pins. | **PROVEN** | 2 pins green: `from_timestamp_past_head_reads_none` (renamed from `…_consumes_through_head`) and `from_timestamp_past_head_waits_for_a_snapshot_at_or_after_it` (p15 plus the later landing; it asserts the below-T and at-or-after-T fixture timestamps). pins: mb-1/C-018 |
+| C-019 | (F5) The window walks `(from, head]` in order and plans a snapshot only while it has room. `replace` is skipped. `overwrite` or `delete` ends a non-empty window before it and refuses only an empty window entering it. The up-front fail-loud scan and `with_fail_on_non_append` are gone. Draining N single-file snapshots at max-files 1 plans at most 2 listings per window. | The F5 pins plus mutation m6. | **PROVEN** | 4 pins green: `capped_window_delivers_appends_before_refusing_the_overwrite` (p17: a, b, c delivered, then the refusal `from` = S1), `capped_windows_plan_a_bounded_number_of_snapshots` (listings `[1,2,2,2,2,2,2,2,1]` over 8 snapshots through the `#[cfg(test)]` counter), and `overwrite_inside_window_refuses` / `delete_inside_window_refuses` (deliver-first, then the refusal). m6 red. pins: mb-1/C-019 |
+| C-020 | (F6) A `from.position` above the start snapshot's added-file count refuses `OffsetPositionOutOfRange { table, snapshot, position, files }`. A position equal to the count resumes. | The F6 pins plus mutation m7. | **PROVEN** | 2 pins green: `position_past_the_added_files_refuses` (p16 `(S1,99)`, `(S1,3)`, head `(S2,2)`, then `(S1,2)` resumes and the drained head reads `None`) and `offset_position_refusal_names_position_count_and_snapshot` (the text, byte-exact). m7 red. pins: mb-1/C-020 |
+| C-021 | (F7) `Earliest` over history truncated by a real `expire_snapshots` refuses `TruncatedHistory` naming the oldest snapshot and the expired parent. | The F7 pin plus mutation m1. | **PROVEN** | 1 pin green: `earliest_refuses_truncated_history_after_expiry`. m1 (`.filter(\|_\| false)`) is red, where it survived 46/46 before. pins: mb-1/C-021 |
+| C-022 | (F8) The provider reads every planned file under the end snapshot's schema, matched by Iceberg field id, with null for a column the file lacks. | The F8 pin, red without the fix. | **PROVEN** | 1 pin green: `provider_reads_older_files_under_the_end_schema_by_field_id` (c03's shape over real parquet: two inserts, ADD COLUMN `note`, one insert, then an `Earliest` `Unbounded` read gives `[(1,null),(2,null),(3,null),(4,"x")]`). Without the re-stamp it fails with the verifier's `iceberg scan missing column 'note'`. pins: mb-1/C-022 |
+| C-023 | (F9) Max rows follows MB0b-R15: add the file, then stop once rows `>=` the cap. Batch sizes and end offsets are exact for caps 3, 4 and 5, across snapshots and inside one; a zero-row tail at cap 2 is `[g0][g1]`. | The F9 pins plus mutation m2. | **PROVEN** | 2 pins green: `max_rows_adds_the_crossing_file_then_stops_at_the_cap` and `max_rows_rule_holds_inside_one_snapshot_and_on_a_zero_row_tail` (exact `(rows, end snapshot, end position)` vectors). m2 (`>=` to `>`) is red on both, where it survived before. pins: mb-1/C-023 |
+| C-024 | (F10) Both stamp readers accept the canonical version `1` only. Any other text, including `+1`, `01`, `-1`, non-numeric and out-of-range, refuses `UnsupportedOffsetFormat` carrying the text found, never a saturated number. The writers return `Result` with no `unwrap_or_default`. A task without a record count refuses `Catalog`. | The F10 pins. | **PROVEN** | 4 pins green: `from_summary_accepts_only_the_canonical_version_text` (o02), `from_property_reports_the_version_it_found` (o03, including `4294967296`, `18446744073709551615`, `1.0`, `"1"` and `null`), `from_summary_refuses_bad_version_and_partial_stamp`, and `a_task_without_a_record_count_refuses`. pins: mb-1/C-024 |
+| C-025 | MB0b-R14…R16 are recorded on live Spark 4.1.2 + Iceberg 1.11.0, merged into the recording with the 24 MB-0 entries and the preamble byte-identical, and the SHA-256 is rewritten. | `sha256sum -c`, the parsed comparison against the pre-run file, and the statement re-derivation. | **PROVEN** | `mb0_streaming_oracle.json: OK`. 24/24 old entries are equal and the preamble is equal. Statement drift is `[]` across 27 cells after the `mb0_bench.py` split. ruff check and format are clean. pins: mb-1/C-025 |
+
+VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Dated decision rows — fold 1
+
+- **FL-9 (2026-10-07).** Question: a delete snapshot adds no data files, so under F1's
+  "position below the added count" rule, `(D, 0)` from `Earliest` or `FromTimestamp`
+  reads as "consumed" and passes silently. That is the verifier's p12 delete case.
+  Flink: no answer; a start bound is a position, not an operation. Spark:
+  `shouldProcess` refuses an `overwrite` or `delete` start on every batch, at any
+  position (MB0b-R16, measured for overwrite). North Star default: refuse loud (NS-6).
+  `Earliest` and `FromTimestamp` landing on an `overwrite` or `delete` with zero added
+  data files refuse `NonAppendSnapshot` (`from: None`) at `initial_offset`.
+  `AfterSnapshot(D)` gives `(D, 0)`, which the window reads as consumed. Acted on;
+  pins in C-017. This is surfaced to the orchestrator as a ruling question.
+- **D-5 (2026-10-07).** F5's deliver-first walk departs from Spark in one case. With
+  no cap, Spark's `latestOffset` throws on reaching the overwrite through
+  `nextValidSnapshot`, so it fails the trigger without delivering the earlier appends.
+  RePark delivers them, then refuses. The ruling chose this so the restart advice is
+  lossless. Under caps the two agree (p17).
+- **D-6 (2026-10-07).** An append's added-file count comes from the same
+  incremental-append listing the window delivers, so positions and counts cannot
+  disagree. It is the same set as the snapshot's ADDED manifest entries. Every other
+  operation counts its own manifests' ADDED data entries (F1). Both listings tick the
+  `#[cfg(test)]` counter.
+- **Superseded (2026-10-07).** FL-4 by C-018. FL-5 by C-017 and C-019. C-010's
+  mechanism (the fork's `PreconditionFailed` as decider) by C-019; its two refusal pins
+  stand with deliver-first expectations. D-4's "record count reads as 0" by C-024.
+  C-008's past-head pin is renamed.
+
+## Gates — fold 1
+
+Mutation probes, each restored from a backup with the restore checked by `cmp`
+(`git diff` cannot show it because the rewrite was uncommitted). The output tails:
+
+```
+m1 window.rs `oldest.parent_snapshot_id()` -> `.filter(|_| false)`
+test microbatch::window::tests::window_fold_pins::earliest_refuses_truncated_history_after_expiry ... FAILED
+test result: FAILED. 60 passed; 1 failed; 0 ignored; 0 measured; 804 filtered out
+m2 window.rs `self.rows >= max.get()` -> `self.rows > max.get()`
+test microbatch::window::tests::window_fold_pins::max_rows_rule_holds_inside_one_snapshot_and_on_a_zero_row_tail ... FAILED
+test microbatch::window::tests::window_fold_pins::max_rows_adds_the_crossing_file_then_stops_at_the_cap ... FAILED
+test result: FAILED. 59 passed; 2 failed; 0 ignored; 0 measured; 804 filtered out
+m5 window.rs `if from.position.get() < count {` -> `if false && …`
+test …::earliest_on_first_snapshot_overwrite_refuses_then_after_snapshot_resumes ... FAILED
+test …::from_timestamp_landing_on_overwrite_refuses_in_the_window ... FAILED
+test result: FAILED. 59 passed; 2 failed
+m6 window.rs `if window.files.is_empty() {` -> `if true {` (eager refusal)
+test microbatch::window::tests::delete_inside_window_refuses ... FAILED
+test microbatch::window::tests::overwrite_inside_window_refuses ... FAILED
+test result: FAILED. 59 passed; 2 failed
+m7 window.rs `if from.position.get() > files {` -> `> files.saturating_add(1000)`
+test …::position_past_the_added_files_refuses ... FAILED
+test result: FAILED. 60 passed; 1 failed
+```

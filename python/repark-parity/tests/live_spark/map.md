@@ -37,6 +37,7 @@ documentation. Nothing here is collected by pytest, and no RePark code runs.
   `answer` and `field`. The preamble names the versions and the catalog (`hadoop`).
 - `mb0_streaming_oracle.sha256` holds `sha256sum` of the JSON. Check it with
   `sha256sum -c` from this directory.
+  pins: mb-1/C-025
 - `c2_jdbc_oracle.py` is the D-M2 recorder. Cells are data (`define_cells`),
   one entry per `(code, tz)` id, and `record_all` prints each entry as one
   JSON line. Run it through the managed interpreter only (brief step 2),

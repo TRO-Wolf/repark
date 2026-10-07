@@ -2,7 +2,7 @@ use std::num::{NonZeroU64, NonZeroUsize};
 
 use futures::TryStreamExt;
 use iceberg::scan::FileScanTask;
-use iceberg::spec::{Operation, SnapshotRef};
+use iceberg::spec::{DataContentType, ManifestContentType, ManifestStatus, Operation, SnapshotRef};
 use iceberg::table::Table;
 
 use crate::microbatch::error::MicroBatchError;
@@ -47,12 +47,19 @@ pub struct WindowPlan {
 pub struct WindowPlanner {
     table: Table,
     caps: ReadCaps,
+    #[cfg(test)]
+    planned: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
 
 impl WindowPlanner {
     #[must_use]
     pub fn new(table: Table, caps: ReadCaps) -> Self {
-        Self { table, caps }
+        Self {
+            table,
+            caps,
+            #[cfg(test)]
+            planned: std::sync::Arc::default(),
+        }
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -79,24 +86,21 @@ impl WindowPlanner {
                         missing_parent: SnapshotId::new(missing),
                     });
                 }
-                Ok(Some(self.offset(oldest.snapshot_id(), 0)))
+                self.landing(oldest, head_id).await.map(Some)
             }
             StartPosition::FromTimestamp { millis } => {
-                for snapshot in self.ancestry(head_id).iter().rev() {
-                    if snapshot.timestamp_ms() >= millis {
-                        return Ok(Some(self.offset(snapshot.snapshot_id(), 0)));
-                    }
+                let chain = self.ancestry(head_id);
+                match chain
+                    .iter()
+                    .rev()
+                    .find(|snapshot| snapshot.timestamp_ms() >= millis)
+                {
+                    Some(landing) => self.landing(landing, head_id).await.map(Some),
+                    None => Ok(None),
                 }
-                let count = self.added_file_count(head_id).await?;
-                Ok(Some(self.offset(head_id, count)))
             }
             StartPosition::AfterSnapshot(snapshot) => {
-                if self
-                    .table
-                    .metadata()
-                    .snapshot_by_id(snapshot.get())
-                    .is_none()
-                {
+                let Some(named) = self.table.metadata().snapshot_by_id(snapshot.get()) else {
                     let Some(oldest) = self
                         .ancestry(head_id)
                         .last()
@@ -109,8 +113,8 @@ impl WindowPlanner {
                         snapshot,
                         oldest: SnapshotId::new(oldest),
                     });
-                }
-                let count = self.added_file_count(snapshot.get()).await?;
+                };
+                let count = self.added_file_count(named).await?;
                 Ok(Some(self.offset(snapshot.get(), count)))
             }
         }
@@ -140,10 +144,10 @@ impl WindowPlanner {
         let head_id = head.snapshot_id();
         let from_id = from.snapshot.get();
         let chain = self.ancestry(head_id);
-        if !chain
+        let Some(start) = chain
             .iter()
-            .any(|snapshot| snapshot.snapshot_id() == from_id)
-        {
+            .find(|snapshot| snapshot.snapshot_id() == from_id)
+        else {
             let Some(oldest) = chain.last().map(|entry| entry.snapshot_id()) else {
                 return Err(self.orphaned_head(head_id));
             };
@@ -152,38 +156,142 @@ impl WindowPlanner {
                 snapshot: from.snapshot,
                 oldest: SnapshotId::new(oldest),
             });
-        }
-        let mut candidates = remainder_files(from, self.added_files(from_id).await?);
-        if from_id != head_id {
-            self.fail_loud(from_id, head_id).await?;
-            for snapshot in self.window_snapshots(from_id, head_id) {
-                let id = snapshot.snapshot_id();
-                match snapshot.summary().operation {
-                    Operation::Append => {
-                        let mut position = 0;
-                        for task in self.added_files(id).await? {
-                            let record_count = task.record_count.unwrap_or(0);
-                            candidates.push(PlannedFile {
-                                snapshot: SnapshotId::new(id),
-                                position: FilePosition::new(position),
-                                task,
-                                record_count,
-                            });
-                            position = position.saturating_add(1);
+        };
+        let mut window = Window::new(&self.caps, limit);
+        self.enter_start(start, from, head_id, &mut window).await?;
+        for snapshot in chain
+            .iter()
+            .rev()
+            .skip_while(|snapshot| snapshot.snapshot_id() != from_id)
+            .skip(1)
+        {
+            if window.full() {
+                break;
+            }
+            let id = snapshot.snapshot_id();
+            match snapshot.summary().operation {
+                Operation::Append => {
+                    let mut position = 0u64;
+                    for task in self.added_tasks(id).await? {
+                        if window.full() {
+                            break;
                         }
+                        window.push(self.planned_file(id, position, task)?);
+                        position = position.saturating_add(1);
                     }
-                    Operation::Replace => {}
-                    Operation::Overwrite | Operation::Delete => {
-                        return Err(MicroBatchError::Catalog(format!(
-                            "table {} snapshot {id} ({}) reached planning after the fail-loud check passed",
-                            self.table_name(),
-                            snapshot.summary().operation.as_str()
-                        )));
+                }
+                Operation::Replace => {}
+                Operation::Overwrite | Operation::Delete => {
+                    if window.files.is_empty() {
+                        return Err(self.non_append(snapshot, Some(from.snapshot), head_id));
                     }
+                    break;
                 }
             }
         }
-        Ok(select_window(from, candidates, &self.caps, limit))
+        Ok(window.finish(from))
+    }
+
+    async fn landing(
+        &self,
+        snapshot: &SnapshotRef,
+        head: i64,
+    ) -> Result<InputOffset, MicroBatchError> {
+        if matches!(
+            snapshot.summary().operation,
+            Operation::Overwrite | Operation::Delete
+        ) && self.added_file_count(snapshot).await? == 0
+        {
+            return Err(self.non_append(snapshot, None, head));
+        }
+        Ok(self.offset(snapshot.snapshot_id(), 0))
+    }
+
+    async fn enter_start(
+        &self,
+        start: &SnapshotRef,
+        from: &InputOffset,
+        head: i64,
+        window: &mut Window<'_>,
+    ) -> Result<(), MicroBatchError> {
+        let id = start.snapshot_id();
+        match start.summary().operation {
+            Operation::Append => {
+                let tasks = self.added_tasks(id).await?;
+                self.check_position(from, self.count_of(id, tasks.len())?)?;
+                let mut position = 0u64;
+                for task in tasks {
+                    if position >= from.position.get() {
+                        if window.full() {
+                            break;
+                        }
+                        window.push(self.planned_file(id, position, task)?);
+                    }
+                    position = position.saturating_add(1);
+                }
+                Ok(())
+            }
+            Operation::Replace => {
+                let count = self.manifest_added_count(start).await?;
+                self.check_position(from, count)
+            }
+            Operation::Overwrite | Operation::Delete => {
+                let count = self.manifest_added_count(start).await?;
+                self.check_position(from, count)?;
+                if from.position.get() < count {
+                    return Err(self.non_append(start, Some(from.snapshot), head));
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn check_position(&self, from: &InputOffset, files: u64) -> Result<(), MicroBatchError> {
+        if from.position.get() > files {
+            return Err(MicroBatchError::OffsetPositionOutOfRange {
+                table: self.table_name(),
+                snapshot: from.snapshot,
+                position: from.position,
+                files,
+            });
+        }
+        Ok(())
+    }
+
+    fn non_append(
+        &self,
+        snapshot: &SnapshotRef,
+        from: Option<SnapshotId>,
+        head: i64,
+    ) -> MicroBatchError {
+        MicroBatchError::NonAppendSnapshot {
+            table: self.table_name(),
+            snapshot: SnapshotId::new(snapshot.snapshot_id()),
+            operation: snapshot.summary().operation.clone(),
+            from,
+            to: SnapshotId::new(head),
+        }
+    }
+
+    fn planned_file(
+        &self,
+        snapshot: i64,
+        position: u64,
+        task: FileScanTask,
+    ) -> Result<PlannedFile, MicroBatchError> {
+        let Some(record_count) = task.record_count else {
+            return Err(MicroBatchError::Catalog(format!(
+                "table {} snapshot {snapshot} file {} carries no record count; the window cannot be bounded",
+                self.table_name(),
+                task.data_file_path()
+            )));
+        };
+        Ok(PlannedFile {
+            snapshot: SnapshotId::new(snapshot),
+            position: FilePosition::new(position),
+            task,
+            record_count,
+        })
     }
 
     fn table_name(&self) -> String {
@@ -219,20 +327,26 @@ impl WindowPlanner {
         chain
     }
 
-    fn window_snapshots(&self, from: i64, head: i64) -> Vec<SnapshotRef> {
-        let mut window = Vec::new();
-        let mut past_from = false;
-        for snapshot in self.ancestry(head).iter().rev() {
-            if past_from {
-                window.push(snapshot.clone());
-            } else if snapshot.snapshot_id() == from {
-                past_from = true;
-            }
-        }
-        window
+    fn count_of(&self, snapshot: i64, files: usize) -> Result<u64, MicroBatchError> {
+        u64::try_from(files).map_err(|_| {
+            MicroBatchError::Catalog(format!(
+                "table {} snapshot {snapshot} lists more files than a position holds",
+                self.table_name()
+            ))
+        })
     }
 
-    async fn added_files(&self, snapshot: i64) -> Result<Vec<FileScanTask>, MicroBatchError> {
+    async fn added_file_count(&self, snapshot: &SnapshotRef) -> Result<u64, MicroBatchError> {
+        if matches!(snapshot.summary().operation, Operation::Append) {
+            let id = snapshot.snapshot_id();
+            let files = self.added_tasks(id).await?.len();
+            return self.count_of(id, files);
+        }
+        self.manifest_added_count(snapshot).await
+    }
+
+    async fn added_tasks(&self, snapshot: i64) -> Result<Vec<FileScanTask>, MicroBatchError> {
+        self.note_planned();
         let parent = self
             .table
             .metadata()
@@ -260,108 +374,100 @@ impl WindowPlanner {
         Ok(tasks)
     }
 
-    async fn added_file_count(&self, snapshot: i64) -> Result<u64, MicroBatchError> {
-        let files = self.added_files(snapshot).await?;
-        u64::try_from(files.len()).map_err(|_| {
-            MicroBatchError::Catalog(format!(
-                "table {} snapshot {snapshot} lists more files than a position holds",
-                self.table_name()
-            ))
+    async fn manifest_added_count(&self, snapshot: &SnapshotRef) -> Result<u64, MicroBatchError> {
+        self.note_planned();
+        let id = snapshot.snapshot_id();
+        let io = self.table.file_io();
+        let list = snapshot
+            .load_manifest_list(io, self.table.metadata())
+            .await
+            .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+        let mut count = 0u64;
+        for manifest in list.entries() {
+            if manifest.content != ManifestContentType::Data || manifest.added_snapshot_id != id {
+                continue;
+            }
+            let loaded = manifest
+                .load_manifest(io)
+                .await
+                .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+            for entry in loaded.entries() {
+                if entry.status() == ManifestStatus::Added
+                    && entry.snapshot_id() == Some(id)
+                    && entry.content_type() == DataContentType::Data
+                {
+                    count = count.saturating_add(1);
+                }
+            }
+        }
+        Ok(count)
+    }
+
+    #[cfg(test)]
+    fn note_planned(&self) {
+        self.planned
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    #[cfg(not(test))]
+    #[allow(clippy::unused_self)]
+    fn note_planned(&self) {}
+
+    #[cfg(test)]
+    fn planned_listings(&self) -> usize {
+        self.planned.load(std::sync::atomic::Ordering::Relaxed)
+    }
+}
+
+struct Window<'caps> {
+    caps: &'caps ReadCaps,
+    limit: WindowLimit,
+    files: Vec<PlannedFile>,
+    rows: u64,
+}
+
+impl<'caps> Window<'caps> {
+    fn new(caps: &'caps ReadCaps, limit: WindowLimit) -> Self {
+        Self {
+            caps,
+            limit,
+            files: Vec::new(),
+            rows: 0,
+        }
+    }
+
+    fn full(&self) -> bool {
+        if matches!(self.limit, WindowLimit::Unbounded) {
+            return false;
+        }
+        let files_full = self
+            .caps
+            .max_files
+            .is_some_and(|max| self.files.len() >= max.get());
+        let rows_full = self.caps.max_rows.is_some_and(|max| self.rows >= max.get());
+        files_full || rows_full
+    }
+
+    fn push(&mut self, file: PlannedFile) {
+        self.rows = self.rows.saturating_add(file.record_count);
+        self.files.push(file);
+    }
+
+    fn finish(self, from: &InputOffset) -> Option<WindowPlan> {
+        let last = self.files.last()?;
+        let end = InputOffset {
+            table: from.table,
+            table_name: from.table_name.clone(),
+            snapshot: last.snapshot,
+            position: FilePosition::new(last.position.get().saturating_add(1)),
+        };
+        Some(WindowPlan {
+            start: from.clone(),
+            end,
+            files: self.files,
+            num_input_rows: self.rows,
         })
     }
-
-    async fn fail_loud(&self, from: i64, head: i64) -> Result<(), MicroBatchError> {
-        let planned = match self
-            .table
-            .incremental_append_scan()
-            .from_snapshot_id_exclusive(from)
-            .to_snapshot_id(head)
-            .with_fail_on_non_append(true)
-            .build()
-        {
-            Ok(planned) => planned,
-            Err(error) => return Err(MicroBatchError::Catalog(error.to_string())),
-        };
-        match planned.plan_files().await {
-            Ok(_) => Ok(()),
-            Err(error) if error.kind() == iceberg::ErrorKind::PreconditionFailed => {
-                Err(self.refused_snapshot(from, head, &error))
-            }
-            Err(error) => Err(MicroBatchError::Catalog(error.to_string())),
-        }
-    }
-
-    fn refused_snapshot(&self, from: i64, head: i64, error: &iceberg::Error) -> MicroBatchError {
-        for snapshot in self.window_snapshots(from, head) {
-            let operation = snapshot.summary().operation.clone();
-            if matches!(operation, Operation::Overwrite | Operation::Delete) {
-                return MicroBatchError::NonAppendSnapshot {
-                    table: self.table_name(),
-                    snapshot: SnapshotId::new(snapshot.snapshot_id()),
-                    operation,
-                    from: Some(SnapshotId::new(from)),
-                    to: SnapshotId::new(head),
-                };
-            }
-        }
-        MicroBatchError::Catalog(format!(
-            "table {} window ({from}, {head}] refused: {error}",
-            self.table_name(),
-        ))
-    }
-}
-
-fn remainder_files(from: &InputOffset, tasks: Vec<FileScanTask>) -> Vec<PlannedFile> {
-    let skip = usize::try_from(from.position.get()).unwrap_or(usize::MAX);
-    let mut position = from.position.get();
-    let mut files = Vec::new();
-    for task in tasks.into_iter().skip(skip) {
-        let record_count = task.record_count.unwrap_or(0);
-        files.push(PlannedFile {
-            snapshot: from.snapshot,
-            position: FilePosition::new(position),
-            task,
-            record_count,
-        });
-        position = position.saturating_add(1);
-    }
-    files
-}
-
-fn select_window(
-    from: &InputOffset,
-    candidates: Vec<PlannedFile>,
-    caps: &ReadCaps,
-    limit: WindowLimit,
-) -> Option<WindowPlan> {
-    let mut files = Vec::new();
-    let mut rows = 0u64;
-    for candidate in candidates {
-        if matches!(limit, WindowLimit::Capped) && !files.is_empty() {
-            let files_full = caps.max_files.is_some_and(|max| files.len() >= max.get());
-            let rows_full = caps
-                .max_rows
-                .is_some_and(|max| rows.saturating_add(candidate.record_count) > max.get());
-            if files_full || rows_full {
-                break;
-            }
-        }
-        rows = rows.saturating_add(candidate.record_count);
-        files.push(candidate);
-    }
-    let last = files.last()?;
-    let end = InputOffset {
-        table: from.table,
-        table_name: from.table_name.clone(),
-        snapshot: last.snapshot,
-        position: FilePosition::new(last.position.get().saturating_add(1)),
-    };
-    Some(WindowPlan {
-        start: from.clone(),
-        end,
-        files,
-        num_input_rows: rows,
-    })
 }
 
 #[cfg(test)]

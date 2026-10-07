@@ -8,7 +8,9 @@ MB-1 under the [design sketch](../../../../task/wo/microbatch/mb-design-2026-10-
 the [MB-1 order](../../../../task/wo/microbatch/mb-1-source.md), and the
 [North Star](../../../../task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md).
 Round 1 landed `mod.rs`, `offset.rs` and `error.rs`; round 2 adds the
-window and provider. Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
+window and provider. Fold 1 (2026-10-07) reworks the window after the
+verifier's FAIL on PR #979, against the measured MB0b-R14…R16 cells.
+Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
 
 ## Contents
 
@@ -22,22 +24,34 @@ window and provider. Progress: the [MB-1 ledger](../../../../task/ledgers/comple
   `OffsetFormatVersion::CURRENT`. `InputOffset`, `OffsetVector`,
   `SinkRecord` with its summary/property readers and writers,
   `SinkDoor`, `spark_source_offset_json`, and the nine key constants.
-  pins: mb-1/C-001, C-002, C-003, C-004, C-005
+  Fold 1: the writers return `Result`, and both readers accept only the
+  canonical version text `1`.
+  pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-024
 - `error.rs` — the sketch's §3.2: `MicroBatchError` with every variant,
-  `thiserror`, `#[non_exhaustive]` (NS-15), plus `RecoveryReason`.
-  pins: mb-1/C-006
+  `thiserror`, `#[non_exhaustive]` (NS-15), plus `RecoveryReason`. Fold 1
+  adds `OffsetPositionOutOfRange`, and `UnsupportedOffsetFormat.found`
+  becomes the version text as read.
+  pins: mb-1/C-006, C-020, C-024
 - `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
   `WindowLimit`, `PlannedFile`, `WindowPlan`, and
   `WindowPlanner::{new, initial_offset, next_window}` over a held table.
-  One fork scan with `with_fail_on_non_append(true)` decides the refusal;
-  per-snapshot plain scans list the files, sorted by path. The skip builders
+  Fold 1: the window walks `(from, head]` lazily, one snapshot at a time,
+  checking each operation as it enters and planning an append's files only
+  while the private `Window` has room. Per-snapshot append scans list the
+  files, sorted by path. The fail-on-non-append scan and the skip builders
   are never called (O-5).
-  pins: mb-1/C-008, C-009, C-010, C-011
+  pins: mb-1/C-008, C-009, C-010, C-011, C-017, C-018, C-019, C-020, C-023, C-024
 - `window_tests.rs` — the `window.rs` pins, split out under `#[path]` when
   the file passed the 1000-line ceiling: the memory-catalog fixture with
   append/overwrite/delete/replace commits plus the 18 start, window, cap,
   fail-loud and guard pins.
-  pins: mb-1/C-008, C-009, C-010, C-011
+  pins: mb-1/C-008, C-009, C-010, C-011, C-019
+- `window_fold_pins.rs` — fold 1's window pins, a child of `window_tests.rs`
+  that reuses its fixture: the non-append start snapshot, the timestamp past
+  the head, deliver-first refusal, the planning count read through the
+  `#[cfg(test)]` counter, the position bound, truncated history after a real
+  `expire_snapshots`, the measured max-rows rule, and the missing record count.
+  pins: mb-1/C-017, C-018, C-019, C-020, C-021, C-023, C-024
 - `provider.rs` — the sketch's §3.3 `MicroBatchTableProvider` (`pub(crate)`):
   reads exactly the planned tasks with `ArrowReaderBuilder` and the crate's
   `conform_batch`, and takes the arrow schema from the end snapshot. Filters
@@ -46,7 +60,10 @@ window and provider. Progress: the [MB-1 ledger](../../../../task/ledgers/comple
   **MB-1 round 3 (2026-10-07):** `provider_for_plan` beside `try_new` is the
   type-erased cross-crate door — the struct stays `pub(crate)` per the sketch
   and `repark-core` reads through `Arc<dyn TableProvider>` (ledger D-4).
-  pins: mb-1/C-012, C-015, C-016
+  Fold 1: every task is re-stamped with the end snapshot's schema and its
+  top-level field ids, so older files read under the end schema, matched by
+  field id, with null for a column a file lacks.
+  pins: mb-1/C-012, C-015, C-016, C-022
 
 ## Design notes
 
@@ -61,11 +78,13 @@ fires only for overwrite and delete; any other `Operation` renders through
 the same template but never reaches the variant.
 
 `from_summary` returns `None` only when the stamp discriminator
-(`repark.cdc.format-version`) is absent. A present version that parses but is
-not `CURRENT` refuses `UnsupportedOffsetFormat`; a version that does not parse and
-any missing or unreadable companion key refuse `Catalog` naming the key
-(ledger FL-2, 2026-10-07). `from_property` has no absent case and refuses the
-same way. Neither reader guesses.
+(`repark.cdc.format-version`) is absent. A present version whose text is not
+exactly `1` refuses `UnsupportedOffsetFormat` carrying that text as read, so
+`+1`, `01`, `-1`, `abc` and an out-of-range number all name themselves
+(fold 1, F10, 2026-10-07). `from_property` compares the JSON rendering of
+its `format-version` member the same way. Any missing or unreadable
+companion key refuses `Catalog` naming the key (ledger FL-2). Neither reader
+guesses.
 
 `try_from_inputs` sorts by table uuid and refuses an empty vector or a
 repeated table uuid, loud, through `Catalog` (ledger FL-1, 2026-10-07). The
@@ -85,9 +104,9 @@ object's key order is Spark's quoted shape, and `serde_json::Map` would sort
 it. The module's own JSON (the offsets array, the property value) goes
 through `serde_json::Value`, whose sorted keys keep every rendering
 deterministic; those objects carry arbitrary table names, so a real JSON
-library owns the escaping. `to_string` over a string/number-only `Value`
-cannot fail (no floats, no writer), and its `unwrap_or_default` is
-unreachable.
+library owns the escaping. `summary_entries` and `property` return the
+serializer's error as `Catalog` rather than defaulting to an empty string
+(fold 1, F10).
 
 `Cargo.toml` carries three lines for this module: the granted
 `thiserror.workspace = true`, the `v5` feature on the existing `uuid` line
@@ -96,19 +115,30 @@ the closure enables it), and `serde_json.workspace = true` in
 `[dependencies]` for the stamp readers and writers (ledger D-1,
 2026-10-07). No version moved; the lockfile change is edges only.
 
-The fork's `PreconditionFailed` is the window's single refusal decider. The
-local ancestry walk on that path extracts the refused snapshot id and
-operation for the `NonAppendSnapshot` struct; it never refuses on its own,
-so dropping `with_fail_on_non_append(true)` turns the refusal pins red
-(ledger C-010). The walk agrees with the fork by construction: both follow
-the parent chain from the head, oldest-first, and neither refuses `Replace`.
+The window's walk is its single refusal decider (fold 1, F5, 2026-10-07).
+It follows the parent chain from `from` toward the head. Before each
+snapshot it checks room: a capped window stops once it holds `max-files`
+files or its rows reach `max-rows` (`>=`), so the file that crosses the
+row cap stays in, as MB0b-R15 measured on Spark. `replace` is skipped
+without planning. An `overwrite` or `delete` ends a non-empty window just
+before it, so the appends ahead of it are delivered. A window that would
+start by entering one refuses `NonAppendSnapshot`. The restart advice,
+`start-after-snapshot-id=<id>`, therefore loses nothing.
 
-Three bounds decided in round 2 (ledger FL-3, FL-4, FL-5, 2026-10-07). A
-`from.snapshot` that sits in metadata but off the current ancestry refuses
-`SourceSnapshotExpired` like a fully expired id. A `FromTimestamp` past the
-head returns the head fully consumed, so later appends stream. The
-`from.snapshot` itself stays outside the refusal range: its listing runs
-without fail-loud and contributes no files when it is not an append.
+The start snapshot (fold 1, F1 and F6). An append start lists its files and
+resumes at `from.position`. Any other start counts the ADDED data entries in
+its own manifests, those written by that snapshot. A position above that
+count refuses `OffsetPositionOutOfRange`. An `overwrite` or `delete` start
+whose position is below its count refuses `NonAppendSnapshot`, as Spark's
+`shouldProcess` does on the start of every batch (MB0b-R16).
+`AfterSnapshot(x)` sets the position to that count, so it steps past `x`'s
+files for any operation. A delete adds no data files, so `(x, 0)` cannot say
+whether `x` is unread or consumed. `Earliest` and `FromTimestamp` therefore
+refuse at `initial_offset` when they land on an `overwrite` or `delete`
+with no added data files (ledger FL-9). `FromTimestamp` past the head reads
+`None` until a snapshot at or after T exists, then starts there; older
+snapshots never stream (MB0b-R14, fold 1, F4). An off-ancestry `from`
+still refuses `SourceSnapshotExpired` (FL-3). FL-4 and FL-5 are superseded.
 
 The provider struct stays `pub(crate)` per the sketch, so its
 `#[allow(dead_code)]` stood until round 3 wired a caller. `catalog/mod.rs`
@@ -127,6 +157,7 @@ the first live caller.
 | Read the refusal texts | `error.rs` (`MicroBatchError`, `RecoveryReason`) |
 | Change a refusal text | the sketch's §4 first — the verbatim rows are oracle cells |
 | Plan a window | `window.rs` (`WindowPlanner::initial_offset`, `next_window`) |
+| Count the listings a window plans | `window.rs` `planned_listings` (`#[cfg(test)]` only) |
 | Read a planned window | `provider.rs` (`provider_for_plan` from another crate, `try_new` inside it) |
 
 ## Pointers

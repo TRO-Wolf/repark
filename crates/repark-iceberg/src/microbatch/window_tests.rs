@@ -286,24 +286,17 @@ async fn from_timestamp_zero_starts_at_oldest() {
 }
 
 #[tokio::test]
-async fn from_timestamp_past_head_consumes_through_head() {
+async fn from_timestamp_past_head_reads_none() {
     let (_warehouse, catalog, ident) = fixture_table("stamp-past").await;
     commit_append(&catalog, &ident, vec![synthetic_file("s1-a.parquet", 2)]).await;
-    let second = commit_append(&catalog, &ident, vec![synthetic_file("s2-a.parquet", 3)]).await;
+    commit_append(&catalog, &ident, vec![synthetic_file("s2-a.parquet", 3)]).await;
     let table = load(&catalog, &ident).await;
     let planner = WindowPlanner::new(table.clone(), uncapped());
     let offset = planner
         .initial_offset(&StartPosition::FromTimestamp { millis: i64::MAX })
         .await
-        .expect("initial")
-        .expect("some");
-    assert_eq!(offset.snapshot, SnapshotId::new(second));
-    assert_eq!(offset.position, FilePosition::new(1));
-    let drained = planner
-        .next_window(&offset, WindowLimit::Capped)
-        .await
-        .expect("window");
-    assert!(drained.is_none());
+        .expect("initial");
+    assert!(offset.is_none());
 }
 
 #[tokio::test]
@@ -477,7 +470,7 @@ async fn overwrite_inside_window_refuses() {
     let (_warehouse, catalog, ident) = fixture_table("overwrite").await;
     let first_file = synthetic_file("s1-a.parquet", 2);
     let first = commit_append(&catalog, &ident, vec![first_file.clone()]).await;
-    commit_append(&catalog, &ident, vec![synthetic_file("s2-a.parquet", 2)]).await;
+    let second = commit_append(&catalog, &ident, vec![synthetic_file("s2-a.parquet", 2)]).await;
     let third = commit_overwrite(
         &catalog,
         &ident,
@@ -490,8 +483,20 @@ async fn overwrite_inside_window_refuses() {
     assert_eq!(operation_of(&table, third), Operation::Overwrite);
     let planner = WindowPlanner::new(table.clone(), uncapped());
     let from = input_offset(&table, first, 0);
-    let error = planner
+    let delivered = planner
         .next_window(&from, WindowLimit::Capped)
+        .await
+        .expect("appends before the overwrite")
+        .expect("some");
+    let snapshots: Vec<i64> = delivered
+        .files
+        .iter()
+        .map(|file| file.snapshot.get())
+        .collect();
+    assert_eq!(snapshots, vec![first, second]);
+    assert_eq!(delivered.end, input_offset(&table, second, 1));
+    let error = planner
+        .next_window(&delivered.end, WindowLimit::Capped)
         .await
         .expect_err("must refuse");
     match &error {
@@ -504,7 +509,7 @@ async fn overwrite_inside_window_refuses() {
         } => {
             assert_eq!(*snapshot, SnapshotId::new(third));
             assert_eq!(*operation, Operation::Overwrite);
-            assert_eq!(*error_from, Some(SnapshotId::new(first)));
+            assert_eq!(*error_from, Some(SnapshotId::new(second)));
             assert_eq!(*to, SnapshotId::new(fourth));
         }
         other => panic!("expected NonAppendSnapshot, got {other:?}"),
@@ -514,7 +519,12 @@ async fn overwrite_inside_window_refuses() {
             .to_string()
             .starts_with(&format!("Cannot process overwrite snapshot: {third}"))
     );
-    let past = input_offset(&table, third, 0);
+    let past = planner
+        .initial_offset(&StartPosition::AfterSnapshot(SnapshotId::new(third)))
+        .await
+        .expect("after the overwrite")
+        .expect("some");
+    assert_eq!(past, input_offset(&table, third, 1));
     let plan = planner
         .next_window(&past, WindowLimit::Capped)
         .await
@@ -534,18 +544,26 @@ async fn delete_inside_window_refuses() {
     assert_eq!(operation_of(&table, second), Operation::Delete);
     let planner = WindowPlanner::new(table.clone(), uncapped());
     let from = input_offset(&table, first, 0);
-    let error = planner
+    let delivered = planner
         .next_window(&from, WindowLimit::Capped)
+        .await
+        .expect("the append before the delete")
+        .expect("some");
+    assert_eq!(delivered.end, input_offset(&table, first, 1));
+    let error = planner
+        .next_window(&delivered.end, WindowLimit::Capped)
         .await
         .expect_err("must refuse");
     match &error {
         MicroBatchError::NonAppendSnapshot {
             snapshot,
             operation,
+            from: error_from,
             ..
         } => {
             assert_eq!(*snapshot, SnapshotId::new(second));
             assert_eq!(*operation, Operation::Delete);
+            assert_eq!(*error_from, Some(SnapshotId::new(first)));
         }
         other => panic!("expected NonAppendSnapshot, got {other:?}"),
     }
@@ -636,3 +654,5 @@ async fn replaced_table_refuses_before_any_scan() {
         other => panic!("expected SourceReplaced, got {other:?}"),
     }
 }
+
+mod window_fold_pins;
