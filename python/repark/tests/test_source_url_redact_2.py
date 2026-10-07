@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import errno
 import shutil
 import traceback
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -592,3 +594,88 @@ def test_registered_dsn_traceback_is_masked() -> None:
         assert secret not in "".join(traceback.format_exception(caught.value))
     finally:
         session.stop()
+
+
+SECRET_URL = "http://u:" + MARK + "@h/x"
+
+
+class _TwoArgError(Exception):
+    def __init__(self, url: str, code: int) -> None:
+        super().__init__(f"connect {url} failed code={code}")
+
+
+class _PathOSError(OSError):
+    def __init__(self, path: str) -> None:
+        super().__init__(errno.ENOENT, "nope", path)
+
+
+class _KeywordOnlyError(Exception):
+    def __new__(cls, *, url: str) -> _KeywordOnlyError:
+        return super().__new__(cls, url)
+
+    def __init__(self, *, url: str) -> None:
+        super().__init__(f"connect {url} failed")
+
+
+def _raised(factory: Callable[[], BaseException]) -> BaseException:
+    try:
+        raise factory()
+    except BaseException as error:
+        return error
+
+
+def _raise_wrapped_two_arg() -> BaseException:
+    try:
+        raise _TwoArgError(SECRET_URL, 7)
+    except _TwoArgError as inner:
+        try:
+            raise RuntimeError("wrapped") from inner
+        except RuntimeError as outer:
+            return outer
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: _raised(lambda: _TwoArgError(SECRET_URL, 7)),
+        lambda: _raised(lambda: _PathOSError("/tmp/" + SECRET_URL)),
+        _raise_wrapped_two_arg,
+        lambda: _raised(lambda: _KeywordOnlyError(url=SECRET_URL)),
+    ],
+    ids=["two_arg", "os_subclass", "wrapped_two_arg", "keyword_only"],
+)
+def test_scrub_exception_copy_failure_never_returns_the_original(
+    factory: Callable[[], BaseException],
+) -> None:
+    original = factory()
+    links = [original, original.__cause__]
+    before = [
+        (link, link.args, link.__cause__, link.__context__, link.__traceback__)
+        for link in links
+        if link is not None
+    ]
+    scrubbed = scrub_exception(original)
+    assert scrubbed is not original
+    assert MARK not in "".join(traceback.format_exception(scrubbed))
+    for link, args, cause, context, trace in before:
+        assert link.args is args
+        assert link.__cause__ is cause
+        assert link.__context__ is context
+        assert link.__traceback__ is trace
+
+
+def test_scrub_exception_copy_failure_keeps_type_and_os_fields() -> None:
+    original = _raised(lambda: _PathOSError("/tmp/" + SECRET_URL))
+    scrubbed = scrub_exception(original)
+    assert type(scrubbed) is _PathOSError
+    assert scrubbed.errno == errno.ENOENT
+    assert scrubbed.strerror == "nope"
+    assert MARK not in str(scrubbed.filename)
+    assert type(scrub_exception(_TwoArgError(SECRET_URL, 7))) is _TwoArgError
+
+
+def test_scrub_exception_unbuildable_link_becomes_masked_stand_in() -> None:
+    scrubbed = scrub_exception(_KeywordOnlyError(url=SECRET_URL))
+    assert type(scrubbed) is PySparkException
+    assert MARK not in str(scrubbed)
+    assert "connect http://u:" in str(scrubbed)

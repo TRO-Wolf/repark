@@ -99,12 +99,40 @@ def _copy_link(link: BaseException, mask: Callable[[str], str]) -> BaseException
 
 
 def _copy_plain_link(link: BaseException, mask: Callable[[str], str]) -> BaseException:
+    masked_args = tuple(mask(item) if isinstance(item, str) else item for item in link.args)
     try:
         fresh = copy.copy(link)
     except Exception:
-        return link
-    fresh.args = tuple(mask(item) if isinstance(item, str) else item for item in link.args)
+        return _fallback_copy(link, mask, masked_args)
+    fresh.args = masked_args
     return fresh
+
+
+def _fallback_copy(
+    link: BaseException, mask: Callable[[str], str], masked_args: tuple[object, ...]
+) -> BaseException:
+    try:
+        fresh = type(link).__new__(type(link), *masked_args)
+        fresh.args = masked_args
+        if isinstance(link, OSError) and isinstance(fresh, OSError):
+            fresh.errno = link.errno
+            for field in ("strerror", "filename", "filename2"):
+                value = getattr(link, field)
+                if isinstance(value, str):
+                    setattr(fresh, field, mask(value))
+        return fresh
+    except Exception:
+        return _masked_stand_in(link, mask)
+
+
+def _masked_stand_in(link: BaseException, mask: Callable[[str], str]) -> BaseException:
+    from repark.errors import PySparkException
+
+    try:
+        text = str(link)
+    except Exception:
+        return PySparkException(type(link).__name__)
+    return PySparkException(mask(text))
 
 
 def _rebuild_os_error(error: OSError, mask: Callable[[str], str]) -> BaseException:
@@ -131,11 +159,12 @@ def _copy_os_fields_link(
     masked_second: str | None,
     mask: Callable[[str], str],
 ) -> BaseException:
+    masked_args = tuple(mask(item) if isinstance(item, str) else item for item in error.args)
     try:
         fresh = copy.copy(error)
     except Exception:
-        return error
-    fresh.args = tuple(mask(item) if isinstance(item, str) else item for item in error.args)
+        return _fallback_copy(error, mask, masked_args)
+    fresh.args = masked_args
     if isinstance(error.strerror, str):
         fresh.strerror = masked_strerror
     if isinstance(error.filename, str):
