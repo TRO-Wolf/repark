@@ -679,3 +679,27 @@ def test_scrub_exception_unbuildable_link_becomes_masked_stand_in() -> None:
     assert type(scrubbed) is PySparkException
     assert MARK not in str(scrubbed)
     assert "connect http://u:" in str(scrubbed)
+
+
+def _raise_merge_denied(source: object, destination: object) -> None:
+    raise OSError(errno.EACCES, "denied", "/tmp/x/" + SECRET_URL)
+
+
+def test_writer_append_merge_os_error_is_masked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import repark.spark.dataframe.writer_readwriter as writer_readwriter
+
+    target = tmp_path / "out_append"
+    session = SparkSession.builder.getOrCreate()
+    try:
+        frame = session.range(3)
+        frame.write.mode("overwrite").parquet(str(target))
+        monkeypatch.setattr(writer_readwriter, "_merge_path_write_tree", _raise_merge_denied)
+        with pytest.raises(AnalysisException) as caught:
+            frame.write.mode("append").parquet(str(target))
+        assert MARK not in str(caught.value)
+        assert "***" in str(caught.value)
+        assert MARK not in "".join(traceback.format_exception(caught.value))
+    finally:
+        session.stop()

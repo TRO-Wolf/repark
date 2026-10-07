@@ -420,6 +420,7 @@ class DataFrameWriter:
                 try:
                     _merge_path_write_tree(staging, destination)
                 except (FileExistsError, OSError, shutil.Error) as exc:
+                    exc = scrub_exception(exc)
                     raise AnalysisException(
                         f"path mode('append') failed for {mask_url_userinfo(path)!r}: {exc}"
                     ) from exc
