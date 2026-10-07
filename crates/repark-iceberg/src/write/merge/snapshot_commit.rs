@@ -33,6 +33,7 @@ pub(crate) enum RowDeltaKind {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct CommitScope {
     pub isolation: IsolationLevel,
+    pub isolation_property: &'static str,
     pub conflict_filter: Predicate,
 }
 
@@ -41,6 +42,7 @@ impl CommitScope {
     pub(crate) fn unscoped(isolation: IsolationLevel) -> Self {
         Self {
             isolation,
+            isolation_property: WRITE_MERGE_ISOLATION_LEVEL,
             conflict_filter: Predicate::AlwaysTrue,
         }
     }
@@ -48,7 +50,15 @@ impl CommitScope {
     pub(crate) fn scoped(isolation: IsolationLevel, conflict_filter: Predicate) -> Self {
         Self {
             isolation,
+            isolation_property: WRITE_MERGE_ISOLATION_LEVEL,
             conflict_filter,
+        }
+    }
+
+    pub(crate) fn governed_by(self, isolation_property: &'static str) -> Self {
+        Self {
+            isolation_property,
+            ..self
         }
     }
 
@@ -167,7 +177,7 @@ pub(crate) async fn commit_overwrite_on_ref(
         return Ok(());
     }
     let new_file_paths = abort::written_file_paths(&new_files);
-    let stamp = SiteStamp::claim(table, branch, summary_extra)?;
+    let stamp = SiteStamp::claim_isolated(table, branch, summary_extra, scope)?;
     let summary_extra = stamp.extras(summary_extra)?;
     let engine = crate::write::summary_collision::EngineSummary::for_changes(
         table, &new_files, &affected, branch,
@@ -378,7 +388,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         return Ok(());
     }
     let data_file_paths = abort::written_file_paths(&data_files);
-    let stamp = SiteStamp::claim(table, branch, summary_extra)?;
+    let stamp = SiteStamp::claim_isolated(table, branch, summary_extra, &policy.scope)?;
     let pair_count = pairs.len() as u64;
     let data_file_count = data_files.len() as u64;
     let mut prepared = dv_close::prepare_row_delta_deletes(

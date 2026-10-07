@@ -124,6 +124,20 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `sink_offsets_isolation_tests.rs`, `sink_offsets_probe_tests.rs`,
+  `predicate_dml.rs` — **MB-2c fold 1, K2, MBE-15 (2026-10-07, ruling Q3):**
+  `SiteStamp::claim_isolated` is the claim at the two MERGE sites in `merge/snapshot_commit.rs`.
+  A stamped claim whose `CommitScope` isolation is not `serializable` refuses
+  `MergeIsolationRefused` before the epoch check and before the scope is claimed, so the scope
+  stays open and nothing latches. The refusal names the scope's isolation property:
+  `write.merge.isolation-level` for MERGE, and the `write.update.isolation-level` or
+  `write.delete.isolation-level` that `predicate_dml.rs` sets on its scope with `governed_by`.
+  An unstamped commit, or one whose token belongs to another table's scope, is untouched. Four
+  pins in the `#[path]` child `sink_offsets_isolation_tests.rs` (under the probe module, so they
+  reuse `ProbeCatalog`): the verifier's race shape refuses before any `update_table` and epoch 1
+  lands once (run A's); stamped UPDATE and DELETE refuse on copy-on-write and merge-on-read;
+  serializable MERGE commits its stamp; unscoped MERGE under snapshot commits unstamped.
+  pins: mb-2c/C-007
 - `sink_offsets.rs`, `sink_offsets_epoch_tests.rs`, `sink_offsets_probe_tests.rs`,
   `sink_offsets_walk_tests.rs`, `sink_offsets_tests.rs` — **MB-2c steps 1 and 2 (2026-10-07, ruling Q2: the split):** the
   epoch check runs in `claim` on the table the commit starts from, after the

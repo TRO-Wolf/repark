@@ -15,7 +15,7 @@ use crate::microbatch::error::{MicroBatchError, RecoveryReason};
 use crate::microbatch::offset::{
     OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SinkDoor, SinkRecord, SnapshotId, TableUuid,
 };
-use crate::write::merge::OPERATION_ID_PROP;
+use crate::write::merge::{CommitScope, IsolationLevel, OPERATION_ID_PROP};
 use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
 
@@ -541,15 +541,41 @@ impl SiteStamp {
         branch: Option<&str>,
         extra: &[(String, String)],
     ) -> datafusion::error::Result<SiteStamp> {
+        Self::claim_with(table, branch, extra, || Ok(()))
+    }
+
+    pub(crate) fn claim_isolated(
+        table: &Table,
+        branch: Option<&str>,
+        extra: &[(String, String)],
+        scope: &CommitScope,
+    ) -> datafusion::error::Result<SiteStamp> {
+        Self::claim_with(table, branch, extra, || match scope.isolation {
+            IsolationLevel::Serializable => Ok(()),
+            IsolationLevel::Snapshot => Err(MicroBatchError::MergeIsolationRefused {
+                sink: table.identifier().to_string(),
+                property: scope.isolation_property.to_string(),
+            }),
+        })
+    }
+
+    fn claim_with(
+        table: &Table,
+        branch: Option<&str>,
+        extra: &[(String, String)],
+        isolation: impl FnOnce() -> Result<(), MicroBatchError>,
+    ) -> datafusion::error::Result<SiteStamp> {
         if branch.is_some_and(|name| name != MAIN_BRANCH) {
             return Ok(SiteStamp::default());
         }
         let Some(token) = ScopeToken::carried_by(extra) else {
             return Ok(SiteStamp::default());
         };
-        let claimed =
-            BatchScope::claim_checked(table, &token, |stamp| refuse_stamp_keys(extra, stamp))
-                .map_err(microbatch_error)?;
+        let claimed = BatchScope::claim_checked(table, &token, |stamp| {
+            refuse_stamp_keys(extra, stamp)?;
+            isolation()
+        })
+        .map_err(microbatch_error)?;
         Ok(SiteStamp { claimed })
     }
 

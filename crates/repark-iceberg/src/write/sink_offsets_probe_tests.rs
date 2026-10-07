@@ -804,3 +804,6 @@ async fn the_walk_finds_a_landed_stamp_above_the_base_by_operation_id_then_by_re
 
 #[path = "sink_offsets_walk_tests.rs"]
 mod walk;
+
+#[path = "sink_offsets_isolation_tests.rs"]
+mod isolation;

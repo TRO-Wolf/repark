@@ -77,7 +77,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   MB-2a fold 2 (ruling Y3, 2026-10-07): `SinkCommittedTwice` names the loss (a restart resumes
   after the stamped epoch, so the refused write's rows never land) and the fix (one sink write
   per batch body, or a single combined write); it carries no scope token.
-  pins: mb-1/C-006, C-020, C-024, C-036
+  MB-2c fold 1 (ruling Q3, 2026-10-07): `MergeIsolationRefused` carries the isolation `property`
+  of the refused operation (MERGE, UPDATE or DELETE) and renders
+  `stamped write into <sink> needs <property>=serializable`.
+  pins: mb-1/C-006, C-020, C-024, C-036, mb-2c/C-007
   pins: mb-2a/C-014, C-022
 - `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
   `WindowLimit`, `PlannedFile`, `WindowPlan`, and

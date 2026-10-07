@@ -118,8 +118,8 @@ pub enum MicroBatchError {
         position: FilePosition,
         files: u64,
     },
-    #[error("stamped MERGE into {sink} needs write.merge.isolation-level=serializable")]
-    MergeIsolationRefused { sink: String },
+    #[error("stamped write into {sink} needs {property}=serializable")]
+    MergeIsolationRefused { sink: String, property: String },
     #[error("batch {epoch} failed: {cause}")]
     BatchFailed { epoch: Epoch, cause: String },
     #[error("recovery required for query {query} epoch {epoch}: {reason}")]
@@ -260,6 +260,7 @@ mod tests {
             },
             MicroBatchError::MergeIsolationRefused {
                 sink: String::from("silver.events"),
+                property: String::from("write.merge.isolation-level"),
             },
             MicroBatchError::BatchFailed {
                 epoch: Epoch::FIRST,
@@ -273,9 +274,7 @@ mod tests {
             },
             MicroBatchError::Catalog(String::from("catalog exploded")),
         ];
-        for error in errors {
-            assert!(!error.to_string().is_empty());
-        }
+        assert!(errors.iter().all(|error| !error.to_string().is_empty()));
     }
 
     #[test]
@@ -416,10 +415,11 @@ mod tests {
     fn merge_isolation_refusal_names_serializable() {
         let error = MicroBatchError::MergeIsolationRefused {
             sink: String::from("silver.events"),
+            property: String::from("write.update.isolation-level"),
         };
         assert_eq!(
             error.to_string(),
-            "stamped MERGE into silver.events needs write.merge.isolation-level=serializable"
+            "stamped write into silver.events needs write.update.isolation-level=serializable"
         );
     }
 
