@@ -232,6 +232,15 @@ def _attr_exact(column: Column, held: list[str | None], engines: list[str]) -> b
 def _attr_exact_child(
     frame: DataFrame, projected: list[Column], engine_names: list[str]
 ) -> DataFrame | None:
+    try:
+        return _attr_exact_plan(frame, projected, engine_names)
+    except Exception:
+        return None
+
+
+def _attr_exact_plan(
+    frame: DataFrame, projected: list[Column], engine_names: list[str]
+) -> DataFrame | None:
     held, engines = _column_fields._stamped_ids_and_engines(frame)
     if not all(_attr_exact(column, held, engines) for column in projected):
         return None

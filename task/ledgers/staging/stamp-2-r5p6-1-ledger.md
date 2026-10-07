@@ -32,9 +32,10 @@ The full attribution, with every table and artifact path, is
 | C-004 | A unique sort key binds without the lineage trace or the twin search, on the Rust binder and on the facade door; an ambiguous Project key reaches them. | `bind_free_names_sort_binds_unique_key_without_tracing_lineage` (`SORT_TRACES`, `#[cfg(test)]` only) and `test_unique_sort_key_binds_without_the_lineage_trace`; the forced-trace mutation below. | **PROVEN** |
 | C-005 | Attribution: no stack code carries the 0.64 pt between `7f45e460` and `13de60e1`; the r5p6 excess over main is construction-side and the largest single block is the `fillna` SQL re-plan through `sql_built`. | The attribution table below and `attribution.md` §1–§3. | **PROVEN** |
 | C-007 | The CAST arm admits only `TINYINT`, `SMALLINT`, `INT`, `BIGINT`, `FLOAT`, `DOUBLE` and `DECIMAL(p,s)`: the targets whose native cast of `0`, `1` and `999999999` equals the SQL route's in value, type, nullability and error, measured on a twin column of the target type and across a 13-type twin matrix (overflow on `TINYINT`, `SMALLINT` and narrow decimals raises the same error on both routes). Every other target (`TIMESTAMP`, `DATE`, `TIMESTAMP_NTZ`, `STRING`, `BOOLEAN`, `BINARY`, nested CASTs) keeps the SQL route, so `coalesce(<TIMESTAMP, DATE, TIMESTAMP_NTZ or void twin>, CAST(n AS TIMESTAMP))` answers `n` seconds as head and Spark do, not `n` microseconds (verifier S1). | `test_coalesce_cast_to_a_native_type_skips_the_sql_replan`, `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan`; mutations M6, M7, M8 below. | **PROVEN** |
+| C-008 | A native exactness attempt that raises (the native `select`, the name read or the spawn in `_attr_exact_plan`) is a miss: `_attr_exact_child` returns `None` and the SQL route runs unchanged, so a refusal keeps head's SQL-route text (`coalesce(Boolean, Int64)`, not the native planner's `coalesce(Boolean, Int32)`; verifier S2, 117 grid cells). | `test_raising_native_probe_keeps_the_sql_route_refusal`; mutation M9 below. | **PROVEN** |
 | C-006 | Pre-measure: the fix brings the whole like set under 1.10 and r5p6 from 1.18 to about 1.13 against main `575f57ca`, single runs by `l4l_gate.py`'s method. | The pre-measure table below. | **PROVEN** |
 
-`LOGIC_SCORE` = **7/7 `PROVEN`**.
+`LOGIC_SCORE` = **8/8 `PROVEN`**.
 
 ## Attribution table (C-005)
 
@@ -89,6 +90,7 @@ guard. The sort lineage trace and twin search were already lazy (C-004); this un
 | M6 | the CAST alternative is deleted (verifier V9) | `test_coalesce_cast_to_a_native_type_skips_the_sql_replan` |
 | M7 | the CAST whitelist gains `TIMESTAMP` | `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan` |
 | M8 | the CAST arm takes any type token again (`[A-Z_]+(\(…\))?`, verifier V8 and the S1 shape) | `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan` |
+| M9 | `_attr_exact_child` lets the native attempt's exception propagate | `test_raising_native_probe_keeps_the_sql_route_refusal` |
 | M5 | the twin search runs in the unique-key (`Bound`) arm | only the counter assertion (`attr_id_s3b.rs:460`); every binding answer and the other 97 `attr_id` tests stay green |
 
 ## Pre-measure (C-006)
@@ -121,7 +123,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/test_stamp_2_r5p6_1.py]
     - id: AT-3
       status: ATTACKED
-      evidence: Refusals are unchanged — the token rewrite (and its MISSING_ATTRIBUTES refusal) still runs before the route decision; the self-join fill refuses identically on both routes and is pinned.
+      evidence: Refusals are unchanged — the token rewrite (and its MISSING_ATTRIBUTES refusal) still runs before the route decision; a raising native attempt falls back to the SQL route (C-008), so refusal text is head's; the self-join fill and a Boolean coalesce refuse identically on both routes and are pinned.
       artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/test_stamp_2_r5p6_1.py]
     - id: AT-4
       status: ATTACKED

@@ -871,6 +871,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   native `CAST(n AS TIMESTAMP)` reads `n` as microseconds where the Spark door
   reads seconds, so datetime, string, boolean and binary targets keep the SQL
   route. pins: stamp-2-r5p6-1/C-007
+  `_attr_exact_child` wraps `_attr_exact_plan`: any exception in the native
+  attempt is a miss and the SQL route runs, so a refusal carries the SQL
+  route's text, not the native planner's. pins: stamp-2-r5p6-1/C-008
   Replacing each token by the engine the SQL route binds (the first position
   holding the id) must reproduce the column's `_sql_expr`, so both routes read
   the same fields. The native output names must equal the names the SQL route

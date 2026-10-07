@@ -146,6 +146,10 @@ def _coalesce_cast(frame: Any, value: Any, target: str) -> Any:
     return frame.select(filled.alias("c"), "i")
 
 
+def _coalesce_bool(frame: Any) -> Any:
+    return frame.select(spark_functions.coalesce(frame["b"], spark_functions.lit(0)))
+
+
 def test_twin_fill_skips_the_sql_replan_with_equal_answers(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -246,3 +250,16 @@ def test_coalesce_cast_to_a_datetime_keeps_the_sql_replan(
             assert routes == [False], (kind, value)
             assert native == sql, (kind, value)
             assert native[2] == [(expected, 1)], (kind, value)
+
+
+def test_raising_native_probe_keeps_the_sql_route_refusal(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    base = spark.createDataFrame([(1, True), (2, None)], "i INT, b BOOLEAN")
+    twins = base.select("i", "b", "b")
+    filled = partial(_coalesce_bool, twins)
+    routes, native, sql = _routes_and_answers(monkeypatch, filled)
+    assert routes == [False]
+    assert native == sql
+    assert native[:2] == ("refused", "AnalysisException")
+    assert "coalesce(Boolean, Int64)" in native[2]
