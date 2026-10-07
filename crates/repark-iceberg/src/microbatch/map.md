@@ -16,8 +16,21 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
 
 - `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) plus `pub mod error;`,
   `pub mod offset;`, `pub mod provider;` and `pub mod window;`. No
-  re-exports: callers use full paths.
+  re-exports: callers use full paths. MB-2a adds `#[cfg(test)] mod crash_tests;`.
   pins: mb-1/C-007, mb-1/C-013
+- `crash_tests.rs` — **MB-2a (2026-10-07):** the crash harness of the
+  [sketch's §5](../../../../task/wo/microbatch/mb-design-2026-10-06.md), in Rust over the memory
+  catalog (correction H-1). It holds pin 1, `test_microbatch_kill_after_commit_resumes_1`, the
+  green guard that resume-from-sink alone holds: Bronze takes two appends; epoch 0 plans the
+  window, reads it through `provider_for_plan`, stages it into the empty sink and commits through
+  the stamped append arm under a `BatchScope`; every in-memory value drops (kill point c). A
+  reload and `read_resume_point` resume epoch 0's offset; epoch 1's window is planned and read,
+  then dropped before staging (kill point a), and the next reload still reads epoch 0. Epoch 1
+  then commits under a fresh run id, and a third trigger finds no window and commits nothing. The
+  sink equals Bronze with each id once, epochs 0 and 1 each appear once in the summary history,
+  and the property equals the head's stamp. Pins 2–4 (red until MB-2c) and pin 5 belong to the
+  harness slice and are not here.
+  pins: mb-2a/C-010
 - `offset.rs` — the sketch's §3.1. Seven newtypes, each `new`/`get`
   (NS-14), with the sketch's named constructors beside them:
   `TableUuid::of`, `QueryId::derive`, `RunId::fresh`, `Epoch::FIRST`/`next`,
