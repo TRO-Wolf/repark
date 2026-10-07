@@ -11,7 +11,13 @@ import pytest
 from repark.errors import PySparkException, PySparkTypeError, PySparkValueError
 from repark.spark import SparkSession
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
-from repark.spark._secrets import scrub_exception
+from repark.spark._secrets import (
+    mask_credentials,
+    mask_url_userinfo,
+    mask_user_visible,
+    scrub_exception,
+    scrub_user_failure,
+)
 from repark.spark.dataframe import udf_bridge
 from repark.spark.functions import arrow_udtf, udtf
 from repark.spark.window import Window
@@ -22,10 +28,12 @@ pytest.importorskip("pandas")
 USERINFO = "u" + ":pw@"
 SECRET_URL = "http://" + USERINFO + "127.0.0.1:9/x"
 _RAISED: list[BaseException] = []
+_TAIL: dict[str, str] = {"text": ""}
+SURROGATE_TAIL = " at /data/\udcff"
 
 
 def _boom(*args: object) -> Any:
-    error = ValueError("fetch failed for " + SECRET_URL)
+    error = ValueError("fetch failed for " + SECRET_URL + _TAIL["text"])
     _RAISED.append(error)
     raise error
 
@@ -548,3 +556,113 @@ def test_scrub_exception_new_copy_carries_keyword_only_attributes_masked() -> No
     assert scrubbed.url == "http://u:***@127.0.0.1:9/x"
     assert USERINFO not in str(scrubbed)
     assert original.url == SECRET_URL
+
+
+def _dataframe_udf(session: SparkSession) -> None:
+    session.range(2).select(F.udf(_boom, "string")("id")).collect()
+
+
+def _sql_udf(session: SparkSession) -> None:
+    session.udf.register("redact_surrogate_boom", _boom, "string")
+    session.sql("SELECT redact_surrogate_boom(id) FROM range(2)").collect()
+
+
+def _raise_surrogate_os_error(*args: object) -> Any:
+    error = FileNotFoundError(2, "No such file", "/data/\udcff" + SECRET_URL)
+    _RAISED.append(error)
+    raise error
+
+
+def _dataframe_udf_os_error(session: SparkSession) -> None:
+    session.range(2).select(F.udf(_raise_surrogate_os_error, "string")("id")).collect()
+
+
+SURROGATE_DOORS: dict[str, Callable[[SparkSession], None]] = {
+    **DOORS,
+    "dataframe_udf": _dataframe_udf,
+    "sql_udf": _sql_udf,
+    "dataframe_udf_os_error": _dataframe_udf_os_error,
+}
+
+
+@pytest.mark.parametrize("door", sorted(SURROGATE_DOORS))
+def test_user_callback_door_masks_a_lone_surrogate(
+    door: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setitem(_TAIL, "text", SURROGATE_TAIL)
+    session = SparkSession.builder.getOrCreate()
+    try:
+        _RAISED.clear()
+        with pytest.raises((PySparkException, PySparkTypeError)) as caught:
+            SURROGATE_DOORS[door](session)
+        error = caught.value
+        assert "\udcff" in str(getattr(_RAISED[-1], "filename", None) or _RAISED[-1])
+        assert "http://u:***@" in str(error)
+        assert USERINFO not in str(error)
+        assert USERINFO not in repr(error)
+        assert USERINFO not in _formatted(error)
+        assert error.__context__ is None
+        assert error.__cause__ is not _RAISED[-1]
+    finally:
+        session.stop()
+
+
+def test_scrub_exception_masks_a_lone_surrogate_message() -> None:
+    original = _raised(lambda: ValueError("bad \udcff " + SECRET_URL))
+    scrubbed = scrub_exception(original)
+    assert type(scrubbed) is ValueError
+    assert scrubbed is not original
+    assert str(scrubbed).startswith("bad ")
+    assert "http://u:***@" in str(scrubbed)
+    assert USERINFO not in _formatted(scrubbed)
+    assert str(original) == "bad \udcff " + SECRET_URL
+
+
+def test_scrub_exception_masks_an_os_error_with_a_surrogate_filename() -> None:
+    original = _raised(lambda: FileNotFoundError(2, "No such file", "/data/\udcff" + SECRET_URL))
+    scrubbed = scrub_exception(original)
+    assert type(scrubbed) is FileNotFoundError
+    assert isinstance(scrubbed, FileNotFoundError)
+    assert scrubbed.errno == 2
+    assert "http://u:***@" in scrubbed.filename
+    assert USERINFO not in _formatted(scrubbed)
+
+
+def test_scrub_user_failure_masks_a_lone_surrogate() -> None:
+    try:
+        raise ValueError("fetch \udcff " + SECRET_URL)
+    except ValueError as error:
+        detail, failure = scrub_user_failure(error)
+    assert "http://u:***@" in detail
+    assert USERINFO not in detail
+    assert USERINFO not in _formatted(failure)
+
+
+def test_scrub_exception_keeps_a_clean_surrogate_message_identity() -> None:
+    original = _raised(lambda: ValueError("plain \udcff text"))
+    assert scrub_exception(original) is original
+
+
+@pytest.mark.parametrize("mask", [mask_credentials, mask_url_userinfo, mask_user_visible])
+def test_mask_entry_points_are_total_on_a_lone_surrogate(mask: Callable[[str], object]) -> None:
+    assert mask("plain \udcff text") == "plain \udcff text"
+    masked = mask("at \udcff " + SECRET_URL)
+    assert isinstance(masked, str)
+    assert masked.startswith("at ")
+    assert USERINFO not in masked
+    assert "http://u:***@" in masked
+
+
+class _ArgsRefusingError(ValueError):
+    @property
+    def args(self) -> tuple[object, ...]:
+        raise RuntimeError("args refuses")
+
+
+def test_scrub_exception_returns_a_masked_stand_in_when_the_walk_raises() -> None:
+    original = _raised(lambda: _ArgsRefusingError("fetch " + SECRET_URL))
+    scrubbed = scrub_exception(original)
+    assert isinstance(scrubbed, PySparkException)
+    assert "http://u:***@" in str(scrubbed)
+    assert USERINFO not in _formatted(scrubbed)
+    assert scrubbed.__traceback__ is original.__traceback__

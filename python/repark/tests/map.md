@@ -5316,6 +5316,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `KeyboardInterrupt`; an `Exception` one to `PySparkException`; an unbuildable group keeps the split;
   slotted (incl. a private slot) and keyword-only copies carry their attributes masked.
   pins: source-url-redact-1/C-080
+  **Fold 5 K1:** every user-callback door above, plus the DataFrame UDF, SQL UDF and an `OSError`
+  with a surrogate filename, raises its own class with a lone surrogate in the user's text, masked,
+  `__context__` None; direct cells hold `scrub_exception` on a surrogate message and an `OSError`
+  filename, `scrub_user_failure`, a clean surrogate message's identity, the three mask entry points,
+  and the masked stand-in when the walk itself raises. pins: source-url-redact-1/C-082
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

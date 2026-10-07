@@ -205,7 +205,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** the mirror
   rows ratchet `dataframe/core.py` 3971 → 3965, `dataframe/joins_columns.py` 1169 → 1117 and
   `functions_udf.py` 1300 → 1287 with the script baselines; H3 then sets `core.py` 3965 → 3969
-  (still below the 3971 base).
+  (still below the 3971 base). **Fold 5 K1:** `core.py` ratchets 3969 → 3967.
+  pins: source-url-redact-1/C-082
 - `test_cap_1_source_file_line_cap.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05):** the mirror
   rows ratchet `repark-ta/src/udf/mod.rs` 1801 → 1791 and `python/repark/src/repark/spark/ta.py`
   1818 → 1795 with the script baselines.

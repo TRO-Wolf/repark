@@ -14,7 +14,7 @@ def mask_credentials(value: object) -> object:
         return value
     from repark import _native
 
-    return _native.mask_value_credentials(value)
+    return _mask_total(_native.mask_value_credentials, value)
 
 
 def mask_url_userinfo(value: object) -> object:
@@ -22,7 +22,22 @@ def mask_url_userinfo(value: object) -> object:
         return value
     from repark import _native
 
-    return _native.mask_url_userinfo(value)
+    return _mask_total(_native.mask_url_userinfo, value)
+
+
+def mask_user_visible(text: str) -> str:
+    from repark import _native
+
+    return _mask_total(_native.mask_user_visible, text)
+
+
+def _mask_total(native: Callable[[str], str], text: str) -> str:
+    try:
+        return native(text)
+    except UnicodeEncodeError:
+        replaced = text.encode("utf-8", "surrogatepass").decode("utf-8", "replace")
+        masked = native(replaced)
+        return text if masked == replaced else masked
 
 
 def register_config_value(value: object) -> None:
@@ -34,10 +49,29 @@ def register_config_value(value: object) -> None:
 
 
 def scrub_exception(error: BaseException) -> BaseException:
-    from repark import _native
+    try:
+        return _scrub_chain(error, mask_user_visible)
+    except Exception:
+        return _total_stand_in(error)
 
+
+def scrub_user_failure(error: BaseException) -> tuple[str, BaseException]:
+    try:
+        detail = mask_user_visible(traceback.format_exc())
+    except Exception:
+        detail = type(error).__name__
+    return detail, scrub_exception(error)
+
+
+def _total_stand_in(error: BaseException) -> BaseException:
+    stand_in = _masked_stand_in(error, mask_user_visible)
+    with contextlib.suppress(Exception):
+        stand_in.__traceback__ = error.__traceback__
+    return stand_in
+
+
+def _scrub_chain(error: BaseException, mask: Callable[[str], str]) -> BaseException:
     links = _chain_links(error)
-    mask = _native.mask_user_visible
     changed = {id(link) for link in links if _link_text_changes(link, mask)}
     if not changed:
         return error
@@ -69,12 +103,6 @@ def scrub_exception(error: BaseException) -> BaseException:
         fresh.__traceback__ = link.__traceback__
         fresh.__suppress_context__ = link.__suppress_context__
     return copies[id(error)]
-
-
-def scrub_user_failure(error: BaseException) -> tuple[str, BaseException]:
-    from repark import _native
-
-    return _native.mask_user_visible(traceback.format_exc()), scrub_exception(error)
 
 
 def _chain_links(error: BaseException) -> list[BaseException]:
@@ -327,6 +355,7 @@ def _copy_os_fields_link(
 __all__ = [
     "mask_credentials",
     "mask_url_userinfo",
+    "mask_user_visible",
     "register_config_value",
     "scrub_exception",
     "scrub_user_failure",

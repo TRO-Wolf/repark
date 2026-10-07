@@ -702,6 +702,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   too: re-raised in place when `scrub_exception` returns it unchanged, else its masked copy is
   raised after the handler. `grouped_arrow.py`, `core.py`'s mapInArrow handler and the UDTF `eval`
   doors carry the same clause. pins: source-url-redact-1/C-077
+  **SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07):** `core.py`'s mapInArrow handler takes
+  `(detail, failure)` from `_secrets.scrub_user_failure` like the other doors, so a lone surrogate
+  in the user's text no longer raises `UnicodeEncodeError` there. pins: source-url-redact-1/C-082
 - `io_declared.py` owns the orc-write / xml declared-refusal bodies and the `jdbc` reader-writer
   surface (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1).
   **IO-ORC-1 (2026-09-16):** the orc reader refusal is deleted (the read side is a real

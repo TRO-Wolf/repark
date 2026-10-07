@@ -27,7 +27,7 @@ from repark.errors import (
 )
 from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
-from repark.spark._secrets import scrub_exception
+from repark.spark._secrets import scrub_exception, scrub_user_failure
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
 from repark.spark.column_fields import column_window_spec as _column_window_spec
@@ -493,7 +493,6 @@ class DataFrame:
         set, stops after that many output rows (peek path).
         """
         import contextlib
-        import traceback
 
         import pyarrow as pa
 
@@ -562,8 +561,7 @@ class DataFrame:
             if passthrough is error:
                 raise
         except Exception as error:
-            failure = scrub_exception(error)
-            detail = _native.mask_user_visible(traceback.format_exc())
+            detail, failure = scrub_user_failure(error)
         finally:
             close = getattr(input_reader, "close", None)
             if callable(close):
