@@ -21,7 +21,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _record_ice_meta_delete_1 import (
+    CATALOG,
     MODES,
+    NAMESPACE,
     SHAPES,
     VERSIONS,
     cell_id,
@@ -119,8 +121,8 @@ def replayed(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, Any
         .getOrCreate()
     )
     warehouse = tmp_path_factory.mktemp("ice-meta-delete-1") / "wh"
-    session.register_memory_catalog("sc", str(warehouse))
-    session.sql("CREATE NAMESPACE sc.ns")
+    session.register_memory_catalog(CATALOG, str(warehouse))
+    session.sql(f"CREATE NAMESPACE {CATALOG}.{NAMESPACE}")
     answers = {
         cell_id(shape, version, mode): _run_cell(session, shape, version, mode)
         for shape in SHAPES

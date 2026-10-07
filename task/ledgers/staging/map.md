@@ -1186,6 +1186,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048
   pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053, C-054, C-055, C-056
   pins: ice-session-write-conf-1/C-057, C-058
+- [parity-live-stop-1-ledger.md](parity-live-stop-1-ledger.md) —
+  **PARITY-LIVE-STOP-1, card v1.5.3 (2026-10-07):** no test stops the shared live-oracle
+  context. Measured over the full nightly command with a stop/rebuild probe: 0 stops, 0 guard
+  hits, `4 failed, 15968 passed` on main (the card's out-of-scope four), C-001. The
+  meta-delete and sorted-insert-2 recorders shared the generic `sc` catalog with procs-route
+  and now bind private names, red-first in the colliding order (C-002); three ordered runs
+  keep later live modules green (C-003); test-side only (C-004). `risk_tier: standard`.
+  Branch `fix/parity-live-stop-1`.
+  pins: parity-live-stop-1/C-001, C-002, C-003, C-004
 
 ## Pointers
 - Up: [../map.md](../map.md)
