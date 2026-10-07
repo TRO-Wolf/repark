@@ -24,8 +24,10 @@ See [../map.md](../map.md).
 - `live_pool.rs` — C-2b fold 1 (2026-10-07), behind `postgres`, live like `live_pg.rs` (whose
   harness it shares). `a_pooled_connection_is_reset_before_reuse` (the verifier's four poison
   shapes on `pool_max_size = 1`: `IntervalStyle`, `default_transaction_read_only`,
-  `search_path` with a schema operator, an advisory lock; each next lease runs on the same
-  backend with clean answers), `user_types_resolve_after_a_reset` (two enums in query mode on
+  `search_path` with a schema operator, an advisory lock, and since fold 2 `role` and
+  `session_authorization` set to a `NOLOGIN` role; each next lease runs on the same backend
+  with clean answers, the last two reading `current_user` = `session_user` = the login and
+  `role` = `none`), `user_types_resolve_after_a_reset` (two enums in query mode on
   one reused connection; `DISCARD ALL` fails it with `26000`),
   `a_pushed_scan_commits_before_its_connection_is_pooled` (V-M2's pin: the backend is `idle`,
   not `idle in transaction`, between two pushed scans on one backend),
@@ -39,7 +41,7 @@ See [../map.md](../map.md).
   `app-schema` shape in a fresh database: a role-level path beats a database-level one, a
   role-in-database path beats both, and with none the built-in path reads `public`; each time
   query mode reads the rows a plain session as that login reads, and a pushed compare matches).
-  pins: c-2/C-052, C-053, C-054, C-055, C-056, C-062
+  pins: c-2/C-052, C-053, C-054, C-055, C-056, C-062, C-063
 - `scan.rs` — C-2b fold 1 (2026-10-07), behind `postgres`, no Postgres server: a loopback fake
   backend answers the startup, the prepare and a one-row binary COPY.
   `a_copy_stream_without_its_trailer_fails_the_scan` (with the trailer `scan()` reads `[7]`;

@@ -45,6 +45,20 @@ async fn poison(reader: &Reader, sql: &str, served_by: i32) {
     );
 }
 
+async fn identity(reader: &Reader) -> Vec<Option<String>> {
+    let sql = "SELECT current_user::pg_catalog.text AS cu, \
+               session_user::pg_catalog.text AS su, \
+               pg_catalog.current_setting('role') AS r";
+    let batches = reader.read_query(sql).await.expect(sql);
+    let batch = batches.first().expect("one batch");
+    (0..batch.num_columns())
+        .map(|column| {
+            let column = batch.column(column).as_string::<i32>();
+            column.iter().next().flatten().map(str::to_string)
+        })
+        .collect()
+}
+
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
 async fn a_pooled_connection_is_reset_before_reuse() {
@@ -124,6 +138,23 @@ async fn a_pooled_connection_is_reset_before_reuse() {
     );
     assert_eq!(cell.count(&held).await, 0, "the advisory lock is released");
     assert_eq!(pid(&reader).await, served_by);
+
+    let login = cell.settings(&[]).user;
+    let other = format!("{schema}_o");
+    cell.sql(&format!("CREATE ROLE {other} NOLOGIN")).await;
+    let mut identities = Vec::new();
+    for setting in ["role", "session_authorization"] {
+        let set = format!("SELECT pg_catalog.set_config('{setting}', '{other}', false) AS s");
+        poison(&reader, &set, served_by).await;
+        identities.push(identity(&reader).await);
+    }
+    cell.sql(&format!("DROP ROLE {other}")).await;
+    let clean = [Some(login.clone()), Some(login), Some("none".to_string())];
+    assert_eq!(
+        identities,
+        [clean.clone(), clean],
+        "role, then session_authorization"
+    );
     cell.close().await;
 }
 

@@ -804,6 +804,7 @@ one S2 and four S3s, under the orchestrator's rulings Z1–Z5. The live cells ra
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-062 | Z1 (S2): query mode honours the configured search path. `QUERY_SEARCH_PATH` is one constant statement in the query's read-only transaction (scan and discovery) that reads the login role's `search_path` from `pg_db_role_setting`, keyed on `session_user` and `current_database()`, in the server's precedence (role in database, role, database, all roles), falls back to the built-in `"$user", public`, and applies it with `set_config('search_path', …, true)`. In a fresh database a role with `ALTER ROLE … SET search_path = app, public` reads `app.vt` over `public.vt` and the database's own `db` path; with no role setting the database's path wins; `ALTER ROLE … IN DATABASE` beats both; with none set the read is `public`'s. Each time query mode returns the rows a plain session as that login returns, and a pushed `int4` compare (`OPERATOR(pg_catalog.=)`) matches one row. | `live_pool.rs::query_mode_reads_the_configured_search_path_as_a_plain_session_does`, `read.rs::query_mode_wraps_the_statement_and_an_empty_projection_selects_nothing`; mutations m86, m87, m88. | PROVEN | §10.1. Supersedes C-056's `"$user", public` statement and FL-16's default (§10.2 R-11). |
+| C-063 | Z2 (S3): the reset ends any `role` or `session_authorization` a query set. `RESET_SESSION` runs `SET SESSION AUTHORIZATION DEFAULT; RESET ROLE` (both outside `RESET ALL`, whose reach excludes them), and `SessionPins::hold` also requires `current_user` = `session_user` = the login role (`settings.user`) on every check row. On `pool_max_size = 1` a query-mode `set_config('role', <NOLOGIN role>, false)`, then a `set_config('session_authorization', …, false)` by the superuser login, each leave the next lease on the same backend reading `current_user` = `session_user` = the login and `role` = `none`. | `live_pool.rs::a_pooled_connection_is_reset_before_reuse`; mutations m89, m90, m91. | PROVEN | §10.1. The re-verify's R-M2 survivor is m89, now red. |
 
 ### 10.1 Mutations (fold 2)
 
@@ -815,6 +816,9 @@ against the container, and the file restored from a copy taken before the edit.
 | m86 | C-062 | the built-in `"$user", public` always wins: it is `COALESCE`'s first argument (`src/discover.rs`) | RED | `query_mode_reads_the_configured_search_path_as_a_plain_session_does` (the role reads `public`) |
 | m87 | C-062 | the precedence flipped: database before role (`ORDER BY s.setdatabase = 0, s.setrole = 0`, `src/discover.rs`) | RED | `query_mode_reads_the_configured_search_path_as_a_plain_session_does` (the role reads `db`) |
 | m88 | C-062 | database-scoped rows ignored (`s.setdatabase IN (0)`, `src/discover.rs`) | RED | `query_mode_reads_the_configured_search_path_as_a_plain_session_does` (the database-level path is missed) |
+| m89 | C-063 | the re-verify's R-M2 and the ruling's mutation: drop `SET SESSION AUTHORIZATION DEFAULT` and `RESET ROLE` (`src/pool.rs`) | RED | `a_pooled_connection_is_reset_before_reuse`: the check sees `current_user` = the poisoned role and drops the client, so the next lease runs on another backend |
+| m90 | C-063 | m89, and `hold` no longer compares `current_user` and `session_user` (`src/pool.rs`) | RED | `a_pooled_connection_is_reset_before_reuse` (the next lease reads `current_user` = the poisoned role) |
+| m91 | C-063 | drop `RESET ROLE` alone (`src/pool.rs`) | GREEN (equivalent: `SET SESSION AUTHORIZATION DEFAULT` also sets `role` back to `none`) | — |
 
 ### 10.2 Readings acted on (no halt)
 
@@ -833,3 +837,8 @@ against the container, and the file restored from a copy taken before the edit.
   it follows an `ALTER ROLE` made after it connected, where a long-lived plain session keeps
   its login-time path. The registry rationale (CONNECT-DECL-pg-session-sql) and `map.md` say
   this, replacing fold 1's "as Spark's `query` resolves" for the built-in path alone.
+- **R-12, a role with a configured `role` (Z2).** A login whose `ALTER ROLE … SET role = x`
+  runs as `x` in a plain session and on a fresh repark connection alike, but after the reset
+  `current_user` is `x`, not the login, so the check drops the connection at every release:
+  such a source reads correctly, without pooling. The re-verify saw that setting persist
+  consistently across the reset; the ruling's check now trades its reuse for a known identity.

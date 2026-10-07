@@ -245,12 +245,13 @@ impl<C: Connect> Deref for PooledClient<C> {
     }
 }
 
-pub const RESET_SESSION: &str = "CLOSE ALL; SET SESSION AUTHORIZATION DEFAULT; RESET ALL; \
-     UNLISTEN *; SELECT pg_catalog.pg_advisory_unlock_all(); DISCARD PLANS; DISCARD TEMP; \
+pub const RESET_SESSION: &str = "CLOSE ALL; SET SESSION AUTHORIZATION DEFAULT; RESET ROLE; \
+     RESET ALL; UNLISTEN *; SELECT pg_catalog.pg_advisory_unlock_all(); DISCARD PLANS; DISCARD TEMP; \
      DISCARD SEQUENCES";
 
 struct SessionPins {
     pins: Vec<(&'static str, String)>,
+    login: String,
     check: String,
     timeout: Duration,
 }
@@ -261,31 +262,34 @@ impl SessionPins {
         let names: Vec<String> = pins.iter().map(|(key, _)| format!("'{key}'")).collect();
         let check = format!(
             "SELECT name, setting, \
-             pg_catalog.statement_timestamp() = pg_catalog.transaction_timestamp() \
+             pg_catalog.statement_timestamp() = pg_catalog.transaction_timestamp(), \
+             current_user::pg_catalog.text, session_user::pg_catalog.text \
              FROM pg_catalog.pg_settings WHERE name IN ({})",
             names.join(", ")
         );
         Self {
             pins,
+            login: settings.user.clone(),
             check,
             timeout: settings.read_timeout,
         }
     }
 
     fn hold(&self, shown: &[SimpleQueryMessage]) -> bool {
-        let rows: Vec<(&str, &str, &str)> = shown
+        let login = Some(self.login.as_str());
+        let rows: Vec<(&str, &str, bool)> = shown
             .iter()
             .filter_map(|message| match message {
-                SimpleQueryMessage::Row(row) => Some((
-                    row.try_get(0).ok()??,
-                    row.try_get(1).ok()??,
-                    row.try_get(2).ok()??,
-                )),
+                SimpleQueryMessage::Row(row) => {
+                    let cell = |index: usize| row.try_get(index).ok().flatten();
+                    let settled = cell(2) == Some("t") && cell(3) == login && cell(4) == login;
+                    Some((cell(0)?, cell(1)?, settled))
+                }
                 _ => None,
             })
             .collect();
         rows.len() == self.pins.len()
-            && rows.iter().all(|(_, _, autocommit)| *autocommit == "t")
+            && rows.iter().all(|(_, _, settled)| *settled)
             && self.pins.iter().all(|(key, value)| {
                 rows.iter().any(|(name, setting, _)| {
                     name.eq_ignore_ascii_case(key) && as_set(key, setting) == value
