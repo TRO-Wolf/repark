@@ -1,4 +1,4 @@
-"""MB-0 streaming oracle: 24 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
+"""MB-0 streaming oracle: 27 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
 
 from __future__ import annotations
 
@@ -13,72 +13,36 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from mb0_bench import (
+    NAMESPACE,
+    Bench,
+    Collect,
+    append,
+    await_query,
+    build_session,
+    checkpoint_logs,
+    create_sink,
+    create_source,
+    error_of,
+    last_snapshot,
+    operations,
+    progress_batches,
+    rows_of,
+    snapshot_log,
+    table_rows,
+)
 from pyspark.errors import PySparkException
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as sf
-from pyspark.sql.streaming import StreamingQuery
 
-NAMESPACE = "local.mb0"
-SOURCE_COLUMNS = "id BIGINT, k STRING"
-JAR_NAME = "iceberg-spark-runtime-4.1_2.13-1.11.0.jar"
-JAR_COORDINATE = "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
-JAR_CANDIDATES = (
-    Path.home() / ".ivy2" / "jars" / f"org.apache.iceberg_{JAR_NAME}",
-    Path.home()
-    / ".ivy2"
-    / "cache"
-    / "org.apache.iceberg"
-    / "iceberg-spark-runtime-4.1_2.13"
-    / "jars"
-    / JAR_NAME,
-    Path.home()
-    / ".m2"
-    / "repository"
-    / "org"
-    / "apache"
-    / "iceberg"
-    / "iceberg-spark-runtime-4.1_2.13"
-    / "1.11.0"
-    / JAR_NAME,
-)
-SUMMARY_COUNTS = (
-    "added-data-files",
-    "added-records",
-    "deleted-data-files",
-    "deleted-records",
-    "added-delete-files",
-    "added-position-deletes",
-)
 FAIL_ID = 3
 PROGRESS_TIMEOUT_S = 120.0
-
-
-class Bench:
-    __slots__ = ("checkpoints", "spark", "warehouse")
-
-    def __init__(self, spark: SparkSession, warehouse: Path, checkpoints: Path) -> None:
-        self.spark = spark
-        self.warehouse = warehouse
-        self.checkpoints = checkpoints
-
-    def table(self, name: str) -> str:
-        return f"{NAMESPACE}.{name}"
-
-    def checkpoint(self, name: str) -> str:
-        return str(self.checkpoints / name)
+FUTURE_MS = 3_600_000
+LANDING_MS = 6_000
+EXPECTED_CELLS = 27
 
 
 Cell = Callable[[Bench], tuple[str, dict[str, Any]]]
-
-
-class Collect:
-    def __init__(self) -> None:
-        self.schema: list[list[Any]] = []
-        self.batches: list[dict[str, Any]] = []
-
-    def __call__(self, frame: DataFrame, batch_id: int) -> None:
-        self.schema = schema_of(frame)
-        self.batches.append({"batch": batch_id, "rows": rows_of(frame)})
 
 
 class AppendTo:
@@ -87,60 +51,6 @@ class AppendTo:
 
     def __call__(self, frame: DataFrame, batch_id: int) -> None:
         frame.writeTo(self.table).append()
-
-
-def iceberg_jar() -> Path:
-    override = os.environ.get("MB0_ICEBERG_JAR")
-    candidates = (Path(override),) if override else JAR_CANDIDATES
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    raise SystemExit(f"missing {JAR_COORDINATE} ({JAR_NAME})")
-
-
-def build_session(warehouse: Path) -> SparkSession:
-    os.environ["SPARK_LOCAL_HOSTNAME"] = "localhost"
-    return (
-        SparkSession.builder.master("local[2]")
-        .appName("mb0-streaming-oracle")
-        .config("spark.jars", str(iceberg_jar()))
-        .config(
-            "spark.sql.extensions",
-            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-        )
-        .config("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
-        .config("spark.sql.catalog.local.type", "hadoop")
-        .config("spark.sql.catalog.local.warehouse", str(warehouse))
-        .config("spark.sql.catalog.local.cache-enabled", "false")
-        .config("spark.driver.host", "127.0.0.1")
-        .config("spark.driver.bindAddress", "127.0.0.1")
-        .config("spark.sql.session.timeZone", "UTC")
-        .config("spark.sql.shuffle.partitions", "2")
-        .config("spark.ui.enabled", "false")
-        .getOrCreate()
-    )
-
-
-def create_source(bench: Bench, name: str) -> str:
-    table = bench.table(name)
-    bench.spark.sql(
-        f"CREATE TABLE {table} ({SOURCE_COLUMNS}) USING iceberg "
-        "TBLPROPERTIES ('format-version'='2', 'write.delete.mode'='merge-on-read')"
-    )
-    return table
-
-
-def create_sink(bench: Bench, name: str, columns: str = SOURCE_COLUMNS, partition: str = "") -> str:
-    table = bench.table(name)
-    partitioned = f" PARTITIONED BY ({partition})" if partition else ""
-    bench.spark.sql(f"CREATE TABLE {table} ({columns}) USING iceberg{partitioned}")
-    return table
-
-
-def append(bench: Bench, table: str, ids: list[int], files: int = 1) -> None:
-    rows = [(i, f"k{i % 2}") for i in ids]
-    frame = bench.spark.createDataFrame(rows, SOURCE_COLUMNS)
-    frame.repartitionByRange(files, "id").writeTo(table).append()
 
 
 def overwrite_snapshot(bench: Bench, table: str) -> None:
@@ -157,84 +67,6 @@ def replace_snapshot(bench: Bench, table: str) -> None:
         f"CALL local.system.rewrite_data_files(table => '{short}', "
         "options => map('rewrite-all', 'true'))"
     )
-
-
-def schema_of(frame: DataFrame) -> list[list[Any]]:
-    return [[f.name, f.dataType.simpleString(), f.nullable] for f in frame.schema.fields]
-
-
-def rows_of(frame: DataFrame) -> list[list[Any]]:
-    return sorted([list(row) for row in frame.collect()])
-
-
-def table_rows(bench: Bench, table: str) -> dict[str, Any]:
-    frame = bench.spark.table(table)
-    return {"schema": schema_of(frame), "rows": rows_of(frame)}
-
-
-def snapshot_log(bench: Bench, table: str) -> list[dict[str, Any]]:
-    return [
-        row.asDict()
-        for row in bench.spark.sql(
-            f"SELECT operation, summary FROM {table}.snapshots ORDER BY committed_at"
-        ).collect()
-    ]
-
-
-def operations(bench: Bench, table: str) -> list[dict[str, str]]:
-    return [
-        {
-            "operation": entry["operation"],
-            **{key: entry["summary"][key] for key in SUMMARY_COUNTS if key in entry["summary"]},
-        }
-        for entry in snapshot_log(bench, table)
-    ]
-
-
-def last_snapshot(bench: Bench, table: str) -> dict[str, Any]:
-    return snapshot_log(bench, table)[-1]
-
-
-def jvm_causes(exc: PySparkException) -> list[str]:
-    chain: list[str] = []
-    origin = getattr(exc, "_origin", None)
-    while origin is not None and len(chain) < 8:
-        chain.append(origin.getClass().getName())
-        origin = origin.getCause()
-    return chain
-
-
-def error_of(exc: PySparkException) -> dict[str, Any]:
-    return {
-        "class": exc.getCondition() or type(exc).__name__,
-        "exception": f"{type(exc).__module__}.{type(exc).__name__}",
-        "sqlstate": exc.getSqlState(),
-        "causes": jvm_causes(exc),
-        "text": str(exc),
-    }
-
-
-def await_query(query: StreamingQuery) -> dict[str, Any] | None:
-    try:
-        query.awaitTermination()
-    except PySparkException as exc:
-        return error_of(exc)
-    return None
-
-
-def progress_batches(query: StreamingQuery) -> list[dict[str, int]]:
-    return [
-        {"batchId": progress["batchId"], "numInputRows": progress["numInputRows"]}
-        for progress in (json.loads(p.json()) for p in query._jsq.recentProgress())
-    ]
-
-
-def checkpoint_logs(checkpoint: str, log: str) -> list[str]:
-    directory = Path(checkpoint) / log
-    if not directory.is_dir():
-        return []
-    names = [p.name for p in directory.iterdir() if p.name.isdigit()]
-    return sorted(names, key=int)
 
 
 def fail_when_flagged(flag: str, value: int) -> int:
@@ -449,6 +281,142 @@ def cell_r13(bench: Bench) -> tuple[str, dict[str, Any]]:
         "commits": commits,
         "entries": sorted(str(p.relative_to(checkpoint)) for p in checkpoint.rglob("*")),
     }
+
+
+def snapshot_ids(bench: Bench, table: str) -> list[int]:
+    return [
+        row[0]
+        for row in bench.spark.sql(
+            f"SELECT snapshot_id FROM {table}.snapshots ORDER BY committed_at"
+        ).collect()
+    ]
+
+
+def snapshot_millis(bench: Bench, table: str) -> list[int]:
+    return [
+        row[0]
+        for row in bench.spark.sql(
+            f"SELECT unix_millis(committed_at) FROM {table}.snapshots ORDER BY committed_at"
+        ).collect()
+    ]
+
+
+def offset_positions(bench: Bench, table: str, checkpoint: str) -> list[dict[str, Any]]:
+    ordinals = {snapshot: index for index, snapshot in enumerate(snapshot_ids(bench, table))}
+    ends = []
+    for name in checkpoint_logs(checkpoint, "offsets"):
+        lines = (Path(checkpoint) / "offsets" / name).read_text().splitlines()
+        offset = json.loads(lines[-1])
+        ends.append(
+            {
+                "batch": int(name),
+                "snapshot_ordinal": ordinals.get(offset["snapshot_id"]),
+                "position": offset["position"],
+                "scan_all_files": offset["scan_all_files"],
+            }
+        )
+    return ends
+
+
+def option_run(
+    bench: Bench, source: str, checkpoint: str, options: dict[str, str]
+) -> dict[str, Any]:
+    collect = Collect()
+    query = (
+        bench.spark.readStream.format("iceberg")
+        .options(**options)
+        .load(source)
+        .writeStream.foreachBatch(collect)
+        .option("checkpointLocation", checkpoint)
+        .trigger(availableNow=True)
+        .start()
+    )
+    error = await_query(query)
+    return {
+        "error": error,
+        "batches": collect.batches,
+        "progress_batches": progress_batches(query),
+        "offsets": offset_positions(bench, source, checkpoint),
+    }
+
+
+def wait_past(millis: int) -> None:
+    while time.time() * 1000 <= millis + 500:
+        time.sleep(0.1)
+
+
+def cell_r14(bench: Bench) -> tuple[str, dict[str, Any]]:
+    source = create_source(bench, "r14")
+    append(bench, source, [1])
+    future = snapshot_millis(bench, source)[-1] + FUTURE_MS
+    options = {"stream-from-timestamp": str(future)}
+    checkpoint = bench.checkpoint("r14")
+    before_append = option_run(bench, source, checkpoint, options)
+    append(bench, source, [2])
+    resumed = option_run(bench, source, checkpoint, options)
+    fresh = option_run(bench, source, bench.checkpoint("r14-fresh"), options)
+    landing = create_source(bench, "r14_landing")
+    append(bench, landing, [10])
+    target = snapshot_millis(bench, landing)[-1] + LANDING_MS
+    landing_options = {"stream-from-timestamp": str(target)}
+    landing_checkpoint = bench.checkpoint("r14-landing")
+    append(bench, landing, [11])
+    before_landing = option_run(bench, landing, landing_checkpoint, landing_options)
+    wait_past(target)
+    append(bench, landing, [12])
+    after_landing = option_run(bench, landing, landing_checkpoint, landing_options)
+    return "rows", {
+        "past_head": {
+            "below_t": [stamp < future for stamp in snapshot_millis(bench, source)],
+            "operations": operations(bench, source),
+            "started_before_append": before_append,
+            "resumed_after_append": resumed,
+            "fresh_after_append": fresh,
+        },
+        "later_landing": {
+            "below_t": [stamp < target for stamp in snapshot_millis(bench, landing)],
+            "operations": operations(bench, landing),
+            "before_landing": before_landing,
+            "after_landing": after_landing,
+        },
+    }
+
+
+def cell_r15(bench: Bench) -> tuple[str, dict[str, Any]]:
+    source = create_source(bench, "r15")
+    for ids in ([1, 2], [3, 4], [5, 6]):
+        append(bench, source, ids)
+    single = create_source(bench, "r15_single")
+    append(bench, single, [1, 2, 3, 4, 5, 6], files=3)
+    answer: dict[str, Any] = {
+        "operations": operations(bench, source),
+        "single_snapshot_operations": operations(bench, single),
+    }
+    for rows in ("3", "4", "5"):
+        options = {"streaming-max-rows-per-micro-batch": rows}
+        answer[f"three_snapshots_max_rows_{rows}"] = option_run(
+            bench, source, bench.checkpoint(f"r15-three-{rows}"), options
+        )
+        answer[f"one_snapshot_max_rows_{rows}"] = option_run(
+            bench, single, bench.checkpoint(f"r15-one-{rows}"), options
+        )
+    return "rows", answer
+
+
+def cell_r16(bench: Bench) -> tuple[str, dict[str, Any]]:
+    source = create_source(bench, "r16")
+    bench.spark.sql(f"INSERT OVERWRITE {source} VALUES (1, 'k1'), (2, 'k0')")
+    append(bench, source, [3])
+    run = option_run(bench, source, bench.checkpoint("r16"), {})
+    context = {
+        "operations": operations(bench, source),
+        "batches": run["batches"],
+        "progress_batches": run["progress_batches"],
+        "offsets": run["offsets"],
+    }
+    if run["error"]:
+        return "error", {**run["error"], **context}
+    return "rows", context
 
 
 def fanout_cell(bench: Bench, name: str, fanout: str) -> tuple[str, dict[str, Any]]:
@@ -778,6 +746,14 @@ CELLS: tuple[tuple[str, str, Cell, tuple[Any, ...]], ...] = (
     ("MB0-R11", "read.max_files.batches", cell_r11, ()),
     ("MB0-R12", "read.max_rows.batches", cell_r12, ()),
     ("MB0-R13", "read.checkpoint.offset", cell_r13, ()),
+    (
+        "MB0b-R14",
+        "read.from_timestamp_past_head.rows",
+        cell_r14,
+        (option_run, offset_positions, snapshot_millis, wait_past),
+    ),
+    ("MB0b-R15", "read.max_rows_crossing.batches", cell_r15, (option_run, offset_positions)),
+    ("MB0b-R16", "read.first_snapshot_overwrite.answer", cell_r16, (option_run,)),
     ("MB0-W1", "write.append_no_fanout.summary", cell_w1, (fanout_cell,)),
     ("MB0-W2", "write.append_fanout.summary", cell_w2, (fanout_cell,)),
     ("MB0-W3", "write.complete.answer", cell_w3, ()),
@@ -804,10 +780,22 @@ def statement_of(cell: Callable[..., Any], helpers: tuple[Any, ...]) -> str:
     return "\n".join(inspect.getsource(part) for part in (cell, *helpers))
 
 
-def record_all(bench: Bench) -> dict[str, dict[str, Any]]:
+def selected_cells() -> tuple[tuple[str, str, Cell, tuple[Any, ...]], ...]:
+    wanted = {part.strip() for part in os.environ.get("MB0_CELLS", "").split(",") if part.strip()}
+    if not wanted:
+        return CELLS
+    unknown = wanted - {cell_id for cell_id, *_ in CELLS}
+    if unknown:
+        raise SystemExit(f"MB0_CELLS names unknown cells: {sorted(unknown)}")
+    return tuple(entry for entry in CELLS if entry[0] in wanted)
+
+
+def record_all(
+    bench: Bench, cells: tuple[tuple[str, str, Cell, tuple[Any, ...]], ...] = CELLS
+) -> dict[str, dict[str, Any]]:
     bench.spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {NAMESPACE}")
     recorded: dict[str, dict[str, Any]] = {}
-    for cell_id, field, cell, helpers in CELLS:
+    for cell_id, field, cell, helpers in cells:
         kind, answer = cell(bench)
         entry = {
             "cell": cell_id,
@@ -848,22 +836,43 @@ def fresh_dir(variable: str, prefix: str) -> Path:
     return path.resolve()
 
 
+def merged_document(
+    out: Path, fresh_preamble: dict[str, Any], recorded: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    if len(recorded) == len(CELLS):
+        return {
+            "preamble": fresh_preamble,
+            "cells": [recorded[cell_id] for cell_id, *_ in CELLS],
+        }
+    kept = json.loads(out.read_text())
+    for key in ("spark", "iceberg_full", "catalog", "master"):
+        if kept["preamble"][key] != fresh_preamble[key]:
+            raise SystemExit(
+                f"preamble {key} moved: {kept['preamble'][key]} != {fresh_preamble[key]}"
+            )
+    by_id = {entry["cell"]: entry for entry in kept["cells"]}
+    by_id.update(recorded)
+    missing = [cell_id for cell_id, *_ in CELLS if cell_id not in by_id]
+    if missing:
+        raise SystemExit(f"cells missing after the merge: {missing}")
+    return {"preamble": kept["preamble"], "cells": [by_id[cell_id] for cell_id, *_ in CELLS]}
+
+
 def main() -> int:
     warehouse = fresh_dir("MB0_WAREHOUSE", "warehouse")
     checkpoints = fresh_dir("MB0_CHECKPOINTS", "checkpoints")
     out = Path(os.environ.get("MB0_OUT") or Path(__file__).with_suffix(".json"))
+    cells = selected_cells()
     spark = build_session(warehouse)
     spark.sparkContext.setLogLevel("ERROR")
     try:
-        recorded = record_all(Bench(spark, warehouse, checkpoints))
-        document = {
-            "preamble": preamble(spark),
-            "cells": [recorded[cell_id] for cell_id, *_ in CELLS],
-        }
+        recorded = record_all(Bench(spark, warehouse, checkpoints), cells)
+        fresh_preamble = preamble(spark)
     finally:
         spark.stop()
+    document = merged_document(out, fresh_preamble, recorded)
     out.write_text(json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
-    return 0 if len(document["cells"]) == len(CELLS) == 24 else 1
+    return 0 if len(document["cells"]) == len(CELLS) == EXPECTED_CELLS else 1
 
 
 if __name__ == "__main__":
