@@ -20,6 +20,24 @@ const FROM_TIMESTAMP_KEY: &str = "stream-from-timestamp";
 const START_AFTER_SNAPSHOT_KEY: &str = "repark.cdc.start-after-snapshot-id";
 const SKIP_OVERWRITE_KEY: &str = "streaming-skip-overwrite-snapshots";
 const SKIP_DELETE_KEY: &str = "streaming-skip-delete-snapshots";
+const UNSUPPORTED_SPARK_KEYS: [(&str, &str); 4] = [
+    (
+        "streaming-snapshot-polling-interval-ms",
+        "the trigger interval governs polling",
+    ),
+    (
+        "async-micro-batch-planning-enabled",
+        "RePark plans each micro-batch synchronously in its trigger",
+    ),
+    (
+        "async-queue-preload-file-limit",
+        "it sizes the asynchronous planning queue, which RePark does not run",
+    ),
+    (
+        "async-queue-preload-row-limit",
+        "it sizes the asynchronous planning queue, which RePark does not run",
+    ),
+];
 const STREAMING_PREFIX: &str = "streaming-";
 const STREAM_PREFIX: &str = "stream-";
 const REPARK_CDC_PREFIX: &str = "repark.cdc.";
@@ -64,6 +82,14 @@ impl SourceOptions {
                 START_AFTER_SNAPSHOT_KEY => {
                     start = StartPosition::AfterSnapshot(parse_snapshot_id(value)?);
                     snapshot_seen = true;
+                }
+                _ if let Some((option, reason)) = UNSUPPORTED_SPARK_KEYS
+                    .iter()
+                    .find(|(option, _)| *option == folded) =>
+                {
+                    return Err(MicroBatchError::Catalog(format!(
+                        "{option} is a Spark/Iceberg streaming option RePark does not support; {reason}"
+                    )));
                 }
                 _ if has_interpreted_prefix(&folded) => {
                     return Err(MicroBatchError::UnknownOption {

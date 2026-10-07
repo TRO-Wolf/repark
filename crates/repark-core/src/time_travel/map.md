@@ -75,8 +75,13 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   The skip keys refuse only when `true` (any case); `false` is Spark's
   default and passes as a no-op, and any other value refuses `Catalog`.
   pins: mb-1/C-028
+  The four Iceberg 1.11 `SparkReadOptions` streaming keys RePark does not
+  implement (`streaming-snapshot-polling-interval-ms` and the three `async-`
+  planning keys, which carry no interpreted prefix) refuse `Catalog` as
+  recognised but unsupported, never "fix the spelling".
+  pins: mb-1/C-029
 - `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
-  under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027, C-028
+  under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027, C-028, C-029
 - `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table
   AS OF decision both doors share. `provider_for_spec` is the #802
   `prepare_metadata_as_of` body moved down from `repark-spark` (refuse/serve-current/

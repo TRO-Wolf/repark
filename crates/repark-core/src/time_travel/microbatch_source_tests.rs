@@ -122,6 +122,49 @@ fn from_options_refuses_unknown_keys_under_interpreted_prefixes() {
 }
 
 #[test]
+fn from_options_refuses_recognised_spark_streaming_keys_it_does_not_support() {
+    for (key, option, reason) in [
+        (
+            "streaming-snapshot-polling-interval-ms",
+            "streaming-snapshot-polling-interval-ms",
+            "the trigger interval governs polling",
+        ),
+        (
+            "Streaming-Snapshot-Polling-Interval-Ms",
+            "streaming-snapshot-polling-interval-ms",
+            "the trigger interval governs polling",
+        ),
+        (
+            "async-micro-batch-planning-enabled",
+            "async-micro-batch-planning-enabled",
+            "RePark plans each micro-batch synchronously in its trigger",
+        ),
+        (
+            "async-queue-preload-file-limit",
+            "async-queue-preload-file-limit",
+            "it sizes the asynchronous planning queue, which RePark does not run",
+        ),
+        (
+            "ASYNC-QUEUE-PRELOAD-ROW-LIMIT",
+            "async-queue-preload-row-limit",
+            "it sizes the asynchronous planning queue, which RePark does not run",
+        ),
+    ] {
+        let error = SourceOptions::from_options(&options_of(&[(key, "1000")]))
+            .expect_err("a recognised but unsupported key must refuse");
+        assert!(matches!(error, MicroBatchError::Catalog(_)));
+        let text = error.to_string();
+        assert_eq!(
+            text,
+            format!(
+                "{option} is a Spark/Iceberg streaming option RePark does not support; {reason}"
+            )
+        );
+        assert!(!text.contains("fix the spelling"), "{text}");
+    }
+}
+
+#[test]
 fn from_options_passes_unprefixed_keys() {
     let options = SourceOptions::from_options(&options_of(&[
         ("checkpointLocation", "/tmp/checkpoints/q1"),
