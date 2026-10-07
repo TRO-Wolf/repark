@@ -234,18 +234,28 @@ See [../map.md](../map.md).
   `decoder_is_poisoned_after_an_error` (an OID refusal, then a valid chunk answers the same
   error unread, and so does `finish`).
   pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
-- `copy_accounting.rs` — C-2a open items (2026-10-07): exact counts on
-  `CopyBinaryDecoder::buffered_bytes()`, each derived from the Arrow layout the builders hold (an
-  `i32` offset slot per variable-width row, the fixed width per `int4` row, one validity bit per
-  slot) under the default limits, so nothing flushes. `carry_reserves_the_declared_length_on_the_first_partial_chunk`
-  (a 4096-byte `text` field opened with 100 bytes charges exactly 4096, and still 4096 after
-  1000 more), `buffered_bytes_counts_a_mid_field_carry` (one buffered `abc` row plus a 64-byte
-  field opened with 10 bytes charges 3 + 4 + 1 + 64), `variable_width_nulls_charge_their_offset_slot`
-  (three all-NULL `text, bytea, int4` rows charge 3 x (4 + 4 + 4) + ceil(9 / 8)) and
-  `variable_width_values_charge_bytes_and_offset` (`abc`, five bytes, `7`, then two empty
-  values and `8`, charge (3 + 4) + (5 + 4) + 4 + 4 + 4 + 4 + ceil(6 / 8)). It borrows
-  `copy_binary.rs`'s stream builders, which are `pub(crate)` for it.
-  pins: c-2/C-089, C-090
+- `copy_accounting.rs` — C-2a open items (2026-10-07), fold 1 the same day: exact counts on
+  `CopyBinaryDecoder::buffered_bytes()` under the default limits, so nothing flushes. Each count
+  follows the decoder's accounting model, not Arrow's per-column layout: one `i32` offset slot
+  per variable-width row, the fixed width per `int4` row, pooled validity bits ceil(rows x
+  columns / 8), plus the carry's capacity. `a_length_word_ending_the_chunk_reserves_nothing`
+  (a 1 GiB length word with no byte after it charges 0),
+  `a_hostile_length_charges_only_the_bytes_received` (that length with 16 bytes charges 16,
+  then 116 after 100 more, then 232 after 10 more: the doubling step),
+  `carry_growth_stops_at_the_declared_length` (a 4096-byte field opened with 100 bytes charges
+  100, then 1100, 2200 and 4096 after each further 1000, never 4400) and
+  `carry_allocation_failure_is_an_error_not_an_abort` (Linux only: the test re-executes its own
+  binary, filtered to itself, under `sh -c 'ulimit -v 524288'` with
+  `REPARK_CONNECT_CARRY_LIMITED` set; the child feeds a 1 GiB field in 1 MiB chunks and must
+  see `ConnectError::FieldBuffer`, class `Base`, and exit cleanly with one test passed; the
+  infallible `reserve_exact` aborts the child instead). `buffered_bytes_counts_a_mid_field_carry`
+  (one buffered `abc` row plus a 64-byte field opened with 10 bytes charges 3 + 4 + 1 + 10),
+  `variable_width_nulls_charge_their_offset_slot` (three all-NULL `text, bytea, int4` rows
+  charge 3 x (4 + 4 + 4) + ceil(9 / 8)) and `variable_width_values_charge_bytes_and_offset`
+  (`abc`, five bytes, `7`, then two empty values and `8`, charge (3 + 4) + (5 + 4) + 4 + 4 + 4
+  + 4 + ceil(6 / 8)). It borrows `copy_binary.rs`'s stream builders, which are `pub(crate)` for
+  it.
+  pins: c-2/C-090, C-092, C-093
 - `postgres_types.rs` — C-1 (2026-10-05): one round-trip pin per mapped row, named in the row
   (`bool_round_trips` … `bytea_round_trips`): Arrow array → wire values → Arrow array, equal,
   over NULLs and boundary values (`MIN` / `MAX`, `-0.0`, the infinities and NaN compared by bit

@@ -148,10 +148,12 @@ four-line records.
   usually valid UTF-8 and would decode silently without the cast.
 - **CLOSED (2026-10-07, §13, C-089): the straddling-field peak is still about 3x the field.**
   The carry grew by `Vec` doubling from the first partial chunk, so its capacity neared twice
-  the field before the builder copy (re-verify `memory.rs`, 512–1023 MiB fields). The carry now
-  reserves the declared field length on the first partial chunk, and the peak is 2.00x
-  (§13.2). Pin: `copy_accounting.rs::carry_reserves_the_declared_length_on_the_first_partial_chunk`.
-  C-3 still owns the gated memory benchmark.
+  the field before the builder copy (re-verify `memory.rs`, 512–1023 MiB fields). Since fold 1
+  (§14, C-092) the carry grows geometrically as bytes arrive, fallibly, and never past the
+  declared length, and the peak is 2.00x (§14.2). The open items' first shape, an up-front
+  reservation of the declared length (C-089), failed verification and is rejected. Pin:
+  `copy_accounting.rs::carry_growth_stops_at_the_declared_length`. C-3 still owns the gated
+  memory benchmark.
 - **CLOSED (2026-10-07, §13, C-090): three accounting mutations survive.** They were
   `buffered_bytes()` without the carry (r11), a variable-width NULL charged 0 (r13), and
   variable-width values charged with no offset bytes (r15)
@@ -1172,9 +1174,9 @@ live cell changes, so no container ran.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-089 | The carry is reserved once. On a field's first partial chunk (the first chunk that holds any of the field's bytes, with the carry empty) `CopyBinaryDecoder` calls `reserve_exact(length.min(MAX_FIELD_BYTES))`, so the carry's capacity equals the declared length and never grows by doubling. A 4096-byte `text` field opened with 100 bytes reads `buffered_bytes()` = 4096 (no row is buffered, so the whole charge is the carry), and still 4096 after 1000 more bytes. The re-verify's `memory.rs` shape (one `text` field of 512, 513, 700 and 1023 MiB, fed in 64 KiB chunks) peaks at 2.00x the field, down from 3.00x (2.46x at 700 MiB). Fed whole, the field still peaks at 1.00x. A length past `MAX_FIELD_BYTES` still refuses at the length word with `FieldTooLong` before any reservation (C-015 unchanged); the `min` bounds the reservation even so. | `copy_accounting.rs::carry_reserves_the_declared_length_on_the_first_partial_chunk`; mutation m141; §13.2. | PROVEN | §13.1 m141 red; §13.2 before and after. The `min` cannot fire behind the length word, so its removal is an equivalent mutation (§13.3 R-2). |
-| C-090 | `buffered_bytes()` is exact for the three shapes the re-verify's survivors touched. Each expected count comes from the Arrow layout the builders hold: one `i32` offset slot (4 bytes) per variable-width row, value or NULL; the stored bytes of a variable-width value; the fixed width per fixed-width row (`int4` 4); and one validity bit per slot, ceil(rows x columns / 8); plus the carry's capacity. One buffered `abc` row and a 64-byte `text` field opened with 10 bytes read 3 + 4 + 1 + 64 = 72. Three all-NULL `text, bytea, int4` rows read 3 x (4 + 4 + 4) + ceil(9 / 8) = 38. The rows (`abc`, five bytes, `7`) and (empty, empty, `8`) read (3 + 4) + (5 + 4) + 4 + 4 + 4 + 4 + ceil(6 / 8) = 33. | `copy_accounting.rs::buffered_bytes_counts_a_mid_field_carry`, `::variable_width_nulls_charge_their_offset_slot`, `::variable_width_values_charge_bytes_and_offset`; mutations m142 (r11), m143 (r13), m144 (r15). | PROVEN | §13.1: all three re-verify survivors are now red. Extends C-016 and C-017 from bounds to exact counts. |
-| C-091 | Shape and files: `src/copy_binary.rs` is the only product change (three lines, the reservation), at 476/480. The new `tests/it/copy_accounting.rs` (98 lines) holds the four pins and borrows `copy_binary.rs`'s stream builders (`Field`, `base`, `header_with`, `tuple`, now `pub(crate)`), so `tests/it/copy_binary.rs` stays at 605/700. No public signature changes, no dependency changes, no code comments. Every gate in §13.4 passes. | §13.4. | PROVEN | — |
+| C-089 | (Rejected by fold 1, §14.) The carry is reserved once. On a field's first partial chunk (the first chunk that holds any of the field's bytes, with the carry empty) `CopyBinaryDecoder` calls `reserve_exact(length.min(MAX_FIELD_BYTES))`, so the carry's capacity equals the declared length and never grows by doubling. A 4096-byte `text` field opened with 100 bytes reads `buffered_bytes()` = 4096 (no row is buffered, so the whole charge is the carry), and still 4096 after 1000 more bytes. The re-verify's `memory.rs` shape (one `text` field of 512, 513, 700 and 1023 MiB, fed in 64 KiB chunks) peaks at 2.00x the field, down from 3.00x (2.46x at 700 MiB). Fed whole, the field still peaks at 1.00x. A length past `MAX_FIELD_BYTES` still refuses at the length word with `FieldTooLong` before any reservation (C-015 unchanged); the `min` bounds the reservation even so. | `copy_accounting.rs::carry_reserves_the_declared_length_on_the_first_partial_chunk` (removed in fold 1); mutation m141; §13.2. | REJECTED (fold 1, the verifier's S1: a declared length alone allocated up to 1 GiB per scan, infallibly, before any byte arrived; C-092 and C-093 replace it) | §13.1 m141 red; §13.2 before and after. Under `ulimit -v` 4 GiB, eight scans with a 1 GiB length word and 16 bytes aborted the process (SIGABRT, `memory allocation of 1073741824 bytes failed`); §14.3. |
+| C-090 | `buffered_bytes()` is exact for the three shapes the re-verify's survivors touched. Each expected count comes from the decoder's accounting model, not Arrow's per-column layout: pooled validity bits, ceil(rows x columns / 8), and one `i32` offset slot (4 bytes) per variable-width row, value or NULL; the stored bytes of a variable-width value; the fixed width per fixed-width row (`int4` 4); plus the carry's capacity. Arrow's own buffers for the two multi-column batches are 47 and 40 bytes (per-column validity, n + 1 offsets, no validity buffer without NULLs), against 38 and 33 here; the model under-counts by O(columns) bytes a batch (fold 1, the verifier's S3). One buffered `abc` row and a 64-byte `text` field opened with 10 bytes read 3 + 4 + 1 + 10 = 18 since fold 1, where the carry holds what arrived (72 before, with the up-front reservation). Three all-NULL `text, bytea, int4` rows read 3 x (4 + 4 + 4) + ceil(9 / 8) = 38. The rows (`abc`, five bytes, `7`) and (empty, empty, `8`) read (3 + 4) + (5 + 4) + 4 + 4 + 4 + 4 + ceil(6 / 8) = 33. | `copy_accounting.rs::buffered_bytes_counts_a_mid_field_carry`, `::variable_width_nulls_charge_their_offset_slot`, `::variable_width_values_charge_bytes_and_offset`; mutations m142 (r11), m143 (r13), m144 (r15). | PROVEN | §13.1: all three re-verify survivors are now red. Extends C-016 and C-017 from bounds to exact counts. |
+| C-091 | Shape and files: `src/copy_binary.rs` is the only product change (three lines, the reservation), at 476/480. The new `tests/it/copy_accounting.rs` (98 lines) holds the four pins and borrows `copy_binary.rs`'s stream builders (`Field`, `base`, `header_with`, `tuple`, now `pub(crate)`), so `tests/it/copy_binary.rs` stays at 605/700. No public signature changes, no dependency changes, no code comments. Every gate in §13.4 passes. | §13.4. | PROVEN | At `f25ca81e`. Fold 1's shape is C-095. |
 
 ### 13.1 Mutations (open items)
 
@@ -1217,21 +1219,26 @@ all-NULL runs flush as before.
 
 ### 13.3 Readings acted on (no halt)
 
-- **R-1, the up-front charge.** A stream that declares a length of up to `MAX_FIELD_BYTES` and
-  sends its first byte now reserves that length at once, where before the carry grew only as
-  bytes arrived. The brief's guard is the cap: a lying length reserves at most 1 GiB, the
-  bound the length word already enforces, and the reservation is untouched virtual memory until
-  bytes fill it. `buffered_bytes()` reports it from that chunk on, so the C-2c scan's
-  `MemoryReservation` is resized to the full field before its bytes arrive and refuses early
-  when the pool cannot hold it, rather than mid-field.
-- **R-2, the `min`.** `field_length` refuses any length past `MAX_FIELD_BYTES` before
+- **R-1, the up-front charge. RETRACTED by fold 1 (the verifier's S2): its last sentence is
+  false.** `buffered_bytes()` has no production caller, and nothing charges the decoder to the
+  pool before it allocates; the C-2c scan resizes its `MemoryReservation` only after a batch
+  exists, to that batch's array size (§14, C-094). The reading as first written: a stream that
+  declares a length of up to `MAX_FIELD_BYTES` and sends its first byte now reserves that length
+  at once, where before the carry grew only as bytes arrived. The brief's guard is the cap: a
+  lying length reserves at most 1 GiB, the bound the length word already enforces, and the
+  reservation is untouched virtual memory until bytes fill it. `buffered_bytes()` reports it
+  from that chunk on, so the C-2c scan's `MemoryReservation` is resized to the full field before
+  its bytes arrive and refuses early when the pool cannot hold it, rather than mid-field.
+- **R-2, the `min`.** Moot since fold 1, whose growth is capped by the declared length itself.
+  As first written: `field_length` refuses any length past `MAX_FIELD_BYTES` before
   `FieldValue` is entered, so `length.min(MAX_FIELD_BYTES)` always equals `length`. It stays
   as the brief's stated guard, which keeps the reservation bounded if the length check ever
   moves; its removal is an equivalent mutation and was not run.
 - **R-3, no reservation on an empty chunk.** A chunk that ends just after the length word
   enters `FieldValue` with no bytes available. The reservation waits for the first byte, so
   `copy_field_at_postgres_max_is_accepted` (the maximum length with no payload) still reserves
-  nothing.
+  nothing. Unpinned here (the verifier's MA survived); fold 1 pins it,
+  `copy_accounting.rs::a_length_word_ending_the_chunk_reserves_nothing`.
 - **R-4, a reused carry.** A carry kept from an earlier field (cleared, capacity within the
   byte cap, C-016) whose capacity already covers the new length keeps that capacity, because
   `reserve_exact` never shrinks. The pins run on a fresh decoder, where the capacity is exactly
@@ -1255,3 +1262,121 @@ Run on the finished tree. Each cargo command ran under the build-slot lock and `
 | `python3 scripts/check_docs_links.py` | 0 | 1354 files, 7295 links clean |
 | `python3 scripts/check_ledger_grammar.py` | 0 | 309 live ledgers clean |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2ao origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+## 14. C-2a open items fold 1 — the reservation never aborts (2026-10-07)
+
+**Branch:** `fix/c-2a-open-items` from `f25ca81e` (PR #989). **Model:** Claude Opus 5.5
+(`claude-opus-5-5`, high). **Scope:** the verifier's FAIL verdict on #989 under the
+orchestrator's rulings M1 (S1), M2 (S2) and M3 (S3), and the verifier's unpinned MA (R-3). No
+live cell changes, so no container ran.
+
+### PROPOSITION LEDGER — C-2a open items fold 1 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-092 | M1 (S1): the carry grows as bytes arrive, geometrically and never past the declared length. `grow_carry`, a free function in `src/copy_binary.rs`, runs before each straddling field's bytes are copied into the carry. When the bytes a chunk gives a straddling field do not fit the carry's capacity, the carry grows to `want = min(length, max(carry.len() + taken, carry.capacity() * 2))`, where `taken` is the chunk's bytes for the field (its `available`, capped at what the field still needs); a carry with room does not grow. A declared length alone allocates nothing: a 1 GiB length word that ends its chunk leaves `buffered_bytes()` at 0 (the verifier's MA, R-3), and with 16 bytes after it charges 16, then 116 after 100 more, then 232 after 10 more. A 4096-byte field opened with 100 bytes charges 100, then 1100, 2200 and 4096 after each further 1000 bytes, never 4400. The re-verify's `memory.rs` peaks stay at 2.00x the field for 512, 513, 700 and 1023 MiB fields in 64 KiB chunks, and 1.00x fed whole. | `copy_accounting.rs::a_length_word_ending_the_chunk_reserves_nothing`, `::a_hostile_length_charges_only_the_bytes_received`, `::carry_growth_stops_at_the_declared_length`, `::buffered_bytes_counts_a_mid_field_carry`; mutations m145, m147, m148, m149; §14.2, §14.3. | PROVEN | §14.1 all red; §14.2 before and after; §14.3, eight scans under 4 GiB exit 0 where `f25ca81e` aborted. |
+| C-093 | M1 (S1): an allocation failure is an error, never an abort. The growth calls `try_reserve_exact` and maps a refusal to `ConnectError::FieldBuffer` ("a COPY BINARY field could not be buffered: the allocator refused its memory"), which carries no value, folds to `repark_common::Error::DataFusion` (class `Base`) and poisons the decoder like any decode error. On Linux, a 1 GiB field fed in 1 MiB chunks under a 512 MiB address-space limit ends in `Err(FieldBuffer)` and the process exits cleanly. | `copy_accounting.rs::carry_allocation_failure_is_an_error_not_an_abort`; mutation m146; §14.3. | PROVEN | §14.1 m146 red (the child aborts). How the failure is forced: §14.4 R-2. |
+| C-094 | M2 (S2): §13.3 R-1 is retracted. `buffered_bytes()` has no production caller (`grep -rn buffered_bytes --include=*.rs crates/` finds the definition and `tests/it` alone), and nothing charges the decoder's builders or carry to the DataFusion pool before they allocate: `provider/scan.rs` resizes the scan's `MemoryReservation` to each batch's `get_array_memory_size()` after the batch is emitted (C-084). The bound on a hostile stream is C-092's: memory follows the bytes received. Charging the decoder carry to the pool before growth is a follow-up for C-3, which owns the gated memory benchmark. | The grep; `src/map.md`'s `copy_binary.rs` entry says it plainly; §13.3 R-1 marked retracted. | PROVEN | Corrects §13.3 R-1 and the C-2a wording in `src/map.md` that the C-2c scan resizes its reservation to `buffered_bytes()`. |
+| C-095 | Shape and files: `src/copy_binary.rs` (`grow_carry` and its one call, replacing the up-front reservation; 483, three past the sketch's 480) and `src/error.rs` (`FieldBuffer`, its message and its fold; 264, four past the sketch's 260) are the product changes (§14.4 R-4). `tests/it/copy_accounting.rs` (165 lines) replaces the rejected pin with four: the empty-chunk pin, the hostile-length pin, the growth-cap pin and the refusal pin; the mid-field pin's count moves from 72 to 18. M3: C-090 and `tests/it/map.md` now say the pins follow the decoder's accounting model, not Arrow's per-column layout. One public addition, the `FieldBuffer` variant; no signature or dependency changes; no code comments. Every gate in §14.5 passes. | §14.5. | PROVEN | — |
+
+### 14.1 Mutations (fold 1)
+
+Each mutation was applied alone to the finished `src/copy_binary.rs`, the crate's tests run
+(`cargo test -p repark-connect --no-fail-fast`) and the file restored from the copy taken before
+the edit (`fold1/mutate.py`); `cmp` against that copy matched after the five runs.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| m145 | C-092, C-093 | `f25ca81e`'s shape: reserve the declared length up front on the first byte, infallibly (`src/copy_binary.rs`) | RED | `a_hostile_length_charges_only_the_bytes_received`, `carry_growth_stops_at_the_declared_length`, `buffered_bytes_counts_a_mid_field_carry`, `carry_allocation_failure_is_an_error_not_an_abort` |
+| m146 | C-093 | the same growth through the infallible `reserve_exact` (`src/copy_binary.rs`) | RED | `carry_allocation_failure_is_an_error_not_an_abort` (the child aborts: `memory allocation of 536870912 bytes failed`) |
+| m147 | C-092, C-093 | no growth step (`grow_carry` called with nothing taken), so `extend_from_slice` grows by `Vec` doubling (`src/copy_binary.rs`) | RED | `carry_growth_stops_at_the_declared_length` (4400), `carry_allocation_failure_is_an_error_not_an_abort` |
+| m148 | C-092 | no cap at the declared length (`src/copy_binary.rs`) | RED | `carry_growth_stops_at_the_declared_length` |
+| m149 | C-092 | no doubling: grow to exactly what is needed (`src/copy_binary.rs`) | RED | `a_hostile_length_charges_only_the_bytes_received`, `carry_growth_stops_at_the_declared_length` |
+
+All five are red, and none is equivalent. The verifier's MA (drop the empty-chunk guard) has no
+counterpart in this shape: with no bytes the carry needs nothing, so it cannot grow, and
+`a_length_word_ending_the_chunk_reserves_nothing` holds that at 0.
+
+### 14.2 The peak, measured (2026-10-07)
+
+The re-verify's probe (`memory.rs`, a counting global allocator, release build, the crate at
+`path = "/tmp/xc2ao/crates/repark-connect"`), run under `ulimit -v 67108864` and the build-slot
+lock, before (`f25ca81e`) and after this fold.
+
+| field | chunk | before (`f25ca81e`) | after |
+|---|---|---|---|
+| 512 MiB | 64 KiB | 1024.0 MiB (2.00x) | 1024.0 MiB (2.00x) |
+| 513 MiB | 64 KiB | 1026.0 MiB (2.00x) | 1026.0 MiB (2.00x) |
+| 700 MiB | 64 KiB | 1400.0 MiB (2.00x) | 1400.0 MiB (2.00x) |
+| 1023 MiB (`(1 << 30) - 64`) | 64 KiB | 2048.0 MiB (2.00x) | 2048.0 MiB (2.00x) |
+| each of the four | whole | 1.00x | 1.00x |
+
+The peak is still the completed carry and the builder copy. Growth stops at the declared
+length, so the last step is at most half the field to the field, under the builder copy that
+follows. Every other probe line is unchanged: the `i32::MAX` length word refuses with 0 bytes
+of growth, nothing is retained after the flush, and the tiny-row and all-NULL runs flush as
+before.
+
+### 14.3 The hostile length, measured (2026-10-07)
+
+The verifier's `probe.rs` (a 1 GiB length word and N bytes, then a stall, per scan), built in
+release against this clone, run under `ulimit -v 4194304` (4 GiB).
+
+| scans | bytes sent | before (`f25ca81e`) | after |
+|---|---|---|---|
+| 8 | 16 | `memory allocation of 1073741824 bytes failed`, SIGABRT, exit 134 | `buffered_bytes` 128 in total, VmSize +268 kB, exit 0 |
+| 1 | 16 | — | 16, +0 kB, exit 0 |
+| 32 | 16 | — | 512, +964 kB, exit 0 |
+| 16 | 65 536 | — | 1 048 576, +1620 kB, exit 0 |
+
+### 14.4 Readings acted on (no halt)
+
+- **R-1, a carry with room does not grow.** The ruling's `want` applies at a growth step. The
+  step runs only when `carry.len() + taken` passes the capacity; otherwise `capacity * 2` would
+  double a carry that already fits, on every chunk.
+- **R-2, forcing the failure.** The workspace sets `unsafe_code = "forbid"`, so no test can
+  install a refusing `#[global_allocator]`, and `try_reserve_exact` refuses on its own only past
+  `isize::MAX`, which no length up to `MAX_FIELD_BYTES` reaches. The pin re-executes its own
+  test binary, filtered to itself, through `sh -c 'ulimit -v 524288 && exec "$0" --exact …'`,
+  marked by `REPARK_CONNECT_CARRY_LIMITED`. A 1 GiB carry cannot fit under 512 MiB, so the child
+  either sees `FieldBuffer` or aborts; the parent asserts a clean exit and `1 passed`. It is
+  `#[cfg(target_os = "linux")]`: `ulimit -v` is not enforced on macOS.
+- **R-3, what stays infallible.** `take_fixed` still extends the carry with
+  `extend_from_slice`, bounded by the 19-byte header. The builders' appends are infallible too,
+  but they copy bytes that have already arrived, so a declared length alone cannot reach them.
+  An abort there needs the whole field received under memory exhaustion; out of scope here, and
+  the pool charge (C-094, C-3) is its fix.
+- **R-4, two files pass their sketch ceilings.** The sketch (c-2-design.md §7) calls its line
+  ceilings hard limits, and this fold passes two by a few lines, as §9.2 R-9 did. `error.rs`
+  was at its 260 (C-048), and M1 says to add a variant if needed. No `ConnectError` fits an
+  allocator refusal (`Arrow` carries a message string; `Protocol` is a malformed stream, which
+  this is not), so `FieldBuffer` takes the file to 264. `copy_binary.rs` was at 476 of 480;
+  inline, the growth step took `run` to 104 lines, past clippy's `too_many_lines` (100), so it
+  moved to `grow_carry`, and the file is at 483. The mechanical gate is 1000 lines
+  (`check_rust_file_size.py`), and it passes. Raised in the hand-back for a ruling on the two
+  ceilings.
+- **R-5, a reused carry.** A carry kept from an earlier field (cleared, capacity within the byte
+  cap, C-016) whose capacity already covers the bytes taken does not grow (R-1). One that does
+  not cover them grows from its capacity, still capped by the new field's length.
+
+### 14.5 Gates (fold 1)
+
+Run on the finished tree. Each cargo command and probe ran under the build-slot lock and
+`ulimit -v 67108864`.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-connect` | 0 | 126 passed, 51 ignored (the live cells), 0 failed |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1112 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 368 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | 1354 files, 7295 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 309 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2ao origin/main HEAD` | 0 | `comment-ban hits=0` |
+| the verifier's `probe.rs`, 8 scans, `ulimit -v 4194304` | 0 | §14.3 |
+| the re-verify's `memory.rs` | 0 | §14.2, 2.00x |

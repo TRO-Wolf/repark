@@ -1,5 +1,8 @@
+use std::process::Command;
+
+use repark_common::{Error, ErrorClass};
 use repark_connect::postgres::PlannedColumn;
-use repark_connect::{BatchLimits, CopyBinaryDecoder};
+use repark_connect::{BatchLimits, ConnectError, CopyBinaryDecoder, MAX_FIELD_BYTES};
 
 use crate::copy_binary::{Field, base, header_with, tuple};
 
@@ -34,15 +37,79 @@ fn feed_unflushed(decoder: &mut CopyBinaryDecoder, chunk: &[u8]) {
     assert!(rest.is_empty());
 }
 
+const LIMITED: &str = "REPARK_CONNECT_CARRY_LIMITED";
+const LIMIT_KIB: usize = 512 << 10;
+const REFUSAL_TEST: &str = "copy_accounting::carry_allocation_failure_is_an_error_not_an_abort";
+
 #[test]
-fn carry_reserves_the_declared_length_on_the_first_partial_chunk() {
+fn a_length_word_ending_the_chunk_reserves_nothing() {
+    let first = opened_field(&[], 1, MAX_FIELD_BYTES, 0);
+    let decoder = buffered(vec![base("payload", "bytea")], &first);
+    assert_eq!(decoder.buffered_bytes(), 0);
+}
+
+#[test]
+fn a_hostile_length_charges_only_the_bytes_received() {
+    let first = opened_field(&[], 1, MAX_FIELD_BYTES, 16);
+    let mut decoder = buffered(vec![base("payload", "bytea")], &first);
+    assert_eq!(decoder.buffered_bytes(), 16);
+    feed_unflushed(&mut decoder, &[b'a'; 100]);
+    assert_eq!(decoder.buffered_bytes(), 116);
+    feed_unflushed(&mut decoder, &[b'a'; 10]);
+    assert_eq!(decoder.buffered_bytes(), 232);
+}
+
+#[test]
+fn carry_growth_stops_at_the_declared_length() {
     let length = 4096;
     let first = opened_field(&[], 1, length, 100);
     let mut decoder = buffered(vec![base("payload", "text")], &first);
     assert_eq!(decoder.buffered_rows(), 0);
-    assert_eq!(decoder.buffered_bytes(), length);
-    feed_unflushed(&mut decoder, &[b'a'; 1000]);
-    assert_eq!(decoder.buffered_bytes(), length);
+    assert_eq!(decoder.buffered_bytes(), 100);
+    for expected in [1100, 2200, length] {
+        feed_unflushed(&mut decoder, &[b'a'; 1000]);
+        assert_eq!(decoder.buffered_bytes(), expected);
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn carry_allocation_failure_is_an_error_not_an_abort() {
+    if std::env::var_os(LIMITED).is_some() {
+        let error = refused_field();
+        assert_eq!(error, ConnectError::FieldBuffer);
+        assert_eq!(Error::from(error).exception_class(), ErrorClass::Base);
+        return;
+    }
+    let binary = std::env::current_exe().expect("the test binary");
+    let script = format!("ulimit -v {LIMIT_KIB} && exec \"$0\" --exact {REFUSAL_TEST}");
+    let output = Command::new("sh")
+        .args(["-c", &script])
+        .arg(binary)
+        .env(LIMITED, "1")
+        .output()
+        .expect("the limited child runs");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "{:?}: {stdout}{stderr}",
+        output.status
+    );
+    assert!(stdout.contains("1 passed"), "{stdout}");
+}
+
+fn refused_field() -> ConnectError {
+    let first = opened_field(&[], 1, MAX_FIELD_BYTES, 0);
+    let mut decoder = buffered(vec![base("payload", "bytea")], &first);
+    let chunk = vec![b'a'; 1 << 20];
+    for _ in 0..MAX_FIELD_BYTES / chunk.len() {
+        let mut rest: &[u8] = &chunk;
+        if let Err(error) = decoder.decode(&mut rest) {
+            return error;
+        }
+    }
+    panic!("a {MAX_FIELD_BYTES}-byte carry fit under a {LIMIT_KIB} KiB address-space limit");
 }
 
 #[test]
@@ -53,7 +120,7 @@ fn buffered_bytes_counts_a_mid_field_carry() {
     let decoder = buffered(vec![base("payload", "text")], &chunk);
     assert_eq!(decoder.buffered_rows(), 1);
     let builders = 3 + OFFSET_BYTES + validity_bytes(1);
-    assert_eq!(decoder.buffered_bytes(), builders + length);
+    assert_eq!(decoder.buffered_bytes(), builders + 10);
 }
 
 #[test]
