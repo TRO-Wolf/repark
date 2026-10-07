@@ -184,3 +184,40 @@ The mutant was restored and the restore verified by diff plus a green
 re-run. `window.rs` crossed the ceiling at 1013 lines and was split into
 `window.rs` (364) plus `window_tests.rs` (649) under `#[path]`; no ceiling
 was raised and no exception added.
+
+## PROPOSITION LEDGER — MB-1 round 3 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-014 | `SourceOptions::from_options` defaults to unbounded caps and `Earliest`; parses the two cap keys, `stream-from-timestamp` millis and `repark.cdc.start-after-snapshot-id`; refuses the two skip keys `SkipOptionRefused` (MBE-3) and any other `streaming-`/`stream-`/`repark.cdc.` key `UnknownOption` (MBE-17); passes unprefixed keys; and refuses malformed values and two start keys `Catalog` (FL-6, FL-7). | The option pins in `microbatch_source.rs`'s test module. | **PROVEN** | 9 pins green (`from_options_defaults_to_unbounded_earliest`, `from_options_parses_caps`, `from_options_parses_from_timestamp`, `from_options_parses_start_after_snapshot_id`, `from_options_refuses_both_skip_keys`, `from_options_refuses_unknown_keys_under_interpreted_prefixes`, `from_options_passes_unprefixed_keys`, `from_options_refuses_malformed_values`, `from_options_refuses_two_start_keys`). pins: mb-1/C-014 |
+| C-015 | `MicroBatchSource::open` resolves a three-part table (FL-8) and refuses unknown catalogs and tables, malformed identifiers and non-three-part names; `initial_offset` and `next_batch` delegate to the planner; `next_batch` reads exactly the planned files through the new `provider_for_plan` seam (D-4), reports `num_input_rows` per plan, and reads `None` once consumed; an empty table reads `None`. | The source pins in `microbatch_source.rs`'s test module over a memory-catalog two-snapshot fixture. | **PROVEN** | 4 pins green (`open_streams_two_appends_then_reports_none`, `capped_batches_agree_with_their_plans_row_for_row`, `open_refuses_unknown_tables_and_malformed_identifiers`, `initial_offset_on_an_empty_table_reads_none`). pins: mb-1/C-015 |
+
+VERDICT: 2 clauses, 2 PROVEN, 0 OPEN, 0 REJECTED.
+
+- **D-4 (2026-10-07).** Question: `MicroBatchSource::next_batch`
+  (core) must return a `DataFrame` over exactly `plan.files`, but the
+  sketch pins `MicroBatchTableProvider` `pub(crate)` with no cross-crate
+  door. Flink: one codebase, no boundary. Spark: one codebase, no
+  boundary. North Star default: keep the reader in `repark-iceberg`
+  (NS-10) over the existing allowed core-to-iceberg edge (NS-19) — a
+  `pub fn provider_for_plan(table, plan) -> Result<Arc<dyn TableProvider>>`
+  beside `try_new`, type-erased so the struct stays `pub(crate)` exactly
+  as sketched; both `dead_code` allows lift with the first live caller.
+  Acted on; pins in C-015.
+- **FL-6 (2026-10-07).** Question: what does `from_options` do with a
+  malformed value (a zero or unparsable cap, a non-integer timestamp or
+  snapshot id). Flink: typed options fail at job build. Spark: a bad
+  submission fails the query; the exact texts are not recorded. North
+  Star default: refuse at start (NS §5 `deny_unknown_fields` spirit)
+  through the enum's generic `Catalog` carrier, naming the key, the
+  value and the expected shape; values parse strictly with no trimming.
+  Acted on; pins in C-014.
+- **FL-7 (2026-10-07).** Question: both start keys set at once. Flink: a
+  single start bound. Spark: not recorded. North Star default: refuse
+  loud naming both keys, never guess which start wins. Acted on; pins
+  in C-014.
+- **FL-8 (2026-10-07).** Question: which table identifiers does `open`
+  accept. Flink: n/a. Spark: `table()` names resolve in the session
+  catalog. North Star default: the three-part `catalog.namespace.table`
+  shape `load_iceberg_table` already enforces, refused otherwise with
+  the received identifier named. Acted on; pins in C-015.

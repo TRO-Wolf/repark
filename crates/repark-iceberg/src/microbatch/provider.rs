@@ -21,7 +21,6 @@ use crate::iceberg_to_datafusion;
 use crate::microbatch::window::WindowPlan;
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub(crate) struct MicroBatchTableProvider {
     table: Table,
     files: Vec<FileScanTask>,
@@ -30,7 +29,6 @@ pub(crate) struct MicroBatchTableProvider {
 
 impl MicroBatchTableProvider {
     #[allow(clippy::missing_errors_doc)]
-    #[allow(dead_code)]
     pub(crate) fn try_new(table: Table, plan: &WindowPlan) -> Result<Self> {
         let metadata = table.metadata();
         let end = plan.end.snapshot.get();
@@ -48,6 +46,11 @@ impl MicroBatchTableProvider {
             schema: Arc::new(arrow),
         })
     }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn provider_for_plan(table: Table, plan: &WindowPlan) -> Result<Arc<dyn TableProvider>> {
+    Ok(Arc::new(MicroBatchTableProvider::try_new(table, plan)?))
 }
 
 #[async_trait]

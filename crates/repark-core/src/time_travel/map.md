@@ -43,6 +43,22 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   SQL literals, `Utf8` scalars) resolves through the engine `CAST(... AS TIMESTAMP)` in the
   session zone; the hand parser is gone. pins: ice-tt-resolve-1/C-002
   pins: ice-tt-resolve-1/C-010
+- `microbatch_source.rs` — **MB-1 round 3 (2026-10-07):** the Session-bound
+  source wrapper over the shipped window planner (the sketch's §3.5).
+  `SourceOptions::from_options` parses the Spark reader keys (checklist line
+  7) plus `repark.cdc.start-after-snapshot-id`; it refuses the two skip keys
+  (`SkipOptionRefused`, MBE-3) and any other `streaming-`/`stream-`/
+  `repark.cdc.` key (`UnknownOption`, MBE-17), and passes every other key as
+  Spark ignores it (R-8). Caps default unbounded and the start defaults
+  `Earliest`. `MicroBatchSource::{open, initial_offset, next_batch}` resolves
+  a three-part table through `load_iceberg_table`, delegates planning, and
+  reads exactly the planned files through
+  `repark_iceberg::microbatch::provider::provider_for_plan`. Malformed values
+  and two start keys refuse `Catalog` naming the keys (ledger FL-6, FL-7);
+  the identifier must be three-part (ledger FL-8). No doc comments (the
+  owner's comment ban); fallible entry points take
+  `#[allow(clippy::missing_errors_doc)]` instead.
+  pins: mb-1/C-014, C-015, C-016
 - `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table
   AS OF decision both doors share. `provider_for_spec` is the #802
   `prepare_metadata_as_of` body moved down from `repark-spark` (refuse/serve-current/

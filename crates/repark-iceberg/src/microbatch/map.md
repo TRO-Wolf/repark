@@ -43,7 +43,10 @@ window and provider. Progress: the [MB-1 ledger](../../../../task/ledgers/stagin
   `conform_batch`, and takes the arrow schema from the end snapshot. Filters
   stay `Inexact` (the tasks are pre-planned, so DataFusion re-applies them)
   and projection is served by `conform_batch`, not by re-planning.
-  pins: mb-1/C-012
+  **MB-1 round 3 (2026-10-07):** `provider_for_plan` beside `try_new` is the
+  type-erased cross-crate door — the struct stays `pub(crate)` per the sketch
+  and `repark-core` reads through `Arc<dyn TableProvider>` (ledger D-4).
+  pins: mb-1/C-012, C-015, C-016
 
 ## Design notes
 
@@ -108,10 +111,13 @@ head returns the head fully consumed, so later appends stream. The
 without fail-loud and contributes no files when it is not an append.
 
 The provider struct stays `pub(crate)` per the sketch, so its
-`#[allow(dead_code)]` stands until round 3 wires a caller. `catalog/mod.rs`
+`#[allow(dead_code)]` stood until round 3 wired a caller. `catalog/mod.rs`
 widened one word (`mod scan_batches` to `pub(crate)`) so the provider reads
 through the crate's `conform_batch` (ledger D-3, 2026-10-07); no behaviour
-changed.
+changed. Round 3 (2026-10-07) wired the caller: `provider_for_plan` beside
+`try_new` returns `Arc<dyn TableProvider>` over the existing allowed
+core-to-iceberg edge (ledger D-4), and both `dead_code` allows lifted with
+the first live caller.
 
 ## I want to...
 
@@ -121,7 +127,7 @@ changed.
 | Read the refusal texts | `error.rs` (`MicroBatchError`, `RecoveryReason`) |
 | Change a refusal text | the sketch's §4 first — the verbatim rows are oracle cells |
 | Plan a window | `window.rs` (`WindowPlanner::initial_offset`, `next_window`) |
-| Read a planned window | `provider.rs` (`MicroBatchTableProvider::try_new`) |
+| Read a planned window | `provider.rs` (`provider_for_plan` from another crate, `try_new` inside it) |
 
 ## Pointers
 
