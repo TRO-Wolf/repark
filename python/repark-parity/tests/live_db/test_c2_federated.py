@@ -183,3 +183,30 @@ def test_federated_join_sees_one_clock_across_zones(
         (4, "2024-03-01 04:00:00", "2024-03-01 04:00:00"),
         (5, "2024-03-01 04:00:00", "2024-03-01 04:00:00"),
     ]
+
+
+def test_a_wall_clock_past_2099_matches_the_timestamp_literal(
+    federated: tuple[ReparkSession, Any, str],
+) -> None:
+    spark, conn, schema = federated
+    walls = ("2099-07-01 12:00:00", "2100-07-01 12:00:00", "2100-01-15 12:00:00")
+    conn.execute(f'CREATE TABLE "{schema}".ev (id int4, ts timestamp)')
+    rows = ", ".join(f"({index}, '{wall}')" for index, wall in enumerate(walls, start=1))
+    conn.execute(f'INSERT INTO "{schema}".ev VALUES {rows}')
+    spark.sql("CREATE TABLE ice.db.cal (id INT, at TIMESTAMP)")
+    literals = ", ".join(
+        f"({index}, TIMESTAMP '{wall}')" for index, wall in enumerate(walls, start=1)
+    )
+    spark.sql(f"INSERT INTO ice.db.cal VALUES {literals}").collect()
+    micros = spark.sql(f"SELECT id, unix_micros(ts) FROM pg.{schema}.ev ORDER BY id").collect()
+    literal = spark.sql("SELECT id, unix_micros(at) FROM ice.db.cal ORDER BY id").collect()
+    assert [tuple(row) for row in micros] == [tuple(row) for row in literal]
+    assert tuple(micros[1]) == (2, 4118140800000000)
+    matched = spark.sql(
+        f"SELECT count(*) FROM pg.{schema}.ev WHERE ts = TIMESTAMP '2100-07-01 12:00:00'"
+    ).collect()
+    assert matched[0][0] == 1
+    joined = spark.sql(
+        f"SELECT e.id, c.id FROM pg.{schema}.ev e JOIN ice.db.cal c ON e.ts = c.at ORDER BY e.id"
+    ).collect()
+    assert [tuple(row) for row in joined] == [(1, 1), (2, 2), (3, 3)]

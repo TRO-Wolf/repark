@@ -1545,3 +1545,29 @@ oracle half), D-M8's TLS profile, and C-3's partitioned reads.
 - **AT-8** (attacked): One new internal edge, core to connect, with R-14's reason verbatim; no python to connect edge; cargo deny clean; both crates build without the postgres feature.
 - **AT-9** (attacked): Every refusal names the source key path (or jdbc), the key or privilege and its registry row; EXPLAIN names the pushed and residual filters per scan through both doors.
 - **AT-10** (attacked): Eighteen mutations, seventeen red and mG2 caught by the binding's mask (R-7), each restored with git checkout.
+
+## 17. C-2d fold 1 — the verifier's S1s and S2s (2026-10-07)
+
+**Branch:** `feat/c-2d-mount-python` at `08a14c25` (the main-merged head; C-2d's clauses are
+C-096..C-108). **Model:** Claude Opus 5.5 (`claude-opus-5-5`, high). **Scope:** the verifier's
+verdict on `23b62ff7` (`FAIL`): two S1s (N1, N2), four S2s (N3..N6) and two S3s, as ruled.
+
+### PROPOSITION LEDGER — C-2d fold 1 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-109 | N1: a Postgres `timestamp` after 2099 is placed by the zone's final rule, at exactly the instant RePark's `TIMESTAMP` literal gives the same wall clock. The localiser does not reimplement the horizon: `LAST_TABULATED_YEAR` and `proxy_year` move from `repark-functions`' `spark_string_timestamp/instant.rs` to `repark_common::zone_horizon`, which both the literal and `SessionZoneLocaliser` read, over one new declared edge, `repark-functions` to `repark-common`. The verifier's New York `2100-07-01 12:00` reads `4118140800000000` (EDT); the 2099/2100 pairs in New York, Sydney and Auckland keep one offset; Sydney, Auckland and New York keep their seasons up to year 262142; gaps and overlaps after 2099 still refuse. Live, in a New York session, `unix_micros` over the three Postgres rows equals it over the three Iceberg literals, the equality filter returns 1 row and the federated join 3. | `zone_localiser/tests.rs::a_wall_clock_past_2099_is_placed_by_the_final_rule`, `::the_2099_and_2100_sides_of_the_horizon_agree`, `::southern_and_far_future_wall_clocks_keep_their_season`; live `test_c2_federated.py::test_a_wall_clock_past_2099_matches_the_timestamp_literal`; `repark-functions`' `spark_string_timestamp` pins unchanged; mutation f1. | PROVEN | §17.1. |
+| C-110 | N3: the localiser canonicalises the session zone through `canonical_session_zone_id` before parsing it, as `orc_scan.rs` and `text_scan.rs` do, and `zone_label()` reports the canonical id. `Z`, `UT`, `GMT+8`, `UTC+05:30`, `-8` and `+3` place a wall clock at `+00:00`, `+00:00`, `+08:00`, `+05:30`, `-08:00` and `+03:00`, and New York keeps its region id. | `zone_localiser/tests.rs::java_form_session_zones_place_at_their_canonical_offset`; live `test_c2_read.py::test_a_java_form_session_zone_places_the_wall_clock_at_its_offset` (six cells); mutations f2, V6. | PROVEN | §17.1. V6 (the label hard-coded to `UTC`) is the verifier's surviving mutation. |
+| C-111 | S3, the calendar end: a wall clock whose instant falls past chrono's calendar refuses `ValueRefusal::TimestampPastCalendar`, which names `+262142-12-31T23:59:59.999999 UTC` and `CONNECT-DECL-pg-out-of-range`, never a DST gap: `262142-12-31 23:00` in `-12:00` and in New York, and `262143-01-01 00:00` in UTC. In `+12:00` the first is placed. | `zone_localiser/tests.rs::the_end_of_the_calendar_refuses_as_out_of_range_never_as_a_gap`; mutation f3. | PROVEN | §17.1. |
+
+### 17.1 Mutations (fold 1)
+
+Each mutation was applied alone to a copy of the file, the named pins run, and the file
+restored from that copy.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| f1 | C-109 | read the offset from the wall clock's own year, not `proxy_year` (`core/src/session/zone_localiser.rs`) | RED | `a_wall_clock_past_2099_is_placed_by_the_final_rule`, `the_2099_and_2100_sides_of_the_horizon_agree`, `southern_and_far_future_wall_clocks_keep_their_season` |
+| f2 | C-110 | parse the raw zone id, skipping `canonical_session_zone_id` (`zone_localiser.rs`) | RED | `java_form_session_zones_place_at_their_canonical_offset` |
+| V6 | C-110 | `zone_label()` returns `"UTC"` (`zone_localiser.rs`) | RED | `java_form_session_zones_place_at_their_canonical_offset` |
+| f3 | C-111 | an overflowing placement refuses `WallClockGap` (`zone_localiser.rs`) | RED | `the_end_of_the_calendar_refuses_as_out_of_range_never_as_a_gap` |

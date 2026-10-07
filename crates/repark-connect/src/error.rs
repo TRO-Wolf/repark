@@ -205,6 +205,7 @@ pub enum ValueRefusal {
     InfiniteTimestamp,
     DateOutOfRange,
     TimestampOutOfRange,
+    TimestampPastCalendar,
     WallClockGap,
     WallClockOverlap,
 }
@@ -221,7 +222,8 @@ impl ValueRefusal {
             }
             ValueRefusal::NumericOutOfRange
             | ValueRefusal::DateOutOfRange
-            | ValueRefusal::TimestampOutOfRange => "CONNECT-DECL-pg-out-of-range",
+            | ValueRefusal::TimestampOutOfRange
+            | ValueRefusal::TimestampPastCalendar => "CONNECT-DECL-pg-out-of-range",
             ValueRefusal::WallClockGap | ValueRefusal::WallClockOverlap => ZONE_ROW,
         }
     }
@@ -238,6 +240,10 @@ impl fmt::Display for ValueRefusal {
             ValueRefusal::DateOutOfRange => "a date beyond the 32-bit day count since 1970",
             ValueRefusal::TimestampOutOfRange => {
                 "a timestamp after 294247-01-10, beyond microseconds since 1970 in 64 bits"
+            }
+            ValueRefusal::TimestampPastCalendar => {
+                "a wall clock whose instant in the session zone falls after \
+                 +262142-12-31T23:59:59.999999 UTC, the end of the engine's calendar"
             }
             ValueRefusal::WallClockGap => {
                 "a wall clock that a daylight-saving gap skips in the session zone; set \

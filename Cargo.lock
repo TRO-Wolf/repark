@@ -5221,6 +5221,7 @@ dependencies = [
  "datafusion-spark",
  "iceberg",
  "regex",
+ "repark-common",
  "tokio",
 ]
 

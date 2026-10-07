@@ -46,6 +46,16 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   (22003), measured byte-exact on live Spark 4.1.2 for DOUBLE and DECIMAL(38,0)
   sources, with catalogue + template pins (44 conditions).
 
+- `zone_horizon.rs` — **C-2d fold 1 (2026-10-07):** the zone horizon, moved here from
+  `repark-functions`' `spark_string_timestamp/instant.rs` so the engine can read it too.
+  chrono-tz tabulates transitions up to `LAST_TABULATED_YEAR` (2099) and Java applies the final
+  rule for ever, so `proxy_year` maps a later year to the latest year in 2072–2099 with the same
+  leap flag and January-1 weekday, and a year before 1200 to the same year in 1200–1599 (local
+  mean time). `is_leap_year` and `days_from_civil` are the proleptic Gregorian helpers it
+  stands on. Two readers: the string → `TIMESTAMP` literal (`repark-functions`) and the
+  Postgres wall-clock placement (`repark-core`'s `session/zone_localiser.rs`), so the two agree
+  on every wall clock. pins: c-2/C-109
+
 - `source.rs` — **C-1 (2026-10-05), the CC-2 identity move:** `SourceKind`
   (`Postgres`, `SqlServer`, `Trino`; `from_spelling` / `spelling` over the exact loader
   spellings `postgres | sqlserver | trino`) moved here unchanged from

@@ -28,11 +28,18 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   wall clock refuses leaving no busy backend; EXPLAIN shows the pushed and residual split
   through `spark.sql`, the DataFrame and `repark.sql` `EXPLAIN VERBOSE` (placeholders, never
   the value, never the endpoint). pins: c-2/C-105
+  **Fold 1 (2026-10-07):** `test_a_java_form_session_zone_places_the_wall_clock_at_its_offset`
+  (six cells: `Z`, `UT`, `GMT+8`, `UTC+05:30`, `-8`, `+3`) places a wall clock at the
+  canonical offset, equal to the `TIMESTAMP` literal. pins: c-2/C-110
 - `test_c2_federated.py` — **C-2d (2026-10-07):** sketch §5.4: an Iceberg memory-catalog
   table joined with a Postgres table on an integer key and a `timestamptz`, one filter pushed
   and one residual, through `spark.sql` and the DataFrame join, equal to the psycopg + pyarrow
   join; EXPLAIN has one `IcebergTableScan`, one `PostgresScanExec` and the hash join above; the
   physical plan, normalised, equals the committed expectation. pins: c-2/C-106
+  **Fold 1 (2026-10-07):** `test_a_wall_clock_past_2099_matches_the_timestamp_literal`: in New
+  York, `2099-07-01`, `2100-07-01` and `2100-01-15` at noon read the same `unix_micros` as the
+  Iceberg `TIMESTAMP` literals; the equality filter on `2100-07-01 12:00` returns 1 row and the
+  join on the timestamp returns all 3. pins: c-2/C-109
 - `test_c2_credentials.py` — **C-2d (2026-10-07):** sketch §5.7: a role with a random
   32-hex password mounted by key, by URL, with a wrong password, on a closed port and through a
   one-connection pool; a subprocess at `RUST_LOG=trace` with Python logging at `DEBUG` drives

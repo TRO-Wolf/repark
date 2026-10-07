@@ -33,6 +33,9 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `prefer_timestamp_ntz`), `DDL_ROW` (`CONNECT-DECL-pg-ddl`) and `read_only_ddl(source)`, all
   outside the `postgres` feature so core's guard needs no driver; `lib.rs` re-exports them.
   pins: c-2/C-098, C-101
+  **Fold 1:** `ValueRefusal::TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`) is the
+  placement's refusal when a wall clock's instant falls past chrono's calendar, so it is never
+  reported as a gap. pins: c-2/C-111
 - `error.rs` — C-2a (2026-10-06; sketch [c-2-design.md](../../../task/wo/c-2-design.md) §2.2,
   NS-15). The crate's one error enum, `ConnectError` (`thiserror`), and
   `Result<T> = std::result::Result<T, ConnectError>`. C-1's `SettingsError` and `TypeMapError`

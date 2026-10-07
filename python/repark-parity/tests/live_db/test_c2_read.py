@@ -297,6 +297,34 @@ def test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock(
     assert lingering == 0
 
 
+JAVA_FORM_ZONES = [
+    ("Z", "2024-07-15 12:00:00"),
+    ("UT", "2024-07-15 12:00:00"),
+    ("GMT+8", "2024-07-15 04:00:00"),
+    ("UTC+05:30", "2024-07-15 06:30:00"),
+    ("-8", "2024-07-15 20:00:00"),
+    ("+3", "2024-07-15 09:00:00"),
+]
+
+
+@pytest.mark.parametrize(("zone", "utc_wall"), JAVA_FORM_ZONES)
+def test_a_java_form_session_zone_places_the_wall_clock_at_its_offset(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]], zone: str, utc_wall: str
+) -> None:
+    conn, names = pg_live
+    conn.execute(f'CREATE TABLE "{names["schema"]}".c (id int4, ts timestamp)')
+    conn.execute(f"INSERT INTO \"{names['schema']}\".c VALUES (1, '2024-07-15 12:00:00')")
+    spark.conf.set("spark.sql.session.timeZone", zone)
+    rows = spark.sql(
+        f"SELECT CAST(ts AS STRING), unix_micros(ts), "
+        f"unix_micros(ts) = unix_micros(TIMESTAMP '2024-07-15 12:00:00') "
+        f"FROM pg.{names['schema']}.c"
+    ).collect()
+    instant = dt.datetime.fromisoformat(utc_wall).replace(tzinfo=dt.UTC)
+    micros = int(instant.timestamp()) * 1_000_000
+    assert [tuple(row) for row in rows] == [("2024-07-15 12:00:00", micros, True)]
+
+
 def test_explain_shows_the_boundary_through_both_doors(
     spark: ReparkSession,
     pg_live: tuple[Any, dict[str, str]],

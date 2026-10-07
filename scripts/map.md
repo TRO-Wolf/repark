@@ -1188,7 +1188,8 @@ repark-parity slice.
   the explicit **allowed-edge table** (`ALLOWED_EDGES`: every internal edge, the dependency
   KINDS it may take, and why it exists; F-Y10-1 added `repark-sql → repark-functions` `normal`;
   IPI-51 PR6 slice 3 promoted `repark-spark → repark-common` `dev` → `normal` (product code
-  renders through `repark_common::spark_error`).
+  renders through `repark_common::spark_error`); C-2d fold 1 added `repark-functions →
+  repark-common` `normal` (the shared zone horizon).
   Prose points here and never restates them. Four rules,
   in order: (1) the declared policy must itself obey the structural rules — a forbidden edge
   cannot be legalized by writing it down; (2) every observed `repark-*` edge must be DECLARED,

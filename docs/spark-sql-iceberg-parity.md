@@ -3614,13 +3614,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   more integer digits than the planned `Decimal128(p,s)` holds (`p − s`; 20 for unconstrained
   `numeric` at `(38,18)`; reason `NumericOutOfRange`); a `timestamp` / `timestamptz` after
   294247-01-10T04:00:54.775807, where microseconds since 1970 overflow 64 bits while Postgres
-  reaches 294276 AD (`TimestampOutOfRange`); and a `date` past `Date32`, which no finite
+  reaches 294276 AD (`TimestampOutOfRange`); a `timestamp` placed in the session zone whose
+  instant falls after +262142-12-31T23:59:59.999999 UTC, the end of chrono's calendar
+  (`TimestampPastCalendar`, C-2d fold 1); and a `date` past `Date32`, which no finite
   Postgres date reaches (`DateOutOfRange`).
 - **Apache Spark** — `Decimal.set` rounds HALF_UP to the scale and raises when the precision
   is exceeded (Flink's `DecimalData.fromBigDecimal` returns null instead). *(oracle:
   documented — FL-2; D-M2 measures it.)*
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::bounded_numeric_overflow_refuses`,
-  `::timestamp_ntz_anchors_round_trip`, `::date_anchors_round_trip`
+  `::timestamp_ntz_anchors_round_trip`, `::date_anchors_round_trip`;
+  `crates/repark-core/src/session/zone_localiser/tests.rs::the_end_of_the_calendar_refuses_as_out_of_range_never_as_a_gap`
 - **Rationale** — DECLARED 2026-10-06 (C-2a; FL-2, Spark's answer: raise, which is also
   NS-6). Retire per type if a wider Arrow type is adopted for it.
 ### CONNECT-DECL-pg-unmapped — a Postgres column whose type is outside the map refuses at resolution
@@ -4008,10 +4011,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   batch's column to the source's `WallClockLocaliser`, which places it as an instant in the
   zone whose label it reports. The label is read once per resolution, so one statement sees one
   zone. Core supplies the localiser over the session's `runtime_zone`, read when the scan
-  runs (C-2d, 2026-10-07; `SessionZoneLocaliser`). Until D-M2 measures Spark's rule, a wall
-  clock in a DST gap or overlap refuses per value with `ValueRefusal::WallClockGap` /
-  `WallClockOverlap`, naming the column, this row and the fix (`prefer_timestamp_ntz`); a wall
-  clock after 262143-12-31, past chrono's calendar, refuses as `pg-out-of-range`. With
+  runs (C-2d, 2026-10-07; `SessionZoneLocaliser`). The zone is canonicalised as every other
+  scan does it, so a Java-form zone (`Z`, `UT`, `GMT+8`, `UTC+05:30`, `-8`) places at its
+  offset and labels the column with the canonical id. A wall clock after 2099 takes its offset
+  from the proxy year RePark's `TIMESTAMP` literal reads (`repark_common::zone_horizon`), so a
+  Postgres value and the literal for the same wall clock are one instant (C-2d fold 1). Until
+  D-M2 measures Spark's rule, a wall clock in a DST gap or overlap refuses per value with
+  `ValueRefusal::WallClockGap` / `WallClockOverlap`, naming the column, this row and the fix
+  (`prefer_timestamp_ntz`); a wall clock whose instant falls after
+  +262142-12-31T23:59:59.999999 UTC, past chrono's calendar, refuses
+  `TimestampPastCalendar` as `pg-out-of-range`. With
   `prefer_timestamp_ntz = true` the column is `Timestamp(Microsecond, None)`, the wall clock. A
   compare on a placed column never pushes (the placement is not injective across a DST change);
   on the NTZ column it does.
@@ -4023,7 +4032,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `crates/repark-connect/tests/it/pushdown.rs::r03_ltz_timestamp_comparisons_stay_residual`;
   live `crates/repark-connect/tests/it/live_pushdown.rs::timestamp_columns_are_placed_in_the_session_zone_live`,
   `::r03_ltz_timestamp_comparisons_stay_residual_live`;
-  `crates/repark-core/src/session/zone_localiser.rs::tests::gap_and_overlap_wall_clocks_refuse_naming_the_zone_row`;
+  `crates/repark-core/src/session/zone_localiser/tests.rs::gap_and_overlap_wall_clocks_refuse_naming_the_zone_row`,
+  `::a_wall_clock_past_2099_is_placed_by_the_final_rule`,
+  `::java_form_session_zones_place_at_their_canonical_offset`;
+  live `python/repark-parity/tests/live_db/test_c2_federated.py::test_a_wall_clock_past_2099_matches_the_timestamp_literal`;
   live `python/repark-parity/tests/live_db/test_c2_read.py::test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock`
 - **Rationale** — DECLARED 2026-10-07 (C-2c; FL-5). The session zone is the one every other
   timestamp in the statement is read in, so a federated compare sees one clock; Spark's JVM zone
