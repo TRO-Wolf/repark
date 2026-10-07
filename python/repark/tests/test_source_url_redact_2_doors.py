@@ -703,3 +703,14 @@ def test_scrub_exception_masks_non_str_note_carriers(notes: object, expected: ob
     assert scrubbed.__notes__ == expected
     assert USERINFO not in _formatted(scrubbed)
     assert original.__notes__ is notes
+
+
+def test_scrub_exception_masks_tuple_notes() -> None:
+    notes = ("tuple note " + SECRET_URL, "plain")
+    original = _raised(lambda: _with_notes(notes))
+    assert USERINFO in _formatted(original)
+    scrubbed = scrub_exception(original)
+    assert scrubbed is not original
+    assert scrubbed.__notes__ == ["tuple note http://u:***@127.0.0.1:9/x", "plain"]
+    assert USERINFO not in _formatted(scrubbed)
+    assert original.__notes__ is notes

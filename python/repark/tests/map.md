@@ -5323,6 +5323,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and the masked stand-in when the walk itself raises. pins: source-url-redact-1/C-082
   **Fold 5 K2:** an object note, a bytes note, a `str` `__notes__` and a note whose `__str__` raises
   are masked on the copy (the last as its type name). pins: source-url-redact-1/C-083
+  **Fold 5 K3:** a tuple-valued `__notes__` is masked on the copy. pins: source-url-redact-1/C-084
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default
