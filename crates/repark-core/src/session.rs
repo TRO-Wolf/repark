@@ -623,8 +623,6 @@ impl ReparkSession {
             .ok_or_else(|| Error::DataFusion(format!("unknown catalog '{catalog}'")))
     }
 
-    // === catalog-staleness ============================================================.
-
     /// Return live table names from an Iceberg catalog handle, not its DataFusion snapshot.
     /// # Errors
     /// Unknown catalog → [`Error::DataFusion`]; list failure → classified iceberg error.
@@ -723,12 +721,10 @@ impl ReparkSession {
     /// # Errors
     /// Returns [`Error::DataFusion`] for a two-part name or unregistered catalog.
     pub async fn table_exists(&self, name: &str) -> Result<bool> {
-        // Quote-aware split (C2-L-006): match Python `_sql_table_ref` for dotted quoted names.
         let parts = parse_table_identifier_segments(name).map_err(|message| {
             Error::DataFusion(format!("tableExists: invalid table identifier: {message}"))
         })?;
         match parts.as_slice() {
-            // The one-part arm uses the pinned home and the already-parsed segment overload.
             [view] => {
                 let quoted = name.trim().starts_with(['"', '`']);
                 self.context()
@@ -736,6 +732,9 @@ impl ReparkSession {
                     .map_err(engine_err)
             }
             [catalog, namespace, table] => {
+                if let Some(found) = self.source_table_exists(catalog, namespace, table).await {
+                    return found;
+                }
                 let handle = self.catalog_handle(catalog)?;
                 let namespace = NamespaceIdent::new(namespace.clone());
                 if !handle

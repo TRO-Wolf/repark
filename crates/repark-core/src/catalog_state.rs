@@ -321,6 +321,18 @@ impl CatalogRegistry {
         self.database_sources.get(name)
     }
 
+    #[must_use]
+    pub fn is_database_source(&self, name: &str) -> bool {
+        self.database_sources.contains_key(name)
+    }
+
+    #[must_use]
+    pub fn source_read_only_message(&self, name: &str) -> Option<String> {
+        let spec = self.database_sources.get(name)?;
+        (spec.identity.kind == SourceKind::Postgres)
+            .then(|| repark_connect::read_only_ddl(&spec.key_path()))
+    }
+
     /// The [`LocationPolicy`] registered under `name`, if any.
     #[must_use]
     pub fn location_policy(&self, name: &str) -> Option<LocationPolicy> {

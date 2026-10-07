@@ -58,6 +58,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **REVIEW-FIX-7 step 1 (2026-09-10):** `parse()` sanitizes TOML failures to
   `message()` plus the locally computed line and column, never the echoed source line.
   pins: review-fix-7/C-002
+- `session.rs` — **C-2d fold 1 (2026-10-07), N5:** `table_exists` asks `source_table_exists` first, so a
+  three-part name under a mounted source resolves through the source. Three comment lines
+  were shed to pay for the three new lines; the file holds 999 of 1000. pins: c-2/C-115
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats instead of the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**
@@ -1001,6 +1004,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **PR-B hadoop naming (2026-09-24):** also holds `kind_from_bare_catalog_value` (moved from
   `catalog_config.rs`), `is_hadoop_type`, and `with_type_naming`. `with_type_naming` inserts
   the fork's `metadata-naming` key with `hadoop` only when the key is absent.
+- `catalog_state.rs` — **C-2d fold 1 (2026-10-07), N5:** `CatalogRegistry::is_database_source(name)` and
+  `source_read_only_message(name)` (the `read_only_ddl` text for a Postgres source), so the
+  Spark door's catalog lookups answer a mounted source by its own rows instead of the P11
+  Iceberg direction note. pins: c-2/C-115
 - `catalog_state.rs` — **C-2d (2026-10-07):** `SourceMount { specs, zone }` implements
   `SessionExtension`: `register(ctx)` registers one catalog per auto-registered source —
   `repark_connect::PostgresSource::mount(identity, props, localiser)` for Postgres (pure, no
@@ -1074,6 +1081,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   read-only. The sweep of `DdlStatement`'s eleven variants leaves only `CreateFunction` and
   `DropFunction` unclaimed: functions are session-scoped and never name a catalog.
   pins: c-2/C-112
+  **Fold 1, N5:** `source_catalog_refusal(name)` answers a mounted source's name with
+  `read_only_ddl(<key path>)` (Postgres) or the pending text (SQL Server, Trino);
+  `check_catalog_refusal` asks it first, so every Iceberg-handle operation against the name
+  (`writeTo`, `saveAsTable`, a listing of Iceberg names) refuses instead of answering `unknown
+  catalog`. `source_table_exists` resolves `catalog.schema.table` through the mounted provider.
+  pins: c-2/C-115
 - `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **C-1 (2026-10-05):** reads
   the source name and kind through `SourceSpec.identity` (CC-2; `SourceKind` now imported from
   `repark-common`); every message, row and handle is unchanged. pins: c-1/C-002

@@ -323,3 +323,29 @@ fn sources_listing_masks_a_percent_encoded_url_password_key() {
     assert!(!rendered.contains("T0kenOnly"), "{rendered}");
     assert!(!rendered.contains("Qu3rySecret"), "{rendered}");
 }
+
+#[tokio::test]
+async fn catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog() {
+    let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
+    session
+        .register_configured_sources()
+        .expect("source registration");
+    let error = session
+        .table_exists("company_db.public.t")
+        .await
+        .expect_err("tableExists resolves through the mount, which refuses without `user`");
+    assert!(matches!(error, Error::Config(_)), "{error:?}");
+    assert!(error.to_string().contains("`user` is required"), "{error}");
+    let error = session
+        .list_iceberg_table_names("company_db", "public")
+        .await
+        .expect_err("a catalog operation under a Postgres source refuses read-only");
+    assert!(matches!(error, Error::NotImplemented(_)), "{error:?}");
+    let message = error.to_string();
+    assert!(
+        message.contains("database source `default.database.postgres.company_db` is read-only"),
+        "{message}"
+    );
+    assert!(message.contains("CONNECT-DECL-pg-ddl"), "{message}");
+    assert!(!message.contains("unknown catalog"), "{message}");
+}

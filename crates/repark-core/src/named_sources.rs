@@ -204,6 +204,45 @@ impl NamedSource {
 }
 
 impl ReparkSession {
+    fn mounted_source(&self, name: &str) -> Option<Arc<SourceSpec>> {
+        self.catalogs
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .database_source(name)
+            .cloned()
+    }
+
+    pub(crate) fn source_catalog_refusal(&self, name: &str) -> Option<Error> {
+        let spec = self.mounted_source(name)?;
+        Some(Error::NotImplemented(match spec.identity.kind {
+            SourceKind::Postgres => read_only_ddl(&spec.key_path()),
+            SourceKind::SqlServer | SourceKind::Trino => source_refusal(&spec),
+        }))
+    }
+
+    pub(crate) async fn source_table_exists(
+        &self,
+        catalog: &str,
+        namespace: &str,
+        table: &str,
+    ) -> Option<Result<bool>> {
+        self.mounted_source(catalog)?;
+        let schema = self
+            .context()
+            .catalog(catalog)
+            .and_then(|provider| provider.schema(namespace));
+        let Some(schema) = schema else {
+            return Some(Ok(false));
+        };
+        Some(
+            schema
+                .table(table)
+                .await
+                .map(|found| found.is_some())
+                .map_err(engine_err),
+        )
+    }
+
     #[must_use]
     pub fn sources(&self) -> Vec<SourceRow> {
         self.source_specs

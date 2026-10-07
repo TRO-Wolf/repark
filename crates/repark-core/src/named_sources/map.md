@@ -43,6 +43,10 @@ that answers for a registered source name until its connector lands (roadmap 1.1
   covers `register_table` and `deregister_table` on a mounted schema (V3).
   `sources_listing_masks_a_percent_encoded_url_password_key` covers a userinfo token and a
   `pass%77ord` query key, which only `redact_source_prop` decodes (V4). pins: c-2/C-113
+  **Fold 1, N5:** `catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog`:
+  `table_exists("company_db.public.t")` resolves through the mount (a source without `user`
+  answers its settings refusal), and `list_iceberg_table_names` under the source refuses with
+  the read-only text, never `unknown catalog`. pins: c-2/C-115
 ## Pointers
 
 - Up: [../map.md](../map.md)
