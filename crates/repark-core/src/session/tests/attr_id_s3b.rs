@@ -445,3 +445,20 @@ fn bind_free_names_binds_outer_but_not_subquery_plans() {
         other => panic!("expected the outer name bound, got {other:?}"),
     }
 }
+
+fn sort_traces() -> usize {
+    crate::session::df_guards::attr_lineage::SORT_TRACES.with(std::cell::Cell::get)
+}
+
+#[test]
+fn bind_free_names_sort_binds_unique_key_without_tracing_lineage() {
+    let (_context, frame) = dup_schema();
+    let plan = frame.logical_plan();
+    let before = sort_traces();
+    let bound = bind_free_names(col("v"), plan, IgnoreCase, &["v".into(), "w".into()], true);
+    assert_eq!(bound_name(bound.unwrap()), "e1");
+    assert_eq!(sort_traces(), before);
+    let traced = bind_free_names(col("v"), plan, IgnoreCase, &["v".into(), "v".into()], true);
+    assert_eq!(bound_name(traced.unwrap()), "v");
+    assert!(sort_traces() > before);
+}

@@ -6,8 +6,15 @@ use repark_common::names::NameRule;
 use super::attr_id::{ATTR_KEY, AttrId};
 use super::sort_names::below_transparent;
 
+#[cfg(test)]
+thread_local! {
+    pub(crate) static SORT_TRACES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 #[must_use]
 pub fn sort_hits_meet_at_join(plan: &LogicalPlan, positions: &[usize]) -> bool {
+    #[cfg(test)]
+    SORT_TRACES.with(|traces| traces.set(traces.get() + 1));
     let mut node = plan;
     let mut at = positions.to_vec();
     loop {
@@ -197,6 +204,8 @@ pub fn sort_sourced_twin_engine(
     written: &str,
     rule: NameRule,
 ) -> Option<String> {
+    #[cfg(test)]
+    SORT_TRACES.with(|traces| traces.set(traces.get() + 1));
     let projection = sort_projection(plan)?;
     if !visible_positions(projection.input.schema(), written, rule).is_empty() {
         return None;

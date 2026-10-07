@@ -210,6 +210,13 @@ wrapped optimizer rule) and declares this directory.
   reports twin output engines by plain count, gating the input-casing
   respell. Pins: `../tests/attr_id_s3b.rs`.
   pins: attr-id-1/C-071
+  **STAMP-2-R5P6-1 (2026-10-07):** the two lineage-trace entries
+  (`sort_hits_meet_at_join` and the twin search `sort_sourced_twin_engine`)
+  bump a thread-local `SORT_TRACES` counter that exists only under
+  `#[cfg(test)]`. The trace was already lazy: `bind_free_column` reaches it
+  only from the `Ambiguous` arm, and the facade's `_resolve_sort_name` binds a
+  unique hit before calling any `_native.sort_*` door. The counter turns that
+  property into a pin. pins: stamp-2-r5p6-1/C-004
 - `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
   ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,
   option A; design sketch `attr-id-1-selfjoin-design.md` §2.1–§2.2). Spark tags every
