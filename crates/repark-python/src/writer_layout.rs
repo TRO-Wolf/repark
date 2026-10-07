@@ -14,7 +14,9 @@ use crate::session::PyReparkSession;
 type LayoutArgs = (Vec<String>, Option<i64>, Vec<String>, Vec<String>);
 
 fn missing_column_error(py: Python<'_>, column: &str, tree: &str) -> PyErr {
-    let raised = AnalysisException::new_err(missing_column_message(column, tree));
+    let raised = AnalysisException::new_err(crate::exceptions::mask_user_visible(
+        missing_column_message(column, tree),
+    ));
     let value = raised.value(py);
     let params = PyDict::new(py);
     let name = missing_column_name(column);
@@ -59,8 +61,11 @@ pub fn writer_plan(
         } else {
             WriterAction::SaveAsTable
         };
-        let schema = crate::cdf_infer::read_schema(frame_schema)?
-            .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("writer plan needs a schema"))?;
+        let schema = crate::cdf_infer::read_schema(frame_schema)?.ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err(crate::exceptions::mask_user_visible(
+                "writer plan needs a schema",
+            ))
+        })?;
         let frame_columns: Vec<String> = schema
             .fields()
             .iter()

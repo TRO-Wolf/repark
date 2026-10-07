@@ -84,6 +84,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   schema, publication and slot names, explicit cleanup) and the five cdc S0 pins
   (`xfail(strict=True)` until the 1.7 producer). Cells skip when `REPARK_PG_URL`
   is unset. No native module.
+- [live_spark/](live_spark/map.md) — **MB-0 (2026-10-06):** the streaming oracle
+  for 1.7. The recorder `mb0_streaming_oracle.py`, its 24 cells on Spark 4.1.2 +
+  Iceberg 1.11.0 (`mb0_streaming_oracle.json`) and their SHA-256. It is run by hand
+  through the managed interpreter, is not collected by pytest, and needs no native
+  module. **D-M2 (2026-10-06):** the Postgres JDBC oracle for 1.6. The recorder
+  `c2_jdbc_oracle.py`, its 58 cells on Spark 4.1.2 + Postgres 16.15 through
+  pgjdbc 42.7.13 (`c2_jdbc_oracle.json`) and their SHA-256. It needs `psql`
+  and `DM2_PG_URL`, and is likewise run by hand, never collected.
 - [spill/](spill/map.md) — **NEVEROOM-1 steps 1–3 (2026-09-10/11):** the spill-coverage
   matrix harness, the full-tier run, and the CI golden: the subprocess-per-cell runner
   with an address-space cap, the in-engine `range()` generators sized to the limit

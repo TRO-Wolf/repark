@@ -25,6 +25,73 @@ pub(crate) fn apply_spark_parser_dialect(mut config: SessionConfig) -> SessionCo
     config
 }
 
+fn mask_session_conf_configuration(
+    error: datafusion::error::DataFusionError,
+) -> datafusion::error::DataFusionError {
+    match error {
+        datafusion::error::DataFusionError::Configuration(message) => {
+            datafusion::error::DataFusionError::Configuration(
+                repark_common::redaction::mask_value_credentials(&message),
+            )
+        }
+        other => other,
+    }
+}
+
+fn install_spark_session_conf(
+    session: SessionBuildConf<'_>,
+    mut config: SessionConfig,
+) -> datafusion::error::Result<SessionConfig> {
+    let settings =
+        repark_functions::cardinality::repark_sql_settings_from_config_map(session.conf)?;
+    config = repark_functions::cardinality::with_repark_sql_config(config, settings);
+    let ansi_enabled = repark_functions::ansi::spark_ansi_from_config_map(session.conf)?;
+    config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
+    let case_sensitive =
+        repark_functions::case_sensitive::spark_case_sensitive_from_config_map(session.conf)?;
+    config =
+        repark_functions::case_sensitive::with_spark_case_sensitive_config(config, case_sensitive);
+    let merge_schema =
+        match repark_functions::merge_schema::merge_schema_from_config_map(session.conf) {
+            Ok(enabled) => enabled,
+            Err(refusal) => {
+                return Err(datafusion::error::DataFusionError::Configuration(
+                    repark_functions::merge_schema::boolean_type_mismatch_message(
+                        refusal.key,
+                        &repark_common::redaction::mask_value_credentials(&refusal.raw),
+                    ),
+                ));
+            }
+        };
+    config = repark_functions::merge_schema::with_merge_schema_config(config, merge_schema);
+    let overwrite_mode = repark_core::partition_overwrite_mode_from_config_map(session.conf)?;
+    config = repark_core::with_partition_overwrite_mode(config, overwrite_mode);
+    let wap = crate::wap::wap_from_config_map(session.conf);
+    config = crate::wap::with_wap_session_config(config, wap);
+    let timestamp_type =
+        repark_functions::timestamp_type::spark_timestamp_type_from_config_map(session.conf)?;
+    config = repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
+    config = apply_spark_float_as_decimal(config);
+    config = apply_spark_parser_dialect(config);
+    let verbatim = crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
+    config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
+    config = session_catalog::with_configured_defaults(config, session.conf);
+    let shuffle_partitions =
+        repark_iceberg::write::fanout_order::shuffle_partitions_from_config_map(session.conf)?;
+    config = repark_iceberg::write::fanout_order::with_spark_fanout_commit_order(
+        config,
+        shuffle_partitions,
+    );
+    config = repark_iceberg::write::negated_null_store::with_view_definition_plans(
+        config,
+        crate::view_ddl::temp_view::definition_plan,
+    );
+    Ok(repark_functions::session_time_zone::with_session_time_zone(
+        config,
+        session.session_time_zone.id(),
+    ))
+}
+
 impl SessionExtension for SparkExtension {
     /// Install Spark configuration carriers, including ANSI mode, timestamp type, and session zone.
     /// # Errors
@@ -34,49 +101,7 @@ impl SessionExtension for SparkExtension {
         session: SessionBuildConf<'_>,
         config: SessionConfig,
     ) -> datafusion::error::Result<SessionConfig> {
-        // pins: v3-2-create-v3-opt-in/C-009
-        let settings =
-            repark_functions::cardinality::repark_sql_settings_from_config_map(session.conf)?;
-        let config = repark_functions::cardinality::with_repark_sql_config(config, settings);
-        let ansi_enabled = repark_functions::ansi::spark_ansi_from_config_map(session.conf)?;
-        let config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
-        let case_sensitive =
-            repark_functions::case_sensitive::spark_case_sensitive_from_config_map(session.conf)?;
-        let config = repark_functions::case_sensitive::with_spark_case_sensitive_config(
-            config,
-            case_sensitive,
-        );
-        let merge_schema =
-            repark_functions::merge_schema::merge_schema_from_config_map(session.conf)?;
-        let config = repark_functions::merge_schema::with_merge_schema_config(config, merge_schema);
-        let overwrite_mode = repark_core::partition_overwrite_mode_from_config_map(session.conf)?;
-        let config = repark_core::with_partition_overwrite_mode(config, overwrite_mode);
-        let wap = crate::wap::wap_from_config_map(session.conf);
-        let config = crate::wap::with_wap_session_config(config, wap);
-        let timestamp_type =
-            repark_functions::timestamp_type::spark_timestamp_type_from_config_map(session.conf)?;
-        let config =
-            repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
-        let config = apply_spark_float_as_decimal(config);
-        let config = apply_spark_parser_dialect(config);
-        let verbatim =
-            crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
-        let config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
-        let config = session_catalog::with_configured_defaults(config, session.conf);
-        let shuffle_partitions =
-            repark_iceberg::write::fanout_order::shuffle_partitions_from_config_map(session.conf)?;
-        let config = repark_iceberg::write::fanout_order::with_spark_fanout_commit_order(
-            config,
-            shuffle_partitions,
-        );
-        let config = repark_iceberg::write::negated_null_store::with_view_definition_plans(
-            config,
-            crate::view_ddl::temp_view::definition_plan,
-        );
-        Ok(repark_functions::session_time_zone::with_session_time_zone(
-            config,
-            session.session_time_zone.id(),
-        ))
+        install_spark_session_conf(session, config).map_err(mask_session_conf_configuration)
     }
 
     fn configure_analyzer_rules(

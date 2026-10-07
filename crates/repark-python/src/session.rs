@@ -46,9 +46,9 @@ pub(crate) fn shared_runtime() -> PyResult<Arc<Runtime>> {
         return Ok(Arc::clone(runtime.runtime()));
     }
     let runtime = build_shared_runtime().map_err(|err| {
-        pyo3::exceptions::PyRuntimeError::new_err(format!(
+        pyo3::exceptions::PyRuntimeError::new_err(crate::exceptions::mask_user_visible(format!(
             "failed to start the engine runtime: {err}"
-        ))
+        )))
     })?;
     let arc = Arc::new(runtime);
     // A losing initializer must use the installed runtime, not its rejected value.
@@ -58,9 +58,9 @@ pub(crate) fn shared_runtime() -> PyResult<Arc<Runtime>> {
             .get()
             .map(|installed| Arc::clone(installed.runtime()))
             .ok_or_else(|| {
-                pyo3::exceptions::PyRuntimeError::new_err(
+                pyo3::exceptions::PyRuntimeError::new_err(crate::exceptions::mask_user_visible(
                     "shared engine runtime race: set rejected but get returned empty",
-                )
+                ))
             }),
     }
 }
@@ -794,9 +794,9 @@ impl PyReparkSession {
 
 /// Build the named unsupported-operation error for deferred readers.
 fn deferred_reader_error(surface: &str) -> PyErr {
-    UnsupportedOperationException::new_err(format!(
+    UnsupportedOperationException::new_err(crate::exceptions::mask_user_visible(format!(
         "{surface} is not available in this build: the repark-excel / repark-postgres read \
          connectors are scheduled post-milestone-one. See the \"Post-milestone-one (BACKLOG)\" \
          row in task/todo.md."
-    ))
+    )))
 }

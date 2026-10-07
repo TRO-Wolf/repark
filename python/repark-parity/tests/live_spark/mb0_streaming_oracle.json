@@ -1,0 +1,1689 @@
+{
+  "cells": [
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          },
+          {
+            "batch": 1,
+            "rows": [
+              [
+                4,
+                "k0"
+              ],
+              [
+                5,
+                "k1"
+              ]
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-R1",
+      "field": "read.appends.rows",
+      "kind": "rows",
+      "statement": "def cell_r1(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"r1\")\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    checkpoint = bench.checkpoint(\"r1\")\n    for ids in ([4, 5], []):\n        query = (\n            bench.spark.readStream.format(\"iceberg\")\n            .load(source)\n            .writeStream.foreachBatch(collect)\n            .option(\"checkpointLocation\", checkpoint)\n            .trigger(availableNow=True)\n            .start()\n        )\n        query.awaitTermination()\n        if ids:\n            append(bench, source, ids)\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    query.awaitTermination()\n    return \"rows\", {\n        \"schema\": collect.schema,\n        \"batches\": collect.batches,\n        \"operations\": operations(bench, source),\n    }\n"
+    },
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          }
+        ],
+        "causes": [
+          "org.apache.spark.sql.streaming.StreamingQueryException",
+          "java.lang.IllegalStateException"
+        ],
+        "class": "STREAM_FAILED",
+        "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "3",
+            "deleted-data-files": "2",
+            "deleted-records": "3",
+            "operation": "overwrite"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "sqlstate": "XXKST",
+        "text": "[STREAM_FAILED] Query [id = 61e858c8-095d-4b65-8848-4bfc32e0e783, runId = 2b62ee20-0690-49bd-be97-c765aa97f8ef] terminated with exception: Cannot process overwrite snapshot: 8541868581236074397, to ignore overwrites, set streaming-skip-overwrite-snapshots=true SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = 61e858c8-095d-4b65-8848-4bfc32e0e783, runId = 2b62ee20-0690-49bd-be97-c765aa97f8ef]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {}\n\nCurrent State: INITIALIZING\nThread State: RUNNABLE"
+      },
+      "cell": "MB0-R2",
+      "field": "read.overwrite_unskipped.error",
+      "kind": "error",
+      "statement": "def cell_r2(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return mutation_cell(bench, \"r2\", overwrite_snapshot, {})\n\ndef mutation_cell(\n    bench: Bench,\n    name: str,\n    mutate: Callable[[Bench, str], None],\n    options: dict[str, str],\n) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, name)\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    checkpoint = bench.checkpoint(name)\n    first = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    first_error = await_query(first)\n    mutate(bench, source)\n    append(bench, source, [4])\n    second = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = first_error or await_query(second)\n    context = {\"operations\": operations(bench, source), \"batches\": collect.batches}\n    if error:\n        return \"error\", {**error, **context}\n    return \"rows\", {\"schema\": collect.schema, **context}\n\ndef overwrite_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"INSERT OVERWRITE {table} SELECT id + 10, k FROM {table}\")\n"
+    },
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          },
+          {
+            "batch": 1,
+            "rows": [
+              [
+                4,
+                "k0"
+              ]
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "3",
+            "deleted-data-files": "2",
+            "deleted-records": "3",
+            "operation": "overwrite"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-R3",
+      "field": "read.overwrite_skipped.rows",
+      "kind": "rows",
+      "statement": "def cell_r3(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return mutation_cell(\n        bench, \"r3\", overwrite_snapshot, {\"streaming-skip-overwrite-snapshots\": \"true\"}\n    )\n\ndef mutation_cell(\n    bench: Bench,\n    name: str,\n    mutate: Callable[[Bench, str], None],\n    options: dict[str, str],\n) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, name)\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    checkpoint = bench.checkpoint(name)\n    first = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    first_error = await_query(first)\n    mutate(bench, source)\n    append(bench, source, [4])\n    second = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = first_error or await_query(second)\n    context = {\"operations\": operations(bench, source), \"batches\": collect.batches}\n    if error:\n        return \"error\", {**error, **context}\n    return \"rows\", {\"schema\": collect.schema, **context}\n\ndef overwrite_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"INSERT OVERWRITE {table} SELECT id + 10, k FROM {table}\")\n"
+    },
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          }
+        ],
+        "causes": [
+          "org.apache.spark.sql.streaming.StreamingQueryException",
+          "java.lang.IllegalStateException"
+        ],
+        "class": "STREAM_FAILED",
+        "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "3",
+            "deleted-data-files": "2",
+            "deleted-records": "3",
+            "operation": "overwrite"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "sqlstate": "XXKST",
+        "text": "[STREAM_FAILED] Query [id = fef9d8b0-1bd0-45cc-98c1-fbc30d6175a5, runId = 37caa775-c5f1-4388-bc19-883198f4386b] terminated with exception: Cannot process overwrite snapshot: 3674837882303180595, to ignore overwrites, set streaming-skip-overwrite-snapshots=true SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = fef9d8b0-1bd0-45cc-98c1-fbc30d6175a5, runId = 37caa775-c5f1-4388-bc19-883198f4386b]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {}\n\nCurrent State: INITIALIZING\nThread State: RUNNABLE"
+      },
+      "cell": "MB0-R4",
+      "field": "read.overwrite_wrong_skip.error",
+      "kind": "error",
+      "statement": "def cell_r4(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return mutation_cell(\n        bench, \"r4\", overwrite_snapshot, {\"streaming-skip-delete-snapshots\": \"true\"}\n    )\n\ndef mutation_cell(\n    bench: Bench,\n    name: str,\n    mutate: Callable[[Bench, str], None],\n    options: dict[str, str],\n) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, name)\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    checkpoint = bench.checkpoint(name)\n    first = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    first_error = await_query(first)\n    mutate(bench, source)\n    append(bench, source, [4])\n    second = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = first_error or await_query(second)\n    context = {\"operations\": operations(bench, source), \"batches\": collect.batches}\n    if error:\n        return \"error\", {**error, **context}\n    return \"rows\", {\"schema\": collect.schema, **context}\n\ndef overwrite_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"INSERT OVERWRITE {table} SELECT id + 10, k FROM {table}\")\n"
+    },
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          }
+        ],
+        "causes": [
+          "org.apache.spark.sql.streaming.StreamingQueryException",
+          "java.lang.IllegalStateException"
+        ],
+        "class": "STREAM_FAILED",
+        "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-delete-files": "1",
+            "added-position-deletes": "1",
+            "operation": "delete"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "sqlstate": "XXKST",
+        "text": "[STREAM_FAILED] Query [id = 1350dce3-156a-4791-be52-d12762a741b9, runId = 2dd8df2a-d7ed-47a8-ae43-6bb7ae72fdee] terminated with exception: Cannot process delete snapshot: 1180307089948889319, to ignore deletes, set streaming-skip-delete-snapshots=true SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = 1350dce3-156a-4791-be52-d12762a741b9, runId = 2dd8df2a-d7ed-47a8-ae43-6bb7ae72fdee]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {}\n\nCurrent State: INITIALIZING\nThread State: RUNNABLE"
+      },
+      "cell": "MB0-R5",
+      "field": "read.delete_unskipped.error",
+      "kind": "error",
+      "statement": "def cell_r5(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return mutation_cell(bench, \"r5\", delete_snapshot, {})\n\ndef mutation_cell(\n    bench: Bench,\n    name: str,\n    mutate: Callable[[Bench, str], None],\n    options: dict[str, str],\n) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, name)\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    checkpoint = bench.checkpoint(name)\n    first = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    first_error = await_query(first)\n    mutate(bench, source)\n    append(bench, source, [4])\n    second = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = first_error or await_query(second)\n    context = {\"operations\": operations(bench, source), \"batches\": collect.batches}\n    if error:\n        return \"error\", {**error, **context}\n    return \"rows\", {\"schema\": collect.schema, **context}\n\ndef delete_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"DELETE FROM {table} WHERE id = 1\")\n"
+    },
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          },
+          {
+            "batch": 1,
+            "rows": [
+              [
+                4,
+                "k0"
+              ]
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-delete-files": "1",
+            "added-position-deletes": "1",
+            "operation": "delete"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-R6",
+      "field": "read.delete_skipped.rows",
+      "kind": "rows",
+      "statement": "def cell_r6(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return mutation_cell(bench, \"r6\", delete_snapshot, {\"streaming-skip-delete-snapshots\": \"true\"})\n\ndef mutation_cell(\n    bench: Bench,\n    name: str,\n    mutate: Callable[[Bench, str], None],\n    options: dict[str, str],\n) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, name)\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    checkpoint = bench.checkpoint(name)\n    first = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    first_error = await_query(first)\n    mutate(bench, source)\n    append(bench, source, [4])\n    second = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = first_error or await_query(second)\n    context = {\"operations\": operations(bench, source), \"batches\": collect.batches}\n    if error:\n        return \"error\", {**error, **context}\n    return \"rows\", {\"schema\": collect.schema, **context}\n\ndef delete_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"DELETE FROM {table} WHERE id = 1\")\n"
+    },
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          }
+        ],
+        "causes": [
+          "org.apache.spark.sql.streaming.StreamingQueryException",
+          "java.lang.IllegalStateException"
+        ],
+        "class": "STREAM_FAILED",
+        "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-delete-files": "1",
+            "added-position-deletes": "1",
+            "operation": "delete"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "sqlstate": "XXKST",
+        "text": "[STREAM_FAILED] Query [id = 5b53e7db-6577-4c42-9672-eac094ae03bf, runId = 6efecddf-f395-46d2-890a-da34734618b6] terminated with exception: Cannot process delete snapshot: 7976793935209776065, to ignore deletes, set streaming-skip-delete-snapshots=true SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = 5b53e7db-6577-4c42-9672-eac094ae03bf, runId = 6efecddf-f395-46d2-890a-da34734618b6]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {}\n\nCurrent State: INITIALIZING\nThread State: RUNNABLE"
+      },
+      "cell": "MB0-R7",
+      "field": "read.delete_wrong_skip.error",
+      "kind": "error",
+      "statement": "def cell_r7(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return mutation_cell(\n        bench, \"r7\", delete_snapshot, {\"streaming-skip-overwrite-snapshots\": \"true\"}\n    )\n\ndef mutation_cell(\n    bench: Bench,\n    name: str,\n    mutate: Callable[[Bench, str], None],\n    options: dict[str, str],\n) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, name)\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    checkpoint = bench.checkpoint(name)\n    first = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    first_error = await_query(first)\n    mutate(bench, source)\n    append(bench, source, [4])\n    second = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = first_error or await_query(second)\n    context = {\"operations\": operations(bench, source), \"batches\": collect.batches}\n    if error:\n        return \"error\", {**error, **context}\n    return \"rows\", {\"schema\": collect.schema, **context}\n\ndef delete_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"DELETE FROM {table} WHERE id = 1\")\n"
+    },
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          },
+          {
+            "batch": 1,
+            "rows": [
+              [
+                4,
+                "k0"
+              ]
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "3",
+            "deleted-data-files": "2",
+            "deleted-records": "3",
+            "operation": "replace"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-R8",
+      "field": "read.replace_unskipped.answer",
+      "kind": "rows",
+      "statement": "def cell_r8(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return mutation_cell(bench, \"r8\", replace_snapshot, {})\n\ndef mutation_cell(\n    bench: Bench,\n    name: str,\n    mutate: Callable[[Bench, str], None],\n    options: dict[str, str],\n) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, name)\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    checkpoint = bench.checkpoint(name)\n    first = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    first_error = await_query(first)\n    mutate(bench, source)\n    append(bench, source, [4])\n    second = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = first_error or await_query(second)\n    context = {\"operations\": operations(bench, source), \"batches\": collect.batches}\n    if error:\n        return \"error\", {**error, **context}\n    return \"rows\", {\"schema\": collect.schema, **context}\n\ndef replace_snapshot(bench: Bench, table: str) -> None:\n    short = table.removeprefix(\"local.\")\n    bench.spark.sql(\n        f\"CALL local.system.rewrite_data_files(table => '{short}', \"\n        \"options => map('rewrite-all', 'true'))\"\n    )\n"
+    },
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          },
+          {
+            "batch": 1,
+            "rows": [
+              [
+                4,
+                "k0"
+              ]
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "3",
+            "deleted-data-files": "2",
+            "deleted-records": "3",
+            "operation": "replace"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-R9",
+      "field": "read.replace_skip_overwrite.answer",
+      "kind": "rows",
+      "statement": "def cell_r9(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return mutation_cell(\n        bench, \"r9\", replace_snapshot, {\"streaming-skip-overwrite-snapshots\": \"true\"}\n    )\n\ndef mutation_cell(\n    bench: Bench,\n    name: str,\n    mutate: Callable[[Bench, str], None],\n    options: dict[str, str],\n) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, name)\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    checkpoint = bench.checkpoint(name)\n    first = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    first_error = await_query(first)\n    mutate(bench, source)\n    append(bench, source, [4])\n    second = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = first_error or await_query(second)\n    context = {\"operations\": operations(bench, source), \"batches\": collect.batches}\n    if error:\n        return \"error\", {**error, **context}\n    return \"rows\", {\"schema\": collect.schema, **context}\n\ndef replace_snapshot(bench: Bench, table: str) -> None:\n    short = table.removeprefix(\"local.\")\n    bench.spark.sql(\n        f\"CALL local.system.rewrite_data_files(table => '{short}', \"\n        \"options => map('rewrite-all', 'true'))\"\n    )\n"
+    },
+    {
+      "answer": {
+        "cases": {
+          "equal_to_second_commit": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  2,
+                  "k0"
+                ],
+                [
+                  3,
+                  "k1"
+                ]
+              ]
+            }
+          ],
+          "midway_between_first_and_second_commit": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  2,
+                  "k0"
+                ],
+                [
+                  3,
+                  "k1"
+                ]
+              ]
+            }
+          ]
+        },
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "1",
+            "operation": "append"
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-R10",
+      "field": "read.from_timestamp.rows",
+      "kind": "rows",
+      "statement": "def cell_r10(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"r10\")\n    for ids in ([1], [2], [3]):\n        append(bench, source, ids)\n        time.sleep(0.25)\n    stamps = [\n        row[0]\n        for row in bench.spark.sql(\n            f\"SELECT unix_millis(committed_at) FROM {source}.snapshots ORDER BY committed_at\"\n        ).collect()\n    ]\n    cases = {\n        \"midway_between_first_and_second_commit\": (stamps[0] + stamps[1]) // 2,\n        \"equal_to_second_commit\": stamps[1],\n    }\n    answer: dict[str, Any] = {\"operations\": operations(bench, source), \"cases\": {}}\n    for label, millis in cases.items():\n        collect = Collect()\n        query = (\n            bench.spark.readStream.format(\"iceberg\")\n            .option(\"stream-from-timestamp\", str(millis))\n            .load(source)\n            .writeStream.foreachBatch(collect)\n            .option(\"checkpointLocation\", bench.checkpoint(f\"r10-{label}\"))\n            .trigger(availableNow=True)\n            .start()\n        )\n        query.awaitTermination()\n        answer[\"schema\"] = collect.schema\n        answer[\"cases\"][label] = collect.batches\n    return \"rows\", answer\n"
+    },
+    {
+      "answer": {
+        "batch_count": 3,
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ]
+            ]
+          },
+          {
+            "batch": 1,
+            "rows": [
+              [
+                3,
+                "k1"
+              ],
+              [
+                4,
+                "k0"
+              ]
+            ]
+          },
+          {
+            "batch": 2,
+            "rows": [
+              [
+                5,
+                "k1"
+              ],
+              [
+                6,
+                "k0"
+              ]
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "added-data-files": "3",
+            "added-records": "6",
+            "operation": "append"
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-R11",
+      "field": "read.max_files.batches",
+      "kind": "rows",
+      "statement": "def cell_r11(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"r11\")\n    append(bench, source, [1, 2, 3, 4, 5, 6], files=3)\n    collect = Collect()\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .option(\"streaming-max-files-per-micro-batch\", \"1\")\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", bench.checkpoint(\"r11\"))\n        .trigger(availableNow=True)\n        .start()\n    )\n    query.awaitTermination()\n    return \"rows\", {\n        \"schema\": collect.schema,\n        \"batches\": collect.batches,\n        \"batch_count\": len(collect.batches),\n        \"operations\": operations(bench, source),\n    }\n"
+    },
+    {
+      "answer": {
+        "batch_count": 2,
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ]
+            ]
+          },
+          {
+            "batch": 1,
+            "rows": [
+              [
+                4,
+                "k0"
+              ],
+              [
+                5,
+                "k1"
+              ],
+              [
+                6,
+                "k0"
+              ]
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "added-data-files": "2",
+            "added-records": "6",
+            "operation": "append"
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-R12",
+      "field": "read.max_rows.batches",
+      "kind": "rows",
+      "statement": "def cell_r12(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"r12\")\n    append(bench, source, [1, 2, 3, 4, 5, 6], files=2)\n    collect = Collect()\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .option(\"streaming-max-rows-per-micro-batch\", \"1\")\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", bench.checkpoint(\"r12\"))\n        .trigger(availableNow=True)\n        .start()\n    )\n    query.awaitTermination()\n    return \"rows\", {\n        \"schema\": collect.schema,\n        \"batches\": collect.batches,\n        \"batch_count\": len(collect.batches),\n        \"operations\": operations(bench, source),\n    }\n"
+    },
+    {
+      "answer": {
+        "commits": {
+          "0": [
+            "v1",
+            "{\"nextBatchWatermarkMs\":0}"
+          ],
+          "1": [
+            "v1",
+            "{\"nextBatchWatermarkMs\":0}"
+          ],
+          "2": [
+            "v1",
+            "{\"nextBatchWatermarkMs\":0}"
+          ]
+        },
+        "entries": [
+          ".metadata.crc",
+          "commits",
+          "commits/.0.crc",
+          "commits/.1.crc",
+          "commits/.2.crc",
+          "commits/0",
+          "commits/1",
+          "commits/2",
+          "metadata",
+          "offsets",
+          "offsets/.0.crc",
+          "offsets/.1.crc",
+          "offsets/.2.crc",
+          "offsets/0",
+          "offsets/1",
+          "offsets/2",
+          "sources",
+          "sources/0",
+          "sources/0/offsets",
+          "sources/0/offsets/.0.crc",
+          "sources/0/offsets/0"
+        ],
+        "metadata": [
+          "{\"id\":\"db90403b-1c5a-4d97-be18-02ff0e58c6ca\"}"
+        ],
+        "offsets": {
+          "0": [
+            "v1",
+            "{\"batchWatermarkMs\":0,\"batchTimestampMs\":1791307460747,\"conf\":{\"spark.sql.streaming.stateStore.providerClass\":\"org.apache.spark.sql.execution.streaming.state.HDFSBackedStateStoreProvider\",\"spark.sql.streaming.stateStore.rocksdb.formatVersion\":\"5\",\"spark.sql.streaming.stateStore.encodingFormat\":\"unsaferow\",\"spark.sql.streaming.statefulOperator.useStrictDistribution\":\"true\",\"spark.sql.streaming.flatMapGroupsWithState.stateFormatVersion\":\"2\",\"spark.sql.streaming.multipleWatermarkPolicy\":\"min\",\"spark.sql.streaming.aggregation.stateFormatVersion\":\"2\",\"spark.sql.shuffle.partitions\":\"2\",\"spark.sql.streaming.join.stateFormatVersion\":\"2\",\"spark.sql.streaming.stateStore.compression.codec\":\"lz4\",\"spark.sql.optimizer.pruneFiltersCanPruneStreamingSubplan\":\"false\"}}",
+            "{\"version\":1,\"snapshot_id\":3293253218355007281,\"position\":1,\"scan_all_files\":false}"
+          ],
+          "1": [
+            "v1",
+            "{\"batchWatermarkMs\":0,\"batchTimestampMs\":1791307460870,\"conf\":{\"spark.sql.streaming.stateStore.providerClass\":\"org.apache.spark.sql.execution.streaming.state.HDFSBackedStateStoreProvider\",\"spark.sql.streaming.stateStore.rocksdb.formatVersion\":\"5\",\"spark.sql.streaming.stateStore.encodingFormat\":\"unsaferow\",\"spark.sql.streaming.statefulOperator.useStrictDistribution\":\"true\",\"spark.sql.streaming.flatMapGroupsWithState.stateFormatVersion\":\"2\",\"spark.sql.streaming.multipleWatermarkPolicy\":\"min\",\"spark.sql.streaming.aggregation.stateFormatVersion\":\"2\",\"spark.sql.shuffle.partitions\":\"2\",\"spark.sql.streaming.join.stateFormatVersion\":\"2\",\"spark.sql.streaming.stateStore.compression.codec\":\"lz4\",\"spark.sql.optimizer.pruneFiltersCanPruneStreamingSubplan\":\"false\"}}",
+            "{\"version\":1,\"snapshot_id\":3293253218355007281,\"position\":2,\"scan_all_files\":false}"
+          ],
+          "2": [
+            "v1",
+            "{\"batchWatermarkMs\":0,\"batchTimestampMs\":1791307460988,\"conf\":{\"spark.sql.streaming.stateStore.providerClass\":\"org.apache.spark.sql.execution.streaming.state.HDFSBackedStateStoreProvider\",\"spark.sql.streaming.stateStore.rocksdb.formatVersion\":\"5\",\"spark.sql.streaming.stateStore.encodingFormat\":\"unsaferow\",\"spark.sql.streaming.statefulOperator.useStrictDistribution\":\"true\",\"spark.sql.streaming.flatMapGroupsWithState.stateFormatVersion\":\"2\",\"spark.sql.streaming.multipleWatermarkPolicy\":\"min\",\"spark.sql.streaming.aggregation.stateFormatVersion\":\"2\",\"spark.sql.shuffle.partitions\":\"2\",\"spark.sql.streaming.join.stateFormatVersion\":\"2\",\"spark.sql.streaming.stateStore.compression.codec\":\"lz4\",\"spark.sql.optimizer.pruneFiltersCanPruneStreamingSubplan\":\"false\"}}",
+            "{\"version\":1,\"snapshot_id\":3293253218355007281,\"position\":3,\"scan_all_files\":false}"
+          ]
+        }
+      },
+      "cell": "MB0-R13",
+      "field": "read.checkpoint.offset",
+      "kind": "checkpoint",
+      "statement": "def cell_r13(bench: Bench) -> tuple[str, dict[str, Any]]:\n    checkpoint = Path(bench.checkpoint(\"r11\"))\n    offsets = {\n        name: (checkpoint / \"offsets\" / name).read_text().splitlines()\n        for name in checkpoint_logs(str(checkpoint), \"offsets\")\n    }\n    commits = {\n        name: (checkpoint / \"commits\" / name).read_text().splitlines()\n        for name in checkpoint_logs(str(checkpoint), \"commits\")\n    }\n    return \"checkpoint\", {\n        \"metadata\": (checkpoint / \"metadata\").read_text().splitlines(),\n        \"offsets\": offsets,\n        \"commits\": commits,\n        \"entries\": sorted(str(p.relative_to(checkpoint)) for p in checkpoint.rglob(\"*\")),\n    }\n"
+    },
+    {
+      "answer": {
+        "keys": [
+          "added-data-files",
+          "added-files-size",
+          "added-records",
+          "app-id",
+          "app-name",
+          "changed-partition-count",
+          "engine-name",
+          "engine-version",
+          "iceberg-version",
+          "manifests-created",
+          "manifests-kept",
+          "manifests-replaced",
+          "spark.app.id",
+          "spark.sql.streaming.epochId",
+          "spark.sql.streaming.queryId",
+          "total-data-files",
+          "total-delete-files",
+          "total-equality-deletes",
+          "total-files-size",
+          "total-position-deletes",
+          "total-records"
+        ],
+        "operation": "append",
+        "rows": [
+          [
+            1,
+            "k1"
+          ],
+          [
+            2,
+            "k0"
+          ],
+          [
+            3,
+            "k1"
+          ],
+          [
+            4,
+            "k0"
+          ]
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-W1",
+      "field": "write.append_no_fanout.summary",
+      "kind": "summary",
+      "statement": "def cell_w1(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return fanout_cell(bench, \"w1\", \"false\")\n\ndef fanout_cell(bench: Bench, name: str, fanout: str) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, f\"{name}_src\")\n    append(bench, source, [1, 2, 3, 4], files=2)\n    sink = create_sink(bench, f\"{name}_sink\", partition=\"k\")\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .load(source)\n        .writeStream.format(\"iceberg\")\n        .outputMode(\"append\")\n        .option(\"fanout-enabled\", fanout)\n        .option(\"checkpointLocation\", bench.checkpoint(name))\n        .trigger(availableNow=True)\n        .toTable(sink)\n    )\n    error = await_query(query)\n    if error:\n        return \"error\", error\n    snapshot = last_snapshot(bench, sink)\n    return \"summary\", {\n        \"operation\": snapshot[\"operation\"],\n        \"keys\": sorted(snapshot[\"summary\"]),\n        **table_rows(bench, sink),\n    }\n"
+    },
+    {
+      "answer": {
+        "keys": [
+          "added-data-files",
+          "added-files-size",
+          "added-records",
+          "app-id",
+          "app-name",
+          "changed-partition-count",
+          "engine-name",
+          "engine-version",
+          "iceberg-version",
+          "manifests-created",
+          "manifests-kept",
+          "manifests-replaced",
+          "spark.app.id",
+          "spark.sql.streaming.epochId",
+          "spark.sql.streaming.queryId",
+          "total-data-files",
+          "total-delete-files",
+          "total-equality-deletes",
+          "total-files-size",
+          "total-position-deletes",
+          "total-records"
+        ],
+        "operation": "append",
+        "rows": [
+          [
+            1,
+            "k1"
+          ],
+          [
+            2,
+            "k0"
+          ],
+          [
+            3,
+            "k1"
+          ],
+          [
+            4,
+            "k0"
+          ]
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-W2",
+      "field": "write.append_fanout.summary",
+      "kind": "summary",
+      "statement": "def cell_w2(bench: Bench) -> tuple[str, dict[str, Any]]:\n    return fanout_cell(bench, \"w2\", \"true\")\n\ndef fanout_cell(bench: Bench, name: str, fanout: str) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, f\"{name}_src\")\n    append(bench, source, [1, 2, 3, 4], files=2)\n    sink = create_sink(bench, f\"{name}_sink\", partition=\"k\")\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .load(source)\n        .writeStream.format(\"iceberg\")\n        .outputMode(\"append\")\n        .option(\"fanout-enabled\", fanout)\n        .option(\"checkpointLocation\", bench.checkpoint(name))\n        .trigger(availableNow=True)\n        .toTable(sink)\n    )\n    error = await_query(query)\n    if error:\n        return \"error\", error\n    snapshot = last_snapshot(bench, sink)\n    return \"summary\", {\n        \"operation\": snapshot[\"operation\"],\n        \"keys\": sorted(snapshot[\"summary\"]),\n        **table_rows(bench, sink),\n    }\n"
+    },
+    {
+      "answer": {
+        "runs": [
+          {
+            "batches": [
+              {
+                "batchId": 0,
+                "numInputRows": 3
+              }
+            ],
+            "operations": [
+              {
+                "added-data-files": "2",
+                "added-records": "2",
+                "operation": "overwrite"
+              }
+            ],
+            "rows": [
+              [
+                "k0",
+                1
+              ],
+              [
+                "k1",
+                2
+              ]
+            ],
+            "schema": [
+              [
+                "k",
+                "string",
+                true
+              ],
+              [
+                "count",
+                "bigint",
+                true
+              ]
+            ]
+          },
+          {
+            "batches": [
+              {
+                "batchId": 1,
+                "numInputRows": 2
+              }
+            ],
+            "operations": [
+              {
+                "added-data-files": "2",
+                "added-records": "2",
+                "operation": "overwrite"
+              },
+              {
+                "added-data-files": "2",
+                "added-records": "2",
+                "deleted-data-files": "2",
+                "deleted-records": "2",
+                "operation": "overwrite"
+              }
+            ],
+            "rows": [
+              [
+                "k0",
+                2
+              ],
+              [
+                "k1",
+                3
+              ]
+            ],
+            "schema": [
+              [
+                "k",
+                "string",
+                true
+              ],
+              [
+                "count",
+                "bigint",
+                true
+              ]
+            ]
+          }
+        ]
+      },
+      "cell": "MB0-W3",
+      "field": "write.complete.answer",
+      "kind": "rows",
+      "statement": "def cell_w3(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"w3_src\")\n    append(bench, source, [1, 2, 3])\n    sink = create_sink(bench, \"w3_sink\", columns=\"k STRING, count BIGINT\")\n    runs = []\n    for ids in ([4, 5], []):\n        counts = bench.spark.readStream.format(\"iceberg\").load(source).groupBy(\"k\").count()\n        query = (\n            counts.writeStream.format(\"iceberg\")\n            .outputMode(\"complete\")\n            .option(\"checkpointLocation\", bench.checkpoint(\"w3\"))\n            .trigger(availableNow=True)\n            .toTable(sink)\n        )\n        error = await_query(query)\n        if error:\n            return \"error\", error\n        runs.append(\n            {\n                \"batches\": progress_batches(query),\n                \"operations\": operations(bench, sink),\n                **table_rows(bench, sink),\n            }\n        )\n        if ids:\n            append(bench, source, ids)\n    return \"rows\", {\"runs\": runs}\n"
+    },
+    {
+      "answer": {
+        "rows": [
+          [
+            1,
+            "k1"
+          ],
+          [
+            2,
+            "k0"
+          ],
+          [
+            3,
+            "k1"
+          ],
+          [
+            4,
+            "k0"
+          ]
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ],
+        "snapshots": [
+          {
+            "added-records": "2",
+            "keys": [
+              "added-data-files",
+              "added-files-size",
+              "added-records",
+              "app-id",
+              "app-name",
+              "changed-partition-count",
+              "engine-name",
+              "engine-version",
+              "iceberg-version",
+              "manifests-created",
+              "manifests-kept",
+              "manifests-replaced",
+              "spark.app.id",
+              "total-data-files",
+              "total-delete-files",
+              "total-equality-deletes",
+              "total-files-size",
+              "total-position-deletes",
+              "total-records"
+            ],
+            "operation": "append"
+          },
+          {
+            "added-records": "2",
+            "keys": [
+              "added-data-files",
+              "added-files-size",
+              "added-records",
+              "app-id",
+              "app-name",
+              "changed-partition-count",
+              "engine-name",
+              "engine-version",
+              "iceberg-version",
+              "manifests-created",
+              "manifests-kept",
+              "manifests-replaced",
+              "spark.app.id",
+              "total-data-files",
+              "total-delete-files",
+              "total-equality-deletes",
+              "total-files-size",
+              "total-position-deletes",
+              "total-records"
+            ],
+            "operation": "append"
+          }
+        ]
+      },
+      "cell": "MB0-W4",
+      "field": "write.foreach_batch.snapshots",
+      "kind": "summary",
+      "statement": "def cell_w4(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"w4_src\")\n    append(bench, source, [1, 2])\n    sink = create_sink(bench, \"w4_sink\")\n    for ids in ([3, 4], []):\n        query = (\n            bench.spark.readStream.format(\"iceberg\")\n            .load(source)\n            .writeStream.foreachBatch(AppendTo(sink))\n            .option(\"checkpointLocation\", bench.checkpoint(\"w4\"))\n            .trigger(availableNow=True)\n            .start()\n        )\n        query.awaitTermination()\n        if ids:\n            append(bench, source, ids)\n    snapshots = [\n        {\n            \"operation\": entry[\"operation\"],\n            \"added-records\": entry[\"summary\"].get(\"added-records\"),\n            \"keys\": sorted(entry[\"summary\"]),\n        }\n        for entry in snapshot_log(bench, sink)\n    ]\n    return \"summary\", {\"snapshots\": snapshots, **table_rows(bench, sink)}\n\nclass AppendTo:\n    def __init__(self, table: str) -> None:\n        self.table = table\n\n    def __call__(self, frame: DataFrame, batch_id: int) -> None:\n        frame.writeTo(self.table).append()\n"
+    },
+    {
+      "answer": {
+        "duplicates": 0,
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          }
+        ],
+        "rows": [
+          [
+            1,
+            "k1"
+          ],
+          [
+            2,
+            "k0"
+          ],
+          [
+            3,
+            "k1"
+          ],
+          [
+            4,
+            "k0"
+          ]
+        ],
+        "runs": [
+          {
+            "batches": [
+              {
+                "batchId": 0,
+                "numInputRows": 2
+              }
+            ],
+            "commits": [
+              "0"
+            ],
+            "offsets": [
+              "0"
+            ]
+          },
+          {
+            "batches": [
+              {
+                "batchId": 1,
+                "numInputRows": 2
+              }
+            ],
+            "commits": [
+              "0",
+              "1"
+            ],
+            "offsets": [
+              "0",
+              "1"
+            ]
+          },
+          {
+            "batches": [
+              {
+                "batchId": 2,
+                "numInputRows": 0
+              }
+            ],
+            "commits": [
+              "0",
+              "1"
+            ],
+            "offsets": [
+              "0",
+              "1"
+            ]
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-W5",
+      "field": "write.restart_committed.rows",
+      "kind": "rows",
+      "statement": "def cell_w5(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"w5_src\")\n    append(bench, source, [1, 2])\n    sink = create_sink(bench, \"w5_sink\")\n    checkpoint = bench.checkpoint(\"w5\")\n    runs = []\n    for ids in ([3, 4], [], []):\n        query = (\n            bench.spark.readStream.format(\"iceberg\")\n            .load(source)\n            .writeStream.format(\"iceberg\")\n            .outputMode(\"append\")\n            .option(\"checkpointLocation\", checkpoint)\n            .trigger(availableNow=True)\n            .toTable(sink)\n        )\n        query.awaitTermination()\n        runs.append(\n            {\n                \"batches\": progress_batches(query),\n                \"offsets\": checkpoint_logs(checkpoint, \"offsets\"),\n                \"commits\": checkpoint_logs(checkpoint, \"commits\"),\n            }\n        )\n        if ids:\n            append(bench, source, ids)\n    final = table_rows(bench, sink)\n    ids_seen = [row[0] for row in final[\"rows\"]]\n    return \"rows\", {\n        \"runs\": runs,\n        \"duplicates\": len(ids_seen) - len(set(ids_seen)),\n        \"operations\": operations(bench, sink),\n        **final,\n    }\n"
+    },
+    {
+      "answer": {
+        "duplicates": 0,
+        "operations": [
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          },
+          {
+            "added-data-files": "1",
+            "added-records": "2",
+            "operation": "append"
+          }
+        ],
+        "rows": [
+          [
+            1,
+            "k1"
+          ],
+          [
+            2,
+            "k0"
+          ],
+          [
+            3,
+            "k1"
+          ],
+          [
+            4,
+            "k0"
+          ]
+        ],
+        "runs": [
+          {
+            "batches": [
+              {
+                "batchId": 0,
+                "numInputRows": 2
+              }
+            ],
+            "commits": [
+              "0"
+            ],
+            "error": null,
+            "offsets": [
+              "0"
+            ],
+            "sink_rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ]
+            ],
+            "step": "commit"
+          },
+          {
+            "batches": [],
+            "commits": [
+              "0"
+            ],
+            "error": {
+              "causes": [
+                "org.apache.spark.sql.streaming.StreamingQueryException",
+                "org.apache.spark.SparkException",
+                "org.apache.spark.api.python.PythonException"
+              ],
+              "class": "STREAM_FAILED",
+              "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+              "sqlstate": "XXKST",
+              "text": "[STREAM_FAILED] Query [id = 6e93c210-d84e-4cba-bb5a-acbc3f6106bb, runId = 342ce66b-ac0b-4814-a2fd-64a238a422c6] terminated with exception: Job aborted due to stage failure: Task 0 in stage 263.0 failed 1 times, most recent failure: Lost task 0.0 in stage 263.0 (TID 250) (localhost executor driver): org.apache.spark.api.python.PythonException: Traceback (most recent call last):\n  File \"$RECORDER\", line 241, in fail_when_flagged\n    raise RuntimeError(f\"mb0 injected failure at id {value}\")\nRuntimeError: mb0 injected failure at id 3\n\n\tat org.apache.spark.api.python.BasePythonRunner$ReaderIterator.handlePythonException(PythonRunner.scala:645)\n\tat org.apache.spark.sql.execution.python.BasePythonUDFRunner$$anon$2.read(PythonUDFRunner.scala:123)\n\tat org.apache.spark.sql.execution.python.BasePythonUDFRunner$$anon$2.read(PythonUDFRunner.scala:106)\n\tat org.apache.spark.api.python.BasePythonRunner$ReaderIterator.hasNext(PythonRunner.scala:596)\n\tat org.apache.spark.InterruptibleIterator.hasNext(InterruptibleIterator.scala:37)\n\tat scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:611)\n\tat scala.collection.Iterator$$anon$9.hasNext(Iterator.scala:593)\n\tat scala.collection.Iterator$$anon$9.hasNext(Iterator.scala:593)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage2.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenEvaluatorFactory$WholeStageCodegenPartitionEvaluator$$anon$1.hasNext(WholeStageCodegenEvaluatorFactory.scala:50)\n\tat org.apache.spark.sql.execution.datasources.v2.WritingSparkTask$IteratorWithMetrics.hasNext(WriteToDataSourceV2Exec.scala:592)\n\tat org.apache.spark.sql.connector.write.DataWriter.writeAll(DataWriter.java:107)\n\tat org.apache.spark.sql.execution.datasources.v2.DataWritingSparkTask$.write(WriteToDataSourceV2Exec.scala:634)\n\tat org.apache.spark.sql.execution.datasources.v2.WritingSparkTask.$anonfun$run$5(WriteToDataSourceV2Exec.scala:530)\n\tat org.apache.spark.util.Utils$.tryWithSafeFinallyAndFailureCallbacks(Utils.scala:1337)\n\tat org.apache.spark.sql.execution.datasources.v2.WritingSparkTask.run(WriteToDataSourceV2Exec.scala:582)\n\tat org.apache.spark.sql.execution.datasources.v2.WritingSparkTask.run$(WriteToDataSourceV2Exec.scala:513)\n\tat org.apache.spark.sql.execution.datasources.v2.DataWritingSparkTask$.run(WriteToDataSourceV2Exec.scala:631)\n\tat org.apache.spark.sql.execution.datasources.v2.V2TableWriteExec.$anonfun$writeWithV2$2(WriteToDataSourceV2Exec.scala:454)\n\tat org.apache.spark.scheduler.ResultTask.runTask(ResultTask.scala:93)\n\tat org.apache.spark.TaskContext.runTaskWithListeners(TaskContext.scala:180)\n\tat org.apache.spark.scheduler.Task.run(Task.scala:147)\n\tat org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$4(Executor.scala:873)\n\tat org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally(SparkErrorUtils.scala:86)\n\tat org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally$(SparkErrorUtils.scala:83)\n\tat org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:97)\n\tat org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:876)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)\n\tat java.base/java.lang.Thread.run(Thread.java:840)\n\nDriver stacktrace: SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = 6e93c210-d84e-4cba-bb5a-acbc3f6106bb, runId = 342ce66b-ac0b-4814-a2fd-64a238a422c6]\nCurrent Committed Offsets: {org.apache.iceberg.spark.source.SparkMicroBatchStream@1ea90561: {\"version\":1,\"snapshot_id\":2215418701314473223,\"position\":1,\"scan_all_files\":false}}\nCurrent Available Offsets: {org.apache.iceberg.spark.source.SparkMicroBatchStream@1ea90561: Streaming Offset[2757262846946453465: position (1) scan_all_files (false)]}\n\nCurrent State: ACTIVE\nThread State: RUNNABLE\n\nLogical Plan:\n~WriteToMicroBatchDataSource RelationV2[id#994L, k#995] local.mb0.w6_sink, local.mb0.w6_sink, 6e93c210-d84e-4cba-bb5a-acbc3f6106bb, [checkpointLocation=$CHECKPOINTS/w6], Append\n+- ~Project [partial(id#983L)#985L AS id#991L, k#984]\n   +- ~StreamingDataSourceV2ScanRelation[id#983L, k#984] local.mb0.w6_src\n"
+            },
+            "offsets": [
+              "0",
+              "1"
+            ],
+            "sink_rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ]
+            ],
+            "step": "kill"
+          },
+          {
+            "batches": [
+              {
+                "batchId": 1,
+                "numInputRows": 2
+              }
+            ],
+            "commits": [
+              "0",
+              "1"
+            ],
+            "error": null,
+            "offsets": [
+              "0",
+              "1"
+            ],
+            "sink_rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ],
+              [
+                3,
+                "k1"
+              ],
+              [
+                4,
+                "k0"
+              ]
+            ],
+            "step": "restart"
+          }
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-W6",
+      "field": "write.restart_uncommitted.rows",
+      "kind": "rows",
+      "statement": "def cell_w6(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"w6_src\")\n    append(bench, source, [1, 2])\n    sink = create_sink(bench, \"w6_sink\")\n    checkpoint = bench.checkpoint(\"w6\")\n    flag = bench.checkpoints / \"w6-fail.flag\"\n    guard = sf.udf(functools.partial(fail_when_flagged, str(flag)), \"bigint\")\n    runs: list[dict[str, Any]] = []\n    for step in (\"commit\", \"kill\", \"restart\"):\n        if step == \"kill\":\n            append(bench, source, [3, 4])\n            flag.write_text(\"fail\\n\")\n        if step == \"restart\":\n            flag.unlink()\n        query = (\n            bench.spark.readStream.format(\"iceberg\")\n            .load(source)\n            .withColumn(\"id\", guard(sf.col(\"id\")))\n            .writeStream.format(\"iceberg\")\n            .outputMode(\"append\")\n            .option(\"checkpointLocation\", checkpoint)\n            .trigger(availableNow=True)\n            .toTable(sink)\n        )\n        error = await_query(query)\n        runs.append(\n            {\n                \"step\": step,\n                \"error\": error,\n                \"batches\": progress_batches(query),\n                \"offsets\": checkpoint_logs(checkpoint, \"offsets\"),\n                \"commits\": checkpoint_logs(checkpoint, \"commits\"),\n                \"sink_rows\": rows_of(bench.spark.table(sink)),\n            }\n        )\n    final = table_rows(bench, sink)\n    ids_seen = [row[0] for row in final[\"rows\"]]\n    return \"rows\", {\n        \"runs\": runs,\n        \"duplicates\": len(ids_seen) - len(set(ids_seen)),\n        \"operations\": operations(bench, sink),\n        **final,\n    }\n\ndef fail_when_flagged(flag: str, value: int) -> int:\n    if Path(flag).exists() and value == FAIL_ID:\n        raise RuntimeError(f\"mb0 injected failure at id {value}\")\n    return value\n"
+    },
+    {
+      "answer": {
+        "operation": "append",
+        "summary": {
+          "added-data-files": "1",
+          "added-files-size": "713",
+          "added-records": "3",
+          "app-id": "local-1791307436699",
+          "app-name": "mb0-streaming-oracle",
+          "changed-partition-count": "1",
+          "engine-name": "spark",
+          "engine-version": "4.1.2",
+          "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+          "manifests-created": "1",
+          "manifests-kept": "0",
+          "manifests-replaced": "0",
+          "spark.app.id": "local-1791307436699",
+          "spark.sql.streaming.epochId": "0",
+          "spark.sql.streaming.queryId": "56d8e7f9-bf81-4aba-bce4-20310656173a",
+          "total-data-files": "1",
+          "total-delete-files": "0",
+          "total-equality-deletes": "0",
+          "total-files-size": "713",
+          "total-position-deletes": "0",
+          "total-records": "3"
+        }
+      },
+      "cell": "MB0-W7",
+      "field": "write.summary_keys.summary",
+      "kind": "summary",
+      "statement": "def cell_w7(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"w7_src\")\n    append(bench, source, [1, 2, 3])\n    sink = create_sink(bench, \"w7_sink\")\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .load(source)\n        .writeStream.format(\"iceberg\")\n        .outputMode(\"append\")\n        .option(\"checkpointLocation\", bench.checkpoint(\"w7\"))\n        .trigger(availableNow=True)\n        .toTable(sink)\n    )\n    query.awaitTermination()\n    snapshot = last_snapshot(bench, sink)\n    return \"summary\", {\"operation\": snapshot[\"operation\"], \"summary\": snapshot[\"summary\"]}\n"
+    },
+    {
+      "answer": {
+        "causes": [
+          "org.apache.spark.sql.AnalysisException"
+        ],
+        "class": "_LEGACY_ERROR_TEMP_1298",
+        "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+        "session_checkpoint_location": null,
+        "sqlstate": null,
+        "text": "checkpointLocation must be specified either through option(\"checkpointLocation\", ...) or SparkSession.conf.set(\"spark.sql.streaming.checkpointLocation\", ...)."
+      },
+      "cell": "MB0-W8",
+      "field": "write.no_checkpoint.answer",
+      "kind": "error",
+      "statement": "def cell_w8(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"w8_src\")\n    append(bench, source, [1, 2])\n    sink = create_sink(bench, \"w8_sink\")\n    default_location = bench.spark.conf.get(\"spark.sql.streaming.checkpointLocation\", None)\n    try:\n        query = (\n            bench.spark.readStream.format(\"iceberg\")\n            .load(source)\n            .writeStream.format(\"iceberg\")\n            .outputMode(\"append\")\n            .trigger(availableNow=True)\n            .toTable(sink)\n        )\n    except PySparkException as exc:\n        return \"error\", {**error_of(exc), \"session_checkpoint_location\": default_location}\n    error = await_query(query)\n    if error:\n        return \"error\", {**error, \"session_checkpoint_location\": default_location}\n    return \"rows\", {\n        \"session_checkpoint_location\": default_location,\n        \"batches\": progress_batches(query),\n        **table_rows(bench, sink),\n    }\n"
+    },
+    {
+      "answer": {
+        "default_options": {
+          "batches": [
+            {
+              "batchId": 0,
+              "numInputRows": 3
+            }
+          ],
+          "is_active": false,
+          "rows": [
+            [
+              1,
+              "k1"
+            ],
+            [
+              2,
+              "k0"
+            ],
+            [
+              3,
+              "k1"
+            ]
+          ],
+          "schema": [
+            [
+              "id",
+              "bigint",
+              true
+            ],
+            [
+              "k",
+              "string",
+              true
+            ]
+          ]
+        },
+        "max_files_per_micro_batch_1": {
+          "batches": [
+            {
+              "batchId": 0,
+              "numInputRows": 3
+            }
+          ],
+          "is_active": false,
+          "rows": [
+            [
+              1,
+              "k1"
+            ],
+            [
+              2,
+              "k0"
+            ],
+            [
+              3,
+              "k1"
+            ]
+          ],
+          "schema": [
+            [
+              "id",
+              "bigint",
+              true
+            ],
+            [
+              "k",
+              "string",
+              true
+            ]
+          ]
+        }
+      },
+      "cell": "MB0-T1",
+      "field": "trigger.once.answer",
+      "kind": "rows",
+      "statement": "def cell_t1(bench: Bench) -> tuple[str, dict[str, Any]]:\n    answer = {\n        \"default_options\": once_run(bench, \"t1\", {}),\n        \"max_files_per_micro_batch_1\": once_run(\n            bench, \"t1_max_files\", {\"streaming-max-files-per-micro-batch\": \"1\"}\n        ),\n    }\n    errors = [run[\"error\"] for run in answer.values() if \"error\" in run]\n    return (\"error\" if errors else \"rows\"), answer\n\ndef once_run(bench: Bench, name: str, options: dict[str, str]) -> dict[str, Any]:\n    source = create_source(bench, f\"{name}_src\")\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    sink = create_sink(bench, f\"{name}_sink\")\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.format(\"iceberg\")\n        .outputMode(\"append\")\n        .option(\"checkpointLocation\", bench.checkpoint(name))\n        .trigger(once=True)\n        .toTable(sink)\n    )\n    error = await_query(query)\n    if error:\n        return {\"error\": error}\n    return {\n        \"batches\": progress_batches(query),\n        \"is_active\": query.isActive,\n        **table_rows(bench, sink),\n    }\n"
+    },
+    {
+      "answer": {
+        "await_termination_returned": null,
+        "batch_count": 2,
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ],
+              [
+                2,
+                "k0"
+              ]
+            ]
+          },
+          {
+            "batch": 1,
+            "rows": [
+              [
+                3,
+                "k1"
+              ]
+            ]
+          }
+        ],
+        "exception": null,
+        "is_active": false,
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ]
+      },
+      "cell": "MB0-T2",
+      "field": "trigger.available_now.batches",
+      "kind": "rows",
+      "statement": "def cell_t2(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"t2\")\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    collect = Collect()\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .option(\"streaming-max-files-per-micro-batch\", \"1\")\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", bench.checkpoint(\"t2\"))\n        .trigger(availableNow=True)\n        .start()\n    )\n    returned = query.awaitTermination()\n    return \"rows\", {\n        \"schema\": collect.schema,\n        \"batches\": collect.batches,\n        \"batch_count\": len(collect.batches),\n        \"await_termination_returned\": returned,\n        \"is_active\": query.isActive,\n        \"exception\": None if query.exception() is None else str(query.exception()),\n    }\n"
+    },
+    {
+      "answer": {
+        "await_termination_1s_returned": true,
+        "await_termination_returned": null,
+        "exception": null,
+        "is_active_after_stop": false,
+        "is_active_before_stop": true,
+        "last_progress": {
+          "batchDuration": 184,
+          "batchId": 0,
+          "durationMs": {
+            "addBatch": 97,
+            "commitOffsets": 41,
+            "getBatch": 0,
+            "latestOffset": 2,
+            "queryPlanning": 9,
+            "triggerExecution": 184,
+            "walCommit": 33
+          },
+          "id": "db7db70b-11b2-4d8c-baaa-21a7c9dcabb6",
+          "inputRowsPerSecond": 0.0,
+          "name": null,
+          "numInputRows": 3,
+          "processedRowsPerSecond": 16.3,
+          "runId": "2ea958b2-136a-44cf-9f90-88ae3ded290b",
+          "sink": {
+            "description": "local.mb0.t3_sink",
+            "numOutputRows": 3
+          },
+          "sources": [
+            {
+              "description": "org.apache.iceberg.spark.source.SparkMicroBatchStream@219ea7d8",
+              "endOffset": {
+                "position": 1,
+                "scan_all_files": false,
+                "snapshot_id": 7596292182655365750,
+                "version": 1
+              },
+              "inputRowsPerSecond": 0.0,
+              "latestOffset": null,
+              "numInputRows": 3,
+              "processedRowsPerSecond": 16.3,
+              "startOffset": null
+            }
+          ],
+          "stateOperators": [],
+          "timestamp": "2026-10-06T17:24:34.878Z"
+        },
+        "recent_progress_count": 1,
+        "rows": [
+          [
+            1,
+            "k1"
+          ],
+          [
+            2,
+            "k0"
+          ],
+          [
+            3,
+            "k1"
+          ]
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ],
+        "status": {
+          "isDataAvailable": true,
+          "isTriggerActive": false,
+          "message": "Waiting for next trigger"
+        },
+        "status_after_stop": {
+          "isDataAvailable": false,
+          "isTriggerActive": false,
+          "message": "Stopped"
+        },
+        "stop_returned": null
+      },
+      "cell": "MB0-T3",
+      "field": "trigger.progress.json",
+      "kind": "progress",
+      "statement": "def cell_t3(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"t3_src\")\n    append(bench, source, [1, 2, 3])\n    sink = create_sink(bench, \"t3_sink\")\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .load(source)\n        .writeStream.format(\"iceberg\")\n        .outputMode(\"append\")\n        .option(\"checkpointLocation\", bench.checkpoint(\"t3\"))\n        .trigger(processingTime=\"1 hour\")\n        .toTable(sink)\n    )\n    deadline = time.monotonic() + PROGRESS_TIMEOUT_S\n    while query._jsq.lastProgress() is None and time.monotonic() < deadline:\n        time.sleep(0.1)\n    last = query._jsq.lastProgress()\n    progress = json.loads(last.json()) if last is not None else None\n    status = dict(query.status)\n    active_before_stop = query.isActive\n    stopped = query.stop()\n    awaited = query.awaitTermination()\n    awaited_with_timeout = query.awaitTermination(1)\n    return \"progress\", {\n        \"last_progress\": progress,\n        \"status\": status,\n        \"recent_progress_count\": len(query.recentProgress),\n        \"is_active_before_stop\": active_before_stop,\n        \"stop_returned\": stopped,\n        \"await_termination_returned\": awaited,\n        \"await_termination_1s_returned\": awaited_with_timeout,\n        \"is_active_after_stop\": query.isActive,\n        \"exception\": None if query.exception() is None else str(query.exception()),\n        \"status_after_stop\": dict(query.status),\n        **table_rows(bench, sink),\n    }\n"
+    }
+  ],
+  "preamble": {
+    "catalog": "hadoop",
+    "catalog_cache_enabled": "false",
+    "iceberg": "1.11.0",
+    "iceberg_full": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+    "master": "local[2]",
+    "paths": {
+      "$CHECKPOINTS": "the private checkpoint root of the run",
+      "$RECORDER": "this recorder file",
+      "$WAREHOUSE": "the private Hadoop-catalog warehouse root of the run"
+    },
+    "python": "3.12.3",
+    "spark": "4.1.2"
+  }
+}

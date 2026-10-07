@@ -28,6 +28,10 @@ mod dispatch_spark;
 
 use super::expr_build::reciprocal_trig_or_inf;
 
+fn value_err(message: impl AsRef<str>) -> PyErr {
+    PyValueError::new_err(crate::exceptions::mask_user_visible(message))
+}
+
 pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
     let mut deepest = 0;
     for expr in &exprs {
@@ -45,7 +49,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
     use datafusion::functions_nested::expr_fn as nested_fn;
     let need = |n: usize| -> PyResult<()> {
         if exprs.len() != n {
-            return Err(PyValueError::new_err(format!(
+            return Err(value_err(format!(
                 "call_scalar({name}) expects {n} args, got {}",
                 exprs.len()
             )));
@@ -54,7 +58,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
     };
     let need_at_least = |n: usize| -> PyResult<()> {
         if exprs.len() < n {
-            return Err(PyValueError::new_err(format!(
+            return Err(value_err(format!(
                 "call_scalar({name}) expects at least {n} args, got {}",
                 exprs.len()
             )));
@@ -297,7 +301,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "to_date" => {
             if exprs.len() != 1 && exprs.len() != 2 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 1 or 2 args, got {}",
                     exprs.len()
                 )));
@@ -306,7 +310,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "unix_timestamp" | "to_unix_timestamp" => {
             if exprs.len() > 2 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 0 to 2 args, got {}",
                     exprs.len()
                 )));
@@ -320,7 +324,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "to_timestamp_ltz" => {
             need_at_least(1)?;
             if exprs.len() > 2 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 1 or 2 args, got {}",
                     exprs.len()
                 )));
@@ -330,7 +334,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "to_timestamp_ntz" => {
             need_at_least(1)?;
             if exprs.len() > 2 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 1 or 2 args, got {}",
                     exprs.len()
                 )));
@@ -340,7 +344,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "from_unixtime" => {
             need_at_least(1)?;
             if exprs.len() > 2 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects at most 2 args, got {}",
                     exprs.len()
                 )));
@@ -527,7 +531,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "current_time" => {
             if exprs.len() > 1 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 0 or 1 args, got {}",
                     exprs.len()
                 )));
@@ -576,7 +580,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "random" | "rand" => {
             if exprs.len() > 1 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 0 or 1 seed arg, got {}",
                     exprs.len()
                 )));
@@ -585,7 +589,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "randn" => {
             if exprs.len() > 1 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar(randn) expects 0 or 1 seed arg, got {}",
                     exprs.len()
                 )));
@@ -608,7 +612,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             // Use the owned substring shim so position zero follows Spark semantics.
             need_at_least(2)?;
             if exprs.len() > 3 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 2 or 3 args, got {}",
                     exprs.len()
                 )));
@@ -679,7 +683,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "regexp_instr" => {
             need_at_least(2)?;
             if exprs.len() > 3 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 2 or 3 args, got {}",
                     exprs.len()
                 )));
@@ -712,7 +716,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "make_interval" => {
             if exprs.len() > 7 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects at most 7 args, got {}",
                     exprs.len()
                 )));
@@ -721,7 +725,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "make_dt_interval" => {
             if exprs.len() > 4 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects at most 4 args, got {}",
                     exprs.len()
                 )));
@@ -773,7 +777,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "try_to_date" | "try_to_binary" | "try_to_time" | "try_to_timestamp" => {
             need_at_least(1)?;
             if exprs.len() > 2 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 1 or 2 args, got {}",
                     exprs.len()
                 )));
@@ -851,7 +855,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "shuffle" => {
             need_at_least(1)?;
             if exprs.len() > 2 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 1 or 2 args, got {}",
                     exprs.len()
                 )));
@@ -865,7 +869,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "str_to_map" => {
             need_at_least(1)?;
             if exprs.len() > 3 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 1 to 3 args, got {}",
                     exprs.len()
                 )));
@@ -877,7 +881,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "parse_url" => {
             need_at_least(2)?;
             if exprs.len() > 3 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 2 or 3 args, got {}",
                     exprs.len()
                 )));
@@ -887,7 +891,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "try_parse_url" => {
             need_at_least(2)?;
             if exprs.len() > 3 {
-                return Err(PyValueError::new_err(format!(
+                return Err(value_err(format!(
                     "call_scalar({name}) expects 2 or 3 args, got {}",
                     exprs.len()
                 )));
@@ -958,9 +962,7 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         }
         "grouping" => grouping_udaf(),
         other => {
-            return Err(PyValueError::new_err(format!(
-                "unknown aggregate function {other:?}"
-            )));
+            return Err(value_err(format!("unknown aggregate function {other:?}")));
         }
     };
     Ok(udaf)
@@ -985,7 +987,7 @@ pub(super) fn nary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "string_agg" | "listagg" => string_agg_udaf(),
         "grouping_id" => repark_functions::aggregate::grouping_id_udaf(),
         other_kind => {
-            return Err(PyValueError::new_err(format!(
+            return Err(value_err(format!(
                 "unknown binary aggregate {other_kind:?}"
             )));
         }
