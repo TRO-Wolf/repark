@@ -166,6 +166,10 @@ lazily-built property of the same name, so ``EXPECTED_DATAFRAME_SLOTS``
 loses exactly that name and ``EXPECTED_DATAFRAME_DIR`` is unchanged. The
 builder moves to ``frame_nodes.py`` behind a same-named import, so the
 package set gains exactly ``frame_nodes``.
+SOURCE-URL-REDACT-2 fold 3 (2026-10-07): ``core`` imports ``scrub_exception`` for the export
+doors, so the frozen ``core`` and package surfaces each gain exactly that one name.
+SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07): ``core``'s mapInArrow handler imports
+``scrub_user_failure``, so the frozen ``core`` and package surfaces each gain exactly that name.
 """
 
 from __future__ import annotations

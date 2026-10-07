@@ -104,7 +104,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_native.mask_value_credentials`; the session modules' conf refusals echo through it.
   pins: source-url-redact-1/C-017
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the `prop_key_is_secret` mirror is deleted; only `mask_credentials` remains.
+  **SOURCE-URL-REDACT-2 (2026-10-06):** `register_config_value(value)` no-ops non-strings and forwards strings to `_native.register_config_value`. pins: source-url-redact-1/C-059
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** `scrub_exception(error)` walks the `__cause__`/`__context__` chain and rewrites each link's string args through `_native.mask_value_credentials`. pins: source-url-redact-1/C-067
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `scrub_exception` masks through `_native.mask_user_visible` only and never mutates: it returns the same object when no link changes, else a rebuilt chain of copies (traceback, cause, context and the suppress flag carried over); `OSError` links rebuild as `type(error)(errno, masked_strerror, masked_filename)` with `filename2`/`winerror` kept. `mask_url_userinfo(value)` forwards to the native URL leg for the writer path echoes.
   pins: source-url-redact-1/C-032
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `scrub_user_failure(error)` returns `(masked format_exc() text, scrub_exception(error))` for the user-callback doors; the raise stays at each call site, after the handler. pins: source-url-redact-1/C-076
+  **SOURCE-URL-REDACT-2 fold 4 H2 (2026-10-07):** `scrub_exception` also walks `BaseExceptionGroup.exceptions`, rebuilds a changed group as `type(g)(masked message, scrubbed subs)` (falling back to `BaseExceptionGroup(...)`, which keeps the `Exception` split), masks `__notes__` on every copy, and marks ancestors of a changed link through a parent map in linear time. pins: source-url-redact-1/C-079
+  **SOURCE-URL-REDACT-2 fold 4 H5 (2026-10-07):** the last-resort stand-in keeps the `BaseException`/`Exception` split: an `Exception` link becomes a masked `PySparkException`, a `BaseException`-only link the nearest builtin `BaseException`-only base of its class (else `BaseException`), and an unbuildable non-`Exception` group never falls back to an `ExceptionGroup`. A same-class copy carries `__dict__` and `__slots__` values over (private names mangled), masking `str` values. pins: source-url-redact-1/C-080
+  **SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07):** scrubbing is total. `mask_credentials`, `mask_url_userinfo` and the new `mask_user_visible(text)` retry a native `UnicodeEncodeError` (a lone surrogate) on `text.encode("utf-8", "surrogatepass").decode("utf-8", "replace")` and return the input itself when that masks nothing, so a clean surrogate text keeps its identity. `scrub_exception` returns a masked stand-in (traceback kept) if anything else raises inside the walk, and `scrub_user_failure` falls back to the class name if `format_exc()` raises; neither propagates. pins: source-url-redact-1/C-082
+  **SOURCE-URL-REDACT-2 fold 5 K2 (2026-10-07):** a `__notes__` that is a `str` is link text and is masked as a `str` on the copy; a non-`str` note item is compared and copied as `mask(str(item))`, or its type name when `str(item)` raises. pins: source-url-redact-1/C-083
+  **SOURCE-URL-REDACT-2 fold 5 K4 (2026-10-07):** a plain link's copy is `type(link)(*masked_args)` first, then `copy.copy` with the masked args set, then the `__new__` path, so a user `__init__` that succeeds sees only masked args. pins: source-url-redact-1/C-085
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
   **FNP-4B (2026-09-15):** `local_view_name` also strips backtick quoting (handles are
   backticked since the D-2 quoter move). pins: fnp-4b/C-008
@@ -122,6 +131,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   views, and schema tables; supports current catalog/database state, function
   registration, cache clearing, and table/view existence operations. Engine-private
   temporary names remain hidden from listing APIs.
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** `listDatabases` scrubs the
+  cause before re-raising. pins: source-url-redact-1/C-067
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `listDatabases` re-raises from the
+  scrubbed copy the narrow scrub returns.
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** `listDatabases` raises after the handler from
+  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
   **EAGER-OWN-1 step 1 (2026-09-13):** `clearCache` releases the session's live
   `CacheViewHandle`s (registered in a WeakSet under the alive token) before the
   unchanged registry `unpersist` loop and the `__repark_cache_*` prefix sweep —
@@ -1002,6 +1017,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `pandas_udf` docstring cross-reference follows the scalar rewrite to its new home,
   `dataframe/udf_projection.py` (line-count neutral; ceiling stays 1300).
   pins: dfcore-2/C-004
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** a duck-typed `returnType.simpleString()` failure
+  echoes the scrubbed copy and raises after the handler; `_refuse_udtf_as_scalar_udf` moved to
+  `udtf.py` (pure move, re-imported; 1300 → 1287 in `check_lib_py.py`). pins: source-url-redact-1/C-076
 - `functions_url.py` — URL parsing and encoding wrappers.
 - `functions_window.py` — window function wrappers, plus the thin `window(...)`
   wrapper and its tail-install row (**FNP-WIN-1**, 2026-09-15); step 3 adds the
@@ -1143,6 +1161,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   handler instances, `orderBy` sorts in-partition ascending nulls-first, and scalar
   call args broadcast as lit-appended columns through `mapInArrow`.
   pins: df-subquery-1/C-005
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** the table-argument `start`/`eval`/`terminate` doors
+  mask through `_secrets.scrub_user_failure` and raise after the handler. pins: source-url-redact-1/C-076
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion. Round 2 adds the additive `_map_arrow_udtf_batches` branch
   (arrow handlers run batch-wise; the plain path is unchanged). **DF-SUBQUERY-1
@@ -1151,6 +1171,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   [PARTITION BY …] [ORDER BY …] [WITH SINGLE PARTITION]` call arguments so the SQL
   door reaches the same path.
   pins: fnp-misc-1/F-1; df-subquery-1/C-005
+  **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** the scalar and Arrow UDTF `start`/`eval`/`terminate`
+  doors mask through `_secrets.scrub_user_failure` and raise after the handler; it now also hosts
+  `_refuse_udtf_as_scalar_udf` (moved from `functions_udf.py`). pins: source-url-redact-1/C-076
+  **H3 (2026-10-07):** the UDTF `eval` doors here and in `table_arg.py` scrub a user-raised
+  `PySparkException` (identity kept when nothing masks). pins: source-url-redact-1/C-077
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and
   partition expressions.
 

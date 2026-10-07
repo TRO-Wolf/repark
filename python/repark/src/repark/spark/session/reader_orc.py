@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from repark.spark._secrets import mask_credentials
 from repark.spark.dataframe import DataFrame
 from repark.spark.session.reader_support import _schema_fields
 
@@ -25,7 +26,7 @@ def orc(
     from repark.errors import IllegalArgumentException
 
     if mergeSchema is not None and not isinstance(mergeSchema, bool):
-        raise IllegalArgumentException(f'For input string: "{mergeSchema}"')
+        raise IllegalArgumentException(f'For input string: "{mask_credentials(mergeSchema)}"')
     for key, value in (
         ("mergeSchema", mergeSchema),
         ("pathGlobFilter", pathGlobFilter),

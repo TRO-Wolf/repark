@@ -31,6 +31,7 @@ from repark.spark import filter_quote as _filter_quote
 from repark.spark import qualified_names as _qualified_names
 from repark.spark import subset_resolve as _subset_resolve
 from repark.spark._idents import quote_ident as _quote_ident_sql
+from repark.spark._secrets import scrub_exception, scrub_user_failure
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
 from repark.spark.column_fields import column_window_spec as _column_window_spec
@@ -46,7 +47,10 @@ from repark.spark.dataframe import (
     surface_b,
     unemitted_ids,
 )
-from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
+from repark.spark.dataframe.cache_handle import (
+    _register_cache_frame,
+    _warn_storage_level_cosmetic_once,
+)
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
     _apply_ordered_window_pandas_udf,
@@ -117,15 +121,6 @@ def _reset_dropin_warnings_for_tests() -> None:
 
 
 _CACHE_VIEW_PREFIX = "__repark_cache_"
-
-
-def _register_cache_frame(alive_token: dict[str, Any], frame: DataFrame) -> None:
-    """Track a DataFrame marked for cache/persist so :meth:`Catalog.clearCache` can drop it."""
-    registry = alive_token.get("cache_frames")
-    if not isinstance(registry, weakref.WeakSet):
-        registry = weakref.WeakSet()
-        alive_token["cache_frames"] = registry
-    registry.add(frame)
 
 
 def _is_numeric_type_key(type_key: str) -> bool:
@@ -437,7 +432,6 @@ class DataFrame:
         set, stops after that many output rows (peek path).
         """
         import contextlib
-        import traceback
 
         import pyarrow as pa
 
@@ -464,17 +458,9 @@ class DataFrame:
             ) from error
 
         rows_kept = 0
+        failure = passthrough = None
         try:
-            try:
-                output = func(iter(input_reader))
-            except PySparkException:
-                raise
-            except Exception as error:
-                detail = traceback.format_exc()
-                raise PySparkException(
-                    f"mapInArrow user function raised {type(error).__name__}: {error}\n{detail}"
-                ) from error
-
+            output = func(iter(input_reader))
             if output is None:
                 raise PySparkException(
                     "mapInArrow user function must return an iterator of "
@@ -509,18 +495,23 @@ class DataFrame:
                         break
                 else:
                     yield aligned
-        except PySparkException:
-            raise
+        except PySparkException as error:
+            passthrough = scrub_exception(error)
+            if passthrough is error:
+                raise
         except Exception as error:
-            detail = traceback.format_exc()
-            raise PySparkException(
-                f"mapInArrow user function raised {type(error).__name__}: {error}\n{detail}"
-            ) from error
+            detail, failure = scrub_user_failure(error)
         finally:
             close = getattr(input_reader, "close", None)
             if callable(close):
                 with contextlib.suppress(Exception):
                     close()
+        if passthrough is not None:
+            raise passthrough
+        if failure is not None:
+            raise PySparkException(
+                f"mapInArrow user function raised {type(failure).__name__}: {failure}\n{detail}"
+            ) from failure
 
     def _consume_map_in_arrow_batches(
         self,
@@ -3269,11 +3260,13 @@ class DataFrame:
         from repark.spark._pyarrow import require_pyarrow
 
         pa = require_pyarrow()
+        failure = None
         try:
             table = pa.table(self)
         except pa.lib.ArrowException as arrow_error:
-            raise _export_engine_error(arrow_error) from arrow_error
-            raise PySparkException(str(arrow_error)) from arrow_error
+            failure = scrub_exception(arrow_error)
+        if failure is not None:
+            raise _export_engine_error(failure) from failure
         return self._apply_export_display_names(table)
 
     def to_arrow_batches(self) -> Iterator[Any]:
@@ -3286,10 +3279,13 @@ class DataFrame:
         from repark.spark._pyarrow import require_pyarrow
 
         pa = require_pyarrow()
+        failure = None
         try:
             reader = pa.RecordBatchReader.from_stream(self)
         except pa.lib.ArrowException as arrow_error:
-            raise _export_engine_error(arrow_error) from arrow_error
+            failure = scrub_exception(arrow_error)
+        if failure is not None:
+            raise _export_engine_error(failure) from failure
         stream_schema = reader.schema
         yielded_batch = False
         try:
@@ -3297,7 +3293,9 @@ class DataFrame:
                 yielded_batch = True
                 yield self._apply_export_display_names(batch)
         except pa.lib.ArrowException as arrow_error:
-            raise _export_engine_error(arrow_error) from arrow_error
+            failure = scrub_exception(arrow_error)
+        if failure is not None:
+            raise _export_engine_error(failure) from failure
         if not yielded_batch:
             empty = pa.RecordBatch.from_pylist([], schema=stream_schema)
             yield self._apply_export_display_names(empty)

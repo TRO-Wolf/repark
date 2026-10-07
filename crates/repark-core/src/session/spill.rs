@@ -194,6 +194,7 @@ pub(crate) fn maybe_apply_runtime_set(
     let Some((key, value)) = parse_set_assignment(query) else {
         return Ok(None);
     };
+    repark_common::redaction::register_config_value(&value);
     if key.eq_ignore_ascii_case(TEMP_DIRECTORY_KEY) {
         return Err(Error::Config(TEMP_DIRECTORY_RUNTIME_REFUSAL.to_string()));
     }

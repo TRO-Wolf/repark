@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
 use pyo3::wrap_pyfunction;
 use repark_core::OrcReadOptions;
 
@@ -104,12 +103,8 @@ fn set_orc_condition(
     params: Option<(&str, &str)>,
 ) {
     let value = raised.value(py);
-    let dict = params.map(|(key, item)| {
-        let dict = PyDict::new(py);
-        dict.set_item(key, item)
-            .unwrap_or_else(|failure| tracing::warn!(error = %failure, "orc param set failed"));
-        dict
-    });
+    let dict =
+        params.map(|(key, item)| crate::exceptions::masked_message_params(py, &[(key, item)]));
     if let Err(failure) = value.setattr("_spark_error_class", error_class) {
         tracing::warn!(error = %failure, "orc condition setattr failed");
     }

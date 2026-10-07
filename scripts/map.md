@@ -1,5 +1,8 @@
 # map — scripts/
 
+SOURCE-URL-REDACT-2 fold 4 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3971 → 3965 (the redundant inner mapInArrow user-call handler is gone), `dataframe/joins_columns.py` 1169 → 1117 (`_grouped_agg_pandas` moves unchanged to `udf_bridge.py`) and `spark/functions_udf.py` 1300 → 1287 (`_refuse_udtf_as_scalar_udf` moves unchanged to `udtf.py`), with the CAP-1 mirror, shrink-only. pins: source-url-redact-1/C-076
+SOURCE-URL-REDACT-2 fold 4 H3 (2026-10-07): `check_lib_py.py` sets `dataframe/core.py` 3965 → 3969 for the mapInArrow `PySparkException` scrub, still below the 3971 base, with the CAP-1 mirror. pins: source-url-redact-1/C-077
+SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3969 → 3967 (the mapInArrow handler takes `scrub_user_failure` and drops its local `traceback` import), with the CAP-1 mirror. pins: source-url-redact-1/C-082
 ATTR-ID-1 S4 follow-up (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1527 → 1485 (the sort-marker family moves to `column_sort.py` behind `Column` bindings) and `dataframe/core.py` 3711 → 3653 (`_select_via_attr_sql` moves to `join_attr_tokens.py` behind a one-line delegate), shrink-only. pins: attr-id-1/C-041
 
 ATTR-ID-1 S4 alias fix (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1485 → 1378 (the string-predicate family moves to `column_string.py` behind `Column` bindings), shrink-only. pins: attr-id-1/C-042

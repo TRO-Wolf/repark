@@ -161,6 +161,7 @@ fn apply_runtime_config(
     value: &str,
     strict_boolean: bool,
 ) -> Result<()> {
+    repark_core::redaction::register_config_value(value);
     if key == SPARK_SQL_ANSI_ENABLED_KEY {
         let enabled = if strict_boolean {
             parse_runtime_spark_sql_ansi_enabled(value).map_err(refused_boolean_knob)?

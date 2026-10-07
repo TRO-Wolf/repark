@@ -5393,6 +5393,42 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `*_conn` key, since a `*_url` key is now whole-value redacted. pins: source-url-redact-1/C-017, C-019
   **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `test_get_database_returns_the_stored_location_and_comment` pins the raw
   `getDatabase` path while `DESCRIBE NAMESPACE` stays masked. pins: source-url-redact-1/C-040
+- `test_source_url_redact_2.py` — **SOURCE-URL-REDACT-2 (2026-10-06):** the 48-cell pin (three credential shapes × builder / `conf.set` / SQL `SET` / `repark.toml` × four knobs): the full traceback never carries the marker and the exception class matches the base run.
+  pins: source-url-redact-1/C-063, C-064
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** round-B pins — the escaped/long integer-guard cut, the ORC params mask, the REST/reader chain pins, the writer-option pin. pins: source-url-redact-1/C-069
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** fold-2 pins — the SQL/DataFrame UDF user-text identity and UDF-URL mask, the no-mutation copy contract, the reader mode/format/jdbc/orc/text echoes plus the writer-format echo, the `OSError` rebuilds (filename, strerror, `filename2`), the writer/text overwrite `OSError` doors, and one scrub-site pin per calling module including the injected REST cause chain.
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** one raise-after-handler pin per scrub-site module (export doors, SQL-UDF door, `listDatabases`, `eager`, the readwriter and text overwrite/append doors: `__context__` is None, `__cause__` is the scrubbed copy, the formatted traceback is clean) plus the DataFrame-UDF and pandas-UDF formatted-traceback pins. pins: source-url-redact-1/C-071, C-073
+- `test_source_url_redact_2_doors.py` — **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** one formatted-traceback
+  pin per user-callback door (GROUPED_AGG plain and unbounded-window, `applyInPandas`, cogroup `applyInPandas`,
+  `applyInArrow` table and iterator forms, cogroup `applyInArrow`, `mapInPandas`, `mapInArrow` call and
+  consume, UDTF `eval`/`start`/`terminate`, table-argument and Arrow UDTF `eval`, a duck-typed
+  `simpleString()` return type): `str`, `repr` and `format_exception` carry no userinfo, `__context__` is
+  None and `__cause__` is not the raw original. pins: source-url-redact-1/C-076
+  **H3:** a user-raised `PySparkValueError` carrying a secret leaves the DataFrame UDF, pandas UDF,
+  `applyInPandas` and `mapInArrow` doors as a masked copy of the same class, and one without a secret
+  leaves as the same object with its error class; a direct `_run_python_udf_on_batch` pin holds the
+  site on its own. pins: source-url-redact-1/C-077
+  **H4:** the SCALAR_ITER "while consuming output" door, at the door (`reverify3/probes/scalar_iter.py`'s
+  shape) and directly on `_run_pandas_udf_scalar_iter`, which holds the site's own mask.
+  pins: source-url-redact-1/C-078
+  **H2:** `scrub_exception` over groups and notes (a sub-exception, a group message, a group subclass, a
+  `BaseExceptionGroup`, a nested group, a note, a sub-exception's note), a clean group and note keep
+  identity, the DataFrame-UDF door masks both, and a 5000-deep chain scrubs in under 2 s.
+  pins: source-url-redact-1/C-079
+  **H5:** a `KeyboardInterrupt` subclass whose `__new__` refuses the copy falls back to a masked
+  `KeyboardInterrupt`; an `Exception` one to `PySparkException`; an unbuildable group keeps the split;
+  slotted (incl. a private slot) and keyword-only copies carry their attributes masked.
+  pins: source-url-redact-1/C-080
+  **Fold 5 K1:** every user-callback door above, plus the DataFrame UDF, SQL UDF and an `OSError`
+  with a surrogate filename, raises its own class with a lone surrogate in the user's text, masked,
+  `__context__` None; direct cells hold `scrub_exception` on a surrogate message and an `OSError`
+  filename, `scrub_user_failure`, a clean surrogate message's identity, the three mask entry points,
+  and the masked stand-in when the walk itself raises. pins: source-url-redact-1/C-082
+  **Fold 5 K2:** an object note, a bytes note, a `str` `__notes__` and a note whose `__str__` raises
+  are masked on the copy (the last as its type name). pins: source-url-redact-1/C-083
+  **Fold 5 K3:** a tuple-valued `__notes__` is masked on the copy. pins: source-url-redact-1/C-084
+  **Fold 5 K4:** a recording `__init__` on a `KeyboardInterrupt` and a `ValueError` subclass is called
+  once by the scrub, with masked args only. pins: source-url-redact-1/C-085
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default
