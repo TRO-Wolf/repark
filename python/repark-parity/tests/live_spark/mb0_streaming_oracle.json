@@ -1445,6 +1445,80 @@
     },
     {
       "answer": {
+        "r17": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.streaming.StreamingQueryException",
+              "java.lang.IllegalStateException"
+            ],
+            "class": "STREAM_FAILED",
+            "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+            "sqlstate": "XXKST",
+            "text": "[STREAM_FAILED] Query [id = 750aca10-4f3d-4da7-94bd-6b0ebb895f7c, runId = e76a3328-49c9-4ae0-84ac-d7bd56250862] terminated with exception: Cannot process overwrite snapshot: 5911067929755415775, to ignore overwrites, set streaming-skip-overwrite-snapshots=true SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = 750aca10-4f3d-4da7-94bd-6b0ebb895f7c, runId = e76a3328-49c9-4ae0-84ac-d7bd56250862]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {}\n\nCurrent State: INITIALIZING\nThread State: RUNNABLE"
+          },
+          "offsets": [],
+          "operations": [
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "added-data-files": "1",
+              "added-records": "2",
+              "deleted-data-files": "2",
+              "deleted-records": "2",
+              "operation": "overwrite"
+            }
+          ],
+          "progress_batches": []
+        },
+        "r17_delete": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.streaming.StreamingQueryException",
+              "java.lang.IllegalStateException"
+            ],
+            "class": "STREAM_FAILED",
+            "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+            "sqlstate": "XXKST",
+            "text": "[STREAM_FAILED] Query [id = f084f2ff-b0a5-4354-8b80-bfd83b996aac, runId = 89f576a4-04cf-43b8-b38a-7f5fb0748eb6] terminated with exception: Cannot process delete snapshot: 4604532933730133205, to ignore deletes, set streaming-skip-delete-snapshots=true SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = f084f2ff-b0a5-4354-8b80-bfd83b996aac, runId = 89f576a4-04cf-43b8-b38a-7f5fb0748eb6]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {}\n\nCurrent State: INITIALIZING\nThread State: RUNNABLE"
+          },
+          "offsets": [],
+          "operations": [
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "added-data-files": "1",
+              "added-records": "1",
+              "operation": "append"
+            },
+            {
+              "deleted-data-files": "1",
+              "deleted-records": "1",
+              "operation": "delete"
+            }
+          ],
+          "progress_batches": []
+        }
+      },
+      "cell": "MB0b-R17",
+      "field": "read.available_now_capped_overwrite.answer",
+      "kind": "rows",
+      "statement": "def cell_r17(bench: Bench) -> tuple[str, dict[str, Any]]:\n    answer: dict[str, Any] = {}\n    for name, mutate in ((\"r17\", overwrite_snapshot), (\"r17_delete\", delete_snapshot)):\n        source = create_source(bench, name)\n        append(bench, source, [1])\n        append(bench, source, [2])\n        mutate(bench, source)\n        options = {\"streaming-max-files-per-micro-batch\": \"1\"}\n        run = option_run(bench, source, bench.checkpoint(name), options)\n        answer[name] = {\"operations\": operations(bench, source), **run}\n    return \"rows\", answer\n\ndef option_run(\n    bench: Bench, source: str, checkpoint: str, options: dict[str, str]\n) -> dict[str, Any]:\n    collect = Collect()\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**options)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", checkpoint)\n        .trigger(availableNow=True)\n        .start()\n    )\n    error = await_query(query)\n    return {\n        \"error\": error,\n        \"batches\": collect.batches,\n        \"progress_batches\": progress_batches(query),\n        \"offsets\": offset_positions(bench, source, checkpoint),\n    }\n\ndef offset_positions(bench: Bench, table: str, checkpoint: str) -> list[dict[str, Any]]:\n    ordinals = {snapshot: index for index, snapshot in enumerate(snapshot_ids(bench, table))}\n    ends = []\n    for name in checkpoint_logs(checkpoint, \"offsets\"):\n        lines = (Path(checkpoint) / \"offsets\" / name).read_text().splitlines()\n        offset = json.loads(lines[-1])\n        ends.append(\n            {\n                \"batch\": int(name),\n                \"snapshot_ordinal\": ordinals.get(offset[\"snapshot_id\"]),\n                \"position\": offset[\"position\"],\n                \"scan_all_files\": offset[\"scan_all_files\"],\n            }\n        )\n    return ends\n\ndef overwrite_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"INSERT OVERWRITE {table} SELECT id + 10, k FROM {table}\")\n\ndef delete_snapshot(bench: Bench, table: str) -> None:\n    bench.spark.sql(f\"DELETE FROM {table} WHERE id = 1\")\n"
+    },
+    {
+      "answer": {
         "keys": [
           "added-data-files",
           "added-files-size",

@@ -86,6 +86,7 @@ deletes from, and rewrites between triggers):
 | MB0b-R14 | `stream-from-timestamp` = head timestamp + 1 h, then an append below it; `availableNow` before and after the append (same and fresh checkpoint), plus a later snapshot at or after T | rows per batch + `progress_batches` + offsets | `read.from_timestamp_past_head.rows` |
 | MB0b-R15 | `streaming-max-rows-per-micro-batch` = 3, 4, 5 over three 2-row one-file appends, and over one 3-file snapshot | rows per batch + end offsets | `read.max_rows_crossing.batches` |
 | MB0b-R16 | the table's first snapshot is an `INSERT OVERWRITE` on the empty table, then an append; stream from earliest | error class + text, verbatim | `read.first_snapshot_overwrite.answer` |
+| MB0b-R17 | two one-file appends, then an `INSERT OVERWRITE` (or a whole-file `DELETE`); `availableNow` with `streaming-max-files-per-micro-batch=1` (fold 2) | rows per batch + offsets, or error class + text, verbatim | `read.available_now_capped_overwrite.answer` |
 
 Write side (a streaming write into an Iceberg sink; the restart cells kill
 the query between batches):
@@ -119,6 +120,15 @@ MB-0 entries and the preamble stayed byte-identical. Measured answers:
 | MB0b-R14 | Nothing streams while no snapshot has a timestamp at or after T: each run writes `START_OFFSET` (snapshot `-1`, position `-1`) and an empty batch, before the append, resumed after it, and fresh. Once a snapshot at or after T lands, only that snapshot streams (rows `[12]`, end `(ordinal 2, position 1)`); the earlier append below T never does. Agrees with the verifier. |
 | MB0b-R15 | A file is added, then the batch stops once its rows reach the cap (`>=`); the crossing file stays in. Max 3 and max 4 give `[4][2]`, max 5 gives `[6]`, the same over three snapshots and over one. End offsets for three snapshots: max 3/4 `(1,1)` then `(2,1)`; max 5 `(2,1)`. Agrees with the verifier; the sketch's §3.3 "until the next would exceed" rule is not Spark's. |
 | MB0b-R16 | `STREAM_FAILED` / `IllegalStateException`: `Cannot process overwrite snapshot: <first id>, to ignore overwrites, set streaming-skip-overwrite-snapshots=true`. No batch runs. The overwrite on the empty table added two data files. Agrees with the verifier. |
+
+**MB-0b R17 (2026-10-07, MB-1 fold 2).** Recorded with `MB0_CELLS=MB0b-R17`; the
+27 earlier entries and the preamble stayed byte-identical. It measures the
+re-verifier's G1 reading: two one-file appends, then an overwrite (or a delete),
+then `availableNow` with `streaming-max-files-per-micro-batch=1`.
+
+| cell | answer |
+|---|---|
+| MB0b-R17 | No batch runs and no offset is written under either mutation. `STREAM_FAILED` / `IllegalStateException`: `Cannot process overwrite snapshot: <id>, to ignore overwrites, set streaming-skip-overwrite-snapshots=true` (and `Cannot process delete snapshot: <id>, to ignore deletes, set streaming-skip-delete-snapshots=true`), thrown from `prepareForTriggerAvailableNow` → `latestOffset` → `nextValidSnapshot` while the query is `INITIALIZING`. The cap does not make Spark deliver the two appends first. Agrees with the re-verifier. |
 
 Step 4. Write the JSON and its SHA-256:
 

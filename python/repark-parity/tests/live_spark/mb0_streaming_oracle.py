@@ -1,4 +1,4 @@
-"""MB-0 streaming oracle: 27 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
+"""MB-0 streaming oracle: 28 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ FAIL_ID = 3
 PROGRESS_TIMEOUT_S = 120.0
 FUTURE_MS = 3_600_000
 LANDING_MS = 6_000
-EXPECTED_CELLS = 27
+EXPECTED_CELLS = 28
 
 
 Cell = Callable[[Bench], tuple[str, dict[str, Any]]]
@@ -419,6 +419,19 @@ def cell_r16(bench: Bench) -> tuple[str, dict[str, Any]]:
     return "rows", context
 
 
+def cell_r17(bench: Bench) -> tuple[str, dict[str, Any]]:
+    answer: dict[str, Any] = {}
+    for name, mutate in (("r17", overwrite_snapshot), ("r17_delete", delete_snapshot)):
+        source = create_source(bench, name)
+        append(bench, source, [1])
+        append(bench, source, [2])
+        mutate(bench, source)
+        options = {"streaming-max-files-per-micro-batch": "1"}
+        run = option_run(bench, source, bench.checkpoint(name), options)
+        answer[name] = {"operations": operations(bench, source), **run}
+    return "rows", answer
+
+
 def fanout_cell(bench: Bench, name: str, fanout: str) -> tuple[str, dict[str, Any]]:
     source = create_source(bench, f"{name}_src")
     append(bench, source, [1, 2, 3, 4], files=2)
@@ -754,6 +767,12 @@ CELLS: tuple[tuple[str, str, Cell, tuple[Any, ...]], ...] = (
     ),
     ("MB0b-R15", "read.max_rows_crossing.batches", cell_r15, (option_run, offset_positions)),
     ("MB0b-R16", "read.first_snapshot_overwrite.answer", cell_r16, (option_run,)),
+    (
+        "MB0b-R17",
+        "read.available_now_capped_overwrite.answer",
+        cell_r17,
+        (option_run, offset_positions, overwrite_snapshot, delete_snapshot),
+    ),
     ("MB0-W1", "write.append_no_fanout.summary", cell_w1, (fanout_cell,)),
     ("MB0-W2", "write.append_fanout.summary", cell_w2, (fanout_cell,)),
     ("MB0-W3", "write.complete.answer", cell_w3, ()),
