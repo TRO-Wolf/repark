@@ -795,6 +795,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   static by-name `overwrite` arm now serves `save(name)` only.
   pins: u7-write-df-2/C-002
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
+  **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the two compression refusals
+  echo the value through `mask_credentials`. pins: source-url-redact-1/C-068
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
   `numBuckets` at the call, list first columns flattened), the action-time checks —
   path saves refuse `_LEGACY_ERROR_TEMP_1312` and `SORT_BY_WITHOUT_BUCKETING`,

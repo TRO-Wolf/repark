@@ -21,6 +21,7 @@ from repark.spark._integral import (
     _attached_message_parameters,
     _attached_sql_state,
 )
+from repark.spark._secrets import mask_credentials
 from repark.spark._temp_views import scratch_view_name
 
 if TYPE_CHECKING:
@@ -312,7 +313,7 @@ def _normalize_write_compression(raw: str) -> str:
     if lowered in {"zstd", "zst"}:
         return "zstd"
     raise AnalysisException(
-        f"unsupported write compression {raw!r}; "
+        f"unsupported write compression {mask_credentials(raw)!r}; "
         "repark supports gzip, bzip2, xz, zstd, none/uncompressed"
     )
 
@@ -333,7 +334,7 @@ def _normalize_parquet_write_compression(raw: str) -> str:
     if lowered.startswith("gzip(") or lowered.startswith("zstd(") or lowered.startswith("brotli("):
         return lowered
     raise AnalysisException(
-        f"unsupported parquet write compression {raw!r}; "
+        f"unsupported parquet write compression {mask_credentials(raw)!r}; "
         "repark supports snappy, gzip, zstd, lz4, none/uncompressed"
     )
 

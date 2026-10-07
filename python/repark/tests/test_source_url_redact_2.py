@@ -165,17 +165,20 @@ def test_orc_message_parameters_mask_url_userinfo(scheme: str) -> None:
 
 def test_rest_catalog_uri_chain_carries_no_userinfo() -> None:
     uri = "http://" + USERINFO + "127.0.0.1:9/"
-    session = (
+    builder = (
         SparkSession.builder.config("spark.sql.catalog.c", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.c.type", "rest")
         .config("spark.sql.catalog.c.uri", uri)
-        .getOrCreate()
     )
+    try:
+        session = builder.getOrCreate()
+    except BaseException as error:
+        assert USERINFO not in "".join(traceback.format_exception(error))
+        return
     try:
         session.sql("SHOW NAMESPACES IN c").collect()
     except BaseException as error:
-        rendered = "".join(traceback.format_exception(error))
-        assert USERINFO not in rendered
+        assert USERINFO not in "".join(traceback.format_exception(error))
     else:
         pytest.fail("rest catalog read unexpectedly succeeded")
     finally:
