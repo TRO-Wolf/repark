@@ -1,3 +1,6 @@
+use iceberg::expr::Reference;
+use iceberg::spec::Datum;
+
 use super::*;
 use crate::write::write_options::WriterStagingOverrides;
 
@@ -256,6 +259,10 @@ async fn seed(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> (Table, Vec<Dat
     (table, files)
 }
 
+fn below_the_racers() -> Predicate {
+    Reference::new("id").less_than(Datum::int(50))
+}
+
 async fn run_arm(
     arm: Arm,
     catalog: &Arc<dyn Catalog>,
@@ -286,7 +293,7 @@ async fn run_arm(
                 pin,
                 affected,
                 files,
-                &Predicate::AlwaysTrue,
+                &below_the_racers(),
                 None,
                 &extra,
             )
@@ -302,7 +309,7 @@ async fn run_arm(
                 vec![(target, 0)],
                 files,
                 WriteConcurrency::new(1).expect("K=1"),
-                &Predicate::AlwaysTrue,
+                &below_the_racers(),
                 None,
                 crate::write::merge::KnownPartitions::new(),
                 &extra,
@@ -445,8 +452,8 @@ async fn three_racing_appends_still_stamp_exactly_once_on_every_arm() {
         let (_warehouse, memory, ident) = fixture_with(
             &name,
             &[
-                ("write.merge.isolation-level", "snapshot"),
-                ("write.delete.isolation-level", "snapshot"),
+                ("write.merge.isolation-level", "serializable"),
+                ("write.delete.isolation-level", "serializable"),
             ],
         )
         .await;

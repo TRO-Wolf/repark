@@ -137,6 +137,9 @@ repark-core's error map.
   reuse `ProbeCatalog`): the verifier's race shape refuses before any `update_table` and epoch 1
   lands once (run A's); stamped UPDATE and DELETE refuse on copy-on-write and merge-on-read;
   serializable MERGE commits its stamp; unscoped MERGE under snapshot commits unstamped.
+  MB-2a's `three_racing_appends_still_stamp_exactly_once_on_every_arm` now runs under
+  `serializable`, and `run_arm`'s MERGE arms take a conflict filter below the racers' rows
+  (`below_the_racers`), so the three-racer answer holds on every arm (MB-2c D-15, pending Q5).
   pins: mb-2c/C-007
 - `sink_offsets.rs`, `sink_offsets_epoch_tests.rs`, `sink_offsets_probe_tests.rs`,
   `sink_offsets_walk_tests.rs`, `sink_offsets_tests.rs` — **MB-2c steps 1 and 2 (2026-10-07, ruling Q2: the split):** the

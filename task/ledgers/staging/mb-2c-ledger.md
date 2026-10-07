@@ -18,6 +18,11 @@ sink_offsets_fence_tests.rs, map.md}`,
 the map row the lockstep gate needs, D-5), the fork card
 [f-append-pin-base-1-2026-10-07.md](../../roadmap/mid-term/f-append-pin-base-1-2026-10-07.md),
 its `mid-term/map.md` row, the [packet](../../wo/microbatch/packet.md) §4 row, and this ledger.
+Fold 1 K2 (2026-10-07, ruling Q3) adds, on the local branch `wip/mb-2c-k2-mbe15`:
+`crates/repark-iceberg/src/write/{merge/snapshot_commit.rs, predicate_dml.rs,
+sink_offsets_isolation_tests.rs, merge/map.md}`, `crates/repark-iceberg/src/microbatch/error.rs`,
+and the MB-2a pin `sink_offsets_probe_tests.rs::three_racing_appends_still_stamp_exactly_once_on_every_arm`
+with its [ledger](mb-2a-ledger.md) C-019 (D-14, D-15).
 
 ## Halt checks — 2026-10-07
 
@@ -45,7 +50,7 @@ its `mid-term/map.md` row, the [packet](../../wo/microbatch/packet.md) §4 row, 
 | C-004 | Step 2, the C-008 walk, `resolve_unknown_outcome`, on `commit_stamp_only`'s unknown branch. (a) After the fork's own reconcile fails, it reloads the sink once. (b) It searches the lineage above the stamp's base for this attempt. The whole stamped record is the key, and `engine.operation-id` is a fast path to the same snapshot (restated in fold 1: a landed attempt always carries the identical record, so no case is identified by the operation-id alone, and the verifier's MV3, which disables the operation-id match, survives by design). (c) A found snapshot is returned, and the scope is marked committed. (d) Absent, it refuses `RecoveryRequired(CommitOutcomeUnknown)` carrying the durable record of the reload. (e) A same-epoch stamp of another run is not taken as this attempt. (f) A stamp at or below the base is not this attempt. (g) Nothing is re-submitted and no replace is committed. (h) When the reload's resume point itself refuses (a rolled-back attempt: the property names the attempt's epoch, the summary on `main` an older one), the refusal stays `CommitOutcomeUnknown` at the attempt's epoch with its operation-id, and carries that refusal's durable record (fold 1, D-10). | Harness pin 4 green, plus six walk pins. Mutations M2, M3, M8, MV1 and MV2 turn them red. | **PROVEN** | `microbatch/crash_tests.rs::test_microbatch_unknown_outcome_reconciles_1` is green with its `#[ignore]` deleted: landed resolves to the head with one `update_table`, and unlanded refuses with epoch 0 durable (a, c, d, g). `write/sink_offsets_probe_tests.rs`: `an_unlanded_unknown_outcome_walks_to_the_durable_record_without_a_resubmit` (d, g: one request seen, no snapshot added, scope `NotCommitted`), `a_same_epoch_stamp_of_another_run_is_not_the_landed_attempt` (e: durable is the racer's record), `the_walk_finds_a_landed_stamp_above_the_base_by_operation_id_then_by_record` (b, f). Fold 1: `write/sink_offsets_walk_tests.rs` (the `#[path]` child of the probe module): `a_landed_unknown_outcome_marks_the_scope_committed_at_the_resolved_snapshot` (c: the fork's reconcile reload fails once under `commit.status-check.num-retries=0`, the walk resolves the landed head, and `guard.outcome() == Committed { snapshot: <resolved> }`, one request), `a_failed_reload_in_the_walk_refuses_unknown_with_no_durable_record` (D-3: every reload fails, the refusal is `CommitOutcomeUnknown` at epoch 1 with its operation-id and `durable: None`, one request, no snapshot added), `a_rolled_back_attempt_stays_unknown_at_its_epoch_with_the_durable_record` (h: the verifier's rollback with the landed copy on branch `side`; epoch 1, the operation-id, and durable epoch 0). pins: mb-2c/C-004 |
 | C-005 | The interim crash gate (ruling Q2): `cargo test -p repark-iceberg --lib microbatch::crash_tests` reads 3 passed, 2 ignored. Pins 2 and 3 keep `#[ignore = "red until F-APPEND-PIN-BASE-1 + MB-2c fence: <scenario>"]`, and their bodies are unchanged. With the epoch check in, each fails at the append re-base: pin 2 at `crash_tests.rs:666` (the stale re-delivery commits) and pin 3 (i) at `:735` (run B's append commits over run A). Pin 3's copy-on-write variant (ii), run alone, is green. | The gate run, the `--ignored` run, and the variant (ii) probe. | **PROVEN** | Gate: `3 passed; 0 failed; 2 ignored`. `-- --ignored`: `the stale re-delivery of epoch 0 must not commit a second time` (`:666`), and `Append: run B's commit of epoch 1 must fail at its base once run A has committed epoch 1` (`:735`). Variant (ii) alone: a temporary edit dropping the `Door::Append` call, reverted before commit, gave `1 passed`. `git diff 97379aff -- crates/repark-iceberg/src/microbatch/crash_tests.rs` touches only the three `#[ignore]` lines. pins: mb-2c/C-005 |
 | C-006 | The closing slice. (i) Step 3, the fence (C-002). (ii) Delete the `#[ignore]` lines on pins 2 and 3. (iii) The crash gate reads 5 passed. (iv) The DM-6 measurements (C-001) are re-read on the new fork pin. (v) Every MB-2a pin stays green under the fence. | `F-APPEND-PIN-BASE-1` merged and repinned (RP-N), then the 5-passed gate. | **OPEN** | Waits on the fork card [F-APPEND-PIN-BASE-1](../../roadmap/mid-term/f-append-pin-base-1-2026-10-07.md), the owner's fork work. The closing question is C-002's. Fold 1 measured the revised card's rule ahead of the fork (D-12). A temporary test-only catalog shim refused a stamped append or stamp-only `update_table` when `main` above the pinned base carried this query's stamp, or when the base was not on `main`. With `--include-ignored`, pins 2 and 3 were green, so the crash gate read `5 passed`. The four MB-2a pins the first draft turned red were green: `a_concurrent_unrelated_append_still_commits_both_halves_exactly_once`, `a_racing_stamp_of_another_query_keeps_both_records`, `a_foreign_writer_inside_the_scope_commits_as_on_main_and_leaves_the_claim` and `three_racing_appends_still_stamp_exactly_once_on_every_arm`. The full lib read `940 passed; 0 failed`. The shim was reverted, so this is evidence for the card, not the fence. |
-| C-007 | MBE-15: a stamped claim on a MERGE arm (copy-on-write or merge-on-read) of a sink whose `write.merge.isolation-level` is not `serializable` refuses `MergeIsolationRefused`, naming `write.merge.isolation-level=serializable`. Without it, a stamped copy-on-write MERGE under `snapshot` isolation re-bases past run A and commits epoch 1 twice (the verifier's `two_drivers_one_sink(Door::CopyOnWrite)` with the property set). | A pin of the verifier's shape: the stamped MERGE refuses, epoch 1 appears once, and the property names run A. | **OPEN** | Fold 1, K2 halted (D-13). `SiteStamp::claim(table, branch, extra)` cannot tell a MERGE arm from an append arm. Its inputs are the same at all three sites (`write_options.rs:432`, `merge/snapshot_commit.rs:170` and `:381`). `SinkDoor` is `Table` or `ForeachBatch`, not the arm. The two MERGE sites are shared with predicate UPDATE and DELETE (`predicate_dml/cow_commit.rs`, `mor_commit.rs`), so the arm has to say it is a MERGE. That means editing the arm files, which the brief puts out of reach. `MicroBatchError::MergeIsolationRefused` exists (`microbatch/error.rs:122`), and nothing raises it. |
+| C-007 | MBE-15 (ruling Q3). A stamped claim at either MERGE site (`merge/snapshot_commit.rs`, copy-on-write `commit_overwrite_on_ref` and merge-on-read `commit_row_delta_kind_on_ref`) whose `CommitScope` isolation is not `serializable` refuses `MergeIsolationRefused`. The refusal names the isolation property of the operation: `write.merge.isolation-level` for MERGE, `write.update.isolation-level` for identity UPDATE, `write.delete.isolation-level` for identity DELETE. It comes before the epoch check and before the scope is claimed, so the scope stays open and nothing latches. An unstamped commit, or one carrying the token of another table's scope, commits as before. Under `serializable`, a stamped MERGE claims and commits. | The verifier's shape, `two_drivers_one_sink(Door::CopyOnWrite)` under `write.merge.isolation-level=snapshot`: it refuses before commit and epoch 1 lands once. Stamped UPDATE and DELETE refuse under snapshot isolation. A stamped MERGE under `serializable` commits. Mutation: `claim_isolated` ignores the isolation level, and the pins turn red. | **PROVEN** (on `wip/mb-2c-k2-mbe15`, pending Q5) | `write/sink_offsets_isolation_tests.rs` (the `#[path]` child of the probe module): `a_stamped_merge_under_snapshot_isolation_refuses_before_commit_and_epoch_one_lands_once` (the verifier's race on `ProbeCatalog`'s stamped racer: B's insert-only MERGE refuses naming `write.merge.isolation-level`, the probe saw no `update_table`, the scope is `NotCommitted`; run A then commits; one epoch-1 stamp, ids `[1, 2, 3]`, and the offset property names run A), `a_stamped_update_or_delete_under_snapshot_isolation_refuses_on_both_arms` (copy-on-write and merge-on-read UPDATE and DELETE each refuse naming their own property, no snapshot added, ids unchanged), `a_stamped_merge_under_serializable_isolation_commits_its_stamp`, `an_unstamped_merge_under_snapshot_isolation_commits_as_before` (no token, and a token whose scope is another table: both commit, unstamped). The hazard, measured under mutation MZ1: B's MERGE re-bases past run A and returns `Ok`, two epoch-1 stamps, ids `[1, 2, 3, 3]`. `microbatch/error.rs::merge_isolation_refusal_names_serializable` renders `stamped write into silver.events needs write.update.isolation-level=serializable`. Code: `sink_offsets.rs` `SiteStamp::claim_isolated`; `merge/snapshot_commit.rs` `CommitScope::isolation_property` and `governed_by`. Commit `4db3c6ef`, and the lean in D-15. pins: mb-2c/C-007 |
 
 ## Dated decision rows
 
@@ -140,6 +145,45 @@ its `mid-term/map.md` row, the [packet](../../wo/microbatch/packet.md) §4 row, 
   `IsolationLevel` (a `SiteStamp::claim_isolated`). Those sites also serve stamped predicate
   UPDATE and DELETE, which take their isolation from the caller's `CommitScope`, so the ruling
   also decides whether those refuse. The edit waits for that ruling, and C-007 tracks the row.
+  **Ruled 2026-10-07 (Q3): yes to both,** with the refusal naming the operation's property
+  (D-14, C-007).
+- **D-14 (2026-10-07). Fold 1, K2: the isolation property travels in `CommitScope`.** The ruling
+  allowed two lines in an arm file, at the two `SiteStamp::claim` calls in
+  `merge/snapshot_commit.rs`, for an S1-class duplicate epoch, and the two lines are as ruled.
+  The ruling also says the refusal names the operation's property, and `IsolationLevel` alone
+  cannot do that. Copy-on-write UPDATE and DELETE both reach `commit_overwrite_on_ref` with a
+  scope built in `predicate_dml.rs`, and merge-on-read UPDATE shares `RowDeltaKind::Merge` with
+  MERGE. So, beyond the two lines: `CommitScope` gains `isolation_property` (`scoped` and
+  `unscoped` set `write.merge.isolation-level`) and a `governed_by` setter
+  (`snapshot_commit.rs`, about 10 lines); the two scope constructors in `predicate_dml.rs` add
+  `.governed_by(WRITE_DELETE_ISOLATION_LEVEL)` and `.governed_by(WRITE_UPDATE_ISOLATION_LEVEL)`
+  (one line each); and `MicroBatchError::MergeIsolationRefused` gains `property`, rendering
+  `stamped write into <sink> needs <property>=serializable` (`microbatch/error.rs`). The
+  narrower alternative, one refusal text naming all three properties, keeps `predicate_dml.rs`
+  untouched and is one revert away. Q5 asks for this to be ratified with the pin change below.
+- **D-15 (2026-10-07). Fold 1, K2: order halt rule 4 fires on an MB-2a cell.** MB-2a's C-019
+  pin `three_racing_appends_still_stamp_exactly_once_on_every_arm` runs every arm stamped under
+  `write.merge.isolation-level=snapshot` and `write.delete.isolation-level=snapshot`, so its
+  copy-on-write insert, copy-on-write rewrite and merge-on-read arms re-base past three racing
+  appends. That is the shape MBE-15 refuses. With the ruled edit those three arms refuse
+  `MergeIsolationRefused`, which changes the cell's answer, and the order halts on that (rule
+  4). Under `serializable` with the arms' `AlwaysTrue` conflict filter, a racing append always
+  conflicts, so the cell cannot keep its answer by flipping the isolation property alone.
+  Measured with a temporary pin before deciding anything: under `serializable` and a conflict
+  filter that misses the racers' rows (`id < 50`; the racers write 97, 98 and 99), all three
+  MERGE arms give four attempts, one stamped snapshot, every racer row and `Committed`. The lean
+  is applied as the second commit on `wip/mb-2c-k2-mbe15`. `run_arm`'s copy-on-write and
+  merge-on-read arms take that filter. The three other `run_arm` callers are pinned and race
+  nothing, so the filter changes none of their answers. The racing pin's two properties become
+  `serializable`. The append and stamp-only arms ignore both properties. The unit branch stays
+  at `a566deb8` until Q5 is ruled.
+  - The question: what MB-2a's three-racer cell asserts once a stamped MERGE needs `serializable`.
+  - Flink: the Iceberg Flink sink commits appends only. A MERGE-shaped commit has no Flink
+    answer.
+  - Spark: Iceberg's Spark MERGE under `serializable` validates conflicting data against the
+    MERGE's own conflict filter, so concurrent appends outside that filter commit beside it.
+  - The NS default: NS-6 (fail loud). The refusal stands under `snapshot`, and the cell's
+    exactly-once answer is kept where Iceberg's own validation admits the race.
 - **D-11 (2026-10-07). Fold 1: an epoch gap is admitted.** The epoch check refuses only an epoch
   at or below the durable one, so durable 0 and a claim of 5 claims. MB-3's driver assigns
   contiguous epochs, as Spark's does. The sink check stays offset-based, because windows are
@@ -163,13 +207,18 @@ restored before commit.
 | M5 | Fold 1, K3: a durable refusal is not latched on the scope entry (the claim stays open). | `a_refused_epoch_check_refuses_every_later_claim_in_the_scope`, `a_stale_view_after_a_refused_claim_does_not_commit_the_epoch_twice`. |
 | M6 | Fold 1: `Fenced` names the durable record's run again (round 2's answer). | `fenced_names_the_committer_of_the_claimed_epoch_and_otherwise_the_owner`. |
 | M7 | Fold 1: the claimed epoch's committer is named even when it is the claimant. | `fenced_names_the_committer_of_the_claimed_epoch_and_otherwise_the_owner`. |
+| MZ1 | Fold 1, K2: `claim_isolated` ignores the isolation level (the closure matches `Serializable`). Ruled. | `a_stamped_merge_under_snapshot_isolation_refuses_before_commit_and_epoch_one_lands_once`, `a_stamped_update_or_delete_under_snapshot_isolation_refuses_on_both_arms`. |
+| MZ2 | Fold 1, K2: the refusal always names `write.merge.isolation-level`. Mine. | `a_stamped_update_or_delete_under_snapshot_isolation_refuses_on_both_arms`. |
+| MZ3 | Fold 1, K2: the isolation check runs whenever a token is carried, before the scope lookup. Mine. | `an_unstamped_merge_under_snapshot_isolation_commits_as_before`. |
 
 ## Owner and ruling questions
 
 - **Q1 (OWNER, under OQ-4): RULED 2026-10-07, file it.** Filed as the docs card (D-6, C-002).
 - **Q2 (RULING): RULED 2026-10-07, yes, as a split.** Steps 1 and 2 and pin 4 are landed (C-003,
   C-004, C-005). The rest is in C-006.
-- **Q3 (RULING, fold 1, open): MBE-15 at the MERGE call sites.** The question is whether
+- **Q3 (RULING, fold 1): RULED 2026-10-07, yes to both, as leaned.** Built on
+  `wip/mb-2c-k2-mbe15` (C-007, D-14).
+- **Q3, as asked:** MBE-15 at the MERGE call sites. The question is whether
   `merge/snapshot_commit.rs` may pass its resolved isolation into the claim, and whether a stamped
   predicate UPDATE or DELETE under `snapshot` isolation refuses too (D-13, C-007). The lean is
   yes to both, with one refusal naming the isolation property of the operation.
@@ -179,7 +228,15 @@ restored before commit.
   by then, and the commit's own `main` requirement covers the gap between that read and the
   write. The question is whether such a wrapper may stand in for `F-APPEND-PIN-BASE-1`. The
   lean is no without the owner, because the card stays the ruled path (Q1). The wrapper costs
-  one extra catalog load per attempt and has not been reviewed as product code.
+  one extra catalog load per attempt and has not been reviewed as product code. **Forwarded to the owner, 2026-10-07; not built.**
+- **Q5 (RULING, fold 1, K2, open): may MBE-15 change MB-2a's three-racer cell, and may the
+  property travel in `CommitScope`?** The ruled refusal turns
+  `three_racing_appends_still_stamp_exactly_once_on_every_arm` red on its three MERGE arms
+  (order halt rule 4, D-15). Naming the property for each operation needs `predicate_dml.rs`
+  and `CommitScope` beyond the two ruled lines (D-14). The lean is yes to both: the racing pin
+  runs under `serializable` with a conflict filter below the racers, so its answer holds, and
+  the snapshot-isolation shape is pinned as the refusal (C-007). If ratified, the unit branch
+  fast-forwards to `wip/mb-2c-k2-mbe15`.
 
 ## Gates — 2026-10-07
 
