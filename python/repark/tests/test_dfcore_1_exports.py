@@ -126,6 +126,8 @@ member, slot, alias, or core-surface name changes.
 U11-EDGE-1 (2026-09-26) binds ``_native`` at module level on ``core`` for the DataFrame-door
 attribute binder (``attribute_column`` / ``attribute_copies``), so ``EXPECTED_NEW_CORE_SUBMODULES``
 and ``EXPECTED_NEW_PACKAGE_SUBMODULES`` each gain exactly ``_native``.
+SOURCE-URL-REDACT-2 fold 3 (2026-10-07): ``core`` imports ``scrub_exception`` for the export
+doors, so the frozen ``core`` and package surfaces each gain exactly that one name.
 """
 
 from __future__ import annotations

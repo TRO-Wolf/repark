@@ -152,6 +152,7 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "plan_collapse",
     "re",
     "scratch_view_name",
+    "scrub_exception",
     "sort_nulls_first_for",
     "udf_bridge",
     "uuid",
@@ -304,6 +305,7 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "overload",
     "re",
     "scratch_view_name",
+    "scrub_exception",
     "sort_nulls_first_for",
     "uuid",
 ]
