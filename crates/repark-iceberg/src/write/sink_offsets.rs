@@ -59,6 +59,7 @@ struct ScopeEntry {
     stamp: CommitStamp,
     claimed: bool,
     committed: Option<SnapshotId>,
+    refused: Option<MicroBatchError>,
 }
 
 fn scopes() -> MutexGuard<'static, HashMap<TableUuid, ScopeEntry>> {
@@ -121,6 +122,7 @@ impl BatchScope {
                 stamp,
                 claimed: false,
                 committed: None,
+                refused: None,
             },
         );
         Ok(BatchScopeGuard { sink, token })
@@ -151,8 +153,16 @@ impl BatchScope {
                 epoch: entry.stamp.record.epoch,
             });
         }
+        if let Some(refused) = &entry.refused {
+            return Err(refused.clone());
+        }
         check(&entry.stamp)?;
-        epoch_check(table, &entry.stamp)?;
+        if let Err(error) = epoch_check(table, &entry.stamp) {
+            if durable_refusal(&error) {
+                entry.refused = Some(error.clone());
+            }
+            return Err(error);
+        }
         entry.claimed = true;
         Ok(Some(ClaimedStamp {
             stamp: entry.stamp.clone(),
@@ -229,6 +239,15 @@ fn mark_committed(sink: &Table, stamp: &CommitStamp, snapshot: SnapshotId) {
     {
         entry.committed = Some(snapshot);
     }
+}
+
+fn durable_refusal(error: &MicroBatchError) -> bool {
+    matches!(
+        error,
+        MicroBatchError::AlreadyCommitted { .. }
+            | MicroBatchError::Fenced { .. }
+            | MicroBatchError::GenerationMismatch { .. }
+    )
 }
 
 fn epoch_check(table: &Table, stamp: &CommitStamp) -> Result<(), MicroBatchError> {

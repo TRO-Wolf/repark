@@ -129,12 +129,14 @@ repark-core's error map.
   epoch check runs in `claim` on the table the commit starts from, after the
   `SinkCommittedTwice` guard: a record of another generation refuses `GenerationMismatch`, and
   an epoch at or below the durable one refuses `AlreadyCommitted` under this run and `Fenced`
-  (naming the winner) under another. An unscoped `commit_stamp_only` runs it too, and a refused
-  check leaves the claim open. `resolve_unknown_outcome` is the C-008 walk on
+  (naming the winner) under another. An unscoped `commit_stamp_only` runs it too. Once a scope
+  has seen its epoch durable (`AlreadyCommitted`, `Fenced` or `GenerationMismatch`), the entry
+  is marked refused and every later claim in that scope returns the same refusal (fold 1, K3),
+  so a stale view cannot re-commit the epoch. `resolve_unknown_outcome` is the C-008 walk on
   `commit_stamp_only`'s unknown branch: it reloads once and searches the lineage above the base
   by `engine.operation-id`, then by the whole stamped record (a same-epoch stamp of another run
   is not this attempt); absent, it refuses `RecoveryRequired(CommitOutcomeUnknown)` with the
-  durable record. It never re-submits and never commits a replace. Five epoch pins in the
+  durable record. It never re-submits and never commits a replace. Six epoch pins in the
   `#[path]` child `sink_offsets_epoch_tests.rs`, three walk pins in `sink_offsets_probe_tests.rs`.
   The append fence (step 3) waits for `F-APPEND-PIN-BASE-1`.
   pins: mb-2c/C-003, C-004

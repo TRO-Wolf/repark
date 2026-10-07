@@ -148,27 +148,75 @@ async fn an_unscoped_stamp_only_commit_runs_the_epoch_check() {
     assert_eq!(table.metadata().snapshots().count(), snapshots);
 }
 
+fn stamps_at(table: &Table, epoch: u64) -> usize {
+    table
+        .metadata()
+        .snapshots()
+        .filter(|snapshot| {
+            SinkRecord::from_summary(&snapshot.summary().additional_properties)
+                .ok()
+                .flatten()
+                .is_some_and(|record| record.epoch == Epoch::new(epoch))
+        })
+        .count()
+}
+
 #[tokio::test]
-async fn a_refused_epoch_check_leaves_the_claim_open_and_reads_only_the_given_view() {
-    let (_warehouse, catalog, ident) = fixture("epoch_reopen").await;
-    let stamp = stamp_for(0, SinkDoor::Table);
+async fn a_refused_epoch_check_refuses_every_later_claim_in_the_scope() {
+    let (_warehouse, catalog, ident) = fixture("epoch_refused_scope").await;
     let empty = catalog.load_table(&ident).await.expect("load");
+    let stamp = stamp_for(0, SinkDoor::Table);
     stamped_append(&catalog, &ident, &stamp, &[1]).await;
     let committed = catalog.load_table(&ident).await.expect("reload");
-    let next = stamp_for(1, SinkDoor::Table);
+    let refused = MicroBatchError::AlreadyCommitted {
+        query: query(),
+        epoch: Epoch::new(0),
+    };
     let guard = BatchScope::enter(TableUuid::of(&committed), stamp.clone()).expect("enter");
     assert_eq!(
         BatchScope::claim(&committed, guard.token()),
-        Err(MicroBatchError::AlreadyCommitted {
-            query: query(),
-            epoch: Epoch::new(0),
-        })
+        Err(refused.clone())
     );
-    assert!(
-        BatchScope::claim(&empty, guard.token())
-            .expect("the stale view passes the epoch check")
-            .is_some()
+    assert_eq!(
+        BatchScope::claim(&empty, guard.token()),
+        Err(refused.clone())
     );
+    assert_eq!(
+        commit_stamp_only(&catalog, &empty, &stamp, Some(guard.token())).await,
+        Err(refused)
+    );
+    assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
     drop(guard);
-    assert_eq!(claim_once(&committed, &next), Ok(true));
+    assert_eq!(
+        claim_once(&committed, &stamp_for(1, SinkDoor::Table)),
+        Ok(true)
+    );
+}
+
+#[tokio::test]
+async fn a_stale_view_after_a_refused_claim_does_not_commit_the_epoch_twice() {
+    let (_warehouse, catalog, ident) = fixture("epoch_stale_after_refusal").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let stamp = stamp_for(0, SinkDoor::Table);
+    stamped_append(&catalog, &ident, &stamp, &[2]).await;
+    let fresh = catalog.load_table(&ident).await.expect("load");
+    let guard = BatchScope::enter(TableUuid::of(&fresh), stamp.clone()).expect("enter");
+    let refused = MicroBatchError::AlreadyCommitted {
+        query: query(),
+        epoch: Epoch::new(0),
+    };
+    assert_eq!(
+        BatchScope::claim(&fresh, guard.token()),
+        Err(refused.clone())
+    );
+    let files = stage(&seeded, &[2]).await;
+    let error = commit_append_with_summary(&catalog, &seeded, files, &scoped(&guard), None)
+        .await
+        .expect_err("the stale view must not commit epoch 0 again");
+    assert_eq!(microbatch_cause(&error), &refused);
+    assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    drop(guard);
+    let after = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(stamps_at(&after, 0), 1);
+    assert_eq!(live_ids(&after).await, vec![1, 2]);
 }
