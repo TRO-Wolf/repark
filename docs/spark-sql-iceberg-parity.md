@@ -4349,18 +4349,44 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   returns `None`; `foreachPartition(f)` calls `f` once per Arrow record batch with an
   iterator of `Row`s (an empty frame still calls `f` once with an empty iterator). A
   non-callable `f` raises `PySparkTypeError` `NOT_CALLABLE` at the call; an exception
-  raised by `f` propagates as that exception class.
+  raised by `f` propagates as that exception class. From 2026-10-07 (FOREACH-WRAP-1) it
+  is `scrub_exception`'s masked copy: a credential in its text, `repr` or formatted
+  traceback shows masked (`http://u:***@…`), and it is raised after the handler, so its
+  `__context__` is None. An exception with no credential is the user's own object, its
+  text byte for byte.
 - **Apache Spark** — runs `f` on executors and wraps both a non-callable `f` and a
   user-raised exception in a Py4J job abort (`Py4JJavaError`). Partition count is the
-  RDD partition count, not the Arrow batch count. *(oracle: recorded — cells
+  RDD partition count, not the Arrow batch count. Spark 4.1.2 shows the user's message,
+  credential included, inside `str()` of that `Py4JJavaError` (no `getErrorClass`, no
+  Python cause, `__context__` None). *(oracle: recorded — cells
   `foreach_return`, `foreach_not_callable`, `foreach_raises`,
-  `foreachPartition_return`.)*
+  `foreachPartition_return`; live 2026-10-07 —
+  `python/repark-parity/tests/live_spark/fw1_callback_oracle.json` cells `FW1-foreach`
+  and `FW1-foreachPartition`, `secret_in_str` true.)*
 - **Pin** — `python/repark/tests/test_df_surface_b_1.py::test_foreach_rejects_non_callable`,
   `…::test_foreach_propagates_user_exception`,
-  `…::test_foreach_partition_empty_frame_calls_once`.
+  `…::test_foreach_partition_empty_frame_calls_once`;
+  `python/repark/tests/test_foreach_wrap_1.py::test_foreach_door_raises_a_masked_copy_of_the_user_class`,
+  `…::test_foreach_door_keeps_a_credential_free_error`.
 - **Rationale** — DECLARED 2026-09-14. repark has no executor/RDD layer; the callable
   runs on the driver over streamed `Row`s. Spark's own `NOT_CALLABLE` class is raised
   at the call instead of a job abort, and the original exception class is preserved.
+  The masking (2026-10-07, FOREACH-WRAP-1) is stricter than Spark by the security
+  ruling "no secret on any door": the user-callback doors SOURCE-URL-REDACT-2 masks all
+  raise a masked copy, and these two now do too.
+### DF-TRANSFORM-1 — `transform` lets the user's own exception through unmasked
+- **repark** — `DataFrame.transform(func, *args, **kwargs)` calls `func` as a plain
+  Python call; an exception `func` raises propagates as that same object, its text
+  unmasked, credential included.
+- **Apache Spark** — the same: a plain Python call, the user's own exception unchanged.
+  *(oracle: live 2026-10-07 —
+  `python/repark-parity/tests/live_spark/fw1_callback_oracle.json` cell
+  `FW1-transform`: `builtins.ValueError`, `is_original` true, `secret_in_str` true.)*
+- **Pin** — `python/repark/tests/test_foreach_wrap_1.py::test_transform_passes_the_user_exception_through`.
+- **Rationale** — DECLARED 2026-10-07 (FOREACH-WRAP-1). The user's own exception from
+  `transform` is not masked because it never crosses an engine boundary: RePark adds no
+  text and runs no engine code between the raise and the caller, which is exactly what
+  Spark does. It is the one user-callback door outside SOURCE-URL-REDACT-2's masking.
 ### DF-OBSERVE-1 — observed metrics are a second aggregation; `get` before an action raises
 - **repark** — `observe` returns a child with the same rows and schema. The first action
   on that child evaluates `agg(*exprs)` once and fills a bound `Observation`; later
