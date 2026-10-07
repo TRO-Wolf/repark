@@ -14,7 +14,11 @@ sink_offsets_tests.rs, mod.rs, map.md}`, the three named commit arms
 (`write_options.rs` `commit_append_with_summary`, `merge/snapshot_commit.rs`
 `commit_overwrite_on_ref` and `commit_row_delta_kind_on_ref`), and
 `crates/repark-iceberg/src/microbatch/{crash_tests.rs, mod.rs, map.md}` for harness pin 1.
-`merge/mod.rs` is not edited.
+`merge/mod.rs` is not edited. **Fold 1 (2026-10-07)**, after the verifier's FAIL on #981
+(`/tmp/oc-worker/direct/wo/microbatch/mb2a/verify/verdict.json`), under the orchestrator's
+rulings V1…V6, adds `write/{sink_offsets_scope_tests.rs, sink_offsets_probe_tests.rs}`, the
+`RecoveryReason::StampNotInLineage` arm in `microbatch/error.rs`, the property-version guard in
+`microbatch/offset.rs`, and the dated §3.4 / §6 amendment in the design sketch.
 
 ## Halt checks — 2026-10-07
 
@@ -171,6 +175,36 @@ All exit 0, in brief order, on the step-6 tree: `cargo test -p repark-iceberg --
 ceiling; `write_options.rs` and `merge/snapshot_commit.rs` grow by 5 and 6 lines (net) inside the
 named functions only; `merge/mod.rs` is untouched.
 
+**Fold 1 — 2026-10-07.** All exit 0, in brief order, on the fold-1 tree:
+`cargo test -p repark-iceberg --lib` (913 passed, 0 failed: the 890 above plus 22
+`write::sink_offsets` pins and one `microbatch::offset` pin),
+`cargo test -p repark-iceberg --lib microbatch::crash_tests` (1 passed), `make rust-clippy`,
+`cargo fmt --check`, `make rust-panic-ban`, `python3 scripts/check_rust_file_size.py`,
+`./scripts/check_lib_rs.sh`, `python3 scripts/sync_map_md.py --check`,
+`bash scripts/check_map_md.sh --base origin/main`, `python3 scripts/check_docs_links.py`,
+`python3 scripts/check_ledger_grammar.py`, and the comment-ban probe (`hits=0`). Sizes:
+`sink_offsets.rs` 480, `sink_offsets_tests.rs` 977, `sink_offsets_scope_tests.rs` 448,
+`sink_offsets_probe_tests.rs` 655, `microbatch/offset.rs` 931, `microbatch/error.rs` 461, all
+under the default ceiling. Against #981's head, `write_options.rs` and `merge/snapshot_commit.rs`
+change 3 lines (the claim takes the extras; the merge-on-read claim moves ahead of the delete
+staging); `merge/mod.rs` is still untouched.
+
+**Fold 1 mutations.** Each applied to the fold-1 tree, run against
+`write::sink_offsets` and `microbatch::crash_tests` (or `microbatch::` where `offset.rs` is
+mutated), restored from a backup and confirmed byte-equal with `cmp`:
+
+| id | mutation | result |
+|---|---|---|
+| MV-T | the claim ignores the token (`SiteStamp::claim` mints one when none is carried; `claim_checked` drops the token filter) | red: 3 (the foreign-writer pin, the wrong-token pin, the scope pin) |
+| MV-C | `claim_checked` marks the entry claimed before the stamp comparison | red: 1 (`a_mismatched_stamp_only_commit_leaves_the_claim`) |
+| MV6 | the verifier's: caller extras appended after the stamp | red: 1 (`site_stamp_extras_put_the_stamp_last_and_drop_the_token`) |
+| MV6-g | the caller stamp-key refusal dropped | red: 1 (`caller_extras_cannot_displace_the_stamp`) |
+| MV6-gx | both together | red: 2 |
+| MV-R | the off-lineage search never matches (a rollback reads as expiry) | red: 1 (`resume_refuses_a_rollback_before_every_stamp_as_not_in_lineage`) |
+| MV-G | the whole-ancestry guard dropped (a gap reads as a rollback) | red: 1 (`resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback`) |
+| MV-F | the property's integer guard dropped | red: 2 (`from_property_refuses_a_non_integer_version_as_corrupt`, `resume_refuses_a_malformed_property_version_as_corrupt`) |
+| MV-O | the merge-on-read claim moved back after `prepare_row_delta_deletes` | red: 1 (`a_refused_merge_on_read_claim_stages_no_delete_file`) |
+
 ## Owner questions (none halts)
 
 - **OQ-2a-1 (FL-1).** Should a stamped scope stamp a commit to a non-`main` branch of the sink,
@@ -189,19 +223,19 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/mb-2a-ledger.md, crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/write/sink_offsets_tests.rs, crates/repark-iceberg/src/microbatch/crash_tests.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Negative pins cover the busy sink, the second claim on the live arm and on the stamp-only path, a head without the stamp, a branch commit inside a scope, a property drifted ahead of the summary, a removed property, an expired stamped snapshot, a newer offset format, another query's stamp in the ancestry, and an empty sink.
-      artifacts: [crates/repark-iceberg/src/write/sink_offsets_tests.rs]
+      evidence: Negative pins cover the busy sink, the second claim on the live arm and on the stamp-only path, a head without the stamp, a branch commit inside a scope, a property drifted ahead of the summary, a removed property, an expired stamped snapshot, a newer offset format, another query's stamp in the ancestry, and an empty sink. Fold 1 adds a foreign unscoped writer, a forged and a malformed token, caller stamp keys, a mismatched stamp-only commit, a rollback before every stamp and between two stamps, an ancestry gap, a non-integer property version, a refused merge-on-read claim, and the verifier's failure, unknown-outcome and race probes on all five arms.
+      artifacts: [crates/repark-iceberg/src/write/sink_offsets_tests.rs, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal is a typed MicroBatchError variant from MB-1's enum (SinkBusy, SinkCommittedTwice, RecoveryRequired with OffsetMismatch, StampedSnapshotExpired, UnstampedSinkCommit, CommitOutcomeUnknown, UnsupportedOffsetFormat); the arms surface it as DataFusionError::External and the pin downcasts the cause rather than matching text.
       artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/write/sink_offsets_tests.rs]
     - id: AT-4
       status: ATTACKED
-      evidence: The scope registry is one process-wide mutex; every critical section is a single map read or write, no guard is held across an await (claim and record run before and after the commit future, never inside it), and a poisoned lock is recovered because no section can leave the map torn. Tests key the registry by fresh table uuids, so parallel tests never share an entry. The retry path is proven under a racing catalog (C-008).
+      evidence: The scope registry is one process-wide mutex keyed by sink uuid, and since fold 1 a claim also needs the entry's ScopeToken (D-9), so a concurrent writer in another session or task cannot take the batch's stamp (C-013, the foreign-writer pin); every critical section is a single map read or write, no guard is held across an await (claim and record run before and after the commit future, never inside it), and a poisoned lock is recovered because no section can leave the map torn. Tests key the registry by fresh table uuids, so parallel tests never share an entry. The retry path is proven under a racing catalog (C-008).
       artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/write/sink_offsets_tests.rs]
     - id: AT-5
       status: ATTACKED
-      evidence: The stamp carries uuids, epochs, generations, snapshot ids, positions and the Bronze table identifier only; no path, location or credential field exists in SinkRecord. Iceberg and DataFusion error texts pass through mask_value_credentials before they enter MicroBatchError::Catalog (D-6).
+      evidence: The scope token is an unguessable UUID v4, its Debug prints ScopeToken(..), and the three arms strip it from every summary they write, claimed or not (C-013, C-015, C-019 checks the catalog request); a caller's stamp-namespace key on a stamped commit refuses (C-015). The stamp carries uuids, epochs, generations, snapshot ids, positions and the Bronze table identifier only; no path, location or credential field exists in SinkRecord. Iceberg and DataFusion error texts pass through mask_value_credentials before they enter MicroBatchError::Catalog (D-6).
       artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/microbatch/offset.rs]
     - id: AT-6
       status: ATTACKED
@@ -213,13 +247,13 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/write/sink_offsets.rs, crates/repark-iceberg/src/write/sink_offsets_tests.rs]
     - id: AT-8
       status: ATTACKED
-      evidence: 12/12 gates green; new files under the default ceiling (336 and 947 lines, the tests in a #[path] sibling); write/map.md, write/merge/map.md and microbatch/map.md updated in the same commits as their files.
+      evidence: 12/12 gates green at the unit and again at fold 1; new files under the default ceiling (fold 1: 480, 977, 448 and 655 lines, the tests in #[path] siblings); write/map.md, write/merge/map.md and microbatch/map.md updated in the same commits as their files.
       artifacts: [task/ledgers/staging/mb-2a-ledger.md, crates/repark-iceberg/src/write/map.md, crates/repark-iceberg/src/write/merge/map.md, crates/repark-iceberg/src/microbatch/map.md]
     - id: AT-9
       status: N/A
       justification: No new log or metric surface; every outcome is a typed value (ScopeOutcome) or a typed error.
     - id: AT-10
       status: ATTACKED
-      evidence: M1 (property write dropped) turns the resume pin and harness pin 1 red among 9; M2 (claim not marked) turns its 3 owning pins red; M3 (no summary-property comparison) turns the guard pin red. Each restored from a backup and confirmed clean by git diff --quiet.
+      evidence: M1 (property write dropped) turns the resume pin and harness pin 1 red among 9; M2 (claim not marked) turns its 3 owning pins red; M3 (no summary-property comparison) turns the guard pin red. Each restored from a backup and confirmed clean by git diff --quiet. Fold 1 adds nine mutants (MV-T, MV-C, MV6, MV6-g, MV6-gx, MV-R, MV-G, MV-F, MV-O), each red on its owning pin (the Fold 1 mutations table), the verifier's MV6 among them.
       artifacts: [task/ledgers/staging/mb-2a-ledger.md]
 ```
