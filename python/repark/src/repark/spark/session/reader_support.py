@@ -6,6 +6,7 @@ from pathlib import Path
 
 from typing import Any
 
+from repark.spark._secrets import mask_credentials
 from repark.spark.dataframe import DataFrame
 
 
@@ -192,10 +193,12 @@ def _parse_snapshot_id_option(raw: Any) -> int:
         parsed = int(raw)
     except (TypeError, ValueError) as error:
         raise AnalysisException(
-            f"snapshot-id must be an integer snapshot id, got {raw!r}"
+            f"snapshot-id must be an integer snapshot id, got {mask_credentials(raw)!r}"
         ) from error
     if parsed < _I64_MIN or parsed > _I64_MAX:
-        raise AnalysisException(f"snapshot-id must fit a signed 64-bit integer, got {raw!r}")
+        raise AnalysisException(
+            f"snapshot-id must fit a signed 64-bit integer, got {mask_credentials(raw)!r}"
+        )
     return parsed
 
 
@@ -208,11 +211,12 @@ def _parse_as_of_timestamp_option(raw: Any) -> int:
         parsed = int(raw)
     except (TypeError, ValueError) as error:
         raise AnalysisException(
-            f"as-of-timestamp must be epoch milliseconds (int), got {raw!r}"
+            f"as-of-timestamp must be epoch milliseconds (int), got {mask_credentials(raw)!r}"
         ) from error
     if parsed < _I64_MIN or parsed > _I64_MAX:
         raise AnalysisException(
-            f"as-of-timestamp must fit a signed 64-bit integer epoch ms, got {raw!r}"
+            f"as-of-timestamp must fit a signed 64-bit integer epoch ms, "
+            f"got {mask_credentials(raw)!r}"
         )
     return parsed
 
@@ -230,7 +234,7 @@ def _parse_jdbc_int_option(name: str, raw: str | None) -> int | None:
         from repark.errors import IllegalArgumentException
 
         raise IllegalArgumentException(
-            f"jdbc option {name} must be an integer, got {raw!r}"
+            f"jdbc option {name} must be an integer, got {mask_credentials(raw)!r}"
         ) from exc
 
 
@@ -573,7 +577,8 @@ def _reject_csv_json_parse_options(options: dict[str, str], *, is_csv: bool) -> 
             if mode in {"", "PERMISSIVE"}:
                 continue
             raise AnalysisException(
-                f"reader option mode={options[key]!r} is not supported by repark yet "
+                f"reader option mode={mask_credentials(options[key])!r} "
+                "is not supported by repark yet "
                 f"(only PERMISSIVE / default; FAILFAST/DROPMALFORMED are unsupported-loud)"
             )
         if lowered == "encoding":
@@ -581,7 +586,8 @@ def _reject_csv_json_parse_options(options: dict[str, str], *, is_csv: bool) -> 
             if encoding in {"", "utf8", "utf_8"}:
                 continue
             raise AnalysisException(
-                f"reader option encoding={options[key]!r} is not supported (only UTF-8)"
+                f"reader option encoding={mask_credentials(options[key])!r} "
+                "is not supported (only UTF-8)"
             )
         if lowered in denylist:
             raise AnalysisException(

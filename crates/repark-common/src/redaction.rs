@@ -91,7 +91,7 @@ fn replace_whole_tokens(text: &str, needle: &str, replacement: &str) -> String {
 }
 
 fn is_token_char(edge: char) -> bool {
-    edge.is_ascii_alphanumeric() || matches!(edge, '_' | '=' | '.' | '-')
+    edge.is_ascii_alphanumeric()
 }
 
 #[must_use]

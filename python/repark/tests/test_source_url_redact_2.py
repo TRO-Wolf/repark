@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import traceback
 from pathlib import Path
 
@@ -7,7 +8,10 @@ import pytest
 
 from repark.errors import AnalysisException, IllegalArgumentException, PySparkException
 from repark.spark import SparkSession
+from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark._secrets import scrub_exception
+from repark.spark.dataframe.export_errors import _export_engine_error
+from repark.spark.session.reader_support import _parse_snapshot_id_option
 
 MARK = "S3cr3tPw"
 
@@ -223,3 +227,325 @@ def test_writer_option_value_never_echoes(tmp_path: Path) -> None:
         pytest.fail("writer option refusal unexpectedly succeeded")
     finally:
         session.stop()
+
+
+UDF_USER_TEXT = "lookup failed for key: customer_id (token: abc123 expired)"
+
+
+def _boom_user_text(value: object) -> str:
+    raise ValueError(UDF_USER_TEXT)
+
+
+def _boom_user_url(value: object) -> str:
+    raise ValueError("fetch failed for " + "http://" + USERINFO + "127.0.0.1:9/x")
+
+
+def test_sql_udf_user_text_is_byte_identical() -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        session.udf.register("boom", _boom_user_text, "string")
+        with pytest.raises(PySparkException) as caught:
+            session.sql("SELECT boom(id) FROM range(2)").collect()
+        assert UDF_USER_TEXT in str(caught.value)
+    finally:
+        session.stop()
+
+
+def test_dataframe_udf_user_text_is_byte_identical() -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        frame = session.range(2).select(F.udf(_boom_user_text, "string")("id"))
+        with pytest.raises(PySparkException) as caught:
+            frame.collect()
+        assert UDF_USER_TEXT in str(caught.value)
+    finally:
+        session.stop()
+
+
+def test_sql_udf_user_url_is_masked() -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        session.udf.register("boom_url", _boom_user_url, "string")
+        with pytest.raises(PySparkException) as caught:
+            session.sql("SELECT boom_url(id) FROM range(2)").collect()
+        rendered = str(caught.value)
+        assert USERINFO not in rendered
+        assert "***" in rendered
+    finally:
+        session.stop()
+
+
+def test_scrub_exception_returns_copies_and_keeps_originals() -> None:
+    cause = ValueError("http://" + USERINFO + "127.0.0.1:9/refused")
+    outer = AnalysisException("listNamespaces failed")
+    outer.__cause__ = cause
+    scrubbed = scrub_exception(outer)
+    assert scrubbed is not outer
+    assert type(scrubbed) is AnalysisException
+    assert str(scrubbed) == "listNamespaces failed"
+    assert isinstance(scrubbed.__cause__, ValueError)
+    assert USERINFO in repr(cause.args)
+    assert USERINFO not in "".join(traceback.format_exception(scrubbed))
+
+
+def test_scrub_exception_keeps_identity_without_secrets() -> None:
+    error = ValueError(UDF_USER_TEXT)
+    assert scrub_exception(error) is error
+
+
+def test_scrub_exception_leaves_decode_error_untouched() -> None:
+    try:
+        b"\xff".decode("utf-8")
+    except UnicodeDecodeError as error:
+        assert scrub_exception(error) is error
+    else:
+        pytest.fail("invalid utf-8 unexpectedly decoded")
+
+
+def test_reader_option_mode_value_is_masked(tmp_path: Path) -> None:
+    value = f"host=h user=u password={MARK}M1"
+    session = SparkSession.builder.getOrCreate()
+    try:
+        with pytest.raises(AnalysisException) as caught:
+            session.read.option("mode", value).csv(str(tmp_path / "zz")).collect()
+        rendered = str(caught.value)
+        assert MARK not in rendered
+        assert "***" in rendered
+    finally:
+        session.stop()
+
+
+def test_reader_format_value_is_masked(tmp_path: Path) -> None:
+    value = f"host=h user=u password={MARK}F1"
+    session = SparkSession.builder.getOrCreate()
+    try:
+        with pytest.raises(AnalysisException) as caught:
+            session.read.format(value).load(str(tmp_path / "zz")).collect()
+        rendered = str(caught.value)
+        assert MARK not in rendered
+        assert "***" in rendered
+    finally:
+        session.stop()
+
+
+def test_reader_snapshot_id_value_is_masked() -> None:
+    with pytest.raises(AnalysisException) as caught:
+        _parse_snapshot_id_option(f"host=h user=u password={MARK}S1")
+    rendered = str(caught.value)
+    assert MARK not in rendered
+    assert "***" in rendered
+
+
+def test_reader_jdbc_int_option_value_is_masked() -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        reader = (
+            session.read.format("postgres")
+            .option("url", "postgresql://h/db")
+            .option("dbtable", "t")
+            .option("partitionColumn", "id")
+            .option("lowerBound", f"host=h user=u password={MARK}J1")
+            .option("upperBound", "10")
+            .option("numPartitions", "2")
+        )
+        with pytest.raises(IllegalArgumentException) as caught:
+            reader.load()
+        rendered = str(caught.value)
+        assert MARK not in rendered
+        assert "***" in rendered
+    finally:
+        session.stop()
+
+
+def test_reader_orc_merge_schema_value_is_masked(tmp_path: Path) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        with pytest.raises(IllegalArgumentException) as caught:
+            session.read.orc(str(tmp_path / "zz"), mergeSchema=f"host=h user=u password={MARK}O1")
+        rendered = str(caught.value)
+        assert MARK not in rendered
+        assert "***" in rendered
+    finally:
+        session.stop()
+
+
+def test_reader_text_encoding_value_is_masked(tmp_path: Path) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        with pytest.raises(AnalysisException) as caught:
+            session.read.option("encoding", f"host=h user=u password={MARK}T1").text(
+                str(tmp_path / "zz")
+            ).collect()
+        rendered = str(caught.value)
+        assert MARK not in rendered
+        assert "***" in rendered
+    finally:
+        session.stop()
+
+
+def test_writer_format_value_is_masked(tmp_path: Path) -> None:
+    value = f"host=h user=u password={MARK}D1"
+    session = SparkSession.builder.getOrCreate()
+    try:
+        with pytest.raises(AnalysisException) as caught:
+            session.range(2).write.format(value).save(str(tmp_path / "h"))
+        rendered = str(caught.value)
+        assert MARK.lower() not in rendered
+        assert "***" in rendered
+    finally:
+        session.stop()
+
+
+def test_scrub_exception_rebuilds_os_error() -> None:
+    original = FileNotFoundError(2, "No such file", "http://" + USERINFO + "h/x")
+    scrubbed = scrub_exception(original)
+    assert scrubbed is not original
+    assert type(scrubbed) is FileNotFoundError
+    assert scrubbed.errno == 2
+    assert USERINFO in str(original.filename)
+    assert USERINFO not in str(scrubbed)
+    assert USERINFO not in str(scrubbed.filename)
+    assert "***" in str(scrubbed.filename)
+
+
+def test_scrub_exception_rebuilds_os_error_strerror() -> None:
+    original = OSError(2, "connect " + "http://" + USERINFO + "h/db failed")
+    scrubbed = scrub_exception(original)
+    assert scrubbed is not original
+    assert type(scrubbed) is OSError
+    assert scrubbed.errno == 2
+    assert USERINFO in str(original)
+    assert USERINFO not in str(scrubbed)
+    assert "***" in str(scrubbed)
+
+
+def test_scrub_exception_masks_os_error_filename2() -> None:
+    original = OSError(2, "No such file", "/tmp/plain")
+    original.filename2 = "http://" + USERINFO + "h/y"
+    scrubbed = scrub_exception(original)
+    assert scrubbed is not original
+    assert USERINFO in str(original.filename2)
+    assert USERINFO not in str(scrubbed.filename2)
+    assert "***" in str(scrubbed.filename2)
+
+
+_REAL_RMTREE = shutil.rmtree
+
+
+def _raise_permission_denied_for_out(path: object, *args: object, **kwargs: object) -> None:
+    if Path(str(path)).name == "out":
+        raise OSError(13, "Permission denied", "http://" + USERINFO + "127.0.0.1:9/x")
+    _REAL_RMTREE(path, *args, **kwargs)
+
+
+def test_writer_overwrite_os_error_is_masked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "out"
+    target.mkdir()
+    (target / "seed").write_text("x", encoding="utf-8")
+    monkeypatch.setattr(shutil, "rmtree", _raise_permission_denied_for_out)
+    session = SparkSession.builder.getOrCreate()
+    try:
+        with pytest.raises(AnalysisException) as caught:
+            session.range(2).write.mode("overwrite").parquet(str(target))
+        rendered = "".join(traceback.format_exception(caught.value))
+        assert USERINFO not in rendered
+        assert "***" in rendered
+        assert str(target) in rendered
+    finally:
+        session.stop()
+
+
+def test_text_write_overwrite_os_error_is_masked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "out"
+    target.mkdir()
+    (target / "seed").write_text("x", encoding="utf-8")
+    monkeypatch.setattr(shutil, "rmtree", _raise_permission_denied_for_out)
+    session = SparkSession.builder.getOrCreate()
+    try:
+        with pytest.raises(AnalysisException) as caught:
+            session.sql("SELECT 'a' AS v").write.mode("overwrite").text(str(target))
+        rendered = "".join(traceback.format_exception(caught.value))
+        assert USERINFO not in rendered
+        assert "***" in rendered
+        assert str(target) in rendered
+    finally:
+        session.stop()
+
+
+_REST_CHAIN_URI = "http://" + USERINFO + "127.0.0.1:9/v1"
+_REST_CHAIN_CAUSE = ConnectionError("connect failed for " + _REST_CHAIN_URI)
+_REST_CHAIN_FAILURE = RuntimeError("catalog read failed")
+_REST_CHAIN_FAILURE.__cause__ = _REST_CHAIN_CAUSE
+
+
+def _raise_rest_chain(sql: object) -> object:
+    raise _REST_CHAIN_FAILURE
+
+
+def test_list_databases_scrubs_cause_chain(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        monkeypatch.setattr(session, "_sql_built", _raise_rest_chain)
+        with pytest.raises(AnalysisException) as caught:
+            session.catalog.listDatabases()
+        rendered = "".join(traceback.format_exception(caught.value))
+        assert USERINFO not in rendered
+        assert "***" in rendered
+        assert USERINFO in str(_REST_CHAIN_CAUSE)
+    finally:
+        session.stop()
+
+
+def _raise_materialize_url_error(self: object) -> None:
+    raise IllegalArgumentException("read failed for " + "http://" + USERINFO + "h/x")
+
+
+def _raise_materialize_user_text(self: object) -> None:
+    raise IllegalArgumentException(UDF_USER_TEXT)
+
+
+def test_eager_materialize_refusal_masks_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        frame = session.range(2)
+        monkeypatch.setattr(
+            type(frame), "_materialize_cache_if_needed", _raise_materialize_url_error
+        )
+        with pytest.raises(IllegalArgumentException) as caught:
+            frame.eager()
+        rendered = "".join(traceback.format_exception(caught.value))
+        assert USERINFO not in rendered
+        assert "***" in rendered
+    finally:
+        session.stop()
+
+
+def test_eager_materialize_refusal_keeps_user_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        frame = session.range(2)
+        monkeypatch.setattr(
+            type(frame), "_materialize_cache_if_needed", _raise_materialize_user_text
+        )
+        with pytest.raises(IllegalArgumentException) as caught:
+            frame.eager()
+        assert UDF_USER_TEXT in str(caught.value)
+    finally:
+        session.stop()
+
+
+def test_export_engine_error_masks_url() -> None:
+    error = RuntimeError("export failed for " + "http://" + USERINFO + "h/x")
+    mapped = _export_engine_error(error)
+    assert USERINFO not in str(mapped)
+    assert "***" in str(mapped)
+    assert USERINFO in str(error)
+
+
+def test_export_engine_error_keeps_user_text() -> None:
+    mapped = _export_engine_error(RuntimeError(UDF_USER_TEXT))
+    assert UDF_USER_TEXT in str(mapped)

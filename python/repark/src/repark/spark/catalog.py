@@ -350,7 +350,7 @@ class Catalog:
         try:
             table = self._session._sql_built(sql).to_arrow()
         except Exception as exc:
-            scrub_exception(exc)
+            exc = scrub_exception(exc)
             raise AnalysisException(f"listDatabases failed for catalog `{catalog}`: {exc}") from exc
         out: list[Any] = []
         for row in table.to_pylist():

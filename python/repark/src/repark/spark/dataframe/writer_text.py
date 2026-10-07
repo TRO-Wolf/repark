@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from repark.spark._secrets import scrub_exception
+from repark.spark._secrets import mask_credentials, mask_url_userinfo, scrub_exception
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.writer_readwriter import DataFrameWriter
@@ -38,20 +38,21 @@ def write_text_path(writer: Any, path: str) -> None:
     writer._dataframe._ensure_alive()
     if is_s3_url(path):
         raise AnalysisException(
-            f"DataFrameWriter.text over {path!r} is not supported yet (repark text "
-            "writes are local only — refuse-loud; no local shadow is written)"
+            f"DataFrameWriter.text over {mask_url_userinfo(path)!r} is not supported yet "
+            "(repark text writes are local only — refuse-loud; no local shadow is written)"
         )
     _refuse_text_compression(writer)
     partition_columns = _text_partition_columns(writer)
     normalized_mode = "error" if writer._mode == "errorifexists" else writer._mode
     if normalized_mode not in writer._PATH_MODES:
         raise AnalysisException(
-            f"path write mode must be one of {writer._PATH_MODES}, got {writer._mode!r}"
+            f"path write mode must be one of {writer._PATH_MODES}, "
+            f"got {mask_credentials(writer._mode)!r}"
         )
     destination = Path(path)
     if destination.exists() and normalized_mode == "error":
         raise AnalysisException(
-            f"[PATH_ALREADY_EXISTS] Path {path} already exists. "
+            f"[PATH_ALREADY_EXISTS] Path {mask_url_userinfo(path)} already exists. "
             'Set mode as "overwrite" to overwrite the existing path.'
         )
     if destination.exists() and normalized_mode == "ignore":
@@ -62,7 +63,8 @@ def write_text_path(writer: Any, path: str) -> None:
         and (destination.is_file() or (destination.is_symlink() and not destination.is_dir()))
     ):
         raise AnalysisException(
-            f"[PATH_ALREADY_EXISTS] Path {path} is a file (or non-directory symlink); "
+            f"[PATH_ALREADY_EXISTS] Path {mask_url_userinfo(path)} is a file "
+            "(or non-directory symlink); "
             "path mode('append') requires a directory of part files. "
             'Use mode("overwrite") to replace the path, or write to a directory path.'
         )
@@ -91,8 +93,10 @@ def write_text_path(writer: Any, path: str) -> None:
             try:
                 _merge_path_write_tree(staging, destination)
             except (FileExistsError, OSError, shutil.Error) as exc:
-                scrub_exception(exc)
-                raise AnalysisException(f"path mode('append') failed for {path!r}: {exc}") from exc
+                exc = scrub_exception(exc)
+                raise AnalysisException(
+                    f"path mode('append') failed for {mask_url_userinfo(path)!r}: {exc}"
+                ) from exc
             if staging.exists():
                 if staging.is_dir():
                     shutil.rmtree(staging)
@@ -102,7 +106,8 @@ def write_text_path(writer: Any, path: str) -> None:
         if destination.exists():
             if destination.is_symlink():
                 raise AnalysisException(
-                    f"cannot overwrite path {path!r}: destination is a symbolic link "
+                    f"cannot overwrite path {mask_url_userinfo(path)!r}: "
+                    "destination is a symbolic link "
                     "(refuse-loud; repark will not rmtree/unlink a symlink destination)"
                 )
             try:
@@ -111,8 +116,10 @@ def write_text_path(writer: Any, path: str) -> None:
                 else:
                     destination.unlink()
             except OSError as exc:
-                scrub_exception(exc)
-                raise AnalysisException(f"cannot overwrite path {path!r}: {exc}") from exc
+                exc = scrub_exception(exc)
+                raise AnalysisException(
+                    f"cannot overwrite path {mask_url_userinfo(path)!r}: {exc}"
+                ) from exc
         staging.rename(destination)
     except AnalysisException:
         if staging.exists():

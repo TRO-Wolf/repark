@@ -5293,6 +5293,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_source_url_redact_2.py` — **SOURCE-URL-REDACT-2 (2026-10-06):** the 48-cell pin (three credential shapes × builder / `conf.set` / SQL `SET` / `repark.toml` × four knobs): the full traceback never carries the marker and the exception class matches the base run.
   pins: source-url-redact-1/C-063, C-064
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** round-B pins — the escaped/long integer-guard cut, the ORC params mask, the REST/reader chain pins, the writer-option pin. pins: source-url-redact-1/C-069
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** fold-2 pins — the SQL/DataFrame UDF user-text identity and UDF-URL mask, the no-mutation copy contract, the reader mode/format/jdbc/orc/text echoes plus the writer-format echo, the `OSError` rebuilds (filename, strerror, `filename2`), the writer/text overwrite `OSError` doors, and one scrub-site pin per calling module including the injected REST cause chain.
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

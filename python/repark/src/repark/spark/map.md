@@ -106,6 +106,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the `prop_key_is_secret` mirror is deleted; only `mask_credentials` remains.
   **SOURCE-URL-REDACT-2 (2026-10-06):** `register_config_value(value)` no-ops non-strings and forwards strings to `_native.register_config_value`. pins: source-url-redact-1/C-059
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** `scrub_exception(error)` walks the `__cause__`/`__context__` chain and rewrites each link's string args through `_native.mask_value_credentials`. pins: source-url-redact-1/C-067
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `scrub_exception` masks through `_native.mask_user_visible` only and never mutates: it returns the same object when no link changes, else a rebuilt chain of copies (traceback, cause, context and the suppress flag carried over); `OSError` links rebuild as `type(error)(errno, masked_strerror, masked_filename)` with `filename2`/`winerror` kept. `mask_url_userinfo(value)` forwards to the native URL leg for the writer path echoes.
   pins: source-url-redact-1/C-032
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
   **FNP-4B (2026-09-15):** `local_view_name` also strips backtick quoting (handles are
@@ -126,6 +127,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   temporary names remain hidden from listing APIs.
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** `listDatabases` scrubs the
   cause before re-raising. pins: source-url-redact-1/C-067
+  **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `listDatabases` re-raises from the
+  scrubbed copy the narrow scrub returns.
   **EAGER-OWN-1 step 1 (2026-09-13):** `clearCache` releases the session's live
   `CacheViewHandle`s (registered in a WeakSet under the alive token) before the
   unchanged registry `unpersist` loop and the `__repark_cache_*` prefix sweep —

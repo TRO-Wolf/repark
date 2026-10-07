@@ -94,7 +94,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   `#[pyfunction]`, `read_iceberg_path`, takes the raw path and drives
   `ReparkSession::read_iceberg_path` — the `format("iceberg").load(<path>)` static-table
   read, identifier resolution and travel options already refused upstream.
-  pins: dfload-1/C-004 **SOURCE-URL-REDACT-2 (2026-10-06):** a sixth free `#[pyfunction]`, `register_config_value`, exposes the registry to the facade doors. pins: source-url-redact-1/C-058, C-059 |
+  pins: dfload-1/C-004 **SOURCE-URL-REDACT-2 (2026-10-06):** a sixth free `#[pyfunction]`, `register_config_value`, exposes the registry to the facade doors. pins: source-url-redact-1/C-058, C-059 **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** seventh and eighth free `#[pyfunction]`s, `mask_user_visible` (the `exceptions` narrow helper: registered values, then URL userinfo) and `mask_url_userinfo`, for the facade scrub and the writer path echoes. |
 | [`text_io.rs`](text_io.rs) | **IO-TEXT-1 (2026-09-14):** the text read/write bindings — two free `#[pyfunction]`s **IO-TEXT-1 (2026-09-15, orchestrator):** `text_io.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
   (the `session_sources` shape, since pyo3 allows one `#[pymethods]` block per type):
   runtime, `write_text_frame` drives `repark_core::write_text_frame` with a newline

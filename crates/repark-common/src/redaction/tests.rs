@@ -849,3 +849,45 @@ fn the_registry_holds_256_values_and_evicts_the_oldest() {
         mask_value_credentials(newest)
     );
 }
+
+#[test]
+fn registered_values_mask_at_punctuation_boundaries() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let jdbc = "jdbc:postgresql://h/db?user=u&password=EdgePw01";
+    let dsn = "host=h user=u password=EdgePw02";
+    let odbc = "Driver=x;Uid=u;Pwd=EdgePw03;";
+    register_config_value(jdbc);
+    register_config_value(dsn);
+    register_config_value(odbc);
+    let cases = [
+        format!("invalid options: url={jdbc}"),
+        format!("connection failed for {dsn}."),
+        format!("bad value: {dsn}, retry"),
+        format!("{{\"url\": \"{jdbc}\"}}"),
+        format!("{{\"dsn\":\"{odbc}\"}}"),
+        format!("url={jdbc};timeout=5"),
+        format!("conn_{odbc}"),
+        format!("got [{dsn}]"),
+    ];
+    for case in &cases {
+        let masked = mask_registered_values(case);
+        assert!(!masked.contains("EdgePw"), "{case} -> {masked}");
+        assert!(masked.contains("***"), "{case} -> {masked}");
+    }
+}
+
+#[test]
+fn registered_values_keep_letter_or_digit_neighbours() {
+    let _held = REGISTRY_TEST_LOCK
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    register_config_value("host=h user=u password=TailPw07");
+    let trailing = "got host=h user=u password=TailPw07x for key";
+    assert_eq!(mask_registered_values(trailing), trailing);
+    let leading = "got xhost=h user=u password=TailPw07 for key";
+    assert_eq!(mask_registered_values(leading), leading);
+    let digits = "got 2host=h user=u password=TailPw072 for key";
+    assert_eq!(mask_registered_values(digits), digits);
+}

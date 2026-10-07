@@ -249,7 +249,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_parse_create_dataframe_schema": (
         "21e22aa6258c57cfaa589197c112e2d76e73d8d9debfe604ae2f0f45b3dba75f"
     ),
-    "_parse_jdbc_int_option": ("3c2424b29ab3021d9d50d77b7a894ca61008974ad896a9d5705240a9807c4ebc"),
+    "_parse_jdbc_int_option": ("f648900e08ca509266221e8f4bdd82eaa6dbfd19b1e4db9cf68e5d3705b32a78"),
     "_parse_schema_ddl": ("f85655a15284092b9ba36ffad12139d4a802702274775be232aa769b1a37410f"),
     "_parse_simple_sql_udf_call": (
         "1487ad6ad0fd8406e55a935574d1af0dc7d65f3e808e6bbf55b0a1ee0e65d3ba"
@@ -354,7 +354,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_sql_udf_arg_is_simple": ("db0b84f0ee3d3410bbb660ac228ab85a8be365f5d17f4ba9623fc7d7ff982bce"),
     "_sql_udf_call_match_key": ("e5d8292341262271b9099a26080982055c0ca1a77274f75f738e458a1e045e99"),
     "_sql_udf_clean_exception": (
-        "e359ee579dbcf25040a9bcdc711bc02cf82914885af34c1f0930aa74c1771b97"
+        "603a9c7f7ffcdf5b6747c2022c4d07a28d6dfaf7ee1a843eba7c91a2ef8d8054"
     ),
     "_sql_udf_in_nested_subquery": (
         "a8d7beee8e9f9f7a07b3190b75eb0f125487a1ea2a97184ea27e2ea3496585ef"

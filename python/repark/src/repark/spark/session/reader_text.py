@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from repark.spark._secrets import mask_credentials
 from repark.spark.dataframe import DataFrame
 from repark.spark.session.reader_support import _schema_fields
 
@@ -140,5 +141,5 @@ def _reject_text_encoding(reader: Any) -> None:
         from repark.errors import AnalysisException
 
         raise AnalysisException(
-            f"reader option encoding={encoding!r} is not supported (only UTF-8)"
+            f"reader option encoding={mask_credentials(encoding)!r} is not supported (only UTF-8)"
         )

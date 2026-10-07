@@ -89,7 +89,7 @@ def _export_error_message(error: BaseException) -> str:
 
 def _export_engine_error(error: BaseException) -> PySparkException:
     """Map a mid-stream Arrow export failure to its engine exception with useful context."""
-    scrub_exception(error)
+    error = scrub_exception(error)
     message = _export_error_message(error)
     refusal = _arithmetic_refusal_message(message)
     if refusal is not None:

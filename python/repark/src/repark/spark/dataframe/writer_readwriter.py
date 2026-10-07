@@ -24,7 +24,12 @@ from repark.errors import (
 )
 from repark.spark._idents import escape_sql_single_quotes
 from repark.spark._idents import quote_ident as _quote_ident_sql
-from repark.spark._secrets import register_config_value, scrub_exception
+from repark.spark._secrets import (
+    mask_credentials,
+    mask_url_userinfo,
+    register_config_value,
+    scrub_exception,
+)
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.dataframe import io_declared as _io_declared
@@ -131,7 +136,8 @@ class DataFrameWriter:
         """Set append, overwrite, error, errorifexists, or ignore mode."""
         if save_mode not in self._VALID_MODES:
             raise AnalysisException(
-                f"[INVALID_SAVE_MODE] The specified save mode {save_mode!r} is invalid; "
+                f"[INVALID_SAVE_MODE] The specified save mode {mask_credentials(save_mode)!r} "
+                "is invalid; "
                 f"mode must be one of {self._VALID_MODES}"
             )
         self._mode = save_mode
@@ -193,7 +199,7 @@ class DataFrameWriter:
         if self._format != "iceberg":
             raise PySparkValueError(
                 "repark.write supports only format('iceberg') for saveAsTable, "
-                f"got {self._format!r}"
+                f"got {mask_credentials(self._format)!r}"
             )
         writer_layout.assert_no_cluster_conflicts(self)
         writer_layout.assert_no_sort_without_bucketing(self)
@@ -212,7 +218,8 @@ class DataFrameWriter:
         self._dataframe._ensure_alive()
         if self._format != "iceberg":
             raise PySparkValueError(
-                f"repark.write supports only format('iceberg') for insertInto, got {self._format!r}"
+                "repark.write supports only format('iceberg') for insertInto, "
+                f"got {mask_credentials(self._format)!r}"
             )
         writer_layout.refuse_bucketed_action(self, "insertInto")
         _qualified, table_ref = _resolve_writer_table(self._dataframe, name)
@@ -369,14 +376,15 @@ class DataFrameWriter:
         normalized_mode = "error" if self._mode == "errorifexists" else self._mode
         if normalized_mode not in self._PATH_MODES:
             raise AnalysisException(
-                f"path write mode must be one of {self._PATH_MODES}, got {self._mode!r}"
+                f"path write mode must be one of {self._PATH_MODES}, "
+                f"got {mask_credentials(self._mode)!r}"
             )
         destination = Path(path)
         if _writer_s3.is_s3_url(path):
             return _writer_s3.write_s3_path(self, path, stored_as=stored_as)
         if destination.exists() and normalized_mode == "error":
             raise AnalysisException(
-                f"[PATH_ALREADY_EXISTS] Path {path} already exists. "
+                f"[PATH_ALREADY_EXISTS] Path {mask_url_userinfo(path)} already exists. "
                 'Set mode as "overwrite" to overwrite the existing path.'
             )
         if destination.exists() and normalized_mode == "ignore":
@@ -384,7 +392,8 @@ class DataFrameWriter:
         if normalized_mode == "append" and destination.exists():
             if destination.is_file() or (destination.is_symlink() and not destination.is_dir()):
                 raise AnalysisException(
-                    f"[PATH_ALREADY_EXISTS] Path {path} is a file (or non-directory symlink); "
+                    f"[PATH_ALREADY_EXISTS] Path {mask_url_userinfo(path)} is a file "
+                    "(or non-directory symlink); "
                     "path mode('append') requires a directory of part files. "
                     'Use mode("overwrite") to replace the path, or write to a directory path.'
                 )
@@ -412,7 +421,7 @@ class DataFrameWriter:
                     _merge_path_write_tree(staging, destination)
                 except (FileExistsError, OSError, shutil.Error) as exc:
                     raise AnalysisException(
-                        f"path mode('append') failed for {path!r}: {exc}"
+                        f"path mode('append') failed for {mask_url_userinfo(path)!r}: {exc}"
                     ) from exc
                 if staging.exists():
                     if staging.is_dir():
@@ -423,7 +432,8 @@ class DataFrameWriter:
             if destination.exists():
                 if destination.is_symlink():
                     raise AnalysisException(
-                        f"cannot overwrite path {path!r}: destination is a symbolic link "
+                        f"cannot overwrite path {mask_url_userinfo(path)!r}: "
+                        "destination is a symbolic link "
                         "(refuse-loud; repark will not rmtree/unlink a symlink destination)"
                     )
                 try:
@@ -432,8 +442,10 @@ class DataFrameWriter:
                     else:
                         destination.unlink()
                 except OSError as exc:
-                    scrub_exception(exc)
-                    raise AnalysisException(f"cannot overwrite path {path!r}: {exc}") from exc
+                    exc = scrub_exception(exc)
+                    raise AnalysisException(
+                        f"cannot overwrite path {mask_url_userinfo(path)!r}: {exc}"
+                    ) from exc
             staging.rename(destination)
         except AnalysisException:
             if staging.exists() and destination.exists():
@@ -738,7 +750,7 @@ class DataFrameWriterV2:
             raise PySparkTypeError(f"using provider must be str, got {type(provider).__name__}")
         if provider.lower() != "iceberg":
             raise PySparkValueError(
-                f"repark.writeTo supports only using('iceberg'), got {provider!r}"
+                f"repark.writeTo supports only using('iceberg'), got {mask_credentials(provider)!r}"
             )
         self._provider = provider.lower()
         return self
@@ -886,7 +898,8 @@ class DataFrameWriterV2:
         """Build ``CREATE [OR REPLACE] TABLE … USING iceberg … AS SELECT``."""
         if self._provider != "iceberg":
             raise PySparkValueError(
-                f"repark.writeTo supports only using('iceberg'), got {self._provider!r}"
+                "repark.writeTo supports only using('iceberg'), "
+                f"got {mask_credentials(self._provider)!r}"
             )
         _qualified, table_ref = self._resolved_table()
         verb = "CREATE OR REPLACE TABLE" if or_replace else "CREATE TABLE"
