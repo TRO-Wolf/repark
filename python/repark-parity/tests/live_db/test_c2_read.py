@@ -327,7 +327,7 @@ def test_explain_shows_the_boundary_through_both_doors(
     assert "current_setting('repark.p0')" in verbose
     assert "bound_values=1" in verbose
     assert "remote_sql" not in by_sql
-    assert "10000" not in verbose.split("remote_sql=")[1].split("bound_values")[0]
+    assert "100" not in verbose.split("remote_sql=")[1].split("bound_values")[0]
 
 
 def test_unknown_keys_and_a_bad_url_refuse_before_any_connection(spark: ReparkSession) -> None:
