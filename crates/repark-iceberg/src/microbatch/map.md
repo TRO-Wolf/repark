@@ -7,14 +7,15 @@ JSON the sink stamp carries, and the track's one error enum. Owned by slice
 MB-1 under the [design sketch](../../../../task/wo/microbatch/mb-design-2026-10-06.md),
 the [MB-1 order](../../../../task/wo/microbatch/mb-1-source.md), and the
 [North Star](../../../../task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md).
-Round 1 lands `mod.rs`, `offset.rs` and `error.rs`; round 2 adds the window
-and provider. Progress: the [MB-1 ledger](../../../../task/ledgers/staging/mb-1-ledger.md).
+Round 1 landed `mod.rs`, `offset.rs` and `error.rs`; round 2 adds the
+window and provider. Progress: the [MB-1 ledger](../../../../task/ledgers/staging/mb-1-ledger.md).
 
 ## Contents
 
-- `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) plus `pub mod error;` and
-  `pub mod offset;`. No re-exports: callers use full paths.
-  pins: mb-1/C-007
+- `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) plus `pub mod error;`,
+  `pub mod offset;`, `pub mod provider;` and `pub mod window;`. No
+  re-exports: callers use full paths.
+  pins: mb-1/C-007, mb-1/C-013
 - `offset.rs` — the sketch's §3.1. Seven newtypes, each `new`/`get`
   (NS-14), with the sketch's named constructors beside them:
   `TableUuid::of`, `QueryId::derive`, `RunId::fresh`, `Epoch::FIRST`/`next`,
@@ -25,6 +26,24 @@ and provider. Progress: the [MB-1 ledger](../../../../task/ledgers/staging/mb-1-
 - `error.rs` — the sketch's §3.2: `MicroBatchError` with every variant,
   `thiserror`, `#[non_exhaustive]` (NS-15), plus `RecoveryReason`.
   pins: mb-1/C-006
+- `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
+  `WindowLimit`, `PlannedFile`, `WindowPlan`, and
+  `WindowPlanner::{new, initial_offset, next_window}` over a held table.
+  One fork scan with `with_fail_on_non_append(true)` decides the refusal;
+  per-snapshot plain scans list the files, sorted by path. The skip builders
+  are never called (O-5).
+  pins: mb-1/C-008, C-009, C-010, C-011
+- `window_tests.rs` — the `window.rs` pins, split out under `#[path]` when
+  the file passed the 1000-line ceiling: the memory-catalog fixture with
+  append/overwrite/delete/replace commits plus the 18 start, window, cap,
+  fail-loud and guard pins.
+  pins: mb-1/C-008, C-009, C-010, C-011
+- `provider.rs` — the sketch's §3.3 `MicroBatchTableProvider` (`pub(crate)`):
+  reads exactly the planned tasks with `ArrowReaderBuilder` and the crate's
+  `conform_batch`, and takes the arrow schema from the end snapshot. Filters
+  stay `Inexact` (the tasks are pre-planned, so DataFusion re-applies them)
+  and projection is served by `conform_batch`, not by re-planning.
+  pins: mb-1/C-012
 
 ## Design notes
 
@@ -74,6 +93,26 @@ the closure enables it), and `serde_json.workspace = true` in
 `[dependencies]` for the stamp readers and writers (ledger D-1,
 2026-10-07). No version moved; the lockfile change is edges only.
 
+The fork's `PreconditionFailed` is the window's single refusal decider. The
+local ancestry walk on that path extracts the refused snapshot id and
+operation for the `NonAppendSnapshot` struct; it never refuses on its own,
+so dropping `with_fail_on_non_append(true)` turns the refusal pins red
+(ledger C-010). The walk agrees with the fork by construction: both follow
+the parent chain from the head, oldest-first, and neither refuses `Replace`.
+
+Three bounds decided in round 2 (ledger FL-3, FL-4, FL-5, 2026-10-07). A
+`from.snapshot` that sits in metadata but off the current ancestry refuses
+`SourceSnapshotExpired` like a fully expired id. A `FromTimestamp` past the
+head returns the head fully consumed, so later appends stream. The
+`from.snapshot` itself stays outside the refusal range: its listing runs
+without fail-loud and contributes no files when it is not an append.
+
+The provider struct stays `pub(crate)` per the sketch, so its
+`#[allow(dead_code)]` stands until round 3 wires a caller. `catalog/mod.rs`
+widened one word (`mod scan_batches` to `pub(crate)`) so the provider reads
+through the crate's `conform_batch` (ledger D-3, 2026-10-07); no behaviour
+changed.
+
 ## I want to...
 
 | ...do this | go to |
@@ -81,12 +120,13 @@ the closure enables it), and `serde_json.workspace = true` in
 | Read the offset encoding | `offset.rs` (`InputOffset`, `OffsetVector`, `SinkRecord`) |
 | Read the refusal texts | `error.rs` (`MicroBatchError`, `RecoveryReason`) |
 | Change a refusal text | the sketch's §4 first — the verbatim rows are oracle cells |
-| Round 2: the window and provider | the sketch's §3.3 (not yet landed) |
+| Plan a window | `window.rs` (`WindowPlanner::initial_offset`, `next_window`) |
+| Read a planned window | `provider.rs` (`MicroBatchTableProvider::try_new`) |
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Design: the sketch's §3.1, §3.2, §4 and Q6
+- Design: the sketch's §3.1, §3.2, §3.3, §4 and Q6
 
 ## Debug
 

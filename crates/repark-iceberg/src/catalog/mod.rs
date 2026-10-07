@@ -23,7 +23,7 @@ mod location;
 mod metadata_columns;
 mod no_overwrite_storage;
 mod provider;
-mod scan_batches;
+pub(crate) mod scan_batches;
 mod snapshot_metadata_table;
 pub mod uuid_presentation;
 

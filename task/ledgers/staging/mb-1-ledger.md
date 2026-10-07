@@ -58,7 +58,7 @@ VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
   distinct ids. `Epoch::next` saturates at `u64::MAX` rather than wrapping to
   `FIRST`. Both reasons live in `microbatch/map.md`.
 
-## Gates
+## Gates — round 1
 
 All exit 0, in brief order: `cargo test -p repark-iceberg --lib` (830 passed,
 0 failed — 804 pre-existing plus 26 new pins), `make rust-clippy` (clean
@@ -120,3 +120,45 @@ COVERAGE_ATTESTATION:
       evidence: Two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift); restores verified by diff.
       artifacts: [task/ledgers/staging/mb-1-ledger.md]
 ```
+
+## PROPOSITION LEDGER — MB-1 round 2 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-008 | `WindowPlanner::initial_offset` resolves `Earliest` to `(oldest ancestor, 0)` and refuses `TruncatedHistory` on a broken chain; `FromTimestamp` is inclusive and a past-head stamp consumes through the head (FL-4); `AfterSnapshot(x)` marks `x` consumed and refuses `SourceSnapshotExpired` for an unknown id; an empty table reads `None` on every start. | The start pins in `window.rs`'s test module. | **OPEN** | To be run. pins: mb-1/C-008 |
+| C-009 | `next_window` streams `(from, head]` oldest-first with path-ordered files inside a snapshot, resumes mid-snapshot from `from.position`, splits by `max-files`/`max-rows` with at least one whole file, takes everything under `Unbounded`, and returns `None` when nothing is new; a replaced table refuses `SourceReplaced` and a dangling `from` refuses `SourceSnapshotExpired` (FL-3). | The window and cap pins in `window.rs`'s test module. | **OPEN** | To be run. pins: mb-1/C-009 |
+| C-010 | An overwrite or delete inside a window refuses `NonAppendSnapshot` with the snapshot id and operation; the fork's `PreconditionFailed` is the single decider (detail walk runs only on its error, FL-5 keeps the `from` bound exclusive); dropping `with_fail_on_non_append(true)` turns the refusal pins red. | The fail-loud pins in `window.rs`'s test module plus the mutation probe. | **OPEN** | To be run. pins: mb-1/C-010 |
+| C-011 | A `replace` snapshot inside a window is skipped silently and later appends stream. | The replace pin in `window.rs`'s test module. | **OPEN** | To be run. pins: mb-1/C-011 |
+| C-012 | `MicroBatchTableProvider` reads exactly the planned files through `ArrowReaderBuilder` and the crate's `conform_batch`, takes the arrow schema from the end snapshot, and refuses an unknown end snapshot instead of guessing. | The provider pins in `provider.rs`'s test module. | **OPEN** | To be run. pins: mb-1/C-012 |
+| C-013 | The round is wired (`window`/`provider` mod lines, the one-word `scan_batches` visibility per D-3), every touched map is current, and the round gate list is green with no neighbour pin changed. | The 11 round gates. | **OPEN** | To be run. pins: mb-1/C-013 |
+
+VERDICT: 6 clauses, 0 PROVEN, 6 OPEN, 0 REJECTED.
+
+## Dated decision rows — round 2
+
+- **D-3 (2026-10-07).** `crates/repark-iceberg/src/catalog/mod.rs` widens
+  one word, `mod scan_batches` to `pub(crate) mod scan_batches`. The sketch's
+  §3.3 requires the provider to read through "the crate's `conform_batch`",
+  which is unreachable from `microbatch/` while the module is private to
+  `catalog/`. No signature, behaviour, or public surface changes.
+- **D-4 (2026-10-07).** Two unreachable-in-practice fallbacks stay loud
+  without inventing variants. `next_window` against a table with no snapshots
+  refuses `Catalog` naming the table and the dangling snapshot: no other
+  variant can name an oldest that does not exist. A planned task without a
+  manifest record count reads as 0 rows: the fork sets `Some` on this path,
+  so the default never fires on a real scan.
+- **FL-3 (2026-10-07).** Question: `next_window` whose `from.snapshot` sits
+  in metadata but off the current ancestry. Flink: unrestorable state fails
+  the restart. Spark: an unreachable start snapshot fails the query. North
+  Star default: refuse loud (NS-6) with `SourceSnapshotExpired` naming the
+  oldest available, the same resume standard as a fully expired id. Acted on;
+  pins in C-009.
+- **FL-4 (2026-10-07).** Question: `FromTimestamp` past the head. Flink: a
+  start after the end waits at the end. Spark: the query starts and waits for
+  new data. North Star default: return the head fully consumed, so later
+  appends stream and nothing replays. Acted on; pins in C-008.
+- **FL-5 (2026-10-07).** Question: the `from.snapshot` itself is not an
+  append. Flink: the start bound is exclusive. Spark: the start offset is
+  consumed. North Star default: the refusal range stays `(from, current]` and
+  the `from` listing runs without fail-loud, so a non-append start
+  contributes no files and never refuses. Acted on; pins in C-009.
