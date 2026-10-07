@@ -156,6 +156,99 @@ four-line records.
   variable-width values charged with no offset bytes (r15)
   (the re-verify's `mutate_rv.py`). Each needs an exact-count pin on `buffered_bytes()`.
   Non-blocking.
+- **D-M1, the dependency measurement (2026-10-07, C-2b round 1a, branch
+  `feat/c-2b-postgres-connection` from main `575f57ca`).** Round 1a is dependencies and the
+  feature only: the root `[workspace.dependencies]` gains `tokio-postgres 0.7` (locked 0.7.18),
+  `tokio-postgres-rustls 0.13` (locked 0.13.0) and `rustls-native-certs 0.8` (locked 0.8.4,
+  already transitive); `repark-connect` gains `default = ["postgres"]`, the six optional driver
+  deps and unconditional `datafusion` (the provider traits). `Cargo.lock` is additions-only
+  (279 insertions, 4 edge rewirings, no version moved): the first attempt,
+  `cargo generate-lockfile --offline`, re-resolved cached AWS crates upward and was discarded
+  for a minimal `cargo metadata --offline` resolve. `cargo deny check` ends `advisories ok,
+  bans ok, licenses ok, sources ok`, so H-DENY did not fire (tail verbatim below). The rustls
+  feature grep at head lists `aws-lc-rs`, `aws_lc_rs`, `default`, `http1`, `http2`,
+  `native-tokio`, `prefer-post-quantum`, `ring`, `rustls-native-certs`, `std`, `tls12`,
+  `webpki-roots`, `webpki-tokio`: new against the base list are `default`, `webpki-roots` and
+  `webpki-tokio`, all `hyper-rustls` / `tokio-rustls` feature lines matched by the `rustls
+  feature` substring, none a crypto backend (one `rustls 0.23.45`, no `fips`), so H-CRYPTO did
+  not fire. `cargo tree -d` is recorded below, not judged. `repark-core` carries no
+  `repark-connect` edge yet, so the step-3 feature re-export is skipped; C-2d adds the edge
+  with the mount.
+
+D-M1 `cargo deny check | tail -25` (exit 0, verbatim):
+
+```text
+      │   └── tokio-postgres v0.7.18 (*)
+      ├── stacker v0.1.25
+      │   ├── recursive v0.1.1
+      │   │   ├── datafusion-common v54.1.0 (*)
+      │   │   ├── datafusion-expr v54.1.0 (*)
+      │   │   ├── datafusion-optimizer v54.1.0 (*)
+      │   │   ├── datafusion-physical-expr v54.1.0 (*)
+      │   │   ├── datafusion-physical-optimizer v54.1.0 (*)
+      │   │   ├── datafusion-sql v54.1.0 (*)
+      │   │   └── sqlparser v0.62.0
+      │   │       ├── datafusion v54.1.0 (*)
+      │   │       ├── datafusion-common v54.1.0 (*)
+      │   │       ├── datafusion-expr v54.1.0 (*)
+      │   │       └── datafusion-sql v54.1.0 (*)
+      │   └── repark-core v1.5.2 (*)
+      ├── tempfile v3.27.0 (*)
+      ├── tokio v1.53.1 (*)
+      └── winapi-util v0.1.11
+          ├── same-file v1.0.6
+          │   └── walkdir v2.5.0
+          │       ├── criterion v0.8.2 (*)
+          │       └── object_store v0.13.2 (*)
+          └── walkdir v2.5.0 (*)
+
+advisories ok, bans ok, licenses ok, sources ok
+```
+
+D-M1 `cargo tree -d --locked | head -40` (verbatim):
+
+```text
+block-buffer v0.10.4
+└── digest v0.10.7
+    ├── apache-avro v0.21.0
+    │   └── iceberg v0.9.1 (https://github.com/TRO-Wolf/iceberg-rust?rev=076d5f982d1d2ef352c3bb5d76d02cff27bc164a#076d5f98)
+    │       ├── iceberg-catalog-glue v0.9.1 (https://github.com/TRO-Wolf/iceberg-rust?rev=076d5f982d1d2ef352c3bb5d76d02cff27bc164a#076d5f98)
+    │       │   └── repark-iceberg v1.5.2 (/tmp/xc2b/crates/repark-iceberg)
+    │       │       ├── repark-core v1.5.2 (/tmp/xc2b/crates/repark-core)
+    │       │       │   ├── repark-distributed v1.5.2 (/tmp/xc2b/crates/repark-distributed)
+    │       │       │   ├── repark-python v1.5.2 (/tmp/xc2b/crates/repark-python)
+    │       │       │   ├── repark-spark v1.5.2 (/tmp/xc2b/crates/repark-spark)
+    │       │       │   │   └── repark-python v1.5.2 (/tmp/xc2b/crates/repark-python)
+    │       │       │   │   [dev-dependencies]
+    │       │       │   │   └── repark-sql v1.5.2 (/tmp/xc2b/crates/repark-sql)
+    │       │       │   ├── repark-sql v1.5.2 (/tmp/xc2b/crates/repark-sql)
+    │       │       │   └── repark-ta v1.5.2 (/tmp/xc2b/crates/repark-ta)
+    │       │       │       ├── repark-python v1.5.2 (/tmp/xc2b/crates/repark-python)
+    │       │       │       └── repark-spark v1.5.2 (/tmp/xc2b/crates/repark-spark) (*)
+    │       │       │       [dev-dependencies]
+    │       │       │       └── repark-sql v1.5.2 (/tmp/xc2b/crates/repark-sql)
+    │       │       ├── repark-spark v1.5.2 (/tmp/xc2b/crates/repark-spark) (*)
+    │       │       └── repark-sql v1.5.2 (/tmp/xc2b/crates/repark-sql)
+    │       ├── iceberg-catalog-s3tables v0.9.1 (https://github.com/TRO-Wolf/iceberg-rust?rev=076d5f982d1d2ef352c3bb5d76d02cff27bc164a#076d5f98)
+    │       │   └── repark-iceberg v1.5.2 (/tmp/xc2b/crates/repark-iceberg) (*)
+    │       ├── iceberg-datafusion v0.9.1 (https://github.com/TRO-Wolf/iceberg-rust?rev=076d5f982d1d2ef352c3bb5d76d02cff27bc164a#076d5f98)
+    │       │   ├── repark-core v1.5.2 (/tmp/xc2b/crates/repark-core) (*)
+    │       │   ├── repark-iceberg v1.5.2 (/tmp/xc2b/crates/repark-iceberg) (*)
+    │       │   └── repark-spark v1.5.2 (/tmp/xc2b/crates/repark-spark) (*)
+    │       ├── iceberg-storage-opendal v0.9.1 (https://github.com/TRO-Wolf/iceberg-rust?rev=076d5f982d1d2ef352c3bb5d76d02cff27bc164a#076d5f98)
+    │       │   ├── iceberg-catalog-glue v0.9.1 (https://github.com/TRO-Wolf/iceberg-rust?rev=076d5f982d1d2ef352c3bb5d76d02cff27bc164a#076d5f98) (*)
+    │       │   ├── iceberg-catalog-s3tables v0.9.1 (https://github.com/TRO-Wolf/iceberg-rust?rev=076d5f982d1d2ef352c3bb5d76d02cff27bc164a#076d5f98) (*)
+    │       │   └── repark-iceberg v1.5.2 (/tmp/xc2b/crates/repark-iceberg) (*)
+    │       ├── repark-core v1.5.2 (/tmp/xc2b/crates/repark-core) (*)
+    │       ├── repark-functions v1.5.2 (/tmp/xc2b/crates/repark-functions)
+    │       │   ├── repark-python v1.5.2 (/tmp/xc2b/crates/repark-python)
+    │       │   ├── repark-spark v1.5.2 (/tmp/xc2b/crates/repark-spark) (*)
+    │       │   └── repark-sql v1.5.2 (/tmp/xc2b/crates/repark-sql)
+    │       ├── repark-iceberg v1.5.2 (/tmp/xc2b/crates/repark-iceberg) (*)
+    │       ├── repark-spark v1.5.2 (/tmp/xc2b/crates/repark-spark) (*)
+    │       └── repark-sql v1.5.2 (/tmp/xc2b/crates/repark-sql)
+    ├── blake2 v0.10.6
+```
 
 ## 4. R-7 citations (ConnectorX and ADBC)
 

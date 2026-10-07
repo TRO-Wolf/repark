@@ -21,16 +21,20 @@ enum `ConnectError` (NS-15, C-1's two enums folded in), the COPY BINARY decoder
 `CopyBinaryDecoder`, and the type map's eight newly mapped rows with their codecs, resolution and
 per-value refusals. C-2b adds the driver behind the `postgres` feature (settings keys, TLS, the
 query pool, the COPY read), C-2c the provider, pushdown and EXPLAIN, C-2d the mount in
-`repark-core`. pins: c-2/C-013
+`repark-core`. C-2b round 1a (2026-10-07) is the feature and the lockfile only. pins: c-2/C-013
 
 ## Contents
 
 - `Cargo.toml` — workspace inheritance for edition, version, license, rust-version, repository,
   publish and lints (the `repark-iceberg` precedent, so `unsafe_code = "forbid"` rides the
-  workspace). Dependencies: `repark-common`, `arrow`, `thiserror`, all at workspace versions.
-  `tokio-postgres`, `sqlx` and `tiberius` wait for the read and write paths (C-2 onward).
-  C-2a added none: the decoder's memory charge is the `buffered_bytes()` seam the C-2c scan
-  reads, so `datafusion` arrives with C-2b. pins: c-1/C-011 · pins: c-2/C-014
+  workspace). Dependencies: `repark-common`, `datafusion` (the provider traits,
+  unconditional), `arrow`, `thiserror`, all at workspace versions. The `postgres` feature
+  (default on, the `repark-distributed` `default = ["local"]` precedent) pulls the six
+  optional driver deps (`tokio-postgres 0.7`, `tokio-postgres-rustls 0.13`,
+  `rustls-native-certs 0.8`, `tokio`, `futures`, `bytes`); `--no-default-features` keeps the
+  pure C-2a half with no driver. `sqlx` and `tiberius` wait for the read and write paths
+  (C-4 onward). The `repark-core → repark-connect` edge is still absent; C-2d adds it with
+  the mount. pins: c-1/C-011 · pins: c-2/C-014
 - `src/` — [src/map.md](src/map.md): `error.rs` (`ConnectError`), `copy_binary.rs` (the COPY
   BINARY decoder), `settings.rs` (the connection settings and the reserved auth-method field)
   and `types/postgres.rs` (the Postgres ↔ Arrow type map, codecs under `types/postgres/`).
