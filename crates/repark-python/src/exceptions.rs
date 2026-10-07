@@ -78,3 +78,8 @@ pyo3::create_exception!(
      (pyspark.errors.NumberFormatException); subclasses IllegalArgumentException, so \
      `except IllegalArgumentException` keeps catching it."
 );
+
+#[must_use]
+pub(crate) fn mask_user_visible(message: impl AsRef<str>) -> String {
+    repark_core::redaction::mask_url_userinfo(message.as_ref())
+}

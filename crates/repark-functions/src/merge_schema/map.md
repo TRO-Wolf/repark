@@ -12,8 +12,9 @@ one `ConfigExtension`.
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../merge_schema.rs`.
   The absent key is `false` (Spark's default); `true` / `false` parse
-  case-insensitively and padded; a non-boolean refuses with Spark's
-  `[INVALID_CONF_VALUE.TYPE_MISMATCH]` / `22022` shape; the carrier round-trips
+  case-insensitively and padded; a non-boolean is a `BooleanConfRefusal` whose
+  Spark `[INVALID_CONF_VALUE.TYPE_MISMATCH]` / `22022` sentence is built from the
+  raw field; the carrier round-trips
   through `SessionConfig`; a direct `repark.merge-schema.*` set refuses, naming
   the user-facing key; and only the hyphenated Iceberg spelling is a session key
   (the camel-case `mergeSchema` spelling is a **write option**, parsed in

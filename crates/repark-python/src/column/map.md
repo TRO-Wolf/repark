@@ -1,5 +1,7 @@
 # map — repark-python/src/column
 
+SOURCE-URL-REDACT-1-FN fold 2 (2026-10-06): column `PyValueError` and `AnalysisException` messages pass through `exceptions::mask_user_visible` before the `PyErr` is built.
+
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
 

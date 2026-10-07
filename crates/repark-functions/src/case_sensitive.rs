@@ -7,6 +7,8 @@ use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, Ex
 use datafusion::error::DataFusionError;
 use datafusion::prelude::SessionConfig;
 
+use crate::merge_schema::BooleanConfRefusal;
+
 pub const SPARK_SQL_CASE_SENSITIVE_KEY: &str = "spark.sql.caseSensitive";
 
 pub const DEFAULT_SPARK_SQL_CASE_SENSITIVE: bool = false;
@@ -69,17 +71,18 @@ pub fn parse_spark_sql_case_sensitive(raw: &str) -> Result<bool> {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn parse_runtime_spark_sql_case_sensitive(raw: &str) -> Result<bool> {
+pub fn parse_runtime_spark_sql_case_sensitive(
+    raw: &str,
+) -> std::result::Result<bool, BooleanConfRefusal> {
     if raw.eq_ignore_ascii_case("true") {
         Ok(true)
     } else if raw.eq_ignore_ascii_case("false") {
         Ok(false)
     } else {
-        Err(DataFusionError::Configuration(format!(
-            "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{raw}' in the config \
-             \"{SPARK_SQL_CASE_SENSITIVE_KEY}\" is invalid. It should be a/an 'boolean' value. \
-             SQLSTATE: 22022"
-        )))
+        Err(BooleanConfRefusal {
+            key: SPARK_SQL_CASE_SENSITIVE_KEY,
+            raw: raw.to_string(),
+        })
     }
 }
 
@@ -107,4 +110,17 @@ pub fn spark_case_sensitive_from_options(options: &ConfigOptions) -> bool {
         .map_or(DEFAULT_SPARK_SQL_CASE_SENSITIVE, |extension| {
             extension.enabled
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SPARK_SQL_CASE_SENSITIVE_KEY, parse_runtime_spark_sql_case_sensitive};
+
+    #[test]
+    fn runtime_refusal_keeps_the_key_and_the_raw_value() {
+        let raw = "postgresql://u:pw@h/db";
+        let error = parse_runtime_spark_sql_case_sensitive(raw).expect_err("url must refuse");
+        assert_eq!(error.key, SPARK_SQL_CASE_SENSITIVE_KEY);
+        assert_eq!(error.raw, raw);
+    }
 }

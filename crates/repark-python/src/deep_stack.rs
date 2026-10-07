@@ -236,9 +236,11 @@ fn expression_depth_and_subqueries(expr: &Expr) -> (usize, Vec<&LogicalPlan>) {
 
 pub(crate) fn refuse_expression_depth(depth: usize) -> PyResult<()> {
     if depth > MAX_EXPRESSION_DEPTH {
-        return Err(AnalysisException::new_err(format!(
-            "expression depth {depth} exceeds the supported maximum of {MAX_EXPRESSION_DEPTH} (deep-expression limit)"
-        )));
+        return Err(AnalysisException::new_err(
+            crate::exceptions::mask_user_visible(format!(
+                "expression depth {depth} exceeds the supported maximum of {MAX_EXPRESSION_DEPTH} (deep-expression limit)"
+            )),
+        ));
     }
     Ok(())
 }
@@ -270,10 +272,12 @@ pub(crate) fn stack_is_small() -> bool {
 
 pub(crate) fn frame_drive_segment_cached(depths: &PlanDepths) -> PyResult<Option<usize>> {
     if depths.limited > MAX_PLAN_DEPTH {
-        return Err(AnalysisException::new_err(format!(
-            "plan depth {} exceeds the supported maximum of {MAX_PLAN_DEPTH} (deep-plan limit)",
-            depths.limited
-        )));
+        return Err(AnalysisException::new_err(
+            crate::exceptions::mask_user_visible(format!(
+                "plan depth {} exceeds the supported maximum of {MAX_PLAN_DEPTH} (deep-plan limit)",
+                depths.limited
+            )),
+        ));
     }
     if drive_segment_bytes(depths).is_none() && stack_is_small() {
         return Ok(Some(GROWN_STACK_SEGMENT_BYTES));

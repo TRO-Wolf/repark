@@ -3473,14 +3473,17 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   that value with `ConnectError::UnrepresentableValue` (reason `InfiniteDate` /
   `InfiniteTimestamp`) naming this row; it folds to the Unsupported class. The pushed-filter
   note of CONNECT-DECL-pg-numeric-special applies.
-- **Apache Spark** — recent releases of the PostgreSQL dialect special-case infinite
-  timestamps; 4.1.2's exact mapping is unmeasured. *(oracle: documented — FL-4; D-M2 measures
-  it.)*
+- **Apache Spark** — Spark 4.1.2 over pgjdbc 42.7.13 answers sentinels, not errors: `date`
+  `infinity` / `-infinity` read as `9999-12-30` / `0001-01-02`, and `timestamp` / `timestamptz`
+  `±infinity` read as `9999-12-31 18:59:59.999` / `0001-01-02 19:00` (America/New_York JVM). These
+  are pgjdbc zone artefacts, not values. *(oracle: recorded — D-M2,
+  `python/repark-parity/tests/live_spark/c2_jdbc_oracle.json` cells `DM2-V01`–`DM2-V03`,
+  2026-10-06.)*
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::date_anchors_round_trip`,
   `::timestamp_ntz_anchors_round_trip`, `::timestamptz_anchors_round_trip`
-- **Rationale** — DECLARED 2026-10-06 (C-2a; FL-4; the sketch's Q1, lean acted on: refuse).
-  `Date32` and `Timestamp(Microsecond)` have no infinity, and a sentinel would approximate.
-  Switching to Spark's measured mapping later is additive.
+- **Rationale** — DECLARED 2026-10-06 (C-2a; FL-4). RULED 2026-10-06 21:45 EDT (Frontier, for the
+  owner; the sketch's Q1): keep refusing. `Date32` and `Timestamp(Microsecond)` have no infinity,
+  and Spark's sentinels are pgjdbc zone artefacts that would approximate.
 ### CONNECT-DECL-pg-out-of-range — a Postgres value outside its Arrow type's range refuses per value
 - **repark** — these refuse with `ConnectError::UnrepresentableValue` naming this row and fold
   to the Unsupported class: a `numeric` that, after HALF_UP rounding to the planned scale, needs

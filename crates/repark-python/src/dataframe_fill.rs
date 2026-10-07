@@ -49,8 +49,8 @@ fn fill_expr_for_column(
         let scalar = match &lit_expr {
             Expr::Literal(value, _) => value.clone(),
             other => {
-                return Err(PyValueError::new_err(format!(
-                    "fill value must be a scalar literal, got {other:?}"
+                return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
+                    format!("fill value must be a scalar literal, got {other:?}"),
                 )));
             }
         };
@@ -76,7 +76,9 @@ fn fill_expr_for_column(
             None => None,
             Some(target) => {
                 let token = fill_cast_token(&target).ok_or_else(|| {
-                    PyValueError::new_err(format!("fill cast target has no CAST token: {target:?}"))
+                    PyValueError::new_err(crate::exceptions::mask_user_visible(format!(
+                        "fill cast target has no CAST token: {target:?}"
+                    )))
                 })?;
                 let cast_inner =
                     PyColumn::from_expr(Expr::Cast(Cast::new(Box::new(lit_expr), target)));

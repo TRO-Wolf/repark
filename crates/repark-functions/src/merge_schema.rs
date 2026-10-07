@@ -11,6 +11,30 @@ pub const SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY: &str = "spark.sql.iceberg.merge-sc
 
 pub const DEFAULT_MERGE_SCHEMA: bool = false;
 
+pub struct BooleanConfRefusal {
+    pub key: &'static str,
+    pub raw: String,
+}
+
+impl std::fmt::Debug for BooleanConfRefusal {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("BooleanConfRefusal")
+            .field("key", &self.key)
+            .field("raw_len", &self.raw.len())
+            .finish()
+    }
+}
+
+#[must_use]
+pub fn boolean_type_mismatch_message(key: &str, shown: &str) -> String {
+    format!(
+        "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{shown}' in the config \
+         \"{key}\" is invalid. It should be a/an 'boolean' value. \
+         SQLSTATE: 22022"
+    )
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MergeSchemaConfig {
     pub enabled: bool,
@@ -48,18 +72,17 @@ impl ExtensionOptions for MergeSchemaConfig {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn parse_merge_schema_value(raw: &str) -> Result<bool> {
+pub fn parse_merge_schema_value(raw: &str) -> std::result::Result<bool, BooleanConfRefusal> {
     let trimmed = raw.trim();
     if trimmed.eq_ignore_ascii_case("true") {
         Ok(true)
     } else if trimmed.eq_ignore_ascii_case("false") {
         Ok(false)
     } else {
-        Err(DataFusionError::Configuration(format!(
-            "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{raw}' in the config \
-             \"{SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY}\" is invalid. It should be a/an 'boolean' \
-             value. SQLSTATE: 22022"
-        )))
+        Err(BooleanConfRefusal {
+            key: SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY,
+            raw: raw.to_string(),
+        })
     }
 }
 
@@ -69,7 +92,9 @@ pub fn is_merge_schema_session_key(key: &str) -> bool {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn merge_schema_from_config_map<S>(config: &HashMap<String, String, S>) -> Result<bool>
+pub fn merge_schema_from_config_map<S>(
+    config: &HashMap<String, String, S>,
+) -> std::result::Result<bool, BooleanConfRefusal>
 where
     S: BuildHasher,
 {

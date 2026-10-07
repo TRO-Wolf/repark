@@ -880,6 +880,7 @@ foreground, while the machine rule holds.
 | maps; the registry's C-2b rows; the ledger | lockstep | — |
 
 - **Statement builder:** casts `interval` (and any `ServerText` mapping) to `::text`, and a pin asserts the cast.
+
 - **Gates:** the common set, plus:
   - `cargo deny check` (D-M1);
   - `cargo build -p repark-connect --no-default-features` (the pure core builds without the driver);
@@ -966,6 +967,11 @@ ledger with the R-7 citations.
 | Q4 | Pushed text comparisons use `COLLATE "C"` (engine semantics), so RePark's rows can differ from Spark's own JDBC pushdown under a non-`C` collation. Keep? | Card 1.6's ruled hand-back rule outranks the engines' behaviour. | Keep; `CONNECT-DIV-pg-text-collation`. |
 | Q5 | `sslmode` accepts only `verify-full` (default) and `disable`; `require` refuses. Keep? | NS §5's TLS-by-default; `require` without a host-name check is open to a man in the middle; some cloud strings ship `sslmode=require`. | Keep; the refusal names `sslrootcert` as the fix. |
 | Q6 | Unknown `read_postgres` properties refuse, where Spark forwards them to the driver. Keep? | NS §5's `deny_unknown_fields` versus §2's "Spark wins the surface". | Keep; `CONNECT-DIV-pg-unknown-option`. |
+
+**Ruled 2026-10-06 21:45 EDT (Frontier, for the owner).** Q1–Q6 are ratified on their leans. On Q1,
+D-M2 (#974) measured Spark 4.1.2 over pgjdbc 42.7.13 returning sentinels for `±infinity`: dates
+`9999-12-30` / `0001-01-02`, timestamps `9999-12-31 18:59:59.999` / `0001-01-02 19:00`. These are pgjdbc
+zone artefacts, not values. RePark keeps refusing per value, and the dated row quotes the sentinels.
 
 ## 10. The ledger's R-7 citations (ConnectorX and ADBC)
 
