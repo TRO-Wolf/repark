@@ -26,14 +26,15 @@ The full attribution, with every table and artifact path, is
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | The attribute-token select plans natively only for an attribute-exact projection: every token held by the frame, the join SQL a bare token or `coalesce(token, <0..999999999 \| CAST(<that> AS T)>)`, each token replaced by the first-held engine reproducing the column's `_sql_expr`, and the native output names equal to the SQL route's. Any other projection keeps the SQL route unchanged. | `test_select_coalesce_route_follows_the_literal_shape`, `test_inexact_fill_literal_keeps_the_sql_replan`, `test_second_twin_reference_keeps_the_sql_replan`; mutations M2, M3, M4 below. | **PROVEN** |
+| C-001 | The attribute-token select plans natively only for an attribute-exact projection: every token held by the frame, the join SQL a bare token or `coalesce(token, <0..999999999 \| CAST(<that> AS T)>)` with `T` in C-007's whitelist, each token replaced by the first-held engine reproducing the column's `_sql_expr`, and the native output names equal to the SQL route's. Any other projection keeps the SQL route unchanged. | `test_select_coalesce_route_follows_the_literal_shape`, `test_inexact_fill_literal_keeps_the_sql_replan`, `test_second_twin_reference_keeps_the_sql_replan`; mutations M2, M3, M4 below. | **PROVEN** |
 | C-002 | `fillna` (scalar and mapping) builds each position from the bound column at the first position holding its id whenever a target carries an id and the frame takes the attribute-token route, so twin fills skip the SQL re-plan with the SQL route's answers (columns, dtypes, rows, display/engine names, id sharing), including a union whose later input differs at the twin positions. | `test_twin_fill_skips_the_sql_replan_with_equal_answers`, `test_twin_fill_mapping_skips_the_sql_replan_with_equal_answers`; mutation M1 below. | **PROVEN** |
 | C-003 | The binding semantics do not change: the same refusals, the same display-name renames, the same answers on every attr-id pin, the sort grid and the SM-2 pins. | The C-003 evidence table below. | **PROVEN** |
 | C-004 | A unique sort key binds without the lineage trace or the twin search, on the Rust binder and on the facade door; an ambiguous Project key reaches them. | `bind_free_names_sort_binds_unique_key_without_tracing_lineage` (`SORT_TRACES`, `#[cfg(test)]` only) and `test_unique_sort_key_binds_without_the_lineage_trace`; the forced-trace mutation below. | **PROVEN** |
 | C-005 | Attribution: no stack code carries the 0.64 pt between `7f45e460` and `13de60e1`; the r5p6 excess over main is construction-side and the largest single block is the `fillna` SQL re-plan through `sql_built`. | The attribution table below and `attribution.md` §1–§3. | **PROVEN** |
+| C-007 | The CAST arm admits only `TINYINT`, `SMALLINT`, `INT`, `BIGINT`, `FLOAT`, `DOUBLE` and `DECIMAL(p,s)`: the targets whose native cast of `0`, `1` and `999999999` equals the SQL route's in value, type, nullability and error, measured on a twin column of the target type and across a 13-type twin matrix (overflow on `TINYINT`, `SMALLINT` and narrow decimals raises the same error on both routes). Every other target (`TIMESTAMP`, `DATE`, `TIMESTAMP_NTZ`, `STRING`, `BOOLEAN`, `BINARY`, nested CASTs) keeps the SQL route, so `coalesce(<TIMESTAMP, DATE, TIMESTAMP_NTZ or void twin>, CAST(n AS TIMESTAMP))` answers `n` seconds as head and Spark do, not `n` microseconds (verifier S1). | `test_coalesce_cast_to_a_native_type_skips_the_sql_replan`, `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan`; mutations M6, M7, M8 below. | **PROVEN** |
 | C-006 | Pre-measure: the fix brings the whole like set under 1.10 and r5p6 from 1.18 to about 1.13 against main `575f57ca`, single runs by `l4l_gate.py`'s method. | The pre-measure table below. | **PROVEN** |
 
-`LOGIC_SCORE` = **6/6 `PROVEN`**.
+`LOGIC_SCORE` = **7/7 `PROVEN`**.
 
 ## Attribution table (C-005)
 
@@ -85,6 +86,9 @@ guard. The sort lineage trace and twin search were already lazy (C-004); this un
 | M2 | the literal-shape check accepts any shape | the decimal-fill and `coalesce`-shape pins |
 | M3 | the binding-equivalence check accepts any spelling | the second-twin pin |
 | M4 | the native-name check accepts any names | the `coalesce`-shape pin (`alias("a b")`) |
+| M6 | the CAST alternative is deleted (verifier V9) | `test_coalesce_cast_to_a_native_type_skips_the_sql_replan` |
+| M7 | the CAST whitelist gains `TIMESTAMP` | `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan` |
+| M8 | the CAST arm takes any type token again (`[A-Z_]+(\(…\))?`, verifier V8 and the S1 shape) | `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan` |
 | M5 | the twin search runs in the unique-key (`Bound`) arm | only the counter assertion (`attr_id_s3b.rs:460`); every binding answer and the other 97 `attr_id` tests stay green |
 
 ## Pre-measure (C-006)

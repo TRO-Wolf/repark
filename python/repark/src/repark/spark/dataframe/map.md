@@ -865,6 +865,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   token or `coalesce(token, <0..999999999 or CAST(<that> AS T)>)`, the two
   shapes whose SQL typing equals the native typing (a decimal or negative
   literal types differently through the Spark door and keeps the SQL route).
+  `T` is one of `_EXACT_CAST_TYPE`'s seven targets (`TINYINT`, `SMALLINT`,
+  `INT`, `BIGINT`, `FLOAT`, `DOUBLE`, `DECIMAL(p,s)`), each measured equal to
+  the SQL route at `0`, `1` and `999999999`, overflow errors included. A
+  native `CAST(n AS TIMESTAMP)` reads `n` as microseconds where the Spark door
+  reads seconds, so datetime, string, boolean and binary targets keep the SQL
+  route. pins: stamp-2-r5p6-1/C-007
   Replacing each token by the engine the SQL route binds (the first position
   holding the id) must reproduce the column's `_sql_expr`, so both routes read
   the same fields. The native output names must equal the names the SQL route

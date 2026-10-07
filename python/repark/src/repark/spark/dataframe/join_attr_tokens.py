@@ -21,8 +21,9 @@ _ATTR_TOKEN_RE = re.compile(
     r"__REPARK_ATTR_([A-Za-z0-9]+)__F(\d+)__([\w\\|]*?)(?:__D([0-9A-Fa-f]*))?__"
 )
 _ENGINE_UNSAFE = (" ", "(", ")", "+", "-", "*", "/")
+_EXACT_CAST_TYPE = r"(?:TINYINT|SMALLINT|INT|BIGINT|FLOAT|DOUBLE|DECIMAL\(\d{1,2},\d{1,2}\))"
 _EXACT_SHAPE = re.compile(
-    r"\x00|coalesce\(\x00, (?:\d{1,9}|CAST\(\d{1,9} AS [A-Z]+(?:\(\d+(?:, ?\d+)?\))?\))\)"
+    rf"\x00|coalesce\(\x00, (?:\d{{1,9}}|CAST\(\d{{1,9}} AS {_EXACT_CAST_TYPE}\))\)"
 )
 
 

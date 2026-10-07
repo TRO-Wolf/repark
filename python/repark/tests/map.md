@@ -9666,10 +9666,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   (the self-join refuses on both). A decimal fill literal and a decimal
   `coalesce` keep the SQL route with equal answers, an integer `coalesce`
   takes the native one, and a `coalesce` over the second twin of a union keeps
-  the SQL route (it reads the first twin). A unique sort key binds without any
+  the SQL route (it reads the first twin). `coalesce(twin, CAST(n AS T))`
+  takes the native route with equal answers for each whitelisted `T` at `0`,
+  `1` and `999999999`, and keeps the SQL route with head's seconds answer for
+  `CAST(n AS TIMESTAMP)` over TIMESTAMP, DATE, TIMESTAMP_NTZ and void twins
+  (deleting the CAST arm or admitting `TIMESTAMP` reds one of the two). A unique sort key binds without any
   `_native.sort_*` trace door while an ambiguous one calls them. Mutations:
   dropping the first-held fill binding reds both fill-route pins, dropping the
   literal-shape check reds the decimal pins, and dropping the
   binding-equivalence check reds the second-twin pin. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
-  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004
+  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007

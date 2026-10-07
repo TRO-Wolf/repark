@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
+from datetime import datetime
 from decimal import Decimal
 from functools import partial
 from typing import Any
@@ -8,10 +9,13 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession, _native
-from repark.errors import AnalysisException
+from repark.errors import PySparkException
 from repark.spark import functions as spark_functions
 from repark.spark.dataframe import join_attr_tokens
 
+_NATIVE_CASTS = ("tinyint", "smallint", "int", "bigint", "float", "double", "decimal(10,2)")
+_SQL_CAST_TWINS = ("TIMESTAMP", "DATE", "TIMESTAMP_NTZ", "void")
+_CAST_LITERALS = (0, 1, 999999999)
 _SORT_TRACES = (
     "sort_hits_meet_at_join",
     "sort_input_carries_twice",
@@ -56,10 +60,9 @@ def _answer(frame: Any) -> tuple[Any, ...]:
 
 def _outcome(build: Callable[[], Any]) -> tuple[Any, ...]:
     try:
-        frame = build()
-    except AnalysisException as error:
-        return ("refused", str(error))
-    return _answer(frame)
+        return _answer(build())
+    except PySparkException as error:
+        return ("refused", type(error).__name__, str(error))
 
 
 def _spy_exact(
@@ -128,6 +131,19 @@ def _coalesce_second_twin(frame: Any) -> Any:
     bounds = frame._iter_bound_columns()
     filled = spark_functions.coalesce(bounds[2], spark_functions.lit(3)).alias("c")
     return frame.select(bounds[0], filled)
+
+
+def _cast_twins(spark: ReparkSession, kind: str) -> Any:
+    if kind == "void":
+        base = spark.createDataFrame([(1,)], "i INT").withColumn("x", spark_functions.lit(None))
+    else:
+        base = spark.createDataFrame([(1, None)], f"i INT, x {kind}")
+    return base.select("i", "x", "x")
+
+
+def _coalesce_cast(frame: Any, value: Any, target: str) -> Any:
+    filled = spark_functions.coalesce(frame["x"], spark_functions.lit(value).cast(target))
+    return frame.select(filled.alias("c"), "i")
 
 
 def test_twin_fill_skips_the_sql_replan_with_equal_answers(
@@ -203,3 +219,30 @@ def test_unique_sort_key_binds_without_the_lineage_trace(
     rows = [tuple(row) for row in ambiguous.orderBy("v").collect()]
     assert rows == [(2, 10, -10), (3, 20, -20), (1, 30, -30)]
     assert traces
+
+
+def test_coalesce_cast_to_a_native_type_skips_the_sql_replan(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for target in _NATIVE_CASTS:
+        twins = _cast_twins(spark, target)
+        for value in _CAST_LITERALS:
+            build = partial(_coalesce_cast, twins, value, target)
+            routes, native, sql = _routes_and_answers(monkeypatch, build)
+            assert routes == [True], (target, value)
+            assert native == sql, (target, value)
+
+
+def test_coalesce_cast_to_a_datetime_keeps_the_sql_replan(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spark.conf.set("spark.sql.session.timeZone", "UTC")
+    seconds = {1: datetime(1970, 1, 1, 0, 0, 1), 999999999: datetime(2001, 9, 9, 1, 46, 39)}
+    for kind in _SQL_CAST_TWINS:
+        twins = _cast_twins(spark, kind)
+        for value, expected in seconds.items():
+            build = partial(_coalesce_cast, twins, value, "timestamp")
+            routes, native, sql = _routes_and_answers(monkeypatch, build)
+            assert routes == [False], (kind, value)
+            assert native == sql, (kind, value)
+            assert native[2] == [(expected, 1)], (kind, value)
