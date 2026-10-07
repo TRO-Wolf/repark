@@ -12,6 +12,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
   **Fold SM-2d (2026-10-07):** C-071 rewritten to the nearest-visible sourced-twin rule.
+- [foreach-wrap-1-ledger.md](foreach-wrap-1-ledger.md) —
+  **FOREACH-WRAP-1 (2026-10-07), security follow-up to SOURCE-URL-REDACT-2:** `foreach` and
+  `foreachPartition` raise `scrub_exception`'s masked copy of the user's class after the
+  handler (C-001), a credential-free error keeps its identity byte for byte (C-002),
+  `transform` stays a passthrough as Spark 4.1.2 does, by the dated row `DF-TRANSFORM-1`
+  (C-003), and the live Spark recording (C-004); `doors4.py` prints `TOTAL 1` in both
+  modes. `risk_tier: high`. Branch `fix/foreach-wrap-1`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
   in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,

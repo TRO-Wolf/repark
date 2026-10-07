@@ -62,7 +62,7 @@ Nothing here is collected by pytest, and no RePark code runs.
   the three actions and `record_all` prints each entry as one JSON line. Run it
   through the managed interpreter only; `FW1_WAREHOUSE` points at an empty private
   directory and `FW1_OUT` redirects the JSON for a re-run comparison. Missing
-  `pyspark` prints `SKIP` and exits 0.
+  `pyspark` prints `SKIP` and exits 0. pins: foreach-wrap-1/C-004
 - `fw1_callback_oracle.json` is the recording: the Spark, master and date
   preamble plus the three cells, pretty-printed with sorted keys. Each `error`
   carries `class`, `mro`, `error_class` (the `getErrorClass` / `getCondition`

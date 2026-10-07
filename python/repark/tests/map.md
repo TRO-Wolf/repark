@@ -5398,6 +5398,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** round-B pins — the escaped/long integer-guard cut, the ORC params mask, the REST/reader chain pins, the writer-option pin. pins: source-url-redact-1/C-069
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** fold-2 pins — the SQL/DataFrame UDF user-text identity and UDF-URL mask, the no-mutation copy contract, the reader mode/format/jdbc/orc/text echoes plus the writer-format echo, the `OSError` rebuilds (filename, strerror, `filename2`), the writer/text overwrite `OSError` doors, and one scrub-site pin per calling module including the injected REST cause chain.
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** one raise-after-handler pin per scrub-site module (export doors, SQL-UDF door, `listDatabases`, `eager`, the readwriter and text overwrite/append doors: `__context__` is None, `__cause__` is the scrubbed copy, the formatted traceback is clean) plus the DataFrame-UDF and pandas-UDF formatted-traceback pins. pins: source-url-redact-1/C-071, C-073
+- `test_foreach_wrap_1.py` — **FOREACH-WRAP-1 (2026-10-07):** the `foreach` and `foreachPartition`
+  doors, plain and lone-surrogate messages: the user's class is kept, the raised object is a masked
+  copy, `str`, `repr` and `format_exception` carry no userinfo, and `__context__` and `__cause__` are
+  None; a credential-free error leaves as the user's own object with its text byte for byte.
+  `transform` passes the user's own exception through unmasked, as the live `FW1-transform` cell
+  records for Spark (`DF-TRANSFORM-1`). The Spark halves read
+  `../../repark-parity/tests/live_spark/fw1_callback_oracle.json`.
+  pins: foreach-wrap-1/C-001, C-002, C-003
 - `test_source_url_redact_2_doors.py` — **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** one formatted-traceback
   pin per user-callback door (GROUPED_AGG plain and unbounded-window, `applyInPandas`, cogroup `applyInPandas`,
   `applyInArrow` table and iterator forms, cogroup `applyInArrow`, `mapInPandas`, `mapInArrow` call and
