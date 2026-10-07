@@ -1258,6 +1258,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `read_table_at` (ref and snapshot) set `with_uuid_as_string(true)` (RP-52 `b61c82b8`), so a
   reader-option snapshot, tag or branch read presents `uuid` as text and filters on it.
   pins: u9-types-1/C-010
+  **MB-1 round 3 (2026-10-07):** `time_travel/microbatch_source.rs` is the
+  Session-bound micro-batch source over `repark-iceberg`'s window planner
+  (the sketch's §3.5): `SourceOptions::from_options` (the Spark reader keys,
+  the two skip refusals, unknown prefixed keys refused, other keys passed)
+  and `MicroBatchSource::{open, initial_offset, next_batch}` (three-part
+  tables only; frames read exactly the planned files). `session.rs` untouched.
+  pins: mb-1/C-014, C-015, C-016
 - `sorted_view.rs` — SE-1 declared-sorted temp views: `verify_batches_sorted` (the O(n)
   adjacent-pair lexicographic check, ASC NULLS LAST, cross-batch) + `declared_sort_order`
   (`Column::from_name`, never ident-parsing `col()` — the U-DF-1 lowercase-fold class)

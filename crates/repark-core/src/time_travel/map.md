@@ -43,6 +43,70 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   SQL literals, `Utf8` scalars) resolves through the engine `CAST(... AS TIMESTAMP)` in the
   session zone; the hand parser is gone. pins: ice-tt-resolve-1/C-002
   pins: ice-tt-resolve-1/C-010
+- `microbatch_source.rs` — **MB-1 round 3 (2026-10-07):** the Session-bound
+  source wrapper over the shipped window planner (the sketch's §3.5).
+  `SourceOptions::from_options` parses the Spark reader keys (checklist line
+  7) plus `repark.cdc.start-after-snapshot-id`; it refuses the two skip keys
+  (`SkipOptionRefused`, MBE-3) and any other `streaming-`/`stream-`/
+  `repark.cdc.` key (`UnknownOption`, MBE-17), and passes every other key as
+  Spark ignores it (R-8). Caps default unbounded and the start defaults
+  `Earliest`. `MicroBatchSource::{open, initial_offset, next_batch}` resolves
+  a three-part table, delegates planning, and
+  reads exactly the planned files through
+  `repark_iceberg::microbatch::provider::provider_for_plan`. Malformed values
+  and two start keys refuse `Catalog` naming the keys (ledger FL-6, FL-7);
+  the identifier must be three-part (ledger FL-8). No doc comments (the
+  owner's comment ban); fallible entry points take
+  `#[allow(clippy::missing_errors_doc)]` instead.
+  pins: mb-1/C-014, C-015, C-016
+  **MB-1 fold 1 round B (2026-10-07):** the source holds the catalog handle
+  and the `TableIdent`, not a `Table`. `initial_offset` and `next_batch`
+  reload the table each call and plan over the fresh metadata, as Spark's
+  `latestOffset` refreshes every trigger, so a long-lived source sees new
+  snapshots and can refuse `SourceReplaced`. `open` still loads once to
+  refuse a missing table up front.
+  pins: mb-1/C-026
+  **MB-1 fold 1 round B (2026-10-07):** option keys match ASCII
+  case-insensitively, as Spark's `CaseInsensitiveStringMap` does; each key is
+  lowercased once at parse and values keep their case. Two spellings of one
+  key with different values refuse `Catalog` naming both spellings and no
+  value, so an unprefixed credential never renders.
+  pins: mb-1/C-027
+  The skip keys refuse only when `true` (any case); `false` is Spark's
+  default and passes as a no-op, and any other value refuses `Catalog`.
+  pins: mb-1/C-028
+  The four Iceberg 1.11 `SparkReadOptions` streaming keys RePark does not
+  implement (`streaming-snapshot-polling-interval-ms` and the three `async-`
+  planning keys, which carry no interpreted prefix) refuse `Catalog` as
+  recognised but unsupported, never "fix the spelling".
+  pins: mb-1/C-029
+  The two caps parse in Spark's `intConf` range; above `i32::MAX` refuses.
+  pins: mb-1/C-030
+  FL-9 (ruled KEEP): an `Earliest` or `stream-from-timestamp` start on a
+  zero-added-files `overwrite`/`delete` refuses at `initial_offset` where
+  Spark idles while no snapshot follows it; the parity registry's row
+  `MB-1-FL-9` declares it. pins: mb-1/C-031, C-035
+  **MB-1 fold 2 (2026-10-07):** `open` captures the table's current schema
+  as the run's read schema and passes it to every `provider_for_plan` call,
+  so each batch of one source has the same columns and types, whatever the
+  window's end snapshot or a later schema change (G2).
+  pins: mb-1/C-033
+  A key with any non-ASCII character whose Unicode lowercase starts with an
+  interpreted prefix (the Kelvin-sign `repar\u{212A}.cdc.`) refuses `Catalog`
+  rather than passing silently, and two spellings of a skip key compare as
+  booleans, so `false`/`FALSE` twins are accepted (G7).
+  pins: mb-1/C-038
+  Both planner calls go through `WindowPlanner::named(name)`, so a planner
+  refusal such as `SourceReplaced` names the table as the source was opened
+  (G8).
+  pins: mb-1/C-039
+- `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
+  under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027, C-028, C-029, C-030
+- `microbatch_source_fold2_tests.rs` — fold 2's source pins, a child of
+  `microbatch_source_tests.rs`: the per-run read schema over a rename, a drop
+  and re-add, a type promotion and a change after open; the Unicode-folded
+  keys and the boolean twins; the `SourceReplaced` text.
+  pins: mb-1/C-033, C-038, C-039
 - `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table
   AS OF decision both doors share. `provider_for_spec` is the #802
   `prepare_metadata_as_of` body moved down from `repark-spark` (refuse/serve-current/

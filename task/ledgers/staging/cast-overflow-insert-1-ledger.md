@@ -6,7 +6,7 @@
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
-**Why now.** [R-INTDIV-9](../staging/intdiv-1-ledger.md) holds that an out-of-range DOUBLE,
+**Why now.** [R-INTDIV-9](intdiv-1-ledger.md) holds that an out-of-range DOUBLE,
 NaN or Infinity stored into an integer column refuses on both engines but with different
 text: Spark answers `CAST_OVERFLOW_IN_TABLE_INSERT` (SQLSTATE 22003, source type, target
 type and column named) while RePark answers `Optimizer rule 'simplify_expressions'
