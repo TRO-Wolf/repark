@@ -151,6 +151,7 @@ impl BatchScope {
             });
         }
         check(&entry.stamp)?;
+        epoch_check(table, &entry.stamp)?;
         entry.claimed = true;
         Ok(Some(ClaimedStamp {
             stamp: entry.stamp.clone(),
@@ -215,14 +216,46 @@ impl ClaimedStamp {
                 reason: RecoveryReason::UnstampedSinkCommit { snapshot },
             });
         }
-        if let Some(entry) = scopes().get_mut(&TableUuid::of(committed))
-            && entry.claimed
-            && entry.stamp == self.stamp
-        {
-            entry.committed = Some(snapshot);
-        }
+        mark_committed(committed, &self.stamp, snapshot);
         Ok(())
     }
+}
+
+fn mark_committed(sink: &Table, stamp: &CommitStamp, snapshot: SnapshotId) {
+    if let Some(entry) = scopes().get_mut(&TableUuid::of(sink))
+        && entry.claimed
+        && entry.stamp == *stamp
+    {
+        entry.committed = Some(snapshot);
+    }
+}
+
+fn epoch_check(table: &Table, stamp: &CommitStamp) -> Result<(), MicroBatchError> {
+    let record = &stamp.record;
+    let Some(durable) = read_resume_point(table, record.query)? else {
+        return Ok(());
+    };
+    if durable.generation != record.generation {
+        return Err(MicroBatchError::GenerationMismatch {
+            query: record.query,
+            resumed: record.generation,
+            stamped: durable.generation,
+        });
+    }
+    if durable.epoch.get() < record.epoch.get() {
+        return Ok(());
+    }
+    if durable.run == record.run {
+        return Err(MicroBatchError::AlreadyCommitted {
+            query: record.query,
+            epoch: record.epoch,
+        });
+    }
+    Err(MicroBatchError::Fenced {
+        query: record.query,
+        epoch: record.epoch,
+        winner: durable.run,
+    })
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -357,10 +390,16 @@ pub async fn commit_stamp_only(
         })?,
         None => None,
     };
-    let claimed = active.unwrap_or_else(|| ClaimedStamp {
-        stamp: stamp.clone(),
-        base: table.metadata().current_snapshot_id().map(SnapshotId::new),
-    });
+    let claimed = match active {
+        Some(claimed) => claimed,
+        None => {
+            epoch_check(table, stamp)?;
+            ClaimedStamp {
+                stamp: stamp.clone(),
+                base: table.metadata().current_snapshot_id().map(SnapshotId::new),
+            }
+        }
+    };
     let engine = EngineSummary::for_append(table, &[], None);
     let (operation_id, summary) = summary_with_extras(&claimed.summary_entries()?, &engine)
         .map_err(|error| masked(&error))?;
