@@ -135,7 +135,7 @@ See [../map.md](../map.md).
   and completes a rustls handshake as the `localhost` leaf, reached at `127.0.0.1`). Fold 1
   awaits `release_clean()`; the fakes take `reset`'s and `canceller`'s defaults. An idle
   backend that dies just before checkout is still handed out (FL-11, accepted).
-  pins: c-2/C-031, C-032, C-033, C-034, C-035, C-060, C-061
+  pins: c-2/C-031, C-032, C-033, C-034, C-035, C-060, C-061, C-067
 - `fixtures/` — C-2b round 2 (2026-10-07): static PEM test identities, generated once with the
   local `openssl` (EC P-256, valid to 2126) because `rcgen` is not in the lock: `ca.pem`;
   `server.pem`, a `localhost` leaf it signs, and `server.key`, its PKCS#8 key; and

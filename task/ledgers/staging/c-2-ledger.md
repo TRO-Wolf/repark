@@ -808,11 +808,15 @@ one S2 and four S3s, under the orchestrator's rulings Z1–Z5. The live cells ra
 | C-064 | Z3 (S3): a prepared statement the driver did not make is deallocated before the client is pooled. After `RESET_SESSION`, one bound `query_typed` lists every `pg_prepared_statements` name not matching the driver's `^s[0-9]+$`, and one batch runs `DEALLOCATE <name>` per name, quoted through `PgIdent`; the check then counts names outside that form and any count but `0` drops the connection, as does a failed `DEALLOCATE`. On `pool_max_size = 1` a query-mode call of an existing plpgsql function that runs `PREPARE vprep` and `PREPARE "v Prep""q"` leaves the next lease on the same backend with neither statement listed, and the driver's own type-lookup statements survive. | `live_pool.rs::a_pooled_connection_is_reset_before_reuse`, `::user_types_resolve_after_a_reset`; mutations m92, m93, m94, m95. | PROVEN | §10.1. Closes the residue C-052 recorded beside Q1. |
 | C-065 | Z4 (S3): `take_url` refuses a URL with no `/` after the scheme whose userinfo (the text before the last `@` before the first `/`) holds `?` or `=`, with `InvalidSpecification { key: UrlPart("userinfo"), reason: Url(AmbiguousUserinfo) }`; the refusal names the position only and echoes no text of the URL. `postgresql://h?user=u&password=S3@CRETpw` (the re-verify's shape, which read host `CRETpw` with no password) and its `jdbc:` form refuse; the same URL with a `/db` path, a userinfo with `%3F` and `%3D`, a trailing `/`, or a raw `@` alone parses with the password intact. | `url.rs::a_userinfo_holding_a_query_mark_without_a_path_refuses`, `::the_userinfo_ends_at_the_last_at_before_the_first_slash`; mutations m96, m97, m98, m99. | PROVEN | §10.1. Narrows C-049 for path-less URLs (§10.2 R-14). |
 | C-066 | Z5 (S3), no code change: a pushed ordered compare on an enum column orders by the label's text (`m::pg_catalog.text OPERATOR(pg_catalog.>) …::pg_catalog.text`), where Spark's JDBC pushdown compares in the enum's order. Over `('sad', 'ok', 'happy')` a pushed `> 'ok'` returns `sad` and `= 'happy'` returns `happy`, in relation and query mode, while the server's own `m > 'ok'` returns `happy`. Registry row CONNECT-DIV-pg-enum-compare declares it. | `live_pool.rs::a_pushed_enum_compare_orders_by_text`; mutation m100. | PROVEN | §10.1. The result equals the `Utf8` column's own compare after the read. |
+| C-067 | Shape and files: `UrlViolation` gains `AmbiguousUserinfo`; `QUERY_SEARCH_PATH` keeps its name and its place in both batches, now holding the catalog statement; `RESET_SESSION` adds `RESET ROLE`; `SessionPins` carries the login; no `ConnectError` variant and no public signature changes. File sizes: `settings/postgres.rs` 614, `pool.rs` 556, `discover.rs` 359, `tests/it/live_pool.rs` 563, `url.rs` 268, `read.rs` 233, all under the 1000-line gate. No dependency change (`query_typed` and `types::Type` are in the pinned `tokio-postgres` 0.7.18). No code comments. Every gate in §10.3 passes. | §10.3. | PROVEN | — |
 
 ### 10.1 Mutations (fold 2)
 
 Each mutation was applied alone to the code, the named pins run with `--include-ignored`
-against the container, and the file restored from a copy taken before the edit.
+against the container, and the file restored from a copy taken before the edit. Fourteen are
+red and one, m91, is equivalent. The mutations that move a pinned identity or statement
+(m89, m90, m92, m93) were run again after the reset pin's steps moved into a helper, red
+again.
 
 | id | clause | mutation (file) | red? | red in |
 |---|---|---|---|---|
@@ -867,3 +871,29 @@ against the container, and the file restored from a copy taken before the edit.
   parse. "No path" is read as "no `/` after the scheme", so a trailing `/` counts as a path.
   `redact_source_prop` is unchanged: it still masks only the userinfo of such a URL, which the
   parser now never takes.
+
+### 10.3 Gates (fold 2)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock.
+
+| command | exit | output |
+|---|---|---|
+| `cargo deny check 2>&1 \| tail -5` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `cargo test -p repark-connect` | 0 | 91 passed, 23 ignored (the live cells), 0 failed (90 at fold 1, plus `url.rs`'s new pin) |
+| `cargo test -p repark-connect --test it -- --ignored` under `make pg-up` | 0 | 23 passed (fold 1's 21, plus the search-path and enum pins), on three full runs |
+| `cargo build -p repark-connect --no-default-features` | 0 | the pure core builds without the driver |
+| `cargo clippy -p repark-connect --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics, with and without default features |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean; no new spawn in product code |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1064 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 366 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | 1340 files, 7202 links clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 303 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+The search-path pin creates a database and a role and drops both before its assertions; a
+cell that panics earlier (as the mutation runs did) leaves them, with its schema, in the
+disposable container, which `make pg-down` removes with its volume.
