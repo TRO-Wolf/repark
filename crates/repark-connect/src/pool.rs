@@ -371,6 +371,9 @@ pub fn query_config(settings: &PostgresSettings) -> Config {
 
 fn classify(error: &tokio_postgres::Error, tls_attempted: Option<bool>) -> ConnectError {
     if let Some(db) = error.as_db_error() {
+        if db.code().code().starts_with("28") {
+            return ConnectError::AuthenticationFailed;
+        }
         return ConnectError::Server {
             sqlstate: db.code().code().to_string(),
             message: db.message().to_string(),

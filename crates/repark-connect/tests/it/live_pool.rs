@@ -1,9 +1,12 @@
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use arrow::array::{AsArray, RecordBatch};
-use repark_connect::{CompareOp, ConnectError, ScanRequest, ScanSource};
+use repark_connect::{
+    CompareOp, ConnectError, PostgresSettings, ScanRequest, ScanSource, SettingsDoor,
+};
 
-use super::live_pg::{Cell, LIVE, Reader, int32s};
+use super::live_pg::{Cell, LIVE, Reader, int32s, url};
 
 const PID: &str = "SELECT pg_catalog.pg_backend_pid() AS pid";
 
@@ -172,5 +175,29 @@ async fn a_pushed_scan_commits_before_its_connection_is_pooled() {
         served.push(pid);
     }
     assert_eq!(served[0], served[1], "the committed connection is reused");
+    cell.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn a_wrong_password_is_authentication_failed() {
+    let cell = Cell::open().await;
+    let settings = cell.settings(&[]);
+    let wrong = url().replacen(
+        &format!(":{}@", settings.password.as_deref().expect(LIVE)),
+        ":not-the-password@",
+        1,
+    );
+    let props = BTreeMap::from([
+        ("url".to_string(), wrong),
+        ("sslmode".to_string(), "disable".to_string()),
+        ("application_name".to_string(), cell.app.clone()),
+    ]);
+    let wrong = PostgresSettings::from_props(&props, SettingsDoor::ReparkToml).expect(LIVE);
+    let reader = Reader::new(&wrong);
+    let refused = reader.resolve(ScanSource::query(PID)).await;
+    assert_eq!(refused, Err(ConnectError::AuthenticationFailed));
+    let message = refused.expect_err("refused").to_string();
+    assert!(!message.contains("not-the-password"), "{message}");
     cell.close().await;
 }
