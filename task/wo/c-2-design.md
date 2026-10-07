@@ -517,7 +517,9 @@ PostgresScanExec: source=company_db, relation="public"."orders", projection=[id,
 - `pushed_filters` takes its name from Spark's `PushedFilters` label. Both lists are the DataFusion `Expr`
   displays of the conjuncts the scan actually pushed and actually left, for **this** statement (CC-1:
   "what the statement actually pushed, … not what the connector supports in general").
-- The residual list matches the `FilterExec` DataFusion keeps above the scan. The EXPLAIN pin checks both.
+- The residual list matches the `FilterExec` DataFusion keeps above the scan. The EXPLAIN pin checks both. *(Qualified by the C-2c
+  fold 1, 2026-10-07: they are semantically equal, and textually equal unless common-subexpression elimination
+  rewrites the `FilterExec`, e.g. `COALESCE(qty, 0) > 2` reads `__common_expr_N@0` over a `ProjectionExec`.)*
 - **Verbose format** adds `remote_sql=` with the `current_setting('repark.pN')` placeholders as sent, never
   the bound values, and `bound_values=N`.
 - **Never rendered:** host, port, database, user, URL, `sslmode` or any prop.

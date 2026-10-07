@@ -18,7 +18,8 @@ See [../map.md](../map.md).
   has no `remote_sql`), `explain_never_renders_endpoint` (default, verbose and tree formats and
   `Debug` hold no host, port, database, user, password or `sslmode`) and
   `explain_residual_matches_filter_exec_above` (the `FilterExec` above the scan is the physical
-  form of `residual_filters`; an exact filter leaves none). D-M6's pin,
+  form of `residual_filters` for its shapes; an exact filter leaves none. Once common-subexpression
+  elimination fires, as for `COALESCE(qty, 0) > 2`, the two are semantically equal only). D-M6's pin,
   `datafusion_hands_inexact_filters_to_scan_and_withholds_limit`, drives DataFusion 54.1 with a
   recording provider. `listing_a_postgres_source_is_empty_and_declared` pins
   `CONNECT-DECL-pg-listing` and a missing endpoint refusing at first resolution.

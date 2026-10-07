@@ -65,7 +65,7 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
 | Symptom | First check |
 |---|---|
 | A filter you expected pushed shows in `residual_filters` | `Pushdown::class` for the column (§2.9's eligibility), then `Pushdown::render` for the shape; a shape the optimizer would still rewrite stays residual on purpose |
-| `FilterExec` above the scan disagrees with `residual_filters` | `explain_residual_matches_filter_exec_above`: a residual must be classed `Inexact`, never `Unsupported` |
+| `FilterExec` above the scan disagrees with `residual_filters` | `explain_residual_matches_filter_exec_above`: a residual must be classed `Inexact`, never `Unsupported`. A `__common_expr_N` in the `FilterExec` is DataFusion's common-subexpression elimination: the two stay semantically equal |
 | A `timestamp` column has a zone you did not expect | `prefer_timestamp_ntz`, then the localiser's `zone_label()` |
 
 First checks: `cargo test -p repark-connect --test it explain pushdown`. Escalate to:
