@@ -84,40 +84,41 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Clauses C-001..C-007 walked one by one against the sketch (§3.1, §3.2, §4, Q6); every clause carries its proof obligation and pin citation in the verdict table.
-      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs]
+      evidence: Clauses C-001..C-013 walked one by one against the sketch (§3.1, §3.2, §3.3, §4, Q4, Q6); every clause carries its proof obligation and pin citation in the verdict tables. Round 2 adds C-008..C-013 for the window and provider.
+      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Negative pins cover the empty vector, the repeated table, the absent stamp, the future and unparsable versions, the partial stamp, the corrupt property, and the unknown-table lookup.
-      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs]
+      evidence: Negative pins cover the empty vector, the repeated table, the absent stamp, the future and unparsable versions, the partial stamp, the corrupt property, and the unknown-table lookup; round 2 adds the unknown start id, the past-head stamp, the empty table, the dangling and replaced from, the mid-snapshot resume past a non-append, and the unknown end snapshot.
+      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, crates/repark-iceberg/src/microbatch/provider.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: All 24 variants and 5 reasons render non-empty; the 8 Spark-quoted rows (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15) are pinned byte-exact.
-      artifacts: [crates/repark-iceberg/src/microbatch/error.rs]
+      evidence: All 24 variants and 5 reasons render non-empty; the 8 Spark-quoted rows (MBE-1, MBE-2, MBE-3, MBE-4, MBE-8, MBE-10, MBE-12, MBE-15) are pinned byte-exact; round 2 pins the MBE-1/MBE-2 prefixes plus variant fields on the live refusal path.
+      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs]
     - id: AT-4
-      status: N/A
-      justification: Pure synchronous code; no spawn, no lock, no shared mutable state, no await point.
+      status: ATTACKED
+      evidence: Round 2 awaits load immutable manifests and plan scans only; no spawn, no lock, no shared mutable state, and the held table is never mutated across an await.
+      artifacts: [crates/repark-iceberg/src/microbatch/window.rs, crates/repark-iceberg/src/microbatch/provider.rs]
     - id: AT-5
       status: ATTACKED
-      evidence: Every stamp key and error text reviewed: identifiers, uuids, and numbers only. No location, DSN, token, or path field exists in the types, so none can reach a summary, a property, or a message.
-      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs]
+      evidence: Every stamp key and error text reviewed: identifiers, uuids, and numbers only. No location, DSN, token, or path field exists in the types, so none can reach a summary, a property, or a message. Round 2 names tables by catalog identifier only; file paths stay inside the planned tasks and never render.
+      artifacts: [crates/repark-iceberg/src/microbatch/offset.rs, crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window.rs]
     - id: AT-6
       status: ATTACKED
-      evidence: Spark-verbatim rows pinned against the MB-0 oracle cells; the change is purely additive and the full pre-existing lib suite (804 tests) stays green beside the 26 new pins.
-      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, python/repark-parity/tests/live_spark/mb0_streaming_oracle.json]
+      evidence: Spark-verbatim rows pinned against the MB-0 oracle cells; the change is purely additive and the full pre-existing lib suite stays green beside the new pins (round 1: 804 + 26; round 2: 830 + 20). The batch append path keeps its silent skip; the refusal lives only in the new planner.
+      artifacts: [crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/microbatch/window_tests.rs, python/repark-parity/tests/live_spark/mb0_streaming_oracle.json]
     - id: AT-7
       status: N/A
-      justification: No hot path; offsets are built once per batch and no measurement is claimed.
+      justification: No hot path; offsets are built once per batch, windows are planned once per batch, and no measurement is claimed.
     - id: AT-8
       status: ATTACKED
-      evidence: 11/11 round gates green; new files under the default ceiling; every touched map updated in the same commits.
-      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/map.md]
+      evidence: 11/11 round gates green in both rounds; new files under the default ceiling (round 2 split window.rs at 1013 lines into 364 + 649 with no ceiling raised); every touched map updated in the same commits.
+      artifacts: [task/ledgers/staging/mb-1-ledger.md, crates/repark-iceberg/src/microbatch/map.md, crates/repark-iceberg/src/catalog/map.md]
     - id: AT-9
       status: N/A
       justification: No new log or metric surface; every failure is a typed value with a named fix.
     - id: AT-10
       status: ATTACKED
-      evidence: Two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift); restores verified by diff.
+      evidence: Round 1: two mutants, both red on exactly the pins that own the behavior (duplicate-check removal, verbatim-prefix drift). Round 2: dropping with_fail_on_non_append fails exactly the 2 refusal pins of 46. All restores verified by diff.
       artifacts: [task/ledgers/staging/mb-1-ledger.md]
 ```
 
@@ -125,14 +126,14 @@ COVERAGE_ATTESTATION:
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-008 | `WindowPlanner::initial_offset` resolves `Earliest` to `(oldest ancestor, 0)` and refuses `TruncatedHistory` on a broken chain; `FromTimestamp` is inclusive and a past-head stamp consumes through the head (FL-4); `AfterSnapshot(x)` marks `x` consumed and refuses `SourceSnapshotExpired` for an unknown id; an empty table reads `None` on every start. | The start pins in `window.rs`'s test module. | **OPEN** | To be run. pins: mb-1/C-008 |
-| C-009 | `next_window` streams `(from, head]` oldest-first with path-ordered files inside a snapshot, resumes mid-snapshot from `from.position`, splits by `max-files`/`max-rows` with at least one whole file, takes everything under `Unbounded`, and returns `None` when nothing is new; a replaced table refuses `SourceReplaced` and a dangling `from` refuses `SourceSnapshotExpired` (FL-3). | The window and cap pins in `window.rs`'s test module. | **OPEN** | To be run. pins: mb-1/C-009 |
-| C-010 | An overwrite or delete inside a window refuses `NonAppendSnapshot` with the snapshot id and operation; the fork's `PreconditionFailed` is the single decider (detail walk runs only on its error, FL-5 keeps the `from` bound exclusive); dropping `with_fail_on_non_append(true)` turns the refusal pins red. | The fail-loud pins in `window.rs`'s test module plus the mutation probe. | **OPEN** | To be run. pins: mb-1/C-010 |
-| C-011 | A `replace` snapshot inside a window is skipped silently and later appends stream. | The replace pin in `window.rs`'s test module. | **OPEN** | To be run. pins: mb-1/C-011 |
-| C-012 | `MicroBatchTableProvider` reads exactly the planned files through `ArrowReaderBuilder` and the crate's `conform_batch`, takes the arrow schema from the end snapshot, and refuses an unknown end snapshot instead of guessing. | The provider pins in `provider.rs`'s test module. | **OPEN** | To be run. pins: mb-1/C-012 |
-| C-013 | The round is wired (`window`/`provider` mod lines, the one-word `scan_batches` visibility per D-3), every touched map is current, and the round gate list is green with no neighbour pin changed. | The 11 round gates. | **OPEN** | To be run. pins: mb-1/C-013 |
+| C-008 | `WindowPlanner::initial_offset` resolves `Earliest` to `(oldest ancestor, 0)` and refuses `TruncatedHistory` on a broken chain; `FromTimestamp` is inclusive and a past-head stamp consumes through the head (FL-4); `AfterSnapshot(x)` marks `x` consumed and refuses `SourceSnapshotExpired` for an unknown id; an empty table reads `None` on every start. | The start pins in `window_tests.rs`. | **PROVEN** | 7 pins green (`earliest_offset_points_at_oldest_ancestor`, `initial_offset_on_empty_table_reads_none_on_every_start`, `after_snapshot_marks_named_snapshot_consumed`, `after_snapshot_with_unknown_id_refuses_naming_oldest`, `from_timestamp_matches_second_commit_inclusively`, `from_timestamp_zero_starts_at_oldest`, `from_timestamp_past_head_consumes_through_head`). pins: mb-1/C-008 |
+| C-009 | `next_window` streams `(from, head]` oldest-first with path-ordered files inside a snapshot, resumes mid-snapshot from `from.position`, splits by `max-files`/`max-rows` with at least one whole file, takes everything under `Unbounded`, and returns `None` when nothing is new; a replaced table refuses `SourceReplaced` and a dangling `from` refuses `SourceSnapshotExpired` (FL-3). | The window and cap pins in `window_tests.rs`. | **PROVEN** | 8 pins green (`window_streams_appends_oldest_first`, `window_returns_none_when_from_is_consumed_head`, `position_resumes_mid_snapshot`, `max_files_splits_snapshot_into_single_file_windows`, `max_rows_keeps_first_file_whole`, `unbounded_limit_ignores_caps`, `unknown_from_snapshot_refuses_naming_oldest`, `replaced_table_refuses_before_any_scan`). pins: mb-1/C-009 |
+| C-010 | An overwrite or delete inside a window refuses `NonAppendSnapshot` with the snapshot id and operation; the fork's `PreconditionFailed` is the single decider (detail walk runs only on its error, FL-5 keeps the `from` bound exclusive); dropping `with_fail_on_non_append(true)` turns the refusal pins red. | The fail-loud pins in `window_tests.rs` plus the mutation probe. | **PROVEN** | 2 pins green (`overwrite_inside_window_refuses` with the MBE-1 prefix and the post-overwrite streaming half, `delete_inside_window_refuses` with the MBE-2 prefix); the mutant fails exactly these 2 of 46, restore verified by diff and a green re-run. pins: mb-1/C-010 |
+| C-011 | A `replace` snapshot inside a window is skipped silently and later appends stream. | The replace pin in `window_tests.rs`. | **PROVEN** | 1 pin green (`replace_inside_window_skipped_silently`: fixture asserts `Operation::Replace`, plan skips it and streams the later append). pins: mb-1/C-011 |
+| C-012 | `MicroBatchTableProvider` reads exactly the planned files through `ArrowReaderBuilder` and the crate's `conform_batch`, takes the arrow schema from the end snapshot, and refuses an unknown end snapshot instead of guessing. | The provider pins in `provider.rs`'s test module. | **PROVEN** | 2 pins green (`provider_reads_exactly_planned_files` over real parquet through SQL, `provider_refuses_unknown_end_snapshot`). pins: mb-1/C-012 |
+| C-013 | The round is wired (`window`/`provider` mod lines, the one-word `scan_batches` visibility per D-3), every touched map is current, and the round gate list is green with no neighbour pin changed. | The 11 round gates. | **PROVEN** | 11/11 green: 850 lib tests pass, clippy/panic-ban/fmt clean, file-size/lib-rs/crate-dag clean, map-sync/lockstep/ledger-grammar clean, comment-ban `hits=0`; `window.rs` split at 1013 lines into 364 + 649 with no ceiling raised. pins: mb-1/C-013 |
 
-VERDICT: 6 clauses, 0 PROVEN, 6 OPEN, 0 REJECTED.
+VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Dated decision rows — round 2
 
@@ -162,3 +163,24 @@ VERDICT: 6 clauses, 0 PROVEN, 6 OPEN, 0 REJECTED.
   consumed. North Star default: the refusal range stays `(from, current]` and
   the `from` listing runs without fail-loud, so a non-append start
   contributes no files and never refuses. Acted on; pins in C-009.
+
+## Gates — round 2
+
+All exit 0, in brief order: `cargo test -p repark-iceberg --lib` (850 passed,
+0 failed — 830 pre-existing plus 20 new pins), `make rust-clippy` (clean
+after removing a `to_string` in format args, de-asyncing the file reader,
+and borrowing its table), `cargo fmt --check`, `make rust-panic-ban`,
+`python3 scripts/check_rust_file_size.py` (1055 files clean),
+`./scripts/check_lib_rs.sh` (11 roots clean), `./scripts/check_crate_dag.sh`
+(23 edges clean), `python3 scripts/sync_map_md.py --check` (365 maps clean),
+`bash scripts/check_map_md.sh --base origin/main`,
+`python3 scripts/check_ledger_grammar.py` (304 live ledgers clean), and the
+comment-ban probe (`hits=0`).
+
+One mutation probe, red as required: dropping `with_fail_on_non_append(true)`
+fails exactly the two refusal pins (`overwrite_inside_window_refuses`,
+`delete_inside_window_refuses`) with the other 44 microbatch pins green.
+The mutant was restored and the restore verified by diff plus a green
+re-run. `window.rs` crossed the ceiling at 1013 lines and was split into
+`window.rs` (364) plus `window_tests.rs` (649) under `#[path]`; no ceiling
+was raised and no exception added.

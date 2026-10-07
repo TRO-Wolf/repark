@@ -305,9 +305,8 @@ impl WindowPlanner {
             }
         }
         MicroBatchError::Catalog(format!(
-            "table {} window ({from}, {head}] refused: {}",
+            "table {} window ({from}, {head}] refused: {error}",
             self.table_name(),
-            error.to_string()
         ))
     }
 }

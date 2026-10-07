@@ -113,8 +113,8 @@ impl PartitionStream for MicroBatchPartition {
         let table = self.table.clone();
         let files = self.files.clone();
         let schema = Arc::clone(&self.schema);
-        let stream = futures::stream::once(async move { read_batches(table, files, schema).await })
-            .try_flatten();
+        let stream =
+            futures::stream::once(async move { read_batches(&table, files, schema) }).try_flatten();
         Box::pin(RecordBatchStreamAdapter::new(
             Arc::clone(&self.schema),
             stream,
@@ -122,8 +122,8 @@ impl PartitionStream for MicroBatchPartition {
     }
 }
 
-async fn read_batches(
-    table: Table,
+fn read_batches(
+    table: &Table,
     files: Vec<FileScanTask>,
     schema: SchemaRef,
 ) -> Result<datafusion::physical_plan::SendableRecordBatchStream> {
