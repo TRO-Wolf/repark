@@ -40,20 +40,21 @@ def scrub_exception(error: BaseException) -> BaseException:
     changed = {id(link) for link in links if _link_text_changes(link, mask)}
     if not changed:
         return error
-    grown = True
-    while grown:
-        grown = False
-        for link in links:
-            if id(link) in changed:
-                continue
-            children = (link.__cause__, link.__context__)
-            if any(isinstance(child, BaseException) and id(child) in changed for child in children):
-                changed.add(id(link))
-                grown = True
+    parents: dict[int, list[BaseException]] = {}
+    for link in links:
+        for child in _link_children(link):
+            parents.setdefault(id(child), []).append(link)
+    frontier = [link for link in links if id(link) in changed]
+    while frontier:
+        for parent in parents.get(id(frontier.pop()), []):
+            if id(parent) not in changed:
+                changed.add(id(parent))
+                frontier.append(parent)
     copies: dict[int, BaseException] = {}
     for link in links:
-        if id(link) in changed:
+        if id(link) in changed and not isinstance(link, BaseExceptionGroup):
             copies[id(link)] = _copy_link(link, mask)
+    _copy_groups(links, changed, copies, mask)
     for link in links:
         if id(link) not in changed:
             continue
@@ -85,10 +86,15 @@ def _chain_links(error: BaseException) -> list[BaseException]:
             continue
         seen.add(id(link))
         links.append(link)
-        for child in (link.__cause__, link.__context__):
-            if isinstance(child, BaseException):
-                pending.append(child)
+        pending.extend(_link_children(link))
     return links
+
+
+def _link_children(link: BaseException) -> list[BaseException]:
+    children = [link.__cause__, link.__context__]
+    if isinstance(link, BaseExceptionGroup):
+        children.extend(link.exceptions)
+    return [child for child in children if isinstance(child, BaseException)]
 
 
 def _link_text_changes(link: BaseException, mask: Callable[[str], str]) -> bool:
@@ -96,7 +102,20 @@ def _link_text_changes(link: BaseException, mask: Callable[[str], str]) -> bool:
         fields = (link.strerror, link.filename, link.filename2)
         if any(isinstance(field, str) and mask(field) != field for field in fields):
             return True
+    if isinstance(link, BaseExceptionGroup) and mask(link.message) != link.message:
+        return True
+    notes = _link_notes(link) or []
+    if any(isinstance(note, str) and mask(note) != note for note in notes):
+        return True
     return any(isinstance(item, str) and mask(item) != item for item in link.args)
+
+
+def _link_notes(link: BaseException) -> list[object] | None:
+    try:
+        notes = getattr(link, "__notes__", None)
+    except Exception:
+        return None
+    return list(notes) if isinstance(notes, list | tuple) else None
 
 
 def _copy_link(link: BaseException, mask: Callable[[str], str]) -> BaseException:
@@ -105,6 +124,59 @@ def _copy_link(link: BaseException, mask: Callable[[str], str]) -> BaseException
     else:
         fresh = _copy_plain_link(link, mask)
     _mask_message_parameters(link, fresh, mask)
+    return _mask_notes(link, fresh, mask)
+
+
+def _copy_groups(
+    links: list[BaseException],
+    changed: set[int],
+    copies: dict[int, BaseException],
+    mask: Callable[[str], str],
+) -> None:
+    pending = [link for link in links if id(link) in changed and id(link) not in copies]
+    while pending:
+        ready = [
+            group
+            for group in pending
+            if isinstance(group, BaseExceptionGroup)
+            and all(id(sub) in copies or id(sub) not in changed for sub in group.exceptions)
+        ]
+        if not ready:
+            for link in pending:
+                copies[id(link)] = _mask_notes(link, _masked_stand_in(link, mask), mask)
+            return
+        for group in ready:
+            copies[id(group)] = _copy_group(group, copies, mask)
+        pending = [link for link in pending if id(link) not in copies]
+
+
+def _copy_group(
+    group: BaseExceptionGroup[BaseException],
+    copies: dict[int, BaseException],
+    mask: Callable[[str], str],
+) -> BaseException:
+    subs = [copies.get(id(sub), sub) for sub in group.exceptions]
+    message = mask(group.message)
+    try:
+        fresh: BaseException = type(group)(message, subs)
+    except Exception:
+        fresh = BaseExceptionGroup(message, subs)
+    return _mask_notes(group, fresh, mask)
+
+
+def _mask_notes(
+    link: BaseException, fresh: BaseException, mask: Callable[[str], str]
+) -> BaseException:
+    notes = _link_notes(link)
+    if notes is None:
+        return fresh
+    masked = [mask(note) if isinstance(note, str) else note for note in notes]
+    try:
+        fresh.__notes__ = masked
+    except Exception:
+        stand_in = _masked_stand_in(link, mask)
+        stand_in.__notes__ = masked
+        return stand_in
     return fresh
 
 

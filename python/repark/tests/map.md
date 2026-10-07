@@ -5308,6 +5308,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **H4:** the SCALAR_ITER "while consuming output" door, at the door (`reverify3/probes/scalar_iter.py`'s
   shape) and directly on `_run_pandas_udf_scalar_iter`, which holds the site's own mask.
   pins: source-url-redact-1/C-078
+  **H2:** `scrub_exception` over groups and notes (a sub-exception, a group message, a group subclass, a
+  `BaseExceptionGroup`, a nested group, a note, a sub-exception's note), a clean group and note keep
+  identity, the DataFrame-UDF door masks both, and a 5000-deep chain scrubs in under 2 s.
+  pins: source-url-redact-1/C-079
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

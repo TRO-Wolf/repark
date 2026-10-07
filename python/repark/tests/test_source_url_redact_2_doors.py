@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import time
 import traceback
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -10,6 +11,7 @@ import pytest
 from repark.errors import PySparkException, PySparkTypeError, PySparkValueError
 from repark.spark import SparkSession
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+from repark.spark._secrets import scrub_exception
 from repark.spark.dataframe import udf_bridge
 from repark.spark.functions import arrow_udtf, udtf
 from repark.spark.window import Window
@@ -335,3 +337,103 @@ def test_scalar_iter_consume_site_masks_its_own_detail() -> None:
     assert USERINFO not in "".join(traceback.format_exception(error))
     assert error.__context__ is None
     assert error.__cause__ is not _RAISED[-1]
+
+
+class _TaggedGroup(ExceptionGroup):
+    pass
+
+
+def _raised(factory: Callable[[], BaseException]) -> BaseException:
+    try:
+        raise factory()
+    except BaseException as error:
+        return error
+
+
+def _noted(note: str) -> BaseException:
+    error = ValueError("plain")
+    error.add_note(note)
+    return error
+
+
+def _formatted(error: BaseException) -> str:
+    return "".join(traceback.format_exception(error))
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: ExceptionGroup("several", [ValueError("fetch " + SECRET_URL), KeyError("k")]),
+        lambda: ExceptionGroup("several " + SECRET_URL, [ValueError("plain")]),
+        lambda: _TaggedGroup("several " + SECRET_URL, [ValueError("plain")]),
+        lambda: BaseExceptionGroup("stop " + SECRET_URL, [KeyboardInterrupt()]),
+        lambda: ExceptionGroup("outer", [ExceptionGroup("inner", [ValueError(SECRET_URL)])]),
+        lambda: _noted("while fetching " + SECRET_URL),
+        lambda: ExceptionGroup("several", [_noted("while fetching " + SECRET_URL)]),
+    ],
+    ids=["sub", "message", "subclass", "base_group", "nested", "note", "sub_note"],
+)
+def test_scrub_exception_masks_groups_and_notes(factory: Callable[[], BaseException]) -> None:
+    original = _raised(factory)
+    before = _formatted(original)
+    scrubbed = scrub_exception(original)
+    assert USERINFO in before
+    assert scrubbed is not original
+    assert type(scrubbed) is type(original)
+    assert USERINFO not in str(scrubbed)
+    assert USERINFO not in _formatted(scrubbed)
+    assert "http://u:***@" in _formatted(scrubbed)
+    assert scrubbed.__traceback__ is original.__traceback__
+    assert _formatted(original) == before
+    if isinstance(original, BaseExceptionGroup):
+        assert isinstance(scrubbed, BaseExceptionGroup)
+        assert len(scrubbed.exceptions) == len(original.exceptions)
+
+
+def test_scrub_exception_keeps_a_clean_group_and_note() -> None:
+    group = _raised(lambda: ExceptionGroup("several", [ValueError("plain"), _noted("a note")]))
+    assert scrub_exception(group) is group
+    noted = _raised(lambda: _noted("a note"))
+    assert scrub_exception(noted) is noted
+
+
+def _udf_group(value: object) -> str:
+    raise ExceptionGroup("several", [ValueError("fetch " + SECRET_URL)])
+
+
+def _udf_note(value: object) -> str:
+    raise _noted("while fetching " + SECRET_URL)
+
+
+@pytest.mark.parametrize("raiser", [_udf_group, _udf_note], ids=["group", "note"])
+def test_dataframe_udf_door_masks_groups_and_notes(raiser: Callable[..., Any]) -> None:
+    session = SparkSession.builder.getOrCreate()
+    try:
+        with pytest.raises(PySparkException) as caught:
+            session.range(2).select(F.udf(raiser, "string")("id")).collect()
+        assert USERINFO not in _formatted(caught.value)
+        assert caught.value.__context__ is None
+    finally:
+        session.stop()
+
+
+def test_scrub_exception_walks_a_deep_chain_in_linear_time() -> None:
+    root = ValueError("fetch " + SECRET_URL)
+    top: BaseException = root
+    for index in range(5000):
+        link = RuntimeError(str(index))
+        link.__cause__ = top
+        top = link
+    started = time.perf_counter()
+    scrubbed = scrub_exception(top)
+    assert time.perf_counter() - started < 2.0
+    assert scrubbed is not top
+    depth = 0
+    cursor: BaseException | None = scrubbed
+    while cursor is not None and cursor.__cause__ is not None:
+        cursor = cursor.__cause__
+        depth += 1
+    assert depth == 5000
+    assert cursor is not root
+    assert USERINFO not in str(cursor)
+    assert USERINFO in str(root)
