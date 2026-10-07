@@ -34,9 +34,10 @@ The full attribution, with every table and artifact path, is
 | C-007 | The CAST arm admits only `TINYINT`, `SMALLINT`, `INT`, `BIGINT`, `FLOAT`, `DOUBLE` and `DECIMAL(p,s)`: the targets whose native cast of `0`, `1` and `999999999` equals the SQL route's in value, type, nullability and error, measured on a twin column of the target type and across a 13-type twin matrix (overflow on `TINYINT`, `SMALLINT` and narrow decimals raises the same error on both routes). Every other target (`TIMESTAMP`, `DATE`, `TIMESTAMP_NTZ`, `STRING`, `BOOLEAN`, `BINARY`, nested CASTs) keeps the SQL route, so `coalesce(<TIMESTAMP, DATE, TIMESTAMP_NTZ or void twin>, CAST(n AS TIMESTAMP))` answers `n` seconds as head and Spark do, not `n` microseconds (verifier S1). | `test_coalesce_cast_to_a_native_type_skips_the_sql_replan`, `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan`; mutations M6, M7, M8 below. | **PROVEN** |
 | C-008 | A native exactness attempt that raises (the native `select`, the name read or the spawn in `_attr_exact_plan`) is a miss: `_attr_exact_child` returns `None` and the SQL route runs unchanged, so a refusal keeps head's SQL-route text (`coalesce(Boolean, Int64)`, not the native planner's `coalesce(Boolean, Int32)`; verifier S2, 117 grid cells). | `test_raising_native_probe_keeps_the_sql_route_refusal`; mutation M9 below. | **PROVEN** |
 | C-009 | The literal bounds hold on both arms: `1000000000` (ten digits), `-1` (a sign) and `1.5` (a fraction), bare and as `CAST(<that> AS BIGINT)`, keep the SQL route with equal answers, while `0` and `999999999` bare take the native route (verifier S3). | `test_out_of_shape_literals_keep_the_sql_replan`; mutations M10, M11, M12 below. | **PROVEN** |
+| C-010 | `SORT_TRACES` (`#[cfg(test)]` only) counts all four lineage doors (`sort_hits_meet_at_join`, `sort_sourced_twin_engine`, `sort_input_carries_twice`, `sort_output_carries_twice`): a unique key leaves it unmoved and the ambiguous Project key moves it by exactly 4, one per door. The facade spy names the same four; `sort_output_carries_twice` has no `_native` export, so the spy asserts it stays unexported and patches the doors the facade can call (verifier S3). | `bind_free_names_sort_binds_unique_key_without_tracing_lineage`, `test_unique_sort_key_binds_without_the_lineage_trace`; mutations M13, M14 below. | **PROVEN** |
 | C-006 | Pre-measure: the fix brings the whole like set under 1.10 and r5p6 from 1.18 to about 1.13 against main `575f57ca`, single runs by `l4l_gate.py`'s method. | The pre-measure table below. | **PROVEN** |
 
-`LOGIC_SCORE` = **9/9 `PROVEN`**.
+`LOGIC_SCORE` = **10/10 `PROVEN`**.
 
 ## Attribution table (C-005)
 
@@ -95,6 +96,8 @@ guard. The sort lineage trace and twin search were already lazy (C-004); this un
 | M10 | either arm accepts a sign, `-?\d{1,9}` (verifier V1; bare and CAST run separately) | `test_out_of_shape_literals_keep_the_sql_replan`, both runs |
 | M11 | either arm accepts ten digits, `\d{1,10}` (verifier V2; bare and CAST run separately) | `test_out_of_shape_literals_keep_the_sql_replan`, both runs |
 | M12 | either arm accepts a fraction, `\d{1,9}(\.\d+)?` (verifier V3; bare and CAST run separately) | bare: the decimal-fill, `coalesce`-shape and bounds pins; CAST: the bounds pin |
+| M13 | the `Bound` arm calls `sort_output_carries_twice` or `sort_input_carries_twice` (the verifier's escape; run separately) | the counter assertion (`attr_id_s3b.rs:460`), both runs |
+| M14 | `sort_output_carries_twice` or `sort_input_carries_twice` stops counting (run separately) | the exact-count assertion (`attr_id_s3b.rs:463`), both runs |
 | M5 | the twin search runs in the unique-key (`Bound`) arm | only the counter assertion (`attr_id_s3b.rs:460`); every binding answer and the other 97 `attr_id` tests stay green |
 
 ## Pre-measure (C-006)

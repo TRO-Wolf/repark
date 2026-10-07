@@ -19,8 +19,9 @@ _CAST_LITERALS = (0, 1, 999999999)
 _OUT_OF_SHAPE_LITERALS = (1000000000, -1, 1.5)
 _SORT_TRACES = (
     "sort_hits_meet_at_join",
-    "sort_input_carries_twice",
     "sort_sourced_twin_engine",
+    "sort_input_carries_twice",
+    "sort_output_carries_twice",
     "sort_project_input_spelling",
 )
 
@@ -217,7 +218,8 @@ def test_unique_sort_key_binds_without_the_lineage_trace(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     traces: list[str] = []
-    for name in _SORT_TRACES:
+    assert not hasattr(_native, "sort_output_carries_twice")
+    for name in filter(partial(hasattr, _native), _SORT_TRACES):
         monkeypatch.setattr(
             _native, name, partial(_spy_trace, traces, name, getattr(_native, name))
         )

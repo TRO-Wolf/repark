@@ -106,9 +106,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   respell pin still asserts the input casing). pins: attr-id-1/C-071
   **STAMP-2-R5P6-1 (2026-10-07):** the lazy-trace pin binds a unique sort key
   with the lineage trace counter (`SORT_TRACES`, `#[cfg(test)]` only) unmoved
-  and, as its positive control, moves it on an ambiguous Project key.
-  Mutation: forcing the twin search into the bound arm leaves every binding
-  answer equal and reds only the counter assertion. pins: stamp-2-r5p6-1/C-004
+  and, as its positive control, moves it by exactly 4 on an ambiguous Project
+  key, one per lineage door. Mutation: forcing any door into the bound arm
+  leaves every binding answer equal and reds only the counter assertion;
+  uncounting a door reds the exact count. pins: stamp-2-r5p6-1/C-004, C-010
 - `attr_id_seam.rs` — **ATTR-ID-1 S2b (2026-09-30):** the logical/physical seam. A core
   session's optimizer starts with `repark_strip_attribute_ids` and its analyzer does not carry
   it, so an analyzed plan (the Spark SQL door's eager analysis) keeps its ids. An Aggregate

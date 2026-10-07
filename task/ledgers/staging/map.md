@@ -996,7 +996,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   binding twins at the first held position. Pre-measure: whole like set
   1.1035 → 1.0717, r5p6 1.182 → 1.128. `risk_tier: standard`. Branch
   `perf/stamp-2-r5p6-1`.
-  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
   S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
   **PERF-UNPIVOT-1 (2026-09-12), in flight:** step 1 (#542) shipped native

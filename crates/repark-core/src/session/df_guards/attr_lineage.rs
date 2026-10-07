@@ -181,6 +181,8 @@ fn lineage_passes_through(
 
 #[must_use]
 pub fn sort_input_carries_twice(plan: &LogicalPlan, written: &str, rule: NameRule) -> bool {
+    #[cfg(test)]
+    SORT_TRACES.with(|traces| traces.set(traces.get() + 1));
     sort_projection(plan).is_some_and(|projection| {
         visible_positions(projection.input.schema(), written, rule).len() > 1
     })
@@ -188,6 +190,8 @@ pub fn sort_input_carries_twice(plan: &LogicalPlan, written: &str, rule: NameRul
 
 #[must_use]
 pub fn sort_output_carries_twice(plan: &LogicalPlan, written: &str, rule: NameRule) -> bool {
+    #[cfg(test)]
+    SORT_TRACES.with(|traces| traces.set(traces.get() + 1));
     plan.schema()
         .fields()
         .iter()

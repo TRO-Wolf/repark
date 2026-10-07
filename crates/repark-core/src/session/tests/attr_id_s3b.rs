@@ -460,5 +460,5 @@ fn bind_free_names_sort_binds_unique_key_without_tracing_lineage() {
     assert_eq!(sort_traces(), before);
     let traced = bind_free_names(col("v"), plan, IgnoreCase, &["v".into(), "v".into()], true);
     assert_eq!(bound_name(traced.unwrap()), "v");
-    assert!(sort_traces() > before);
+    assert_eq!(sort_traces(), before + 4);
 }
