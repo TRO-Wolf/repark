@@ -8,8 +8,13 @@ See [../map.md](../map.md).
 ## Contents
 
 - `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings; mod url;`, plus
-  `mod live_pg; mod live_pool; mod pool; mod read; mod scan; mod tls;` under the `postgres`
-  feature.
+  `mod explain; mod live_pg; mod live_pool; mod pool; mod read; mod scan; mod tls;` under the
+  `postgres` feature.
+- `explain.rs` — C-2c (2026-10-07), behind `postgres`, no network. D-M6's pin,
+  `datafusion_hands_inexact_filters_to_scan_and_withholds_limit`, drives DataFusion 54.1 with a
+  recording provider that classes column `a` `Exact` and the rest `Inexact`: every `Inexact`
+  conjunct reaches `scan`, and `limit` reaches it only when no filter remains above.
+  pins: c-2/C-068
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
   verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
   `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and

@@ -5144,6 +5144,7 @@ name = "repark-connect"
 version = "1.5.2"
 dependencies = [
  "arrow",
+ "async-trait",
  "bytes",
  "datafusion",
  "futures",

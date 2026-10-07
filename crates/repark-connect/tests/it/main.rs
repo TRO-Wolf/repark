@@ -1,4 +1,6 @@
 mod copy_binary;
+#[cfg(feature = "postgres")]
+mod explain;
 mod ident;
 #[cfg(feature = "postgres")]
 mod live_pg;

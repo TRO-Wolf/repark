@@ -897,3 +897,22 @@ Run on the finished tree. Each cargo command ran under the build-slot lock.
 The search-path pin creates a database and a role and drops both before its assertions; a
 cell that panics earlier (as the mutation runs did) leaves them, with its schema, in the
 disposable container, which `make pg-down` removes with its volume.
+
+## 11. C-2c — the provider, pushdown and the EXPLAIN boundary (2026-10-07)
+
+**Branch:** `feat/c-2c-pushdown-explain` from `cdca8173` (C-2b merged). **Model:** Claude Opus
+5.5 (`claude-opus-5-5`, high). **Scope:** sketch §2.9 (pushdown), §2.10 (the EXPLAIN boundary,
+CC-1), §4's C-2c rows, §5.2, §5.3, §7's C-2c slice and §8 D-M6. D-M6 ran first, before any
+provider code.
+
+### PROPOSITION LEDGER — C-2c — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-068 | D-M6 (sketch §8, halt rule H-DF): DataFusion 54.1 hands every conjunct a provider classes `Inexact` to `TableProvider::scan` while keeping it in a `FilterExec` above the scan, and passes `limit` to `scan` only when no filter remains above it. A conjunct classed `Exact` reaches `scan` and leaves no filter. | `explain.rs::datafusion_hands_inexact_filters_to_scan_and_withholds_limit`, a recording provider (column `a` `Exact`, the rest `Inexact`): `a > 1 AND b = 'x' LIMIT 5` → `scan([a > 1, b = 'x'], None)`; `b = 'x' LIMIT 5` → `scan([b = 'x'], None)`; `a > 1 LIMIT 5` → `scan([a > 1], Some(5))`. | PROVEN | §11.1. H-DF did not fire. |
+
+### 11.1 D-M6, measured (2026-10-07)
+
+| id | date | measurement | result | decides |
+|---|---|---|---|---|
+| D-M6 | 2026-10-07 | A minimal DataFusion 54.1 probe (`SessionContext`, one recording `TableProvider`, `EXPLAIN` and the physical plan of `SELECT a FROM t WHERE … LIMIT 5`): does `scan` receive `Inexact` filters, and does it receive `limit` while a filter remains above? | Yes to the first: the logical plan reads `TableScan: t projection=[a, b], full_filters=[t.a > Int32(1)], partial_filters=[t.b = Utf8("x")]` and `scan` receives both, unqualified. No to the second: with an `Inexact` conjunct the plan is `Limit` over `Filter` over `TableScan`, the physical `FilterExec: b@1 = x, projection=[a@0], fetch=5` carries the limit and `scan` sees `limit = None`; with only `Exact` conjuncts `scan` sees `Some(5)` and no filter remains. `OR` of two `Exact`-classed columns is one conjunct, classed as a whole. | The EXPLAIN boundary of sketch §2.10 holds: `scan` sees the full conjunct list, so it can list the residual filters, and P-11's limit arrives only when no residual remains (the scan re-checks anyway). H-DF does not fire. |
