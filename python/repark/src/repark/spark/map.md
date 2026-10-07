@@ -129,6 +129,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   cause before re-raising. pins: source-url-redact-1/C-067
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `listDatabases` re-raises from the
   scrubbed copy the narrow scrub returns.
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** `listDatabases` raises after the handler from
+  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
   **EAGER-OWN-1 step 1 (2026-09-13):** `clearCache` releases the session's live
   `CacheViewHandle`s (registered in a WeakSet under the alive token) before the
   unchanged registry `unpersist` loop and the `__repark_cache_*` prefix sweep —

@@ -56,6 +56,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   test). `core.py` re-imports every moved private name, so the package export surface is
   unchanged; the `PySparkNotImplementedError` import stays because it is part of that surface.
   pins: dfcore-1/C-001, C-002, C-004, C-005, C-006
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the export doors keep the
+  `scrub_exception` copy in `failure` and raise after the handler, so `__context__` is None.
+  pins: source-url-redact-1/C-071
   DML-A: `mergeInto` `whenNotMatchedBySource` DELETE/UPDATE execute.
   NULLABILITY-2 (2026-09-05): the `schema` property maps the `timestamp`/`timestamp_ntz`
   type keys through `ReparkDataType.fromDDL` — `fromDDL("timestamp")` equals the old
@@ -541,6 +544,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   cause before re-raising. pins: source-url-redact-1/C-067
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the materialize refusal re-raises from
   the scrubbed copy the narrow scrub returns.
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the materialize refusal raises after the handler from
+  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
   `eager()` materializes
   the plan through the existing cache-view call on an `_identity_child` sibling (the source
   frame is untouched), then fills `_eager_shape` once with a count over the built MemTable
@@ -585,6 +590,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_warn_storage_level_cosmetic_once` moved here unchanged and is re-imported by
   `core`, keeping the frozen surfaces. pins: eager-own-1/C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-010, C-011
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** `_register_cache_frame` moved here
+  unchanged and is re-imported by `core`, paying for the export doors' raise-after-handler
+  shape inside `core.py`'s exact baseline. pins: source-url-redact-1/C-071
   CATALOG-SURFACE-1 critic round 1 (2026-09-14): `bind_registered_view` notes the
   materialize-time identity token (`catalog_surface._note_frame_cached`) for
   `spark.table(name)` frames, so the catalog overlay can tell a still-current
@@ -674,6 +682,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
   projection rewrites moved out. pins: dfcore-2/C-005
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the classic and pandas UDF user-exception
+  doors interpolate the `scrub_exception` copy, mask the `format_exc()` detail through
+  `_native.mask_user_visible`, and raise after the handler from the copy. pins: source-url-redact-1/C-073
 - `io_declared.py` owns the orc-write / xml declared-refusal bodies and the `jdbc` reader-writer
   surface (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1).
   **IO-ORC-1 (2026-09-16):** the orc reader refusal is deleted (the read side is a real
@@ -717,6 +728,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   ceiling room for the F2-3/F2-4 masks. The save-mode/format/provider refusals echo the
   value through `mask_credentials`, the path echoes through `mask_url_userinfo`, and the
   overwrite re-raise re-raises from the scrubbed `OSError` copy.
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the append and overwrite refusals raise after the handler from
+  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
   **U7 PR2 (2026-09-24):** `DataFrameWriterV2.option` stores a `branch` or `tag` key
   like any other option (the refusal is gone); no writer reads it, so the write lands on main
   as Spark's does (`check_lib_py.py` 1039 → 1033). pins: u7-write-df-2/C-005
@@ -901,6 +914,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the mode refusal masks through
   `mask_credentials`, every path echo through `mask_url_userinfo`, and both re-raises
   re-raise from the scrubbed copy.
+  **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the append and overwrite refusals raise after the handler from
+  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`
