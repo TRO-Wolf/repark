@@ -150,3 +150,89 @@ async fn a_mismatched_stamp_only_commit_leaves_the_claim() {
     assert_stamped_head(&reloaded, &stamp);
     assert_eq!(stamped_snapshots(&reloaded), 1);
 }
+
+#[tokio::test]
+async fn caller_extras_cannot_displace_the_stamp() {
+    let (_warehouse, catalog, ident) = fixture("caller_stamp_keys").await;
+    let table = append_plain(&catalog, &ident, &[1]).await;
+    let base_snapshots = table.metadata().snapshots().count();
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    for (key, value) in [
+        ("repark.cdc.epoch", "99"),
+        ("spark.sql.streaming.epochId", "99"),
+        ("Repark.CDC.Epoch", "99"),
+        ("repark.cdc.offsets.other", "{}"),
+    ] {
+        let mut extra = scoped(&guard);
+        extra.push((key.to_string(), value.to_string()));
+        let files = stage(&table, &[2]).await;
+        let error = commit_append_with_summary(&catalog, &table, files, &extra, None)
+            .await
+            .expect_err("a caller stamp key on a stamped commit");
+        assert!(
+            matches!(microbatch_cause(&error), MicroBatchError::Catalog(message) if message.contains(key)),
+            "{key}: {error:?}"
+        );
+        assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    }
+    let reloaded = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(reloaded.metadata().snapshots().count(), base_snapshots);
+    assert_eq!(stamped_snapshots(&reloaded), 0);
+    let files = stage(&table, &[2]).await;
+    let committed = commit_append_with_summary(&catalog, &table, files, &scoped(&guard), None)
+        .await
+        .expect("the claim survives the refusals");
+    assert_stamped_head(&committed, &stamp);
+    drop(guard);
+    let note = [(String::from("repark.cdc.note"), String::from("caller"))];
+    let files = stage(&committed, &[3]).await;
+    let unscoped = commit_append_with_summary(&catalog, &committed, files, &note, None)
+        .await
+        .expect("an unscoped commit keeps the caller's key as on main");
+    let head = unscoped.metadata().current_snapshot().expect("head");
+    assert_eq!(
+        head.summary()
+            .additional_properties
+            .get("repark.cdc.note")
+            .map(String::as_str),
+        Some("caller")
+    );
+}
+
+#[test]
+fn site_stamp_extras_put_the_stamp_last_and_drop_the_token() {
+    let stamp = stamp_for(7, SinkDoor::Table);
+    let site = SiteStamp {
+        claimed: Some(ClaimedStamp {
+            stamp: stamp.clone(),
+            base: None,
+        }),
+    };
+    let token = ScopeToken::parse("eeeeeeee-0000-4000-8000-0000000000e5").expect("token");
+    let extra = [
+        token.summary_entry(),
+        (String::from("repark.cdc.epoch"), String::from("99")),
+        (
+            String::from("spark.sql.streaming.epochId"),
+            String::from("99"),
+        ),
+        (String::from("run_id"), String::from("caller")),
+    ];
+    let folded: HashMap<String, String> = site
+        .extras(&extra)
+        .expect("extras")
+        .iter()
+        .cloned()
+        .collect();
+    assert!(!folded.contains_key(SCOPE_TOKEN_KEY));
+    assert_eq!(folded.get("run_id").map(String::as_str), Some("caller"));
+    assert_eq!(
+        SinkRecord::from_summary(&folded).expect("stamp"),
+        Some(stamp.record)
+    );
+    assert_eq!(
+        folded.get(SPARK_EPOCH_ID_KEY).map(String::as_str),
+        Some("7")
+    );
+}

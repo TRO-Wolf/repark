@@ -134,8 +134,10 @@ repark-core's error map.
   **MB-3 seam:** the driver installs the token in the batch's session config as
   `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token`, which `resolve_*_session_write`
   already carries into `summary_extra` on all three arms (MERGE included, `merge/mod.rs`
-  unedited). The scope pins sit in the `#[path]` child `sink_offsets_scope_tests.rs`.
-  pins: mb-2a/C-013, C-017
+  unedited). A stamped commit whose caller extras carry a `repark.cdc.*` or
+  `spark.sql.streaming.*` key refuses before it claims, and the stamp is appended after the
+  caller's extras. The scope pins sit in the `#[path]` child `sink_offsets_scope_tests.rs`.
+  pins: mb-2a/C-013, C-015, C-017
 - `sink_offsets.rs`, `sink_offsets_tests.rs` — **MB-2a (2026-10-07):** the micro-batch sink
   stamp, the sketch's §3.4 (`task/wo/microbatch/mb-design-2026-10-06.md`). `BatchScope` is a
   process-wide map from sink uuid to the active `CommitStamp`; `enter` refuses `SinkBusy`, a

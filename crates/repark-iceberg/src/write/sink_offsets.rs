@@ -20,6 +20,8 @@ use crate::write::write_options::summary_with_extras;
 
 pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";
 
+const STAMP_KEY_PREFIXES: [&str; 2] = ["repark.cdc.", "spark.sql.streaming."];
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct ScopeToken(Uuid);
 
@@ -366,7 +368,9 @@ impl SiteStamp {
         let Some(token) = ScopeToken::carried_by(extra) else {
             return Ok(SiteStamp::default());
         };
-        let claimed = BatchScope::claim(table, &token).map_err(microbatch_error)?;
+        let claimed =
+            BatchScope::claim_checked(table, &token, |stamp| refuse_stamp_keys(extra, stamp))
+                .map_err(microbatch_error)?;
         Ok(SiteStamp { claimed })
     }
 
@@ -401,6 +405,27 @@ impl SiteStamp {
             Some(claimed) => claimed.record_commit(committed).map_err(microbatch_error),
             None => Ok(()),
         }
+    }
+}
+
+fn refuse_stamp_keys(
+    extra: &[(String, String)],
+    stamp: &CommitStamp,
+) -> Result<(), MicroBatchError> {
+    let collision = extra.iter().map(|(key, _)| key).find(|key| {
+        let folded = key.to_ascii_lowercase();
+        key.as_str() != SCOPE_TOKEN_KEY
+            && STAMP_KEY_PREFIXES
+                .iter()
+                .any(|prefix| folded.starts_with(prefix))
+    });
+    match collision {
+        Some(key) => Err(MicroBatchError::Catalog(format!(
+            "snapshot property {key} collides with the stamp of query {query} epoch {epoch}; remove it from the stamped commit",
+            query = stamp.record.query,
+            epoch = stamp.record.epoch
+        ))),
+        None => Ok(()),
     }
 }
 
