@@ -40,9 +40,25 @@ impl MicroBatchTableProvider {
         })?;
         let schema = snapshot.schema(metadata).map_err(iceberg_to_datafusion)?;
         let arrow = presented_arrow_schema(&schema).map_err(iceberg_to_datafusion)?;
+        let field_ids: Arc<[i32]> = schema
+            .as_struct()
+            .fields()
+            .iter()
+            .map(|field| field.id)
+            .collect();
+        let files = plan
+            .files
+            .iter()
+            .map(|file| {
+                let mut task = file.task.clone();
+                task.schema = Arc::clone(&schema);
+                task.project_field_ids = Arc::clone(&field_ids);
+                task
+            })
+            .collect();
         Ok(Self {
             table,
-            files: plan.files.iter().map(|file| file.task.clone()).collect(),
+            files,
             schema: Arc::new(arrow),
         })
     }
@@ -150,7 +166,7 @@ mod tests {
     use std::collections::HashMap;
     use std::fs;
 
-    use datafusion::arrow::array::{Array, Int32Array};
+    use datafusion::arrow::array::{Array, Int32Array, StringArray};
     use datafusion::prelude::SessionContext;
     use iceberg::spec::{
         DataContentType, DataFile, DataFileBuilder, DataFileFormat, NestedField, PrimitiveType,
@@ -296,6 +312,160 @@ mod tests {
             got.extend(column.values().iter().copied());
         }
         assert_eq!(got, vec![1, 2, 3]);
+    }
+
+    fn write_noted_parquet(path: &std::path::Path, ids: &[i32], notes: &[&str]) {
+        let field = |name: &str, kind, id: &str| {
+            datafusion::arrow::datatypes::Field::new(name, kind, true).with_metadata(HashMap::from(
+                [(PARQUET_FIELD_ID_META_KEY.to_string(), id.to_string())],
+            ))
+        };
+        let arrow_schema = Arc::new(datafusion::arrow::datatypes::Schema::new(vec![
+            field("id", datafusion::arrow::datatypes::DataType::Int32, "1").with_nullable(false),
+            field("note", datafusion::arrow::datatypes::DataType::Utf8, "2"),
+        ]));
+        let batch = datafusion::arrow::record_batch::RecordBatch::try_new(
+            Arc::clone(&arrow_schema),
+            vec![
+                Arc::new(Int32Array::from(ids.to_vec())),
+                Arc::new(StringArray::from(notes.to_vec())),
+            ],
+        )
+        .expect("batch");
+        let file = fs::File::create(path).expect("create parquet");
+        let mut writer = ArrowWriter::try_new(file, arrow_schema, None).expect("writer");
+        writer.write(&batch).expect("write");
+        writer.close().expect("close");
+    }
+
+    async fn evolved_table() -> (TempDir, Table) {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = crate::memory_catalog(warehouse.path().to_str().expect("utf8"))
+            .await
+            .expect("catalog");
+        catalog
+            .create_namespace(&NamespaceIdent::new("sales".to_string()), HashMap::new())
+            .await
+            .expect("namespace");
+        let ident = TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "evolve".to_string(),
+        );
+        let table = catalog
+            .create_table(
+                ident.namespace(),
+                TableCreation::builder()
+                    .name("evolve".to_string())
+                    .schema(id_schema())
+                    .build(),
+            )
+            .await
+            .expect("create table");
+        let data_dir = std::path::PathBuf::from(
+            table
+                .metadata()
+                .location()
+                .strip_prefix("file://")
+                .unwrap_or(table.metadata().location()),
+        )
+        .join("data");
+        fs::create_dir_all(&data_dir).expect("data dir");
+        for (name, ids) in [("f1.parquet", vec![1, 2]), ("f2.parquet", vec![3])] {
+            let file = stored_file(&data_dir.join(name), &ids);
+            let head = catalog.load_table(&ident).await.expect("load table");
+            let tx = Transaction::new(&head);
+            let tx = tx
+                .fast_append()
+                .add_data_files(vec![file])
+                .apply(tx)
+                .expect("apply append");
+            tx.commit(catalog.as_ref()).await.expect("commit append");
+        }
+        let head = catalog.load_table(&ident).await.expect("load table");
+        let tx = Transaction::new(&head);
+        let tx = tx
+            .update_schema()
+            .add_column("note", Type::Primitive(PrimitiveType::String))
+            .apply(tx)
+            .expect("apply add column");
+        tx.commit(catalog.as_ref())
+            .await
+            .expect("commit add column");
+        let path = data_dir.join("f3.parquet");
+        write_noted_parquet(&path, &[4], &["x"]);
+        let file = DataFileBuilder::default()
+            .content(DataContentType::Data)
+            .file_path(path.to_string_lossy().into_owned())
+            .file_format(DataFileFormat::Parquet)
+            .file_size_in_bytes(fs::metadata(&path).expect("stat").len())
+            .record_count(1)
+            .partition_spec_id(0)
+            .partition(Struct::empty())
+            .build()
+            .expect("data file");
+        let head = catalog.load_table(&ident).await.expect("load table");
+        let tx = Transaction::new(&head);
+        let tx = tx
+            .fast_append()
+            .add_data_files(vec![file])
+            .apply(tx)
+            .expect("apply append");
+        tx.commit(catalog.as_ref()).await.expect("commit append");
+        let table = catalog.load_table(&ident).await.expect("load table");
+        (warehouse, table)
+    }
+
+    #[tokio::test]
+    async fn provider_reads_older_files_under_the_end_schema_by_field_id() {
+        let (_warehouse, table) = evolved_table().await;
+        let planner = WindowPlanner::new(table.clone(), ReadCaps::default());
+        let from = planner
+            .initial_offset(&StartPosition::Earliest)
+            .await
+            .expect("initial")
+            .expect("some");
+        let plan = planner
+            .next_window(&from, WindowLimit::Unbounded)
+            .await
+            .expect("window")
+            .expect("some");
+        assert_eq!(plan.files.len(), 3);
+        let provider = provider_for_plan(table, &plan).expect("provider");
+        let ctx = SessionContext::new();
+        ctx.register_table("evolve", provider).expect("register");
+        let batches = ctx
+            .sql("SELECT id, note FROM evolve ORDER BY id")
+            .await
+            .expect("sql")
+            .collect()
+            .await
+            .expect("collect");
+        let mut got = Vec::new();
+        for batch in &batches {
+            let ids = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<Int32Array>()
+                .expect("Int32");
+            let notes = batch
+                .column(1)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .expect("Utf8");
+            for row in 0..batch.num_rows() {
+                let note = (!notes.is_null(row)).then(|| notes.value(row).to_string());
+                got.push((ids.value(row), note));
+            }
+        }
+        assert_eq!(
+            got,
+            vec![
+                (1, None),
+                (2, None),
+                (3, None),
+                (4, Some(String::from("x")))
+            ]
+        );
     }
 
     #[tokio::test]
