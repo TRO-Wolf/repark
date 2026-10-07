@@ -8,8 +8,71 @@ See [../map.md](../map.md).
 ## Contents
 
 - `main.rs` — `mod copy_binary; mod ident; mod postgres_types; mod settings; mod url;`, plus
-  `mod live_pg; mod live_pool; mod pool; mod read; mod scan; mod tls;` under the `postgres`
-  feature.
+  `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
+  mod scan; mod tls;` under the `postgres` feature.
+- `explain.rs` — C-2c (2026-10-07), behind `postgres`, no network: sketch §5.3 over the
+  `pushdown.rs` fixture's injected resolution. `explain_renders_pushed_and_residual_per_scan`
+  (the exact `PostgresScanExec` line for one pushed and one residual conjunct, and for a pushed
+  limit), `explain_verbose_shows_placeholders_never_values` (`remote_sql` carries
+  `current_setting('repark.p0')` and `bound_values=1`, never the literal; the default format
+  has no `remote_sql`), `explain_never_renders_endpoint` (default, verbose and tree formats and
+  `Debug` hold no host, port, database, user, password or `sslmode`) and
+  `explain_residual_matches_filter_exec_above` (the `FilterExec` above the scan is the physical
+  form of `residual_filters` for its shapes; an exact filter leaves none. Once common-subexpression
+  elimination fires, as for `COALESCE(qty, 0) > 2`, the two are semantically equal only). D-M6's pin,
+  `datafusion_hands_inexact_filters_to_scan_and_withholds_limit`, drives DataFusion 54.1 with a
+  recording provider. `listing_a_postgres_source_is_empty_and_declared` pins
+  `CONNECT-DECL-pg-listing` and a missing endpoint refusing at first resolution.
+  pins: c-2/C-068, C-069, C-075
+- `pushdown.rs` — C-2c (2026-10-07), behind `postgres`, no network. The fixture: an `orders`
+  resolution with every mapped type, a `PostgresSource` whose props hold a fake endpoint and
+  password, and `FixedZone`, a fixed-offset `WallClockLocaliser` (`-05:00`); `split` plans a
+  statement through DataFusion, so each pin reads the coerced shape a real query hands the
+  provider. Sketch §5.2's unit halves: `p01_null_tests_push` … `p11_limit_pushes_only_without_residual`
+  (with `p06b_…` and `p06c_…`) and `r01_float_comparisons_stay_residual` …
+  `r05_pushdown_predicate_false_pushes_nothing`, each asserting the class, the rendered SQL and
+  the bound texts; `pushed_values_past_1024_fail_the_plan` (the refusal names
+  `CONNECT-DECL-pg-bound-values` since fold 1); `a_limit_past_i64_max_never_pushes`
+  (fold 1: `skip + fetch` past `i64::MAX` pushes no limit);
+  `pushdown_limit_gates_the_limit_and_pushdown_predicate_the_filters` (fold 1: each switch gates
+  its own push); and
+  `a_filter_the_optimizer_would_still_rewrite_stays_inexact` (`qty <> NULL` renders but stays
+  `Inexact`). pins: c-2/C-070, C-071, C-072, C-073, C-074, C-077, C-078, C-081, C-082, C-087
+- `live_pushdown.rs` — C-2c (2026-10-07), behind `postgres`, live like `live_pg.rs` (whose
+  `Cell` it shares). Each cell seeds `edges`, one table holding every edge sketch §5.2 names
+  (an all-NULL row; the integer extremes; `numeric(10,2)` and unconstrained `numeric` with a
+  value past scale 18; `4714-11-24 BC` and `5874897-12-31`; the earliest and latest instants;
+  `NaN` and `-0` in `float8`; a padded `char(5)`; mixed-case, accented, `%` and `\` text; an ICU
+  `und` column and a case-insensitive nondeterministic one; `uuid`, an enum, `interval`; and
+  twenty rows that make a pushed `LIMIT` visible), mounts it twice through
+  `PostgresSource::mount`, with `pushdown_predicate` on and off, and asserts for every filter
+  that the two return the same ids, that the pushed and residual counts are the expected ones,
+  and that the unpushed half pushed nothing. Sketch §5.2's live halves are
+  `p01_null_tests_push_live` … `r05_pushdown_predicate_false_pushes_nothing_live`; beside them
+  `a_pushed_filter_sees_the_retyped_value_live` (fold 1, `CONNECT-DECL-pg-drift-cast`: a
+  `qty = 6` planned over `int4`, then `qty` retyped `numeric(10,1)` and one row set to `5.5`,
+  returns one row pushed and two above the scan, both reading `6`),
+  `a_refused_value_inside_a_pushed_range_follows_postgres_order_live` (fold 1: `NaN` and
+  `±infinity` in unprojected `numeric(10,2)`, `date` and `timestamptz` columns are chosen by
+  Postgres's ordering when pushed, and refuse naming their row with pushdown off),
+  `timestamp_columns_are_placed_in_the_session_zone_live` (the `-05:00` fixture zone moves a
+  wall clock by five hours), `explain_analyze_reports_rows_bytes_and_time_per_scan_live` (the
+  five metrics on the scan line, and from the executed plan's `MetricsSet` six rows, more than
+  the 19-byte COPY header received and a non-zero time to first byte),
+  `a_batch_past_the_memory_pool_is_resources_exhausted_live` (a 16 KiB pool refuses the first
+  8192-row batch, naming the `PostgresScan` consumer; the default pool reads all 50 000 rows),
+  `the_scan_reserves_each_batch_and_counts_its_bytes_live` (fold 1: executing the scan alone
+  over two 4096-row batches, the pool holds exactly the current batch's size at each yield and
+  0 after the drop, and `output_bytes` is the batches' `get_record_batch_memory_size` sum),
+  `pushdown_limit_is_its_own_switch_live` (fold 1: `pushdown_limit = false` pushes the filter and
+  no limit, `pushdown_predicate = false` pushes the limit of an unfiltered read),
+  `a_limit_past_i64_max_reads_every_row_live` (fold 1: `LIMIT 9223372036854775807 OFFSET 5`
+  over thirty rows reads twenty-five, pushdown on and off),
+  `a_missing_relation_is_table_not_found_live` (DataFusion's own table-not-found, and a 64-byte
+  name refusing with `PgIdent`'s reason) and `pushed_compare_keeps_the_index_live` (D-M3: a pushed
+  `id OPERATOR(pg_catalog.=) current_setting('repark.p0')::int4` over one million rows plans as
+  an index-only scan). pins: c-2/C-069, C-071, C-072, C-073, C-076, C-077, C-079, C-081, C-082,
+  C-083, C-084, C-085, C-086
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
   verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
   `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and

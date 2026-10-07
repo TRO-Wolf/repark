@@ -14,6 +14,7 @@ workspace = true
 [features]
 default = ["postgres"]
 postgres = [
+  "dep:async-trait",
   "dep:bytes",
   "dep:futures",
   "dep:rustls",
@@ -28,6 +29,7 @@ repark-common.workspace = true
 datafusion.workspace = true
 arrow.workspace = true
 thiserror.workspace = true
+async-trait = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 rustls = { workspace = true, optional = true, features = ["ring", "std", "tls12"] }
