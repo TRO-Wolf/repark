@@ -51,7 +51,7 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   `repark.cdc.` key (`UnknownOption`, MBE-17), and passes every other key as
   Spark ignores it (R-8). Caps default unbounded and the start defaults
   `Earliest`. `MicroBatchSource::{open, initial_offset, next_batch}` resolves
-  a three-part table through `load_iceberg_table`, delegates planning, and
+  a three-part table, delegates planning, and
   reads exactly the planned files through
   `repark_iceberg::microbatch::provider::provider_for_plan`. Malformed values
   and two start keys refuse `Catalog` naming the keys (ledger FL-6, FL-7);
@@ -59,6 +59,15 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   owner's comment ban); fallible entry points take
   `#[allow(clippy::missing_errors_doc)]` instead.
   pins: mb-1/C-014, C-015, C-016
+  **MB-1 fold 1 round B (2026-10-07):** the source holds the catalog handle
+  and the `TableIdent`, not a `Table`. `initial_offset` and `next_batch`
+  reload the table each call and plan over the fresh metadata, as Spark's
+  `latestOffset` refreshes every trigger, so a long-lived source sees new
+  snapshots and can refuse `SourceReplaced`. `open` still loads once to
+  refuse a missing table up front.
+  pins: mb-1/C-026
+- `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
+  under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026
 - `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table
   AS OF decision both doors share. `provider_for_spec` is the #802
   `prepare_metadata_as_of` body moved down from `repark-spark` (refuse/serve-current/

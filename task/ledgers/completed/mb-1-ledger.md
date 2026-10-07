@@ -348,3 +348,29 @@ m7 window.rs `if from.position.get() > files {` -> `> files.saturating_add(1000)
 test …::position_past_the_added_files_refuses ... FAILED
 test result: FAILED. 60 passed; 1 failed
 ```
+
+## Fold 1 — 2026-10-07 — round B (the core wrapper in `repark-core`)
+
+**Model:** claude-opus-5-5 (opus-worker build lane). **Evidence:** the verifier's
+`verify_core_probes` (c01, c02), ported here as pins. Round B owns
+`crates/repark-core/src/time_travel/microbatch_source.rs`; its tests move under
+`#[path]` to `microbatch_source_tests.rs` so the source stays well under the ceiling.
+Nothing in `crates/repark-iceberg/src/microbatch/` changed: `WindowPlanner::new`
+already takes a `Table` by value.
+
+## PROPOSITION LEDGER — MB-1 fold 1 round B — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-026 | (F2) `MicroBatchSource` holds the catalog handle and the `TableIdent`, never a frozen `Table`. `initial_offset` and `next_batch` reload the table on every call and build the `WindowPlanner` from the fresh table, as Spark's `latestOffset` calls `table.refresh()` every trigger. One source sees a snapshot committed after it opened, and refuses `SourceReplaced` when the table is dropped and re-created under the same name between two `next_batch` calls. | The F2 pins in `microbatch_source_tests.rs` plus the reload mutation. | **PROVEN** | 2 pins green: `the_same_source_sees_appends_committed_after_open` (c02: open, drain 5 rows, INSERT `(6),(7)`, the same source returns exactly `[6, 7]`, then `None`) and `the_same_source_refuses_a_table_replaced_under_its_name` (drop, re-create, insert, then `SourceReplaced` with the recorded and the new uuid). The reload mutation is red on both. pins: mb-1/C-026 |
+
+## Gates — fold 1 round B
+
+Mutation probes, each restored from a backup with the restore checked by `cmp`:
+
+```
+m8 microbatch_source.rs: `open` keeps the first loaded `Table` and `load` returns it (no per-call reload)
+test time_travel::microbatch_source::tests::the_same_source_refuses_a_table_replaced_under_its_name ... FAILED
+test time_travel::microbatch_source::tests::the_same_source_sees_appends_committed_after_open ... FAILED
+test result: FAILED. 13 passed; 2 failed; 0 ignored; 0 measured; 1027 filtered out
+```
