@@ -8,8 +8,8 @@ use crate::datafusion_to_py_err;
 use crate::deep_stack::grown_clone_frame;
 use crate::fence::fenced;
 use repark_core::frame_names::{
-    NameRule, expose_hidden_keys, hidden_names_in, hidden_names_in_text, output_columns,
-    rebind_key_name, shown_columns, using_hidden_keys,
+    NameRule, expose_hidden_keys, hidden_keys_born, hidden_names_in, hidden_names_in_text,
+    output_columns, rebind_key_name, shown_columns, using_hidden_keys,
 };
 
 #[allow(clippy::missing_errors_doc)]
@@ -44,8 +44,10 @@ pub(crate) fn exposed_frame<'a>(
     frame: &PyDataFrame,
     columns: impl IntoIterator<Item = &'a PyColumn>,
 ) -> PyResult<Option<PyDataFrame>> {
-    let exprs = columns.into_iter().map(PyColumn::expr).collect::<Vec<_>>();
-    let names = hidden_names_in(&exprs);
+    if !hidden_keys_born() {
+        return Ok(None);
+    }
+    let names = hidden_names_in(columns.into_iter().map(PyColumn::held_expr));
     if names.is_empty() {
         return Ok(None);
     }
@@ -53,6 +55,9 @@ pub(crate) fn exposed_frame<'a>(
 }
 
 pub(crate) fn exposed_for_text(frame: &PyDataFrame, text: &str) -> PyResult<Option<PyDataFrame>> {
+    if !hidden_keys_born() {
+        return Ok(None);
+    }
     let names = hidden_names_in_text(text);
     if names.is_empty() {
         return Ok(None);

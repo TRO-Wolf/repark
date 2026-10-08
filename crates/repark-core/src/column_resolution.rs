@@ -38,7 +38,7 @@ async fn plan_using(
     let mut marked = statement.clone();
     let merging = using_marks::mark_explicit(&mut marked);
     if let Ok(plan) = plan_with_repair(&spanned, marked.clone(), case_insensitive).await
-        && let Ok(merged) = using_keys::merge_using_keys(plan, merging)
+        && let Ok((merged, _)) = using_keys::merge_using_keys(plan, merging)
     {
         return Ok(merged);
     }
@@ -46,9 +46,10 @@ async fn plan_using(
         Ok(plan) => return Ok(plan),
         Err(refused) => refused,
     };
-    if using_marks::qualify_keys(&mut marked, case_insensitive)
+    if merging
+        && using_marks::qualify_keys(&mut marked, case_insensitive)
         && let Ok(plan) = plan_with_repair(&spanned, marked, case_insensitive).await
-        && let Ok(merged) = using_keys::merge_using_keys(plan, merging)
+        && let Ok((merged, true)) = using_keys::merge_using_keys(plan, merging)
     {
         return Ok(merged);
     }

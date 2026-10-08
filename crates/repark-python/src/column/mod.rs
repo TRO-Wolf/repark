@@ -51,6 +51,10 @@ impl PyColumn {
         crate::deep_stack::grown_clone_expr(&self.expr, self.expr_levels, self.plan_levels)
     }
 
+    pub(crate) fn held_expr(&self) -> &Expr {
+        &self.expr
+    }
+
     pub(crate) fn expression_depth(&self) -> usize {
         self.expr_levels
     }

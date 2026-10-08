@@ -498,12 +498,17 @@ impl Pass {
                     JoinType::Full => {
                         let left_type = merged_left.get_type(join.schema.as_ref())?;
                         let right_type = merged_right.get_type(join.schema.as_ref())?;
-                        full_key(
-                            merged_left.clone(),
-                            &left_type,
-                            merged_right.clone(),
-                            &right_type,
-                        )
+                        if left_type == right_type {
+                            full_key(
+                                merged_left.clone(),
+                                &left_type,
+                                merged_right.clone(),
+                                &right_type,
+                                true,
+                            )
+                        } else {
+                            None
+                        }
                     }
                     _ => Some(merged_left.clone()),
                 };
@@ -528,15 +533,18 @@ impl Pass {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub(super) fn merge_using_keys(plan: LogicalPlan, merging: bool) -> Result<LogicalPlan> {
+pub(super) fn merge_using_keys(plan: LogicalPlan, merging: bool) -> Result<(LogicalPlan, bool)> {
     let plan = unmark_order(plan)?;
     if !merging {
-        return Ok(plan);
+        return Ok((plan, false));
     }
     let mut pass = Pass::default();
     let walked = pass.walk(plan.clone())?;
-    if pass.bail || !pass.changed {
-        return Ok(plan);
+    if pass.bail {
+        return Ok((plan, false));
     }
-    Ok(walked.plan)
+    if !pass.changed {
+        return Ok((plan, true));
+    }
+    Ok((walked.plan, true))
 }

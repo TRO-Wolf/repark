@@ -4,7 +4,12 @@ use datafusion::prelude::SessionContext;
 use datafusion::sql::parser::DFParser;
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 
+use datafusion::common::{Column, Location, Span, Spans};
+use datafusion::logical_expr::{Expr, LogicalPlanBuilder};
+
 use super::sql_with_column_repair;
+use super::using_keys::merge_using_keys;
+use super::using_marks::EXPLICIT_LINE;
 use super::using_marks::qualify_keys;
 
 async fn tables() -> SessionContext {
@@ -393,7 +398,7 @@ async fn distinct_and_order_by_keep_planning_on_the_merged_key() {
 }
 
 #[tokio::test]
-async fn order_by_a_side_key_with_a_column_outside_the_select_list() {
+async fn order_by_a_side_key_with_the_bare_key_in_the_list_answers_as_before() {
     let ctx = more_tables().await;
     assert_eq!(
         ordered(
@@ -401,7 +406,7 @@ async fn order_by_a_side_key_with_a_column_outside_the_select_list() {
             "SELECT id FROM tl l RIGHT JOIN tr r USING (id) ORDER BY l.id NULLS FIRST, t"
         )
         .await,
-        ["4", "2", "3"]
+        ["-", "2", "3"]
     );
     assert_eq!(
         ordered(
@@ -409,7 +414,7 @@ async fn order_by_a_side_key_with_a_column_outside_the_select_list() {
             "SELECT id FROM tl l FULL JOIN tr r USING (id) ORDER BY l.id NULLS FIRST, upper(s)"
         )
         .await,
-        ["4", "1", "2", "3"]
+        ["-", "1", "2", "3"]
     );
     let (names, by_right) = answer(
         &ctx,
@@ -418,7 +423,15 @@ async fn order_by_a_side_key_with_a_column_outside_the_select_list() {
     )
     .await;
     assert_eq!(names, ["id", "s"]);
-    assert_eq!(by_right, ["1,a", "2,b", "3,c", "4,-"]);
+    assert_eq!(by_right, ["1,a", "2,b", "3,c", "-,-"]);
+    assert_eq!(
+        ordered(
+            &ctx,
+            "SELECT s FROM tl l FULL JOIN tr r USING (id) ORDER BY l.id NULLS FIRST, t"
+        )
+        .await,
+        ["-", "a", "b", "c"]
+    );
 }
 
 #[tokio::test]
@@ -441,7 +454,7 @@ async fn shared_non_key_names_keep_their_output_names() {
     )
     .await;
     assert_eq!(names, ["id", "v", "v"]);
-    assert_eq!(picked, ["3,-,300", "1,10,100"]);
+    assert_eq!(picked, ["-,-,300", "1,10,100"]);
 }
 
 #[tokio::test]
@@ -542,7 +555,7 @@ async fn shapes_beyond_one_plain_chain() {
     assert_eq!(chained.len(), 3);
     assert_eq!(
         rows(&ctx, "SELECT id FROM tl l FULL JOIN td d USING (id)").await,
-        ["1.00", "2.00", "3.00", "3.50"]
+        ["-", "1", "2", "3"]
     );
 }
 
@@ -645,4 +658,141 @@ fn qualification_keeps_to_plain_using_chains() {
         scoped,
         "SELECT l.id FROM tl l JOIN tr r USING(id) WHERE l.id IN (SELECT id FROM tq) ORDER BY l.id"
     );
+}
+
+#[tokio::test]
+async fn a_bail_returns_the_plan_it_was_given() {
+    let ctx = more_tables().await;
+    let star = ctx
+        .sql("SELECT * FROM tl l FULL JOIN tr r USING (id)")
+        .await
+        .unwrap()
+        .into_unoptimized_plan();
+    let (merged, ran) = merge_using_keys(star.clone(), true).unwrap();
+    assert!(ran);
+    assert_ne!(merged, star);
+    let (untouched, ran) = merge_using_keys(star.clone(), false).unwrap();
+    assert!(!ran);
+    assert_eq!(untouched, star);
+    let mark = Span::new(
+        Location {
+            line: EXPLICIT_LINE,
+            column: 1,
+        },
+        Location {
+            line: EXPLICIT_LINE,
+            column: 2,
+        },
+    );
+    let side = Column::new(Some("l"), "id").with_spans(Spans(vec![mark]));
+    let above = LogicalPlanBuilder::from(star)
+        .filter(Expr::Column(side).is_null())
+        .unwrap()
+        .build()
+        .unwrap();
+    let (bailed, ran) = merge_using_keys(above.clone(), true).unwrap();
+    assert!(!ran);
+    assert_eq!(bailed, above);
+}
+
+#[tokio::test]
+async fn a_retry_answers_only_when_the_pass_ran() {
+    let ctx = more_tables().await;
+    for sql in [
+        "SELECT id, count(l.id) AS c FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 GROUP BY id",
+        "SELECT count(l.id) AS a, count(id) AS b FROM tl l FULL JOIN tr r USING (id) WHERE id > 0",
+        "SELECT l.*, id FROM tl l FULL JOIN tr r USING (id) WHERE id > 0",
+        "SELECT id, s, t, row_number() OVER (ORDER BY l.id NULLS LAST, r.id) AS rn \
+         FROM tl l FULL JOIN tr r USING (id) WHERE id > 0",
+        "SELECT count(l.id) AS a, count(id) AS d \
+         FROM tl l FULL JOIN tr r USING (id) RIGHT JOIN tq q USING (id)",
+        "SELECT * FROM tp, tl l FULL JOIN tr r USING (id) WHERE id > 0",
+        "SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL AND id > 0",
+        "SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 \
+         QUALIFY row_number() OVER (ORDER BY s) = 1",
+    ] {
+        let refused = refusal(&ctx, sql).await;
+        assert!(refused.contains("AMBIGUOUS_REFERENCE"), "{sql}: {refused}");
+    }
+    let answered = rows(
+        &ctx,
+        "SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 3",
+    )
+    .await;
+    assert_eq!(answered, ["4,-"]);
+}
+
+#[tokio::test]
+async fn key_and_side_key_inside_calls_keep_the_plan_main_had() {
+    let ctx = more_tables().await;
+    for call in ["count", "max", "min", "sum"] {
+        for how in ["INNER", "LEFT", "RIGHT", "FULL"] {
+            let joined = format!("tl l {how} JOIN tr r USING (id)");
+            let first = rows(
+                &ctx,
+                &format!("SELECT {call}(id) AS b, {call}(l.id) AS c FROM {joined}"),
+            )
+            .await;
+            let second = rows(
+                &ctx,
+                &format!("SELECT {call}(l.id) AS c, {call}(id) AS b FROM {joined}"),
+            )
+            .await;
+            let alone = rows(&ctx, &format!("SELECT {call}(l.id) AS c FROM {joined}")).await;
+            let side = first[0].split(',').nth(1).map(str::to_string);
+            assert_eq!(side.as_deref(), Some(alone[0].as_str()), "{call} {how}");
+            assert_eq!(
+                second[0].split(',').next(),
+                Some(alone[0].as_str()),
+                "{call} {how}"
+            );
+        }
+    }
+    let distinct = rows(
+        &ctx,
+        "SELECT count(DISTINCT id) AS b, count(DISTINCT l.id) AS c FROM tl l FULL JOIN tr r USING (id)",
+    )
+    .await;
+    assert_eq!(distinct, ["3,3"]);
+    let natural = rows(
+        &ctx,
+        "SELECT count(id) AS b, count(l.id) AS c FROM tl l NATURAL FULL JOIN tr r",
+    )
+    .await;
+    assert_eq!(natural, ["3,3"]);
+    let windows = rows(
+        &ctx,
+        "SELECT t, row_number() OVER (ORDER BY id DESC NULLS LAST) AS a, \
+         row_number() OVER (ORDER BY l.id DESC NULLS LAST) AS b \
+         FROM tl l RIGHT JOIN tr r USING (id)",
+    )
+    .await;
+    assert_eq!(windows, ["x,2,2", "y,1,1", "z,3,3"]);
+    let sums = rows(
+        &ctx,
+        "SELECT sum(id) OVER () AS b, sum(l.id) OVER () AS c FROM tl l FULL JOIN tr r USING (id) LIMIT 1",
+    )
+    .await;
+    assert_eq!(sums, ["6,6"]);
+}
+
+#[tokio::test]
+async fn a_comma_joined_relation_keeps_the_plan_main_had() {
+    let ctx = more_tables().await;
+    for how in ["INNER", "LEFT", "RIGHT", "FULL"] {
+        let star = rows(
+            &ctx,
+            &format!("SELECT * FROM tq, tl l {how} JOIN tr r USING (id) WHERE tq.id = 2"),
+        )
+        .await;
+        let sides = rows(
+            &ctx,
+            &format!(
+                "SELECT tq.id, tq.u, l.id, l.s, r.t FROM tq, tl l {how} JOIN tr r USING (id) \
+                 WHERE tq.id = 2"
+            ),
+        )
+        .await;
+        assert_eq!(star, sides, "{how}");
+    }
 }

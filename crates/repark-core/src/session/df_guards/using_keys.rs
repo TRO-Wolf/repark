@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
@@ -13,6 +14,17 @@ use repark_common::names::NameRule;
 use super::attr_id::AttrId;
 
 pub const HIDDEN_PREFIX: &str = "__repark_using__";
+
+static HIDDEN_BORN: AtomicBool = AtomicBool::new(false);
+
+pub fn note_hidden_keys() {
+    HIDDEN_BORN.store(true, Ordering::Relaxed);
+}
+
+#[must_use]
+pub fn hidden_keys_born() -> bool {
+    HIDDEN_BORN.load(Ordering::Relaxed)
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HiddenKey {
@@ -37,11 +49,21 @@ pub fn shown_key(
     right: &Column,
     left_schema: &DFSchema,
     right_schema: &DFSchema,
+    ansi: bool,
 ) -> Result<Expr> {
     let (Some(left), Some(right)) = (qualified(left, left_schema), qualified(right, right_schema))
     else {
         return Ok(Expr::Column(left.clone()));
     };
+    let reserved = |schema: &DFSchema| {
+        schema
+            .fields()
+            .iter()
+            .any(|field| field.name().starts_with(HIDDEN_PREFIX))
+    };
+    if reserved(left_schema) || reserved(right_schema) {
+        return Ok(Expr::Column(left));
+    }
     match join_type {
         JoinType::Right => Ok(Expr::Column(right)),
         JoinType::Full => {
@@ -52,6 +74,7 @@ pub fn shown_key(
                 &left_type,
                 Expr::Column(right),
                 &right_type,
+                ansi,
             );
             Ok(match merged {
                 Some(merged) => Expr::Alias(
@@ -145,7 +168,11 @@ pub fn full_key(
     left_type: &DataType,
     right: Expr,
     right_type: &DataType,
+    ansi: bool,
 ) -> Option<Expr> {
+    if !ansi && left_type != right_type {
+        return None;
+    }
     let wide = spark_key_type(left_type, right_type)?;
     let widened = |expr: Expr, held: &DataType| {
         if held == &wide {

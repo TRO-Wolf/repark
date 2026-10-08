@@ -716,6 +716,15 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   already did; `_cache_lineage` hands the cache and checkpoint paths the
   frame with its reachable hidden keys exposed, so the keys stay
   reachable after materialisation. pins: using-per-side-keys-1/C-014
+  **USING-PER-SIDE-KEYS-1 fold 2 (2026-10-08):** `_using_mark` and
+  `_set_using_mark` return at once while no mark exists, and `_bound_refs`
+  skips the bind and the unemitted-id loop for a frame without a mark or
+  unemitted ids, so a frame that never met a `USING` join pays nothing.
+  A join whose inputs carry a `__repark_using__` user column gets a mark
+  whose hidden entries have an empty alias: right-side references refuse
+  with the R6 message, as on `main`. `_cache_lineage` serves `cache` and
+  `persist` only; a checkpoint keeps no reach.
+  pins: using-per-side-keys-1/C-017
   **Fold SM-2c round B (2026-10-06):** `_route_sort_key_through_input`
   serves the ambiguous-Project arm of `_resolve_sort_name` after the sourced
   twin: it reads the input spelling from

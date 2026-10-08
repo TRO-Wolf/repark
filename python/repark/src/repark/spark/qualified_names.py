@@ -295,7 +295,7 @@ def _using_star_keys(
     folded = qualifier_parts[0] if exact else qualifier_parts[0].lower()
     keys: list[Any] = []
     for quals, display, _alias in mark[2]:
-        if any((cand if exact else cand.lower()) == folded for cand in quals):
+        if _alias and any((cand if exact else cand.lower()) == folded for cand in quals):
             bound = _using_key_name_column(frame, held, qualifier_parts, display)
             if bound is not None:
                 keys.append(bound)
@@ -418,12 +418,15 @@ def _raise_using_key_reference(ref: str) -> NoReturn:
 
 
 def _using_mark(frame: Any) -> Any:
+    if not _USING_MARKS:
+        return None
     return _USING_MARKS.get(frame)
 
 
 def _set_using_mark(frame: Any, mark: Any) -> None:
     if mark is None:
-        _USING_MARKS.pop(frame, None)
+        if _USING_MARKS:
+            _USING_MARKS.pop(frame, None)
     else:
         _USING_MARKS[frame] = mark
 
@@ -473,6 +476,10 @@ def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how:
         names.append((quals, display, alias))
         if side_id is not None and side_id not in held:
             ids[side_id] = (alias, display)
+    if kept and not names:
+        right_map = right._frame_qualifiers or {}
+        refused = frozenset(name for values in right_map.values() for name in values)
+        names = [(refused, key, "") for key in keys] if refused else []
     if not kept or not names:
         _set_using_mark(child, merged)
         return
@@ -703,14 +710,18 @@ def _bind_using_key_column(frame: Any, column: Any, keep_name: bool) -> Any:
 def _bound_refs(frame: Any, items: Any, keep_name: bool) -> list[Any]:
     from repark.spark.column import Column
 
-    bound = [
-        _bind_using_key_column(frame, item, keep_name) if isinstance(item, Column) else item
-        for item in items
-    ]
+    if _using_mark(frame) is None:
+        bound = list(items)
+    else:
+        bound = [
+            _bind_using_key_column(frame, item, keep_name) if isinstance(item, Column) else item
+            for item in items
+        ]
     held = [item for item in bound if isinstance(item, Column)]
     frame._refuse_self_join_refs(held)
-    for item in held:
-        frame._refuse_unemitted_ids(item)
+    if frame._unemitted_attr_ids:
+        for item in held:
+            frame._refuse_unemitted_ids(item)
     return bound
 
 
@@ -744,7 +755,9 @@ def _expose_using_keys_in_cond(self: Any, other: Any, cond_sql: str) -> tuple[An
         held = _stamped_frame_id_snapshot(frame)[1]
         if not _using_mark_live(mark, held):
             continue
-        wanted[position].extend(alias for _quals, _display, alias in mark[2] if alias in cond_sql)
+        wanted[position].extend(
+            alias for _quals, _display, alias in mark[2] if alias and alias in cond_sql
+        )
         hits = _using_key_text_hits(mark, cond_sql, _session_exact(frame), True)
         for start, end, qualifier, name, alias in hits:
             ref = f"{_quote_ident(qualifier)}.{_quote_ident(name)}"
@@ -768,7 +781,7 @@ def _expose_using_keys_in_text(frame: Any, text: str) -> tuple[Any, dict[str, st
     plan = frame._plan()
     if mark is None or "__repark_using__" not in text:
         return plan, {}
-    shown = {alias: display for _quals, display, alias in mark[2] if alias in text}
+    shown = {alias: display for _quals, display, alias in mark[2] if alias and alias in text}
     if not shown:
         return plan, {}
     wide = _native.expose_using_keys(plan, list(shown))
@@ -785,7 +798,7 @@ def _cache_lineage(frame: Any) -> Any:
     reachable = [
         alias
         for _quals, _display, alias in mark[2]
-        if _native.expose_using_keys(inner, [alias]) is not None
+        if alias and _native.expose_using_keys(inner, [alias]) is not None
     ]
     if not reachable:
         return inner

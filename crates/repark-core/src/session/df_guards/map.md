@@ -813,6 +813,13 @@ wrapped optimizer rule) and declares this directory.
   scan that already carries the keys; `shown_columns` is the projection that hides them
   again, and `hidden_names_in_text` reads the aliases from the text alone.
   pins: using-per-side-keys-1/C-010, C-014
+  **Fold 2 (2026-10-08):** `join_on_named_keys_with` takes the session's ANSI flag
+  (`join_on_named_keys` passes `true`); `full_key` builds the common-type key only with ANSI on
+  and answers `None` for differing types otherwise, so the left key shows as before. A join
+  whose inputs carry a `__repark_using__` user column shows the plain left key, exactly the
+  projection `main` builds. `note_hidden_keys` / `hidden_keys_born` is a process-wide flag
+  set by the first names join, so the bindings skip their hidden-key scan entirely until
+  one exists. pins: using-per-side-keys-1/C-010, C-017
 
 ## Pointers
 

@@ -378,7 +378,7 @@ async fn a_user_column_named_like_the_alias_keeps_the_key_unexposed() {
         .unwrap()
         .is_none()
     );
-    assert_eq!(first_column(frame).await, vec![Some(1), Some(2), Some(3)]);
+    assert_eq!(first_column(frame).await, vec![None, Some(1), Some(2)]);
 }
 
 #[tokio::test]

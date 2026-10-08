@@ -99,6 +99,19 @@ pins: ice-error-conditions-1/C-011
   parameters and select aliases shadow it; sub-queries are not entered) and plan again, which
   is what makes `WHERE id > 2` answer. Pins: `using_keys_tests.rs`.
   pins: using-per-side-keys-1/C-006, C-007, C-008, C-009, C-012, C-013
+- `using_marks.rs` — **USING-PER-SIDE-KEYS-1 folds 1 and 2 (2026-10-08):** the statement side
+  of `using_keys.rs`, split from it under the file-size gate: `names_using`, `spanned_state`,
+  `mark_explicit` and `qualify_keys`. **Fold 2 narrows which statements are merged.**
+  `mark_explicit` answers `false`, and the statement keeps the plan `main` builds, when a
+  `USING` select has a qualified star, `QUALIFY`, a comma-joined relation, a grouped side
+  key, or names both the unqualified key and a side key anywhere in its select list, `WHERE`,
+  `GROUP BY`, `HAVING` or `ORDER BY` (`KeyMix`; for `NATURAL`, any bare identifier with any
+  compound one). The last rule is the fix for DataFusion keeping one copy of equal aggregate
+  and window expressions, where the marker of `l.id` was lost to an earlier `id`.
+  `plan_using` returns the retry after `qualify_keys` only when `merge_using_keys` reports
+  that the pass ran without bailing; otherwise the caller gets `main`'s refusal unchanged.
+  A `FULL` key whose sides differ in type bails (the session's ANSI setting is not readable
+  here). pins: using-per-side-keys-1/C-015, C-016
 - `using_keys_tests.rs` — the pins of `using_keys.rs` on MemTables: star and unqualified key per
   clause, `WHERE` on six join types, per-side keys with `ORDER BY l.id`, chains, alias shadow,
   derived table, sub-query scope, set operation, `*, r.id`, the `ON` control, a case-sensitive

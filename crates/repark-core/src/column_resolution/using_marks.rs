@@ -205,6 +205,67 @@ fn grouped_side_refs(select: &Select, query: Option<&Query>) -> bool {
     if !grouped(select) {
         return false;
     }
+    let (keys, any) = select_keys(select);
+    let mut refs = SideRefs {
+        keys: &keys,
+        any,
+        depth: 0,
+        found: false,
+    };
+    let _ = Visit::visit(&select.projection, &mut refs);
+    let _ = Visit::visit(&select.having, &mut refs);
+    if let Some(query) = query {
+        let _ = Visit::visit(&query.order_by, &mut refs);
+    }
+    refs.found
+}
+
+struct KeyMix<'a> {
+    keys: &'a [Ident],
+    any: bool,
+    depth: usize,
+    bare: bool,
+    side: bool,
+}
+
+impl Visitor for KeyMix<'_> {
+    type Break = ();
+
+    fn pre_visit_query(&mut self, _query: &Query) -> ControlFlow<Self::Break> {
+        self.depth += 1;
+        ControlFlow::Continue(())
+    }
+
+    fn post_visit_query(&mut self, _query: &Query) -> ControlFlow<Self::Break> {
+        self.depth = self.depth.saturating_sub(1);
+        ControlFlow::Continue(())
+    }
+
+    fn pre_visit_expr(&mut self, expr: &SqlExpr) -> ControlFlow<Self::Break> {
+        if self.depth > 0 {
+            return ControlFlow::Continue(());
+        }
+        let named = |ident: &Ident| {
+            self.any
+                || self
+                    .keys
+                    .iter()
+                    .any(|key| key.value.eq_ignore_ascii_case(&ident.value))
+        };
+        match expr {
+            SqlExpr::Identifier(ident) if named(ident) => self.bare = true,
+            SqlExpr::CompoundIdentifier(parts)
+                if parts.len() > 1 && parts.last().is_some_and(named) =>
+            {
+                self.side = true;
+            }
+            _ => {}
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+fn select_keys(select: &Select) -> (Vec<Ident>, bool) {
     let mut keys = Vec::new();
     let mut any = false;
     for join in select.from.iter().flat_map(|table| table.joins.iter()) {
@@ -221,18 +282,26 @@ fn grouped_side_refs(select: &Select, query: Option<&Query>) -> bool {
             _ => {}
         }
     }
-    let mut refs = SideRefs {
+    (keys, any)
+}
+
+fn mixes_key_and_side(select: &Select, query: Option<&Query>) -> bool {
+    let (keys, any) = select_keys(select);
+    let mut refs = KeyMix {
         keys: &keys,
         any,
         depth: 0,
-        found: false,
+        bare: false,
+        side: false,
     };
     let _ = Visit::visit(&select.projection, &mut refs);
+    let _ = Visit::visit(&select.selection, &mut refs);
+    let _ = Visit::visit(&select.group_by, &mut refs);
     let _ = Visit::visit(&select.having, &mut refs);
     if let Some(query) = query {
         let _ = Visit::visit(&query.order_by, &mut refs);
     }
-    refs.found
+    refs.bare && refs.side
 }
 
 struct MarkOrder {
@@ -252,7 +321,10 @@ impl VisitorMut for MarkOrder {
                         .projection
                         .iter()
                         .any(|item| matches!(item, SelectItem::QualifiedWildcard(..)))
-                        || grouped_side_refs(select, top.then_some(&*query));
+                        || select.from.len() > 1
+                        || grouped_side_refs(select, top.then_some(&*query))
+                        || select.qualify.is_some()
+                        || mixes_key_and_side(select, top.then_some(&*query));
                 }
                 SetExpr::SetOperation { left, right, .. } => {
                     pending.push(right.as_ref());

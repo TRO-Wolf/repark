@@ -110,6 +110,8 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   **Fold 1 (2026-10-08):** `using_keys.rs` gains the mixed-type rule (`spark_key_type` on the
   measured pairs, the shown type per join type), the second side key after a narrowed filter
   and the reserved-prefix guard; 13 pins. pins: using-per-side-keys-1/C-010, C-014
+  **Fold 2 (2026-10-08):** the reserved-prefix pin now expects the plain left key.
+  pins: using-per-side-keys-1/C-017
 - `attr_id_s3e.rs` — **ATTR-ID-1 S3e (2026-10-01):** 14 pins for the
   qualified-name family: facade-over-plan matching, the using-key union, the
   free-ref rewriter (bind, pass-through, ambiguity), the grandchild key, the

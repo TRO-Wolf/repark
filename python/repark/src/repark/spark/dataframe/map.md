@@ -1891,6 +1891,9 @@ caches or checkpoints from `qualified_names._cache_lineage`, and
 `cache_handle.bind_registered_view` / `bind_checkpoint_scan` hide the exposed
 keys again (`_native.hide_using_keys`) on the frame they bind, only when the
 lineage was widened. Line-neutral at 3462. pins: using-per-side-keys-1/C-014
+**Fold 2 (2026-10-08):** the checkpoint path binds `self._inner` again, so side keys
+refuse after `localCheckpoint` as on `main`. Line-neutral at 3462.
+pins: using-per-side-keys-1/C-017
 **Fold SM-2c C-3 (2026-10-06):** every writer and temp-view door registers a
 frame whose output fields are renamed to the display names when they differ
 and are exactly unique, so a dropped-side twin engine name never reaches a
