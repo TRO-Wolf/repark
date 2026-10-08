@@ -16,6 +16,7 @@ pub(crate) const SPEC_TIMESTAMP_FORMAT_KEY: &str = "repark.text.timestamp_format
 pub(crate) const SPEC_NTZ_FORMAT_KEY: &str = "repark.text.timestamp_ntz_format_hex";
 pub(crate) const SPEC_DATE_FORMAT_KEY: &str = "repark.text.date_format_hex";
 pub(crate) const SPEC_WRITE_ID_KEY: &str = "repark.text.write_id";
+pub(crate) const SPEC_DISPLAY_HEADER_KEY: &str = "repark.text.display_header_hex";
 const SPEC_PREFIX: &str = "repark.text.";
 
 type TextWriteCollectors = Arc<Mutex<HashMap<String, Arc<Mutex<Vec<ObjectPath>>>>>>;
@@ -115,6 +116,7 @@ pub(crate) struct TextWriteSpec {
     pub display: String,
     pub specs: FormatSpecs,
     pub write_id: Option<String>,
+    pub display_header: Option<Vec<String>>,
 }
 
 impl TextWriteSpec {
@@ -134,6 +136,7 @@ impl TextWriteSpec {
                 date: spec_from_value(date, PatternKind::Date)?,
             },
             write_id: None,
+            display_header: None,
         })
     }
 
@@ -155,6 +158,20 @@ impl TextWriteSpec {
             date.as_deref(),
         )?;
         spec.write_id = format_options.get(SPEC_WRITE_ID_KEY).cloned();
+        spec.display_header = match format_options.get(SPEC_DISPLAY_HEADER_KEY) {
+            Some(encoded) => Some(
+                encoded
+                    .split(',')
+                    .map(Self::hex_decode)
+                    .collect::<std::result::Result<Vec<_>, ()>>()
+                    .map_err(|()| {
+                        DataFusionError::Execution(format!(
+                            "text write option '{SPEC_DISPLAY_HEADER_KEY}' is not valid hex"
+                        ))
+                    })?,
+            ),
+            None => None,
+        };
         let rest = format_options
             .iter()
             .filter(|(key, _)| !key.starts_with(SPEC_PREFIX))
@@ -217,11 +234,20 @@ impl TextWriteSpec {
         timestamp: Option<&str>,
         ntz: Option<&str>,
         date: Option<&str>,
+        display_header: Option<&[String]>,
     ) -> String {
         let mut pairs = vec![format!(
             "'{SPEC_ZONE_KEY}' '{}'",
             zone_id.replace('\'', "''")
         )];
+        if let Some(header) = display_header {
+            let encoded = header
+                .iter()
+                .map(|name| Self::hex_encode(name))
+                .collect::<Vec<_>>()
+                .join(",");
+            pairs.push(format!("'{SPEC_DISPLAY_HEADER_KEY}' '{encoded}'"));
+        }
         for (key, pattern) in [
             (SPEC_TIMESTAMP_FORMAT_KEY, timestamp),
             (SPEC_NTZ_FORMAT_KEY, ntz),

@@ -3305,23 +3305,47 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   visible (`conf.get` discloses it), and both directions stay under test so a drift in
   either inference path reds.
 
-### FA-5 — csv writes of exact-duplicate display names refuse (Spark writes them)
+### FA-5 — csv writes of exact-duplicate display names carry the display header — **FIXED 2026-10-08 (FA-5)**
 
-- **repark** — a frame whose display names hold exact duplicates refuses a csv
-  path write with `[COLUMN_ALREADY_EXISTS]`, naming the first duplicate,
-  before any file is created — the same refusal as the parquet/json/orc/table
-  doors. Case-twin columns (`T`, `t`) write with the raw header, as Spark
-  does (SM-2b narrowing, 2026-10-06).
-- **Apache Spark** — writes the file with the duplicate display header
-  (`id,s,v,id,s,v` on the fold's self-join). *(oracle: live 4.1.2, 2026-10-06,
-  raw header line of the written part file.)*
-- **Pin** — `python/repark/tests/test_attr_id_1_sm2_dupwrites.py::test_csv_write_of_duplicate_display_names_refuses_as_ruled_divergence`
-- **Rationale** — DECLARED as a deliberate divergence (orchestrator, 2026-10-06):
-  the csv rows can only carry the twin engine names today, and writing them
-  would ship a silent wrong answer; the loud refusal holds the line until the
-  physical-only COPY rename lands (follow-up on the v1.5.3 card, 2026-10-06).
-  The pin asserts the refusal, so the rename reds it and forces this row to be
-  re-recorded together with the behavior.
+- **repark** — a frame whose display names hold exact duplicates writes a csv
+  path instead of refusing: the header line carries the display names
+  (`id,s,v,id,s,v` on the fold's self-join), with or without `header`, under
+  every `mode`, both case flags, and for temporal columns. Everything else
+  about the bytes is the csv door's own behaviour, the same as for a frame
+  of unique names (see the rationale). A `partitionBy` over a name that two
+  attributes carry refuses `[AMBIGUOUS_REFERENCE]` (SQLSTATE 42704) with the
+  reference as written and one candidate per plan qualifier, sorted, before
+  any file is created; a unique partition column writes and leaves the
+  header. parquet, json, orc, `saveAsTable` and `writeTo` keep refusing
+  `[COLUMN_ALREADY_EXISTS]`, as Spark does. A column a user names
+  `__repark_dup_0_id` keeps that name on every door: the display names
+  travel as a record beside the registration copy, never as a naming
+  convention.
+- **Apache Spark** — writes the file with the duplicate display header, and
+  refuses the same partition and non-csv cells. *(oracle: live 4.1.2,
+  2026-10-08, the csv cells in `task/ledgers/staging/fa-5-6-ledger.md`.)*
+- **Pin** — `python/repark/tests/test_fa_5_duplicate_csv.py`;
+  `crates/repark-core/src/session/tests/duplicate_names.rs`
+- **Rationale** — was DECLARED as a deliberate refusal (orchestrator,
+  2026-10-06) because the csv rows could only carry the twin engine names.
+  The csv door now registers a copy of the frame under unique engine names
+  that records each display name in field metadata, and hands the Rust text
+  sink that list, so the engine never plans a duplicate and the file never
+  carries an internal name. What this row does **not** claim: the bytes are
+  not Spark's in every cell. The csv door's existing differences apply to a
+  duplicate-name frame exactly as to any frame, measured 2026-10-08 by the
+  unit's verifier and listed in the ledger ("The csv door's own differences"):
+  the header is written when the `header` option is absent (Spark's default
+  is off); header and body values are not trimmed; an empty name or an empty
+  string is written as nothing where Spark writes `""`; a quote is escaped
+  as `""` where Spark writes `\"`; `quoteAll` does not reach the header of an
+  empty frame; binary is written as hex; an empty partitioned write leaves a
+  header-only file at the root. Two refusals are this row's own and loud: a
+  same-origin repeat used as the partition column
+  (`select('id', 'id', 's').write.partitionBy('id')`) refuses where Spark
+  writes `id=1/` with header `s`; and under `caseSensitive=true` a partition
+  spelling that matches a repeated name only by case refuses with Spark's
+  `Partition column … not found in schema` text.
 
 ### FA-6 — temp views over exact-duplicate display names refuse (Spark registers them)
 
@@ -3343,6 +3367,14 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   until duplicate-name view schemas land (follow-up on the v1.5.3 card,
   2026-10-06). The pins assert the refusal, so the follow-up reds them and
   forces this row to be re-recorded together with the behavior.
+- **FA-6 follow-up (2026-10-08)** — a first design that registered the view
+  under unique engine names and re-created Spark's ambiguity afterwards was
+  built and withdrawn before merge: an independent verifier found silent
+  wrong answers in scopes the audit did not model (`NATURAL JOIN`, a bare name
+  inside `EXISTS` or `LATERAL`, a qualified reference beside a case twin).
+  The refusal stays. Record: `task/ledgers/staging/fa-5-6-ledger.md`, "Why
+  FA-6 was withdrawn (2026-10-08)"; the open ask is
+  `task/roadmap/mid-term/fa-6-duplicate-view-schemas-card-2026-10-08.md`.
 
 ### DF-STREAM-1 — `dropDuplicatesWithinWatermark` drops the appended plan dump
 

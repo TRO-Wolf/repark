@@ -241,7 +241,13 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   catalog this session builds through the same `CatalogCaches`, so no registration path changed.
   Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report
   there is no settle step before reading. pins: ice-footer-cache-1/C-006, C-007
-- `path_write.rs` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path`
+- `path_write.rs` — **FA-5 (2026-10-08, fold 1):** `materialize_empty_part`
+  writes the csv header from the frame schema's recorded display names
+  (`duplicate_names::recorded_display_names`) when it carries them, so the
+  header-only part of an empty duplicate-name csv write shows the display
+  names, as the sink serializer does for a non-empty one; a frame without
+  the record passes its own column names as before. pins: fa-5-6/C-002
+  **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path`
   owns the S3 save-mode protocol: per-call temp view, one `COPY` per part, parts land
   direct under the destination, `_SUCCESS` is the last object, exists means any object
   under the prefix, and `overwrite` lists and deletes the whole prefix. Bucket root
