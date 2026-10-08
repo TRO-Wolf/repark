@@ -673,7 +673,8 @@ declines it (a dated ruling in the intake, then the archive).
   misleading text (`getTable`, `listColumns`, `SHOW VIEWS`, `SHOW COLUMNS`, `DESCRIBE TABLE`,
   `TRUNCATE TABLE`, `USE`); none writes; each door gives the declared listing or names its registry row.
 - [offset-nested-sort-1-card-2026-10-08.md](offset-nested-sort-1-card-2026-10-08.md) — **card
-  OFFSET-NESTED-SORT-1 (2026-10-08, filed, not scheduled, from the C-3 hand-back, PR #998):** an
+  OFFSET-NESTED-SORT-1 (2026-10-08, closed 2026-10-08 by its unit, pending the product PR's
+  verifier; a DataFusion 54.1.0 `EnforceSorting` defect, guarded in `repark-core`; filed from the C-3 hand-back, PR #998):** an
   `OFFSET` under a nested `ORDER BY` answers 0 rows at one input partition where 16 partitions answer
   5, a wrong answer reproduced with no Postgres scan in the plan; the ask is to reproduce it on main,
   find whether it is the pinned DataFusion version's defect or RePark's planning, and add a parity cell.

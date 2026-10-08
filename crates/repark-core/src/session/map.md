@@ -386,6 +386,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;
   the build sweep in `session.rs` enforces it. Pins: `tests/conf_unread.rs`.
+  **OFFSET-NESTED-SORT-1 (2026-10-08):** `df_guards.rs` installs
+  `skipping_limit::skip_safe_physical_optimizer_rules()` as the physical rule list, ahead of
+  the three RePark physical rules: DataFusion's list with `EnforceSorting` wrapped. Design,
+  cost and the retirement event are in the `df_guards/` directory map.
+  pins: offset-nested-sort-1/C-005
   **DF-SUBQUERY-1 (2026-09-15):** `df_guards.rs` declares `subquery/`'s module,
   registers the `__repark_single_row` guard UDAF on every core session beside
   `stack`/`repark_isnan`, and inserts `repark_projection_exists` +
