@@ -2166,3 +2166,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   close the sketch's two open refusal shapes; D-2 records the two
   saturations. `risk_tier: standard`. Branch `feat/mb-1-source`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [threaded-collect-segv-1-ledger.md](threaded-collect-segv-1-ledger.md) —
+  **THREADED-COLLECT-SEGV-1 (2026-10-08):** the cause of the threaded-`collect()`
+  segfault is pyarrow 25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in
+  25.0.1), not RePark: the native stack, the reproduction without RePark, the
+  25.0.0 against 25.0.1 comparison, the RePark-side candidates ruled out, and the
+  door, source and release tables. No product code changes; the dependency floor
+  is the owner's decision. `risk_tier: standard`. Branch
+  `fix/threaded-collect-segv-1`.
+  pins: threaded-collect-segv-1/C-001, C-002
