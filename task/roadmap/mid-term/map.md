@@ -658,10 +658,18 @@ declines it (a dated ruling in the intake, then the archive).
   MB3-W9); option (a) a pending-window stamp before the body at one more commit per batch,
   option (b) leave registry row `MB-3-REPLAY-WINDOW-1` declared; needs an owner decision.
 - [zone-horizon-render-1-card-2026-10-07.md](zone-horizon-render-1-card-2026-10-07.md) — **card
-  ZONE-HORIZON-RENDER-1 (2026-10-07, filed, not scheduled, from the C-2d fold 1 re-verify verdict,
-  PR #991):** an instant past 2099 in a DST zone renders at standard time (`11:00` where Spark gives
-  `12:00` for 2100-07-01 in New York), in the cast to string, `hour` and `date_format`, not in the
-  C-2 diff; the ask is to read the localiser's `zone_horizon::proxy_year`.
+  ZONE-HORIZON-RENDER-1 (2026-10-07, from the C-2d fold 1 re-verify verdict, PR #991; closed
+  2026-10-08 by the unit of the same name):** an instant past 2099 in a DST zone rendered at
+  standard time (`11:00` where Spark gives `12:00` for 2100-07-01 in New York), in the cast to
+  string, `hour` and `date_format`. Every workspace site now reads
+  `repark_common::zone_horizon`; `from_utc_timestamp` / `to_utc_timestamp` (an upstream kernel)
+  stay open as the ledger's C-012.
+- [transition-day-arithmetic-1-card-2026-10-08.md](transition-day-arithmetic-1-card-2026-10-08.md) — **card
+  TRANSITION-DAY-ARITHMETIC-1 (2026-10-08, open, not scheduled, ruled 2026-10-08 from ZONE-HORIZON-RENDER-1
+  C-016 and residue R-4):** on a DST transition day, `unix_timestamp` of a gap wall, a gap wall cast to
+  `TIMESTAMP_NTZ` or `from_json`, and `months_between` and interval arithmetic answer differently from
+  Spark; a defect at every year, hidden after 2099 on main only because main had no transitions there;
+  1,208 verifier cells after 2099 and 20 at 2099 of the unit's grid.
 - [preview-bounded-source-1-card-2026-10-07.md](preview-bounded-source-1-card-2026-10-07.md) — **card
   PREVIEW-BOUNDED-SOURCE-1 (2026-10-07, filed, not scheduled, from the C-2d fold 1 re-verify verdict,
   PR #991):** the styled `show(n)` on a lazy frame counts once and reads the tail once under the

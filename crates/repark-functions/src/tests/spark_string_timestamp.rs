@@ -3,7 +3,7 @@ use std::sync::Arc;
 use arrow::array::timezone::Tz;
 use arrow::array::{Array, ArrayRef, AsArray, StringArray};
 use arrow::datatypes::{DataType, TimeUnit, TimestampMicrosecondType};
-use chrono::{DateTime, Datelike, NaiveDate, Utc};
+use chrono::{DateTime, Datelike, NaiveDate, Offset, TimeZone, Utc};
 
 use crate::datetime::micros_from_local_datetime;
 use crate::spark_string_timestamp::grammar::parse_timestamp_string;
@@ -259,15 +259,23 @@ fn chrono_tz_tables_stop_after_the_last_tabulated_year() {
             .and_then(|date| date.and_hms_opt(12, 0, 0))
             .expect("wall builds")
     };
-    let offset_hours = |year: i32| {
+    let tabulated_hours = |year: i32| {
+        zone(NEW_YORK)
+            .offset_from_local_datetime(&local(year))
+            .single()
+            .map(|offset| offset.fix().local_minus_utc() / 3_600)
+    };
+    let placed_hours = |year: i32| {
         let wall = local(year);
         let instant =
             micros_from_local_datetime(wall, zone(NEW_YORK), None).expect("wall localizes");
         (wall.and_utc().timestamp_micros() - instant) / 3_600_000_000
     };
     let last = i32::try_from(LAST_TABULATED_YEAR).expect("year fits");
-    assert_eq!(offset_hours(last), -4);
-    assert_eq!(offset_hours(last + 1), -5);
+    assert_eq!(tabulated_hours(last), Some(-4));
+    assert_eq!(tabulated_hours(last + 1), Some(-5));
+    assert_eq!(placed_hours(last), -4);
+    assert_eq!(placed_hours(last + 1), -4);
 }
 
 #[test]

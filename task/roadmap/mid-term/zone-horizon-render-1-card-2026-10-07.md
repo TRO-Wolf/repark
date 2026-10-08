@@ -2,7 +2,13 @@
 
 **Date:** 2026-10-07. **Filed by:** Claude (Haiku 5.5), docs lane, from the orchestrator's brief. **Source:** the C-2d fold 1 re-verify verdict (PR #991), finding "Engine-wide: an instant past 2099 in a DST zone renders at standard time".
 
-**Status:** filed, not scheduled. The verdict grades it S2.
+**Status:** closed 2026-10-08 by unit ZONE-HORIZON-RENDER-1 (branch `fix/zone-horizon-render-1`),
+except `from_utc_timestamp` / `to_utc_timestamp`, which are an upstream kernel and stay open as
+the ledger's C-012. Ledger:
+[zone-horizon-render-1-ledger.md](../../ledgers/staging/zone-horizon-render-1-ledger.md).
+The three expressions answer `12:00:00 / 12 / 12:00` at 2100, 2104, 2500 and 9999 in New York,
+Sydney, Lord Howe and Kolkata; the 2099 controls are unchanged. Filed 2026-10-07, graded S2 by
+the verdict.
 
 ## Why
 

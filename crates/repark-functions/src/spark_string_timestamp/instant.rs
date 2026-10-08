@@ -3,7 +3,7 @@ use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use super::grammar::ParsedTimestamp;
 use super::zone::SparkZone;
 use crate::datetime::micros_from_local_datetime;
-use repark_common::zone_horizon::{days_from_civil, is_leap_year, proxy_year};
+use repark_common::zone_horizon::{days_from_civil, is_leap_year, offset_at_instant, proxy_year};
 
 const MICROS_PER_SECOND: i128 = 1_000_000;
 const MICROS_PER_DAY: i128 = 86_400 * MICROS_PER_SECOND;
@@ -56,7 +56,9 @@ fn offset_micros_at(
 
 fn today_in(zone: SparkZone, now: DateTime<Utc>) -> (i64, i64, i64) {
     let date = match zone {
-        SparkZone::Named(named) => now.with_timezone(&named).date_naive(),
+        SparkZone::Named(named) => now
+            .with_timezone(&offset_at_instant(&named, &now.naive_utc()))
+            .date_naive(),
         SparkZone::Offset(offset) => now.with_timezone(&offset).date_naive(),
     };
     (

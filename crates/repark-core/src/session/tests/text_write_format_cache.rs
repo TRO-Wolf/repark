@@ -782,3 +782,16 @@ fn fixed_resolver_matches_direct_lookups() {
         }
     }
 }
+
+#[test]
+fn an_instant_after_2099_is_written_at_the_final_rule() {
+    let zone = Tz::from_str("America/New_York").expect("zone parses");
+    for (micros, year) in [
+        (4_087_802_096_000_000_i64, 2099),
+        (4_119_338_096_000_000, 2100),
+    ] {
+        let (wall, offset) = micros_to_wall_zone(micros, zone).expect("instant resolves");
+        assert_eq!(wall.to_string(), format!("{year}-07-15 08:34:56"), "{year}");
+        assert_eq!(offset.local_minus_utc(), -4 * 3_600, "{year}");
+    }
+}

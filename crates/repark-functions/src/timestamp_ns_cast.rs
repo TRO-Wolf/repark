@@ -27,6 +27,7 @@ use crate::datetime::localize_wall_micros_in_zone;
 use crate::instant_ts::string_carries_timezone;
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::timestamp_cast::parse_session_zone;
+use repark_common::zone_horizon::wall_at_instant;
 use values_evidence::Evidence;
 
 pub const TIMESTAMP_NS_CAST_NAME: &str = "__repark_cast_timestamp_ns__";
@@ -384,9 +385,7 @@ fn localize_wall_nanos(wall: i64, zone: Tz) -> Option<i64> {
 }
 
 fn session_wall_nanos(instant: i64, zone: Tz) -> Option<i64> {
-    DateTime::from_timestamp_nanos(instant)
-        .with_timezone(&zone)
-        .naive_local()
+    wall_at_instant(&zone, &DateTime::from_timestamp_nanos(instant).naive_utc())?
         .and_utc()
         .timestamp_nanos_opt()
 }

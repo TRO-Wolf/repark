@@ -10,8 +10,9 @@ use arrow::array::{
     StringArray, StringBuilder, TimestampMicrosecondArray, new_null_array,
 };
 use arrow::datatypes::{DataType, Field, TimeUnit};
-use chrono::{DateTime, NaiveDate, TimeZone as _};
+use chrono::{DateTime, Datelike, NaiveDate, TimeZone as _};
 use datafusion::error::DataFusionError;
+use repark_common::zone_horizon::{LAST_TABULATED_YEAR, offsets_at_wall};
 
 use crate::Error;
 use crate::partition_timestamp::{
@@ -208,8 +209,16 @@ fn zoned_wall_micros(zoned: DateTime<Tz>) -> Option<i64> {
 
 pub(crate) fn parse_timestamp_micros_zone(raw: &str, zone: Tz) -> Option<i64> {
     let wall = parse_wall_naive(raw)?;
-    let zoned = zone.from_local_datetime(&wall).single()?;
-    zoned_wall_micros(zoned)
+    if i64::from(wall.year()) <= LAST_TABULATED_YEAR {
+        let zoned = zone.from_local_datetime(&wall).single()?;
+        return zoned_wall_micros(zoned);
+    }
+    let offset = offsets_at_wall(&zone, &wall).single()?;
+    Some(
+        wall.checked_sub_offset(offset)?
+            .and_utc()
+            .timestamp_micros(),
+    )
 }
 
 macro_rules! finish_partition_numbers {
@@ -644,6 +653,19 @@ mod tests {
 
     fn utc_zone() -> Tz {
         "UTC".parse().expect("UTC parses as a session zone")
+    }
+
+    #[test]
+    fn a_timestamp_partition_value_after_2099_is_placed_by_the_final_rule() {
+        let zone: Tz = "America/New_York".parse().expect("zone parses");
+        assert_eq!(
+            parse_timestamp_micros_zone("2099-07-15 12:00:00", zone),
+            Some(4_087_814_400_000_000)
+        );
+        assert_eq!(
+            parse_timestamp_micros_zone("2100-07-15 12:00:00", zone),
+            Some(4_119_350_400_000_000)
+        );
     }
 
     fn leaf(root: &Path, segments: &[&str], name: &str) -> PathBuf {

@@ -27,8 +27,8 @@ mod placement {
 
     use arrow::array::TimestampMicrosecondArray;
     use arrow::array::timezone::Tz;
-    use chrono::{DateTime, Datelike, LocalResult, Offset, TimeZone};
-    use repark_common::zone_horizon::proxy_year;
+    use chrono::{DateTime, LocalResult};
+    use repark_common::zone_horizon::offsets_at_wall;
     use repark_connect::{ConnectError, ValueRefusal, WallClockLocaliser};
 
     use super::SessionZoneLocaliser;
@@ -56,12 +56,8 @@ mod placement {
         let wall = DateTime::from_timestamp_micros(micros)
             .ok_or_else(past)?
             .naive_utc();
-        let proxy = i32::try_from(proxy_year(i64::from(wall.year())))
-            .ok()
-            .and_then(|year| wall.with_year(year))
-            .ok_or_else(past)?;
-        let offset = match zone.offset_from_local_datetime(&proxy) {
-            LocalResult::Single(offset) => offset.fix(),
+        let offset = match offsets_at_wall(&zone, &wall) {
+            LocalResult::Single(offset) => offset,
             LocalResult::Ambiguous(_, _) => {
                 return Err(refused(index, ValueRefusal::WallClockOverlap));
             }

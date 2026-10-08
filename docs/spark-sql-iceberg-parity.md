@@ -3214,10 +3214,9 @@ still open is `isModifiable`.
   refuses; Spark answers). The date and time extractors (`year('2020')`, `hour(<string>)`, …)
   still Arrow-cast a string argument, so a Spark-legal short string refuses there (loud;
   verification critic 2026-09-19, P2). A string leaf inside `CAST(… AS MAP<…, TIMESTAMP>)` keeps Arrow's
-  parse. Rendering an LTZ instant after 2099 in a DST region zone uses standard time:
-  `CAST(CAST('2999-07-01 12:00:00' AS TIMESTAMP) AS STRING)` in New York answers
-  `2999-07-01 11:00:00`, and Java's final rule gives `12:00:00` (inferred from the recorded
-  instant, not recorded as text). The native `repark.sql` door has no LTZ `TIMESTAMP` (its
+  parse. Rendering an LTZ instant after 2099 in a DST region zone used standard time
+  (`CAST(CAST('2999-07-01 12:00:00' AS TIMESTAMP) AS STRING)` in New York answered
+  `2999-07-01 11:00:00`); closed 2026-10-08 by ZONE-HORIZON-RENDER-1, the next row. The native `repark.sql` door has no LTZ `TIMESTAMP` (its
   `TIMESTAMP` is the ANSI zoneless type), so no cell runs there.
 - **Apache Spark** — the 604 cells in `python/repark/tests/cast_ts_string_1_spark_oracle.json`:
   151 strings x `UTC` / `America/New_York` x ANSI off / on, each with the `unix_micros` of
@@ -3237,6 +3236,56 @@ still open is `isModifiable`.
   unwraps one dictionary layer, pinned on `CAST`, `TRY_CAST` and `try_to_timestamp`, and a
   doubled blank between date and time is pinned as Spark's refusal in the kernel.
   pins: cast-ts-string-1/C-013
+
+### ZONE-HORIZON-RENDER-1 — an instant after 2099 renders at the zone's final rule — **FIXED 2026-10-08**
+
+- **repark** — Before (main `156be81c`): chrono-tz tabulates zone transitions up to 2099 and
+  only the string → `TIMESTAMP` literal (and the Postgres wall-clock placement) read the
+  shared horizon, `repark_common::zone_horizon::proxy_year`. Every other site read chrono-tz
+  directly, so after 2099 a shifting zone stayed on whatever offset its last tabulated
+  transition left: with the session zone `America/New_York`,
+  `CAST(TIMESTAMP '2100-07-01 12:00:00' AS STRING)`, `hour(…)` and `date_format(…, 'HH:mm')`
+  answered `2100-07-01 11:00:00`, `11`, `11:00` over the right instant, and
+  `make_timestamp(2100, 7, 15, 12, 0, 0)` placed the wall clock an hour late. 1516 of 6972
+  measured cells differed from Spark. After: `zone_horizon` carries both directions
+  (`offset_at_instant`, `wall_at_instant`, `offsets_at_wall`), each the zone itself for a year
+  in 1200–2099 and the zone at the proxy year outside it, and every instant ↔ wall-clock site
+  in `repark-functions` and `repark-core` reads the zone through them: the cast to string, to
+  `DATE` and to `TIMESTAMP_NTZ`, the calendar extractors, `date_format`, `to_char`,
+  `date_trunc`, `trunc`, `from_unixtime`, `timestampadd` and interval arithmetic, `to_json`,
+  `make_timestamp`, `to_timestamp` with a pattern, `unix_timestamp`, `convert_timezone`,
+  `TIMESTAMP_NTZ` → `TIMESTAMP`, `DATE` → `TIMESTAMP`, CSV and JSON writes, text partition
+  values, partition discovery, the ORC writer zone and time-travel bounds. 700 cells moved to
+  Spark's answer; no 2099 cell changed.
+  Residues (open, not parity; each pinned as a still-differing cell by the residue file):
+  `from_utc_timestamp` and `to_utc_timestamp` are `datafusion-spark` kernels and still read
+  standard time after 2099 (ledger C-012, open). The built-in `extract` / `date_part` never
+  read the session zone, at any year (`extract(HOUR FROM …)` answers the UTC hour).
+  `make_timestamp`, the `TIMESTAMP_NTZ` literal and `convert_timezone` over one stop at the
+  nanosecond range (2262). On a transition day `months_between` reads the wall clock where
+  Spark reads elapsed seconds, and `unix_timestamp` of a wall clock inside a gap refuses
+  where Spark shifts forward; both are true at 2099 too, and after 2099 they now show on the
+  real transition days, which moved 16 cells that agreed by accident (ledger R-5).
+  `timestamp_micros` / `timestamp_seconds` do not exist. The styled `show()` prints instants
+  in UTC, not in the session zone.
+- **Apache Spark** — the 6972 cells in
+  `python/repark/tests/zone_horizon_render_1_spark_oracle.json`: six session zones x 2099,
+  2100, 2104, 2500, 9999 x a January and a July instant plus both sides of each transition x
+  46 instant functions, the same walls x 16 wall-clock functions, and a CSV and a JSON write
+  per zone. Spark's rule and the proxy-year rule agree on every cell RePark reaches.
+  *(oracle: live PySpark 4.1.2, 2026-10-08, recorder
+  `python/repark/tests/_record_zone_horizon_render_1.py`.)*
+- **Pin** — `python/repark/tests/test_zone_horizon_render_1.py` (every cell outside the residue
+  per zone, the residue explained, the card's three expressions, `collect` and the Arrow
+  path, and a live drift check); `crates/repark-common/src/zone_horizon/tests.rs`;
+  `crates/repark-functions/src/tests/zone_horizon_render.rs`; the core site pins
+  `…/session/tests/text_write_format_cache.rs::an_instant_after_2099_is_written_at_the_final_rule`,
+  `…/text_partition.rs::…::a_timestamp_partition_after_2099_is_named_by_the_final_rule`,
+  `…/partition_discovery.rs::…::a_timestamp_partition_value_after_2099_is_placed_by_the_final_rule`,
+  `…/orc_scan.rs::…::a_writer_wall_clock_after_2099_is_placed_by_the_final_rule`,
+  `…/time_travel/tests.rs::a_snapshot_bound_after_2099_reads_the_final_rule_in_both_directions`.
+- **Rationale** — FIXED 2026-10-08 (card ZONE-HORIZON-RENDER-1, the C-2d fold 1 re-verify's S2
+  finding). A silent wrong wall clock over a right instant. pins: zone-horizon-render-1/C-015
 
 ## 5. Facade drop-in semantics (DECLARED)
 

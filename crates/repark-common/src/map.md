@@ -55,6 +55,42 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   stands on. Two readers: the string → `TIMESTAMP` literal (`repark-functions`) and the
   Postgres wall-clock placement (`repark-core`'s `session/zone_localiser.rs`), so the two agree
   on every wall clock. pins: c-2/C-109
+  **ZONE-HORIZON-RENDER-1 (2026-10-08):** the inverse direction and one door for both. The
+  helpers are generic over `chrono::TimeZone` (so `repark-common` now depends on `chrono`,
+  already a workspace dependency, and still carries no zone tables): `offset_at_instant(zone,
+  utc)`, `wall_at_instant(zone, utc)` and `zoned_at_instant(zone, utc)` (the instant with its
+  offset attached, for field reads) read the zone at the same month, day and time of the proxy
+  year, and `offsets_at_wall(zone, wall)` does the same for a wall clock, keeping chrono's
+  `Single` / `Ambiguous` / `None` so a gap and an overlap after 2099 stay a gap and an
+  overlap. All are the zone itself for a year in 1200–2099: the tabulated branch is inlined
+  and is the expression the call sites held before (one year compare per value), and the
+  proxy branch is `#[cold]` and out of line, so the hot loops keep their shape.
+  `tabulated_utc_seconds()` is the same range in epoch seconds, for a kernel that checks a
+  whole batch once.
+  The proxy is taken from the year of the value as given: the UTC year for an instant, the
+  wall year for a wall clock. The two differ only within a zone's offset of New Year, where no
+  final rule changes, so the directions agree. Why it existed: only the literal read the
+  horizon, so `CAST(TIMESTAMP '2100-07-01 12:00:00' AS STRING)` in New York answered `11:00`.
+  Readers after this unit — `repark-functions`: `datetime/session_wall.rs` (the crate's
+  funnel: the extractors, `date_format`, `date_trunc`, `trunc`, `to_char`, `from_unixtime`,
+  `make_timestamp`, `convert_timezone`, `timestampadd`, interval arithmetic and the
+  `DATE` / `TIMESTAMP_NTZ` casts all call it), `timestamp_cast.rs` (the cast to string and
+  `unix_timestamp` of a string), `timestamp_ns_cast.rs`, `json/to_json.rs`, `json/decode.rs`,
+  `collection/array_append/coerce.rs` and the literal's `today_in`; `repark-core`:
+  `session/text_write_format.rs` (CSV and JSON writes), `text_partition.rs`,
+  `partition_discovery.rs`, `orc_scan.rs` (the writer zone), `time_travel/sql_text.rs` and
+  `session/zone_localiser.rs`. No call site holds a copy of the rule. Tests:
+  [zone_horizon/map.md](zone_horizon/map.md). pins: zone-horizon-render-1/C-003
+  **ZONE-HORIZON-RENDER-1 fold 1 Item A (2026-10-08):** four helpers whose tabulated
+  branch (a year at or before 2099) is the chrono-tz call the site held on main and
+  whose later branch is the proxy: `wall_to_unix_seconds`, `wall_to_micros_earlier`
+  (`from_local_datetime`, the earlier offset in an overlap), `wall_to_millis_earlier`
+  (the earlier instant) and `micros_to_wall_and_offset` (`with_timezone`).
+  **Fold 1 Item B (2026-10-08):** the proxy applies past 2099 only when the zone's
+  table holds a transition inside 2099; otherwise the helpers read the offset in force
+  at the table end, as main did. The predicate scans 2099 hourly once per zone into a
+  small `Display`-keyed cache, so no value path allocates; helpers take
+  `TimeZone + Display`.
 
 - `source.rs` — **C-1 (2026-10-05), the CC-2 identity move:** `SourceKind`
   (`Postgres`, `SqlServer`, `Trino`; `from_spelling` / `spelling` over the exact loader

@@ -206,6 +206,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **ZONE-HORIZON-RENDER-1 (2026-10-08):** the mirror
+  table reads `crates/repark-functions/src/datetime.rs` at 1655, the ceiling the unit ratcheted
+  down from 1699 in `scripts/check_rust_file_size.py`.
 - `test_cap_1_source_file_line_cap.py` — **STAMP-2-R5P6-2 (2026-10-07):** the mirror
   follows `dataframe/core.py` 3462 → 3461 (the H1 join door's route switch).
   pins: stamp-2-r5p6-2/C-003

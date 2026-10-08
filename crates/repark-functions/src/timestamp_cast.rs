@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use arrow::array::timezone::Tz;
-use chrono::{DateTime, Datelike, MappedLocalTime, NaiveDate, NaiveDateTime, TimeZone, Timelike};
+use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Timelike};
 use datafusion::arrow::array::{
     Array, ArrayRef, AsArray, Date32Array, Float64Array, Int64Array, StringArray, StringBuilder,
 };
@@ -21,6 +21,7 @@ use datafusion::logical_expr::{
 use crate::ansi::spark_ansi_enabled_from_options;
 use crate::datetime::invoke_local_dates;
 use crate::session_time_zone::session_time_zone_from_options;
+use repark_common::zone_horizon::{wall_at_instant, wall_to_unix_seconds};
 
 /// The embedded integer-target UDF: floored epoch seconds as `Int64`.
 #[must_use]
@@ -621,17 +622,15 @@ fn unix_seconds_from_string(array: &dyn Array, session_zone: Tz, ansi: bool) -> 
         }
         let text = values.value(row);
         match NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S") {
-            Ok(naive) => match session_zone.from_local_datetime(&naive) {
-                MappedLocalTime::Single(instant) | MappedLocalTime::Ambiguous(instant, _) => {
-                    seconds.append_value(instant.timestamp());
-                }
-                MappedLocalTime::None => {
-                    if ansi {
-                        return Err(malformed_timestamp_parse(text));
-                    }
+            Ok(naive) => {
+                if let Some(placed) = wall_to_unix_seconds(&session_zone, &naive) {
+                    seconds.append_value(placed);
+                } else if ansi {
+                    return Err(malformed_timestamp_parse(text));
+                } else {
                     seconds.append_null();
                 }
-            },
+            }
             Err(_) if ansi => return Err(malformed_timestamp_parse(text)),
             Err(_) => seconds.append_null(),
         }
@@ -710,7 +709,7 @@ fn wall_clock_from_ticks(
         _ => DateTime::from_timestamp_micros(ticks_to_micros(ticks, unit)?)?,
     };
     if zone_annotation.is_some() {
-        Some(utc.with_timezone(&session_zone).naive_local())
+        wall_at_instant(&session_zone, &utc.naive_utc())
     } else {
         Some(utc.naive_utc())
     }

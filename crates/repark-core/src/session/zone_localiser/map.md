@@ -11,7 +11,8 @@ The pins of [../zone_localiser.rs](../zone_localiser.rs) (`#[cfg(all(test, featu
   - The offset of the wall clock's own date, and a fixed offset. A gap or an overlap refuses
     naming `CONNECT-DIV-pg-timestamp-zone`.
   - **Fold 1, N1:** a wall clock after 2099 reads its offset from
-    `repark_common::zone_horizon::proxy_year`, the year RePark's `TIMESTAMP` literal reads.
+    `repark_common::zone_horizon::proxy_year`, the year RePark's `TIMESTAMP` literal reads
+    (since ZONE-HORIZON-RENDER-1, 2026-10-08, through `zone_horizon::offsets_at_wall`).
     The verifier's New York `2100-07-01 12:00` is `4118140800000000` (EDT). The 2099/2100
     boundary pairs in New York, Sydney and Auckland keep one offset. Southern-hemisphere and
     far-future wall clocks keep their season, up to year 262142. Gaps and overlaps after 2099

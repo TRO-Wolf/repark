@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use arrow::array::timezone::Tz;
-use chrono::{FixedOffset, NaiveDateTime, Offset as _};
+use chrono::{FixedOffset, NaiveDateTime};
 use datafusion::common::DataFusionError;
 use repark_common::Error;
+use repark_common::zone_horizon::micros_to_wall_and_offset;
 
 pub mod fast;
 pub mod file_format;
@@ -545,9 +546,7 @@ pub fn compile_write_pattern(
 }
 
 pub fn micros_to_wall_zone(micros: i64, zone: Tz) -> Option<(NaiveDateTime, FixedOffset)> {
-    let instant = chrono::DateTime::from_timestamp_micros(micros)?;
-    let zoned = instant.with_timezone(&zone);
-    Some((zoned.naive_local(), zoned.offset().fix()))
+    micros_to_wall_and_offset(&zone, micros)
 }
 
 pub fn micros_to_naive_wall(micros: i64) -> Option<NaiveDateTime> {

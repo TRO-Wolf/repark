@@ -94,6 +94,17 @@ round-trip destroys.
 
 Each kernel file carries its own `#[cfg(test)] mod tests` running the measured Spark cells
 through a `SessionContext`.
+- **ZONE-HORIZON-RENDER-1 (2026-10-08):** `to_json.rs::timestamp_text` and
+  `decode.rs::local_micros` read the session zone through `repark_common::zone_horizon`, so
+  `to_json` prints an instant after 2099 with the final rule's wall clock and offset
+  (`2100-07-15T08:34:56.000-04:00` in New York) and `from_json` places a wall clock there.
+  `to_json` is pinned in `../tests/zone_horizon_render.rs`; `from_json` has no pin of its own
+  (ledger R-9).
+  **Fold 1 Item A (2026-10-08):** `timestamp_text` runs main's `timestamp_opt` +
+  `%:z` expression at or before 2099 (a seconds-bearing offset prints as main
+  printed it) and the helper only past the table end; `local_micros` is the
+  shared `wall_to_micros_earlier`, whose tabulated branch is main's
+  `from_local_datetime`.
 
 ## Pointers
 

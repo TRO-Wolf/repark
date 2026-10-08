@@ -12,10 +12,7 @@ use arrow::compute::{DatePart, cast, date_part};
 use arrow::datatypes::{
     DataType, Date32Type, Int32Type, Int64Type, TimeUnit, TimestampMicrosecondType,
 };
-use chrono::{
-    DateTime, Datelike, Days, FixedOffset, MappedLocalTime, NaiveDate, NaiveDateTime, Offset,
-    TimeDelta, TimeZone, Timelike,
-};
+use chrono::{Datelike, Days, NaiveDate, NaiveDateTime, Timelike};
 use datafusion::common::config::ConfigOptions;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{
@@ -23,6 +20,14 @@ use datafusion::logical_expr::{
 };
 
 use crate::session_time_zone::session_time_zone_from_options;
+
+mod session_wall;
+
+pub(crate) use session_wall::{
+    datetime_from_micros, local_datetime_from_micros, localize_wall_micros_in_zone,
+    micros_from_local_datetime, offset_at_instant,
+};
+use session_wall::{instant_part, within_the_tables};
 
 /// `date_trunc` returns a microsecond timestamp with Spark's LTZ wire type.
 const TIMESTAMP_UNIT: TimeUnit = TimeUnit::Microsecond;
@@ -270,6 +275,11 @@ impl ScalarUDFImpl for DatePartUdf {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let zone = session_time_zone_from_options(args.config_options.as_ref());
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+        if is_instant(arrays[0].data_type()) && !within_the_tables(&arrays[0]) {
+            let zone = extraction_time_zone(args.config_options.as_ref())?;
+            return instant_part(&arrays[0], zone, self.part, self.spark_offset)
+                .map(ColumnarValue::Array);
+        }
         let resolved = resolve_instant_in_zone(&arrays[0], zone)?;
         let extracted = date_part(resolved.as_ref(), self.part)?;
         let extracted = cast(extracted.as_ref(), &DataType::Int32)?;
@@ -439,60 +449,6 @@ pub(crate) fn invoke_local_dates(array: &ArrayRef, options: &ConfigOptions) -> R
         }
     }
     Ok(Arc::new(builder.finish()))
-}
-
-/// A microsecond timestamp (µs since the Unix epoch, UTC) as a naive local-instant datetime.
-pub(crate) fn datetime_from_micros(micros: i64) -> Option<NaiveDateTime> {
-    DateTime::from_timestamp_micros(micros).map(|instant| instant.naive_utc())
-}
-
-/// Localize a zoneless wall clock (ticks as if the digits were UTC) in `zone` → instant µs.
-pub(crate) fn localize_wall_micros_in_zone(wall_micros: i64, zone: Tz) -> Option<i64> {
-    datetime_from_micros(wall_micros)
-        .and_then(|naive| micros_from_local_datetime(naive, zone, None))
-}
-
-/// Return an instant's local datetime in `zone`; `None` means outside chrono's range.
-pub(crate) fn local_datetime_from_micros(micros: i64, zone: Tz) -> Option<NaiveDateTime> {
-    DateTime::from_timestamp_micros(micros)
-        .map(|instant| instant.with_timezone(&zone).naive_local())
-}
-
-/// Return the UTC offset at an instant; `None` means outside chrono's range.
-fn offset_at_instant(micros: i64, zone: Tz) -> Option<FixedOffset> {
-    DateTime::from_timestamp_micros(micros)
-        .map(|instant| instant.with_timezone(&zone).offset().fix())
-}
-
-/// Look back 26 hours to obtain the pre-gap offset; this bound covers the IANA transition range.
-const GAP_LOOKBACK_HOURS: i64 = 26;
-
-/// Return the offset before a DST gap so local walls resolve like Spark's `ofLocal`.
-fn offset_before_gap(local: NaiveDateTime, zone: Tz) -> Option<FixedOffset> {
-    let probe = local.checked_sub_signed(TimeDelta::try_hours(GAP_LOOKBACK_HOURS)?)?;
-    Some(zone.offset_from_utc_datetime(&probe).fix())
-}
-
-/// Map a local wall to epoch micros with Spark DST rules for overlaps and gaps.
-pub(crate) fn micros_from_local_datetime(
-    local: NaiveDateTime,
-    zone: Tz,
-    preferred: Option<FixedOffset>,
-) -> Option<i64> {
-    let offset = match zone.offset_from_local_datetime(&local) {
-        MappedLocalTime::Single(single) => single.fix(),
-        MappedLocalTime::Ambiguous(earliest, latest) => {
-            let (earliest, latest) = (earliest.fix(), latest.fix());
-            match preferred {
-                Some(source) if source == earliest || source == latest => source,
-                _ => earliest,
-            }
-        }
-        MappedLocalTime::None => offset_before_gap(local, zone)?,
-    };
-    let utc =
-        local.checked_sub_signed(TimeDelta::try_seconds(i64::from(offset.local_minus_utc()))?)?;
-    Some(utc.and_utc().timestamp_micros())
 }
 
 /// Days in `(year, month)`: the day before the first of the next month, so leap years fall out.

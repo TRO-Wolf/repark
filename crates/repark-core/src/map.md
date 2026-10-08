@@ -1459,6 +1459,19 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **CATALOG-1 fold V-007 (2026-09-26):** `refused_catalog_names` lists the refused-kind
   placeholder names beside `registered_catalog_names`. pins: catalog-1/C-014
 
+- **ZONE-HORIZON-RENDER-1 (2026-10-08):** three files read the zone through
+  `repark_common::zone_horizon` instead of chrono-tz directly, so a value after 2099 follows
+  the zone's final rule: `orc_scan.rs::writer_wall_to_utc` (`offsets_at_wall`, earlier offset
+  in an overlap as before), `partition_discovery.rs::parse_timestamp_micros_zone`
+  (`offsets_at_wall`; `zoned_wall_micros` is gone, its one caller builds the instant from
+  the offset) and `text_partition.rs::timestamp_partition_text` (`wall_at_instant`). Each
+  carries one pin at 2099 and 2100 in its own test module.
+  pins: zone-horizon-render-1/C-011
+  **Fold 1 Item A (2026-10-08):** `writer_wall_to_utc` is the shared
+  `wall_to_micros_earlier` (tabulated: main's `from_local_datetime`);
+  `parse_timestamp_micros_zone` restores `zoned_wall_micros` and runs main's
+  expression at or before 2099, the helper only after.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

@@ -131,6 +131,15 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   takes the router path `spark.sql` takes. `repark-spark`'s caller is a net deletion.
   pins: ipi-23-mt-reader-1/C-004, C-005, C-006, C-007
 
+**ZONE-HORIZON-RENDER-1 (2026-10-08):** `sql_text.rs::zoned_wall_to_ms` and
+`::format_snapshot_bound_ms` read a region zone through `repark_common::zone_horizon`
+(`offsets_at_wall`, the earlier instant in an overlap as before; `offset_at_instant`), so a
+bound after 2099 is placed and printed at the final rule. `tests.rs` pins both directions at
+2099 and 2100. pins: zone-horizon-render-1/C-011
+**Fold 1 Item A (2026-10-08):** `zoned_wall_to_ms` is the shared
+`wall_to_millis_earlier`, whose tabulated branch is main's `from_local_datetime`
+with `first.min(second)` in an overlap.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

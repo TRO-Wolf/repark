@@ -35,6 +35,10 @@ of the rule. Closes when the Spark grammar changes (a Spark bump re-records the 
 
 Tests: [`../tests/spark_string_timestamp.rs`](../tests/map.md).
 pins: cast-ts-string-1/C-001, C-002, C-003, C-008
+- **ZONE-HORIZON-RENDER-1 (2026-10-08):** `instant.rs::today_in` takes today's date from
+  `zone_horizon::offset_at_instant`, so a time-only string after 2099 lands on the right day
+  (`../tests/zone_horizon_render.rs::a_time_only_string_takes_today_from_the_final_rule`).
+  `offset_micros_at` is unchanged: it already read `proxy_year`.
 
 ## Pointers
 

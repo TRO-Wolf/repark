@@ -12,4 +12,5 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+chrono.workspace = true
 thiserror.workspace = true

@@ -49,8 +49,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `runtime_zone` handle. Under `postgres` it implements `repark_connect::WallClockLocaliser`.
   The zone is read at scan time and canonicalised through `canonical_session_zone_id`, as
   `orc_scan.rs` and `text_scan.rs` do; `zone_label()` reports that canonical id. `localise`
-  takes each wall clock's offset from the same date in
-  `repark_common::zone_horizon::proxy_year`, so a wall clock after 2099 is placed by the final
+  takes each wall clock's offset from `repark_common::zone_horizon::offsets_at_wall` (the
+  proxy year; ZONE-HORIZON-RENDER-1, 2026-10-08, replaced the inline `proxy_year` call with
+  the shared helper), so a wall clock after 2099 is placed by the final
   rule, exactly as RePark's `TIMESTAMP` literal places it. A gap refuses
   `ValueRefusal::WallClockGap` and an overlap `WallClockOverlap` (both
   `CONNECT-DIV-pg-timestamp-zone`, naming `prefer_timestamp_ntz`). A wall clock whose instant
@@ -295,6 +296,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   messages), the micros-to-wall/zone conversions, and the option-key helpers.
   Child: [`text_write_format/`](text_write_format/map.md).
   pins: text-write-timestamp-zone-1/C-004
+  **ZONE-HORIZON-RENDER-1 fold 1 Item A (2026-10-08):** `micros_to_wall_zone` is
+  the shared `micros_to_wall_and_offset`, whose tabulated branch is main's
+  `with_timezone` expression.
   **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** Java quote-run
   scan, `y` runs past 6 refused, and the trailing-`]` class (RECOGNITION for
   LTZ/DATE when every letter is a legacy `SimpleDateFormat` letter, measured
