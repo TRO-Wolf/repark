@@ -22,7 +22,7 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   `processingTime` and `continuous` through the native `check_trigger_interval`
   (MB-0c T1/T1B/T1C/T4 grammar) before storing the stripped string; the parsed
   duration threads into the start spec in a later round.
-  pins: mb-4/C-018. A missing format refuses as the PySpark default
+  pins: mb-4/C-020. A missing format refuses as the PySpark default
   `parquet`; `partitionBy` and `path` pass through opaquely. Omitted PySpark members
   (`csv`, `json`, `orc`, `parquet`, `schema`, `text`, `xml`, `clusterBy`, `foreach`,
   `partitionBy`, `resetTerminated`, `processAllAvailable`, `load`'s `format`/`schema`

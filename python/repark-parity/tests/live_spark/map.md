@@ -97,7 +97,7 @@ collected by pytest, and no RePark code runs.
   empty private directories; `MB0_OUT` redirects the JSON and `MB0C_CELLS` (a comma
   list of cell ids) records a subset merged into the existing JSON. A re-run is
   byte-identical.
-  pins: mb-4/C-009
+  pins: mb-4/C-019
 - `mb0c_facade_oracle.json` is that recording: the MB-0 preamble shape and the 31 cells.
 - `mb0c_facade_oracle.sha256` holds `sha256sum` of the JSON. Check it with `sha256sum -c`
   from this directory.

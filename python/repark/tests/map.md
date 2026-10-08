@@ -7952,7 +7952,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   trigger-parser pins, one per refusal class plus accepts and the padded-input strip
   proofs, each asserting class, condition, SQLSTATE, text and message parameters
   against its MB-0c cell; the full 152-string sweep lives in the Rust tests.
-  pins: mb-4/C-018
+  pins: mb-4/C-020 **MB-4 round 2 (2026-10-08):** two mutant-hardening pins, the `toTable` unknown-option refusal and the sink-before-unknowns order. pins: mb-4/C-021
 
 ## I want to...
 

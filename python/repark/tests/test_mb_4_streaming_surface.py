@@ -469,6 +469,33 @@ def test_writer_unknown_prefixed_option_refuses_mbe17(spark: ReparkSession) -> N
     assert excinfo.value.getSqlState() is None
 
 
+def test_writer_totable_unknown_option_refuses_mbe17(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException) as excinfo:
+        (
+            _writer(spark)
+            .format("iceberg")
+            .option("streaming-zzz", "1")
+            .toTable("ice.sales.silver", checkpointLocation="/tmp/x")
+        )
+    assert excinfo.value.getCondition() == "REPARK_MICROBATCH.UNKNOWN_OPTION"
+    assert excinfo.value.getMessageParameters() == {"key": "streaming-zzz"}
+    assert excinfo.value.getSqlState() is None
+
+
+def test_writer_sink_refusal_precedes_unknown_option(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException) as excinfo:
+        (
+            _writer(spark)
+            .format("iceberg")
+            .foreachBatch(_ignore_batch)
+            .option("streaming-zzz", "1")
+            .start(checkpointLocation="/tmp/x")
+        )
+    assert excinfo.value.getCondition() == "REPARK_MICROBATCH.SINK_UNDECLARED"
+    assert excinfo.value.getMessageParameters() == {}
+    assert excinfo.value.getSqlState() is None
+
+
 def test_writer_partitionby_accepted_and_ignored(spark: ReparkSession) -> None:
     with pytest.raises(NotImplementedError) as excinfo:
         _writer(spark).format("iceberg").start(checkpointLocation="/tmp/x", partitionBy="dt")

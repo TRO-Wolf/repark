@@ -597,6 +597,12 @@ mod tests {
             )
             .expect_err("refuses");
             assert_eq!(condition(&refused, py), UNKNOWN_OPTION);
+            let refused = start(
+                options(&[("checkpointLocation", "/tmp/x"), ("streaming-zzz", "1")]),
+                true,
+            )
+            .expect_err("refuses");
+            assert_eq!(condition(&refused, py), SINK_UNDECLARED);
             let terminal = start(
                 options(&[
                     ("checkpointLocation", "/tmp/x"),
@@ -631,6 +637,20 @@ mod tests {
             )
             .expect_err("the door validates");
             assert_eq!(condition(&refused, py), CHECKPOINT_MISSING);
+            let refused = to_table_stream(
+                py,
+                &session,
+                &frame,
+                "ice.sales.silver",
+                "availableNow",
+                None,
+                options(&[("checkpointLocation", "/tmp/x"), ("streaming-zzz", "1")]),
+                None,
+                None,
+                Vec::new(),
+            )
+            .expect_err("unknown writer options refuse");
+            assert_eq!(condition(&refused, py), UNKNOWN_OPTION);
             let terminal = to_table_stream(
                 py,
                 &session,
