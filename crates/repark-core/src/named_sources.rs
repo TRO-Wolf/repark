@@ -24,6 +24,7 @@ mod tests;
 pub(crate) fn refuse_source_ddl(
     plan: &LogicalPlan,
     catalogs: &CatalogRegistry,
+    default_catalog: &str,
 ) -> std::result::Result<(), DataFusionError> {
     let LogicalPlan::Ddl(ddl) = plan else {
         return Ok(());
@@ -36,12 +37,19 @@ pub(crate) fn refuse_source_ddl(
         DdlStatement::CreateIndex(create) => claimed(create.table.catalog()),
         DdlStatement::DropTable(drop) => claimed(drop.name.catalog()),
         DdlStatement::DropView(drop) => claimed(drop.name.catalog()),
-        DdlStatement::CreateCatalog(create) => claimed(Some(create.catalog_name.as_str()))
-            .or_else(|| claimed(dotted_head(&create.catalog_name))),
-        DdlStatement::CreateCatalogSchema(create) => claimed(dotted_head(&create.schema_name)),
+        DdlStatement::CreateCatalog(create) => {
+            claimed(Some(create.catalog_name.as_str())).or_else(|| {
+                claimed(Some(
+                    dotted_head(&create.catalog_name).unwrap_or(default_catalog),
+                ))
+            })
+        }
+        DdlStatement::CreateCatalogSchema(create) => claimed(Some(
+            dotted_head(&create.schema_name).unwrap_or(default_catalog),
+        )),
         DdlStatement::DropCatalogSchema(drop) => match &drop.name {
             SchemaReference::Full { catalog, .. } => claimed(Some(catalog.as_ref())),
-            SchemaReference::Bare { .. } => None,
+            SchemaReference::Bare { .. } => claimed(Some(default_catalog)),
         },
         DdlStatement::CreateFunction(_) | DdlStatement::DropFunction(_) => None,
     };

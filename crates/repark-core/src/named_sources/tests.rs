@@ -82,6 +82,64 @@ async fn configured_source_ddl_refuses_as_read_only() {
     assert!(error.to_string().contains("1.10"), "{error}");
 }
 
+async fn assert_bare_ddl_refuses_under_a_mounted_default_catalog(sql: &str) {
+    let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
+    session
+        .register_configured_sources()
+        .expect("source registration");
+    session
+        .sql("SET datafusion.catalog.default_catalog = 'company_db'")
+        .await
+        .expect("the default catalog moves to the mounted source");
+    let Err(error) = session.sql(sql).await else {
+        panic!("{sql}: a bare schema under a mounted default catalog must refuse");
+    };
+    let message = error.to_string();
+    assert!(
+        message.contains("database source `default.database.postgres.company_db` is read-only"),
+        "{sql}: {message}"
+    );
+    assert!(message.contains("CONNECT-DECL-pg-ddl"), "{sql}: {message}");
+}
+
+#[tokio::test]
+async fn bare_create_schema_if_not_exists_refuses_under_a_mounted_default_catalog() {
+    assert_bare_ddl_refuses_under_a_mounted_default_catalog("CREATE SCHEMA IF NOT EXISTS bare_x")
+        .await;
+}
+
+#[tokio::test]
+async fn bare_create_schema_refuses_under_a_mounted_default_catalog() {
+    assert_bare_ddl_refuses_under_a_mounted_default_catalog("CREATE SCHEMA bare_x").await;
+}
+
+#[tokio::test]
+async fn bare_create_database_if_not_exists_refuses_under_a_mounted_default_catalog() {
+    assert_bare_ddl_refuses_under_a_mounted_default_catalog("CREATE DATABASE IF NOT EXISTS bare_x")
+        .await;
+}
+
+#[tokio::test]
+async fn bare_drop_schema_refuses_under_a_mounted_default_catalog() {
+    assert_bare_ddl_refuses_under_a_mounted_default_catalog("DROP SCHEMA bare_x").await;
+}
+
+#[tokio::test]
+async fn bare_schema_ddl_succeeds_under_the_ordinary_default_catalog() {
+    let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
+    session
+        .register_configured_sources()
+        .expect("source registration");
+    session
+        .sql("CREATE SCHEMA bare_x")
+        .await
+        .expect("a bare schema under the ordinary default catalog is created");
+    session
+        .sql("DROP SCHEMA bare_x")
+        .await
+        .expect("and dropped again");
+}
+
 #[tokio::test]
 async fn mounted_postgres_sources_are_read_only_catalogs() {
     let (_directory, session) = session_with_source(
