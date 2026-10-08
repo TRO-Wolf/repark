@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
+from functools import partial
 from typing import Any
 
 import pytest
@@ -18,10 +19,20 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
+@pytest.fixture
+def route_hits() -> dict[str, int]:
+    return {"native": 0, "sql": 0}
+
+
 @pytest.fixture(params=["native", "sql"])
-def route(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> str:
-    if request.param == "sql":
-        monkeypatch.setattr(join_attr_tokens, "_join_exact_plan", _no_exact)
+def route(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    route_hits: dict[str, int],
+) -> str:
+    original = join_attr_tokens._join_exact_plan
+    counting = partial(_counting_exact_plan, route_hits, original, request.param == "sql")
+    monkeypatch.setattr(join_attr_tokens, "_join_exact_plan", counting)
     return str(request.param)
 
 
@@ -36,8 +47,22 @@ def _rows(frame: Any) -> list[tuple[Any, ...]]:
     return sorted(tuple(row) for row in frame.collect())
 
 
-def _no_exact(*_: Any) -> None:
-    return None
+def _counting_exact_plan(
+    hits: dict[str, int], original: Callable[..., Any], force_sql: bool, *args: Any
+) -> Any:
+    if force_sql:
+        hits["sql"] += 1
+        return None
+    planned = original(*args)
+    hits["sql" if planned is None else "native"] += 1
+    return planned
+
+
+def _assert_route_taken(route: str, hits: dict[str, int], joins: int) -> None:
+    if route == "native":
+        assert hits == {"native": joins, "sql": 0}
+    else:
+        assert hits == {"native": 0, "sql": joins}
 
 
 def _outcome(build: Callable[[], Any]) -> tuple[Any, ...]:
@@ -49,7 +74,7 @@ def _outcome(build: Callable[[], Any]) -> tuple[Any, ...]:
 
 
 def test_cross_join_with_an_equality_condition_answers_the_inner_rows(
-    spark: ReparkSession, route: str
+    spark: ReparkSession, route: str, route_hits: dict[str, int]
 ) -> None:
     assert route in ("native", "sql")
     frames = _frames(spark)
@@ -61,12 +86,14 @@ def test_cross_join_with_an_equality_condition_answers_the_inner_rows(
     inner = left.join(right, left["id"] == right["k"], "inner")
     assert _rows(joined) == _rows(inner)
     assert joined.columns == inner.columns
+    _assert_route_taken(route, route_hits, 2)
 
 
+@pytest.mark.parametrize("route", ["sql"], indirect=True)
 def test_cross_join_with_an_inequality_condition_answers_nine_rows(
     spark: ReparkSession, route: str
 ) -> None:
-    assert route in ("native", "sql")
+    assert route == "sql"
     frames = _frames(spark)
     left = frames["left"]
     right = frames["right"]
@@ -84,10 +111,11 @@ def test_cross_join_with_an_inequality_condition_answers_nine_rows(
     ]
 
 
+@pytest.mark.parametrize("route", ["sql"], indirect=True)
 def test_cross_join_with_a_false_condition_answers_no_rows(
     spark: ReparkSession, route: str
 ) -> None:
-    assert route in ("native", "sql")
+    assert route == "sql"
     frames = _frames(spark)
     joined = frames["left"].join(frames["right"], spark_functions.lit(False), "cross")
     assert joined.columns == ["id", "s", "k", "t"]
@@ -95,7 +123,7 @@ def test_cross_join_with_a_false_condition_answers_no_rows(
 
 
 def test_cross_join_with_an_aliased_condition_answers_the_inner_rows(
-    spark: ReparkSession, route: str
+    spark: ReparkSession, route: str, route_hits: dict[str, int]
 ) -> None:
     assert route in ("native", "sql")
     frames = _frames(spark)
@@ -105,10 +133,11 @@ def test_cross_join_with_an_aliased_condition_answers_the_inner_rows(
         right, spark_functions.col("l.id") == spark_functions.col("r.k"), "cross"
     ).select("l.id", "r.t")
     assert _rows(joined) == [(2, "x"), (3, "y")]
+    _assert_route_taken(route, route_hits, 1)
 
 
 def test_cross_join_with_a_condition_then_a_filter_answers_one_row(
-    spark: ReparkSession, route: str
+    spark: ReparkSession, route: str, route_hits: dict[str, int]
 ) -> None:
     assert route in ("native", "sql")
     frames = _frames(spark)
@@ -116,9 +145,12 @@ def test_cross_join_with_a_condition_then_a_filter_answers_one_row(
     right = frames["right"]
     joined = left.join(right, left["id"] == right["k"], "cross").where(left["id"] > 2)
     assert _rows(joined) == [(3, "c", 3, "y")]
+    _assert_route_taken(route, route_hits, 1)
 
 
-def test_join_none_cross_and_cross_join_stay_cartesian(spark: ReparkSession, route: str) -> None:
+def test_join_none_cross_and_cross_join_stay_cartesian(
+    spark: ReparkSession, route: str, route_hits: dict[str, int]
+) -> None:
     assert route in ("native", "sql")
     frames = _frames(spark)
     left = frames["left"]
@@ -130,6 +162,7 @@ def test_join_none_cross_and_cross_join_stay_cartesian(spark: ReparkSession, rou
     assert by_none.columns == ["id", "s", "k", "t"]
     assert by_call.columns == ["id", "s", "k", "t"]
     assert _rows(by_none) == _rows(by_call)
+    _assert_route_taken(route, route_hits, 2)
 
 
 def test_cross_join_with_shared_names_stays_refused(spark: ReparkSession, route: str) -> None:
@@ -155,7 +188,7 @@ def test_cross_join_with_a_column_list_stays_refused(spark: ReparkSession, route
 
 
 def test_cross_join_of_a_frame_with_itself_answers_as_inner(
-    spark: ReparkSession, route: str
+    spark: ReparkSession, route: str, route_hits: dict[str, int]
 ) -> None:
     assert route in ("native", "sql")
     frames = _frames(spark)
@@ -163,9 +196,14 @@ def test_cross_join_of_a_frame_with_itself_answers_as_inner(
     cross = _outcome(lambda: left.join(left, left["id"] == left["id"], "cross"))
     inner = _outcome(lambda: left.join(left, left["id"] == left["id"], "inner"))
     assert cross == inner
+    assert cross[0] == "rows"
+    assert cross[2] == [(1, "a", 1, "a"), (2, "b", 2, "b"), (3, "c", 3, "c")]
+    _assert_route_taken(route, route_hits, 2)
 
 
-def test_cross_join_of_two_derivations_answers_as_inner(spark: ReparkSession, route: str) -> None:
+def test_cross_join_of_two_derivations_answers_as_inner(
+    spark: ReparkSession, route: str, route_hits: dict[str, int]
+) -> None:
     assert route in ("native", "sql")
     frames = _frames(spark)
     base = frames["left"]
@@ -173,5 +211,39 @@ def test_cross_join_of_two_derivations_answers_as_inner(spark: ReparkSession, ro
     shrunk = base.filter(base["id"] < 3)
     cross = _outcome(lambda: grown.join(shrunk, grown["id"] == shrunk["id"], "cross"))
     inner = _outcome(lambda: grown.join(shrunk, grown["id"] == shrunk["id"], "inner"))
+    assert cross == inner
+    assert cross[0] == "rows"
+    assert cross[2] == [(2, "b", 2, "b")]
+    _assert_route_taken(route, route_hits, 2)
+
+
+def test_cross_join_with_a_nondeterministic_condition_answers_as_inner(
+    spark: ReparkSession,
+) -> None:
+    frames = _frames(spark)
+    left = frames["left"]
+    right = frames["right"]
+    cross = _outcome(
+        lambda: left.join(
+            right, (left["id"] == right["k"]) & (spark_functions.rand(1) >= 0), "cross"
+        )
+    )
+    inner = _outcome(
+        lambda: left.join(
+            right, (left["id"] == right["k"]) & (spark_functions.rand(1) >= 0), "inner"
+        )
+    )
+    assert cross == inner
+    assert cross[0] == "rows"
+
+
+def test_cross_join_with_an_untyped_null_condition_answers_as_inner(
+    spark: ReparkSession,
+) -> None:
+    frames = _frames(spark)
+    left = frames["left"]
+    right = frames["right"]
+    cross = _outcome(lambda: left.join(right, spark_functions.lit(None), "cross"))
+    inner = _outcome(lambda: left.join(right, spark_functions.lit(None), "inner"))
     assert cross == inner
     assert cross[0] == "rows"
