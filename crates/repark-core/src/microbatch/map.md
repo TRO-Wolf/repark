@@ -83,6 +83,11 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
   the user's session without the token, then stamps once through `commit_stamp_only` (ledger D-2).
   pins: mb-3/C-004, C-005
   **Fold 1 (2026-10-07):**
+  - *The schedule.* With an interval the next trigger starts at the next wall-clock multiple
+    of the interval after the trigger began (`until_next_trigger`, Spark's
+    `ProcessingTimeExecutor.nextBatchTime`: `now / interval * interval + interval`, in epoch
+    milliseconds); a batch that overruns the boundary is followed at once by the next
+    trigger. pins: mb-3/C-017
   - *The scope wait.* `enter_scope` loads the sink and enters the `BatchScope`; when another
     query in the process holds the sink's scope (two sessions on one sink), it waits
     `pollingDelay`, reloads the sink and tries again, up to `catalog_timeout`, and only then

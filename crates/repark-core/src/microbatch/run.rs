@@ -1,6 +1,6 @@
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use datafusion::error::DataFusionError;
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -163,7 +163,9 @@ impl Run {
                     }
                     Instant::now() + self.shared.polling_delay
                 }
-                Trigger::ProcessingTime(interval) => started + interval,
+                Trigger::ProcessingTime(interval) => {
+                    started + until_next_trigger(started_at, interval)
+                }
             };
             if let Wake::Stop = self.wait_until(next).await {
                 return Ok(Ending::Stopped);
@@ -447,6 +449,15 @@ impl Run {
             Err(error) => Err(engine_error(&error)),
         }
     }
+}
+
+pub(crate) fn until_next_trigger(started_at: SystemTime, interval: Duration) -> Duration {
+    let interval_ms = interval.as_millis().max(1);
+    let started_ms = started_at
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |since| since.as_millis());
+    let next_ms = started_ms / interval_ms * interval_ms + interval_ms;
+    Duration::from_millis(u64::try_from(next_ms - started_ms).unwrap_or(u64::MAX))
 }
 
 fn unknown_operation_id(error: &DataFusionError) -> Option<String> {

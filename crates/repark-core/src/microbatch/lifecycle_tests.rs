@@ -552,3 +552,29 @@ fn wall_millis() -> u64 {
         .expect("the clock is past the epoch");
     u64::try_from(since.as_millis()).expect("the wall clock fits")
 }
+
+#[tokio::test]
+async fn a_processing_time_trigger_fires_on_the_interval_boundary() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    let boundary = wall_millis() + 2_000;
+    let trigger = Trigger::ProcessingTime(Duration::from_millis(boundary));
+    let handle = started(&fixture, table_spec(trigger, &options(ONE))).await;
+    wait_for_epoch(&handle, 0).await;
+    fixture.insert(SOURCE, "(2)").await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let early = handle.durable().map(|record| record.epoch.get());
+    if wall_millis() + 100 < boundary {
+        assert_eq!(early, Some(0), "the next trigger waits for the boundary");
+    }
+    wait_for_epoch(&handle, 1).await;
+    assert!(
+        wall_millis() + 50 >= boundary,
+        "the next trigger fired before the interval boundary"
+    );
+    assert!(matches!(
+        handle.stop().await,
+        ShutdownOutcome::Stopped { .. }
+    ));
+    assert_eq!(fixture.ids(SINK).await, [1, 2]);
+}

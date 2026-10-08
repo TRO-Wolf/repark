@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, UNIX_EPOCH};
 
 use repark_iceberg::microbatch::error::MicroBatchError;
 use repark_iceberg::microbatch::offset::{SPARK_EPOCH_ID_KEY, SinkRecord};
@@ -7,6 +7,20 @@ use crate::microbatch::driver::{QueryState, ShutdownOutcome, StreamingQueryManag
 use crate::microbatch::testing::{
     Fixture, SINK, SOURCE, options, stamped_epochs, started, table_spec, wait_for_epoch,
 };
+
+#[test]
+fn the_next_trigger_is_the_next_multiple_of_the_interval() {
+    let at = |millis: u64| UNIX_EPOCH + Duration::from_millis(millis);
+    let wait = |millis: u64, interval: u64| {
+        super::until_next_trigger(at(millis), Duration::from_millis(interval))
+    };
+    assert_eq!(wait(10_250, 2_000), Duration::from_millis(1_750));
+    assert_eq!(wait(11_999, 2_000), Duration::from_millis(1));
+    assert_eq!(wait(12_000, 2_000), Duration::from_secs(2));
+    assert_eq!(wait(0, 2_000), Duration::from_secs(2));
+    assert_eq!(wait(3_599_000, 3_600_000), Duration::from_secs(1));
+    assert_eq!(wait(5, 10_000), Duration::from_millis(9_995));
+}
 
 fn durable_epoch(outcome: &ShutdownOutcome) -> Option<u64> {
     outcome.durable().map(|record| record.epoch.get())
