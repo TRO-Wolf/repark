@@ -9,9 +9,13 @@ use datafusion::error::DataFusionError;
 use datafusion::logical_expr::{DdlStatement, LogicalPlan};
 use repark_common::{Error, Result};
 
-use crate::catalog_state::CatalogRegistry;
-use crate::config_file::redact::redact_value;
+use repark_common::SourceKind;
+use repark_connect::{read_only_ddl, redact_source_prop};
+
+use crate::catalog_state::{CatalogRegistry, SourceMount};
 use crate::config_file::sources::SourceSpec;
+use crate::engine_err;
+use crate::extension::SessionExtension;
 use crate::session::ReparkSession;
 
 #[cfg(test)]
@@ -32,22 +36,38 @@ pub(crate) fn refuse_source_ddl(
         DdlStatement::CreateIndex(create) => claimed(create.table.catalog()),
         DdlStatement::DropTable(drop) => claimed(drop.name.catalog()),
         DdlStatement::DropView(drop) => claimed(drop.name.catalog()),
-        DdlStatement::CreateCatalog(create) => claimed(Some(create.catalog_name.as_str())),
+        DdlStatement::CreateCatalog(create) => claimed(Some(create.catalog_name.as_str()))
+            .or_else(|| claimed(dotted_head(&create.catalog_name))),
+        DdlStatement::CreateCatalogSchema(create) => claimed(dotted_head(&create.schema_name)),
         DdlStatement::DropCatalogSchema(drop) => match &drop.name {
             SchemaReference::Full { catalog, .. } => claimed(Some(catalog.as_ref())),
             SchemaReference::Bare { .. } => None,
         },
-        DdlStatement::CreateCatalogSchema(_)
-        | DdlStatement::CreateFunction(_)
-        | DdlStatement::DropFunction(_) => None,
+        DdlStatement::CreateFunction(_) | DdlStatement::DropFunction(_) => None,
     };
     if let Some(spec) = spec {
-        return Err(DataFusionError::NotImplemented(connector_pending_message(
-            &spec.key_path(),
-            spec.identity.kind.spelling(),
-        )));
+        let message = match spec.identity.kind {
+            SourceKind::Postgres => read_only_ddl(&spec.key_path()),
+            SourceKind::SqlServer | SourceKind::Trino => source_refusal(spec),
+        };
+        return Err(DataFusionError::NotImplemented(message));
     }
     Ok(())
+}
+
+fn dotted_head(name: &str) -> Option<&str> {
+    name.split_once('.').map(|(head, _)| head)
+}
+
+fn source_refusal(spec: &SourceSpec) -> String {
+    if spec.identity.kind == SourceKind::Postgres {
+        return format!(
+            "database source `{}` (kind `postgres`) cannot be used: the Postgres connector is \
+             not compiled into this build",
+            spec.key_path()
+        );
+    }
+    connector_pending_message(&spec.key_path(), spec.identity.kind.spelling())
 }
 
 fn connector_pending_message(key_path: &str, kind: &str) -> String {
@@ -96,15 +116,15 @@ impl SchemaProvider for RefusingSourceSchemaProvider {
 }
 
 #[derive(Debug)]
-struct RefusingSourceCatalogProvider {
+pub(crate) struct RefusingSourceCatalogProvider {
     schema: Arc<RefusingSourceSchemaProvider>,
 }
 
 impl RefusingSourceCatalogProvider {
-    fn new(spec: &SourceSpec) -> Self {
+    pub(crate) fn new(spec: &SourceSpec) -> Self {
         Self {
             schema: Arc::new(RefusingSourceSchemaProvider {
-                message: connector_pending_message(&spec.key_path(), spec.identity.kind.spelling()),
+                message: source_refusal(spec),
             }),
         }
     }
@@ -139,7 +159,7 @@ impl SourceRow {
             properties: spec
                 .props
                 .iter()
-                .map(|(key, value)| (key.clone(), redact_value(key, value)))
+                .map(|(key, value)| (key.clone(), redact_source_prop(key, value)))
                 .collect(),
         }
     }
@@ -150,17 +170,12 @@ pub struct NamedSource {
     name: String,
     kind: String,
     key_path: String,
+    refusal: String,
+    #[cfg(feature = "postgres")]
+    postgres: Option<Arc<repark_connect::PostgresSource>>,
 }
 
 impl NamedSource {
-    fn from_spec(spec: &SourceSpec) -> Self {
-        Self {
-            name: spec.identity.name.clone(),
-            kind: spec.identity.kind.spelling().to_string(),
-            key_path: spec.key_path(),
-        }
-    }
-
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
@@ -177,16 +192,57 @@ impl NamedSource {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    #[allow(clippy::unnecessary_wraps)]
-    pub fn ping(&self) -> Result<()> {
-        Err(Error::NotImplemented(connector_pending_message(
-            &self.key_path,
-            &self.kind,
-        )))
+    pub async fn ping(&self) -> Result<()> {
+        #[cfg(feature = "postgres")]
+        if let Some(source) = &self.postgres {
+            return source.ping().await.map_err(|error| {
+                crate::session::read_postgres::source_error(&self.key_path, error)
+            });
+        }
+        Err(Error::NotImplemented(self.refusal.clone()))
     }
 }
 
 impl ReparkSession {
+    fn mounted_source(&self, name: &str) -> Option<Arc<SourceSpec>> {
+        self.catalogs
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .database_source(name)
+            .cloned()
+    }
+
+    pub(crate) fn source_catalog_refusal(&self, name: &str) -> Option<Error> {
+        let spec = self.mounted_source(name)?;
+        Some(Error::NotImplemented(match spec.identity.kind {
+            SourceKind::Postgres => read_only_ddl(&spec.key_path()),
+            SourceKind::SqlServer | SourceKind::Trino => source_refusal(&spec),
+        }))
+    }
+
+    pub(crate) async fn source_table_exists(
+        &self,
+        catalog: &str,
+        namespace: &str,
+        table: &str,
+    ) -> Option<Result<bool>> {
+        self.mounted_source(catalog)?;
+        let schema = self
+            .context()
+            .catalog(catalog)
+            .and_then(|provider| provider.schema(namespace));
+        let Some(schema) = schema else {
+            return Some(Ok(false));
+        };
+        Some(
+            schema
+                .table(table)
+                .await
+                .map(|found| found.is_some())
+                .map_err(engine_err),
+        )
+    }
+
     #[must_use]
     pub fn sources(&self) -> Vec<SourceRow> {
         self.source_specs
@@ -200,7 +256,7 @@ impl ReparkSession {
         self.source_specs
             .iter()
             .find(|spec| spec.identity.name == name)
-            .map(|spec| NamedSource::from_spec(spec))
+            .map(|spec| self.named_source(spec))
             .ok_or_else(|| {
                 let declared: Vec<&str> = self
                     .source_specs
@@ -218,17 +274,45 @@ impl ReparkSession {
             })
     }
 
+    fn named_source(&self, spec: &SourceSpec) -> NamedSource {
+        NamedSource {
+            name: spec.identity.name.clone(),
+            kind: spec.identity.kind.spelling().to_string(),
+            key_path: spec.key_path(),
+            refusal: source_refusal(spec),
+            #[cfg(feature = "postgres")]
+            postgres: SourceMount::mounts_postgres(spec).then(|| self.postgres_source(spec)),
+        }
+    }
+
+    #[cfg(feature = "postgres")]
+    fn postgres_source(&self, spec: &SourceSpec) -> Arc<repark_connect::PostgresSource> {
+        let mounted = self
+            .context()
+            .catalog(&spec.identity.name)
+            .and_then(|catalog| {
+                catalog
+                    .downcast_ref::<repark_connect::PostgresCatalog>()
+                    .map(|catalog| Arc::clone(catalog.source()))
+            });
+        mounted.unwrap_or_else(|| {
+            repark_connect::PostgresSource::new(
+                &spec.identity,
+                spec.props.clone(),
+                repark_connect::SettingsDoor::ReparkToml,
+                Arc::new(self.zone_localiser()),
+            )
+        })
+    }
+
     #[allow(clippy::missing_errors_doc)]
     pub fn register_configured_sources(&self) -> Result<()> {
-        for spec in self.source_specs.iter() {
-            if !spec.auto_register {
-                continue;
-            }
-            let provider = RefusingSourceCatalogProvider::new(spec);
-            let mut catalogs = self
-                .catalogs
-                .write()
-                .unwrap_or_else(PoisonError::into_inner);
+        let mount = SourceMount::new(Arc::clone(&self.source_specs), self.zone_localiser());
+        let mut catalogs = self
+            .catalogs
+            .write()
+            .unwrap_or_else(PoisonError::into_inner);
+        for spec in mount.mounted() {
             if catalogs.is_registered(&spec.identity.name)
                 || self.context().catalog(&spec.identity.name).is_some()
             {
@@ -237,10 +321,18 @@ impl ReparkSession {
                     spec.identity.name
                 )));
             }
-            self.context()
-                .register_catalog(spec.identity.name.clone(), Arc::new(provider));
+        }
+        mount.register(self.context()).map_err(engine_err)?;
+        for spec in mount.mounted() {
             catalogs.insert_database_source(Arc::clone(spec));
         }
+        drop(catalogs);
+        self.note_postgres_catalog_names(
+            mount
+                .mounted()
+                .filter(|spec| SourceMount::mounts_postgres(spec))
+                .map(|spec| spec.identity.name.clone()),
+        );
         Ok(())
     }
 }

@@ -6,7 +6,7 @@ import pytest
 
 import repark
 from repark import ReparkSession
-from repark.errors import PySparkException, UnsupportedOperationException
+from repark.errors import IllegalArgumentException, PySparkException
 
 
 def _write_source_config(tmp_path: Path, *, auto_register: bool | None = None) -> Path:
@@ -45,21 +45,22 @@ def test_sources_lists_declared_source_with_redacted_properties(tmp_path: Path) 
     assert "s3cr3t" not in repr(row.properties)
 
 
-def test_source_ping_raises_connector_refusal(tmp_path: Path) -> None:
+def test_source_ping_resolves_through_the_mount(tmp_path: Path) -> None:
     spark = _session_from(tmp_path)
     try:
         handle = spark.source("company_db")
         assert handle.name == "company_db"
         assert handle.kind == "postgres"
         assert handle.key_path == "default.database.postgres.company_db"
-        with pytest.raises(UnsupportedOperationException) as excinfo:
+        with pytest.raises(IllegalArgumentException) as excinfo:
             handle.ping()
     finally:
         spark.stop()
     message = str(excinfo.value)
-    assert "default.database.postgres.company_db" in message
-    assert "postgres" in message
-    assert "1.10" in message
+    assert "database source `default.database.postgres.company_db`" in message
+    assert "`dbname` is not a Postgres source key" in message
+    assert "1.10" not in message
+    assert "s3cr3t" not in message
 
 
 def test_unknown_source_raises_naming_declared_sources(tmp_path: Path) -> None:
@@ -74,20 +75,21 @@ def test_unknown_source_raises_naming_declared_sources(tmp_path: Path) -> None:
     assert "company_db" in message
 
 
-def test_select_under_source_name_raises_connector_refusal(
+def test_select_under_source_name_resolves_through_the_mount(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = _write_source_config(tmp_path)
     monkeypatch.setenv("REPARK_CONFIG", str(path))
     monkeypatch.setattr(repark, "_ANSI_NATIVE", None)
-    with pytest.raises(UnsupportedOperationException) as excinfo:
+    with pytest.raises(IllegalArgumentException) as excinfo:
         repark.sql("SELECT * FROM company_db.public.t")
     message = str(excinfo.value)
-    assert "company_db" in message
-    assert "postgres" in message
-    assert "1.10" in message
+    assert "database source `company_db`" in message
+    assert "`dbname` is not a Postgres source key" in message
+    assert "1.10" not in message
     assert "not found" not in message
     assert "does not exist" not in message
+    assert "s3cr3t" not in message
 
 
 def test_auto_register_false_listed_not_registered(tmp_path: Path) -> None:

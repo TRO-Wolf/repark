@@ -5396,6 +5396,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (engine not-found, no `1.10`), and the `listCatalogs` observation stays pinned
   (the source name does not appear — D-11 measured, not changed).
   pins: cfg-2/C-013, C-014, C-015, C-016, C-017, C-019
+  **C-2d (2026-10-07):** the two Postgres refusal pins are retired by name as mount pins:
+  `test_source_ping_raises_connector_refusal` (C-014) becomes
+  `test_source_ping_resolves_through_the_mount` and
+  `test_select_under_source_name_raises_connector_refusal` (C-016) becomes
+  `test_select_under_source_name_resolves_through_the_mount`: the fixture's `dbname` key
+  refuses as `IllegalArgumentException` naming the source and the key, without `1.10` or the
+  password. pins: c-2/C-104
 - `test_source_url_redaction_1.py` — **SOURCE-URL-REDACT-1 (2026-10-06):** the facade pin: a `repark.toml` with a
   per-test random password in a source `url`, a query string, a keyword DSN, an ODBC string, a
   catalog `uri` and a `[conf]` key; the password appears nowhere in `sources()` (`repr` / `str`),

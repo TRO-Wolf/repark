@@ -6,6 +6,7 @@ pub mod redaction;
 pub mod source;
 pub mod spark_error;
 pub mod surfaces;
+pub mod zone_horizon;
 
 pub use source::{Generation, SourceIdentity, SourceKind};
 

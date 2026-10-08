@@ -2095,6 +2095,8 @@ pins: rp-4-fork-repin/C-005, C-006
   backticks re-escaped, and suggestions sort against the quote-if-needed name. Identity
   partition rows write the source name through the same quote-if-needed rule.
   pins: wo-b10-describe-sweep/C-008, C-009, C-010
+- `describe_show.rs` — **C-2d fold 1 (2026-10-07), N5:** `SHOW NAMESPACES IN <source>` returns the empty listing
+  `CONNECT-DECL-pg-listing` declares. pins: c-2/C-115
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction) +
   SQL-DESCRIBE-1 `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`
@@ -2321,6 +2323,10 @@ pins: rp-4-fork-repin/C-005, C-006
   retired).
   pins: u9-types-1/C-010
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
+- `catalog_ops.rs` — **C-2d fold 1 (2026-10-07), N5:** `catalog_handle` refuses a mounted Postgres source with
+  `source_read_only_message` as `NotImplemented` (the Unsupported class), and
+  `refuse_read_only_dml_table_sql` prefers that text. A legacy read-only catalog keeps the P11
+  note. pins: c-2/C-115
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
   `reregister*` provider invalidation. **CATALOG-1 (2026-09-26):** `catalog_handle` raises a
   refused catalog's refusal before the unknown-catalog error. It is also the home of the v2-command intercepts
@@ -2342,6 +2348,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]`/`SQLSTATE: 0A000` text over a caller-supplied
   command string (newlines flattened); the four v2-command router intercepts answer through it.
   pins: ipi-21-25-42-small-parser/C-007, C-008; ice-error-conditions-1/C-011
+- `use_ddl.rs` — **C-2d fold 1 (2026-10-07), N5:** `resolve_show_tables_scope` takes `<source>.<schema>` as a
+  scope with no Iceberg handle, so `SHOW TABLES IN pg.s` returns the empty listing.
+  pins: c-2/C-115
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the session-defaults seam:
   `session_defaults` / `set_session_defaults` over the registry box
   (`CatalogRegistry::current_defaults` / `set_defaults`, seeded `spark_catalog` /

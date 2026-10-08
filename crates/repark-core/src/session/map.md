@@ -17,6 +17,31 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 ## Contents
 
+- `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
+  under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
+  `<schema>.<table>`, and a `query` is named `jdbc`. pins: c-2/C-116
+- `read_postgres.rs` — **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
+  partitioning }` and `PostgresTarget::{Relation, Query}`, re-exported at the crate root with
+  `READ_POSTGRES_SOURCE` (`jdbc`). `ReparkSession::read_postgres` refuses a partitioned read
+  first (`CONNECT-DECL-pg-partitioned-read`), parses `dbtable` through
+  `ScanSource::from_dbtable`, drops a `dbtable` property, sets `url`, and resolves an ad-hoc
+  `PostgresSource` on the `ReadPostgres` door whose pool lives as long as the returned frame's
+  provider. `source_error(source, error)` keeps `From<ConnectError>`'s class and prefixes the
+  source. Without the `postgres` feature the method refuses ("not compiled into this build").
+  `note_postgres_catalog_names` fills the session's read-only set. pins: c-2/C-100, C-102
+- `zone_localiser.rs` — **C-2d (2026-10-07):** `SessionZoneLocaliser` holds the session's
+  `runtime_zone` handle. Under `postgres` it implements `repark_connect::WallClockLocaliser`.
+  The zone is read at scan time and canonicalised through `canonical_session_zone_id`, as
+  `orc_scan.rs` and `text_scan.rs` do; `zone_label()` reports that canonical id. `localise`
+  takes each wall clock's offset from the same date in
+  `repark_common::zone_horizon::proxy_year`, so a wall clock after 2099 is placed by the final
+  rule, exactly as RePark's `TIMESTAMP` literal places it. A gap refuses
+  `ValueRefusal::WallClockGap` and an overlap `WallClockOverlap` (both
+  `CONNECT-DIV-pg-timestamp-zone`, naming `prefer_timestamp_ntz`). A wall clock whose instant
+  falls past chrono's calendar refuses `TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`).
+  H-TZ did not fire. `session.rs` holds 1000 lines: its two new `mod` lines are paid for by two
+  shed comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
+  pins: c-2/C-098, C-108, C-109, C-110, C-111
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
   pins: ice-views-1/C-018
@@ -256,6 +281,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   the LEGACY clause; `g` padding and the `fast.rs` loops live in the child.
   **Re-verify 2 (2026-09-30):** the compiled pattern carries `has_era`,
   decided once per pattern instead of once per value.
+- `late_catalogs.rs` — **C-2d fold 1 (2026-10-07), N5:** `check_catalog_refusal` asks
+  `source_catalog_refusal` first, so an Iceberg-handle lookup of a mounted source's name refuses
+  with that source's text. pins: c-2/C-115
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

@@ -1380,3 +1380,269 @@ Run on the finished tree. Each cargo command and probe ran under the build-slot 
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2ao origin/main HEAD` | 0 | `comment-ban hits=0` |
 | the verifier's `probe.rs`, 8 scans, `ulimit -v 4194304` | 0 | §14.3 |
 | the re-verify's `memory.rs` | 0 | §14.2, 2.00x |
+
+## 15. C-2d — the mount, both stubs retired, the Python door, the federated cells (2026-10-07)
+
+**Branch:** `feat/c-2d-mount-python` from `930ccbf3` (C-2a, C-2b and C-2c merged). **Model:** Claude
+Opus 5.5 (`claude-opus-5-5`, high). **Scope:** sketch §2.11 (the edge, `SourceMount`, both
+stubs, the localiser), §2.10 through both doors, §4's C-2d rows, §5.3, §5.4, §5.7, §6's Python
+cells and §7 C-2d with its halt rules. The live cells ran against `make pg-up` (PostgreSQL 16,
+rootless Docker, a private `XDG_RUNTIME_DIR`), torn down with `make pg-down` at the end.
+**Halt rules:** H-EXT, H-TZ and H-CFG2 did not fire (§15.2 R-1, R-2, R-3).
+
+### PROPOSITION LEDGER — C-2d — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-096 | The edge (sketch §2.11, R-14): `repark-core` depends on `repark-connect` (`normal`), with `[features] default = ["postgres"]`, `postgres = ["repark-connect/postgres"]`; the root `[workspace.dependencies]` gains `repark-connect` (path, default features off); `repark-python` asks for `repark-core`'s `postgres`, so the standard wheel carries the connector; `ALLOWED_EDGES` holds `("repark-core", "repark-connect")` with R-14's reason verbatim. `repark-python` gains no `connect` edge. Without the feature, core builds and a Postgres source mounts the refusing provider ("not compiled into this build"). | `./scripts/check_crate_dag.sh`, `./scripts/check_manifest.sh`, `cargo check -p repark-core --no-default-features`, `cargo build -p repark-connect --no-default-features`. | PROVEN | §15.4: the gate counts 24 internal edges, clean, with no stale row; both no-default builds are clean. |
+| C-097 | The mount (sketch §2.11, FL-1, CFG-2 D-4): `catalog_state.rs`'s `SourceMount { specs, zone }` implements `SessionExtension`; `register(ctx)` registers `PostgresSource::mount(identity, props, localiser)` for each auto-registered Postgres source and `RefusingSourceCatalogProvider` for SQL Server and Trino. `register_configured_sources()` stays the one entry point: it refuses a duplicate name under the registry lock before mounting anything, runs `SourceMount::register`, records the specs, and adds every mounted Postgres name to `postgres_catalog_names`. Building and registering does no I/O. | `named_sources/tests.rs::configured_source_select_resolves_through_the_postgres_mount`, `::mounted_postgres_sources_are_read_only_catalogs`, and CFG-2's unchanged `::source_registration_opens_no_connection`, `::catalog_named_like_source_refuses_as_duplicate`, `::auto_register_false_lists_but_does_not_register`; mutations mH, mL. | PROVEN | §15.1. |
+| C-098 | The localiser (sketch §2.7, §2.11; D-M2 still open): `session/zone_localiser.rs`'s `SessionZoneLocaliser` reads the session's `runtime_zone` when the scan runs; `zone_label()` is its id; a wall clock is placed through arrow's chrono-tz `Tz`; a gap refuses `ValueRefusal::WallClockGap`, an overlap `WallClockOverlap` (both `CONNECT-DIV-pg-timestamp-zone`, the message naming `prefer_timestamp_ntz`), a wall clock past chrono's calendar `TimestampOutOfRange`. `CONNECT-DECL-pg-timestamp` retires (registry §6). Live, a New York session reads `2024-01-15 12:00` and `2024-07-15 12:00` as instants 17:00 and 16:00 UTC, `prefer_timestamp_ntz` keeps the wall clock as `timestamp_ntz`, and `2024-03-10 02:30` refuses. | `zone_localiser.rs::tests::a_wall_clock_is_placed_at_the_zone_offset_of_its_date`, `::gap_and_overlap_wall_clocks_refuse_naming_the_zone_row`; live `test_c2_read.py::test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock`; mutation mJ. | PROVEN | §15.1. H-TZ did not fire: `orc_scan.rs` already places wall clocks with the same `Tz`. |
+| C-099 | `ping()` goes live (sketch §2.11): `PostgresSource::ping()` checks out one pooled connection, runs `SELECT 1` under `read_timeout_ms` and releases it clean; `NamedSource::ping()` is `async` and pings the mounted source (the context's `PostgresCatalog`, downcast) or, for a source not auto-registered, one built for the call; a failure names the key path; `session_source_ping` blocks on the binding's shared runtime with the GIL released. SQL Server and Trino keep the pending refusal. | `named_sources/tests.rs::source_ping_resolves_through_the_mount`; facade `test_session_sources.py::test_source_ping_resolves_through_the_mount`; live `test_c2_read.py::test_ping_reaches_the_server_and_names_the_source_on_failure`, `test_c2_credentials.py` (the four ping surfaces); mutation mP. | PROVEN | §15.1. |
+| C-100 | `read_postgres` goes live (sketch §2.11, the second stub): core's `ReparkSession::read_postgres(PostgresRead { url, target, properties, partitioning })` refuses any partitioned-read argument first (`CONNECT-DECL-pg-partitioned-read`), takes `dbtable` through `ScanSource::from_dbtable` or `query`, drops a `dbtable` property, sets `url`, and resolves an ad-hoc `PostgresSource` on the `ReadPostgres` door (`source=jdbc`), whose pool lives as long as the frame's provider. The Python door maps the five Spark arguments by name and blocks on the shared runtime; `deferred_reader_error` names Excel alone. | `session_tests.rs::read_postgres_refusals_name_their_row_and_never_echo_credentials`; live `test_c2_read.py::test_read_jdbc_and_format_postgres_match_the_mount`, `::test_a_partitioned_read_refuses_naming_its_row`, `::test_unknown_keys_and_a_bad_url_refuse_before_any_connection`; facade `-k "source or postgres or toml or named"`; mutation mN. | PROVEN | §15.1. |
+| C-101 | Read-only DDL (sketch §2.11, `CONNECT-DECL-pg-ddl`): `refuse_source_ddl` answers `read_only_ddl(<key path>)` for a Postgres source and keeps the pending text for SQL Server and Trino; the Postgres schema provider refuses `register_table` and `deregister_table` with the same text; the Spark door's P11 guards refuse `CREATE TABLE` and `DROP TABLE` as read-only; `INSERT`, `UPDATE` and `DELETE` refuse as not implemented; nothing is written. | `named_sources/tests.rs::configured_source_ddl_refuses_as_read_only`; live `test_c2_read.py::test_ddl_and_dml_refuse_through_both_doors`; mutation mK. | PROVEN | §15.1; §15.2 R-4, R-5. |
+| C-102 | Errors name their source (sketch §0 line 6; C-2b's deferral to C-2d "at resolution"): a resolution error carries `database source `<name>`` as `DataFusionError::Context`; `ping` and `read_postgres` prefix the key path or `jdbc` keeping `From<ConnectError>`'s class; `engine_err` downcasts `ConnectError`, takes its class (`Config`, `NotImplemented`, else `DataFusion`) and flattens the context chain into one line, so a Python message carries the cause. | `named_sources/tests.rs::configured_source_select_resolves_through_the_postgres_mount` (`Error::Config`, the source and the key); facade `test_session_sources.py::test_select_under_source_name_resolves_through_the_mount`; live `test_c2_credentials.py` (the `auth` surface reads `authentication failed`); mutation mM. | PROVEN | §15.1. Scan-time errors keep C-2c's text; the source is in the statement and in EXPLAIN. |
+| C-103 | A placement refusal drops the scan's lease: `PostgresScanExec`'s stream ends at its first error and drops the inner scan, so the lease aborts (cancel, then the connection task) instead of idling inside the read-only transaction holding `AccessShareLock`. Live, after the gap refusal of a pushed scan no backend under the cell's `application_name` is busy within three seconds. | Live `test_c2_read.py::test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock` (`_busy_backends` is `0`); mutation mI. | PROVEN | §15.2 R-6. Found by the cell: its teardown's `DROP SCHEMA` waited 60 s on the held lock. |
+| C-104 | H-CFG2: CFG-2's assertions are unchanged except the Postgres refusal pins this card retires by name, each replaced by a mount pin: Rust C-003 `configured_source_select_refuses_with_connector_message`, C-005 `source_ping_refuses_until_connector`, C-011 `configured_source_create_table_refuses_with_connector_message`; facade C-014 `test_source_ping_raises_connector_refusal`, C-016 `test_select_under_source_name_raises_connector_refusal`. C-001, C-002, C-004, C-006…C-010, C-012, C-013, C-015, C-017…C-019 hold as written, and SOURCE-URL-REDACT-1's `test_ping_refusal_never_carries_the_password` holds unchanged (it now answers the settings refusal naming `acme`). | `cargo test -p repark-core named_sources config_file`; the facade subset; `git diff origin/main -- crates/repark-core/src/config_file python/repark/tests/test_config_mirror.py` is empty. | PROVEN | §15.2 R-3. |
+| C-105 | Sketch §5.3 re-pinned through both doors: `spark.sql("EXPLAIN …")`, the DataFrame's plan and `repark.sql("EXPLAIN VERBOSE …")` each show `PostgresScanExec: source=pg` with the pushed `n > Decimal128(Some(10000),10,2)`, the residual `lower(t) = Utf8("x")` and the `FilterExec` above; none shows the host, the port, the user, the password or `sslmode`; the verbose form shows `current_setting('repark.p0')` and `bound_values=1` and never the bound `100.00`. | Live `test_c2_read.py::test_explain_shows_the_boundary_through_both_doors`; mutations mA, mB, mC, mD. | PROVEN | §15.1. |
+| C-106 | Sketch §5.4: `ice.db.customers` (a private memory catalog) joined with the cell's `orders` on `cust = id` and `placed = since` (`timestamptz` against Iceberg `timestamp`, one written at `-05`), with `amount > 100` pushed and `lower(note) = 'b'` residual, returns orders 2 and 5 through `spark.sql` and the DataFrame join, equal to psycopg's filtered rows joined in pyarrow; EXPLAIN shows one `IcebergTableScan`, one `PostgresScanExec` with that split, and the hash join above both; the physical plan, normalised for attribute ids, the fan-out and the cell tag, equals the committed expectation; the two clocks render equal in a New York session. | Live `test_c2_federated.py::test_federated_iceberg_postgres_join`, `::test_federated_join_explain_boundary`, `::test_federated_join_sees_one_clock_across_zones`; mutations mA, mD, mE, mF. | PROVEN | §15.1. The Spark-oracle half waits on D-M2's pgjdbc environment; the reference is the independent expectation (sketch §5.4). |
+| C-107 | Sketch §5.7: a role with a random 32-hex password, mounted by key, by URL, with a different random wrong password, on a closed port and through a one-connection pool, driven in a subprocess at `RUST_LOG=trace` with Python logging at `DEBUG` across `sources()` and its `repr`, the four pings, `explain()` and `EXPLAIN VERBOSE`, an authentication failure, an unreachable host, a missing relation, a refused `NaN`, a lock timeout, a pool timeout and a `read.jdbc` URL carrying the password: neither password, nor any URL form, appears on stdout or stderr, and each surface answers its own error. | Live `test_c2_credentials.py::test_no_credential_reaches_any_surface`; mutations mG, mG2, mG3, mG4. | PROVEN | §15.1, §15.2 R-7. |
+| C-108 | Docs and shape: `docs/guide/repark-toml.md` gains "Postgres source keys" (the 21 keys and defaults, the `read_postgres` spellings, `sslmode`, the three `GRANT`s, `pushdown_limit`); the registry adds `CONNECT-DECL-pg-ddl` and `-pg-partitioned-read`, retires `-pg-timestamp`, updates `CONNECT-DIV-pg-timestamp-zone` and rewrites IO-JDBC-1; every touched `map.md` moves in lockstep. Sizes: `catalog_state.rs` 524/640, `named_sources.rs` 295/380, `session/read_postgres.rs` 111/260, `session/zone_localiser.rs` 142/160, the live cells 339, 185 and 172 of 400; `session.rs` holds 1000 (two comment lines shed for its two `mod` lines), `lib.rs` 154/155. No code comments. | §15.4. | PROVEN | §15.2 R-8. |
+
+### 15.1 Mutations (C-2d)
+
+Each mutation was applied alone, the named cells run (the Python ones against a rebuilt debug
+wheel and the container), and the file restored with `git checkout`. Seventeen are red; mG2 is
+caught by an existing layer, not by this card's cell (R-7).
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| mA | C-105, C-106 (§5.3 `explain_renders_pushed_and_residual_per_scan`) | list every filter as pushed, the classifier's general support (`connect/src/provider/scan.rs`) | RED | `test_c2_read.py::test_explain_shows_the_boundary_through_both_doors`, `test_c2_federated.py::test_federated_join_explain_boundary`, `::test_federated_iceberg_postgres_join` |
+| mB | C-105 (§5.3 `explain_verbose_shows_placeholders_never_values`) | render the bound values into `remote_sql` (`scan.rs`) | RED | `test_explain_shows_the_boundary_through_both_doors` |
+| mC | C-105 (§5.3 `explain_never_renders_endpoint`) | add `host=` to the scan's source label (`connect/src/provider/table.rs`) | RED | `test_explain_shows_the_boundary_through_both_doors` (the credentials cell stays green: a host is not a credential) |
+| mD | C-105, C-106 (§5.3 `explain_residual_matches_filter_exec_above`) | class a residual `Unsupported`, so the scan never sees it (`connect/src/pushdown.rs`) | RED | `test_explain_shows_the_boundary_through_both_doors`, `test_federated_join_explain_boundary` |
+| mE | C-106 (§5.4 "push the join predicate into the scan") | class every conjunct `Exact`, so the scan claims the residual and nothing applies it (`pushdown.rs`) | RED | `test_federated_iceberg_postgres_join` (order 4 joins) |
+| mF | C-106 (§5.4 "mislabel the timestamp zone") | the Postgres epoch one hour late (`connect/src/types/postgres/temporal.rs`) | RED | `test_federated_iceberg_postgres_join`, `::test_federated_join_sees_one_clock_across_zones` |
+| mG | C-107 (§5.7, the sketch's literal mutation) | an unreachable connect answers `Server` with the URL as its message (`connect/src/pool.rs`) | RED | `test_no_credential_reaches_any_surface`, at the `unreachable` surface check, before the credential grep |
+| mG2 | C-107 | as mG, keeping "unreachable" in the text so only the grep can catch it | GREEN (caught upstream) | the binding's `to_py_err` masks URL userinfo (SOURCE-URL-REDACT-1-FN) before Python sees it; R-7 |
+| mG3 | C-107 | as mG2, with the bare password in the message instead of the URL | RED | `test_no_credential_reaches_any_surface`, at the credential grep over stdout |
+| mG4 | C-107 | write the URL to stderr on an unreachable connect | RED | `test_no_credential_reaches_any_surface`, at the credential grep over stderr |
+| mH | C-097 | mount the refusing provider for Postgres too (`core/src/catalog_state.rs`) | RED | `named_sources/tests.rs::configured_source_select_resolves_through_the_postgres_mount`, `::mounted_postgres_sources_are_read_only_catalogs` at `tests.rs:99` |
+| mI | C-103 | keep the inner scan after an error (`scan.rs`) | RED | `test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock` (a busy backend; 60 s teardown) |
+| mJ | C-098 | take the earlier instant on an overlap (`core/src/session/zone_localiser.rs`) | RED | `zone_localiser.rs::tests::gap_and_overlap_wall_clocks_refuse_naming_the_zone_row` at `zone_localiser.rs:133` |
+| mK | C-101 | keep the pending text for Postgres DDL (`core/src/named_sources.rs`) | RED | `configured_source_ddl_refuses_as_read_only` at `tests.rs:66` |
+| mL | C-097 | never fill `postgres_catalog_names` (`named_sources.rs`) | RED | `mounted_postgres_sources_are_read_only_catalogs` at `tests.rs:93` |
+| mM | C-102 | keep the context chain as DataFusion renders it (`core/src/error_map.rs`) | RED | `test_no_credential_reaches_any_surface` (the `auth` surface reads only `database source `wrong``) |
+| mN | C-100 | skip the partitioned-read refusal (`core/src/session/read_postgres.rs`) | RED | `test_a_partitioned_read_refuses_naming_its_row` |
+| mP | C-099 | `ping` drops the key path from its error (`named_sources.rs`) | RED | `source_ping_resolves_through_the_mount` at `tests.rs:138` |
+
+### 15.2 Readings acted on (no halt)
+
+- **R-1, H-EXT.** `SourceMount` implements `SessionExtension`, but it is not installed in the
+  builder's single extension slot (which `repark_spark::SparkExtension` holds on the Python
+  door): `register_configured_sources()` calls `SourceMount::register(ctx)` itself, where
+  CFG-2 D-4 put registration. No builder change; H-EXT did not fire.
+- **R-2, H-TZ.** Core already places wall clocks with arrow's chrono-tz `Tz` (`orc_scan.rs`),
+  so the localiser stands on it; the fallback was not needed. The label is read once per
+  resolution and the zone again at scan time, as Spark reads its session zone per query; a
+  `SET` of the zone between planning and execution places in the new zone under the old label.
+- **R-3, H-CFG2.** "The Postgres refusal pins this card retires by name" is read as the five
+  CFG-2 pins that assert the connector-pending refusal for a Postgres source (C-003, C-005,
+  C-011, C-014, C-016); each is renamed, and every other CFG-2 assertion is untouched (C-104).
+  The Rust DDL replacement uses `DROP SCHEMA` and `CREATE DATABASE`: DataFusion resolves a
+  `CREATE TABLE` or `DROP TABLE` target before the pre-execute guard runs, so a malformed source
+  answers its settings refusal first and a live one opens a connection. The live cell pins the
+  table forms.
+- **R-4, out of scope, observed.** Sketch §2.11 expected the P11 guards to refuse DML in their
+  pinned wording. On the Spark door `CREATE TABLE` and `DROP TABLE` do (`postgres catalogs are
+  read-only`), but `INSERT`, `UPDATE` and `DELETE` reach DataFusion first and refuse as not
+  implemented (`Insert into not implemented for this table`, `UPDATE not supported for Base
+  table`). The refusal is loud and nothing is written (every connection is read-only); the
+  ordering lives in `repark-spark`'s router, outside this card's files. The registry row and the
+  cell state what happens.
+- **R-5, files beyond the list.** `connect/src/error.rs` (the two `ValueRefusal` reasons,
+  `DDL_ROW`, `read_only_ddl`), `connect/src/provider/{catalog,schema,scan}.rs` (`ping`, the
+  source on resolution errors, the DDL refusals, the fuse), `connect/src/lib.rs`,
+  `core/src/error_map.rs` (the `ConnectError` fold), `core/src/session.rs` (two `mod` lines,
+  paid for by two shed comments), `core/src/lib.rs` (one re-export line, 154 of 155),
+  `repark-python/Cargo.toml` (the feature), `repark-python/src/session_tests.rs` (the
+  deferred-refusal pin replaced) and the facade's `session_sources.py` docstring. Each is the
+  smallest edit a sketch item needs.
+- **R-6, the lease after a placement refusal (C-103).** The exec mapped each batch through
+  `place`, so an error raised there left the inner scan stream alive; on a pushed scan it held
+  its read-only transaction until Python released the stream. The fuse is three lines; C-2c's
+  pins are unchanged (the connect suite and its 51 live cells pass).
+- **R-7, mG2.** The sketch's literal mutation puts a URL in an error. The binding's `to_py_err`
+  masks any URL userinfo before a `PyErr` exists (SOURCE-URL-REDACT-1-FN, C-056), so the cell
+  cannot see it: the layer below catches it. mG3 (the bare password) and mG4 (stderr, which
+  bypasses `to_py_err`) show the cell's own grep is live on both streams.
+- **R-8, file ceilings.** `session.rs` sits at the 1000-line gate; it gains `mod read_postgres;`
+  and `mod zone_localiser;` and sheds two comment lines. `zone_localiser.rs` is 142 of its 160
+  ceiling with its two unit pins inline.
+- **R-9, the facade suite.** `make develop` builds the debug wheel; the brief's subset
+  (`-k "source or postgres or toml or named"`, `-n 8`) runs with `repark-parity` on
+  `PYTHONPATH`; the full facade suite is CI's (the 09-18 CI-offload ruling). The parity
+  suite, run as CI's isolated `py-test` job does (no wheel installed), collects the live cells
+  through `pytest.importorskip` and skips them.
+
+### 15.3 The live run (2026-10-07)
+
+`make pg-up` (PostgreSQL 16, rootless Docker, a private `XDG_RUNTIME_DIR`), then the Python
+live cells: `pytest python/repark-parity/tests/live_db/` — 13 passed and C-0's five strict
+xfails, on three full runs of the final tree, with `REPARK_PG_URL` set; without it, 18 skipped.
+The C-2d cells are `test_c2_read.py` (8), `test_c2_federated.py` (3) and
+`test_c2_credentials.py` (1). The Rust live cells ran too: `cargo test -p repark-connect --
+--include-ignored`, 170 passed (C-2c fold 1's 119 and 51). `make pg-down` removed the container
+and its volume at the end.
+
+### 15.4 Gates (C-2d)
+
+Run on the finished tree. Each cargo command ran under the build-slot lock.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-core -p repark-connect -p repark-python 2>&1 \| grep "test result"` | 0 | core 1276 passed (1 ignored), connect 119 passed (51 ignored, the live cells), python 151 + 25 passed, every other binary green |
+| `cargo test -p repark-connect -- --include-ignored` under `make pg-up` | 0 | 170 passed |
+| `pytest python/repark-parity/tests/live_db/` under `make pg-up` | 0 | 13 passed, 5 xfailed (three runs) |
+| `pytest python/repark/tests -k "source or postgres or toml or named" -n 8` after `make develop` | 0 | 692 passed, 9 skipped |
+| `pytest python/repark-parity/tests` in an environment without the wheel | 0 | 702 passed, 14 skipped |
+| `./scripts/check_crate_dag.sh` | 0 | 24 internal edges clean, no stale row |
+| `./scripts/check_manifest.sh` | 0 | 20 components agree |
+| `cargo deny check 2>&1 \| tail -5` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `cargo build -p repark-connect --no-default-features`; `cargo check -p repark-core --no-default-features` | 0 | clean |
+| `cargo clippy -p repark-core -p repark-connect -p repark-python --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics |
+| `make rust-clippy` | 0 | workspace, all targets, no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py` | 0 | clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_docs_links.py` | 0 | clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+## 16. Close (C-2, 2026-10-07)
+
+C-2a…C-2d are built: the decoder and the type map, the connection, the provider with Exact
+pushdown and the EXPLAIN boundary, and now the mount, both doors and the federated statement.
+The R-7 citations are §4, unchanged by C-2d: ConnectorX shaped the read path (COPY BINARY over
+the rust-postgres family into typed Arrow destinations; C-2 binds values where ConnectorX
+renders them), and Arrow ADBC shaped the type contract and the error discipline (C-2 surfaces
+Spark's types where ADBC's differ). The order's hand-back:
+`{"unit":"C-2","tests":"core 1276, connect 119 (+51 live), python 176","live":"connect 170, python 13 + 5 xfail","dag":"24 edges clean; core → connect real","halt":null}`.
+Still open beyond C-2: D-M2's Spark oracle over pgjdbc (gap and overlap placement, the §5.4
+oracle half), D-M8's TLS profile, and C-3's partitioned reads.
+
+**C-2d coverage, by category** (the ledger's one attestation block stays C-2a's, §5):
+
+- **AT-1** (attacked): Sketch §7 C-2d's file list, §2.11's mount, both stubs and the localiser, §4's C-2d rows, §5.3, §5.4 and §5.7 each map to a clause (C-096..C-108); the files beyond the list are R-5.
+- **AT-2** (attacked): Every mapped type and a NULL row through the mount and through both read_postgres forms (a schema-qualified dbtable, a query); DST gap and overlap wall clocks; a fixed offset; an Iceberg timestamp joined against a Postgres value written at another offset; a source without user, with an unknown key and on a closed port.
+- **AT-3** (attacked): Each refusal is typed and classed (Config, NotImplemented, DataFusion) through the downcast in engine_err; a placement error ends the stream and aborts the lease (C-103); settings refusals precede any connection.
+- **AT-4** (attacked): Registration checks every name under the registry write lock before mounting; the localiser reads the live zone through the session's RwLock; ping and scans share the source's one pool; a one-connection pool times out a second statement while the first waits on a lock.
+- **AT-5** (attacked): A per-test random password and a wrong one, by key and by URL, across sources(), ping, EXPLAIN in both formats, every error class and trace-level stderr, are never seen; mG3 and mG4 prove the grep live on both streams.
+- **AT-6** (attacked): The federated join equals an independent psycopg plus pyarrow join; mE and mF (a dropped residual, a shifted epoch) turn the rows red; nothing is written by DDL or DML.
+- **AT-7** (attacked): Mounting is pure (no I/O at build); the ad-hoc read_postgres pool lives with its frame; a failed scan no longer pins a backend for the frame's lifetime.
+- **AT-8** (attacked): One new internal edge, core to connect, with R-14's reason verbatim; no python to connect edge; cargo deny clean; both crates build without the postgres feature.
+- **AT-9** (attacked): Every refusal names the source key path (or jdbc), the key or privilege and its registry row; EXPLAIN names the pushed and residual filters per scan through both doors.
+- **AT-10** (attacked): Eighteen mutations, seventeen red and mG2 caught by the binding's mask (R-7), each restored with git checkout.
+
+## 17. C-2d fold 1 — the verifier's S1s and S2s (2026-10-07)
+
+**Branch:** `feat/c-2d-mount-python` at `08a14c25` (the main-merged head; C-2d's clauses are
+C-096..C-108). **Model:** Claude Opus 5.5 (`claude-opus-5-5`, high). **Scope:** the verifier's
+verdict on `23b62ff7` (`FAIL`): two S1s (N1, N2), four S2s (N3..N6) and two S3s, as ruled.
+
+### PROPOSITION LEDGER — C-2d fold 1 — 2026-10-07
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-109 | N1: a Postgres `timestamp` after 2099 is placed by the zone's final rule, at exactly the instant RePark's `TIMESTAMP` literal gives the same wall clock. The localiser does not reimplement the horizon: `LAST_TABULATED_YEAR` and `proxy_year` move from `repark-functions`' `spark_string_timestamp/instant.rs` to `repark_common::zone_horizon`, which both the literal and `SessionZoneLocaliser` read, over one new declared edge, `repark-functions` to `repark-common`. The verifier's New York `2100-07-01 12:00` reads `4118140800000000` (EDT); the 2099/2100 pairs in New York, Sydney and Auckland keep one offset; Sydney, Auckland and New York keep their seasons up to year 262142; gaps and overlaps after 2099 still refuse. Live, in a New York session, `unix_micros` over the three Postgres rows equals it over the three Iceberg literals, the equality filter returns 1 row and the federated join 3. | `zone_localiser/tests.rs::a_wall_clock_past_2099_is_placed_by_the_final_rule`, `::the_2099_and_2100_sides_of_the_horizon_agree`, `::southern_and_far_future_wall_clocks_keep_their_season`; live `test_c2_federated.py::test_a_wall_clock_past_2099_matches_the_timestamp_literal`; `repark-functions`' `spark_string_timestamp` pins unchanged; mutation f1. | PROVEN | §17.1. |
+| C-110 | N3: the localiser canonicalises the session zone through `canonical_session_zone_id` before parsing it, as `orc_scan.rs` and `text_scan.rs` do, and `zone_label()` reports the canonical id. `Z`, `UT`, `GMT+8`, `UTC+05:30`, `-8` and `+3` place a wall clock at `+00:00`, `+00:00`, `+08:00`, `+05:30`, `-08:00` and `+03:00`, and New York keeps its region id. | `zone_localiser/tests.rs::java_form_session_zones_place_at_their_canonical_offset`; live `test_c2_read.py::test_a_java_form_session_zone_places_the_wall_clock_at_its_offset` (six cells); mutations f2, V6. | PROVEN | §17.1. V6 (the label hard-coded to `UTC`) is the verifier's surviving mutation. |
+| C-111 | S3, the calendar end: a wall clock whose instant falls past chrono's calendar refuses `ValueRefusal::TimestampPastCalendar`, which names `+262142-12-31T23:59:59.999999 UTC` and `CONNECT-DECL-pg-out-of-range`, never a DST gap: `262142-12-31 23:00` in `-12:00` and in New York, and `262143-01-01 00:00` in UTC. In `+12:00` the first is placed. | `zone_localiser/tests.rs::the_end_of_the_calendar_refuses_as_out_of_range_never_as_a_gap`; mutation f3. | PROVEN | §17.1. |
+| C-112 | N2: every DDL that names a mounted Postgres source refuses on the native door with the read-only text and `CONNECT-DECL-pg-ddl`. `refuse_source_ddl` claims `CreateCatalogSchema` by the head of its dotted name (DataFusion creates the schema in that catalog) and `CreateCatalog` by its name or that head, so `CREATE SCHEMA pg.x`, `CREATE SCHEMA IF NOT EXISTS pg.x` and `CREATE DATABASE pg.x` refuse and nothing is created. The sweep of `DdlStatement`'s eleven variants leaves `CreateFunction` and `DropFunction` unclaimed: a function is session-scoped and names no catalog. | `named_sources/tests.rs::configured_source_ddl_refuses_as_read_only` (four new statements); live `test_c2_read.py::test_ddl_and_dml_refuse_through_both_doors` (three new statements, `pg_namespace` unchanged); mutations f4, f5. | PROVEN | §17.1. The gap predates C-2d (CFG-2); the contract it broke is C-101's. |
+| C-113 | N6: each C-2d contract that a verifier mutation left unpinned has a pin that turns red. V1: C-097's duplicate refusal covers a catalog registered on the `SessionContext` alone. V2: C-100's `dbtable` property (any case) is dropped before the settings check. V3: C-101's mounted schema refuses `register_table` and `deregister_table` with the read-only text. V4: `SourceRow` masks through `redact_source_prop`, so a userinfo token and a percent-encoded `pass%77ord` query key are masked. V6 (the zone label) is C-110's. | `named_sources/tests.rs::a_source_named_like_an_engine_catalog_refuses_as_duplicate`, `::a_mounted_schema_refuses_table_registration_as_read_only`, `::sources_listing_masks_a_percent_encoded_url_password_key`; `session/tests/read_postgres.rs::a_dbtable_property_is_the_target_never_a_setting`; mutations V1, V2, V3, V4. | PROVEN | §17.1. The verifier's clause numbers C-090, C-093 and C-094 are C-097, C-100 and C-101 after the renumbering. |
+| C-114 | N4: a per-value refusal fails only a read that reaches its row. The decoder emits the rows of a batch before a refused value and raises the refusal on the next pull (`refuse_after_kept_rows`); the exec does the same for a placement refusal (`place_until_refusal`). `LIMIT n`, `limit(n)` and Spark-style `show(n)` push the limit when no filter is left for the engine (`pushDownLimit` / `pushdown_limit`, on by default). Over the verifier's 200 000-row table with `NaN` at row 150 000, `LIMIT 5` returns 5 rows with `pushed_limit=5`, and `show(3)` and `limit(5)` return 3 and 5 rows with `pushDownLimit` on and off. With the limit kept in the engine, a `NaN` in row 4 and a gap in row 5 leave `limit(3)` and `limit(4)` whole. The residual cases are declared on `CONNECT-DECL-pg-numeric-special`: a filter left above the scan, which DataFusion's round-robin repartition reads ahead of, and the `polars` and `duckdb` display styles' head-and-tail `show(n)`, which reads every row. | `connect/tests/it/copy_binary.rs::a_refused_value_emits_the_rows_before_it_then_refuses`; live `test_c2_catalog_and_limit.py::test_a_limit_never_reaches_a_refused_value_past_it`, `::test_a_refused_value_fails_only_a_read_that_reaches_its_row`; mutations f6, L1, L2. | PROVEN | §17.1, §17.2 R-1. The ruling preferred a per-row lazy refusal; it is per batch boundary, which a limit over a single-partition scan honours, and the read-ahead is declared. |
+| C-115 | N5: the Spark door's catalog APIs answer for a mounted source. `spark.catalog.tableExists("pg.<schema>.<table>")` resolves the relation through the mount (`True` / `False`, never `unknown catalog`); `SHOW TABLES IN pg.<schema>` and `SHOW SCHEMAS IN pg` return the empty listing `CONNECT-DECL-pg-listing` declares; `writeTo(...).create()` and `write.saveAsTable(...)` refuse in the Unsupported class with `read_only_ddl(<key path>)` and `CONNECT-DECL-pg-ddl`, and nothing is created. Core's `check_catalog_refusal` refuses every Iceberg-handle lookup of a source's name the same way. | `named_sources/tests.rs::catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog`; live `test_c2_catalog_and_limit.py::test_catalog_apis_answer_for_a_mounted_source`; mutations f7, f8, L3, L4, L5. | PROVEN | §17.1, §17.2 R-2. `listTables("pg.<schema>")` still answers `SCHEMA_NOT_FOUND`, declared on the listing row (§17.2 R-2). |
+| C-116 | S3, the plan name: a `read_postgres` frame is built under a name, never `?table?`. A `dbtable` relation renders as `TableScan: <schema>.<table>`, with its filters qualified by it, and a `query` renders as `TableScan: jdbc`. | Live `test_c2_catalog_and_limit.py::test_a_read_postgres_frame_names_its_relation_in_the_plan`; mutation L6. | PROVEN | §17.1. |
+| C-117 | Docs and shape (fold 1). The registry updates `CONNECT-DIV-pg-timestamp-zone`, `CONNECT-DECL-pg-out-of-range`, `-pg-numeric-special` (which reads refuse), `-pg-listing` (the Spark door) and `-pg-ddl` (`CREATE SCHEMA`, the catalog operations). Every touched `map.md` moves in lockstep, and `zone_localiser/` gains its own. One new internal edge, `repark-functions` to `repark-common` (`normal`), is declared in `check_crate_dag.py`. `session.rs` holds 999 lines after shedding three comment lines. The new live cells are in `test_c2_catalog_and_limit.py`. No code comments. | §17.3. | PROVEN | |
+
+### 17.1 Mutations (fold 1)
+
+Each mutation was applied alone to a copy of the file, the named pins run, and the file
+restored from that copy.
+
+| id | clause | mutation (file) | red? | red in |
+|---|---|---|---|---|
+| f1 | C-109 | read the offset from the wall clock's own year, not `proxy_year` (`core/src/session/zone_localiser.rs`) | RED | `a_wall_clock_past_2099_is_placed_by_the_final_rule`, `the_2099_and_2100_sides_of_the_horizon_agree`, `southern_and_far_future_wall_clocks_keep_their_season` |
+| f2 | C-110 | parse the raw zone id, skipping `canonical_session_zone_id` (`zone_localiser.rs`) | RED | `java_form_session_zones_place_at_their_canonical_offset` |
+| V6 | C-110 | `zone_label()` returns `"UTC"` (`zone_localiser.rs`) | RED | `java_form_session_zones_place_at_their_canonical_offset` |
+| f3 | C-111 | an overflowing placement refuses `WallClockGap` (`zone_localiser.rs`) | RED | `the_end_of_the_calendar_refuses_as_out_of_range_never_as_a_gap` |
+| f4 | C-112 | `CreateCatalogSchema` unclaimed again (`core/src/named_sources.rs`) | RED | `configured_source_ddl_refuses_as_read_only` |
+| f5 | C-112 | `CreateCatalog` claimed by its whole name only (`named_sources.rs`) | RED | `configured_source_ddl_refuses_as_read_only` |
+| V1 | C-113 | drop the `SessionContext` half of the duplicate check (`core/src/named_sources.rs`) | RED | `a_source_named_like_an_engine_catalog_refuses_as_duplicate` |
+| V2 | C-113 | keep a `dbtable` property (`core/src/session/read_postgres.rs`) | RED | `a_dbtable_property_is_the_target_never_a_setting` |
+| V3 | C-113 | `register_table` answers `Ok(None)` (`connect/src/provider/schema.rs`) | RED | `a_mounted_schema_refuses_table_registration_as_read_only` |
+| V4 | C-113 | `SourceRow` masks through `redact_value` (`named_sources.rs`) | RED | `sources_listing_masks_a_percent_encoded_url_password_key` |
+| f6 | C-114 | a refusal never emits the rows before it (`connect/src/copy_binary.rs`) | RED | `a_refused_value_emits_the_rows_before_it_then_refuses` |
+| L1 | C-114 | as f6, live | RED | `test_a_refused_value_fails_only_a_read_that_reaches_its_row` |
+| L2 | C-114 | a placement refusal never emits the rows before it (`connect/src/provider/scan.rs`) | RED | `test_a_refused_value_fails_only_a_read_that_reaches_its_row` |
+| f7 | C-115 | `table_exists` skips `source_table_exists` (`core/src/session.rs`) | RED | `catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog` |
+| f8 | C-115 | `check_catalog_refusal` skips `source_catalog_refusal` (`core/src/session/late_catalogs.rs`) | RED | `catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog` |
+| L3 | C-115 | the Spark door's `catalog_handle` skips the source text (`spark/src/catalog_ops.rs`) | RED | `test_catalog_apis_answer_for_a_mounted_source` |
+| L4 | C-115 | `SHOW TABLES` scope skips the source arm (`spark/src/use_ddl.rs`) | RED | `test_catalog_apis_answer_for_a_mounted_source` |
+| L5 | C-115 | `SHOW NAMESPACES` skips the source arm (`spark/src/describe_show.rs`) | RED | `test_catalog_apis_answer_for_a_mounted_source` |
+| L6 | C-116 | a `dbtable` frame named `?table?` (`core/src/session/read_postgres.rs`) | RED | `test_a_read_postgres_frame_names_its_relation_in_the_plan` |
+| L7 | C-109 | f1, live (`zone_localiser.rs`) | RED | `test_c2_federated.py::test_a_wall_clock_past_2099_matches_the_timestamp_literal` |
+
+### 17.2 Readings acted on (fold 1)
+
+- **R-1, N4: the verifier's diagnosis and the display style.** The verifier's `show(3)` repro
+  failed in the default display style, `polars`. There, `show(n)` is a head-and-tail preview:
+  it counts the frame and reads its last row through `limit_with_skip`, so it decodes every
+  row, whatever the limit pushdown does. In `repark.display.style = spark`, `show(3)` is
+  `limit(3)`, which never reaches row 150 000, with `pushDownLimit` on or off. The verifier's
+  `LIMIT 5` failure needed a residual filter: a `RepartitionExec` sits between the filter and
+  the scan and reads ahead. A per-row lazy refusal (the ruling's preference) would need the
+  refused value carried as data past the scan, which is a decoder redesign. The decoder and
+  the exec now defer a refusal to the batch boundary, so a single-partition limit is whole.
+  The two residual cases are declared on `CONNECT-DECL-pg-numeric-special`. The pin runs
+  Spark's style. The `polars` preview is a facade decision outside this card, and is put as Q1
+  of the hand-back.
+- **R-2, N5: the listing row, followed.** `CONNECT-DECL-pg-listing` declares an empty listing,
+  so `SHOW TABLES IN pg.<schema>` and `SHOW SCHEMAS IN pg` return it rather than refusing.
+  `tableExists` is not a listing: it names one relation, which the mount resolves.
+  `listTables("pg.<schema>")` is outside the ruled list. It still answers `SCHEMA_NOT_FOUND`,
+  because the facade checks the schema against the empty `SHOW SCHEMAS`; the listing row says
+  so.
+- **R-3, N1: one horizon.** `repark-core` cannot reach `repark-functions` (tier 2 to 3), so the
+  horizon moved down to `repark-common` (tier 0), which both crates read. Nothing was
+  reimplemented: `proxy_year`, `is_leap_year` and `days_from_civil` moved verbatim, and the
+  CAST-TS-STRING-1 pins hold unchanged.
+- **R-4, out of scope, observed.** `repark_common::redaction::mask_value_credentials` does not
+  percent-decode a query key, so `jdbc:postgresql://h/db?pass%77ord=x` passes the generic mask.
+  `SourceRow` uses `redact_source_prop`, which decodes it (C-113, V4); the error path's
+  `to_py_err` uses the generic mask.
+
+### 17.3 Gates (fold 1)
+
+The gates ran on the finished tree, each cargo command under the build-slot lock. The live run
+used `make pg-up` (PostgreSQL 16, rootless Docker), and `make pg-down` removed the container
+at the end.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-core -p repark-connect -p repark-python --lib` | 0 | core 1286 passed (1 ignored), connect 0 (lib), python 151 |
+| `cargo test -p repark-connect` | 0 | 127 passed, 51 ignored (the live cells) |
+| `cargo test -p repark-connect -- --include-ignored` under `make pg-up` | 0 | 178 passed |
+| `cargo test -p repark-functions --lib`; `cargo test -p repark-spark --lib` | 0 | 891 passed; 2630 passed |
+| `pytest python/repark-parity/tests/live_db/` under `make pg-up`, after `make develop` | 0 | 24 passed, 5 xfailed (C-0's strict xfails) |
+| `pytest python/repark/tests -k "source or postgres or toml or named" -n 8` | 0 | 692 passed, 9 skipped |
+| `cargo clippy -p repark-connect --all-targets -- -D warnings -A clippy::disallowed_methods`; `make rust-clippy` | 0 | no diagnostics |
+| `cargo fmt --check`; `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py`; `./scripts/check_lib_rs.sh` | 0 | clean; 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check`; `bash scripts/check_map_md.sh --base origin/main` | 0 | clean; no output |
+| `python3 scripts/check_docs_links.py`; `python3 scripts/check_ledger_grammar.py` | 0 | clean |
+| `./scripts/check_crate_dag.sh`; `./scripts/check_manifest.sh` | 0 | 25 internal edges clean; 20 components agree |
+| `cargo deny check 2>&1 \| tail -3` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `ruff check` / `ruff format --check` over the three live-cell files | 0 | clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |

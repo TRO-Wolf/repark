@@ -28,6 +28,14 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `Rendered`, `ColumnClass`, `MAX_IN_LIST`, `MIN_POSTGRES_DAYS`, `MAX_POSTGRES_DAYS`,
   `TEXT_COLLATION`, `UTF8_ENCODING`, `decimal_text`, `date_text`, `timestamp_text`) and
   `ScanMeter` and `scan_metered`.
+- `error.rs` — **C-2d (2026-10-07):** `ValueRefusal::WallClockGap` and `WallClockOverlap`
+  (registry row `ZONE_ROW`, `CONNECT-DIV-pg-timestamp-zone`, the message naming
+  `prefer_timestamp_ntz`), `DDL_ROW` (`CONNECT-DECL-pg-ddl`) and `read_only_ddl(source)`, all
+  outside the `postgres` feature so core's guard needs no driver; `lib.rs` re-exports them.
+  pins: c-2/C-098, C-101
+  **Fold 1:** `ValueRefusal::TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`) is the
+  placement's refusal when a wall clock's instant falls past chrono's calendar, so it is never
+  reported as a gap. pins: c-2/C-111
 - `error.rs` — C-2a (2026-10-06; sketch [c-2-design.md](../../../task/wo/c-2-design.md) §2.2,
   NS-15). The crate's one error enum, `ConnectError` (`thiserror`), and
   `Result<T> = std::result::Result<T, ConnectError>`. C-1's `SettingsError` and `TypeMapError`
@@ -65,6 +73,13 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   field needs. It carries no value, and it takes the file to 264, four lines past the sketch
   ceiling (the 1000-line gate is the mechanical one).
   pins: c-2/C-001, C-015, C-018, C-025, C-037, C-048, C-093
+- `copy_binary.rs` — **C-2d fold 1 (2026-10-07), N4:** a value refusal (`ConnectError::UnrepresentableValue`)
+  in a batch that already holds rows does not discard them. `refuse_after_kept_rows` slices
+  every builder to the rows before the refused tuple, so the half-appended tuple is dropped. It
+  returns those rows as a batch and poisons the decoder with the refusal, which the next
+  `decode` or `finish` returns. A refusal in a batch's first row, and every protocol error,
+  still fail at once. `recycle_carry` clears the carry after a carried field, dropping its
+  buffer past the byte cap, so `run` stays under clippy's line limit. pins: c-2/C-114
 - `copy_binary.rs` — C-2a (2026-10-06; sketch §2.6). `CopyBinaryDecoder`, the resumable state
   machine over `COPY … TO STDOUT (FORMAT BINARY)` chunks, independent of how the server or TLS
   cuts the stream: `Header → HeaderExtension → TupleStart → FieldLength(i) → FieldValue(i, n)
