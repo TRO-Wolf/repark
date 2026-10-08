@@ -13,11 +13,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
   **Fold SM-2d (2026-10-07):** C-071 rewritten to the nearest-visible sourced-twin rule.
 - [using-per-side-keys-1-ledger.md](using-per-side-keys-1-ledger.md) —
-  **USING-PER-SIDE-KEYS-1 (2026-10-07), HALT after step 1:** the acceptance grid for the
-  coalesced `USING` key and per-side key references, 1,090 cells measured on Spark 4.1.2 and on
-  `main` `3fbcb2ca` on both doors (C-001), and the design note. The DataFrame door needs
-  `repark-python` and facade binding changes, outside the brief's two crates, so the unit
-  stops with four questions (Q1..Q4); C-001..C-010 are `OPEN`. No product code changed.
+  **USING-PER-SIDE-KEYS-1 (2026-10-07/08), built, awaiting the Critic:** the acceptance grid for
+  the coalesced `USING` key and per-side key references, 1,090 cells on Spark 4.1.2, `main`
+  `3fbcb2ca` and the head (C-001); both doors show the merged key on `right`/`full` (C-002,
+  C-006) and answer per-side keys (C-003) with hidden keys never in the output schema (C-004);
+  chained `USING` joins match on the merged key, wrong since 1.0.0 (C-008); the SQL `WHERE`
+  refusal is gone (C-007); controls and the mixed-key divergence are pinned (C-009, C-010).
+  206 cells moved to Spark's answer, none regressed. C-011 (the Critic pass) is `OPEN`.
   `risk_tier: high`. Branch `fix/using-per-side-keys-1`. Evidence in
   [using-per-side-keys-1-probes/](using-per-side-keys-1-probes/map.md).
 - [foreach-wrap-1-ledger.md](foreach-wrap-1-ledger.md) —

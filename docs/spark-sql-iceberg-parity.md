@@ -3344,6 +3344,60 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   2026-10-06). The pins assert the refusal, so the follow-up reds them and
   forces this row to be re-recorded together with the behavior.
 
+### USING-SIDE-KEY-REACH-1 — a per-side `USING` key is reachable on the joined frame, through `filter` and `sort` only
+
+- **repark** — after `l.join(r, "id", how)` on `left`/`right`/`full`, `l.id` and `r.id` answer the
+  per-side key in `select`, `selectExpr`, `filter`, `sort`, a join condition and `l.*` / `r.*`, on
+  the joined frame and on a `filter` or `sort` of it. Past a narrowing `select`, after `.alias`, in
+  `groupBy` / `withColumn` and other operations, and written with backticks in a text predicate
+  (`` `r`.`id` > 2 ``), the reference refuses with `UnsupportedOperationException`: "qualified
+  reference `r`.`id` to a USING join key is not supported in repark v1".
+- **Apache Spark** — answers the per-side key past a `select` of the frame
+  (`frame.select("id", "s").select("r.id")` → `2, 3, 4, NULL` on `full`), in `groupBy` and
+  `withColumn`, and with backticks; after `.alias("x")` it refuses with
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` (42703). *(oracle: live 4.1.2, 2026-10-07, grid cells
+  `chain|full|select-then-r.id`, `chain|full|alias-x-r.id`.)*
+- **Pin** — `python/repark/tests/test_attr_id_1_sm2_r6.py::test_side_key_past_a_narrowing_select_or_alias_refuses`,
+  `::test_using_key_guards_literals_and_unqualified`
+- **Rationale** — DECLARED for the first cut (orchestrator ruling Q4, 2026-10-07): a hidden key is a
+  column of the `Join` node, exposed on demand through filter, sort and limit; carrying it through
+  arbitrary projections is a later unit. The refusal is loud, so no reference answers the merged
+  key silently. The pins assert the refusal, so widening the reach reds them.
+
+### USING-MIXED-KEY-TYPE-1 — a `USING` key of mixed `INT` / `STRING` sides keeps the left type
+
+- **repark** — `l(id INT).join(r(id STRING), "id", how)` shows `id` as `INT` on every join type; on
+  `right` and `full` the right key is read through `try_cast` to the left type, so `'3'` shows `3`.
+  `r.id` answers the right side's own strings.
+- **Apache Spark** — the shown key is `STRING` on `right` and `BIGINT` on `full` (`INT` on
+  `inner`/`left`); `r.id` answers the strings. *(oracle: live 4.1.2, 2026-10-07, grid cells
+  `mixed|right|schema`, `mixed|full|schema`.)*
+- **Pin** — `python/repark/tests/test_attr_id_1_sm2_r6.py::test_mixed_type_using_keeps_the_left_key_type`
+- **Rationale** — DECLARED (v1.5.3 card row USING-PER-SIDE-KEYS-1 and orchestrator ruling,
+  2026-10-07): the unit does not change the key's type; Spark's coercion of mixed join keys is a
+  separate question.
+
+### USING-SQL-STAR-SHAPES-1 — SQL `USING` shapes whose star keeps the left key
+
+- **repark** — on the SQL door the merged key (the right key on `RIGHT`, `coalesce` on `FULL`) is
+  shown by `*` and by the unqualified key when the `FROM` is one relation followed only by `USING`
+  joins. Three shapes keep the left key (`NULL` on right-outer rows): a `USING` join followed by an
+  `ON` join in the same `FROM` (`… FULL JOIN tr r USING (id) JOIN tq q ON r.id = q.id`); a `NATURAL`
+  join; and a select list that names a per-side key or a qualified star beside the merged key
+  (`SELECT *, r.id`). `SELECT id, l.id, r.id` refuses ("Projections require unique expression
+  names"). Chained `USING` and `NATURAL` joins match on the merged key in every shape.
+- **Apache Spark** — coalesces the key in all of them: the `ON`-join shape shows `4, NULL, z, 4, r`
+  on the right-outer row; `NATURAL FULL JOIN` shows `4, NULL, z`; `SELECT id, l.id, r.id` answers
+  three columns named `id`. *(oracle: live 4.1.2, 2026-10-07, grid cells `sql|full|alias|joincond|r.id`,
+  `natural|full|star`, `sql|full|alias|select|id,l.id,r.id`.)*
+- **Pin** — `python/repark/tests/test_using_per_side_keys_1_sql.py::test_sql_using_declared_divergences`,
+  `::test_sql_using_scopes_and_shadows`
+- **Rationale** — DECLARED (USING-PER-SIDE-KEYS-1, 2026-10-07): the rewrite runs on the parsed
+  statement without table schemas, so it cannot tell whether a later `ON`-joined relation also
+  carries the key name or which columns a `NATURAL` join merges, and DataFusion cannot hold an
+  unqualified `id` beside a qualified `r.id` in one projection. Each shape answers what v1.5.2
+  answered; none is a new wrong answer.
+
 ### DF-STREAM-1 — `dropDuplicatesWithinWatermark` drops the appended plan dump
 
 - **repark** — raises `AnalysisException` with errorClass `_LEGACY_ERROR_TEMP_3102` at the call,

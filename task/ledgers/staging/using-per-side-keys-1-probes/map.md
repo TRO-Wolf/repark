@@ -24,3 +24,6 @@ product code lives here; the product rounds pin against these files.
   4.1.2 (Zulu 17, `local[1]`), recorded 2026-10-07.
 - [grid-main.json](grid-main.json) — the repark leg: the same 1,090 cells on
   `main` `3fbcb2ca` (repark 1.5.3), recorded 2026-10-07.
+- [grid-head.json](grid-head.json) — the head leg: the same 1,090 cells on
+  branch `fix/using-per-side-keys-1` after both doors were built, recorded
+  2026-10-08.
