@@ -9652,14 +9652,29 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   session/join builders plus refusal-shape and no-`__repark_`-bytes helpers for
   the fold's pin files. No module docstring: the lane's no-comments ruling
   covers the new file; the contract lives here. pins: attr-id-1/C-061
+- [test_fa_5_duplicate_csv.py](test_fa_5_duplicate_csv.py) — **FA-5
+  (2026-10-08):** csv path writes of frames with exact-duplicate display
+  names, against the live Spark 4.1.2 cells in the unit ledger: the display
+  header for the self, mixed and `USING` joins, a same-origin repeat and a
+  repeat beside a case twin; rows only with `header` off; separator,
+  `quoteAll` and compression options; every `mode` on a fresh and an existing
+  path; both case flags; temporal twins with and without `timestampFormat`;
+  the header-only file of an empty frame; a single-part byte-equal cell. A
+  `partitionBy` over a repeated name refuses `AMBIGUOUS_REFERENCE` with the
+  written spelling and creates nothing; a unique partition column writes and
+  leaves the header. Controls: parquet and json keep refusing, and a
+  unique-name csv is unchanged. No module docstring: the no-comments ruling
+  covers the new file; the contract lives here.
+  pins: fa-5-6/C-002, C-003, C-004
 - [test_attr_id_1_sm2_dupwrites.py](test_attr_id_1_sm2_dupwrites.py) — **Fold
   SM-2 R2 (2026-10-06):** duplicate-display-name writes refuse
   `COLUMN_ALREADY_EXISTS` with Spark's exact text, condition and SQLSTATE, and
   create no file or table (parquet, json, csv, orc, saveAsTable, V2 create and
   V2 append); `insertInto` writes positionally as Spark does; folded-only
-  duplicates report the folded name. The csv refusal is the ruled divergence
-  FA-5 (Spark writes the duplicate header). SM-2b narrowing: csv refuses
-  exact duplicates only (case-twins write the raw header, pinned), and a
+  duplicates report the folded name. **FA-5 (2026-10-08):** csv no longer
+  refuses; its pin now asserts the display header and no internal name in the
+  file (`test_fa_5_duplicate_csv.py` holds the full cell set). SM-2b: csv
+  case-twins write the raw header (pinned), and a
   case-sensitive parquet twin pin holds the per-flag rule. No module
   docstring: the lane's no-comments ruling covers the new file; the contract
   lives here. pins: attr-id-1/C-061

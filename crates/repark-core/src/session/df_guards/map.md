@@ -687,6 +687,21 @@ wrapped optimizer rule) and declares this directory.
   `IgnoreCase`) and gains the sibling `resolve_bound_expr_with(expr, schema, rule)`,
   re-exported through `frame_names` (`session.rs` sits exactly at its ceiling, so the root
   re-export cannot grow). pins: casesens-1/C-009
+- `duplicate_names.rs` — **FA-5 and FA-6 (2026-10-08):** the one rule that lets a
+  relation repeat a display name while its engine names stay unique.
+  `duplicate_tolerant_names(displays)` answers `None` when no display repeats
+  exactly (case twins are not repeats); otherwise each repeated position becomes
+  `__repark_dup_<position>_<display>` and every other position keeps its display.
+  `display_name(engine)` reads the display back; it needs at least one position
+  digit and the separator, so `__repark_dup_id` and the `__repark_l_` twin names
+  answer `None`. `rename_duplicate_tolerant(frame, displays)` is the positional
+  projection over `rename_output_fields`, and returns the frame untouched when
+  nothing repeats. DataFusion cannot hold the repeat itself:
+  `DFSchema::check_names` refuses one `(qualifier, name)` pair twice under a
+  `TableScan` or a `SubqueryAlias`. The prefix starts with `__repark_`, so
+  `is_scratch_relation` already hides these names from suggestions. All three
+  are re-exported through `frame_names`. Pins: `../tests/duplicate_names.rs`.
+  pins: fa-5-6/C-001
 - `written_names.rs` — **CASESENS-2 port (2026-10-03):** what the ATTR-ID-1
   stack keeps of the charter's written-name matchers (cherry-picks `e4be1feb`,
   `581f91b1`, `28f6d28a`, `111e95b3`): `refuse_folded_duplicate_keys(keys, rule)`

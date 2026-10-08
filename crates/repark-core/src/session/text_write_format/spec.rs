@@ -16,6 +16,7 @@ pub(crate) const SPEC_TIMESTAMP_FORMAT_KEY: &str = "repark.text.timestamp_format
 pub(crate) const SPEC_NTZ_FORMAT_KEY: &str = "repark.text.timestamp_ntz_format_hex";
 pub(crate) const SPEC_DATE_FORMAT_KEY: &str = "repark.text.date_format_hex";
 pub(crate) const SPEC_WRITE_ID_KEY: &str = "repark.text.write_id";
+pub(crate) const SPEC_DISPLAY_HEADER_KEY: &str = "repark.text.display_header";
 const SPEC_PREFIX: &str = "repark.text.";
 
 type TextWriteCollectors = Arc<Mutex<HashMap<String, Arc<Mutex<Vec<ObjectPath>>>>>>;
@@ -115,6 +116,7 @@ pub(crate) struct TextWriteSpec {
     pub display: String,
     pub specs: FormatSpecs,
     pub write_id: Option<String>,
+    pub display_header: bool,
 }
 
 impl TextWriteSpec {
@@ -134,6 +136,7 @@ impl TextWriteSpec {
                 date: spec_from_value(date, PatternKind::Date)?,
             },
             write_id: None,
+            display_header: false,
         })
     }
 
@@ -155,6 +158,9 @@ impl TextWriteSpec {
             date.as_deref(),
         )?;
         spec.write_id = format_options.get(SPEC_WRITE_ID_KEY).cloned();
+        spec.display_header = format_options
+            .get(SPEC_DISPLAY_HEADER_KEY)
+            .is_some_and(|value| value == "true");
         let rest = format_options
             .iter()
             .filter(|(key, _)| !key.starts_with(SPEC_PREFIX))
@@ -217,11 +223,15 @@ impl TextWriteSpec {
         timestamp: Option<&str>,
         ntz: Option<&str>,
         date: Option<&str>,
+        display_header: bool,
     ) -> String {
         let mut pairs = vec![format!(
             "'{SPEC_ZONE_KEY}' '{}'",
             zone_id.replace('\'', "''")
         )];
+        if display_header {
+            pairs.push(format!("'{SPEC_DISPLAY_HEADER_KEY}' 'true'"));
+        }
         for (key, pattern) in [
             (SPEC_TIMESTAMP_FORMAT_KEY, timestamp),
             (SPEC_NTZ_FORMAT_KEY, ntz),

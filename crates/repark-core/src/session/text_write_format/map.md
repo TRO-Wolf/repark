@@ -66,6 +66,13 @@ unformatted, as the UDF left them unwrapped.
   refusal order never changed.
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the legacy-policy fallback reads the session's raw conf rows
   (`&self.conf_dump`), never the display-redacted `conf_dump()`. pins: source-url-redact-1/C-031
+  **FA-5 (2026-10-08):** a csv write whose source schema carries a
+  duplicate-tolerant name (`df_guards/duplicate_names.rs`) resolves the sink
+  format and adds `'repark.text.display_header' 'true'` to the spec options,
+  with or without temporal columns. json never sets it: Spark refuses json
+  over duplicate names, and the facade refuses before this builder runs. A
+  schema without such a name builds the same parts as before.
+  pins: fa-5-6/C-002, C-004
 - `spec.rs` — `TextWriteSpec`: the session zone text with its canonical and
   Java display ids plus the three compiled format specs, built once per COPY
   in the factory's `create`. `from_format_options` strips the `repark.text.*`
@@ -85,6 +92,12 @@ unformatted, as the UDF left them unwrapped.
   name so `keep_partition_by_columns` writes them native, exactly as the UDF
   left partition columns unwrapped; then delegates to the inner CSV/JSON
   serializer with the batch's `initial` flag untouched.
+  **FA-5 (2026-10-08):** when the spec carries `display_header`, the
+  serializer renames the formatted batch's schema through `display_name`
+  (`with_display_header`: one schema rebuild per batch, the columns shared)
+  before the inner csv serializer writes the header from it. Arrow batches
+  allow a repeated field name; the logical plan and the demux never see one.
+  With the flag off the serializer does what it did. pins: fa-5-6/C-002
 - `sink.rs` — `ReparkTextSink`: mirrors `CsvSink` / `JsonSink` (`config`,
   `write_all` via `FileSink::write_all`, inner serializer built exactly as
   DataFusion builds it, then wrapped). The demux strips partition columns

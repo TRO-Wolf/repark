@@ -616,7 +616,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   only simple refs (display equals the drop name), so an alias — which now
   carries its base id — falls through to the name path and stays a no-op as
   at base. pins: attr-id-1/C-042
-- `qualified_names.py` — **ATTR-ID-1 S3e (2026-10-01):** the qualified-name
+- `qualified_names.py` — **FA-5 (2026-10-08):**
+  `_refuse_ambiguous_partition_columns(frame, partition_columns)` refuses a
+  csv `partitionBy` name that two distinct attribute ids carry, with Spark's
+  `AMBIGUOUS_REFERENCE` text: the reference as written and one candidate per
+  twin under its plan qualifier. A frame without a repeated display name
+  returns at once, and same-id twins (`select('id', 'id')`) pass, as
+  `_refuse_ambiguous_map_input` already rules. pins: fa-5-6/C-003
+  **ATTR-ID-1 S3e (2026-10-01):** the qualified-name
   home, split out of `column_fields.py` at the ceiling. `_frame_qualifiers`
   threading (`_alias_frame_qualifiers` names every stamped id,
   `_join_frame_qualifiers` unions each side's names onto the

@@ -310,14 +310,61 @@ frame. `EXPLAIN` keeps printing the true engine plan, as the v1.5.3 notes alread
 
 The unit continues.
 
+## FA-5 — what landed (2026-10-08)
+
+**Head against Spark, cell by cell** (`/tmp/fa56/repark-head5.json`, the step-0 probe rerun on
+the FA-5 build). Every csv write cell is equal to Spark on bytes or on the refusal, with two
+exceptions that are not this unit's:
+
+- `csv_noheader`: repark writes the header when the `header` option is absent, for every
+  frame, on main too (`L.write.csv(p)` over a plain frame writes `id,s,v`). Spark's default
+  is off. The duplicate-name frame follows the door's existing default; with
+  `header=false` the bytes equal Spark's, and the pin sets the option.
+- `csv_mode_error_existing`: the same `PATH_ALREADY_EXISTS` condition; main's text has no
+  `file:` prefix and no SQLSTATE, as for a plain frame.
+
+Head against main: the probe differs only on the csv write cells. Every json, text, parquet,
+orc, avro and xml cell, and every FA-6 cell, is byte-identical to main on this build.
+
+**Cells this unit did not change, recorded because the brief asked for them.**
+
+- Reading the duplicate-header file back (`csv_header_readback*`): the reader fails on main
+  and on head, including one caught Rust panic with `header` off (`index out of bounds` in
+  `__arrow_c_stream__`). Spark answers `id0,s1,v2,id3,s4,v5`. A reader defect, outside a
+  write unit.
+- `text`: Spark refuses `COLUMN_ALREADY_EXISTS`; main and head refuse with
+  `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` and name the twin engine field in the message.
+- `orc`, `xml`, `avro`: no path writer on either side of this unit.
+
+**A residue inside FA-5.** `L.select('id', 'id', 's').write.partitionBy('id').csv(…)`: Spark
+writes `id=1/` with header `s` (both same-origin columns are partition columns). On head the
+engine fails the `PARTITIONED BY` lookup loudly. Main refused the frame outright, so nothing
+that answered before answers differently.
+
+**Design note, one correction.** The note said `text_write_copy_parts` takes the display
+names. It does not need them: the csv door hands it the renamed frame, and the builder reads
+the duplicate-tolerant names from the schema. One argument fewer crosses the binding, and
+the s3a route gets the same behaviour from the frame alone.
+
+**Mutations, facade half** (run on the FA-5 build, each reverted, tree clean after):
+
+| Mutation | Change | Red pins |
+|---|---|---|
+| M3 (a duplicate reaches a door Spark refuses) | the parquet/json refusal in `_apply_path_write` never fires | 5: both `test_other_file_doors_keep_refusing_duplicate_names` cells and three C-061 pins |
+| M6 (own) | the partition ambiguity refusal is skipped | 4: every `AMBIGUOUS_REFERENCE` partition pin |
+| M7 (own) | the csv door registers without the duplicate-tolerant rename | 25: every csv write pin |
+
+The Rust half (M1 remove the rename, M2 let the display name reach the engine, and two more)
+runs in the unit's cargo batch and is recorded below with the FA-6 mutations.
+
 ## Clauses
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | `duplicate_tolerant_names` answers `None` without an exact duplicate and unique `__repark_dup_<position>_<display>` names for the repeated positions otherwise; `display_name` inverts it; `rename_duplicate_tolerant` renames positionally. | Unit pins on exact, case-twin, and digit-bearing names, plus the round trip. | OPEN | Closes with the FA-5 Rust commit. |
-| C-002 | A csv path write of a frame with exact-duplicate display names writes Spark's bytes: the display header (when `header` is set) and the rows, for the self, mixed and `USING` joins, every measured option and mode, temporal columns, and the empty frame. | One pin per step-0 csv cell, byte-equal to the recorded Spark file. | OPEN | Closes with the FA-5 commits. |
-| C-003 | A csv `partitionBy` over a duplicate display name refuses `AMBIGUOUS_REFERENCE` with Spark's text before any file is created; a unique partition column writes and the header drops it. | One pin per measured cell. | OPEN | Closes with the FA-5 commits. |
-| C-004 | parquet, json, orc and text keep refusing a duplicate-display-name frame, and a frame without duplicates writes the same csv and json bytes as on main. | Control pins per door; the temporal and plain csv suites unchanged. | OPEN | Closes with the FA-5 commits. |
+| C-001 | `duplicate_tolerant_names` answers `None` without an exact duplicate and unique `__repark_dup_<position>_<display>` names for the repeated positions otherwise; `display_name` inverts it; `rename_duplicate_tolerant` renames positionally. | Unit pins on exact, case-twin, and digit-bearing names, plus the round trip. | PROVEN | `crates/repark-core/src/session/tests/duplicate_names.rs` (`names_without_an_exact_duplicate_answer_none`, `repeated_names_take_their_position_and_unique_names_stay`, `display_name_reads_the_display_back`, `rename_gives_unique_engine_names_and_keeps_a_plain_frame`). |
+| C-002 | A csv path write of a frame with exact-duplicate display names writes Spark's bytes: the display header (when `header` is set) and the rows, for the self, mixed and `USING` joins, every measured option and mode, temporal columns, and the empty frame. | One pin per step-0 csv cell, byte-equal to the recorded Spark file. | PROVEN | `python/repark/tests/test_fa_5_duplicate_csv.py` (the header, option, mode, case-flag, temporal, empty and byte-equal pins); `crates/repark-core/src/session/tests/duplicate_names.rs` (the `csv_*` sink pins and the routing and batch-rename pins); `test_attr_id_1_sm2_dupwrites.py::test_csv_write_of_duplicate_display_names_writes_the_display_header`; head probe `/tmp/fa56/repark-head5.json` against `/tmp/fa56/spark.json`. |
+| C-003 | A csv `partitionBy` over a duplicate display name refuses `AMBIGUOUS_REFERENCE` with Spark's text before any file is created; a unique partition column writes and the header drops it. | One pin per measured cell. | PROVEN | `python/repark/tests/test_fa_5_duplicate_csv.py` (`test_csv_partition_by_*`, five tests, six cells). |
+| C-004 | parquet, json, orc and text keep refusing a duplicate-display-name frame, and a frame without duplicates writes the same csv and json bytes as on main. | Control pins per door; the temporal and plain csv suites unchanged. | PROVEN | `python/repark/tests/test_fa_5_duplicate_csv.py::test_other_file_doors_keep_refusing_duplicate_names`, `::test_csv_of_unique_names_is_unchanged`; the unchanged C-061 pins in `test_attr_id_1_sm2_dupwrites.py` (parquet, json, orc, `saveAsTable`, `writeTo`); `parts_route_duplicate_csv_to_the_sink_and_leave_the_rest` in the Rust file; the brief's pytest selection green on the FA-5 build (4080 passed, 59 skipped, 9 xfailed). |
 | C-005 | `createOrReplaceTempView` and `createTempView` register a frame with exact-duplicate display names; `SELECT *`, `spark.table`, `DESCRIBE` and `listColumns` answer the display names and Spark's rows, cached or not. | One pin per step-0 cell. | OPEN | Closes with the FA-6 commits. |
 | C-006 | A reference to a duplicated name on such a view refuses `AMBIGUOUS_REFERENCE` with Spark's reference and candidates on the SQL door and the DataFrame door; a unique name answers. | One pin per measured reference shape. | OPEN | Closes with the FA-6 commits. |
 | C-007 | `CREATE TABLE … AS SELECT *` and `CREATE VIEW … AS SELECT *` over such a view refuse `COLUMN_ALREADY_EXISTS`, and no durable surface carries a `__repark_dup_` name. | Refusal pins plus a no-internal-name scan. | OPEN | Closes with the FA-6 commits. |

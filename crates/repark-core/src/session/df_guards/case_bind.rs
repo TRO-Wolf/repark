@@ -30,6 +30,9 @@ pub use super::attr_lineage::{
     projection_source_ids, sort_hits_meet_at_join, sort_input_carries_twice,
     sort_output_carries_twice, sort_sourced_twin_engine,
 };
+pub use super::duplicate_names::{
+    display_name, duplicate_tolerant_names, rename_duplicate_tolerant,
+};
 pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
 pub use super::frame_lineage::{all_ids, ambiguous, ambiguous_images, renewed_absent, shared_ids};
 pub use super::predicate_names::fold_frame_qualifiers;

@@ -16,6 +16,7 @@ use crate::OverwriteIntent;
 use crate::engine_err;
 use crate::object_store_s3;
 use crate::session::ReparkSession;
+use crate::session::df_guards::duplicate_names::display_name;
 use crate::session::text_write_format::is_text_write_format_option;
 use crate::session::text_write_format::select::{TextWriteCopyParts, merge_spec_options};
 use crate::session::text_write_format::spec::{SPEC_WRITE_ID_KEY, TextWritePathRegistry};
@@ -499,7 +500,11 @@ fn empty_csv_bytes(frame_columns: &[String], options: &HashMap<String, String>) 
         }
     }
     if header_on && !frame_columns.is_empty() {
-        format!("{}\n", frame_columns.join(&separator)).into_bytes()
+        let header = frame_columns
+            .iter()
+            .map(|name| display_name(name).unwrap_or(name.as_str()))
+            .collect::<Vec<_>>();
+        format!("{}\n", header.join(&separator)).into_bytes()
     } else {
         Vec::new()
     }
