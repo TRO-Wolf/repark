@@ -143,7 +143,7 @@ fn has_final_rule<Z: TimeZone + Display>(zone: &Z) -> bool {
     };
     let mut cache = HAS_FINAL_RULE_CACHE
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     if let Some(found) = cache.iter().find(|(cached, _)| cached == name) {
         return found.1;
     }

@@ -622,15 +622,15 @@ fn unix_seconds_from_string(array: &dyn Array, session_zone: Tz, ansi: bool) -> 
         }
         let text = values.value(row);
         match NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S") {
-            Ok(naive) => match wall_to_unix_seconds(&session_zone, &naive) {
-                Some(placed) => seconds.append_value(placed),
-                None => {
-                    if ansi {
-                        return Err(malformed_timestamp_parse(text));
-                    }
+            Ok(naive) => {
+                if let Some(placed) = wall_to_unix_seconds(&session_zone, &naive) {
+                    seconds.append_value(placed);
+                } else if ansi {
+                    return Err(malformed_timestamp_parse(text));
+                } else {
                     seconds.append_null();
                 }
-            },
+            }
             Err(_) if ansi => return Err(malformed_timestamp_parse(text)),
             Err(_) => seconds.append_null(),
         }
