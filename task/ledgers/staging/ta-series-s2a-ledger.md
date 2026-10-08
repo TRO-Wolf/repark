@@ -119,6 +119,13 @@ Release wheels were built with `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 uvx matur
 64,000); `test_futures.parquet` read in place. Evidence: `s2a-evidence/owner/` (`owner_run.py`,
 `compare.py`, `compare.json`, `plans-base.txt`, `plans-head.txt`).
 
+**Recipe line (2026-10-08).** Every polars baseline pins `polars<2` or sets
+`pl.Config.set_engine_affinity("in-memory")`, because polars 2.0.0 defaults `collect()` to the
+streaming engine, and runs plugin pipelines such as polars_talib slower (reported 0.334 s against
+0.084 s on 1.44 for a 1M-row TA script, and 0.099 s on 2.0 in-memory; reported by the owner's PM
+delegate, not re-measured here). The gates in this ledger were measured on polars 1.43.1 and stand.
+polars_talib 0.2.0 requires `polars<2`.
+
 - **Sorted eager frame** (the owner's `load_repark`: select, `sort(event_timestamp_utc)`,
   `.eager().lazy()`). The bare spelling resolves by (b) on this base, because the eager cache
   does not declare its order until S1 (#944); it warns once, naming `event_timestamp_utc`. Bare
