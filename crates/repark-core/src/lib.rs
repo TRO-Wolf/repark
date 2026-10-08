@@ -16,6 +16,7 @@ mod idents;
 mod isnan;
 mod lineage_columns;
 mod metadata_columns;
+pub mod microbatch;
 mod na_fill;
 mod named_sources;
 mod namespace_create;
