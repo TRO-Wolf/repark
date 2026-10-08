@@ -6,6 +6,38 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
+- `partition.rs` — **C-3 (2026-10-07), the planning slice**, no feature gate and no I/O
+  ([c-3-ledger.md](../../../task/ledgers/staging/c-3-ledger.md) §0.1). Spark's JDBC range
+  partitioning as numbers.
+  - **`PartitionOptions`** holds the four values a door was handed (`column`, `lower_bound`,
+    `upper_bound`, `num_partitions`). `with_props(&mut props)` lifts the four Spark spellings
+    (`PARTITION_COLUMN_KEY`, `LOWER_BOUND_KEY`, `UPPER_BOUND_KEY`, `NUM_PARTITIONS_KEY`) out of
+    a property map, matching case-insensitively as Spark's option map does: a bound that is
+    not an `i64` refuses naming the option and never the value, a spelling given twice or
+    beside an explicit argument is a conflict, and `predicates` stays declared.
+    `spec()` applies Spark's rule: a column, or either bound, needs all four; `numPartitions`
+    alone is no partitioning. It answers `Option<PartitionSpec>`.
+  - **`stride_cuts(lower, upper, num_partitions)`** is `JDBCRelation.columnPartition`'s
+    arithmetic and answers the cuts, the upper bound of every stride but the last. A count
+    of one or less, or equal bounds, is no cut at all (checked before the bounds' order, as
+    Spark does); reversed bounds refuse in Spark's words; a count above the span shrinks to
+    the span. The cuts are computed as Spark computes them: each bound divided by the count
+    under `MathContext.DECIMAL128` (34 significant digits, half-even) and set to scale 18,
+    the difference truncated to the stride, the first cut shifted by half the strides the
+    truncation lost (half-up), and `i64` additions that wrap as the JVM's do. `Decimal` is
+    the small decimal that arithmetic needs, over Arrow's `i256` with checked operations.
+    Cuts that are not strictly increasing refuse (`PartitionRefusal::Strides`), so no
+    arithmetic surprise can duplicate or drop a row.
+  - **`strides(&cuts)`** turns cuts into `Stride { lower, upper }` pairs: the first open
+    below, the last open above, each cut the upper bound of one and the lower bound of the
+    next.
+  - **`PartitionRefusal`** is the reason enum of `ConnectError::PartitionedRead`. Its
+    messages are Spark's where Spark was measured. `error.rs` folds it by Spark's class:
+    `Incomplete`, `Reversed`, `QueryOption` and `Strides` to `Config` (Spark's
+    `IllegalArgumentException`), `NotInteger` to `NumberFormat`, `ColumnNotFound`,
+    `AmbiguousColumn` and `ColumnType` to `Analysis`, and `DeclaredColumnType`, which names
+    `PARTITIONED_READ_ROW`, to `NotImplemented`.
+  pins: c-3/C-002, C-003
 - `lib.rs` — `mod copy_binary; mod error; mod ident; mod settings; mod types;`, plus
   `mod discover; mod pool; mod read; mod tls;` under the `postgres` feature, and the
   re-exports: `BatchLimits`, `COPY_SIGNATURE`, `CopyBinaryDecoder`, `DEFAULT_BATCH_BYTES`,
@@ -27,7 +59,9 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `PostgresScanExec`, `WallClockLocaliser`, `LISTING_ROW`), the classifier (`Pushdown`,
   `Rendered`, `ColumnClass`, `MAX_IN_LIST`, `MIN_POSTGRES_DAYS`, `MAX_POSTGRES_DAYS`,
   `TEXT_COLLATION`, `UTF8_ENCODING`, `decimal_text`, `date_text`, `timestamp_text`) and
-  `ScanMeter` and `scan_metered`.
+  `ScanMeter` and `scan_metered`. C-3 (2026-10-07) adds `mod partition;` (no feature gate) and
+  re-exports `PartitionOptions`, `PartitionSpec`, `PartitionRefusal`, `Stride`, `stride_cuts`,
+  `strides`, the four option-key constants and `PARTITIONED_READ_ROW`.
 - `error.rs` — **C-2d (2026-10-07):** `ValueRefusal::WallClockGap` and `WallClockOverlap`
   (registry row `ZONE_ROW`, `CONNECT-DIV-pg-timestamp-zone`, the message naming
   `prefer_timestamp_ntz`), `DDL_ROW` (`CONNECT-DECL-pg-ddl`) and `read_only_ddl(source)`, all

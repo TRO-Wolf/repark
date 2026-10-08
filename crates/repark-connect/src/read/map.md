@@ -49,6 +49,15 @@ feature. See [../map.md](../map.md).
     metrics: `bytes_received` (every chunk), `time_to_first_byte` (from the first poll to the
     first chunk) and `decode` (the time inside `CopyBinaryDecoder::decode`); `scan` passes a
     fresh meter.
+  - **C-3 (2026-10-07).** `ScanRequest::stride(column, Stride)` appends one stride of a
+    partitioned read as a conjunct after everything already pushed: the first stride is
+    `(col OPERATOR(pg_catalog.<) $cut OR col IS NULL)`, a middle one
+    `(col OPERATOR(pg_catalog.>=) $low AND col OPERATOR(pg_catalog.<) $high)` and the last
+    `(col OPERATOR(pg_catalog.>=) $low)`. Each cut is bound through the carriage and read
+    back as `::pg_catalog.int8`, so an `int2` or `int4` column compares through the
+    catalog's cross-type operators and a cut outside the column's range never fails a cast.
+    A stride open on both sides returns the request unchanged; an unknown column or a cut
+    past the slot bound answers `None`. pins: c-3/C-004
   pins: c-2/C-038, C-039, C-040, C-041, C-053, C-054, C-056, C-059, C-062, C-074, C-076
 
 ## Pointers

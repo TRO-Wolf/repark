@@ -9,6 +9,7 @@ mod live_pg;
 mod live_pool;
 #[cfg(feature = "postgres")]
 mod live_pushdown;
+mod partition;
 #[cfg(feature = "postgres")]
 mod pool;
 mod postgres_types;

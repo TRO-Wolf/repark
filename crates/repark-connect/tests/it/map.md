@@ -7,9 +7,24 @@ See [../map.md](../map.md).
 
 ## Contents
 
-- `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod postgres_types; mod settings; mod url;`, plus
+- `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod partition; mod postgres_types; mod settings; mod url;`, plus
   `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
   mod scan; mod tls;` under the `postgres` feature.
+- `partition.rs` — C-3 (2026-10-07), no network. `strides_equal_sparks_recorded_grid` reads
+  [c3_stride_grid.txt](../../../../python/repark-parity/tests/live_spark/c3_stride_grid.txt),
+  the 740 triples recorded on live Spark 4.1.2, and compares `stride_cuts` with every recorded
+  cut list and the one recorded refusal. Beside it: the `i64` extremes
+  (`strides_at_the_i64_bounds_neither_wrap_nor_repeat`), the cases that are one unpartitioned
+  read (`one_stride_means_an_unpartitioned_read`), counts above the span, negative and
+  straddling ranges, Spark's reversed-bounds sentence, and
+  `strides_hold_every_value_exactly_once` (values below, between, on and above the cuts each
+  fall in one stride; the first stride is open below and the last above). The option pins:
+  Spark's all-or-none rule and sentence, the four spellings lifted out of a property map, a
+  bound that is not an `i64` naming the option and never the value, `predicates` declared, and
+  the class each refusal folds to. `rendering` (behind `postgres`) pins the three stride
+  shapes byte for byte, the `int8` cast on every cut, the NULL test on the first stride
+  alone, a stride after a pushed conjunct with projection and `LIMIT` kept, and the refusals
+  past the slot bound. pins: c-3/C-002, C-003, C-004
 - `explain.rs` — C-2c (2026-10-07), behind `postgres`, no network: sketch §5.3 over the
   `pushdown.rs` fixture's injected resolution. `explain_renders_pushed_and_residual_per_scan`
   (the exact `PostgresScanExec` line for one pushed and one residual conjunct, and for a pushed

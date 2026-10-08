@@ -17,6 +17,7 @@ use crate::copy_binary::{BatchLimits, CopyBinaryDecoder, DEFAULT_BATCH_BYTES, DE
 use crate::discover::{CastType, Privilege, ResolvedSource, ScanColumn};
 use crate::error::{ConnectError, ProtocolViolation, Result};
 use crate::ident::QualifiedRelation;
+use crate::partition::Stride;
 use crate::pool::{PooledClient, PostgresConnector, PostgresPool, TimeoutSetting, within};
 use crate::settings::PostgresSettings;
 
@@ -132,6 +133,38 @@ impl ScanRequest {
         self.filters.push(sql);
         self.values.extend(values);
         Some(self)
+    }
+
+    #[must_use]
+    pub fn stride(self, column: usize, stride: Stride) -> Option<ScanRequest> {
+        let scanned = self.resolved.columns.get(column)?;
+        let (name, tested) = (operand(scanned), scanned.name.to_string());
+        let base = self.values.len();
+        let bound = |offset: usize| {
+            let slot = ParamSlot::new(u16::try_from(base + offset).ok()?)?;
+            Some(format!("{slot}::pg_catalog.int8"))
+        };
+        let (at_least, below) = (CompareOp::GtEq.sql(), CompareOp::Lt.sql());
+        let (sql, values) = match (stride.lower, stride.upper) {
+            (None, None) => return Some(self),
+            (None, Some(upper)) => (
+                format!("({name} {below} {} OR {tested} IS NULL)", bound(0)?),
+                vec![upper.to_string()],
+            ),
+            (Some(lower), Some(upper)) => (
+                format!(
+                    "({name} {at_least} {} AND {name} {below} {})",
+                    bound(0)?,
+                    bound(1)?
+                ),
+                vec![lower.to_string(), upper.to_string()],
+            ),
+            (Some(lower), None) => (
+                format!("({name} {at_least} {})", bound(0)?),
+                vec![lower.to_string()],
+            ),
+        };
+        self.filter(sql, values)
     }
 
     #[must_use]

@@ -3,6 +3,7 @@ mod copy_binary;
 mod discover;
 mod error;
 mod ident;
+mod partition;
 #[cfg(feature = "postgres")]
 mod pool;
 #[cfg(feature = "postgres")]
@@ -31,6 +32,11 @@ pub use error::{
     read_only_ddl,
 };
 pub use ident::{DEFAULT_SCHEMA, IdentRefusal, MAX_IDENT_BYTES, PgIdent, QualifiedRelation};
+pub use partition::{
+    LOWER_BOUND_KEY, NUM_PARTITIONS_KEY, PARTITION_COLUMN_KEY, PARTITIONED_READ_ROW,
+    PartitionOptions, PartitionRefusal, PartitionSpec, Stride, UPPER_BOUND_KEY, stride_cuts,
+    strides,
+};
 #[cfg(feature = "postgres")]
 pub use pool::{
     CONNECTION_CHECK_INTERVAL, Canceller, Connect, PgConnection, PoolConnection, PoolLimits,
