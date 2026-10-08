@@ -9760,6 +9760,18 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   twins keeps the SQL route with equal answers. A `spark.sql.caseSensitive`
   change between the frames and the join shows on the joined frame on both
   routes (the native join takes the session state of the join call). A raising
-  native attempt keeps the SQL route's answer. No module docstring: the lane's
-  no-comments ruling covers the new file; the contract lives here.
-  pins: stamp-2-r5p6-2/C-003, C-004, C-005, C-006
+  native attempt keeps the SQL route's answer. The condition door takes the
+  native route for one equality between a left and a right column: by column
+  handle over six join types in both operand orders, by alias-qualified names
+  (r5p6's `j_alias`, with its qualified select), a self-join, twin displays,
+  and `INT` against `BIGINT`; `STRING` against `INT` raises the same cast
+  error at the action on both routes. A conjunction, a literal comparand,
+  `<`, `<=>`, a text condition, bare names, arithmetic, a cast, a one-sided
+  equality and a spaced side field keep the SQL route with equal answers.
+  `_join_exact_keys` is pinned directly on 3 exact and 14 inexact prepared
+  conditions. The self-join, ambiguous-name and missing-attribute refusals
+  raise before the route is chosen, and a map key raises on the native attempt
+  and falls back: each carries the SQL route's class and text. No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here.
+  pins: stamp-2-r5p6-2/C-003, C-004, C-005, C-006, C-007

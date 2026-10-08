@@ -29,6 +29,8 @@ _MAX_DECIMAL_PRECISION = 38
 _EXACT_SHAPE = re.compile(
     rf"\x00|coalesce\(\x00, (?:\d{{1,9}}|CAST\(\d{{1,9}} AS {_EXACT_CAST_TYPE}\))\)"
 )
+_EXACT_JOIN_FIELD = re.compile(r"\.`([A-Za-z_][A-Za-z0-9_]*)`")
+_EXACT_JOIN_SHAPE = "(\x00 = \x00)"
 
 
 def _token_leaf_display(match: re.Match[str]) -> str | None:
@@ -355,8 +357,11 @@ def _join_exact_native(
     on_sql: str | None,
     engine_names: list[str],
 ) -> Any:
+    keys = None
     if on_sql is not None:
-        return None
+        keys = _join_exact_keys(on_sql, *aliases)
+        if keys is None:
+            return None
     left = _join_side_engines(frame)
     width = len(left)
     right = _join_side_engines(other) if len(engine_names) > width else []
@@ -366,10 +371,29 @@ def _join_exact_native(
         other._plan(),
         *aliases,
         engine_how,
-        None,
+        keys,
         list(zip(left, engine_names[:width], strict=True)),
         list(zip(right, engine_names[width:], strict=True)),
     )
+
+
+def _join_exact_keys(
+    on_sql: str, left_alias: str, right_alias: str
+) -> tuple[str, str, bool] | None:
+    fields: list[str] = []
+    starts: list[int] = []
+    shape = on_sql
+    for alias in (left_alias, right_alias):
+        head, found, tail = shape.partition(alias)
+        match = _EXACT_JOIN_FIELD.match(tail) if found else None
+        if match is None:
+            return None
+        fields.append(match.group(1))
+        starts.append(on_sql.index(alias))
+        shape = f"{head}\x00{tail[match.end() :]}"
+    if shape != _EXACT_JOIN_SHAPE:
+        return None
+    return fields[0], fields[1], starts[0] < starts[1]
 
 
 def _join_side_engines(side_frame: DataFrame) -> list[str]:

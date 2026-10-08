@@ -203,3 +203,218 @@ def test_raising_native_cross_join_keeps_the_sql_route_answer(
 
 def _raise_native(*_: Any) -> None:
     raise PySparkException("the native door raised")
+
+
+_HOWS = ("inner", "left", "right", "full", "semi", "anti")
+_LEFT = "`datafusion`.`public`.`_repark_jl_0`"
+_RIGHT = "`datafusion`.`public`.`_repark_jr_0`"
+_EXACT_KEYS = {
+    f"({_LEFT}.`id` = {_RIGHT}.`x`)": ("id", "x", True),
+    f"({_RIGHT}.`x` = {_LEFT}.`id`)": ("id", "x", False),
+    f"({_LEFT}.`__repark_l_1_v` = {_RIGHT}.`V`)": ("__repark_l_1_v", "V", True),
+}
+_INEXACT_KEYS = (
+    f"{_LEFT}.`id` = {_RIGHT}.`x`",
+    f"({_LEFT}.`id` < {_RIGHT}.`x`)",
+    f"({_LEFT}.`id` <=> {_RIGHT}.`x`)",
+    f"({_LEFT}.`id` = {_LEFT}.`v`)",
+    f"({_RIGHT}.`x` = {_RIGHT}.`y`)",
+    f"({_LEFT}.`id` = 5)",
+    f"(({_LEFT}.`id` = {_RIGHT}.`x`) AND ({_LEFT}.`v` > 5))",
+    f"(({_LEFT}.`id` = {_RIGHT}.`x`) AND ({_LEFT}.`v` = {_RIGHT}.`y`))",
+    f"(({_LEFT}.`id` + 1) = {_RIGHT}.`x`)",
+    f"(CAST({_LEFT}.`id` AS BIGINT) = {_RIGHT}.`y`)",
+    f"({_LEFT}.`a b` = {_RIGHT}.`x`)",
+    f"({_LEFT}.`s`.`a` = {_RIGHT}.`x`)",
+    "(`v` = `x`)",
+    "v = x",
+)
+
+
+def _on_ids(left: Any, right: Any, how: str, reverse: bool) -> Any:
+    condition = right["id"] == left["id"] if reverse else left["id"] == right["id"]
+    return left.join(right, condition, how)
+
+
+def _on_columns(left: Any, right: Any, left_name: str, right_name: str) -> Any:
+    return left.join(right, left[left_name] == right[right_name])
+
+
+def _on_aliases(left: Any, right: Any) -> Any:
+    return left.join(right, spark_functions.col("a.id") == spark_functions.col("b.id"))
+
+
+def _on_aliases_projected(left: Any, right: Any) -> Any:
+    return _on_aliases(left, right).select("a.id", "a.v", "b.v")
+
+
+def _on_both(left: Any, right: Any) -> Any:
+    return left.join(right, (left["id"] == right["id"]) & (left["v"] == right["x"]))
+
+
+def _on_key_and_literal(left: Any, right: Any) -> Any:
+    return left.join(right, (left["id"] == right["id"]) & (left["v"] > 5))
+
+
+def _on_less(left: Any, right: Any) -> Any:
+    return left.join(right, left["id"] < right["id"])
+
+
+def _on_null_safe(left: Any, right: Any) -> Any:
+    return left.join(right, left["id"].eqNullSafe(right["id"]))
+
+
+def _on_text(left: Any, right: Any) -> Any:
+    return left.join(right, spark_functions.expr("v = x"))
+
+
+def _on_bare_names(left: Any, right: Any) -> Any:
+    return left.join(right, spark_functions.col("v") == spark_functions.col("x"))
+
+
+def _on_arithmetic(left: Any, right: Any) -> Any:
+    return left.join(right, left["id"] + 1 == right["id"])
+
+
+def _on_cast(left: Any, right: Any) -> Any:
+    return left.join(right, left["id"].cast("bigint") == right["y"])
+
+
+def _on_one_side(left: Any, right: Any) -> Any:
+    return left.join(right, left["id"] == left["v"])
+
+
+def _on_greater_self(left: Any, right: Any) -> Any:
+    return left.join(right, left["id"] > right["id"])
+
+
+def _on_ambiguous_name(left: Any, right: Any) -> Any:
+    return left.join(right, spark_functions.col("id") == spark_functions.col("id"))
+
+
+def _on_foreign(left: Any, right: Any, foreign: Any) -> Any:
+    return left.join(right, left["id"] == foreign["z"])
+
+
+def _on_maps(left: Any, right: Any) -> Any:
+    renamed = right.select(spark_functions.col("m").alias("m2"))
+    return left.join(renamed, spark_functions.col("m") == spark_functions.col("m2"))
+
+
+def _exact_shapes(frames: dict[str, Any]) -> dict[str, tuple[Callable[[], Any], tuple[Any, Any]]]:
+    pair = (frames["base"], frames["other"])
+    shapes: dict[str, tuple[Callable[..., Any], tuple[Any, Any]]] = {
+        f"{how}_{'reversed' if reverse else 'written'}": (
+            partial(_on_ids, how=how, reverse=reverse),
+            pair,
+        )
+        for how in _HOWS
+        for reverse in (False, True)
+    }
+    shapes["aliased"] = (_on_aliases, (frames["a"], frames["b"]))
+    shapes["aliased_projected"] = (_on_aliases_projected, (frames["a"], frames["b"]))
+    shapes["self"] = (partial(_on_ids, how="inner", reverse=False), (frames["base"],) * 2)
+    shapes["twins"] = (partial(_on_ids, how="inner", reverse=False), (frames["twins"], pair[1]))
+    shapes["int_bigint"] = (partial(_on_columns, left_name="id", right_name="y"), pair)
+    shapes["string_int"] = (partial(_on_columns, left_name="Data", right_name="id"), pair)
+    return {name: (partial(build, *sides), sides) for name, (build, sides) in shapes.items()}
+
+
+def _inexact_shapes(
+    frames: dict[str, Any],
+) -> dict[str, tuple[Callable[[], Any], tuple[Any, Any]]]:
+    pair = (frames["base"], frames["other"])
+    shapes: dict[str, tuple[Callable[..., Any], tuple[Any, Any]]] = {
+        "both": (_on_both, pair),
+        "key_and_literal": (_on_key_and_literal, pair),
+        "less": (_on_less, pair),
+        "null_safe": (_on_null_safe, pair),
+        "text": (_on_text, pair),
+        "bare_names": (_on_bare_names, pair),
+        "arithmetic": (_on_arithmetic, pair),
+        "cast": (_on_cast, pair),
+        "one_side": (_on_one_side, pair),
+        "spaced_side": (partial(_on_ids, how="inner", reverse=False), (frames["spaced"], pair[0])),
+    }
+    return {name: (partial(build, *sides), sides) for name, (build, sides) in shapes.items()}
+
+
+def test_exact_join_keys_are_one_equality_between_the_two_sides() -> None:
+    for on_sql, keys in _EXACT_KEYS.items():
+        assert join_attr_tokens._join_exact_keys(on_sql, _LEFT, _RIGHT) == keys, on_sql
+    for on_sql in _INEXACT_KEYS:
+        assert join_attr_tokens._join_exact_keys(on_sql, _LEFT, _RIGHT) is None, on_sql
+
+
+def test_exact_key_join_plans_natively_with_the_sql_route_answers(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    frames = _frames(spark)
+    answers = {}
+    for name, (build, sides) in _exact_shapes(frames).items():
+        routes, native, sql = _routes_and_answers(monkeypatch, build, sides)
+        assert routes == [True], name
+        assert native == sql, name
+        answers[name] = native
+    assert answers["inner_written"][3] == [(1, 10, "a", 1, 5, 6), (2, 20, "b", 2, None, 7)]
+    assert answers["semi_reversed"][3] == [(1, 10, "a"), (2, 20, "b")]
+    assert answers["anti_written"][3] == [(3, None, "v"), (None, 40, None)]
+    assert answers["aliased_projected"][3] == [(1, 10, 10), (2, 20, 20), (3, None, None)]
+    assert answers["aliased_projected"][7] == [0, 1, "minted"]
+    assert answers["self"][7] == [0, 1, 2, "minted", "minted", "minted"]
+    assert answers["int_bigint"][3] == [(2, 20, "b", None, 1, 2)]
+    assert answers["string_int"][:2] == ("refused", "PySparkException")
+
+
+def test_inexact_join_conditions_keep_the_sql_route(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    frames = _frames(spark)
+    answers = {}
+    for name, (build, sides) in _inexact_shapes(frames).items():
+        routes, native, sql = _routes_and_answers(monkeypatch, build, sides)
+        assert routes == [False], name
+        assert native == sql, name
+        assert native[0] != "refused", name
+        answers[name] = native
+    assert answers["key_and_literal"][3] == [(1, 10, "a", 1, 5, 6), (2, 20, "b", 2, None, 7)]
+    assert answers["both"][3] == []
+    assert answers["null_safe"][3] == [
+        (1, 10, "a", 1, 5, 6),
+        (2, 20, "b", 2, None, 7),
+        (None, 40, None, None, 1, 2),
+    ]
+
+
+def test_join_refusals_are_the_sql_route_refusals(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    frames = _frames(spark)
+    base, other = frames["base"], frames["other"]
+    refusals: dict[str, tuple[Callable[[], Any], tuple[Any, Any], list[bool], str]] = {
+        "self_join": (partial(_on_greater_self, base, base), (base, base), [], "are ambiguous"),
+        "ambiguous_name": (
+            partial(_on_ambiguous_name, base, other),
+            (base, other),
+            [],
+            "[AMBIGUOUS_REFERENCE]",
+        ),
+        "missing": (
+            partial(_on_foreign, base, other, frames["lone"]),
+            (base, other),
+            [],
+            "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT]",
+        ),
+        "map_key": (
+            partial(_on_maps, frames["mapped"], frames["mapped"]),
+            (frames["mapped"],) * 2,
+            [False],
+            "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE]",
+        ),
+    }
+    for name, (build, sides, attempts, text) in refusals.items():
+        routes, native, sql = _routes_and_answers(monkeypatch, build, sides)
+        assert routes == attempts, name
+        assert native == sql, name
+        assert native[:2] == ("refused", "AnalysisException"), name
+        assert text in native[2], name

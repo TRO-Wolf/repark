@@ -11,6 +11,9 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
 
 - [`mod.rs`](mod.rs) — the binding: plan access, terminals, builders, schema, and
   stream export.
+  **STAMP-2-R5P6-2 (2026-10-07):** `join_type_from_str` widens to `pub(crate)`: the
+  native join door in `../frame_lineage.rs` maps the facade's join type through it.
+  pins: stamp-2-r5p6-2/C-002
   **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** the inline test
   module moved here to `tests.rs` untouched (the file would otherwise pass its
   ceiling); terminals and `analyzed_arrow_schema_native` drive through

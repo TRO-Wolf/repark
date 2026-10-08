@@ -937,8 +937,21 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   route untouched. Why: the door's `sql_built` was 0.71 s of the r5p6 like cells; the native
   call keeps the SQL door's eager analysis and saves the text, the parse and the SQL planner
   (0.49 ms a cross join). The attribution is in the unit ledger.
+  `_join_exact_keys` reads the prepared condition, where the native preparer has
+  already bound every reference to a side: it replaces the one left reference
+  and the one right reference (`<alias>.\`field\``, a plain identifier) by a
+  placeholder and admits only the shape `(\x00 = \x00)`, returning the two
+  fields and which was written first. It is #980's exactness test moved to a
+  condition: a placeholder shape matched whole. #980's function itself does not
+  fit, since it rewrites tokens against one frame and compares with that
+  column's own `_sql_expr`; here the two routes read the same prepared text, so
+  there is no second spelling to compare. Anything else (a conjunction, another
+  operator, a literal, a cast, arithmetic, a one-sided equality, a text or
+  bare-name condition the preparer left unqualified) keeps the SQL route. The
+  key types carry no guard: the binding runs the SQL door's analysis, so
+  coercion is the same on both routes (0.68 ms saved a condition join).
   Pins: `python/repark/tests/test_stamp_2_r5p6_2.py`.
-  pins: stamp-2-r5p6-2/C-001, C-003, C-005, C-006
+  pins: stamp-2-r5p6-2/C-001, C-003, C-005, C-006, C-007
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
   unemitted-id family (`_remember_unemitted_right_ids`/`_raise_if_id_not_emitted`/
   `_raise_unemitted_attr_tokens`/`_refuse_unemitted_ids`), split out of `core.py`

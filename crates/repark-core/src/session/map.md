@@ -348,6 +348,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   module (the join-condition qualifier binder). pins: casesens-2/C-009
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `dead_datafusion_54_1_refusal` and the new `invalid_datafusion_config` echo
   the value masked; `spill.rs`'s `memory_limit` refusal likewise. pins: source-url-redact-1/C-017
+  **STAMP-2-R5P6-2 (2026-10-07):** `df_guards.rs` declares `df_guards/join_exact.rs`, the
+  builder of the facade's H1 join statement without the SQL planner (see `df_guards/map.md`).
+  pins: stamp-2-r5p6-2/C-002
 - `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   **U11-EDGE-1 (2026-09-26):** `df_guards.rs` also declares `df_guards/case_bind.rs`
   (row in `df_guards/map.md`). pins: u11-edge-1/C-015

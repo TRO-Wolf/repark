@@ -30,7 +30,7 @@ orchestrator's departure move).
 | C-004 | A side that is not exact keeps the SQL route: a field or output name outside `[A-Za-z_][A-Za-z0-9_]*`, two fields equal under case folding, an output source the side does not hold exactly once, or a scratch alias that is not the three-part home reference. | `inexact_joins_are_left_to_the_sql_route`, `test_cross_join_over_an_inexact_side_keeps_the_sql_route`; mutation M6 below. | **PROVEN** |
 | C-005 | A native attempt that raises is a miss: the SQL route runs unchanged, so a refusal carries the SQL route's class and text. | `test_raising_native_cross_join_keeps_the_sql_route_answer`, `a_map_key_refuses_on_both_routes`. | **PROVEN** |
 | C-006 | The native join carries the session state of the join call, as `sql_built` does, not the left frame's older snapshot: a `spark.sql.caseSensitive` change between the frame and the join shows on the joined frame on both routes. | `test_native_cross_join_carries_the_session_state_of_the_join_call`; mutation M4 below. | **PROVEN** |
-| C-007 | The condition door plans natively when the prepared condition is one equality between a left field and a right field. | Does the keyed route give the SQL route's answers over the suites' join shapes? Step 1, second commit. | **OPEN** |
+| C-007 | The condition door plans natively when the prepared condition is exactly one equality between one left field and one right field, `(l.f = r.g)` in either operand order, with the SQL route's schema, column names, attribute ids, rows and plan text over six join types; every other condition keeps the SQL route unchanged, and a refusal carries the SQL route's class and text. | `test_exact_join_keys_are_one_equality_between_the_two_sides`, `test_exact_key_join_plans_natively_with_the_sql_route_answers`, `test_inexact_join_conditions_keep_the_sql_route`, `test_join_refusals_are_the_sql_route_refusals`; mutations M1, M2 below. | **PROVEN** |
 | C-008 | Answers: the attr-id, sort, fill and self-join suites, the 394-cell sort grid and the replay corpus are unchanged. | Does every answer gate come back identical? Step 4. | **OPEN** |
 | C-009 | The stamp: metadata sharing and a wider `plan_is_stamped` short-circuit are measured. | Does either measure a gain without an answer change? Step 2. | **OPEN** |
 | C-010 | Binding: the per-column resolution is profiled. | Is there a measured hot spot? Step 3. | **OPEN** |
@@ -101,6 +101,18 @@ by exact name:
 where source and output name are equal, as DataFusion's SQL planner does. `analyze_built_plan`
 then does what the SQL door does after planning. Key types carry no guard: coercion happens in
 the shared analysis, and the Rust pins hold plan equality for mixed-type keys too.
+
+**The condition door.** The native preparer has already bound every reference of the
+condition to a side before the route is chosen, and its refusals (the self-join 1182, a missing
+attribute, an ambiguous name, a USING key) are raised there on both routes. `_join_exact_keys`
+reads the prepared text: it replaces the one left reference and the one right reference by a
+placeholder and admits only `(\x00 = \x00)`. That is #980's exactness test moved to a
+condition, a placeholder shape matched whole. #980's own function does not fit: it rewrites
+tokens against one frame and compares the result with that column's `_sql_expr`, and here both
+routes read the same prepared text, so there is no second spelling to compare. #980's CAST and
+literal discipline exists because the native typing of a literal differed from the SQL door's.
+This route has no such difference to guard: it admits no literal and no cast, and it runs the
+SQL door's own analysis.
 
 Scratch views are still registered on both routes. Registration costs 35 µs per join, it moves
 the session's deep-view high-water mark that later statements read, and leaving it in place

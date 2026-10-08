@@ -30,6 +30,9 @@ pins: rp-4-fork-repin/C-005, C-006
 - `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
   from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`.
   pins: fnp-15-16/C-001
+  **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s
+  `analyze_built_plan` on the existing `normalize` line (the root stays at 156), for the
+  binding's native join door. pins: stamp-2-r5p6-2/C-002
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)
