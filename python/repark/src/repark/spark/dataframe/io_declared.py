@@ -73,6 +73,17 @@ def _jdbc_alias(camel: str, camel_value: Any, snake: str, snake_value: Any) -> A
     return camel_value if camel_value is not None else snake_value
 
 
+def _put_jdbc_option_text(props: dict[str, str], key: str, value: Any) -> None:
+    """Hand one jdbc partition option to the engine door as text, as PySpark passes it on."""
+    if value is None:
+        return
+    spelling = next(
+        (name for name in (key, key.lower(), key.upper()) if name not in props),
+        key,
+    )
+    props[spelling] = str(value)
+
+
 def _is_postgres_url(url: str) -> bool:
     """Whether a JDBC URL names PostgreSQL (the driver the native connector serves).
 
@@ -104,15 +115,15 @@ def reader_jdbc(
     url: str,
     table: str | None = None,
     column: str | None = None,
-    lowerBound: int | None = None,  # noqa: N803 — PySpark param name
-    upperBound: int | None = None,  # noqa: N803 — PySpark param name
-    numPartitions: int | None = None,  # noqa: N803 — PySpark param name
+    lowerBound: int | str | None = None,  # noqa: N803 — PySpark param name
+    upperBound: int | str | None = None,  # noqa: N803 — PySpark param name
+    numPartitions: int | str | None = None,  # noqa: N803 — PySpark param name
     predicates: list[str] | None = None,
     properties: dict[str, str] | None = None,
     *,
-    lower_bound: int | None = None,
-    upper_bound: int | None = None,
-    num_partitions: int | None = None,
+    lower_bound: int | str | None = None,
+    upper_bound: int | str | None = None,
+    num_partitions: int | str | None = None,
     connection_properties: dict[str, str] | None = None,
 ) -> DataFrame:
     """Read PostgreSQL via the native connector; other drivers refuse.
@@ -120,7 +131,6 @@ def reader_jdbc(
     pins: io-declared-1/C-003, C-007
     """
     from repark.errors import IllegalArgumentException
-    from repark.spark.session.reader_support import _jdbc_i64
 
     resolved_lower = _jdbc_alias("lowerBound", lowerBound, "lower_bound", lower_bound)
     resolved_upper = _jdbc_alias("upperBound", upperBound, "upper_bound", upper_bound)
@@ -148,24 +158,19 @@ def reader_jdbc(
             "jdbc predicates[] cannot be combined with partitionColumn/lowerBound/"
             "upperBound/numPartitions (Spark JDBC mutual exclusion)"
         )
-    if range_set not in (0, 4):
-        raise IllegalArgumentException(
-            "jdbc range partitioning requires column, lowerBound, upperBound, and "
-            "numPartitions together (Spark JDBC parity)"
-        )
     if predicates is not None and len(predicates) == 0:
         raise IllegalArgumentException("jdbc predicates[] must be non-empty when supplied")
     if not _is_postgres_url(url):
         _refuse("jdbc")
+    _put_jdbc_option_text(props, "lowerBound", resolved_lower)
+    _put_jdbc_option_text(props, "upperBound", resolved_upper)
+    _put_jdbc_option_text(props, "numPartitions", resolved_num)
     return reader._session.read_postgres(
         url=url,
         dbtable=dbtable,
         query=None,
         properties=props,
         partition_column=column,
-        lower_bound=_jdbc_i64("lowerBound", resolved_lower),
-        upper_bound=_jdbc_i64("upperBound", resolved_upper),
-        num_partitions=_jdbc_i64("numPartitions", resolved_num),
         predicates=predicates,
     )
 

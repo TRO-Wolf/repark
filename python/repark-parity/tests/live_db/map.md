@@ -29,6 +29,13 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   `NumberFormatException` through `jdbc()` and `format("postgres")`; `2147483647` over a span
   of 3 reads on three strides; 10 000 strides plan; 10 001, asked for or left after the shrink,
   refuse naming the row and the ceiling. pins: c-3/C-010
+- `test_c3_partitioned.py` — **C-3 fold 2 (2026-10-08):**
+  `test_the_keyword_door_hands_str_and_int_values_to_the_engine_door`: `jdbc(column=...)` with
+  str and with int bounds plans the strides the `format("postgres")` door plans and reads the
+  same rows; `numPartitions="4"` works and `"3000000000"` or `" 4"` refuse as `NumberFormat`;
+  date, timestamp and timestamptz columns with date text refuse naming the row; `"abc"`
+  refuses as the properties door does; an incomplete set refuses in Spark's sentence.
+  pins: c-3/C-006
 - `test_c3_partitioned.py` — **C-3 fold 1 (2026-10-08):** the declared cell adds Spark's own
   spellings: a `date`, `timestamp` and `timestamptz` column with date or timestamp text as
   bounds, through `format("postgres")` and through `properties`, refuses naming the row and

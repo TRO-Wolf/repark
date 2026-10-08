@@ -15,7 +15,11 @@ from __future__ import annotations
 import pytest
 
 from repark import SparkSession
-from repark.errors import IllegalArgumentException, PySparkNotImplementedError
+from repark.errors import (
+    IllegalArgumentException,
+    NumberFormatException,
+    PySparkNotImplementedError,
+)
 
 
 @pytest.fixture
@@ -221,9 +225,15 @@ def test_jdbc_camel_case_keywords_reach_read_postgres(spark: SparkSession) -> No
     assert captured.get("dbtable") == "t"
     assert captured.get("url") == "jdbc:postgresql://localhost/db"
     assert captured.get("partition_column") == "id"
-    assert captured.get("lower_bound") == 0
-    assert captured.get("upper_bound") == 100
-    assert captured.get("num_partitions") == 2
+    assert captured.get("lower_bound") is None
+    assert captured.get("upper_bound") is None
+    assert captured.get("num_partitions") is None
+    assert captured.get("properties") == {
+        "user": "u",
+        "lowerBound": "0",
+        "upperBound": "100",
+        "numPartitions": "2",
+    }
     assert captured.get("predicates") is None
 
 
@@ -251,9 +261,11 @@ def test_jdbc_snake_case_aliases_reach_read_postgres(spark: SparkSession) -> Non
             num_partitions=2,
         )
     assert captured.get("partition_column") == "id"
-    assert captured.get("lower_bound") == 0
-    assert captured.get("upper_bound") == 100
-    assert captured.get("num_partitions") == 2
+    assert captured.get("properties") == {
+        "lowerBound": "0",
+        "upperBound": "100",
+        "numPartitions": "2",
+    }
 
 
 def test_jdbc_both_keyword_spellings_raise_typeerror(spark: SparkSession) -> None:
@@ -349,3 +361,133 @@ def test_jdbc_postgres_jdbc_scheme_still_refuses_not_implemented(spark: SparkSes
         spark.read.jdbc("jdbc:postgres://h/db", "t")
     assert raised.value.getCondition() == "NOT_IMPLEMENTED"
     assert raised.value.getMessageParameters() == {"feature": "jdbc"}
+
+
+def _keyword_door_capture(spark: SparkSession, **keywords: object) -> dict[str, object]:
+    """Run ``reader.jdbc`` with the given keywords against a fake session; return what arrived."""
+    captured: dict[str, object] = {}
+
+    class _FakeSession:
+        def read_postgres(self, **kwargs: object) -> object:
+            captured.update(kwargs)
+            raise RuntimeError("stop-after-capture")
+
+    reader = spark.read
+    reader._session = _FakeSession()  # type: ignore[assignment]
+    with pytest.raises(RuntimeError, match="stop-after-capture"):
+        reader.jdbc("postgresql://localhost/db", "t", properties={"user": "u"}, **keywords)
+    return captured
+
+
+def test_jdbc_keyword_door_str_and_int_bounds_reach_the_engine_door_as_the_same_text(
+    spark: SparkSession,
+) -> None:
+    """A str or an int bound is handed on as PySpark hands it: text, never parsed here.
+
+    pins: c-3/C-010
+    """
+    by_int = _keyword_door_capture(spark, column="d", lowerBound=0, upperBound=100, numPartitions=4)
+    by_str = _keyword_door_capture(
+        spark, column="d", lowerBound="0", upperBound="100", numPartitions="4"
+    )
+    assert by_int == by_str
+    assert by_int["properties"] == {
+        "user": "u",
+        "lowerBound": "0",
+        "upperBound": "100",
+        "numPartitions": "4",
+    }
+    dates = _keyword_door_capture(
+        spark,
+        column="d",
+        lowerBound="2024-01-01",
+        upperBound="2024-02-01",
+        numPartitions="4",
+    )
+    assert dates["properties"] == {
+        "user": "u",
+        "lowerBound": "2024-01-01",
+        "upperBound": "2024-02-01",
+        "numPartitions": "4",
+    }
+    assert dates.get("lower_bound") is None
+    assert dates.get("upper_bound") is None
+    assert dates.get("num_partitions") is None
+
+
+def test_jdbc_keyword_door_keeps_a_properties_spelling_for_the_door_to_refuse(
+    spark: SparkSession,
+) -> None:
+    """A keyword bound beside the same option in the properties never overwrites it.
+
+    pins: c-3/C-010
+    """
+    captured: dict[str, object] = {}
+
+    class _FakeSession:
+        def read_postgres(self, **kwargs: object) -> object:
+            captured.update(kwargs)
+            raise RuntimeError("stop-after-capture")
+
+    reader = spark.read
+    reader._session = _FakeSession()  # type: ignore[assignment]
+    with pytest.raises(RuntimeError, match="stop-after-capture"):
+        reader.jdbc(
+            "postgresql://localhost/db",
+            "t",
+            column="id",
+            lowerBound=0,
+            upperBound=10,
+            numPartitions=2,
+            properties={"lowerBound": "5"},
+        )
+    assert captured["properties"] == {
+        "lowerBound": "5",
+        "lowerbound": "0",
+        "upperBound": "10",
+        "numPartitions": "2",
+    }
+
+
+def test_jdbc_keyword_door_incomplete_set_refuses_in_sparks_sentence(spark: SparkSession) -> None:
+    """The engine door judges the incomplete set, as it does for the format door.
+
+    pins: c-3/C-010
+    """
+    for keywords in (
+        {"column": "id", "numPartitions": "4"},
+        {"column": "id", "lowerBound": "0", "upperBound": "9"},
+        {"lowerBound": 0, "upperBound": 9, "numPartitions": 4},
+    ):
+        with pytest.raises(IllegalArgumentException, match="users need to specify all or none"):
+            spark.read.jdbc("postgresql://localhost/db", "t", **keywords)
+
+
+def test_jdbc_keyword_door_num_partitions_text_refuses_as_the_format_door_does(
+    spark: SparkSession,
+) -> None:
+    """A count past Spark's 32-bit Int refuses as NumberFormat, from the keyword door too.
+
+    pins: c-3/C-010
+    """
+    for count in ("3000000000", 3_000_000_000):
+        with pytest.raises(NumberFormatException, match="`numPartitions` must be a 32-bit"):
+            spark.read.jdbc(
+                "postgresql://localhost/db",
+                "t",
+                column="id",
+                lowerBound="0",
+                upperBound="9",
+                numPartitions=count,
+            )
+        with pytest.raises(NumberFormatException, match="`numPartitions` must be a 32-bit"):
+            (
+                spark.read.format("jdbc")
+                .option("url", "postgresql://localhost/db")
+                .option("dbtable", "t")
+                .option("partitionColumn", "id")
+                .option("lowerBound", "0")
+                .option("upperBound", "9")
+                .option("numPartitions", str(count))
+                .load()
+            )

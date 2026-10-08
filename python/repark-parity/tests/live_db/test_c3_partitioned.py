@@ -333,6 +333,94 @@ def test_a_partition_column_resolves_in_another_case_quoted_or_bare(
             _jdbc(spark, f"{schema}.twins", spelled, (0, 200, 4))
 
 
+def _keyword(spark: ReparkSession, target: str, column: str, *texts: Any) -> Any:
+    """Read `target` through `spark.read.jdbc` with the three partition values as given."""
+    lower, upper, count = texts
+    return spark.read.jdbc(
+        _url(),
+        target,
+        column=column,
+        lowerBound=lower,
+        upperBound=upper,
+        numPartitions=count,
+        properties=PLAIN,
+    )
+
+
+def test_the_keyword_door_hands_str_and_int_values_to_the_engine_door(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    conn, names = pg_live
+    table, target = _wide(conn, names, rows=50)
+    expected = [tuple(row) for row in conn.execute(EXPECTED_SQL.format(table=table)).fetchall()]
+    spelled = {
+        "partitionColumn": "k",
+        "lowerBound": "0",
+        "upperBound": "1000",
+        "numPartitions": "4",
+    }
+    by_format = _options(spark, dbtable=target, **spelled).load()
+    plan = by_format._explain_text()
+    assert "partition_column=k, strides=4" in plan
+    for texts in ((0, 1000, 4), ("0", "1000", "4"), (0, "1000", 4), ("0", 1000, "4")):
+        frame = _keyword(spark, target, "k", *texts)
+        assert frame._explain_text() == plan, texts
+        assert _rows(frame) == expected, texts
+    past_int = _keyword(spark, target, "k", "0", "3", "2147483647")
+    assert "strides=3, " in past_int._explain_text()
+    for column, lower, upper in (
+        ("d", "2024-01-01", "2024-02-01"),
+        ("ts", "2024-01-01 00:00:00", "2024-01-02 00:00:00"),
+        ("tz", "2024-01-01", "2024-01-02"),
+    ):
+        with pytest.raises(errors.UnsupportedOperationException) as excinfo:
+            _keyword(spark, target, column, lower, upper, "4")
+        assert ROW in str(excinfo.value)
+        assert "2024-01-0" not in str(excinfo.value)
+    refusals: list[tuple[Callable[[], Any], type[Exception], str]] = [
+        (
+            lambda: _keyword(spark, target, "k", "abc", "9", "4"),
+            errors.NumberFormatException,
+            "`lowerBound` must be a 64-bit integer",
+        ),
+        (
+            lambda: spark.read.jdbc(
+                _url(), target, properties={**PLAIN, **spelled, "lowerBound": "abc"}
+            ),
+            errors.NumberFormatException,
+            "`lowerBound` must be a 64-bit integer",
+        ),
+        (
+            lambda: _keyword(spark, target, "k", "0", "1000", "3000000000"),
+            errors.NumberFormatException,
+            "`numPartitions` must be a 32-bit integer",
+        ),
+        (
+            lambda: _keyword(spark, target, "k", "0", "1000", " 4"),
+            errors.NumberFormatException,
+            "`numPartitions` must be a 32-bit integer",
+        ),
+        (
+            lambda: spark.read.jdbc(
+                _url(), target, column="k", numPartitions="4", properties=PLAIN
+            ),
+            errors.IllegalArgumentException,
+            ALL_OR_NONE,
+        ),
+        (
+            lambda: spark.read.jdbc(
+                _url(), target, lowerBound="0", upperBound="9", numPartitions=4, properties=PLAIN
+            ),
+            errors.IllegalArgumentException,
+            ALL_OR_NONE,
+        ),
+    ]
+    for attempt, expected_class, words in refusals:
+        with pytest.raises(expected_class) as excinfo:
+            attempt()
+        assert words in str(excinfo.value)
+
+
 def test_num_partitions_is_sparks_int_and_strides_have_a_ceiling(
     spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
 ) -> None:
