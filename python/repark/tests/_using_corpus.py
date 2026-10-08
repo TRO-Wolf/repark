@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 from typing import Any
 
 TABLES: dict[str, tuple[str, list[tuple[Any, ...]]]] = {
@@ -136,6 +138,47 @@ _HOWS = {
 }
 
 
+_PAIR_SHAPES = [
+    "SELECT {a} AS a, {b} AS b FROM {j}",
+    "SELECT s, t FROM {j} WHERE {a} > 1 AND {b} > 1",
+    "SELECT count(*) AS c FROM {j} GROUP BY {a}, {b}",
+    "SELECT count(*) AS c FROM {j} GROUP BY {a}, {b} HAVING {a} > 1 AND {b} > 1",
+    "SELECT count(*) AS c FROM {j} GROUP BY {a} HAVING max({b}) > 1",
+    "SELECT s, t FROM {j} ORDER BY {a} NULLS LAST, {b} NULLS LAST, s NULLS LAST, t NULLS LAST",
+    "SELECT count({a}) AS a, count({b}) AS b FROM {j}",
+    "SELECT max({a}) AS a, max({b}) AS b, sum({a}) AS c, sum({b}) AS d FROM {j}",
+    "SELECT count(DISTINCT {a}) AS a, count(DISTINCT {b}) AS b FROM {j}",
+    "SELECT s, t, row_number() OVER (ORDER BY {a} NULLS LAST, s NULLS LAST, t NULLS LAST) AS x, "
+    "row_number() OVER (ORDER BY {b} NULLS LAST, s NULLS LAST, t NULLS LAST) AS y FROM {j}",
+    "SELECT s, t, sum({a}) OVER () AS x, sum({b}) OVER () AS y FROM {j}",
+    "SELECT u FROM tq WHERE id IN (SELECT {a} FROM {j} WHERE {b} > 1)",
+    "SELECT (SELECT max({a}) FROM {j} WHERE {b} IS NOT NULL) AS m",
+    "SELECT {a} AS a FROM {j} WHERE {b} > 0 GROUP BY {a}",
+    "SELECT * FROM tp, {j} WHERE tp.id = 3 AND {b} > 1",
+]
+_PAIR_JOINS = [
+    ("al", "tl l {how} JOIN tr r USING (id)", "l.id", "r.id"),
+    ("pl", "tl {how} JOIN tr USING (id)", "tl.id", "tr.id"),
+]
+
+
+def _pair_statements() -> list[tuple[str, str]]:
+    found = []
+    for index, shape in enumerate(_PAIR_SHAPES):
+        for tag, join, left, right in _PAIR_JOINS:
+            for name in ("inner", "left", "right", "full"):
+                joined = join.format(how=_HOWS[name])
+                pairs = (("id", left), (left, "id"), ("id", right), (right, "id"))
+                for order, (first, second) in enumerate(pairs):
+                    found.append(
+                        (
+                            f"pair-{index:02d}-{tag}-{name}-{order}",
+                            shape.format(a=first, b=second, j=joined),
+                        )
+                    )
+    return found
+
+
 def statements() -> list[tuple[str, str]]:
     found = [(f"plain-{index:02d}", text) for index, text in enumerate(PLAIN)]
     for index, text in enumerate(_PER_TYPE):
@@ -144,6 +187,24 @@ def statements() -> list[tuple[str, str]]:
     for index, text in enumerate(_OUTER):
         for name in ("right", "full"):
             found.append((f"outer-{index:02d}-{name}", text.format(how=_HOWS[name])))
+    found.extend(_pair_statements())
+    return found
+
+
+def scenarios() -> dict[str, list[list[Any]]]:
+    path = Path(__file__).parent / "using_per_side_keys_1_verifier_events.json"
+    loaded: dict[str, list[list[Any]]] = json.loads(path.read_text())
+    return loaded
+
+
+def scenario_statements() -> list[tuple[str, str]]:
+    found = []
+    for script, events in sorted(scenarios().items()):
+        position = 0
+        for event in events:
+            if event[0] == "sql":
+                found.append((f"v-{script}-{position:03d}", str(event[1])))
+                position += 1
     return found
 
 
@@ -160,6 +221,16 @@ def _plain(value: Any) -> Any:
     return str(value)
 
 
+def _scrubbed(text: str) -> str:
+    text = re.sub(r"#\d+", "#N", text)
+    text = re.sub(r"__repark_cdf_[0-9a-f]+", "CDF", text)
+    text = re.sub(r"_repark_j([lr])_[0-9a-f]{12}", r"_repark_j\1_<hex>", text)
+    text = re.sub(r"__repark_([a-z]+)_[0-9a-f]{12,}", r"__repark_\1_<hex>", text)
+    if len(text) > 240:
+        text = text[:240].rsplit(" ", 1)[0]
+    return text
+
+
 def answer(session: Any, text: str) -> dict[str, Any]:
     try:
         frame = session.sql(text)
@@ -170,9 +241,33 @@ def answer(session: Any, text: str) -> dict[str, Any]:
             condition = str(getter() or "") if callable(getter) else ""
         except Exception:
             condition = ""
-        return {"refused": condition or type(error).__name__}
+        return {
+            "refused": condition or type(error).__name__,
+            "msg": _scrubbed(str(error).split("\n")[0]),
+        }
     if text.startswith("EXPLAIN"):
         return {"explained": True}
     if not re.search(r"ORDER BY", text.rsplit(")", 1)[-1]):
         rows = sorted(rows, key=lambda row: [str(value) for value in row])
     return {"cols": list(frame.columns), "rows": rows}
+
+
+def answers(session: Any) -> dict[str, dict[str, Any]]:
+    load(session)
+    found = {name: answer(session, text) for name, text in statements()}
+    for script, events in sorted(scenarios().items()):
+        position = 0
+        for event in events:
+            kind = event[0]
+            if kind == "rows":
+                rows = [tuple(row) for row in event[2]]
+                session.createDataFrame(rows, event[3]).createOrReplaceTempView(event[1])
+            elif kind == "sqlview":
+                try:
+                    session.sql(event[2]).createOrReplaceTempView(event[1])
+                except Exception:
+                    continue
+            elif kind == "sql":
+                found[f"v-{script}-{position:03d}"] = answer(session, str(event[1]))
+                position += 1
+    return found

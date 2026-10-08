@@ -7,7 +7,7 @@ from typing import Any
 import _sm2_shared as sm2
 import pytest
 
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark import functions as spark_functions
 
 _HERE = Path(__file__).parent
@@ -98,8 +98,10 @@ def test_a_second_side_key_operation_keeps_the_reach(tmp_path: Path, how: str) -
 
 
 @pytest.mark.parametrize("how", ["left", "right", "full"])
-@pytest.mark.parametrize("action", ["cache", "persist", "checkpoint"])
-def test_side_keys_do_not_depend_on_materialisation(tmp_path: Path, how: str, action: str) -> None:
+@pytest.mark.parametrize("action", ["cache", "persist"])
+def test_side_keys_do_not_depend_on_cache_materialisation(
+    tmp_path: Path, how: str, action: str
+) -> None:
     session = sm2._open(tmp_path, f"upsk-df-cache-{how}-{action}")
     left, right = _frames(session)
     fresh = left.alias("l").join(right.alias("r"), "id", how)
@@ -107,10 +109,7 @@ def test_side_keys_do_not_depend_on_materialisation(tmp_path: Path, how: str, ac
     before = _rows(fresh.select(hidden))
     filtered = _rows(fresh.filter(f"{hidden} > 2"))
     frame = left.alias("l").join(right.alias("r"), "id", how)
-    if action == "checkpoint":
-        frame = frame.localCheckpoint()
-    else:
-        getattr(frame, action)().count()
+    getattr(frame, action)().count()
     assert frame.columns == ["id", "s", "t"]
     assert _rows(frame) == _rows(fresh)
     assert _rows(frame.select(hidden)) == before
@@ -120,9 +119,40 @@ def test_side_keys_do_not_depend_on_materialisation(tmp_path: Path, how: str, ac
     target = tmp_path / f"out-{how}-{action}"
     frame.write.parquet(str(target))
     sm2._assert_no_twin_bytes(target)
-    if action != "checkpoint":
-        frame.unpersist()
-        assert _rows(frame.select(hidden)) == before
+    frame.unpersist()
+    assert _rows(frame.select(hidden)) == before
+    session.stop()
+
+
+@pytest.mark.parametrize("how", ["left", "right", "full"])
+def test_side_keys_refuse_after_a_checkpoint_as_before(tmp_path: Path, how: str) -> None:
+    session = sm2._open(tmp_path, f"upsk-df-ckpt-{how}")
+    left, right = _frames(session)
+    fresh = left.alias("l").join(right.alias("r"), "id", how)
+    frame = left.alias("l").join(right.alias("r"), "id", how).localCheckpoint()
+    hidden = "l.id" if how == "right" else "r.id"
+    assert frame.columns == ["id", "s", "t"]
+    assert _rows(frame) == _rows(fresh)
+    refused = sm2._refusal_of(lambda: frame.select(hidden).collect())
+    assert isinstance(refused, UnsupportedOperationException)
+    assert "to a USING join key is not supported in repark v1" in str(refused)
+    session.stop()
+
+
+@pytest.mark.parametrize("ansi", ["true", "false"])
+def test_ansi_off_keeps_the_left_key_for_mixed_full_keys(tmp_path: Path, ansi: str) -> None:
+    session = sm2._open(tmp_path, f"upsk-df-ansi-{ansi}")
+    session.conf.set("spark.sql.ansi.enabled", ansi)
+    left = session.sql("SELECT CAST(c AS INT) AS id FROM VALUES (1), (2) AS t(c)")
+    right = session.sql("SELECT CAST(c AS STRING) AS id FROM VALUES ('2'), ('3') AS t(c)")
+    frame = left.join(right, "id", "full")
+    if ansi == "true":
+        assert frame.schema.simpleString() == "struct<id:bigint>"
+        assert _rows(frame) == [(1,), (2,), (3,)]
+    else:
+        assert frame.schema.simpleString() == "struct<id:int>"
+        assert _rows(frame) == [(1,), (2,), (None,)]
+    session.conf.set("spark.sql.ansi.enabled", "true")
     session.stop()
 
 
@@ -134,12 +164,15 @@ def test_a_user_column_with_the_reserved_prefix_refuses_side_keys(tmp_path: Path
     )
     frame = odd.alias("l").join(right.alias("r"), "id", "full")
     assert frame.columns == ["id", "__repark_using__r__id", "t"]
-    assert _rows(frame.select("id")) == [(1,), (2,), (3,), (4,)]
+    assert _rows(frame.select("id")) == [(1,), (2,), (3,), (None,)]
     assert _rows(frame.select("__repark_using__r__id")) == [(100,), (200,), (300,), (None,)]
+    assert _rows(frame.filter("l.id > 1").select("id")) == [(2,), (3,)]
+    assert _rows(frame.select("l.id")) == [(1,), (2,), (3,), (None,)]
+    by_left = frame.sort(spark_functions.col("l.id").desc()).collect()
+    assert [row[0] for row in by_left][:3] == [3, 2, 1]
     refused = sm2._refusal_of(lambda: frame.select("r.id").collect())
-    assert isinstance(refused, AnalysisException)
-    assert sm2._sql_state_of(refused) == "42703"
-    assert "`r`.`id`" in str(refused)
+    assert isinstance(refused, UnsupportedOperationException)
+    assert "qualified reference `r`.`id` to a USING join key" in str(refused)
     cached = odd.alias("l").join(right.alias("r"), "id", "full")
     cached.cache().count()
     assert cached.columns == ["id", "__repark_using__r__id", "t"]

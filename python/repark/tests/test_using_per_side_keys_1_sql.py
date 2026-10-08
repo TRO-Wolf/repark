@@ -206,10 +206,11 @@ def test_sql_distinct_and_order_by_outside_the_select_list(tmp_path: Path, how: 
         pairs = session.sql(f"SELECT DISTINCT id, s FROM {joined} ORDER BY id DESC").collect()
         assert [row[0] for row in pairs] == keys[::-1]
     aliased = f"tl l {_HOWS[how]} JOIN tr r USING (id)"
+    as_before = [None, 2, 3] if how == "right" else [None, 1, 2, 3]
     by_left = session.sql(f"SELECT id FROM {aliased} ORDER BY l.id, t").collect()
-    assert [row[0] for row in by_left] == _BY_LEFT[how]
+    assert [row[0] for row in by_left] == as_before
     by_expr = session.sql(f"SELECT id FROM {aliased} ORDER BY l.id, upper(s)").collect()
-    assert [row[0] for row in by_expr] == _BY_LEFT[how]
+    assert [row[0] for row in by_expr] == as_before
     session.stop()
 
 
@@ -303,4 +304,32 @@ def test_sql_on_join_is_unchanged(tmp_path: Path, how: str) -> None:
     }
     assert frame.columns == ["id", "s", "id", "t"]
     assert _rows(frame) == expected[how]
+    session.stop()
+
+
+@pytest.mark.parametrize("how", ["inner", "left", "right", "full"])
+def test_sql_key_and_side_key_together_answer_as_before(tmp_path: Path, how: str) -> None:
+    session = sm2._open(tmp_path, f"upsk-sql-mixed-{how}")
+    _views(session)
+    joined = f"tl l {_HOWS[how]} JOIN tr r USING (id)"
+    for call in ("count", "max", "min", "sum"):
+        alone = session.sql(f"SELECT {call}(l.id) AS c FROM {joined}").collect()[0][0]
+        first = session.sql(f"SELECT {call}(id) AS b, {call}(l.id) AS c FROM {joined}").collect()
+        second = session.sql(f"SELECT {call}(l.id) AS c, {call}(id) AS b FROM {joined}").collect()
+        assert first[0][1] == alone, call
+        assert second[0][0] == alone, call
+        assert first[0][0] == second[0][1], call
+    for text in (
+        f"SELECT id, count(l.id) AS c FROM {joined} WHERE id > 0 GROUP BY id",
+        f"SELECT count(l.id) AS a, count(id) AS b FROM {joined} WHERE id > 0",
+        f"SELECT id, s FROM {joined} WHERE l.id IS NULL AND id > 0",
+        f"SELECT * FROM tq, {joined} WHERE id > 0",
+    ):
+        refused = sm2._refusal_of(lambda text=text: session.sql(text).collect())
+        assert sm2._condition_of(refused) == "AMBIGUOUS_REFERENCE", text
+    comma = _rows(session.sql(f"SELECT * FROM tq, {joined} WHERE tq.id = 2"))
+    sides = _rows(
+        session.sql(f"SELECT tq.id, tq.u, l.id, l.s, r.t FROM tq, {joined} WHERE tq.id = 2")
+    )
+    assert comma == sides
     session.stop()

@@ -19,6 +19,8 @@ if ENGINE == "spark":
         SparkSession.builder.master("local[1]")
         .config("spark.ui.enabled", "false")
         .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.sql.shuffle.partitions", "1")
+        .config("spark.sql.warehouse.dir", tempfile.mkdtemp(prefix="corpus-wh-"))
         .getOrCreate()
     )
     session.sparkContext.setLogLevel("OFF")
@@ -33,8 +35,7 @@ else:
         .getOrCreate()
     )
 
-corpus.load(session)
-answers = {name: corpus.answer(session, text) for name, text in corpus.statements()}
+answers = corpus.answers(session)
 lines = ",\n".join(
     f"{json.dumps(name)}: {json.dumps(answers[name], sort_keys=True)}" for name in sorted(answers)
 )

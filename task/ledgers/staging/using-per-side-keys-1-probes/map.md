@@ -36,3 +36,8 @@ product code lives here; the product rounds pin against these files.
   of key types in both orders on four join types (112 cells). Usage as above;
   the recordings are `using_per_side_keys_1_mixed_spark.json` and
   `…_mixed_main.json` beside the tests. Ruff-clean; no comments.
+- [extract.py](extract.py) — fold 2 (2026-10-08): replays the re-verifier's scripts
+  (`corpus.py`, `p7.py`, `p8.py`, `p10.py`, `p11.py`) against a recording stub and writes
+  their table setups and SQL statements, in order, to
+  `python/repark/tests/using_per_side_keys_1_verifier_events.json`. Usage
+  `extract.py <out.json> <script>...`. No engine is needed. Ruff-clean; no comments.

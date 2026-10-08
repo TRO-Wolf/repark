@@ -11,7 +11,7 @@ import pytest
 _HERE = Path(__file__).parent
 _SPARK = json.loads((_HERE / "using_per_side_keys_1_corpus_spark.json").read_text())
 _MAIN = json.loads((_HERE / "using_per_side_keys_1_corpus_main.json").read_text())
-_STATEMENTS = corpus.statements()
+_STATEMENTS = corpus.statements() + corpus.scenario_statements()
 
 
 def _in_head_order(head: dict[str, Any], recorded: dict[str, Any], text: str) -> dict[str, Any]:
@@ -27,17 +27,18 @@ def _in_head_order(head: dict[str, Any], recorded: dict[str, Any], text: str) ->
     return {"cols": list(head["cols"]), "rows": rows}
 
 
-def _same(head: dict[str, Any], recorded: dict[str, Any], text: str) -> bool:
+def _same(head: dict[str, Any], recorded: dict[str, Any], text: str, exact: bool) -> bool:
     if "refused" in head or "refused" in recorded:
-        return head.get("refused") == recorded.get("refused")
+        return head.get("refused") == recorded.get("refused") and (
+            exact is False or head.get("msg") == recorded.get("msg")
+        )
     return head == _in_head_order(head, recorded, text)
 
 
 @pytest.fixture(scope="module")
 def answers(tmp_path_factory: pytest.TempPathFactory) -> dict[str, dict[str, Any]]:
     session = sm2._open(tmp_path_factory.mktemp("upsk-diff"), "upsk-diff")
-    corpus.load(session)
-    found = {name: corpus.answer(session, text) for name, text in _STATEMENTS}
+    found = corpus.answers(session)
     session.stop()
     return found
 
@@ -46,9 +47,11 @@ def test_corpus_holds_the_agreed_shape() -> None:
     names = [name for name, _text in _STATEMENTS]
     assert len(names) == len(set(names))
     assert set(names) == set(_SPARK) == set(_MAIN)
-    plain = [text for _name, text in _STATEMENTS if "USING" not in text and "NATURAL" not in text]
+    own = corpus.statements()
+    plain = [text for _name, text in own if "USING" not in text and "NATURAL" not in text]
     assert len(plain) == 32
-    assert len(names) - len(plain) >= 60
+    assert sum(1 for name, _text in own if name.startswith("pair-")) == 480
+    assert len(corpus.scenario_statements()) >= 630
 
 
 @pytest.mark.parametrize(("name", "text"), _STATEMENTS)
@@ -56,7 +59,7 @@ def test_every_statement_answers_as_spark_or_as_main(
     answers: dict[str, dict[str, Any]], name: str, text: str
 ) -> None:
     head = answers[name]
-    assert _same(head, _SPARK[name], text) or _same(head, _MAIN[name], text), (
+    assert _same(head, _SPARK[name], text, False) or _same(head, _MAIN[name], text, True), (
         text,
         head,
         _SPARK[name],
