@@ -36,9 +36,15 @@ impl AppendFence {
     fn refuse(&self, refreshed: &Table) -> Option<Error> {
         let metadata = refreshed.metadata();
         let record = &self.claimed.stamp.record;
-        let breach = breach(metadata, self.claimed.base, record.query)?;
-        let message = self.message(metadata, &breach);
-        let refusal = self.typed(refreshed, &breach, &message);
+        let (message, refusal) =
+            if let Some(breach) = breach(metadata, self.claimed.base, record.query) {
+                let message = self.message(metadata, &breach);
+                let refusal = self.typed(refreshed, &breach, &message);
+                (message, refusal)
+            } else {
+                let refusal = epoch_check(refreshed, &self.claimed.stamp).err()?;
+                (refusal.to_string(), refusal)
+            };
         latch_refusal(refreshed, &self.claimed.stamp, &refusal);
         Some(
             Error::new(ErrorKind::DataInvalid, message)

@@ -239,3 +239,95 @@ async fn the_fence_forwards_every_other_catalog_call() {
     assert_eq!(loaded.metadata_location(), table.metadata_location());
     assert_eq!(loaded.metadata(), table.metadata());
 }
+
+async fn expire(catalog: &Arc<dyn Catalog>, ident: &TableIdent, snapshot: i64) -> Table {
+    let table = catalog.load_table(ident).await.expect("load");
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .expire_snapshots()
+        .expire_snapshot_id(snapshot)
+        .apply(tx)
+        .expect("apply expire");
+    tx.commit(catalog.as_ref()).await.expect("expire")
+}
+
+struct ExpiredAboveEmpty {
+    empty: Table,
+    first: CommitStamp,
+    snapshots: usize,
+}
+
+async fn expired_stamp_above_an_empty_base(
+    name: &str,
+) -> (TempDir, Arc<dyn Catalog>, TableIdent, ExpiredAboveEmpty) {
+    let (warehouse, memory, ident) = fixture(name).await;
+    let empty = memory.load_table(&ident).await.expect("load");
+    assert_eq!(empty.metadata().current_snapshot_id(), None);
+    let first = stamp_for(0, SinkDoor::Table);
+    let landed = stamped_append(&memory, &ident, &first, &[1]).await;
+    let stamped = landed.metadata().current_snapshot_id().expect("stamped");
+    append_plain(&memory, &ident, &[2]).await;
+    let expired = expire(&memory, &ident, stamped).await;
+    assert!(expired.metadata().snapshot_by_id(stamped).is_none());
+    assert!(matches!(
+        read_resume_point(&expired, query()),
+        Err(MicroBatchError::RecoveryRequired {
+            reason: RecoveryReason::StampedSnapshotExpired,
+            ..
+        })
+    ));
+    let snapshots = expired.metadata().snapshots().count();
+    (
+        warehouse,
+        memory,
+        ident,
+        ExpiredAboveEmpty {
+            empty,
+            first,
+            snapshots,
+        },
+    )
+}
+
+fn stamped_snapshot_expired(first: &CommitStamp) -> MicroBatchError {
+    MicroBatchError::RecoveryRequired {
+        query: query(),
+        epoch: Epoch::new(0),
+        durable: Some(Box::new(first.record.clone())),
+        reason: RecoveryReason::StampedSnapshotExpired,
+    }
+}
+
+#[tokio::test]
+async fn an_expired_stamp_above_an_empty_base_refuses_the_append_door() {
+    let (_warehouse, memory, ident, setup) =
+        expired_stamp_above_an_empty_base("af_expired_empty_append").await;
+    let guard = BatchScope::enter(TableUuid::of(&setup.empty), setup.first.clone()).expect("enter");
+    let files = stage(&setup.empty, &[1]).await;
+    let error = commit_append_with_summary(&memory, &setup.empty, files, &scoped(&guard), None)
+        .await
+        .expect_err("epoch 0 must not land again above an expired stamp");
+    assert_eq!(
+        microbatch_cause(&error),
+        &stamped_snapshot_expired(&setup.first)
+    );
+    assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    drop(guard);
+    let reloaded = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(reloaded.metadata().snapshots().count(), setup.snapshots);
+    assert_eq!(live_ids(&reloaded).await, vec![1, 2]);
+}
+
+#[tokio::test]
+async fn an_expired_stamp_above_an_empty_base_refuses_the_stamp_only_door() {
+    let (_warehouse, memory, ident, setup) =
+        expired_stamp_above_an_empty_base("af_expired_empty_stamp_only").await;
+    let stamp = stamp_for(0, SinkDoor::ForeachBatch);
+    let refused = commit_stamp_only(&memory, &setup.empty, &stamp, None)
+        .await
+        .expect_err("epoch 0 must not land again above an expired stamp");
+    assert_eq!(refused, stamped_snapshot_expired(&setup.first));
+    let reloaded = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(reloaded.metadata().snapshots().count(), setup.snapshots);
+    assert_eq!(live_ids(&reloaded).await, vec![1, 2]);
+}
