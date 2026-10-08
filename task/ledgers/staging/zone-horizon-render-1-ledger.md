@@ -6,7 +6,9 @@
 **Card:** [zone-horizon-render-1-card-2026-10-07.md](../../roadmap/mid-term/zone-horizon-render-1-card-2026-10-07.md).
 
 **Retires:** this ledger moves to `../completed/` when C-012 and C-013 are ruled and the unit's
-last commit lands.
+last commit lands. Ruled 2026-10-08 (owner's PM delegate, relayed by the owner): C-013 PROVEN;
+C-012 and C-016 are carried to follow-up units and stay OPEN, so the coverage attestation waits
+for them. The move is left to the lifecycle script at merge.
 
 **Why now.** The C-2d fold 1 re-verify (PR #991) graded it S2: chrono-tz tabulates zone
 transitions up to 2099 and Java applies a zone's final rule for ever. Only the wall clock →
@@ -32,11 +34,11 @@ gives `12:00:00`.
 | C-009 | Every residue cell after 2099 is explained: it differs in the 2099 control too, or it is in a named class. | `test_every_residue_cell_is_explained`. | PROVEN | 832 cells (§Residue). |
 | C-010 | `collect()` and the Arrow path are unchanged: the session wall clock and the instant. | `test_collect_and_the_arrow_path_carry_the_same_instant`. | PROVEN | `collect()` converts in Python (`zoneinfo`), which already applied the final rule; it was right on main. |
 | C-011 | Every instant ↔ wall-clock site in the workspace reads the zone through the helper; the routed sites carry the pins §Sites names. | §Sites; the Rust pins named there. | PROVEN | 19 sites routed, 0 copies of the rule; two have no pin of their own (R-9). M2, M6 and M8 each make one site bypass the helper and turn its pins red. |
-| C-012 | `from_utc_timestamp` and `to_utc_timestamp` read the final rule after 2099. | The eight `*_utc_timestamp*` rows of the grid. | OPEN | Both are `datafusion-spark` kernels, outside the workspace, so they cannot call the helper. Closing question (Q1): own the two functions in `repark-functions` on the funnel in this unit, or in a follow-up unit? Lean: a follow-up — owning them is a port of two Spark functions (their implicit `TIMESTAMP_NTZ` → `TIMESTAMP` cast and gap rule differ from the upstream kernel before 2100 too: 13 control cells), which is wider than the horizon. |
-| C-013 | On data before 2100 a 1M-row `hour()` and `date_format` are not more than 2 % slower than on main. | §Perf. | OPEN | By instruction count the three measured statements are within the guard (`hour` +1.5 %, `date_format` +0.3 %, the string cast +0.2 %). By wall clock and cycles this machine reads +1.4 % to +4 % at that instruction parity, and the profile shows the extra cycles spread evenly over code this unit does not touch. Closing question (Q2): does the instruction count close the guard, or does it need a wall-clock reading on a quiet machine? Lean: the instruction count closes it; §Perf gives the reasons. |
+| C-012 | `from_utc_timestamp` and `to_utc_timestamp` read the final rule after 2099. | The eight `*_utc_timestamp*` rows of the grid. | OPEN (carried to the follow-up unit, ruled 2026-10-08) | Both are `datafusion-spark` kernels, outside the workspace, so they cannot call the helper. Closing question (Q1): own the two functions in `repark-functions` on the funnel in this unit, or in a follow-up unit? Ruled 2026-10-08 (owner's PM delegate, relayed by the owner): a follow-up unit. Owning them is a port of two Spark functions (their implicit `TIMESTAMP_NTZ` → `TIMESTAMP` cast and gap rule differ from the upstream kernel before 2100 too: 13 control cells), which is wider than the horizon. |
+| C-013 | On data before 2100 a 1M-row `hour()` and `date_format` are not more than 2 % slower than on main. | §Perf. | PROVEN | Ruled 2026-10-08 (owner's PM delegate, relayed by the owner): the guard names `hour()` and `date_format`, and both pass on the wall clock. Quiet record in §Perf: suite median 0.9985 over 43,889 like cells; `hour()` 1.007 and `date_format` 0.992. The instruction counts in §Perf are the earlier reading. |
 | C-014 | Each pin fails for its reason: eight mutations, each red. | §Mutations. | PROVEN | See §Mutations. |
 | C-015 | The card row reads closed with the date, the registry carries the unit's row, and the CAST-TS-STRING-1 residue reads closed. | Diff of `task/roadmap/mid-term/map.md`, the card, `docs/spark-sql-iceberg-parity.md`; `check_docs_links.py`. | PROVEN | No next-release notes draft exists (`ls task/roadmap/mid-term | grep -i release-notes` lists only shipped notes and the 1.5.0 draft that shipped), so no notes line was added. |
-| C-016 | After 2099 a gap wall cast to `TIMESTAMP_NTZ`, `from_json` of a gap wall, `unix_timestamp` of a gap wall and `months_between` on a transition day answer as their 2099 twins do. | Fold 1; the verifier's 27-zone grid. | OPEN | With the owner (finding 3 + the declared 16): a pre-2100 fault now reached because the real transition days exist. Main matched Spark only because it had no transitions after 2099. The verifier counted 1,208 such cells (629 `months_between`, 150 `unix_timestamp` gap, 279 NTZ gap wall, 150 `from_json` gap wall). |
+| C-016 | After 2099 a gap wall cast to `TIMESTAMP_NTZ`, `from_json` of a gap wall, `unix_timestamp` of a gap wall and `months_between` on a transition day answer as their 2099 twins do. | Fold 1; the verifier's 27-zone grid. | OPEN (carried to the follow-up unit, ruled 2026-10-08) | Ruled accept and card 2026-10-08 (owner's PM delegate, relayed by the owner); the cells are carried by [TRANSITION-DAY-ARITHMETIC-1](../../roadmap/mid-term/transition-day-arithmetic-1-card-2026-10-08.md). A pre-2100 fault now reached because the real transition days exist. Main matched Spark only because it had no transitions after 2099. The verifier counted 1,208 such cells (629 `months_between`, 150 `unix_timestamp` gap, 279 NTZ gap wall, 150 `from_json` gap wall). |
 
 ## Grid
 
@@ -221,7 +223,8 @@ differing:
 | R-1 upstream kernel, reads standard time after 2099 | `from_utc_timestamp`, `to_utc_timestamp`, and both over a `TIMESTAMP_NTZ` | 223 | 13 (transition, gap and overlap cells) |
 | R-2 built-in never reads the session zone | `extract_hour`, `extract_minute`, `extract_doy`, `date_part_hour`, `date_part_day` | 325 | 65 |
 | R-3 nanosecond range (2262) | `make_timestamp`, `make_timestamp_zone`, `ntz_to_ltz`, `convert_from_utc`, `convert_to_utc` at 2500 and 9999 | 180 | 0 (the year is not reachable) |
-| R-4 transition-day arithmetic | `interval_day`, `interval_month`, `months_between`, `unix_timestamp` in a gap | 104 | 20 |
+| R-4 transition-day arithmetic ([card](../../roadmap/mid-term/transition-day-arithmetic-1-card-2026-10-08.md)) | `interval_day`, `interval_month`, `months_between`, `unix_timestamp` in a gap | 104 | 20 |
+| R-12 cost, not an answer: the two casts | `CAST AS DATE`, `CAST AS TIMESTAMP_NTZ` on data before 2100 (§Perf) | 0 | — |
 
 Notes on the classes:
 
@@ -238,12 +241,20 @@ Notes on the classes:
   `CANNOT_PARSE_TIMESTAMP` where Spark shifts the wall clock forward. All four differ in the
   2099 control. `test_every_residue_cell_is_explained` names `months_between` on a `*_at` probe
   as a class because its 2099 autumn twin hides the difference (both days of month are 1).
+  Carded 2026-10-08 as [TRANSITION-DAY-ARITHMETIC-1](../../roadmap/mid-term/transition-day-arithmetic-1-card-2026-10-08.md),
+  which carries the 1,208 verifier cells after 2099 and this row's 20 cells at 2099.
 - **R-5, the 16 cells that moved away from Spark.** On main these agreed by accident: main saw
   no transition after 2099, so it never met the transition-day defects of R-4 there. With the
   real transition days in place, `unix_timestamp` of the New York gap wall refuses at 2100,
   2104, 2500 and 9999 as it does at 2099 (4 cells), and `months_between` at the first instant
   of the spring change differs as it does at 2099 (12 cells, three zones). They are in the
   residue and explained by their 2099 twins. Closing R-4 closes them.
+- **R-12, a cost row, not an answer.** On data before 2100, `CAST(… AS DATE)` and
+  `CAST(… AS TIMESTAMP_NTZ)` read 1.04 of main (§Perf: 1.043 and 1.041), outside the C-013 guard,
+  which names `hour()` and `date_format`. No cell changes its answer, so the 832 count stands. The
+  remedy is hoisting the year check to once per batch; it is folded into the follow-up unit that
+  ports `from_utc_timestamp` / `to_utc_timestamp` (same helper, C-012). Ruled 2026-10-08 (owner's
+  PM delegate, relayed by the owner).
 
 Out of scope, observed while measuring:
 
@@ -308,7 +319,30 @@ change in where code lands does, and any edit to the crate moves it: between two
 unit's own builds the cast went from 3 % faster to 2.7 % slower. The machine was also busy
 with other lanes for the whole session.
 
-So C-013 stays OPEN (Q2). What was done to keep the pre-2100 path identical to main: inside
+**Wall-clock record, ruled 2026-10-08 (owner's PM delegate, relayed by the owner): C-013 PROVEN.**
+Base `156be81c` against head `d0db2b5e`, release builds (codegen units 16; the instruction-count
+runs above used one), quiet machine.
+
+- Suite: a quiet three-run of the like-for-like replay, 43,889 like cells. Run ratios 0.9985,
+  0.9946 and 0.9991; median 0.9985, spread 0.0045.
+- Targeted: 20,000,000 instants before 2100, session zone `America/New_York`, four pinned cores,
+  five interleaved process pairs, best of five per process, median. Ratio is head over base.
+
+| Expression | Base ms | Head ms | Ratio | Pair range |
+|---|---|---|---|---|
+| `CAST(ts AS STRING)` | 1964.1 | 1909.1 | 0.972 | 0.950–0.981 |
+| `to_json(struct(ts))` | 5279.7 | 5341.3 | 1.012 | 1.009–1.016 |
+| `date_format(ts, 'yyyy-MM-dd HH:mm:ss')` | 2613.2 | 2592.4 | 0.992 | 0.979–1.005 |
+| `hour(ts)` | 284.7 | 286.8 | 1.007 | 1.001–1.028 |
+| `CAST(ts AS DATE)` | 294.3 | 307.0 | 1.043 | 1.027–1.065 |
+| `unix_timestamp(CAST(ts AS STRING))` | 3521.1 | 3456.1 | 0.982 | 0.966–0.993 |
+| `CAST(ts AS TIMESTAMP_NTZ)` | 298.5 | 310.8 | 1.041 | 1.029–1.062 |
+
+The guard names `hour()` and `date_format`, and both ratios are inside 2 %. The `hour()` pair range
+reaches 1.028 at its top pair, so one pair is above 2 % while the reported ratio is 1.007. The two
+casts read 1.043 and 1.041: outside the guard, carried as R-12.
+
+What was done to keep the pre-2100 path identical to main: inside
 1200–2099 `wall_at_instant` is the expression the call sites held before
 (`zone.from_utc_datetime(utc).naive_local()`), behind one year compare; the proxy branch is
 `#[cold]` and out of line; the calendar extractors keep Arrow's kernel for a batch wholly
@@ -357,10 +391,14 @@ On the unit's tree, 2026-10-08:
 
 - **Q1 (C-012).** `from_utc_timestamp` / `to_utc_timestamp` are `datafusion-spark` kernels.
   Own them in `repark-functions` on the funnel in this unit, or in a follow-up? Lean: a
-  follow-up; it is a port of two Spark functions, and their pre-2100 edges differ too.
-- **Q2 (C-013).** Does the instruction count close the perf guard? Lean: yes.
+  follow-up; it is a port of two Spark functions, and their pre-2100 edges differ too. Ruled
+  2026-10-08 (owner's PM delegate, relayed by the owner): a follow-up unit; C-012 is carried to it.
+- **Q2 (C-013).** Does the instruction count close the perf guard? Ruled 2026-10-08 (owner's PM
+  delegate, relayed by the owner): the guard is read on the wall clock, and the quiet record in
+  §Perf closes it; C-013 PROVEN.
 
-The coverage attestation is filed when C-012 and C-013 are ruled.
+The coverage attestation is not filed here. The grammar gate requires it once no clause is OPEN,
+and C-012 and C-016 stay OPEN, carried to follow-up units (ruled 2026-10-08).
 
 ## Fold 1 (2026-10-08)
 
