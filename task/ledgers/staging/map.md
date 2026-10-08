@@ -22,7 +22,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [mb-3-ledger.md](mb-3-ledger.md) —
   **MB-3 (2026-10-07), the Session-owned micro-batch driver, round 1:** MB0b-R18 measured before
   the capped trigger (C-001), the `toTable` door's racing-driver guarantee left open on
-  `F-APPEND-PIN-BASE-1` (C-002), and the driver slices that follow. `risk_tier: standard`.
+  `F-APPEND-PIN-BASE-1` (C-002), and the driver slices that follow. **Fold 1 (2026-10-07):**
+  the verifier's findings, a panic on the driver task (C-011), `start` racing `stop` (C-012),
+  the session's end (C-013), the replay window declared (C-014), static frames in the template
+  (C-015), two queries on one sink (C-016), the trigger schedule (C-017) and the S3s (C-018);
+  the catalog timeout stays open (C-010). `risk_tier: standard`.
   Branch `feat/mb-3-driver`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction

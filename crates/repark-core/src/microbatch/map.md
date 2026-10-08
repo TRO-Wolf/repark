@@ -11,6 +11,7 @@ the [design sketch](../../../../task/wo/microbatch/mb-design-2026-10-06.md) §3.
 [North Star](../../../../task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md).
 Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md). The round's gates,
 the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3/C-009
+Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
 
 ## Contents
 
