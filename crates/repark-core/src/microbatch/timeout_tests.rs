@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
-use iceberg::TableIdent;
+use iceberg::{Catalog, TableIdent};
 use repark_iceberg::microbatch::error::{MicroBatchError, RecoveryReason};
 use repark_iceberg::microbatch::offset::Epoch;
 use repark_iceberg::microbatch::window::WindowLimit;
@@ -180,6 +180,40 @@ async fn a_stalled_commit_goes_to_the_unknown_outcome_walk() {
             assert_eq!(fixture.ids(SINK).await, [1, 2]);
         }
     }
+}
+
+#[tokio::test]
+async fn an_unstamped_batch_ends_recovery_required_over_a_stalled_catalog() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    let catalog = flaky(&fixture).await;
+    let location = format!("{root}/sales/silver_again", root = fixture.root());
+    let replaced = Arc::clone(&catalog) as Arc<dyn Catalog>;
+    let body = Probe::new(Mode::ReplaceSink(replaced, location));
+    let handle = registered(&fixture, door_spec(Some(&body), Trigger::Once)).await;
+    catalog.on_load(Some(stall_from("silver", 4)));
+    handle.start_below_catalog_check().expect("start");
+    let error = ended(&handle).await.expect_err("the batch is unstamped");
+    catalog.on_load(None);
+    let stamp = fixture
+        .table("silver")
+        .await
+        .metadata()
+        .current_snapshot_id()
+        .expect("the stamp landed on the replaced sink");
+    assert!(
+        matches!(
+            error.as_ref(),
+            MicroBatchError::RecoveryRequired {
+                epoch,
+                durable: None,
+                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+                ..
+            } if *epoch == Epoch::FIRST && snapshot.get() == stamp
+        ),
+        "{error:?}"
+    );
+    assert_eq!(handle.state(), QueryState::RecoveryRequired);
 }
 
 async fn timed_walk(source: &MicroBatchSource) -> Duration {

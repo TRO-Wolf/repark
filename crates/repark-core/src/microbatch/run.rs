@@ -335,19 +335,25 @@ impl Run {
                 let Some(batch) = self.batch_session(&guard) else {
                     return Ok(None);
                 };
-                self.append(&batch, &stamp, &sink, frame).await.map(Some)
+                let appended = self.append(&batch, &stamp, &sink, frame).await;
+                appended.map(|(rows, snapshot)| (Some(rows), snapshot))
             }
             Door::ForeachBatch(body) => self
                 .foreach_batch(&guard, &stamp, body.as_ref(), frame)
                 .await
-                .map(|()| None),
+                .map(|snapshot| (None, snapshot)),
         };
         let add_batch = door_started.elapsed();
         let outcome = guard.outcome();
         drop(guard);
-        let num_output_rows = committed?;
+        let (num_output_rows, snapshot) = committed?;
         if let ScopeOutcome::NotCommitted = outcome {
-            return Err(self.unstamped(epoch).await);
+            return Err(MicroBatchError::RecoveryRequired {
+                query: self.shared.id,
+                epoch,
+                durable: self.shared.durable().map(Box::new),
+                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+            });
         }
         self.shared.end_batch(Some(record));
         cursor.epoch = epoch.next();
@@ -382,27 +388,6 @@ impl Run {
         cursor.from = durable.offsets.inputs().first().cloned();
         self.shared.end_batch(None);
         Ok(())
-    }
-
-    async fn unstamped(&self, epoch: Epoch) -> MicroBatchError {
-        let snapshot = match self.load_sink().await {
-            Ok(table) => table.metadata().current_snapshot_id(),
-            Err(error) => return error,
-        };
-        match snapshot {
-            Some(snapshot) => MicroBatchError::RecoveryRequired {
-                query: self.shared.id,
-                epoch,
-                durable: self.shared.durable().map(Box::new),
-                reason: RecoveryReason::UnstampedSinkCommit {
-                    snapshot: SnapshotId::new(snapshot),
-                },
-            },
-            None => MicroBatchError::Catalog(format!(
-                "batch {epoch} of query {query} left the sink without a snapshot",
-                query = self.shared.id
-            )),
-        }
     }
 
     fn batch_session(&self, guard: &BatchScopeGuard) -> Option<SessionContext> {
@@ -447,7 +432,7 @@ impl Run {
         stamp: &CommitStamp,
         body: &dyn BatchBody,
         frame: DataFrame,
-    ) -> Result<(), MicroBatchError> {
+    ) -> Result<SnapshotId, MicroBatchError> {
         let epoch = stamp.record.epoch;
         body.run(frame, epoch)
             .await
@@ -459,8 +444,8 @@ impl Run {
         let commit =
             commit_stamp_only(&self.shared.sink.catalog, &sink, stamp, Some(guard.token()));
         match tokio::time::timeout(self.shared.catalog_timeout, commit).await {
-            Ok(committed) => committed.map(|_| ()),
-            Err(_) => self.resolve_unknown(&sink, stamp, None).await.map(|_| ()),
+            Ok(committed) => committed,
+            Err(_) => self.resolve_unknown(&sink, stamp, None).await,
         }
     }
 
@@ -470,7 +455,7 @@ impl Run {
         stamp: &CommitStamp,
         sink: &Table,
         frame: DataFrame,
-    ) -> Result<u64, MicroBatchError> {
+    ) -> Result<(u64, SnapshotId), MicroBatchError> {
         let (extra, mut staging) =
             resolve_empty_session_write(batch).map_err(|error| engine_error(&error))?;
         staging.fork_insert_dictionary_rule = true;
@@ -493,7 +478,18 @@ impl Run {
         let catalog = &self.shared.sink.catalog;
         let commit = commit_append_with_summary(catalog, sink, files, &extra, None);
         let resolved = match tokio::time::timeout(self.shared.catalog_timeout, commit).await {
-            Ok(Ok(_)) => return Ok(rows),
+            Ok(Ok(committed)) => {
+                let head = committed.metadata().current_snapshot_id();
+                return head
+                    .map(|snapshot| (rows, SnapshotId::new(snapshot)))
+                    .ok_or_else(|| {
+                        MicroBatchError::Catalog(format!(
+                            "batch {epoch} of query {query} left the sink without a snapshot",
+                            epoch = stamp.record.epoch,
+                            query = self.shared.id
+                        ))
+                    });
+            }
             Ok(Err(error)) if is_commit_state_unknown(&error) => {
                 let operation_id = unknown_operation_id(&error);
                 self.resolve_unknown(sink, stamp, operation_id.as_deref())
@@ -502,7 +498,7 @@ impl Run {
             Ok(Err(error)) => return Err(engine_error(&error)),
             Err(_) => self.resolve_unknown(sink, stamp, None).await,
         };
-        resolved.map(|_| rows)
+        resolved.map(|snapshot| (rows, snapshot))
     }
 }
 

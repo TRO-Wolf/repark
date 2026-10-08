@@ -124,7 +124,9 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
   - *An unstamped batch.* The `NotCommitted` check after the door is reachable when the sink
     table is replaced under a `foreachBatch` body: the trailing stamp lands on the new table,
     outside the batch's scope, and the query ends `RecoveryRequired(UnstampedSinkCommit)`.
-    pins: mb-3/C-018
+    Since fold 2 (2026-10-08) each door hands back the snapshot its commit produced, and the
+    check names that snapshot without another catalog call, so a stalled catalog cannot turn
+    this ending into a retryable error. pins: mb-3/C-018, C-026
   **Round 2 (2026-10-08):**
   - *The bounded calls.* Each catalog call of the task runs under `catalog_timeout`: the sink
     load (`load_sink`: at start, at each batch's scope and after a `foreachBatch` body) and
