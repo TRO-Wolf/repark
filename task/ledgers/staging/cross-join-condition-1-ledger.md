@@ -20,13 +20,14 @@ shared names under `"cross"` answering as inner-USING (ruling 3 fallback, kept r
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | A Column condition on a cross join answers the inner join's rows and columns on both routes: the equality cell 2 rows, the inequality cell 9 rows, the false cell 0 rows, the aliased select `[(2, x), (3, y)]`, the join-then-filter cell 1 row. | `test_cross_join_condition_1.py` (each cell on the native route and with `_join_exact_plan` forced to miss, rows and columns literal, plus equality with the same condition under `"inner"`). | PROVEN | Spark's answers are the brief's live Spark 4.1.2 column; no interpreter on this machine holds PySpark, so they were not re-run here. Green on the fix, red on main (12 rows each). |
+| C-001 | A Column condition on a cross join answers the inner join's rows and columns: the equality cell 2 rows on both routes, the inequality cell 9 rows and the false cell 0 rows on the SQL route, the aliased select `[(2, x), (3, y)]`, the join-then-filter cell 1 row. | `test_cross_join_condition_1.py` (the equality, aliased and filter cells on the native route and with `_join_exact_plan` forced to miss, rows and columns literal, plus equality with the same condition under `"inner"`; the inequality and false cells SQL-only; a route assertion on every native-capable cell). | PROVEN | The five literals re-derived on live Spark 4.1.2 in fold 1 (same values, §Fold 1 record). The inequality and false cells dropped the native parameter: the exact planner takes one equality or no condition, so both parameters ran SQL. Green on the fix, red on main (12 rows each). |
 | C-002 | `crossJoin(other)` and `join(other, None, "cross")` are unmoved: 12 rows, the same plan as main. | The Cartesian pin in `test_cross_join_condition_1.py`; `cj.py` before/after. | PROVEN | 12 rows before and after on both spellings; the `None` path still emits `CROSS JOIN` with no `ON` and the same exact record. Red under M3. |
-| C-003 | Two self-join shapes (a frame with itself, two derivations of one frame) answer exactly as the same condition does with `"inner"` on this branch. | The two self-join pins in `test_cross_join_condition_1.py`. | PROVEN | Both answer rows on this branch (the frame with itself: the 3 diagonal rows); the pins compare the full outcome, rows or refusal. |
+| C-003 | Two self-join shapes (a frame with itself, two derivations of one frame) answer exactly as the same condition does with `"inner"` on this branch. | The two self-join pins in `test_cross_join_condition_1.py`, plus the live Spark 4.1.2 literals. | PROVEN | Both answer rows on this branch; the pins compare the full outcome, rows or refusal. Fold 1: the literals measured on live Spark 4.1.2 here (three diagonal rows; `[(2, "b", 2, "b")]`), equal to the verifier's; pinned beside cross == inner. |
 | C-004 | Shared names under `"cross"` (`"id"`, `["id"]`) and a list of Columns keep main's refusals byte-identical. | The two refusal pins in `test_cross_join_condition_1.py`; `test_columns.py::test_join_rejects_unsupported_how` stays green. | PROVEN | `ValueError unsupported join type "cross" (...)` and `PySparkTypeError ... expects a column name ...` as on main. The names-to-inner-USING route is future work (ruling 3 fallback: it needs its own routing lines past the net-zero ceiling and would flip the pinned refusal). |
-| C-005 | Each pin fails for its reason: three mutations, each red, each reverted. | §Mutations. | PROVEN | M1 reds the SQL legs, M2 the native legs, M3 the unmoved cell. |
+| C-005 | Each pin fails for its reason: four mutations, each red, each reverted. | §Mutations. | PROVEN | M1 reds the SQL legs, M2 the native legs, M3 the unmoved cell, M4 (fold 1) the route assertions. |
 | C-006 | No test outside the new file changes its result against main. | The neighbour run §Gates. | PROVEN | The same 3 pre-existing `test_fa_5_duplicate_csv.py` failures (missing native `rename_duplicate_tolerant`, unrelated to joins) before and after; +20 new passes, zero flips. |
 | C-007 | The card reads closed with the date, every touched directory's `map.md` moves in the same change, and the parity registry carries no cross-join row to update. | Diff of the card, `task/roadmap/mid-term/map.md`, the three `map.md` rows; `check_docs_links.py`. | PROVEN | `grep cross docs/spark-sql-iceberg-parity.md` names only the ANSI `cross_door` suite and branch cross-read legs, neither a cross-join registry row. |
+| C-008 | A cross join with a condition Spark refuses for every join type answers as RePark's inner join does. | The two cross-equals-inner pins in `test_cross_join_condition_1.py` (eq-and-rand, untyped null: rows and columns equal, never the row count, never a refusal). | OPEN | Eight cells (four conditions, two routes) from the Opus verifier: grid `cond/rand` and extra `eq-and-rand` (`(a.id == b.k) & (F.rand(1) >= 0)`, Spark `INVALID_NON_DETERMINISTIC_EXPRESSIONS`, head 2 rows, main 12); extra `rand-lt-half` (`F.rand(7) < 0.5`, Spark refuses, head an 8-row subset, main 12); extra `null-untyped` (`F.lit(None)`, Spark `JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE`, head 0 rows, main 12). On every cell head's cross equals head's inner and main's inner. ruled 2026-10-08 (orchestrator, owner informed): carried to card JOIN-CONDITION-REFUSALS-1 ([join-condition-refusals-1-card-2026-10-08.md](../../roadmap/mid-term/join-condition-refusals-1-card-2026-10-08.md)). |
 
 ## The fix
 
@@ -55,7 +56,7 @@ Measured on `cj.py` (`a = [(1,a),(2,b),(3,c)]`, `b = [(2,x),(3,y),(4,z),(9,q)]`)
 
 ## Mutations
 
-Each is one edit to `core.py`, run against
+Each is one edit (M1-M3 to `core.py`, M4 to `join_attr_tokens.py`), run against
 `pytest python/repark/tests/test_cross_join_condition_1.py` (20 cells), then reverted with
 `git checkout --`:
 
@@ -65,6 +66,7 @@ Each is one edit to `core.py`, run against
 | M2 (brief: native route) | the exact record becomes `("cross", None)` while the SQL text keeps `ON` | 5: every `[native]` condition cell answers 12 rows; every `[sql]` cell stays green |
 | M3 (brief: None-equivalent) | the remap drops the `condition is not None` guard | 2: the unmoved Cartesian cell on both routes (`UnboundLocalError: on_sql`) |
 | M2-first (own, stayed green) | the exact record keeps `engine_how` but drops only the condition (`exact_on = None`) | 0 of 20: the native attempt misses and the route switch falls back to the SQL text, which keeps `ON`. Kept as evidence that the switch fails closed; M2 supersedes it. |
+| M4 (fold 1: route assertions) | `_join_exact_plan` returns `None` always | 6: every `[native]` leg with a route assertion (equality, aliased, filter, Cartesian, both self-joins); rows still right, the route assert reds |
 
 ## Gates
 
@@ -87,6 +89,20 @@ Out of scope, observed while measuring:
   remap past the net-zero `core.py` ceiling plus the pinned refusal it would flip.
 - R-2. A list of Columns is refused for every join type on main and here (ruling 4, C-004).
 
+## Fold 1 record (2026-10-08)
+
+- The five condition cells' literals re-derived on live Spark 4.1.2 (banner `4.1.2`,
+  `/tmp/sparkenv`, the frames the tests use): equality 2 rows, inequality 9 rows, false
+  0 rows, aliased `[(2, x), (3, y)]`, join-then-filter `[(3, c, 3, y)]`; all equal the
+  pinned literals. Cartesian 12 rows on both spellings.
+- Both self-join literals measured on the same live Spark: three diagonal rows;
+  `[(2, "b", 2, "b")]`. Equal to the verifier's; pinned (C-003).
+- The inequality and false cells dropped the native parameter: the exact planner takes
+  one equality or no condition, so both parameters ran the SQL route.
+- M4: forcing `_join_exact_plan` to miss reds the 6 native route assertions and nothing
+  else; reverted. `test_cross_join_condition_1.py`: 20 passed (8 tests on 2 routes,
+  inequality and false SQL-only, 2 unrouted leniency pins).
+
 ## Coverage attestation
 
 ```yaml
@@ -101,7 +117,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/cross-join-condition-1-ledger.md, python/repark/tests/test_cross_join_condition_1.py]
     - id: AT-2
       status: ATTACKED
-      evidence: Equality, inequality, false, aliased, join-then-filter, None, shared name, name list, Column list, and two self-join shapes run as cells; the None/empty-list/Column/garbage partition of the join door is unchanged outside the remapped branch.
+      evidence: Equality, inequality, false, aliased, join-then-filter, None, shared name, name list, Column list, and two self-join shapes run as cells; the None/empty-list/Column/garbage partition of the join door is unchanged outside the remapped branch. Fold 1 adds the eq-and-rand and untyped-null leniency shapes.
       artifacts: [python/repark/tests/test_cross_join_condition_1.py]
     - id: AT-3
       status: ATTACKED
@@ -129,6 +145,6 @@ COVERAGE_ATTESTATION:
       justification: No new error text, log, or metric; the only texts on the touched paths are main's, pinned.
     - id: AT-10
       status: ATTACKED
-      evidence: Spark literals on both routes (stronger than the #997 differential); M1/M2/M3 each red the legs they target; branch liveness: the remap arm changes output exactly for cross-with-condition (M1/M2), and its None guard is load-bearing (M3).
+      evidence: Spark literals on both routes (stronger than the #997 differential); M1/M2/M3/M4 each red the legs they target; branch liveness: the remap arm changes output exactly for cross-with-condition (M1/M2), and its None guard is load-bearing (M3).
       artifacts: [python/repark/tests/test_cross_join_condition_1.py, task/ledgers/staging/cross-join-condition-1-ledger.md]
 ```
