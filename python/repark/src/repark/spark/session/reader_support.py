@@ -221,6 +221,14 @@ def _parse_as_of_timestamp_option(raw: Any) -> int:
     return parsed
 
 
+def _jdbc_bound_is_temporal(raw: str | None) -> bool:
+    """True when a JDBC bound is spelled as a date or timestamp; the engine door judges it."""
+    if raw is None:
+        return False
+    year, dash, rest = raw.strip().lstrip("+-").partition("-")
+    return len(year) >= 4 and year.isdigit() and dash == "-" and rest[:1].isdigit()
+
+
 def _jdbc_i64(name: str, value: int | None) -> int | None:
     """Refuse a JDBC partition integer outside the 64-bit range, as Spark's parse does."""
     if value is not None and not -(2**63) <= value < 2**63:

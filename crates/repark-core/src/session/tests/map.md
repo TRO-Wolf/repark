@@ -9,6 +9,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned
+  on `numPartitions`; a bound is no longer parsed before the relation resolves, so a date bound
+  beside a bad count still names the count. pins: c-3/C-009
 - `read_postgres.rs` — **C-3 (2026-10-07):** `partition_options_refuse_as_spark_does_before_any_connection`
   (the all-or-none sentence from arguments and from properties, a bound that is not an `i64`
   as `NumberFormat` without its value, `query` with a column, `predicates` declared from the

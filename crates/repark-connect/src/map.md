@@ -6,6 +6,15 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
+- `partition.rs` — **C-3 fold 1 (2026-10-08), the verifier's S2 on bound spelling:** the two
+  bounds stay text until the column is known, as Spark keeps them. `PartitionOptions` and
+  `PartitionSpec` carry `lower_bound` and `upper_bound` as `String`; `with_props` lifts them
+  unparsed (only `numPartitions` is parsed there, as Spark parses it before any connection);
+  `PartitionSpec::bounds()` parses the pair as `i64` and is called by `PostgresTable::partitioned`
+  after the column's type is judged. So a `date` or timestamp column refuses naming the
+  registry row whether the bounds are Spark's date text or integers, and only an integer
+  column refuses a bound that is not an `i64`. `PartitionOptions::of` builds the options from
+  a door's integer arguments. pins: c-3/C-009
 - `partition.rs` — **C-3 (2026-10-07), the planning slice**, no feature gate and no I/O
   ([c-3-ledger.md](../../../task/ledgers/staging/c-3-ledger.md) §0.1). Spark's JDBC range
   partitioning as numbers.

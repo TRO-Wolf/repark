@@ -87,12 +87,12 @@ mod door {
             }
             let mut props = read.properties;
             props.retain(|key, _| !key.eq_ignore_ascii_case("dbtable"));
-            let partitioning = PartitionOptions {
-                column: read.partition_column,
-                lower_bound: read.lower_bound,
-                upper_bound: read.upper_bound,
-                num_partitions: read.num_partitions,
-            };
+            let partitioning = PartitionOptions::of(
+                read.partition_column,
+                read.lower_bound,
+                read.upper_bound,
+                read.num_partitions,
+            );
             let partitioning = partitioning
                 .with_props(&mut props)
                 .and_then(PartitionOptions::spec)

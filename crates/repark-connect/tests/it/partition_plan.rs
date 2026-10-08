@@ -14,8 +14,8 @@ use crate::pushdown::{column, find_scan, orders, physical, resolved, source};
 fn spec(column: &str, lower: i64, upper: i64, count: i64) -> PartitionSpec {
     PartitionSpec {
         column: column.to_string(),
-        lower_bound: lower,
-        upper_bound: upper,
+        lower_bound: lower.to_string(),
+        upper_bound: upper.to_string(),
         num_partitions: count,
     }
 }
@@ -173,6 +173,66 @@ fn only_integer_columns_partition_and_the_rest_refuse_by_kind() {
         let message = ConnectError::PartitionedRead { refusal: refused }.to_string();
         assert!(message.contains(PARTITIONED_READ_ROW), "{message}");
     }
+}
+
+fn text_spec(column: &str, lower: &str, upper: &str) -> PartitionSpec {
+    PartitionSpec {
+        column: column.to_string(),
+        lower_bound: lower.to_string(),
+        upper_bound: upper.to_string(),
+        num_partitions: 4,
+    }
+}
+
+#[test]
+fn a_declared_column_type_refuses_naming_the_row_whatever_the_bound_spelling() {
+    let spellings = [
+        ("2024-01-01", "2024-02-01"),
+        ("2024-01-01 00:00:00", "2024-01-02 00:00:00"),
+        ("0", "9"),
+        ("not-a-bound", "9"),
+    ];
+    for (name, postgres_type) in [
+        ("day", "date"),
+        ("wall", "timestamp"),
+        ("at", "timestamptz"),
+    ] {
+        for (lower, upper) in spellings {
+            let outcome = table(orders(), &[]).partitioned(&text_spec(name, lower, upper));
+            let (refused, class) = refusal(outcome);
+            assert_eq!(
+                refused,
+                PartitionRefusal::DeclaredColumnType {
+                    column: name.to_string(),
+                    postgres_type,
+                },
+                "{name} {lower}"
+            );
+            assert_eq!(class, ErrorClass::Unsupported, "{name} {lower}");
+            let message = ConnectError::PartitionedRead { refusal: refused }.to_string();
+            assert!(message.contains(PARTITIONED_READ_ROW), "{message}");
+            assert!(!message.contains(lower), "{message}");
+        }
+    }
+    let on_integer = table(orders(), &[]).partitioned(&text_spec("qty", "2024-01-01", "9"));
+    let (refused, class) = refusal(on_integer);
+    assert_eq!(
+        refused,
+        PartitionRefusal::NotInteger {
+            option: "lowerBound"
+        }
+    );
+    assert_eq!(class, ErrorClass::NumberFormat);
+    let on_text = table(orders(), &[]).partitioned(&text_spec("note", "2024-01-01", "9"));
+    let (refused, _) = refusal(on_text);
+    assert_eq!(refused, PartitionRefusal::ColumnType { found: "string" });
+    let upper = table(orders(), &[]).partitioned(&text_spec("qty", "0", "1.5"));
+    assert_eq!(
+        refusal(upper).0,
+        PartitionRefusal::NotInteger {
+            option: "upperBound"
+        }
+    );
 }
 
 #[test]

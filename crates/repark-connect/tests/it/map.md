@@ -25,6 +25,13 @@ See [../map.md](../map.md).
   shapes byte for byte, the `int8` cast on every cut, the NULL test on the first stride
   alone, a stride after a pushed conjunct with projection and `LIMIT` kept, and the refusals
   past the slot bound. pins: c-3/C-002, C-003, C-004
+- `partition_plan.rs`, `partition.rs` — **C-3 fold 1 (2026-10-08):**
+  `a_declared_column_type_refuses_naming_the_row_whatever_the_bound_spelling` (a `date`,
+  `timestamp` or `timestamptz` column with Spark's date text, its timestamp text, integers or
+  nonsense as bounds refuses as declared, naming the row and never the bound; an integer column
+  refuses a date bound as `NumberFormat` naming the option; a `text` column refuses in Spark's
+  sentence) and `bounds_stay_text_until_the_column_is_known`; the lift pin now shows the text
+  kept and the count parsed before any bound. pins: c-3/C-009
 - `partition_plan.rs` — C-3 (2026-10-07), behind `postgres`, no network, over an injected
   resolution. The column resolves in another case and when quoted, a quoted name is exact, a
   missing column lists the relation's columns, two case-twins refuse as ambiguous unless one is

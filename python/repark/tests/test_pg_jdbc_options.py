@@ -153,6 +153,43 @@ def test_jdbc_dbtable_from_properties_is_forwarded_by_the_alternative(
     assert captured.get("url") == "postgresql://localhost/db"
 
 
+def test_format_postgres_forwards_a_date_bound_as_text_for_the_door_to_judge(
+    spark: SparkSession,
+) -> None:
+    """Spark's date spelling of a bound reaches the engine door, which names the registry row.
+
+    pins: c-3/C-009
+    """
+    captured: dict[str, object] = {}
+
+    class _FakeSession:
+        def read_postgres(self, **kwargs: object) -> object:
+            captured.update(kwargs)
+            raise RuntimeError("stop-after-capture")
+
+    reader = spark.read
+    reader._session = _FakeSession()  # type: ignore[assignment]
+    with pytest.raises(RuntimeError, match="stop-after-capture"):
+        (
+            reader.format("jdbc")
+            .option("url", "postgresql://localhost/db")
+            .option("dbtable", "t")
+            .option("partitionColumn", "day")
+            .option("lowerBound", "2024-01-01")
+            .option("upperBound", "2024-02-01 00:00:00")
+            .option("numPartitions", "4")
+            .load()
+        )
+    assert captured.get("partition_column") == "day"
+    assert captured.get("num_partitions") == 4
+    assert captured.get("lower_bound") is None
+    assert captured.get("upper_bound") is None
+    assert captured.get("properties") == {
+        "lowerBound": "2024-01-01",
+        "upperBound": "2024-02-01 00:00:00",
+    }
+
+
 def test_jdbc_camel_case_keywords_reach_read_postgres(spark: SparkSession) -> None:
     """Spark's camelCase keywords bind and reach read_postgres with main's argument names.
 

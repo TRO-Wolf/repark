@@ -39,8 +39,8 @@ INSERT INTO {s}.wide
 fn spec(column: &str, lower: i64, upper: i64, count: i64) -> PartitionSpec {
     PartitionSpec {
         column: column.to_string(),
-        lower_bound: lower,
-        upper_bound: upper,
+        lower_bound: lower.to_string(),
+        upper_bound: upper.to_string(),
         num_partitions: count,
     }
 }

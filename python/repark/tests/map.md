@@ -2370,6 +2370,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   i64 CAST+lit wrap cells are pinned (ASCII docstring operators for RUF002;
   ruff format on long CAST SQL).
   pins: f-y10-1-int-overflow/C-001, C-002, C-003; types-1/C-002 (untyped cells).
+- `test_pg_jdbc_options.py` — **C-3 fold 1 (2026-10-08):**
+  `test_format_postgres_forwards_a_date_bound_as_text_for_the_door_to_judge`. pins: c-3/C-009
 - `test_production_file_size.py` — **C-3 fold 1 (2026-10-08):** the `_parse_jdbc_int_option`
   body hash moves: C-3 changed its behaviour on purpose (a bound that is not an integer raises
   `NumberFormatException`, Spark's measured class and a subclass of the old one, and an

@@ -18,6 +18,11 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   five S0 pins: crash after commit, snapshot-to-WAL handover, replay and
   duplicate delivery, schema change plus partial update image, lost slot.
 
+- `test_c3_partitioned.py` — **C-3 fold 1 (2026-10-08):** the declared cell adds Spark's own
+  spellings: a `date`, `timestamp` and `timestamptz` column with date or timestamp text as
+  bounds, through `format("postgres")` and through `properties`, refuses naming the row and
+  never the bound; a date bound on an integer column is `NumberFormatException`.
+  pins: c-3/C-009
 - `c3_bench.py` — **C-3 (2026-10-08):** the benchmark harness of order R-3, not collected by
   pytest (no `test_` prefix, no test function). `load` creates `c3_bench.mixed` (10M rows by
   default, `C3_BENCH_ROWS`; nine columns of mixed types, a primary key) in the container

@@ -92,14 +92,14 @@ async fn partition_options_refuse_as_spark_does_before_any_connection() {
     let not_a_number = read(&[
         ("user", "u"),
         ("PartitionColumn", "id"),
-        ("lowerbound", "sentinel-bound"),
+        ("lowerbound", "2024-01-01"),
         ("upperBound", "9"),
-        ("numPartitions", "4"),
+        ("numpartitions", "sentinel-count"),
     ]);
     let (class, message) = refusal(&session, not_a_number).await;
     assert_eq!(class, ErrorClass::NumberFormat, "{message}");
-    assert!(message.contains("`lowerBound`"), "{message}");
-    assert!(!message.contains("sentinel-bound"), "{message}");
+    assert!(message.contains("`numPartitions`"), "{message}");
+    assert!(!message.contains("sentinel-count"), "{message}");
 
     let all_four = (Some("id"), Some(0), Some(9), Some(4));
     let mut with_query = partitioned(read(&[("user", "u")]), all_four);

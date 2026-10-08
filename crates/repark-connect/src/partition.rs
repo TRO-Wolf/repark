@@ -105,17 +105,26 @@ fn refuse<T>(refusal: PartitionRefusal) -> Result<T> {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PartitionOptions {
     pub column: Option<String>,
-    pub lower_bound: Option<i64>,
-    pub upper_bound: Option<i64>,
+    pub lower_bound: Option<String>,
+    pub upper_bound: Option<String>,
     pub num_partitions: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartitionSpec {
     pub column: String,
-    pub lower_bound: i64,
-    pub upper_bound: i64,
+    pub lower_bound: String,
+    pub upper_bound: String,
     pub num_partitions: i64,
+}
+
+impl PartitionSpec {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn bounds(&self) -> Result<(i64, i64)> {
+        let lower = integer(LOWER_BOUND_KEY, &self.lower_bound)?;
+        let upper = integer(UPPER_BOUND_KEY, &self.upper_bound)?;
+        Ok((lower, upper))
+    }
 }
 
 fn take_key(props: &mut BTreeMap<String, String>, key: &str) -> Result<Option<String>> {
@@ -152,17 +161,29 @@ fn merged<T>(key: &'static str, explicit: Option<T>, prop: Option<T>) -> Result<
     }
 }
 
-fn integer(option: &'static str, text: Option<String>) -> Result<Option<i64>> {
-    match text {
-        None => Ok(None),
-        Some(text) => match text.parse::<i64>() {
-            Ok(value) => Ok(Some(value)),
-            Err(_) => refuse(PartitionRefusal::NotInteger { option }),
-        },
+fn integer(option: &'static str, text: &str) -> Result<i64> {
+    match text.parse::<i64>() {
+        Ok(value) => Ok(value),
+        Err(_) => refuse(PartitionRefusal::NotInteger { option }),
     }
 }
 
 impl PartitionOptions {
+    #[must_use]
+    pub fn of(
+        column: Option<String>,
+        lower_bound: Option<i64>,
+        upper_bound: Option<i64>,
+        num_partitions: Option<i64>,
+    ) -> PartitionOptions {
+        PartitionOptions {
+            column,
+            lower_bound: lower_bound.map(|bound| bound.to_string()),
+            upper_bound: upper_bound.map(|bound| bound.to_string()),
+            num_partitions,
+        }
+    }
+
     #[allow(clippy::missing_errors_doc)]
     pub fn with_props(self, props: &mut BTreeMap<String, String>) -> Result<PartitionOptions> {
         if let Some(key) = props
@@ -175,9 +196,12 @@ impl PartitionOptions {
             });
         }
         let column = take_key(props, PARTITION_COLUMN_KEY)?;
-        let lower = integer(LOWER_BOUND_KEY, take_key(props, LOWER_BOUND_KEY)?)?;
-        let upper = integer(UPPER_BOUND_KEY, take_key(props, UPPER_BOUND_KEY)?)?;
-        let count = integer(NUM_PARTITIONS_KEY, take_key(props, NUM_PARTITIONS_KEY)?)?;
+        let lower = take_key(props, LOWER_BOUND_KEY)?;
+        let upper = take_key(props, UPPER_BOUND_KEY)?;
+        let count = match take_key(props, NUM_PARTITIONS_KEY)? {
+            Some(text) => Some(integer(NUM_PARTITIONS_KEY, &text)?),
+            None => None,
+        };
         Ok(PartitionOptions {
             column: merged(PARTITION_COLUMN_KEY, self.column, column)?,
             lower_bound: merged(LOWER_BOUND_KEY, self.lower_bound, lower)?,

@@ -20,6 +20,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
   under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
   `<schema>.<table>`, and a `query` is named `jdbc`. pins: c-2/C-116
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
+  from its integer arguments; bounds given as text in `properties` reach
+  `PostgresTable::partitioned` unparsed, so they are judged after the column's type.
+  pins: c-3/C-009
 - `read_postgres.rs` — **C-3 (2026-10-07):** `PostgresRead` carries `partition_column`,
   `lower_bound`, `upper_bound`, `num_partitions` and a `predicates` flag in place of the list
   of option names C-2d refused by. The door refuses `predicates` first (still declared), lifts

@@ -18,6 +18,7 @@ from repark.spark._secrets import mask_credentials, register_config_value
 from repark.spark.session.session_core import ReparkSession
 from repark.spark.session.reader_support import (
     _ICEBERG_INCREMENTAL_OPTIONS,
+    _jdbc_bound_is_temporal,
     _parse_as_of_timestamp_option,
     _parse_snapshot_id_option,
 )
@@ -796,8 +797,9 @@ class DataFrameReader:
                 "partitionColumn, lowerBound, upperBound, and numPartitions must all be set "
                 "together (Spark JDBC parity)"
             )
-        lower_bound = _parse_jdbc_int_option("lowerBound", lower_raw)
-        upper_bound = _parse_jdbc_int_option("upperBound", upper_raw)
+        temporal = _jdbc_bound_is_temporal(lower_raw) or _jdbc_bound_is_temporal(upper_raw)
+        lower_bound = None if temporal else _parse_jdbc_int_option("lowerBound", lower_raw)
+        upper_bound = None if temporal else _parse_jdbc_int_option("upperBound", upper_raw)
         num_partitions = _parse_jdbc_int_option("numPartitions", num_raw)
 
         # Connection property bag (pass-through; driver ignored by engine).
@@ -829,6 +831,9 @@ class DataFrameReader:
                 "path",
             }
         }
+        if temporal:
+            raw_bounds = {"lowerBound": lower_raw, "upperBound": upper_raw}
+            properties.update({key: raw for key, raw in raw_bounds.items() if raw is not None})
 
         return self._session.read_postgres(
             url=url,

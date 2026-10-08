@@ -69,6 +69,8 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
   `MetricsSet`, which `EXPLAIN ANALYZE` shows. Accessors (`pushed_filters`, `residual_filters`,
   `pushed_limit`, `request`) serve the pins. pins: c-2/C-075, C-076, C-077, C-083, C-084
 
+- `table.rs` — **C-3 fold 1 (2026-10-08):** `partitioned` judges the column's type first and
+  parses the bounds second (`PartitionSpec::bounds`), then plans the cuts. pins: c-3/C-009
 - `table.rs` — **C-3 (2026-10-07):** `PostgresTable::partitioned(&PartitionSpec)` plans a
   partitioned read ([c-3-ledger.md](../../../../task/ledgers/staging/c-3-ledger.md) §0.1). It
   resolves the column as Spark does (the exact name, else the one case-insensitive match; a

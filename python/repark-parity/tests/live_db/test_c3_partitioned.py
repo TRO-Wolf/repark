@@ -272,6 +272,22 @@ def test_what_stays_declared_refuses_naming_its_row(
     ]
     for column in ("d", "tz", "ts", "n", "nu", "f8"):
         attempts.append(lambda column=column: _jdbc(spark, target, column, (0, 9, 4)))
+    sparks_spellings = {
+        "d": ("2024-01-01", "2024-02-01"),
+        "ts": ("2024-01-01 00:00:00", "2024-01-02 00:00:00"),
+        "tz": ("2024-01-01", "2024-01-02"),
+    }
+    for column, (lower, upper) in sparks_spellings.items():
+        spelled = {
+            "partitionColumn": column,
+            "lowerBound": lower,
+            "upperBound": upper,
+            "numPartitions": "4",
+        }
+        attempts.append(lambda spelled=spelled: _options(spark, dbtable=target, **spelled).load())
+        attempts.append(
+            lambda spelled=spelled: spark.read.jdbc(_url(), target, properties={**PLAIN, **spelled})
+        )
     for attempt in attempts:
         with pytest.raises(errors.UnsupportedOperationException) as excinfo:
             attempt()
@@ -279,6 +295,19 @@ def test_what_stays_declared_refuses_naming_its_row(
         assert ROW in message
         assert "postgres:repark@" not in message
         assert "id < 2" not in message
+        assert "2024-01-0" not in message
+    with pytest.raises(errors.NumberFormatException, match="`lowerBound` must be"):
+        spark.read.jdbc(
+            _url(),
+            target,
+            properties={
+                **PLAIN,
+                "partitionColumn": "k",
+                "lowerBound": "2024-01-01",
+                "upperBound": "9",
+                "numPartitions": "4",
+            },
+        )
 
 
 def test_filter_projection_and_limit_compose_with_the_strides(

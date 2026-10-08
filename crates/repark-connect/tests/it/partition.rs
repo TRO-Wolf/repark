@@ -195,12 +195,12 @@ fn options(
     upper_bound: Option<i64>,
     num_partitions: Option<i64>,
 ) -> PartitionOptions {
-    PartitionOptions {
-        column: column.map(str::to_string),
+    PartitionOptions::of(
+        column.map(str::to_string),
         lower_bound,
         upper_bound,
         num_partitions,
-    }
+    )
 }
 
 #[test]
@@ -211,8 +211,8 @@ fn the_four_options_are_all_or_none_as_spark_rules() {
         options(Some("n"), Some(0), Some(200), Some(4)).spec(),
         Ok(Some(PartitionSpec {
             column: "n".to_string(),
-            lower_bound: 0,
-            upper_bound: 200,
+            lower_bound: "0".to_string(),
+            upper_bound: "200".to_string(),
             num_partitions: 4,
         }))
     );
@@ -259,7 +259,16 @@ fn the_four_spellings_lift_out_of_the_properties() {
     let lifted = PartitionOptions::default()
         .with_props(&mut given)
         .expect("lifted");
-    assert_eq!(lifted, options(Some("n"), Some(-5), Some(200), Some(4)));
+    assert_eq!(lifted.column.as_deref(), Some("n"));
+    assert_eq!(lifted.lower_bound.as_deref(), Some("-5"));
+    assert_eq!(
+        lifted.upper_bound.as_deref(),
+        Some("+200"),
+        "the text is kept"
+    );
+    assert_eq!(lifted.num_partitions, Some(4));
+    let spec = lifted.spec().expect("complete").expect("a spec");
+    assert_eq!(spec.bounds(), Ok((-5, 200)));
     assert_eq!(given, props(&[("user", "u")]));
 
     let mut twice = props(&[("lowerBound", "0"), ("lowerbound", "1")]);
@@ -286,10 +295,18 @@ fn a_bound_that_is_not_an_i64_refuses_naming_the_option_never_the_value() {
         ("numPartitions", "x-secret", "numPartitions"),
         ("lowerBound", " 5", "lowerBound"),
     ] {
-        let mut given = props(&[(key, value)]);
-        let error = PartitionOptions::default()
+        let mut given = props(&[
+            ("partitionColumn", "n"),
+            ("lowerBound", "0"),
+            ("upperBound", "9"),
+            ("numPartitions", "4"),
+        ]);
+        given.insert(key.to_string(), value.to_string());
+        let parsed = PartitionOptions::default()
             .with_props(&mut given)
-            .expect_err("not an integer");
+            .and_then(PartitionOptions::spec)
+            .and_then(|spec| spec.expect("a spec").bounds());
+        let error = parsed.expect_err("not an integer");
         assert_eq!(
             refusal(error.clone()),
             PartitionRefusal::NotInteger { option: named }
@@ -550,4 +567,27 @@ mod rendering {
         }
         assert_eq!(full.stride(1, stride), None);
     }
+}
+
+#[test]
+fn bounds_stay_text_until_the_column_is_known() {
+    let mut given = props(&[
+        ("partitionColumn", "day"),
+        ("lowerBound", "2024-01-01"),
+        ("upperBound", "2024-02-01 00:00:00"),
+        ("numPartitions", "4"),
+    ]);
+    let spec = PartitionOptions::default()
+        .with_props(&mut given)
+        .and_then(PartitionOptions::spec)
+        .expect("Spark's date spelling is not refused before the column's type is known")
+        .expect("a spec");
+    assert_eq!(spec.lower_bound, "2024-01-01");
+    assert_eq!(spec.upper_bound, "2024-02-01 00:00:00");
+    assert_eq!(
+        refusal(spec.bounds().expect_err("not integers")),
+        PartitionRefusal::NotInteger {
+            option: "lowerBound"
+        }
+    );
 }
