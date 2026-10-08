@@ -11,7 +11,7 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
-**v1.5.3 (2026-10-07):** SOURCE-URL-REDACT-1, -1-FN and -2 (credentials never displayed), ATTR-ID-1 (STAMP-2 gate 1.0812), the TA single-series slices, the ANSI -0.0 division, GROWN-STACK-GATE-1. Matrix 705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
+**v1.5.3 (2026-10-07):** SOURCE-URL-REDACT-1, -1-FN and -2 (credentials never displayed), ATTR-ID-1 (STAMP-2 gate 1.0812), the TA single-series slices, the ANSI -0.0 division, GROWN-STACK-GATE-1. Matrix 705/132/5/0. Tagged `v1.5.3` at `7a8fcf1a`; on PyPI 2026-10-08 09:45 UTC. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
 
 **v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1, TEXT-WRITE-TIMESTAMP-ZONE-1. Matrix 705/132/5/0. Tagged `v1.5.2` at `d0c50405` (2026-10-04 11:55 UTC); on PyPI 13:33 UTC. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
 

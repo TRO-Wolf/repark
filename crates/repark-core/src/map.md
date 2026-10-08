@@ -27,6 +27,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
+- `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
+  micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
+  `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
+  `pub mod microbatch;` line in `lib.rs`. pins: mb-3/C-003
 - `silver.rs` + [silver/](silver/map.md) — typed `SilverPlan` (SILVER-S1, 2026-09-12): TOML
   parse with key-path refusals, closed operation enums, parse-time structural validation,
   canonical identity bytes, deterministic `explain()`. `pub` from this crate, not bound
@@ -1081,6 +1085,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   read-only. The sweep of `DdlStatement`'s eleven variants leaves only `CreateFunction` and
   `DropFunction` unclaimed: functions are session-scoped and never name a catalog.
   pins: c-2/C-112
+  **Residual of N2:** `refuse_source_ddl` takes the `SessionContext` and, once the plan is a
+  `Ddl`, reads the default catalog through `copied_config()` (no state clone, nothing new for a
+  non-DDL statement). A bare name in `CreateCatalogSchema` or `DropCatalogSchema` resolves against
+  it and refuses as read-only when it is a mounted source. `CreateCatalog` is unchanged: a bare
+  `CREATE DATABASE x` registers a new catalog and never writes to the default one. Corrected
+  2026-10-07 after the verifier's measurement. pins: c-2/C-118
   **Fold 1, N5:** `source_catalog_refusal(name)` answers a mounted source's name with
   `read_only_ddl(<key path>)` (Postgres) or the pending text (SQL Server, Trino);
   `check_catalog_refusal` asks it first, so every Iceberg-handle operation against the name

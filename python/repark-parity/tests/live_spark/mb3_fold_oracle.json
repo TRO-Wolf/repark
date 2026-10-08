@@ -1,0 +1,463 @@
+{
+  "cells": [
+    {
+      "answer": {
+        "static_full_join_stream": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+            ],
+            "class": "_LEGACY_ERROR_TEMP_3102",
+            "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+            "sqlstate": null,
+            "text": "FullOuter joins with streaming DataFrames/Datasets on the right and a static DataFrame/Dataset on the left is not supported;\n~Join FullOuter, (id#254L = id#252L)\n:- SubqueryAlias local.mb0.j1_static\n:  +- RelationV2[id#254L, k#255] local.mb0.j1_static\n+- ~StreamingRelationV2 org.apache.iceberg.spark.source.IcebergSource@223a2f32, iceberg, local.mb0.j1_src, [streaming-max-files-per-micro-batch=1, path=local.mb0.j1_src], [id#252L, k#253]\n"
+          },
+          "refused_at": "start"
+        },
+        "static_inner_join_stream": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  2,
+                  "k0",
+                  "k0"
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": []
+            }
+          ],
+          "error": null,
+          "refused_at": null
+        },
+        "static_left_anti_join_stream": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+            ],
+            "class": "_LEGACY_ERROR_TEMP_3102",
+            "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+            "sqlstate": null,
+            "text": "LeftAnti joins with a streaming DataFrame/Dataset on the right are not supported;\n~Join LeftAnti, (id#348L = id#346L)\n:- SubqueryAlias local.mb0.j1_static\n:  +- RelationV2[id#348L, k#349] local.mb0.j1_static\n+- ~StreamingRelationV2 org.apache.iceberg.spark.source.IcebergSource@1fe76a4d, iceberg, local.mb0.j1_src, [streaming-max-files-per-micro-batch=1, path=local.mb0.j1_src], [id#346L, k#347]\n"
+          },
+          "refused_at": "start"
+        },
+        "static_left_join_stream": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+            ],
+            "class": "_LEGACY_ERROR_TEMP_3102",
+            "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+            "sqlstate": null,
+            "text": "LeftOuter join with a streaming DataFrame/Dataset on the right and a static DataFrame/Dataset on the left is not supported;\n~Join LeftOuter, (id#159L = id#157L)\n:- SubqueryAlias local.mb0.j1_static\n:  +- RelationV2[id#159L, k#160] local.mb0.j1_static\n+- ~StreamingRelationV2 org.apache.iceberg.spark.source.IcebergSource@1abef208, iceberg, local.mb0.j1_src, [streaming-max-files-per-micro-batch=1, path=local.mb0.j1_src], [id#157L, k#158]\n"
+          },
+          "refused_at": "start"
+        },
+        "static_left_semi_join_stream": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+            ],
+            "class": "_LEGACY_ERROR_TEMP_3102",
+            "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+            "sqlstate": null,
+            "text": "LeftSemi join with a streaming DataFrame/Dataset on the right and a static DataFrame/Dataset on the left is not supported;\n~Join LeftSemi, (id#302L = id#300L)\n:- SubqueryAlias local.mb0.j1_static\n:  +- RelationV2[id#302L, k#303] local.mb0.j1_static\n+- ~StreamingRelationV2 org.apache.iceberg.spark.source.IcebergSource@5e02771, iceberg, local.mb0.j1_src, [streaming-max-files-per-micro-batch=1, path=local.mb0.j1_src], [id#300L, k#301]\n"
+          },
+          "refused_at": "start"
+        },
+        "static_right_join_stream": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  1,
+                  null,
+                  "k1"
+                ],
+                [
+                  2,
+                  "k0",
+                  "k0"
+                ],
+                [
+                  3,
+                  null,
+                  "k1"
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": [
+                [
+                  4,
+                  null,
+                  "k0"
+                ],
+                [
+                  5,
+                  null,
+                  "k1"
+                ]
+              ]
+            }
+          ],
+          "error": null,
+          "refused_at": null
+        },
+        "static_union_stream": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+            ],
+            "class": "_LEGACY_ERROR_TEMP_3102",
+            "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+            "sqlstate": null,
+            "text": "Union between streaming and batch DataFrames/Datasets is not supported;\n~Union false, false\n:- SubqueryAlias local.mb0.j1_static\n:  +- RelationV2[id#24L, k#25] local.mb0.j1_static\n+- ~StreamingRelationV2 org.apache.iceberg.spark.source.IcebergSource@3ac6c22d, iceberg, local.mb0.j1_src, [streaming-max-files-per-micro-batch=1, path=local.mb0.j1_src], [id#22L, k#23]\n"
+          },
+          "refused_at": "start"
+        },
+        "stream_full_join_static": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+            ],
+            "class": "_LEGACY_ERROR_TEMP_3102",
+            "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+            "sqlstate": null,
+            "text": "FullOuter joins with streaming DataFrames/Datasets on the left and a static DataFrame/Dataset on the right is not supported;\n~Join FullOuter, (id#234L = id#236L)\n:- ~StreamingRelationV2 org.apache.iceberg.spark.source.IcebergSource@2403bc7e, iceberg, local.mb0.j1_src, [streaming-max-files-per-micro-batch=1, path=local.mb0.j1_src], [id#234L, k#235]\n+- SubqueryAlias local.mb0.j1_static\n   +- RelationV2[id#236L, k#237] local.mb0.j1_static\n"
+          },
+          "refused_at": "start"
+        },
+        "stream_inner_join_static": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  2,
+                  "k0",
+                  "k0"
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": []
+            }
+          ],
+          "error": null,
+          "refused_at": null
+        },
+        "stream_left_anti_join_static": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  1,
+                  "k1"
+                ],
+                [
+                  3,
+                  "k1"
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": [
+                [
+                  4,
+                  "k0"
+                ],
+                [
+                  5,
+                  "k1"
+                ]
+              ]
+            }
+          ],
+          "error": null,
+          "refused_at": null
+        },
+        "stream_left_join_static": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  1,
+                  "k1",
+                  null
+                ],
+                [
+                  2,
+                  "k0",
+                  "k0"
+                ],
+                [
+                  3,
+                  "k1",
+                  null
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": [
+                [
+                  4,
+                  "k0",
+                  null
+                ],
+                [
+                  5,
+                  "k1",
+                  null
+                ]
+              ]
+            }
+          ],
+          "error": null,
+          "refused_at": null
+        },
+        "stream_left_semi_join_static": {
+          "batches": [
+            {
+              "batch": 0,
+              "rows": [
+                [
+                  2,
+                  "k0"
+                ]
+              ]
+            },
+            {
+              "batch": 1,
+              "rows": []
+            }
+          ],
+          "error": null,
+          "refused_at": null
+        },
+        "stream_right_join_static": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+            ],
+            "class": "_LEGACY_ERROR_TEMP_3102",
+            "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+            "sqlstate": null,
+            "text": "RightOuter join with a streaming DataFrame/Dataset on the left and a static DataFrame/DataSet on the right not supported;\n~Join RightOuter, (id#174L = id#176L)\n:- ~StreamingRelationV2 org.apache.iceberg.spark.source.IcebergSource@349fb324, iceberg, local.mb0.j1_src, [streaming-max-files-per-micro-batch=1, path=local.mb0.j1_src], [id#174L, k#175]\n+- SubqueryAlias local.mb0.j1_static\n   +- RelationV2[id#176L, k#177] local.mb0.j1_static\n"
+          },
+          "refused_at": "start"
+        },
+        "stream_union_static": {
+          "batches": [],
+          "error": {
+            "causes": [
+              "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+            ],
+            "class": "_LEGACY_ERROR_TEMP_3102",
+            "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+            "sqlstate": null,
+            "text": "Union between streaming and batch DataFrames/Datasets is not supported;\n~Union false, false\n:- ~StreamingRelationV2 org.apache.iceberg.spark.source.IcebergSource@1bc79f05, iceberg, local.mb0.j1_src, [streaming-max-files-per-micro-batch=1, path=local.mb0.j1_src], [id#16L, k#17]\n+- SubqueryAlias local.mb0.j1_static\n   +- RelationV2[id#18L, k#19] local.mb0.j1_static\n"
+          },
+          "refused_at": "start"
+        }
+      },
+      "cell": "MB3-J1",
+      "field": "plan.static_frame_shapes.answer",
+      "kind": "rows",
+      "statement": "def cell_static_shapes(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"j1_src\")\n    append(bench, source, [1, 2, 3])\n    append(bench, source, [4, 5])\n    static = create_source(bench, \"j1_static\")\n    append(bench, static, [2, 900])\n    shapes: list[tuple[str, Shape]] = [\n        (\"stream_union_static\", union_static),\n        (\"static_union_stream\", static_union_stream),\n    ]\n    for how in (\"inner\", \"left\", \"right\", \"full\", \"left_semi\", \"left_anti\"):\n        shapes.append((f\"stream_{how}_join_static\", JoinShape(stream_join_static, how)))\n        shapes.append((f\"static_{how}_join_stream\", JoinShape(static_join_stream, how)))\n    answer = {name: shape_run(bench, f\"j1_{name}\", source, static, build) for name, build in shapes}\n    return \"rows\", answer\n\ndef shape_run(bench: Bench, name: str, source: str, static: str, build: Shape) -> dict[str, Any]:\n    collect = Collect()\n    stream = bench.spark.readStream.format(\"iceberg\").options(**ONE_FILE).load(source)\n    fixed = bench.spark.table(static)\n    try:\n        frame = build(stream, fixed)\n    except PySparkException as exc:\n        return {\"refused_at\": \"analysis\", \"error\": error_of(exc), \"batches\": collect.batches}\n    writer = (\n        frame.writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", bench.checkpoint(name))\n        .trigger(availableNow=True)\n    )\n    try:\n        query = writer.start()\n    except PySparkException as exc:\n        return {\"refused_at\": \"start\", \"error\": error_of(exc), \"batches\": collect.batches}\n    error = await_query(query)\n    return {\n        \"refused_at\": \"run\" if error else None,\n        \"error\": error,\n        \"batches\": collect.batches,\n    }\n\nclass JoinShape:\n    def __init__(self, join: Callable[[str, DataFrame, DataFrame], DataFrame], how: str) -> None:\n        self.join = join\n        self.how = how\n\n    def __call__(self, stream: DataFrame, static: DataFrame) -> DataFrame:\n        return self.join(self.how, stream, static)\n\ndef union_static(stream: DataFrame, static: DataFrame) -> DataFrame:\n    return stream.union(static)\n\ndef static_union_stream(stream: DataFrame, static: DataFrame) -> DataFrame:\n    return static.union(stream)\n\ndef stream_join_static(how: str, stream: DataFrame, static: DataFrame) -> DataFrame:\n    return stream.join(static, \"id\", how)\n\ndef static_join_stream(how: str, stream: DataFrame, static: DataFrame) -> DataFrame:\n    return static.join(stream, \"id\", how)\n"
+    },
+    {
+      "answer": {
+        "interval_ms": 2000,
+        "triggers": [
+          {
+            "batchId": 0,
+            "millis_past_interval_boundary": 241,
+            "numInputRows": 1,
+            "timestamp": "2026-10-08T02:46:42.241Z"
+          },
+          {
+            "batchId": 1,
+            "millis_past_interval_boundary": 0,
+            "numInputRows": 1,
+            "timestamp": "2026-10-08T02:46:44.000Z"
+          },
+          {
+            "batchId": 2,
+            "millis_past_interval_boundary": 1,
+            "numInputRows": 1,
+            "timestamp": "2026-10-08T02:46:46.001Z"
+          },
+          {
+            "batchId": 3,
+            "millis_past_interval_boundary": 0,
+            "numInputRows": 1,
+            "timestamp": "2026-10-08T02:46:48.000Z"
+          }
+        ]
+      },
+      "cell": "MB3-P1",
+      "field": "trigger.processing_time_schedule.progress",
+      "kind": "progress",
+      "statement": "def cell_trigger_schedule(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"p1_src\")\n    for value in (1, 2, 3, 4):\n        append(bench, source, [value])\n    collect = Collect()\n    query = (\n        bench.spark.readStream.format(\"iceberg\")\n        .options(**ONE_FILE)\n        .load(source)\n        .writeStream.foreachBatch(collect)\n        .option(\"checkpointLocation\", bench.checkpoint(\"p1\"))\n        .trigger(processingTime=f\"{INTERVAL_MS} milliseconds\")\n        .start()\n    )\n    deadline = time.monotonic() + SCHEDULE_TIMEOUT_S\n    while len(query._jsq.recentProgress()) < 4 and time.monotonic() < deadline:\n        time.sleep(0.05)\n    progress = [json.loads(entry.json()) for entry in query._jsq.recentProgress()]\n    query.stop()\n    triggers = [\n        {\n            \"batchId\": entry[\"batchId\"],\n            \"numInputRows\": entry[\"numInputRows\"],\n            \"timestamp\": entry[\"timestamp\"],\n            \"millis_past_interval_boundary\": epoch_millis(entry[\"timestamp\"]) % INTERVAL_MS,\n        }\n        for entry in progress\n    ]\n    return \"progress\", {\"interval_ms\": INTERVAL_MS, \"triggers\": triggers}\n\ndef epoch_millis(timestamp: str) -> int:\n    seconds, millis = timestamp.removesuffix(\"Z\").split(\".\")\n    return calendar.timegm(time.strptime(seconds, \"%Y-%m-%dT%H:%M:%S\")) * 1000 + int(millis)\n"
+    },
+    {
+      "answer": {
+        "batches": [
+          {
+            "batch": 0,
+            "rows": [
+              [
+                1,
+                "k1"
+              ]
+            ]
+          }
+        ],
+        "default": "100",
+        "error": {
+          "causes": [
+            "org.apache.spark.sql.streaming.StreamingQueryException",
+            "java.util.NoSuchElementException"
+          ],
+          "class": "STREAM_FAILED",
+          "exception": "pyspark.errors.exceptions.captured.StreamingQueryException",
+          "sqlstate": "XXKST",
+          "text": "[STREAM_FAILED] Query [id = 151acaa8-353b-4f71-9712-7f80bb020bf0, runId = f16490ad-9686-47b7-9129-67946a04b93e] terminated with exception: empty collection SQLSTATE: XXKST\n=== Streaming Query ===\nIdentifier: [id = 151acaa8-353b-4f71-9712-7f80bb020bf0, runId = f16490ad-9686-47b7-9129-67946a04b93e]\nCurrent Committed Offsets: {}\nCurrent Available Offsets: {org.apache.iceberg.spark.source.SparkMicroBatchStream@40e2a63b: Streaming Offset[3332419116172211574: position (0) scan_all_files (false)]}\n\nCurrent State: ACTIVE\nThread State: RUNNABLE\n\nLogical Plan:\n~WriteToMicroBatchDataSourceV1 ForeachBatchSink, 151acaa8-353b-4f71-9712-7f80bb020bf0, [checkpointLocation=$CHECKPOINTS/g1], Append\n+- ~StreamingDataSourceV2ScanRelation[id#406L, k#407] local.mb0.g1_src\n"
+        },
+        "last_progress_is_null": true,
+        "recent_progress_count": 0,
+        "set_error": null
+      },
+      "cell": "MB3-G1",
+      "field": "progress.retention_zero.answer",
+      "kind": "progress",
+      "statement": "def cell_progress_retention_zero(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"g1_src\")\n    for value in (1, 2, 3):\n        append(bench, source, [value])\n    collect = Collect()\n    before = bench.spark.conf.get(RETENTION_KEY)\n    set_error = None\n    try:\n        bench.spark.conf.set(RETENTION_KEY, \"0\")\n    except PySparkException as exc:\n        set_error = error_of(exc)\n    answer: dict[str, Any] = {\"default\": before, \"set_error\": set_error}\n    if set_error is None:\n        query = (\n            bench.spark.readStream.format(\"iceberg\")\n            .options(**ONE_FILE)\n            .load(source)\n            .writeStream.foreachBatch(collect)\n            .option(\"checkpointLocation\", bench.checkpoint(\"g1\"))\n            .trigger(availableNow=True)\n            .start()\n        )\n        answer[\"error\"] = await_query(query)\n        answer[\"recent_progress_count\"] = len(query._jsq.recentProgress())\n        answer[\"last_progress_is_null\"] = query._jsq.lastProgress() is None\n        answer[\"batches\"] = collect.batches\n        bench.spark.conf.set(RETENTION_KEY, before)\n    return \"progress\", answer\n"
+    },
+    {
+      "answer": {
+        "runs": [
+          {
+            "batches": [
+              {
+                "batch": 0,
+                "rows": [
+                  [
+                    1,
+                    "k1"
+                  ],
+                  [
+                    2,
+                    "k0"
+                  ],
+                  [
+                    3,
+                    "k1"
+                  ]
+                ]
+              }
+            ],
+            "commits": [],
+            "error_class": "STREAM_FAILED",
+            "offsets": [
+              "0"
+            ],
+            "progress_batches": [],
+            "step": "fail"
+          },
+          {
+            "batches": [
+              {
+                "batch": 0,
+                "rows": [
+                  [
+                    1,
+                    "k1"
+                  ],
+                  [
+                    2,
+                    "k0"
+                  ],
+                  [
+                    3,
+                    "k1"
+                  ]
+                ]
+              },
+              {
+                "batch": 1,
+                "rows": [
+                  [
+                    4,
+                    "k0"
+                  ],
+                  [
+                    5,
+                    "k1"
+                  ]
+                ]
+              }
+            ],
+            "commits": [
+              "0",
+              "1"
+            ],
+            "error_class": null,
+            "offsets": [
+              "0",
+              "1"
+            ],
+            "progress_batches": [
+              {
+                "batchId": 0,
+                "numInputRows": 3
+              },
+              {
+                "batchId": 1,
+                "numInputRows": 2
+              }
+            ],
+            "step": "restart"
+          }
+        ]
+      },
+      "cell": "MB3-W9",
+      "field": "write.restart_uncommitted_grown_source.rows",
+      "kind": "rows",
+      "statement": "def cell_replay_window(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"w9_src\")\n    append(bench, source, [1, 2, 3])\n    checkpoint = bench.checkpoint(\"w9\")\n    flag = bench.checkpoints / \"w9-fail.flag\"\n    runs: list[dict[str, Any]] = []\n    for step in (\"fail\", \"restart\"):\n        collect = Collect()\n        if step == \"fail\":\n            flag.write_text(\"fail\\n\")\n        else:\n            flag.unlink()\n            append(bench, source, [4, 5])\n        query = (\n            bench.spark.readStream.format(\"iceberg\")\n            .load(source)\n            .writeStream.foreachBatch(FailWhenFlagged(flag, collect))\n            .option(\"checkpointLocation\", checkpoint)\n            .trigger(availableNow=True)\n            .start()\n        )\n        error = await_query(query)\n        runs.append(\n            {\n                \"step\": step,\n                \"error_class\": error[\"class\"] if error else None,\n                \"batches\": collect.batches,\n                \"progress_batches\": progress_batches(query),\n                \"offsets\": checkpoint_logs(checkpoint, \"offsets\"),\n                \"commits\": checkpoint_logs(checkpoint, \"commits\"),\n            }\n        )\n    return \"rows\", {\"runs\": runs}\n\nclass FailWhenFlagged:\n    def __init__(self, flag: Path, collect: Collect) -> None:\n        self.flag = flag\n        self.collect = collect\n\n    def __call__(self, frame: DataFrame, batch_id: int) -> None:\n        self.collect(frame, batch_id)\n        if self.flag.exists():\n            raise RuntimeError(f\"mb3 injected failure at batch {batch_id}\")\n"
+    }
+  ],
+  "preamble": {
+    "catalog": "hadoop",
+    "catalog_cache_enabled": "false",
+    "iceberg": "1.11.0",
+    "iceberg_full": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+    "master": "local[2]",
+    "paths": {
+      "$CHECKPOINTS": "the private checkpoint root of the run",
+      "$RECORDER": "this recorder file",
+      "$WAREHOUSE": "the private Hadoop-catalog warehouse root of the run"
+    },
+    "python": "3.12.3",
+    "spark": "4.1.2"
+  }
+}

@@ -927,6 +927,33 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pre-measure (r5p6 1.182 → 1.128 against main `575f57ca`) are in the unit ledger.
   Pins: `python/repark/tests/test_stamp_2_r5p6_1.py`.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-005, C-006
+  **STAMP-2-R5P6-2 (2026-10-07):** `_join_exact_or_sql` is the H1 join door's route
+  switch (`core.py`'s `_join_on_condition_h1` calls it in place of `sql_built`).
+  `_join_exact_plan` asks `_native.join_exact_sides` for the join built without the SQL
+  planner and returns `None` on a miss or on any exception, and then the SQL route runs
+  unchanged, so a refusal carries the SQL route's class and text. The cross door passes no
+  condition. The scratch views are still registered on both routes: it costs 35 µs a join,
+  it moves the session's deep-view mark that later statements read, and it leaves the SQL
+  route untouched. Why: the door's `sql_built` was 0.71 s of the r5p6 like cells; the native
+  call keeps the SQL door's eager analysis and saves the text, the parse and the SQL planner
+  (0.49 ms a cross join). The attribution is in the unit ledger.
+  `_join_exact_keys` reads the prepared condition, where the native preparer has
+  already bound every reference to a side: it replaces the one left reference
+  and the one right reference (`<alias>.\`field\``, a plain identifier) by a
+  placeholder and admits only the shape `(\x00 = \x00)`, returning the two
+  fields and which was written first. It is #980's exactness test moved to a
+  condition: a placeholder shape matched whole. #980's function itself does not
+  fit, since it rewrites tokens against one frame and compares with that
+  column's own `_sql_expr`; here the two routes read the same prepared text, so
+  there is no second spelling to compare. Anything else (a conjunction, another
+  operator, a literal, a cast, arithmetic, a one-sided equality, a text or
+  bare-name condition the preparer left unqualified) keeps the SQL route. The
+  key types carry no guard: the binding runs the SQL door's analysis, so
+  coercion is the same on both routes (0.68 ms saved a condition join).
+  The unit's answers gate (replay corpus, suites, sort grid) and its lane-side speed
+  runs are in the ledger.
+  Pins: `python/repark/tests/test_stamp_2_r5p6_2.py`.
+  pins: stamp-2-r5p6-2/C-001, C-003, C-005, C-006, C-007, C-008, C-011, C-012
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
   unemitted-id family (`_remember_unemitted_right_ids`/`_raise_if_id_not_emitted`/
   `_raise_unemitted_attr_tokens`/`_refuse_unemitted_ids`), split out of `core.py`
@@ -995,6 +1022,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   and `refuse_writer_save_format` are the `format("orc")` / `format("xml")` arms at
   `load()` / `save()`, with `save()`'s residual `DATA_SOURCE_NOT_FOUND` answer for
   every other non-path format kept byte-identical.
+  C-3 (2026-10-07): `reader_jdbc` passes its three integers through `_jdbc_i64`, so a value
+  outside 64 bits is `NumberFormatException` and never a binding `OverflowError`; the four
+  range arguments now partition the read. pins: c-3/C-006
+  C-3 fold 2 (2026-10-08): `reader_jdbc` takes `lowerBound`, `upperBound` and `numPartitions` as
+  int or str, as PySpark does, and hands each on as text in `properties` (`_put_jdbc_option_text`;
+  a properties key that already spells the option keeps its own spelling, so the engine door's
+  conflict refusal answers). The facade no longer compares, parses or counts them: the engine door
+  resolves the column first, then parses the bounds, and refuses an incomplete set in Spark's
+  sentence, so `_jdbc_i64` is no longer on this door. pins: c-3/C-006
   R-3 (2026-09-14 round 2): `reader_jdbc` is main's PostgreSQL read path —
   dbtable-from-properties resolution, the three `IllegalArgumentException` teaching
   errors, and the `read_postgres` delegation with main's argument names — behind
@@ -1884,3 +1920,19 @@ scratch view passes `rename_fields=False` through
 `register_view_without_fill`, so the plan text shows the true engine plan
 (the R5 refusal stays out of that helper for the same reason).
 pins: attr-id-1/C-067, C-068
+**FA-5 (2026-10-08):** the csv path write no longer refuses exact-duplicate
+display names. `writer_layout._rename_duplicate_tolerant` hands the frame to
+the native `rename_duplicate_tolerant` when a display name repeats (unique
+engine names that carry the display; otherwise the SM-2c rename above), and
+only the csv door asks for it: `_registration_frame(duplicate_tolerant=True)`
+through `run_through_temp_view` and the S3 forward, and
+`text_write_copy_parts` for the schema the Rust builder reads. The copy
+records the display names in field metadata and the Rust sink writes the
+header from that record, so no column is ever renamed by its spelling
+(fold 1). A csv `partitionBy` over a repeated name refuses in
+`qualified_names._refuse_ambiguous_partition_columns` before any view is
+registered, so no refusal can name the scratch view.
+parquet, json, orc, `saveAsTable` and `writeTo` keep
+`_refuse_duplicate_output_columns`. `writer_readwriter.py` calls
+`writer_layout.run_through_temp_view` directly for the path `COPY`, which
+keeps the file under its ceiling. pins: fa-5-6/C-002, C-003, C-004

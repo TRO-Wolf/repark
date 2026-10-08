@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
+  **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
+  under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort
+  over an offset-only limit answered the wrong rows at every partition count. Reproduction on
+  stock DataFusion 54.1.0 and on three facade doors (C-001, C-002), the 70-statement Spark grid
+  (C-003), the defect located in `EnforceSorting`'s sort pushdown (C-004), the guard and its
+  wiring (C-005), 840 cells right (C-006), the live cell (C-007), five mutations (C-008), the
+  perf guard (C-009), card and registry (C-010), gates (C-011). `risk_tier: standard`. Branch
+  `fix/offset-nested-sort-1`.
 - [attr-id-1-ledger.md](attr-id-1-ledger.md) —
   **WO ATTR-ID-1 (2026-09-30), in flight:** every output field of every DataFrame plan
   carries one attribute id in field metadata (`repark.attr`), and the DataFrame door resolves a
@@ -25,6 +34,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   clock (C-013, Q2), and the post-2099 twin-answering classes are with the owner (C-016,
   fold 1). **Fold 1 (2026-10-08):** findings 1, 2, 6 fixed and 7 pinned.
   `risk_tier: standard`. Branch `fix/zone-horizon-render-1`.
+- [fa-5-6-ledger.md](fa-5-6-ledger.md) —
+  **FA-5 and FA-6 (2026-10-08; fold 1 the same day):** FA-5 ships: a csv path write of a
+  frame with exact-duplicate display names writes instead of refusing, with the display names
+  in the header; the names travel as a record (field metadata, then an explicit list to the
+  Rust sink), never as a naming convention (C-001 to C-004). **FA-6 is withdrawn:** the view
+  doors refuse as on main (C-005), after a verifier found silent wrong answers in the
+  registered-view design (C-006, C-007 rejected; "Why FA-6 was withdrawn"); the ask is the
+  card `fa-6-duplicate-view-schemas-card-2026-10-08.md`. Holds every measured Spark 4.1.2 and
+  main cell, the csv door's own differences from Spark, and the main-native byte and timing
+  comparison (C-008). `risk_tier: standard`. Branch `fix/fa-5-6-duplicate-names`.
 - [foreach-wrap-1-ledger.md](foreach-wrap-1-ledger.md) —
   **FOREACH-WRAP-1 (2026-10-07), security follow-up to SOURCE-URL-REDACT-2:** `foreach` and
   `foreachPartition` raise `scrub_exception`'s masked copy of the user's class after the
@@ -32,6 +51,24 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `transform` stays a passthrough as Spark 4.1.2 does, by the dated row `DF-TRANSFORM-1`
   (C-003), and the live Spark recording (C-004); `doors4.py` prints `TOTAL 1` in both
   modes. `risk_tier: high`. Branch `fix/foreach-wrap-1`.
+- [mb-3-ledger.md](mb-3-ledger.md) —
+  **MB-3 (2026-10-07), the Session-owned micro-batch driver, round 1:** MB0b-R18 measured before
+  the capped trigger (C-001), the `toTable` door's racing-driver guarantee left open on
+  `F-APPEND-PIN-BASE-1` (C-002), and the driver slices that follow. **Fold 1 (2026-10-07):**
+  the verifier's findings, a panic on the driver task (C-011), `start` racing `stop` (C-012),
+  the session's end (C-013), the replay window declared (C-014), static frames in the template
+  (C-015), two queries on one sink (C-016), the trigger schedule (C-017) and the S3s (C-018);
+  the catalog timeout stays open (C-010). **Round 2 (2026-10-08):** the typed panic and
+  timeout variants (C-020), the session's drop as a signal with no poll (C-021), the catalog
+  timeout built and C-010 closed, and the fresh sink load per batch (C-022). **Fold 2
+  (2026-10-08):** the re-verify's findings, a stop from inside a body (C-024), the timeout on
+  the catalog load only (C-025), the unstamped check (C-026), the unpinned branches (C-027)
+  and the session watch (C-028). **Round 3 (2026-10-08):** main merged with the append fence,
+  the `toTable` door's exactly-once guarantee against a racing driver pinned and C-002 closed,
+  the fence's refusals at the driver (C-030); no clause is open and the coverage attestation
+  is filed.
+  `risk_tier: standard`.
+  Branch `feat/mb-3-driver`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
   in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,
@@ -52,6 +89,22 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pin each and declares nine (C-007, C-008); eleven `CONNECT-DECL-*` registry rows (C-009); ADBC
   and ConnectorX cited (C-010); gates (C-011). `risk_tier: standard`. Branch
   `feat/c-1-connect-skeleton`.
+- [c-3-ledger.md](c-3-ledger.md) —
+  **C-3, card 1.6 (2026-10-07), in flight:** partitioned parallel Postgres reads and the
+  ConnectorX benchmark. §0 is the design note: Spark's four JDBC options as the surface with
+  every malformed combination measured on live Spark 4.1.2 (C-001), one exported snapshot per
+  scan, strides run on at most `pool_max_size` connections inside one DataFusion partition, a
+  pushed `LIMIT` per stride capped above, and what `CONNECT-DECL-pg-partitioned-read` still
+  declares. Then the slices: Spark's stride arithmetic checked against 740 recorded triples and
+  the option rule (C-002, C-003), the stride predicate (C-004), execution on one snapshot with
+  nine live cells (C-005), the three doors and the rewritten registry row (C-006), the 10M-row
+  benchmark against ConnectorX and pandas with its factor recorded and no pass declared
+  (C-007), and the ConnectorX and ADBC citations (C-008); thirteen mutations, all red.
+  **Fold 1 (2026-10-08):** main merged; a declared column type names the registry row for
+  Spark's own bound spelling (C-009); `numPartitions` is Spark's 32-bit `Int` and a read stops
+  at 10 000 strides, after the shrink (C-010); a quoted column in another case resolves as
+  Spark's does (C-011); five more mutations, all red.
+  `risk_tier: standard`. Branch `feat/c-3-partitioned-reads`.
 - [c-2-ledger.md](c-2-ledger.md) —
   **C-2, card 1.6 (2026-10-06), in flight:** the Postgres read path, slice by slice. **C-2a**, the
   pure slice: `ConnectError` folds C-1's two error enums (C-001); the COPY BINARY decoder's
@@ -1018,6 +1071,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   1.1035 → 1.0717, r5p6 1.182 → 1.128. `risk_tier: standard`. Branch
   `perf/stamp-2-r5p6-1`.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [stamp-2-r5p6-2-ledger.md](stamp-2-r5p6-2-ledger.md) —
+  **STAMP-2-R5P6-2 (2026-10-07), in flight:** profiles the remaining r5p6
+  construction cost on main (the H1 join door 0.88 s, the stamp 0.30 s, binding
+  about 1.6 s over the like cells). Plans the H1 join statement without the
+  SQL planner when its references are exact, keeping the SQL door's eager
+  analysis, and reads a frame's name rule once per handle instead of building
+  a `TaskContext` per bound column. The stamp is measured and left. Lane-side,
+  indicative: r5p6 0.953 and the whole set 0.948 against main `3fbcb2ca`;
+  43,989 replay cells, 0 deterministic changes. Two verifier rows (2026-10-08)
+  follow the attestation: C-012 the refused-join double plan, C-013 OPEN, the
+  native door's skipped Iceberg cache trim. `risk_tier: standard`. Branch
+  `perf/stamp-2-r5p6-2`.
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
   S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
   **PERF-UNPIVOT-1 (2026-09-12), in flight:** step 1 (#542) shipped native
@@ -2163,3 +2228,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   close the sketch's two open refusal shapes; D-2 records the two
   saturations. `risk_tier: standard`. Branch `feat/mb-1-source`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [threaded-collect-segv-1-ledger.md](threaded-collect-segv-1-ledger.md) —
+  **THREADED-COLLECT-SEGV-1 (2026-10-08):** the cause of the threaded-`collect()`
+  segfault is pyarrow 25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in
+  25.0.1), not RePark: the native stack, the reproduction without RePark, the
+  25.0.0 against 25.0.1 comparison, the RePark-side candidates ruled out, and the
+  door, source and release tables. No product code changes; the dependency floor
+  is the owner's decision. `risk_tier: standard`. Branch
+  `fix/threaded-collect-segv-1`.
+  pins: threaded-collect-segv-1/C-001, C-002

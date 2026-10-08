@@ -140,43 +140,6 @@ def test_read_jdbc_and_format_postgres_match_the_mount(
     assert _actual(pushed) == [(1,)]
 
 
-def test_a_partitioned_read_refuses_naming_its_row(
-    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
-) -> None:
-    conn, names = pg_live
-    _typed_table(conn, names)
-    target = f"{names['schema']}.typed"
-    props = {"sslmode": "disable"}
-    attempts = [
-        lambda: spark.read.jdbc(
-            _url(),
-            target,
-            column="id",
-            lowerBound=0,
-            upperBound=10,
-            numPartitions=2,
-            properties=props,
-        ),
-        lambda: spark.read.jdbc(_url(), target, predicates=["id < 2"], properties=props),
-        lambda: (
-            spark.read.format("postgres")
-            .option("url", _url())
-            .option("dbtable", target)
-            .option("partitionColumn", "id")
-            .option("lowerBound", "0")
-            .option("upperBound", "10")
-            .option("numPartitions", "2")
-            .load()
-        ),
-    ]
-    for attempt in attempts:
-        with pytest.raises(errors.UnsupportedOperationException) as excinfo:
-            attempt()
-        message = str(excinfo.value)
-        assert "CONNECT-DECL-pg-partitioned-read" in message
-        assert "postgres:repark@" not in message
-
-
 def test_ddl_and_dml_refuse_through_both_doors(
     spark: ReparkSession,
     pg_live: tuple[Any, dict[str, str]],

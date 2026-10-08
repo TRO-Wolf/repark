@@ -551,3 +551,42 @@ fn cached_frame_levels_match_a_fresh_survey() {
         assert_frame_depths(&conditional, "join_on_condition");
     });
 }
+
+#[test]
+fn name_rule_is_read_once_per_handle_and_children_inherit_their_parents() {
+    Python::attach(|py| {
+        let session = Py::new(
+            py,
+            crate::session::PyReparkSession::new(py, None, None, None, None, None)
+                .expect("session"),
+        )
+        .expect("session object");
+        let query = "SELECT 1 AS id, 2 AS v";
+        let loose = session.borrow(py).sql(py, query).expect("a frame");
+        assert!(loose.rule.get().is_none());
+        assert_eq!(loose.rule(), NameRule::IgnoreCase);
+        assert_eq!(loose.rule.get(), Some(&NameRule::IgnoreCase));
+        crate::session_runtime::set_runtime_config(
+            session.borrow(py),
+            "spark.sql.caseSensitive",
+            "true",
+        )
+        .expect("the conf flips");
+        let exact = session.borrow(py).sql(py, query).expect("a later frame");
+        assert_eq!(exact.rule(), NameRule::Exact);
+        assert_eq!(loose.rule(), NameRule::IgnoreCase);
+        for (parent, rule) in [(&loose, NameRule::IgnoreCase), (&exact, NameRule::Exact)] {
+            let child = parent
+                .select(vec![PyColumn::from_expr(col("id"))])
+                .expect("a child");
+            assert_eq!(child.rule.get(), Some(&rule));
+            assert_eq!(crate::dataframe_names::frame_rule(child.inner()), rule);
+            let filtered = child.filter_sql("id > 0").expect("a grandchild");
+            assert_eq!(filtered.rule.get(), Some(&rule));
+        }
+        let unread = session.borrow(py).sql(py, query).expect("an unread frame");
+        let child = unread.limit(1).expect("a child of an unread frame");
+        assert!(child.rule.get().is_none());
+        assert_eq!(child.rule(), NameRule::Exact);
+    });
+}

@@ -19,6 +19,7 @@ use datafusion::physical_plan::{
 };
 use futures::StreamExt;
 
+use super::partitioned::{self, Partitioned};
 use super::schema::external;
 use crate::discover::ScanSource;
 use crate::error::ConnectError;
@@ -47,6 +48,7 @@ pub(crate) struct ScanPlan {
     pub(crate) pool: Arc<PostgresPool>,
     pub(crate) placed: Vec<(usize, Arc<str>)>,
     pub(crate) localiser: Arc<dyn WallClockLocaliser>,
+    pub(crate) partition: Option<Partitioned>,
 }
 
 pub struct PostgresScanExec {
@@ -106,6 +108,28 @@ impl PostgresScanExec {
         &self.plan.request
     }
 
+    #[must_use]
+    pub fn partition_column(&self) -> Option<&str> {
+        let partition = self.plan.partition.as_ref()?;
+        Some(&partition.column)
+    }
+
+    #[must_use]
+    pub fn strides(&self) -> &[ScanRequest] {
+        self.plan
+            .partition
+            .as_ref()
+            .map_or(&[], |partition| &partition.strides)
+    }
+
+    #[must_use]
+    pub fn max_connections(&self) -> usize {
+        self.plan
+            .partition
+            .as_ref()
+            .map_or(1, |partition| partition.max_connections)
+    }
+
     fn target(&self) -> String {
         match &self.plan.target {
             ScanSource::Relation(relation) => format!("relation={relation}"),
@@ -141,7 +165,13 @@ impl DisplayAs for PostgresScanExec {
             writeln!(f, "{}", self.target())?;
             writeln!(f, "pushed_filters=[{pushed}]")?;
             writeln!(f, "residual_filters=[{residual}]")?;
-            return writeln!(f, "pushed_limit={limit}");
+            writeln!(f, "pushed_limit={limit}")?;
+            let Some(partition) = &plan.partition else {
+                return Ok(());
+            };
+            writeln!(f, "partition_column={}", partition.column)?;
+            writeln!(f, "strides={}", partition.strides.len())?;
+            return writeln!(f, "max_connections={}", partition.max_connections);
         }
         write!(
             f,
@@ -150,8 +180,18 @@ impl DisplayAs for PostgresScanExec {
             plan.source,
             self.target()
         )?;
+        if let Some(partition) = &plan.partition {
+            write!(
+                f,
+                ", partition_column={}, strides={}, max_connections={}",
+                partition.column,
+                partition.strides.len(),
+                partition.max_connections
+            )?;
+        }
         if format == DisplayFormatType::Verbose {
-            let statement = plan.request.statement();
+            let first = plan.partition.as_ref().and_then(|p| p.strides.first());
+            let statement = first.unwrap_or(&plan.request).statement();
             write!(
                 f,
                 ", remote_sql={}, bound_values={}",
@@ -198,7 +238,7 @@ fn place(plan: &ScanPlan, batch: &RecordBatch) -> crate::error::Result<RecordBat
     )
 }
 
-fn place_until_refusal(
+pub(super) fn place_until_refusal(
     plan: &ScanPlan,
     batch: crate::error::Result<RecordBatch>,
 ) -> Vec<crate::error::Result<RecordBatch>> {
@@ -263,8 +303,12 @@ impl ExecutionPlan for PostgresScanExec {
                 .subset_time("time_to_first_byte", partition),
             decode: baseline.elapsed_compute().clone(),
         };
-        let reservation = MemoryConsumer::new("PostgresScan").register(context.memory_pool());
         let plan = Arc::clone(&self.plan);
+        if plan.partition.is_some() {
+            let memory = Arc::clone(context.memory_pool());
+            return Ok(partitioned::stream(plan, meter, memory, baseline));
+        }
+        let reservation = MemoryConsumer::new("PostgresScan").register(context.memory_pool());
         let rows = scan_metered(
             Arc::clone(&plan.pool),
             plan.request.clone(),
@@ -293,3 +337,6 @@ impl ExecutionPlan for PostgresScanExec {
         Some(self.metrics.clone_inner())
     }
 }
+
+#[cfg(test)]
+mod tests;

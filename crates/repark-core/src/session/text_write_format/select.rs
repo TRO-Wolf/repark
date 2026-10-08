@@ -8,6 +8,7 @@ use super::file_format::{TEXT_CSV_FORMAT_NAME, TEXT_JSON_FORMAT_NAME};
 use super::spec::TextWriteSpec;
 use super::{PatternKind, compile_write_pattern, pattern_failure_error, write_option_patterns};
 use crate::session::ReparkSession;
+use crate::session::df_guards::duplicate_names::recorded_display_names;
 use crate::session_time_zone::{
     TimeParserPolicy, TimeParserPolicyConfig, conf_dump_selects_legacy_policy,
 };
@@ -92,7 +93,12 @@ pub fn build_text_write_copy_parts(
 ) -> crate::Result<TextWriteCopyParts> {
     let (timestamp, ntz, date) = write_option_patterns(options);
     validate_user_patterns(timestamp.as_ref(), ntz.as_ref(), date.as_ref())?;
-    if !text_write_needs_format(schema, partition_by) {
+    let display_header = if stored_as.eq_ignore_ascii_case("csv") {
+        recorded_display_names(schema)
+    } else {
+        None
+    };
+    if display_header.is_none() && !text_write_needs_format(schema, partition_by) {
         return Ok(TextWriteCopyParts {
             select_sql: format!("SELECT * FROM {view_sql}"),
             stored_as: stored_as.to_string(),
@@ -112,6 +118,7 @@ pub fn build_text_write_copy_parts(
             timestamp.as_deref(),
             ntz.as_deref(),
             date.as_deref(),
+            display_header.as_deref(),
         ),
     })
 }

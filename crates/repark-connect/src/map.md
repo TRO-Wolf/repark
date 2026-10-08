@@ -6,6 +6,58 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
+- `partition.rs` — **C-3 fold 1 (2026-10-08), the verifier's S2 on the count:**
+  `numPartitions` is Spark's 32-bit `Int` (`C3-N07`: `3000000000` is `NumberFormatException`):
+  `PartitionOptions.num_partitions` is an `i32`, `with_props` parses the text as one and
+  `PartitionOptions::of` refuses a door's integer outside it, both as
+  `PartitionRefusal::NotInteger` naming `numPartitions` ("must be a 32-bit integer"; a bound
+  says 64). **`MAX_STRIDES` = 10 000**: `stride_cuts` refuses a stride count above it with
+  `TooManyStrides { strides }`, which names `PARTITIONED_READ_ROW` and the ceiling and folds
+  to `NotImplemented`. The ceiling applies to the count **after** Spark's shrink to the span,
+  so `2147483647` over a span of 3 is three strides as Spark plans it (`C3-N08`). The reason:
+  every stride is one statement under one open `REPEATABLE READ` snapshot, and each costs
+  client memory; the measurements are the C-3 ledger's §7. pins: c-3/C-010
+- `partition.rs` — **C-3 fold 1 (2026-10-08), the verifier's S2 on bound spelling:** the two
+  bounds stay text until the column is known, as Spark keeps them. `PartitionOptions` and
+  `PartitionSpec` carry `lower_bound` and `upper_bound` as `String`; `with_props` lifts them
+  unparsed (only `numPartitions` is parsed there, as Spark parses it before any connection);
+  `PartitionSpec::bounds()` parses the pair as `i64` and is called by `PostgresTable::partitioned`
+  after the column's type is judged. So a `date` or timestamp column refuses naming the
+  registry row whether the bounds are Spark's date text or integers, and only an integer
+  column refuses a bound that is not an `i64`. `PartitionOptions::of` builds the options from
+  a door's integer arguments. pins: c-3/C-009
+- `partition.rs` — **C-3 (2026-10-07), the planning slice**, no feature gate and no I/O
+  ([c-3-ledger.md](../../../task/ledgers/staging/c-3-ledger.md) §0.1). Spark's JDBC range
+  partitioning as numbers.
+  - **`PartitionOptions`** holds the four values a door was handed (`column`, `lower_bound`,
+    `upper_bound`, `num_partitions`). `with_props(&mut props)` lifts the four Spark spellings
+    (`PARTITION_COLUMN_KEY`, `LOWER_BOUND_KEY`, `UPPER_BOUND_KEY`, `NUM_PARTITIONS_KEY`) out of
+    a property map, matching case-insensitively as Spark's option map does: a bound that is
+    not an `i64` refuses naming the option and never the value, a spelling given twice or
+    beside an explicit argument is a conflict, and `predicates` stays declared.
+    `spec()` applies Spark's rule: a column, or either bound, needs all four; `numPartitions`
+    alone is no partitioning. It answers `Option<PartitionSpec>`.
+  - **`stride_cuts(lower, upper, num_partitions)`** is `JDBCRelation.columnPartition`'s
+    arithmetic and answers the cuts, the upper bound of every stride but the last. A count
+    of one or less, or equal bounds, is no cut at all (checked before the bounds' order, as
+    Spark does); reversed bounds refuse in Spark's words; a count above the span shrinks to
+    the span. The cuts are computed as Spark computes them: each bound divided by the count
+    under `MathContext.DECIMAL128` (34 significant digits, half-even) and set to scale 18,
+    the difference truncated to the stride, the first cut shifted by half the strides the
+    truncation lost (half-up), and `i64` additions that wrap as the JVM's do. `Decimal` is
+    the small decimal that arithmetic needs, over Arrow's `i256` with checked operations.
+    Cuts that are not strictly increasing refuse (`PartitionRefusal::Strides`), so no
+    arithmetic surprise can duplicate or drop a row.
+  - **`strides(&cuts)`** turns cuts into `Stride { lower, upper }` pairs: the first open
+    below, the last open above, each cut the upper bound of one and the lower bound of the
+    next.
+  - **`PartitionRefusal`** is the reason enum of `ConnectError::PartitionedRead`. Its
+    messages are Spark's where Spark was measured. `error.rs` folds it by Spark's class:
+    `Incomplete`, `Reversed`, `QueryOption` and `Strides` to `Config` (Spark's
+    `IllegalArgumentException`), `NotInteger` to `NumberFormat`, `ColumnNotFound`,
+    `AmbiguousColumn` and `ColumnType` to `Analysis`, and `DeclaredColumnType`, which names
+    `PARTITIONED_READ_ROW`, to `NotImplemented`.
+  pins: c-3/C-002, C-003
 - `lib.rs` — `mod copy_binary; mod error; mod ident; mod settings; mod types;`, plus
   `mod discover; mod pool; mod read; mod tls;` under the `postgres` feature, and the
   re-exports: `BatchLimits`, `COPY_SIGNATURE`, `CopyBinaryDecoder`, `DEFAULT_BATCH_BYTES`,
@@ -27,7 +79,10 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `PostgresScanExec`, `WallClockLocaliser`, `LISTING_ROW`), the classifier (`Pushdown`,
   `Rendered`, `ColumnClass`, `MAX_IN_LIST`, `MIN_POSTGRES_DAYS`, `MAX_POSTGRES_DAYS`,
   `TEXT_COLLATION`, `UTF8_ENCODING`, `decimal_text`, `date_text`, `timestamp_text`) and
-  `ScanMeter` and `scan_metered`.
+  `ScanMeter` and `scan_metered`. C-3 (2026-10-07) adds `mod partition;` (no feature gate) and
+  re-exports `PartitionOptions`, `PartitionSpec`, `PartitionRefusal`, `Stride`, `stride_cuts`,
+  `strides`, the four option-key constants and `PARTITIONED_READ_ROW`; under `postgres`,
+  `scan_lanes`, `LaneStream`, `BEGIN_SNAPSHOT_SCAN` and `EXPORT_SNAPSHOT`.
 - `error.rs` — **C-2d (2026-10-07):** `ValueRefusal::WallClockGap` and `WallClockOverlap`
   (registry row `ZONE_ROW`, `CONNECT-DIV-pg-timestamp-zone`, the message naming
   `prefer_timestamp_ntz`), `DDL_ROW` (`CONNECT-DECL-pg-ddl`) and `read_only_ddl(source)`, all
@@ -171,6 +226,15 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `TrackedTls` wraps `MakeRustlsConnect` and records whether the handshake began, so the
   connector can tell a server that refused TLS from every later failure without reading driver
   text. pins: c-2/C-028, C-029, C-030, C-058
+- `pool.rs` — **C-3 (2026-10-07):** `QueryPool::checkout_up_to(wanted)` takes the
+  connections of one partitioned scan (the C-3 ledger's §0.3). The first is an ordinary `checkout()`: it queues for `pool_checkout_timeout_ms` and
+  then refuses with `PoolExhausted`. Every further one is taken only if a permit is free at
+  that moment (`try_acquire_owned`), so the call returns between one and `wanted` leases, never
+  opens past `max_size`, and never waits while it holds a connection: two partitioned scans
+  on one pool cannot hold each other to a timeout. `lease(permit)` is the shared tail of both
+  checkouts (an idle connection, else a new one). `PooledClient::retire()` closes a healthy
+  connection without pooling it and without the cancel a dropped lease fires; its permit
+  returns to the pool. pins: c-3/C-005
 - `pool.rs` — C-2b round 2 (2026-10-07; sketch §2.5, NS-7), behind `postgres`.
   - **`QueryPool<C: Connect>`**, one per mounted source: a semaphore of `pool_max_size` permits;
     `checkout()` waits at most `pool_checkout_timeout_ms` for one (else `PoolExhausted`), reaps
@@ -270,11 +334,12 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   and `qty NOT IN (1, NULL)` became a pushed `qty <> NULL` that later simplified to `NULL`,
   which nothing applied. `split` and `push` serve `scan`. With `pushdown_predicate = false`
   nothing renders; the limit is `pushdown_limit`'s, in `provider/table.rs`. pins: c-2/C-070, C-071, C-072, C-073, C-074, C-078
-- `provider.rs` — C-2c (2026-10-07): `mod catalog; mod scan; mod schema; mod table;` and their
+- `provider.rs` — C-2c (2026-10-07), C-3 adding `mod partitioned;`: `mod catalog; mod scan; mod schema; mod table;` and their
   re-exports.
 - `provider/` — [provider/map.md](provider/map.md): `PostgresSource`, the catalog, schema and
   table providers, `PostgresScanExec` and `WallClockLocaliser`.
-- `read.rs` — C-2b round 3 (2026-10-07): `pub(crate) mod postgres;`.
+- `read.rs` — C-2b round 3 (2026-10-07): `pub(crate) mod postgres;`, and since C-3
+  `pub(crate) mod postgres_lanes;`.
 - `read/` — [read/map.md](read/map.md): `postgres.rs`, the statement builder, the `set_config`
   carriage and the COPY stream.
 - `types.rs` — `pub mod postgres;` (`mssql` joins with C-5).

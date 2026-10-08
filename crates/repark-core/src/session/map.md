@@ -20,6 +20,22 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
   under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
   `<schema>.<table>`, and a `query` is named `jdbc`. pins: c-2/C-116
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** `PartitionOptions::of` is fallible: a
+  `num_partitions` outside Spark's 32-bit `Int` refuses before any connection.
+  pins: c-3/C-010
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
+  from its integer arguments; bounds given as text in `properties` reach
+  `PostgresTable::partitioned` unparsed, so they are judged after the column's type.
+  pins: c-3/C-009
+- `read_postgres.rs` — **C-3 (2026-10-07):** `PostgresRead` carries `partition_column`,
+  `lower_bound`, `upper_bound`, `num_partitions` and a `predicates` flag in place of the list
+  of option names C-2d refused by. The door refuses `predicates` first (still declared), lifts
+  the four Spark spellings out of `properties` (`PartitionOptions::with_props`), applies
+  Spark's all-or-none rule, refuses a `query` target with a partition column in Spark's
+  words, all before any connection, and then calls `PostgresTable::partitioned` on the
+  resolved table. `source_error` now keeps the `Analysis` and `NumberFormat` classes too.
+  `tests/read_postgres.rs` pins each refusal's class and sentence against an unroutable
+  address. pins: c-3/C-006
 - `read_postgres.rs` — **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
   partitioning }` and `PostgresTarget::{Relation, Query}`, re-exported at the crate root with
   `READ_POSTGRES_SOURCE` (`jdbc`). `ReparkSession::read_postgres` refuses a partitioned read
@@ -226,7 +242,13 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   catalog this session builds through the same `CatalogCaches`, so no registration path changed.
   Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report
   there is no settle step before reading. pins: ice-footer-cache-1/C-006, C-007
-- `path_write.rs` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path`
+- `path_write.rs` — **FA-5 (2026-10-08, fold 1):** `materialize_empty_part`
+  writes the csv header from the frame schema's recorded display names
+  (`duplicate_names::recorded_display_names`) when it carries them, so the
+  header-only part of an empty duplicate-name csv write shows the display
+  names, as the sink serializer does for a non-empty one; a frame without
+  the record passes its own column names as before. pins: fa-5-6/C-002
+  **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path`
   owns the S3 save-mode protocol: per-call temp view, one `COPY` per part, parts land
   direct under the destination, `_SUCCESS` is the last object, exists means any object
   under the prefix, and `overwrite` lists and deletes the whole prefix. Bucket root
@@ -368,6 +390,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;
   the build sweep in `session.rs` enforces it. Pins: `tests/conf_unread.rs`.
+  **OFFSET-NESTED-SORT-1 (2026-10-08):** `df_guards.rs` installs
+  `skipping_limit::skip_safe_physical_optimizer_rules()` as the physical rule list, ahead of
+  the three RePark physical rules: DataFusion's list with `EnforceSorting` wrapped. Design,
+  cost and the retirement event are in the `df_guards/` directory map.
+  pins: offset-nested-sort-1/C-005
   **DF-SUBQUERY-1 (2026-09-15):** `df_guards.rs` declares `subquery/`'s module,
   registers the `__repark_single_row` guard UDAF on every core session beside
   `stack`/`repark_isnan`, and inserts `repark_projection_exists` +
@@ -380,6 +407,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   module (the join-condition qualifier binder). pins: casesens-2/C-009
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `dead_datafusion_54_1_refusal` and the new `invalid_datafusion_config` echo
   the value masked; `spill.rs`'s `memory_limit` refusal likewise. pins: source-url-redact-1/C-017
+  **STAMP-2-R5P6-2 (2026-10-07):** `df_guards.rs` declares `df_guards/join_exact.rs`, the
+  builder of the facade's H1 join statement without the SQL planner (see `df_guards/map.md`).
+  pins: stamp-2-r5p6-2/C-002
 - `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   **U11-EDGE-1 (2026-09-26):** `df_guards.rs` also declares `df_guards/case_bind.rs`
   (row in `df_guards/map.md`). pins: u11-edge-1/C-015

@@ -3354,23 +3354,47 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   visible (`conf.get` discloses it), and both directions stay under test so a drift in
   either inference path reds.
 
-### FA-5 — csv writes of exact-duplicate display names refuse (Spark writes them)
+### FA-5 — csv writes of exact-duplicate display names carry the display header — **FIXED 2026-10-08 (FA-5)**
 
-- **repark** — a frame whose display names hold exact duplicates refuses a csv
-  path write with `[COLUMN_ALREADY_EXISTS]`, naming the first duplicate,
-  before any file is created — the same refusal as the parquet/json/orc/table
-  doors. Case-twin columns (`T`, `t`) write with the raw header, as Spark
-  does (SM-2b narrowing, 2026-10-06).
-- **Apache Spark** — writes the file with the duplicate display header
-  (`id,s,v,id,s,v` on the fold's self-join). *(oracle: live 4.1.2, 2026-10-06,
-  raw header line of the written part file.)*
-- **Pin** — `python/repark/tests/test_attr_id_1_sm2_dupwrites.py::test_csv_write_of_duplicate_display_names_refuses_as_ruled_divergence`
-- **Rationale** — DECLARED as a deliberate divergence (orchestrator, 2026-10-06):
-  the csv rows can only carry the twin engine names today, and writing them
-  would ship a silent wrong answer; the loud refusal holds the line until the
-  physical-only COPY rename lands (follow-up on the v1.5.3 card, 2026-10-06).
-  The pin asserts the refusal, so the rename reds it and forces this row to be
-  re-recorded together with the behavior.
+- **repark** — a frame whose display names hold exact duplicates writes a csv
+  path instead of refusing: the header line carries the display names
+  (`id,s,v,id,s,v` on the fold's self-join), with or without `header`, under
+  every `mode`, both case flags, and for temporal columns. Everything else
+  about the bytes is the csv door's own behaviour, the same as for a frame
+  of unique names (see the rationale). A `partitionBy` over a name that two
+  attributes carry refuses `[AMBIGUOUS_REFERENCE]` (SQLSTATE 42704) with the
+  reference as written and one candidate per plan qualifier, sorted, before
+  any file is created; a unique partition column writes and leaves the
+  header. parquet, json, orc, `saveAsTable` and `writeTo` keep refusing
+  `[COLUMN_ALREADY_EXISTS]`, as Spark does. A column a user names
+  `__repark_dup_0_id` keeps that name on every door: the display names
+  travel as a record beside the registration copy, never as a naming
+  convention.
+- **Apache Spark** — writes the file with the duplicate display header, and
+  refuses the same partition and non-csv cells. *(oracle: live 4.1.2,
+  2026-10-08, the csv cells in `task/ledgers/staging/fa-5-6-ledger.md`.)*
+- **Pin** — `python/repark/tests/test_fa_5_duplicate_csv.py`;
+  `crates/repark-core/src/session/tests/duplicate_names.rs`
+- **Rationale** — was DECLARED as a deliberate refusal (orchestrator,
+  2026-10-06) because the csv rows could only carry the twin engine names.
+  The csv door now registers a copy of the frame under unique engine names
+  that records each display name in field metadata, and hands the Rust text
+  sink that list, so the engine never plans a duplicate and the file never
+  carries an internal name. What this row does **not** claim: the bytes are
+  not Spark's in every cell. The csv door's existing differences apply to a
+  duplicate-name frame exactly as to any frame, measured 2026-10-08 by the
+  unit's verifier and listed in the ledger ("The csv door's own differences"):
+  the header is written when the `header` option is absent (Spark's default
+  is off); header and body values are not trimmed; an empty name or an empty
+  string is written as nothing where Spark writes `""`; a quote is escaped
+  as `""` where Spark writes `\"`; `quoteAll` does not reach the header of an
+  empty frame; binary is written as hex; an empty partitioned write leaves a
+  header-only file at the root. Two refusals are this row's own and loud: a
+  same-origin repeat used as the partition column
+  (`select('id', 'id', 's').write.partitionBy('id')`) refuses where Spark
+  writes `id=1/` with header `s`; and under `caseSensitive=true` a partition
+  spelling that matches a repeated name only by case refuses with Spark's
+  `Partition column … not found in schema` text.
 
 ### FA-6 — temp views over exact-duplicate display names refuse (Spark registers them)
 
@@ -3392,6 +3416,14 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   until duplicate-name view schemas land (follow-up on the v1.5.3 card,
   2026-10-06). The pins assert the refusal, so the follow-up reds them and
   forces this row to be re-recorded together with the behavior.
+- **FA-6 follow-up (2026-10-08)** — a first design that registered the view
+  under unique engine names and re-created Spark's ambiguity afterwards was
+  built and withdrawn before merge: an independent verifier found silent
+  wrong answers in scopes the audit did not model (`NATURAL JOIN`, a bare name
+  inside `EXISTS` or `LATERAL`, a qualified reference beside a case twin).
+  The refusal stays. Record: `task/ledgers/staging/fa-5-6-ledger.md`, "Why
+  FA-6 was withdrawn (2026-10-08)"; the open ask is
+  `task/roadmap/mid-term/fa-6-duplicate-view-schemas-card-2026-10-08.md`.
 
 ### DF-STREAM-1 — `dropDuplicatesWithinWatermark` drops the appended plan dump
 
@@ -3571,6 +3603,107 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   the stream; repark refuses at start rather than idling, so the failure lands when the query
   is launched, not on the first later append (NS-6, refuse loud). The only difference is when
   the refusal fires.
+### MB-3-LOOKAHEAD-1 — a capped processing-time stream delivers every append before a non-append; Spark stops one batch earlier when the files cap fills on a snapshot's last file
+- **repark** — under a processing-time trigger with `streaming-max-files-per-micro-batch`, the
+  window (`WindowLimit::Capped`, MB-1) takes each append's files up to the cap and never looks
+  past the window's last file. Two one-file appends `a` and `b`, then an `overwrite` (or a
+  `delete`), at max-files 1 deliver `a` in batch 0 and `b` in batch 1, and the next trigger
+  refuses `NonAppendSnapshot` (`Cannot process overwrite snapshot: <id>; Bronze is append-only
+  (O-5) …`). Every row before the non-append lands, so a restart after the documented
+  `repark.cdc.start-after-snapshot-id=<id>` advice loses nothing.
+- **Apache Spark** — the capped `latestOffset` checks the files cap only before adding the next
+  file inside a snapshot, so a window that fills exactly on a snapshot's last file still calls
+  `nextValidSnapshot`, which throws at the following `overwrite` or `delete`. The same history
+  delivers `a` (batch 0, offset `(a, 0)`) and then fails `STREAM_FAILED` / `XXKST`, `Cannot
+  process overwrite snapshot: <id>, to ignore overwrites, set
+  streaming-skip-overwrite-snapshots=true`; `b` is never delivered, and the delete twin is the
+  same. *(oracle: cell MB0b-R18, `trigger(processingTime="0 seconds")`, recorded 2026-10-07.)*
+- **Pin** — `crates/repark-iceberg/src/microbatch/window_fold2_pins.rs::capped_walk_delivers_both_appends_then_refuses_the_non_append`
+- **Rationale** — DECLARED 2026-10-07 (MB-3, beside MB-1 ledger D-5; MB-1 fold-2 ruling Q1
+  KEEP deliver-first). Both engines refuse the stream at the non-append; repark delivers the
+  appends ahead of it first, so the refusal lands one batch later and no appended row is held
+  back behind a snapshot the stream refuses anyway. Under `availableNow` and `Once` the two
+  agree (MB0b-R17): both refuse before batch 0.
+### MB-3-REPLAY-WINDOW-1 — a restart after a failed batch replans that batch's window; Spark replays the logged one
+- **repark** — the offsets live in the sink's summary and there is no offset log, so the window
+  of a batch that failed is not durable. The restart keeps the batch id (the epoch after the
+  durable record) and plans its window again from the durable offset to the source's head. When
+  the source grew between the failure and the restart, the same batch id covers a wider window:
+  source `(1, 2, 3)`, a `foreachBatch` body that fails at batch 0, an append `(4, 5)`, then the
+  restart delivers batch 0 as `(1, 2, 3, 4, 5)` under `availableNow` with no cap. With
+  `streaming-max-files-per-micro-batch=1` the restart delivers batch 0 `(1, 2, 3)` and batch 1
+  `(4, 5)`, because the cap cuts the window at the same file. No row is lost or skipped by the
+  driver in either shape, and the offset never advances past a batch whose body failed.
+- **Apache Spark** — writes the batch's offset range to `offsets/<batchId>` before the batch
+  runs, and a restart replays that range under the same batch id: the same history delivers
+  batch 0 `(1, 2, 3)` again and then batch 1 `(4, 5)`, with `offsets` `0, 1` and `commits`
+  `0, 1`. *(oracle: cell MB3-W9 in `mb3_fold_oracle.json`, `trigger(availableNow=True)`,
+  recorded 2026-10-07; MB0-W6 holds the unchanged-source half.)*
+- **Pin** — `crates/repark-core/src/microbatch/lifecycle_tests.rs::a_restart_after_a_failed_batch_replans_its_window_over_a_grown_source`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F4: no offset log in this fold;
+  beside the `foreachBatch` at-least-once declaration, MB-3 ledger C-005 (e) and D-2). The
+  consequence is for a body that deduplicates on the batch id, Spark's documented idempotence
+  recipe: if the body recorded batch 0 as done before it failed, it skips the wider replay,
+  and the trailing stamp then moves the offset past `(4, 5)`, which the body never wrote. A
+  body on repark deduplicates on its rows' keys, or writes the sink through the `toTable` door.
+  The pending-window stamp that would close the difference is filed as
+  `task/roadmap/mid-term/mb-pending-window-1-card-2026-10-07.md` for an owner decision.
+### MB-3-SINK-BUSY-1 — a second streaming query on a sink that already has an active query in the session refuses at start; Spark runs both
+- **repark** — one active query per sink per session. `start` refuses the second query with
+  `SinkBusy` (`sink <table> is busy: another streaming query or batch is active on it; one at a
+  time per sink`, MBE-13)
+  before anything runs, on both doors; the first query is not disturbed, and the refused query
+  stays registered and starts once the first one ends. Two sessions in one process can still
+  target one sink, because `start` sees only its own session: there each batch waits for the
+  sink's `BatchScope` up to `repark.cdc.catalog-timeout` (60 s) and then runs, so both queries
+  drain and neither fails on an overlap.
+- **Apache Spark** — lets two streaming queries with different checkpoints append to one
+  Iceberg table; each commits its own snapshots. *(oracle: documented behavior; no MB-0 cell
+  runs two queries on one sink.)*
+- **Pin** — `crates/repark-core/src/microbatch/lifecycle_tests.rs::a_second_query_on_an_active_sink_is_refused_at_start`,
+  `::two_sessions_on_one_sink_wait_for_the_scope`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F6). A process holds at most one
+  `BatchScope` per sink (sketch §0 line 5), because the scope is what ties a sink commit to
+  its batch stamp. Before this row the second query died `Failed` at whichever batch
+  overlapped the first; the refusal now lands at start, where the caller can act on it.
+### MB-3-STATIC-SIDE-1 — a streaming frame combined with a static frame refuses the shapes Spark refuses, under repark's own error
+- **repark** — `PlanTemplate::from_frame` refuses, with `StatefulOperatorRefused` (MBE-6:
+  `<operator> is not supported on a streaming DataFrame; use foreachBatch`), a union of the
+  stream and a static frame in either order, a full outer join, a left outer join with the
+  static frame on the left, a right outer join with the static frame on the right, and a left
+  semi or left anti join with the stream on the right. It accepts an inner join in either
+  order, a left outer join with the stream on the left, a right outer join with the stream on
+  the right, and a left semi or left anti join with the stream on the left, and lands Spark's
+  rows for each. It also refuses a streaming frame inside a subquery expression
+  (`a streaming DataFrame in a subquery`), which no cell measures.
+- **Apache Spark** — refuses the same union and join shapes at `start()` with
+  `AnalysisException` / `_LEGACY_ERROR_TEMP_3102`, no SQLSTATE, from
+  `UnsupportedOperationChecker` (`Union between streaming and batch DataFrames/Datasets is
+  not supported`; `LeftOuter join with a streaming DataFrame/Dataset on the right and a static
+  DataFrame/Dataset on the left is not supported`; and the twins), and runs the accepted
+  shapes. *(oracle: cell MB3-J1 in `mb3_fold_oracle.json`, fourteen shapes over a stream
+  `(1, 2, 3)`, `(4, 5)` and a static `(2, 900)`, recorded 2026-10-07.)*
+- **Pin** — `crates/repark-core/src/microbatch/relation_tests.rs::shapes_that_would_re_emit_the_static_side_refuse`,
+  `::shapes_that_preserve_the_stream_run_spark_s_rows`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F5). The template runs once per
+  batch, so a shape whose output keeps static rows would land them again on every batch. Both
+  engines refuse at start; the difference is the error class and text, which follow MBE-6's
+  SES-DECL shape. The subquery refusal is wider than what was measured and is kept until a
+  cell shows Spark answering a shape it covers.
+### MB-3-PROGRESS-RETENTION-0 — `numRecentProgressUpdates = 0` keeps the newest progress; Spark fails the query
+- **repark** — a `recentProgress` limit of `0` is read as `1`: the ring keeps the newest
+  progress, `lastProgress` answers it, and the query runs on.
+- **Apache Spark** — with `spark.sql.streaming.numRecentProgressUpdates=0` the query fails
+  after its first batch with `STREAM_FAILED` / `XXKST`, cause
+  `java.util.NoSuchElementException` (`empty collection`): `ProgressReporter.addNewProgress`
+  dequeues while the buffer's length is at least the retention, and an empty buffer still
+  satisfies that. `recentProgress` is empty and `lastProgress` is null. *(oracle: cell MB3-G1
+  in `mb3_fold_oracle.json`, recorded 2026-10-07; Spark 4.1.2
+  `sql/core/.../streaming/runtime/ProgressReporter.scala` lines 104–108.)*
+- **Pin** — `crates/repark-core/src/microbatch/progress_tests.rs::a_zero_limit_keeps_the_newest_progress`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1; MB-3 ledger D-9). Spark's answer is an
+  unhandled exception in its progress buffer, not a contract. repark keeps the query alive
+  and its last progress readable.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.
@@ -3879,23 +4012,59 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-10-07 (C-2d; sketch §2.11). C-2 is the read path: every pooled
   connection is read-only, and C-4 writes rows, not DDL. Retire when a dated decision gives
   Postgres sources DDL.
-### CONNECT-DECL-pg-partitioned-read — `read_postgres` refuses Spark's partitioned-read options
+### CONNECT-DECL-pg-partitioned-read — a partitioned Postgres read covers integer range columns; `predicates`, other column types and automatic bounds are declared
 - **repark** — `spark.read.jdbc(url, table, column, lowerBound, upperBound, numPartitions)`,
-  `spark.read.jdbc(url, table, predicates=…)` and `format("postgres" | "jdbc")` with
-  `partitionColumn`, `lowerBound`, `upperBound`, `numPartitions` or `predicates` refuse with
-  `ConnectError::DeclaredSetting` naming the first option given and this row, in the
-  Unsupported class, before any connection. The facade's own Spark-parity checks (the full
-  range bag, predicates against a range, empty predicates) run first, unchanged. In
-  `repark.toml` the five spellings are unknown keys.
+  `format("postgres" | "jdbc")` with `partitionColumn`, `lowerBound`, `upperBound` and
+  `numPartitions` (as options or inside `properties`) and `read_postgres(partition_column=…)`
+  read an `int2`, `int4` or `int8` column in Spark's own strides: rows below `lowerBound`,
+  above `upperBound` and NULL rows are all returned, exactly once. Every stride reads one
+  exported snapshot (`pg_export_snapshot`), on at most `pool_max_size` connections, so a
+  partitioned read equals the unpartitioned read under concurrent writes. Spark's refusals are
+  kept in Spark's words: the four options are all or none (`numPartitions` alone is accepted
+  and reads unpartitioned), reversed bounds, `query` with `partitionColumn`, a column that is
+  missing, and a `text`-like, `boolean` or `bytea` column. **Still declared**, each refusing
+  with `ConnectError` naming this row, in the Unsupported class: `predicates` (before any
+  connection); a partition column of type `date`, `timestamp`, `timestamptz`, `numeric`,
+  `float4` or `float8` (whether its bounds are Spark's date text or integers); and a read of
+  more than **10 000 strides** (the count after Spark's shrink to the span), which refuses
+  with the ceiling in its text after one catalog connection for the column and type lookup
+  and before any snapshot or stride connection. Not offered: automatic choice of the column and its bounds (Spark
+  has none). In `repark.toml` the five spellings are unknown keys: a mounted source is a
+  catalog of every relation, so a per-relation column has no key to sit under. Two deliberate
+  differences from Spark, both on the safe side: two columns that differ only in case, with
+  neither named exactly, refuse as ambiguous (Spark cannot read such a relation at all:
+  `COLUMN_ALREADY_EXISTS`, `C3-C08`…`C10`; RePark reads it and an exact name, quoted or
+  bare, picks its column), and a pushed `LIMIT`
+  is sent to every stride and capped by the scan (Spark's V1 JDBC scan pushes none).
 - **Apache Spark** — the JDBC source splits the read into `numPartitions` range queries over
-  `partitionColumn`, or one query per predicate. *(oracle: documented — `JDBCRelation.columnPartition`;
-  no value claim.)*
-- **Pin** — `crates/repark-python/src/session_tests.rs::read_postgres_refusals_name_their_row_and_never_echo_credentials`;
-  `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`; live
-  `python/repark-parity/tests/live_db/test_c2_read.py::test_a_partitioned_read_refuses_naming_its_row`
-- **Rationale** — DECLARED 2026-10-07 (C-2d; sketch §2.11). One scan is one statement snapshot
-  (sketch §0 line 1); partitions that each see their own snapshot would break that, and C-3
-  builds them on an exported snapshot. Retire when C-3 lands partitioned reads.
+  `partitionColumn`, each its own statement with its own snapshot, or one query per predicate;
+  it also partitions `date`, `timestamp`, `numeric` and floating columns. *(oracle: measured —
+  live Spark 4.1.2 over pgjdbc 42.7.13, 41 cells and a 740-triple stride grid in
+  `python/repark-parity/tests/live_spark/c3_partition_oracle.json` and `c3_stride_grid.txt`:
+  `C3-P01` the three stride shapes and the NULL and out-of-bounds rows, `C3-M01`…`M07` the
+  all-or-none rule, `C3-B01`…`B08` the bounds, `C3-N01`…`N06` the count, `C3-T01`…`T10` the
+  column types, `C3-C01`…`C03` the column name, `C3-Q01`, `Q02` `query` and the subquery,
+  `C3-L01` no pushed limit.)*
+- **Pin** — `crates/repark-connect/tests/it/partition.rs::strides_equal_sparks_recorded_grid`;
+  `crates/repark-connect/tests/it/partition_plan.rs::only_integer_columns_partition_and_the_rest_refuse_by_kind`;
+  `crates/repark-core/src/session/tests/read_postgres.rs::partition_options_refuse_as_spark_does_before_any_connection`;
+  `crates/repark-python/src/session_tests.rs::read_postgres_refusals_name_their_row_and_never_echo_credentials`;
+  live `crates/repark-connect/tests/it/live_partition.rs::a_writer_between_strides_never_changes_a_partitioned_read`;
+  live `python/repark-parity/tests/live_db/test_c3_partitioned.py::test_what_stays_declared_refuses_naming_its_row`
+- **Dated divergence, 2026-10-08 (C-3 fold 1): the stride ceiling.** Spark has no ceiling on
+  `numPartitions` beyond its 32-bit `Int` (kept: a value outside it is `NumberFormatException`,
+  `C3-N07`). RePark refuses above 10 000 strides because every stride is one statement under
+  one open `REPEATABLE READ` snapshot and each costs client memory: measured on the 10M-row
+  table, 10 000 strides read in 12.7 s at 1.6 GB and 100 000 in 75 s at 8.0 GB, against 10.0 s
+  at 0.4 GB for four (ledger §7); the verifier's 2 000 000-stride read ran past nine minutes
+  at 2.6 GB before it was killed. The fix is a lower `numPartitions`; a large count over a
+  small span still shrinks as Spark's does (`C3-N08`) and is not refused.
+- **Rationale** — DECLARED 2026-10-07 (C-2d; sketch §2.11); REWRITTEN 2026-10-07 (C-3; design
+  note `task/ledgers/staging/c-3-ledger.md` §0). C-3 delivers the integer range read on one
+  snapshot. A `timestamp` stride depends on the zone Spark takes from the JVM (D-M2), and
+  `numeric` and floating strides are integer cuts over a non-integer column; each needs its
+  own measured arithmetic before it is offered. Retire when a dated decision lands the
+  remaining column types and `predicates`.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.
@@ -4789,8 +4958,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   meaning `public`, or a parenthesised subquery) or `query`; the properties take the
   `repark.toml` Postgres keys and Spark's spellings ([the guide](guide/repark-toml.md)
   "Postgres source keys"); the source renders as `source=jdbc` in `EXPLAIN`; every refusal names
-  `database source `jdbc`` and never echoes the URL or a property value. The partitioned-read
-  arguments refuse (CONNECT-DECL-pg-partitioned-read) and unknown properties refuse
+  `database source `jdbc`` and never echoes the URL or a property value. Since C-3 (2026-10-07)
+  the four range arguments partition the read over an integer column on one snapshot;
+  `predicates` and the other column types refuse (CONNECT-DECL-pg-partitioned-read). Unknown
+  properties refuse
   (CONNECT-DIV-pg-unknown-option). A URL naming any other driver — including the
   undocumented `jdbc:postgres://` spelling — refuses at the call,
   before any connection attempt, with `PySparkNotImplementedError` `NOT_IMPLEMENTED`
@@ -16291,6 +16462,47 @@ field NAME.
 - **Rationale** — the row lands FIXED: the rebase onto `a3cb8012` closed LOGICAL-WIDTH-1
   for this label, and slice (d) carries the passing pin rather than the filed xfail.
   pins: fnp-agg-1/C-003
+
+### OFFSET-NESTED-SORT-1 — an `OFFSET` under a nested `ORDER BY` answers Spark's rows at every partition count — **FIXED 2026-10-08 (OFFSET-NESTED-SORT-1)**
+
+- **repark** — **FIXED 2026-10-08.** `SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET
+  4990) ORDER BY v` over 5000 rows answers `4991..4995` at 1, 2 and 16 partitions, on both SQL
+  doors and as `orderBy("v").offset(4990).limit(5).orderBy("v")`. Before the fix it answered no
+  rows whenever the scan below the inner sort had one partition: a `CREATE TABLE AS` memory
+  table at `target_partitions = 1`, and a `createDataFrame` view, a one-file parquet scan and an
+  Iceberg scan at every setting. A second shape was wrong at every partition count: an outer
+  sort over an `OFFSET` with no `LIMIT` (`SELECT v FROM (SELECT v FROM t ORDER BY v OFFSET 4990)
+  ORDER BY v DESC` answered `10..1` instead of `5000..4991`).
+  **The upstream defect:** DataFusion 54.1.0's `EnforceSorting` physical rule
+  (`datafusion-physical-optimizer`, `enforce_sorting/sort_pushdown.rs`) ignores a
+  `GlobalLimitExec`'s `skip`. It pushes the limit's `fetch` into the sort below as a row cap
+  (`TopK(fetch=4995)` becomes `TopK(fetch=5)`, then `LimitPushdown` folds the plan to
+  `GlobalLimitExec: skip=4990, fetch=0`), and it pushes an outer sort below a limit that has a
+  `skip` and no `fetch`. A bare DataFusion `SessionContext` reproduces both with no RePark rule
+  installed. DataFusion 55.0.0 carries the same code (read, not run). RePark's guard
+  (`crates/repark-core/src/session/df_guards/skipping_limit.rs`) wraps the rule so a limit with
+  a `skip` is a boundary the rule cannot push through; a statement with no `OFFSET` plans
+  exactly as before.
+  **Retirement:** at the DataFusion bump that fixes the pushdown, the two
+  `stock_enforce_sorting_still_*` pins go red; delete the guard, its wiring line and those two
+  pins, and keep the grid.
+- **Apache Spark** — answers `4991..4995` for the reported statement and `5000..4991` for the
+  offset-only one, independent of the partition count.
+  *(oracle: recorded — live PySpark 4.1.2, 2026-10-08; 70 SQL statements recorded at 1 and 16 input
+  partitions in `crates/repark-core/src/session/tests/skipping_limit_grid.tsv`, 31 of them and
+  15 DataFrame shapes with Arrow types in
+  `python/repark/tests/offset_nested_sort_1_spark_oracle.json`, re-derived under `REPARK_PARITY_LIVE=1` by
+  `python/repark/tests/test_offset_nested_sort_1.py::test_live_spark_answers_every_recorded_cell`.)*
+- **Pin** — `crates/repark-core/src/session/tests/skipping_limit.rs` (the 70-statement grid over
+  a memory table, a sorted series view, a parquet scan and an Iceberg scan at 1, 2 and 16
+  partitions; the two stock-rule pins; the plan-text and no-`OFFSET` plan-identity pins) and
+  `python/repark/tests/test_offset_nested_sort_1.py` (the Spark-dialect SQL door, the native
+  ANSI door and the DataFrame door).
+- **Rationale** — FIXED, filed and closed in the same unit. A wrong row count, not a declared
+  difference: the guard stays only until the pinned DataFusion fixes its rule. Measurements,
+  the rule bisect and the mutation results are in
+  `task/ledgers/staging/offset-nested-sort-1-ledger.md`.
+  pins: offset-nested-sort-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 
 ## 8. Drop-in disclosure rationale
 

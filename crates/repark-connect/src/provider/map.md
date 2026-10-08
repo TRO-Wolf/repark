@@ -50,6 +50,8 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
   the decoder's rule. When the localiser refuses row `k > 0` of a batch, the exec emits rows
   `0..k`, placed, and then the refusal. The stream still ends at its first error, so the lease
   aborts as before (C-103). pins: c-2/C-114
+- `scan.rs` — **C-2d residual (2026-10-07):** gains its first unit-test child, [scan/](scan/map.md),
+  for the private `place_until_refusal`. pins: c-2/C-119
 - `scan.rs` — **`WallClockLocaliser`** (`localise(&TimestampMicrosecondArray)`, `zone_label()`;
   the trait sits here with no zone dependency, NS-10) and **`PostgresScanExec`**, one partition.
   `DisplayAs` renders, per scan, `PostgresScanExec: source=<name>, relation=<schema.table>` (or
@@ -66,6 +68,50 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
   `elapsed_compute` (the decode), `bytes_received` and `time_to_first_byte` in its
   `MetricsSet`, which `EXPLAIN ANALYZE` shows. Accessors (`pushed_filters`, `residual_filters`,
   `pushed_limit`, `request`) serve the pins. pins: c-2/C-075, C-076, C-077, C-083, C-084
+
+- `table.rs` — **C-3 fold 1 (2026-10-08), the verifier's third S2:** the partition column
+  resolves as Spark's resolver does (`C3-C02`…`C07`). The name, with its double quotes removed
+  if it has them, matches exactly first; with no exact match it matches case-insensitively
+  when exactly one column does, quoted or bare (`"mixed"` finds `"Mixed"`); when more than one
+  does it refuses as ambiguous. Spark cannot read such a relation at all (`C3-C08`…`C10`:
+  `COLUMN_ALREADY_EXISTS`), so there is no Spark choice to copy and refusing names the fix:
+  the exact name. `PostgresTable::partition_column()` answers the resolved name.
+  pins: c-3/C-011
+- `table.rs` — **C-3 fold 1 (2026-10-08):** the spec's count is an `i32`, widened for
+  `stride_cuts`, which applies the 10 000-stride ceiling after the shrink. pins: c-3/C-010
+- `table.rs` — **C-3 fold 1 (2026-10-08):** `partitioned` judges the column's type first and
+  parses the bounds second (`PartitionSpec::bounds`), then plans the cuts. pins: c-3/C-009
+- `table.rs` — **C-3 (2026-10-07):** `PostgresTable::partitioned(&PartitionSpec)` plans a
+  partitioned read ([c-3-ledger.md](../../../../task/ledgers/staging/c-3-ledger.md) §0.1). It
+  resolves the column as Spark does (the exact name, else the one case-insensitive match; a
+  double-quoted name matches exactly; two case-insensitive matches with no exact one refuse as
+  ambiguous), verifies its type before anything else (`int2`, `int4`, `int8` partition;
+  `text`-like, `boolean` and `bytea` refuse in Spark's sentence; `date`, the timestamps,
+  `numeric` and the floats refuse as declared, naming the row), then computes the cuts. No cut
+  leaves the table unpartitioned. `scan` renders one `ScanRequest` per stride from the request
+  it already built (projection, pushed conjuncts, limit), so every stride carries the same
+  pushed filter and the same `LIMIT`, and sets `max_connections = min(strides,
+  pool_max_size)`; strides that would bind past 1024 values refuse the plan.
+  pins: c-3/C-005
+- `scan.rs` — **C-3 (2026-10-07):** `ScanPlan` carries the optional `Partitioned` plan.
+  `PostgresScanExec` stays one output partition; `execute` hands a partitioned plan to
+  `partitioned::stream`. `DisplayAs` adds `partition_column=`, `strides=` and
+  `max_connections=` to a partitioned scan's line (a line each in the tree format), and
+  `Verbose` shows the first stride's statement. Accessors `partition_column()`, `strides()`
+  and `max_connections()` serve the pins. pins: c-3/C-005
+- `partitioned.rs` — **C-3 (2026-10-07)**, the stream of a partitioned scan (§0.3, §0.4).
+  On first poll it calls `scan_lanes`, then drives each connection from its own tracked task
+  (`SpawnedTask`, aborted when the stream drops), so decoding and timestamp placement run in
+  parallel on the runtime's workers. The tasks feed one bounded channel of as many batches as
+  there are connections. Each batch carries its own slice of the task's `MemoryReservation`
+  (`try_grow` then `split`), which the consumer holds until the next batch replaces it, so the
+  memory pool sees every batch in flight and a refusal is DataFusion's resources-exhausted
+  error. The consumer forwards batches in arrival order, stops at the pushed limit (slicing
+  the batch that crosses it) and ends at the first error; either way the tasks drop, their
+  leases abort and the server's queries are cancelled. When the channel closes it joins every
+  task, so a task that died surfaces as `ExecutionJoin` and never as a short result.
+  `place_until_refusal` keeps the per-value contract per connection: the rows before a refused
+  value, then the refusal. pins: c-3/C-005
 
 ## Pointers
 

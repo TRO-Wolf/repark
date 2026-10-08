@@ -5,6 +5,7 @@ enum Fence {
     None,
     BranchA,
     BranchAEmptyAllowed,
+    Catalog,
 }
 
 struct Measured {
@@ -23,7 +24,7 @@ fn operations(table: &Table) -> Vec<Operation> {
 }
 
 fn fenced(tx: Transaction, base: Option<i64>, fence: Fence) -> Transaction {
-    if fence == Fence::None {
+    if matches!(fence, Fence::None | Fence::Catalog) {
         return tx;
     }
     let action = tx.overwrite_files().validate_no_conflicting_data();
@@ -71,7 +72,11 @@ async fn measure(name: &str, fence: Fence, race: bool) -> Measured {
         .expect("apply append");
     let tx = claimed.stamp_transaction(tx).expect("stamp");
     let tx = fenced(tx, base, fence);
-    let result = tx.commit(catalog.as_ref()).await;
+    let committer = match fence {
+        Fence::Catalog => AppendFence::install(&catalog, &claimed),
+        _ => Arc::clone(&catalog),
+    };
+    let result = tx.commit(committer.as_ref()).await;
     let table = catalog.load_table(&ident).await.expect("reload");
     let added = operations(&table).split_off(before);
     Measured {
@@ -117,4 +122,20 @@ async fn dm6_branch_a_with_empty_commits_allowed_never_commits() {
     assert_eq!(error.kind(), iceberg::ErrorKind::CatalogCommitConflicts);
     assert!(measured.added.is_empty());
     assert_eq!(live_ids(&measured.table).await, vec![1]);
+}
+
+#[tokio::test]
+async fn dm6_the_catalog_fence_lands_one_append_on_a_quiet_commit() {
+    let measured = measure("dm6_catalog_fence_quiet", Fence::Catalog, false).await;
+    assert!(measured.result.is_ok());
+    assert_eq!(measured.added, vec![Operation::Append]);
+    assert_eq!(live_ids(&measured.table).await, vec![1, 2]);
+}
+
+#[tokio::test]
+async fn dm6_the_catalog_fence_rebases_past_an_unrelated_append() {
+    let measured = measure("dm6_catalog_fence_race", Fence::Catalog, true).await;
+    assert!(measured.result.is_ok());
+    assert_eq!(measured.added, vec![Operation::Append]);
+    assert_eq!(live_ids(&measured.table).await, vec![1, 2, 3]);
 }

@@ -30,8 +30,12 @@ pub use super::attr_lineage::{
     projection_source_ids, sort_hits_meet_at_join, sort_input_carries_twice,
     sort_output_carries_twice, sort_sourced_twin_engine,
 };
+pub use super::duplicate_names::{
+    DISPLAY_NAME_KEY, duplicate_tolerant_names, recorded_display_names, rename_duplicate_tolerant,
+};
 pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
 pub use super::frame_lineage::{all_ids, ambiguous, ambiguous_images, renewed_absent, shared_ids};
+pub use super::join_exact::{ExactJoin, ExactKeys, join_exact_sides};
 pub use super::predicate_names::fold_frame_qualifiers;
 pub use super::self_join::{AttrRefText, JoinSide, Prepared, PreparedCondition, Refusal};
 pub use super::self_join::{SELF_JOIN_CONDITION, SelfJoinRules, check_refs, missing_condition};

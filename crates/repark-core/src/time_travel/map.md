@@ -58,6 +58,15 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   the identifier must be three-part (ledger FL-8). No doc comments (the
   owner's comment ban); fallible entry points take
   `#[allow(clippy::missing_errors_doc)]` instead.
+  **MB-3 round 2 (2026-10-08):** the source no longer owns a `SessionContext` clone. It holds
+  a crate-private `WeakSessionState` (a closure over `SessionContext::state_weak_ref`, so the
+  lock type is not named) and takes one state snapshot per batch frame, building the frame as
+  `SessionContext::read_table` does. A source therefore never keeps its session alive; a
+  batch planned after the session ended refuses `Catalog` naming that. pins: mb-3/C-021
+  **MB-3 fold 2 (2026-10-08):** `with_catalog_timeout` gives the source a limit for its one
+  `load_table` call per planning call; past it the call fails `CatalogTimeout` (`load the
+  source`). The manifest walk after the load is not bounded. A source opened without it (the
+  streaming frame, the MB-1 pins) is unbounded as before. pins: mb-3/C-025
   pins: mb-1/C-014, C-015, C-016
   **MB-1 fold 1 round B (2026-10-07):** the source holds the catalog handle
   and the `TableIdent`, not a `Table`. `initial_offset` and `next_batch`
@@ -100,6 +109,12 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   refusal such as `SourceReplaced` names the table as the source was opened
   (G8).
   pins: mb-1/C-039
+  **MB-3 (2026-10-07):** `available_now_target` returns the uncapped walk's end (Spark's
+  `prepareForTriggerAvailableNow`), and `next_batch_until` plans a capped window and cuts it at
+  that end by ancestry and position, so an `availableNow` drain never reads a snapshot committed
+  after it started. `table_uuid`, `table_identifier` and `name` serve the driver's resume check,
+  and `arrow_schema` presents the run's read schema to the streaming frame's placeholder.
+  pins: mb-3/C-004, C-008
 - `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
   under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027, C-028, C-029, C-030
 - `microbatch_source_fold2_tests.rs` — fold 2's source pins, a child of

@@ -17,6 +17,7 @@ use crate::copy_binary::{BatchLimits, CopyBinaryDecoder, DEFAULT_BATCH_BYTES, DE
 use crate::discover::{CastType, Privilege, ResolvedSource, ScanColumn};
 use crate::error::{ConnectError, ProtocolViolation, Result};
 use crate::ident::QualifiedRelation;
+use crate::partition::Stride;
 use crate::pool::{PooledClient, PostgresConnector, PostgresPool, TimeoutSetting, within};
 use crate::settings::PostgresSettings;
 
@@ -135,6 +136,38 @@ impl ScanRequest {
     }
 
     #[must_use]
+    pub fn stride(self, column: usize, stride: Stride) -> Option<ScanRequest> {
+        let scanned = self.resolved.columns.get(column)?;
+        let (name, tested) = (operand(scanned), scanned.name.to_string());
+        let base = self.values.len();
+        let bound = |offset: usize| {
+            let slot = ParamSlot::new(u16::try_from(base + offset).ok()?)?;
+            Some(format!("{slot}::pg_catalog.int8"))
+        };
+        let (at_least, below) = (CompareOp::GtEq.sql(), CompareOp::Lt.sql());
+        let (sql, values) = match (stride.lower, stride.upper) {
+            (None, None) => return Some(self),
+            (None, Some(upper)) => (
+                format!("({name} {below} {} OR {tested} IS NULL)", bound(0)?),
+                vec![upper.to_string()],
+            ),
+            (Some(lower), Some(upper)) => (
+                format!(
+                    "({name} {at_least} {} AND {name} {below} {})",
+                    bound(0)?,
+                    bound(1)?
+                ),
+                vec![lower.to_string(), upper.to_string()],
+            ),
+            (Some(lower), None) => (
+                format!("({name} {at_least} {})", bound(0)?),
+                vec![lower.to_string()],
+            ),
+        };
+        self.filter(sql, values)
+    }
+
+    #[must_use]
     pub fn bound_values(&self) -> usize {
         self.values.len()
     }
@@ -194,6 +227,18 @@ impl ScanRequest {
             .map(|(slot, value)| (slot.setting_name(), value.clone()))
             .collect();
         ScanStatement { copy, settings }
+    }
+
+    pub(crate) fn search_path(&self) -> Option<&'static str> {
+        self.resolved.source.search_path()
+    }
+
+    pub(crate) fn prepared(&self, options: ScanOptions) -> Result<Prepared> {
+        Ok(Prepared {
+            statement: self.statement(),
+            decoder: self.decoder(options.batch)?,
+            relation: self.relation().cloned(),
+        })
     }
 
     fn decoder(&self, limits: BatchLimits) -> Result<CopyBinaryDecoder> {
@@ -308,12 +353,17 @@ pub(crate) async fn request<T>(
     within(TimeoutSetting::Read, read_timeout, classified).await
 }
 
-struct Copying {
+pub(crate) struct Prepared {
+    statement: ScanStatement,
+    decoder: CopyBinaryDecoder,
+    relation: Option<QualifiedRelation>,
+}
+
+pub(crate) struct Copying {
     pooled: PooledClient<PostgresConnector>,
     copy: Pin<Box<CopyOutStream>>,
     decoder: CopyBinaryDecoder,
     pending: Bytes,
-    in_transaction: bool,
     read_timeout: Duration,
     relation: Option<QualifiedRelation>,
     meter: ScanMeter,
@@ -321,54 +371,67 @@ struct Copying {
 }
 
 impl Copying {
-    async fn open(
-        pool: &Arc<PostgresPool>,
-        scan: &ScanRequest,
-        options: ScanOptions,
+    pub(crate) async fn start(
+        pooled: PooledClient<PostgresConnector>,
+        prepared: Prepared,
+        read_timeout: Duration,
         meter: ScanMeter,
+        opened: Option<Instant>,
     ) -> Result<Self> {
-        let opened = Some(Instant::now());
-        let statement = scan.statement();
-        let decoder = scan.decoder(options.batch)?;
-        let relation = scan.relation().cloned();
-        let timeout = options.read_timeout;
-        let pooled = pool.checkout().await?;
+        let Prepared {
+            statement,
+            decoder,
+            relation,
+        } = prepared;
         let client = pooled.client();
-        let set_config = statement.set_config_sql();
-        let search_path = scan.resolved.source.search_path();
-        let in_transaction = set_config.is_some() || search_path.is_some();
-        if in_transaction {
-            let begin = match search_path {
-                Some(search_path) => format!("{BEGIN_SCAN}; {search_path}"),
-                None => BEGIN_SCAN.to_string(),
-            };
-            request(timeout, relation.as_ref(), client.batch_execute(&begin)).await?;
-        }
-        if let Some(set_config) = &set_config {
+        if let Some(set_config) = statement.set_config_sql() {
             let params: Vec<&(dyn ToSql + Sync)> = statement
                 .settings
                 .iter()
                 .flat_map(|(name, value)| [name as &(dyn ToSql + Sync), value])
                 .collect();
             let carried = client.execute(set_config.as_str(), &params);
-            request(timeout, relation.as_ref(), carried).await?;
+            request(read_timeout, relation.as_ref(), carried).await?;
         }
         let copy = client.copy_out(statement.copy.as_str());
-        let copy = request(timeout, relation.as_ref(), copy).await?;
+        let copy = request(read_timeout, relation.as_ref(), copy).await?;
         Ok(Copying {
             pooled,
             copy: Box::pin(copy),
             decoder,
             pending: Bytes::new(),
-            in_transaction,
-            read_timeout: timeout,
+            read_timeout,
             relation,
             meter,
             opened,
         })
     }
 
-    async fn next_batch(&mut self) -> Result<Option<RecordBatch>> {
+    async fn open(
+        pool: &Arc<PostgresPool>,
+        scan: &ScanRequest,
+        options: ScanOptions,
+        meter: ScanMeter,
+    ) -> Result<(Self, bool)> {
+        let opened = Some(Instant::now());
+        let prepared = scan.prepared(options)?;
+        let timeout = options.read_timeout;
+        let pooled = pool.checkout().await?;
+        let search_path = scan.search_path();
+        let in_transaction = !prepared.statement.settings.is_empty() || search_path.is_some();
+        if in_transaction {
+            let begin = match search_path {
+                Some(search_path) => format!("{BEGIN_SCAN}; {search_path}"),
+                None => BEGIN_SCAN.to_string(),
+            };
+            let opening = pooled.client().batch_execute(&begin);
+            request(timeout, prepared.relation.as_ref(), opening).await?;
+        }
+        let copying = Copying::start(pooled, prepared, timeout, meter, opened).await?;
+        Ok((copying, in_transaction))
+    }
+
+    pub(crate) async fn next_batch(&mut self) -> Result<Option<RecordBatch>> {
         loop {
             if !self.pending.is_empty() {
                 let mut rest: &[u8] = &self.pending;
@@ -396,16 +459,15 @@ impl Copying {
         }
     }
 
-    async fn finish(self) -> Result<()> {
-        let Copying {
-            pooled,
-            copy,
-            in_transaction,
-            read_timeout,
-            relation,
-            ..
-        } = self;
+    pub(crate) fn into_client(self) -> PooledClient<PostgresConnector> {
+        let Copying { pooled, copy, .. } = self;
         drop(copy);
+        pooled
+    }
+
+    async fn finish(self, in_transaction: bool) -> Result<()> {
+        let (read_timeout, relation) = (self.read_timeout, self.relation.clone());
+        let pooled = self.into_client();
         if in_transaction {
             let commit = pooled.client().batch_execute("COMMIT");
             request(read_timeout, relation.as_ref(), commit).await?;
@@ -422,25 +484,29 @@ enum Scan {
         options: ScanOptions,
         meter: ScanMeter,
     },
-    Copying(Box<Copying>),
+    Copying(Box<Copying>, bool),
 }
 
 impl Scan {
     async fn step(self) -> Result<Option<(RecordBatch, Scan)>> {
-        let mut copying = match self {
+        let (mut copying, in_transaction) = match self {
             Scan::Pending {
                 pool,
                 request,
                 options,
                 meter,
-            } => Box::new(Copying::open(&pool, &request, options, meter).await?),
-            Scan::Copying(copying) => copying,
+            } => {
+                let (copying, in_transaction) =
+                    Copying::open(&pool, &request, options, meter).await?;
+                (Box::new(copying), in_transaction)
+            }
+            Scan::Copying(copying, in_transaction) => (copying, in_transaction),
         };
         let Some(batch) = copying.next_batch().await? else {
-            copying.finish().await?;
+            copying.finish(in_transaction).await?;
             return Ok(None);
         };
-        Ok(Some((batch, Scan::Copying(copying))))
+        Ok(Some((batch, Scan::Copying(copying, in_transaction))))
     }
 }
 

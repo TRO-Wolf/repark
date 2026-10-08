@@ -1,5 +1,7 @@
 # map — python/repark/tests
 
+OFFSET-NESTED-SORT-1 (2026-10-08): `test_offset_nested_sort_1.py` pins an `OFFSET` under a nested `ORDER BY` on the three doors against `offset_nested_sort_1_spark_oracle.json`, recorded from live Spark 4.1.2 with value and Arrow type. The Spark-dialect SQL door runs 31 statements (the reported one, the 19 others DataFusion 54.1.0 answers wrong, 11 controls) and the DataFrame door runs 15 shapes (`orderBy().offset().limit()` under an outer `orderBy`, `sort` + `limit` + `offset`, offset-only under a descending or different-key sort), each at `spark.sql.shuffle.partitions` 1, 2 and 16; a `createDataFrame` view scans one partition at every setting, so on main these were wrong at all three. The native ANSI door runs the same statements by value over a `CREATE TABLE AS` table under `SET datafusion.execution.target_partitions`. `test_live_spark_answers_every_recorded_cell` replays every cell on the shared live session over its own temp view (`offset_nested_sort_1_oracle`); it stops nothing and reads no environment. pins: offset-nested-sort-1/C-002, C-007
+
 SOURCE-URL-REDACT-1-FN fold 2 (2026-10-06): `test_source_url_redact_1_fn.py` pins the builder door for `repark.sql.maxArrayElements`, `repark.sql.allowLocalFilesystemDDL`, `spark.sql.session.timeZone`, and `repark.merge.file-scoped-rewrite`. A URL password becomes `postgresql://u:***@h/db`. The plan knobs stay `AnalysisException`; the time-zone and file-scoped knobs stay `IllegalArgumentException`.
 
 SOURCE-URL-REDACT-1-FN fold 1 (2026-10-06): `test_source_url_redact_1_fn.py` pins the builder door, a `repark.toml` `[conf]` file, `spark.conf.set`, and the ANSI `RESET` restore path. A URL password in `spark.sql.caseSensitive`, `spark.sql.ansi.enabled`, `spark.sql.iceberg.merge-schema`, and `spark.sql.timestampType` is `postgresql://u:***@h/db`. `merge-schema` and `conf.set` keep `INVALID_CONF_VALUE.TYPE_MISMATCH` and SQLSTATE `22022`. pins: source-url-redact-1/C-055
@@ -2395,6 +2397,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   i64 CAST+lit wrap cells are pinned (ASCII docstring operators for RUF002;
   ruff format on long CAST SQL).
   pins: f-y10-1-int-overflow/C-001, C-002, C-003; types-1/C-002 (untyped cells).
+- `test_pg_jdbc_options.py` — **C-3 fold 1 (2026-10-08):**
+  `test_partial_range_bag_fails_loud` now matches Spark's all-or-none sentence on the
+  `format("postgres")` door. pins: c-3/C-006
+  `test_format_postgres_forwards_a_date_bound_as_text_for_the_door_to_judge`. pins: c-3/C-009
+  **C-3 fold 2 (2026-10-08):** the keyword door hands `lowerBound`, `upperBound` and
+  `numPartitions` on as text in `properties` (the camelCase and snake_case capture pins move
+  from integers to text); `test_jdbc_keyword_door_str_and_int_bounds_reach_the_engine_door_as_the_same_text`,
+  `test_jdbc_keyword_door_keeps_a_properties_spelling_for_the_door_to_refuse`,
+  `test_jdbc_keyword_door_incomplete_set_refuses_in_sparks_sentence` and
+  `test_jdbc_keyword_door_num_partitions_text_refuses_as_the_format_door_does` (a count past
+  32 bits as str and as int, on both doors). pins: c-3/C-006
+- `test_production_file_size.py` — **C-3 fold 1 (2026-10-08):** the `_parse_jdbc_int_option`
+  body hash moves: C-3 changed its behaviour on purpose (a bound that is not an integer raises
+  `NumberFormatException`, Spark's measured class and a subclass of the old one, and an
+  integer outside 64 bits refuses there too), which is the "current-main behavior change" the
+  pin's docstring admits. pins: c-3/C-006
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
@@ -9677,14 +9695,38 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   session/join builders plus refusal-shape and no-`__repark_`-bytes helpers for
   the fold's pin files. No module docstring: the lane's no-comments ruling
   covers the new file; the contract lives here. pins: attr-id-1/C-061
+- [test_fa_5_duplicate_csv.py](test_fa_5_duplicate_csv.py) — **FA-5
+  (2026-10-08):** csv path writes of frames with exact-duplicate display
+  names, against the live Spark 4.1.2 cells in the unit ledger: the display
+  header for the self, mixed and `USING` joins, a same-origin repeat and a
+  repeat beside a case twin; rows only with `header` off; separator,
+  `quoteAll` and compression options; every `mode` on a fresh and an existing
+  path; both case flags; temporal twins with and without `timestampFormat`;
+  the header-only file of an empty frame; a single-part byte-equal cell. A
+  `partitionBy` over a repeated name refuses `AMBIGUOUS_REFERENCE` with the
+  written spelling and creates nothing; a unique partition column writes and
+  leaves the header. Controls: parquet and json keep refusing, and a
+  unique-name csv is unchanged. **Fold 1 (2026-10-08):** a unique column
+  named `__repark_dup_0_id` or `__repark_dup_7_` keeps its name in the csv
+  header, beside a repeat too, and on the SQL, view, `DESCRIBE`,
+  `spark.table` and `listColumns` doors (`SELECT 1 AS __repark_dup_3_x`
+  included); the partition candidates are pinned sorted on reversed
+  aliases; the case-sensitive unmatched spelling answers Spark's not-found
+  text; the same-origin repeat refuses with clean text (`_divergence`); the
+  s3a csv route hands the engine a frame whose recorded names build the
+  display-header option; and a duplicate-name view stays refused, so no
+  bare name can bind beside one. No module docstring: the no-comments ruling
+  covers the new file; the contract lives here.
+  pins: fa-5-6/C-002, C-003, C-004, C-005, C-008
 - [test_attr_id_1_sm2_dupwrites.py](test_attr_id_1_sm2_dupwrites.py) — **Fold
   SM-2 R2 (2026-10-06):** duplicate-display-name writes refuse
   `COLUMN_ALREADY_EXISTS` with Spark's exact text, condition and SQLSTATE, and
   create no file or table (parquet, json, csv, orc, saveAsTable, V2 create and
   V2 append); `insertInto` writes positionally as Spark does; folded-only
-  duplicates report the folded name. The csv refusal is the ruled divergence
-  FA-5 (Spark writes the duplicate header). SM-2b narrowing: csv refuses
-  exact duplicates only (case-twins write the raw header, pinned), and a
+  duplicates report the folded name. **FA-5 (2026-10-08):** csv no longer
+  refuses; its pin now asserts the display header and no internal name in the
+  file (`test_fa_5_duplicate_csv.py` holds the full cell set). SM-2b: csv
+  case-twins write the raw header (pinned), and a
   case-sensitive parquet twin pin holds the per-flag rule. No module
   docstring: the lane's no-comments ruling covers the new file; the contract
   lives here. pins: attr-id-1/C-061
@@ -9778,3 +9820,46 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   binding-equivalence check reds the second-twin pin. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011
+- [test_stamp_2_r5p6_2.py](test_stamp_2_r5p6_2.py) — **STAMP-2-R5P6-2
+  (2026-10-07):** the H1 join door's differential pins. Each shape is built twice
+  over the same side frames, once with `_join_exact_plan` spied and once with it
+  forced to miss, and the two answers must be equal: columns, dtypes, the schema
+  with nullability, rows, display and engine names, the plan's field names,
+  where each attribute id comes from (a side position or a fresh mint), the
+  id-sharing pattern, the frame's case rule and the normalized plan text. The
+  cross door takes the native route over a filtered side, a self cross, twin
+  displays, aliased sides (with a qualified select after), a map column,
+  `join` with no condition, with `how="cross"`, with no keys, and with a
+  condition under `how="cross"`. A side with a spaced field name or with case
+  twins keeps the SQL route with equal answers. A `spark.sql.caseSensitive`
+  change between the frames and the join shows on the joined frame on both
+  routes (the native join takes the session state of the join call). A raising
+  native attempt keeps the SQL route's answer. The condition door takes the
+  native route for one equality between a left and a right column: by column
+  handle over six join types in both operand orders, by alias-qualified names
+  (r5p6's `j_alias`, with its qualified select), a self-join, twin displays,
+  and `INT` against `BIGINT`; `STRING` against `INT` raises the same cast
+  error at the action on both routes. A conjunction, a literal comparand,
+  `<`, `<=>`, a text condition, bare names, arithmetic, a cast, a one-sided
+  equality and a spaced side field keep the SQL route with equal answers.
+  `_join_exact_keys` is pinned directly on 3 exact and 14 inexact prepared
+  conditions. The self-join, ambiguous-name and missing-attribute refusals
+  raise before the route is chosen, and a map key raises on the native attempt
+  and falls back: each carries the SQL route's class and text. A frame made
+  before a `spark.sql.caseSensitive` change and one made after each keep their
+  own case rule through `select`, `filter`, `orderBy` and `select` again (the
+  binding's per-handle rule cache). No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: stamp-2-r5p6-2/C-003, C-004, C-005, C-006, C-007, C-010
+- [test_threaded_collect_segv_1.py](test_threaded_collect_segv_1.py) —
+  **THREADED-COLLECT-SEGV-1 (2026-10-08):** `collect`, `take`, `head`, `first`,
+  `toLocalIterator` and `toArrow` each answer on six successive fresh non-main
+  threads. One isolated interpreter per door, so a crash is a failed assertion on
+  the exit status and never a dead pytest. The worker must not have pyarrow loaded
+  on the main thread before the first door runs (asserted): that is the crash's
+  precondition. Skips on pyarrow 25.0.0 with the reason: its bundled mimalloc
+  null-dereferences in `mi_thread_init` when libarrow is first loaded on a
+  non-main thread that exits (apache/arrow GH-50471, fixed in 25.0.1); the fault
+  reproduces without RePark. With the skip bypassed on 25.0.0 the worker dies with
+  signal 11 on five of the six doors.
+  pins: threaded-collect-segv-1/C-001, C-002

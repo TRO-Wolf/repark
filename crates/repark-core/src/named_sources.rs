@@ -7,6 +7,7 @@ use datafusion::common::SchemaReference;
 use datafusion::datasource::TableProvider;
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::{DdlStatement, LogicalPlan};
+use datafusion::prelude::SessionContext;
 use repark_common::{Error, Result};
 
 use repark_common::SourceKind;
@@ -23,11 +24,14 @@ mod tests;
 
 pub(crate) fn refuse_source_ddl(
     plan: &LogicalPlan,
+    ctx: &SessionContext,
     catalogs: &CatalogRegistry,
 ) -> std::result::Result<(), DataFusionError> {
     let LogicalPlan::Ddl(ddl) = plan else {
         return Ok(());
     };
+    let config = ctx.copied_config();
+    let default_catalog = config.options().catalog.default_catalog.as_str();
     let claimed = |name: Option<&str>| name.and_then(|name| catalogs.database_source(name));
     let spec = match ddl {
         DdlStatement::CreateExternalTable(create) => claimed(create.name.catalog()),
@@ -38,10 +42,12 @@ pub(crate) fn refuse_source_ddl(
         DdlStatement::DropView(drop) => claimed(drop.name.catalog()),
         DdlStatement::CreateCatalog(create) => claimed(Some(create.catalog_name.as_str()))
             .or_else(|| claimed(dotted_head(&create.catalog_name))),
-        DdlStatement::CreateCatalogSchema(create) => claimed(dotted_head(&create.schema_name)),
+        DdlStatement::CreateCatalogSchema(create) => claimed(Some(
+            dotted_head(&create.schema_name).unwrap_or(default_catalog),
+        )),
         DdlStatement::DropCatalogSchema(drop) => match &drop.name {
             SchemaReference::Full { catalog, .. } => claimed(Some(catalog.as_ref())),
-            SchemaReference::Bare { .. } => None,
+            SchemaReference::Bare { .. } => claimed(Some(default_catalog)),
         },
         DdlStatement::CreateFunction(_) | DdlStatement::DropFunction(_) => None,
     };
