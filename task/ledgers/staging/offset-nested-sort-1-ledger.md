@@ -129,6 +129,8 @@ GlobalLimitExec: skip=4990, fetch=None              SortExec: expr=[v@0 DESC]
 
 70 SQL statements over a 5000-row relation `(v = 1..5000, k = v % 7)`, each recorded on live
 Spark 4.1.2 at 1 and at 16 input partitions (the two recordings agree for every statement).
+Fold 1 (2026-10-08) added three `OFFSET 1` statements (`offset_one`, `offset_one_desc`,
+`offset_one_other_key`), recorded on live Spark 4.1.2 (`local[2]`) over the same relation.
 The statements, their Spark rows and their family are
 `crates/repark-core/src/session/tests/skipping_limit_grid.tsv`. Each statement ran at
 `target_partitions` 1, 2 and 16 over four sources: `m` (a `CREATE TABLE AS` memory table), `t`
@@ -225,21 +227,30 @@ of the two defects or the harmless merge below.
 `ORDER BY v`), DataFusion merged the two sorts below the limit. RePark now sorts the rows left
 after the `OFFSET` a second time. Only a statement with an `OFFSET` under a sort pays this.
 
+*Fold 1 (2026-10-08), measured by the verifier:* stock's plan for this shape is one sort and
+its answer was valid; the guard's plan is two sorts, and with a small `OFFSET` the second is a
+sort of nearly the whole relation. `SELECT s, j FROM (SELECT s, j FROM big ORDER BY j OFFSET 10)
+ORDER BY j, s` over a 1M-row memory table, 8 partitions, `ci` profile, 11 rounds: guard 136.3 ms
+against stock 76.3 ms, +78.4 % (a second run +83.7 %). Whether to accept this or to let the rule
+merge the two sorts when the outer sort refines the inner one is **OPEN for the owner** (C-012).
+
 ## PROPOSITION LEDGER — OFFSET-NESTED-SORT-1 — 2026-10-08
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | The reported statement answers no rows at one partition and 5 rows at 16 on main, in a `repark-core` session and on a bare DataFusion 54.1.0 `SessionContext`; the plans at 1, 2 and 16 are those of §2. | A Rust reproduction that runs DataFusion's own rule on a RePark session state, and the plan text. | PROVEN | `stock_enforce_sorting_still_loses_the_rows_at_one_partition_only` (stock: `0 []` at 1, `5 [4991..4995]` at 16; guarded: 5 at 1) and `reported_plan_keeps_the_inner_top_k_as_wide_as_skip_plus_fetch` (stock text `skip=4990, fetch=0` over `TopK(fetch=4990)`). The bare-context run is the 630-cell row of §3 (scratch probe, not kept in the tree: the stock-rule pins hold the same answers on RePark's state). |
 | C-002 | Through the facade the defect reproduces on main on the Spark-dialect SQL door, the native ANSI door and the DataFrame door, and every measured cell answers Spark's rows with the guard. | A module built from main's rule list and one built with the guard, the same probe on each; then pins on all three doors. | PROVEN | §3 facade table (47 / 23 / 18 wrong on main, 0 / 0 / 0 with the guard). `python/repark/tests/test_offset_nested_sort_1.py`: `test_spark_sql_door_answers_spark_rows` and `test_dataframe_door_answers_spark_rows` at 1, 2, 16 with value and Arrow type; `test_native_sql_door_answers_spark_rows` at 1, 2, 16 by value (the native door keeps DataFusion's own types, for example `uint64` for `row_number`). |
-| C-003 | The shape family is measured against live Spark 4.1.2: 70 statements, 20 of them wrong somewhere, 50 controls; every wrong cell is recorded. | The grid of §3 and its fixture. | PROVEN | `skipping_limit_grid.tsv` (70 lines: 11 `one-partition`, 9 `every-partition`, 50 `control`, the family being the memory-table behaviour); `grid_fixture_carries_every_recorded_cell` holds the counts and the reported statement's text. The brief's shapes are all present: OFFSET without LIMIT, LIMIT without OFFSET, OFFSET past the row count, a nested sort on a different key, under a projection, a filter, a UNION, over a join, over an Iceberg scan and a parquet scan, with and without TopK. |
+| C-003 | The shape family is measured against live Spark 4.1.2: 73 statements, 21 of them wrong somewhere, 52 controls; every wrong cell is recorded (fold 1, 2026-10-08, added three: 70 statements, 20 wrong, 50 controls before). | The grid of §3 and its fixture. | PROVEN | `skipping_limit_grid.tsv` (73 lines: 12 `one-partition`, 9 `every-partition`, 52 `control`, the family being the memory-table behaviour); `grid_fixture_carries_every_recorded_cell` holds the counts and the reported statement's text. The brief's shapes are all present: OFFSET without LIMIT, LIMIT without OFFSET, OFFSET past the row count, a nested sort on a different key, under a projection, a filter, a UNION, over a join, over an Iceberg scan and a parquet scan, with and without TopK. |
 | C-004 | The defect is in DataFusion 54.1.0's `EnforceSorting` sort pushdown, which ignores `GlobalLimitExec::skip`; no RePark rule takes part; DataFusion 55.0.0 carries the same code. | The rule bisect, the bare-context reproduction, the source reading of §1. | PROVEN | §1. `stock_enforce_sorting_still_loses_the_rows_at_one_partition_only` and `stock_enforce_sorting_still_sorts_below_an_offset` swap only that one rule and get the wrong answers back at the recorded partition counts. The 55.0.0 claim is a source reading, not a run. |
 | C-005 | RePark's session installs DataFusion's recommended physical rule list with `EnforceSorting` wrapped by the guard, in the same position and under the same name, followed by the three RePark physical rules. | A pin on the installed rule names. | PROVEN | `guarded_rule_list_is_stock_datafusion_in_order_then_the_repark_rules`. |
-| C-006 | With the guard every one of the 70 statements answers Spark's rows at 1, 2 and 16 partitions over a memory table, a sorted series view, a one-file parquet scan and an Iceberg scan (840 cells). | Rust pins per family and per source. | PROVEN | `one_partition_family_answers_spark_rows_at_one_partition` / `_at_two_partitions` / `_at_sixteen_partitions`, `every_partition_family_answers_spark_rows_at_each_partition_count`, `control_cells_keep_spark_rows_at_each_partition_count`, `grid_answers_spark_rows_over_a_sorted_series_view`, `…_over_a_parquet_scan`, `…_over_an_iceberg_scan`. |
+| C-006 | With the guard every one of the 73 statements answers Spark's rows at 1, 2 and 16 partitions over a memory table, a sorted series view, a one-file parquet scan and an Iceberg scan (876 cells; 840 before fold 1). | Rust pins per family and per source. | PROVEN | `one_partition_family_answers_spark_rows_at_one_partition` / `_at_two_partitions` / `_at_sixteen_partitions`, `every_partition_family_answers_spark_rows_at_each_partition_count`, `control_cells_keep_spark_rows_at_each_partition_count`, `grid_answers_spark_rows_over_a_sorted_series_view`, `…_over_a_parquet_scan`, `…_over_an_iceberg_scan`. |
 | C-007 | A live Spark cell replays every facade cell and follows the live-cell rules. | The cell, run with `REPARK_PARITY_LIVE=1`, collected together with another live module. | PROVEN | `test_live_spark_answers_every_recorded_cell` uses the shared `spark_engine` fixture (the conftest guard fails any test that stops the context), registers one temp view of its own name (`offset_nested_sort_1_oracle`; no catalog is created, so none can collide), and reads or pops no environment variable. Run together with `test_win_slide_1.py`'s live cells: `15 passed, 152 deselected`. |
 | C-008 | The pins cover the partition-dependent path and the guard's own branches. | Mutations, each run against the pin module. | PROVEN | §5: five mutations, each red; M1 is red at one partition and green at two and sixteen for the one-partition family. |
 | C-009 | The guard adds no work to a statement without an `OFFSET` beyond one walk of the physical plan, and such a statement plans exactly as stock DataFusion plans it. | A plan-identity pin, the rule-list pin, a measurement. | PROVEN | `statements_without_offset_plan_exactly_as_stock_datafusion` (12 statements at 1, 2, 16: the same plan text as the stock rule gives, including `SELECT … ORDER BY … LIMIT n`, a nested `LIMIT` under a refining sort, a `LIMIT` over a `UNION ALL`). §6 has the measurement. |
 | C-010 | The card row is closed with its date and the registry row names the upstream defect and the retirement event. | The card, the registry row, the retirement note. | PROVEN | Card status line and its `map.md` row; registry row `OFFSET-NESTED-SORT-1` (§7 of the parity registry); retirement note in `crates/repark-core/src/session/df_guards/map.md`: the two `stock_enforce_sorting_still_*` pins go red when DataFusion fixes the rule. |
 | C-011 | The unit's gates pass on the final tree. | The gate runs. | PROVEN | §7. |
+| C-012 | 2026-10-08 (fold 1): the guard's second sort above an `OFFSET` under a refining outer sort (`ORDER BY j, s` over `ORDER BY j`) is an accepted cost, or is removed by a rule that merges the two sorts when the outer sort refines the inner one. | The verifier's measurement (§9) and an owner ruling. | **OPEN** | **OPEN for the owner.** Measured: 136.3 ms guarded against 76.3 ms stock, +78.4 % (second run +83.7 %), 1M rows, 8 partitions, `ci` profile, 11 rounds; stock's one-sort answer for this shape was valid. The question: accept the cost, or a follow-up that merges the two sorts. |
+| C-013 | 2026-10-08 (fold 1): the guard's boundary `skip > 0` is pinned: moving it to `skip > 1` turns pins red. | Verifier mutation A against the pin module. | PROVEN | `offset_one` in `skipping_limit_grid.tsv`; with `limit.skip() > 1` in `is_skipping_limit`, 3 of 16 pins are red (`one_partition_family_answers_spark_rows_at_one_partition`, `grid_answers_spark_rows_over_a_parquet_scan`, `grid_answers_spark_rows_over_an_iceberg_scan`) and `offset_one` answers `4 [2,3,4,5]` against Spark's `5 [2,3,4,5,6]`; before the cell the mutant passed all 16. §9. |
 
 ## 5. Mutations
 
@@ -330,6 +341,51 @@ Spark environment's site-packages appended to `sys.path`.
 - **A parquet file written from a sorted plan declares its order**, so a scan of it never
   showed the defect. The parquet source of the pins is written in shuffled order for that
   reason.
+
+## 9. Fold 1 — the verifier's measurements (2026-10-08)
+
+The Opus verifier passed the unit (0 wrong of 11,316 cells; two S2s, two S3s). Its figures:
+
+- **Grid totals.** 264 statements (165 `OFFSET` family, 64 without `OFFSET`, 31 DataFrame
+  shapes, 4 `OFFSET 1` cells), all recorded on live Spark 4.1.2 and none taken from the lane's 70;
+  11,316 cells, 0 wrong. The stock `EnforceSorting` in the same grid: 636 wrong of 2,724 over 55
+  statements; bare DataFusion 54.1.0: 474 wrong of 2,043.
+- **S2, the boundary (C-013).** Mutation A, `limit.skip() > 1` in `is_skipping_limit`, passed all
+  16 pins while `SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 1) ORDER BY v` answered
+  wrong in 6 of 6 cells (memory table and one-file parquet at 1, 2, 16). The fold added the
+  `OFFSET 1` cells to the pinned grid; the same mutation now leaves 3 of 16 pins red.
+- **S2, the cost of the refining sort (C-012), OPEN for the owner.** §4.
+- **Cost of statements without `OFFSET`** (the table follows). Profile `ci` (opt-level 2, no debuginfo), **not** the
+  thin-LTO release profile; 11 rounds; one process, the guard against a context that differs only
+  in DataFusion's own `EnforceSorting`, a second such context as the floor; rotating order;
+  median of per-round ratios; under the build lock on cpus 48-63.
+
+| Statement | Guard | Stock | Guard vs stock | Floor |
+|---|---|---|---|---|
+| `SELECT 1`, run | 244.3 µs | 243.9 µs | +0.17 % | -0.21 % |
+| `SELECT 1`, plan | 214.8 µs | 213.5 µs | +0.28 % | -0.16 % |
+| TopK over 1M rows, run | 5235.2 µs | 5190.5 µs | +0.58 % | +0.22 % |
+| TopK over 1M rows, plan | 488.7 µs | 487.8 µs | +0.16 % | +0.10 % |
+| 3-way join, plan | 1813.0 µs | 1811.5 µs | +0.09 % | +0.01 % |
+| 3-way join, run | 2952.0 µs | 2934.6 µs | +1.94 % | +0.66 % |
+| filter, sort, limit, plan | 773.5 µs | 771.9 µs | +0.17 % | +0.05 % |
+| five nested `OFFSET`s, plan | 1286.7 µs | 1311.5 µs | -1.82 % | |
+| five nested `OFFSET`s, run | 212315.0 µs | 211676.1 µs | +0.42 % | |
+| top-level `OFFSET`, run | 7526.0 µs | 7481.2 µs | +0.43 % | +0.21 % |
+| refining sort over `OFFSET`, run (C-012) | 136310.0 µs | 76306.7 µs | +78.44 % | +2.3 % |
+
+The join run's plan text is identical; its unlocked repeat measured -0.56 % with a floor of
+-1.04 %, and the per-round floor ranged -11 % to +9 %. The verifier's bar: no statement without
+`OFFSET` is 2 % outside the floor.
+
+- **S3, `optimize_with_context`.** The planner calls `optimize_with_context`;
+  `SkipSafeEnforceSorting` inherits the default, which calls its own `optimize`. In 54.1.0 only
+  `JoinSelection` overrides it, so nothing is lost today. At the next DataFusion bump, check
+  whether `EnforceSorting` overrides it (the retirement note in `df_guards/map.md` carries this).
+- **S3, the seal's missing `fetch`.** Mutation D made `SealedSkippingLimitExec::fetch()` return
+  the limit's fetch: 16 of 16 pins green, 1356 of 1356 answered cells right, no plan change in a
+  statement without `OFFSET`. The cap cannot pass because the seal is a leaf; the map's sentence now
+  says that.
 
 ## Coverage attestation
 

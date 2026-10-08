@@ -24,8 +24,11 @@ wrapped optimizer rule) and declares this directory.
   goes bottom-up: for each skipping limit it runs the inner rule on the limit's input as a plan
   of its own, rebuilds the limit over the result, and replaces it with
   `SealedSkippingLimitExec`, a leaf. The leaf reports the limit's own properties (ordering,
-  one partition), has no children and no `fetch`, so the rule can neither push a row cap nor a
-  sort through it. The wrapper then runs the inner rule on the sealed plan and puts every limit
+  one partition) and has no children, so the rule has nothing below the seal to push a row cap
+  or a sort into: the property that holds is that the seal is a leaf. (Verifier mutation D made
+  the seal report the limit's `fetch`; the lane pins, 1356 answered cells and every plan of a
+  statement without an `OFFSET` did not change, so the missing `fetch` is not what holds the
+  cap back.) The wrapper then runs the inner rule on the sealed plan and puts every limit
   back top-down. A seal never leaves the rule: the later rules cannot see the plan a seal
   holds (`OutputRequirements` puts its marker node below a top-level limit, so the marker would
   stay), so `execute` on a seal is an internal error and `no_seal_survives_into_a_final_plan`
@@ -34,15 +37,35 @@ wrapped optimizer rule) and declares this directory.
   one-partition requirement is met before this rule (EnforceDistribution runs first), so the
   input of a skipping limit is a complete plan the rule can optimize alone. What the guard gives
   up: DataFusion could merge an outer sort that refines the inner one (`ORDER BY v, k` over
-  `ORDER BY v`) into the sort below the limit; RePark now sorts the rows that remain after the
-  `OFFSET` a second time. That cost exists only in a statement with an `OFFSET` under a sort.
+  `ORDER BY v`) into the sort below the limit, and stock's one-sort plan for that shape answered
+  rightly. The guard's plan is two sorts, the inner `SortExec` and a second `SortExec` above the
+  `GlobalLimitExec`; with a small `OFFSET` the second one sorts nearly the whole relation again.
+  Measured by the verifier (2026-10-08, `ci` profile, 11 rounds, guard against stock):
+  `SELECT s, j FROM (SELECT s, j FROM big ORDER BY j OFFSET 10) ORDER BY j, s` over a 1M-row
+  memory table at 8 partitions ran 136.3 ms guarded against 76.3 ms stock, +78.4% (a second run
+  +83.7%; the stock-against-stock floor +2.3%). **OPEN for the owner:** accept the cost, or a
+  follow-up that lets the rule merge the two sorts when the outer sort refines the inner one.
+  A statement without an `OFFSET` pays none of this: the verifier's `ci`-profile measurements
+  (not the thin-LTO release profile) found no statement without an `OFFSET` 2% outside the
+  floor, for example `SELECT 1` run +0.17% (floor -0.21%) and a TopK over 1M rows run +0.58% (floor +0.22%);
+  the table is in the unit ledger, section 9.
   Routes not taken: a repair after the rule (the original `fetch` is gone by then); splitting
   the limit into `skip` over `fetch` (the rule then pushes the sort through the skip-only half).
   **Retire** at the DataFusion bump that fixes the pushdown: the two
   `stock_enforce_sorting_still_*` pins in `../tests/skipping_limit.rs` go red when stock
   DataFusion answers right; delete this file, its wiring line and those two pins then.
   DataFusion 55.0.0 carries the same pushdown code (read in the registry copy, not run).
-  pins: offset-nested-sort-1/C-004, C-005, C-006, C-008, C-009, C-010
+  At the same bump check whether `EnforceSorting` overrides
+  `PhysicalOptimizerRule::optimize_with_context`: the physical planner calls that method and
+  `SkipSafeEnforceSorting` does not forward it (the default calls the wrapper's own `optimize`),
+  so an override in the new version would be dropped silently. In 54.1.0 only `JoinSelection`
+  overrides it, so nothing is lost today.
+  The boundary `skip > 0` is pinned by the grid cell `offset_one`: with `is_skipping_limit` moved
+  to `skip > 1` (verifier mutation A, repeated on the pins as committed) `offset_one` answers
+  4 rows `[2,3,4,5]` where Spark answers `[2,3,4,5,6]`, and 3 of the 16 pins go red:
+  `one_partition_family_answers_spark_rows_at_one_partition` (on `m`, one partition) and the parquet
+  and Iceberg grids (at 1, 2 and 16); the other 13 stay green. Before the cell, all 16 passed.
+  pins: offset-nested-sort-1/C-004, C-005, C-006, C-008, C-009, C-010, C-013
 - [window_rescan.rs](window_rescan.rs) — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule.
   Its design note, the DataFusion contracts it reads, and the routes it does not take are in
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and
