@@ -1372,53 +1372,6 @@
     {
       "answer": {
         "strings": {
-          "+ 5 seconds": {
-            "parsed": {
-              "millis": 5000,
-              "rendered": "ProcessingTimeTrigger(5000)"
-            },
-            "trigger": "accepted"
-          },
-          "- 5 seconds": {
-            "parsed": {
-              "causes": [
-                "java.lang.IllegalArgumentException"
-              ],
-              "class": "IllegalArgumentException",
-              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
-              "sqlstate": null,
-              "text": "requirement failed: the interval of trigger should not be negative"
-            },
-            "trigger": {
-              "causes": [
-                "java.lang.IllegalArgumentException"
-              ],
-              "class": "IllegalArgumentException",
-              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
-              "sqlstate": null,
-              "text": "requirement failed: the interval of trigger should not be negative"
-            }
-          },
-          "-0.0005 seconds": {
-            "parsed": {
-              "causes": [
-                "java.lang.IllegalArgumentException"
-              ],
-              "class": "IllegalArgumentException",
-              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
-              "sqlstate": null,
-              "text": "requirement failed: the interval of trigger should not be negative"
-            },
-            "trigger": {
-              "causes": [
-                "java.lang.IllegalArgumentException"
-              ],
-              "class": "IllegalArgumentException",
-              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
-              "sqlstate": null,
-              "text": "requirement failed: the interval of trigger should not be negative"
-            }
-          },
           "-100000000 days -200000 hours": {
             "parsed": {
               "causes": [
@@ -1459,19 +1412,25 @@
               "text": "long overflow"
             }
           },
-          ".5 seconds": {
+          "-2147483648 months -1 month": {
             "parsed": {
-              "millis": 500,
-              "rendered": "ProcessingTimeTrigger(500)"
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '-2147483648 months -1 month' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '-2147483648 months -1 month'. SQLSTATE: 22006"
             },
-            "trigger": "accepted"
-          },
-          "0 months": {
-            "parsed": {
-              "millis": 0,
-              "rendered": "ProcessingTimeTrigger(0)"
-            },
-            "trigger": "accepted"
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '-2147483648 months -1 month' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '-2147483648 months -1 month'. SQLSTATE: 22006"
+            }
           },
           "1 day 2147483648 days": {
             "parsed": {
@@ -1512,20 +1471,6 @@
               "sqlstate": "22006",
               "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '1 day 2600000000 hours' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '1 day 2600000000 hours'. SQLSTATE: 22006"
             }
-          },
-          "1 second 1 day": {
-            "parsed": {
-              "millis": 86401000,
-              "rendered": "ProcessingTimeTrigger(86401000)"
-            },
-            "trigger": "accepted"
-          },
-          "1 second 1 second": {
-            "parsed": {
-              "millis": 2000,
-              "rendered": "ProcessingTimeTrigger(2000)"
-            },
-            "trigger": "accepted"
           },
           "100000000 days 200000 hours": {
             "parsed": {
@@ -1686,6 +1631,26 @@
               "exception": "pyspark.errors.exceptions.captured.ArithmeticException",
               "sqlstate": null,
               "text": "long overflow"
+            }
+          },
+          "2147483647 months 1 month": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '2147483647 months 1 month' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '2147483647 months 1 month'. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '2147483647 months 1 month' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '2147483647 months 1 month'. SQLSTATE: 22006"
             }
           },
           "2147483648 days": {
@@ -1909,47 +1874,6 @@
               "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '306783379 weeks' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '306783379 weeks'. SQLSTATE: 22006"
             }
           },
-          "5\tseconds": {
-            "parsed": {
-              "millis": 5000,
-              "rendered": "ProcessingTimeTrigger(5000)"
-            },
-            "trigger": "accepted"
-          },
-          "5  seconds": {
-            "parsed": {
-              "millis": 5000,
-              "rendered": "ProcessingTimeTrigger(5000)"
-            },
-            "trigger": "accepted"
-          },
-          "5 séconds": {
-            "parsed": {
-              "causes": [
-                "org.apache.spark.SparkIllegalArgumentException"
-              ],
-              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
-              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
-              "sqlstate": "22006",
-              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 séconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit séconds. SQLSTATE: 22006"
-            },
-            "trigger": {
-              "causes": [
-                "org.apache.spark.SparkIllegalArgumentException"
-              ],
-              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
-              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
-              "sqlstate": "22006",
-              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 séconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit séconds. SQLSTATE: 22006"
-            }
-          },
-          "5. seconds": {
-            "parsed": {
-              "millis": 5000,
-              "rendered": "ProcessingTimeTrigger(5000)"
-            },
-            "trigger": "accepted"
-          },
           "9999999999999999999.5 seconds": {
             "parsed": {
               "causes": [
@@ -1988,6 +1912,833 @@
               "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
               "sqlstate": "22006",
               "text": "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing 'bogus 2600000000 hours' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Unrecognized number bogus. SQLSTATE: 22006"
+            }
+          }
+        }
+      },
+      "cell": "MB0c-T1B",
+      "field": "facade.trigger.overflow_strings.answer",
+      "kind": "rows",
+      "statement": "def cell_t1b(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"t1b\")\n    append(bench, source, [1])\n    stream = bench.spark.readStream.format(\"iceberg\").load(source)\n    texts = [\n        \"2147483647 days\",\n        \"2147483648 days\",\n        \"106751991167 days\",\n        \"3000000000 hours\",\n        \"2200000000 hours\",\n        \"2600000000 hours\",\n        \"3000000000 minutes\",\n        \"200000000000 minutes\",\n        \"3000000000 seconds\",\n        \"10000000000000 seconds\",\n        \"10000000000000000000 milliseconds\",\n        \"10000000000000000000000 microseconds\",\n        \"3000000000 months\",\n        \"2147483648 months\",\n        \"3000000000 weeks\",\n        \"306783378 weeks\",\n        \"306783379 weeks\",\n        \"100000000 days 200000 hours\",\n        \"-100000000 days -200000 hours\",\n        \"106700000 days\",\n        \"2000000 hours\",\n        \"106700000 days 2000000 hours\",\n        \"-106700000 days -2000000 hours\",\n        \"1 day 2600000000 hours\",\n        \"1 day 2147483648 days\",\n        \"2600000000.5 hours\",\n        \"9999999999999999999.5 seconds\",\n        \"2600000000 hours bogus\",\n        \"bogus 2600000000 hours\",\n        \"2147483647 months 1 month\",\n        \"-2147483648 months -1 month\",\n    ]\n    outcomes: dict[str, dict[str, Any]] = {}\n    for text in texts:\n        trigger_outcome: str | dict[str, Any] = \"accepted\"\n        try:\n            stream.writeStream.format(\"iceberg\").trigger(processingTime=text)\n        except PySparkException as exc:\n            trigger_outcome = error_of(exc)\n        try:\n            parsed_outcome: dict[str, Any] = trigger_millis(bench.spark, text)\n        except PySparkException as exc:\n            parsed_outcome = error_of(exc)\n        outcomes[text] = {\"trigger\": trigger_outcome, \"parsed\": parsed_outcome}\n    return \"rows\", {\"strings\": outcomes}\n\ndef trigger_millis(spark: SparkSession, text: str) -> dict[str, Any]:\n    rendered = spark._jvm.org.apache.spark.sql.streaming.Trigger.ProcessingTime(text).toString()\n    match = TRIGGER_MILLIS_RE.match(rendered)\n    if match is None:\n        raise SystemExit(f\"unexpected trigger rendering: {rendered}\")\n    return {\"millis\": int(match.group(1)), \"rendered\": rendered}\n"
+    },
+    {
+      "answer": {
+        "strings": {
+          "  bogus": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing '  bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Unrecognized number bogus. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing 'bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Unrecognized number bogus. SQLSTATE: 22006"
+            }
+          },
+          " 1 month ": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "_LEGACY_ERROR_TEMP_3262",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "Doesn't support month or year interval:  1 month "
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "_LEGACY_ERROR_TEMP_3262",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "Doesn't support month or year interval: 1 month"
+            }
+          },
+          "+ 5 seconds": {
+            "parsed": {
+              "millis": 5000,
+              "rendered": "ProcessingTimeTrigger(5000)"
+            },
+            "trigger": "accepted"
+          },
+          "+ bogus": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '+ bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value bogus. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '+ bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value bogus. SQLSTATE: 22006"
+            }
+          },
+          "+5": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '+5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after +5 but hit EOL. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '+5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after +5 but hit EOL. SQLSTATE: 22006"
+            }
+          },
+          "-": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_NUMBER] Error parsing '-' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a number after - but hit EOL. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_NUMBER] Error parsing '-' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a number after - but hit EOL. SQLSTATE: 22006"
+            }
+          },
+          "- - 5 seconds": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '- - 5 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value -. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '- - 5 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value -. SQLSTATE: 22006"
+            }
+          },
+          "- 5": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '- 5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after 5 but hit EOL. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '- 5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after 5 but hit EOL. SQLSTATE: 22006"
+            }
+          },
+          "- 5 seconds": {
+            "parsed": {
+              "causes": [
+                "java.lang.IllegalArgumentException"
+              ],
+              "class": "IllegalArgumentException",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "requirement failed: the interval of trigger should not be negative"
+            },
+            "trigger": {
+              "causes": [
+                "java.lang.IllegalArgumentException"
+              ],
+              "class": "IllegalArgumentException",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "requirement failed: the interval of trigger should not be negative"
+            }
+          },
+          "- bogus": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '- bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value bogus. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '- bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value bogus. SQLSTATE: 22006"
+            }
+          },
+          "- seconds": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '- seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value seconds. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '- seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value seconds. SQLSTATE: 22006"
+            }
+          },
+          "-.5 seconds": {
+            "parsed": {
+              "causes": [
+                "java.lang.IllegalArgumentException"
+              ],
+              "class": "IllegalArgumentException",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "requirement failed: the interval of trigger should not be negative"
+            },
+            "trigger": {
+              "causes": [
+                "java.lang.IllegalArgumentException"
+              ],
+              "class": "IllegalArgumentException",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "requirement failed: the interval of trigger should not be negative"
+            }
+          },
+          "-0.0000005 seconds": {
+            "parsed": {
+              "millis": 0,
+              "rendered": "ProcessingTimeTrigger(0)"
+            },
+            "trigger": "accepted"
+          },
+          "-0.0005 seconds": {
+            "parsed": {
+              "causes": [
+                "java.lang.IllegalArgumentException"
+              ],
+              "class": "IllegalArgumentException",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "requirement failed: the interval of trigger should not be negative"
+            },
+            "trigger": {
+              "causes": [
+                "java.lang.IllegalArgumentException"
+              ],
+              "class": "IllegalArgumentException",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "requirement failed: the interval of trigger should not be negative"
+            }
+          },
+          "-1 months": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "_LEGACY_ERROR_TEMP_3262",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "Doesn't support month or year interval: -1 months"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "_LEGACY_ERROR_TEMP_3262",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "Doesn't support month or year interval: -1 months"
+            }
+          },
+          "-5": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '-5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after -5 but hit EOL. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '-5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after -5 but hit EOL. SQLSTATE: 22006"
+            }
+          },
+          "-bogus": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '-bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value -bogus. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '-bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid value -bogus. SQLSTATE: 22006"
+            }
+          },
+          ".5": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '.5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after .5 but hit EOL. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '.5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after .5 but hit EOL. SQLSTATE: 22006"
+            }
+          },
+          ".5 seconds": {
+            "parsed": {
+              "millis": 500,
+              "rendered": "ProcessingTimeTrigger(500)"
+            },
+            "trigger": "accepted"
+          },
+          "0 months": {
+            "parsed": {
+              "millis": 0,
+              "rendered": "ProcessingTimeTrigger(0)"
+            },
+            "trigger": "accepted"
+          },
+          "0.0015 seconds": {
+            "parsed": {
+              "millis": 1,
+              "rendered": "ProcessingTimeTrigger(1)"
+            },
+            "trigger": "accepted"
+          },
+          "1 second 1 day": {
+            "parsed": {
+              "millis": 86401000,
+              "rendered": "ProcessingTimeTrigger(86401000)"
+            },
+            "trigger": "accepted"
+          },
+          "1 second 1 second": {
+            "parsed": {
+              "millis": 2000,
+              "rendered": "ProcessingTimeTrigger(2000)"
+            },
+            "trigger": "accepted"
+          },
+          "1.0 minutes": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_FRACTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_FRACTION] Error parsing '1.0 minutes' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. minutes cannot have fractional part. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_FRACTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_FRACTION] Error parsing '1.0 minutes' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. minutes cannot have fractional part. SQLSTATE: 22006"
+            }
+          },
+          "1.5": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '1.5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after 1.5 but hit EOL. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '1.5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after 1.5 but hit EOL. SQLSTATE: 22006"
+            }
+          },
+          "1.5 minute": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_FRACTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_FRACTION] Error parsing '1.5 minute' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. minute cannot have fractional part. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_FRACTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_FRACTION] Error parsing '1.5 minute' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. minute cannot have fractional part. SQLSTATE: 22006"
+            }
+          },
+          "5\tbogus": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5\tbogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit bogus. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5\tbogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit bogus. SQLSTATE: 22006"
+            }
+          },
+          "5\tseconds": {
+            "parsed": {
+              "millis": 5000,
+              "rendered": "ProcessingTimeTrigger(5000)"
+            },
+            "trigger": "accepted"
+          },
+          "5  bogus": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5  bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit bogus. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5  bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit bogus. SQLSTATE: 22006"
+            }
+          },
+          "5  seconds": {
+            "parsed": {
+              "millis": 5000,
+              "rendered": "ProcessingTimeTrigger(5000)"
+            },
+            "trigger": "accepted"
+          },
+          "5 + seconds": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 + seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit +. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 + seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit +. SQLSTATE: 22006"
+            }
+          },
+          "5 -": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 -' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit -. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 -' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit -. SQLSTATE: 22006"
+            }
+          },
+          "5 6 seconds": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 6 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit 6. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 6 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit 6. SQLSTATE: 22006"
+            }
+          },
+          "5 SECS": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 SECS' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit secs. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 SECS' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit secs. SQLSTATE: 22006"
+            }
+          },
+          "5 seconds +": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_NUMBER] Error parsing '5 seconds +' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a number after + but hit EOL. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_NUMBER] Error parsing '5 seconds +' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a number after + but hit EOL. SQLSTATE: 22006"
+            }
+          },
+          "5 seconds -": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_NUMBER] Error parsing '5 seconds -' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a number after - but hit EOL. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_NUMBER] Error parsing '5 seconds -' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a number after - but hit EOL. SQLSTATE: 22006"
+            }
+          },
+          "5 seconds 1 month": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "_LEGACY_ERROR_TEMP_3262",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "Doesn't support month or year interval: 5 seconds 1 month"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "_LEGACY_ERROR_TEMP_3262",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": null,
+              "text": "Doesn't support month or year interval: 5 seconds 1 month"
+            }
+          },
+          "5 seconds interval": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing '5 seconds interval' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Unrecognized number interval. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing '5 seconds interval' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Unrecognized number interval. SQLSTATE: 22006"
+            }
+          },
+          "5 séconds": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 séconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit séconds. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 séconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid unit séconds. SQLSTATE: 22006"
+            }
+          },
+          "5.": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '5.' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after 5. but hit EOL. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '5.' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after 5. but hit EOL. SQLSTATE: 22006"
+            }
+          },
+          "5. days": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_FRACTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_FRACTION] Error parsing '5. days' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. days cannot have fractional part. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_FRACTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_FRACTION] Error parsing '5. days' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. days cannot have fractional part. SQLSTATE: 22006"
+            }
+          },
+          "5. seconds": {
+            "parsed": {
+              "millis": 5000,
+              "rendered": "ProcessingTimeTrigger(5000)"
+            },
+            "trigger": "accepted"
+          },
+          "99999999999999999999 months": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '99999999999999999999 months' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '99999999999999999999 months'. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '99999999999999999999 months' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '99999999999999999999 months'. SQLSTATE: 22006"
+            }
+          },
+          "99999999999999999999999 seconds": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '99999999999999999999999 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '99999999999999999999999 seconds'. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '99999999999999999999999 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '99999999999999999999999 seconds'. SQLSTATE: 22006"
+            }
+          },
+          "99999999999999999999999.5 seconds": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '99999999999999999999999.5 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '99999999999999999999999.5 seconds'. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '99999999999999999999999.5 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Uncaught arithmetic exception while parsing '99999999999999999999999.5 seconds'. SQLSTATE: 22006"
+            }
+          },
+          "BOGUS": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing 'BOGUS' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Unrecognized number bogus. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing 'BOGUS' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Unrecognized number bogus. SQLSTATE: 22006"
+            }
+          },
+          "INTERVAL   5 seconds": {
+            "parsed": {
+              "millis": 5000,
+              "rendered": "ProcessingTimeTrigger(5000)"
+            },
+            "trigger": "accepted"
+          },
+          "bogus  ": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing 'bogus  ' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Unrecognized number bogus. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing 'bogus' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Unrecognized number bogus. SQLSTATE: 22006"
             }
           },
           "interval": {
@@ -2030,6 +2781,26 @@
               "text": "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing 'interval 5' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Expect a unit name after 5 but hit EOL. SQLSTATE: 22006"
             }
           },
+          "interval5 seconds": {
+            "parsed": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_PREFIX",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_PREFIX] Error parsing 'interval5 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid interval prefix interval5. SQLSTATE: 22006"
+            },
+            "trigger": {
+              "causes": [
+                "org.apache.spark.SparkIllegalArgumentException"
+              ],
+              "class": "INVALID_INTERVAL_FORMAT.INVALID_PREFIX",
+              "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+              "sqlstate": "22006",
+              "text": "[INVALID_INTERVAL_FORMAT.INVALID_PREFIX] Error parsing 'interval5 seconds' to interval. Please ensure that the value provided is in a valid format for defining an interval. You can reference the documentation for the correct format. Invalid interval prefix interval5. SQLSTATE: 22006"
+            }
+          },
           "５ seconds": {
             "parsed": {
               "causes": [
@@ -2052,10 +2823,10 @@
           }
         }
       },
-      "cell": "MB0c-T1B",
-      "field": "facade.trigger.overflow_and_edge_strings.answer",
+      "cell": "MB0c-T1C",
+      "field": "facade.trigger.tokenizer_edge_strings.answer",
       "kind": "rows",
-      "statement": "def cell_t1b(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"t1b\")\n    append(bench, source, [1])\n    stream = bench.spark.readStream.format(\"iceberg\").load(source)\n    texts = [\n        \"2147483647 days\",\n        \"2147483648 days\",\n        \"106751991167 days\",\n        \"3000000000 hours\",\n        \"2200000000 hours\",\n        \"2600000000 hours\",\n        \"3000000000 minutes\",\n        \"200000000000 minutes\",\n        \"3000000000 seconds\",\n        \"10000000000000 seconds\",\n        \"10000000000000000000 milliseconds\",\n        \"10000000000000000000000 microseconds\",\n        \"3000000000 months\",\n        \"2147483648 months\",\n        \"3000000000 weeks\",\n        \"306783378 weeks\",\n        \"306783379 weeks\",\n        \"100000000 days 200000 hours\",\n        \"-100000000 days -200000 hours\",\n        \"106700000 days\",\n        \"2000000 hours\",\n        \"106700000 days 2000000 hours\",\n        \"-106700000 days -2000000 hours\",\n        \"1 day 2600000000 hours\",\n        \"1 day 2147483648 days\",\n        \"2600000000.5 hours\",\n        \"9999999999999999999.5 seconds\",\n        \"2600000000 hours bogus\",\n        \"bogus 2600000000 hours\",\n        \"interval\",\n        \"interval 5\",\n        \"5  seconds\",\n        \"5\\tseconds\",\n        \"- 5 seconds\",\n        \"+ 5 seconds\",\n        \".5 seconds\",\n        \"5. seconds\",\n        \"-0.0005 seconds\",\n        \"0 months\",\n        \"1 second 1 second\",\n        \"1 second 1 day\",\n        \"５ seconds\",  # noqa: RUF001 — the fullwidth digit is the probed input\n        \"5 séconds\",\n    ]\n    outcomes: dict[str, dict[str, Any]] = {}\n    for text in texts:\n        trigger_outcome: str | dict[str, Any] = \"accepted\"\n        try:\n            stream.writeStream.format(\"iceberg\").trigger(processingTime=text)\n        except PySparkException as exc:\n            trigger_outcome = error_of(exc)\n        try:\n            parsed_outcome: dict[str, Any] = trigger_millis(bench.spark, text)\n        except PySparkException as exc:\n            parsed_outcome = error_of(exc)\n        outcomes[text] = {\"trigger\": trigger_outcome, \"parsed\": parsed_outcome}\n    return \"rows\", {\"strings\": outcomes}\n\ndef trigger_millis(spark: SparkSession, text: str) -> dict[str, Any]:\n    rendered = spark._jvm.org.apache.spark.sql.streaming.Trigger.ProcessingTime(text).toString()\n    match = TRIGGER_MILLIS_RE.match(rendered)\n    if match is None:\n        raise SystemExit(f\"unexpected trigger rendering: {rendered}\")\n    return {\"millis\": int(match.group(1)), \"rendered\": rendered}\n"
+      "statement": "def cell_t1c(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"t1c\")\n    append(bench, source, [1])\n    stream = bench.spark.readStream.format(\"iceberg\").load(source)\n    texts = [\n        \"interval\",\n        \"interval 5\",\n        \"5  seconds\",\n        \"5\\tseconds\",\n        \"- 5 seconds\",\n        \"+ 5 seconds\",\n        \".5 seconds\",\n        \"5. seconds\",\n        \"-0.0005 seconds\",\n        \"0 months\",\n        \"1 second 1 second\",\n        \"1 second 1 day\",\n        \"５ seconds\",  # noqa: RUF001 — the fullwidth digit is the probed input\n        \"5 séconds\",\n        \"5 SECS\",\n        \"  bogus\",\n        \"bogus  \",\n        \"BOGUS\",\n        \"-0.0000005 seconds\",\n        \"0.0015 seconds\",\n        \"-1 months\",\n        \"5 seconds 1 month\",\n        \"interval5 seconds\",\n        \"- bogus\",\n        \"+ bogus\",\n        \"-bogus\",\n        \"- 5\",\n        \"1.5\",\n        \"5 seconds -\",\n        \"- seconds\",\n        \"5  bogus\",\n        \"5\\tbogus\",\n        \".5\",\n        \"5.\",\n        \"5 seconds +\",\n        \"- - 5 seconds\",\n        \"5 6 seconds\",\n        \"-\",\n        \"INTERVAL   5 seconds\",\n        \"1.5 minute\",\n        \"5 seconds interval\",\n        \"-.5 seconds\",\n        \"-5\",\n        \"+5\",\n        \"5 -\",\n        \"5 + seconds\",\n        \"1.0 minutes\",\n        \"5. days\",\n        \"99999999999999999999 months\",\n        \"99999999999999999999999 seconds\",\n        \"99999999999999999999999.5 seconds\",\n        \" 1 month \",\n    ]\n    outcomes: dict[str, dict[str, Any]] = {}\n    for text in texts:\n        trigger_outcome: str | dict[str, Any] = \"accepted\"\n        try:\n            stream.writeStream.format(\"iceberg\").trigger(processingTime=text)\n        except PySparkException as exc:\n            trigger_outcome = error_of(exc)\n        try:\n            parsed_outcome: dict[str, Any] = trigger_millis(bench.spark, text)\n        except PySparkException as exc:\n            parsed_outcome = error_of(exc)\n        outcomes[text] = {\"trigger\": trigger_outcome, \"parsed\": parsed_outcome}\n    return \"rows\", {\"strings\": outcomes}\n\ndef trigger_millis(spark: SparkSession, text: str) -> dict[str, Any]:\n    rendered = spark._jvm.org.apache.spark.sql.streaming.Trigger.ProcessingTime(text).toString()\n    match = TRIGGER_MILLIS_RE.match(rendered)\n    if match is None:\n        raise SystemExit(f\"unexpected trigger rendering: {rendered}\")\n    return {\"millis\": int(match.group(1)), \"rendered\": rendered}\n"
     },
     {
       "answer": {

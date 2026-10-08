@@ -17,12 +17,13 @@ the Spark halves of registry rows `MB-3-STATIC-SIDE-1`, `MB-3-PROGRESS-RETENTION
 `MB-3-REPLAY-WINDOW-1` and of the processing-time schedule (MB-3 ledger C-017).
 
 MB-0c (2026-10-08): the facade oracle for the micro-batch track (1.7). It records
-29 cells, `MB0c-F1…F15` (format and no-format doors), `MB0c-T1`, `MB0c-T1B`, `MB0c-T2`,
-`MB0c-T3` (trigger strings, client checks, continuous), `MB0c-O1…O2` (output mode),
-`MB0c-D1…D2` (DM-3, DM-1), `MB0c-M1…M3` (the query manager) and `MB0c-W1…W3` (writer
-runs), on live Spark 4.1.2 + Iceberg 1.11.0 over a local Hadoop catalog. The MB-4
-wire-up pins its Q3/Q4/Q5 rulings against these cells, not against the read's
-scratch probe. Nothing here is collected by pytest, and no RePark code runs.
+30 cells, `MB0c-F1…F15` (format and no-format doors), `MB0c-T1`, `MB0c-T1B`, `MB0c-T1C`,
+`MB0c-T2`, `MB0c-T3` (trigger strings, overflow, tokenizer edges, client checks,
+continuous), `MB0c-O1…O2` (output mode), `MB0c-D1…D2` (DM-3, DM-1), `MB0c-M1…M3` (the
+query manager) and `MB0c-W1…W3` (writer runs), on live Spark 4.1.2 + Iceberg 1.11.0
+over a local Hadoop catalog. The MB-4 wire-up pins its Q3/Q4/Q5 rulings against
+these cells, not against the read's scratch probe. Nothing here is collected by
+pytest, and no RePark code runs.
 
 D-M2 (2026-10-06): the Postgres JDBC oracle for the connect track (1.6). It records
 58 cells, `DM2-T01…T30` (types), `DM2-V01…V10` (values) and `DM2-S01…S04`
@@ -81,18 +82,21 @@ collected by pytest, and no RePark code runs.
 - `mb3_fold_oracle.json` is that recording: the MB-0 preamble shape and the four cells.
 - `mb3_fold_oracle.sha256` holds `sha256sum` of the JSON. Check it with `sha256sum -c` from
   this directory.
-- `mb0c_facade_oracle.py` is the MB-0c recorder (2026-10-08). It records 29 cells on
+- `mb0c_facade_oracle.py` is the MB-0c recorder (2026-10-08). It records 30 cells on
   the same bench (`mb0_bench.py`, and `AppendTo`, `fresh_dir`, `preamble` and `scrub`
   from the MB-0 recorder), into its own JSON so the MB-0 and MB-3 recordings stay
   byte-identical. Refusal cells use kind `error` with the `error_of` shape; cells that
   run use kind `rows`; the trigger-string sweeps are `rows` matrices in the `MB3-J1`
   shape, each string carrying its `trigger()` outcome plus the millisecond duration
-  read off the `Trigger.ProcessingTime` the JVM door itself builds. Run it as the MB-0
-  recorder is run, with `MB0_WAREHOUSE` and `MB0_CHECKPOINTS` pointing at empty private
-  directories; `MB0_OUT` redirects the JSON and `MB0C_CELLS` (a comma list of cell ids)
-  records a subset merged into the existing JSON. A re-run is byte-identical.
+  read off the `Trigger.ProcessingTime` the JVM door itself builds. `T1` sweeps the
+  read's strings with unit, fraction and sign coverage; `T1B` the overflow field
+  boundaries; `T1C` the tokenizer edges (echoes, prefixes, missing parts). Run it as
+  the MB-0 recorder is run, with `MB0_WAREHOUSE` and `MB0_CHECKPOINTS` pointing at
+  empty private directories; `MB0_OUT` redirects the JSON and `MB0C_CELLS` (a comma
+  list of cell ids) records a subset merged into the existing JSON. A re-run is
+  byte-identical.
   pins: mb-4/C-009
-- `mb0c_facade_oracle.json` is that recording: the MB-0 preamble shape and the 29 cells.
+- `mb0c_facade_oracle.json` is that recording: the MB-0 preamble shape and the 30 cells.
 - `mb0c_facade_oracle.sha256` holds `sha256sum` of the JSON. Check it with `sha256sum -c`
   from this directory.
 - `c2_jdbc_oracle.py` is the D-M2 recorder. Cells are data (`define_cells`),

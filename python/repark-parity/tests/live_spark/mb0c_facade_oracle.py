@@ -1,4 +1,4 @@
-"""MB-0c facade oracle: 29 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
+"""MB-0c facade oracle: 30 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from mb0_streaming_oracle import AppendTo, fresh_dir, preamble, scrub
 from pyspark.errors import PySparkException
 from pyspark.sql import DataFrame, SparkSession
 
-EXPECTED_CELLS = 29
+EXPECTED_CELLS = 30
 
 TRIGGER_MILLIS_RE = re.compile(r"^ProcessingTimeTrigger\((\d+)\)$")
 
@@ -343,6 +343,29 @@ def cell_t1b(bench: Bench) -> tuple[str, dict[str, Any]]:
         "9999999999999999999.5 seconds",
         "2600000000 hours bogus",
         "bogus 2600000000 hours",
+        "2147483647 months 1 month",
+        "-2147483648 months -1 month",
+    ]
+    outcomes: dict[str, dict[str, Any]] = {}
+    for text in texts:
+        trigger_outcome: str | dict[str, Any] = "accepted"
+        try:
+            stream.writeStream.format("iceberg").trigger(processingTime=text)
+        except PySparkException as exc:
+            trigger_outcome = error_of(exc)
+        try:
+            parsed_outcome: dict[str, Any] = trigger_millis(bench.spark, text)
+        except PySparkException as exc:
+            parsed_outcome = error_of(exc)
+        outcomes[text] = {"trigger": trigger_outcome, "parsed": parsed_outcome}
+    return "rows", {"strings": outcomes}
+
+
+def cell_t1c(bench: Bench) -> tuple[str, dict[str, Any]]:
+    source = create_source(bench, "t1c")
+    append(bench, source, [1])
+    stream = bench.spark.readStream.format("iceberg").load(source)
+    texts = [
         "interval",
         "interval 5",
         "5  seconds",
@@ -357,6 +380,44 @@ def cell_t1b(bench: Bench) -> tuple[str, dict[str, Any]]:
         "1 second 1 day",
         "５ seconds",  # noqa: RUF001 — the fullwidth digit is the probed input
         "5 séconds",
+        "5 SECS",
+        "  bogus",
+        "bogus  ",
+        "BOGUS",
+        "-0.0000005 seconds",
+        "0.0015 seconds",
+        "-1 months",
+        "5 seconds 1 month",
+        "interval5 seconds",
+        "- bogus",
+        "+ bogus",
+        "-bogus",
+        "- 5",
+        "1.5",
+        "5 seconds -",
+        "- seconds",
+        "5  bogus",
+        "5\tbogus",
+        ".5",
+        "5.",
+        "5 seconds +",
+        "- - 5 seconds",
+        "5 6 seconds",
+        "-",
+        "INTERVAL   5 seconds",
+        "1.5 minute",
+        "5 seconds interval",
+        "-.5 seconds",
+        "-5",
+        "+5",
+        "5 -",
+        "5 + seconds",
+        "1.0 minutes",
+        "5. days",
+        "99999999999999999999 months",
+        "99999999999999999999999 seconds",
+        "99999999999999999999999.5 seconds",
+        " 1 month ",
     ]
     outcomes: dict[str, dict[str, Any]] = {}
     for text in texts:
@@ -594,8 +655,14 @@ CELLS: tuple[tuple[str, str, Cell, tuple[Any, ...]], ...] = (
     ("MB0c-T1", "facade.trigger.processing_time_strings.answer", cell_t1, (trigger_millis,)),
     (
         "MB0c-T1B",
-        "facade.trigger.overflow_and_edge_strings.answer",
+        "facade.trigger.overflow_strings.answer",
         cell_t1b,
+        (trigger_millis,),
+    ),
+    (
+        "MB0c-T1C",
+        "facade.trigger.tokenizer_edge_strings.answer",
+        cell_t1c,
         (trigger_millis,),
     ),
     ("MB0c-T2", "facade.trigger.client_checks.answer", cell_t2, ()),
