@@ -39,6 +39,7 @@ pub(super) struct FaultCatalog {
     armed: AtomicU8,
     fail_next_load: AtomicBool,
     load_hook: Mutex<Option<LoadHook>>,
+    events: Mutex<Vec<String>>,
 }
 
 impl std::fmt::Debug for FaultCatalog {
@@ -52,6 +53,17 @@ impl std::fmt::Debug for FaultCatalog {
 impl FaultCatalog {
     pub(super) fn arm(&self, fault: u8) {
         self.armed.store(fault, Ordering::SeqCst);
+    }
+
+    pub(super) fn events(&self) -> Vec<String> {
+        self.events.lock().expect("the events").clone()
+    }
+
+    fn note(&self, what: &str, table: &TableIdent) {
+        self.events
+            .lock()
+            .expect("the events")
+            .push(format!("{what} {name}", name = table.name()));
     }
 
     pub(super) fn on_load(&self, hook: Option<LoadHook>) {
@@ -113,6 +125,7 @@ impl Catalog for FaultCatalog {
     }
 
     async fn load_table(&self, table: &TableIdent) -> iceberg::Result<Table> {
+        self.note("load", table);
         let hook = self.load_hook.lock().expect("the load hook").clone();
         if let Some(hook) = hook {
             hook(table).await;
@@ -147,6 +160,7 @@ impl Catalog for FaultCatalog {
     }
 
     async fn update_table(&self, commit: TableCommit) -> iceberg::Result<Table> {
+        self.note("commit", commit.identifier());
         match self.armed.swap(ARMED_NONE, Ordering::SeqCst) {
             ARMED_STALL_LANDED => {
                 self.inner.update_table(commit).await?;
@@ -182,6 +196,7 @@ pub(super) async fn flaky(fixture: &Fixture) -> Arc<FaultCatalog> {
         armed: AtomicU8::new(ARMED_NONE),
         fail_next_load: AtomicBool::new(false),
         load_hook: Mutex::new(None),
+        events: Mutex::default(),
     });
     fixture
         .session

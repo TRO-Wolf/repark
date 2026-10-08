@@ -7,6 +7,8 @@ mod foreach_tests;
 mod lifecycle_tests;
 pub mod progress;
 pub mod relation;
+#[cfg(test)]
+mod reload_tests;
 mod run;
 #[cfg(test)]
 mod table_door_tests;

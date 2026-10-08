@@ -123,6 +123,11 @@ Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
     record or ends `RecoveryRequired(CommitOutcomeUnknown)`; the walk is bounded too. The
     bound on a source call covers that call's manifest reads as well as its catalog load,
     because the load lives inside the source (ledger D-16). pins: mb-3/C-010
+  - *A fresh sink for every batch.* `enter_scope` loads the sink for each batch, the `toTable`
+    door stages and commits on that handle, and the `foreachBatch` door loads it again after
+    the body before the trailing stamp. No handle is kept across batches, so an epoch never
+    commits from a handle older than the run's previous commit (the append fence's rule,
+    PR #996). pins: mb-3/C-022
 - `progress.rs` — the `StreamingQuery` progress surface (sketch §3.6, MB0-T3):
   `StreamingQueryProgress`, `DurationMs`, `SourceProgress`, `SinkProgress`, `QueryStatus` and
   `StatusMessage`, serialised with T3's camelCase names, and the crate-private `ProgressLog` (the
@@ -173,12 +178,17 @@ Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
   the six read sites of the task, the reload after a body, a stalled commit on both doors
   (landed and lost), and `stop` over a stalled catalog.
   pins: mb-3/C-010
+- `reload_tests.rs` — the fresh-sink pin (round 2, 2026-10-08): `FaultCatalog`'s event log
+  counts the sink loads before each commit over three batches, on both doors. One load per
+  commit is the fork's own refresh inside the commit (`FORK_REFRESH`, measured 2026-10-08), so
+  a fork repin that changes it shows here.
+  pins: mb-3/C-022
 - `table_door_tests.rs` — the `toTable` door pins: the stamped append with the Spark keys, the
   start check on a shared catalog, the unknown-outcome reconcile and walk over a fault-injecting
   catalog wrapper (`FaultCatalog`, the `crash_tests.rs` shape), and fencing by another run of the
   same query across two sessions. `FaultCatalog` also takes a load hook (`on_load`), which the
-  fold-1 pins use to panic or to hold a table load; round 2 adds two stalling commit
-  modes. The door's exactly-once guarantee against a racing driver is
+  fold-1 pins use to panic or to hold a table load; round 2 adds two stalling commit modes
+  and an event log of loads and commits. The door's exactly-once guarantee against a racing driver is
   not claimed until `F-APPEND-PIN-BASE-1` lands (ledger C-002).
   pins: mb-3/C-007
 - `testing.rs` — the test fixture: a session over a memory catalog with the `sales.orders`
