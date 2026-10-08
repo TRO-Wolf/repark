@@ -42,12 +42,7 @@ impl<'a> PreExecute<'a> {
     pub fn guard(&self, plan: &LogicalPlan) -> DfResult<()> {
         refuse_iceberg_create_of_tightened_ddl(plan, self.ctx, self.catalogs)
             .map_err(|error| DataFusionError::Plan(error.to_string()))?;
-        let state = self.ctx.state();
-        crate::named_sources::refuse_source_ddl(
-            plan,
-            self.catalogs,
-            &state.config_options().catalog.default_catalog,
-        )
+        crate::named_sources::refuse_source_ddl(plan, self.ctx, self.catalogs)
     }
 
     /// Execute an already-guarded plan.

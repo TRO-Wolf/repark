@@ -82,8 +82,8 @@ async fn configured_source_ddl_refuses_as_read_only() {
     assert!(error.to_string().contains("1.10"), "{error}");
 }
 
-async fn assert_bare_ddl_refuses_under_a_mounted_default_catalog(sql: &str) {
-    let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
+async fn session_defaulting_to_the_mounted_source() -> (TempDir, ReparkSession) {
+    let (directory, session) = session_with_source(UNROUTABLE_SOURCE);
     session
         .register_configured_sources()
         .expect("source registration");
@@ -91,6 +91,11 @@ async fn assert_bare_ddl_refuses_under_a_mounted_default_catalog(sql: &str) {
         .sql("SET datafusion.catalog.default_catalog = 'company_db'")
         .await
         .expect("the default catalog moves to the mounted source");
+    (directory, session)
+}
+
+async fn assert_bare_ddl_refuses_under_a_mounted_default_catalog(sql: &str) {
+    let (_directory, session) = session_defaulting_to_the_mounted_source().await;
     let Err(error) = session.sql(sql).await else {
         panic!("{sql}: a bare schema under a mounted default catalog must refuse");
     };
@@ -114,9 +119,37 @@ async fn bare_create_schema_refuses_under_a_mounted_default_catalog() {
 }
 
 #[tokio::test]
-async fn bare_create_database_if_not_exists_refuses_under_a_mounted_default_catalog() {
-    assert_bare_ddl_refuses_under_a_mounted_default_catalog("CREATE DATABASE IF NOT EXISTS bare_x")
-        .await;
+async fn bare_create_database_under_a_mounted_default_catalog_makes_an_unrelated_catalog() {
+    let (_directory, session) = session_defaulting_to_the_mounted_source().await;
+    for sql in [
+        "CREATE DATABASE bare_db",
+        "CREATE DATABASE IF NOT EXISTS bare_db2",
+    ] {
+        session
+            .sql(sql)
+            .await
+            .unwrap_or_else(|error| panic!("{sql}: a bare database is a new catalog: {error}"));
+    }
+    let names = session.context().catalog_names();
+    for name in ["company_db", "bare_db", "bare_db2"] {
+        assert!(
+            names.iter().any(|listed| listed == name),
+            "{name}: {names:?}"
+        );
+    }
+    session
+        .sql("CREATE SCHEMA bare_db.s")
+        .await
+        .expect("the new catalog is usable");
+}
+
+#[tokio::test]
+async fn a_dotted_schema_whose_head_is_not_a_source_succeeds_under_a_mounted_default_catalog() {
+    let (_directory, session) = session_defaulting_to_the_mounted_source().await;
+    session
+        .sql("CREATE SCHEMA datafusion.dotted_s")
+        .await
+        .expect("a dotted name whose head is not a source is not refused");
 }
 
 #[tokio::test]
