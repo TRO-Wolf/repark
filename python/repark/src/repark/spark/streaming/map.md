@@ -18,7 +18,11 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   order through the validated setters. MBE-6/MBE-7 refuse Python-side with
   `NOT_IMPLEMENTED` (`outputMode(complete|update)`, `readStream.format(<x>)`,
   `trigger(continuous)`, and the symmetric `writeStream.format(<x>)`); the native doors
-  raise MBE-3/MBE-17/MBE-4/MBE-10. A missing format refuses as the PySpark default
+  raise MBE-3/MBE-17/MBE-4/MBE-10. **MB-4 round 2 (2026-10-08):** `trigger()` parses
+  `processingTime` and `continuous` through the native `check_trigger_interval`
+  (MB-0c T1/T1B/T1C/T4 grammar) before storing the stripped string; the parsed
+  duration threads into the start spec in a later round.
+  pins: mb-4/C-018. A missing format refuses as the PySpark default
   `parquet`; `partitionBy` and `path` pass through opaquely. Omitted PySpark members
   (`csv`, `json`, `orc`, `parquet`, `schema`, `text`, `xml`, `clusterBy`, `foreach`,
   `partitionBy`, `resetTerminated`, `processAllAvailable`, `load`'s `format`/`schema`

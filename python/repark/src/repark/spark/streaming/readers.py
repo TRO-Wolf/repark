@@ -285,6 +285,7 @@ class DataStreamWriter:
                         "arg_value": str(processingTime),
                     },
                 )
+            _native.check_trigger_interval(processingTime.strip())
             self._trigger_kind = _PROCESSING_TIME_TRIGGER
             self._trigger_interval = processingTime.strip()
         elif once is not None:
@@ -304,6 +305,7 @@ class DataStreamWriter:
                         "arg_value": str(continuous),
                     },
                 )
+            _native.check_trigger_interval(continuous.strip())
             self._trigger_kind = _CONTINUOUS_TRIGGER
             self._trigger_interval = continuous.strip()
         else:

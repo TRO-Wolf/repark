@@ -31,6 +31,7 @@ mod streaming;
 mod subquery;
 mod temp_view_names;
 mod text_io;
+mod trigger_interval;
 mod type_bridge;
 mod unresolved_routine;
 mod writer_layout;
@@ -174,6 +175,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     subquery::register(module)?;
     temp_view_names::register(module)?;
     text_io::register(module)?;
+    trigger_interval::register(module)?;
     type_bridge::register(module)?;
     writer_layout::register(module)?;
     Ok(())

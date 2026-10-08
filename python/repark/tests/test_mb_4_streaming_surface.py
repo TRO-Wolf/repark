@@ -2,6 +2,7 @@ import pytest
 
 from repark.errors import (
     AnalysisException,
+    ArithmeticException,
     IllegalArgumentException,
     PySparkNotImplementedError,
     PySparkTypeError,
@@ -576,3 +577,195 @@ def test_query_surface_raises_stub_terminal() -> None:
         with pytest.raises(NotImplementedError) as excinfo:
             probe()
         _terminal_type(excinfo)
+
+
+def test_writer_trigger_accepts_five_seconds_mb0c_t1(spark: ReparkSession) -> None:
+    writer = _writer(spark).trigger(processingTime="5 seconds")
+    assert writer._trigger_kind == "processingTime"
+    assert writer._trigger_interval == "5 seconds"
+
+
+def test_writer_trigger_accepts_padded_interval_mb0c_t1(spark: ReparkSession) -> None:
+    writer = _writer(spark).trigger(processingTime=" 5 seconds ")
+    assert writer._trigger_kind == "processingTime"
+    assert writer._trigger_interval == "5 seconds"
+
+
+def test_writer_trigger_bogus_refuses_unrecognized_mb0c_t1(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="Unrecognized number bogus") as excinfo:
+        _writer(spark).trigger(processingTime="bogus")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing 'bogus' to interval. "
+        "Please ensure that the value provided is in a valid format for defining an "
+        "interval. You can reference the documentation for the correct format. "
+        "Unrecognized number bogus. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {"input": "bogus", "number": "bogus"}
+
+
+def test_writer_trigger_padded_bogus_echoes_stripped_mb0c_t1c(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="Unrecognized number bogus") as excinfo:
+        _writer(spark).trigger(processingTime="  bogus")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER] Error parsing 'bogus' to interval. "
+        "Please ensure that the value provided is in a valid format for defining an "
+        "interval. You can reference the documentation for the correct format. "
+        "Unrecognized number bogus. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {"input": "bogus", "number": "bogus"}
+
+
+def test_writer_trigger_missing_unit_refuses_mb0c_t1(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="after 5 but hit EOL") as excinfo:
+        _writer(spark).trigger(processingTime="5")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.MISSING_UNIT"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.MISSING_UNIT] Error parsing '5' to interval. "
+        "Please ensure that the value provided is in a valid format for defining an "
+        "interval. You can reference the documentation for the correct format. "
+        "Expect a unit name after 5 but hit EOL. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {"input": "5", "word": "5"}
+
+
+def test_writer_trigger_invalid_unit_refuses_mb0c_t1(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="Invalid unit secs") as excinfo:
+        _writer(spark).trigger(processingTime="5 secs")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.INVALID_UNIT"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.INVALID_UNIT] Error parsing '5 secs' to interval. "
+        "Please ensure that the value provided is in a valid format for defining an "
+        "interval. You can reference the documentation for the correct format. "
+        "Invalid unit secs. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {"input": "5 secs", "unit": "secs"}
+
+
+def test_writer_trigger_invalid_value_refuses_mb0c_t1(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="Invalid value 5s") as excinfo:
+        _writer(spark).trigger(processingTime="5s")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.INVALID_VALUE"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.INVALID_VALUE] Error parsing '5s' to interval. "
+        "Please ensure that the value provided is in a valid format for defining an "
+        "interval. You can reference the documentation for the correct format. "
+        "Invalid value 5s. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {"input": "5s", "value": "5s"}
+
+
+def test_writer_trigger_fraction_refuses_mb0c_t1(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="cannot have fractional part") as excinfo:
+        _writer(spark).trigger(processingTime="1.5 minutes")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.INVALID_FRACTION"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.INVALID_FRACTION] Error parsing '1.5 minutes' to interval. "
+        "Please ensure that the value provided is in a valid format for defining an "
+        "interval. You can reference the documentation for the correct format. "
+        "minutes cannot have fractional part. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {"input": "1.5 minutes", "unit": "minutes"}
+
+
+def test_writer_trigger_prefix_refuses_mb0c_t1c(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="Invalid interval prefix") as excinfo:
+        _writer(spark).trigger(processingTime="interval5 seconds")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.INVALID_PREFIX"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.INVALID_PREFIX] Error parsing 'interval5 seconds' to "
+        "interval. Please ensure that the value provided is in a valid format for defining "
+        "an interval. You can reference the documentation for the correct format. "
+        "Invalid interval prefix interval5. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {
+        "input": "interval5 seconds",
+        "prefix": "interval5",
+    }
+
+
+def test_writer_trigger_missing_number_refuses_mb0c_t1c(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="Expect a number after") as excinfo:
+        _writer(spark).trigger(processingTime="5 seconds -")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.MISSING_NUMBER"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.MISSING_NUMBER] Error parsing '5 seconds -' to interval. "
+        "Please ensure that the value provided is in a valid format for defining an "
+        "interval. You can reference the documentation for the correct format. "
+        "Expect a number after - but hit EOL. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {"input": "5 seconds -", "word": "-"}
+
+
+def test_writer_trigger_wrapped_arithmetic_refuses_mb0c_t1b(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="Uncaught arithmetic exception") as excinfo:
+        _writer(spark).trigger(processingTime="2147483648 days")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION] Error parsing '2147483648 days' to "
+        "interval. Please ensure that the value provided is in a valid format for defining "
+        "an interval. You can reference the documentation for the correct format. "
+        "Uncaught arithmetic exception while parsing '2147483648 days'. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {"input": "2147483648 days"}
+
+
+def test_writer_trigger_raw_overflow_refuses_mb0c_t1b(spark: ReparkSession) -> None:
+    with pytest.raises(ArithmeticException, match="long overflow") as excinfo:
+        _writer(spark).trigger(processingTime="2147483647 days")
+    assert excinfo.value.getCondition() is None
+    assert excinfo.value.getSqlState() is None
+    assert str(excinfo.value) == "long overflow"
+    assert excinfo.value.getMessageParameters() is None
+
+
+def test_writer_trigger_months_refuse_mb0c_t1(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="month or year interval") as excinfo:
+        _writer(spark).trigger(processingTime="1 month")
+    assert excinfo.value.getCondition() == "_LEGACY_ERROR_TEMP_3262"
+    assert excinfo.value.getSqlState() is None
+    assert str(excinfo.value) == "Doesn't support month or year interval: 1 month"
+    assert excinfo.value.getMessageParameters() == {"interval": "1 month"}
+
+
+def test_writer_trigger_negative_refuses_mb0c_t1(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="should not be negative") as excinfo:
+        _writer(spark).trigger(processingTime="-1 seconds")
+    assert excinfo.value.getCondition() is None
+    assert excinfo.value.getSqlState() is None
+    assert str(excinfo.value) == (
+        "requirement failed: the interval of trigger should not be negative"
+    )
+    assert excinfo.value.getMessageParameters() is None
+
+
+def test_writer_trigger_interval_alone_refuses_empty_mb0c_t1c(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="cannot be empty") as excinfo:
+        _writer(spark).trigger(processingTime="interval")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.INPUT_IS_EMPTY"
+    assert excinfo.value.getSqlState() == "22006"
+    assert str(excinfo.value) == (
+        "[INVALID_INTERVAL_FORMAT.INPUT_IS_EMPTY] Error parsing 'interval' to interval. "
+        "Please ensure that the value provided is in a valid format for defining an "
+        "interval. You can reference the documentation for the correct format. "
+        "Interval string cannot be empty. SQLSTATE: 22006"
+    )
+    assert excinfo.value.getMessageParameters() == {"input": "interval"}
+
+
+def test_writer_trigger_continuous_bogus_refuses_at_trigger_mb0c_t3(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException, match="Unrecognized number bogus") as excinfo:
+        _writer(spark).trigger(continuous="bogus")
+    assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER"
+    assert excinfo.value.getSqlState() == "22006"
+    assert excinfo.value.getMessageParameters() == {"input": "bogus", "number": "bogus"}

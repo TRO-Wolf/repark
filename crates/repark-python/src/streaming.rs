@@ -41,7 +41,12 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-fn attached(py: Python<'_>, raised: PyErr, condition: &str, params: &[(&str, &str)]) -> PyErr {
+pub(crate) fn attached(
+    py: Python<'_>,
+    raised: PyErr,
+    condition: &str,
+    params: &[(&str, &str)],
+) -> PyErr {
     let value = raised.value(py);
     let held = masked_message_params(py, params);
     if let Err(failure) = value.setattr("_spark_error_class", condition) {
