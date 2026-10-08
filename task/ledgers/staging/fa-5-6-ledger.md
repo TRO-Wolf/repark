@@ -686,9 +686,11 @@ which is not a small change to the `COPY`.
 | `python/repark/tests/test_dfcore_1_exports.py` | 10 passed; `core.py` is main's file again, ceiling 3462 |
 | Parity-harness suite (`python/repark-parity/tests`) | 788 passed, 32 skipped, 12 xfailed |
 | pyarrow in the clone's venv | 25.0.1 |
-
-The cargo gates and the Rust mutations run on this commit and are recorded in the commit that
-follows it (CARGO_PENDING).
+| Sort grid (394 cells), head against a real main (main sources over the main native module) | 394/394 equal, and equal to `s4_orch.json` |
+| Replay corpus (43,989 cells), the same pair | 0 deterministic differences; 3 cells differ, all on the harness's nondeterministic list (`cs2.df.stat.freqItems(['NAME'])`, two `r3.F_cp_*_join_parent`) |
+| Cargo gates on the committed HEAD `47218f37`, one lock hold, tree clean: `cargo fmt --check`, `make rust-clippy`, `make rust-panic-ban`, `cargo test -p repark-core -p repark-spark -p repark-python --lib` | exit 0 each; core 1,307 passed, 1 ignored; spark 2,630 passed, 5 ignored; python 151 passed |
+| The same gates on the fold's first commit `c486d0d6` | clippy **failed** (`too_many_lines` on `write_path`, 102 of 100); fmt, panic-ban and the tests passed. `47218f37` moves the two lines into `materialize_empty_part` |
+| After `47218f37`: the pytest selection, the docs-links, CAP-1 and REG-1 mirrors, the exports pin | 4,089 passed, 59 skipped, 9 xfailed; 48 passed; 10 passed |
 
 **Fold 1 mutations**, each applied, run and reverted on the fold's tree. Facade mutations run
 the FA-5 file and the two ATTR-ID-1 files (67 tests).
@@ -705,6 +707,15 @@ the FA-5 file and the two ATTR-ID-1 files (67 tests).
 | F1 (own) | the same-origin partition refusal is dropped | 1 |
 | F2 (own) | the case-sensitive not-found refusal is dropped | 1 |
 | F3 (own, the withdrawal) | a view door stops refusing a duplicate-name frame | 5: the bare-name pin and four of main's ATTR-ID-1 refusal pins |
+| R1 (remove the rename) | the csv serializer never renames the batch | 5 of the 15 core `duplicate_names` pins |
+| R2 (the display name reaches the engine) | the copy is aliased to the display names | 8 |
+| R3 (own) | the copy records nothing | 7 |
+| R4 (own) | a generated name does not step around a taken one | 2: `generated_names_step_around_a_user_column_of_the_same_shape`, `csv_keeps_a_user_column_named_like_a_generated_one` |
+| R5 (own) | the empty part takes the engine names | 1: `csv_empty_duplicate_frame_writes_the_display_header` |
+| R6 (own, round 1's defect put back) | a display name is inferred from the generated spelling | 2: `display_names_are_read_from_the_record_never_from_a_name`, `parts_route_recorded_csv_to_the_sink_and_leave_the_rest` |
+
+The Rust rows ran on `47218f37` with `cargo test -p repark-core --lib -- duplicate_names`;
+the tree was clean after the batch.
 
 
 ```
