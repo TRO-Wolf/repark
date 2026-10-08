@@ -50,6 +50,8 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
   the decoder's rule. When the localiser refuses row `k > 0` of a batch, the exec emits rows
   `0..k`, placed, and then the refusal. The stream still ends at its first error, so the lease
   aborts as before (C-103). pins: c-2/C-114
+- `scan.rs` — **C-2d residual (2026-10-07):** gains its first unit-test child, [scan/](scan/map.md),
+  for the private `place_until_refusal`. pins: c-2/C-119
 - `scan.rs` — **`WallClockLocaliser`** (`localise(&TimestampMicrosecondArray)`, `zone_label()`;
   the trait sits here with no zone dependency, NS-10) and **`PostgresScanExec`**, one partition.
   `DisplayAs` renders, per scan, `PostgresScanExec: source=<name>, relation=<schema.table>` (or
