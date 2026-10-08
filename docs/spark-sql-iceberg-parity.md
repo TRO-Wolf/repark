@@ -3381,13 +3381,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **repark** — after `l.join(r, "id", how)` on `left`/`right`/`full`, `l.id` and `r.id` answer the
   per-side key in `select`, `selectExpr`, `filter`, `sort`, a join condition and `l.*` / `r.*`, on
   the joined frame, on any chain of `filter` and `sort` over it (a filter or sort on a side key
-  included), and after `cache()`, `persist()` or `localCheckpoint()`, materialised or not. Past a
+  included), and after `cache()` or `persist()`, materialised or not. After `localCheckpoint()`
+  it refuses, as v1.5.2 does. Past a
   narrowing `select`, after `.alias`, in `groupBy` / `withColumn` and other operations, and
   written with backticks in a text predicate (`` `r`.`id` > 2 ``), the reference refuses with
   `UnsupportedOperationException`: "qualified reference `r`.`id` to a USING join key is not
-  supported in repark v1". A frame that carries a user column whose name starts with
-  `__repark_using__` has no per-side keys: the reference refuses with
-  `UNRESOLVED_COLUMN.WITH_SUGGESTION` (42703).
+  supported in repark v1". A side key that is not the shown key also refuses in `sort` after
+  `distinct`, `union` or a second `USING` join, where v1.5.2 answered the left key (its shown
+  key). A join whose inputs carry a user column whose name starts with `__repark_using__` is
+  joined as in v1.5.2: the left key is shown, left-side references answer, right-side
+  references refuse with the same message.
 - **Apache Spark** — answers the per-side key past a `select` of the frame
   (`frame.select("id", "s").select("r.id")` → `2, 3, 4, NULL` on `full`), in `groupBy` and
   `withColumn`, and with backticks; after `.alias("x")` it refuses with
@@ -3396,7 +3399,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `python/repark/tests/test_attr_id_1_sm2_r6.py::test_side_key_past_a_narrowing_select_or_alias_refuses`,
   `::test_using_key_guards_literals_and_unqualified`;
   `python/repark/tests/test_using_per_side_keys_1_df.py::test_a_second_side_key_operation_keeps_the_reach`,
-  `::test_side_keys_do_not_depend_on_materialisation`,
+  `::test_side_keys_do_not_depend_on_cache_materialisation`,
+  `::test_side_keys_refuse_after_a_checkpoint_as_before`,
   `::test_a_user_column_with_the_reserved_prefix_refuses_side_keys`
 - **Rationale** — DECLARED for the first cut (orchestrator ruling Q4, 2026-10-07; fold 1,
   2026-10-08): a hidden key is a column of the `Join` node, exposed on demand through filter, sort
@@ -3415,12 +3419,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   measured `right`/`full` cells. A pair with no rule here (a `DECIMAL` or a temporal type with a
   `STRING`, `BOOLEAN` with a number, a decimal wider than 38 digits) shows the left key on `full`
   (`NULL` on right-only rows) on the DataFrame door and keeps the planner's star on the SQL door,
-  as v1.5.2 does. No value is ever truncated.
+  as v1.5.2 does. No value is ever truncated. The rule is measured with
+  `spark.sql.ansi.enabled=true` and applies only then: with ANSI off every mixed-type `full` key
+  shows the left key, as v1.5.2 does. On the SQL door a mixed-type `FULL` key keeps the planner's
+  star (the left key) under both settings.
 - **Apache Spark** — the same types on the measured pairs; `DATE` or `TIMESTAMP` with a `STRING`
   key refuses with `CAST_INVALID_INPUT` on these data. *(oracle: live 4.1.2, 2026-10-08, 112
   cells in `python/repark/tests/using_per_side_keys_1_mixed_spark.json`.)*
 - **Pin** — `python/repark/tests/test_using_per_side_keys_1_df.py::test_mixed_key_shows_sparks_type_and_value`
-  (48 cells), `::test_mixed_key_table_covers_the_measured_pairs`;
+  (48 cells), `::test_mixed_key_table_covers_the_measured_pairs`,
+  `::test_ansi_off_keeps_the_left_key_for_mixed_full_keys`;
   `python/repark/tests/test_attr_id_1_sm2_r6.py::test_mixed_type_using_shows_sparks_key_type`
 - **Rationale** — DECLARED for the pairs without a rule (fold 1, 2026-10-08, replacing the
   2026-10-07 wording that kept the left type): the measured pairs follow Spark; an unmeasured
@@ -3428,34 +3436,38 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 
 ### USING-SQL-STAR-SHAPES-1 — SQL `USING` shapes that keep the previous answer
 
-- **repark** — on the SQL door the merged key (the right key on `RIGHT`, the common-type
-  `coalesce` on `FULL`) is read by `*`, by the unqualified key in every clause, by a later `ON`
-  join's star, by `NATURAL` joins, by a derived-table or sub-query side, by three-part names and
-  by chains of any length that name the same or a new key. These shapes answer as v1.5.2 does:
-  (1) a statement whose select list over a `USING` join holds a qualified star keeps the
-  planner's answer: `l.*` and `r.*` alone carry the side's own key, as in Spark, and `*, r.*`
-  refuses on the repeated column as before. (2) `SELECT id, l.id, r.id` refuses ("Projections require unique expression
-  names"). (3) `SELECT *` over four or more relations chained by `USING` refuses with
-  `AMBIGUOUS_REFERENCE`. (4) An unqualified key in `WHERE` answers only when the `FROM` is one
-  relation followed by `INNER`/`LEFT`/`RIGHT`/`FULL` `USING` joins that all name the key; with
-  an `ON` join or a `NATURAL` join in the `FROM` it refuses with `AMBIGUOUS_REFERENCE`.
-  (5) `SELECT DISTINCT … ORDER BY l.id`, and an aggregate or window that names both the
-  unqualified key and the same side key, or a `HAVING` on a side key over `GROUP BY id`, keep
-  the left key. (6) `USING (id)` over sides whose column is spelled `ID` and `id` refuses with
-  `AMBIGUOUS_REFERENCE` under `spark.sql.caseSensitive=false`. The key keeps its position in the
-  left relation; Spark moves `USING` keys to the front.
+- **repark** — on the SQL door the merged key (the right key on `RIGHT`, `coalesce` on `FULL`) is
+  read by `*`, by the unqualified key in every clause, by a later `ON` join's star, by `NATURAL`
+  joins, by a derived-table or sub-query side, by three-part names and by chains that name the
+  same or a new key. A statement whose `USING` select has any of these keeps the plan v1.5.2
+  builds, rows and refusals alike (fold 2, 2026-10-08): (1) the unqualified key and a side key
+  (`l.id`) in the same select, anywhere in its select list, `WHERE`, `GROUP BY`, `HAVING` or
+  `ORDER BY` (`SELECT count(id), count(l.id)`, `SELECT id … ORDER BY l.id`); (2) a qualified
+  star (`l.*`, `r.*`); (3) `GROUP BY` or `HAVING` with a side key in the select list, `HAVING`
+  or `ORDER BY`; (4) `QUALIFY`; (5) a comma-joined relation beside the join
+  (`FROM tp, tl l FULL JOIN tr r USING (id)`); (6) a `FULL` key whose sides differ in type.
+  These refuse as v1.5.2 does: `SELECT id, l.id, r.id` ("Projections require unique expression
+  names"); `SELECT *` over four or more relations chained by `USING`, and `USING (id)` over
+  sides spelled `ID` and `id` (`AMBIGUOUS_REFERENCE`). An unqualified key in `WHERE` answers
+  when the `FROM` is one relation followed by `INNER`/`LEFT`/`RIGHT`/`FULL` `USING` joins that
+  all name the key and the statement has none of (1) to (6); otherwise it refuses with v1.5.2's
+  `AMBIGUOUS_REFERENCE`, text unchanged. The key keeps its position in the left relation;
+  Spark moves `USING` keys to the front.
 - **Apache Spark** — coalesces or answers all of them; `SELECT id, l.id, r.id` answers three
-  columns named `id`. *(oracle: live 4.1.2, 2026-10-07/08, grid cells
-  `sql|full|alias|select|id,l.id,r.id`, corpus statements `outer-12-*`, `outer-35-*`.)*
+  columns named `id`; `count(id), count(l.id)` over a `FULL` join is `4, 3`. *(oracle: live
+  4.1.2, 2026-10-07/08, the 1,355-statement recording
+  `python/repark/tests/using_per_side_keys_1_corpus_spark.json`.)*
 - **Pin** — `python/repark/tests/test_using_per_side_keys_1_sql.py::test_sql_using_declared_divergences`,
+  `::test_sql_key_and_side_key_together_answer_as_before`,
   `::test_sql_shapes_the_plan_pass_reaches`;
   `python/repark/tests/test_using_per_side_keys_1_differential.py::test_every_statement_answers_as_spark_or_as_main`
-  (182 statements, each equal to Spark's or to `main`'s recorded answer)
-- **Rationale** — DECLARED (USING-PER-SIDE-KEYS-1 fold 1, 2026-10-08): the merged key is resolved
-  on the plan, where a column that came from a qualified star cannot be told from one that came
-  from `*`, and the planner refuses shapes (2), (3), (4) and (6) before there is a plan. Every
-  listed shape answers what the previous release answered; none is a new error or a new wrong
-  row.
+  (1,355 statements, each equal to Spark's or to `main`'s recorded answer)
+- **Rationale** — DECLARED (USING-PER-SIDE-KEYS-1 fold 2, 2026-10-08): the merged key is resolved
+  on the plan by telling a user-qualified column from every other reference to the key, and
+  DataFusion treats the two as one column wherever it de-duplicates expressions (aggregate and
+  window arguments, `ORDER BY` against the select list, grouped references). Where both can
+  meet, the statement is left exactly as the previous release planned it. None of the listed
+  shapes is a new error or a new wrong row.
 
 ### DF-STREAM-1 — `dropDuplicatesWithinWatermark` drops the appended plan dump
 

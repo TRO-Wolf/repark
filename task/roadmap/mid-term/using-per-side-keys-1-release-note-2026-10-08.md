@@ -40,18 +40,22 @@ On the SQL door `WHERE id > 2` over a `USING` join answers on every join type; i
 ## Known limits
 
 - A per-side key is reachable on the joined frame, after any chain of `filter` and `sort` over
-  it, and after `cache()`, `persist()` or `localCheckpoint()`. After a narrowing `select`, an
-  `.alias`, in `groupBy` / `withColumn`, or written with backticks in a text predicate it refuses
-  with the same message as v1.5.3; Spark answers past a `select`.
-- A key whose two sides have different types shows the right key's type on `right` and Spark's
-  common type on `full` for the measured pairs (integers, decimals, floats, an integer or a
-  double with a string, a date with a timestamp). A pair outside that list shows the left key
-  on `full`, as before.
-- On the SQL door a few shapes keep the previous answer: a select list with `l.*` or `r.*`, a
-  grouped select that names a side key, `SELECT *` over four or more `USING`-chained relations
-  (refuses), and `SELECT id, l.id, r.id` (refuses). The key keeps its position in the left
-  relation; Spark moves it to the front.
-- A stale right-side key in `sort` after a `left_semi` / `left_anti` join now refuses with
+  it, and after `cache()` or `persist()`. After a narrowing `select`, an `.alias`, a
+  `localCheckpoint()`, in `groupBy` / `withColumn`, or written with backticks in a text
+  predicate it refuses with the same message as v1.5.3; Spark answers past a `select`.
+- Sorting by the side key that is not shown (`l.id` after a `right` or `full` join) after
+  `distinct`, `union` or a second `USING` join refuses; v1.5.3 answered there, sorting by the
+  left key it showed.
+- A key whose two sides have different types shows the right key's type on `right` and, with
+  `spark.sql.ansi.enabled=true` on the DataFrame door, Spark's common type on `full` for the
+  measured pairs. With ANSI off, for other pairs, and on the SQL door, a mixed-type `full` key
+  shows the left key, as before.
+- On the SQL door a statement that names both the unqualified key and a side key in one
+  select, or has `l.*` / `r.*`, `QUALIFY`, a grouped side key, or a comma-joined relation beside
+  the join, answers exactly as v1.5.3 does. `SELECT *` over four or more `USING`-chained
+  relations and `SELECT id, l.id, r.id` refuse, as before. The key keeps its position in the
+  left relation; Spark moves it to the front.
+- A stale right-side key in `sort` after a `left_semi` / `left_anti` join refuses with
   `MISSING_ATTRIBUTES`, as Spark and v1.5.2 do; v1.5.3 answered the left rows.
 
 The limits are registry rows `USING-SIDE-KEY-REACH-1`, `USING-MIXED-KEY-TYPE-1` and

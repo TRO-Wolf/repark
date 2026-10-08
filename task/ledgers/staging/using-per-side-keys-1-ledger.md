@@ -37,6 +37,9 @@ to refuse.
 | C-012 | Never worse than `main` (fold 1): each of 182 SQL statements (32 without `USING`, 150 with `USING` or `NATURAL`) answers as Spark's recording or as `main`'s recording, column order aside, never a third thing; the 32 without `USING` answer exactly as `main`. On the 1,090-cell grid no cell that matched Spark on `main` differs on head. | The differential pin; the grid re-measured; mutation N3. | PROVEN | `test_using_per_side_keys_1_differential.py` (182 + 32 + 1); §13. |
 | C-013 | The verifier's SQL-door S1 and S2 repros hold: a lambda parameter named like the key shadows it on every join type; `SELECT DISTINCT id … ORDER BY id` plans; `ORDER BY l.id, t` with `t` outside the select list answers; output names stay `id, v, v` when both sides share a non-key name; a key spelled in another case follows `spark.sql.caseSensitive` in star, select list, `WHERE` and `ORDER BY`; `EXPLAIN` shows the plan that runs; helper names avoid user columns. | A pin per repro on both the Rust and the facade side; mutations M7, V4, N1, N2. | PROVEN | `column_resolution/using_keys_tests.rs` (18); `test_using_per_side_keys_1_sql.py` fold-1 tests; §13. |
 | C-014 | The verifier's DataFrame-door S2 and S3 repros hold: a second side-key operation after a side-key filter or sort answers; side keys answer the same before and after `cache`, `persist` and `localCheckpoint`, and hidden keys still reach no output, pandas frame or file; a user column with the reserved prefix cannot be mistaken for a hidden key; a stale right key in `sort` over `semi`/`anti` refuses as Spark and v1.5.2 do. | A pin per repro; mutation V2. | PROVEN | `test_using_per_side_keys_1_df.py`; Rust `a_second_side_key_is_reachable_after_a_narrowed_filter`, `a_user_column_named_like_the_alias_keeps_the_key_unexposed`; §13. |
+| C-015 | Fold 2, never a third answer: a `USING` select that names both the unqualified key and a side key (select list, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, aggregate or window arguments in either order), has `QUALIFY`, or has a comma-joined relation beside the join keeps `main`'s plan wholesale. On 1,355 statements (182 own, 480 generated key/side-key variants, the re-verifier's 693) every answer equals Spark's recording or `main`'s; third answers: 0. | The differential pin; Rust and facade pins per shape; mutations S1a, S1c, X4. | PROVEN | `test_every_statement_answers_as_spark_or_as_main` (1,355); `key_and_side_key_inside_calls_keep_the_plan_main_had`, `a_comma_joined_relation_keeps_the_plan_main_had`; `test_sql_key_and_side_key_together_answer_as_before`; §14. |
+| C-016 | Fold 2, the retry: when `main`'s planning refuses the unqualified key, the statement answers only if the marker pass ran on the retry without bailing; a wholesale-`main` shape or a bail returns `main`'s refusal, class and text unchanged. The bail returns the plan it was given. | Rust pins on the refusals and on the pass directly; mutations S1b, N3. | PROVEN | `a_retry_answers_only_when_the_pass_ran`, `a_bail_returns_the_plan_it_was_given`; the differential pin compares refusal text with `main`'s; §14. |
+| C-017 | Fold 2, DataFrame door narrowings and cost: a `__repark_using__` user column gives `main`'s join (left references answer, right-side references give the R6 refusal); side keys refuse after `localCheckpoint` as on `main`; with ANSI off a mixed-type `full` key shows the left key; a frame that never met a `USING` join runs no hidden-key scan. | A pin per narrowing; the cost table. | PROVEN | `test_a_user_column_with_the_reserved_prefix_refuses_side_keys`, `test_side_keys_refuse_after_a_checkpoint_as_before`, `test_ansi_off_keeps_the_left_key_for_mixed_full_keys`; Rust `a_user_column_named_like_the_alias_keeps_the_key_unexposed`; §14. |
 
 ## 1. Step 0 — how the grid was measured
 
@@ -844,3 +847,113 @@ which the `repark-core` pins do not build, and N3 (ignoring the bail flag) is ca
 differential pin: `GROUP BY`/`HAVING` shapes that would otherwise answer a third thing. After
 each batch the sources were restored, the wheel rebuilt, and both pin sets ran green (32 and
 370).
+
+
+## 14. Fold 2 (2026-10-08) — the re-verify, the rulings, and what narrowed
+
+The re-verify failed `783942f3` with three S1s, five S2s and one S3
+(`/tmp/oc-worker/direct/wo/using-per-side-keys-1/reverify/verdict.json`; 630 statements, 34 third
+answers). This is the last fold. It narrows and adds no answering shape: where a shape is not
+provably right it answers exactly as `main` does.
+
+**Rulings (orchestrator, fold-2 brief).**
+
+1. An aggregate or window over the unqualified key written before the same function over a side
+   key: fix at the cause, or keep `main`'s plan wholesale for statements that read both.
+2. The retry after `main` refuses may answer only when the marker pass ran and merged;
+   otherwise `main`'s own refusal, unchanged in class and text.
+3. A `FROM` with a comma-joined relation beside a `USING` or `NATURAL` join keeps `main`'s plan.
+4. The cost on frames that never met a `USING` join is removed; within 1% of `main` is the bar.
+5. S2/S3 items are fixed only where the fix is a narrowing.
+
+**Findings.**
+
+| # | Finding | Status |
+|---|---|---|
+| S1 | `count(id), count(l.id)`: the side key reads the merged key when written second | fixed by the wholesale fallback. Cause: DataFusion keeps one copy of equal aggregate and window expressions and column equality ignores spans, so the marker of `l.id` is lost to an earlier `id`. The same loss can happen wherever expressions are de-duplicated, so the rule is not limited to calls: a `USING` select that names both the unqualified key and a side key anywhere keeps `main`'s plan. |
+| S1 | The retry answers with the key bound to the left relation when the pass did not merge | fixed: `merge_using_keys` reports whether the pass ran without bailing and `plan_using` returns the retry only then. An `INNER`/`LEFT` statement where the pass ran and the merged key is the left key still answers (`WHERE id > 2` on six join types, C-007); there the left key is the merged key by the pass's own account. |
+| S1 | A comma-joined relation before a `USING` join shows a third key | fixed: such a select keeps `main`'s plan. |
+| S2 | ANSI-off string/numeric `full` key takes a third type | narrowed: with ANSI off every mixed-type `full` key shows the left key, as `main`. Spark's ANSI-off rule was not measured, so no rule was written. On the SQL door, where the session's ANSI flag cannot be read from `repark-core`, a mixed-type `FULL` key keeps `main`'s plan under both settings. |
+| S2 | A `__repark_using__` user column makes the left key fail | fixed: such a join builds `main`'s projection; `l.id` answers `main`'s rows and `r.id` gives the R6 refusal. |
+| S2 | Sort by a side key after `union`, `distinct` or a second `USING` join refuses where `main` answered | **not changed; question Q1 in the hand-back.** `main` answered by sorting on the key it showed, the left key. The head shows the merged key there, so `main`'s rows cannot be reproduced, and binding the side key to the shown key would be a third answer. The refusal stays and is in the registry row. |
+| S2 | Cost: `filter` and `sort` about 3% over `main` | reduced; table below. |
+| S2 | Mutation N3 is held by two facade statements only | fixed: `a_bail_returns_the_plan_it_was_given` drives the pass directly. |
+| S3 | Side keys answer after `localCheckpoint` | narrowed: they refuse as on `main`. `cache()` / `persist()` keep the reach (Spark answers there). |
+
+**The wholesale-`main` predicate, complete.** `mark_explicit` answers `false` when a `USING` or
+`NATURAL` select has: a qualified star; `QUALIFY`; more than one comma-separated `FROM` item;
+`GROUP BY` or `HAVING` together with a side key in its select list, `HAVING` or `ORDER BY`; or
+both the unqualified key and a side key anywhere in its select list, `WHERE`, `GROUP BY`,
+`HAVING` or `ORDER BY`. For `NATURAL`, whose keys are not written, any bare identifier with any
+compound identifier counts. The plan pass also bails on a `FULL` key whose sides differ in type.
+
+**Corpus.** 1,355 statements recorded on live Spark 4.1.2 and on a `main` `3fbcb2ca` build:
+182 of the fold-1 corpus, 480 generated variants (15 shapes, the unqualified key and a side key
+in both orders, aliased and unaliased sides, four join types), and the re-verifier's 693
+replayed with their own setups. Third answers: 0. Three statements where Spark refuses and
+head had differed from `main` (`QUALIFY`, a relation alias equal to the key name) now equal
+`main`.
+
+**Cost.** `taskset -c 40-41 verify/cost.py`, `main` and head interleaved, three runs each,
+microseconds, minimum of seven rounds per run. `main` is the `3fbcb2ca` build; head also
+carries the `origin/main` merge of this fold, and the two SQL paths this unit does not
+touch on a non-`USING` statement moved by the same half percent.
+
+| Path | `main` (beside before) | head before | `main` (beside after) | head after | before / `main` | after / `main` |
+|---|---|---|---|---|---|---|
+| `select` | 874.6 / 878.1 / 878.0 | 891.5 / 891.8 / 892.6 | 875.3 / 880.1 / 876.8 | 874.8 / 875.5 / 876.6 | 1.019 | 0.999 |
+| `filter` | 418.4 / 419.2 / 418.8 | 429.4 / 428.9 / 431.4 | 418.4 / 418.8 / 418.2 | 418.7 / 419.8 / 420.2 | 1.025 | 1.001 |
+| `filter_sql` | 641.5 / 642.8 / 642.6 | 650.2 / 648.9 / 651.0 | 642.3 / 642.9 / 642.8 | 646.9 / 650.3 / 646.5 | 1.012 | 1.007 |
+| `sort` | 533.1 / 533.5 / 538.4 | 545.5 / 548.8 / 549.2 | 534.6 / 536.4 / 533.0 | 541.5 / 541.6 / 542.7 | 1.023 | 1.016 |
+| `sql_select_1` | 2613.2 / 2639.8 / 2649.0 | 2663.7 / 2647.1 / 2667.1 | 2638.4 / 2612.8 / 2611.5 | 2631.3 / 2611.1 / 2652.2 | 1.013 | 1.000 |
+| `sql_join_on` | 13287.9 / 13351.0 / 13392.7 | 13431.6 / 13428.2 / 13461.5 | 13460.5 / 13317.1 / 13270.8 | 13240.8 / 13244.3 / 13345.6 | 1.011 | 0.998 |
+| `on_join_select` | 698.6 / 699.7 / 697.5 | 714.2 / 710.9 / 712.5 | 698.6 / 702.5 / 696.9 | 703.0 / 706.3 / 710.0 | 1.019 | 1.009 |
+
+Six of seven paths are within 1% of `main`. `sort` is at 1.016 against the `3fbcb2ca` build;
+between that build and this head `origin/main` moved by twelve commits (69 files under
+`python/repark/src` and the two crates, the sort-planning fix OFFSET-NESTED-SORT-1 and 44 lines
+of `qualified_names.py` among them), and a build of the merged `origin/main` was not measured
+in this fold. What this unit adds to a `sort` on a frame without a mark is one function call
+and one list copy in `_bound_refs`.
+
+Removed: the deep clone of every column expression in `PyDataFrame.select` / `filter` /
+`sort` (the scan reads them by reference); the scan itself until a names join has been built in
+the process; the weak-map lookups of `_using_mark` / `_set_using_mark` while no mark exists; the
+bind and unemitted-id loops of `_bound_refs` for a frame without a mark.
+
+**Mutations (fold 2).**
+
+| # | Mutation | Rust pins red (of 36) | Facade pins red (of 1,549) |
+|---|---|---|---|
+| M1 | remove the coalesce: the DataFrame door shows the left key on full | 8 | 37 |
+| M2 | drop a hidden field: join_hidden does not record the right key | 5 | 27 |
+| M3 | leak a hidden field: the right key stays in the merge projection | 12 | 58 |
+| M4 | SQL: a chained USING join keeps the planner's key | 2 | 6 |
+| M5 | SQL: the unqualified key in WHERE is not qualified after main refuses | 8 | 15 |
+| M6 | the shown key pairs with both sides on every emitting join | 1 | 1 |
+| M7 | SQL: ORDER BY l.id is not carried below the sort | 2 | 7 |
+| V1 | SQL: RIGHT JOIN USING treated as left-keyed (the verifier's X2) | 8 | 21 |
+| V2 | narrowed_frame does not project back | 0 | 14 |
+| V3 | the DataFrame door shows the left key on right joins | 6 | 37 |
+| V4 | SQL: key matching is always case-sensitive | 3 | 1 |
+| N1 | SQL: a lambda parameter does not shadow the key | 2 | 4 |
+| N2 | SQL: no reference counts as explicit | 6 | 60 |
+| N3 | SQL: the bail flag is ignored | 1 | 0 |
+| N4 | the mixed-type full key keeps the left type (no common type) | 1 | 2 |
+| X1 | SQL: the ORDER BY aid unwraps without re-marking | 2 | 7 |
+| X3 | SQL: an aggregate is not redefined | 1 | 5 |
+| X4 | SQL: mark_explicit always merges (no wholesale-main shape) | 5 | 75 |
+| S1a | fold 2: the key-and-side-key rule is off | 4 | 55 |
+| S1b | fold 2: the retry answers whatever the pass did | 1 | 97 |
+| S1c | fold 2: a comma-joined relation is merged | 1 | 8 |
+| F2a | fold 2: ANSI off still builds the common type | 0 | 1 |
+| F2b | fold 2: a reserved-prefix user column still gets the merged key | 1 | 1 |
+
+M1 to N4 are the fifteen of fold 1 re-cut (V1 is also the verifier's X2); X1, X3 and X4 are the
+verifier's; S1a to S1c are one per S1 fixed here; F2a and F2b hold the ANSI and reserved-prefix
+narrowings. Every mutation is red on at least one pin set. N3, the bail flag, is now red on the
+Rust pin that drives the pass directly and green on the facade, because no statement of the
+corpus reaches a bail any more: the wholesale-`main` predicate stops them first. V2 and F2a
+edit code the `repark-core` pins cannot see (the binding crate; the ANSI flag the binding
+passes). After the batch the sources were restored, the wheel rebuilt, and both sets ran green
+(36 and 1,549).

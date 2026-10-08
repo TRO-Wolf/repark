@@ -31,7 +31,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   moves the SQL door from a statement rewrite to the plan and holds "never worse than `main`"
   with a 182-statement differential pin (C-012, C-013); mixed-type keys take Spark's type
   (C-010); the DataFrame-door reach survives side-key filters, sorts and caching (C-014). 902
-  grid cells match Spark, 223 moved, none regressed. C-011 (the Critic pass) is `OPEN`.
+  grid cells matched Spark after fold 1. Fold 2 (the re-verify's FAIL at `783942f3`, the last
+  fold) narrows: a select that names both the unqualified key and a side key, a comma join,
+  `QUALIFY` and a failed retry answer exactly as `main` (C-015, C-016, C-017); 1,355 statements,
+  zero third answers. C-011 (the Critic pass) is `OPEN`.
   `risk_tier: high`. Branch `fix/using-per-side-keys-1`. Evidence in
   [using-per-side-keys-1-probes/](using-per-side-keys-1-probes/map.md).
 - [fa-5-6-ledger.md](fa-5-6-ledger.md) —
