@@ -3845,7 +3845,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   connection); a partition column of type `date`, `timestamp`, `timestamptz`, `numeric`,
   `float4` or `float8` (whether its bounds are Spark's date text or integers); and a read of
   more than **10 000 strides** (the count after Spark's shrink to the span), which refuses
-  with the ceiling in its text. Not offered: automatic choice of the column and its bounds (Spark
+  with the ceiling in its text after one catalog connection for the column and type lookup
+  and before any snapshot or stride connection. Not offered: automatic choice of the column and its bounds (Spark
   has none). In `repark.toml` the five spellings are unknown keys: a mounted source is a
   catalog of every relation, so a per-relation column has no key to sit under. Two deliberate
   differences from Spark, both on the safe side: two columns that differ only in case, with

@@ -234,7 +234,7 @@ each, the median reported (§4).
 | C-007 | The benchmark (§0.7, order R-3) is a harness beside the live cells and a recorded run: `c3_bench.py` loads a 10M-row, nine-column table into the C-0 container and times `SELECT *` on RePark's release wheel (unpartitioned, 4 strides, 8 strides), ConnectorX `read_sql` with an Arrow return at the same partition settings and pandas over SQLAlchemy, three runs each in a fresh interpreter, the build lock held, the median reported with rows per second and the factor against ConnectorX. The acceptance factor is the owner's: the measurement is recorded and no pass is declared. | §4; the harness's JSON report, quoted. | PROVEN | §4. |
 | C-008 | The ledger cites ConnectorX (the partitioned-read design and the benchmark bar) and ADBC, order R-4. | §5. | PROVEN | §5. |
 | C-009 | Fold 1, the verifier's first S2. A declared partition column type refuses naming `CONNECT-DECL-pg-partitioned-read` for the spelling a Spark user sends: the column's type is judged first and the bounds are parsed second, as Spark does (`C3-T04`, `T06`, `T11` partition with date and timestamp text; `C3-T05` refuses an integer bound on a date). A `date`, `timestamp` or `timestamptz` column refuses as declared with date text, timestamp text, integers or nonsense as bounds, through `format("jdbc")` and through `properties`; an integer column refuses a bound that is not an `i64` as `NumberFormat`, naming the option and never the value; the facade forwards a date-spelled bound unparsed. | `a_declared_column_type_refuses_naming_the_row_whatever_the_bound_spelling`, `bounds_stay_text_until_the_column_is_known`, `a_bound_that_is_not_an_i64_refuses_naming_the_option_never_the_value`; `test_format_postgres_forwards_a_date_bound_as_text_for_the_door_to_judge`; live `test_what_stays_declared_refuses_naming_its_row`. | PROVEN | §7. |
-| C-010 | Fold 1, the verifier's second S2. `numPartitions` is Spark's 32-bit `Int`: a value outside it refuses with Spark's class, `NumberFormat`, before any connection (`C3-N07`, and the verifier's `num_big`). A read of more than 10 000 strides refuses as declared, naming `CONNECT-DECL-pg-partitioned-read` and the ceiling; the ceiling applies after Spark's shrink to the span, so a large count over a small span answers as Spark does (`C3-N08`). Spark has no ceiling: a dated divergence in the registry row, with the measurements in §7. | `num_partitions_is_sparks_32_bit_int`, `strides_above_the_ceiling_refuse_after_sparks_shrink`; core `partition_options_refuse_as_spark_does_before_any_connection`; live `test_num_partitions_is_sparks_int_and_strides_have_a_ceiling`. | PROVEN | §7. |
+| C-010 | Fold 1, the verifier's second S2. `numPartitions` is Spark's 32-bit `Int`: a value outside it refuses with Spark's class, `NumberFormat`, before any connection (`C3-N07`, and the verifier's `num_big`). A read of more than 10 000 strides refuses as declared, naming `CONNECT-DECL-pg-partitioned-read` and the ceiling, after one catalog connection for the column and type lookup and before any snapshot or stride connection; the ceiling applies after Spark's shrink to the span, so a large count over a small span answers as Spark does (`C3-N08`). Spark has no ceiling: a dated divergence in the registry row, with the measurements in §7. | `num_partitions_is_sparks_32_bit_int`, `strides_above_the_ceiling_refuse_after_sparks_shrink`; core `partition_options_refuse_as_spark_does_before_any_connection`; live `test_num_partitions_is_sparks_int_and_strides_have_a_ceiling`. | PROVEN | §7. |
 | C-011 | Fold 1, the verifier's third S2. The partition column resolves as Spark's resolver does: the name, unquoted if it is quoted, matches exactly first, else case-insensitively when exactly one column matches, quoted or bare (`C3-C04`…`C07`: `"N"` finds `n`, `"mixed"` finds `"Mixed"`). When more than one column matches and none exactly, the read refuses naming both: Spark cannot read a relation with two columns that differ only in case at all (`C3-C08`…`C10`, `COLUMN_ALREADY_EXISTS`), so it makes no choice to copy. | `the_partition_column_resolves_as_spark_resolves_it`; live `test_a_partition_column_resolves_in_another_case_quoted_or_bare`. | PROVEN | §7. |
 
 ## 1. Mutations (2026-10-08)
@@ -464,6 +464,40 @@ ceiling above 10 000 is ever wanted.
 - *Dated note, 2026-10-08: a bare `predicates` option.* `option("predicates", …)` with no
   partition options refuses naming the registry row; Spark ignores the unknown option and reads
   unpartitioned. A refusal where Spark answers, the safe direction, declared by the row.
+- *Dated note, 2026-10-08 (fold 2): the keyword door.* `jdbc(column=…)` took `lowerBound`,
+  `upperBound` and `numPartitions` as Python integers and raised a raw `TypeError` on a `str`
+  (the re-verify's S2); it now hands all three on as text in the properties, as PySpark
+  passes them, and the engine door judges them: the column first, the bounds second, an
+  incomplete set in Spark's sentence. Pinned by `test_the_keyword_door_hands_str_and_int_values_to_the_engine_door`
+  (live) and the four `test_jdbc_keyword_door_*` pins (offline). The `format("jdbc")` door's
+  incomplete-set sentence and the keyword door's now both come from the engine door.
+- *Dated note, 2026-10-08 (fold 2): padded `numPartitions` text.* The re-verify measured `' 4'`,
+  `'4 '` and the full-width `'４'` accepted as 4 on the `format("jdbc")` door, where Python
+  `int()` parses them; the properties doors refuse them as `NumberFormatException` (Spark's
+  `toInt` refuses padded text). Fold 2 removes this on the `jdbc(column=…)` keyword door,
+  which no longer parses (a padded string refuses there as on the properties doors); the
+  `format("jdbc")` door still has it, for `numPartitions` and for a padded bound (the note
+  above). Every case reads the same rows, so the safe direction holds and no row changes.
+  The same facade parse runs before the column is looked at on that door: `lowerBound='abc'`
+  answers the facade's `NumberFormatException` for a missing, text or date column, where the
+  properties door answers column-not-found, the type sentence and the registry row.
+- *Dated note, 2026-10-08 (fold 2): case-insensitive column resolution folds ASCII only.* The
+  partition column matches its name case-insensitively with ASCII folding. Non-ASCII case
+  variants refuse as column-not-found (`'ünï'` against `"Ünï"`, `'i̇d'` against `"İd"`,
+  `'ẞ'` against `"ß"`); the exact spellings, quoted or bare, resolve, and `'ss'` resolves to
+  `"SS"` and never to `"ß"`. Spark's resolver is `String.equalsIgnoreCase` (read, not
+  measured), which would match the first; RePark refuses where Spark may resolve, the safe
+  direction, and no row changes.
+- *Dated note, 2026-10-08 (fold 2): what "before any connection" covers.* The ceiling
+  refusal opens **one catalog connection**: the column and type lookup the check needs (a
+  missing or declared column must win over the ceiling, and does). The re-verify's
+  `log_statement=all` shows seven statements on one backend, all the catalog lookup (`BEGIN
+  READ ONLY`, the relation resolve, `COMMIT`, the pool reset), and no `REPEATABLE READ`, no
+  `pg_export_snapshot`, no `COPY` and no stride statement: no snapshot connection and no
+  stride connection opens. "Before any connection" holds for `numPartitions` outside Spark's
+  `Int`, an incomplete option set and `predicates`, which the engine door judges before it
+  resolves the relation; it does not hold for the ceiling, nor for a bound, which is parsed
+  once the column's type is known.
 
 **Mutations (fold 1).** Each applied alone to `9af3d3f0`, `cargo test -p repark-connect --test it
 partition`, the file restored.
