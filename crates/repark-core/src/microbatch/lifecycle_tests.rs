@@ -18,6 +18,7 @@ use crate::microbatch::driver::{
     BatchBody, QueryHandle, QueryState, ShutdownOutcome, SinkSpec, StreamSpec,
     StreamingQueryManager, Trigger,
 };
+use crate::microbatch::progress::StatusMessage;
 use crate::microbatch::relation::{PlanTemplate, streaming_frame};
 use crate::microbatch::table_door_tests::{FLAKY_SINK, FLAKY_SOURCE, LoadHook, flaky};
 use crate::microbatch::testing::{
@@ -379,6 +380,66 @@ async fn assert_released_after_the_drop(trigger: Trigger) {
 async fn dropping_the_session_stops_its_queries_and_releases_the_catalog() {
     assert_released_after_the_drop(Trigger::ProcessingTime(Duration::ZERO)).await;
     assert_released_after_the_drop(Trigger::ProcessingTime(Duration::from_hours(1))).await;
+}
+
+#[tokio::test]
+async fn a_registered_query_does_not_keep_the_session_alive() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    let body = Probe::new(Mode::Record);
+    let handle = StreamingQueryManager::of(&fixture.session)
+        .register(&fixture.session, foreach(&body, Trigger::Once, &[]))
+        .await
+        .expect("register");
+    let state = fixture.session.context().state_weak_ref();
+    let Fixture { warehouse, session } = fixture;
+    drop(session);
+    assert_eq!(
+        state.strong_count(),
+        0,
+        "a registered query keeps the session state alive"
+    );
+    assert!(handle.start_below_catalog_check().is_err());
+    assert_eq!(
+        handle.stop().await,
+        ShutdownOutcome::Stopped { durable: None }
+    );
+    assert_eq!(body.calls(), 0);
+    drop(warehouse);
+}
+
+const WAKE_ROUNDS: usize = 8;
+const WAKE_BOUND: Duration = Duration::from_millis(25);
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_session_drop_wakes_a_waiting_query_without_a_poll() {
+    let mut prompt = 0;
+    let mut waits = Vec::new();
+    for _ in 0..WAKE_ROUNDS {
+        let fixture = Fixture::new().await;
+        fixture.insert(SOURCE, "(1)").await;
+        let trigger = Trigger::ProcessingTime(Duration::from_hours(1));
+        let handle = started(&fixture, table_spec(trigger, &options(&[]))).await;
+        wait_for_epoch(&handle, 0).await;
+        eventually("the query never reached its trigger wait", || {
+            handle.status().message == StatusMessage::WaitingForNextTrigger
+        })
+        .await;
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let Fixture { warehouse, session } = fixture;
+        let dropped = std::time::Instant::now();
+        drop(session);
+        assert_eq!(ended(&handle).await, Ok(true));
+        let waited = dropped.elapsed();
+        prompt += usize::from(waited < WAKE_BOUND);
+        waits.push(waited);
+        assert_eq!(handle.state(), QueryState::Stopped);
+        drop(warehouse);
+    }
+    assert!(
+        prompt + 1 >= WAKE_ROUNDS,
+        "the stop waited for a poll tick: {waits:?}"
+    );
 }
 
 #[tokio::test]

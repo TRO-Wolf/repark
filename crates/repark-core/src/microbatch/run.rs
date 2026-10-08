@@ -27,7 +27,7 @@ use tokio::time::Instant;
 use crate::microbatch::driver::{BatchBody, Ending, Pending, QueryShared, Trigger};
 use crate::microbatch::progress::TriggerReport;
 use crate::microbatch::relation::PlanTemplate;
-use crate::time_travel::microbatch_source::{MicroBatchSource, SourceBatch};
+use crate::time_travel::microbatch_source::{MicroBatchSource, SourceBatch, WeakSessionState};
 
 #[derive(Clone)]
 pub(crate) enum Door {
@@ -64,7 +64,7 @@ pub(crate) struct Run {
     shared: Arc<QueryShared>,
     source: MicroBatchSource,
     plan: Option<PlanTemplate>,
-    context: SessionContext,
+    context: WeakSessionState,
     door: Door,
 }
 
@@ -107,7 +107,10 @@ impl Run {
             let started = Instant::now();
             let started_at = SystemTime::now();
             self.shared.progress().trigger_started();
-            let batch = self.next_batch(&mut cursor, target.as_ref()).await?;
+            let batch = match self.next_batch(&mut cursor, target.as_ref()).await {
+                Err(_) if self.shared.session_ended() => return Ok(Ending::Stopped),
+                planned => planned?,
+            };
             let planned = Instant::now();
             let found = batch.is_some();
             if found && self.shared.stop_requested() {
@@ -184,7 +187,6 @@ impl Run {
         tokio::select! {
             () = tokio::time::sleep_until(deadline) => Wake::Tick,
             _ = stop.wait_for(|stopped| *stopped) => Wake::Stop,
-            () = self.shared.session_dropped() => Wake::Stop,
         }
     }
 
@@ -310,7 +312,12 @@ impl Run {
         };
         let door_started = Instant::now();
         let committed = match &self.door {
-            Door::Table => self.append(&guard, &stamp, &sink, frame).await.map(Some),
+            Door::Table => {
+                let Some(batch) = self.batch_session(&guard) else {
+                    return Ok(None);
+                };
+                self.append(&batch, &stamp, &sink, frame).await.map(Some)
+            }
             Door::ForeachBatch(body) => self
                 .foreach_batch(&guard, &stamp, body.as_ref(), frame)
                 .await
@@ -379,8 +386,8 @@ impl Run {
         }
     }
 
-    fn batch_session(&self, guard: &BatchScopeGuard) -> SessionContext {
-        let batch = SessionContext::new_with_state(self.context.state());
+    fn batch_session(&self, guard: &BatchScopeGuard) -> Option<SessionContext> {
+        let batch = SessionContext::new_with_state(self.context.snapshot()?);
         {
             let state = batch.state_ref();
             let mut state = state.write();
@@ -390,7 +397,7 @@ impl Run {
                 &guard.token().to_string(),
             );
         }
-        batch
+        Some(batch)
     }
 
     async fn foreach_batch(
@@ -415,14 +422,13 @@ impl Run {
 
     async fn append(
         &self,
-        guard: &BatchScopeGuard,
+        batch: &SessionContext,
         stamp: &CommitStamp,
         sink: &Table,
         frame: DataFrame,
     ) -> Result<u64, MicroBatchError> {
-        let batch = self.batch_session(guard);
         let (extra, mut staging) =
-            resolve_empty_session_write(&batch).map_err(|error| engine_error(&error))?;
+            resolve_empty_session_write(batch).map_err(|error| engine_error(&error))?;
         staging.fork_insert_dictionary_rule = true;
         let stream = frame
             .execute_stream()
@@ -432,7 +438,7 @@ impl Run {
             sink,
             stream,
             Vec::new(),
-            concurrency_from_ctx(&batch),
+            concurrency_from_ctx(batch),
             &staging,
         )
         .await

@@ -3,6 +3,9 @@ use std::collections::{BTreeMap, HashSet};
 use std::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 
+use datafusion::datasource::provider_as_source;
+use datafusion::execution::session_state::SessionState;
+use datafusion::logical_expr::{LogicalPlanBuilder, UNNAMED_TABLE};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::{SchemaRef, TableMetadata};
 use iceberg::table::Table;
@@ -216,8 +219,24 @@ pub struct SourceBatch {
     pub num_input_rows: u64,
 }
 
+#[derive(Clone)]
+pub(crate) struct WeakSessionState(Arc<dyn Fn() -> Option<SessionState> + Send + Sync>);
+
+impl WeakSessionState {
+    pub(crate) fn of(context: &SessionContext) -> Self {
+        let state = context.state_weak_ref();
+        WeakSessionState(Arc::new(move || {
+            state.upgrade().map(|state| state.read().clone())
+        }))
+    }
+
+    pub(crate) fn snapshot(&self) -> Option<SessionState> {
+        (self.0)()
+    }
+}
+
 pub struct MicroBatchSource {
-    context: SessionContext,
+    context: WeakSessionState,
     catalog: Arc<dyn Catalog>,
     ident: TableIdent,
     name: String,
@@ -268,7 +287,7 @@ impl MicroBatchSource {
         let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone());
         let opened = load_table(&catalog, &ident, table).await?;
         Ok(Self {
-            context: session.context().clone(),
+            context: WeakSessionState::of(session.context()),
             catalog,
             ident,
             name: table.to_string(),
@@ -373,15 +392,22 @@ impl MicroBatchSource {
                 "microbatch source cannot read the batch ending at snapshot {end_snapshot}: {error}"
             ))
         })?;
-        let frame = self.context.read_table(provider).map_err(|error| {
+        let state = self.context.snapshot().ok_or_else(|| {
             MicroBatchError::Catalog(format!(
-                "microbatch source cannot read the batch ending at snapshot {end_snapshot}: {error}"
+                "microbatch source cannot read the batch ending at snapshot {end_snapshot}: the session ended"
             ))
         })?;
+        let scan = LogicalPlanBuilder::scan(UNNAMED_TABLE, provider_as_source(provider), None)
+            .and_then(LogicalPlanBuilder::build)
+            .map_err(|error| {
+                MicroBatchError::Catalog(format!(
+                    "microbatch source cannot read the batch ending at snapshot {end_snapshot}: {error}"
+                ))
+            })?;
         Ok(SourceBatch {
             start: plan.start,
             end: plan.end,
-            frame,
+            frame: DataFrame::new(state, scan),
             num_input_rows: plan.num_input_rows,
         })
     }

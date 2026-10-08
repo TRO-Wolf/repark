@@ -58,6 +58,11 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   the identifier must be three-part (ledger FL-8). No doc comments (the
   owner's comment ban); fallible entry points take
   `#[allow(clippy::missing_errors_doc)]` instead.
+  **MB-3 round 2 (2026-10-08):** the source no longer owns a `SessionContext` clone. It holds
+  a crate-private `WeakSessionState` (a closure over `SessionContext::state_weak_ref`, so the
+  lock type is not named) and takes one state snapshot per batch frame, building the frame as
+  `SessionContext::read_table` does. A source therefore never keeps its session alive; a
+  batch planned after the session ended refuses `Catalog` naming that. pins: mb-3/C-021
   pins: mb-1/C-014, C-015, C-016
   **MB-1 fold 1 round B (2026-10-07):** the source holds the catalog handle
   and the `TableIdent`, not a `Table`. `initial_offset` and `next_batch`

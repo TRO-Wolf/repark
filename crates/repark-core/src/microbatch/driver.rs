@@ -3,7 +3,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, RwLock, Weak};
 use std::time::Duration;
 
-use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::prelude::DataFrame;
 use futures::future::BoxFuture;
 use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
@@ -22,13 +22,11 @@ use crate::microbatch::progress::{
 };
 use crate::microbatch::relation::PlanTemplate;
 use crate::microbatch::run::{Door, Run};
-use crate::time_travel::microbatch_source::{MicroBatchSource, SourceOptions};
+use crate::time_travel::microbatch_source::{MicroBatchSource, SourceOptions, WeakSessionState};
 
 pub const DEFAULT_POLLING_DELAY: Duration = Duration::from_millis(10);
 
 pub const DEFAULT_CATALOG_TIMEOUT: Duration = Duration::from_mins(1);
-
-const SESSION_WATCH: Duration = Duration::from_millis(100);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trigger {
@@ -252,6 +250,18 @@ pub struct StreamingQueryManager {
     queries: Mutex<Vec<QueryHandle>>,
 }
 
+impl Drop for StreamingQueryManager {
+    fn drop(&mut self) {
+        let queries = self
+            .queries
+            .get_mut()
+            .unwrap_or_else(PoisonError::into_inner);
+        for query in queries.iter() {
+            query.shared.stop.send_replace(true);
+        }
+    }
+}
+
 impl fmt::Debug for StreamingQueryManager {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
@@ -324,7 +334,7 @@ impl StreamingQueryManager {
                     pending: Some(Pending {
                         source,
                         plan: spec.plan,
-                        context: session.context().clone(),
+                        context: WeakSessionState::of(session.context()),
                         door,
                     }),
                     ..Lifecycle::default()
@@ -385,7 +395,7 @@ impl StreamingQueryManager {
 pub(crate) struct Pending {
     pub(crate) source: MicroBatchSource,
     pub(crate) plan: Option<PlanTemplate>,
-    pub(crate) context: SessionContext,
+    pub(crate) context: WeakSessionState,
     pub(crate) door: Door,
 }
 
@@ -537,13 +547,11 @@ impl QueryShared {
     }
 
     pub(crate) fn stop_requested(&self) -> bool {
-        *self.stop.borrow() || self.session.strong_count() == 0
+        *self.stop.borrow() || self.session_ended()
     }
 
-    pub(crate) async fn session_dropped(&self) {
-        while self.session.strong_count() > 0 {
-            tokio::time::sleep(SESSION_WATCH).await;
-        }
+    pub(crate) fn session_ended(&self) -> bool {
+        self.session.strong_count() == 0
     }
 }
 

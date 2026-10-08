@@ -61,15 +61,18 @@ Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
     pins: mb-3/C-016
   - *The session's end stops its queries.* An explicit session stop is
     `StreamingQueryManager::stop_all`, which stops each active query and waits for it as
-    `stop` does. A session dropped without a stop is seen through a `Weak` to the session's
-    catalog registry (`Session::catalogs`, an `Arc` only the session's handles hold): every
-    stop check reads it, and the trigger wait and the scope wait poll it every 100 ms
-    (`SESSION_WATCH`), so each query ends `Stopped` after its in-flight batch and the task
-    drops the source, the context and the catalog handles. A poll, not a drop hook, because
-    `MicroBatchSource` owns a `SessionContext` clone, which keeps the session state and
-    with it the manager alive for as long as the task runs, so the manager's `Drop` cannot
-    fire first; `session.rs` is not edited (ledger D-11). A handle the caller still holds
-    keeps the sink's catalog handle until it is dropped. pins: mb-3/C-013
+    `stop` does. A session dropped without a stop drops its state, the state drops the
+    manager, and the manager's `Drop` sends the stop signal to every query it holds (round 2,
+    2026-10-08). Nothing a query owns keeps the session state alive: the source, the driver
+    task and a registered handle's pending work hold a `WeakSessionState`
+    (`time_travel/microbatch_source.rs`) and take a state snapshot per batch. There is no
+    poll. The fallback is a `Weak` to the session's catalog registry (`Session::catalogs`),
+    read at every stop check: it covers a state snapshot that outlives the session (a
+    `DataFrame` the caller still holds keeps the manager alive), where the query ends at its
+    next trigger without running a batch (ledger D-11). A planning error after the session
+    ended is a stop, not a failure, and the `toTable` door stops before its write when the
+    state is gone. A handle the caller still holds keeps the sink's catalog handle until it is
+    dropped. pins: mb-3/C-013, C-021
   - `StreamSpec` gains `catalog_timeout` (`DEFAULT_CATALOG_TIMEOUT`, 60 s), today the bound on
     the scope wait only (ledger C-010 stays open for the per-call bound).
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
@@ -147,8 +150,10 @@ Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
   boundary. The boundary pin sets the interval to a wall-clock instant two seconds ahead in
   epoch milliseconds, so the first multiple of the interval is that instant and the schedule
   is exact without an injected clock; the arithmetic itself is pinned on fixed instants in
-  `run_tests.rs`.
-  pins: mb-3/C-011, C-012, C-013, C-014, C-016, C-017, C-018
+  `run_tests.rs`. Round 2 (2026-10-08) adds a registered handle that does not keep the session
+  alive and the wake pin: eight rounds of a query in a one-hour wait, at least seven of which
+  must end within 25 ms of the session's drop, which a 100 ms poll cannot do.
+  pins: mb-3/C-011, C-012, C-013, C-014, C-016, C-017, C-018, C-020, C-021
 - `table_door_tests.rs` — the `toTable` door pins: the stamped append with the Spark keys, the
   start check on a shared catalog, the unknown-outcome reconcile and walk over a fault-injecting
   catalog wrapper (`FaultCatalog`, the `crash_tests.rs` shape), and fencing by another run of the
