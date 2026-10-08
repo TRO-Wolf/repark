@@ -40,7 +40,13 @@ pins: mb-3/C-031
 ## Contents
 
 - `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) and the module declarations: `pub mod driver;`,
-  `pub mod progress;`, `pub mod relation;`, the private `run`, and the test-only modules. No re-exports: callers use full paths.
+  `pub mod progress;`, `pub mod relation;`, the private `run`, and the test-only modules.
+  **MB-4 round 2b (2026-10-08):** re-exports `MicroBatchError` and its direct field types
+  (`RecoveryReason`, the offset ids, `Generation`, `iceberg::spec::Operation`) so the binding
+  names the mapper's input without a `repark-iceberg` edge, following the three
+  `repark_iceberg::write` re-export precedents (`partition_overwrite_mode.rs`,
+  `session/writer_layout.rs`, `error_map.rs`).
+  pins: mb-4/C-022
 - `driver.rs` — the driver's types (`Trigger`, `QueryState`, `ShutdownOutcome`, `BatchBody`,
   `SinkSpec`, `StreamSpec`, `RecordedLocation`), the `StreamingQueryManager` and the
   `QueryHandle`. **The Session seam (sketch §3.5):** `StreamingQueryManager::of` installs the

@@ -20,3 +20,10 @@ mod table_door_tests;
 pub(crate) mod testing;
 #[cfg(test)]
 mod timeout_tests;
+
+pub use iceberg::spec::Operation;
+pub use repark_common::Generation;
+pub use repark_iceberg::microbatch::error::{MicroBatchError, RecoveryReason};
+pub use repark_iceberg::microbatch::offset::{
+    Epoch, FilePosition, QueryId, RunId, SinkRecord, SnapshotId, TableUuid,
+};
