@@ -331,13 +331,13 @@ class DataFrame:
         view_name = scratch_view_name(self._session, prefix)
         if not is_checkpoint:
             budgets = _resolve_cache_budgets(self._alive_token)
-            lineage = self._inner
+            lineage = _qualified_names._cache_lineage(self)
             self._session.materialize_as_cache_view(view_name, lineage, budgets)
             cache_handle.bind_registered_view(self, view_name, lineage)
             _register_cache_frame(self._alive_token, self)
             return
         old_cache_view = self._cache_view
-        cache_handle.bind_checkpoint_scan(self, view_name, self._inner)
+        cache_handle.bind_checkpoint_scan(self, view_name, _qualified_names._cache_lineage(self))
         if old_cache_view is not None and old_cache_view != view_name:
             cache_handle.release_view_hold(self, old_cache_view)
         self._checkpoint_lazy = False

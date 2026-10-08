@@ -724,6 +724,18 @@ wrapped optimizer rule) and declares this directory.
   only on `inner`: on `left` it is the left key alone, on `right` the right key, on `full`
   neither. Design and rulings: `task/ledgers/staging/using-per-side-keys-1-ledger.md`. Pins:
   `../tests/using_keys.rs`. pins: using-per-side-keys-1/C-002, C-003, C-004, C-005, C-008
+  **Fold 1 (2026-10-08):** `shown_key` no longer casts: the right key shows in its own type on
+  `right`, and on `full` `full_key` casts both sides to `spark_key_type` (the measured Spark
+  rule: wider integer, decimal widened for an integer, `DOUBLE` with any float, `BIGINT` for an
+  integer with a string, `DOUBLE` for a double with a string, `TIMESTAMP` for a date with a
+  timestamp) before the `coalesce`; a pair without a rule shows the left key as before, never
+  a truncated value. A join whose schema holds a user column starting with
+  `__repark_using__` has no hidden keys. `passes_every_column` reads a projection as
+  pass-through when it carries every non-hidden input column, so `expose_hidden_keys` reaches
+  through the narrowing projection a side-key filter or sort leaves and through a cached
+  scan that already carries the keys; `shown_columns` is the projection that hides them
+  again, and `hidden_names_in_text` reads the aliases from the text alone.
+  pins: using-per-side-keys-1/C-010, C-014
 
 ## Pointers
 

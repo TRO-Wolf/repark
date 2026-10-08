@@ -2,13 +2,13 @@ use datafusion::arrow::array::{Array, Int64Array};
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::{Column, JoinType};
 use datafusion::dataframe::DataFrame;
-use datafusion::logical_expr::{Expr, LogicalPlan, col, lit};
+use datafusion::logical_expr::{Expr, col, lit};
 
 use crate::ReparkSession;
 use crate::frame_names::{
     FrameNode, HIDDEN_PREFIX, NameRule::IgnoreCase, attribute_ids, expose_hidden_keys,
     hidden_names_in, hidden_names_in_text, join_on_named_keys, join_output_sources, output_columns,
-    rebind_key_name, stamp, using_hidden_keys,
+    rebind_key_name, shown_columns, spark_key_type, stamp, using_hidden_keys,
 };
 
 async fn side(session: &ReparkSession, alias: &str, rows: &str, second: &str) -> DataFrame {
@@ -256,23 +256,129 @@ async fn chained_full_join_matches_on_the_coalesced_key() {
 }
 
 #[tokio::test]
-async fn mixed_type_keys_keep_the_left_key_type() {
+async fn mixed_type_keys_show_the_right_key_on_right_and_the_common_type_on_full() {
     let session = ReparkSession::new().unwrap();
-    for (how, expected) in [
-        (JoinType::Right, vec![Some(2), Some(3)]),
-        (JoinType::Full, vec![Some(1), Some(2), Some(3)]),
+    for (how, shown) in [
+        (JoinType::Right, DataType::Utf8),
+        (JoinType::Full, DataType::Int64),
+        (JoinType::Left, DataType::Int64),
     ] {
         let left = side(&session, "jl", "(1, 'a'), (2, 'b')", "s").await;
         let right = side(&session, "jr", "('2', 'x'), ('3', 'y')", "t").await;
         let frame = joined(left, right, how);
-        assert_eq!(frame.schema().field(0).data_type(), &DataType::Int64);
-        assert_eq!(first_column(frame.clone()).await, expected, "{how:?}");
-        let alias = hidden_alias(&frame, true);
-        let wide = expose_hidden_keys(frame.logical_plan(), std::slice::from_ref(&alias))
+        assert_eq!(frame.schema().field(0).data_type(), &shown, "{how:?}");
+    }
+    let left = side(&session, "jl", "(1, 'a'), (2, 'b')", "s").await;
+    let right = side(&session, "jr", "(2.5, 'x'), (3.5, 'y')", "t").await;
+    let frame = joined(left, right, JoinType::Full);
+    assert_eq!(frame.schema().field(0).data_type(), &DataType::Float64);
+    let mut keys = Vec::new();
+    for batch in frame.collect().await.unwrap() {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::Float64Array>()
+            .unwrap()
+            .clone();
+        keys.extend((0..column.len()).map(|row| column.value(row).to_string()));
+    }
+    keys.sort();
+    assert_eq!(keys, ["1", "2", "2.5", "3.5"]);
+}
+
+#[test]
+fn spark_key_type_follows_the_measured_pairs() {
+    let decimal = |precision, scale| DataType::Decimal128(precision, scale);
+    let stamp = DataType::Timestamp(datafusion::arrow::datatypes::TimeUnit::Microsecond, None);
+    for (left, right, wide) in [
+        (DataType::Int32, DataType::Int64, Some(DataType::Int64)),
+        (DataType::Int32, DataType::Int16, Some(DataType::Int32)),
+        (DataType::Int32, decimal(10, 2), Some(decimal(12, 2))),
+        (DataType::Int64, decimal(10, 2), Some(decimal(22, 2))),
+        (DataType::Int32, DataType::Float64, Some(DataType::Float64)),
+        (DataType::Int32, DataType::Float32, Some(DataType::Float64)),
+        (
+            DataType::Float32,
+            DataType::Float64,
+            Some(DataType::Float64),
+        ),
+        (decimal(10, 2), DataType::Float64, Some(DataType::Float64)),
+        (DataType::Int32, DataType::Utf8, Some(DataType::Int64)),
+        (DataType::Float64, DataType::Utf8, Some(DataType::Float64)),
+        (DataType::Date32, stamp.clone(), Some(stamp.clone())),
+        (DataType::Date32, DataType::Utf8, None),
+        (stamp.clone(), DataType::Utf8, None),
+        (DataType::Boolean, DataType::Int32, None),
+        (decimal(38, 0), decimal(38, 10), None),
+    ] {
+        assert_eq!(spark_key_type(&left, &right), wide, "{left:?} {right:?}");
+        assert_eq!(spark_key_type(&right, &left), wide, "{right:?} {left:?}");
+    }
+}
+
+#[tokio::test]
+async fn a_second_side_key_is_reachable_after_a_narrowed_filter() {
+    let session = ReparkSession::new().unwrap();
+    let (left, right) = sides(&session).await;
+    let frame = joined(left, right, JoinType::Full);
+    let right_alias = hidden_alias(&frame, true);
+    let left_alias = hidden_alias(&frame, false);
+    let wide = expose_hidden_keys(frame.logical_plan(), std::slice::from_ref(&right_alias))
+        .unwrap()
+        .unwrap();
+    let (state, _) = frame.clone().into_parts();
+    let filtered = DataFrame::new(state, wide)
+        .filter(col(Column::new_unqualified(right_alias.clone())).gt(lit(2)))
+        .unwrap();
+    let narrowed = filtered
+        .clone()
+        .select(shown_columns(filtered.schema()))
+        .unwrap();
+    assert_eq!(names(&narrowed), ["id", "s", "t"]);
+    for alias in [&right_alias, &left_alias] {
+        let again = expose_hidden_keys(narrowed.logical_plan(), std::slice::from_ref(alias))
             .unwrap()
             .unwrap();
-        assert_eq!(wide.schema().field(3).data_type(), &DataType::Utf8);
+        assert_eq!(again.schema().fields().len(), 4);
+        assert_eq!(again.schema().field(3).name(), alias);
     }
+    let both = expose_hidden_keys(
+        narrowed.logical_plan(),
+        &[left_alias.clone(), right_alias.clone()],
+    )
+    .unwrap()
+    .unwrap();
+    let (state, _) = frame.into_parts();
+    let picked = DataFrame::new(state, both)
+        .select(vec![col(Column::new_unqualified(left_alias))])
+        .unwrap();
+    assert_eq!(first_column(picked).await, vec![None, Some(3)]);
+}
+
+#[tokio::test]
+async fn a_user_column_named_like_the_alias_keeps_the_key_unexposed() {
+    let session = ReparkSession::new().unwrap();
+    let left = side(
+        &session,
+        "jl",
+        "(1, 'a'), (2, 'b')",
+        "__repark_using__jr__id",
+    )
+    .await;
+    let right = side(&session, "jr", "(2, 'x'), (3, 'y')", "t").await;
+    let frame = joined(left, right, JoinType::Full);
+    assert_eq!(names(&frame), ["id", "__repark_using__jr__id", "t"]);
+    let hidden = using_hidden_keys(frame.logical_plan());
+    assert!(hidden.is_empty());
+    assert!(
+        expose_hidden_keys(
+            frame.logical_plan(),
+            &["__repark_using__jr__id".to_string()]
+        )
+        .unwrap()
+        .is_none()
+    );
+    assert_eq!(first_column(frame).await, vec![Some(1), Some(2), Some(3)]);
 }
 
 #[tokio::test]
@@ -305,13 +411,15 @@ async fn hidden_names_are_read_from_expressions_and_text() {
         vec![alias.clone()]
     );
     assert!(hidden_names_in([&col("id")]).is_empty());
-    let plan: &LogicalPlan = frame.logical_plan();
     assert_eq!(
-        hidden_names_in_text(plan, &format!("`{alias}` > 1")),
+        hidden_names_in_text(&format!("`{alias}` > 1 AND {alias} < 9")),
         vec![alias.clone()]
     );
-    assert!(hidden_names_in_text(plan, "id > 1").is_empty());
-    assert!(hidden_names_in_text(plan, "__repark_using__other > 1").is_empty());
+    assert!(hidden_names_in_text("id > 1").is_empty());
+    assert_eq!(
+        hidden_names_in_text("x.__repark_using__other > 1"),
+        ["__repark_using__other"]
+    );
 }
 
 #[test]

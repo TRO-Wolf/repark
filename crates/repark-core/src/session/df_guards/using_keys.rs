@@ -6,7 +6,7 @@ use datafusion::common::{Column, DFSchema, Result, TableReference};
 use datafusion::functions::core::expr_fn::coalesce;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::{
-    Expr, ExprSchemable, Filter, Join, JoinType, Limit, LogicalPlan, Projection, Sort, try_cast,
+    Expr, ExprSchemable, Filter, Join, JoinType, Limit, LogicalPlan, Projection, Sort, cast,
 };
 use repark_common::names::NameRule;
 
@@ -42,30 +42,27 @@ pub fn shown_key(
     else {
         return Ok(Expr::Column(left.clone()));
     };
-    let (left, right) = (&left, &right);
-    let left_type = Expr::Column(left.clone()).get_type(left_schema)?;
-    let right_type = Expr::Column(right.clone()).get_type(right_schema)?;
-    let right_expr = typed_right(right, &left_type, &right_type);
-    let shown = match join_type {
-        JoinType::Right if left_type == right_type => return Ok(Expr::Column(right.clone())),
-        JoinType::Right => {
-            let id = right_schema
-                .qualified_field_from_column(right)
-                .ok()
-                .and_then(|(_, field)| AttrId::of(field))
-                .unwrap_or_else(AttrId::mint);
-            return Ok(Expr::Alias(
-                Alias::new(right_expr, right.relation.clone(), left.name.clone())
-                    .with_metadata(Some(id.metadata())),
-            ));
+    match join_type {
+        JoinType::Right => Ok(Expr::Column(right)),
+        JoinType::Full => {
+            let left_type = Expr::Column(left.clone()).get_type(left_schema)?;
+            let right_type = Expr::Column(right.clone()).get_type(right_schema)?;
+            let merged = full_key(
+                Expr::Column(left.clone()),
+                &left_type,
+                Expr::Column(right),
+                &right_type,
+            );
+            Ok(match merged {
+                Some(merged) => Expr::Alias(
+                    Alias::new(merged, left.relation.clone(), left.name.clone())
+                        .with_metadata(Some(AttrId::mint().metadata())),
+                ),
+                None => Expr::Column(left),
+            })
         }
-        JoinType::Full => coalesce(vec![Expr::Column(left.clone()), right_expr]),
-        _ => return Ok(Expr::Column(left.clone())),
-    };
-    Ok(Expr::Alias(
-        Alias::new(shown, left.relation.clone(), left.name.clone())
-            .with_metadata(Some(AttrId::mint().metadata())),
-    ))
+        _ => Ok(Expr::Column(left)),
+    }
 }
 
 fn qualified(column: &Column, schema: &DFSchema) -> Option<Column> {
@@ -78,13 +75,89 @@ fn qualified(column: &Column, schema: &DFSchema) -> Option<Column> {
     qualifier.map(|qualifier| Column::new(Some(qualifier.clone()), field.name()))
 }
 
-fn typed_right(right: &Column, left_type: &DataType, right_type: &DataType) -> Expr {
-    let column = Expr::Column(right.clone());
-    if left_type == right_type {
-        column
-    } else {
-        try_cast(column, left_type.clone())
+fn integral_digits(kind: &DataType) -> Option<u8> {
+    match kind {
+        DataType::Int8 => Some(3),
+        DataType::Int16 => Some(5),
+        DataType::Int32 => Some(10),
+        DataType::Int64 => Some(20),
+        _ => None,
     }
+}
+
+fn is_text(kind: &DataType) -> bool {
+    matches!(
+        kind,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
+fn decimal_of(kind: &DataType) -> Option<(u8, i8)> {
+    match kind {
+        DataType::Decimal128(precision, scale) if *scale >= 0 => Some((*precision, *scale)),
+        other => integral_digits(other).map(|digits| (digits, 0)),
+    }
+}
+
+#[must_use]
+pub fn spark_key_type(left: &DataType, right: &DataType) -> Option<DataType> {
+    if left == right {
+        return Some(left.clone());
+    }
+    let floating = |kind: &DataType| matches!(kind, DataType::Float32 | DataType::Float64);
+    match (left, right) {
+        (DataType::Date32, DataType::Timestamp(..)) => return Some(right.clone()),
+        (DataType::Timestamp(..), DataType::Date32) => return Some(left.clone()),
+        _ => {}
+    }
+    if let (Some(left_digits), Some(right_digits)) = (integral_digits(left), integral_digits(right))
+    {
+        return Some(if left_digits >= right_digits {
+            left.clone()
+        } else {
+            right.clone()
+        });
+    }
+    if (floating(left) || floating(right))
+        && [left, right]
+            .iter()
+            .all(|kind| floating(kind) || decimal_of(kind).is_some() || is_text(kind))
+    {
+        return Some(DataType::Float64);
+    }
+    if (is_text(left) && integral_digits(right).is_some())
+        || (is_text(right) && integral_digits(left).is_some())
+    {
+        return Some(DataType::Int64);
+    }
+    let (left_precision, left_scale) = decimal_of(left)?;
+    let (right_precision, right_scale) = decimal_of(right)?;
+    let scale = left_scale.max(right_scale);
+    let whole = (i16::from(left_precision) - i16::from(left_scale))
+        .max(i16::from(right_precision) - i16::from(right_scale));
+    let precision = u8::try_from(whole + i16::from(scale)).ok()?;
+    (precision <= 38).then_some(DataType::Decimal128(precision, scale))
+}
+
+#[must_use]
+pub fn full_key(
+    left: Expr,
+    left_type: &DataType,
+    right: Expr,
+    right_type: &DataType,
+) -> Option<Expr> {
+    let wide = spark_key_type(left_type, right_type)?;
+    let widened = |expr: Expr, held: &DataType| {
+        if held == &wide {
+            expr
+        } else {
+            cast(expr, wide.clone())
+        }
+    };
+    Some(coalesce(vec![
+        widened(left, left_type),
+        widened(right, right_type),
+    ]))
 }
 
 fn merge_site(plan: &LogicalPlan) -> Option<(&Projection, &Join)> {
@@ -109,11 +182,26 @@ fn merge_site(plan: &LogicalPlan) -> Option<(&Projection, &Join)> {
 }
 
 fn passes_every_column(projection: &Projection) -> bool {
-    projection.expr.len() == projection.input.schema().fields().len()
-        && projection
-            .expr
+    let below = projection
+        .input
+        .schema()
+        .iter()
+        .filter(|(_, field)| !field.name().starts_with(HIDDEN_PREFIX))
+        .map(|(qualifier, field)| Column::new(qualifier.cloned(), field.name()))
+        .collect::<Vec<_>>();
+    let shown = projection
+        .expr
+        .iter()
+        .filter(|expr| {
+            !matches!(expr, Expr::Column(column)
+                if column.relation.is_none() && column.name.starts_with(HIDDEN_PREFIX))
+        })
+        .collect::<Vec<_>>();
+    shown.len() == below.len()
+        && shown
             .iter()
-            .all(|expr| plain_column(expr).is_some())
+            .zip(below.iter())
+            .all(|(expr, held)| plain_column(expr) == Some(held))
 }
 
 fn plain_column(expr: &Expr) -> Option<&Column> {
@@ -131,7 +219,13 @@ fn side_position(schema: &DFSchema, column: &Column) -> Option<usize> {
 }
 
 fn join_hidden(projection: &Projection, join: &Join) -> Vec<(HiddenKey, Column)> {
-    if matches!(join.join_type, JoinType::LeftSemi | JoinType::LeftAnti) {
+    if matches!(join.join_type, JoinType::LeftSemi | JoinType::LeftAnti)
+        || join
+            .schema
+            .fields()
+            .iter()
+            .any(|field| field.name().starts_with(HIDDEN_PREFIX))
+    {
         return Vec::new();
     }
     let shown = projection
@@ -157,11 +251,12 @@ fn join_hidden(projection: &Projection, join: &Join) -> Vec<(HiddenKey, Column)>
             let Some(position) = side_position(schema, column) else {
                 continue;
             };
+            let alias = hidden_alias(column.relation.as_ref(), &column.name);
             hidden.push((
                 HiddenKey {
                     right: is_right,
                     side_position: position,
-                    alias: hidden_alias(column.relation.as_ref(), &column.name),
+                    alias,
                     display: column.name.clone(),
                 },
                 column.clone(),
@@ -240,9 +335,17 @@ pub fn expose_hidden_keys(plan: &LogicalPlan, names: &[String]) -> Result<Option
 
 fn expose_in_projection(projection: &Projection, names: &[String]) -> Result<Option<LogicalPlan>> {
     let mut exprs = projection.expr.clone();
+    let held = |name: &String| {
+        projection.expr.iter().any(
+            |expr| matches!(expr, Expr::Alias(alias) if alias.relation.is_none() && &alias.name == name),
+        ) || projection
+            .expr
+            .iter()
+            .any(|expr| matches!(expr, Expr::Column(column) if column.relation.is_none() && &column.name == name))
+    };
     if let LogicalPlan::Join(join) = projection.input.as_ref() {
         let hidden = join_hidden(projection, join);
-        for name in names {
+        for name in names.iter().filter(|name| !held(name)) {
             let Some((_, column)) = hidden.iter().find(|(key, _)| &key.alias == name) else {
                 return Ok(None);
             };
@@ -255,15 +358,27 @@ fn expose_in_projection(projection: &Projection, names: &[String]) -> Result<Opt
     if !passes_every_column(projection) {
         return Ok(None);
     }
-    let Some(input) = expose_hidden_keys(projection.input.as_ref(), names)? else {
-        return Ok(None);
+    let below = projection.input.schema();
+    let missing = names
+        .iter()
+        .filter(|name| !below.has_column_with_unqualified_name(name))
+        .cloned()
+        .collect::<Vec<_>>();
+    let input = if missing.is_empty() {
+        Arc::clone(&projection.input)
+    } else {
+        match expose_hidden_keys(projection.input.as_ref(), &missing)? {
+            Some(input) => Arc::new(input),
+            None => return Ok(None),
+        }
     };
     exprs.extend(
         names
             .iter()
+            .filter(|name| !held(name))
             .map(|name| Expr::Column(Column::new_unqualified(name))),
     );
-    Projection::try_new(exprs, Arc::new(input))
+    Projection::try_new(exprs, input)
         .map(LogicalPlan::Projection)
         .map(Some)
 }
@@ -272,6 +387,15 @@ fn expose_in_projection(projection: &Projection, names: &[String]) -> Result<Opt
 pub fn output_columns(schema: &DFSchema) -> Vec<Expr> {
     schema
         .iter()
+        .map(|(qualifier, field)| Expr::Column(Column::new(qualifier.cloned(), field.name())))
+        .collect()
+}
+
+#[must_use]
+pub fn shown_columns(schema: &DFSchema) -> Vec<Expr> {
+    schema
+        .iter()
+        .filter(|(_, field)| !field.name().starts_with(HIDDEN_PREFIX))
         .map(|(qualifier, field)| Expr::Column(Column::new(qualifier.cloned(), field.name())))
         .collect()
 }
@@ -320,13 +444,15 @@ fn names_key(
 }
 
 #[must_use]
-pub fn hidden_names_in_text(plan: &LogicalPlan, text: &str) -> Vec<String> {
+pub fn hidden_names_in_text(text: &str) -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
     if !text.contains(HIDDEN_PREFIX) {
-        return Vec::new();
+        return names;
     }
-    using_hidden_keys(plan)
-        .into_iter()
-        .map(|key| key.alias)
-        .filter(|alias| text.contains(alias.as_str()))
-        .collect()
+    for word in text.split(|letter: char| !(letter.is_ascii_alphanumeric() || letter == '_')) {
+        if word.starts_with(HIDDEN_PREFIX) && !names.iter().any(|held| held == word) {
+            names.push(word.to_string());
+        }
+    }
+    names
 }

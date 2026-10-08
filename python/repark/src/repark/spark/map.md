@@ -698,6 +698,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_refuse_using_key_columns`. `selectExpr` plans over the exposed frame
   and renames the alias back to the key in output names.
   pins: using-per-side-keys-1/C-003, C-004
+  **USING-PER-SIDE-KEYS-1 fold 1 (2026-10-08):** `_bound_refs` also runs
+  `_refuse_unemitted_ids` on each Column, so a stale right key in `sort`
+  over a `semi`/`anti` join refuses with `MISSING_ATTRIBUTES`, as `filter`
+  already did; `_cache_lineage` hands the cache and checkpoint paths the
+  frame with its reachable hidden keys exposed, so the keys stay
+  reachable after materialisation. pins: using-per-side-keys-1/C-014
   **Fold SM-2c round B (2026-10-06):** `_route_sort_key_through_input`
   serves the ambiguous-Project arm of `_resolve_sort_name` after the sourced
   twin: it reads the input spelling from

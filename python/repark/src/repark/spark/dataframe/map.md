@@ -1877,6 +1877,11 @@ self-join refusal), and the condition join takes its two plans and its
 preparer arguments from `_cond_sides` / `_cond_args`, so a condition over a
 hidden key joins on the exposed frame. Line-neutral at the exact 3462
 baseline. pins: using-per-side-keys-1/C-003
+**Fold 1 (2026-10-08):** `_materialize_cache_if_needed` takes the lineage it
+caches or checkpoints from `qualified_names._cache_lineage`, and
+`cache_handle.bind_registered_view` / `bind_checkpoint_scan` hide the exposed
+keys again (`_native.hide_using_keys`) on the frame they bind, only when the
+lineage was widened. Line-neutral at 3462. pins: using-per-side-keys-1/C-014
 **Fold SM-2c C-3 (2026-10-06):** every writer and temp-view door registers a
 frame whose output fields are renamed to the display names when they differ
 and are exactly unique, so a dropped-side twin engine name never reaches a

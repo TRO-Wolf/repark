@@ -9,7 +9,7 @@ use crate::deep_stack::grown_clone_frame;
 use crate::fence::fenced;
 use repark_core::frame_names::{
     NameRule, expose_hidden_keys, hidden_names_in, hidden_names_in_text, output_columns,
-    rebind_key_name, using_hidden_keys,
+    rebind_key_name, shown_columns, using_hidden_keys,
 };
 
 #[allow(clippy::missing_errors_doc)]
@@ -17,6 +17,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(using_hidden_key_fields, module)?)?;
     module.add_function(wrap_pyfunction!(expose_using_keys, module)?)?;
     module.add_function(wrap_pyfunction!(rebind_using_key, module)?)?;
+    module.add_function(wrap_pyfunction!(hide_using_keys, module)?)?;
     Ok(())
 }
 
@@ -52,7 +53,7 @@ pub(crate) fn exposed_frame<'a>(
 }
 
 pub(crate) fn exposed_for_text(frame: &PyDataFrame, text: &str) -> PyResult<Option<PyDataFrame>> {
-    let names = hidden_names_in_text(frame.inner().logical_plan(), text);
+    let names = hidden_names_in_text(text);
     if names.is_empty() {
         return Ok(None);
     }
@@ -101,5 +102,19 @@ fn rebind_using_key(
         rebind_key_name(column.expr(), qualifier, key, alias, rule, keep_name)
             .map(PyColumn::from_expr)
             .map_err(datafusion_to_py_err)
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+fn hide_using_keys(frame: &PyDataFrame) -> PyResult<PyDataFrame> {
+    fenced!("using_keys.hide_using_keys", {
+        let shown = shown_columns(frame.inner().schema());
+        let held = grown_clone_frame(frame.inner(), &frame.depths());
+        if shown.len() == frame.inner().schema().fields().len() {
+            return Ok(PyDataFrame::new(held, frame.runtime_handle()));
+        }
+        let narrowed = held.select(shown).map_err(datafusion_to_py_err)?;
+        Ok(PyDataFrame::new(narrowed, frame.runtime_handle()))
     })
 }

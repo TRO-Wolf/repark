@@ -47,8 +47,8 @@ pub use super::sort_names::{
 };
 pub use super::subquery::resolve_bound_expr_with;
 pub use super::using_keys::{
-    HIDDEN_PREFIX, HiddenKey, expose_hidden_keys, hidden_names_in, hidden_names_in_text,
-    output_columns, rebind_key_name, using_hidden_keys,
+    HIDDEN_PREFIX, HiddenKey, expose_hidden_keys, full_key, hidden_names_in, hidden_names_in_text,
+    output_columns, rebind_key_name, shown_columns, spark_key_type, using_hidden_keys,
 };
 pub use super::written_names::refuse_folded_duplicate_keys;
 pub use repark_common::names::{NameHit, NameRule};

@@ -663,7 +663,10 @@ def _bound_refs(frame: Any, items: Any, keep_name: bool) -> list[Any]:
         _bind_using_key_column(frame, item, keep_name) if isinstance(item, Column) else item
         for item in items
     ]
-    frame._refuse_self_join_refs([item for item in bound if isinstance(item, Column)])
+    held = [item for item in bound if isinstance(item, Column)]
+    frame._refuse_self_join_refs(held)
+    for item in held:
+        frame._refuse_unemitted_ids(item)
     return bound
 
 
@@ -728,3 +731,18 @@ def _expose_using_keys_in_text(frame: Any, text: str) -> tuple[Any, dict[str, st
     if wide is None:
         _raise_using_key_reference(", ".join(f"`{display}`" for display in shown.values()))
     return wide, shown
+
+
+def _cache_lineage(frame: Any) -> Any:
+    inner = frame._inner
+    mark = _using_mark(frame)
+    if mark is None or not mark[2]:
+        return inner
+    reachable = [
+        alias
+        for _quals, _display, alias in mark[2]
+        if _native.expose_using_keys(inner, [alias]) is not None
+    ]
+    if not reachable:
+        return inner
+    return _native.expose_using_keys(inner, list(dict.fromkeys(reachable))) or inner

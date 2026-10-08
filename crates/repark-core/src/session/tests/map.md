@@ -68,6 +68,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   refusal past a narrowing select or an alias, the chained `full` join on the coalesced
   key, mixed key types, the `inner`-only side pairing and `rebind_key_name`.
   pins: using-per-side-keys-1/C-002, C-003, C-004, C-005, C-008, C-010
+  **Fold 1 (2026-10-08):** `using_keys.rs` gains the mixed-type rule (`spark_key_type` on the
+  measured pairs, the shown type per join type), the second side key after a narrowed filter
+  and the reserved-prefix guard; 13 pins. pins: using-per-side-keys-1/C-010, C-014
 - `attr_id_s3e.rs` — **ATTR-ID-1 S3e (2026-10-01):** 14 pins for the
   qualified-name family: facade-over-plan matching, the using-key union, the
   free-ref rewriter (bind, pass-through, ambiguity), the grandchild key, the
