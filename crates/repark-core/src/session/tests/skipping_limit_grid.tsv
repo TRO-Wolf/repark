@@ -68,3 +68,6 @@ filter_below	one-partition	SELECT v FROM (SELECT v FROM t WHERE k < 5 ORDER BY v
 limit_zero	control	SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 0 OFFSET 10) ORDER BY v	0 []
 join_two_windows	control	SELECT a.v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990) a JOIN (SELECT v FROM t ORDER BY v DESC LIMIT 5 OFFSET 5) b ON a.v = b.v ORDER BY a.v DESC	5 [4995,4994,4993,4992,4991]
 sort_limit_no_offset_nested_desc	control	SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5) ORDER BY v DESC	5 [5,4,3,2,1]
+offset_one	one-partition	SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 1) ORDER BY v	5 [2,3,4,5,6]
+offset_one_desc	control	SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 1) ORDER BY v DESC	5 [6,5,4,3,2]
+offset_one_other_key	control	SELECT v, k FROM (SELECT v, k FROM t ORDER BY v LIMIT 3 OFFSET 1) ORDER BY k DESC, v	3 [4/4,3/3,2/2]

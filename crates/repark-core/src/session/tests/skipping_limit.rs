@@ -229,7 +229,7 @@ fn grid_fixture_carries_every_recorded_cell() {
             count(CONTROL),
             cells.len()
         ),
-        (11, 9, 50, 70)
+        (12, 9, 52, 73)
     );
     assert!(
         cells

@@ -10,17 +10,19 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 
 - `mod.rs` — thin index (rustfmt module order).
 - `skipping_limit.rs` + `skipping_limit_grid.tsv` — **OFFSET-NESTED-SORT-1 (2026-10-08):** pins
-  for the `EnforceSorting` guard in `../df_guards/skipping_limit.rs`. The fixture holds 70
+  for the `EnforceSorting` guard in `../df_guards/skipping_limit.rs`. The fixture holds 73
   statements, one per line: name, family, SQL over a relation `t`, and the rows live Spark 4.1.2
   answered (count, then values; columns joined by `/`). Family is what stock DataFusion 54.1.0
-  does on a memory table: `one-partition` (11 statements, wrong only when the scan has one
-  partition), `every-partition` (9, wrong at 1, 2 and 16), `control` (50, right). Each test
+  does on a memory table: `one-partition` (12 statements, wrong only when the scan has one
+  partition), `every-partition` (9, wrong at 1, 2 and 16), `control` (52, right). Each test
   swaps `t` for a source: `m` (a `CREATE TABLE AS` memory table, whose partition count follows
   `target_partitions`), `t` (a view over `generate_series`, a source that declares its order),
   `p` (a one-file parquet scan written in shuffled order) and `ice.s.i` (an Iceberg table in a
   memory catalog, inserted in shuffled order). `one_partition_family_answers_spark_rows_at_*`
   are three tests so that the mutation "remove the guard" shows red at one partition and green
   at two and sixteen. The other grid tests loop over 1, 2 and 16.
+  `offset_one` (`OFFSET 1` under a same-key outer sort) pins the guard's boundary `skip > 0`: with
+  the boundary moved to `skip > 1` it is red on `m` at one partition and on `p` and `ice.s.i` at 1, 2 and 16.
   `stock_enforce_sorting_still_loses_the_rows_at_one_partition_only` and
   `stock_enforce_sorting_still_sorts_below_an_offset` run DataFusion's own rule on the same
   session state and assert today's wrong answers: they are the retirement signal for the guard.
