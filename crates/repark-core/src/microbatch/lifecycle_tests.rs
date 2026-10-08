@@ -169,6 +169,50 @@ async fn assert_panicked(fixture: &Fixture, handle: &QueryHandle, message: &str)
     );
 }
 
+#[tokio::test]
+async fn a_panicking_body_fails_the_query_and_frees_its_id() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1), (2), (3)").await;
+    let body = Probe::new(Mode::PanicAt(0));
+    let handle = started(&fixture, foreach(&body, Trigger::AvailableNow, ONE)).await;
+    assert_panicked(&fixture, &handle, "the body panicked").await;
+    assert!(stamped_epochs(&fixture.table("silver").await).is_empty());
+    let again = Probe::new(Mode::Record);
+    let restart = started(&fixture, foreach(&again, Trigger::AvailableNow, ONE)).await;
+    assert_eq!(restart.id(), handle.id());
+    assert_eq!(ended(&restart).await, Ok(true));
+    assert_eq!(again.seen(), [(0, vec![1, 2, 3])]);
+    assert_eq!(stamped_epochs(&fixture.table("silver").await), [0]);
+}
+
+#[tokio::test]
+async fn a_panic_in_plan_execution_fails_the_query_on_the_table_door() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1), (2), (3)").await;
+    let frame = streaming_frame(&fixture.session, SOURCE, &BTreeMap::new())
+        .await
+        .expect("the streaming frame");
+    let boom = create_udf(
+        "boom",
+        vec![DataType::Int64],
+        DataType::Boolean,
+        Volatility::Volatile,
+        Arc::new(|_: &[ColumnarValue]| panic!("the plan panicked")),
+    );
+    let frame = frame
+        .filter(boom.call(vec![col("id")]))
+        .expect("the filter plans");
+    let mut spec = table_spec(Trigger::AvailableNow, &options(&[]));
+    spec.plan = Some(PlanTemplate::from_frame(&frame).expect("a template"));
+    let handle = started(&fixture, spec).await;
+    assert_panicked(&fixture, &handle, "the plan panicked").await;
+    assert!(fixture.ids(SINK).await.is_empty());
+    let restart = started(&fixture, table_spec(Trigger::AvailableNow, &options(&[]))).await;
+    assert_eq!(ended(&restart).await, Ok(true));
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3]);
+    assert_eq!(stamped_epochs(&fixture.table("silver").await), [0]);
+}
+
 fn flaky_spec() -> StreamSpec {
     let mut spec = StreamSpec::new(
         FLAKY_SOURCE,
@@ -200,6 +244,29 @@ fn gate_on(name: &'static str, gate: &Arc<Semaphore>, arrivals: &Arc<AtomicUsize
             }
         })
     })
+}
+
+#[tokio::test]
+async fn a_panic_during_planning_fails_the_query_and_frees_its_id() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    let catalog = flaky(&fixture).await;
+    let manager = StreamingQueryManager::of(&fixture.session);
+    let handle = manager
+        .register(&fixture.session, flaky_spec())
+        .await
+        .expect("register");
+    catalog.on_load(Some(panic_on("orders")));
+    handle.start_below_catalog_check().expect("start");
+    assert_panicked(&fixture, &handle, "the catalog panicked").await;
+    catalog.on_load(None);
+    let restart = manager
+        .register(&fixture.session, flaky_spec())
+        .await
+        .expect("register");
+    restart.start_below_catalog_check().expect("start");
+    assert_eq!(ended(&restart).await, Ok(true));
+    assert_eq!(fixture.ids(SINK).await, [1]);
 }
 
 async fn race(fixture: &Fixture, name: String) -> (QueryHandle, ShutdownOutcome) {

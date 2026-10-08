@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::Duration;
@@ -442,6 +443,25 @@ impl QueryShared {
 
     pub(crate) fn finish(&self, ending: Result<Ending, MicroBatchError>) -> ShutdownOutcome {
         self.conclude(self.lifecycle(), ending)
+    }
+
+    pub(crate) fn panicked(&self, panic: &(dyn Any + Send)) -> MicroBatchError {
+        let message = panic
+            .downcast_ref::<&str>()
+            .map(|text| (*text).to_string())
+            .or_else(|| panic.downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| String::from("no message"));
+        let lifecycle = self.lifecycle();
+        let epoch = lifecycle
+            .in_flight
+            .or_else(|| lifecycle.durable.as_ref().map(|record| record.epoch.next()))
+            .unwrap_or(Epoch::FIRST);
+        MicroBatchError::BatchFailed {
+            epoch,
+            cause: repark_common::redaction::mask_value_credentials(&format!(
+                "the driver task panicked: {message}"
+            )),
+        }
     }
 
     fn conclude(

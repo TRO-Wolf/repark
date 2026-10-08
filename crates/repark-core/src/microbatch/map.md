@@ -47,6 +47,11 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
     query already in the registry. `start` holds its own lifecycle while it is admitted, and
     a query is in the registry only after that, so no path takes the registry while it holds
     the lifecycle of a registered query. pins: mb-3/C-012
+  - *A panic ends the query `Failed`.* `Run::drive` catches an unwind of the whole trigger
+    loop (`catch_unwind` around the loop's future, not around one call), and
+    `QueryShared::panicked` turns the payload into `BatchFailed { epoch, cause }` with the
+    in-flight epoch, or the next one when the panic came before a batch began. The outcome,
+    the done signal and the freed query id then follow the body-error path. pins: mb-3/C-011
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and

@@ -1,8 +1,10 @@
+use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use datafusion::error::DataFusionError;
 use datafusion::prelude::{DataFrame, SessionContext};
+use futures::FutureExt;
 use iceberg::table::Table;
 use repark_common::Generation;
 use repark_common::redaction::mask_value_credentials;
@@ -78,7 +80,10 @@ impl Run {
     }
 
     pub(crate) async fn drive(self) {
-        let ending = self.trigger_loop().await;
+        let ending = match AssertUnwindSafe(self.trigger_loop()).catch_unwind().await {
+            Ok(ending) => ending,
+            Err(panic) => Err(self.shared.panicked(panic.as_ref())),
+        };
         self.shared.finish(ending);
     }
 
