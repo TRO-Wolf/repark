@@ -310,6 +310,29 @@ def test_what_stays_declared_refuses_naming_its_row(
         )
 
 
+def test_a_partition_column_resolves_in_another_case_quoted_or_bare(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    conn, names = pg_live
+    schema = names["schema"]
+    conn.execute(f'CREATE TABLE "{schema}".mx (id int8, "Mixed" int4)')
+    conn.execute(f'INSERT INTO "{schema}".mx SELECT g, g * 10 FROM generate_series(1, 20) g')
+    conn.execute(f'CREATE TABLE "{schema}".twins (id int8, "Mixed" int4, "mixed" int4)')
+    fill = "SELECT g, g * 10, 2000 - g * 10 FROM generate_series(1, 20) g"
+    conn.execute(f'INSERT INTO "{schema}".twins {fill}')
+    for spelled in ('"mixed"', '"Mixed"', '"MIXED"', "mixed", "MIXED", "Mixed"):
+        frame = _jdbc(spark, f"{schema}.mx", spelled, (0, 200, 4))
+        assert "partition_column=Mixed, strides=4" in frame._explain_text(), spelled
+        assert sorted(row[0] for row in frame.select("id").collect()) == list(range(1, 21))
+    for spelled, column in (('"mixed"', "mixed"), ("Mixed", "Mixed"), ('"Mixed"', "Mixed")):
+        frame = _jdbc(spark, f"{schema}.twins", spelled, (0, 200, 4))
+        assert f"partition_column={column}, strides=4" in frame._explain_text(), spelled
+        assert frame.count() == 20
+    for spelled in ("MIXED", '"MIXED"'):
+        with pytest.raises(errors.AnalysisException, match="matches more than one column"):
+            _jdbc(spark, f"{schema}.twins", spelled, (0, 200, 4))
+
+
 def test_num_partitions_is_sparks_int_and_strides_have_a_ceiling(
     spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
 ) -> None:

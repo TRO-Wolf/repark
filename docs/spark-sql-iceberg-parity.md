@@ -3849,7 +3849,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   has none). In `repark.toml` the five spellings are unknown keys: a mounted source is a
   catalog of every relation, so a per-relation column has no key to sit under. Two deliberate
   differences from Spark, both on the safe side: two columns that differ only in case, with
-  neither named exactly, refuse as ambiguous (Spark takes the first), and a pushed `LIMIT`
+  neither named exactly, refuse as ambiguous (Spark cannot read such a relation at all:
+  `COLUMN_ALREADY_EXISTS`, `C3-C08`…`C10`; RePark reads it and an exact name, quoted or
+  bare, picks its column), and a pushed `LIMIT`
   is sent to every stride and capped by the scan (Spark's V1 JDBC scan pushes none).
 - **Apache Spark** — the JDBC source splits the read into `numPartitions` range queries over
   `partitionColumn`, each its own statement with its own snapshot, or one query per predicate;

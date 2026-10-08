@@ -25,6 +25,12 @@ See [../map.md](../map.md).
   shapes byte for byte, the `int8` cast on every cut, the NULL test on the first stride
   alone, a stride after a pushed conjunct with projection and `LIMIT` kept, and the refusals
   past the slot bound. pins: c-3/C-002, C-003, C-004
+- `partition_plan.rs` — **C-3 fold 1 (2026-10-08):** `the_partition_column_resolves_as_spark_resolves_it`
+  now holds RePark to Spark's resolver, not to exact quoted matching: six spellings of `qty`
+  and of `Mixed` (bare and quoted, three cases each) resolve to the one column, a quoted name
+  with a doubled quote included; a missing name refuses listing the columns, quoted or bare;
+  with `Key` and `KEY` both present, four inexact spellings refuse as ambiguous naming both
+  and each exact spelling, quoted or bare, picks its own. pins: c-3/C-011
 - `partition.rs` — **C-3 fold 1 (2026-10-08):** `num_partitions_is_sparks_32_bit_int` (the
   `Int` extremes parse; `3000000000`, one past either extreme, padded text and a fraction refuse
   as `NumberFormat` naming the option, from the property and from a door's integer) and

@@ -87,32 +87,47 @@ fn the_snapshot_statements_are_repeatable_read_and_read_only() {
 
 #[test]
 fn the_partition_column_resolves_as_spark_resolves_it() {
-    let planned = |name: &str| {
-        table(orders(), &[])
+    let resolved_in = |columns: Vec<ScanColumn>, name: &str| {
+        let planned = table(columns, &[])
             .partitioned(&spec(name, 0, 200, 4))
-            .expect(name)
-            .strides()
-            .to_vec()
+            .expect(name);
+        assert_eq!(planned.strides().len(), 4, "{name}");
+        planned.partition_column().expect(name).to_string()
     };
-    let expected = planned("qty");
-    assert_eq!(expected.len(), 4);
-    assert_eq!(planned("QTY"), expected);
-    assert_eq!(planned("\"qty\""), expected);
-    assert_eq!(planned("id"), expected);
-    assert_eq!(planned("small"), expected);
+    for name in ["qty", "QTY", "Qty", "\"qty\"", "\"QTY\"", "\"Qty\""] {
+        assert_eq!(resolved_in(orders(), name), "qty", "{name}");
+    }
+    assert_eq!(resolved_in(orders(), "id"), "id");
+    assert_eq!(resolved_in(orders(), "\"SMALL\""), "small");
 
-    let (missing, class) = refusal(table(orders(), &[]).partitioned(&spec("nope", 0, 200, 4)));
-    assert_eq!(class, ErrorClass::Analysis);
-    let message = ConnectError::PartitionedRead { refusal: missing }.to_string();
-    assert!(
-        message.starts_with(
-            "User-defined partition column nope not found in the JDBC relation: id, small, qty, "
-        ),
-        "{message}"
-    );
+    let mixed = || {
+        vec![
+            column("id", "int8", -1, false),
+            column("Mixed", "int4", -1, true),
+            column("Wei\"rd", "int4", -1, true),
+        ]
+    };
+    for name in [
+        "Mixed",
+        "mixed",
+        "MIXED",
+        "\"Mixed\"",
+        "\"mixed\"",
+        "\"MIXED\"",
+    ] {
+        assert_eq!(resolved_in(mixed(), name), "Mixed", "{name}");
+    }
+    assert_eq!(resolved_in(mixed(), "\"wei\"\"RD\""), "Wei\"rd");
 
-    let (quoted, _) = refusal(table(orders(), &[]).partitioned(&spec("\"QTY\"", 0, 200, 4)));
-    assert!(matches!(quoted, PartitionRefusal::ColumnNotFound { .. }));
+    for name in ["nope", "\"nope\"", "\"qt\"", "qt"] {
+        let (missing, class) = refusal(table(orders(), &[]).partitioned(&spec(name, 0, 200, 4)));
+        assert_eq!(class, ErrorClass::Analysis, "{name}");
+        let message = ConnectError::PartitionedRead { refusal: missing }.to_string();
+        let head = format!(
+            "User-defined partition column {name} not found in the JDBC relation: id, small, qty, "
+        );
+        assert!(message.starts_with(&head), "{message}");
+    }
 
     let twins = || {
         vec![
@@ -121,19 +136,23 @@ fn the_partition_column_resolves_as_spark_resolves_it() {
             column("other", "int4", -1, true),
         ]
     };
-    let (ambiguous, class) = refusal(table(twins(), &[]).partitioned(&spec("key", 0, 200, 4)));
-    assert_eq!(
-        ambiguous,
-        PartitionRefusal::AmbiguousColumn {
-            column: "key".to_string(),
-            matches: vec!["Key".to_string(), "KEY".to_string()],
-        }
-    );
-    assert_eq!(class, ErrorClass::Analysis);
-    let exact = table(twins(), &[])
-        .partitioned(&spec("KEY", 0, 200, 4))
-        .expect("the exact name wins");
-    assert_eq!(exact.strides().len(), 4);
+    for name in ["key", "\"key\"", "kEY", "\"kEy\""] {
+        let (ambiguous, class) = refusal(table(twins(), &[]).partitioned(&spec(name, 0, 200, 4)));
+        assert_eq!(
+            ambiguous,
+            PartitionRefusal::AmbiguousColumn {
+                column: name.to_string(),
+                matches: vec!["Key".to_string(), "KEY".to_string()],
+            },
+            "{name}"
+        );
+        assert_eq!(class, ErrorClass::Analysis, "{name}");
+    }
+    assert_eq!(resolved_in(twins(), "KEY"), "KEY", "the exact name wins");
+    assert_eq!(resolved_in(twins(), "\"KEY\""), "KEY");
+    assert_eq!(resolved_in(twins(), "Key"), "Key");
+    assert_eq!(resolved_in(twins(), "\"Key\""), "Key");
+    assert_eq!(resolved_in(twins(), "OTHER"), "other");
 }
 
 #[test]

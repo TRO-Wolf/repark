@@ -45,7 +45,7 @@ fn partition_column(resolved: &ResolvedSource, wanted: &str) -> crate::error::Re
     let folded: Vec<usize> = names
         .iter()
         .enumerate()
-        .filter(|(_, name)| quoted.is_none() && name.eq_ignore_ascii_case(wanted))
+        .filter(|(_, name)| name.eq_ignore_ascii_case(exact))
         .map(|(index, _)| index)
         .collect();
     match folded.as_slice() {
@@ -155,6 +155,12 @@ impl PostgresTable {
                 strides: strides(&cuts),
             });
         Ok(self)
+    }
+
+    #[must_use]
+    pub fn partition_column(&self) -> Option<&str> {
+        let partitioning = self.partitioning.as_ref()?;
+        Some(&partitioning.name)
     }
 
     #[must_use]

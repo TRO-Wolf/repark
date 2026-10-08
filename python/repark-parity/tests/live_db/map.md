@@ -19,6 +19,10 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   duplicate delivery, schema change plus partial update image, lost slot.
 
 - `test_c3_partitioned.py` — **C-3 fold 1 (2026-10-08):**
+  `test_a_partition_column_resolves_in_another_case_quoted_or_bare`: six spellings of a
+  `"Mixed"` column partition on it; with `"Mixed"` and `"mixed"` both present an exact spelling
+  picks its own column and an inexact one refuses as ambiguous. pins: c-3/C-011
+- `test_c3_partitioned.py` — **C-3 fold 1 (2026-10-08):**
   `test_num_partitions_is_sparks_int_and_strides_have_a_ceiling`: `3000000000` is
   `NumberFormatException` through `jdbc()` and `format("postgres")`; `2147483647` over a span
   of 3 reads on three strides; 10 000 strides plan; 10 001, asked for or left after the shrink,

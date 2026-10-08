@@ -69,6 +69,14 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
   `MetricsSet`, which `EXPLAIN ANALYZE` shows. Accessors (`pushed_filters`, `residual_filters`,
   `pushed_limit`, `request`) serve the pins. pins: c-2/C-075, C-076, C-077, C-083, C-084
 
+- `table.rs` — **C-3 fold 1 (2026-10-08), the verifier's third S2:** the partition column
+  resolves as Spark's resolver does (`C3-C02`…`C07`). The name, with its double quotes removed
+  if it has them, matches exactly first; with no exact match it matches case-insensitively
+  when exactly one column does, quoted or bare (`"mixed"` finds `"Mixed"`); when more than one
+  does it refuses as ambiguous. Spark cannot read such a relation at all (`C3-C08`…`C10`:
+  `COLUMN_ALREADY_EXISTS`), so there is no Spark choice to copy and refusing names the fix:
+  the exact name. `PostgresTable::partition_column()` answers the resolved name.
+  pins: c-3/C-011
 - `table.rs` — **C-3 fold 1 (2026-10-08):** the spec's count is an `i32`, widened for
   `stride_cuts`, which applies the 10 000-stride ceiling after the shrink. pins: c-3/C-010
 - `table.rs` — **C-3 fold 1 (2026-10-08):** `partitioned` judges the column's type first and
