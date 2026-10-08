@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-08. **Filed by:** Claude (Haiku 5.5), docs lane, from the orchestrator's measurements. **Source:** the orchestrator's measurements of 2026-10-08, and the C-3 verifier's out-of-scope observation in PR #998.
 
-**Status:** filed, not scheduled.
+**Status:** cause found 2026-10-08 (pyarrow 25.0.0's, see "Cause"); the dependency floor awaits the owner.
 
 It is not a regression in v1.5.3: 1.5.1 and 1.5.2 behave the same. A user whose environment pins pyarrow 25.0.0 can crash the process by calling `collect()` from a worker thread.
 
@@ -38,6 +38,35 @@ Each iteration collects on a new non-main thread. No Postgres and no Iceberg tab
 - With pyarrow 25.0.0, four collects of the same frame on the **main** thread succeed.
 - The Python traceback at the fault (faulthandler): `repark/spark/dataframe/rows_export.py`, line 235, in `rows_from_arrow_table`, called from `core.py` `_rows_from_arrow_table`, called from `collect`. The verifier names the native function `_native.rows_from_record_batch`.
 - The wheel's metadata requires `pyarrow>=25.0.0`. A fresh install today resolves pyarrow 25.0.1.
+
+## Cause (2026-10-08)
+
+**pyarrow 25.0.0's bundled mimalloc, not RePark.** Upstream apache/arrow GH-50471, fixed in
+pyarrow 25.0.1 by a bump of the bundled mimalloc.
+
+- The faulting frame is `mi_thread_init` in `libarrow.so.2500`, a null dereference (fault address
+  `0x18`), reached from `RecordBatch.__arrow_c_array__`, which RePark's `rows_from_record_batch`
+  calls with the GIL held.
+- mimalloc takes the first thread that uses it as its main thread. RePark imports pyarrow lazily,
+  so the first threaded `collect()` loads libarrow on a worker; when that worker exits and a later
+  thread is given its thread-control-block address, mimalloc hands the new thread a torn-down
+  heap.
+- It reproduces with pyarrow 25.0.0 alone, no repark installed: 9 of 20 runs, same frame.
+  pyarrow 25.0.1: 0 of 20.
+- Row count, column type, thread stack size, the address-space limit and the grown-stack
+  machinery are ruled out. One row crashes.
+- On 25.0.0, `collect`, `toPandas`, `toLocalIterator`, `take`, `head` and `first` crash on fresh
+  threads over range, parquet and Iceberg sources; `toArrow`, `show` and `count` survived six
+  iterations. repark 1.5.0 and 1.4.2 crash the same way. All doors survive on 25.0.1.
+- Two ways around it on 25.0.0: import pyarrow on the main thread before any threaded use, or set
+  `ARROW_DEFAULT_MEMORY_POOL=system`.
+
+The evidence, the tables and the recommendation are in the
+[ledger](../../ledgers/staging/threaded-collect-segv-1-ledger.md). The facade test is
+`python/repark/tests/test_threaded_collect_segv_1.py`; it skips on pyarrow 25.0.0.
+
+**Still the owner's:** the floor. The change would be `pyarrow>=25.0.1` in
+`python/repark/pyproject.toml` line 20.
 
 ## What is not known
 

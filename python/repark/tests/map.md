@@ -9753,3 +9753,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   binding-equivalence check reds the second-twin pin. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011
+- [test_threaded_collect_segv_1.py](test_threaded_collect_segv_1.py) —
+  **THREADED-COLLECT-SEGV-1 (2026-10-08):** `collect`, `take`, `head`, `first`,
+  `toLocalIterator` and `toArrow` each answer on six successive fresh non-main
+  threads. One isolated interpreter per door, so a crash is a failed assertion on
+  the exit status and never a dead pytest. The worker must not have pyarrow loaded
+  on the main thread before the first door runs (asserted): that is the crash's
+  precondition. Skips on pyarrow 25.0.0 with the reason: its bundled mimalloc
+  null-dereferences in `mi_thread_init` when libarrow is first loaded on a
+  non-main thread that exits (apache/arrow GH-50471, fixed in 25.0.1); the fault
+  reproduces without RePark. With the skip bypassed on 25.0.0 the worker dies with
+  signal 11 on five of the six doors.
+  pins: threaded-collect-segv-1/C-001, C-002
