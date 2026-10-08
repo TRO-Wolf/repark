@@ -233,7 +233,12 @@ CELLS: tuple[tuple[str, str, Cell, tuple[Any, ...]], ...] = (
     ),
     ("MB3-P1", "trigger.processing_time_schedule.progress", cell_trigger_schedule, (epoch_millis,)),
     ("MB3-G1", "progress.retention_zero.answer", cell_progress_retention_zero, ()),
-    ("MB3-W9", "write.restart_uncommitted_grown_source.rows", cell_replay_window, (FailWhenFlagged,)),
+    (
+        "MB3-W9",
+        "write.restart_uncommitted_grown_source.rows",
+        cell_replay_window,
+        (FailWhenFlagged,),
+    ),
 )
 
 
