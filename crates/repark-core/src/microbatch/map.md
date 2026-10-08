@@ -10,10 +10,30 @@ shutdown rules and the `StreamingQuery` progress surface, over MB-1's
 the [design sketch](../../../../task/wo/microbatch/mb-design-2026-10-06.md) §3.5 and §3.6 and the
 [North Star](../../../../task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md).
 Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md). The round's gates,
-the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3/C-009
+the crash gate's 3 passed and 2 ignored included, are recorded there (round 1's count; since
+the append fence merged, 2026-10-08, the crash gate reads 5 passed and 0 ignored).
+pins: mb-3/C-009
 Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
 Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
 Fold 2's gates (2026-10-08) likewise. pins: mb-3/C-029
+
+## What each door guarantees (round 3, 2026-10-08, ledger C-002 and D-19)
+
+- **`toTable`: exactly-once per epoch.** A batch is one append commit that carries its rows
+  and its stamp, and that commit goes through the append fence
+  (`repark-iceberg/src/write/sink_offsets/append_fence.rs`). An epoch lands once across a
+  restart, across a second driver of the same query in this process (the sink's `BatchScope`
+  serialises the two and the batch's resume-point check fences the later one before it
+  writes), and across a driver in another process or one committing from a stale table handle
+  (the fence refuses at the commit: `Fenced` naming the winner's run, or `AlreadyCommitted`
+  for the run's own re-delivery). The refused driver's rows do not land. A commit whose
+  outcome cannot be learned ends `RecoveryRequired`, never a silent second delivery.
+- **`foreachBatch`: the stamp is exactly-once per epoch, the body is at-least-once.** The
+  trailing stamp goes through the same scope, check and fence. The body's own sink writes are
+  not stamped (OQ-2a-2, ledger D-2) and run before the stamp, so a body that died, or whose
+  stamp was refused by a racing commit from another process, has already written and its epoch
+  replays or is taken over. A driver fenced at the batch's resume-point check never runs the
+  body.
 
 ## Contents
 
@@ -177,6 +197,15 @@ Fold 2's gates (2026-10-08) likewise. pins: mb-3/C-029
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).
 - `run_tests.rs` — the trigger-loop and lifecycle pins (`#[cfg(test)] #[path]` from `run.rs`).
   pins: mb-3/C-004
+- `fence_tests.rs` — the racing-driver pins (round 3, 2026-10-08), on both doors: two drivers
+  of one query in two sessions over twenty rounds (each epoch stamped once, the rows once, no
+  fenced body run, the fenced driver's restart adds nothing); a commit that lands between the
+  driver's load and its commit, issued from `FaultCatalog`'s load hook inside the fork's own
+  refresh, which is how another process's driver looks from here (`Fenced` for another run,
+  `AlreadyCommitted` for the run's own re-delivery, `RecoveryRequired` when the refreshed sink
+  needs recovery); and a driver that resumed before another run committed. The restart of the
+  refused query continues at the next epoch each time.
+  pins: mb-3/C-002, C-030
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005
@@ -211,7 +240,9 @@ Fold 2's gates (2026-10-08) likewise. pins: mb-3/C-029
 - `reload_tests.rs` — the fresh-sink pin (round 2, 2026-10-08): `FaultCatalog`'s event log
   counts the sink loads before each commit over three batches, on both doors. One load per
   commit is the fork's own refresh inside the commit (`FORK_REFRESH`, measured 2026-10-08), so
-  a fork repin that changes it shows here.
+  a fork repin that changes it shows here. Re-measured after the append fence merged
+  (2026-10-08): unchanged, because the fence reads `TableCommit::base_table` and loads nothing
+  on the driver's paths.
   pins: mb-3/C-022
 - `table_door_tests.rs` — the `toTable` door pins: the stamped append with the Spark keys, the
   start check on a shared catalog, the unknown-outcome reconcile and walk over a fault-injecting
@@ -219,7 +250,8 @@ Fold 2's gates (2026-10-08) likewise. pins: mb-3/C-029
   same query across two sessions. `FaultCatalog` also takes a load hook (`on_load`), which the
   fold-1 pins use to panic or to hold a table load; round 2 adds two stalling commit modes
   and an event log of loads and commits. The door's exactly-once guarantee against a racing driver is
-  not claimed until `F-APPEND-PIN-BASE-1` lands (ledger C-002).
+  claimed since the append fence merged (round 3, 2026-10-08, ledger C-002) and pinned in
+  `fence_tests.rs`.
   pins: mb-3/C-007
 - `testing.rs` — the test fixture: a session over a memory catalog with the `sales.orders`
   source, the `sales.silver` sink and a spare `sales.other` table.

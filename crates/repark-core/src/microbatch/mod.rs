@@ -2,6 +2,8 @@
 
 pub mod driver;
 #[cfg(test)]
+mod fence_tests;
+#[cfg(test)]
 mod foreach_tests;
 #[cfg(test)]
 mod lifecycle_tests;
