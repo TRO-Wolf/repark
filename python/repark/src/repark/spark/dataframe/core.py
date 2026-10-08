@@ -2126,7 +2126,7 @@ class DataFrame:
         the ``ascending`` keyword (a bool or a per-column list) overrides those. Null ordering
         follows Spark: ascending → nulls first, descending → nulls last.
         """
-        cols = tuple(_qualified_names._bound_refs(self, cols, False))
+        cols = _qualified_names._bound_refs(self, cols, False)
         columns, ascending_flags, nulls_first_flags = self._sort_specs(cols, ascending)
         return self._spawn_preserving_identity(
             self._plan().sort(columns, ascending_flags, nulls_first_flags)

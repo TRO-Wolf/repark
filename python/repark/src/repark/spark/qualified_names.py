@@ -710,8 +710,8 @@ def _bind_using_key_column(frame: Any, column: Any, keep_name: bool) -> Any:
 def _bound_refs(frame: Any, items: Any, keep_name: bool) -> list[Any]:
     from repark.spark.column import Column
 
-    if _using_mark(frame) is None:
-        bound = list(items)
+    if not _USING_MARKS or _USING_MARKS.get(frame) is None:
+        bound = items
     else:
         bound = [
             _bind_using_key_column(frame, item, keep_name) if isinstance(item, Column) else item

@@ -901,25 +901,23 @@ touch on a non-`USING` statement moved by the same half percent.
 
 | Path | `main` (beside before) | head before | `main` (beside after) | head after | before / `main` | after / `main` |
 |---|---|---|---|---|---|---|
-| `select` | 874.6 / 878.1 / 878.0 | 891.5 / 891.8 / 892.6 | 875.3 / 880.1 / 876.8 | 874.8 / 875.5 / 876.6 | 1.019 | 0.999 |
-| `filter` | 418.4 / 419.2 / 418.8 | 429.4 / 428.9 / 431.4 | 418.4 / 418.8 / 418.2 | 418.7 / 419.8 / 420.2 | 1.025 | 1.001 |
-| `filter_sql` | 641.5 / 642.8 / 642.6 | 650.2 / 648.9 / 651.0 | 642.3 / 642.9 / 642.8 | 646.9 / 650.3 / 646.5 | 1.012 | 1.007 |
-| `sort` | 533.1 / 533.5 / 538.4 | 545.5 / 548.8 / 549.2 | 534.6 / 536.4 / 533.0 | 541.5 / 541.6 / 542.7 | 1.023 | 1.016 |
-| `sql_select_1` | 2613.2 / 2639.8 / 2649.0 | 2663.7 / 2647.1 / 2667.1 | 2638.4 / 2612.8 / 2611.5 | 2631.3 / 2611.1 / 2652.2 | 1.013 | 1.000 |
-| `sql_join_on` | 13287.9 / 13351.0 / 13392.7 | 13431.6 / 13428.2 / 13461.5 | 13460.5 / 13317.1 / 13270.8 | 13240.8 / 13244.3 / 13345.6 | 1.011 | 0.998 |
-| `on_join_select` | 698.6 / 699.7 / 697.5 | 714.2 / 710.9 / 712.5 | 698.6 / 702.5 / 696.9 | 703.0 / 706.3 / 710.0 | 1.019 | 1.009 |
+| `select` | 874.6 / 878.1 / 878.0 | 891.5 / 891.8 / 892.6 | 878.5 / 878.6 / 877.9 | 874.5 / 880.5 / 877.4 | 1.019 | 0.996 |
+| `filter` | 418.4 / 419.2 / 418.8 | 429.4 / 428.9 / 431.4 | 418.5 / 418.6 / 417.8 | 417.7 / 421.4 / 418.7 | 1.025 | 1.000 |
+| `filter_sql` | 641.5 / 642.8 / 642.6 | 650.2 / 648.9 / 651.0 | 642.8 / 643.3 / 643.2 | 645.2 / 650.5 / 652.7 | 1.012 | 1.004 |
+| `sort` | 533.1 / 533.5 / 538.4 | 545.5 / 548.8 / 549.2 | 533.8 / 533.6 / 533.2 | 535.4 / 541.9 / 543.4 | 1.023 | 1.004 |
+| `sql_select_1` | 2613.2 / 2639.8 / 2649.0 | 2663.7 / 2647.1 / 2667.1 | 2631.1 / 2626.2 / 2603.5 | 2613.6 / 2620.9 / 2647.8 | 1.013 | 1.004 |
+| `sql_join_on` | 13287.9 / 13351.0 / 13392.7 | 13431.6 / 13428.2 / 13461.5 | 13227.7 / 13268.6 / 13805.3 | 13190.7 / 13219.6 / 13251.1 | 1.011 | 0.997 |
+| `on_join_select` | 698.6 / 699.7 / 697.5 | 714.2 / 710.9 / 712.5 | 698.2 / 699.8 / 706.3 | 703.7 / 709.7 / 706.5 | 1.019 | 1.008 |
 
-Six of seven paths are within 1% of `main`. `sort` is at 1.016 against the `3fbcb2ca` build;
-between that build and this head `origin/main` moved by twelve commits (69 files under
-`python/repark/src` and the two crates, the sort-planning fix OFFSET-NESTED-SORT-1 and 44 lines
-of `qualified_names.py` among them), and a build of the merged `origin/main` was not measured
-in this fold. What this unit adds to a `sort` on a frame without a mark is one function call
-and one list copy in `_bound_refs`.
+Every path is within 1% of `main` (the largest is `on_join_select` at 1.008). The ratio is the
+smallest of three runs over the smallest of three. `main` is the `3fbcb2ca` build; this head
+also carries twelve `origin/main` commits merged in this fold, which no `main` build here has.
 
 Removed: the deep clone of every column expression in `PyDataFrame.select` / `filter` /
 `sort` (the scan reads them by reference); the scan itself until a names join has been built in
 the process; the weak-map lookups of `_using_mark` / `_set_using_mark` while no mark exists; the
-bind and unemitted-id loops of `_bound_refs` for a frame without a mark.
+bind and unemitted-id loops and the two copies of the argument list in `_bound_refs` for a
+frame without a mark (an A/B on `sort` put that function at about half a percent).
 
 **Mutations (fold 2).**
 
