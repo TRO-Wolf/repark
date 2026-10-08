@@ -15,10 +15,12 @@ directory holds the piece split out of it. The test files of the module stay bes
   claimed stamp (the append arm and the stamp-only door). At `update_table` it reads the
   refreshed base the fork hands in `TableCommit::base_table` and refuses with a non-retryable
   `DataInvalid` when this query's `repark.cdc.query-id` was stamped on `main` above
-  `ClaimedStamp::base`, or when the base is no longer an ancestor of `main`. `refusal_of` reads
+  `ClaimedStamp::base`, or when the base is no longer an ancestor of `main`. When the walk finds
+  neither, it still runs the epoch check on the refreshed table and refuses on its error (an
+  expired stamp the offsets property still names, C-012). `refusal_of` reads
   the typed `MicroBatchError` back at the two commit sites. Every other `Catalog` method forwards
   to the inner catalog. The full rule, the pins and the retirement list are in
   [the parent map](../map.md) under the MB-2c closing slice. Stopgap for
   [F-APPEND-PIN-BASE-1](../../../../../task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md);
   the file is deleted when the fork lands it and RP-N repins.
-  pins: mb-2c/C-008, C-009, C-010, C-011
+  pins: mb-2c/C-008, C-009, C-010, C-011, C-012, C-013, C-014

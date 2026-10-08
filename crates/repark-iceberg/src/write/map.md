@@ -144,7 +144,10 @@ repark-core's error map.
     this query's `repark.cdc.query-id` refuses. A base that is not reached (rolled back, or the
     ref reset past it) refuses. A `None` base has nothing to stop at, so every snapshot on
     `main` is concurrent. A newer snapshot without the pair never refuses: an unrelated append,
-    another query's stamp, a `replace` (MB-2a's tolerance). The gap between the fork's load and
+    another query's stamp, a `replace` (MB-2a's tolerance). When the walk finds no breach, the
+    epoch check still runs on the refreshed table and refuses on its error, so an expired stamp
+    above an empty base cannot land its epoch twice (fold 1, C-012). A base that expired while an
+    unrelated append landed is refused like a rollback (C-013, D-23). The gap between the fork's load and
     the write is covered by the commit's own `main` requirement: a racer landing there fails
     the write retryably, and the next attempt's re-base shows it to the wrapper.
   - **The refusal** is an `iceberg::Error` of kind `DataInvalid`, not retryable, so the
@@ -168,7 +171,11 @@ repark-core's error map.
     both doors; the unstamped append (the caller's `Arc`, and it re-bases past this query's
     stamp); the forwarding. `sink_offsets_fence_tests.rs` adds two DM-6 measurements under the
     wrapper: the quiet commit lands one `append` (the case branch A failed), and so does a
-    commit raced by an unrelated append. `ProbeCatalog` counts loads.
+    commit raced by an unrelated append. `ProbeCatalog` counts loads. Fold 1 adds, in the same
+    file: the expired stamp above an empty base on both doors (C-012); the expired base with an
+    unrelated append, refused and then committed from a fresh view (C-013); a commit with no
+    base table, captured through `ProbeMode::Capture`, checked against a fresh load; and a
+    tokenless stamp-only refusal that leaves another stamp's scope claimed (C-014).
   - **Retirement.** This is a stopgap for
     [F-APPEND-PIN-BASE-1](../../../../task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md).
     When the fork lands it and RP-N repins, delete: `sink_offsets/append_fence.rs` (and
