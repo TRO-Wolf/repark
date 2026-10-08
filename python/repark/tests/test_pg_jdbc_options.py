@@ -46,7 +46,11 @@ def test_dbtable_query_mutually_exclusive(spark: SparkSession) -> None:
 
 
 def test_partial_range_bag_fails_loud(spark: SparkSession) -> None:
-    with pytest.raises(IllegalArgumentException, match="together"):
+    """An incomplete option set refuses in Spark's sentence, before any connection.
+
+    pins: c-3/C-006
+    """
+    with pytest.raises(IllegalArgumentException, match="users need to specify all or none"):
         (
             spark.read.format("postgres")
             .option("url", "postgresql://localhost/db")

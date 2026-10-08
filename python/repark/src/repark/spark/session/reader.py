@@ -791,12 +791,6 @@ class DataFrameReader:
         lower_raw = options.get("lowerbound")
         upper_raw = options.get("upperbound")
         num_raw = options.get("numpartitions")
-        ranged = (partition_column, lower_raw, upper_raw)
-        if any(value is not None for value in ranged) and None in (*ranged, num_raw):
-            raise IllegalArgumentException(
-                "partitionColumn, lowerBound, upperBound, and numPartitions must all be set "
-                "together (Spark JDBC parity)"
-            )
         temporal = _jdbc_bound_is_temporal(lower_raw) or _jdbc_bound_is_temporal(upper_raw)
         lower_bound = None if temporal else _parse_jdbc_int_option("lowerBound", lower_raw)
         upper_bound = None if temporal else _parse_jdbc_int_option("upperBound", upper_raw)

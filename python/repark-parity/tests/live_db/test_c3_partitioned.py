@@ -228,7 +228,7 @@ def test_spark_refusals_keep_sparks_class_and_words(
         (
             lambda: _options(spark, dbtable=target, partitionColumn="k", numPartitions="4").load(),
             errors.IllegalArgumentException,
-            "together",
+            ALL_OR_NONE,
         ),
     ]
     for attempt, expected, words in cases:

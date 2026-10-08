@@ -18,6 +18,8 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   five S0 pins: crash after commit, snapshot-to-WAL handover, replay and
   duplicate delivery, schema change plus partial update image, lost slot.
 
+- `test_c3_partitioned.py` — **C-3 fold 1 (2026-10-08):** the refusal cell's incomplete
+  `format("postgres")` case now expects Spark's all-or-none sentence. pins: c-3/C-006
 - `test_c3_partitioned.py` — **C-3 fold 1 (2026-10-08):**
   `test_a_partition_column_resolves_in_another_case_quoted_or_bare`: six spellings of a
   `"Mixed"` column partition on it; with `"Mixed"` and `"mixed"` both present an exact spelling
