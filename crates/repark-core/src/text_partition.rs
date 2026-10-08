@@ -132,7 +132,7 @@ fn timestamp_partition_text(value: i64, unit: TimeUnit, zone: Tz) -> Result<Stri
                 "text partition timestamp out of range".to_string(),
             ))
         })?;
-    let wall = wall_at_instant(&zone, &naive).map_or(naive, |(wall, _)| wall);
+    let wall = wall_at_instant(&zone, &naive).unwrap_or(naive);
     let mut text = wall.format("%Y-%m-%d %H:%M:%S").to_string();
     if nanos != 0 {
         let mut fraction = format!("{nanos:09}");

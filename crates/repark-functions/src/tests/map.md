@@ -31,8 +31,10 @@ Only tests; `mod.rs` is the module manifest.
   2100–2500, more than 12 000 per zone) reads back as the instant with the preferred offset,
   agrees with the literal without it, and differs from the instant in fewer than 20 samples
   per zone (the overlaps); a time-only string takes today's date from the final rule; the
-  card's three expressions answer noon in six zones and five years; and 22 extractor and 7
-  constructor expressions answer Spark's New York 2100 cells through the analyzer.
+  card's three expressions answer noon in six zones and five years; 21 extractor and 7
+  constructor expressions answer Spark's New York 2100 cells through the analyzer; and a batch
+  reads Arrow's kernel only when every instant is inside the tables (a 2024 + 2099 batch, a
+  2024 + 2100 batch and a 2100 + 2500 batch each answer the right hour, weekday and year).
   pins: zone-horizon-render-1/C-001, C-002, C-004, C-006, C-007, C-011
   The same unit rewrote `spark_string_timestamp.rs::chrono_tz_tables_stop_after_the_last_tabulated_year`:
   it read the table end through `micros_from_local_datetime`, which now reads the horizon, so

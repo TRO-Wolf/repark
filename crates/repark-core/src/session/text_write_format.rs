@@ -4,7 +4,7 @@ use arrow::array::timezone::Tz;
 use chrono::{FixedOffset, NaiveDateTime};
 use datafusion::common::DataFusionError;
 use repark_common::Error;
-use repark_common::zone_horizon::wall_at_instant;
+use repark_common::zone_horizon::offset_at_instant;
 
 pub mod fast;
 pub mod file_format;
@@ -546,10 +546,9 @@ pub fn compile_write_pattern(
 }
 
 pub fn micros_to_wall_zone(micros: i64, zone: Tz) -> Option<(NaiveDateTime, FixedOffset)> {
-    wall_at_instant(
-        &zone,
-        &chrono::DateTime::from_timestamp_micros(micros)?.naive_utc(),
-    )
+    let utc = chrono::DateTime::from_timestamp_micros(micros)?.naive_utc();
+    let offset = offset_at_instant(&zone, &utc);
+    utc.checked_add_offset(offset).map(|wall| (wall, offset))
 }
 
 pub fn micros_to_naive_wall(micros: i64) -> Option<NaiveDateTime> {

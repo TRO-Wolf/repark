@@ -461,6 +461,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   kinds on both doors (builds quietly, `table_exists` raises, the long form replaces), and
   the opt-in making the memory type a catalog on both doors.
   pins: catalog-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008
+- **ZONE-HORIZON-RENDER-1 (2026-10-08):** `text_write_format_cache.rs` gains
+  `an_instant_after_2099_is_written_at_the_final_rule`: `micros_to_wall_zone` gives New York's
+  July wall clock and `-04:00` at 2099 and at 2100. pins: zone-horizon-render-1/C-008
 
 ## Pointers
 

@@ -55,13 +55,18 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   stands on. Two readers: the string → `TIMESTAMP` literal (`repark-functions`) and the
   Postgres wall-clock placement (`repark-core`'s `session/zone_localiser.rs`), so the two agree
   on every wall clock. pins: c-2/C-109
-  **ZONE-HORIZON-RENDER-1 (2026-10-08):** the inverse direction and one door for both. Three
-  helpers, generic over `chrono::TimeZone` (so `repark-common` now depends on `chrono`, already
-  a workspace dependency, and still carries no zone tables): `offset_at_instant(zone, utc)`
-  and `wall_at_instant(zone, utc)` read the zone at the same month, day and time of the proxy
+  **ZONE-HORIZON-RENDER-1 (2026-10-08):** the inverse direction and one door for both. The
+  helpers are generic over `chrono::TimeZone` (so `repark-common` now depends on `chrono`,
+  already a workspace dependency, and still carries no zone tables): `offset_at_instant(zone,
+  utc)`, `wall_at_instant(zone, utc)` and `zoned_at_instant(zone, utc)` (the instant with its
+  offset attached, for field reads) read the zone at the same month, day and time of the proxy
   year, and `offsets_at_wall(zone, wall)` does the same for a wall clock, keeping chrono's
   `Single` / `Ambiguous` / `None` so a gap and an overlap after 2099 stay a gap and an
-  overlap. All three are the zone itself for a year in 1200–2099 (one year compare per value).
+  overlap. All are the zone itself for a year in 1200–2099: the tabulated branch is inlined
+  and is the expression the call sites held before (one year compare per value), and the
+  proxy branch is `#[cold]` and out of line, so the hot loops keep their shape.
+  `tabulated_utc_seconds()` is the same range in epoch seconds, for a kernel that checks a
+  whole batch once.
   The proxy is taken from the year of the value as given: the UTC year for an instant, the
   wall year for a wall clock. The two differ only within a zone's offset of New Year, where no
   final rule changes, so the directions agree. Why it existed: only the literal read the

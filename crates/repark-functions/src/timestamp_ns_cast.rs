@@ -386,7 +386,6 @@ fn localize_wall_nanos(wall: i64, zone: Tz) -> Option<i64> {
 
 fn session_wall_nanos(instant: i64, zone: Tz) -> Option<i64> {
     wall_at_instant(&zone, &DateTime::from_timestamp_nanos(instant).naive_utc())?
-        .0
         .and_utc()
         .timestamp_nanos_opt()
 }

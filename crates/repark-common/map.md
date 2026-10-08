@@ -65,6 +65,11 @@ workspace reserves `repark-core` for the Session crate.)
   dead name reds that gate. `audit()` still catches an unmapped, stale, duplicated or
   untraceable ID.
 
+**ZONE-HORIZON-RENDER-1 (2026-10-08):** `Cargo.toml` gains `chrono` (the workspace's own entry,
+no default features) for `src/zone_horizon.rs`, whose helpers are generic over
+`chrono::TimeZone`. Still no internal edge and no zone tables. Detail:
+[src/map.md](src/map.md).
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

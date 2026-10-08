@@ -715,7 +715,7 @@ fn wall_clock_from_ticks(
         _ => DateTime::from_timestamp_micros(ticks_to_micros(ticks, unit)?)?,
     };
     if zone_annotation.is_some() {
-        wall_at_instant(&session_zone, &utc.naive_utc()).map(|(wall, _)| wall)
+        wall_at_instant(&session_zone, &utc.naive_utc())
     } else {
         Some(utc.naive_utc())
     }

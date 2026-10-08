@@ -18,12 +18,17 @@ past its ratcheted size.
   `micros_from_local_datetime` keeps Spark's rules: an overlap takes the earlier offset unless
   the caller's preferred offset is one of the two, and a gap takes the offset 26 hours earlier
   (no IANA transition is wider), which shifts the wall clock forward.
-  `instant_part` is new: the calendar-field reader behind `year` … `second`. It replaces
-  Arrow's `date_part` over a zone-labelled array, which reads chrono-tz directly and so
-  rendered standard time after 2099. One pass per value: decode the instant, read the offset
-  through the horizon, read the field with chrono, add the Spark index shift. One closure per
-  field keeps each loop monomorphic; a field with no reader is an internal error, not a silent
-  fallback. A zone-free argument (`DATE`, `TIMESTAMP_NTZ`, `TIME`) still goes to Arrow.
+  `within_the_tables` and `instant_part` are new, for the calendar-field extractors (`year` …
+  `second`). Those ran Arrow's `date_part` over a zone-labelled array, which reads chrono-tz
+  directly and so rendered standard time after 2099. `within_the_tables` checks a batch once:
+  one branch-free pass over the raw ticks against `zone_horizon::tabulated_utc_seconds()`
+  (the value under a null slot may send a batch to the slow path, never the other way). A
+  batch wholly inside 1200–2099 still runs Arrow's kernel, the code main ran, so data before
+  2100 pays that one pass and nothing per value. Any other batch runs `instant_part`: decode
+  the instant, attach the offset through `zoned_at_instant`, read the field with chrono, add
+  the Spark index shift; one closure per field keeps each loop monomorphic, and a field with
+  no reader is an internal error, not a silent fallback. A zone-free argument (`DATE`,
+  `TIMESTAMP_NTZ`, `TIME`) goes to Arrow as before.
   Not routed here because they are not in this workspace: DataFusion's built-in `extract` /
   `date_part` (they never read the session zone) and `datafusion-spark`'s `from_utc_timestamp`
   / `to_utc_timestamp` (ledger R-1, R-2).

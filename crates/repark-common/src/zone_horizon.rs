@@ -1,4 +1,6 @@
-use chrono::{Datelike, FixedOffset, MappedLocalTime, NaiveDateTime, Offset, TimeZone};
+use std::ops::Range;
+
+use chrono::{DateTime, Datelike, FixedOffset, MappedLocalTime, NaiveDateTime, Offset, TimeZone};
 
 pub const LAST_TABULATED_YEAR: i64 = 2099;
 const CALENDAR_CYCLE_YEARS: i64 = 28;
@@ -8,6 +10,7 @@ const DAYS_PER_GREGORIAN_CYCLE: i64 = 146_097;
 const DAYS_FROM_YEAR_ZERO_TO_EPOCH: i64 = 719_468;
 const DAYS_PER_WEEK: i64 = 7;
 const MONTHS_PER_YEAR: i64 = 12;
+const SECONDS_PER_DAY: i64 = 86_400;
 
 #[must_use]
 pub fn is_leap_year(year: i64) -> bool {
@@ -47,38 +50,78 @@ pub fn proxy_year(year: i64) -> i64 {
     year
 }
 
+#[must_use]
+pub fn tabulated_utc_seconds() -> Range<i64> {
+    days_from_civil(FAR_PAST_PROXY_BASE, 1, 1) * SECONDS_PER_DAY
+        ..days_from_civil(LAST_TABULATED_YEAR + 1, 1, 1) * SECONDS_PER_DAY
+}
+
+#[inline]
+fn is_tabulated(moment: &NaiveDateTime) -> bool {
+    (FAR_PAST_PROXY_BASE..=LAST_TABULATED_YEAR).contains(&i64::from(moment.year()))
+}
+
 fn in_proxy_year(moment: &NaiveDateTime) -> NaiveDateTime {
-    let year = i64::from(moment.year());
-    if (FAR_PAST_PROXY_BASE..=LAST_TABULATED_YEAR).contains(&year) {
-        return *moment;
-    }
-    i32::try_from(proxy_year(year))
+    i32::try_from(proxy_year(i64::from(moment.year())))
         .ok()
         .and_then(|proxy| moment.with_year(proxy))
         .unwrap_or(*moment)
 }
 
-#[must_use]
-pub fn offset_at_instant<Z: TimeZone>(zone: &Z, utc: &NaiveDateTime) -> FixedOffset {
+#[cold]
+#[inline(never)]
+fn offset_outside_the_tables<Z: TimeZone>(zone: &Z, utc: &NaiveDateTime) -> FixedOffset {
     zone.offset_from_utc_datetime(&in_proxy_year(utc)).fix()
 }
 
-#[must_use]
-pub fn wall_at_instant<Z: TimeZone>(
-    zone: &Z,
-    utc: &NaiveDateTime,
-) -> Option<(NaiveDateTime, FixedOffset)> {
-    let offset = offset_at_instant(zone, utc);
-    utc.checked_add_offset(offset).map(|wall| (wall, offset))
-}
-
-#[must_use]
-pub fn offsets_at_wall<Z: TimeZone>(
+#[cold]
+#[inline(never)]
+fn offsets_outside_the_tables<Z: TimeZone>(
     zone: &Z,
     wall: &NaiveDateTime,
 ) -> MappedLocalTime<FixedOffset> {
     zone.offset_from_local_datetime(&in_proxy_year(wall))
         .map(|offset| offset.fix())
+}
+
+#[inline]
+#[must_use]
+pub fn offset_at_instant<Z: TimeZone>(zone: &Z, utc: &NaiveDateTime) -> FixedOffset {
+    if is_tabulated(utc) {
+        zone.offset_from_utc_datetime(utc).fix()
+    } else {
+        offset_outside_the_tables(zone, utc)
+    }
+}
+
+#[inline]
+#[must_use]
+pub fn zoned_at_instant<Z: TimeZone>(zone: &Z, utc: &NaiveDateTime) -> DateTime<FixedOffset> {
+    DateTime::from_naive_utc_and_offset(*utc, offset_at_instant(zone, utc))
+}
+
+#[inline]
+#[must_use]
+pub fn wall_at_instant<Z: TimeZone>(zone: &Z, utc: &NaiveDateTime) -> Option<NaiveDateTime> {
+    if is_tabulated(utc) {
+        Some(zone.from_utc_datetime(utc).naive_local())
+    } else {
+        utc.checked_add_offset(offset_outside_the_tables(zone, utc))
+    }
+}
+
+#[inline]
+#[must_use]
+pub fn offsets_at_wall<Z: TimeZone>(
+    zone: &Z,
+    wall: &NaiveDateTime,
+) -> MappedLocalTime<FixedOffset> {
+    if is_tabulated(wall) {
+        zone.offset_from_local_datetime(wall)
+            .map(|offset| offset.fix())
+    } else {
+        offsets_outside_the_tables(zone, wall)
+    }
 }
 
 #[cfg(test)]

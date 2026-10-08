@@ -23,11 +23,11 @@ use crate::session_time_zone::session_time_zone_from_options;
 
 mod session_wall;
 
-use session_wall::instant_part;
 pub(crate) use session_wall::{
     datetime_from_micros, local_datetime_from_micros, localize_wall_micros_in_zone,
     micros_from_local_datetime, offset_at_instant,
 };
+use session_wall::{instant_part, within_the_tables};
 
 /// `date_trunc` returns a microsecond timestamp with Spark's LTZ wire type.
 const TIMESTAMP_UNIT: TimeUnit = TimeUnit::Microsecond;
@@ -195,6 +195,20 @@ fn is_instant(arg: &DataType) -> bool {
     matches!(arg, DataType::Timestamp(_, Some(_)))
 }
 
+/// Re-annotate an instant array without changing its epoch ticks.
+fn resolve_instant_in_zone(array: &ArrayRef, zone: &str) -> Result<ArrayRef> {
+    if !is_instant(array.data_type()) {
+        return Ok(Arc::clone(array));
+    }
+    let DataType::Timestamp(unit, _) = array.data_type() else {
+        return Ok(Arc::clone(array));
+    };
+    Ok(cast(
+        array.as_ref(),
+        &DataType::Timestamp(*unit, Some(zone.into())),
+    )?)
+}
+
 /// `DatePartUdf` — vectorized calendar-field extraction with a Spark indexing offset.
 #[derive(Debug)]
 struct DatePartUdf {
@@ -259,13 +273,15 @@ impl ScalarUDFImpl for DatePartUdf {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let zone = session_time_zone_from_options(args.config_options.as_ref());
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        if is_instant(arrays[0].data_type()) {
+        if is_instant(arrays[0].data_type()) && !within_the_tables(&arrays[0]) {
             let zone = extraction_time_zone(args.config_options.as_ref())?;
             return instant_part(&arrays[0], zone, self.part, self.spark_offset)
                 .map(ColumnarValue::Array);
         }
-        let extracted = date_part(arrays[0].as_ref(), self.part)?;
+        let resolved = resolve_instant_in_zone(&arrays[0], zone)?;
+        let extracted = date_part(resolved.as_ref(), self.part)?;
         let extracted = cast(extracted.as_ref(), &DataType::Int32)?;
         let result = if self.spark_offset == 0 {
             extracted

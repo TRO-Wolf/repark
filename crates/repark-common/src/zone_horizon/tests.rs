@@ -3,7 +3,10 @@ use chrono::{
     TimeDelta, TimeZone,
 };
 
-use super::{LAST_TABULATED_YEAR, offset_at_instant, offsets_at_wall, proxy_year, wall_at_instant};
+use super::{
+    LAST_TABULATED_YEAR, offset_at_instant, offsets_at_wall, proxy_year, tabulated_utc_seconds,
+    wall_at_instant,
+};
 
 const STANDARD_SECONDS: i32 = -5 * 3_600;
 const SUMMER_SECONDS: i32 = -4 * 3_600;
@@ -118,6 +121,18 @@ fn an_instant_inside_the_tables_reads_the_zone_itself() {
 }
 
 #[test]
+fn the_tabulated_seconds_are_the_years_the_helpers_leave_alone() {
+    let seconds = |moment: NaiveDateTime| moment.and_utc().timestamp();
+    let tabulated = tabulated_utc_seconds();
+    assert_eq!(tabulated.start, seconds(utc(1_200, 1, 1, 0)));
+    assert_eq!(tabulated.end, seconds(utc(2_100, 1, 1, 0)));
+    assert!(tabulated.contains(&seconds(utc(2_024, 7, 1, 12))));
+    assert!(tabulated.contains(&(seconds(utc(2_100, 1, 1, 0)) - 1)));
+    assert!(!tabulated.contains(&seconds(utc(2_100, 7, 1, 0))));
+    assert!(!tabulated.contains(&(seconds(utc(1_200, 1, 1, 0)) - 1)));
+}
+
+#[test]
 fn an_instant_past_the_horizon_reads_its_proxy_year() {
     assert_eq!(
         hours(TabulatedToHorizon.offset_from_utc_datetime(&utc(2_100, 7, 1, 16))),
@@ -159,7 +174,7 @@ fn the_change_past_the_horizon_falls_on_the_rule_day_of_the_real_year() {
             "{year}"
         );
         assert_eq!(
-            wall_at_instant(&TabulatedToHorizon, &change).map(|(wall, _)| wall),
+            wall_at_instant(&TabulatedToHorizon, &change),
             second_sunday_of_march(year).and_hms_opt(3, 0, 0),
             "{year}"
         );
@@ -223,7 +238,8 @@ fn the_wall_of_an_instant_reads_back_as_the_instant() {
         let instant = DateTime::from_timestamp(seconds, 0)
             .expect("an instant")
             .naive_utc();
-        let (wall, offset) = wall_at_instant(&TabulatedToHorizon, &instant).expect("a wall clock");
+        let wall = wall_at_instant(&TabulatedToHorizon, &instant).expect("a wall clock");
+        let offset = offset_at_instant(&TabulatedToHorizon, &instant);
         let back = match offsets_at_wall(&TabulatedToHorizon, &wall) {
             MappedLocalTime::Single(single) => {
                 assert_eq!(single, offset, "{instant}");

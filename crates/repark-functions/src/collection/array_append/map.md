@@ -47,6 +47,9 @@ registration, the invoke wrapper and the tests.
 | change the append/prepend kernels or the null graft | [`../array_append.rs`](../array_append.rs) |
 | change which type pairs Spark accepts | `spark_common_element` in `coerce.rs` |
 | change how values reach the common type | `convert_columnar`/`convert_array` in `coerce.rs` |
+- **ZONE-HORIZON-RENDER-1 (2026-10-08):** `coerce.rs::ZoneSpans::resolve_day` reads a day's two
+  midnight offsets through `repark_common::zone_horizon::offsets_at_wall`, so a day after
+  2099 follows the zone's final rule. No pin of its own (ledger R-9).
 
 ## Pointers
 

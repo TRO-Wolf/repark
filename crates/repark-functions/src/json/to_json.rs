@@ -13,7 +13,7 @@ use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
 };
-use repark_common::zone_horizon::wall_at_instant;
+use repark_common::zone_horizon::offset_at_instant;
 
 use super::reader::write_escaped;
 use crate::java_double::{with_java_double_text, with_java_float_text};
@@ -68,9 +68,12 @@ fn decimal_text(raw: i128, scale: i8) -> String {
 }
 
 fn timestamp_text(micros: i64, zone: Tz) -> String {
-    let Some((wall, offset)) = DateTime::from_timestamp_micros(micros)
-        .and_then(|instant| wall_at_instant(&zone, &instant.naive_utc()))
+    let Some(utc) = DateTime::from_timestamp_micros(micros).map(|instant| instant.naive_utc())
     else {
+        return String::new();
+    };
+    let offset = offset_at_instant(&zone, &utc);
+    let Some(wall) = utc.checked_add_offset(offset) else {
         return String::new();
     };
     let stamp = wall.format("%Y-%m-%dT%H:%M:%S%.3f").to_string();

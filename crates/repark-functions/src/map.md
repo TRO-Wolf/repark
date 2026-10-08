@@ -1317,6 +1317,15 @@ streams, preserve pool order, reject non-constant bounds, and enforce per-row an
 Validation functions preserve binary-vs-UTF8 representation behavior; `assert_true` passes only
 `true` and fails on NULL. The module's registration helper keeps these surfaces aligned.
 
+- **ZONE-HORIZON-RENDER-1 (2026-10-08):** an instant after 2099 renders at the zone's final
+  rule. `datetime.rs` hands its instant ↔ wall-clock helpers to the new child
+  [`datetime/session_wall.rs`](datetime/map.md) (re-exported, so callers are unchanged), and
+  the calendar extractors run Arrow's zone-labelled `date_part` only for a batch wholly
+  inside 1200–2099. `timestamp_cast.rs` (the cast to string, `unix_timestamp` of a string),
+  `timestamp_ltz_ntz.rs` (LTZ → NTZ) and `timestamp_ns_cast.rs` read the zone through
+  `repark_common::zone_horizon`. Pins: [tests/map.md](tests/map.md).
+  pins: zone-horizon-render-1/C-006, C-007
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

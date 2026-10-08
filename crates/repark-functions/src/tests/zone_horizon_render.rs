@@ -322,3 +322,24 @@ async fn every_constructor_reads_the_final_rule_in_new_york() {
         );
     }
 }
+
+#[tokio::test]
+async fn a_batch_reads_the_tables_only_when_every_instant_is_inside_them() {
+    let ctx = context(NEW_YORK);
+    let fields = "min(hour(t)), max(hour(t)), min(dayofweek(t)), max(year(t)), count(*)";
+    let inside = "(TIMESTAMP '2024-07-01 12:00:00'), (TIMESTAMP '2099-07-01 12:00:00')";
+    let mixed = "(TIMESTAMP '2024-07-01 12:00:00'), (TIMESTAMP '2100-07-01 12:00:00')";
+    let outside = "(TIMESTAMP '2100-07-01 12:00:00'), (TIMESTAMP '2500-07-01 12:00:00')";
+    for (values, weekday, year) in [
+        (inside, "2", "2099"),
+        (mixed, "2", "2100"),
+        (outside, "5", "2500"),
+    ] {
+        let sql = format!("SELECT {fields} FROM (VALUES {values}) AS v(t)");
+        assert_eq!(
+            row(&ctx, &sql).await,
+            vec!["12", "12", weekday, year, "2"],
+            "{values}"
+        );
+    }
+}
