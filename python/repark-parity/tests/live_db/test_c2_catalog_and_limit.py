@@ -1,4 +1,4 @@
-"""C-2d fold 1 live cells: catalog APIs on a mounted source, limits over refused values, plan names."""
+"""C-2d fold 1 live cells: mounted-source catalog APIs, limits over refused values, plan names."""
 
 from __future__ import annotations
 

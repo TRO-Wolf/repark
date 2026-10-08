@@ -1622,3 +1622,27 @@ restored from that copy.
   percent-decode a query key, so `jdbc:postgresql://h/db?pass%77ord=x` passes the generic mask.
   `SourceRow` uses `redact_source_prop`, which decodes it (C-113, V4); the error path's
   `to_py_err` uses the generic mask.
+
+### 17.3 Gates (fold 1)
+
+The gates ran on the finished tree, each cargo command under the build-slot lock. The live run
+used `make pg-up` (PostgreSQL 16, rootless Docker), and `make pg-down` removed the container
+at the end.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-core -p repark-connect -p repark-python --lib` | 0 | core 1286 passed (1 ignored), connect 0 (lib), python 151 |
+| `cargo test -p repark-connect` | 0 | 127 passed, 51 ignored (the live cells) |
+| `cargo test -p repark-connect -- --include-ignored` under `make pg-up` | 0 | 178 passed |
+| `cargo test -p repark-functions --lib`; `cargo test -p repark-spark --lib` | 0 | 891 passed; 2630 passed |
+| `pytest python/repark-parity/tests/live_db/` under `make pg-up`, after `make develop` | 0 | 24 passed, 5 xfailed (C-0's strict xfails) |
+| `pytest python/repark/tests -k "source or postgres or toml or named" -n 8` | 0 | 692 passed, 9 skipped |
+| `cargo clippy -p repark-connect --all-targets -- -D warnings -A clippy::disallowed_methods`; `make rust-clippy` | 0 | no diagnostics |
+| `cargo fmt --check`; `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/check_rust_file_size.py`; `./scripts/check_lib_rs.sh` | 0 | clean; 11 crate roots clean |
+| `python3 scripts/sync_map_md.py --check`; `bash scripts/check_map_md.sh --base origin/main` | 0 | clean; no output |
+| `python3 scripts/check_docs_links.py`; `python3 scripts/check_ledger_grammar.py` | 0 | clean |
+| `./scripts/check_crate_dag.sh`; `./scripts/check_manifest.sh` | 0 | 25 internal edges clean; 20 components agree |
+| `cargo deny check 2>&1 \| tail -3` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
+| `ruff check` / `ruff format --check` over the three live-cell files | 0 | clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
