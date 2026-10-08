@@ -7943,6 +7943,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   partitioned text (4 parts), localCheckpoint (20), transpose (1) and the
   ML fit ([2.0, [3.0]]). Every constant recorded from a base run first.
   pins: grown-stack-gate-1/C-002, C-003, C-004
+- [test_mb_4_streaming_surface.py](test_mb_4_streaming_surface.py) — **MB-4 surface half
+  (2026-10-08):** one test per streaming builder method, per named option, and per
+  driver-free §4 refusal, each asserting class, SQLSTATE and message text; MB-0-recorded
+  cells cite their cell id in the test name (W8 verbatim, R3/R6, W3, W4 divergence
+  anchors). Terminal-reaching tests assert the builtin `NotImplementedError` type only.
+  pins: mb-4/C-004, C-005, C-006
 
 ## I want to...
 
