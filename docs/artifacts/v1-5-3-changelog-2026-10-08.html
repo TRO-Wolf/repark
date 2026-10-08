@@ -1,0 +1,266 @@
+<title>RePark v1.5.3 Changelog</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F2F5F7;
+  --surface: #FFFFFF;
+  --fg: #16232B;
+  --muted: #55676F;
+  --rule: #D5DEE3;
+  --accent: #0E6C88;
+  --accent-soft: #DCEEF3;
+  --code-bg: #E9EFF2;
+  --sec: #9B2C3A;      --sec-soft: #F7E3E5;
+  --chg: #8A5A00;      --chg-soft: #F6ECD3;
+  --perf: #0E6C88;     --perf-soft: #DCEEF3;
+  --fix: #2F6B3C;      --fix-soft: #DFEFE2;
+  --base: #55676F;     --base-soft: #E3E9EC;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1418; --surface: #151D22; --fg: #E3EBEF; --muted: #93A5AD; --rule: #27343B;
+    --accent: #4DB1CF; --accent-soft: #14303A; --code-bg: #1A252B;
+    --sec: #F0919C; --sec-soft: #3A1B20; --chg: #E5B95C; --chg-soft: #382C12;
+    --perf: #4DB1CF; --perf-soft: #14303A; --fix: #7FCB8F; --fix-soft: #183021;
+    --base: #93A5AD; --base-soft: #202C32; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1418; --surface: #151D22; --fg: #E3EBEF; --muted: #93A5AD; --rule: #27343B;
+  --accent: #4DB1CF; --accent-soft: #14303A; --code-bg: #1A252B;
+  --sec: #F0919C; --sec-soft: #3A1B20; --chg: #E5B95C; --chg-soft: #382C12;
+  --perf: #4DB1CF; --perf-soft: #14303A; --fix: #7FCB8F; --fix-soft: #183021;
+  --base: #93A5AD; --base-soft: #202C32; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.6; }
+.page { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, pre, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 0.08em 0.36em; border-radius: 3px; overflow-wrap: anywhere; }
+pre { background: var(--code-bg); padding: 14px 16px; border-radius: 4px; overflow-x: auto; margin: 0; line-height: 1.5; }
+pre code { background: none; padding: 0; font-size: 1em; overflow-wrap: normal; }
+
+.masthead { border-bottom: 2px solid var(--fg); padding-bottom: 22px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(38px, 7vw, 60px); line-height: 1.02; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { max-width: 64ch; margin: 16px 0 0; font-size: 17px; color: var(--fg); }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0; margin: 0; padding: 0; border-bottom: 1px solid var(--rule); }
+.facts div { padding: 16px 16px 16px 0; min-width: 0; }
+.facts dt { font-family: var(--mono); font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.facts dd { margin: 4px 0 0; font-family: var(--display); font-weight: 600; font-size: 21px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.facts dd small { display: block; font-family: var(--body); font-weight: 400; font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px; margin-top: 36px; }
+@media (min-width: 900px) { .layout { grid-template-columns: 200px minmax(0, 1fr); gap: 56px; } }
+nav.toc { font-size: 14px; }
+@media (min-width: 900px) { nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; } }
+nav.toc p { font-family: var(--mono); font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+@media (max-width: 899px) { nav.toc ul { flex-direction: row; flex-wrap: wrap; gap: 6px 18px; } }
+nav.toc a { text-decoration: none; color: var(--fg); }
+nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+main { display: flex; flex-direction: column; gap: 52px; min-width: 0; }
+section { display: flex; flex-direction: column; gap: 16px; min-width: 0; scroll-margin-top: 24px; }
+section > * { margin: 0; }
+.tag { align-self: flex-start; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 9px; border-radius: 2px; }
+.tag.sec { color: var(--sec); background: var(--sec-soft); }
+.tag.chg { color: var(--chg); background: var(--chg-soft); }
+.tag.perf { color: var(--perf); background: var(--perf-soft); }
+.tag.fix { color: var(--fix); background: var(--fix-soft); }
+.tag.base { color: var(--base); background: var(--base-soft); }
+h2 { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.12; text-wrap: balance; }
+h3 { font-family: var(--display); font-weight: 600; font-size: 20px; line-height: 1.2; margin-top: 10px; text-wrap: balance; }
+p, li { max-width: 68ch; }
+ul { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.ref { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.note { border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; color: var(--fg); }
+.note.warn { border-left-color: var(--chg); }
+
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.pair > div { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 14px 16px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pair h4 { margin: 0; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.pair p { margin: 0; font-size: 15px; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+td.num, th.num { text-align: right; padding-right: 20px; white-space: nowrap; }
+tr.hl td { font-weight: 600; }
+
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13.5px; }
+footer p { max-width: 80ch; margin: 0 0 6px; }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">RePark · patch release · third patch on 1.5.0</p>
+    <h1>v1.5.3 <span>Changelog</span></h1>
+    <p class="lede">Credentials no longer appear in any display or error. Columns carry Spark-style attribute ids, so ambiguous self-joins raise as Spark does. TA indicators on one long series run faster than polars_talib. The API freeze holds.</p>
+  </header>
+
+  <dl class="facts">
+    <div><dt>Published</dt><dd>2026-10-08<small>PyPI, 09:45 UTC, five wheels</small></dd></div>
+    <div><dt>Tagged</dt><dd class="mono">7a8fcf1a<small>2026-10-07, 23:58 UTC</small></dd></div>
+    <div><dt>Parity matrix</dt><dd>705 equal · 0 different<small>842 cells, unchanged from v1.5.2</small></dd></div>
+    <div><dt>Since v1.5.2</dt><dd>44 merges<small>from <span class="mono">d0c50405</span></small></dd></div>
+  </dl>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Contents">
+      <p>In this release</p>
+      <ul>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#attr">Attribute identity</a></li>
+        <li><a href="#ta">TA on one series</a></li>
+        <li><a href="#fixes">Fixes</a></li>
+        <li><a href="#groundwork">Groundwork</a></li>
+        <li><a href="#known">Known issues</a></li>
+        <li><a href="#upgrade">Upgrading</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <section id="security">
+        <span class="tag sec">Security</span>
+        <h2>Credentials are never displayed</h2>
+        <p>Since v1.4.1, a credential embedded in a URL- or DSN-shaped source or catalog property was shown in plain text by <code>sources()</code> and the config dump. Three fixes close that and the paths around it.</p>
+        <ul>
+          <li><strong>Displays are masked.</strong> <code>DESCRIBE TABLE EXTENDED</code>, <code>SHOW CREATE TABLE</code>, <code>SHOW TBLPROPERTIES</code>, <code>DESCRIBE NAMESPACE</code>, the config dump and <code>SET</code> all redact. Secret-keyed properties show as <code>*********(redacted)</code>, at least where Spark 4.1.2 does.</li>
+          <li><strong>Errors are masked.</strong> Every Python-visible error masks URL userinfo, including message parameters and the chained copy of a re-raised error.</li>
+          <li><strong>Non-URL shapes are covered.</strong> JDBC query strings, libpq keyword strings, ODBC connection strings, Oracle and TNS logins, JSON and YAML values, and Azure account-key, <code>Authorization</code> and personal-access-token settings.</li>
+          <li><strong>User-code errors are masked too.</strong> Errors raised inside UDFs, pandas and Arrow UDFs, UDTFs, <code>applyInPandas</code>, <code>applyInArrow</code>, <code>mapInPandas</code> and <code>mapInArrow</code>.</li>
+          <li><strong>Nothing else changes.</strong> Text without a credential is unchanged, byte for byte. Credential-free paths such as <code>s3://lake/data@corp.example.com/ns</code> display as stored.</li>
+        </ul>
+        <p class="note warn"><strong>Two known limits.</strong> An exception class with its own <code>__str__</code> is not rewritten. <code>foreach</code>, <code>foreachPartition</code> and <code>transform</code> pass the user's own exception through unchanged.</p>
+        <p class="ref">SOURCE-URL-REDACT-1 #967 · SOURCE-URL-REDACT-1-FN #975 · SOURCE-URL-REDACT-2 #976</p>
+      </section>
+
+      <section id="attr">
+        <span class="tag chg">Behaviour change</span>
+        <h2>Attribute identity: ambiguous self-joins now raise, as in Spark</h2>
+        <p>Columns now carry Spark-style attribute ids. This is the one change in the release that can turn working code into an error, and it does so only where Spark Classic raises too.</p>
+<pre><code>s = d.select("id")
+s.join(d).select(d.v)</code></pre>
+        <div class="pair">
+          <div><h4>v1.5.2</h4><p>Answered <code>d</code>'s <code>v</code>, four rows.</p></div>
+          <div><h4>v1.5.3 and Spark</h4><p>Raises <code>_LEGACY_ERROR_TEMP_1182</code>, with Spark's message word for word.</p></div>
+        </div>
+        <p>The same holds after any join whose two sides share lineage: a <code>select</code>, <code>filter</code>, <code>groupBy</code>, <code>orderBy</code>, <code>withColumn</code> or aggregate over a column bound before the join raises when Spark cannot tell which side it points to.</p>
+
+        <h3>The fix in your code</h3>
+        <p>Alias the frames and reference the alias, as Spark's own message suggests. The join is unchanged; only the reference changes.</p>
+<pre><code>s.alias("a").join(d.alias("b")).select(F.col("b.v"))</code></pre>
+        <p>Spark's switch <code>spark.sql.analyzer.failAmbiguousSelfJoin=false</code> turns the check off, and references then resolve by id. It is not a return to the old answers.</p>
+
+        <h3>Also newly raising</h3>
+        <ul>
+          <li>Two reads of a DataFrame view joined to each other: <code>spark.table("tv")</code> twice, then <code>select(left["v"], right["v"])</code>.</li>
+          <li>A cross-field self-join condition, <code>d.join(d, d.id == d.v)</code>. v1.5.2 answered an empty frame.</li>
+          <li>Under <code>caseSensitive=true</code>, a wrong-case name in <code>select</code>, <code>df[...]</code>, <code>fillna</code> or <code>dropDuplicates</code>. <code>withColumn("VAL")</code> now appends where v1.5.2 replaced.</li>
+          <li>Writing duplicate display names to parquet, json, orc, <code>saveAsTable</code> or <code>writeTo</code> refuses with Spark's <code>COLUMN_ALREADY_EXISTS</code> before any file is created.</li>
+        </ul>
+
+        <h3>Newly answering</h3>
+        <ul>
+          <li>Aliased joins with qualified references: <code>.select("l.v", "r.v")</code> after <code>d.alias("l").join(o.alias("r"), ...)</code>. v1.5.2 raised <code>UNRESOLVED_COLUMN</code>.</li>
+          <li><code>withColumnsRenamed</code> to duplicate names.</li>
+          <li>A sort over exact-duplicate projection outputs, answered by the source column.</li>
+          <li>Self-joins whose two sides carry the same column names. Internal twin names never reach files, tables, views or Arrow and pandas exports.</li>
+          <li><code>freqItems</code>, <code>describe</code> and <code>transpose</code> frames now write Spark's column names.</li>
+        </ul>
+
+        <h3>What it cost</h3>
+        <p>The stack merged after meeting its performance gate: <strong>1.0812×</strong> of pre-stack main on the work-equal replay set, release builds, median of three, against a 1.10× ceiling.</p>
+        <p class="ref">ATTR-ID-1 #968 · PERF-ATTR-STAMP-2 · STAMP-2-R5P6-1 #980</p>
+      </section>
+
+      <section id="ta">
+        <span class="tag perf">Performance</span>
+        <h2>TA indicators on one long series</h2>
+        <p>Eighteen TA calls over one million rows of a single series, in three dependent <code>withColumns</code> levels. Release wheels, median of five, interleaved with polars_talib in one process on a 64-core box.</p>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Build</th><th class="num">Bare <span class="mono">ta.*</span></th><th class="num">Explicit window</th><th class="num">polars_talib</th></tr></thead>
+            <tbody>
+              <tr><td>Main before the series</td><td class="num">0.168 s</td><td class="num">0.280 s</td><td class="num">0.131 s</td></tr>
+              <tr class="hl"><td>v1.5.3</td><td class="num">0.119 s</td><td class="num">0.094 s</td><td class="num">0.131 s</td></tr>
+              <tr><td>Ratio to polars_talib</td><td class="num">0.86</td><td class="num">0.68</td><td class="num">1.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><strong>A bare <code>ta.*</code> column is a series.</strong> Without <code>.over(...)</code> it is computed over the frame's declared sort order. With no declared order, the first timestamp column orders the series and RePark warns once per session. Before this change the answer depended on the order a split read delivered.</li>
+          <li><strong>Order is kept.</strong> A sorted single-partition frame read back through <code>.eager()</code>, <code>.cache()</code> or <code>localCheckpoint</code> keeps its order on plain reads.</li>
+          <li><strong>One partition runs in parallel.</strong> Independent window expressions and projections on a single partition run side by side, up to <code>repark.target.partitions</code>.</li>
+        </ul>
+        <p class="note">For one series per instrument, keep using <code>.over(Window.partitionBy(...).orderBy(...))</code>.</p>
+        <p class="ref">TA-SINGLE-SERIES-PARALLEL-1 · #939 #940 #943 #944 #945 #950</p>
+      </section>
+
+      <section id="fixes">
+        <span class="tag fix">Fixes</span>
+        <h2>Smaller fixes</h2>
+        <ul>
+          <li><strong>The v1.5.2 slowdown is repaired.</strong> v1.5.2's deep-chain fix grew the stack at 34 native call sites on every call, which slowed ordinary work by about 5.2%. The stack now grows only when the query is deep. Answers are unchanged and deep chains still answer.</li>
+          <li><strong>ANSI division by <code>-0.0</code></strong> raises <code>DIVIDE_BY_ZERO</code>, as Spark 4.1.2 does. A NaN divisor still answers.</li>
+          <li><strong>The nightly live-parity suite is readable again.</strong> A test was stopping the shared Spark context; the suite now reads 4 failed and 0 errors, down from 156 failed and 7,565 errors.</li>
+        </ul>
+        <p class="ref">GROWN-STACK-GATE-1 · TA-SERIES-S0b · PARITY-LIVE-STOP-1</p>
+      </section>
+
+      <section id="groundwork">
+        <span class="tag base">Not exposed</span>
+        <h2>Groundwork on main</h2>
+        <p>Two tracks landed code that the Python package cannot reach yet. Nothing here changes behaviour in v1.5.3.</p>
+        <ul>
+          <li><strong>Postgres connector (for 1.6).</strong> The <code>repark-connect</code> crate and its connection layer.</li>
+          <li><strong>Micro-batch (for 1.7).</strong> The batch source, the offset store and the crash harness. <code>readStream</code> still raises not-implemented.</li>
+        </ul>
+      </section>
+
+      <section id="known">
+        <span class="tag chg">Known issues</span>
+        <h2>Found after the tag</h2>
+        <p>None of these is a regression from v1.5.2. Each was present in earlier releases and found while working on the next ones.</p>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Issue</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><code>collect()</code> on a worker thread can crash with pyarrow 25.0.0.</td><td>Use pyarrow 25.0.1 or later. A fresh install already resolves it; raising the floor is an open decision.</td></tr>
+              <tr><td><code>OFFSET</code> under a nested <code>ORDER BY</code> can return the wrong rows.</td><td>Fixed on main (#1004), not in this release.</td></tr>
+              <tr><td>Chained <code>FULL JOIN ... USING</code> shows the left key, where Spark shows the merged key.</td><td>Fix in review (#1000).</td></tr>
+              <tr><td><code>df.join(other, cond, "cross")</code> ignores the condition.</td><td>Carded, not started.</td></tr>
+              <tr><td>Instants after 2099 render in standard time all year.</td><td>Fix in review (#1007).</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="upgrade">
+        <span class="tag base">Upgrading</span>
+        <h2>From v1.5.2</h2>
+<pre><code>pip install --upgrade repark==1.5.3</code></pre>
+        <ul>
+          <li>Search for joins where both sides come from the same frame and a later step references a pre-join column. Those are the ones that can now raise 1182. Alias both sides.</li>
+          <li>If you write frames with duplicate column names to parquet, json or orc, rename first.</li>
+          <li>If you call bare <code>ta.*</code> without <code>.over(...)</code>, sort the frame by its time column first so the series order is yours and the one-time warning does not fire.</li>
+          <li>If any tooling parsed credentials out of <code>sources()</code>, the config dump or error text, it now sees masked values.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <p>Source: <span class="mono">task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md</span> on main, the TA series ledgers, and the orchestrator's post-release findings of 2026-10-08.</p>
+    <p>Range <span class="mono">d0c50405</span> (v1.5.2) to <span class="mono">7a8fcf1a</span> (v1.5.3). Matrix: 705 EQUAL, 132 SPARK-CANNOT, 5 REFUSED-REGISTERED, 0 DIFFERENT.</p>
+  </footer>
+</div>
