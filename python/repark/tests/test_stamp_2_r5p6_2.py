@@ -298,7 +298,7 @@ def _on_foreign(left: Any, right: Any, foreign: Any) -> Any:
 
 def _on_maps(left: Any, right: Any) -> Any:
     renamed = right.select(spark_functions.col("m").alias("m2"))
-    return left.join(renamed, spark_functions.col("m") == spark_functions.col("m2"))
+    return left.join(renamed, left["m"] == renamed["m2"])
 
 
 def _exact_shapes(frames: dict[str, Any]) -> dict[str, tuple[Callable[[], Any], tuple[Any, Any]]]:
@@ -418,3 +418,15 @@ def test_join_refusals_are_the_sql_route_refusals(
         assert native == sql, name
         assert native[:2] == ("refused", "AnalysisException"), name
         assert text in native[2], name
+
+
+def test_frames_keep_the_case_rule_of_their_own_session_state(spark: ReparkSession) -> None:
+    earlier = spark.createDataFrame([(1, 10)], "id INT, v INT").select("id", "v")
+    assert not _native.frame_case_sensitive(earlier._plan())
+    spark.conf.set("spark.sql.caseSensitive", "true")
+    later = spark.createDataFrame([(1, 10)], "id INT, v INT").select("id", "v")
+    for frame, exact in ((earlier, False), (later, True)):
+        derived = frame.select("id", "v").filter("id > 0").orderBy("v").select("id")
+        assert _native.frame_case_sensitive(frame._plan()) is exact
+        assert _native.frame_case_sensitive(derived._plan()) is exact
+        assert [tuple(row) for row in derived.collect()] == [(1,)]

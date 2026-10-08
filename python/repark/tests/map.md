@@ -9771,7 +9771,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `_join_exact_keys` is pinned directly on 3 exact and 14 inexact prepared
   conditions. The self-join, ambiguous-name and missing-attribute refusals
   raise before the route is chosen, and a map key raises on the native attempt
-  and falls back: each carries the SQL route's class and text. No module
-  docstring: the lane's no-comments ruling covers the new file; the contract
-  lives here.
-  pins: stamp-2-r5p6-2/C-003, C-004, C-005, C-006, C-007
+  and falls back: each carries the SQL route's class and text. A frame made
+  before a `spark.sql.caseSensitive` change and one made after each keep their
+  own case rule through `select`, `filter`, `orderBy` and `select` again (the
+  binding's per-handle rule cache). No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: stamp-2-r5p6-2/C-003, C-004, C-005, C-006, C-007, C-010

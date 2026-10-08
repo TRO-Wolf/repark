@@ -14,6 +14,20 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   **STAMP-2-R5P6-2 (2026-10-07):** `join_type_from_str` widens to `pub(crate)`: the
   native join door in `../frame_lineage.rs` maps the facade's join type through it.
   pins: stamp-2-r5p6-2/C-002
+  **STAMP-2-R5P6-2 step 3 (2026-10-07):** `PyDataFrame` reads its name rule once per
+  handle (`rule()`, a `OnceLock<NameRule>`) and passes it to `bound_column` and
+  `bound_projection`. Why: `dataframe_names::frame_rule` reads the rule through
+  `DataFrame::task_ctx()`, DataFusion 54.1's only borrowed door to a frame's configuration,
+  and that builds a `TaskContext`: a clone of the session configuration and of the four
+  function registries, about 12 µs. It ran once per bound column, and `perf` put 72 % of a
+  native `select` in building and dropping it. A frame's session state never changes after
+  the handle is made, so the cached value is the value every call would read. `derived`
+  builds a child of `with_column`, `filter`, `filter_sql`, `select`, `sort` and `aggregate`
+  and hands it the parent's rule when the parent has read it: those six make the child from
+  a clone of the parent through the DataFrame API, which keeps the parent's state.
+  `inherit_rule` asserts in debug builds that the inherited rule is the child's own. A
+  frame from another state (`sql`, `sql_built`, the native join) starts unread. Measured:
+  a three-column native `select` 51.3 → 22.3 µs. pins: stamp-2-r5p6-2/C-010
   **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** the inline test
   module moved here to `tests.rs` untouched (the file would otherwise pass its
   ceiling); terminals and `analyzed_arrow_schema_native` drive through
@@ -81,7 +95,13 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   consumers pass at most one argument); a length-matched vector renames the
   export schema and batches, anything else keeps engine names.
   pins: attr-id-1/C-062
-- [`tests.rs`](tests.rs) — **DEEP-FILTER-CHAIN-CRASH-1 verifier fold
+- [`tests.rs`](tests.rs) — **STAMP-2-R5P6-2 step 3 (2026-10-07):**
+  `name_rule_is_read_once_per_handle_and_children_inherit_their_parents` holds the rule
+  cache: a handle starts unread, a frame made before and one made after a
+  `spark.sql.caseSensitive` change each keep their own rule, their `select` and
+  `filter_sql` children inherit it without a read, and a child of an unread parent starts
+  unread. pins: stamp-2-r5p6-2/C-010
+  **DEEP-FILTER-CHAIN-CRASH-1 verifier fold
   (2026-09-29):** the `dataframe` unit tests, moved verbatim from the inline
   module (Arrow export values, types, laziness, errors, schema caching).
   **Re-verify fold (2026-09-30):** plus the frame exactness battery (every O(1)

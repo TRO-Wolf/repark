@@ -1,5 +1,6 @@
 use datafusion::logical_expr::{Expr, col, lit};
 use pyo3::prelude::*;
+use repark_core::frame_names::NameRule;
 
 use crate::dataframe::PyDataFrame;
 use crate::session::PyReparkSession;
@@ -247,6 +248,36 @@ fn cross_join_builds_the_sql_route_plan() {
                 .expect("a cross join plans natively");
             assert_same_plan(&built, &sql, "cross");
         }
+    });
+}
+
+#[test]
+fn native_join_carries_the_live_session_state() {
+    Python::attach(|py| {
+        let session = Py::new(
+            py,
+            PyReparkSession::new(py, None, None, None, None, None).expect("session"),
+        )
+        .expect("session object");
+        let sides = keyed_sides(py, &session.borrow(py), ("INT", "INT"));
+        assert_eq!(sides.left.bind(py).borrow().rule(), NameRule::IgnoreCase);
+        crate::session_runtime::set_runtime_config(
+            session.borrow(py),
+            "spark.sql.caseSensitive",
+            "true",
+        )
+        .expect("the conf flips");
+        let session = session.borrow(py);
+        let query = join_query(&sides, "INNER", &RIGHT, true);
+        let sql = session.sql_built(py, &query).expect("the SQL route plans");
+        assert_eq!(sql.rule(), NameRule::Exact);
+        for (how, keys) in [("inner", Some(("k", "k", true))), ("cross", None)] {
+            let built = native(py, &session, &sides, how, keys, (&LEFT, &RIGHT))
+                .expect("the native door answers")
+                .expect("an exact join plans natively");
+            assert_eq!(built.rule(), NameRule::Exact, "{how}");
+        }
+        assert_eq!(sides.left.bind(py).borrow().rule(), NameRule::IgnoreCase);
     });
 }
 

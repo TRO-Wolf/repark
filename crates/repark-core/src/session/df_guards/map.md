@@ -169,6 +169,13 @@ wrapped optimizer rule) and declares this directory.
   node (semi/anti record the map with `emits_right=false` and skip the plan
   re-mint). Only `remint_cross_collisions` and `lateral_join` still pass the
   collision set. Pins: `../tests/frame_lineage.rs`.
+  **STAMP-2-R5P6-2 step 2 (2026-10-07):** `plan_is_stamped` and `stamp` were measured and
+  left as they are. On the r5p6 like cells 39,731 of 43,194 stamp calls find the plan stamped
+  (0.16 s together, 0.3 µs each warm) and 3,463 restamp (47 µs each, DataFusion's
+  `Projection::try_new` and one state clone). No short-circuit can gain 1 point. Field
+  metadata is Arrow's owned map inside `Field`, so there is nothing here to share behind an
+  `Arc`. The Projection arm's `maybe_index_of_column` per output makes the check quadratic in
+  width (14 µs at 40 columns), recorded for a wide-frame unit. pins: stamp-2-r5p6-2/C-009
 - `attr_lineage.rs` — **ATTR-ID-1 S4 (2026-10-02):** projection-output lineage,
   a pure move out of `attr_id.rs` when that file passed the 1000-line ceiling.
   `projection_source_ids` maps each `Projection` output to its input attribute id

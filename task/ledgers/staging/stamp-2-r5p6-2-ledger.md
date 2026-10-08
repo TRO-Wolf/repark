@@ -31,9 +31,9 @@ orchestrator's departure move).
 | C-005 | A native attempt that raises is a miss: the SQL route runs unchanged, so a refusal carries the SQL route's class and text. | `test_raising_native_cross_join_keeps_the_sql_route_answer`, `a_map_key_refuses_on_both_routes`. | **PROVEN** |
 | C-006 | The native join carries the session state of the join call, as `sql_built` does, not the left frame's older snapshot: a `spark.sql.caseSensitive` change between the frame and the join shows on the joined frame on both routes. | `test_native_cross_join_carries_the_session_state_of_the_join_call`; mutation M4 below. | **PROVEN** |
 | C-007 | The condition door plans natively when the prepared condition is exactly one equality between one left field and one right field, `(l.f = r.g)` in either operand order, with the SQL route's schema, column names, attribute ids, rows and plan text over six join types; every other condition keeps the SQL route unchanged, and a refusal carries the SQL route's class and text. | `test_exact_join_keys_are_one_equality_between_the_two_sides`, `test_exact_key_join_plans_natively_with_the_sql_route_answers`, `test_inexact_join_conditions_keep_the_sql_route`, `test_join_refusals_are_the_sql_route_refusals`; mutations M1, M2 below. | **PROVEN** |
-| C-008 | Answers: the attr-id, sort, fill and self-join suites, the 394-cell sort grid and the replay corpus are unchanged. | Does every answer gate come back identical? Step 4. | **OPEN** |
-| C-009 | The stamp: metadata sharing and a wider `plan_is_stamped` short-circuit are measured. | Does either measure a gain without an answer change? Step 2. | **OPEN** |
-| C-010 | Binding: the per-column resolution is profiled. | Is there a measured hot spot? Step 3. | **OPEN** |
+| C-008 | Answers: the attr-id, sort, fill and self-join suites, the 394-cell sort grid and the replay corpus are unchanged. | Does every answer gate come back identical on the final code? Step 4. | **OPEN** |
+| C-009 | The stamp is measured and left: 39,731 of the 43,194 stamp calls on the like cells find the plan stamped and cost 0.16 s together, so no short-circuit can gain more than 0.7 point; field metadata is Arrow's owned map and cannot be shared from this repository; and the hash-table clones the earlier attribution read as field metadata are mostly the session registries, which C-010 removes. | The step 2 table below. | **PROVEN** |
+| C-010 | Binding has one measured hot spot, in the native binder: `frame_rule` built a DataFusion `TaskContext` (the session configuration and four function registries, about 12 µs) for every bound column, 72 % of a native `select`. `PyDataFrame` now reads the rule once per handle and hands it to children that keep the parent's state. The value is the one every call read, so no answer changes. | `name_rule_is_read_once_per_handle_and_children_inherit_their_parents`, `test_frames_keep_the_case_rule_of_their_own_session_state`; the debug assertion in `inherit_rule` under the binding's 158 tests; mutation M7 below; the step 3 table below. | **PROVEN** |
 | C-011 | Speed, lane side: the r5p6 family and the whole like set, three runs each, head against main. | What are the indicative ratios? Step 5. | **OPEN** |
 
 ## Step 0: where the time goes on main `3fbcb2ca` (C-001)
@@ -118,12 +118,86 @@ Scratch views are still registered on both routes. Registration costs 35 µs per
 the session's deep-view high-water mark that later statements read, and leaving it in place
 keeps the SQL route byte-for-byte unchanged.
 
+## Step 2: the stamp (C-009)
+
+Measured on the 12,272 like cells, head build, with `_native.stamp_attribute_ids` wrapped by a
+counter (`out is inner` tells a kept plan from a restamped one).
+
+| Outcome | Calls | Time | Each |
+|---|---|---|---|
+| already stamped, handle returned | 39,731 | 0.161 s | 4.05 µs in the run; 0.27–0.33 µs warm on 2–3 columns |
+| restamped (sources and computed outputs) | 3,463 | 0.164 s | 47 µs |
+
+**`plan_is_stamped` short-circuit: left.** The check already returns on the first read of a
+stamped plan. All 39,731 kept calls together are 0.16 s of a 23.9 s run, so skipping every one
+of them from the facade could gain at most 0.7 point, and a provable rule (children of
+identity-preserving spawns only) would reach a part of that. Under the 1-point bar, with a new
+constructor path to keep right; not landed. One thing is recorded for a wide-frame unit: the
+Projection arm calls `maybe_index_of_column` per output, a linear scan, so the check is
+quadratic in width (14 µs at 40 columns). r5p6 frames are 2–6 columns wide.
+
+**Metadata sharing: not ours to do.** A field's metadata is Arrow's owned
+`HashMap<String, String>` inside `Field`. DataFusion rebuilds it in `Expr::to_field` and
+`projection_schema` on every schema computation. There is no map in this repository to put
+behind an `Arc`; the 47 µs of a restamp is DataFusion's `Projection::try_new` plus one
+session-state clone for the new `DataFrame`.
+
+**A correction to the earlier attribution.** STAMP-2-R5P6-1 read the +0.20 s of
+`hashbrown::RawTable::clone` as field metadata maps. `perf` with DWARF call graphs on a
+`select` loop puts the hash-table clones and drops under `TaskContext::from(&SessionState)`
+and its drop. On the like cells, hash-table clone plus drop self time is 7.5 % of all samples
+before C-010 and 5.8 % after. What remains is the one session-state clone DataFusion needs for
+every child `DataFrame`, the state snapshots of `sql` and `sql_built`, and the real field maps.
+
+## Step 3: binding (C-010)
+
+The Python binding layer profiles as the card says, wide and thin: `_column_of` 1.56 s
+cumulative over 60,778 calls, no single function above 0.26 s self. No Python change is made.
+
+The hot spot is below it, in the native binder. Ranking every native call of the step 0
+profile put `PyDataFrame.select` fourth (18,972 calls, 1.45 s, 77 µs each), and a
+`select` loop under `perf` gave:
+
+| Frame | Share of the loop's samples |
+|---|---|
+| `PyDataFrame.select` | 29.8 % |
+| — `bound_projection` | 22.1 % |
+| — — `TaskContext::from(&SessionState)` | 11.7 % |
+| — — `drop_in_place<TaskContext>` | 9.8 % |
+| — `grown_clone_frame` (the child's own state clone) | 7.5 % |
+
+`frame_rule` asks a frame for one boolean, `spark.sql.caseSensitive`, through
+`DataFrame::task_ctx()`, because DataFusion 54.1 offers no borrowed access to a frame's
+configuration. `task_ctx()` clones the session configuration and the scalar, higher-order,
+aggregate and window registries. It ran once per bound column.
+
+| Native `select` | Before | After |
+|---|---|---|
+| 1 column | 26.7 µs | 17.3 µs |
+| 2 columns | 39.1 µs | 19.8 µs |
+| 3 columns | 51.3 µs | 22.3 µs |
+| facade `select("id", "v")` | 91.1 µs | 75.0 µs |
+| `frame_case_sensitive` | 10.2 µs | 0.09 µs |
+
+**Why no answer changes.** A `DataFrame` owns a snapshot of its session state; nothing changes
+it after the handle is made, so the first read is every read. A child inherits only in the six
+builders that make it from a clone of the parent through the DataFrame API, and from
+`grown_plan_rewrite`, which rebuilds on the frame's own state. `inherit_rule` asserts in debug
+builds that the inherited rule equals the child's own; the binding's tests run with it. Frames
+from `sql`, `sql_built` and the native join start unread and read their own state.
+
 ## Mutations (red-first)
 
-Filed as each is run; see the final commit.
+Filed with the answers and the speed runs in the unit's last commit.
 
 ## Out of scope, observed
 
+- Every native builder clones the parent `DataFrame`, and so its whole session state, to make
+  a child (`grown_clone_frame`, 7.5 % of a `select` loop). DataFusion's `DataFrame` owns its
+  state by value, so this is one clone per frame by construction. It is most of the 5.8 % of
+  hash-table clone and drop time left on the like cells.
+- `session_table` plans `S.table("tv")` through `sql_built`: 1,650 calls, 1.17 s on the like
+  cells, the same on main before the stack.
 - `df.join(other, condition, "cross")` ignores the condition on main and on this branch (12 rows
   where Spark 4.1 answers 2, measured live). The H1 door emits `CROSS JOIN` with no `ON`. The
   native route reproduces the SQL route here and the differential pin holds only their
