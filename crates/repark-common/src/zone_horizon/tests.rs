@@ -4,17 +4,34 @@ use chrono::{
 };
 
 use super::{
-    LAST_TABULATED_YEAR, offset_at_instant, offsets_at_wall, proxy_year, tabulated_utc_seconds,
-    wall_at_instant,
+    LAST_TABULATED_YEAR, has_final_rule, micros_to_wall_and_offset, offset_at_instant,
+    offsets_at_wall, proxy_year, tabulated_utc_seconds, wall_at_instant, wall_to_micros_earlier,
+    wall_to_millis_earlier, wall_to_unix_seconds,
 };
 
 const STANDARD_SECONDS: i32 = -5 * 3_600;
 const SUMMER_SECONDS: i32 = -4 * 3_600;
 const UNTABULATED_PAST_SECONDS: i32 = -17_762;
 const FIRST_TABULATED_YEAR: i32 = 1_200;
+const LAST_SHIFTING_YEAR: i32 = 2_087;
 
 #[derive(Debug, Clone, Copy)]
 struct TabulatedToHorizon;
+
+#[derive(Debug, Clone, Copy)]
+struct SettledIn2088;
+
+impl std::fmt::Display for TabulatedToHorizon {
+    fn fmt(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        out.write_str("TabulatedToHorizon")
+    }
+}
+
+impl std::fmt::Display for SettledIn2088 {
+    fn fmt(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        out.write_str("SettledIn2088")
+    }
+}
 
 fn fixed(seconds: i32) -> FixedOffset {
     FixedOffset::east_opt(seconds).expect("an offset inside a day")
@@ -56,6 +73,66 @@ impl TabulatedToHorizon {
 }
 
 impl TimeZone for TabulatedToHorizon {
+    type Offset = FixedOffset;
+
+    fn from_offset(_offset: &FixedOffset) -> Self {
+        Self
+    }
+
+    fn offset_from_local_date(&self, local: &NaiveDate) -> MappedLocalTime<FixedOffset> {
+        self.offset_from_local_datetime(&local.and_time(NaiveTime::MIN))
+    }
+
+    fn offset_from_local_datetime(&self, local: &NaiveDateTime) -> MappedLocalTime<FixedOffset> {
+        let holds = |seconds: i32| {
+            local
+                .checked_sub_offset(fixed(seconds))
+                .is_some_and(|utc| Self::seconds_at(&utc) == seconds)
+        };
+        let candidates = [SUMMER_SECONDS, STANDARD_SECONDS, UNTABULATED_PAST_SECONDS];
+        let mut found = candidates.into_iter().filter(|seconds| holds(*seconds));
+        match (found.next(), found.next()) {
+            (Some(earliest), Some(latest)) => {
+                MappedLocalTime::Ambiguous(fixed(earliest), fixed(latest))
+            }
+            (Some(only), None) => MappedLocalTime::Single(fixed(only)),
+            _ => MappedLocalTime::None,
+        }
+    }
+
+    fn offset_from_utc_date(&self, utc: &NaiveDate) -> FixedOffset {
+        self.offset_from_utc_datetime(&utc.and_time(NaiveTime::MIN))
+    }
+
+    fn offset_from_utc_datetime(&self, utc: &NaiveDateTime) -> FixedOffset {
+        fixed(Self::seconds_at(utc))
+    }
+}
+
+impl SettledIn2088 {
+    fn seconds_at(utc: &NaiveDateTime) -> i32 {
+        let year = utc.year();
+        if year < FIRST_TABULATED_YEAR {
+            return UNTABULATED_PAST_SECONDS;
+        }
+        if year > LAST_SHIFTING_YEAR {
+            return STANDARD_SECONDS;
+        }
+        let start = second_sunday_of_march(year)
+            .and_hms_opt(7, 0, 0)
+            .expect("the spring change");
+        let end = first_sunday_of_november(year)
+            .and_hms_opt(6, 0, 0)
+            .expect("the autumn change");
+        if (start..end).contains(utc) {
+            SUMMER_SECONDS
+        } else {
+            STANDARD_SECONDS
+        }
+    }
+}
+
+impl TimeZone for SettledIn2088 {
     type Offset = FixedOffset;
 
     fn from_offset(_offset: &FixedOffset) -> Self {
@@ -258,4 +335,62 @@ fn the_wall_of_an_instant_reads_back_as_the_instant() {
     }
     assert!(checked > 45_000, "{checked}");
     assert!(summer > checked / 2, "{summer} of {checked}");
+}
+
+#[test]
+fn a_zone_steady_through_2099_reads_the_table_end_past_the_horizon() {
+    assert!(has_final_rule(&TabulatedToHorizon));
+    assert!(!has_final_rule(&SettledIn2088));
+    let summer = utc(2_100, 7, 1, 16);
+    assert_eq!(
+        offset_at_instant(&SettledIn2088, &summer),
+        fixed(STANDARD_SECONDS)
+    );
+    assert_eq!(
+        offset_at_instant(&TabulatedToHorizon, &summer),
+        fixed(SUMMER_SECONDS)
+    );
+    let july = (2_100..2_120)
+        .map(|year| (year, proxy_year(i64::from(year))))
+        .find(|(_, proxy)| *proxy <= i64::from(LAST_SHIFTING_YEAR))
+        .map(|(year, _)| year)
+        .expect("a proxy inside the shifting years");
+    let probe = NaiveDate::from_ymd_opt(july, 7, 1)
+        .and_then(|date| date.and_hms_opt(16, 0, 0))
+        .expect("a summer instant");
+    assert_eq!(
+        offset_at_instant(&SettledIn2088, &probe),
+        fixed(STANDARD_SECONDS),
+        "{july}"
+    );
+    assert_eq!(
+        offsets_at_wall(&SettledIn2088, &utc(july, 7, 1, 12)),
+        MappedLocalTime::Single(fixed(STANDARD_SECONDS)),
+        "{july}"
+    );
+    let wall = utc(2_112, 9, 11, 12);
+    let direct = SettledIn2088
+        .offset_from_local_datetime(&wall)
+        .single()
+        .and_then(|found| wall.checked_sub_offset(found))
+        .map(|instant| instant.and_utc().timestamp_micros());
+    assert_eq!(wall_to_micros_earlier(&SettledIn2088, &wall), direct);
+    assert_eq!(
+        wall_to_unix_seconds(&SettledIn2088, &wall).map(|seconds| seconds * 1_000_000),
+        direct.map(|micros| micros.div_euclid(1_000_000) * 1_000_000)
+    );
+    assert_eq!(
+        wall_to_millis_earlier(&SettledIn2088, &wall).map(|millis| millis * 1_000),
+        direct.map(|micros| micros.div_euclid(1_000) * 1_000)
+    );
+    let micros = utc(2_112, 9, 11, 12).and_utc().timestamp_micros();
+    let (rendered, offset) =
+        micros_to_wall_and_offset(&SettledIn2088, micros).expect("a wall clock");
+    assert_eq!(offset, fixed(STANDARD_SECONDS));
+    assert_eq!(
+        rendered,
+        SettledIn2088
+            .from_utc_datetime(&utc(2_112, 9, 11, 12))
+            .naive_local()
+    );
 }

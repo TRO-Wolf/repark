@@ -423,3 +423,16 @@ async fn an_offset_with_seconds_prints_main_text_before_2100() {
         assert_ne!(answered, vec!["{}".to_string()], "{session} {instant}");
     }
 }
+
+#[tokio::test]
+async fn a_zone_without_a_transition_in_2099_reads_the_table_end() {
+    for session in ["Africa/Casablanca", "Africa/El_Aaiun"] {
+        let ctx = context(session);
+        let sql = "SELECT CAST(TIMESTAMP '2112-09-11 12:34:56 UTC' AS STRING), hour(TIMESTAMP '2112-09-11 12:34:56 UTC')";
+        assert_eq!(
+            row(&ctx, sql).await,
+            vec!["2112-09-11 13:34:56".to_string(), "13".to_string()],
+            "{session}"
+        );
+    }
+}

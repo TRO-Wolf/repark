@@ -86,6 +86,11 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   whose later branch is the proxy: `wall_to_unix_seconds`, `wall_to_micros_earlier`
   (`from_local_datetime`, the earlier offset in an overlap), `wall_to_millis_earlier`
   (the earlier instant) and `micros_to_wall_and_offset` (`with_timezone`).
+  **Fold 1 Item B (2026-10-08):** the proxy applies past 2099 only when the zone's
+  table holds a transition inside 2099; otherwise the helpers read the offset in force
+  at the table end, as main did. The predicate scans 2099 hourly once per zone into a
+  small `Display`-keyed cache, so no value path allocates; helpers take
+  `TimeZone + Display`.
 
 - `source.rs` — **C-1 (2026-10-05), the CC-2 identity move:** `SourceKind`
   (`Postgres`, `SqlServer`, `Trino`; `from_spelling` / `spelling` over the exact loader

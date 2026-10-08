@@ -44,6 +44,10 @@ Only tests; `mod.rs` is the module manifest.
   pins `to_json` of a seconds-bearing offset (New York, Paris, Kolkata, Sydney at
   1850, 1883 and 0001) to main's text, and the `from_json` round trip to a
   non-empty document.
+  **Fold 1 Item B (2026-10-08):**
+  `a_zone_without_a_transition_in_2099_reads_the_table_end` pins Casablanca and
+  El_Aaiun at 2112-09-11 12:34:56 UTC to 13:34:56 (string cast and hour). The
+  facade grid keeps its six zones: the two zones are pinned in Rust only.
 
 ## Pointers
 
