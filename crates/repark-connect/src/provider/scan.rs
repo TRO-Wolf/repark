@@ -293,3 +293,6 @@ impl ExecutionPlan for PostgresScanExec {
         Some(self.metrics.clone_inner())
     }
 }
+
+#[cfg(test)]
+mod tests;
