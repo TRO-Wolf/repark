@@ -140,7 +140,7 @@ declines it (a dated ruling in the intake, then the archive).
   Rulings applied, decisions R14b-D-1..13, incidents, owner questions Q-R14b-1..6 with recommendations.
 - [f-append-window-failloud-1-2026-10-05.md](f-append-window-failloud-1-2026-10-05.md) — **fork card (2026-10-05):** an opt-in fail-loud mode on `IncrementalAppendScan` when the window holds a non-append snapshot (today it skips silently at `incremental.rs:531`, like Java's batch scan), with skip opt-ins mirroring Spark's `streaming-skip-overwrite-snapshots` / `-delete-snapshots`; default unchanged; consumer MB-1 (O-5: Bronze refuses deletes).
 - [f-commit-offset-property-1-2026-10-05.md](f-commit-offset-property-1-2026-10-05.md) — **fork card (2026-10-05):** the summary half of the sink's offsets already exists at the pin (both MERGE arms pass summary extras). The request is a red-first proof that a table-property update in the same `Transaction` as a row delta or overwrite survives the commit-retry and rebase path, plus a measurement of the same-key race. A fork fix lands only if the proof fails. Consumers: MB-2a and MB-2c.
-- [f-append-pin-base-1-2026-10-07.md](f-append-pin-base-1-2026-10-07.md) — **fork card (2026-10-07):** filed under OQ-4 after DM-6 measured the sketch's Q8 branch A not green (MB-2c C-001). Revised in MB-2c fold 1 (2026-10-07). `FastAppendAction` and `MergeAppendAction` gain `validate_from_snapshot(i64)` and `validate_no_concurrent_snapshot_with_summary(key, value)`, default off, failing non-retryably only when a newer snapshot on the target ref carries this query's `repark.cdc.query-id`, so unrelated writers and other queries still land (MB-2a's tolerance). A missing from-snapshot uses the transaction's start, and a `None` start treats every snapshot as concurrent; a from-snapshot off the ref's ancestry fails. The operation stays `Append`. A second snapshot producer never commits, and A′ (one add-only overwrite) cannot fence the stamp-only door, so the check sits on the append action. A RePark-side emulation turns harness pins 2 and 3 green with every MB-2a pin green. Race, tolerance, replace, empty-start, non-ancestor, quiet and default pins; two mutations. Consumer: MB-2c's closing slice.
+- [f-append-pin-base-1-2026-10-07.md](f-append-pin-base-1-2026-10-07.md) — **fork card (2026-10-07):** filed under OQ-4 after DM-6 measured the sketch's Q8 branch A not green (MB-2c C-001). Revised in MB-2c fold 1 (2026-10-07). `FastAppendAction` and `MergeAppendAction` gain `validate_from_snapshot(i64)` and `validate_no_concurrent_snapshot_with_summary(key, value)`, default off, failing non-retryably only when a newer snapshot on the target ref carries this query's `repark.cdc.query-id`, so unrelated writers and other queries still land (MB-2a's tolerance). A missing from-snapshot uses the transaction's start, and a `None` start treats every snapshot as concurrent; a from-snapshot off the ref's ancestry fails. The operation stays `Append`. A second snapshot producer never commits, and A′ (one add-only overwrite) cannot fence the stamp-only door, so the check sits on the append action. A RePark-side emulation turns harness pins 2 and 3 green with every MB-2a pin green. Race, tolerance, replace, empty-start, non-ancestor, quiet and default pins; two mutations. Consumer: MB-2c's closing slice. **2026-10-07:** the RePark-side append fence is in (branch `feat/mb-2c-append-fence`, owner ruling 2026-10-07), so the slice no longer waits on the fork, and this ask is now the fence's retirement.
 - [f-partspec-redundant-1-2026-09-26.md](f-partspec-redundant-1-2026-09-26.md) — **card
   F-PARTSPEC-REDUNDANT-1 (2026-09-26, filed by WO PARTNAME-1):** the fork's partition-spec
   update path allows distinct transforms on one source and refuses only exact duplicates
@@ -665,3 +665,22 @@ declines it (a dated ruling in the intake, then the archive).
   PR #991):** the neighbouring Spark-door catalog and DDL doors answer a mounted source with
   misleading text (`getTable`, `listColumns`, `SHOW VIEWS`, `SHOW COLUMNS`, `DESCRIBE TABLE`,
   `TRUNCATE TABLE`, `USE`); none writes; each door gives the declared listing or names its registry row.
+- [offset-nested-sort-1-card-2026-10-08.md](offset-nested-sort-1-card-2026-10-08.md) — **card
+  OFFSET-NESTED-SORT-1 (2026-10-08, filed, not scheduled, from the C-3 hand-back, PR #998):** an
+  `OFFSET` under a nested `ORDER BY` answers 0 rows at one input partition where 16 partitions answer
+  5, a wrong answer reproduced with no Postgres scan in the plan; the ask is to reproduce it on main,
+  find whether it is the pinned DataFusion version's defect or RePark's planning, and add a parity cell.
+- [cross-join-condition-1-card-2026-10-08.md](cross-join-condition-1-card-2026-10-08.md) — **card
+  CROSS-JOIN-CONDITION-1 (2026-10-08, filed, not scheduled, from the STAMP-2-R5P6-2 hand-back, PR #997):**
+  `df.join(other, condition, "cross")` ignores the condition (12 rows where live Spark 4.1 answers 2),
+  on main and on the PR branch alike, because the H1 door emits `CROSS JOIN` with no `ON`; sequenced
+  after PR #997 merges, as both touch the same door.
+- [c-3-null-stride-1-card-2026-10-08.md](c-3-null-stride-1-card-2026-10-08.md) — **card
+  C-3-NULL-STRIDE-1 (2026-10-08, filed, not scheduled, from C-3 question Q3, PR #998):** the first
+  stride's `OR col IS NULL` arm is a sequential scan of the whole table (about 1.1 s of a 7.3 s
+  four-stream read); the lean is the NULL test as its own stride, measured on an unindexed column
+  before adopting.
+- [c-3-partition-types-1-card-2026-10-08.md](c-3-partition-types-1-card-2026-10-08.md) — **card
+  C-3-PARTITION-TYPES-1 (2026-10-08, filed, not scheduled, from C-3 question Q4, PR #998):** C-3 takes
+  `int2`/`int4`/`int8` partition columns and refuses the rest under `CONNECT-DECL-pg-partitioned-read`;
+  the ruled order is `date` first, then timestamp once the zone rule is ruled, each with its own Spark grid.
