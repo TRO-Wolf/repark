@@ -248,7 +248,7 @@ impl Run {
         if let Some(durable) = read_resume_point(&sink, self.shared.id)?
             && durable.epoch.get() >= epoch.get()
         {
-            self.already_durable(cursor, durable)?;
+            self.already_durable(cursor, &durable)?;
             return Ok(BatchDone {
                 add_batch: Duration::ZERO,
                 num_output_rows: None,
@@ -297,8 +297,9 @@ impl Run {
     fn already_durable(
         &self,
         cursor: &mut Cursor,
-        durable: SinkRecord,
+        durable: &SinkRecord,
     ) -> Result<(), MicroBatchError> {
+        self.shared.resumed(Some(durable.clone()));
         if durable.generation != cursor.generation {
             return Err(MicroBatchError::GenerationMismatch {
                 query: self.shared.id,
@@ -315,7 +316,7 @@ impl Run {
         }
         cursor.epoch = durable.epoch.next();
         cursor.from = durable.offsets.inputs().first().cloned();
-        self.shared.end_batch(Some(durable));
+        self.shared.end_batch(None);
         Ok(())
     }
 

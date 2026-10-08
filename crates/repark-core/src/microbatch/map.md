@@ -65,5 +65,11 @@ Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md).
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005
+- `table_door_tests.rs` — the `toTable` door pins: the stamped append with the Spark keys, the
+  start check on a shared catalog, the unknown-outcome reconcile and walk over a fault-injecting
+  catalog wrapper (`FaultCatalog`, the `crash_tests.rs` shape), and fencing by another run of the
+  same query across two sessions. The door's exactly-once guarantee against a racing driver is
+  not claimed until `F-APPEND-PIN-BASE-1` lands (ledger C-002).
+  pins: mb-3/C-007
 - `testing.rs` — the test fixture: a session over a memory catalog with the `sales.orders`
   source, the `sales.silver` sink and a spare `sales.other` table.
