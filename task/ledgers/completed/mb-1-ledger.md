@@ -1,3 +1,12 @@
+> **Errata (2026-10-08, MB-3).** **D-5a, DECLARED: the processing-time half of D-5 is now
+> measured.** MB0b-R18 runs R17's shape under `trigger(processingTime="0 seconds")` with
+> `streaming-max-files-per-micro-batch=1`: Spark delivers `a` only (batch 0, offset `(a, 0)`),
+> then fails `STREAM_FAILED` at the overwrite (and at the delete), so its capped `latestOffset`
+> looks one snapshot ahead when the files cap fills on a snapshot's last file.
+> `WindowLimit::Capped` keeps deliver-first under ruling Q1 (MB-1 fold 2) and delivers `a` then
+> `b` before the refusal. Registry row `MB-3-LOOKAHEAD-1`; the MB-3 ledger carries the driver
+> pin. D-5 below stands unedited.
+
 # Unit ledger — MB-1 · the batch source over the incremental append scan
 
 **Date:** 2026-10-07 · **Branch:** `feat/mb-1-source` · **Base:** `origin/main`
@@ -321,14 +330,6 @@ VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
   `WindowLimit::Capped` keeps deliver-first, so the restart advice stays lossless. The
   fold-1 text, "Under caps the two agree (p17)", cited a RePark probe rather than a
   Spark cell and is withdrawn.
-- **D-5a (2026-10-07, MB-3, DECLARED).** The processing-time half of D-5 is now measured.
-  MB0b-R18 runs R17's shape under `trigger(processingTime="0 seconds")` with
-  `streaming-max-files-per-micro-batch=1`: Spark delivers `a` only (batch 0, offset
-  `(a, 0)`), then fails `STREAM_FAILED` at the overwrite (and at the delete), so its capped
-  `latestOffset` looks one snapshot ahead when the files cap fills on a snapshot's last file.
-  `WindowLimit::Capped` keeps deliver-first under ruling Q1 (MB-1 fold 2) and delivers `a`
-  then `b` before the refusal. Registry row `MB-3-LOOKAHEAD-1`; the MB-3 ledger carries the
-  driver pin.
 - **D-6 (2026-10-07).** An append's added-file count comes from the same
   incremental-append listing the window delivers, so positions and counts cannot
   disagree. It is the same set as the snapshot's ADDED manifest entries. Every other
