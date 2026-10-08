@@ -332,6 +332,73 @@ async fn an_expired_stamp_above_an_empty_base_refuses_the_stamp_only_door() {
     assert_eq!(live_ids(&reloaded).await, vec![1, 2]);
 }
 
+struct ExpiredBelowLive {
+    view: Table,
+    first: CommitStamp,
+    snapshots: usize,
+}
+
+async fn expired_stamp_below_a_live_base(
+    name: &str,
+) -> (TempDir, Arc<dyn Catalog>, TableIdent, ExpiredBelowLive) {
+    let (warehouse, memory, ident) = fixture(name).await;
+    let first = stamp_for(0, SinkDoor::Table);
+    let landed = stamped_append(&memory, &ident, &first, &[1]).await;
+    let stamped = landed.metadata().current_snapshot_id().expect("stamped");
+    let view = append_plain(&memory, &ident, &[2]).await;
+    assert!(view.metadata().current_snapshot_id().is_some());
+    let expired = expire(&memory, &ident, stamped).await;
+    assert!(expired.metadata().snapshot_by_id(stamped).is_none());
+    let snapshots = expired.metadata().snapshots().count();
+    (
+        warehouse,
+        memory,
+        ident,
+        ExpiredBelowLive {
+            view,
+            first,
+            snapshots,
+        },
+    )
+}
+
+#[tokio::test]
+async fn an_expired_stamp_below_a_live_base_refuses_the_append_door() {
+    let (_warehouse, memory, ident, setup) =
+        expired_stamp_below_a_live_base("af_expired_below_append").await;
+    let next = stamp_for(1, SinkDoor::Table);
+    let guard = BatchScope::enter(TableUuid::of(&setup.view), next).expect("enter");
+    let files = stage(&setup.view, &[3]).await;
+    let error = commit_append_with_summary(&memory, &setup.view, files, &scoped(&guard), None)
+        .await
+        .expect_err("epoch 1 must not land from a stale view while epoch 0's stamp is expired");
+    assert_eq!(
+        microbatch_cause(&error),
+        &stamped_snapshot_expired(&setup.first)
+    );
+    assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    drop(guard);
+    let reloaded = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(reloaded.metadata().snapshots().count(), setup.snapshots);
+    assert_eq!(stamped_snapshots(&reloaded), 0);
+    assert_eq!(live_ids(&reloaded).await, vec![1, 2]);
+}
+
+#[tokio::test]
+async fn an_expired_stamp_below_a_live_base_refuses_the_stamp_only_door() {
+    let (_warehouse, memory, ident, setup) =
+        expired_stamp_below_a_live_base("af_expired_below_stamp_only").await;
+    let next = stamp_for(1, SinkDoor::ForeachBatch);
+    let refused = commit_stamp_only(&memory, &setup.view, &next, None)
+        .await
+        .expect_err("epoch 1 must not land from a stale view while epoch 0's stamp is expired");
+    assert_eq!(refused, stamped_snapshot_expired(&setup.first));
+    let reloaded = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(reloaded.metadata().snapshots().count(), setup.snapshots);
+    assert_eq!(stamped_snapshots(&reloaded), 0);
+    assert_eq!(live_ids(&reloaded).await, vec![1, 2]);
+}
+
 #[tokio::test]
 async fn an_expired_base_with_an_unrelated_append_is_refused_like_a_rollback_and_a_fresh_view_commits()
  {
