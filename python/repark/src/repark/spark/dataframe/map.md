@@ -273,6 +273,17 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   lazily-built property `frame_nodes.py` binds; births assign `None` (root)
   or `(parent, others)` (derived), joins assign the built node, and the
   birth registry moves into the first build (3485 → 3475, CAP-1 mirror).
+  **CROSS-JOIN-CONDITION-1 (2026-10-08):** `_join_on_condition_h1` routes a cross join with a
+  condition onto the inner path: `engine_how` becomes `"inner"` when it is `"cross"` and the
+  condition is present, so the SQL text, the exact-condition record and the native call are the
+  inner join's, with no second implementation. Spark answers a cross join with a condition as
+  the inner join's rows and columns. The `"cross"` key of the `how_sql` map is gone with it: a
+  cross now reaches the map only with a `None` condition, where the map is unused. A `None`
+  condition still emits `CROSS JOIN` with no `ON`, so `crossJoin` and
+  `join(other, None, "cross")` keep main's plan and rows. Net zero lines (3461, ceiling
+  unchanged). A list of Columns and shared names under `"cross"` keep main's refusals, pinned
+  beside the fix. Pins: `python/repark/tests/test_cross_join_condition_1.py`.
+  pins: cross-join-condition-1/C-001, C-002, C-003, C-004
 - `frame_nodes.py` — **ATTR-ID-1 PERF-1 (2026-10-03):** the lazy lineage-node
   home. `_bind_frame_node` attaches `_frame_node` as a property at package
   import; reads build root/derived nodes on first touch into a weak table
