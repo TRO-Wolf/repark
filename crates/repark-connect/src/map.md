@@ -78,7 +78,8 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   every builder to the rows before the refused tuple, so the half-appended tuple is dropped. It
   returns those rows as a batch and poisons the decoder with the refusal, which the next
   `decode` or `finish` returns. A refusal in a batch's first row, and every protocol error,
-  still fail at once. pins: c-2/C-114
+  still fail at once. `recycle_carry` clears the carry after a carried field, dropping its
+  buffer past the byte cap, so `run` stays under clippy's line limit. pins: c-2/C-114
 - `copy_binary.rs` — C-2a (2026-10-06; sketch §2.6). `CopyBinaryDecoder`, the resumable state
   machine over `COPY … TO STDOUT (FORMAT BINARY)` chunks, independent of how the server or TLS
   cuts the stream: `Header → HeaderExtension → TupleStart → FieldLength(i) → FieldValue(i, n)

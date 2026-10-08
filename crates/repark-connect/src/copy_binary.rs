@@ -229,12 +229,10 @@ impl CopyBinaryDecoder {
                 }
                 State::FieldValue { column, length } => {
                     let available = input.len().saturating_sub(*pos);
-                    if self.carry.is_empty() && available >= length {
+                    let appended = if self.carry.is_empty() && available >= length {
                         let bytes = input.get(*pos..*pos + length).unwrap_or_default();
                         *pos += length;
-                        if let Err(error) = self.append_value(column, bytes) {
-                            return self.refuse_after_kept_rows(error);
-                        }
+                        self.append_value(column, bytes)
                     } else {
                         let taken = (length - self.carry.len()).min(available);
                         grow_carry(&mut self.carry, length, taken)?;
@@ -246,14 +244,11 @@ impl CopyBinaryDecoder {
                         }
                         let carried = std::mem::take(&mut self.carry);
                         let appended = self.append_value(column, &carried);
-                        self.carry = carried;
-                        self.carry.clear();
-                        if self.carry.capacity() > self.limits.bytes.get() {
-                            self.carry = Vec::new();
-                        }
-                        if let Err(error) = appended {
-                            return self.refuse_after_kept_rows(error);
-                        }
+                        self.recycle_carry(carried);
+                        appended
+                    };
+                    if let Err(error) = appended {
+                        return self.refuse_after_kept_rows(error);
                     }
                     if let Some(batch) = self.end_field(column)? {
                         return Ok(Some(batch));
@@ -267,6 +262,15 @@ impl CopyBinaryDecoder {
                 }
             }
         }
+    }
+
+    fn recycle_carry(&mut self, mut carried: Vec<u8>) {
+        carried.clear();
+        self.carry = if carried.capacity() > self.limits.bytes.get() {
+            Vec::new()
+        } else {
+            carried
+        };
     }
 
     fn take_fixed<const N: usize>(&mut self, input: &[u8], pos: &mut usize) -> Option<[u8; N]> {
