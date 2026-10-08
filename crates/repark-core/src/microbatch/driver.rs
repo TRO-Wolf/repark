@@ -1,17 +1,24 @@
 use std::fmt;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::Duration;
 
-use datafusion::prelude::DataFrame;
+use datafusion::prelude::{DataFrame, SessionContext};
 use futures::future::BoxFuture;
 use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_iceberg::microbatch::error::{MicroBatchError, RecoveryReason};
 use repark_iceberg::microbatch::offset::{Epoch, QueryId, RunId, SinkRecord, TableUuid};
+use repark_iceberg::write::sink_offsets::read_resume_point;
+use tokio::sync::watch;
+use tokio::task::AbortHandle;
 
 use crate::Session;
+use crate::catalog_state::LocationPolicy;
 use crate::idents::parse_table_identifier_segments;
-use crate::time_travel::microbatch_source::SourceOptions;
+use crate::microbatch::run::{Door, Run};
+use crate::time_travel::microbatch_source::{MicroBatchSource, SourceOptions};
+
+pub const DEFAULT_POLLING_DELAY: Duration = Duration::from_millis(10);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trigger {
@@ -26,8 +33,9 @@ impl Default for Trigger {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum QueryState {
+    #[default]
     Registered,
     Running,
     Draining,
@@ -155,6 +163,7 @@ pub struct StreamSpec {
     pub query_name: Option<String>,
     pub checkpoint_location: Option<RecordedLocation>,
     pub stop_timeout: Option<Duration>,
+    pub polling_delay: Duration,
 }
 
 impl StreamSpec {
@@ -168,6 +177,7 @@ impl StreamSpec {
             query_name: None,
             checkpoint_location: None,
             stop_timeout: None,
+            polling_delay: DEFAULT_POLLING_DELAY,
         }
     }
 }
@@ -177,6 +187,7 @@ pub(crate) struct TableTarget {
     pub(crate) name: String,
     pub(crate) catalog: Arc<dyn Catalog>,
     pub(crate) ident: TableIdent,
+    pub(crate) local_catalog: Option<String>,
 }
 
 impl TableTarget {
@@ -197,10 +208,16 @@ impl TableTarget {
                 "streaming sink table {table:?}: catalog {catalog_name:?} is not registered"
             ))
         })?;
+        let local_catalog = matches!(
+            catalogs.location_policy(catalog_name),
+            Some(LocationPolicy::TempFallbackAllowed { .. })
+        )
+        .then(|| catalog_name.clone());
         Ok(TableTarget {
             name: table.to_string(),
             catalog,
             ident: TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone()),
+            local_catalog,
         })
     }
 
@@ -247,23 +264,39 @@ impl StreamingQueryManager {
 
     #[allow(clippy::missing_errors_doc)]
     pub async fn register(
-        &self,
+        self: &Arc<Self>,
         session: &Session,
         spec: StreamSpec,
     ) -> Result<QueryHandle, MicroBatchError> {
         let sink = TableTarget::resolve(session, spec.sink.sink())?;
         let table = sink.load().await?;
         let id = QueryId::derive(TableUuid::of(&table), spec.query_name.as_deref());
+        let source = MicroBatchSource::open(session, &spec.source, spec.source_options).await?;
+        let door = match spec.sink {
+            SinkSpec::Table { .. } => Door::Table,
+            SinkSpec::ForeachBatch { body, .. } => Door::ForeachBatch(body),
+        };
+        let (stop, _) = watch::channel(false);
+        let (done, _) = watch::channel(false);
         Ok(QueryHandle {
             shared: Arc::new(QueryShared {
                 id,
                 run_id: RunId::fresh(),
-                name: spec.query_name.clone(),
+                name: spec.query_name,
                 sink,
-                lifecycle: Mutex::new(Lifecycle {
-                    state: QueryState::Registered,
-                }),
-                spec,
+                trigger: spec.trigger,
+                stop_timeout: spec.stop_timeout.filter(|limit| !limit.is_zero()),
+                polling_delay: spec.polling_delay,
+                checkpoint_location: spec.checkpoint_location,
+                manager: Arc::downgrade(self),
+                lifecycle: Mutex::new(Lifecycle::default()),
+                stop,
+                done,
+                pending: Mutex::new(Some(Pending {
+                    source,
+                    context: session.context().clone(),
+                    door,
+                })),
             }),
         })
     }
@@ -283,19 +316,151 @@ impl StreamingQueryManager {
     pub fn get(&self, id: QueryId) -> Option<QueryHandle> {
         self.active().into_iter().find(|query| query.id() == id)
     }
+
+    pub async fn stop_all(&self) -> Vec<ShutdownOutcome> {
+        let mut outcomes = Vec::new();
+        for query in self.active() {
+            outcomes.push(query.stop().await);
+        }
+        outcomes
+    }
+
+    fn admit(&self, query: &QueryHandle) -> Result<(), MicroBatchError> {
+        let mut registry = self.registry();
+        registry.retain(|entry| !entry.state().is_terminal());
+        if registry.iter().any(|entry| entry.id() == query.id()) {
+            return Err(MicroBatchError::Catalog(format!(
+                "Cannot start query with id {id} as another query with same id is already active",
+                id = query.id()
+            )));
+        }
+        registry.push(query.clone());
+        Ok(())
+    }
 }
 
+pub(crate) struct Pending {
+    pub(crate) source: MicroBatchSource,
+    pub(crate) context: SessionContext,
+    pub(crate) door: Door,
+}
+
+#[derive(Default)]
 struct Lifecycle {
     state: QueryState,
+    durable: Option<SinkRecord>,
+    in_flight: Option<Epoch>,
+    outcome: Option<ShutdownOutcome>,
+    exception: Option<Arc<MicroBatchError>>,
+    abort: Option<AbortHandle>,
 }
 
-struct QueryShared {
-    id: QueryId,
-    run_id: RunId,
-    name: Option<String>,
-    sink: TableTarget,
+pub(crate) struct QueryShared {
+    pub(crate) id: QueryId,
+    pub(crate) run_id: RunId,
+    pub(crate) name: Option<String>,
+    pub(crate) sink: TableTarget,
+    pub(crate) trigger: Trigger,
+    stop_timeout: Option<Duration>,
+    pub(crate) polling_delay: Duration,
+    checkpoint_location: Option<RecordedLocation>,
+    manager: Weak<StreamingQueryManager>,
     lifecycle: Mutex<Lifecycle>,
-    spec: StreamSpec,
+    pub(crate) stop: watch::Sender<bool>,
+    done: watch::Sender<bool>,
+    pending: Mutex<Option<Pending>>,
+}
+
+impl QueryShared {
+    fn lifecycle(&self) -> MutexGuard<'_, Lifecycle> {
+        self.lifecycle
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    pub(crate) fn resumed(&self, durable: Option<SinkRecord>) {
+        self.lifecycle().durable = durable;
+    }
+
+    pub(crate) fn begin_batch(&self, epoch: Epoch) {
+        self.lifecycle().in_flight = Some(epoch);
+    }
+
+    pub(crate) fn end_batch(&self, committed: Option<SinkRecord>) {
+        let mut lifecycle = self.lifecycle();
+        lifecycle.in_flight = None;
+        if let Some(record) = committed {
+            lifecycle.durable = Some(record);
+        }
+    }
+
+    pub(crate) fn durable(&self) -> Option<SinkRecord> {
+        self.lifecycle().durable.clone()
+    }
+
+    pub(crate) fn finish(&self, ending: Result<Ending, MicroBatchError>) -> ShutdownOutcome {
+        let mut lifecycle = self.lifecycle();
+        if let Some(outcome) = &lifecycle.outcome {
+            return outcome.clone();
+        }
+        let durable = lifecycle.durable.clone();
+        let (outcome, exception) = match ending {
+            Ok(Ending::Drained) => (ShutdownOutcome::Drained { durable }, None),
+            Ok(Ending::Stopped) => (ShutdownOutcome::Stopped { durable }, None),
+            Err(MicroBatchError::RecoveryRequired {
+                query,
+                epoch,
+                durable: reported,
+                reason,
+            }) => {
+                let durable = reported.as_deref().cloned().or(durable);
+                let error = MicroBatchError::RecoveryRequired {
+                    query,
+                    epoch,
+                    durable: durable.clone().map(Box::new),
+                    reason: reason.clone(),
+                };
+                (
+                    ShutdownOutcome::RecoveryRequired { durable, reason },
+                    Some(Arc::new(error)),
+                )
+            }
+            Err(error) => {
+                let error = Arc::new(error);
+                (
+                    ShutdownOutcome::Failed {
+                        durable,
+                        error: Arc::clone(&error),
+                    },
+                    Some(error),
+                )
+            }
+        };
+        lifecycle.state = outcome.state();
+        lifecycle.in_flight = None;
+        lifecycle.abort = None;
+        lifecycle.exception = exception;
+        lifecycle.outcome = Some(outcome.clone());
+        drop(lifecycle);
+        self.done.send_replace(true);
+        outcome
+    }
+
+    pub(crate) fn stop_requested(&self) -> bool {
+        *self.stop.borrow()
+    }
+}
+
+pub(crate) enum Ending {
+    Drained,
+    Stopped,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CatalogCheck {
+    Enforce,
+    #[cfg(test)]
+    Skip,
 }
 
 #[derive(Clone)]
@@ -311,19 +476,13 @@ impl fmt::Debug for QueryHandle {
             .field("run_id", &self.shared.run_id)
             .field("name", &self.shared.name)
             .field("sink", &self.shared.sink.name)
+            .field("checkpoint_location", &self.shared.checkpoint_location)
             .field("state", &self.state())
             .finish_non_exhaustive()
     }
 }
 
 impl QueryHandle {
-    fn lifecycle(&self) -> MutexGuard<'_, Lifecycle> {
-        self.shared
-            .lifecycle
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-    }
-
     #[must_use]
     pub fn id(&self) -> QueryId {
         self.shared.id
@@ -346,17 +505,177 @@ impl QueryHandle {
 
     #[must_use]
     pub fn trigger(&self) -> Trigger {
-        self.shared.spec.trigger
+        self.shared.trigger
     }
 
     #[must_use]
     pub fn state(&self) -> QueryState {
-        self.lifecycle().state
+        self.shared.lifecycle().state
     }
 
     #[must_use]
     pub fn is_active(&self) -> bool {
         self.state().is_active()
+    }
+
+    #[must_use]
+    pub fn durable(&self) -> Option<SinkRecord> {
+        self.shared.durable()
+    }
+
+    #[must_use]
+    pub fn exception(&self) -> Option<Arc<MicroBatchError>> {
+        self.shared.lifecycle().exception.clone()
+    }
+
+    #[allow(
+        clippy::missing_errors_doc,
+        clippy::unused_async,
+        reason = "async as the sketch's signature: start is awaited inside the runtime that owns the driver task"
+    )]
+    pub async fn start(&self) -> Result<(), MicroBatchError> {
+        self.launch(CatalogCheck::Enforce)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn start_below_catalog_check(&self) -> Result<(), MicroBatchError> {
+        self.launch(CatalogCheck::Skip)
+    }
+
+    fn launch(&self, check: CatalogCheck) -> Result<(), MicroBatchError> {
+        if check == CatalogCheck::Enforce
+            && let Some(catalog) = &self.shared.sink.local_catalog
+        {
+            return Err(MicroBatchError::LocalCatalogRefused {
+                catalog: catalog.clone(),
+            });
+        }
+        if tokio::runtime::Handle::try_current().is_err() {
+            return Err(MicroBatchError::Catalog(format!(
+                "query {id} must start inside a Tokio runtime",
+                id = self.shared.id
+            )));
+        }
+        let manager = self.shared.manager.upgrade().ok_or_else(|| {
+            MicroBatchError::Catalog(format!(
+                "query {id} outlived its session's streaming query manager",
+                id = self.shared.id
+            ))
+        })?;
+        let mut pending = self
+            .shared
+            .pending
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        let Some(work) = pending.take() else {
+            return Err(MicroBatchError::Catalog(format!(
+                "query {id} was already started; register a new query to run it again",
+                id = self.shared.id
+            )));
+        };
+        if let Err(error) = manager.admit(self) {
+            *pending = Some(work);
+            return Err(error);
+        }
+        drop(pending);
+        self.shared.lifecycle().state = QueryState::Running;
+        let run = Run::new(Arc::clone(&self.shared), work);
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the one tracked driver task per query (sketch §3.5): its AbortHandle lives \
+                      in the QueryHandle, stop() waits for it and aborts it on stopTimeout, and \
+                      it ends on drain, stop or failure"
+        )]
+        let task = tokio::spawn(run.drive());
+        let mut lifecycle = self.shared.lifecycle();
+        if lifecycle.outcome.is_none() {
+            lifecycle.abort = Some(task.abort_handle());
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn await_termination(
+        &self,
+        timeout: Option<Duration>,
+    ) -> Result<bool, Arc<MicroBatchError>> {
+        if !self.wait_done(timeout).await {
+            return Ok(false);
+        }
+        match self.exception() {
+            Some(error) => Err(error),
+            None => Ok(true),
+        }
+    }
+
+    async fn wait_done(&self, timeout: Option<Duration>) -> bool {
+        let mut done = self.shared.done.subscribe();
+        let finished = async move { done.wait_for(|finished| *finished).await.is_ok() };
+        match timeout {
+            None => finished.await,
+            Some(limit) => tokio::time::timeout(limit, finished).await.unwrap_or(false),
+        }
+    }
+
+    pub async fn stop(&self) -> ShutdownOutcome {
+        {
+            let mut lifecycle = self.shared.lifecycle();
+            if let Some(outcome) = &lifecycle.outcome {
+                return outcome.clone();
+            }
+            if lifecycle.state == QueryState::Registered {
+                drop(lifecycle);
+                self.shared
+                    .pending
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .take();
+                return self.shared.finish(Ok(Ending::Stopped));
+            }
+            if lifecycle.state == QueryState::Running {
+                lifecycle.state = QueryState::Draining;
+            }
+        }
+        self.shared.stop.send_replace(true);
+        let limit = self.shared.stop_timeout;
+        if self.wait_done(limit).await {
+            let finished = self.shared.lifecycle().outcome.clone();
+            if let Some(outcome) = finished {
+                return outcome;
+            }
+        }
+        let (abort, epoch) = {
+            let lifecycle = self.shared.lifecycle();
+            (lifecycle.abort.clone(), lifecycle.in_flight)
+        };
+        if let Some(abort) = abort {
+            abort.abort();
+        }
+        let durable = self.read_durable().await;
+        self.shared.resumed(durable.clone());
+        let epoch = epoch
+            .or_else(|| durable.as_ref().map(|record| record.epoch.next()))
+            .unwrap_or(Epoch::FIRST);
+        self.shared.finish(Err(MicroBatchError::RecoveryRequired {
+            query: self.shared.id,
+            epoch,
+            durable: durable.map(Box::new),
+            reason: RecoveryReason::StopTimeout {
+                waited: limit.unwrap_or_default(),
+            },
+        }))
+    }
+
+    async fn read_durable(&self) -> Option<SinkRecord> {
+        let known = self.durable();
+        let Ok(table) = self.shared.sink.load().await else {
+            return known;
+        };
+        match read_resume_point(&table, self.shared.id) {
+            Ok(record) => record,
+            Err(MicroBatchError::RecoveryRequired { durable, .. }) => durable.map(|record| *record),
+            Err(_) => known,
+        }
     }
 }
 

@@ -13,8 +13,8 @@ Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md).
 
 ## Contents
 
-- `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) and the module declarations. No re-exports:
-  callers use full paths.
+- `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) and the module declarations: `pub mod driver;`,
+  the private `run`, and the test-only modules. No re-exports: callers use full paths.
 - `driver.rs` — the driver's types (`Trigger`, `QueryState`, `ShutdownOutcome`, `BatchBody`,
   `SinkSpec`, `StreamSpec`, `RecordedLocation`), the `StreamingQueryManager` and the
   `QueryHandle`. **The Session seam (sketch §3.5):** `StreamingQueryManager::of` installs the
@@ -27,6 +27,34 @@ Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md).
   synchronous signature (ledger D-1). `RecordedLocation` has no accessor that returns its text,
   and its `Debug` prints `RecordedLocation(<redacted>)`.
   pins: mb-3/C-003
+  **Slice 2 (2026-10-07):** the lifecycle. `start` refuses a sink on a local filesystem catalog
+  (`LocationPolicy::TempFallbackAllowed`, MBE-8), a second start and a second active query with
+  the same id, then spawns the query's one tracked task (`#[expect(clippy::disallowed_methods)]`
+  with its lifecycle stated) and keeps its `AbortHandle`. `stop` wakes the trigger wait, waits up
+  to `stopTimeout` (none or zero waits forever) for the in-flight batch and returns the
+  `ShutdownOutcome` with the durable `SinkRecord`; past the timeout it aborts the task, re-reads
+  the sink and yields `RecoveryRequired(StopTimeout)` (CC-1 rules 2 and 3). Dropping a handle
+  never stops the query (rule 4): the manager keeps it until it terminates. Every lock is a
+  `std::sync::Mutex` held for one read or write, never across an await.
+  pins: mb-3/C-004, C-005
+- `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
+  the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
+  one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and
+  drains capped batches up to it, `Once` runs one uncapped batch, and a processing-time trigger runs
+  back to back at `ProcessingTime(0)` (an idle trigger waits `pollingDelay`) or once per interval.
+  Each batch re-reads the resume point (an epoch already durable under this run is skipped, under
+  another run it is `Fenced`), enters the `BatchScope`, runs the door, and requires the scope's
+  outcome to be `Committed`. The `toTable` door writes through a private batch session cloned from
+  the session state with the scope token installed as
+  `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token` (MB-2a D-10, ledger D-3), and an
+  unknown commit outcome goes to `resolve_unknown_outcome`. The `foreachBatch` door runs the body on
+  the user's session without the token, then stamps once through `commit_stamp_only` (ledger D-2).
+  pins: mb-3/C-004, C-005
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).
+- `run_tests.rs` — the trigger-loop and lifecycle pins (`#[cfg(test)] #[path]` from `run.rs`).
+  pins: mb-3/C-004
+- `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
+  writes the sink through the session's resolved write options.
+  pins: mb-3/C-005
 - `testing.rs` — the test fixture: a session over a memory catalog with the `sales.orders`
   source, the `sales.silver` sink and a spare `sales.other` table.
