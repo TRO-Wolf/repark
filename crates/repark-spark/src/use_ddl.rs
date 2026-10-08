@@ -364,6 +364,9 @@ pub(crate) async fn resolve_show_tables_scope(
             Err(schema_not_found(&[&current_catalog, one]))
         }
         [first, second] => {
+            if catalogs.is_database_source(first) {
+                return Ok(((first.clone(), second.clone()), false));
+            }
             if catalogs.is_registered(first) {
                 if namespace_exists(catalogs, first, second).await? {
                     return Ok(((first.clone(), second.clone()), false));

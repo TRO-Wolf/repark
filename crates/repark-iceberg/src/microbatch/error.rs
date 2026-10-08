@@ -45,7 +45,9 @@ pub enum MicroBatchError {
         "no sink declared for this streaming query; pass .option(\"repark.cdc.sink\", \"<table>\")"
     )]
     SinkUndeclared,
-    #[error("sink {sink} already has an active batch; one batch per sink at a time")]
+    #[error(
+        "sink {sink} is busy: another streaming query or batch is active on it; one at a time per sink"
+    )]
     SinkBusy { sink: String },
     #[error(
         "epoch {epoch} already stamped the sink; refusing a second sink write in the same batch: a restart resumes after epoch {epoch}, so this write's rows would never land. Write the sink once per batch body, or combine the writes into a single write"
@@ -122,6 +124,17 @@ pub enum MicroBatchError {
     MergeIsolationRefused { sink: String, property: String },
     #[error("batch {epoch} failed: {cause}")]
     BatchFailed { epoch: Epoch, cause: String },
+    #[error("Cannot wait for a query state from the same thread that is running the query")]
+    AwaitFromDriver { query: QueryId },
+    #[error("the driver task panicked at batch {epoch}: {message}")]
+    DriverPanicked { epoch: Epoch, message: String },
+    #[error(
+        "catalog call ({call}) timed out after {waited:?} (repark.cdc.catalog-timeout); the offset did not advance, restart the query to retry"
+    )]
+    CatalogTimeout {
+        call: &'static str,
+        waited: Duration,
+    },
     #[error("recovery required for query {query} epoch {epoch}: {reason}")]
     RecoveryRequired {
         query: QueryId,
@@ -278,6 +291,37 @@ mod tests {
             MicroBatchError::Catalog(String::from("catalog exploded")),
         ];
         assert!(errors.iter().all(|error| !error.to_string().is_empty()));
+    }
+
+    #[test]
+    fn the_driver_errors_render_their_fields() {
+        assert_eq!(
+            MicroBatchError::SinkBusy {
+                sink: String::from("silver.events"),
+            }
+            .to_string(),
+            "sink silver.events is busy: another streaming query or batch is active on it; one at a time per sink"
+        );
+        assert_eq!(
+            MicroBatchError::AwaitFromDriver { query: query_id() }.to_string(),
+            "Cannot wait for a query state from the same thread that is running the query"
+        );
+        assert_eq!(
+            MicroBatchError::DriverPanicked {
+                epoch: Epoch::FIRST,
+                message: String::from("boom"),
+            }
+            .to_string(),
+            "the driver task panicked at batch 0: boom"
+        );
+        assert_eq!(
+            MicroBatchError::CatalogTimeout {
+                call: "load the sink",
+                waited: Duration::from_mins(1),
+            }
+            .to_string(),
+            "catalog call (load the sink) timed out after 60s (repark.cdc.catalog-timeout); the offset did not advance, restart the query to retry"
+        );
     }
 
     #[test]

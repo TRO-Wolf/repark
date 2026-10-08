@@ -16,6 +16,7 @@ mod idents;
 mod isnan;
 mod lineage_columns;
 mod metadata_columns;
+pub mod microbatch;
 mod na_fill;
 mod named_sources;
 mod namespace_create;
@@ -55,6 +56,7 @@ mod update_fields;
 
 // --- The Session surface (v1 names, courtesy `Session` alias).
 pub use repark_common::java_case::{fold_b_equal, string_lower_equal};
+pub use session::read_postgres::{PostgresRead, PostgresTarget, READ_POSTGRES_SOURCE};
 pub use session::{
     DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSession as Session, ReparkSessionBuilder,
     frame_names, resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan, writer_layout,

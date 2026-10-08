@@ -16,6 +16,7 @@ use crate::OverwriteIntent;
 use crate::engine_err;
 use crate::object_store_s3;
 use crate::session::ReparkSession;
+use crate::session::df_guards::duplicate_names::recorded_display_names;
 use crate::session::text_write_format::is_text_write_format_option;
 use crate::session::text_write_format::select::{TextWriteCopyParts, merge_spec_options};
 use crate::session::text_write_format::spec::{SPEC_WRITE_ID_KEY, TextWritePathRegistry};
@@ -516,7 +517,10 @@ async fn materialize_empty_part(
 ) -> Result<()> {
     let bytes = match format {
         WriteFormat::Parquet => empty_parquet_bytes(schema)?,
-        WriteFormat::Csv => empty_csv_bytes(columns, options),
+        WriteFormat::Csv => match recorded_display_names(schema) {
+            Some(displays) => empty_csv_bytes(&displays, options),
+            None => empty_csv_bytes(columns, options),
+        },
         WriteFormat::Json => Vec::new(),
     };
     store

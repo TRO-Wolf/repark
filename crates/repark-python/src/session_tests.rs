@@ -133,47 +133,86 @@ fn excel_sheet_names_refuses_with_named_unsupported_operation() {
 }
 
 #[test]
-fn read_postgres_refuses_with_named_unsupported_operation() {
+fn read_postgres_refusals_name_their_row_and_never_echo_credentials() {
     Python::attach(|py| {
         let session =
             PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
-        let Err(error) = session.read_postgres(
+        let properties =
+            HashMap::from([("password".to_owned(), "sentinel-property-secret".to_owned())]);
+        let Err(partitioned) = session.read_postgres(
             py,
-            "postgresql://user:sentinel-secret@host:5432/db",
+            "postgresql://user:sentinel-secret@203.0.113.1:5432/db",
             Some("public.t"),
             None,
-            Some(HashMap::from([(
-                "password".to_owned(),
-                "sentinel-property-secret".to_owned(),
-            )])),
+            Some(properties.clone()),
+            None,
+            None,
+            None,
+            None,
+            Some(vec!["id > 0".to_owned()]),
+        ) else {
+            panic!("a `predicates` read stays declared")
+        };
+        let Err(incomplete) = session.read_postgres(
+            py,
+            "postgresql://user:sentinel-secret@203.0.113.1:5432/db",
+            Some("public.t"),
+            None,
+            Some(properties.clone()),
+            Some("id"),
+            Some(0),
+            None,
+            Some(-1),
+            None,
+        ) else {
+            panic!("three of the four options refuse before any connection")
+        };
+        assert!(incomplete.is_instance_of::<crate::IllegalArgumentException>(py));
+        let incomplete = incomplete.to_string();
+        assert!(
+            incomplete.contains("users need to specify all or none"),
+            "{incomplete}"
+        );
+        assert!(!incomplete.contains("sentinel"), "{incomplete}");
+        assert!(partitioned.is_instance_of::<crate::UnsupportedOperationException>(py));
+        let unknown_properties = HashMap::from([
+            ("password".to_owned(), "sentinel-property-secret".to_owned()),
+            ("bogusKey".to_owned(), "sentinel-value".to_owned()),
+        ]);
+        let Err(unknown) = session.read_postgres(
+            py,
+            "postgresql://user:sentinel-secret@203.0.113.1:5432/db",
+            Some("public.t"),
+            None,
+            Some(unknown_properties),
             None,
             None,
             None,
             None,
             None,
         ) else {
-            panic!("the postgres connector is deferred post-milestone-one — no frame is returned")
+            panic!("an unknown property refuses before any connection")
         };
-        assert!(error.is_instance_of::<crate::UnsupportedOperationException>(py));
-        let message = error.to_string();
+        let partitioned = partitioned.to_string();
+        let unknown = unknown.to_string();
         assert!(
-            message.contains("spark.read.jdbc"),
-            "the message names the refused SURFACE: {message}"
+            partitioned.contains("CONNECT-DECL-pg-partitioned-read")
+                && partitioned.contains("`predicates`")
+                && !partitioned.contains("id > 0"),
+            "{partitioned}"
         );
-        assert!(
-            message.contains("post-milestone-one") && message.contains("task/todo.md"),
-            "the message states the schedule and the tracking row: {message}"
-        );
-        assert!(
-            !message.contains("sentinel-secret") && !message.contains("postgresql://"),
-            "a refusal must never echo the connection URL — it may carry credentials: \
-             {message}"
-        );
-        assert!(
-            !message.contains("sentinel-property-secret") && !message.contains("password"),
-            "a refusal must never echo the connection PROPERTIES — they may carry \
-             credentials: {message}"
-        );
+        assert!(unknown.contains("bogusKey"), "{unknown}");
+        for message in [partitioned, unknown] {
+            assert!(message.contains("database source `jdbc`"), "{message}");
+            for secret in [
+                "sentinel-secret",
+                "sentinel-property-secret",
+                "sentinel-value",
+                "postgresql://",
+            ] {
+                assert!(!message.contains(secret), "{message}");
+            }
+        }
     });
 }
 

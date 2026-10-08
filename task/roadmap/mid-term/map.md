@@ -140,7 +140,7 @@ declines it (a dated ruling in the intake, then the archive).
   Rulings applied, decisions R14b-D-1..13, incidents, owner questions Q-R14b-1..6 with recommendations.
 - [f-append-window-failloud-1-2026-10-05.md](f-append-window-failloud-1-2026-10-05.md) — **fork card (2026-10-05):** an opt-in fail-loud mode on `IncrementalAppendScan` when the window holds a non-append snapshot (today it skips silently at `incremental.rs:531`, like Java's batch scan), with skip opt-ins mirroring Spark's `streaming-skip-overwrite-snapshots` / `-delete-snapshots`; default unchanged; consumer MB-1 (O-5: Bronze refuses deletes).
 - [f-commit-offset-property-1-2026-10-05.md](f-commit-offset-property-1-2026-10-05.md) — **fork card (2026-10-05):** the summary half of the sink's offsets already exists at the pin (both MERGE arms pass summary extras). The request is a red-first proof that a table-property update in the same `Transaction` as a row delta or overwrite survives the commit-retry and rebase path, plus a measurement of the same-key race. A fork fix lands only if the proof fails. Consumers: MB-2a and MB-2c.
-- [f-append-pin-base-1-2026-10-07.md](f-append-pin-base-1-2026-10-07.md) — **fork card (2026-10-07):** filed under OQ-4 after DM-6 measured the sketch's Q8 branch A not green (MB-2c C-001). Revised in MB-2c fold 1 (2026-10-07). `FastAppendAction` and `MergeAppendAction` gain `validate_from_snapshot(i64)` and `validate_no_concurrent_snapshot_with_summary(key, value)`, default off, failing non-retryably only when a newer snapshot on the target ref carries this query's `repark.cdc.query-id`, so unrelated writers and other queries still land (MB-2a's tolerance). A missing from-snapshot uses the transaction's start, and a `None` start treats every snapshot as concurrent; a from-snapshot off the ref's ancestry fails. The operation stays `Append`. A second snapshot producer never commits, and A′ (one add-only overwrite) cannot fence the stamp-only door, so the check sits on the append action. A RePark-side emulation turns harness pins 2 and 3 green with every MB-2a pin green. Race, tolerance, replace, empty-start, non-ancestor, quiet and default pins; two mutations. Consumer: MB-2c's closing slice.
+- [f-append-pin-base-1-2026-10-07.md](f-append-pin-base-1-2026-10-07.md) — **fork card (2026-10-07):** filed under OQ-4 after DM-6 measured the sketch's Q8 branch A not green (MB-2c C-001). Revised in MB-2c fold 1 (2026-10-07). `FastAppendAction` and `MergeAppendAction` gain `validate_from_snapshot(i64)` and `validate_no_concurrent_snapshot_with_summary(key, value)`, default off, failing non-retryably only when a newer snapshot on the target ref carries this query's `repark.cdc.query-id`, so unrelated writers and other queries still land (MB-2a's tolerance). A missing from-snapshot uses the transaction's start, and a `None` start treats every snapshot as concurrent; a from-snapshot off the ref's ancestry fails. The operation stays `Append`. A second snapshot producer never commits, and A′ (one add-only overwrite) cannot fence the stamp-only door, so the check sits on the append action. A RePark-side emulation turns harness pins 2 and 3 green with every MB-2a pin green. Race, tolerance, replace, empty-start, non-ancestor, quiet and default pins; two mutations. Consumer: MB-2c's closing slice. **2026-10-07:** the RePark-side append fence is in (branch `feat/mb-2c-append-fence`, owner ruling 2026-10-07), so the slice no longer waits on the fork, and this ask is now the fence's retirement.
 - [f-partspec-redundant-1-2026-09-26.md](f-partspec-redundant-1-2026-09-26.md) — **card
   F-PARTSPEC-REDUNDANT-1 (2026-09-26, filed by WO PARTNAME-1):** the fork's partition-spec
   update path allows distinct transforms on one source and refuses only exact duplicates
@@ -448,6 +448,7 @@ declines it (a dated ruling in the intake, then the archive).
 - [view-lineage-selfjoin-1-card-2026-10-03.md](view-lineage-selfjoin-1-card-2026-10-03.md) — **card VIEW-LINEAGE-SELFJOIN-1 (2026-10-03, ATTR-ID-1 SJ-6):** a view read keeps its frame's lineage for self-join checks — the temp-view registry stores the registering frame's node — with the `J_view_sel_d`/`J_sql_sel_d` oracle cells.
 - [local-checkpoint-new-frame-1-card-2026-10-03.md](local-checkpoint-new-frame-1-card-2026-10-03.md) — **card LOCAL-CHECKPOINT-NEW-FRAME-1 (2026-10-03, ATTR-ID-1 SJ-6, ruled R-SJ4-1):** `localCheckpoint()` returns a new frame, so `I_checkpoint_sel_d` answers Spark's rows; the same-object pins are rewritten to the new semantics.
 - [perf-attr-stamp-2-card-2026-10-03.md](perf-attr-stamp-2-card-2026-10-03.md) — **card PERF-ATTR-STAMP-2 (2026-10-03, owner ruling, design unit, before 1.6):** take attribute-id stamping under 1.10x like-for-like; the stack ships to main at 1.2021x as a dated carve-out and no release tag carries it until this card lands and is measured.
+- [fa-6-duplicate-view-schemas-card-2026-10-08.md](fa-6-duplicate-view-schemas-card-2026-10-08.md) — **card FA-6 (2026-10-08, filed, needs an owner decision):** temp views over frames with duplicate display names. A first design (unique engine names plus an ambiguity audit) was withdrawn from #1002 for silent wrong answers; the ask is a design where the planner's own scoping resolves the names, or the declared refusal stays. Carries the verifier's shapes as the acceptance grid.
 - [stamp-2-r5p6-2-card-2026-10-07.md](stamp-2-r5p6-2-card-2026-10-07.md) — **card STAMP-2-R5P6-2 (2026-10-07, filed, not scheduled):** the remaining r5p6 construction cost after #980 (family 1.135 on the met 1.0812 gate record): native join doors when attribute-exact, shared field-metadata maps, binding only if a hot spot is measured.
 - [attr-id-1-release-note-2026-10-03.md](attr-id-1-release-note-2026-10-03.md) — **ATTR-ID-1 release note (2026-10-03, SJ-6):** the user-visible tightening that ships with the ATTR-ID-1 stack, not v1.5.2 — the `s.join(d).select(d.v)` 1182 refusal, the `failAmbiguousSelfJoin=false` escape hatch, the free-name `AMBIGUOUS_REFERENCE` tightening, and the alias fix. **ATTR-VIEW-SEMANTICS-1 item (a) (2026-10-05):** each read of a SQL temp view mints fresh attribute ids, like Spark, so the two-read self-join over `sv` answers. **SM-1 (2026-10-06):** the v1.5.2 comparisons are corrected, the seven unlisted toward-Spark changes are added, and the twins sort refusal is recorded. **Fold SM-2 (2026-10-06):** the "Qualified self-joins: written files and exports" section — duplicate-display-name writes refuse `COLUMN_ALREADY_EXISTS` as Spark does, exports carry the display names, map/pandas inputs refuse or go positional, temp views refuse (FA-6), USING joins keep the left key with right-side refusals (R6). **Fold SM-2d (2026-10-07):** the SM-2c sort-by-source change and the freqItems/describe/transpose display names are added, and the twin-names sentence is scoped to durable surfaces and exports with the EXPLAIN and error-text exceptions named.
 - [fexpr-operator-paren-1-card-2026-10-01.md](fexpr-operator-paren-1-card-2026-10-01.md) — **card FEXPR-OPERATOR-PAREN-1
@@ -650,3 +651,51 @@ declines it (a dated ruling in the intake, then the archive).
   raises `DIVIDE_BY_ZERO` on `%`, answers `NULL` on `mod`/`pmod`, `NaN` on a `-0.0` divisor,
   and cannot parse infix `div`; the guard learns its operator, with the error text per operator;
   grade lean B, small.
+- [mb-pending-window-1-card-2026-10-07.md](mb-pending-window-1-card-2026-10-07.md) — **card
+  MB-PENDING-WINDOW-1 (2026-10-07, filed by claude-opus-5-5 for the orchestrator, from MB-3
+  fold 1, PR #994):** a restart after a failed batch replans that batch's window, so the same
+  batch id covers a wider window when the source grew (Spark replays the logged window, cell
+  MB3-W9); option (a) a pending-window stamp before the body at one more commit per batch,
+  option (b) leave registry row `MB-3-REPLAY-WINDOW-1` declared; needs an owner decision.
+- [zone-horizon-render-1-card-2026-10-07.md](zone-horizon-render-1-card-2026-10-07.md) — **card
+  ZONE-HORIZON-RENDER-1 (2026-10-07, filed, not scheduled, from the C-2d fold 1 re-verify verdict,
+  PR #991):** an instant past 2099 in a DST zone renders at standard time (`11:00` where Spark gives
+  `12:00` for 2100-07-01 in New York), in the cast to string, `hour` and `date_format`, not in the
+  C-2 diff; the ask is to read the localiser's `zone_horizon::proxy_year`.
+- [preview-bounded-source-1-card-2026-10-07.md](preview-bounded-source-1-card-2026-10-07.md) — **card
+  PREVIEW-BOUNDED-SOURCE-1 (2026-10-07, filed, not scheduled, from the C-2d fold 1 re-verify verdict,
+  PR #991):** the styled `show(n)` on a lazy frame counts once and reads the tail once under the
+  `polars` and `duckdb` styles; a bounded or refusal-tolerant preview over a mounted source, and
+  whether PERF-EAGER-PREVIEW-1 covers the styled doors; owner decision before any code.
+- [c-2-catalog-doors-card-2026-10-07.md](c-2-catalog-doors-card-2026-10-07.md) — **card
+  C-2-CATALOG-DOORS-1 (2026-10-07, filed, not scheduled, from the C-2d fold 1 re-verify verdict,
+  PR #991):** the neighbouring Spark-door catalog and DDL doors answer a mounted source with
+  misleading text (`getTable`, `listColumns`, `SHOW VIEWS`, `SHOW COLUMNS`, `DESCRIBE TABLE`,
+  `TRUNCATE TABLE`, `USE`); none writes; each door gives the declared listing or names its registry row.
+- [offset-nested-sort-1-card-2026-10-08.md](offset-nested-sort-1-card-2026-10-08.md) — **card
+  OFFSET-NESTED-SORT-1 (2026-10-08, closed 2026-10-08 by its unit, pending the product PR's
+  verifier; a DataFusion 54.1.0 `EnforceSorting` defect, guarded in `repark-core`; filed from the C-3 hand-back, PR #998):** an
+  `OFFSET` under a nested `ORDER BY` answers 0 rows at one input partition where 16 partitions answer
+  5, a wrong answer reproduced with no Postgres scan in the plan; the ask is to reproduce it on main,
+  find whether it is the pinned DataFusion version's defect or RePark's planning, and add a parity cell.
+- [threaded-collect-segv-1-card-2026-10-08.md](threaded-collect-segv-1-card-2026-10-08.md) — **card
+  THREADED-COLLECT-SEGV-1 (2026-10-08, filed, not scheduled, from the orchestrator's measurements, PR #998):**
+  `collect()` on a second thread segfaults with pyarrow 25.0.0 and survives with 25.0.1, in 1.5.1 through
+  1.5.3 alike; the ask is to find whether pyarrow or RePark's native row export faults, fix or pin it with a
+  threaded test, and decide the dependency floor, an owner ruling. **Cause found 2026-10-08:** pyarrow
+  25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in 25.0.1), reproduced without RePark; the
+  threaded test is in the facade suite and the floor awaits the owner.
+- [cross-join-condition-1-card-2026-10-08.md](cross-join-condition-1-card-2026-10-08.md) — **card
+  CROSS-JOIN-CONDITION-1 (2026-10-08, filed, not scheduled, from the STAMP-2-R5P6-2 hand-back, PR #997):**
+  `df.join(other, condition, "cross")` ignores the condition (12 rows where live Spark 4.1 answers 2),
+  on main and on the PR branch alike, because the H1 door emits `CROSS JOIN` with no `ON`; sequenced
+  after PR #997 merges, as both touch the same door.
+- [c-3-null-stride-1-card-2026-10-08.md](c-3-null-stride-1-card-2026-10-08.md) — **card
+  C-3-NULL-STRIDE-1 (2026-10-08, filed, not scheduled, from C-3 question Q3, PR #998):** the first
+  stride's `OR col IS NULL` arm is a sequential scan of the whole table (about 1.1 s of a 7.3 s
+  four-stream read); the lean is the NULL test as its own stride, measured on an unindexed column
+  before adopting.
+- [c-3-partition-types-1-card-2026-10-08.md](c-3-partition-types-1-card-2026-10-08.md) — **card
+  C-3-PARTITION-TYPES-1 (2026-10-08, filed, not scheduled, from C-3 question Q4, PR #998):** C-3 takes
+  `int2`/`int4`/`int8` partition columns and refuses the rest under `CONNECT-DECL-pg-partitioned-read`;
+  the ruled order is `date` first, then timestamp once the zone rule is ruled, each with its own Spark grid.

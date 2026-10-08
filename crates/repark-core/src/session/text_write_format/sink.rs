@@ -21,7 +21,7 @@ use object_store::ObjectStore;
 use object_store::path::Path as ObjectPath;
 
 use super::file_format::TextKind;
-use super::serializer::ReparkTextSerializer;
+use super::serializer::{DisplayHeader, ReparkTextSerializer};
 use super::spec::TextWriteSpec;
 
 pub(crate) struct ReparkTextSink {
@@ -31,6 +31,7 @@ pub(crate) struct ReparkTextSink {
     json_options: Option<JsonWriterOptions>,
     spec: Arc<TextWriteSpec>,
     created: Arc<Mutex<Vec<ObjectPath>>>,
+    header: Option<DisplayHeader>,
 }
 
 impl ReparkTextSink {
@@ -39,6 +40,7 @@ impl ReparkTextSink {
         options: CsvWriterOptions,
         spec: Arc<TextWriteSpec>,
         created: Arc<Mutex<Vec<ObjectPath>>>,
+        header: Option<DisplayHeader>,
     ) -> Self {
         Self {
             config,
@@ -47,6 +49,7 @@ impl ReparkTextSink {
             json_options: None,
             spec,
             created,
+            header,
         }
     }
 
@@ -63,6 +66,7 @@ impl ReparkTextSink {
             json_options: Some(options),
             spec,
             created,
+            header: None,
         }
     }
 
@@ -129,6 +133,7 @@ impl FileSink for ReparkTextSink {
                             inner,
                             Arc::clone(&self.spec),
                             skip,
+                            self.header.clone(),
                         )),
                         options.compression.into(),
                         options.compression_level,
@@ -144,6 +149,7 @@ impl FileSink for ReparkTextSink {
                             inner,
                             Arc::clone(&self.spec),
                             skip,
+                            self.header.clone(),
                         )),
                         options.compression.into(),
                         options.compression_level,

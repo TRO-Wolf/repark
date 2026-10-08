@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 use std::{fmt, io};
 
+use futures::future::try_join_all;
 use rustls::pki_types::InvalidDnsNameError;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
@@ -155,6 +156,19 @@ impl<C: Connect> QueryPool<C> {
         let Ok(Ok(permit)) = tokio::time::timeout(waited, acquire).await else {
             return Err(ConnectError::PoolExhausted { waited });
         };
+        self.lease(permit).await
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn checkout_up_to(self: &Arc<Self>, wanted: usize) -> Result<Vec<PooledClient<C>>> {
+        let first = self.checkout().await?;
+        let spare = std::iter::from_fn(|| Arc::clone(&self.permits).try_acquire_owned().ok())
+            .take(wanted.saturating_sub(1));
+        let rest = try_join_all(spare.map(|permit| self.lease(permit))).await?;
+        Ok(std::iter::once(first).chain(rest).collect())
+    }
+
+    async fn lease(self: &Arc<Self>, permit: OwnedSemaphorePermit) -> Result<PooledClient<C>> {
         let connection = match self.take_idle() {
             Some(connection) => connection,
             None => self.connector.connect().await?,
@@ -236,6 +250,16 @@ impl<C: Connect> PooledClient<C> {
         lease.abort = None;
         lease.cancel = None;
         lease.pool.put_idle(connection);
+    }
+
+    pub fn retire(self) {
+        let PooledClient {
+            mut lease,
+            connection,
+        } = self;
+        lease.abort = None;
+        lease.cancel = None;
+        drop(connection);
     }
 }
 

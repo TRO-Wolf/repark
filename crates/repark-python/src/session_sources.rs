@@ -46,12 +46,15 @@ pub fn session_source(
 }
 
 #[pyfunction]
-pub fn session_source_ping(session: PyRef<'_, PyReparkSession>, name: &str) -> PyResult<()> {
+pub fn session_source_ping(
+    py: Python<'_>,
+    session: PyRef<'_, PyReparkSession>,
+    name: &str,
+) -> PyResult<()> {
     fenced!("session_sources.session_source_ping", {
-        session
-            .session
-            .source(name)
-            .and_then(|source| source.ping())
+        let inner: &PyReparkSession = &session;
+        let source = inner.session.source(name).map_err(to_py_err)?;
+        py.detach(|| inner.runtime.block_on(source.ping()))
             .map_err(to_py_err)
     })
 }

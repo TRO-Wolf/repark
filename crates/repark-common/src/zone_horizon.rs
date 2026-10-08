@@ -1,0 +1,46 @@
+pub const LAST_TABULATED_YEAR: i64 = 2099;
+const CALENDAR_CYCLE_YEARS: i64 = 28;
+const FAR_PAST_PROXY_BASE: i64 = 1200;
+const GREGORIAN_CYCLE_YEARS: i64 = 400;
+const DAYS_PER_GREGORIAN_CYCLE: i64 = 146_097;
+const DAYS_FROM_YEAR_ZERO_TO_EPOCH: i64 = 719_468;
+const DAYS_PER_WEEK: i64 = 7;
+const MONTHS_PER_YEAR: i64 = 12;
+
+#[must_use]
+pub fn is_leap_year(year: i64) -> bool {
+    year.rem_euclid(4) == 0 && (year.rem_euclid(100) != 0 || year.rem_euclid(400) == 0)
+}
+
+#[must_use]
+pub fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
+    let shifted_year = if month <= 2 { year - 1 } else { year };
+    let era = shifted_year.div_euclid(GREGORIAN_CYCLE_YEARS);
+    let year_of_era = shifted_year.rem_euclid(GREGORIAN_CYCLE_YEARS);
+    let month_from_march = (month + 9) % MONTHS_PER_YEAR;
+    let day_of_year = (153 * month_from_march + 2) / 5 + day - 1;
+    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+    era * DAYS_PER_GREGORIAN_CYCLE + day_of_era - DAYS_FROM_YEAR_ZERO_TO_EPOCH
+}
+
+fn calendar_kind(year: i64) -> (bool, i64) {
+    (
+        is_leap_year(year),
+        days_from_civil(year, 1, 1).rem_euclid(DAYS_PER_WEEK),
+    )
+}
+
+#[must_use]
+pub fn proxy_year(year: i64) -> i64 {
+    if year > LAST_TABULATED_YEAR {
+        let wanted = calendar_kind(year);
+        return (LAST_TABULATED_YEAR - CALENDAR_CYCLE_YEARS + 1..=LAST_TABULATED_YEAR)
+            .rev()
+            .find(|candidate| calendar_kind(*candidate) == wanted)
+            .unwrap_or(LAST_TABULATED_YEAR);
+    }
+    if year < FAR_PAST_PROXY_BASE {
+        return FAR_PAST_PROXY_BASE + year.rem_euclid(GREGORIAN_CYCLE_YEARS);
+    }
+    year
+}

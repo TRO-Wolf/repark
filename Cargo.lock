@@ -5178,14 +5178,17 @@ dependencies = [
  "orc-rust",
  "parquet",
  "repark-common",
+ "repark-connect",
  "repark-iceberg",
  "serde",
+ "serde_json",
  "snap",
  "stacker",
  "tempfile",
  "tokio",
  "toml",
  "url",
+ "uuid",
  "zstd",
 ]
 
@@ -5220,6 +5223,7 @@ dependencies = [
  "datafusion-spark",
  "iceberg",
  "regex",
+ "repark-common",
  "tokio",
 ]
 

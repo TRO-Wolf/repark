@@ -1,16 +1,23 @@
-use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
+use std::collections::{BTreeMap, HashSet};
 use std::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
+use std::time::Duration;
 
+use datafusion::datasource::provider_as_source;
+use datafusion::execution::session_state::SessionState;
+use datafusion::logical_expr::{LogicalPlanBuilder, UNNAMED_TABLE};
 use datafusion::prelude::{DataFrame, SessionContext};
-use iceberg::spec::SchemaRef;
+use iceberg::spec::{SchemaRef, TableMetadata};
 use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
+use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
 use repark_iceberg::microbatch::error::MicroBatchError;
-use repark_iceberg::microbatch::offset::{InputOffset, SnapshotId};
+use repark_iceberg::microbatch::offset::{FilePosition, InputOffset, SnapshotId, TableUuid};
 use repark_iceberg::microbatch::provider::provider_for_plan;
-use repark_iceberg::microbatch::window::{ReadCaps, StartPosition, WindowLimit, WindowPlanner};
+use repark_iceberg::microbatch::window::{
+    ReadCaps, StartPosition, WindowLimit, WindowPlan, WindowPlanner,
+};
 
 use crate::Session;
 use crate::idents::parse_table_identifier_segments;
@@ -213,14 +220,32 @@ pub struct SourceBatch {
     pub num_input_rows: u64,
 }
 
+#[derive(Clone)]
+pub(crate) struct WeakSessionState(Arc<dyn Fn() -> Option<SessionState> + Send + Sync>);
+
+impl WeakSessionState {
+    pub(crate) fn of(context: &SessionContext) -> Self {
+        let state = context.state_weak_ref();
+        WeakSessionState(Arc::new(move || {
+            state.upgrade().map(|state| state.read().clone())
+        }))
+    }
+
+    pub(crate) fn snapshot(&self) -> Option<SessionState> {
+        (self.0)()
+    }
+}
+
 pub struct MicroBatchSource {
-    context: SessionContext,
+    context: WeakSessionState,
     catalog: Arc<dyn Catalog>,
     ident: TableIdent,
     name: String,
+    uuid: TableUuid,
     caps: ReadCaps,
     start: StartPosition,
     read_schema: SchemaRef,
+    catalog_timeout: Option<Duration>,
 }
 
 async fn load_table(
@@ -264,18 +289,36 @@ impl MicroBatchSource {
         let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone());
         let opened = load_table(&catalog, &ident, table).await?;
         Ok(Self {
-            context: session.context().clone(),
+            context: WeakSessionState::of(session.context()),
             catalog,
             ident,
             name: table.to_string(),
+            uuid: TableUuid::of(&opened),
             caps: options.caps,
             start: options.start,
             read_schema: opened.metadata().current_schema().clone(),
+            catalog_timeout: None,
         })
     }
 
+    #[must_use]
+    pub fn with_catalog_timeout(mut self, limit: Duration) -> Self {
+        self.catalog_timeout = Some(limit);
+        self
+    }
+
     async fn load(&self) -> Result<Table, MicroBatchError> {
-        load_table(&self.catalog, &self.ident, &self.name).await
+        let loading = load_table(&self.catalog, &self.ident, &self.name);
+        let Some(limit) = self.catalog_timeout else {
+            return loading.await;
+        };
+        match tokio::time::timeout(limit, loading).await {
+            Ok(loaded) => loaded,
+            Err(_) => Err(MicroBatchError::CatalogTimeout {
+                call: "load the source",
+                waited: limit,
+            }),
+        }
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -285,6 +328,33 @@ impl MicroBatchSource {
             .named(self.name.clone())
             .initial_offset(&self.start)
             .await
+    }
+
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    #[must_use]
+    pub fn table_uuid(&self) -> TableUuid {
+        self.uuid
+    }
+
+    #[must_use]
+    pub fn table_identifier(&self) -> String {
+        self.ident.to_string()
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn arrow_schema(&self) -> Result<datafusion::arrow::datatypes::SchemaRef, MicroBatchError> {
+        presented_arrow_schema(&self.read_schema)
+            .map(Arc::new)
+            .map_err(|error| {
+                MicroBatchError::Catalog(format!(
+                    "microbatch source {name} has a schema Arrow cannot present: {error}",
+                    name = self.name
+                ))
+            })
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -298,24 +368,115 @@ impl MicroBatchSource {
         let Some(plan) = planner.next_window(from, limit).await? else {
             return Ok(None);
         };
+        self.batch_of(table, plan).map(Some)
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn available_now_target(
+        &self,
+        from: &InputOffset,
+    ) -> Result<Option<InputOffset>, MicroBatchError> {
+        let table = self.load().await?;
+        let planner = WindowPlanner::new(table, self.caps).named(self.name.clone());
+        Ok(planner
+            .next_window(from, WindowLimit::Unbounded)
+            .await?
+            .map(|plan| plan.end))
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn next_batch_until(
+        &self,
+        from: &InputOffset,
+        until: &InputOffset,
+    ) -> Result<Option<SourceBatch>, MicroBatchError> {
+        if same_position(from, until) {
+            return Ok(None);
+        }
+        let table = self.load().await?;
+        let planner = WindowPlanner::new(table.clone(), self.caps).named(self.name.clone());
+        let Some(plan) = planner.next_window(from, WindowLimit::Capped).await? else {
+            return Ok(None);
+        };
+        let Some(plan) = bounded(plan, table.metadata(), until) else {
+            return Ok(None);
+        };
+        self.batch_of(table, plan).map(Some)
+    }
+
+    fn batch_of(&self, table: Table, plan: WindowPlan) -> Result<SourceBatch, MicroBatchError> {
         let end_snapshot = plan.end.snapshot.get();
         let provider = provider_for_plan(table, &plan, &self.read_schema).map_err(|error| {
             MicroBatchError::Catalog(format!(
                 "microbatch source cannot read the batch ending at snapshot {end_snapshot}: {error}"
             ))
         })?;
-        let frame = self.context.read_table(provider).map_err(|error| {
+        let state = self.context.snapshot().ok_or_else(|| {
             MicroBatchError::Catalog(format!(
-                "microbatch source cannot read the batch ending at snapshot {end_snapshot}: {error}"
+                "microbatch source cannot read the batch ending at snapshot {end_snapshot}: the session ended"
             ))
         })?;
-        Ok(Some(SourceBatch {
+        let scan = LogicalPlanBuilder::scan(UNNAMED_TABLE, provider_as_source(provider), None)
+            .and_then(LogicalPlanBuilder::build)
+            .map_err(|error| {
+                MicroBatchError::Catalog(format!(
+                    "microbatch source cannot read the batch ending at snapshot {end_snapshot}: {error}"
+                ))
+            })?;
+        Ok(SourceBatch {
             start: plan.start,
             end: plan.end,
-            frame,
+            frame: DataFrame::new(state, scan),
             num_input_rows: plan.num_input_rows,
-        }))
+        })
     }
+}
+
+#[must_use]
+pub fn same_position(left: &InputOffset, right: &InputOffset) -> bool {
+    left.table == right.table && left.snapshot == right.snapshot && left.position == right.position
+}
+
+fn bounded(plan: WindowPlan, metadata: &TableMetadata, until: &InputOffset) -> Option<WindowPlan> {
+    let mut before: HashSet<i64> = HashSet::new();
+    let mut cursor = metadata
+        .snapshot_by_id(until.snapshot.get())
+        .and_then(|snapshot| snapshot.parent_snapshot_id());
+    while let Some(id) = cursor
+        && before.len() < metadata.snapshots().len()
+        && before.insert(id)
+    {
+        cursor = metadata
+            .snapshot_by_id(id)
+            .and_then(|snapshot| snapshot.parent_snapshot_id());
+    }
+    let files: Vec<_> = plan
+        .files
+        .into_iter()
+        .take_while(|file| {
+            if file.snapshot == until.snapshot {
+                file.position.get() < until.position.get()
+            } else {
+                before.contains(&file.snapshot.get())
+            }
+        })
+        .collect();
+    let last = files.last()?;
+    let end = InputOffset {
+        table: plan.start.table,
+        table_name: plan.start.table_name.clone(),
+        snapshot: last.snapshot,
+        position: FilePosition::new(last.position.get().saturating_add(1)),
+    };
+    let num_input_rows = files
+        .iter()
+        .fold(0u64, |rows, file| rows.saturating_add(file.record_count));
+    Some(WindowPlan {
+        start: plan.start,
+        end,
+        files,
+        num_input_rows,
+    })
 }
 
 #[cfg(test)]

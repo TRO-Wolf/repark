@@ -101,6 +101,50 @@ def _refuse_ambiguous_map_input(frame: Any) -> None:
         _raise_ambiguous_reference(quoted, references)
 
 
+def _refuse_ambiguous_partition_columns(frame: Any, partition_columns: list[Any]) -> None:
+    from repark.spark.dataframe.writer_layout import _raise_analysis
+
+    columns = list(frame.columns)
+    if len(set(columns)) == len(columns):
+        return
+    held = _stamped_frame_id_snapshot(frame)[1]
+    if len(columns) != len(held):
+        return
+    sensitive = bool(_native.session_case_sensitive(frame._session))
+    qualifiers = getattr(frame, "_frame_qualifiers", None) or {}
+    for column in partition_columns:
+        written = str(column)
+        folded = [
+            position for position, name in enumerate(columns) if name.lower() == written.lower()
+        ]
+        positions = [
+            position for position in folded if not sensitive or columns[position] == written
+        ]
+        if not positions and len(folded) > 1:
+            _raise_analysis(
+                f"Partition column `{written}` not found in schema {frame.schema.simpleString()}.",
+                "_LEGACY_ERROR_TEMP_1155",
+            )
+        if len(positions) < 2:
+            continue
+        distinct = {
+            held[position] if held[position] is not None else f"#{position}"
+            for position in positions
+        }
+        if len(distinct) < 2:
+            raise AnalysisException(
+                f"partitionBy column `{written}` is carried {len(positions)} times by the "
+                "frame; a csv path partitionBy needs a column the frame carries once "
+                "(Spark writes this shape; rename or drop the repeat first)"
+            )
+        candidates = []
+        for position in positions:
+            names = sorted(qualifiers.get(held[position]) or ())
+            candidates.append(f"`{names[0]}`.`{written}`" if names else f"`{written}`")
+        candidates.sort()
+        _raise_ambiguous_reference(f"`{written}`", "[" + ", ".join(candidates) + "]")
+
+
 def _raise_ambiguous_reference(quoted: str, references: str) -> NoReturn:
     error = AnalysisException(
         f"[AMBIGUOUS_REFERENCE] Reference {quoted} is ambiguous, "

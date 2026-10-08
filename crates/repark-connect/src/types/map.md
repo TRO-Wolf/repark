@@ -55,6 +55,9 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
   - **Encode** stays C-1's ten types; the C-2a mappings answer
     `ConnectError::EncodeNotBuilt`, which names the write path (C-4). pins: c-2/C-011
 
+- `postgres.rs` — **C-3 (2026-10-07):** `PlannedColumn::postgres_type()` returns the row's
+  Postgres type name, which a partition-column refusal names. pins: c-3/C-005
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

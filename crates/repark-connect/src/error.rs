@@ -12,6 +12,7 @@ use crate::discover::{Privilege, SERVER_VERSION_ROW};
 use crate::ident::IdentRefusal;
 #[cfg(feature = "postgres")]
 use crate::ident::QualifiedRelation;
+use crate::partition::PartitionRefusal;
 #[cfg(feature = "postgres")]
 use crate::pool::TimeoutSetting;
 use crate::settings::{AUTH_METHOD_KEY, AuthMethod, DeclaredSetting, SpecRefusal, Spelling};
@@ -21,6 +22,18 @@ use crate::tls::TlsFailure;
 pub(crate) const REGISTRY: &str = "docs/spark-sql-iceberg-parity.md";
 
 pub const UNMAPPED_ROW: &str = "CONNECT-DECL-pg-unmapped";
+
+pub const DDL_ROW: &str = "CONNECT-DECL-pg-ddl";
+
+pub const ZONE_ROW: &str = "CONNECT-DIV-pg-timestamp-zone";
+
+#[must_use]
+pub fn read_only_ddl(source: &str) -> String {
+    format!(
+        "database source `{source}` is read-only: DDL against it is not supported (registry \
+         row {DDL_ROW} in {REGISTRY})"
+    )
+}
 
 pub type Result<T> = std::result::Result<T, ConnectError>;
 
@@ -53,6 +66,9 @@ pub enum ConnectError {
         key: Spelling,
         declared: DeclaredSetting,
     },
+
+    #[error("{refusal}")]
+    PartitionedRead { refusal: PartitionRefusal },
 
     #[error("invalid specification: a Postgres identifier {reason}")]
     InvalidIdentifier { reason: IdentRefusal },
@@ -193,6 +209,9 @@ pub enum ValueRefusal {
     InfiniteTimestamp,
     DateOutOfRange,
     TimestampOutOfRange,
+    TimestampPastCalendar,
+    WallClockGap,
+    WallClockOverlap,
 }
 
 impl ValueRefusal {
@@ -207,7 +226,9 @@ impl ValueRefusal {
             }
             ValueRefusal::NumericOutOfRange
             | ValueRefusal::DateOutOfRange
-            | ValueRefusal::TimestampOutOfRange => "CONNECT-DECL-pg-out-of-range",
+            | ValueRefusal::TimestampOutOfRange
+            | ValueRefusal::TimestampPastCalendar => "CONNECT-DECL-pg-out-of-range",
+            ValueRefusal::WallClockGap | ValueRefusal::WallClockOverlap => ZONE_ROW,
         }
     }
 }
@@ -224,6 +245,18 @@ impl fmt::Display for ValueRefusal {
             ValueRefusal::TimestampOutOfRange => {
                 "a timestamp after 294247-01-10, beyond microseconds since 1970 in 64 bits"
             }
+            ValueRefusal::TimestampPastCalendar => {
+                "a wall clock whose instant in the session zone falls after \
+                 +262142-12-31T23:59:59.999999 UTC, the end of the engine's calendar"
+            }
+            ValueRefusal::WallClockGap => {
+                "a wall clock that a daylight-saving gap skips in the session zone; set \
+                 `prefer_timestamp_ntz` to read the wall clock"
+            }
+            ValueRefusal::WallClockOverlap => {
+                "a wall clock that a daylight-saving overlap repeats in the session zone; set \
+                 `prefer_timestamp_ntz` to read the wall clock"
+            }
         })
     }
 }
@@ -234,6 +267,20 @@ impl From<ConnectError> for Error {
             ConnectError::InvalidAuthMethod { .. }
             | ConnectError::InvalidSpecification { .. }
             | ConnectError::InvalidIdentifier { .. } => Error::Config(error.to_string()),
+            ConnectError::PartitionedRead { ref refusal } => match refusal {
+                PartitionRefusal::DeclaredColumnType { .. }
+                | PartitionRefusal::TooManyStrides { .. } => {
+                    Error::NotImplemented(error.to_string())
+                }
+                PartitionRefusal::NotInteger { .. } => Error::NumberFormat(error.to_string()),
+                PartitionRefusal::ColumnNotFound { .. }
+                | PartitionRefusal::AmbiguousColumn { .. }
+                | PartitionRefusal::ColumnType { .. } => Error::Analysis(error.to_string()),
+                PartitionRefusal::Incomplete
+                | PartitionRefusal::Reversed { .. }
+                | PartitionRefusal::QueryOption
+                | PartitionRefusal::Strides => Error::Config(error.to_string()),
+            },
             ConnectError::DeclaredAuthMethod { .. }
             | ConnectError::DeclaredSetting { .. }
             | ConnectError::Declared { .. }

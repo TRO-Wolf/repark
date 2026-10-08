@@ -68,9 +68,11 @@ def _refuse_duplicate_output_columns(frame: Any, *, exact_only: bool = False) ->
         seen.append(name)
 
 
-def _registration_frame(dataframe: DataFrame) -> Any:
+def _registration_frame(dataframe: DataFrame, *, duplicate_tolerant: bool = False) -> Any:
     """Return the stripped native frame writers register, renamed to unique display names."""
     stripped = _native.strip_attribute_ids(dataframe._native_for_registration())
+    if duplicate_tolerant:
+        return _rename_duplicate_tolerant(dataframe, stripped)
     return _rename_to_unique_display_names(dataframe, stripped)
 
 
@@ -82,6 +84,14 @@ def _rename_to_unique_display_names(dataframe: DataFrame, native: Any) -> Any:
     return _native.rename_output_fields(native, list(overlay))
 
 
+def _rename_duplicate_tolerant(dataframe: DataFrame, native: Any) -> Any:
+    """Rename native output fields so repeated display names ride unique engine names."""
+    displays = list(dataframe.columns)
+    if len(set(displays)) == len(displays):
+        return _rename_to_unique_display_names(dataframe, native)
+    return _native.rename_duplicate_tolerant(native, displays)
+
+
 def run_through_temp_view(
     dataframe: DataFrame,
     build_sql: Callable[[str], str],
@@ -90,12 +100,13 @@ def run_through_temp_view(
     static_overwrite: bool = False,
     dynamic_overwrite: bool = False,
     source_by_name: bool = False,
+    duplicate_tolerant: bool = False,
 ) -> None:
     """Register a temp view, run the built write SQL with options, drop the view."""
     dataframe._ensure_alive()
     session = dataframe._session
     view_name = scratch_view_name(session, prefix)
-    registered = _registration_frame(dataframe)
+    registered = _registration_frame(dataframe, duplicate_tolerant=duplicate_tolerant)
     session.create_or_replace_temp_view(view_name, registered)
     try:
         _native.session_sql_with_write_options(
@@ -460,9 +471,12 @@ def text_write_copy_parts(writer: Any, view: str, stored_as: str) -> tuple[str, 
     """Build the COPY inner SELECT, STORED AS name and spec OPTIONS for text writes."""
     dataframe = writer._dataframe
     dataframe._ensure_alive()
+    native = dataframe._native_for_registration()
+    if stored_as == "CSV":
+        native = _rename_duplicate_tolerant(dataframe, native)
     return _native.session_text_write_copy_parts(
         dataframe._session,
-        dataframe._native_for_registration(),
+        native,
         view,
         dict(writer._options),
         [str(column) for column in writer._partition_columns],

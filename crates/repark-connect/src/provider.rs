@@ -1,4 +1,5 @@
 mod catalog;
+mod partitioned;
 mod scan;
 mod schema;
 mod table;

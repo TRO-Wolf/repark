@@ -17,10 +17,12 @@ use crate::extension::SessionExtension;
 pub(crate) mod attr_id;
 pub(crate) mod attr_lineage;
 pub mod case_bind;
+pub(crate) mod duplicate_names;
 pub(crate) mod frame_lineage;
 pub(crate) mod join_exact;
 mod predicate_names;
 pub(crate) mod self_join;
+pub(crate) mod skipping_limit;
 pub(crate) mod sort_names;
 pub(super) mod subquery;
 mod window_rescan;
@@ -75,6 +77,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_query_planner(Arc::new(crate::stack::StackQueryPlanner))
         .with_optimizer_rules(unnest_safe_optimizer_rules())
         .with_analyzer_rules(analyzer_rules)
+        .with_physical_optimizer_rules(skipping_limit::skip_safe_physical_optimizer_rules())
         .with_physical_optimizer_rule(Arc::new(crate::nlj_build_reset::NljBuildSideReset))
         .with_physical_optimizer_rule(Arc::new(crate::parallel_window::ParallelWindowRule))
         .with_physical_optimizer_rule(Arc::new(crate::parallel_window::ParallelProjectionRule))

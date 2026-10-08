@@ -285,9 +285,6 @@ impl PyReparkSession {
         })
     }
 
-    /// Read PostgreSQL via the own-stack connector (PySpark `spark.read.jdbc` / format postgres).
-    /// # Errors
-    /// Always `UnsupportedOperationException` — the connector is not in this build.
     #[pyo3(signature = (
         url,
         dbtable=None,
@@ -301,8 +298,8 @@ impl PyReparkSession {
     ))]
     #[allow(
         clippy::too_many_arguments,
-        clippy::unused_self,
-        clippy::needless_pass_by_value
+        clippy::needless_pass_by_value,
+        clippy::missing_errors_doc
     )]
     pub fn read_postgres(
         &self,
@@ -314,25 +311,35 @@ impl PyReparkSession {
         partition_column: Option<&str>,
         lower_bound: Option<i64>,
         upper_bound: Option<i64>,
-        num_partitions: Option<usize>,
+        num_partitions: Option<i64>,
         predicates: Option<Vec<String>>,
     ) -> PyResult<PyDataFrame> {
-        // Never log URL or properties because they may contain credentials.
         fenced_span!("py.read", "PyReparkSession.read_postgres", {
-            // Bind and drop arguments without formatting credential-bearing values.
-            let _ = (
-                py,
-                url,
-                dbtable,
-                query,
-                properties,
-                partition_column,
+            let target = match (dbtable, query) {
+                (Some(dbtable), None) => {
+                    repark_core::PostgresTarget::Relation(String::from(dbtable))
+                }
+                (None, Some(query)) => repark_core::PostgresTarget::Query(String::from(query)),
+                _ => {
+                    return Err(to_py_err(repark_core::Error::Config(String::from(
+                        "read_postgres takes exactly one of `dbtable` and `query`",
+                    ))));
+                }
+            };
+            let read = repark_core::PostgresRead {
+                url: String::from(url),
+                target,
+                properties: properties.unwrap_or_default().into_iter().collect(),
+                partition_column: partition_column.map(String::from),
                 lower_bound,
                 upper_bound,
                 num_partitions,
-                predicates,
-            );
-            Err(deferred_reader_error("spark.read.jdbc (read_postgres)"))
+                predicates: predicates.is_some(),
+            };
+            let frame = py
+                .detach(|| self.runtime.block_on(self.session.read_postgres(read)))
+                .map_err(to_py_err)?;
+            Ok(PyDataFrame::new(frame, Arc::clone(&self.runtime)))
         })
     }
 
@@ -795,8 +802,8 @@ impl PyReparkSession {
 /// Build the named unsupported-operation error for deferred readers.
 fn deferred_reader_error(surface: &str) -> PyErr {
     UnsupportedOperationException::new_err(crate::exceptions::mask_user_visible(format!(
-        "{surface} is not available in this build: the repark-excel / repark-postgres read \
-         connectors are scheduled post-milestone-one. See the \"Post-milestone-one (BACKLOG)\" \
+        "{surface} is not available in this build: the repark-excel read connector is \
+         scheduled post-milestone-one. See the \"Post-milestone-one (BACKLOG)\" \
          row in task/todo.md."
     )))
 }

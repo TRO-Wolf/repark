@@ -56,16 +56,12 @@ pub const POSTGRES_ALIASES: [(&str, &str); 13] = [
 
 const SECONDS_ALIASES: [&str; 3] = ["connectTimeout", "socketTimeout", "queryTimeout"];
 
-const DECLARED_KEYS: [(&str, DeclaredSetting); 10] = [
+const DECLARED_KEYS: [(&str, DeclaredSetting); 6] = [
     ("sslcert", DeclaredSetting::ClientCert),
     ("sslkey", DeclaredSetting::ClientCert),
     ("sessionInitStatement", DeclaredSetting::SessionSql),
     ("customSchema", DeclaredSetting::SessionSql),
     ("options", DeclaredSetting::SessionSql),
-    ("partitionColumn", DeclaredSetting::PartitionedRead),
-    ("lowerBound", DeclaredSetting::PartitionedRead),
-    ("upperBound", DeclaredSetting::PartitionedRead),
-    ("numPartitions", DeclaredSetting::PartitionedRead),
     ("predicates", DeclaredSetting::PartitionedRead),
 ];
 
@@ -143,7 +139,10 @@ impl fmt::Display for DeclaredSetting {
                 "SQL at connect, a schema override or raw startup options; select through \
                  `query` with casts instead",
             ),
-            DeclaredSetting::PartitionedRead => f.write_str("a partitioned read (C-3)"),
+            DeclaredSetting::PartitionedRead => f.write_str(
+                "one query per predicate; partition by range with `partitionColumn`, \
+                 `lowerBound`, `upperBound` and `numPartitions`",
+            ),
             DeclaredSetting::MultiHost => f.write_str("a host list; give one host"),
             DeclaredSetting::UnverifiedSslmode(mode @ (SslMode::Allow | SslMode::Prefer)) => {
                 write!(

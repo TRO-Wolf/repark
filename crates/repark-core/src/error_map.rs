@@ -30,6 +30,7 @@ pub(crate) enum EngineErrorKind<'a> {
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
     Iceberg(&'a iceberg::Error),
     CommitStateUnknown(&'a CommitStateUnknownError),
+    Connect(&'a repark_connect::ConnectError),
     Other,
 }
 
@@ -111,10 +112,31 @@ fn classify_external_tail<'a>(
     if let Some(marker) = inner.downcast_ref::<UnsupportedMarker>() {
         return EngineErrorKind::UnsupportedMarked(marker);
     }
+    if let Some(connect) = inner.downcast_ref::<repark_connect::ConnectError>() {
+        return EngineErrorKind::Connect(connect);
+    }
     match inner.downcast_ref::<iceberg::Error>() {
         Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
         None => EngineErrorKind::Other,
     }
+}
+
+fn connect_message(error: &DataFusionError, connect: &repark_connect::ConnectError) -> String {
+    let mut parts = Vec::new();
+    let mut current = error;
+    for _ in 0..MAX_ERROR_PEEL_DEPTH {
+        match current {
+            DataFusionError::Context(context, inner) => {
+                parts.push(context.clone());
+                current = inner;
+            }
+            DataFusionError::Diagnostic(_, inner) => current = inner,
+            DataFusionError::Shared(inner) => current = inner,
+            _ => break,
+        }
+    }
+    parts.push(connect.to_string());
+    parts.join(": ")
 }
 
 /// Classify a DataFusion error after peeling wrapper variants up to [`MAX_ERROR_PEEL_DEPTH`].
@@ -194,6 +216,14 @@ pub fn engine_err(err: DataFusionError) -> Error {
             message: stamped.inner().to_string(),
             operation_id: Some(stamped.operation_id().to_string()),
         },
+        EngineErrorKind::Connect(connect) => {
+            let message = connect_message(&err, connect);
+            match Error::from(connect.clone()) {
+                Error::Config(_) => Error::Config(message),
+                Error::NotImplemented(_) => Error::NotImplemented(message),
+                _ => Error::DataFusion(message),
+            }
+        }
         EngineErrorKind::Other => Error::DataFusion(err.to_string()),
     }
 }
