@@ -1188,7 +1188,8 @@ repark-parity slice.
   the explicit **allowed-edge table** (`ALLOWED_EDGES`: every internal edge, the dependency
   KINDS it may take, and why it exists; F-Y10-1 added `repark-sql → repark-functions` `normal`;
   IPI-51 PR6 slice 3 promoted `repark-spark → repark-common` `dev` → `normal` (product code
-  renders through `repark_common::spark_error`).
+  renders through `repark_common::spark_error`); C-2d fold 1 added `repark-functions →
+  repark-common` `normal` (the shared zone horizon).
   Prose points here and never restates them. Four rules,
   in order: (1) the declared policy must itself obey the structural rules — a forbidden edge
   cannot be legalized by writing it down; (2) every observed `repark-*` edge must be DECLARED,
@@ -1219,6 +1220,9 @@ repark-parity slice.
   configured database sources in the one federated namespace, the way it registers Iceberg
   catalogs today") in the change that adds the dependency and mounts the providers.
   pins: c-1/C-001
+  **C-2d (2026-10-07):** the row is restored, `normal`, with that reason verbatim, in the
+  change that adds `repark-core`'s `repark-connect` dependency and mounts the providers; the
+  gate reads the edge as real. pins: c-2/C-096
   Wired into `make check-crate-dag` (in the `make ci` chain),
   `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
   **Dual-wired:** the `crate-DAG layering guard` step in the ci.yml `guards` job mirrors the

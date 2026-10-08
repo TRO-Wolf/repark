@@ -9,6 +9,14 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
 
 ## Contents
 
+- **C-2d (2026-10-07):** `catalog.rs` adds `PostgresSource::ping()` (checkout, `SELECT 1`
+  under `read_timeout_ms`, `release_clean`). `schema.rs` names the source on every resolution
+  error (`DataFusionError::Context("database source `<name>`")`) and refuses
+  `register_table` / `deregister_table` with `read_only_ddl`. `scan.rs` fuses the exec stream:
+  the first error (a placement refusal, a refused resize) drops the inner scan, so its lease
+  aborts (cancel, then the connection task) instead of idling inside the read-only transaction
+  until the frame is collected; found by the C-2d live timestamp cell, whose teardown waited 60
+  s on the held lock. pins: c-2/C-099, C-101, C-102, C-103
 - `catalog.rs` — **`PostgresSource`**, one per mounted source: its name, settings door, prop map
   and `WallClockLocaliser`. `PostgresSource::mount(identity, props, localiser)` (the call C-2d's
   `SourceMount` makes) builds it on the `repark.toml` door and returns a **`PostgresCatalog`**
@@ -38,6 +46,12 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
   scan's own re-check) and the limit, DataFusion's `skip + fetch`, fits `i64` (Postgres's `LIMIT` is a
   `bigint`; past it no limit pushes), takes `batch_rows` or else the session batch size under the 64 MiB cap, and
   returns a `PostgresScanExec`. pins: c-2/C-070, C-072, C-074, C-077, C-081, C-082, C-087
+- `scan.rs` — **C-2d fold 1 (2026-10-07), N4:** `place_until_refusal` gives the localiser's per-value refusals
+  the decoder's rule. When the localiser refuses row `k > 0` of a batch, the exec emits rows
+  `0..k`, placed, and then the refusal. The stream still ends at its first error, so the lease
+  aborts as before (C-103). pins: c-2/C-114
+- `scan.rs` — **C-2d residual (2026-10-07):** gains its first unit-test child, [scan/](scan/map.md),
+  for the private `place_until_refusal`. pins: c-2/C-119
 - `scan.rs` — **`WallClockLocaliser`** (`localise(&TimestampMicrosecondArray)`, `zone_label()`;
   the trait sits here with no zone dependency, NS-10) and **`PostgresScanExec`**, one partition.
   `DisplayAs` renders, per scan, `PostgresScanExec: source=<name>, relation=<schema.table>` (or

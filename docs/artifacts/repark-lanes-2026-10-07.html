@@ -1,0 +1,177 @@
+<title>RePark Lanes 10-07</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --bg:#eef4f4;--surface:#ffffff;--sunk:#e3eded;--ink:#13292b;--muted:#4f6a6c;--line:#cfdfdf;
+  --accent:#0d7378;--accent-soft:#d3ecec;
+  --ok:#2c7a4b;--ok-soft:#dcefe3;--warn:#9a5b00;--warn-soft:#f6e8d0;--crit:#a82820;--crit-soft:#f6dcd9;--run:#2d5fa0;--run-soft:#dbe6f4;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;--bg:#0c191a;--surface:#122426;--sunk:#0f1f21;--ink:#dfecec;--muted:#8ea9aa;--line:#23393b;
+  --accent:#5cc5c8;--accent-soft:#163a3c;
+  --ok:#6fcf97;--ok-soft:#173527;--warn:#e7b05a;--warn-soft:#3a2c14;--crit:#f08a80;--crit-soft:#3d1c19;--run:#86b2ec;--run-soft:#1a2b42;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;--bg:#0c191a;--surface:#122426;--sunk:#0f1f21;--ink:#dfecec;--muted:#8ea9aa;--line:#23393b;
+  --accent:#5cc5c8;--accent-soft:#163a3c;
+  --ok:#6fcf97;--ok-soft:#173527;--warn:#e7b05a;--warn-soft:#3a2c14;--crit:#f08a80;--crit-soft:#3d1c19;--run:#86b2ec;--run-soft:#1a2b42;
+}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);}
+.wrap{max-width:980px;margin:0 auto;padding-inline:20px;padding-block:28px 56px;display:grid;gap:28px;}
+header{display:grid;gap:6px;border-bottom:2px solid var(--accent);padding-bottom:16px;}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);}
+h1{font:600 clamp(28px,5vw,40px)/1.1 var(--cond);margin:0;text-wrap:balance;}
+.sub{color:var(--muted);margin:0;max-width:68ch;}
+h2{font:600 20px/1.2 var(--cond);margin:0;text-wrap:balance;letter-spacing:.01em;}
+section{display:grid;gap:12px;}
+p{margin:0;max-width:72ch;}
+.mono{font-family:var(--mono);font-size:13px;}
+.decide{background:var(--warn-soft);border:1px solid var(--warn);border-radius:6px;padding:18px 20px;display:grid;gap:10px;}
+.decide h2{color:var(--warn);}
+.decide ol{margin:0;padding-left:22px;display:grid;gap:4px;}
+.gauge{display:grid;gap:6px;}
+.bar{position:relative;height:30px;background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+.bar .fill{position:absolute;inset:0 auto 0 0;background:var(--crit-soft);border-right:2px solid var(--crit);}
+.bar .limit{position:absolute;top:0;bottom:0;border-left:2px dashed var(--ink);}
+.bar .lbl{position:absolute;top:50%;transform:translateY(-50%);font:500 12px/1 var(--mono);color:var(--ink);white-space:nowrap;}
+.scale{display:flex;justify-content:space-between;font:12px/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px;}
+.lane{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:grid;gap:8px;align-content:start;}
+.lane h3{margin:0;font:600 16px/1.25 var(--cond);}
+.unit{font:12px/1.3 var(--mono);color:var(--muted);word-break:break-all;}
+.pill{display:inline-block;font:500 11px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:4px 7px;border-radius:3px;justify-self:start;}
+.p-run{background:var(--run-soft);color:var(--run);}
+.p-ok{background:var(--ok-soft);color:var(--ok);}
+.p-warn{background:var(--warn-soft);color:var(--warn);}
+.p-crit{background:var(--crit-soft);color:var(--crit);}
+.p-idle{background:var(--sunk);color:var(--muted);}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:6px;}
+table{border-collapse:collapse;width:100%;min-width:560px;font-variant-numeric:tabular-nums;}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line);}
+th{font:500 11px/1.2 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--sunk);}
+tr:last-child td{border-bottom:0;}
+td.sev{white-space:nowrap;}
+.note{background:var(--accent-soft);border-left:3px solid var(--accent);padding:12px 16px;border-radius:0 6px 6px 0;}
+ol.order{margin:0;padding-left:24px;display:grid;gap:6px;}
+ol.order li::marker{font-family:var(--mono);color:var(--accent);}
+ul.plain{margin:0;padding-left:20px;display:grid;gap:4px;}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:14px;}
+code{font-family:var(--mono);font-size:.88em;background:var(--sunk);padding:1px 4px;border-radius:3px;}
+@media (max-width:520px){.wrap{padding-inline:16px;}}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">RePark orchestrator · 2026-10-07 · 16:05 EDT</span>
+  <h1>v1.5.3 ready to tag</h1>
+  <p class="sub">The attr-id stack, three security fixes and the micro-batch and Postgres groundwork are all in main. The v1.5.3 release commit merged at 16:00. Executors stay on Opus 5.5 until about 19:45 EDT.</p>
+</header>
+
+<section class="decide" style="background:var(--ok-soft);border-color:var(--ok)">
+  <h2 style="color:var(--ok)">v1.5.3 is ready to tag: release commit 7a8fcf1a</h2>
+  <p>Release PR #986 merged at 16:00 EDT with 17 of 17 checks. Main <span class="mono">7a8fcf1a</span> is the tag target. <strong>The tag and PyPI are yours.</strong></p>
+  <ol>
+    <li><strong>Security:</strong> SOURCE-URL-REDACT-1 (#967), -1-FN (#975) and -2 (#976, five folds and four Opus re-verifies). No secret reaches any probed door. Two known limits are named in the notes: a custom <code>__str__</code>, and <code>foreach</code>/<code>foreachPartition</code>/<code>transform</code> passthrough, follow-up FOREACH-WRAP-1.</li>
+    <li><strong>ATTR-ID-1 (#968):</strong> its ruled note ships as is. STAMP-2 is met at <strong>1.0812</strong> after STAMP-2-R5P6-1 (#980).</li>
+    <li><strong>Matrix:</strong> a fresh release build gives <strong>705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED / 0 DIFFERENT</strong>, with 0 cell moves from v1.5.2.</li>
+    <li><strong>Groundwork on main, not exposed:</strong> C-1, C-2a, C-2b (<code>repark-connect</code>); MB-0, MB-1, MB-2a and the crash harness.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Running now</h2>
+  <p class="note">Per your 07:45 instruction, executor work moved from Muse to <strong>Opus 5.5 high</strong> lanes until about 19:45 EDT. The stalled Muse C-2b round had made no edits, so I stopped it and relaunched it on Opus. Commits carry the single trailer <code>Authored-By: Claude (claude-opus-5-5)</code>.</p>
+  <div class="grid">
+    <article class="lane">
+      <span class="pill p-warn">owner decision</span>
+      <h3>F-APPEND-PIN-BASE-1 · fork ask</h3>
+      <span class="unit">task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md</span>
+      <p>DM-6 failed, so the ask is filed under OQ-4. The MB-2c verifier found the first draft would break four MB-2a pins, and the revision (query-scoped validation) is in fold 1. Implementing it in the fork is yours. The MB-2c closing slice and MB-3's exactly-once <code>toTable</code> wait on it.</p>
+    </article>
+    <article class="lane">
+      <span class="pill p-run">fold 1</span>
+      <h3>#985 MB-2c part 1</h3>
+      <span class="unit">opus-mb2c-f1</span>
+      <p>The epoch check and the C-008 walk are in; verifier PASS. The fold makes a refused epoch stay refused, raises MBE-15 for snapshot-isolation MERGE, and revises the fork card.</p>
+    </article>
+    <article class="lane">
+      <span class="pill p-run">fold 1</span>
+      <h3>#984 C-2c pushdown and EXPLAIN</h3>
+      <span class="unit">opus-c2c-f1</span>
+      <p>Verifier PASS. The lane caught and fixed a NOT IN (1, NULL) wrong-rows bug first. The fold declares DDL drift and NaN/infinity-in-range, clamps huge limits, adds <code>pushDownLimit</code>, and adds the 1024-values row.</p>
+    </article>
+    <article class="lane">
+      <span class="pill p-run">proving</span>
+      <h3>PARITY-LIVE-STOP-1</h3>
+      <span class="unit">opus-pls1</span>
+      <p>The nightly red is reproduced: one recorder read another's warehouse through the shared session. Private catalogs are applied, and the order-sensitive proof runs are going.</p>
+    </article>
+  </div>
+</section>
+
+<section>
+  <h2>#976: from re-verify 2 FAIL to re-verify 4</h2>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>Round</th><th>What it closed</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">fold 3 A</td><td>Chain from the scrubbed copy at the export and SQL-UDF doors. Copies never fail open. The append re-raise and message parameters are masked.</td><td><span class="pill p-ok">0 leaks</span></td></tr>
+        <tr><td class="mono">fold 3 A2</td><td>Owner ruling: raise below the <code>except</code> block, so <code>__context__</code> is None (C-071 closed). The DataFrame-UDF door is masked too.</td><td><span class="pill p-ok">2,658 passed</span></td></tr>
+        <tr><td class="mono">fold 3 B / B2</td><td>The registered-value boundary at punctuation edges (ODBC) and after ANSI CSI codes (C-075 closed).</td><td><span class="pill p-ok">masked</span></td></tr>
+        <tr><td class="mono">re-verify 3</td><td>All prior findings closed. One S2: the other user-callback doors still leaked (pre-existing).</td><td><span class="pill p-ok">PASS</span></td></tr>
+        <tr><td class="mono">fold 4</td><td>Every user-callback door (pandas, UDTF, arrow), ExceptionGroup and notes, user-raised PySparkException, the BaseException split, the ECMA-48 CSI grammar.</td><td><span class="pill p-ok">all probes 0</span></td></tr>
+        <tr><td class="mono">re-verify 4</td><td>An attack on fold 4's sites, control flow and grammar.</td><td><span class="pill p-run">running</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Landed since 10-06</h2>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>PR</th><th>Unit</th><th>What it did</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">#964</td><td>Frontier read</td><td>Merged with Q1–Q6 ratified.</td></tr>
+        <tr><td class="mono">#971</td><td>MB design sketch</td><td>Merged with OQ-1…OQ-6 ratified. North Star §5 amended: <code>repark.</code>-namespaced keys; Iceberg sink keys mirrored verbatim.</td></tr>
+        <tr><td class="mono">#986</td><td>v1.5.3 release</td><td>Release commit <span class="mono">7a8fcf1a</span>: matrix 705 EQUAL / 0 DIFFERENT. Tag and PyPI are the owner's.</td></tr>
+        <tr><td class="mono">#976</td><td>SOURCE-URL-REDACT-2</td><td>Registered config values never echo; every user-callback door masks; <code>__context__</code> is None.</td></tr>
+        <tr><td class="mono">#982, #981, #983</td><td>C-2b, MB-2a, harness</td><td>The Postgres connection; sink stamping and resume (token-bound scope); the crash harness.</td></tr>
+        <tr><td class="mono">#979</td><td>MB-1</td><td>The micro-batch source: offsets, the lazy window walk, field-id provider, case-insensitive options, Spark-measured fail-loud.</td></tr>
+        <tr><td class="mono">#980</td><td>STAMP-2-R5P6-1</td><td>Into the stack: attribute-exact selects skip the SQL re-plan. Gate 1.0812.</td></tr>
+        <tr><td class="mono">#970</td><td>MB-0</td><td>Spark micro-batch oracle cells.</td></tr>
+        <tr><td class="mono">#974</td><td>D-M2</td><td>58 JDBC oracle cells for C-2.</td></tr>
+        <tr><td class="mono">#975</td><td>SOURCE-URL-REDACT-1-FN</td><td>Masks the boolean-conf refusal and the configure choke.</td></tr>
+        <tr><td class="mono">#977</td><td>C-2a</td><td>COPY BINARY decode and nine declared Postgres types.</td></tr>
+        <tr><td class="mono">#973, #978</td><td>SM-2 stack folds</td><td>Into the attr-id stack. Main merged in, re-verify 3 PASS.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Order after the running lanes</h2>
+  <ol class="order">
+    <li>#976 fold 3 round B (Rust boundary), then an Opus re-verify, then queue for v1.5.3.</li>
+    <li>#979 MB-1: fold round B (core wrapper), then an Opus re-verify, then queue. MB-2a after it merges.</li>
+    <li>C-2b round 2 (TLS and pool, after r5p6 releases the build lock), then round 3 (read path, discovery, live pg, the <code>::text</code> cast), then the PR and one Opus verifier.</li>
+    <li>#968: the quiet confirmation on the R5P6 head, then the queue if it is under 1.10.</li>
+    <li>Clerk items:
+      <ul>
+        <li>USING-PER-SIDE-KEYS-1 (after #968);</li>
+        <li>FA-5 CSV duplicate names;</li>
+        <li>the stale F-V4-2 row;</li>
+        <li>PARITY-LIVE-STOP-1;</li>
+        <li>the C-2a open items: the 3x memory peak and the r11/r13/r15 mutation survivors;</li>
+        <li>clone cleanup.</li>
+      </ul>
+    </li>
+  </ol>
+</section>
+
+<footer>The tag and PyPI stay yours. Nothing pushes from the lanes; I push, open PRs and merge through the queue. Muse lanes resume at the cap of four after the Opus window unless you extend it.</footer>
+</div>

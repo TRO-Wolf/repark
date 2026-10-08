@@ -146,6 +146,7 @@ datafusion-proto = "=54.1.0"
 # (a stale one fails resolution). The workspace is `publish = false` and crates.io is deferred
 # (docs/release.md); version requirements return only when crates get published.
 repark-common = { path = "crates/repark-common", default-features = false }
+repark-connect = { path = "crates/repark-connect", default-features = false }
 repark-iceberg = { path = "crates/repark-iceberg", default-features = false }
 repark-core = { path = "crates/repark-core", default-features = false }
 repark-functions = { path = "crates/repark-functions", default-features = false }

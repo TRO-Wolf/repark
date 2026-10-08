@@ -62,6 +62,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **REVIEW-FIX-7 step 1 (2026-09-10):** `parse()` sanitizes TOML failures to
   `message()` plus the locally computed line and column, never the echoed source line.
   pins: review-fix-7/C-002
+- `session.rs` — **C-2d fold 1 (2026-10-07), N5:** `table_exists` asks `source_table_exists` first, so a
+  three-part name under a mounted source resolves through the source. Three comment lines
+  were shed to pay for the three new lines; the file holds 999 of 1000. pins: c-2/C-115
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats instead of the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**
@@ -363,6 +366,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `apply_with_subqueries` (IN / EXISTS / scalar subqueries count as reads) and
   `scan_url_hits_prefix` compares the decoded `ListingTableUrl::prefix` plus
   the `object_store` bucket, so percent-encoded keys refuse self-overwrite.
+- `error_map.rs` — **C-2d (2026-10-07):** `classify_external_tail` downcasts
+  `repark_connect::ConnectError` to `EngineErrorKind::Connect`; `engine_err` takes the class from
+  `From<ConnectError>` (`Config`, `NotImplemented`, else `DataFusion`) and flattens the
+  `Context` chain into one line (`database source `<name>`: <error>`), so a Python message
+  carries the cause. pins: c-2/C-102
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`
@@ -1000,6 +1008,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **PR-B hadoop naming (2026-09-24):** also holds `kind_from_bare_catalog_value` (moved from
   `catalog_config.rs`), `is_hadoop_type`, and `with_type_naming`. `with_type_naming` inserts
   the fork's `metadata-naming` key with `hadoop` only when the key is absent.
+- `catalog_state.rs` — **C-2d fold 1 (2026-10-07), N5:** `CatalogRegistry::is_database_source(name)` and
+  `source_read_only_message(name)` (the `read_only_ddl` text for a Postgres source), so the
+  Spark door's catalog lookups answer a mounted source by its own rows instead of the P11
+  Iceberg direction note. pins: c-2/C-115
+- `catalog_state.rs` — **C-2d (2026-10-07):** `SourceMount { specs, zone }` implements
+  `SessionExtension`: `register(ctx)` registers one catalog per auto-registered source —
+  `repark_connect::PostgresSource::mount(identity, props, localiser)` for Postgres (pure, no
+  I/O, no validation; FL-1) and `RefusingSourceCatalogProvider` for SQL Server and Trino. It is
+  not installed in the builder's single extension slot: `register_configured_sources` calls it
+  after build, so H-EXT did not fire. `mounts_postgres(spec)` is the one test of "this name is a
+  Postgres mount". pins: c-2/C-097
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the root resolves once
@@ -1048,6 +1067,36 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **R2 (2026-09-21):** `is_view` returns a `Result` — genuine catalog errors
   propagate (fail-closed); `FeatureUnsupported`/`NamespaceNotFound` stay false.
   pins: ice-views-1/C-006, C-007, C-012
+- `named_sources.rs` — **C-2d (2026-10-07):** `register_configured_sources()` (still the
+  one entry point CFG-2 D-4 named) checks every auto-registered name for a duplicate under the
+  registry lock, runs `SourceMount::register` (`catalog_state.rs`), records the specs, and adds
+  every mounted Postgres name to the session's `postgres_catalog_names`, so the P11 read-only
+  guards see it. `refuse_source_ddl` answers `repark_connect::read_only_ddl(<key path>)`
+  (`CONNECT-DECL-pg-ddl`) for a Postgres source and keeps the pending text for SQL Server and
+  Trino. `RefusingSourceCatalogProvider` is `pub(crate)`; for a Postgres source it only serves a
+  build without the `postgres` feature ("not compiled into this build"). `SourceRow` redacts
+  through `repark_connect::redact_source_prop`. `NamedSource::ping()` is `async`: a Postgres
+  source pings the mounted `PostgresSource` (the context's `PostgresCatalog`, downcast) or, when
+  not auto-registered, one built for the call; a failure names the key path
+  (`session::read_postgres::source_error`). pins: c-2/C-097, C-099, C-101, C-102
+  **Fold 1, N2:** `refuse_source_ddl` claims `CreateCatalogSchema` by the head of its dotted
+  name, the catalog DataFusion would create the schema in, and `CreateCatalog` by its name or
+  that head, so `CREATE SCHEMA [IF NOT EXISTS] pg.x` and `CREATE DATABASE pg.x` refuse as
+  read-only. The sweep of `DdlStatement`'s eleven variants leaves only `CreateFunction` and
+  `DropFunction` unclaimed: functions are session-scoped and never name a catalog.
+  pins: c-2/C-112
+  **Residual of N2:** `refuse_source_ddl` takes the `SessionContext` and, once the plan is a
+  `Ddl`, reads the default catalog through `copied_config()` (no state clone, nothing new for a
+  non-DDL statement). A bare name in `CreateCatalogSchema` or `DropCatalogSchema` resolves against
+  it and refuses as read-only when it is a mounted source. `CreateCatalog` is unchanged: a bare
+  `CREATE DATABASE x` registers a new catalog and never writes to the default one. Corrected
+  2026-10-07 after the verifier's measurement. pins: c-2/C-118
+  **Fold 1, N5:** `source_catalog_refusal(name)` answers a mounted source's name with
+  `read_only_ddl(<key path>)` (Postgres) or the pending text (SQL Server, Trino);
+  `check_catalog_refusal` asks it first, so every Iceberg-handle operation against the name
+  (`writeTo`, `saveAsTable`, a listing of Iceberg names) refuses instead of answering `unknown
+  catalog`. `source_table_exists` resolves `catalog.schema.table` through the mounted provider.
+  pins: c-2/C-115
 - `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **C-1 (2026-10-05):** reads
   the source name and kind through `SourceSpec.identity` (CC-2; `SourceKind` now imported from
   `repark-common`); every message, row and handle is unchanged. pins: c-1/C-002

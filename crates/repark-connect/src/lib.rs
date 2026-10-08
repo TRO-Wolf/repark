@@ -26,7 +26,10 @@ pub use discover::{
     QUERY_SEARCH_PATH, ResolvedSource, SERVER_VERSION_ROW, ScanColumn, ScanSource,
     check_server_version, discover,
 };
-pub use error::{ConnectError, ProtocolViolation, Result, UNMAPPED_ROW, ValueRefusal};
+pub use error::{
+    ConnectError, DDL_ROW, ProtocolViolation, Result, UNMAPPED_ROW, ValueRefusal, ZONE_ROW,
+    read_only_ddl,
+};
 pub use ident::{DEFAULT_SCHEMA, IdentRefusal, MAX_IDENT_BYTES, PgIdent, QualifiedRelation};
 #[cfg(feature = "postgres")]
 pub use pool::{

@@ -20,8 +20,8 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   pins: mb-1/C-007, mb-1/C-013
 - `crash_tests.rs` — the crash harness of the
   [sketch's §5](../../../../task/wo/microbatch/mb-design-2026-10-06.md), in Rust over the memory
-  catalog (correction H-1): five pins, three green and two red until `F-APPEND-PIN-BASE-1` and
-  MB-2c's fence. Every pin enters a `BatchScope` and carries the guard's token through the
+  catalog (correction H-1): five pins, all green since MB-2c's closing slice (2026-10-07,
+  the append fence in `write/sink_offsets/append_fence.rs`; mb-2c C-010). Every pin enters a `BatchScope` and carries the guard's token through the
   session snapshot property `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token`, as
   MB-3's driver will (D-10).
   `FaultCatalog` is the `UnknownOutcomeCatalog` shape over the memory catalog with three faults:
@@ -31,14 +31,14 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   - Pin 1, `test_microbatch_kill_after_commit_resumes_1` (**MB-2a, 2026-10-07**, green guard):
     kill points (a) and (c); the sink equals Bronze, epochs 0 and 1 stamped once, the property
     equals the head's stamp. pins: mb-2a/C-010, C-013
-  - Pin 2, `test_microbatch_duplicate_delivery_skips_1` (**harness, 2026-10-07**, red): kill
+  - Pin 2, `test_microbatch_duplicate_delivery_skips_1` (**harness, 2026-10-07**; green since MB-2c's closing slice): kill
     point (b) leaves staged files in no snapshot; epoch 0 re-delivered with its original stamp
     against the pre-commit `Table` must not commit, and a claim on the reloaded sink must return
-    `AlreadyCommitted`. pins: microbatch-harness/C-002
-  - Pin 3, `test_microbatch_two_drivers_one_sink_1` (red): run A commits epoch 1 inside run B's
+    `AlreadyCommitted`. pins: microbatch-harness/C-002, mb-2c/C-010
+  - Pin 3, `test_microbatch_two_drivers_one_sink_1` (green since MB-2c's closing slice): run A commits epoch 1 inside run B's
     `update_table`, on the append arm and on a copy-on-write `execute_merge`. B's commit must
     fail, epoch 1 and its rows land once, the property names A, and B's claim on the reload must
-    be `Fenced { winner: A }`. pins: microbatch-harness/C-003
+    be `Fenced { winner: A }`. pins: microbatch-harness/C-003, mb-2c/C-010
   - Pin 4, `test_microbatch_unknown_outcome_reconciles_1` (**MB-2c, 2026-10-07**, green):
     `commit_stamp_only` on the `foreachBatch` door with `commit.status-check.num-retries=0`. A
     landed stamp must resolve to its snapshot with one `update_table` and no replace; an unlanded

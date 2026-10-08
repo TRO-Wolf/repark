@@ -97,7 +97,10 @@ waits in the queue rather than rebasing repeatedly.
   operation stays `append`. The validation sits on the append action itself
   (DM-6 C-001 (d), A′ rejected).
   Consumer: MB-2c's closing slice (step 3, the fence; harness pins 2 and 3;
-  the 5-passed gate). The owner's fork work.
+  the 5-passed gate). The owner's fork work. **2026-10-07:** the RePark-side
+  append fence is in (branch `feat/mb-2c-append-fence`, owner ruling
+  2026-10-07), so the closing slice no longer waits on the fork, and this ask
+  is now the fence's retirement.
 
 ## 5. Open decisions the design sketch must close
 

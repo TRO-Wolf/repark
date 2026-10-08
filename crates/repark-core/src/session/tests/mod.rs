@@ -24,6 +24,8 @@ mod nlj_tight_pool;
 mod ordered_cache;
 mod path_write;
 mod pool_refusals;
+#[cfg(feature = "postgres")]
+mod read_postgres;
 mod s3_prefix_read;
 mod self_join;
 mod session;

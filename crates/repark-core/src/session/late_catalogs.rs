@@ -67,6 +67,9 @@ impl ReparkSession {
     }
 
     pub(super) fn check_catalog_refusal(&self, name: &str) -> Result<()> {
+        if let Some(error) = self.source_catalog_refusal(name) {
+            return Err(error);
+        }
         if let Some(error) = self
             .catalogs
             .read()

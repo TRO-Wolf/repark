@@ -207,6 +207,9 @@ See [../map.md](../map.md).
   (an embedded `"`, a lone `"`, an injection-shaped name, a qualified relation) and
   `identifiers_refuse_empty_nul_and_more_than_63_bytes` (63 ASCII bytes and 62 bytes of `é` pass;
   64 bytes, as 64 ASCII or 32 `é`, refuse with the IllegalArgument class). pins: c-2/C-025
+- `copy_binary.rs` — **C-2d fold 1 (2026-10-07):** `a_refused_value_emits_the_rows_before_it_then_refuses`: a
+  `NaN` in the third of four rows yields a two-row batch, then the refusal at index 2 from
+  `decode` and `finish`; a `NaN` in a batch's first row refuses at once. pins: c-2/C-114
 - `copy_binary.rs` — C-2a (2026-10-06), the stream half of sketch §5.1, through
   `CopyBinaryDecoder` with hand-built streams: `copy_header_is_the_signature_flags_and_extension`
   (every signature byte flipped, low flag bits ignored, the extension skipped),

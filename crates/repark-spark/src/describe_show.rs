@@ -645,6 +645,9 @@ pub(crate) async fn execute_show_namespaces(
         current = crate::use_ddl::session_defaults(catalogs).0;
         &current
     };
+    if catalogs.is_database_source(catalog) {
+        return ctx.read_batch(show_namespaces_batch(Vec::new())?);
+    }
     let handle = catalog_handle(catalogs, catalog)?;
     let namespaces = handle.list_namespaces(None).await.map_err(iceberg_err)?;
     let rows = show_namespace_rows(&namespaces, show.pattern.as_deref());
