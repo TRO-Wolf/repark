@@ -49,6 +49,9 @@ rule 2 does not bind.
 | C-016 | The two exceptions gain their `errors.py` re-export and structured-method loop entries in the wire-up round. | The wire-up round's brief and pins. | **OPEN** | The facade imports them from `repark._native` until then; no stub test needs the structured methods. |
 | C-017 | The PySpark members outside §3.7 land in the wire-up round or a dated card: the reader's `csv`, `json`, `orc`, `parquet`, `schema`, `text` and `xml`, the writer's `clusterBy`, `foreach` and `partitionBy`, the manager's `resetTerminated`, the query's `processAllAvailable`, and `load`'s `format`/`schema` kwargs. | The wire-up round's brief and pins. | **OPEN** | The stub implements exactly the §3.7 surface; anything else is an `AttributeError` or `TypeError` today. |
 | C-018 | The driver-owned start checks land at wire-up: MBE-8 (local catalog), MBE-15 (isolation), MBE-13 at start (sink busy), the stateful-operator arm of MBE-6, and the run-time rows MBE-1, MBE-2, MBE-11, MBE-12 and MBE-16 — with the streaming frame, `isStreaming` and the `writeStream` answer. | The wire-up round's brief and pins. | **OPEN** | The stub cannot reach a session's catalogs without re-implementing resolution, and `surface_a.py` / `streaming_batch.py` stay vacuous-correct until frames exist. |
+| C-019 | MB-0c records the facade oracle on live Spark 4.1.2 + Iceberg 1.11.0: 31 cells covering the no-format doors, format case, sourceless load, 152 trigger strings with millisecond durations, client checks, invalid output mode, DM-1, DM-3, the manager gets, the duplicate query name and the writer runs. A re-run is byte-identical; every read-scratch pair matches; the MB-0 and MB-3 recordings are untouched; the JSON carries a `sha256sum -c` pin. | The recorder, the recording, the re-run diff and the scratch comparison. | **PROVEN** | `mb0c_facade_oracle.py` (752 lines) records F1–F15, T1/T1B/T1C/T4, T2, T3, O1–O2, D1–D2, M1–M3, W1–W3; two full runs diff zero cells; the `MB0C_CELLS` merge path re-verified byte-identical; all 22 read trigger strings, all client checks and all error cells match the scratch probe in class and full text (F2 differs only by the scrubbed warehouse path, M3 only by the chosen query name, both by design). `mb0_streaming_oracle.json` and `mb3_fold_oracle.json` verify against their shas. pins: mb-4/C-019 |
+| C-020 | The trigger interval grammar is parsed in Rust and called from `trigger()`, refusing with Spark's class, condition, SQLSTATE and text: all 152 recorded strings pinned to millis-or-refusal in three Rust sweep tables, and 16 facade pins (one per refusal class plus accepts and padded-input strip proofs) asserting class, condition, SQLSTATE, text and message parameters. The neighbour selection answers identical to baseline. | The parser, the Rust sweeps and the facade pins. | **PROVEN** | `trigger_interval.rs` implements the measured grammar (single `interval` prefix, case-insensitive units, fraction on seconds only, `i32` month/day counts, the measured raw-versus-wrapped overflow split, month refusal before negativity, truncation to millis); `sweep_t1/t1b/t1c_matches_mb0c_t1*` pin all 152 cells with full texts and the T4 params; 16 `test_writer_trigger_*_mb0c_*` pins cover every class through the door; neighbours read 68 passed, 9 skipped, identical to the unmodified tree. This closes the C-012 question; threading the `Duration` into the start spec belongs to item 6. pins: mb-4/C-020 |
+| C-021 | The M1 and M4 weak pins are fixed at both levels and all four read mutants re-run by hand: M1 and M4 go red on the new pins, M2 stays red as found, M3 survives because its fix is item 3's `from_options`. | The new pins and the mutant re-runs, recorded here. | **PROVEN** | Rust: a `to_table_stream` unknown-option case (M1) and a both-violations order case asserting `SINK_UNDECLARED` (M4) extend the two door tests. Facade: `test_writer_totable_unknown_option_refuses_mbe17` and `test_writer_sink_refusal_precedes_unknown_option`. Re-runs: M1 red, M4 red, M2 red, M3 survived — no pin added for M3 because it would codify behaviour item 3 reverses (C-014 keeps those cases unpinned deliberately). pins: mb-4/C-021 |
 
 ## Decisions
 
@@ -153,6 +156,92 @@ rule 2 does not bind.
   - **Spark:** the recorded `streams_active` oracle cell answers `[]` on an idle
     session, and the pinned `awaitAnyTermination` validates its timeout first.
   - **The default acted on:** answer the vacuous shapes for real, validate first.
+- **D-20 (2026-10-08). Round-2 scope split.** Items 1 (C-019) and 4 (C-020) land with
+  the M1/M4 pin hardening (C-021); items 2–3 halt on the hand-back's P1/P2 questions;
+  items 5–15 are untouched. Applied brief rulings of 2026-10-08: W-Q1 (start/run
+  split, per-variant records below), W-Q3/W-Q4/W-Q6/W-Q7 leans (W-Q7's empty-checkpoint
+  text untouched — items 3–4 never reach `check_checkpoint`), W-Q2/W-Q5 pending (no
+  action), Q3/Q4/Q5, Rust-first (reader validation and trigger move; outputMode and
+  the format rule stay in Python), and the repark-core fence (only the relation.rs
+  predicate; the P1 question asks for one re-export more).
+- **D-21 (2026-10-08). P1: the binding cannot name `MicroBatchError`.** No crate
+  outside `repark-iceberg` and `repark-core` names it; `repark-python` has no
+  `repark-iceberg` edge by a deliberate EC-2 non-edge, `Cargo.toml` is out of scope,
+  and the DAG script is unfenced. The mapper (item 2) and the reader wire-up (item 3)
+  both need the type and its field types. Recommended: a `pub use` re-export through
+  `repark-core`, following the three `repark_iceberg::write` precedents; the exact
+  module (relation.rs beside the predicate, or a dedicated re-export) is the ruling.
+- **D-22 (2026-10-08). P2: the DM-3 answer has no home in scope.** A batch action on
+  a streaming frame must answer `_LEGACY_ERROR_TEMP_3102` with Spark's text, but the
+  natural scan error classifies to `PySparkException` (pinned shape in
+  `relation_tests.rs`, which must not move). Candidates: `error_map.rs` (fenced core),
+  the native collect/export path (unlisted), `export_errors.py` marker mapping
+  (unlisted, precedented), or `core.py` (the plan halts on it). Recommended: the
+  orchestrator picks the layer; the brief's behaviour requirement stands either way.
+- **D-23 (2026-10-08). Trigger parser records.** `trigger()` validates only; the
+  parsed millis return to Rust tests and item 6 threads a `Duration` into the start
+  spec — no unread stored attribute. `T4` carries the message parameters because the
+  cells did not. Uncovered micro-cases, each unreachable or same-class with the
+  natural rule: a lone dot refuses `INVALID_VALUE`; the 3262 echo keeps the input's
+  case; multi-group day accumulation past `i32` answers raw (micros total overflows
+  first); years scale to months exactly like weeks scale to days; a sign word before
+  a signed word refuses `INVALID_VALUE` on the second; counts past `i128` refuse
+  wrapped like every other huge count.
+- **D-24 (2026-10-08). Mutant re-runs.** M1 red (the new `to_table` unknown-option
+  pin), M4 red (the new both-violations order pin), M2 red as the read found, M3
+  survived: its fix is item 3's `from_options` (a `skip=maybe` refusal), so no pin —
+  a passing pin now would codify behaviour item 3 reverses.
+- **D-25 (2026-10-08). Round-1 findings disposition.** Closed: S2-trigger-interval
+  (Rust parser, full grammar, T1/T1B/T1C/T4 cells). Partial: S2-python-refusals (the
+  trigger moved; reader, outputMode and format stay for items 3/6). Moved to round 3:
+  S1, S2-format, S2-case-fold, S2-Q5-class, S2-reader-dup, S2-output-mode,
+  S2-binding-shape, S3-None-return, S3-empty-checkpoint.
+- **D-26 (2026-10-08). Deferred oracle cells.** `awaitAnyTermination` /
+  `resetTerminated` and the y-sequence need stateful multi-query choreography the
+  recorder cannot take without design; the `bogusfmt` and missing-table doors raise
+  `Py4JJavaError`, a shape no cell needs yet; output-mode runs belong to item 6.
+  All three move to round 3 with their scratch measurements intact.
+- **D-27 (2026-10-08). Round-2 clause numbers.** C-017/C-018 were already taken by
+  round-1 OPEN clauses, so the round-2 clauses are C-019 (oracle), C-020 (parser)
+  and C-021 (mutant pins); the `pins:` citations in the touched maps use these.
+
+## W-Q1 records (2026-10-08, brief ruling of 2026-10-08)
+
+At start: `IllegalArgumentException` for option-value refusals, `AnalysisException`
+for the rest. At run: `StreamingQueryException` `STREAM_FAILED` with the variant as
+cause. One record per variant with no §4 row, for item 2's mapper round.
+
+- **`Catalog(String)`.** Start: `AnalysisException` (a catalog passthrough, never an
+  option-value refusal). Run: `STREAM_FAILED` with the string as the cause.
+  Text: the passthrough verbatim. No SQLSTATE, no condition.
+- **`CatalogTimeout`.** Start: `AnalysisException` (a catalog call during table
+  resolution). Run: `STREAM_FAILED` with the variant as the cause.
+  Text: the call name, the waited `Duration`, the offset-did-not-advance tail.
+- **`AwaitFromDriver`.** Never raised at start; raised only from wait paths on a
+  running query, so the run branch: `STREAM_FAILED` with the variant as the cause.
+  Text: Spark's `IllegalStateException` text verbatim, which the variant carries.
+  PySpark 4.1.2 has no `IllegalStateException` (verified against the
+  `/tmp/sparkenv` inventory), so the class cannot be copied, only the text.
+- **`DriverPanicked`.** Run-only (batch N panicked): `STREAM_FAILED` with the
+  variant as the cause. Text carries the epoch and the panic message.
+  Never raised at start.
+- **`AlreadyCommitted`.** Run (a replayed epoch commit): `STREAM_FAILED` with the
+  variant as the cause. Text names the query and the epoch. Never raised at start.
+- **`SnapshotNotInLineage`.** Start (resume planning): `AnalysisException`. Run
+  (first trigger): `STREAM_FAILED` with the variant as the cause.
+  Text: the full guidance with table, snapshot, head and the start-after fix.
+- **`OffsetPositionOutOfRange`.** Start (resume planning): `AnalysisException`. Run
+  (first trigger): `STREAM_FAILED` with the variant as the cause.
+  Text: the corrupt-offset guidance with table, snapshot, position and file count.
+
+## Round-3 carry-over (2026-10-08)
+
+- Items 2–3: blocked on the hand-back's P1 (mapper home) and P2 (DM-3 home).
+- Items 5–15 untouched; `readStream`/`streams`/`writeStream` still refuse as on main.
+- Deferred cells: `awaitAnyTermination`/`resetTerminated`, the y-sequence,
+  `bogusfmt`/missing-table doors (`Py4JJavaError`), output-mode runs (D-26).
+- W-Q2/W-Q5 pending with owner/orchestrator; empty-`checkpointLocation` text (W-Q7)
+  untouched; outputMode and the format rule stay Python-side until item 6 (D-20).
 
 ## Registry drafts (step 4 files these; not yet added to the registry doc)
 
