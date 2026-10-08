@@ -3305,23 +3305,47 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   visible (`conf.get` discloses it), and both directions stay under test so a drift in
   either inference path reds.
 
-### FA-5 — csv writes of exact-duplicate display names refuse (Spark writes them)
+### FA-5 — csv writes of exact-duplicate display names carry the display header — **FIXED 2026-10-08 (FA-5)**
 
-- **repark** — a frame whose display names hold exact duplicates refuses a csv
-  path write with `[COLUMN_ALREADY_EXISTS]`, naming the first duplicate,
-  before any file is created — the same refusal as the parquet/json/orc/table
-  doors. Case-twin columns (`T`, `t`) write with the raw header, as Spark
-  does (SM-2b narrowing, 2026-10-06).
-- **Apache Spark** — writes the file with the duplicate display header
-  (`id,s,v,id,s,v` on the fold's self-join). *(oracle: live 4.1.2, 2026-10-06,
-  raw header line of the written part file.)*
-- **Pin** — `python/repark/tests/test_attr_id_1_sm2_dupwrites.py::test_csv_write_of_duplicate_display_names_refuses_as_ruled_divergence`
-- **Rationale** — DECLARED as a deliberate divergence (orchestrator, 2026-10-06):
-  the csv rows can only carry the twin engine names today, and writing them
-  would ship a silent wrong answer; the loud refusal holds the line until the
-  physical-only COPY rename lands (follow-up on the v1.5.3 card, 2026-10-06).
-  The pin asserts the refusal, so the rename reds it and forces this row to be
-  re-recorded together with the behavior.
+- **repark** — a frame whose display names hold exact duplicates writes a csv
+  path instead of refusing: the header line carries the display names
+  (`id,s,v,id,s,v` on the fold's self-join), with or without `header`, under
+  every `mode`, both case flags, and for temporal columns. Everything else
+  about the bytes is the csv door's own behaviour, the same as for a frame
+  of unique names (see the rationale). A `partitionBy` over a name that two
+  attributes carry refuses `[AMBIGUOUS_REFERENCE]` (SQLSTATE 42704) with the
+  reference as written and one candidate per plan qualifier, sorted, before
+  any file is created; a unique partition column writes and leaves the
+  header. parquet, json, orc, `saveAsTable` and `writeTo` keep refusing
+  `[COLUMN_ALREADY_EXISTS]`, as Spark does. A column a user names
+  `__repark_dup_0_id` keeps that name on every door: the display names
+  travel as a record beside the registration copy, never as a naming
+  convention.
+- **Apache Spark** — writes the file with the duplicate display header, and
+  refuses the same partition and non-csv cells. *(oracle: live 4.1.2,
+  2026-10-08, the csv cells in `task/ledgers/staging/fa-5-6-ledger.md`.)*
+- **Pin** — `python/repark/tests/test_fa_5_duplicate_csv.py`;
+  `crates/repark-core/src/session/tests/duplicate_names.rs`
+- **Rationale** — was DECLARED as a deliberate refusal (orchestrator,
+  2026-10-06) because the csv rows could only carry the twin engine names.
+  The csv door now registers a copy of the frame under unique engine names
+  that records each display name in field metadata, and hands the Rust text
+  sink that list, so the engine never plans a duplicate and the file never
+  carries an internal name. What this row does **not** claim: the bytes are
+  not Spark's in every cell. The csv door's existing differences apply to a
+  duplicate-name frame exactly as to any frame, measured 2026-10-08 by the
+  unit's verifier and listed in the ledger ("The csv door's own differences"):
+  the header is written when the `header` option is absent (Spark's default
+  is off); header and body values are not trimmed; an empty name or an empty
+  string is written as nothing where Spark writes `""`; a quote is escaped
+  as `""` where Spark writes `\"`; `quoteAll` does not reach the header of an
+  empty frame; binary is written as hex; an empty partitioned write leaves a
+  header-only file at the root. Two refusals are this row's own and loud: a
+  same-origin repeat used as the partition column
+  (`select('id', 'id', 's').write.partitionBy('id')`) refuses where Spark
+  writes `id=1/` with header `s`; and under `caseSensitive=true` a partition
+  spelling that matches a repeated name only by case refuses with Spark's
+  `Partition column … not found in schema` text.
 
 ### FA-6 — temp views over exact-duplicate display names refuse (Spark registers them)
 
@@ -3343,6 +3367,14 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   until duplicate-name view schemas land (follow-up on the v1.5.3 card,
   2026-10-06). The pins assert the refusal, so the follow-up reds them and
   forces this row to be re-recorded together with the behavior.
+- **FA-6 follow-up (2026-10-08)** — a first design that registered the view
+  under unique engine names and re-created Spark's ambiguity afterwards was
+  built and withdrawn before merge: an independent verifier found silent
+  wrong answers in scopes the audit did not model (`NATURAL JOIN`, a bare name
+  inside `EXISTS` or `LATERAL`, a qualified reference beside a case twin).
+  The refusal stays. Record: `task/ledgers/staging/fa-5-6-ledger.md`, "Why
+  FA-6 was withdrawn (2026-10-08)"; the open ask is
+  `task/roadmap/mid-term/fa-6-duplicate-view-schemas-card-2026-10-08.md`.
 
 ### USING-SIDE-KEY-REACH-1 — a per-side `USING` key is reachable on the joined frame, through `filter` and `sort` only
 
@@ -3603,6 +3635,107 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   the stream; repark refuses at start rather than idling, so the failure lands when the query
   is launched, not on the first later append (NS-6, refuse loud). The only difference is when
   the refusal fires.
+### MB-3-LOOKAHEAD-1 — a capped processing-time stream delivers every append before a non-append; Spark stops one batch earlier when the files cap fills on a snapshot's last file
+- **repark** — under a processing-time trigger with `streaming-max-files-per-micro-batch`, the
+  window (`WindowLimit::Capped`, MB-1) takes each append's files up to the cap and never looks
+  past the window's last file. Two one-file appends `a` and `b`, then an `overwrite` (or a
+  `delete`), at max-files 1 deliver `a` in batch 0 and `b` in batch 1, and the next trigger
+  refuses `NonAppendSnapshot` (`Cannot process overwrite snapshot: <id>; Bronze is append-only
+  (O-5) …`). Every row before the non-append lands, so a restart after the documented
+  `repark.cdc.start-after-snapshot-id=<id>` advice loses nothing.
+- **Apache Spark** — the capped `latestOffset` checks the files cap only before adding the next
+  file inside a snapshot, so a window that fills exactly on a snapshot's last file still calls
+  `nextValidSnapshot`, which throws at the following `overwrite` or `delete`. The same history
+  delivers `a` (batch 0, offset `(a, 0)`) and then fails `STREAM_FAILED` / `XXKST`, `Cannot
+  process overwrite snapshot: <id>, to ignore overwrites, set
+  streaming-skip-overwrite-snapshots=true`; `b` is never delivered, and the delete twin is the
+  same. *(oracle: cell MB0b-R18, `trigger(processingTime="0 seconds")`, recorded 2026-10-07.)*
+- **Pin** — `crates/repark-iceberg/src/microbatch/window_fold2_pins.rs::capped_walk_delivers_both_appends_then_refuses_the_non_append`
+- **Rationale** — DECLARED 2026-10-07 (MB-3, beside MB-1 ledger D-5; MB-1 fold-2 ruling Q1
+  KEEP deliver-first). Both engines refuse the stream at the non-append; repark delivers the
+  appends ahead of it first, so the refusal lands one batch later and no appended row is held
+  back behind a snapshot the stream refuses anyway. Under `availableNow` and `Once` the two
+  agree (MB0b-R17): both refuse before batch 0.
+### MB-3-REPLAY-WINDOW-1 — a restart after a failed batch replans that batch's window; Spark replays the logged one
+- **repark** — the offsets live in the sink's summary and there is no offset log, so the window
+  of a batch that failed is not durable. The restart keeps the batch id (the epoch after the
+  durable record) and plans its window again from the durable offset to the source's head. When
+  the source grew between the failure and the restart, the same batch id covers a wider window:
+  source `(1, 2, 3)`, a `foreachBatch` body that fails at batch 0, an append `(4, 5)`, then the
+  restart delivers batch 0 as `(1, 2, 3, 4, 5)` under `availableNow` with no cap. With
+  `streaming-max-files-per-micro-batch=1` the restart delivers batch 0 `(1, 2, 3)` and batch 1
+  `(4, 5)`, because the cap cuts the window at the same file. No row is lost or skipped by the
+  driver in either shape, and the offset never advances past a batch whose body failed.
+- **Apache Spark** — writes the batch's offset range to `offsets/<batchId>` before the batch
+  runs, and a restart replays that range under the same batch id: the same history delivers
+  batch 0 `(1, 2, 3)` again and then batch 1 `(4, 5)`, with `offsets` `0, 1` and `commits`
+  `0, 1`. *(oracle: cell MB3-W9 in `mb3_fold_oracle.json`, `trigger(availableNow=True)`,
+  recorded 2026-10-07; MB0-W6 holds the unchanged-source half.)*
+- **Pin** — `crates/repark-core/src/microbatch/lifecycle_tests.rs::a_restart_after_a_failed_batch_replans_its_window_over_a_grown_source`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F4: no offset log in this fold;
+  beside the `foreachBatch` at-least-once declaration, MB-3 ledger C-005 (e) and D-2). The
+  consequence is for a body that deduplicates on the batch id, Spark's documented idempotence
+  recipe: if the body recorded batch 0 as done before it failed, it skips the wider replay,
+  and the trailing stamp then moves the offset past `(4, 5)`, which the body never wrote. A
+  body on repark deduplicates on its rows' keys, or writes the sink through the `toTable` door.
+  The pending-window stamp that would close the difference is filed as
+  `task/roadmap/mid-term/mb-pending-window-1-card-2026-10-07.md` for an owner decision.
+### MB-3-SINK-BUSY-1 — a second streaming query on a sink that already has an active query in the session refuses at start; Spark runs both
+- **repark** — one active query per sink per session. `start` refuses the second query with
+  `SinkBusy` (`sink <table> is busy: another streaming query or batch is active on it; one at a
+  time per sink`, MBE-13)
+  before anything runs, on both doors; the first query is not disturbed, and the refused query
+  stays registered and starts once the first one ends. Two sessions in one process can still
+  target one sink, because `start` sees only its own session: there each batch waits for the
+  sink's `BatchScope` up to `repark.cdc.catalog-timeout` (60 s) and then runs, so both queries
+  drain and neither fails on an overlap.
+- **Apache Spark** — lets two streaming queries with different checkpoints append to one
+  Iceberg table; each commits its own snapshots. *(oracle: documented behavior; no MB-0 cell
+  runs two queries on one sink.)*
+- **Pin** — `crates/repark-core/src/microbatch/lifecycle_tests.rs::a_second_query_on_an_active_sink_is_refused_at_start`,
+  `::two_sessions_on_one_sink_wait_for_the_scope`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F6). A process holds at most one
+  `BatchScope` per sink (sketch §0 line 5), because the scope is what ties a sink commit to
+  its batch stamp. Before this row the second query died `Failed` at whichever batch
+  overlapped the first; the refusal now lands at start, where the caller can act on it.
+### MB-3-STATIC-SIDE-1 — a streaming frame combined with a static frame refuses the shapes Spark refuses, under repark's own error
+- **repark** — `PlanTemplate::from_frame` refuses, with `StatefulOperatorRefused` (MBE-6:
+  `<operator> is not supported on a streaming DataFrame; use foreachBatch`), a union of the
+  stream and a static frame in either order, a full outer join, a left outer join with the
+  static frame on the left, a right outer join with the static frame on the right, and a left
+  semi or left anti join with the stream on the right. It accepts an inner join in either
+  order, a left outer join with the stream on the left, a right outer join with the stream on
+  the right, and a left semi or left anti join with the stream on the left, and lands Spark's
+  rows for each. It also refuses a streaming frame inside a subquery expression
+  (`a streaming DataFrame in a subquery`), which no cell measures.
+- **Apache Spark** — refuses the same union and join shapes at `start()` with
+  `AnalysisException` / `_LEGACY_ERROR_TEMP_3102`, no SQLSTATE, from
+  `UnsupportedOperationChecker` (`Union between streaming and batch DataFrames/Datasets is
+  not supported`; `LeftOuter join with a streaming DataFrame/Dataset on the right and a static
+  DataFrame/Dataset on the left is not supported`; and the twins), and runs the accepted
+  shapes. *(oracle: cell MB3-J1 in `mb3_fold_oracle.json`, fourteen shapes over a stream
+  `(1, 2, 3)`, `(4, 5)` and a static `(2, 900)`, recorded 2026-10-07.)*
+- **Pin** — `crates/repark-core/src/microbatch/relation_tests.rs::shapes_that_would_re_emit_the_static_side_refuse`,
+  `::shapes_that_preserve_the_stream_run_spark_s_rows`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F5). The template runs once per
+  batch, so a shape whose output keeps static rows would land them again on every batch. Both
+  engines refuse at start; the difference is the error class and text, which follow MBE-6's
+  SES-DECL shape. The subquery refusal is wider than what was measured and is kept until a
+  cell shows Spark answering a shape it covers.
+### MB-3-PROGRESS-RETENTION-0 — `numRecentProgressUpdates = 0` keeps the newest progress; Spark fails the query
+- **repark** — a `recentProgress` limit of `0` is read as `1`: the ring keeps the newest
+  progress, `lastProgress` answers it, and the query runs on.
+- **Apache Spark** — with `spark.sql.streaming.numRecentProgressUpdates=0` the query fails
+  after its first batch with `STREAM_FAILED` / `XXKST`, cause
+  `java.util.NoSuchElementException` (`empty collection`): `ProgressReporter.addNewProgress`
+  dequeues while the buffer's length is at least the retention, and an empty buffer still
+  satisfies that. `recentProgress` is empty and `lastProgress` is null. *(oracle: cell MB3-G1
+  in `mb3_fold_oracle.json`, recorded 2026-10-07; Spark 4.1.2
+  `sql/core/.../streaming/runtime/ProgressReporter.scala` lines 104–108.)*
+- **Pin** — `crates/repark-core/src/microbatch/progress_tests.rs::a_zero_limit_keeps_the_newest_progress`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1; MB-3 ledger D-9). Spark's answer is an
+  unhandled exception in its progress buffer, not a contract. repark keeps the query alive
+  and its last progress readable.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.
@@ -3653,12 +3786,29 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `c numeric(10,2)` holding `NaN`, `1`, `2` and `5`, `SELECT id … WHERE c > 1` returns the
   `NaN` row (`NaN > 1` in Postgres), `c <> 5` returns it too, and `c < 6` leaves it out; each
   refuses with `pushdown_predicate = false`, and `SELECT id, c … WHERE c > 1` refuses pushed.
+  **Which reads refuse** (C-2d fold 1, 2026-10-07). This holds for every per-value refusal:
+  this row's, `CONNECT-DECL-pg-infinite-datetime`'s, `CONNECT-DECL-pg-out-of-range`'s and the
+  gap and overlap of `CONNECT-DIV-pg-timestamp-zone`. The scan emits the rows before a refused
+  value and raises the refusal only when the next batch is pulled, so a read that stops before
+  the refused row succeeds. `LIMIT n`, `limit(n)`, `take`, `head` and Spark-style `show(n)` send
+  the limit to the server when no filter is left for the engine (`pushdown_limit`, on by
+  default), so a later row is never sent. With the limit kept in the engine, a single-partition
+  scan is pulled one batch at a time and stops at the limit. Two reads can still refuse past the
+  rows they return. (1) A filter left above the scan keeps the limit in the engine, and
+  DataFusion's round-robin repartition reads ahead of that filter by about one batch per target
+  partition, so a refused value inside the read-ahead can fail a `LIMIT` the filter would have
+  satisfied. (2) The default display style `polars`, and `duckdb`, shows a head-and-tail
+  preview: `show(n)` counts the frame and reads its last rows, which decodes every row, so any
+  refused value fails it. `repark.display.style = spark` shows only the first `n` rows.
 - **Apache Spark** — the JDBC source reads `numeric` through pgjdbc's `getBigDecimal`, which
   cannot build a `BigDecimal` from `NaN` or an infinity, so the read fails. *(oracle:
   documented — the C-2 sketch's FL-3; no value claim, D-M2 measures it.)*
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::numeric_special_values_refuse`;
   live `crates/repark-connect/tests/it/live_pushdown.rs::a_refused_value_inside_a_pushed_range_follows_postgres_order_live`
-  (the pushed shapes, both ways)
+  (the pushed shapes, both ways);
+  `crates/repark-connect/tests/it/copy_binary.rs::a_refused_value_emits_the_rows_before_it_then_refuses`;
+  live `python/repark-parity/tests/live_db/test_c2_catalog_and_limit.py::test_a_limit_never_reaches_a_refused_value_past_it`,
+  `::test_a_refused_value_fails_only_a_read_that_reaches_its_row`
 - **Rationale** — DECLARED 2026-10-06 (C-2a; card 1.6 "declare, never approximate"; FL-3,
   where Flink and Spark agree). `Decimal128` has no `NaN` and no infinity. RULED 2026-10-07 (the
   C-2c verifier's S2, L2): declare the pushed-filter membership. Retire when an opt-in quarantine (North Star §7)
@@ -3695,13 +3845,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   more integer digits than the planned `Decimal128(p,s)` holds (`p − s`; 20 for unconstrained
   `numeric` at `(38,18)`; reason `NumericOutOfRange`); a `timestamp` / `timestamptz` after
   294247-01-10T04:00:54.775807, where microseconds since 1970 overflow 64 bits while Postgres
-  reaches 294276 AD (`TimestampOutOfRange`); and a `date` past `Date32`, which no finite
+  reaches 294276 AD (`TimestampOutOfRange`); a `timestamp` placed in the session zone whose
+  instant falls after +262142-12-31T23:59:59.999999 UTC, the end of chrono's calendar
+  (`TimestampPastCalendar`, C-2d fold 1); and a `date` past `Date32`, which no finite
   Postgres date reaches (`DateOutOfRange`).
 - **Apache Spark** — `Decimal.set` rounds HALF_UP to the scale and raises when the precision
   is exceeded (Flink's `DecimalData.fromBigDecimal` returns null instead). *(oracle:
   documented — FL-2; D-M2 measures it.)*
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::bounded_numeric_overflow_refuses`,
-  `::timestamp_ntz_anchors_round_trip`, `::date_anchors_round_trip`
+  `::timestamp_ntz_anchors_round_trip`, `::date_anchors_round_trip`;
+  `crates/repark-core/src/session/zone_localiser/tests.rs::the_end_of_the_calendar_refuses_as_out_of_range_never_as_a_gap`
 - **Rationale** — DECLARED 2026-10-06 (C-2a; FL-2, Spark's answer: raise, which is also
   NS-6). Retire per type if a wider Arrow type is adopted for it.
 ### CONNECT-DECL-pg-unmapped — a Postgres column whose type is outside the map refuses at resolution
@@ -3831,10 +3984,18 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   name; the relation is resolved, and a missing one reported, only when a statement names it
   (`SchemaProvider::table` resolves it, and `RelationNotFound` becomes DataFusion's own
   table-not-found). `SHOW TABLES` and `information_schema` therefore show no Postgres table.
-  `repark_connect::LISTING_ROW` names this row.
+  `repark_connect::LISTING_ROW` names this row. **Through the Spark door** (C-2d fold 1,
+  2026-10-07): `SHOW TABLES IN pg.<schema>` and `SHOW SCHEMAS IN pg` return this empty listing;
+  `spark.catalog.tableExists("pg.<schema>.<table>")` resolves the relation, so it answers `True`
+  for one that exists and `False` for one that does not; `writeTo(...).create()` and
+  `write.saveAsTable(...)` refuse with `CONNECT-DECL-pg-ddl`'s read-only text.
+  `spark.catalog.listTables("pg.<schema>")` still answers `SCHEMA_NOT_FOUND`: the facade checks
+  the schema against `SHOW SCHEMAS`, which is empty.
 - **Apache Spark** — the JDBC table catalog lists the server's schemas and tables. *(oracle:
   documented — FL-8; no value claim.)*
-- **Pin** — `crates/repark-connect/tests/it/explain.rs::listing_a_postgres_source_is_empty_and_declared`
+- **Pin** — `crates/repark-connect/tests/it/explain.rs::listing_a_postgres_source_is_empty_and_declared`;
+  `crates/repark-core/src/named_sources/tests.rs::catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog`;
+  live `python/repark-parity/tests/live_db/test_c2_catalog_and_limit.py::test_catalog_apis_answer_for_a_mounted_source`
 - **Rationale** — DECLARED 2026-10-07 (C-2c; FL-8; sketch §2.8). DataFusion's listing hooks are
   synchronous, and building a session does no I/O (CFG-2 D-4). Retire when an asynchronous
   listing lands through the doors' catalog operations, or the 1.7 crawler's read surface (the
@@ -3859,6 +4020,83 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   inside COPY each bound value takes one `set_config` slot. Retire when
   the classifier budgets values across a scan's conjuncts, keeping the excess above the scan
   instead of refusing.
+### CONNECT-DECL-pg-ddl — a Postgres source is read-only: DDL against it refuses
+- **repark** — `CREATE TABLE`, `DROP TABLE`, `CREATE VIEW`, `DROP VIEW`, `CREATE INDEX`,
+  `CREATE SCHEMA [IF NOT EXISTS]`, `DROP SCHEMA` and `CREATE DATABASE` (bare or dotted, as
+  `pg.x`) naming a mounted Postgres source refuse with
+  `database source `<key path>` is read-only: DDL against it is not supported (registry row
+  CONNECT-DECL-pg-ddl …)` in the Unsupported class on the native door (the pre-execute guard
+  `refuse_source_ddl`, shared by both doors), and the source's schema provider refuses
+  `register_table` and `deregister_table` with the same text, and every catalog operation the
+  session runs against the name (`writeTo`, `saveAsTable`, a listing of Iceberg names) refuses
+  with it too (C-2d fold 1). On the Spark door
+  `CREATE TABLE` and `DROP TABLE` answer the P11 read-only text first (`postgres catalogs are
+  read-only`), because every mounted Postgres source is in the session's read-only catalog set.
+  A DDL statement that names a table resolves it first, as every statement does, so a malformed
+  source answers its settings refusal and a live one opens a connection before the guard
+  refuses. `INSERT`, `UPDATE` and `DELETE` refuse as not implemented; nothing is written in
+  either case. `repark_connect::DDL_ROW` names this row.
+- **Apache Spark** — the JDBC table catalog runs `CREATE TABLE` and `DROP TABLE` against the
+  server, and the JDBC source writes rows (`df.write.jdbc`). *(oracle: documented — the JDBC
+  table catalog's `createTable` / `dropTable`; no value claim.)*
+- **Pin** — `crates/repark-core/src/named_sources/tests.rs::configured_source_ddl_refuses_as_read_only`;
+  live `python/repark-parity/tests/live_db/test_c2_read.py::test_ddl_and_dml_refuse_through_both_doors`
+- **Rationale** — DECLARED 2026-10-07 (C-2d; sketch §2.11). C-2 is the read path: every pooled
+  connection is read-only, and C-4 writes rows, not DDL. Retire when a dated decision gives
+  Postgres sources DDL.
+### CONNECT-DECL-pg-partitioned-read — a partitioned Postgres read covers integer range columns; `predicates`, other column types and automatic bounds are declared
+- **repark** — `spark.read.jdbc(url, table, column, lowerBound, upperBound, numPartitions)`,
+  `format("postgres" | "jdbc")` with `partitionColumn`, `lowerBound`, `upperBound` and
+  `numPartitions` (as options or inside `properties`) and `read_postgres(partition_column=…)`
+  read an `int2`, `int4` or `int8` column in Spark's own strides: rows below `lowerBound`,
+  above `upperBound` and NULL rows are all returned, exactly once. Every stride reads one
+  exported snapshot (`pg_export_snapshot`), on at most `pool_max_size` connections, so a
+  partitioned read equals the unpartitioned read under concurrent writes. Spark's refusals are
+  kept in Spark's words: the four options are all or none (`numPartitions` alone is accepted
+  and reads unpartitioned), reversed bounds, `query` with `partitionColumn`, a column that is
+  missing, and a `text`-like, `boolean` or `bytea` column. **Still declared**, each refusing
+  with `ConnectError` naming this row, in the Unsupported class: `predicates` (before any
+  connection); a partition column of type `date`, `timestamp`, `timestamptz`, `numeric`,
+  `float4` or `float8` (whether its bounds are Spark's date text or integers); and a read of
+  more than **10 000 strides** (the count after Spark's shrink to the span), which refuses
+  with the ceiling in its text after one catalog connection for the column and type lookup
+  and before any snapshot or stride connection. Not offered: automatic choice of the column and its bounds (Spark
+  has none). In `repark.toml` the five spellings are unknown keys: a mounted source is a
+  catalog of every relation, so a per-relation column has no key to sit under. Two deliberate
+  differences from Spark, both on the safe side: two columns that differ only in case, with
+  neither named exactly, refuse as ambiguous (Spark cannot read such a relation at all:
+  `COLUMN_ALREADY_EXISTS`, `C3-C08`…`C10`; RePark reads it and an exact name, quoted or
+  bare, picks its column), and a pushed `LIMIT`
+  is sent to every stride and capped by the scan (Spark's V1 JDBC scan pushes none).
+- **Apache Spark** — the JDBC source splits the read into `numPartitions` range queries over
+  `partitionColumn`, each its own statement with its own snapshot, or one query per predicate;
+  it also partitions `date`, `timestamp`, `numeric` and floating columns. *(oracle: measured —
+  live Spark 4.1.2 over pgjdbc 42.7.13, 41 cells and a 740-triple stride grid in
+  `python/repark-parity/tests/live_spark/c3_partition_oracle.json` and `c3_stride_grid.txt`:
+  `C3-P01` the three stride shapes and the NULL and out-of-bounds rows, `C3-M01`…`M07` the
+  all-or-none rule, `C3-B01`…`B08` the bounds, `C3-N01`…`N06` the count, `C3-T01`…`T10` the
+  column types, `C3-C01`…`C03` the column name, `C3-Q01`, `Q02` `query` and the subquery,
+  `C3-L01` no pushed limit.)*
+- **Pin** — `crates/repark-connect/tests/it/partition.rs::strides_equal_sparks_recorded_grid`;
+  `crates/repark-connect/tests/it/partition_plan.rs::only_integer_columns_partition_and_the_rest_refuse_by_kind`;
+  `crates/repark-core/src/session/tests/read_postgres.rs::partition_options_refuse_as_spark_does_before_any_connection`;
+  `crates/repark-python/src/session_tests.rs::read_postgres_refusals_name_their_row_and_never_echo_credentials`;
+  live `crates/repark-connect/tests/it/live_partition.rs::a_writer_between_strides_never_changes_a_partitioned_read`;
+  live `python/repark-parity/tests/live_db/test_c3_partitioned.py::test_what_stays_declared_refuses_naming_its_row`
+- **Dated divergence, 2026-10-08 (C-3 fold 1): the stride ceiling.** Spark has no ceiling on
+  `numPartitions` beyond its 32-bit `Int` (kept: a value outside it is `NumberFormatException`,
+  `C3-N07`). RePark refuses above 10 000 strides because every stride is one statement under
+  one open `REPEATABLE READ` snapshot and each costs client memory: measured on the 10M-row
+  table, 10 000 strides read in 12.7 s at 1.6 GB and 100 000 in 75 s at 8.0 GB, against 10.0 s
+  at 0.4 GB for four (ledger §7); the verifier's 2 000 000-stride read ran past nine minutes
+  at 2.6 GB before it was killed. The fix is a lower `numPartitions`; a large count over a
+  small span still shrinks as Spark's does (`C3-N08`) and is not refused.
+- **Rationale** — DECLARED 2026-10-07 (C-2d; sketch §2.11); REWRITTEN 2026-10-07 (C-3; design
+  note `task/ledgers/staging/c-3-ledger.md` §0). C-3 delivers the integer range read on one
+  snapshot. A `timestamp` stride depends on the zone Spark takes from the JVM (D-M2), and
+  `numeric` and floating strides are integer cuts over a non-integer column; each needs its
+  own measured arithmetic before it is offered. Retire when a dated decision lands the
+  remaining column types and `predicates`.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.
@@ -3881,21 +4119,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
 - **Rationale** — DECLARED 2026-10-05 (C-1). Postgres accepts `24:00:00`, one microsecond past
   the last value Arrow's `Time64(Microsecond)` day holds.
-### CONNECT-DECL-pg-timestamp — Postgres `timestamp` reads as NTZ until C-2c places it
-- **repark** — `timestamp` (without time zone) decodes to `Timestamp(Microsecond, None)`, the
-  wall clock (C-2a, 2026-10-06). That matches Spark only under `preferTimestampNTZ`; in
-  default mode the wall clock still needs placing in the session zone, which is C-2c's
-  localiser ([c-2-design.md](../task/wo/c-2-design.md) §2.7, FL-5).
-- **Apache Spark** — the JDBC source reads `timestamp` as `timestamp` by default, and as
-  `timestamp_ntz` only under `preferTimestampNTZ`. *(oracle: measured — D-M2 DM2-T11/T12 in
-  `python/repark-parity/tests/live_spark/c2_jdbc_oracle.json`.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::timestamp_ntz_anchors_round_trip`
-- **Rationale** — DECLARED 2026-10-05 (C-1); retired 2026-10-06 (C-2a) and re-declared the same
-  day (C-2a fold, round D) on the D-M2 measurement: the NTZ decode is the wall clock, not
-  Spark's default `TimestampType`. C-2c (2026-10-07) builds the placement in the provider: a
-  `PostgresTable` surfaces `timestamp` in its `WallClockLocaliser`'s zone unless
-  `prefer_timestamp_ntz` is set (CONNECT-DIV-pg-timestamp-zone). No door mounts the provider
-  yet, so retire when C-2d mounts it with core's session-zone localiser.
+### CONNECT-DECL-pg-timestamp — RETIRED (2026-10-07, C-2d): Postgres `timestamp` is placed in the session zone
+
+> **CLOSED 2026-10-07 (C-2d, [c-2-design.md](../task/wo/c-2-design.md) §2.11).** Every door now mounts the provider with core's `SessionZoneLocaliser`, so a `timestamp` column reads as Spark's default `TimestampType`: the wall clock placed in the session's live `spark.sql.session.timeZone`, read at scan time, with the gap and overlap refusals of CONNECT-DIV-pg-timestamp-zone; `prefer_timestamp_ntz` (`preferTimestampNTZ`) keeps the NTZ wall clock. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::timestamp_ntz_anchors_round_trip` pins the decoder, which is unchanged, so it stays green; the declared behaviour (NTZ by default) had no door to be observed through, and the replacing pins are `crates/repark-core/src/session/zone_localiser.rs::tests::a_wall_clock_is_placed_at_the_zone_offset_of_its_date` and live `python/repark-parity/tests/live_db/test_c2_read.py::test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock`. Retired per §6.
 
 ### CONNECT-DECL-pg-timestamptz — RETIRED (2026-10-06, C-2a): Postgres `timestamptz` maps to a UTC microsecond timestamp
 
@@ -4062,8 +4288,17 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   surfaces as `Timestamp(Microsecond, <zone>)`: the scan decodes the wall clock and hands each
   batch's column to the source's `WallClockLocaliser`, which places it as an instant in the
   zone whose label it reports. The label is read once per resolution, so one statement sees one
-  zone. Core supplies the localiser over the session's `runtime_zone` (C-2d); until D-M2
-  measures Spark's rule, a wall clock in a DST gap or overlap refuses per value there. With
+  zone. Core supplies the localiser over the session's `runtime_zone`, read when the scan
+  runs (C-2d, 2026-10-07; `SessionZoneLocaliser`). The zone is canonicalised as every other
+  scan does it, so a Java-form zone (`Z`, `UT`, `GMT+8`, `UTC+05:30`, `-8`) places at its
+  offset and labels the column with the canonical id. A wall clock after 2099 takes its offset
+  from the proxy year RePark's `TIMESTAMP` literal reads (`repark_common::zone_horizon`), so a
+  Postgres value and the literal for the same wall clock are one instant (C-2d fold 1). Until
+  D-M2 measures Spark's rule, a wall clock in a DST gap or overlap refuses per value with
+  `ValueRefusal::WallClockGap` / `WallClockOverlap`, naming the column, this row and the fix
+  (`prefer_timestamp_ntz`); a wall clock whose instant falls after
+  +262142-12-31T23:59:59.999999 UTC, past chrono's calendar, refuses
+  `TimestampPastCalendar` as `pg-out-of-range`. With
   `prefer_timestamp_ntz = true` the column is `Timestamp(Microsecond, None)`, the wall clock. A
   compare on a placed column never pushes (the placement is not injective across a DST change);
   on the NTZ column it does.
@@ -4074,7 +4309,12 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   for the zone.)*
 - **Pin** — `crates/repark-connect/tests/it/pushdown.rs::r03_ltz_timestamp_comparisons_stay_residual`;
   live `crates/repark-connect/tests/it/live_pushdown.rs::timestamp_columns_are_placed_in_the_session_zone_live`,
-  `::r03_ltz_timestamp_comparisons_stay_residual_live`
+  `::r03_ltz_timestamp_comparisons_stay_residual_live`;
+  `crates/repark-core/src/session/zone_localiser/tests.rs::gap_and_overlap_wall_clocks_refuse_naming_the_zone_row`,
+  `::a_wall_clock_past_2099_is_placed_by_the_final_rule`,
+  `::java_form_session_zones_place_at_their_canonical_offset`;
+  live `python/repark-parity/tests/live_db/test_c2_federated.py::test_a_wall_clock_past_2099_matches_the_timestamp_literal`;
+  live `python/repark-parity/tests/live_db/test_c2_read.py::test_timestamp_is_placed_in_the_session_zone_or_kept_as_the_wall_clock`
 - **Rationale** — DECLARED 2026-10-07 (C-2c; FL-5). The session zone is the one every other
   timestamp in the statement is read in, so a federated compare sees one clock; Spark's JVM zone
   is process state a session cannot set.
@@ -4732,7 +4972,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   XML crate — owner question Q-15B-1. The `rowTag` check is Spark's own error surface and is
   reproduced exactly before the declared refusal.
 
-### IO-JDBC-1 — PostgreSQL URLs read through `spark.read.jdbc`; other drivers and every `write.jdbc` are declared `NOT_IMPLEMENTED` until the 1.6 native connectors
+### IO-JDBC-1 — PostgreSQL URLs read through `spark.read.jdbc` and the native connector; other drivers and every `write.jdbc` are declared `NOT_IMPLEMENTED`
 
 - **repark** — `spark.read.jdbc(url, table, column, lowerBound, upperBound, numPartitions,
   predicates, properties)` (Spark's signature; main's `lower_bound` / `upper_bound` /
@@ -4744,7 +4984,17 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   dbtable-from-properties resolution, the three `IllegalArgumentException` teaching errors
   (predicates with a range bag, a partial range bag, empty predicates), and the
   `read_postgres` delegation with main's exact arguments (R-3 restored the working path the
-  IO-DECLARED-1 step-1 diff had refused). A URL naming any other driver — including the
+  IO-DECLARED-1 step-1 diff had refused). **Live since C-2d (2026-10-07):** `read_postgres`
+  reads through `repark-connect` (COPY BINARY into Arrow, Exact pushdown, one statement
+  snapshot per scan): `dbtable` (a relation, `schema.table` or `"Quoted"` parts, unqualified
+  meaning `public`, or a parenthesised subquery) or `query`; the properties take the
+  `repark.toml` Postgres keys and Spark's spellings ([the guide](guide/repark-toml.md)
+  "Postgres source keys"); the source renders as `source=jdbc` in `EXPLAIN`; every refusal names
+  `database source `jdbc`` and never echoes the URL or a property value. Since C-3 (2026-10-07)
+  the four range arguments partition the read over an integer column on one snapshot;
+  `predicates` and the other column types refuse (CONNECT-DECL-pg-partitioned-read). Unknown
+  properties refuse
+  (CONNECT-DIV-pg-unknown-option). A URL naming any other driver — including the
   undocumented `jdbc:postgres://` spelling — refuses at the call,
   before any connection attempt, with `PySparkNotImplementedError` `NOT_IMPLEMENTED`
   `{"feature": "jdbc"}`, str `[NOT_IMPLEMENTED] jdbc is not implemented.`;
@@ -4767,7 +5017,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `…::test_jdbc_camel_case_keywords_reach_read_postgres`, `…::test_jdbc_snake_case_aliases_reach_read_postgres`,
   `…::test_jdbc_both_keyword_spellings_raise_typeerror`, `…::test_jdbc_postgres_alias_url_reaches_read_postgres`,
   `…::test_jdbc_postgres_jdbc_scheme_still_refuses_not_implemented`, `…::test_jdbc_predicates_xor_range`,
-  `…::test_jdbc_empty_predicates_fails` (the read path);
+  `…::test_jdbc_empty_predicates_fails` (the read path); live
+  `python/repark-parity/tests/live_db/test_c2_read.py::test_read_jdbc_and_format_postgres_match_the_mount`,
+  `…::test_a_partitioned_read_refuses_naming_its_row` (the connector, C-2d);
   `python/repark/tests/test_io_declared_1.py::test_reader_jdbc_non_postgres_urls_refuse_at_the_call`,
   `…::test_reader_jdbc_non_postgres_props_refuse_at_the_call`,
   `…::test_writer_jdbc_refuses_after_the_mode_check`,
@@ -4779,7 +5031,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   native connectors (Postgres, SQL Server writes; SQL Server reads); the JVM JDBC driver
   path is unreachable". BACKLOG 2026-09-14: the owner roadmap ships the native connectors
   in 1.6. The PostgreSQL read path keeps its `format('postgres')` spelling beside
-  `spark.read.jdbc`.
+  `spark.read.jdbc`. REWRITTEN 2026-10-07 (C-2d): the PostgreSQL read goes live through
+  `repark-connect`; Postgres and SQL Server writes stay with C-4 and C-5.
 
 ### IO-TEXT-GZIP-1 — text writes refuse compression; Spark writes `.txt.gz`
 
@@ -16241,6 +16494,47 @@ field NAME.
 - **Rationale** — the row lands FIXED: the rebase onto `a3cb8012` closed LOGICAL-WIDTH-1
   for this label, and slice (d) carries the passing pin rather than the filed xfail.
   pins: fnp-agg-1/C-003
+
+### OFFSET-NESTED-SORT-1 — an `OFFSET` under a nested `ORDER BY` answers Spark's rows at every partition count — **FIXED 2026-10-08 (OFFSET-NESTED-SORT-1)**
+
+- **repark** — **FIXED 2026-10-08.** `SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET
+  4990) ORDER BY v` over 5000 rows answers `4991..4995` at 1, 2 and 16 partitions, on both SQL
+  doors and as `orderBy("v").offset(4990).limit(5).orderBy("v")`. Before the fix it answered no
+  rows whenever the scan below the inner sort had one partition: a `CREATE TABLE AS` memory
+  table at `target_partitions = 1`, and a `createDataFrame` view, a one-file parquet scan and an
+  Iceberg scan at every setting. A second shape was wrong at every partition count: an outer
+  sort over an `OFFSET` with no `LIMIT` (`SELECT v FROM (SELECT v FROM t ORDER BY v OFFSET 4990)
+  ORDER BY v DESC` answered `10..1` instead of `5000..4991`).
+  **The upstream defect:** DataFusion 54.1.0's `EnforceSorting` physical rule
+  (`datafusion-physical-optimizer`, `enforce_sorting/sort_pushdown.rs`) ignores a
+  `GlobalLimitExec`'s `skip`. It pushes the limit's `fetch` into the sort below as a row cap
+  (`TopK(fetch=4995)` becomes `TopK(fetch=5)`, then `LimitPushdown` folds the plan to
+  `GlobalLimitExec: skip=4990, fetch=0`), and it pushes an outer sort below a limit that has a
+  `skip` and no `fetch`. A bare DataFusion `SessionContext` reproduces both with no RePark rule
+  installed. DataFusion 55.0.0 carries the same code (read, not run). RePark's guard
+  (`crates/repark-core/src/session/df_guards/skipping_limit.rs`) wraps the rule so a limit with
+  a `skip` is a boundary the rule cannot push through; a statement with no `OFFSET` plans
+  exactly as before.
+  **Retirement:** at the DataFusion bump that fixes the pushdown, the two
+  `stock_enforce_sorting_still_*` pins go red; delete the guard, its wiring line and those two
+  pins, and keep the grid.
+- **Apache Spark** — answers `4991..4995` for the reported statement and `5000..4991` for the
+  offset-only one, independent of the partition count.
+  *(oracle: recorded — live PySpark 4.1.2, 2026-10-08; 70 SQL statements recorded at 1 and 16 input
+  partitions in `crates/repark-core/src/session/tests/skipping_limit_grid.tsv`, 31 of them and
+  15 DataFrame shapes with Arrow types in
+  `python/repark/tests/offset_nested_sort_1_spark_oracle.json`, re-derived under `REPARK_PARITY_LIVE=1` by
+  `python/repark/tests/test_offset_nested_sort_1.py::test_live_spark_answers_every_recorded_cell`.)*
+- **Pin** — `crates/repark-core/src/session/tests/skipping_limit.rs` (the 70-statement grid over
+  a memory table, a sorted series view, a parquet scan and an Iceberg scan at 1, 2 and 16
+  partitions; the two stock-rule pins; the plan-text and no-`OFFSET` plan-identity pins) and
+  `python/repark/tests/test_offset_nested_sort_1.py` (the Spark-dialect SQL door, the native
+  ANSI door and the DataFrame door).
+- **Rationale** — FIXED, filed and closed in the same unit. A wrong row count, not a declared
+  difference: the guard stays only until the pinned DataFusion fixes its rule. Measurements,
+  the rule bisect and the mutation results are in
+  `task/ledgers/staging/offset-nested-sort-1-ledger.md`.
+  pins: offset-nested-sort-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 
 ## 8. Drop-in disclosure rationale
 

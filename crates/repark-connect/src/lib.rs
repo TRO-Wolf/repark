@@ -3,6 +3,7 @@ mod copy_binary;
 mod discover;
 mod error;
 mod ident;
+mod partition;
 #[cfg(feature = "postgres")]
 mod pool;
 #[cfg(feature = "postgres")]
@@ -26,8 +27,16 @@ pub use discover::{
     QUERY_SEARCH_PATH, ResolvedSource, SERVER_VERSION_ROW, ScanColumn, ScanSource,
     check_server_version, discover,
 };
-pub use error::{ConnectError, ProtocolViolation, Result, UNMAPPED_ROW, ValueRefusal};
+pub use error::{
+    ConnectError, DDL_ROW, ProtocolViolation, Result, UNMAPPED_ROW, ValueRefusal, ZONE_ROW,
+    read_only_ddl,
+};
 pub use ident::{DEFAULT_SCHEMA, IdentRefusal, MAX_IDENT_BYTES, PgIdent, QualifiedRelation};
+pub use partition::{
+    LOWER_BOUND_KEY, MAX_STRIDES, NUM_PARTITIONS_KEY, PARTITION_COLUMN_KEY, PARTITIONED_READ_ROW,
+    PartitionOptions, PartitionRefusal, PartitionSpec, Stride, UPPER_BOUND_KEY, stride_cuts,
+    strides,
+};
 #[cfg(feature = "postgres")]
 pub use pool::{
     CONNECTION_CHECK_INTERVAL, Canceller, Connect, PgConnection, PoolConnection, PoolLimits,
@@ -49,6 +58,8 @@ pub use read::postgres::{
     BEGIN_SCAN, CompareOp, MAX_PARAM_SLOTS, ParamSlot, ScanMeter, ScanOptions, ScanRequest,
     ScanStatement, scan, scan_metered,
 };
+#[cfg(feature = "postgres")]
+pub use read::postgres_lanes::{BEGIN_SNAPSHOT_SCAN, EXPORT_SNAPSHOT, LaneStream, scan_lanes};
 pub use settings::{
     AUTH_METHOD_KEY, AuthMethod, ConnectionSettings, DEFAULT_PORT, DeclaredSetting,
     POSTGRES_ALIASES, POSTGRES_DRIVER, POSTGRES_KEYS, PostgresSettings, SettingsDoor, SpecRefusal,

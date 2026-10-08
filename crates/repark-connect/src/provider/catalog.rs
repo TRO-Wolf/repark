@@ -10,7 +10,8 @@ use super::schema::PostgresSchemaProvider;
 use super::table::PostgresTable;
 use crate::discover::{ResolvedSource, ScanSource, discover};
 use crate::error::Result;
-use crate::pool::{PoolLimits, PostgresConnector, PostgresPool, QueryPool};
+use crate::pool::{PoolLimits, PostgresConnector, PostgresPool, QueryPool, TimeoutSetting, within};
+use crate::read::postgres::request_error;
 use crate::settings::{PostgresSettings, SettingsDoor};
 
 pub const LISTING_ROW: &str = "CONNECT-DECL-pg-listing";
@@ -97,6 +98,23 @@ impl PostgresSource {
         let mounted = self.mounted()?;
         let resolved = discover(&mounted.pool, &source, mounted.settings.read_timeout).await?;
         Ok(PostgresTable::new(Arc::clone(self), mounted, resolved))
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn ping(&self) -> Result<()> {
+        let mounted = self.mounted()?;
+        let pooled = mounted.pool.checkout().await?;
+        let probe = async {
+            pooled
+                .client()
+                .simple_query("SELECT 1")
+                .await
+                .map(drop)
+                .map_err(|error| request_error(&error, None))
+        };
+        within(TimeoutSetting::Read, mounted.settings.read_timeout, probe).await?;
+        pooled.release_clean().await;
+        Ok(())
     }
 
     #[allow(clippy::missing_errors_doc)]

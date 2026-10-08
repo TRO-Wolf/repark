@@ -42,6 +42,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   + `iceberg` (**ICE-SYSTEM-FUNCTIONS-1**, 2026-09-20: the external fork crate for the
   system-function UDFs; external crates are invisible to `check-crate-dag`).
   DataFusion-native: speaks `datafusion::error::Result`, so **no** `repark-core` dep.
+  **C-2d fold 1 (2026-10-07):** one internal dep, `repark-common` (`normal`), for
+  `zone_horizon::proxy_year`, which the string → `TIMESTAMP` literal shares with the engine's
+  Postgres wall-clock placement. pins: c-2/C-109
   **r24 G10 / PERF-10:** crate-level `criterion` 0.8 dev-dep + `[[bench]] ratio_string_datetime`
   (never `[workspace.dependencies]`). See [benches/map.md](benches/map.md).
 - `benches/` — PERF-10 ratio micro-benches (`date_format`/`to_char`, `substring`/`upper`).
@@ -233,8 +236,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - **Public outputs:** registered scalar / aggregate UDFs + aliases; analyzer rules; logical-`Expr`
   builders (consumed by the Spark door + the Python bindings).
 - **State & lifecycle:** stateless registration; idempotent analyzer rules.
-- **Allowed internal deps:** **none internal** — speaks `datafusion::error::Result` (no `repark-core`
-  dep). Third-party: datafusion + datafusion-spark + arrow + chrono + regex.
+- **Allowed internal deps:** `repark-common` only (the zone horizon, C-2d fold 1) — speaks
+  `datafusion::error::Result` (no `repark-core` dep). Third-party: datafusion + datafusion-spark + arrow + chrono + regex.
 - **Failure model:** `datafusion::error::Result`; a missing function gets a Rust shim or a LOUD
   unsupported error — never Python compute.
 - **Extension points:** add a Spark date / non-date function (a shim module + register from

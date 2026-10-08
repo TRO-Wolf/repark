@@ -17,6 +17,47 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 ## Contents
 
+- `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
+  under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
+  `<schema>.<table>`, and a `query` is named `jdbc`. pins: c-2/C-116
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** `PartitionOptions::of` is fallible: a
+  `num_partitions` outside Spark's 32-bit `Int` refuses before any connection.
+  pins: c-3/C-010
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
+  from its integer arguments; bounds given as text in `properties` reach
+  `PostgresTable::partitioned` unparsed, so they are judged after the column's type.
+  pins: c-3/C-009
+- `read_postgres.rs` — **C-3 (2026-10-07):** `PostgresRead` carries `partition_column`,
+  `lower_bound`, `upper_bound`, `num_partitions` and a `predicates` flag in place of the list
+  of option names C-2d refused by. The door refuses `predicates` first (still declared), lifts
+  the four Spark spellings out of `properties` (`PartitionOptions::with_props`), applies
+  Spark's all-or-none rule, refuses a `query` target with a partition column in Spark's
+  words, all before any connection, and then calls `PostgresTable::partitioned` on the
+  resolved table. `source_error` now keeps the `Analysis` and `NumberFormat` classes too.
+  `tests/read_postgres.rs` pins each refusal's class and sentence against an unroutable
+  address. pins: c-3/C-006
+- `read_postgres.rs` — **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
+  partitioning }` and `PostgresTarget::{Relation, Query}`, re-exported at the crate root with
+  `READ_POSTGRES_SOURCE` (`jdbc`). `ReparkSession::read_postgres` refuses a partitioned read
+  first (`CONNECT-DECL-pg-partitioned-read`), parses `dbtable` through
+  `ScanSource::from_dbtable`, drops a `dbtable` property, sets `url`, and resolves an ad-hoc
+  `PostgresSource` on the `ReadPostgres` door whose pool lives as long as the returned frame's
+  provider. `source_error(source, error)` keeps `From<ConnectError>`'s class and prefixes the
+  source. Without the `postgres` feature the method refuses ("not compiled into this build").
+  `note_postgres_catalog_names` fills the session's read-only set. pins: c-2/C-100, C-102
+- `zone_localiser.rs` — **C-2d (2026-10-07):** `SessionZoneLocaliser` holds the session's
+  `runtime_zone` handle. Under `postgres` it implements `repark_connect::WallClockLocaliser`.
+  The zone is read at scan time and canonicalised through `canonical_session_zone_id`, as
+  `orc_scan.rs` and `text_scan.rs` do; `zone_label()` reports that canonical id. `localise`
+  takes each wall clock's offset from the same date in
+  `repark_common::zone_horizon::proxy_year`, so a wall clock after 2099 is placed by the final
+  rule, exactly as RePark's `TIMESTAMP` literal places it. A gap refuses
+  `ValueRefusal::WallClockGap` and an overlap `WallClockOverlap` (both
+  `CONNECT-DIV-pg-timestamp-zone`, naming `prefer_timestamp_ntz`). A wall clock whose instant
+  falls past chrono's calendar refuses `TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`).
+  H-TZ did not fire. `session.rs` holds 1000 lines: its two new `mod` lines are paid for by two
+  shed comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
+  pins: c-2/C-098, C-108, C-109, C-110, C-111
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
   pins: ice-views-1/C-018
@@ -200,7 +241,13 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   catalog this session builds through the same `CatalogCaches`, so no registration path changed.
   Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report
   there is no settle step before reading. pins: ice-footer-cache-1/C-006, C-007
-- `path_write.rs` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path`
+- `path_write.rs` — **FA-5 (2026-10-08, fold 1):** `materialize_empty_part`
+  writes the csv header from the frame schema's recorded display names
+  (`duplicate_names::recorded_display_names`) when it carries them, so the
+  header-only part of an empty duplicate-name csv write shows the display
+  names, as the sink serializer does for a non-empty one; a frame without
+  the record passes its own column names as before. pins: fa-5-6/C-002
+  **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path`
   owns the S3 save-mode protocol: per-call temp view, one `COPY` per part, parts land
   direct under the destination, `_SUCCESS` is the last object, exists means any object
   under the prefix, and `overwrite` lists and deletes the whole prefix. Bucket root
@@ -256,6 +303,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   the LEGACY clause; `g` padding and the `fast.rs` loops live in the child.
   **Re-verify 2 (2026-09-30):** the compiled pattern carries `has_era`,
   decided once per pattern instead of once per value.
+- `late_catalogs.rs` — **C-2d fold 1 (2026-10-07), N5:** `check_catalog_refusal` asks
+  `source_catalog_refusal` first, so an Iceberg-handle lookup of a mounted source's name refuses
+  with that source's text. pins: c-2/C-115
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.
@@ -336,6 +386,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;
   the build sweep in `session.rs` enforces it. Pins: `tests/conf_unread.rs`.
+  **OFFSET-NESTED-SORT-1 (2026-10-08):** `df_guards.rs` installs
+  `skipping_limit::skip_safe_physical_optimizer_rules()` as the physical rule list, ahead of
+  the three RePark physical rules: DataFusion's list with `EnforceSorting` wrapped. Design,
+  cost and the retirement event are in the `df_guards/` directory map.
+  pins: offset-nested-sort-1/C-005
   **DF-SUBQUERY-1 (2026-09-15):** `df_guards.rs` declares `subquery/`'s module,
   registers the `__repark_single_row` guard UDAF on every core session beside
   `stack`/`repark_isnan`, and inserts `repark_projection_exists` +

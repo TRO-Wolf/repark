@@ -7,11 +7,11 @@ use chrono::{DateTime, Datelike, NaiveDate, Utc};
 
 use crate::datetime::micros_from_local_datetime;
 use crate::spark_string_timestamp::grammar::parse_timestamp_string;
-use crate::spark_string_timestamp::instant::{LAST_TABULATED_YEAR, proxy_year};
 use crate::spark_string_timestamp::zone::{SparkZone, spark_zone_id};
 use crate::spark_string_timestamp::{
     StringCastFailure, cast_strings_to_ltz, string_to_timestamp_micros,
 };
+use repark_common::zone_horizon::{LAST_TABULATED_YEAR, proxy_year};
 
 const NEW_YORK: &str = "America/New_York";
 

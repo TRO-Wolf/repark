@@ -138,6 +138,11 @@ ALLOWED_EDGES: dict[tuple[str, str], tuple[frozenset[str], str]] = {
         "the write half re-exports `repark_common::{Error, Result}`; the catalog half stays "
         "DataFusion/iceberg-native and folds one layer up",
     ),
+    ("repark-functions", "repark-common"): (
+        frozenset({"normal"}),
+        "the zone horizon (`zone_horizon::proxy_year`): the string -> TIMESTAMP literal and the "
+        "engine's Postgres wall-clock placement read a post-2099 offset from one proxy year",
+    ),
     ("repark-ta", "repark-core"): (
         frozenset({"optional"}),
         "`TaExtension` implements the `SessionExtension` seam — OPTIONAL and feature-tied "
@@ -250,6 +255,12 @@ ALLOWED_EDGES: dict[tuple[str, str], tuple[frozenset[str], str]] = {
         frozenset({"normal"}),
         "PRE-DECLARED for release 1.8 (crate-layout-1-8-2026-10-01.md): the error seed the "
         "inference readers raise through; the readers are DataFusion-native TableProviders",
+    ),
+    ("repark-core", "repark-connect"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.6 (crate-layout-1-8-2026-10-01.md): Session registers the "
+        "configured database sources in the one federated namespace, the way it registers "
+        "Iceberg catalogs today",
     ),
     ("repark-core", "repark-cdc"): (
         frozenset({"normal"}),

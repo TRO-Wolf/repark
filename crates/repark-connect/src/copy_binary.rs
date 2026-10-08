@@ -2,7 +2,7 @@ use std::fmt;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
-use arrow::array::{ArrayRef, RecordBatch, RecordBatchOptions};
+use arrow::array::{Array, ArrayRef, RecordBatch, RecordBatchOptions};
 use arrow::datatypes::{Schema, SchemaRef};
 
 use crate::error::{ConnectError, Result};
@@ -229,10 +229,10 @@ impl CopyBinaryDecoder {
                 }
                 State::FieldValue { column, length } => {
                     let available = input.len().saturating_sub(*pos);
-                    if self.carry.is_empty() && available >= length {
+                    let appended = if self.carry.is_empty() && available >= length {
                         let bytes = input.get(*pos..*pos + length).unwrap_or_default();
                         *pos += length;
-                        self.append_value(column, bytes)?;
+                        self.append_value(column, bytes)
                     } else {
                         let taken = (length - self.carry.len()).min(available);
                         grow_carry(&mut self.carry, length, taken)?;
@@ -244,12 +244,11 @@ impl CopyBinaryDecoder {
                         }
                         let carried = std::mem::take(&mut self.carry);
                         let appended = self.append_value(column, &carried);
-                        self.carry = carried;
-                        self.carry.clear();
-                        if self.carry.capacity() > self.limits.bytes.get() {
-                            self.carry = Vec::new();
-                        }
-                        appended?;
+                        self.recycle_carry(carried);
+                        appended
+                    };
+                    if let Err(error) = appended {
+                        return self.refuse_after_kept_rows(error);
                     }
                     if let Some(batch) = self.end_field(column)? {
                         return Ok(Some(batch));
@@ -263,6 +262,15 @@ impl CopyBinaryDecoder {
                 }
             }
         }
+    }
+
+    fn recycle_carry(&mut self, mut carried: Vec<u8>) {
+        carried.clear();
+        self.carry = if carried.capacity() > self.limits.bytes.get() {
+            Vec::new()
+        } else {
+            carried
+        };
     }
 
     fn take_fixed<const N: usize>(&mut self, input: &[u8], pos: &mut usize) -> Option<[u8; N]> {
@@ -343,6 +351,25 @@ impl CopyBinaryDecoder {
             .iter_mut()
             .map(ColumnAppender::finish)
             .collect();
+        self.emit(arrays)
+    }
+
+    fn refuse_after_kept_rows(&mut self, error: ConnectError) -> Result<Option<RecordBatch>> {
+        if self.rows == 0 || !matches!(error, ConnectError::UnrepresentableValue { .. }) {
+            return Err(error);
+        }
+        let kept = self.rows;
+        let arrays: Vec<ArrayRef> = self
+            .appenders
+            .iter_mut()
+            .map(|appender| appender.finish().slice(0, kept))
+            .collect();
+        let batch = self.emit(arrays)?;
+        self.poisoned = Some(error);
+        Ok(Some(batch))
+    }
+
+    fn emit(&mut self, arrays: Vec<ArrayRef>) -> Result<RecordBatch> {
         let options = RecordBatchOptions::new().with_row_count(Some(self.rows));
         let batch = RecordBatch::try_new_with_options(Arc::clone(&self.schema), arrays, &options)
             .map_err(|error| ConnectError::Arrow {

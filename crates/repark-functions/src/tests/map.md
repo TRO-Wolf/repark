@@ -15,6 +15,8 @@ Only tests; `mod.rs` is the module manifest.
   short ids and regions, DST gap and overlap, the chrono-tz table end and the far-future
   proxy, local mean time, the i64 microsecond edges, and both failure modes (NULL, and
   `CAST_INVALID_INPUT` with Spark's `'…'` quoting). pins: cast-ts-string-1/C-001, C-002, C-003, C-008
+  **C-2d fold 1 (2026-10-07):** the horizon pins import `LAST_TABULATED_YEAR` and `proxy_year`
+  from `repark_common::zone_horizon`, their new home; every assertion is unchanged.
 - `spark_string_timestamp_sql.rs` — the same kernel through the analyzer: literal and column
   `CAST`, ANSI on and off, `TRY_CAST`, one-argument `to_timestamp` and `try_to_timestamp`, each
   as `Timestamp(µs, "UTC")`. pins: cast-ts-string-1/C-004, C-005, C-006

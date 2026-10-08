@@ -36,6 +36,7 @@ from repark.spark.dataframe import io_declared as _io_declared
 from repark.spark.dataframe import writer_s3 as _writer_s3
 from repark.spark.dataframe import writer_text as _writer_text
 from repark.spark.dataframe.core import DataFrame, _by_name_casefold_map, _sql_string_literal
+from repark.spark.qualified_names import _refuse_ambiguous_partition_columns
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
@@ -381,10 +382,10 @@ class DataFrameWriter:
                 f"path write mode must be one of {self._PATH_MODES}, "
                 f"got {mask_credentials(self._mode)!r}"
             )
-        if stored_as in ("PARQUET", "JSON", "CSV"):
-            writer_layout._refuse_duplicate_output_columns(
-                self._dataframe, exact_only=stored_as == "CSV"
-            )
+        if stored_as in ("PARQUET", "JSON"):
+            writer_layout._refuse_duplicate_output_columns(self._dataframe)
+        elif self._partition_columns:
+            _refuse_ambiguous_partition_columns(self._dataframe, self._partition_columns)
         destination = Path(path)
         if _writer_s3.is_s3_url(path):
             return _writer_s3.write_s3_path(self, path, stored_as=stored_as)
@@ -414,10 +415,14 @@ class DataFrameWriter:
         options_clause = self._copy_options_sql(stored_as)
         self._dataframe._session.note_local_write_root(escaped_staging)
         try:
-            self._run_through_temp_view(
+            writer_layout.run_through_temp_view(
+                self._dataframe,
                 lambda view: writer_layout.text_write_copy_sql(
                     self, view, stored_as, partition_clause, options_clause, escaped_staging
-                )
+                ),
+                None,
+                "_repark_writer_",
+                duplicate_tolerant=stored_as == "CSV",
             )
             if not staging.exists():
                 staging.mkdir(parents=True, exist_ok=True)

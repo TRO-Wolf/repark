@@ -505,10 +505,6 @@ fn declared_keys_refuse_naming_their_row() {
         ("sessionInitStatement", DeclaredSetting::SessionSql),
         ("customSchema", DeclaredSetting::SessionSql),
         ("options", DeclaredSetting::SessionSql),
-        ("partitionColumn", DeclaredSetting::PartitionedRead),
-        ("lowerBound", DeclaredSetting::PartitionedRead),
-        ("upperBound", DeclaredSetting::PartitionedRead),
-        ("numPartitions", DeclaredSetting::PartitionedRead),
         ("predicates", DeclaredSetting::PartitionedRead),
     ];
     for (name, declared) in cases {
@@ -517,7 +513,22 @@ fn declared_keys_refuse_naming_their_row() {
     for (name, declared) in &cases[..5] {
         is_declared(&refuse_one(name, "x", TOML), key(name), *declared);
     }
-    rejects("numPartitions", "4", TOML, unknown());
+    for lifted in [
+        "partitionColumn",
+        "lowerBound",
+        "upperBound",
+        "numPartitions",
+    ] {
+        rejects(lifted, "4", TOML, unknown());
+        assert!(matches!(
+            refuse_one(lifted, "4", SPARK),
+            ConnectError::InvalidSpecification {
+                reason: SpecRefusal::UnknownKey { aliases: true },
+                ..
+            }
+        ));
+    }
+    rejects("predicates", "x", TOML, unknown());
     let url = "postgresql://h/db?options=-c%20search_path%3Dpublic";
     let error = refusal(&[("url", url), ("user", "app")], TOML);
     is_declared(&error, query("options"), DeclaredSetting::SessionSql);

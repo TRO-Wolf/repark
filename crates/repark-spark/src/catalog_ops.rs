@@ -53,10 +53,19 @@ pub(crate) fn catalog_handle<'a>(
     if let Some(handle) = catalogs.get(name) {
         return Ok(handle);
     }
+    if let Some(message) = catalogs.source_read_only_message(name) {
+        return Err(DataFusionError::NotImplemented(message));
+    }
     if catalogs.is_read_only_catalog(name) {
         return Err(DataFusionError::Plan(postgres_read_only_dml_message(name)));
     }
     Err(DataFusionError::Plan(format!("unknown catalog `{name}`")))
+}
+
+fn read_only_message(catalogs: &CatalogRegistry, name: &str) -> String {
+    catalogs
+        .source_read_only_message(name)
+        .unwrap_or_else(|| postgres_read_only_dml_message(name))
 }
 
 /// If `table_name` is three-part and targets a read-only catalog, return the P11 direction-note.
@@ -66,7 +75,7 @@ pub(crate) fn refuse_read_only_dml_table_sql(
 ) -> Option<String> {
     let catalog = table_sql.split('.').next()?.trim().trim_matches('"');
     if catalogs.is_read_only_catalog(catalog) {
-        Some(postgres_read_only_dml_message(catalog))
+        Some(read_only_message(catalogs, catalog))
     } else {
         None
     }

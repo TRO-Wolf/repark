@@ -995,6 +995,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   and `refuse_writer_save_format` are the `format("orc")` / `format("xml")` arms at
   `load()` / `save()`, with `save()`'s residual `DATA_SOURCE_NOT_FOUND` answer for
   every other non-path format kept byte-identical.
+  C-3 (2026-10-07): `reader_jdbc` passes its three integers through `_jdbc_i64`, so a value
+  outside 64 bits is `NumberFormatException` and never a binding `OverflowError`; the four
+  range arguments now partition the read. pins: c-3/C-006
+  C-3 fold 2 (2026-10-08): `reader_jdbc` takes `lowerBound`, `upperBound` and `numPartitions` as
+  int or str, as PySpark does, and hands each on as text in `properties` (`_put_jdbc_option_text`;
+  a properties key that already spells the option keeps its own spelling, so the engine door's
+  conflict refusal answers). The facade no longer compares, parses or counts them: the engine door
+  resolves the column first, then parses the bounds, and refuses an incomplete set in Spark's
+  sentence, so `_jdbc_i64` is no longer on this door. pins: c-3/C-006
   R-3 (2026-09-14 round 2): `reader_jdbc` is main's PostgreSQL read path —
   dbtable-from-properties resolution, the three `IllegalArgumentException` teaching
   errors, and the `read_postgres` delegation with main's argument names — behind
@@ -1895,3 +1904,19 @@ scratch view passes `rename_fields=False` through
 `register_view_without_fill`, so the plan text shows the true engine plan
 (the R5 refusal stays out of that helper for the same reason).
 pins: attr-id-1/C-067, C-068
+**FA-5 (2026-10-08):** the csv path write no longer refuses exact-duplicate
+display names. `writer_layout._rename_duplicate_tolerant` hands the frame to
+the native `rename_duplicate_tolerant` when a display name repeats (unique
+engine names that carry the display; otherwise the SM-2c rename above), and
+only the csv door asks for it: `_registration_frame(duplicate_tolerant=True)`
+through `run_through_temp_view` and the S3 forward, and
+`text_write_copy_parts` for the schema the Rust builder reads. The copy
+records the display names in field metadata and the Rust sink writes the
+header from that record, so no column is ever renamed by its spelling
+(fold 1). A csv `partitionBy` over a repeated name refuses in
+`qualified_names._refuse_ambiguous_partition_columns` before any view is
+registered, so no refusal can name the scratch view.
+parquet, json, orc, `saveAsTable` and `writeTo` keep
+`_refuse_duplicate_output_columns`. `writer_readwriter.py` calls
+`writer_layout.run_through_temp_view` directly for the path `COPY`, which
+keeps the file under its ceiling. pins: fa-5-6/C-002, C-003, C-004

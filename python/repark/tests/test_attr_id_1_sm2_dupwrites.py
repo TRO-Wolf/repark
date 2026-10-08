@@ -40,20 +40,18 @@ def test_json_write_of_duplicate_display_names_refuses_column_already_exists(
     session.stop()
 
 
-def test_csv_write_of_duplicate_display_names_refuses_as_ruled_divergence(
+def test_csv_write_of_duplicate_display_names_writes_the_display_header(
     tmp_path: Path,
 ) -> None:
     session = sm2._open(tmp_path, "sm2-dupwrites-csv")
     frame = sm2._self_join(session)
     target = tmp_path / "dup_csv"
-    refused = sm2._refusal_of(
-        lambda: frame.write.mode("overwrite").option("header", "true").csv(str(target))
-    )
-    assert isinstance(refused, AnalysisException)
-    assert sm2._condition_of(refused) == "COLUMN_ALREADY_EXISTS"
-    assert sm2._sql_state_of(refused) == "42711"
-    assert str(refused).splitlines()[0] == sm2._expected_dup_message("id")
-    assert not target.exists()
+    frame.write.mode("overwrite").option("header", "true").csv(str(target))
+    parts = sorted(target.rglob("*.csv"))
+    assert parts
+    for part in parts:
+        assert part.read_text(encoding="utf-8").splitlines()[0] == "id,s,v,id,s,v"
+    sm2._assert_no_twin_bytes(target)
     session.stop()
 
 

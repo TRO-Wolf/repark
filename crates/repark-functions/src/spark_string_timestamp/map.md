@@ -28,7 +28,10 @@ of the rule. Closes when the Spark grammar changes (a Spark bump re-records the 
   `LAST_TABULATED_YEAR` (2099) and Java applies the final rule for ever, so a later wall reads
   its offset from the latest year in 2072–2099 with the same leap flag and January-1 weekday.
   A wall before 1200 reads its offset from the same day in 1200–1599 (local mean time), so the
-  i64 range edge outside chrono's calendar still resolves.
+  i64 range edge outside chrono's calendar still resolves. **C-2d fold 1 (2026-10-07):** the
+  horizon (`LAST_TABULATED_YEAR`, `proxy_year` and the calendar helpers) lives in
+  `repark_common::zone_horizon`, shared with the engine's Postgres wall-clock placement.
+  pins: c-2/C-109
 
 Tests: [`../tests/spark_string_timestamp.rs`](../tests/map.md).
 pins: cast-ts-string-1/C-001, C-002, C-003, C-008

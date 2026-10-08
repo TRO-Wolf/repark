@@ -1,6 +1,6 @@
-"""List a repark.toml-declared database source and show its connector-pending refusal.
+"""List a repark.toml-declared source and show ping() refusing its incomplete specification.
 
-pins: cfg-2/C-013
+pins: cfg-2/C-013 · pins: c-2/C-099
 """
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from repark.errors import UnsupportedOperationException
+from repark.errors import IllegalArgumentException
 from repark.spark import ReparkSession
 
 COVERS: list[str] = [
@@ -39,11 +39,14 @@ def main() -> None:
                 raise SystemExit(f"key_path {handle.key_path!r} unexpected")
             try:
                 handle.ping()
-            except UnsupportedOperationException as error:
-                if "1.10" not in str(error):
+            except IllegalArgumentException as error:
+                text = str(error)
+                if handle.key_path not in text or "`user` is required" not in text:
                     raise SystemExit(f"ping refusal {error!r} unexpected") from error
+                if "s3cr3t" in text:
+                    raise SystemExit("ping refusal must not carry the password") from error
             else:
-                raise SystemExit("ping() must refuse until the connector lands")
+                raise SystemExit("ping() must refuse an incomplete specification")
         finally:
             repark.stop()
 

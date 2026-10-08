@@ -118,6 +118,58 @@ async fn a_lease_dropped_before_release_aborts_its_connection() {
 }
 
 #[tokio::test]
+async fn a_multi_checkout_takes_what_is_free_and_never_passes_the_pool() {
+    let (pool, opened) = fake_pool(4, 100, 60_000);
+    let all = pool.checkout_up_to(8).await.expect("the whole pool");
+    assert_eq!(all.len(), 4);
+    assert_eq!(opened.count(), 4);
+    let error = checkout_error(&pool).await;
+    assert!(matches!(error, ConnectError::PoolExhausted { .. }));
+    let mut all = all;
+    let kept: Vec<_> = all.drain(1..).collect();
+    for client in all {
+        client.release_clean().await;
+    }
+    let one = pool.checkout_up_to(4).await.expect("the one free permit");
+    assert_eq!(one.len(), 1, "it never waits for a second connection");
+    assert_eq!(opened.count(), 4, "the idle connection was reused");
+    drop(kept);
+    for client in one {
+        client.release_clean().await;
+    }
+    let none_wanted = pool.checkout_up_to(0).await.expect("at least one");
+    assert_eq!(none_wanted.len(), 1);
+    let two = pool.checkout_up_to(2).await.expect("two of the three free");
+    assert_eq!(two.len(), 2);
+}
+
+#[tokio::test]
+async fn a_retired_connection_is_closed_and_never_pooled() {
+    let (pool, opened) = fake_pool(2, 100, 60_000);
+    let mut pair = pool.checkout_up_to(2).await.expect("both");
+    pair.pop().expect("second").retire();
+    assert_eq!(pool.idle_count(), 0, "a retired connection is not kept");
+    pair.pop().expect("first").release_clean().await;
+    assert_eq!(pool.idle_count(), 1);
+    let again = pool.checkout_up_to(2).await.expect("both again");
+    assert_eq!(again.len(), 2, "the retired lease gave its permit back");
+    assert_eq!(opened.count(), 3, "one reused, one opened afresh");
+}
+
+#[tokio::test]
+async fn a_multi_checkout_queues_for_its_first_connection_only() {
+    let (pool, _opened) = fake_pool(1, 100, 60_000);
+    let held = pool.checkout().await.expect("the one permit");
+    let started = Instant::now();
+    let outcome = pool.checkout_up_to(4).await;
+    assert!(started.elapsed() >= Duration::from_millis(100));
+    let waited = Duration::from_millis(100);
+    assert!(matches!(outcome, Err(ConnectError::PoolExhausted { waited: w }) if w == waited));
+    held.release_clean().await;
+    assert_eq!(pool.checkout_up_to(4).await.expect("freed").len(), 1);
+}
+
+#[tokio::test]
 async fn checkout_beyond_pool_max_size_is_pool_exhausted() {
     let (pool, _opened) = fake_pool(1, 100, 60_000);
     let held = pool.checkout().await.expect("the one permit");

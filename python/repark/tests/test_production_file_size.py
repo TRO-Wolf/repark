@@ -249,7 +249,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_parse_create_dataframe_schema": (
         "21e22aa6258c57cfaa589197c112e2d76e73d8d9debfe604ae2f0f45b3dba75f"
     ),
-    "_parse_jdbc_int_option": ("f648900e08ca509266221e8f4bdd82eaa6dbfd19b1e4db9cf68e5d3705b32a78"),
+    "_parse_jdbc_int_option": ("d7c7ef7c127a54d0030f51a55020be27381931910e9908462ff6c2eb3d3fa4eb"),
     "_parse_schema_ddl": ("f85655a15284092b9ba36ffad12139d4a802702274775be232aa769b1a37410f"),
     "_parse_simple_sql_udf_call": (
         "1487ad6ad0fd8406e55a935574d1af0dc7d65f3e808e6bbf55b0a1ee0e65d3ba"
