@@ -16243,6 +16243,47 @@ field NAME.
   for this label, and slice (d) carries the passing pin rather than the filed xfail.
   pins: fnp-agg-1/C-003
 
+### OFFSET-NESTED-SORT-1 — an `OFFSET` under a nested `ORDER BY` answers Spark's rows at every partition count — **FIXED 2026-10-08 (OFFSET-NESTED-SORT-1)**
+
+- **repark** — **FIXED 2026-10-08.** `SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET
+  4990) ORDER BY v` over 5000 rows answers `4991..4995` at 1, 2 and 16 partitions, on both SQL
+  doors and as `orderBy("v").offset(4990).limit(5).orderBy("v")`. Before the fix it answered no
+  rows whenever the scan below the inner sort had one partition: a `CREATE TABLE AS` memory
+  table at `target_partitions = 1`, and a `createDataFrame` view, a one-file parquet scan and an
+  Iceberg scan at every setting. A second shape was wrong at every partition count: an outer
+  sort over an `OFFSET` with no `LIMIT` (`SELECT v FROM (SELECT v FROM t ORDER BY v OFFSET 4990)
+  ORDER BY v DESC` answered `10..1` instead of `5000..4991`).
+  **The upstream defect:** DataFusion 54.1.0's `EnforceSorting` physical rule
+  (`datafusion-physical-optimizer`, `enforce_sorting/sort_pushdown.rs`) ignores a
+  `GlobalLimitExec`'s `skip`. It pushes the limit's `fetch` into the sort below as a row cap
+  (`TopK(fetch=4995)` becomes `TopK(fetch=5)`, then `LimitPushdown` folds the plan to
+  `GlobalLimitExec: skip=4990, fetch=0`), and it pushes an outer sort below a limit that has a
+  `skip` and no `fetch`. A bare DataFusion `SessionContext` reproduces both with no RePark rule
+  installed. DataFusion 55.0.0 carries the same code (read, not run). RePark's guard
+  (`crates/repark-core/src/session/df_guards/skipping_limit.rs`) wraps the rule so a limit with
+  a `skip` is a boundary the rule cannot push through; a statement with no `OFFSET` plans
+  exactly as before.
+  **Retirement:** at the DataFusion bump that fixes the pushdown, the two
+  `stock_enforce_sorting_still_*` pins go red; delete the guard, its wiring line and those two
+  pins, and keep the grid.
+- **Apache Spark** — answers `4991..4995` for the reported statement and `5000..4991` for the
+  offset-only one, independent of the partition count.
+  *(oracle: recorded — live PySpark 4.1.2, 2026-10-08; 70 SQL statements recorded at 1 and 16 input
+  partitions in `crates/repark-core/src/session/tests/skipping_limit_grid.tsv`, 31 of them and
+  15 DataFrame shapes with Arrow types in
+  `python/repark/tests/offset_nested_sort_1_spark_oracle.json`, re-derived under `REPARK_PARITY_LIVE=1` by
+  `python/repark/tests/test_offset_nested_sort_1.py::test_live_spark_answers_every_recorded_cell`.)*
+- **Pin** — `crates/repark-core/src/session/tests/skipping_limit.rs` (the 70-statement grid over
+  a memory table, a sorted series view, a parquet scan and an Iceberg scan at 1, 2 and 16
+  partitions; the two stock-rule pins; the plan-text and no-`OFFSET` plan-identity pins) and
+  `python/repark/tests/test_offset_nested_sort_1.py` (the Spark-dialect SQL door, the native
+  ANSI door and the DataFrame door).
+- **Rationale** — FIXED, filed and closed in the same unit. A wrong row count, not a declared
+  difference: the guard stays only until the pinned DataFusion fixes its rule. Measurements,
+  the rule bisect and the mutation results are in
+  `task/ledgers/staging/offset-nested-sort-1-ledger.md`.
+  pins: offset-nested-sort-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

@@ -238,8 +238,8 @@ after the `OFFSET` a second time. Only a statement with an `OFFSET` under a sort
 | C-007 | A live Spark cell replays every facade cell and follows the live-cell rules. | The cell, run with `REPARK_PARITY_LIVE=1`, collected together with another live module. | PROVEN | `test_live_spark_answers_every_recorded_cell` uses the shared `spark_engine` fixture (the conftest guard fails any test that stops the context), registers one temp view of its own name (`offset_nested_sort_1_oracle`; no catalog is created, so none can collide), and reads or pops no environment variable. Run together with `test_win_slide_1.py`'s live cells: `15 passed, 152 deselected`. |
 | C-008 | The pins cover the partition-dependent path and the guard's own branches. | Mutations, each run against the pin module. | PROVEN | §5: five mutations, each red; M1 is red at one partition and green at two and sixteen for the one-partition family. |
 | C-009 | The guard adds no work to a statement without an `OFFSET` beyond one walk of the physical plan, and such a statement plans exactly as stock DataFusion plans it. | A plan-identity pin, the rule-list pin, a measurement. | PROVEN | `statements_without_offset_plan_exactly_as_stock_datafusion` (12 statements at 1, 2, 16: the same plan text as the stock rule gives, including `SELECT … ORDER BY … LIMIT n`, a nested `LIMIT` under a refining sort, a `LIMIT` over a `UNION ALL`). §6 has the measurement. |
-| C-010 | The card row is closed with its date and the registry row names the upstream defect and the retirement event. | The card, the registry row, the retirement note. | OPEN | Closes with the unit's last commit: is the registry row filed and the card row dated? |
-| C-011 | The unit's gates pass on the final tree. | The gate runs. | OPEN | Closes with the unit's last commit: do the gates of §7 pass on the final tree? |
+| C-010 | The card row is closed with its date and the registry row names the upstream defect and the retirement event. | The card, the registry row, the retirement note. | PROVEN | Card status line and its `map.md` row; registry row `OFFSET-NESTED-SORT-1` (§7 of the parity registry); retirement note in `crates/repark-core/src/session/df_guards/map.md`: the two `stock_enforce_sorting_still_*` pins go red when DataFusion fixes the rule. |
+| C-011 | The unit's gates pass on the final tree. | The gate runs. | PROVEN | §7. |
 
 ## 5. Mutations
 
@@ -291,7 +291,32 @@ noise-floor column exists. The probe was a scratch test and is not in the tree.
 
 ## 7. Gates
 
-Recorded with the unit's last commit.
+Every cargo command ran under the build lock, on the final tree (the scratch probe removed).
+
+| Gate | Result |
+|---|---|
+| `cargo fmt --check` | exit 0 |
+| `cargo test -p repark-core -p repark-spark -p repark-sql --lib` | exit 0 — `repark-core` 1308 passed, 1 ignored; `repark-spark` 2630 passed, 5 ignored; `repark-sql` 392 passed |
+| `cargo test -p repark-core --lib -- session::tests::skipping_limit` | 16 passed |
+| `make rust-clippy` | exit 0 |
+| `make rust-panic-ban` | exit 0 |
+| `make develop` | exit 0 |
+| `pytest python/repark/tests -k "limit or offset or sort or order" -n 8` | 677 passed, 43 skipped, 3 xfailed |
+| `pytest python/repark/tests -n 8` (the whole facade suite, as a regression check) | 15692 passed, 485 skipped, 153 xfailed, 0 failed |
+| `pytest python/repark/tests/test_offset_nested_sort_1.py` | 10 passed, 1 skipped (the live cell, without the live flag) |
+| the live cell, `REPARK_PARITY_LIVE=1`, with `test_win_slide_1.py`'s live cells | 15 passed |
+| `ruff check .`, `ruff format --check .` (0.15.22) | clean |
+| `python3 scripts/check_rust_file_size.py` | 1124 files clean |
+| `./scripts/check_lib_rs.sh`, `./scripts/check_lib_py.sh`, `./scripts/check_crate_dag.sh` | clean |
+| `python3 scripts/sync_map_md.py --check`, `bash scripts/check_map_md.sh --base origin/main` | clean |
+| `python3 scripts/check_docs_links.py` | clean |
+| `python3 scripts/check_ledger_grammar.py` | clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xsec1 origin/main HEAD` | 0 hits |
+
+`pytest-xdist` is not in the clone's `.venv`; the `-n 8` runs used
+`uv run --no-sync --with pytest-xdist`, which layers it without changing the environment. The
+live cell needs PySpark, which the `.venv` lacks: it ran on the `.venv` interpreter with the
+Spark environment's site-packages appended to `sys.path`.
 
 ## 8. Notes for the orchestrator
 
@@ -305,3 +330,51 @@ Recorded with the unit's last commit.
 - **A parquet file written from a sorted plan declares its order**, so a scan of it never
   showed the defect. The parquet source of the pins is written in shuffled order for that
   reason.
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: offset-nested-sort-1
+  complete: true
+  reattested: []
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-001..C-011 walked against behavior — the reproduction on stock DataFusion and on RePark's state, the three facade doors on a module built from main and one built with the guard, the 70-statement Spark grid over four sources at three partition counts, the rule list, the live cell and the gates.
+      artifacts: [task/ledgers/staging/offset-nested-sort-1-ledger.md, crates/repark-core/src/session/tests/skipping_limit.rs, python/repark/tests/test_offset_nested_sort_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary inputs run as grid cells — OFFSET 0, OFFSET past the row count with and without LIMIT, LIMIT 0, LIMIT past the end, a small offset, nested offsets, a skip with no fetch and a fetch with no skip, sorted and unsorted sources, one and many scan partitions.
+      artifacts: [crates/repark-core/src/session/tests/skipping_limit_grid.tsv]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The seal's two failure paths are pinned — execute refuses with an internal error and with_new_children refuses a child; mutation M3 shows a limit input left unoptimized fails planning loudly instead of answering wrong rows.
+      artifacts: [crates/repark-core/src/session/tests/skipping_limit.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The rule holds no state — the wrapper owns only the inner rule, and a seal owns only its limit; nested skipping limits are sealed bottom-up and restored top-down (triple_limits, triple_offsets, join_two_windows cells); no seal survives planning for any grid statement at 1 and 16 partitions.
+      artifacts: [crates/repark-core/src/session/df_guards/skipping_limit.rs, crates/repark-core/src/session/tests/skipping_limit.rs]
+    - id: AT-5
+      status: N/A
+      justification: A physical-plan rewrite with no privileged action, no secret, no parsed input and no path handling.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The defect is a wrong row count and wrong rows; every cell compares the full ordered row list with Spark's, and the facade cells compare the Arrow types as well; statements without an OFFSET keep the stock plan text.
+      artifacts: [crates/repark-core/src/session/tests/skipping_limit.rs, python/repark/tests/offset_nested_sort_1_spark_oracle.json]
+    - id: AT-7
+      status: ATTACKED
+      evidence: No rule pass is added; a statement without an OFFSET gains one walk of the physical plan and keeps its plan; the measurement in section 6 puts the difference inside the noise floor; the one cost given up (a second small sort above an OFFSET under a refining sort) is recorded.
+      artifacts: [task/ledgers/staging/offset-nested-sort-1-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: The DataFusion 54.1.0 behaviour is read at its source lines and pinned by two stock-rule tests that go red when upstream changes; the 55.0.0 claim is marked as a reading, not a run; the rule-list pin holds DataFusion's recommended order.
+      artifacts: [crates/repark-core/src/session/tests/skipping_limit.rs, crates/repark-core/src/session/df_guards/map.md]
+    - id: AT-9
+      status: N/A
+      justification: No log, metric or error text reaches a user from this change; the only new error texts are two internal errors that planning never raises on a correct tree, and both are pinned.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Five mutations run against the pin module; M5 found a gap (sealing every limit stayed green) and the plan-identity pin was widened until it went red; M1 is red at one partition and green at two and sixteen for the one-partition family.
+      artifacts: [task/ledgers/staging/offset-nested-sort-1-ledger.md, crates/repark-core/src/session/tests/skipping_limit.rs]
+```

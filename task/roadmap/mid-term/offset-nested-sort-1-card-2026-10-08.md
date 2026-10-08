@@ -2,7 +2,9 @@
 
 **Date:** 2026-10-08. **Filed by:** Claude (Haiku 5.5), docs lane, from the orchestrator's brief. **Source:** the C-3 lane's hand-back (PR #998, not on main yet), its first out-of-scope item.
 
-**Status:** filed, not scheduled.
+**Status:** **closed 2026-10-08** by unit OFFSET-NESTED-SORT-1 (branch `fix/offset-nested-sort-1`), pending the product PR's verifier. Confirmed, and wider than filed: the defect is in the pinned DataFusion 54.1.0 (`EnforceSorting`'s sort pushdown ignores a limit's `skip`), it is wrong wherever the scan below the inner sort has one partition (a `createDataFrame` view, a one-file parquet scan and an Iceberg scan at every partition count), and an outer sort over an offset-only limit was wrong at every partition count. RePark guards the rule; the reported statement answers 5 rows at 1, 2 and 16 partitions on all three doors, with a live Spark cell. Ledger: [../../ledgers/staging/offset-nested-sort-1-ledger.md](../../ledgers/staging/offset-nested-sort-1-ledger.md). Registry row: `OFFSET-NESTED-SORT-1` in [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md). The version question below is answered: RePark pins DataFusion 54.1.0.
+
+**Status when filed:** filed, not scheduled.
 
 ## Why
 
