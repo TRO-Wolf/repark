@@ -70,29 +70,41 @@ pins: ice-error-conditions-1/C-011
   reference them (DataFusion's alias-list path resolves `col(field.name())`
   through its normalizer and cannot see stored case). pins:
   ice-mixed-case-1/C-013, C-014, casesens-1/C-003
-- `using_keys.rs` — **USING-PER-SIDE-KEYS-1 (2026-10-07):** the SQL-door half. Stock
-  DataFusion plans `USING` with both keys in the join schema, shows the left key in `*` and
-  for the unqualified key, matches a chained join on the left key, and refuses the
-  unqualified key in `WHERE`. `rewrite_using_keys` runs on the parsed statement before
-  `plan_with_repair` (no second plan): for a `SELECT` whose `FROM` is one relation followed
-  only by `USING` joins it builds the merged key left to right (the left key on
-  `inner`/`left`/`semi`/`anti`, the right key on `right`, `coalesce(merged, right)` on
-  `full`), replaces the unqualified key with it in the projection, `WHERE`, `GROUP BY`,
-  `HAVING`, `QUALIFY` and `ORDER BY` (not inside subqueries, and not in `ORDER BY` when a
-  select alias shadows the key), and gives a bare `*` a `REPLACE (merged AS key)` option.
-  The replaced output is an unqualified alias, which DataFusion cannot hold beside a
-  qualified field of the same name, so the select keeps main's answer when its list also
-  names `l.id` or a qualified star, and an `ORDER BY l.id` is carried as a helper column
-  through a wrapping `SELECT * EXCEPT (…) FROM (…)`. A `FROM` with an `ON` join, a comma
-  join, a nested join or `NATURAL` is left as DataFusion plans it. `rekey_chained_using`
-  then fixes the plan: a `USING` join whose left input is a `USING` join matches on that
-  join's merged key, so chained `right`/`full` joins answer the right rows (`NATURAL` chains
-  too). Pins: `using_keys_tests.rs`.
-  pins: using-per-side-keys-1/C-006, C-007, C-008, C-009
-- `using_keys_tests.rs` — the pins of `using_keys.rs` on three MemTables: star and
-  unqualified key per clause, `WHERE` on six join types (aliased and not), per-side keys
-  with `ORDER BY l.id`, chained joins, alias shadow, derived table, subquery scope, set
-  operation, `*, r.id`, the `ON` control and a case-sensitive session.
+- `using_keys.rs` — **USING-PER-SIDE-KEYS-1 fold 1 (2026-10-08):** the SQL-door half, on the
+  plan. The 2026-10-07 statement rewrite (`REPLACE` in the star, an `ORDER BY` wrapper) is
+  gone: it had no scopes and broke lambdas, `DISTINCT`, `ORDER BY` and output names. Stock
+  DataFusion plans `USING` with both keys in the join schema, shows the left key in `*` and for
+  the unqualified key, matches a chained join on the left key, and refuses the unqualified key
+  in `WHERE`. `plan_statement_with_column_repair` sends a statement that names `USING` or
+  `NATURAL` (`names_using`) through `plan_using`: it plans once with
+  `sql_parser.collect_spans` on (`spanned_state`) after `mark_explicit` has set a marker span
+  on every compound identifier, so a planned column that carries the marker is one the user
+  qualified. DataFusion rebinds an `ORDER BY` reference to the projection's output and drops
+  its span, so compound identifiers under `ORDER BY` are also wrapped in a doubled one-argument
+  `coalesce`, which `unmark_order` removes from the plan again (restoring the marker).
+  `merge_using_keys` then walks the plan once (`Pass`): each `USING` join opens a key set
+  (its side columns and the merged key: left on `inner`/`left`/`semi`/`anti`, right on
+  `right`, `frame_names::full_key`'s common-type `coalesce` on `full`, chained left to right);
+  while a set is open a reference without the marker reads the merged key, in filters, sorts,
+  later joins' keys and the first projection, which keeps its output names and qualifiers; an
+  aggregate or window gets one projection below it; an `ORDER BY l.id` over a projection whose
+  `l.id` now reads the merged key gets the side key as a helper column (`__repark_using_k<N>`,
+  numbered past any name in the schema) below the sort and a narrowing projection above it;
+  `EXPLAIN` re-renders the plan it shows. A shape with no rule sets `bail` and the statement
+  keeps the plan it had, which is `main`'s; so do a select list with a qualified star and a
+  grouped select that names a side key (`mark_explicit` answers `false`), because the planner
+  drops the marker there. If planning with spans fails, the statement is planned exactly as
+  before; only when that also refuses does `qualify_keys` qualify the unqualified key with
+  the first relation (one relation followed by `USING` joins that all name the key; lambda
+  parameters and select aliases shadow it; sub-queries are not entered) and plan again, which
+  is what makes `WHERE id > 2` answer. Pins: `using_keys_tests.rs`.
+  pins: using-per-side-keys-1/C-006, C-007, C-008, C-009, C-012, C-013
+- `using_keys_tests.rs` — the pins of `using_keys.rs` on MemTables: star and unqualified key per
+  clause, `WHERE` on six join types, per-side keys with `ORDER BY l.id`, chains, alias shadow,
+  derived table, sub-query scope, set operation, `*, r.id`, the `ON` control, a case-sensitive
+  session, and the fold-1 repros: `DISTINCT … ORDER BY`, an `ORDER BY` column outside the select
+  list, shared non-key names, a key in another case, `EXPLAIN`, shapes beyond one chain, a
+  helper-name collision, refusals that stay `main`'s, and `qualify_keys` on lambdas and scopes.
 - `stack.rs` — run 22b: the nesting-depth stack estimate and the grown-stack future that
   `plan_statement_with_column_repair` polls the repair through. The per-level 32 KiB is
   about 1.9× the measured debug cost of the derived `SetExpr::clone` (17,216 B per `UNION`

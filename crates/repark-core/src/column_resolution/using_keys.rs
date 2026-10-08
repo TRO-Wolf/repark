@@ -1,525 +1,542 @@
-use std::ops::ControlFlow;
+use std::sync::Arc;
 
+use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
-use datafusion::common::{Column, JoinConstraint as PlanConstraint, Result};
-use datafusion::functions::core::expr_fn::coalesce;
-use datafusion::logical_expr::{Expr, Join, JoinType, LogicalPlan};
-use datafusion::sql::sqlparser::ast::{
-    ExceptSelectItem, Expr as SqlExpr, GroupByExpr, Ident, JoinConstraint, JoinOperator,
-    ObjectName, ObjectNamePart, OrderByKind, Query, ReplaceSelectElement, ReplaceSelectItem,
-    Select, SelectItem, SetExpr, Statement, TableFactor, TableWithJoins, Visit, VisitMut, Visitor,
-    VisitorMut,
+use datafusion::common::{Column, JoinConstraint as PlanConstraint, Location, Result, Span};
+use datafusion::logical_expr::expr::Sort as SortExpr;
+use datafusion::logical_expr::{
+    Explain, Expr, ExprSchemable, Join, JoinType, LogicalPlan, PlanType, Projection, Sort,
+    SubqueryAlias, ToStringifiedPlan,
 };
-use datafusion::sql::sqlparser::dialect::DatabricksDialect;
-use datafusion::sql::sqlparser::parser::Parser;
 
-use super::fold::constraint;
+use super::using_marks::EXPLICIT_LINE;
+use crate::frame_names::full_key;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Side {
-    Left,
-    Right,
-    Both,
+const HELPER: &str = "__repark_using_k";
+
+fn explicit(column: &Column) -> bool {
+    column.relation.is_some()
+        && column
+            .spans()
+            .iter()
+            .any(|span| span.start.line == EXPLICIT_LINE)
 }
 
-struct Merged {
-    key: Ident,
-    expr: SqlExpr,
-    plain: bool,
-}
-
-fn side_of(operator: &JoinOperator) -> Option<Side> {
-    match operator {
-        JoinOperator::Join(_)
-        | JoinOperator::Inner(_)
-        | JoinOperator::Left(_)
-        | JoinOperator::LeftOuter(_)
-        | JoinOperator::Semi(_)
-        | JoinOperator::LeftSemi(_)
-        | JoinOperator::Anti(_)
-        | JoinOperator::LeftAnti(_) => Some(Side::Left),
-        JoinOperator::Right(_) | JoinOperator::RightOuter(_) => Some(Side::Right),
-        JoinOperator::FullOuter(_) => Some(Side::Both),
-        _ => None,
-    }
-}
-
-fn qualifier_of(factor: &TableFactor) -> Option<String> {
-    match factor {
-        TableFactor::Table { name, alias, .. } => match alias {
-            Some(alias) => Some(alias.name.to_string()),
-            None => match name.0.last() {
-                Some(ObjectNamePart::Identifier(ident)) => Some(ident.to_string()),
-                _ => None,
-            },
-        },
-        TableFactor::Derived {
-            alias: Some(alias), ..
-        } => Some(alias.name.to_string()),
-        _ => None,
-    }
-}
-
-fn using_idents(columns: &[ObjectName]) -> Option<Vec<&Ident>> {
-    columns
-        .iter()
-        .map(|column| match column.0.as_slice() {
-            [ObjectNamePart::Identifier(ident)] => Some(ident),
+fn single_coalesce(expr: &Expr) -> Option<&Expr> {
+    match expr {
+        Expr::ScalarFunction(call) if call.name() == "coalesce" => match call.args.as_slice() {
+            [held] => Some(held),
             _ => None,
-        })
-        .collect()
-}
-
-fn same_key(left: &Ident, right: &Ident, insensitive: bool) -> bool {
-    if insensitive && left.quote_style.is_none() && right.quote_style.is_none() {
-        left.value.eq_ignore_ascii_case(&right.value)
-    } else {
-        left.value == right.value
+        },
+        _ => None,
     }
 }
 
-fn parsed(text: &str) -> Option<SqlExpr> {
-    Parser::new(&DatabricksDialect {})
-        .try_with_sql(text)
-        .ok()?
-        .parse_expr()
-        .ok()
-}
-
-fn merged_keys(from: &[TableWithJoins], insensitive: bool) -> Vec<Merged> {
-    let [table] = from else {
-        return Vec::new();
-    };
-    let Some(first) = qualifier_of(&table.relation) else {
-        return Vec::new();
-    };
-    let mut held: Option<Vec<(Ident, String, bool)>> = None;
-    for join in &table.joins {
-        let Some(side) = side_of(&join.join_operator) else {
-            return Vec::new();
-        };
-        let Some(JoinConstraint::Using(columns)) = constraint(&join.join_operator) else {
-            return Vec::new();
-        };
-        let Some(idents) = using_idents(columns) else {
-            return Vec::new();
-        };
-        let right = qualifier_of(&join.relation);
-        let mut next = Vec::new();
-        for ident in idents {
-            let before = match &held {
-                None => Some((format!("{first}.{ident}"), true)),
-                Some(keys) => keys
-                    .iter()
-                    .find(|(key, _, _)| same_key(key, ident, insensitive))
-                    .map(|(_, text, plain)| (text.clone(), *plain)),
-            };
-            let Some((before, plain)) = before else {
-                continue;
-            };
-            let entry = match (side, &right) {
-                (Side::Left, _) => (before, plain),
-                (Side::Right, Some(right)) => (format!("{right}.{ident}"), false),
-                (Side::Both, Some(right)) => {
-                    (format!("coalesce({before}, {right}.{ident})"), false)
-                }
-                _ => return Vec::new(),
-            };
-            next.push((ident.clone(), entry.0, entry.1));
-        }
-        held = Some(next);
-    }
-    held.unwrap_or_default()
-        .into_iter()
-        .filter_map(|(key, text, plain)| parsed(&text).map(|expr| Merged { key, expr, plain }))
-        .collect()
-}
-
-struct KeyRefs<'a> {
-    keys: &'a [Merged],
-    skipped: &'a [Ident],
-    insensitive: bool,
-    depth: usize,
-}
-
-impl VisitorMut for KeyRefs<'_> {
-    type Break = ();
-
-    fn pre_visit_query(&mut self, _query: &mut Query) -> ControlFlow<Self::Break> {
-        self.depth += 1;
-        ControlFlow::Continue(())
-    }
-
-    fn post_visit_query(&mut self, _query: &mut Query) -> ControlFlow<Self::Break> {
-        self.depth = self.depth.saturating_sub(1);
-        ControlFlow::Continue(())
-    }
-
-    fn post_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
-        if self.depth > 0 {
-            return ControlFlow::Continue(());
-        }
-        let SqlExpr::Identifier(ident) = expr else {
-            return ControlFlow::Continue(());
-        };
-        if self
-            .skipped
-            .iter()
-            .any(|skipped| same_key(skipped, ident, self.insensitive))
-        {
-            return ControlFlow::Continue(());
-        }
-        if let Some(merged) = self
-            .keys
-            .iter()
-            .find(|merged| same_key(&merged.key, ident, self.insensitive))
-        {
-            *expr = merged.expr.clone();
-        }
-        ControlFlow::Continue(())
-    }
-}
-
-fn names_side_key(parts: &[Ident], keys: &[Merged], insensitive: bool) -> bool {
-    parts.len() > 1
-        && parts.last().is_some_and(|last| {
-            keys.iter()
-                .any(|merged| !merged.plain && same_key(&merged.key, last, insensitive))
-        })
-}
-
-fn projection_conflicts(select: &Select, keys: &[Merged], insensitive: bool) -> bool {
-    select.projection.iter().any(|item| match item {
-        SelectItem::QualifiedWildcard(..) => true,
-        SelectItem::UnnamedExpr(SqlExpr::CompoundIdentifier(parts)) => {
-            names_side_key(parts, keys, insensitive)
-        }
-        _ => false,
-    })
-}
-
-fn rewrite_select(
-    select: &mut Select,
-    keys: &[Merged],
-    outputs: bool,
-    insensitive: bool,
-) -> (bool, bool) {
-    let outputs = outputs && !projection_conflicts(select, keys, insensitive);
-    let active = outputs || keys.iter().all(|merged| merged.plain);
-    let mut replaced = false;
-    for item in &mut select.projection {
-        match item {
-            SelectItem::UnnamedExpr(SqlExpr::Identifier(ident)) if outputs => {
-                if let Some(merged) = keys
-                    .iter()
-                    .find(|merged| !merged.plain && same_key(&merged.key, ident, insensitive))
-                {
-                    replaced = true;
-                    *item = SelectItem::ExprWithAlias {
-                        expr: merged.expr.clone(),
-                        alias: ident.clone(),
-                    };
-                }
-            }
-            SelectItem::Wildcard(options) if outputs && options.opt_replace.is_none() => {
-                let items = keys
-                    .iter()
-                    .filter(|merged| !merged.plain)
-                    .map(|merged| {
-                        Box::new(ReplaceSelectElement {
-                            expr: merged.expr.clone(),
-                            column_name: merged.key.clone(),
-                            as_keyword: true,
-                        })
-                    })
-                    .collect::<Vec<_>>();
-                if !items.is_empty() {
-                    replaced = true;
-                    options.opt_replace = Some(ReplaceSelectItem { items });
-                }
-            }
-            _ => {}
-        }
-    }
-    if active {
-        let mut refs = KeyRefs {
-            keys,
-            skipped: &[],
-            insensitive,
-            depth: 0,
-        };
-        let _ = VisitMut::visit(&mut select.projection, &mut refs);
-        let _ = VisitMut::visit(&mut select.selection, &mut refs);
-        let _ = VisitMut::visit(&mut select.group_by, &mut refs);
-        let _ = VisitMut::visit(&mut select.having, &mut refs);
-        let _ = VisitMut::visit(&mut select.qualify, &mut refs);
-    }
-    (active, replaced)
-}
-
-struct SideOrder<'a> {
-    keys: &'a [Merged],
-    insensitive: bool,
-    found: bool,
-}
-
-impl Visitor for SideOrder<'_> {
-    type Break = ();
-
-    fn pre_visit_expr(&mut self, expr: &SqlExpr) -> ControlFlow<Self::Break> {
-        if let SqlExpr::CompoundIdentifier(parts) = expr
-            && names_side_key(parts, self.keys, self.insensitive)
-        {
-            self.found = true;
-        }
-        ControlFlow::Continue(())
-    }
-}
-
-fn holds_compound(expr: &SqlExpr) -> bool {
-    struct Compound(bool);
-    impl Visitor for Compound {
-        type Break = ();
-        fn pre_visit_expr(&mut self, expr: &SqlExpr) -> ControlFlow<Self::Break> {
-            if matches!(expr, SqlExpr::CompoundIdentifier(_)) {
-                self.0 = true;
-            }
-            ControlFlow::Continue(())
-        }
-    }
-    let mut found = Compound(false);
-    let _ = Visit::visit(expr, &mut found);
-    found.0
-}
-
-fn plain_rows(select: &Select) -> bool {
-    let grouped = match &select.group_by {
-        GroupByExpr::Expressions(exprs, modifiers) => !exprs.is_empty() || !modifiers.is_empty(),
-        GroupByExpr::All(_) => true,
-    };
-    select.distinct.is_none() && !grouped && select.having.is_none() && select.qualify.is_none()
-}
-
-const WRAPPER: &str = "SELECT * FROM (SELECT 1) AS __repark_using_w";
-
-fn wrap_side_order(query: &mut Query) -> Option<()> {
-    let OrderByKind::Expressions(ordered) = &mut query.order_by.as_mut()?.kind else {
-        return None;
-    };
-    let mut carried = Vec::new();
-    for (index, item) in ordered.iter_mut().enumerate() {
-        if !holds_compound(&item.expr) {
-            continue;
-        }
-        let name = Ident::new(format!("__repark_using_o{index}"));
-        let expr = std::mem::replace(&mut item.expr, SqlExpr::Identifier(name.clone()));
-        carried.push((expr, name));
-    }
-    let (first, rest) = carried.split_first()?;
-    let Statement::Query(mut outer) = Parser::new(&DatabricksDialect {})
-        .try_with_sql(WRAPPER)
-        .ok()?
-        .parse_statement()
-        .ok()?
-    else {
-        return None;
-    };
-    let SetExpr::Select(outer_select) = outer.body.as_mut() else {
-        return None;
-    };
-    let [SelectItem::Wildcard(options)] = outer_select.projection.as_mut_slice() else {
-        return None;
-    };
-    options.opt_except = Some(ExceptSelectItem {
-        first_element: first.1.clone(),
-        additional_elements: rest.iter().map(|(_, name)| name.clone()).collect(),
-    });
-    let [table] = outer_select.from.as_mut_slice() else {
-        return None;
-    };
-    let TableFactor::Derived { subquery, .. } = &mut table.relation else {
-        return None;
-    };
-    let SetExpr::Select(inner) = query.body.as_mut() else {
-        return None;
-    };
-    for (expr, alias) in &carried {
-        inner.projection.push(SelectItem::ExprWithAlias {
-            expr: expr.clone(),
-            alias: alias.clone(),
-        });
-    }
-    std::mem::swap(&mut subquery.body, &mut query.body);
-    std::mem::swap(&mut outer.body, &mut query.body);
-    Some(())
-}
-
-fn select_has_using(select: &Select) -> bool {
-    select.from.iter().any(|table| {
-        table.joins.iter().any(|join| {
-            matches!(
-                constraint(&join.join_operator),
-                Some(JoinConstraint::Using(_) | JoinConstraint::Natural)
-            )
-        })
-    })
-}
-
-struct UsingSelects {
-    insensitive: bool,
-    found: bool,
-}
-
-impl UsingSelects {
-    fn top_select(&mut self, query: &mut Query) {
-        let Query { body, order_by, .. } = query;
-        let SetExpr::Select(select) = body.as_mut() else {
-            return;
-        };
-        if !select_has_using(select) {
-            return;
-        }
-        self.found = true;
-        let keys = merged_keys(&select.from, self.insensitive);
-        if keys.is_empty() {
-            return;
-        }
-        let mut side = SideOrder {
-            keys: &keys,
-            insensitive: self.insensitive,
-            found: false,
-        };
-        let _ = Visit::visit(order_by, &mut side);
-        let outputs = !side.found || plain_rows(select);
-        let shadowed = select
-            .projection
-            .iter()
-            .filter_map(|item| match item {
-                SelectItem::ExprWithAlias { alias, .. } => Some(alias.clone()),
+fn unmarked(expr: Expr) -> Result<Transformed<Expr>> {
+    expr.transform(|node| {
+        let held = single_coalesce(&node)
+            .and_then(single_coalesce)
+            .and_then(|inner| match inner {
+                Expr::Column(column) => Some(column.clone()),
                 _ => None,
-            })
-            .collect::<Vec<_>>();
-        let (active, replaced) = rewrite_select(select, &keys, outputs, self.insensitive);
-        if side.found && replaced && wrap_side_order(query).is_some() {
-            return;
-        }
-        if active {
-            let mut refs = KeyRefs {
-                keys: &keys,
-                skipped: &shadowed,
-                insensitive: self.insensitive,
-                depth: 0,
-            };
-            let _ = VisitMut::visit(&mut query.order_by, &mut refs);
-        }
-    }
-}
-
-impl VisitorMut for UsingSelects {
-    type Break = ();
-
-    fn pre_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
-        if matches!(query.body.as_ref(), SetExpr::Select(_)) {
-            self.top_select(query);
-            return ControlFlow::Continue(());
-        }
-        let mut pending = vec![query.body.as_mut()];
-        while let Some(node) = pending.pop() {
-            match node {
-                SetExpr::Select(select) if select_has_using(select) => {
-                    self.found = true;
-                    let keys = merged_keys(&select.from, self.insensitive);
-                    if !keys.is_empty() {
-                        rewrite_select(select, &keys, true, self.insensitive);
-                    }
-                }
-                SetExpr::SetOperation { left, right, .. } => {
-                    pending.push(right.as_mut());
-                    pending.push(left.as_mut());
-                }
-                _ => {}
+            });
+        Ok(match held {
+            Some(mut column) => {
+                column.spans_mut().add_span(Span::new(
+                    Location {
+                        line: EXPLICIT_LINE,
+                        column: 1,
+                    },
+                    Location {
+                        line: EXPLICIT_LINE,
+                        column: 2,
+                    },
+                ));
+                Transformed::yes(Expr::Column(column))
             }
-        }
-        ControlFlow::Continue(())
-    }
-}
-
-pub(super) fn rewrite_using_keys(statement: &mut Statement, insensitive: bool) -> bool {
-    let mut selects = UsingSelects {
-        insensitive,
-        found: false,
-    };
-    let _ = VisitMut::visit(statement, &mut selects);
-    selects.found
-}
-
-fn columns_of(expr: &Expr) -> Vec<Column> {
-    let mut columns = Vec::new();
-    let _ = expr.apply(|node| {
-        if let Expr::Column(column) = node {
-            columns.push(column.clone());
-        }
-        Ok(TreeNodeRecursion::Continue)
-    });
-    columns
-}
-
-fn merged_below(child: &Join, wanted: &Column) -> Option<Expr> {
-    if !matches!(child.join_constraint, PlanConstraint::Using) {
-        return None;
-    }
-    child.on.iter().find_map(|(left, right)| {
-        let held = columns_of(left)
-            .into_iter()
-            .chain(columns_of(right))
-            .any(|column| &column == wanted);
-        if !held {
-            return None;
-        }
-        match child.join_type {
-            JoinType::Right => Some(right.clone()),
-            JoinType::Full => Some(coalesce(vec![left.clone(), right.clone()])),
-            _ => Some(left.clone()),
-        }
+            None => Transformed::no(node),
+        })
     })
 }
 
-fn rekey_join(join: Join) -> Transformed<LogicalPlan> {
-    let LogicalPlan::Join(child) = join.left.as_ref() else {
-        return Transformed::no(LogicalPlan::Join(join));
-    };
-    if !matches!(join.join_constraint, PlanConstraint::Using) {
-        return Transformed::no(LogicalPlan::Join(join));
-    }
-    let mut changed = false;
-    let on = join
-        .on
-        .iter()
-        .map(|(left, right)| {
-            let merged = match left {
-                Expr::Column(column) => merged_below(child, column),
-                _ => None,
-            };
-            match merged {
-                Some(merged) if &merged != left => {
-                    changed = true;
-                    (merged, right.clone())
-                }
-                _ => (left.clone(), right.clone()),
-            }
-        })
-        .collect::<Vec<_>>();
-    if !changed {
-        return Transformed::no(LogicalPlan::Join(join));
-    }
-    Transformed::yes(LogicalPlan::Join(Join { on, ..join }))
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub(super) fn rekey_chained_using(plan: LogicalPlan) -> Result<LogicalPlan> {
+fn unmark_order(plan: LogicalPlan) -> Result<LogicalPlan> {
     plan.transform_up_with_subqueries(|node| match node {
-        LogicalPlan::Join(join) => Ok(rekey_join(join)),
+        LogicalPlan::Sort(sort) => {
+            let mut moved = false;
+            let expr = sort
+                .expr
+                .into_iter()
+                .map(|key| {
+                    let held = unmarked(key.expr)?;
+                    moved |= held.transformed;
+                    Ok(SortExpr {
+                        expr: held.data,
+                        ..key
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let sorted = LogicalPlan::Sort(Sort {
+                expr,
+                input: sort.input,
+                fetch: sort.fetch,
+            });
+            Ok(if moved {
+                Transformed::yes(sorted)
+            } else {
+                Transformed::no(sorted)
+            })
+        }
         other => Ok(Transformed::no(other)),
     })
     .map(|transformed| transformed.data)
+}
+#[derive(Clone)]
+struct KeySet {
+    cols: Vec<Column>,
+    merged: Expr,
+}
+
+struct Walked {
+    plan: LogicalPlan,
+    open: Vec<KeySet>,
+    swapped: Vec<Column>,
+}
+
+#[derive(Default)]
+struct Pass {
+    bail: bool,
+    changed: bool,
+}
+
+fn set_of<'a>(open: &'a [KeySet], column: &Column) -> Option<&'a KeySet> {
+    open.iter().find(|set| set.cols.contains(column))
+}
+
+fn each_column(expr: &Expr, mut visit: impl FnMut(&Column)) {
+    let _ = expr.apply(|node| {
+        if let Expr::Column(column) = node {
+            visit(column);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+}
+
+fn names_explicit(exprs: &[Expr], columns: &[Column]) -> bool {
+    let mut found = false;
+    for expr in exprs {
+        each_column(expr, |column| {
+            found |= explicit(column) && columns.contains(column);
+        });
+    }
+    found
+}
+
+impl Pass {
+    fn merge(&mut self, expr: Expr, open: &[KeySet]) -> Result<Expr> {
+        if open.is_empty() {
+            return Ok(expr);
+        }
+        let merged = expr.transform(|node| match &node {
+            Expr::Column(column) if !explicit(column) => match set_of(open, column) {
+                Some(set) if set.merged != node => Ok(Transformed::yes(set.merged.clone())),
+                _ => Ok(Transformed::no(node)),
+            },
+            _ => Ok(Transformed::no(node)),
+        })?;
+        self.changed |= merged.transformed;
+        Ok(merged.data)
+    }
+
+    fn walk(&mut self, plan: LogicalPlan) -> Result<Walked> {
+        let walked = self.node(plan)?;
+        let plan = walked
+            .plan
+            .map_subqueries(|sub| self.walk(sub).map(|inner| Transformed::yes(inner.plan)));
+        Ok(Walked {
+            plan: plan?.data,
+            open: walked.open,
+            swapped: walked.swapped,
+        })
+    }
+
+    fn children(&mut self, plan: LogicalPlan) -> Result<(LogicalPlan, Vec<Walked>)> {
+        let mut seen = Vec::new();
+        let rebuilt = plan.map_children(|child| {
+            let walked = self.walk(child)?;
+            let plan = walked.plan.clone();
+            seen.push(walked);
+            Ok(Transformed::yes(plan))
+        })?;
+        Ok((rebuilt.data, seen))
+    }
+
+    fn node(&mut self, plan: LogicalPlan) -> Result<Walked> {
+        match plan {
+            LogicalPlan::Join(join) => self.join(join),
+            LogicalPlan::Projection(projection) => self.projection(&projection),
+            LogicalPlan::Sort(sort) => self.sort(sort),
+            LogicalPlan::Filter(_) => self.passing(plan),
+            LogicalPlan::Limit(_) | LogicalPlan::Distinct(_) | LogicalPlan::Repartition(_) => {
+                let exprs = plan.expressions();
+                let (plan, mut seen) = self.children(plan)?;
+                let below = seen.pop();
+                let swapped = below
+                    .as_ref()
+                    .map(|walked| walked.swapped.clone())
+                    .unwrap_or_default();
+                self.bail |= names_explicit(&exprs, &swapped);
+                Ok(Walked {
+                    plan,
+                    open: below.map(|walked| walked.open).unwrap_or_default(),
+                    swapped,
+                })
+            }
+            LogicalPlan::Aggregate(_) | LogicalPlan::Window(_) => self.redefining(plan),
+            LogicalPlan::SubqueryAlias(alias) => {
+                let below = self.walk(alias.input.as_ref().clone())?;
+                let plan = SubqueryAlias::try_new(Arc::new(below.plan), alias.alias.clone())?;
+                Ok(Walked {
+                    plan: LogicalPlan::SubqueryAlias(plan),
+                    open: Vec::new(),
+                    swapped: Vec::new(),
+                })
+            }
+            LogicalPlan::Explain(explain) => {
+                let below = self.walk(explain.plan.as_ref().clone())?;
+                let shown = below.plan.to_stringified(PlanType::InitialLogicalPlan);
+                Ok(Walked {
+                    plan: LogicalPlan::Explain(Explain {
+                        plan: Arc::new(below.plan),
+                        stringified_plans: vec![shown],
+                        ..explain
+                    }),
+                    open: Vec::new(),
+                    swapped: Vec::new(),
+                })
+            }
+            other => {
+                let exprs = other.expressions();
+                let (plan, seen) = self.children(other)?;
+                for walked in &seen {
+                    self.bail |= names_explicit(&exprs, &walked.swapped);
+                }
+                Ok(Walked {
+                    plan,
+                    open: Vec::new(),
+                    swapped: Vec::new(),
+                })
+            }
+        }
+    }
+
+    fn passing(&mut self, plan: LogicalPlan) -> Result<Walked> {
+        let exprs = plan.expressions();
+        let (plan, mut seen) = self.children(plan)?;
+        let Some(below) = seen.pop() else {
+            return Ok(Walked {
+                plan,
+                open: Vec::new(),
+                swapped: Vec::new(),
+            });
+        };
+        self.bail |= names_explicit(&exprs, &below.swapped);
+        let merged = exprs
+            .into_iter()
+            .map(|expr| self.merge(expr, &below.open))
+            .collect::<Result<Vec<_>>>()?;
+        let plan = plan.with_new_exprs(merged, vec![below.plan])?;
+        Ok(Walked {
+            plan,
+            open: below.open,
+            swapped: below.swapped,
+        })
+    }
+
+    fn redefining(&mut self, plan: LogicalPlan) -> Result<Walked> {
+        let exprs = plan.expressions();
+        let (plan, mut seen) = self.children(plan)?;
+        let Some(below) = seen.pop() else {
+            return Ok(Walked {
+                plan,
+                open: Vec::new(),
+                swapped: Vec::new(),
+            });
+        };
+        self.bail |= names_explicit(&exprs, &below.swapped);
+        let mut redefined: Vec<Column> = Vec::new();
+        for expr in &exprs {
+            each_column(expr, |column| {
+                if !explicit(column)
+                    && !redefined.contains(column)
+                    && set_of(&below.open, column)
+                        .is_some_and(|set| set.merged != Expr::Column(column.clone()))
+                {
+                    redefined.push(column.clone());
+                }
+            });
+        }
+        if redefined.is_empty() {
+            return Ok(Walked {
+                plan,
+                open: Vec::new(),
+                swapped: below.swapped,
+            });
+        }
+        self.bail |= names_explicit(&exprs, &redefined);
+        let schema = below.plan.schema();
+        let carried = schema
+            .iter()
+            .map(|(qualifier, field)| {
+                let column = Column::new(qualifier.cloned(), field.name());
+                match set_of(&below.open, &column) {
+                    Some(set) if redefined.contains(&column) => set
+                        .merged
+                        .clone()
+                        .alias_qualified(qualifier.cloned(), field.name()),
+                    _ => Expr::Column(column),
+                }
+            })
+            .collect::<Vec<_>>();
+        let input = LogicalPlan::Projection(Projection::try_new(carried, Arc::new(below.plan))?);
+        self.changed = true;
+        Ok(Walked {
+            plan: plan.with_new_exprs(exprs, vec![input])?,
+            open: Vec::new(),
+            swapped: redefined,
+        })
+    }
+
+    fn projection(&mut self, projection: &Projection) -> Result<Walked> {
+        let below = self.walk(projection.input.as_ref().clone())?;
+        self.bail |= names_explicit(&projection.expr, &below.swapped);
+        let mut swapped = Vec::new();
+        let mut exprs = Vec::with_capacity(projection.expr.len());
+        for (expr, (qualifier, field)) in projection.expr.iter().zip(projection.schema.iter()) {
+            let merged = self.merge(expr.clone(), &below.open)?;
+            if &merged == expr {
+                if let Expr::Column(column) = expr
+                    && below.swapped.contains(column)
+                {
+                    swapped.push(column.clone());
+                }
+                exprs.push(merged);
+                continue;
+            }
+            if let Expr::Column(column) = expr {
+                swapped.push(column.clone());
+            }
+            exprs.push(if matches!(expr, Expr::Alias(_)) {
+                merged
+            } else {
+                merged.alias_qualified_with_metadata(
+                    qualifier.cloned(),
+                    field.name().clone(),
+                    Some(FieldMetadata::new_from_field(field)),
+                )
+            });
+        }
+        let plan = Projection::try_new(exprs, Arc::new(below.plan))?;
+        Ok(Walked {
+            plan: LogicalPlan::Projection(plan),
+            open: Vec::new(),
+            swapped,
+        })
+    }
+
+    fn sort(&mut self, sort: Sort) -> Result<Walked> {
+        let below = self.walk(sort.input.as_ref().clone())?;
+        let keys = sort
+            .expr
+            .iter()
+            .map(|key| key.expr.clone())
+            .collect::<Vec<_>>();
+        if !names_explicit(&keys, &below.swapped) {
+            let expr = sort
+                .expr
+                .into_iter()
+                .map(|key| {
+                    Ok(SortExpr {
+                        expr: self.merge(key.expr, &below.open)?,
+                        ..key
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            return Ok(Walked {
+                plan: LogicalPlan::Sort(Sort {
+                    expr,
+                    input: Arc::new(below.plan),
+                    fetch: sort.fetch,
+                }),
+                open: below.open,
+                swapped: below.swapped,
+            });
+        }
+        self.carried_sort(sort, below, &keys)
+    }
+
+    fn carried_sort(&mut self, sort: Sort, below: Walked, keys: &[Expr]) -> Result<Walked> {
+        let LogicalPlan::Projection(shown) = &below.plan else {
+            self.bail = true;
+            return Ok(Walked {
+                plan: LogicalPlan::Sort(Sort {
+                    input: Arc::new(below.plan),
+                    ..sort
+                }),
+                open: Vec::new(),
+                swapped: Vec::new(),
+            });
+        };
+        let mut carried = shown.expr.clone();
+        let mut helpers: Vec<(Column, String)> = Vec::new();
+        let taken = |name: &str| {
+            let held = |schema: &datafusion::common::DFSchema| {
+                schema
+                    .fields()
+                    .iter()
+                    .any(|field| field.name().eq_ignore_ascii_case(name))
+            };
+            held(shown.schema.as_ref()) || held(shown.input.schema().as_ref())
+        };
+        let mut next = 0usize;
+        for key in keys {
+            each_column(key, |column| {
+                if explicit(column)
+                    && below.swapped.contains(column)
+                    && !helpers.iter().any(|(held, _)| held == column)
+                {
+                    let mut name = format!("{HELPER}{next}");
+                    while taken(&name) {
+                        next += 1;
+                        name = format!("{HELPER}{next}");
+                    }
+                    next += 1;
+                    helpers.push((column.clone(), name));
+                }
+            });
+        }
+        if helpers
+            .iter()
+            .any(|(column, _)| !shown.input.schema().has_column(column))
+        {
+            self.bail = true;
+        }
+        for (column, name) in &helpers {
+            carried.push(Expr::Column(column.clone()).alias(name));
+        }
+        let outputs = shown
+            .schema
+            .iter()
+            .map(|(qualifier, field)| Expr::Column(Column::new(qualifier.cloned(), field.name())))
+            .collect::<Vec<_>>();
+        let wide = Projection::try_new(carried, Arc::clone(&shown.input))?;
+        let expr = sort
+            .expr
+            .into_iter()
+            .map(|key| {
+                let moved = key.expr.transform(|node| match &node {
+                    Expr::Column(column) if explicit(column) => {
+                        match helpers.iter().find(|(held, _)| held == column) {
+                            Some((_, name)) => Ok(Transformed::yes(Expr::Column(
+                                Column::new_unqualified(name),
+                            ))),
+                            None => Ok(Transformed::no(node)),
+                        }
+                    }
+                    _ => Ok(Transformed::no(node)),
+                })?;
+                Ok(SortExpr {
+                    expr: moved.data,
+                    ..key
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let sorted = LogicalPlan::Sort(Sort {
+            expr,
+            input: Arc::new(LogicalPlan::Projection(wide)),
+            fetch: sort.fetch,
+        });
+        self.changed = true;
+        Ok(Walked {
+            plan: LogicalPlan::Projection(Projection::try_new(outputs, Arc::new(sorted))?),
+            open: Vec::new(),
+            swapped: below.swapped,
+        })
+    }
+
+    fn join(&mut self, join: Join) -> Result<Walked> {
+        let left = self.walk(join.left.as_ref().clone())?;
+        let right = self.walk(join.right.as_ref().clone())?;
+        let mut open = left.open.clone();
+        if !matches!(join.join_type, JoinType::LeftSemi | JoinType::LeftAnti) {
+            open.extend(right.open.clone());
+        }
+        if !matches!(join.join_constraint, PlanConstraint::Using) {
+            return Ok(Walked {
+                plan: LogicalPlan::Join(Join {
+                    left: Arc::new(left.plan),
+                    right: Arc::new(right.plan),
+                    ..join
+                }),
+                open,
+                swapped: Vec::new(),
+            });
+        }
+        let mut on = Vec::with_capacity(join.on.len());
+        for (left_key, right_key) in &join.on {
+            let merged_left = self.merge(left_key.clone(), &left.open)?;
+            let merged_right = self.merge(right_key.clone(), &right.open)?;
+            if let (Expr::Column(left_col), Expr::Column(right_col)) = (left_key, right_key) {
+                let mut cols = Vec::new();
+                for column in [left_col, right_col] {
+                    match open.iter().position(|set| set.cols.contains(column)) {
+                        Some(index) => cols.extend(open.remove(index).cols),
+                        None => cols.push(column.clone()),
+                    }
+                }
+                let merged = match join.join_type {
+                    JoinType::Right => Some(merged_right.clone()),
+                    JoinType::Full => {
+                        let left_type = merged_left.get_type(join.schema.as_ref())?;
+                        let right_type = merged_right.get_type(join.schema.as_ref())?;
+                        full_key(
+                            merged_left.clone(),
+                            &left_type,
+                            merged_right.clone(),
+                            &right_type,
+                        )
+                    }
+                    _ => Some(merged_left.clone()),
+                };
+                match merged {
+                    Some(merged) => open.push(KeySet { cols, merged }),
+                    None => self.bail = true,
+                }
+            }
+            on.push((merged_left, merged_right));
+        }
+        Ok(Walked {
+            plan: LogicalPlan::Join(Join {
+                left: Arc::new(left.plan),
+                right: Arc::new(right.plan),
+                on,
+                ..join
+            }),
+            open,
+            swapped: Vec::new(),
+        })
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(super) fn merge_using_keys(plan: LogicalPlan, merging: bool) -> Result<LogicalPlan> {
+    let plan = unmark_order(plan)?;
+    if !merging {
+        return Ok(plan);
+    }
+    let mut pass = Pass::default();
+    let walked = pass.walk(plan.clone())?;
+    if pass.bail || !pass.changed {
+        return Ok(plan);
+    }
+    Ok(walked.plan)
 }

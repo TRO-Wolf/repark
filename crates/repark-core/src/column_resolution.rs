@@ -21,20 +21,38 @@ pub async fn plan_statement_with_column_repair(
     statement: datafusion::sql::parser::Statement,
     case_insensitive: bool,
 ) -> Result<LogicalPlan> {
-    let mut statement = statement;
-    let using = match &mut statement {
-        datafusion::sql::parser::Statement::Statement(inner) => {
-            using_keys::rewrite_using_keys(inner, case_insensitive)
-        }
-        _ => false,
-    };
     let bytes = stack::stack_bytes_for(&statement);
-    let plan =
-        stack::on_grown_stack(bytes, plan_with_repair(state, statement, case_insensitive)).await?;
-    if using {
-        return using_keys::rekey_chained_using(plan);
+    if !using_marks::names_using(&statement) {
+        return stack::on_grown_stack(bytes, plan_with_repair(state, statement, case_insensitive))
+            .await;
     }
-    Ok(plan)
+    stack::on_grown_stack(bytes, plan_using(state, statement, case_insensitive)).await
+}
+
+async fn plan_using(
+    state: &SessionState,
+    statement: datafusion::sql::parser::Statement,
+    case_insensitive: bool,
+) -> Result<LogicalPlan> {
+    let spanned = using_marks::spanned_state(state);
+    let mut marked = statement.clone();
+    let merging = using_marks::mark_explicit(&mut marked);
+    if let Ok(plan) = plan_with_repair(&spanned, marked.clone(), case_insensitive).await
+        && let Ok(merged) = using_keys::merge_using_keys(plan, merging)
+    {
+        return Ok(merged);
+    }
+    let refused = match plan_with_repair(state, statement, case_insensitive).await {
+        Ok(plan) => return Ok(plan),
+        Err(refused) => refused,
+    };
+    if using_marks::qualify_keys(&mut marked, case_insensitive)
+        && let Ok(plan) = plan_with_repair(&spanned, marked, case_insensitive).await
+        && let Ok(merged) = using_keys::merge_using_keys(plan, merging)
+    {
+        return Ok(merged);
+    }
+    Err(refused)
 }
 
 async fn finish_with_display(
@@ -921,6 +939,7 @@ mod star_twins;
 mod struct_fields;
 mod twins;
 mod using_keys;
+mod using_marks;
 
 pub use fold_text::fold_query_text;
 pub use stack::{GrownStack, on_grown_stack_with, remaining_stack, run_on_grown_stack};
