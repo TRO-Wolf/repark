@@ -16,6 +16,8 @@ pins: mb-3/C-009
 Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
 Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
 Fold 2's gates (2026-10-08) likewise. pins: mb-3/C-029
+Round 3's gates (2026-10-08, on the tree merged with the append fence) likewise.
+pins: mb-3/C-031
 
 ## What each door guarantees (round 3, 2026-10-08, ledger C-002 and D-19)
 

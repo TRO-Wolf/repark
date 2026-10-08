@@ -31,7 +31,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   timeout built and C-010 closed, and the fresh sink load per batch (C-022). **Fold 2
   (2026-10-08):** the re-verify's findings, a stop from inside a body (C-024), the timeout on
   the catalog load only (C-025), the unstamped check (C-026), the unpinned branches (C-027)
-  and the session watch (C-028).
+  and the session watch (C-028). **Round 3 (2026-10-08):** main merged with the append fence,
+  the `toTable` door's exactly-once guarantee against a racing driver pinned and C-002 closed,
+  the fence's refusals at the driver (C-030); no clause is open and the coverage attestation
+  is filed.
   `risk_tier: standard`.
   Branch `feat/mb-3-driver`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
