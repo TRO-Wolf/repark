@@ -19,7 +19,6 @@ use crate::write::merge::{CommitScope, IsolationLevel, OPERATION_ID_PROP};
 use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
 
-#[path = "sink_offsets_append_fence.rs"]
 mod append_fence;
 
 use append_fence::AppendFence;

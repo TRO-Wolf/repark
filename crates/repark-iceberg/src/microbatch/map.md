@@ -21,7 +21,7 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
 - `crash_tests.rs` — the crash harness of the
   [sketch's §5](../../../../task/wo/microbatch/mb-design-2026-10-06.md), in Rust over the memory
   catalog (correction H-1): five pins, all green since MB-2c's closing slice (2026-10-07,
-  the append fence in `write/sink_offsets_append_fence.rs`; mb-2c C-010). Every pin enters a `BatchScope` and carries the guard's token through the
+  the append fence in `write/sink_offsets/append_fence.rs`; mb-2c C-010). Every pin enters a `BatchScope` and carries the guard's token through the
   session snapshot property `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token`, as
   MB-3's driver will (D-10).
   `FaultCatalog` is the `UnknownOutcomeCatalog` shape over the memory catalog with three faults:

@@ -124,11 +124,12 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
-- `sink_offsets_append_fence.rs`, `sink_offsets_append_fence_tests.rs`, `sink_offsets.rs`,
+- `sink_offsets/append_fence.rs`, `sink_offsets_append_fence_tests.rs`, `sink_offsets.rs`,
   `sink_offsets_fence_tests.rs`, `sink_offsets_probe_tests.rs`, `write_options.rs` — **MB-2c
   closing slice, the append fence (2026-10-07, owner ruling ~20:55 EDT: `F-APPEND-PIN-BASE-1` is
   not built in the fork now, and the RePark-side stopgap is allowed):** `AppendFence` is a
-  catalog wrapper, the `#[path]` child `append_fence` of `sink_offsets.rs`. It is installed for
+  catalog wrapper, the child module `append_fence` of `sink_offsets.rs`
+  (see [sink_offsets/map.md](sink_offsets/map.md)). It is installed for
   one commit only, and only when the commit holds a claimed stamp: on the append arm
   (`SiteStamp::commit_append`, the one call `commit_append_with_summary` makes in place of
   `tx.commit`) and on the stamp-only door (`commit_stamp_only`). The two MERGE sites keep the
@@ -170,8 +171,9 @@ repark-core's error map.
     commit raced by an unrelated append. `ProbeCatalog` counts loads.
   - **Retirement.** This is a stopgap for
     [F-APPEND-PIN-BASE-1](../../../../task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md).
-    When the fork lands it and RP-N repins, delete: `sink_offsets_append_fence.rs`; the
-    `append_fence` module lines and the `AppendFence` import in `sink_offsets.rs`;
+    When the fork lands it and RP-N repins, delete: `sink_offsets/append_fence.rs` (and
+    `sink_offsets/map.md`); the
+    `mod append_fence;` line and the `AppendFence` import in `sink_offsets.rs`;
     `SiteStamp::fenced`; the `AppendFence::install` line in `commit_stamp_only`; the pins
     `the_fence_forwards_every_other_catalog_call` and
     `an_unstamped_append_commits_through_the_callers_own_catalog`'s two `fenced` assertions;
