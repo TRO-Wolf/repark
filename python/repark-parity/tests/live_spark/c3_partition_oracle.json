@@ -1,0 +1,2215 @@
+{
+ "cells": [
+  {
+   "error": null,
+   "id": "C3-P01-all-four",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     101,
+     102,
+     103,
+     105
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 50 or \"n\" is null",
+    "\"n\" >= 50 AND \"n\" < 100",
+    "\"n\" >= 100 AND \"n\" < 150",
+    "\"n\" >= 150"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-P02-unpartitioned",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    null
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+    "error_class": null,
+    "message": "requirement failed: When reading JDBC data sources, users need to specify all or none for the following options: 'partitionColumn', 'lowerBound', 'upperBound', and 'numPartitions'",
+    "sqlstate": null
+   },
+   "id": "C3-M01-no-column",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+    "error_class": null,
+    "message": "requirement failed: When reading JDBC data sources, users need to specify all or none for the following options: 'partitionColumn', 'lowerBound', 'upperBound', and 'numPartitions'",
+    "sqlstate": null
+   },
+   "id": "C3-M02-no-lower",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+    "error_class": null,
+    "message": "requirement failed: When reading JDBC data sources, users need to specify all or none for the following options: 'partitionColumn', 'lowerBound', 'upperBound', and 'numPartitions'",
+    "sqlstate": null
+   },
+   "id": "C3-M03-no-upper",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+    "error_class": null,
+    "message": "requirement failed: When reading JDBC data sources, users need to specify all or none for the following options: 'partitionColumn', 'lowerBound', 'upperBound', and 'numPartitions'",
+    "sqlstate": null
+   },
+   "id": "C3-M04-no-count",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-M05-count-only",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    null
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+    "error_class": null,
+    "message": "requirement failed: When reading JDBC data sources, users need to specify all or none for the following options: 'partitionColumn', 'lowerBound', 'upperBound', and 'numPartitions'",
+    "sqlstate": null
+   },
+   "id": "C3-M06-column-only",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+    "error_class": null,
+    "message": "requirement failed: When reading JDBC data sources, users need to specify all or none for the following options: 'partitionColumn', 'lowerBound', 'upperBound', and 'numPartitions'",
+    "sqlstate": null
+   },
+   "id": "C3-M07-bounds-only",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+    "error_class": null,
+    "message": "requirement failed: Operation not allowed: the lower bound of partitioning column is larger than the upper bound. Lower bound: 200; Upper bound: 0",
+    "sqlstate": null
+   },
+   "id": "C3-B01-reversed",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "200"
+    ],
+    [
+     "upperBound",
+     "0"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-B02-equal",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "50"
+    ],
+    [
+     "upperBound",
+     "50"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    null
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-B03-narrow",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "3"
+    ],
+    [
+     "numPartitions",
+     "10"
+    ]
+   ],
+   "placement": [
+    [
+     101,
+     102,
+     103,
+     105
+    ],
+    [],
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 1 or \"n\" is null",
+    "\"n\" >= 1 AND \"n\" < 2",
+    "\"n\" >= 2"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-B04-inside-data",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "50"
+    ],
+    [
+     "upperBound",
+     "150"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     101,
+     102,
+     103,
+     105
+    ],
+    [
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12
+    ],
+    [
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 75 or \"n\" is null",
+    "\"n\" >= 75 AND \"n\" < 100",
+    "\"n\" >= 100 AND \"n\" < 125",
+    "\"n\" >= 125"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-B05-negative",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "-600"
+    ],
+    [
+     "upperBound",
+     "-400"
+    ],
+    [
+     "numPartitions",
+     "2"
+    ]
+   ],
+   "placement": [
+    [
+     101,
+     102
+    ],
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     103,
+     104,
+     105,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < -500 or \"n\" is null",
+    "\"n\" >= -500"
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.NumberFormatException",
+    "error_class": null,
+    "message": "For input string: \"abc\"",
+    "sqlstate": null
+   },
+   "id": "C3-B06-lower-not-integer",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "abc"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.NumberFormatException",
+    "error_class": null,
+    "message": "For input string: \"1.5\"",
+    "sqlstate": null
+   },
+   "id": "C3-B07-lower-fraction",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "1.5"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.NumberFormatException",
+    "error_class": null,
+    "message": "For input string: \"9223372036854775808\"",
+    "sqlstate": null
+   },
+   "id": "C3-B08-upper-past-i64",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "9223372036854775808"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-N01-count-zero",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "0"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    null
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-N02-count-one",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "1"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    null
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-N03-count-negative",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "-1"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    null
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.NumberFormatException",
+    "error_class": null,
+    "message": "For input string: \"x\"",
+    "sqlstate": null
+   },
+   "id": "C3-N04-count-not-integer",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "x"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-N05-count-two",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "2"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     101,
+     102,
+     103,
+     105
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 100 or \"n\" is null",
+    "\"n\" >= 100"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-N06-count-large",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "64"
+    ]
+   ],
+   "placement": [
+    [
+     101,
+     102,
+     103,
+     105
+    ],
+    [],
+    [
+     1
+    ],
+    [],
+    [],
+    [
+     2
+    ],
+    [],
+    [],
+    [
+     3
+    ],
+    [],
+    [],
+    [],
+    [
+     4
+    ],
+    [],
+    [],
+    [
+     5
+    ],
+    [],
+    [],
+    [
+     6
+    ],
+    [],
+    [],
+    [],
+    [
+     7
+    ],
+    [],
+    [],
+    [
+     8
+    ],
+    [],
+    [],
+    [
+     9
+    ],
+    [],
+    [],
+    [],
+    [
+     10
+    ],
+    [],
+    [],
+    [
+     11
+    ],
+    [],
+    [],
+    [
+     12
+    ],
+    [],
+    [],
+    [],
+    [
+     13
+    ],
+    [],
+    [],
+    [
+     14
+    ],
+    [],
+    [],
+    [
+     15
+    ],
+    [],
+    [],
+    [],
+    [
+     16
+    ],
+    [],
+    [],
+    [
+     17
+    ],
+    [],
+    [],
+    [
+     18
+    ],
+    [],
+    [],
+    [],
+    [
+     19
+    ],
+    [
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 7 or \"n\" is null",
+    "\"n\" >= 7 AND \"n\" < 10",
+    "\"n\" >= 10 AND \"n\" < 13",
+    "\"n\" >= 13 AND \"n\" < 16",
+    "\"n\" >= 16 AND \"n\" < 19",
+    "\"n\" >= 19 AND \"n\" < 22",
+    "\"n\" >= 22 AND \"n\" < 25",
+    "\"n\" >= 25 AND \"n\" < 28",
+    "\"n\" >= 28 AND \"n\" < 31",
+    "\"n\" >= 31 AND \"n\" < 34",
+    "\"n\" >= 34 AND \"n\" < 37",
+    "\"n\" >= 37 AND \"n\" < 40",
+    "\"n\" >= 40 AND \"n\" < 43",
+    "\"n\" >= 43 AND \"n\" < 46",
+    "\"n\" >= 46 AND \"n\" < 49",
+    "\"n\" >= 49 AND \"n\" < 52",
+    "\"n\" >= 52 AND \"n\" < 55",
+    "\"n\" >= 55 AND \"n\" < 58",
+    "\"n\" >= 58 AND \"n\" < 61",
+    "\"n\" >= 61 AND \"n\" < 64",
+    "\"n\" >= 64 AND \"n\" < 67",
+    "\"n\" >= 67 AND \"n\" < 70",
+    "\"n\" >= 70 AND \"n\" < 73",
+    "\"n\" >= 73 AND \"n\" < 76",
+    "\"n\" >= 76 AND \"n\" < 79",
+    "\"n\" >= 79 AND \"n\" < 82",
+    "\"n\" >= 82 AND \"n\" < 85",
+    "\"n\" >= 85 AND \"n\" < 88",
+    "\"n\" >= 88 AND \"n\" < 91",
+    "\"n\" >= 91 AND \"n\" < 94",
+    "\"n\" >= 94 AND \"n\" < 97",
+    "\"n\" >= 97 AND \"n\" < 100",
+    "\"n\" >= 100 AND \"n\" < 103",
+    "\"n\" >= 103 AND \"n\" < 106",
+    "\"n\" >= 106 AND \"n\" < 109",
+    "\"n\" >= 109 AND \"n\" < 112",
+    "\"n\" >= 112 AND \"n\" < 115",
+    "\"n\" >= 115 AND \"n\" < 118",
+    "\"n\" >= 118 AND \"n\" < 121",
+    "\"n\" >= 121 AND \"n\" < 124",
+    "\"n\" >= 124 AND \"n\" < 127",
+    "\"n\" >= 127 AND \"n\" < 130",
+    "\"n\" >= 130 AND \"n\" < 133",
+    "\"n\" >= 133 AND \"n\" < 136",
+    "\"n\" >= 136 AND \"n\" < 139",
+    "\"n\" >= 139 AND \"n\" < 142",
+    "\"n\" >= 142 AND \"n\" < 145",
+    "\"n\" >= 145 AND \"n\" < 148",
+    "\"n\" >= 148 AND \"n\" < 151",
+    "\"n\" >= 151 AND \"n\" < 154",
+    "\"n\" >= 154 AND \"n\" < 157",
+    "\"n\" >= 157 AND \"n\" < 160",
+    "\"n\" >= 160 AND \"n\" < 163",
+    "\"n\" >= 163 AND \"n\" < 166",
+    "\"n\" >= 166 AND \"n\" < 169",
+    "\"n\" >= 169 AND \"n\" < 172",
+    "\"n\" >= 172 AND \"n\" < 175",
+    "\"n\" >= 175 AND \"n\" < 178",
+    "\"n\" >= 178 AND \"n\" < 181",
+    "\"n\" >= 181 AND \"n\" < 184",
+    "\"n\" >= 184 AND \"n\" < 187",
+    "\"n\" >= 187 AND \"n\" < 190",
+    "\"n\" >= 190 AND \"n\" < 193",
+    "\"n\" >= 193"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-T01-int8",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "id"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "20"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"id\" < 5 or \"id\" is null",
+    "\"id\" >= 5 AND \"id\" < 10",
+    "\"id\" >= 10 AND \"id\" < 15",
+    "\"id\" >= 15"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-T02-int2",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "small"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "20"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"small\" < 5 or \"small\" is null",
+    "\"small\" >= 5 AND \"small\" < 10",
+    "\"small\" >= 10 AND \"small\" < 15",
+    "\"small\" >= 15"
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.AnalysisException",
+    "error_class": "_LEGACY_ERROR_TEMP_1287",
+    "message": "Partition column type should be numeric, date, or timestamp, but string found.",
+    "sqlstate": null
+   },
+   "id": "C3-T03-text",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "s"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "20"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-T04-date-date-bounds",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "d"
+    ],
+    [
+     "lowerBound",
+     "2024-01-02"
+    ],
+    [
+     "upperBound",
+     "2024-01-21"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ],
+    [
+     7,
+     8,
+     9,
+     10
+    ],
+    [
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"d\" < '2024-01-08' or \"d\" is null",
+    "\"d\" >= '2024-01-08' AND \"d\" < '2024-01-12'",
+    "\"d\" >= '2024-01-12' AND \"d\" < '2024-01-16'",
+    "\"d\" >= '2024-01-16'"
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+    "error_class": null,
+    "message": "Cannot parse the bound value 0 as date",
+    "sqlstate": null
+   },
+   "id": "C3-T05-date-integer-bounds",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "d"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "20"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-T06-timestamp",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "ts"
+    ],
+    [
+     "lowerBound",
+     "2024-01-01 00:00:00"
+    ],
+    [
+     "upperBound",
+     "2024-01-02 00:00:00"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ],
+    [
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ],
+    [
+     12,
+     13,
+     14,
+     15,
+     16,
+     17
+    ],
+    [
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"ts\" < '2024-01-01 06:00:00' or \"ts\" is null",
+    "\"ts\" >= '2024-01-01 06:00:00' AND \"ts\" < '2024-01-01 12:00:00'",
+    "\"ts\" >= '2024-01-01 12:00:00' AND \"ts\" < '2024-01-01 18:00:00'",
+    "\"ts\" >= '2024-01-01 18:00:00'"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-T07-timestamptz",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "tstz"
+    ],
+    [
+     "lowerBound",
+     "2024-01-01 00:00:00"
+    ],
+    [
+     "upperBound",
+     "2024-01-02 00:00:00"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ],
+    [
+     11,
+     12,
+     13,
+     14,
+     15,
+     16
+    ],
+    [
+     17,
+     18,
+     19,
+     20
+    ],
+    []
+   ],
+   "rows": 26,
+   "where": [
+    "\"tstz\" < '2024-01-01 06:00:00' or \"tstz\" is null",
+    "\"tstz\" >= '2024-01-01 06:00:00' AND \"tstz\" < '2024-01-01 12:00:00'",
+    "\"tstz\" >= '2024-01-01 12:00:00' AND \"tstz\" < '2024-01-01 18:00:00'",
+    "\"tstz\" >= '2024-01-01 18:00:00'"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-T08-numeric",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "num"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "30"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ],
+    [
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"num\" < 8 or \"num\" is null",
+    "\"num\" >= 8 AND \"num\" < 15",
+    "\"num\" >= 15 AND \"num\" < 22",
+    "\"num\" >= 22"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-T09-float8",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "f"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "10"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ],
+    [
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13
+    ],
+    [
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"f\" < 3 or \"f\" is null",
+    "\"f\" >= 3 AND \"f\" < 5",
+    "\"f\" >= 5 AND \"f\" < 7",
+    "\"f\" >= 7"
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.AnalysisException",
+    "error_class": "_LEGACY_ERROR_TEMP_1287",
+    "message": "Partition column type should be numeric, date, or timestamp, but boolean found.",
+    "sqlstate": null
+   },
+   "id": "C3-T10-bool",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "b"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "1"
+    ],
+    [
+     "numPartitions",
+     "2"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.AnalysisException",
+    "error_class": "_LEGACY_ERROR_TEMP_1286",
+    "message": "User-defined partition column nope not found in the JDBC relation: struct<id: bigint, small: smallint, n: int, d: date, ts: timestamp, tstz: timestamp, num: decimal(10,2), f: double, b: boolean, s: string ... 8 more fields>.",
+    "sqlstate": null
+   },
+   "id": "C3-C01-missing-column",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "nope"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-C02-upper-case-column",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "N"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     101,
+     102,
+     103,
+     105
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 50 or \"n\" is null",
+    "\"n\" >= 50 AND \"n\" < 100",
+    "\"n\" >= 100 AND \"n\" < 150",
+    "\"n\" >= 150"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-C03-quoted-column",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "\"n\""
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     101,
+     102,
+     103,
+     105
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 50 or \"n\" is null",
+    "\"n\" >= 50 AND \"n\" < 100",
+    "\"n\" >= 100 AND \"n\" < 150",
+    "\"n\" >= 150"
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+    "error_class": null,
+    "message": "requirement failed: \nOptions 'query' and 'partitionColumn' can not be specified together.\nPlease define the query using `dbtable` option instead and make sure to qualify\nthe partition columns using the supplied subquery alias to resolve any ambiguity.\nExample :\nspark.read.format(\"jdbc\")\n  .option(\"url\", jdbcUrl)\n  .option(\"dbtable\", \"(select c1, c2 from t1) as subq\")\n  .option(\"partitionColumn\", \"c1\")\n  .option(\"lowerBound\", \"1\")\n  .option(\"upperBound\", \"100\")\n  .option(\"numPartitions\", \"3\")\n  .",
+    "sqlstate": null
+   },
+   "id": "C3-Q01-query-with-column",
+   "options": [
+    [
+     "query",
+     "SELECT id, n FROM c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-Q02-subquery-dbtable",
+   "options": [
+    [
+     "dbtable",
+     "(SELECT id, n FROM c3o.t WHERE id < 100) AS sub"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 20,
+   "where": [
+    "\"n\" < 50 or \"n\" is null",
+    "\"n\" >= 50 AND \"n\" < 100",
+    "\"n\" >= 100 AND \"n\" < 150",
+    "\"n\" >= 150"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-J01-jdbc-method",
+   "options": [
+    [
+     "column",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "n",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     101,
+     102,
+     103,
+     105
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 50 or \"n\" is null",
+    "\"n\" >= 50 AND \"n\" < 100",
+    "\"n\" >= 100 AND \"n\" < 150",
+    "\"n\" >= 150"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-J02-jdbc-properties",
+   "options": [
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     101,
+     102,
+     103,
+     105
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 50 or \"n\" is null",
+    "\"n\" >= 50 AND \"n\" < 100",
+    "\"n\" >= 100 AND \"n\" < 150",
+    "\"n\" >= 150"
+   ]
+  },
+  {
+   "explain": "== Physical Plan ==\nCollectLimit (2)\n+- * Scan JDBCRelation(c3o.t) [numPartitions=4]  (1)\n\n\n(1) Scan JDBCRelation(c3o.t) [numPartitions=4]  [codegen id : 1]\nOutput [10]: [id#584L, small#585, n#586, d#587, ts#588, tstz#589, num#590, f#591, b#592, s#593]\nReadSchema: struct<id:bigint,small:smallint,n:int,d:date,ts:timestamp,tstz:timestamp,num:decimal(10,2),f:double,b:boolean,s:string>\nExternal engine query: SELECT \"id\",\"small\",\"n\",\"d\",\"ts\",\"tstz\",\"num\",\"f\",\"b\",\"s\" FROM c3o.t      \n\n(2) CollectLimit\nInput [10]: [id#584L, small#585, n#586, d#587, ts#588, tstz#589, num#590, f#591, b#592, s#593]\nArguments: 3\n\n",
+   "id": "C3-L01-limit-over-partitions",
+   "rows": 3
+  }
+ ],
+ "preamble": {
+  "date": "2026-10-08",
+  "grid_random": 700,
+  "grid_seed": 20261007,
+  "grid_sha256": "0e887b8407f09182e748067fee1c1ff35b1deda44b5f1179188ca600a316c22d",
+  "grid_triples": 740,
+  "pgjdbc": "postgresql-42.7.13.jar",
+  "pgjdbc_sha256": "6e0e4cc2d8cae902084f8a2b18728b073a6fd9d1f87c9d8bff8f298c18185b93",
+  "postgres": "16.15",
+  "setup": [
+   "DROP SCHEMA IF EXISTS c3o CASCADE",
+   "CREATE SCHEMA c3o",
+   "CREATE TABLE c3o.t (id int8, small int2, n int4, d date, ts timestamp, tstz timestamptz, num numeric(10,2), f float8, b bool, s text)",
+   "INSERT INTO c3o.t SELECT g, g, g * 10, DATE '2024-01-01' + g::int, TIMESTAMP '2024-01-01 00:00:00' + g * INTERVAL '1 hour', TIMESTAMPTZ '2024-01-01 00:00:00+00' + g * INTERVAL '1 hour', g * 1.5, g * 0.5, g % 2 = 0, 'r' || g FROM generate_series(1, 20) g",
+   "INSERT INTO c3o.t (id, n) VALUES (101, NULL), (102, NULL), (103, -500), (104, 5000), (105, 0), (106, 200)"
+  ],
+  "spark": "4.1.2"
+ }
+}
