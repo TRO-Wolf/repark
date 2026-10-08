@@ -583,6 +583,60 @@ async fn two_sessions_on_one_sink_wait_for_the_scope() {
 }
 
 #[tokio::test]
+async fn a_scope_wait_that_outlives_the_timeout_ends_sink_busy() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    let shared = fixture
+        .session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("the memory catalog");
+    let other = Session::builder().build().expect("a second session");
+    other
+        .register_iceberg_catalog("ice", shared)
+        .await
+        .expect("the shared catalog registers");
+    let gate = Arc::new(Semaphore::new(0));
+    let holding = Probe::new(Mode::Hold(Arc::clone(&gate)));
+    let holder = started(
+        &fixture,
+        named(foreach(&holding, Trigger::Once, &[]), "holder"),
+    )
+    .await;
+    eventually("the holder never ran", || holding.calls() == 1).await;
+    let waiting = Probe::new(Mode::Record);
+    let waiter = || {
+        let mut spec = named(foreach(&waiting, Trigger::Once, &[]), "waiter");
+        spec.catalog_timeout = Duration::from_millis(150);
+        spec
+    };
+    let refused = StreamingQueryManager::of(&other)
+        .register(&other, waiter())
+        .await
+        .expect("register");
+    refused.start_below_catalog_check().expect("start");
+    let error = ended(&refused).await.expect_err("the scope stays held");
+    assert_eq!(
+        *error,
+        MicroBatchError::SinkBusy {
+            sink: SINK.to_string()
+        }
+    );
+    assert_eq!(refused.durable(), None, "the offset does not advance");
+    assert_eq!(waiting.calls(), 0);
+    gate.add_permits(1);
+    assert_eq!(ended(&holder).await, Ok(true));
+    let retried = StreamingQueryManager::of(&other)
+        .register(&other, waiter())
+        .await
+        .expect("register");
+    retried.start_below_catalog_check().expect("start");
+    assert_eq!(ended(&retried).await, Ok(true));
+    assert_eq!(waiting.seen(), [(0, vec![1])]);
+}
+
+#[tokio::test]
 async fn a_stop_during_planning_never_starts_the_body() {
     let fixture = Fixture::new().await;
     fixture.insert(SOURCE, "(1)").await;

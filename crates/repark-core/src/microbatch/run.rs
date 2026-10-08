@@ -224,6 +224,11 @@ impl Run {
                         return Ok(None);
                     }
                 }
+                Err(MicroBatchError::SinkBusy { .. }) => {
+                    return Err(MicroBatchError::SinkBusy {
+                        sink: self.shared.sink.name.clone(),
+                    });
+                }
                 Err(error) => return Err(error),
             }
         }

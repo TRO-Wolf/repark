@@ -116,7 +116,8 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
   - *The scope wait.* `enter_scope` loads the sink and enters the `BatchScope`; when another
     query in the process holds the sink's scope (two sessions on one sink), it waits
     `pollingDelay`, reloads the sink and tries again, up to `catalog_timeout`, and only then
-    fails `SinkBusy`. The sink is loaded again after each wait because the other query's
+    fails `SinkBusy` naming the sink's table, as the refusal at start does (fold 2). The sink is
+    loaded again after each wait because the other query's
     commit moved it, and the resume-point check runs after the scope is held. A stop or a
     dropped session ends the wait with no batch run. pins: mb-3/C-016
   - *The replay window is not durable.* A restart plans the failed batch's window again
@@ -191,8 +192,12 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
 - `timeout_tests.rs` — the catalog-timeout pins (round 2, 2026-10-08), one per call site over
   `FaultCatalog`'s load hook and its two stalling commit modes, with a 100 ms bound: `register`,
   the six read sites of the task, the reload after a body, a stalled commit on both doors
-  (landed and lost), and `stop` over a stalled catalog.
-  pins: mb-3/C-010
+  (landed and lost), and `stop` over a stalled catalog. Fold 2 (2026-10-08) adds a walk longer
+  than the timeout (thirty snapshots; the walk is timed first and the timeout set to a third
+  of it, so the pin scales with the machine; the stamp runs under the same timeout, so the
+  pin asserts the planned batch and accepts a drained or an unknown-outcome ending), the unstamped batch over a stalled catalog, and a
+  stalled unknown-outcome walk after a stalled commit.
+  pins: mb-3/C-010, C-025, C-026, C-027
 - `self_stop_tests.rs` — the self-stop pins (fold 2, 2026-10-08), with a body that holds its
   own query handle: `stop` and `stop_all` from the body under the default `stopTimeout`,
   `stop_all` from a body with another query running, two bodies stopping each other, and

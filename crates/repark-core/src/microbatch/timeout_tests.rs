@@ -183,6 +183,35 @@ async fn a_stalled_commit_goes_to_the_unknown_outcome_walk() {
 }
 
 #[tokio::test]
+async fn a_stalled_walk_after_a_stalled_commit_ends_commit_outcome_unknown() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    let catalog = flaky(&fixture).await;
+    let handle = registered(&fixture, door_spec(None, Trigger::Once)).await;
+    catalog.arm(ARMED_STALL_LOST);
+    catalog.on_load(Some(stall_from("silver", 3)));
+    handle.start_below_catalog_check().expect("start");
+    let error = ended(&handle).await.expect_err("the walk stalls too");
+    assert!(
+        matches!(
+            error.as_ref(),
+            MicroBatchError::RecoveryRequired {
+                epoch,
+                durable: None,
+                reason: RecoveryReason::CommitOutcomeUnknown {
+                    operation_id: None,
+                    resume_refusal: None
+                },
+                ..
+            } if *epoch == Epoch::FIRST
+        ),
+        "{error:?}"
+    );
+    catalog.on_load(None);
+    assert!(stamped_epochs(&fixture.table("silver").await).is_empty());
+}
+
+#[tokio::test]
 async fn an_unstamped_batch_ends_recovery_required_over_a_stalled_catalog() {
     let fixture = Fixture::new().await;
     fixture.insert(SOURCE, "(1)").await;
