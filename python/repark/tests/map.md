@@ -2372,6 +2372,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   i64 CAST+lit wrap cells are pinned (ASCII docstring operators for RUF002;
   ruff format on long CAST SQL).
   pins: f-y10-1-int-overflow/C-001, C-002, C-003; types-1/C-002 (untyped cells).
+- `test_pg_jdbc_options.py` — **C-3 fold 1 (2026-10-08):**
+  `test_partial_range_bag_fails_loud` now matches Spark's all-or-none sentence on the
+  `format("postgres")` door. pins: c-3/C-006
+  `test_format_postgres_forwards_a_date_bound_as_text_for_the_door_to_judge`. pins: c-3/C-009
+  **C-3 fold 2 (2026-10-08):** the keyword door hands `lowerBound`, `upperBound` and
+  `numPartitions` on as text in `properties` (the camelCase and snake_case capture pins move
+  from integers to text); `test_jdbc_keyword_door_str_and_int_bounds_reach_the_engine_door_as_the_same_text`,
+  `test_jdbc_keyword_door_keeps_a_properties_spelling_for_the_door_to_refuse`,
+  `test_jdbc_keyword_door_incomplete_set_refuses_in_sparks_sentence` and
+  `test_jdbc_keyword_door_num_partitions_text_refuses_as_the_format_door_does` (a count past
+  32 bits as str and as int, on both doors). pins: c-3/C-006
+- `test_production_file_size.py` — **C-3 fold 1 (2026-10-08):** the `_parse_jdbc_int_option`
+  body hash moves: C-3 changed its behaviour on purpose (a bound that is not an integer raises
+  `NumberFormatException`, Spark's measured class and a subclass of the old one, and an
+  integer outside 64 bits refuses there too), which is the "current-main behavior change" the
+  pin's docstring admits. pins: c-3/C-006
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
@@ -9654,14 +9670,38 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   session/join builders plus refusal-shape and no-`__repark_`-bytes helpers for
   the fold's pin files. No module docstring: the lane's no-comments ruling
   covers the new file; the contract lives here. pins: attr-id-1/C-061
+- [test_fa_5_duplicate_csv.py](test_fa_5_duplicate_csv.py) — **FA-5
+  (2026-10-08):** csv path writes of frames with exact-duplicate display
+  names, against the live Spark 4.1.2 cells in the unit ledger: the display
+  header for the self, mixed and `USING` joins, a same-origin repeat and a
+  repeat beside a case twin; rows only with `header` off; separator,
+  `quoteAll` and compression options; every `mode` on a fresh and an existing
+  path; both case flags; temporal twins with and without `timestampFormat`;
+  the header-only file of an empty frame; a single-part byte-equal cell. A
+  `partitionBy` over a repeated name refuses `AMBIGUOUS_REFERENCE` with the
+  written spelling and creates nothing; a unique partition column writes and
+  leaves the header. Controls: parquet and json keep refusing, and a
+  unique-name csv is unchanged. **Fold 1 (2026-10-08):** a unique column
+  named `__repark_dup_0_id` or `__repark_dup_7_` keeps its name in the csv
+  header, beside a repeat too, and on the SQL, view, `DESCRIBE`,
+  `spark.table` and `listColumns` doors (`SELECT 1 AS __repark_dup_3_x`
+  included); the partition candidates are pinned sorted on reversed
+  aliases; the case-sensitive unmatched spelling answers Spark's not-found
+  text; the same-origin repeat refuses with clean text (`_divergence`); the
+  s3a csv route hands the engine a frame whose recorded names build the
+  display-header option; and a duplicate-name view stays refused, so no
+  bare name can bind beside one. No module docstring: the no-comments ruling
+  covers the new file; the contract lives here.
+  pins: fa-5-6/C-002, C-003, C-004, C-005, C-008
 - [test_attr_id_1_sm2_dupwrites.py](test_attr_id_1_sm2_dupwrites.py) — **Fold
   SM-2 R2 (2026-10-06):** duplicate-display-name writes refuse
   `COLUMN_ALREADY_EXISTS` with Spark's exact text, condition and SQLSTATE, and
   create no file or table (parquet, json, csv, orc, saveAsTable, V2 create and
   V2 append); `insertInto` writes positionally as Spark does; folded-only
-  duplicates report the folded name. The csv refusal is the ruled divergence
-  FA-5 (Spark writes the duplicate header). SM-2b narrowing: csv refuses
-  exact duplicates only (case-twins write the raw header, pinned), and a
+  duplicates report the folded name. **FA-5 (2026-10-08):** csv no longer
+  refuses; its pin now asserts the display header and no internal name in the
+  file (`test_fa_5_duplicate_csv.py` holds the full cell set). SM-2b: csv
+  case-twins write the raw header (pinned), and a
   case-sensitive parquet twin pin holds the per-flag rule. No module
   docstring: the lane's no-comments ruling covers the new file; the contract
   lives here. pins: attr-id-1/C-061
@@ -9755,3 +9795,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   binding-equivalence check reds the second-twin pin. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011
+- [test_threaded_collect_segv_1.py](test_threaded_collect_segv_1.py) —
+  **THREADED-COLLECT-SEGV-1 (2026-10-08):** `collect`, `take`, `head`, `first`,
+  `toLocalIterator` and `toArrow` each answer on six successive fresh non-main
+  threads. One isolated interpreter per door, so a crash is a failed assertion on
+  the exit status and never a dead pytest. The worker must not have pyarrow loaded
+  on the main thread before the first door runs (asserted): that is the crash's
+  precondition. Skips on pyarrow 25.0.0 with the reason: its bundled mimalloc
+  null-dereferences in `mi_thread_init` when libarrow is first loaded on a
+  non-main thread that exits (apache/arrow GH-50471, fixed in 25.0.1); the fault
+  reproduces without RePark. With the skip bypassed on 25.0.0 the worker dies with
+  signal 11 on five of the six doors.
+  pins: threaded-collect-segv-1/C-001, C-002

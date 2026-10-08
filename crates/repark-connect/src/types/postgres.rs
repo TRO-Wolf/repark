@@ -251,6 +251,11 @@ impl PlannedColumn {
     }
 
     #[must_use]
+    pub fn postgres_type(&self) -> &'static str {
+        self.postgres_type
+    }
+
+    #[must_use]
     pub fn nullable(&self) -> bool {
         self.nullable
     }

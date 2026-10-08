@@ -34,6 +34,16 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `seal_reports_its_limit_and_neither_runs_nor_takes_a_child`
   pin the seal node. The fixture is regenerated from a live Spark recording, never edited by hand.
   pins: offset-nested-sort-1/C-001, C-003, C-004, C-005, C-006, C-008, C-009, C-011
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
+  argument refuses as `NumberFormat` before any connection. pins: c-3/C-010
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned
+  on `numPartitions`; a bound is no longer parsed before the relation resolves, so a date bound
+  beside a bad count still names the count. pins: c-3/C-009
+- `read_postgres.rs` — **C-3 (2026-10-07):** `partition_options_refuse_as_spark_does_before_any_connection`
+  (the all-or-none sentence from arguments and from properties, a bound that is not an `i64`
+  as `NumberFormat` without its value, `query` with a column, `predicates` declared from the
+  argument and from a property, a spelling given twice) and
+  `num_partitions_alone_is_no_partitioning_and_never_a_setting`. pins: c-3/C-006
 - `read_postgres.rs` — **C-2d fold 1 (2026-10-07), N6:** behind `postgres`.
   `a_dbtable_property_is_the_target_never_a_setting`: a `dbtable` property, in any case, is
   dropped before the settings check, so a read without `user` answers that refusal and never
@@ -319,6 +329,24 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   OPTIONS keys reach `create` verbatim, part files keep the `.csv`/`.json`
   extension, and a serializer error surfaces with its message intact; a
   no-strip control shows unstripped custom keys fail the inner factory.
+- `duplicate_names.rs` — **FA-5 (2026-10-08, fold 1):** the generated-name
+  rule (no repeat answers `None`, case twins are not repeats, the position
+  makes repeats unique, a generated name steps around a user column of the
+  same spelling); the record (`recorded_display_names` answers `None` for
+  unrecorded fields named `__repark_dup_0_id` or `__repark_dup_7_`, and reads
+  the metadata otherwise); the hex option round trip for empty, comma,
+  quote and non-ASCII names, with bad hex refused; the rename over a SQL
+  self-join (unique engine names that register as a view, the record
+  present, a plain frame's plan returned unchanged); the copy-parts routing
+  (recorded csv to the sink with the list, json, plain and prefix-shaped
+  unrecorded csv untouched, temporal csv without the list); the map-driven
+  batch rename; and end-to-end csv bytes through `write_path` on an
+  in-memory store, which is the s3a route's engine half: the display header
+  with and without `header`, under a separator, with a unique partition
+  column dropped, for an empty frame, with temporal twins, a user column
+  named like a generated one kept as written, and a repeat beside such a
+  column. Expected bytes are the live Spark 4.1.2 cells in the unit ledger.
+  pins: fa-5-6/C-001, C-002
 - `text_write_sink.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round
   (2026-09-30):** end-to-end pins for the sink serializer: zone-correct
   CSV/JSON bytes, user patterns, raw partition directory names, lazy and

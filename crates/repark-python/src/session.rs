@@ -311,7 +311,7 @@ impl PyReparkSession {
         partition_column: Option<&str>,
         lower_bound: Option<i64>,
         upper_bound: Option<i64>,
-        num_partitions: Option<usize>,
+        num_partitions: Option<i64>,
         predicates: Option<Vec<String>>,
     ) -> PyResult<PyDataFrame> {
         fenced_span!("py.read", "PyReparkSession.read_postgres", {
@@ -326,21 +326,15 @@ impl PyReparkSession {
                     ))));
                 }
             };
-            let partitioning = [
-                ("partitionColumn", partition_column.is_some()),
-                ("lowerBound", lower_bound.is_some()),
-                ("upperBound", upper_bound.is_some()),
-                ("numPartitions", num_partitions.is_some()),
-                ("predicates", predicates.is_some()),
-            ]
-            .into_iter()
-            .filter_map(|(key, given)| given.then_some(key))
-            .collect();
             let read = repark_core::PostgresRead {
                 url: String::from(url),
                 target,
                 properties: properties.unwrap_or_default().into_iter().collect(),
-                partitioning,
+                partition_column: partition_column.map(String::from),
+                lower_bound,
+                upper_bound,
+                num_partitions,
+                predicates: predicates.is_some(),
             };
             let frame = py
                 .detach(|| self.runtime.block_on(self.session.read_postgres(read)))

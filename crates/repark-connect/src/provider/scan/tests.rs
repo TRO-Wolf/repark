@@ -91,6 +91,7 @@ fn plan() -> ScanPlan {
         pool,
         placed: vec![(0, ZONE.into())],
         localiser: Arc::new(NewYorkSpringForward),
+        partition: None,
     }
 }
 

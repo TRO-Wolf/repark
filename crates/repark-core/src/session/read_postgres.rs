@@ -19,13 +19,18 @@ pub struct PostgresRead {
     pub url: String,
     pub target: PostgresTarget,
     pub properties: BTreeMap<String, String>,
-    pub partitioning: Vec<&'static str>,
+    pub partition_column: Option<String>,
+    pub lower_bound: Option<i64>,
+    pub upper_bound: Option<i64>,
+    pub num_partitions: Option<i64>,
+    pub predicates: bool,
 }
 
 impl std::fmt::Debug for PostgresRead {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PostgresRead")
-            .field("partitioning", &self.partitioning)
+            .field("partition_column", &self.partition_column)
+            .field("num_partitions", &self.num_partitions)
             .finish_non_exhaustive()
     }
 }
@@ -49,7 +54,8 @@ mod door {
     use repark_common::SourceIdentity;
     use repark_common::source::SourceKind;
     use repark_connect::{
-        ConnectError, DeclaredSetting, PostgresSource, ScanSource, SettingsDoor, Spelling,
+        ConnectError, DeclaredSetting, PartitionOptions, PartitionRefusal, PostgresSource,
+        ScanSource, SettingsDoor, Spelling,
     };
 
     use super::{
@@ -63,6 +69,8 @@ mod door {
         match Error::from(error) {
             Error::Config(_) => Error::Config(message),
             Error::NotImplemented(_) => Error::NotImplemented(message),
+            Error::Analysis(_) => Error::Analysis(message),
+            Error::NumberFormat(_) => Error::NumberFormat(message),
             _ => Error::DataFusion(message),
         }
     }
@@ -71,10 +79,27 @@ mod door {
         #[allow(clippy::missing_errors_doc)]
         pub async fn read_postgres(&self, read: PostgresRead) -> Result<DataFrame> {
             let refuse = |error| source_error(READ_POSTGRES_SOURCE, error);
-            if let Some(first) = read.partitioning.first() {
+            if read.predicates {
                 return Err(refuse(ConnectError::DeclaredSetting {
-                    key: Spelling::Key((*first).to_string()),
+                    key: Spelling::Key("predicates".to_string()),
                     declared: DeclaredSetting::PartitionedRead,
+                }));
+            }
+            let mut props = read.properties;
+            props.retain(|key, _| !key.eq_ignore_ascii_case("dbtable"));
+            let partitioning = PartitionOptions::of(
+                read.partition_column,
+                read.lower_bound,
+                read.upper_bound,
+                read.num_partitions,
+            );
+            let partitioning = partitioning
+                .and_then(|given| given.with_props(&mut props))
+                .and_then(PartitionOptions::spec)
+                .map_err(refuse)?;
+            if partitioning.is_some() && matches!(read.target, PostgresTarget::Query(_)) {
+                return Err(refuse(ConnectError::PartitionedRead {
+                    refusal: PartitionRefusal::QueryOption,
                 }));
             }
             let target = match &read.target {
@@ -83,8 +108,6 @@ mod door {
                 }
                 PostgresTarget::Query(query) => ScanSource::query(query),
             };
-            let mut props = read.properties;
-            props.retain(|key, _| !key.eq_ignore_ascii_case("dbtable"));
             props.insert("url".to_string(), read.url);
             let identity =
                 SourceIdentity::unassigned(READ_POSTGRES_SOURCE.to_string(), SourceKind::Postgres);
@@ -98,6 +121,10 @@ mod door {
                 ScanSource::Query(_) => TableReference::bare(READ_POSTGRES_SOURCE),
             };
             let table = source.resolve(target).await.map_err(refuse)?;
+            let table = match &partitioning {
+                Some(partitioning) => table.partitioned(partitioning).map_err(refuse)?,
+                None => table,
+            };
             let plan = LogicalPlanBuilder::scan(name, provider_as_source(Arc::new(table)), None)
                 .and_then(LogicalPlanBuilder::build)
                 .map_err(engine_err)?;

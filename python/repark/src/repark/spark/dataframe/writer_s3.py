@@ -24,7 +24,7 @@ def write_s3_path(writer: Any, path: str, *, stored_as: str) -> None:
     dataframe._ensure_alive()
     _native.session_write_path(
         dataframe._session,
-        _registration_frame(dataframe),
+        _registration_frame(dataframe, duplicate_tolerant=stored_as == "CSV"),
         path,
         stored_as.lower(),
         writer._mode,
