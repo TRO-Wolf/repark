@@ -19,10 +19,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   and on main (6972 cells, 1516 differing; main's answers for those cells are the JSON
   beside the ledger), the one helper for both directions in `repark_common::zone_horizon`
   (C-003, C-004), the 19 routed sites (C-011), the facade and Rust pins (C-001, C-002,
-  C-005..C-010), eight mutations (C-014) and the closed card and registry row (C-015). Two
+  C-005..C-010), eight mutations (C-014) and the closed card and registry row (C-015). Three
   clauses are OPEN: `from_utc_timestamp` / `to_utc_timestamp` are an upstream kernel
-  (C-012, Q1), and the perf guard holds by instruction count but not by this machine's wall
-  clock (C-013, Q2). `risk_tier: standard`. Branch `fix/zone-horizon-render-1`.
+  (C-012, Q1), the perf guard holds by instruction count but not by this machine's wall
+  clock (C-013, Q2), and the post-2099 twin-answering classes are with the owner (C-016,
+  fold 1). **Fold 1 (2026-10-08):** findings 1, 2, 6 fixed and 7 pinned.
+  `risk_tier: standard`. Branch `fix/zone-horizon-render-1`.
 - [foreach-wrap-1-ledger.md](foreach-wrap-1-ledger.md) —
   **FOREACH-WRAP-1 (2026-10-07), security follow-up to SOURCE-URL-REDACT-2:** `foreach` and
   `foreachPartition` raise `scrub_exception`'s masked copy of the user's class after the

@@ -36,6 +36,7 @@ gives `12:00:00`.
 | C-013 | On data before 2100 a 1M-row `hour()` and `date_format` are not more than 2 % slower than on main. | §Perf. | OPEN | By instruction count the three measured statements are within the guard (`hour` +1.5 %, `date_format` +0.3 %, the string cast +0.2 %). By wall clock and cycles this machine reads +1.4 % to +4 % at that instruction parity, and the profile shows the extra cycles spread evenly over code this unit does not touch. Closing question (Q2): does the instruction count close the guard, or does it need a wall-clock reading on a quiet machine? Lean: the instruction count closes it; §Perf gives the reasons. |
 | C-014 | Each pin fails for its reason: eight mutations, each red. | §Mutations. | PROVEN | See §Mutations. |
 | C-015 | The card row reads closed with the date, the registry carries the unit's row, and the CAST-TS-STRING-1 residue reads closed. | Diff of `task/roadmap/mid-term/map.md`, the card, `docs/spark-sql-iceberg-parity.md`; `check_docs_links.py`. | PROVEN | No next-release notes draft exists (`ls task/roadmap/mid-term | grep -i release-notes` lists only shipped notes and the 1.5.0 draft that shipped), so no notes line was added. |
+| C-016 | After 2099 a gap wall cast to `TIMESTAMP_NTZ`, `from_json` of a gap wall, `unix_timestamp` of a gap wall and `months_between` on a transition day answer as their 2099 twins do. | Fold 1; the verifier's 27-zone grid. | OPEN | With the owner (finding 3 + the declared 16): a pre-2100 fault now reached because the real transition days exist. Main matched Spark only because it had no transitions after 2099. The verifier counted 1,208 such cells (629 `months_between`, 150 `unix_timestamp` gap, 279 NTZ gap wall, 150 `from_json` gap wall). |
 
 ## Grid
 
@@ -360,3 +361,66 @@ On the unit's tree, 2026-10-08:
 - **Q2 (C-013).** Does the instruction count close the perf guard? Lean: yes.
 
 The coverage attestation is filed when C-012 and C-013 are ruled.
+
+## Fold 1 (2026-10-08)
+
+The Opus verifier graded the unit FAIL: three S1s, two S2s, two S3s
+(`verdict.json` in the verify directory). This fold fixes findings 1, 2 and 6
+and pins finding 7. Finding 3 is with the owner: no code changed for it.
+Model: muse-spark-1.3-contributor.
+
+**Findings 1 (S1) + 6 (S3): the pre-2100 path is main's own code.**
+`to_json`'s `timestamp_text` was rewritten for every year, so a seconds-bearing
+offset printed in full where main prints the minute (`-04:56:02` vs `-04:56`
+for New York 1850) and the `from_json(to_json(ts))` round trip of such an
+instant went from a near value to NULL: 15,470 changed pre-2100 cells, all in
+the `to_json` family. `timestamp_text` now runs main's exact `timestamp_opt` +
+`%:z` expression at or before 2099 and the horizon helper only past the table
+end. The six sites finding 6 names take the same shape through four shared
+helpers in `repark_common::zone_horizon` (`wall_to_unix_seconds`,
+`wall_to_micros_earlier`, `wall_to_millis_earlier`, `micros_to_wall_and_offset`),
+whose tabulated branch is the chrono-tz call the site held on main;
+`parse_timestamp_micros_zone` restores `zoned_wall_micros`, and `to_json`
+branches at the call site. Pin:
+`an_offset_with_seconds_prints_main_text_before_2100` (New York, Paris,
+Kolkata, Sydney at 1850, 1883 and 0001: main's text, round trip non-empty).
+Re-run of the verifier's pre-2100 differential on this head (`run.py` on the
+rebuilt module, `cmp.py` logic against main's recorded answers): 1,939,804
+cells (969,902 pre table + 969,902 mix-table pre portion, 41 zones), 0 changed
+(2 zones refused by both builds, as in the verdict).
+
+**Finding 2 (S1): a zone with no transition in 2099 has no final rule.**
+Casablanca and El_Aaiun rendered one hour off after 2099 whenever the proxy
+year landed in 2072–2087, where the table holds dated Ramadan shifts. The proxy
+now applies past 2099 only when the zone's table holds at least one offset
+transition inside 2099; otherwise the helpers read the offset in force at the
+table end, as main does. The predicate scans 2099 hourly once per zone into a
+small `Display`-keyed cache, so no value path allocates; the helpers take
+`TimeZone + Display`. Gaza and Hebron stay exactly as on main (finding 5:
+still wrong against Spark, not worse). Pins: `SettledIn2088` in
+`repark-common` (steady from 2088: no rule, table end in both directions and
+all four helpers, including a summer instant whose proxy year still shifts)
+and Casablanca/El_Aaiun at 2112-09-11 12:34:56 UTC rendering 13:34:56 (string
+cast and hour) in the functions battery. The facade grid keeps its six zones:
+the two zones are pinned in Rust only. Mutation: predicate forced true → the
+Casablanca pin answers 12:34:56 and goes red; reversed after.
+
+**Finding 7 (S3): the surviving mutation.** `unix_timestamp` of an overlap wall
+taking the later offset turned no test red. Pin:
+`unix_timestamp_of_an_overlap_answers_the_earlier_offset` (2024-11-03 and its
+post-2099 twin 2100-11-07). The verifier's M4 sed no longer applies literally:
+Item A moved the site into `wall_to_unix_seconds`, so the equivalent edit
+(later offset in both arms) was applied there by patch file → the pin goes
+red; reversed after.
+
+**Finding 3 (S1) + the declared 16: OPEN, with the owner.** After 2099 a gap
+wall cast to `TIMESTAMP_NTZ`, `from_json` of a gap wall, `unix_timestamp` of a
+gap wall and `months_between` on a transition day now answer as their 2099
+twins do, where main matched Spark only because it had no transitions after
+2099 (the verifier counted 1,208 such cells on its 27-zone grid). Clause C-016
+stays OPEN.
+
+**Record.** `_record_zone_horizon_render_1.py --check` on live Spark 4.1.2:
+oracle matches (6972 cells), no drift. `--engine repark` re-derived on the
+rebuilt module: 832 of 6972 differ, identical cell keys to the committed
+residue, so no residue count moved.
