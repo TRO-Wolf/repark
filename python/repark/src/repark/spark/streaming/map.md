@@ -46,4 +46,6 @@ The builder surface is reachable module-direct only; `spark.readStream` and
 `spark.streams` keep refusing exactly as on main until the wire-up round flips them.
 The valid-spec terminal, writer unknown options, the missing-format default, the
 trigger interval grammar, and a sourceless `load()` are halt-pending; see the MB-4
-ledger's OPEN clauses.
+ledger's OPEN clauses. The IPI-47 cells answer through this surface per the ledger's
+C-007.
+pins: mb-4/C-007

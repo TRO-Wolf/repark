@@ -69,6 +69,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   is filed.
   `risk_tier: standard`.
   Branch `feat/mb-3-driver`.
+- [mb-4-ledger.md](mb-4-ledger.md) —
+  **MB-4 (2026-10-08), the streaming facade, SURFACE HALF:** the stub binding's reader
+  checks (C-001) and start doors (C-002), the two native exceptions (C-003), the
+  builders (C-004), the end-to-end §4 refusals (C-005), the query surface (C-006) and
+  the IPI-47 cells measured against the stub (C-007); the valid-spec terminal, writer
+  unknowns, the missing-format default, the trigger grammar and a sourceless `load()`
+  stay open (C-009..C-013) and the round hands back HALT.
+  `risk_tier: standard`.
+  Branch `feat/mb-4-facade`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
   in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,

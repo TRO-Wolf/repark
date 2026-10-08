@@ -7948,7 +7948,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   driver-free §4 refusal, each asserting class, SQLSTATE and message text; MB-0-recorded
   cells cite their cell id in the test name (W8 verbatim, R3/R6, W3, W4 divergence
   anchors). Terminal-reaching tests assert the builtin `NotImplementedError` type only.
-  pins: mb-4/C-004, C-005, C-006
+  pins: mb-4/C-004, C-005, C-006, C-007
 
 ## I want to...
 
