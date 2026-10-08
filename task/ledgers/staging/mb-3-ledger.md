@@ -40,6 +40,7 @@ the processing-time look-ahead cell measured first).
 | C-010 | Every catalog call the driver makes (the sink load, the resume read, the source planning loads, the door's commit) runs under `repark.cdc.catalog-timeout` (sketch §0 line 5, NS-7). | A bounded catalog call pin per call site over a stalling catalog wrapper, and the option's default ruled. | **OPEN** | Not built in round 1: the brief's six slices do not name it, the sketch names the key but no default, and the source's and the commit arms' loads live in MB-1's and MB-2a's code. The closing question: what default does `repark.cdc.catalog-timeout` take, and does the bound wrap the whole batch or each call? |
 | C-011 | Fold 1, F1 (S1): a panic on the driver task ends the query `Failed`. A panic in the `foreachBatch` body, in plan execution on the `toTable` door, or during planning ends the query with `BatchFailed { epoch, cause }` whose cause carries the panic message, exactly as a body error does: the outcome and the done signal are set, `await_termination` returns the error, `stop` returns `Failed`, the manager no longer lists the query, the durable offset does not advance, and a restart under the same id runs. The catch is structural: `Run::drive` catches an unwind of the whole trigger loop. | The three pins in `microbatch/lifecycle_tests.rs`, plus mutation F1. | **PROVEN** | 3 pins green: `a_panicking_body_fails_the_query_and_frees_its_id` (the verifier's P01, `foreachBatch` door; the restart delivers epoch 0 `[1, 2, 3]` and stamps it), `a_panic_in_plan_execution_fails_the_query_on_the_table_door` (a panicking UDF in the template; the sink stays empty and the restart lands `[1, 2, 3]`), `a_panic_during_planning_fails_the_query_and_frees_its_id` (the source's catalog load panics). Mutation F1 (the `catch_unwind` removed): red 3, each waiting out its bound with the query still `Running`, which is the verifier's observation. pins: mb-3/C-011 |
 | C-012 | Fold 1, F2 (S1): `start` and `stop` on one handle are atomic against each other. The not-yet-started work lives inside the lifecycle, so each is one transition under one lock; after a `stop()` that reports `Stopped` no driver task is alive and nothing commits. | The two stress pins in `microbatch/lifecycle_tests.rs`, plus mutation F2. | **PROVEN** | 2 pins green: `start_racing_stop_leaves_no_task_behind` (the verifier's P04: 300 rounds of one thread starting and one stopping a just-registered `ProcessingTime(0)` query; every round reports `Stopped` and the runtime's alive-task count returns to its baseline), `nothing_commits_after_a_stop_that_reported_stopped` (P10: after 300 such rounds a source append lands nothing in the sink and no epoch is stamped). Mutation F2 (the lifecycle lock released between taking the work and spawning, which is the window round 1 had): red 2 within about 2 s. Fifty consecutive runs of both pins: see C-019. pins: mb-3/C-012 |
+| C-013 | Fold 1, F3 (S1): the session's end stops its queries (D-11). (a) An explicit session stop, `StreamingQueryManager::stop_all`, stops every active query of the session and waits for each as `stop` does. (b) Dropping the last handle to the session without a stop signals every running query; each ends `Stopped` after its in-flight batch with no exception, the driver task ends, and once the caller's query handle is dropped too the catalog's strong count is zero. `session.rs` is not edited. | The two pins in `microbatch/lifecycle_tests.rs`, plus mutations F3 and F3b. | **PROVEN** | 2 pins green: `dropping_the_session_stops_its_queries_and_releases_the_catalog` (the verifier's P03, under `ProcessingTime(0)` and under a one-hour interval: state `Stopped`, durable epoch 0, one body call, alive tasks back at the baseline, the catalog `Weak` at strong count 0, each within a 10 s bound), `stopping_the_session_stops_every_query_and_waits_for_each` (two queries on two sinks, one mid-interval). Mutation F3 (the wait never sees the drop): red 1, the one-hour half; mutation F3b (no stop check sees it either): red 1. `git diff origin/main -- crates/repark-core/src/session.rs` is empty. pins: mb-3/C-013 |
 ## Decisions
 
 - **D-1 (2026-10-07). `register` is async and takes the session.** The sketch's
@@ -112,6 +113,25 @@ the processing-time look-ahead cell measured first).
   the sketch's list: a window function (Spark refuses non-time windows on a stream) and more than
   one streaming source in one query (MB-5's vector form). The stateful check runs before the
   source count, so a stream-stream self-join names the join.
+- **D-11 (2026-10-07, fold 1, ruling F3). The session's end stops its queries.**
+  - **The question:** what happens to a running query when its session goes away.
+  - **Spark:** stopping the session stops its queries.
+  - **The contract:** an explicit session stop is `StreamingQueryManager::stop_all`; it stops
+    every active query of the session and waits for each as `stop()` does (`ReparkSession` has
+    no stop method in Rust today; MB-4's `spark.stop()` calls it). Dropping the last handle
+    to the session without a stop signals every running query to stop and does not wait; each
+    ends `Stopped` after its in-flight batch, and the task and its catalog handles are
+    released. A query handle the caller still holds keeps the sink's catalog handle until it
+    is dropped.
+  - **How the drop is seen:** through a `Weak` to the session's catalog registry
+    (`Session::catalogs`, an `Arc` held only by the session's handles), read at every stop
+    check and polled every 100 ms inside the trigger wait and the scope wait. The ruling's
+    example, the manager's `Drop`, cannot fire while a driver task runs: `MicroBatchSource`
+    (`time_travel/microbatch_source.rs`, outside the fold's files) owns a `SessionContext`
+    clone, the context owns the config, and the config owns the manager. `session.rs` sits
+    exactly at the 1000-line ceiling, so a hook there would need a size exception; it is not
+    edited. Replacing the poll with the manager's `Drop` needs the source to hold a weak
+    context, which is the hand-back's question Q1.
 - **D-12 (2026-10-07, fold 1, ruling F2). One lifecycle lock, and its order.** `Pending` moved
   from its own mutex into `Lifecycle`. `start` holds the query's lifecycle while the manager
   admits it and until the task is spawned and its `AbortHandle` stored; `stop` on a registered

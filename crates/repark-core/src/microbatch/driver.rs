@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::fmt;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError, RwLock, Weak};
 use std::time::Duration;
 
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -14,7 +14,7 @@ use tokio::sync::watch;
 use tokio::task::AbortHandle;
 
 use crate::Session;
-use crate::catalog_state::LocationPolicy;
+use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::idents::parse_table_identifier_segments;
 use crate::microbatch::progress::{
     DEFAULT_RECENT_PROGRESS, Identity, ProgressLog, QueryStatus, StreamingQueryProgress,
@@ -25,6 +25,8 @@ use crate::microbatch::run::{Door, Run};
 use crate::time_travel::microbatch_source::{MicroBatchSource, SourceOptions};
 
 pub const DEFAULT_POLLING_DELAY: Duration = Duration::from_millis(10);
+
+const SESSION_WATCH: Duration = Duration::from_millis(100);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trigger {
@@ -309,6 +311,7 @@ impl StreamingQueryManager {
                 polling_delay: spec.polling_delay,
                 checkpoint_location: spec.checkpoint_location,
                 manager: Arc::downgrade(self),
+                session: Arc::downgrade(&session.catalogs),
                 source_name,
                 lifecycle: Mutex::new(Lifecycle {
                     pending: Some(Pending {
@@ -392,6 +395,7 @@ pub(crate) struct QueryShared {
     pub(crate) polling_delay: Duration,
     checkpoint_location: Option<RecordedLocation>,
     manager: Weak<StreamingQueryManager>,
+    session: Weak<RwLock<CatalogRegistry>>,
     source_name: String,
     lifecycle: Mutex<Lifecycle>,
     progress: Mutex<ProgressLog>,
@@ -518,7 +522,13 @@ impl QueryShared {
     }
 
     pub(crate) fn stop_requested(&self) -> bool {
-        *self.stop.borrow()
+        *self.stop.borrow() || self.session.strong_count() == 0
+    }
+
+    pub(crate) async fn session_dropped(&self) {
+        while self.session.strong_count() > 0 {
+            tokio::time::sleep(SESSION_WATCH).await;
+        }
     }
 }
 

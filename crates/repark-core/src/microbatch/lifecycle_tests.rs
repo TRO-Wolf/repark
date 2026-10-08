@@ -375,6 +375,49 @@ async fn assert_released_after_the_drop(trigger: Trigger) {
     drop(warehouse);
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn dropping_the_session_stops_its_queries_and_releases_the_catalog() {
+    assert_released_after_the_drop(Trigger::ProcessingTime(Duration::ZERO)).await;
+    assert_released_after_the_drop(Trigger::ProcessingTime(Duration::from_hours(1))).await;
+}
+
+#[tokio::test]
+async fn stopping_the_session_stops_every_query_and_waits_for_each() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    fixture.insert("ice.sales.other", "(1)").await;
+    let first = started(
+        &fixture,
+        table_spec(Trigger::ProcessingTime(Duration::ZERO), &options(&[])),
+    )
+    .await;
+    let mut second = table_spec(
+        Trigger::ProcessingTime(Duration::from_hours(1)),
+        &options(&[]),
+    );
+    second.sink = SinkSpec::Table {
+        sink: "ice.sales.other".to_string(),
+    };
+    let second = started(&fixture, second).await;
+    wait_for_epoch(&first, 0).await;
+    wait_for_epoch(&second, 0).await;
+    let manager = StreamingQueryManager::of(&fixture.session);
+    let outcomes = tokio::time::timeout(BOUND, manager.stop_all())
+        .await
+        .expect("the session stop returns");
+    assert_eq!(outcomes.len(), 2);
+    assert!(
+        outcomes.iter().all(|outcome| matches!(
+            outcome,
+            ShutdownOutcome::Stopped { durable: Some(record) } if record.epoch == Epoch::FIRST
+        )),
+        "{outcomes:?}"
+    );
+    assert_eq!(first.state(), QueryState::Stopped);
+    assert_eq!(second.state(), QueryState::Stopped);
+    assert!(manager.active().is_empty());
+}
+
 fn door_spec(door: &str, body: &Arc<Probe>, trigger: Trigger) -> StreamSpec {
     match door {
         "foreachBatch" => foreach(body, trigger, ONE),

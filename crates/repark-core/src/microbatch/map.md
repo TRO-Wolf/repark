@@ -52,6 +52,17 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
     `QueryShared::panicked` turns the payload into `BatchFailed { epoch, cause }` with the
     in-flight epoch, or the next one when the panic came before a batch began. The outcome,
     the done signal and the freed query id then follow the body-error path. pins: mb-3/C-011
+  - *The session's end stops its queries.* An explicit session stop is
+    `StreamingQueryManager::stop_all`, which stops each active query and waits for it as
+    `stop` does. A session dropped without a stop is seen through a `Weak` to the session's
+    catalog registry (`Session::catalogs`, an `Arc` only the session's handles hold): every
+    stop check reads it, and the trigger wait and the scope wait poll it every 100 ms
+    (`SESSION_WATCH`), so each query ends `Stopped` after its in-flight batch and the task
+    drops the source, the context and the catalog handles. A poll, not a drop hook, because
+    `MicroBatchSource` owns a `SessionContext` clone, which keeps the session state and
+    with it the manager alive for as long as the task runs, so the manager's `Drop` cannot
+    fire first; `session.rs` is not edited (ledger D-11). A handle the caller still holds
+    keeps the sink's catalog handle until it is dropped. pins: mb-3/C-013
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and

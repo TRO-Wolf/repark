@@ -177,6 +177,7 @@ impl Run {
         tokio::select! {
             () = tokio::time::sleep_until(deadline) => Wake::Tick,
             _ = stop.wait_for(|stopped| *stopped) => Wake::Stop,
+            () = self.shared.session_dropped() => Wake::Stop,
         }
     }
 
