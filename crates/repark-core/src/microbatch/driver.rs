@@ -477,11 +477,9 @@ impl QueryShared {
             .in_flight
             .or_else(|| lifecycle.durable.as_ref().map(|record| record.epoch.next()))
             .unwrap_or(Epoch::FIRST);
-        MicroBatchError::BatchFailed {
+        MicroBatchError::DriverPanicked {
             epoch,
-            cause: repark_common::redaction::mask_value_credentials(&format!(
-                "the driver task panicked: {message}"
-            )),
+            message: repark_common::redaction::mask_value_credentials(&message),
         }
     }
 

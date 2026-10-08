@@ -143,8 +143,8 @@ async fn assert_panicked(fixture: &Fixture, handle: &QueryHandle, message: &str)
     assert!(
         matches!(
             error.as_ref(),
-            MicroBatchError::BatchFailed { epoch, cause }
-                if *epoch == Epoch::FIRST && cause.contains(message)
+            MicroBatchError::DriverPanicked { epoch, message: reported }
+                if *epoch == Epoch::FIRST && reported == message
         ),
         "{error:?}"
     );

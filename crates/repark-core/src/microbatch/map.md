@@ -50,9 +50,11 @@ Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
     the lifecycle of a registered query. pins: mb-3/C-012
   - *A panic ends the query `Failed`.* `Run::drive` catches an unwind of the whole trigger
     loop (`catch_unwind` around the loop's future, not around one call), and
-    `QueryShared::panicked` turns the payload into `BatchFailed { epoch, cause }` with the
+    `QueryShared::panicked` turns the payload into `DriverPanicked { epoch, message }` (its own
+    variant since round 2, 2026-10-08; the message is the panic's, credential-masked) with the
     in-flight epoch, or the next one when the panic came before a batch began. The outcome,
-    the done signal and the freed query id then follow the body-error path. pins: mb-3/C-011
+    the done signal and the freed query id then follow the body-error path.
+    pins: mb-3/C-011, C-020
   - *One active query per sink per session.* `admit` refuses `SinkBusy` at start when an
     active query of this session already targets the sink's table uuid (registry row
     `MB-3-SINK-BUSY-1`); the refused query keeps its work and can start later.

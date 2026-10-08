@@ -3569,7 +3569,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `task/roadmap/mid-term/mb-pending-window-1-card-2026-10-07.md` for an owner decision.
 ### MB-3-SINK-BUSY-1 — a second streaming query on a sink that already has an active query in the session refuses at start; Spark runs both
 - **repark** — one active query per sink per session. `start` refuses the second query with
-  `SinkBusy` (`sink <table> already has an active batch; one batch per sink at a time`, MBE-13)
+  `SinkBusy` (`sink <table> is busy: another streaming query or batch is active on it; one at a
+  time per sink`, MBE-13)
   before anything runs, on both doors; the first query is not disturbed, and the refused query
   stays registered and starts once the first one ends. Two sessions in one process can still
   target one sink, because `start` sees only its own session: there each batch waits for the
