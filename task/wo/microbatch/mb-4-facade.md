@@ -70,3 +70,11 @@ three cells. Step 5. Commit (surface and wire-up may be two commits).
 
 `{"status":"DONE|HALT","ipi47":"3 EQUAL|…","verifier":"pass|fail|n/a-surface-only","questions":[]}`
 plus the commit sha(s).
+
+## Carried from MB-3
+
+The open S3 findings of the MB-3 re-verify (`/tmp/oc-worker/direct/wo/microbatch/mb3/reverify3/verdict.json`,
+orchestrator scratch, not in the repo). Titles only, verbatim. Each is a `findings` entry with `sev` S3; the verdict gives these entries no closed status.
+
+- No pin runs a real race through the fence at the driver level: the three pins that need the fence each inject one commit at one fixed load
+- A restart after the fence's RecoveryRequired ending is not pinned and I did not run it

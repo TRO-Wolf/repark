@@ -707,3 +707,30 @@ declines it (a dated ruling in the intake, then the archive).
   C-3-PARTITION-TYPES-1 (2026-10-08, filed, not scheduled, from C-3 question Q4, PR #998):** C-3 takes
   `int2`/`int4`/`int8` partition columns and refuses the rest under `CONNECT-DECL-pg-partitioned-read`;
   the ruled order is `date` first, then timestamp once the zone rule is ruled, each with its own Spark grid.
+- [sql-epoch-constructors-1-card-2026-10-08.md](sql-epoch-constructors-1-card-2026-10-08.md) — **card
+  SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08, open, not scheduled, from the orchestrator's measurements on main `156be81c`):**
+  `timestamp_micros`, `timestamp_seconds` and `timestamp_millis` are `UNRESOLVED_ROUTINE` on the Spark SQL door
+  where Spark has all three as built-ins; the DataFrame door answers `timestamp_micros`. Step 0 records Spark's
+  answers and types; the native-door spelling is an open question for the owner.
+- [cast-view-agg-nullability-1-card-2026-10-08.md](cast-view-agg-nullability-1-card-2026-10-08.md) — **card
+  CAST-VIEW-AGG-NULLABILITY-1 (2026-10-08, open, not scheduled, not attributed to a unit):** `max` over a view of
+  `CAST(… AS TIMESTAMP)` of arithmetic over `range` raises a DataFusion internal schema error (a field nullability
+  mismatch at `ts`); `count(*)`, a plain `SELECT` and a parquet round trip answer. Step 0 shrinks the repro and
+  records Spark's answer; the fix is at the source or reported upstream.
+- [utc-timestamp-port-1-card-2026-10-08.md](utc-timestamp-port-1-card-2026-10-08.md) — **card
+  UTC-TIMESTAMP-PORT-1 (2026-10-08, open, not scheduled, ruled 2026-10-08 as a follow-up to ZONE-HORIZON-RENDER-1,
+  from its C-012, R-1 and R-12):** `from_utc_timestamp` and `to_utc_timestamp` read standard time after 2099 because
+  they are `datafusion-spark` kernels; the port owns them in `repark-functions` on the zone-horizon helper and hoists
+  the helper's year check, returning `CAST AS DATE` and `CAST AS TIMESTAMP_NTZ` before 2100 to main's cost (1.043 and
+  1.041 of main on 20,000,000 rows). The ledger's 223 residue cells (13 at 2099) are the grid.
+- [csv-writer-door-1-card-2026-10-08.md](csv-writer-door-1-card-2026-10-08.md) — **card
+  CSV-WRITER-DOOR-1 (2026-10-08, open, not scheduled, from FA-5's fold-1 ledger and its reverify verdict):** the csv
+  write door's byte differences from Spark that FA-5 recorded and did not fix (header, trimming, quoting, binary,
+  coalesce, empty writes), one refusal shape, and the verifier's S2: under `caseSensitive=true` a case-twin
+  partition column writes to the wrong directory. Decided per row by the owner.
+- [using-side-key-design-1-card-2026-10-08.md](using-side-key-design-1-card-2026-10-08.md) — **design card
+  USING-SIDE-KEY-DESIGN-1 (2026-10-08, open, not scheduled, requires an Opus design sketch before any executor):**
+  PR #1000 (USING-PER-SIDE-KEYS-1) parked at `e1e763fa` after three verifies, each finding the plan-level marker lost
+  or unread in one more pass (aggregate and window, the retry binding the left key, the WINDOW clause: 18 third
+  answers of 575 statements). Asks how a qualified side key resolves structurally; governing rule: never worse than
+  main, a third answer is an S1.
