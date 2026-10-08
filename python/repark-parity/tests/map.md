@@ -1,5 +1,6 @@
 # map — python/repark-parity/tests
 
+FA-6 (2026-10-08): the CAP-1 mirror follows the shrink-only ratchet `dataframe/core.py` 3462 → 3456 (the two temp-view doors drop their duplicate-name refusal). pins: fa-5-6/C-005
 ATTR-ID-1 S3b (2026-10-01): CAP-1 mirror row ratcheted down with the code — `dataframe/core.py` 3921 → 3846 (the filter quoter moves to `column_fields.py`). The `check_lib_py.py` exception row moved in the same commit; no row raised. pins: attr-id-1/C-025
 STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): the CAP-1 mirror follows the shrink-only ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277. pins: string-literal-escape-1/C-011
 

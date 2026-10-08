@@ -709,7 +709,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the S3 prefix once per call through `object_store_s3`, so the infer read and
   the relaxed-schema re-read share the directory spelling.
   pins: s3-path-write-1/C-013
-- `column_resolution.rs` — **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
+- `column_resolution.rs` — **FA-6 (2026-10-08):** the unresolved-column stamp
+  first asks `column_resolution/duplicate_views.rs` whether the missing name
+  is a repeated display name of a duplicate-name temp view
+  (`AMBIGUOUS_REFERENCE`), and lists such fields by display name in its
+  suggestions; `stamp_unresolved_exact` is the case-sensitive path's form.
+  Every planned statement, on both case paths, passes
+  `duplicate_views::refuse_shadowed_duplicates`; the case-sensitive path
+  collects the written references before planning for it. Detail:
+  [column_resolution/map.md](column_resolution/map.md). pins: fa-5-6/C-006
+  **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
   case-insensitive column fold with normalization ON
   (`plan_statement_with_column_repair` / `sql_with_column_repair` fold the parsed
   statement once against the valid fields under `spark.sql.caseSensitive = false`,

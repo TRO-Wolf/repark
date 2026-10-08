@@ -486,6 +486,7 @@ accepts both names and was rerun three times green.
 | Every suite touching `fillna` / `.fill(` (14 files) | 498 passed, 65 skipped, 3 xfailed on head and on main's sources |
 | Self-join suites (every file naming `_self_join`, `self-join` or `_LEGACY_ERROR_TEMP_1182`) | main's 21 files: 835 passed, 3 xfailed; head's 23 files: 925 passed, 3 xfailed. The difference is this unit's two new files (33 and 57 tests) |
 | `python/repark/tests/test_dfcore_1_exports.py` | 10 passed; `dataframe/core.py` gains no module-level name and ratchets 3462 → 3456 |
+| Parity-harness suite (`python/repark-parity/tests`, the CAP-1 and REG-1 mirrors included) | 788 passed, 32 skipped, 12 xfailed; the CAP-1 mirror row for `core.py` follows the ratchet |
 
 The main baseline for the grid and the corpus is main's Python tree (`origin/main`, a detached
 worktree) run over head's native module. That isolates the unit soundly: every Rust change
