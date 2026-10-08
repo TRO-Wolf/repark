@@ -3931,23 +3931,59 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-10-07 (C-2d; sketch §2.11). C-2 is the read path: every pooled
   connection is read-only, and C-4 writes rows, not DDL. Retire when a dated decision gives
   Postgres sources DDL.
-### CONNECT-DECL-pg-partitioned-read — `read_postgres` refuses Spark's partitioned-read options
+### CONNECT-DECL-pg-partitioned-read — a partitioned Postgres read covers integer range columns; `predicates`, other column types and automatic bounds are declared
 - **repark** — `spark.read.jdbc(url, table, column, lowerBound, upperBound, numPartitions)`,
-  `spark.read.jdbc(url, table, predicates=…)` and `format("postgres" | "jdbc")` with
-  `partitionColumn`, `lowerBound`, `upperBound`, `numPartitions` or `predicates` refuse with
-  `ConnectError::DeclaredSetting` naming the first option given and this row, in the
-  Unsupported class, before any connection. The facade's own Spark-parity checks (the full
-  range bag, predicates against a range, empty predicates) run first, unchanged. In
-  `repark.toml` the five spellings are unknown keys.
+  `format("postgres" | "jdbc")` with `partitionColumn`, `lowerBound`, `upperBound` and
+  `numPartitions` (as options or inside `properties`) and `read_postgres(partition_column=…)`
+  read an `int2`, `int4` or `int8` column in Spark's own strides: rows below `lowerBound`,
+  above `upperBound` and NULL rows are all returned, exactly once. Every stride reads one
+  exported snapshot (`pg_export_snapshot`), on at most `pool_max_size` connections, so a
+  partitioned read equals the unpartitioned read under concurrent writes. Spark's refusals are
+  kept in Spark's words: the four options are all or none (`numPartitions` alone is accepted
+  and reads unpartitioned), reversed bounds, `query` with `partitionColumn`, a column that is
+  missing, and a `text`-like, `boolean` or `bytea` column. **Still declared**, each refusing
+  with `ConnectError` naming this row, in the Unsupported class: `predicates` (before any
+  connection); a partition column of type `date`, `timestamp`, `timestamptz`, `numeric`,
+  `float4` or `float8` (whether its bounds are Spark's date text or integers); and a read of
+  more than **10 000 strides** (the count after Spark's shrink to the span), which refuses
+  with the ceiling in its text after one catalog connection for the column and type lookup
+  and before any snapshot or stride connection. Not offered: automatic choice of the column and its bounds (Spark
+  has none). In `repark.toml` the five spellings are unknown keys: a mounted source is a
+  catalog of every relation, so a per-relation column has no key to sit under. Two deliberate
+  differences from Spark, both on the safe side: two columns that differ only in case, with
+  neither named exactly, refuse as ambiguous (Spark cannot read such a relation at all:
+  `COLUMN_ALREADY_EXISTS`, `C3-C08`…`C10`; RePark reads it and an exact name, quoted or
+  bare, picks its column), and a pushed `LIMIT`
+  is sent to every stride and capped by the scan (Spark's V1 JDBC scan pushes none).
 - **Apache Spark** — the JDBC source splits the read into `numPartitions` range queries over
-  `partitionColumn`, or one query per predicate. *(oracle: documented — `JDBCRelation.columnPartition`;
-  no value claim.)*
-- **Pin** — `crates/repark-python/src/session_tests.rs::read_postgres_refusals_name_their_row_and_never_echo_credentials`;
-  `crates/repark-connect/tests/it/settings.rs::declared_keys_refuse_naming_their_row`; live
-  `python/repark-parity/tests/live_db/test_c2_read.py::test_a_partitioned_read_refuses_naming_its_row`
-- **Rationale** — DECLARED 2026-10-07 (C-2d; sketch §2.11). One scan is one statement snapshot
-  (sketch §0 line 1); partitions that each see their own snapshot would break that, and C-3
-  builds them on an exported snapshot. Retire when C-3 lands partitioned reads.
+  `partitionColumn`, each its own statement with its own snapshot, or one query per predicate;
+  it also partitions `date`, `timestamp`, `numeric` and floating columns. *(oracle: measured —
+  live Spark 4.1.2 over pgjdbc 42.7.13, 41 cells and a 740-triple stride grid in
+  `python/repark-parity/tests/live_spark/c3_partition_oracle.json` and `c3_stride_grid.txt`:
+  `C3-P01` the three stride shapes and the NULL and out-of-bounds rows, `C3-M01`…`M07` the
+  all-or-none rule, `C3-B01`…`B08` the bounds, `C3-N01`…`N06` the count, `C3-T01`…`T10` the
+  column types, `C3-C01`…`C03` the column name, `C3-Q01`, `Q02` `query` and the subquery,
+  `C3-L01` no pushed limit.)*
+- **Pin** — `crates/repark-connect/tests/it/partition.rs::strides_equal_sparks_recorded_grid`;
+  `crates/repark-connect/tests/it/partition_plan.rs::only_integer_columns_partition_and_the_rest_refuse_by_kind`;
+  `crates/repark-core/src/session/tests/read_postgres.rs::partition_options_refuse_as_spark_does_before_any_connection`;
+  `crates/repark-python/src/session_tests.rs::read_postgres_refusals_name_their_row_and_never_echo_credentials`;
+  live `crates/repark-connect/tests/it/live_partition.rs::a_writer_between_strides_never_changes_a_partitioned_read`;
+  live `python/repark-parity/tests/live_db/test_c3_partitioned.py::test_what_stays_declared_refuses_naming_its_row`
+- **Dated divergence, 2026-10-08 (C-3 fold 1): the stride ceiling.** Spark has no ceiling on
+  `numPartitions` beyond its 32-bit `Int` (kept: a value outside it is `NumberFormatException`,
+  `C3-N07`). RePark refuses above 10 000 strides because every stride is one statement under
+  one open `REPEATABLE READ` snapshot and each costs client memory: measured on the 10M-row
+  table, 10 000 strides read in 12.7 s at 1.6 GB and 100 000 in 75 s at 8.0 GB, against 10.0 s
+  at 0.4 GB for four (ledger §7); the verifier's 2 000 000-stride read ran past nine minutes
+  at 2.6 GB before it was killed. The fix is a lower `numPartitions`; a large count over a
+  small span still shrinks as Spark's does (`C3-N08`) and is not refused.
+- **Rationale** — DECLARED 2026-10-07 (C-2d; sketch §2.11); REWRITTEN 2026-10-07 (C-3; design
+  note `task/ledgers/staging/c-3-ledger.md` §0). C-3 delivers the integer range read on one
+  snapshot. A `timestamp` stride depends on the zone Spark takes from the JVM (D-M2), and
+  `numeric` and floating strides are integer cuts over a non-integer column; each needs its
+  own measured arithmetic before it is offered. Retire when a dated decision lands the
+  remaining column types and `predicates`.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.
@@ -4841,8 +4877,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   meaning `public`, or a parenthesised subquery) or `query`; the properties take the
   `repark.toml` Postgres keys and Spark's spellings ([the guide](guide/repark-toml.md)
   "Postgres source keys"); the source renders as `source=jdbc` in `EXPLAIN`; every refusal names
-  `database source `jdbc`` and never echoes the URL or a property value. The partitioned-read
-  arguments refuse (CONNECT-DECL-pg-partitioned-read) and unknown properties refuse
+  `database source `jdbc`` and never echoes the URL or a property value. Since C-3 (2026-10-07)
+  the four range arguments partition the read over an integer column on one snapshot;
+  `predicates` and the other column types refuse (CONNECT-DECL-pg-partitioned-read). Unknown
+  properties refuse
   (CONNECT-DIV-pg-unknown-option). A URL naming any other driver — including the
   undocumented `jdbc:postgres://` spelling — refuses at the call,
   before any connection attempt, with `PySparkNotImplementedError` `NOT_IMPLEMENTED`

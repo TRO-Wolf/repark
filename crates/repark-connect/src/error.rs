@@ -12,6 +12,7 @@ use crate::discover::{Privilege, SERVER_VERSION_ROW};
 use crate::ident::IdentRefusal;
 #[cfg(feature = "postgres")]
 use crate::ident::QualifiedRelation;
+use crate::partition::PartitionRefusal;
 #[cfg(feature = "postgres")]
 use crate::pool::TimeoutSetting;
 use crate::settings::{AUTH_METHOD_KEY, AuthMethod, DeclaredSetting, SpecRefusal, Spelling};
@@ -65,6 +66,9 @@ pub enum ConnectError {
         key: Spelling,
         declared: DeclaredSetting,
     },
+
+    #[error("{refusal}")]
+    PartitionedRead { refusal: PartitionRefusal },
 
     #[error("invalid specification: a Postgres identifier {reason}")]
     InvalidIdentifier { reason: IdentRefusal },
@@ -263,6 +267,20 @@ impl From<ConnectError> for Error {
             ConnectError::InvalidAuthMethod { .. }
             | ConnectError::InvalidSpecification { .. }
             | ConnectError::InvalidIdentifier { .. } => Error::Config(error.to_string()),
+            ConnectError::PartitionedRead { ref refusal } => match refusal {
+                PartitionRefusal::DeclaredColumnType { .. }
+                | PartitionRefusal::TooManyStrides { .. } => {
+                    Error::NotImplemented(error.to_string())
+                }
+                PartitionRefusal::NotInteger { .. } => Error::NumberFormat(error.to_string()),
+                PartitionRefusal::ColumnNotFound { .. }
+                | PartitionRefusal::AmbiguousColumn { .. }
+                | PartitionRefusal::ColumnType { .. } => Error::Analysis(error.to_string()),
+                PartitionRefusal::Incomplete
+                | PartitionRefusal::Reversed { .. }
+                | PartitionRefusal::QueryOption
+                | PartitionRefusal::Strides => Error::Config(error.to_string()),
+            },
             ConnectError::DeclaredAuthMethod { .. }
             | ConnectError::DeclaredSetting { .. }
             | ConnectError::Declared { .. }

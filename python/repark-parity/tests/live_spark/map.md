@@ -27,6 +27,12 @@ FOREACH-WRAP-1 (2026-10-07): the user-callback oracle. It records three cells,
 classic, each callback raising `ValueError('fetch failed for http://u:<secret>@h/x')`.
 Nothing here is collected by pytest, and no RePark code runs.
 
+C-3 (2026-10-07): the JDBC partitioned-read oracle for the connect track (1.6). It records
+41 cells, `C3-P`, `M`, `B`, `N`, `T`, `C`, `Q`, `J` and `L`, and a 740-triple stride grid on
+live Spark 4.1.2 reading Postgres 16.15 through pgjdbc 42.7.13. The C-3 design note and the
+`CONNECT-DECL-pg-partitioned-read` row take their Spark halves from these cells. Nothing here is
+collected by pytest, and no RePark code runs.
+
 ## Contents
 
 - `mb0_streaming_oracle.py` is the recorder. There is one function per cell, and
@@ -97,6 +103,56 @@ Nothing here is collected by pytest, and no RePark code runs.
   line carrying it, with the secret written `$SECRET`.
 - `fw1_callback_oracle.sha256` holds `sha256sum` of the JSON. Check it with
   `sha256sum -c` from this directory.
+
+- `c3_partition_oracle.py` is the C-3 recorder. `define_shapes` names one option bag per cell;
+  `shape_cell` records each partition's `whereClause` (read off `JDBCRelation.parts()`), the
+  ids each partition returned (`spark_partition_id`), the row count, or the error (`class`,
+  `error_class`, `sqlstate`, the first 500 characters of the message). `grid_triples` is 40
+  edge triples (the `i64` extremes, equal bounds, one stride, more strides than values,
+  negative ranges, reversed bounds) followed by 700 triples from `random.Random(20261007)`.
+  Run it through the managed interpreter only, with `C3_PG_URL` (from `make pg-url`) and
+  `C3_PGJDBC_JAR` when the jar lives outside the D-M2 jars directory; `C3_OUT` and
+  `C3_GRID_OUT` redirect the two outputs for a re-run comparison. Missing Spark, jar or
+  database prints `SKIP` and exits 0. It creates and drops its own schema, `c3o`.
+- `c3_partition_oracle.json` is the recording: the Spark, pgjdbc (name and SHA-256), Postgres
+  and date preamble, the setup statements, the grid's seed, size and SHA-256, then the 41
+  cells in recorder order. `url` and the credentials never reach it.
+- `c3_stride_grid.txt` is the stride grid, one triple per line: `lower upper count cuts c1 c2 …`
+  (the upper bound of every stride but the last, in order; no cut means one unpartitioned
+  read) or `lower upper count refused`. `crates/repark-connect/tests/it/partition.rs` reads
+  this file, so the Rust arithmetic is compared with Spark's own numbers.
+- `c3_partition_oracle.sha256` holds `sha256sum` of both files. Check it with `sha256sum -c`
+  from this directory. pins: c-3/C-001
+
+## C-3 fold 1 cells (2026-10-08)
+
+The recorder gains eleven cells, so the recording holds 52; the stride grid re-recorded byte for
+byte. Two more tables: `c3o.mx` (one column `"Mixed"`) and `c3o.twins` (`"Mixed"` and `"mixed"`).
+
+- `C3-C04`…`C07`: a quoted name in another case resolves (`"N"` against `n`, `"mixed"` against
+  `"Mixed"`), as a bare name in another case does (`MIXED`), and the `whereClause` carries the
+  column's real name.
+- `C3-C08`…`C10`: a relation with two columns that differ only in case cannot be read at all,
+  partitioned or not: `AnalysisException` `COLUMN_ALREADY_EXISTS` (`42711`).
+- `C3-N07`: `numPartitions = 3000000000` is `NumberFormatException` (the option is a 32-bit
+  `Int`). `C3-N08`: `2147483647` over a span of 3 shrinks to three strides. `C3-N09`: a padded
+  `" 4"` is `NumberFormatException`.
+- `C3-T11`: a `timestamp` column partitions with date text as bounds.
+  pins: c-3/C-001
+
+## C-3 measured notes (2026-10-07, read from the recording)
+
+- Rows below `lowerBound`, above `upperBound` and NULL rows are all returned: the first stride
+  is `"n" < 50 or "n" is null`, the last is `"n" >= 150` (`C3-P01`).
+- `numPartitions` alone, `numPartitions` of `1`, `0` or `-1`, and equal bounds each read one
+  unpartitioned partition with no error (`C3-M05`, `N01`…`N03`, `B02`). Reversed bounds refuse.
+- When `upperBound - lowerBound < numPartitions` the count shrinks to the difference (`C3-B03`).
+- The column resolves in another case and when quoted (`C3-C02`, `C03`). `text` and `boolean`
+  refuse; `date`, `timestamp`, `timestamptz`, `numeric` and `float8` partition (`C3-T03`…`T10`).
+- `query` with `partitionColumn` refuses and names the `dbtable` subquery form, which partitions
+  (`C3-Q01`, `Q02`).
+- A `limit` over a partitioned V1 JDBC scan is not pushed (`C3-L01`).
+- Every recorded cut list is strictly increasing, the `i64` extremes included.
 
 ## FOREACH-WRAP-1 measured notes (2026-10-07, read from the recording)
 

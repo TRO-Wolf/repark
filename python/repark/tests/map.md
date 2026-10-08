@@ -2370,6 +2370,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   i64 CAST+lit wrap cells are pinned (ASCII docstring operators for RUF002;
   ruff format on long CAST SQL).
   pins: f-y10-1-int-overflow/C-001, C-002, C-003; types-1/C-002 (untyped cells).
+- `test_pg_jdbc_options.py` — **C-3 fold 1 (2026-10-08):**
+  `test_partial_range_bag_fails_loud` now matches Spark's all-or-none sentence on the
+  `format("postgres")` door. pins: c-3/C-006
+  `test_format_postgres_forwards_a_date_bound_as_text_for_the_door_to_judge`. pins: c-3/C-009
+  **C-3 fold 2 (2026-10-08):** the keyword door hands `lowerBound`, `upperBound` and
+  `numPartitions` on as text in `properties` (the camelCase and snake_case capture pins move
+  from integers to text); `test_jdbc_keyword_door_str_and_int_bounds_reach_the_engine_door_as_the_same_text`,
+  `test_jdbc_keyword_door_keeps_a_properties_spelling_for_the_door_to_refuse`,
+  `test_jdbc_keyword_door_incomplete_set_refuses_in_sparks_sentence` and
+  `test_jdbc_keyword_door_num_partitions_text_refuses_as_the_format_door_does` (a count past
+  32 bits as str and as int, on both doors). pins: c-3/C-006
+- `test_production_file_size.py` — **C-3 fold 1 (2026-10-08):** the `_parse_jdbc_int_option`
+  body hash moves: C-3 changed its behaviour on purpose (a bound that is not an integer raises
+  `NumberFormatException`, Spark's measured class and a subclass of the old one, and an
+  integer outside 64 bits refuses there too), which is the "current-main behavior change" the
+  pin's docstring admits. pins: c-3/C-006
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
@@ -9753,3 +9769,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   binding-equivalence check reds the second-twin pin. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011
+- [test_threaded_collect_segv_1.py](test_threaded_collect_segv_1.py) —
+  **THREADED-COLLECT-SEGV-1 (2026-10-08):** `collect`, `take`, `head`, `first`,
+  `toLocalIterator` and `toArrow` each answer on six successive fresh non-main
+  threads. One isolated interpreter per door, so a crash is a failed assertion on
+  the exit status and never a dead pytest. The worker must not have pyarrow loaded
+  on the main thread before the first door runs (asserted): that is the crash's
+  precondition. Skips on pyarrow 25.0.0 with the reason: its bundled mimalloc
+  null-dereferences in `mi_thread_init` when libarrow is first loaded on a
+  non-main thread that exits (apache/arrow GH-50471, fixed in 25.0.1); the fault
+  reproduces without RePark. With the skip bypassed on 25.0.0 the worker dies with
+  signal 11 on five of the six doors.
+  pins: threaded-collect-segv-1/C-001, C-002

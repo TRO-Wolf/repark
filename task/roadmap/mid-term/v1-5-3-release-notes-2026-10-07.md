@@ -6,6 +6,8 @@ error, the TA single-series performance series, the grown-stack repair, and one 
 fix. The API freeze holds; the attribute-identity stack tightens behaviour toward Spark, as its
 section says.
 
+Tagged `v1.5.3` at `7a8fcf1a` (2026-10-07 23:58 UTC); published to PyPI 2026-10-08 09:45 UTC, five wheels (release run 37705196261).
+
 ## Security: credentials are never displayed (SOURCE-URL-REDACT-1, -1-FN, -2)
 
 - **SOURCE-URL-REDACT-1 (#967, `64615dde`).** A credential embedded in a URL- or DSN-shaped
