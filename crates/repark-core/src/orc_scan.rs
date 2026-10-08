@@ -26,6 +26,7 @@ use orc_rust::projection::ProjectionMask;
 use orc_rust::schema::TimestampPrecision;
 use orc_rust::{ArrowReader, ArrowReaderBuilder};
 use repark_common::spark_error;
+use repark_common::zone_horizon::offsets_at_wall;
 
 use crate::orc_footer::file_writer_tz;
 use crate::orc_schema::{apply_user_orc_schema, infer_orc_schema, orc_types_equal};
@@ -708,10 +709,10 @@ fn writer_wall_to_utc(value: i64, zone: Tz) -> std::result::Result<i64, DataFusi
             DataFusionError::Execution(format!("orc read found an out-of-range timestamp {value}"))
         })?
         .naive_utc();
-    zone.from_local_datetime(&wall)
-        .single()
-        .or_else(|| zone.from_local_datetime(&wall).earliest())
-        .map(|moment| moment.timestamp_micros())
+    offsets_at_wall(&zone, &wall)
+        .earliest()
+        .and_then(|offset| wall.checked_sub_offset(offset))
+        .map(|moment| moment.and_utc().timestamp_micros())
         .ok_or_else(|| {
             DataFusionError::Execution(format!(
                 "orc read cannot place timestamp {value} in its writer zone"
@@ -983,5 +984,16 @@ impl crate::ReparkSession {
             None => Ok(frame),
             Some(user) => apply_user_orc_schema(frame, &user, &data, &part_fields, zone),
         }
+    }
+}
+
+#[cfg(test)]
+mod zone_horizon_tests {
+    #[test]
+    fn a_writer_wall_clock_after_2099_is_placed_by_the_final_rule() {
+        let zone = "America/New_York".parse().expect("zone parses");
+        let placed = |wall: i64| super::writer_wall_to_utc(wall, zone).ok();
+        assert_eq!(placed(4_087_800_000_000_000), Some(4_087_814_400_000_000));
+        assert_eq!(placed(4_119_336_000_000_000), Some(4_119_350_400_000_000));
     }
 }

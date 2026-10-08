@@ -12,7 +12,7 @@ use arrow::array::{
     UInt16Array, UInt32Array, UInt64Array,
 };
 use arrow::datatypes::{DataType, TimeUnit};
-use chrono::{NaiveDate, TimeZone};
+use chrono::NaiveDate;
 use datafusion::common::DFSchema;
 use datafusion::error::DataFusionError;
 use datafusion::prelude::DataFrame;
@@ -20,6 +20,7 @@ use futures::StreamExt;
 
 use crate::text_io::text_unsupported_column;
 use crate::{Error, Result, engine_err};
+use repark_common::zone_horizon::wall_at_instant;
 
 const TEXT_PARTITION_WRITERS_CAP: usize = 256;
 
@@ -131,10 +132,8 @@ fn timestamp_partition_text(value: i64, unit: TimeUnit, zone: Tz) -> Result<Stri
                 "text partition timestamp out of range".to_string(),
             ))
         })?;
-    let mut text = zone
-        .from_utc_datetime(&naive)
-        .format("%Y-%m-%d %H:%M:%S")
-        .to_string();
+    let wall = wall_at_instant(&zone, &naive).map_or(naive, |(wall, _)| wall);
+    let mut text = wall.format("%Y-%m-%d %H:%M:%S").to_string();
     if nanos != 0 {
         let mut fraction = format!("{nanos:09}");
         while fraction.ends_with('0') {
@@ -776,6 +775,16 @@ pub(crate) fn write_partition_body_row(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_timestamp_partition_after_2099_is_named_by_the_final_rule() {
+        let zone: Tz = "America/New_York".parse().expect("zone parses");
+        let text = |micros: i64| {
+            timestamp_partition_text(micros, TimeUnit::Microsecond, zone).expect("in range")
+        };
+        assert_eq!(text(4_087_802_096_000_000), "2099-07-15 08:34:56");
+        assert_eq!(text(4_119_338_096_000_000), "2100-07-15 08:34:56");
+    }
 
     fn test_session() -> crate::ReparkSession {
         crate::ReparkSession::builder().build().unwrap()

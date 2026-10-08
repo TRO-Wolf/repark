@@ -96,3 +96,30 @@ fn incremental_other_failures_keep_their_error() {
     let mapped = incremental_window_refusal(planned);
     assert!(matches!(mapped, DataFusionError::Plan(_)));
 }
+
+#[test]
+fn a_snapshot_bound_after_2099_reads_the_final_rule_in_both_directions() {
+    let zone = crate::session_time_zone::parse_runtime_session_zone_value("America/New_York")
+        .expect("a runtime zone");
+    assert_eq!(
+        format_snapshot_bound_ms(4_087_814_400_000, &zone),
+        "2099-07-15T12:00:00-04:00"
+    );
+    assert_eq!(
+        format_snapshot_bound_ms(4_119_350_400_000, &zone),
+        "2100-07-15T12:00:00-04:00"
+    );
+    let wall = |year: i32| {
+        chrono::NaiveDate::from_ymd_opt(year, 7, 15)
+            .and_then(|date| date.and_hms_opt(12, 0, 0))
+            .expect("a wall clock")
+    };
+    assert_eq!(
+        sql_text::zoned_wall_to_ms(wall(2099), &zone),
+        Some(4_087_814_400_000)
+    );
+    assert_eq!(
+        sql_text::zoned_wall_to_ms(wall(2100), &zone),
+        Some(4_119_350_400_000)
+    );
+}

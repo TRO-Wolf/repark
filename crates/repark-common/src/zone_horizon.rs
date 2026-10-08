@@ -1,3 +1,5 @@
+use chrono::{Datelike, FixedOffset, MappedLocalTime, NaiveDateTime, Offset, TimeZone};
+
 pub const LAST_TABULATED_YEAR: i64 = 2099;
 const CALENDAR_CYCLE_YEARS: i64 = 28;
 const FAR_PAST_PROXY_BASE: i64 = 1200;
@@ -44,3 +46,40 @@ pub fn proxy_year(year: i64) -> i64 {
     }
     year
 }
+
+fn in_proxy_year(moment: &NaiveDateTime) -> NaiveDateTime {
+    let year = i64::from(moment.year());
+    if (FAR_PAST_PROXY_BASE..=LAST_TABULATED_YEAR).contains(&year) {
+        return *moment;
+    }
+    i32::try_from(proxy_year(year))
+        .ok()
+        .and_then(|proxy| moment.with_year(proxy))
+        .unwrap_or(*moment)
+}
+
+#[must_use]
+pub fn offset_at_instant<Z: TimeZone>(zone: &Z, utc: &NaiveDateTime) -> FixedOffset {
+    zone.offset_from_utc_datetime(&in_proxy_year(utc)).fix()
+}
+
+#[must_use]
+pub fn wall_at_instant<Z: TimeZone>(
+    zone: &Z,
+    utc: &NaiveDateTime,
+) -> Option<(NaiveDateTime, FixedOffset)> {
+    let offset = offset_at_instant(zone, utc);
+    utc.checked_add_offset(offset).map(|wall| (wall, offset))
+}
+
+#[must_use]
+pub fn offsets_at_wall<Z: TimeZone>(
+    zone: &Z,
+    wall: &NaiveDateTime,
+) -> MappedLocalTime<FixedOffset> {
+    zone.offset_from_local_datetime(&in_proxy_year(wall))
+        .map(|offset| offset.fix())
+}
+
+#[cfg(test)]
+mod tests;

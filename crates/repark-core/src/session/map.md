@@ -33,8 +33,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `runtime_zone` handle. Under `postgres` it implements `repark_connect::WallClockLocaliser`.
   The zone is read at scan time and canonicalised through `canonical_session_zone_id`, as
   `orc_scan.rs` and `text_scan.rs` do; `zone_label()` reports that canonical id. `localise`
-  takes each wall clock's offset from the same date in
-  `repark_common::zone_horizon::proxy_year`, so a wall clock after 2099 is placed by the final
+  takes each wall clock's offset from `repark_common::zone_horizon::offsets_at_wall` (the
+  proxy year; ZONE-HORIZON-RENDER-1, 2026-10-08, replaced the inline `proxy_year` call with
+  the shared helper), so a wall clock after 2099 is placed by the final
   rule, exactly as RePark's `TIMESTAMP` literal places it. A gap refuses
   `ValueRefusal::WallClockGap` and an overlap `WallClockOverlap` (both
   `CONNECT-DIV-pg-timestamp-zone`, naming `prefer_timestamp_ntz`). A wall clock whose instant

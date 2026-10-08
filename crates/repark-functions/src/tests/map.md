@@ -22,6 +22,22 @@ Only tests; `mod.rs` is the module manifest.
   as `Timestamp(µs, "UTC")`. pins: cast-ts-string-1/C-004, C-005, C-006
   A dictionary-encoded string column runs the kernel on every door, and the kernel battery
   pins the doubled-blank refusal (verification critic). pins: cast-ts-string-1/C-013
+- `zone_horizon_render.rs` — **ZONE-HORIZON-RENDER-1 (2026-10-08):** the horizon in real
+  zones, against answers recorded on live Spark 4.1.2. 40 recorded instants (New York, Sydney,
+  Lord Howe, Kolkata, UTC; 2099 controls, 2100, 2104, 2500, 9999; both sides of each
+  transition) render at Spark's wall clock; 12 recorded wall clocks, gap and overlap included,
+  are placed at Spark's instant by `micros_from_local_datetime` and by the literal kernel; the
+  round trip over eight zones (an instant every 11 days, 7 hours and 1861 seconds in
+  2100–2500, more than 12 000 per zone) reads back as the instant with the preferred offset,
+  agrees with the literal without it, and differs from the instant in fewer than 20 samples
+  per zone (the overlaps); a time-only string takes today's date from the final rule; the
+  card's three expressions answer noon in six zones and five years; and 22 extractor and 7
+  constructor expressions answer Spark's New York 2100 cells through the analyzer.
+  pins: zone-horizon-render-1/C-001, C-002, C-004, C-006, C-007, C-011
+  The same unit rewrote `spark_string_timestamp.rs::chrono_tz_tables_stop_after_the_last_tabulated_year`:
+  it read the table end through `micros_from_local_datetime`, which now reads the horizon, so
+  it reads chrono-tz itself for the table end (−4 at 2099, −5 at 2100) and the funnel for the
+  placement (−4 at both).
 
 ## Pointers
 

@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
-use chrono::{DateTime, NaiveDateTime, TimeZone};
+use chrono::NaiveDateTime;
 use datafusion::arrow::array::{
     Array, ArrayRef, AsArray, StringArray, StringBuilder, TimestampMicrosecondArray,
 };
@@ -19,6 +19,7 @@ use datafusion::logical_expr::{
 };
 
 use crate::ansi::{SparkAnsiConfig, spark_ansi_enabled_from_options};
+use crate::datetime::local_datetime_from_micros;
 use crate::instant_ts::{
     arrow_grammar_to_timestamp_udf, ltz_timestamp_type, ntz_timestamp_type, to_timestamp_udf,
 };
@@ -369,13 +370,12 @@ fn unlocalize_to_walls(ltz: &ArrayRef, zone: Tz) -> Result<ArrayRef> {
             builder.append_null();
             continue;
         }
-        let utc = DateTime::from_timestamp_micros(instants.value(row)).ok_or_else(|| {
+        let wall = local_datetime_from_micros(instants.value(row), zone).ok_or_else(|| {
             DataFusionError::Execution(
                 "[CAST_INVALID_INPUT] NTZ instant is out of the supported range. SQLSTATE: 22018"
                     .to_string(),
             )
         })?;
-        let wall = zone.from_utc_datetime(&utc.naive_utc()).naive_local();
         builder.append_value(wall.and_utc().timestamp_micros());
     }
     Ok(Arc::new(builder.finish()))

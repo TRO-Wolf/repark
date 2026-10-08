@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::sync::Arc;
 
-use chrono::{DateTime, NaiveDateTime, Offset, TimeZone};
+use chrono::{DateTime, NaiveDateTime};
 use datafusion::arrow::array::builder::NullBufferBuilder;
 use datafusion::arrow::array::timezone::Tz;
 use datafusion::arrow::array::{
@@ -18,6 +18,7 @@ use datafusion::logical_expr::{ColumnarValue, ReturnFieldArgs};
 
 use crate::datetime::{datetime_from_micros, localize_wall_micros_in_zone};
 use crate::instant_ts::{ltz_timestamp_type, ntz_timestamp_type};
+use repark_common::zone_horizon::offsets_at_wall;
 
 const NUMERIC_ORDER: [DataType; 6] = [
     DataType::Int8,
@@ -321,12 +322,12 @@ impl ZoneSpans {
         let midnight = midnight_naive(day)?;
         let next = midnight_naive(day.checked_add(1)?)?;
         let (Some(start), Some(end)) = (
-            self.zone.offset_from_local_datetime(&midnight).single(),
-            self.zone.offset_from_local_datetime(&next).single(),
+            offsets_at_wall(&self.zone, &midnight).single(),
+            offsets_at_wall(&self.zone, &next).single(),
         ) else {
             return None;
         };
-        (start.fix() == end.fix()).then(|| start.fix().local_minus_utc())
+        (start == end).then(|| start.local_minus_utc())
     }
 
     fn offset_for_day(&mut self, day: i64) -> Option<i32> {
