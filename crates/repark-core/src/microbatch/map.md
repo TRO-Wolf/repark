@@ -66,14 +66,16 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
     manager, and the manager's `Drop` sends the stop signal to every query it holds (round 2,
     2026-10-08). Nothing a query owns keeps the session state alive: the source, the driver
     task and a registered handle's pending work hold a `WeakSessionState`
-    (`time_travel/microbatch_source.rs`) and take a state snapshot per batch. There is no
-    poll. The fallback is a `Weak` to the session's catalog registry (`Session::catalogs`),
-    read at every stop check: it covers a state snapshot that outlives the session (a
-    `DataFrame` the caller still holds keeps the manager alive), where the query ends at its
-    next trigger without running a batch (ledger D-11). A planning error after the session
-    ended is a stop, not a failure, and the `toTable` door stops before its write when the
-    state is gone. A handle the caller still holds keeps the sink's catalog handle until it is
-    dropped. pins: mb-3/C-013, C-021
+    (`time_travel/microbatch_source.rs`) and take a state snapshot per batch. The signal
+    misses one case: a state snapshot that outlives the session (a `DataFrame` the caller still
+    holds keeps the manager alive). For that case the trigger wait and the scope wait also
+    watch a `Weak` to the session's catalog registry (`Session::catalogs`), polled once a
+    second (`SESSION_WATCH`; fold 2, 2026-10-08, ledger D-18), and a planning error after the
+    session ended is a stop, not a failure; the `toTable` door stops before its write when the
+    state is gone. A registered, never started handle whose manager is gone concludes
+    `Stopped` when it is awaited (`orphaned`, the same one-second watch), so
+    `await_termination` on it returns. A handle the caller still holds keeps the sink's
+    catalog handle until it is dropped. pins: mb-3/C-013, C-021, C-028
   - *A stop from inside a body never waits on itself* (fold 2, 2026-10-08, ledger D-17). The
     driver task runs inside the task-local `DRIVING`, a `Weak` to its own query. `stop` always
     sends the signal first. Called from a driver task, it records a wait edge from that task's
@@ -187,8 +189,10 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
   is exact without an injected clock; the arithmetic itself is pinned on fixed instants in
   `run_tests.rs`. Round 2 (2026-10-08) adds a registered handle that does not keep the session
   alive and the wake pin: eight rounds of a query in a one-hour wait, at least seven of which
-  must end within 25 ms of the session's drop, which a 100 ms poll cannot do.
-  pins: mb-3/C-011, C-012, C-013, C-014, C-016, C-017, C-018, C-020, C-021
+  must end within 25 ms of the session's drop, which a 100 ms poll cannot do. Fold 2
+  (2026-10-08) adds the scope wait that outlives the timeout, the session gone behind a live
+  frame (a waiting query and a busy one), and the registered handle whose session is gone.
+  pins: mb-3/C-011, C-012, C-013, C-014, C-016, C-017, C-018, C-020, C-021, C-027, C-028
 - `timeout_tests.rs` — the catalog-timeout pins (round 2, 2026-10-08), one per call site over
   `FaultCatalog`'s load hook and its two stalling commit modes, with a 100 ms bound: `register`,
   the six read sites of the task, the reload after a body, a stalled commit on both doors

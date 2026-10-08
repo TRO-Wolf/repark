@@ -442,6 +442,69 @@ async fn the_session_drop_wakes_a_waiting_query_without_a_poll() {
     );
 }
 
+const STREAMED: usize = 40;
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_session_gone_behind_a_live_frame_still_ends_its_queries() {
+    for busy in [false, true] {
+        let fixture = Fixture::new().await;
+        for value in 0..if busy { STREAMED } else { 1 } {
+            fixture.insert(SOURCE, &format!("({value})")).await;
+        }
+        let body = Probe::new(Mode::Sleep(Duration::from_millis(20)));
+        let trigger = if busy {
+            Trigger::ProcessingTime(Duration::ZERO)
+        } else {
+            Trigger::ProcessingTime(Duration::from_hours(1))
+        };
+        let handle = started(&fixture, foreach(&body, trigger, ONE)).await;
+        wait_for_epoch(&handle, 0).await;
+        let live = fixture
+            .session
+            .sql("SELECT 1")
+            .await
+            .expect("a frame that outlives the session");
+        let manager = Arc::downgrade(&StreamingQueryManager::of(&fixture.session));
+        let Fixture { warehouse, session } = fixture;
+        drop(session);
+        assert_eq!(ended(&handle).await, Ok(true), "busy: {busy}");
+        assert_eq!(handle.state(), QueryState::Stopped);
+        assert!(
+            manager.strong_count() > 0,
+            "the frame keeps the manager, so its Drop never signalled"
+        );
+        assert!(body.calls() < STREAMED, "busy: {busy}");
+        drop(live);
+        drop(warehouse);
+    }
+}
+
+#[tokio::test]
+async fn a_registered_query_whose_session_is_gone_concludes_stopped() {
+    let fixture = Fixture::new().await;
+    let body = Probe::new(Mode::Record);
+    let handle = StreamingQueryManager::of(&fixture.session)
+        .register(&fixture.session, foreach(&body, Trigger::Once, &[]))
+        .await
+        .expect("register");
+    let awaiting = {
+        let handle = handle.clone();
+        tokio::spawn(async move { handle.await_termination(None).await })
+    };
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(!awaiting.is_finished());
+    let Fixture { warehouse, session } = fixture;
+    drop(session);
+    let waited = tokio::time::timeout(BOUND, awaiting)
+        .await
+        .expect("await_termination returns once the session is gone")
+        .expect("the waiter joins");
+    assert_eq!(waited, Ok(true));
+    assert_eq!(handle.state(), QueryState::Stopped);
+    assert_eq!(body.calls(), 0);
+    drop(warehouse);
+}
+
 #[tokio::test]
 async fn stopping_the_session_stops_every_query_and_waits_for_each() {
     let fixture = Fixture::new().await;

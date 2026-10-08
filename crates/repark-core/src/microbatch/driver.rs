@@ -31,6 +31,8 @@ pub const DEFAULT_CATALOG_TIMEOUT: Duration = Duration::from_mins(1);
 
 pub(crate) const LOAD_SINK: &str = "load the sink";
 
+const SESSION_WATCH: Duration = Duration::from_secs(1);
+
 const WAIT_CHAIN_LIMIT: usize = 1024;
 
 tokio::task_local! {
@@ -511,6 +513,23 @@ impl QueryShared {
         }
     }
 
+    async fn orphaned(&self) {
+        loop {
+            {
+                let lifecycle = self.lifecycle();
+                if lifecycle.pending.is_none() {
+                    break;
+                }
+                if self.manager.strong_count() == 0 {
+                    self.conclude(lifecycle, Ok(Ending::Stopped));
+                    return;
+                }
+            }
+            tokio::time::sleep(SESSION_WATCH).await;
+        }
+        std::future::pending::<()>().await;
+    }
+
     pub(crate) fn report(&self, report: &TriggerReport) {
         let identity = Identity {
             id: self.id,
@@ -617,7 +636,13 @@ impl QueryShared {
     }
 
     pub(crate) fn stop_requested(&self) -> bool {
-        *self.stop.borrow() || self.session_ended()
+        *self.stop.borrow()
+    }
+
+    pub(crate) async fn session_gone(&self) {
+        while !self.session_ended() {
+            tokio::time::sleep(SESSION_WATCH).await;
+        }
     }
 
     pub(crate) fn session_ended(&self) -> bool {
@@ -796,7 +821,12 @@ impl QueryHandle {
 
     async fn wait_done(&self, timeout: Option<Duration>) -> bool {
         let mut done = self.shared.done.subscribe();
-        let finished = async move { done.wait_for(|finished| *finished).await.is_ok() };
+        let finished = async move {
+            tokio::select! {
+                ended = done.wait_for(|finished| *finished) => ended.is_ok(),
+                () = self.shared.orphaned() => true,
+            }
+        };
         match timeout {
             None => finished.await,
             Some(limit) => tokio::time::timeout(limit, finished).await.unwrap_or(false),
