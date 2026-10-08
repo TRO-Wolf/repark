@@ -5178,6 +5178,7 @@ dependencies = [
  "orc-rust",
  "parquet",
  "repark-common",
+ "repark-connect",
  "repark-iceberg",
  "serde",
  "snap",
@@ -5220,6 +5221,7 @@ dependencies = [
  "datafusion-spark",
  "iceberg",
  "regex",
+ "repark-common",
  "tokio",
 ]
 

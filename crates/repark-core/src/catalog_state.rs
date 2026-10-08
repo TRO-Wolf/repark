@@ -5,13 +5,18 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
 
-use datafusion::catalog::SchemaProvider;
+use datafusion::catalog::{CatalogProvider, SchemaProvider};
+use datafusion::prelude::SessionContext;
 use iceberg::Catalog;
+use repark_common::SourceKind;
 use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
 
 use crate::catalog_config::refusal::CatalogRefusal;
 use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
+use crate::extension::SessionExtension;
+use crate::named_sources::RefusingSourceCatalogProvider;
+use crate::session::zone_localiser::SessionZoneLocaliser;
 
 pub(crate) mod session_catalog;
 
@@ -316,6 +321,18 @@ impl CatalogRegistry {
         self.database_sources.get(name)
     }
 
+    #[must_use]
+    pub fn is_database_source(&self, name: &str) -> bool {
+        self.database_sources.contains_key(name)
+    }
+
+    #[must_use]
+    pub fn source_read_only_message(&self, name: &str) -> Option<String> {
+        let spec = self.database_sources.get(name)?;
+        (spec.identity.kind == SourceKind::Postgres)
+            .then(|| repark_connect::read_only_ddl(&spec.key_path()))
+    }
+
     /// The [`LocationPolicy`] registered under `name`, if any.
     #[must_use]
     pub fn location_policy(&self, name: &str) -> Option<LocationPolicy> {
@@ -378,6 +395,47 @@ impl CatalogRegistry {
             depth: Arc::clone(&self.view_expansion_depth),
             level,
         }
+    }
+}
+
+pub(crate) struct SourceMount {
+    specs: Arc<Vec<Arc<SourceSpec>>>,
+    zone: SessionZoneLocaliser,
+}
+
+impl SourceMount {
+    pub(crate) fn new(specs: Arc<Vec<Arc<SourceSpec>>>, zone: SessionZoneLocaliser) -> Self {
+        Self { specs, zone }
+    }
+
+    pub(crate) fn mounted(&self) -> impl Iterator<Item = &Arc<SourceSpec>> {
+        self.specs.iter().filter(|spec| spec.auto_register)
+    }
+
+    pub(crate) fn mounts_postgres(spec: &SourceSpec) -> bool {
+        cfg!(feature = "postgres") && spec.identity.kind == SourceKind::Postgres
+    }
+
+    pub(crate) fn provider(&self, spec: &SourceSpec) -> Arc<dyn CatalogProvider> {
+        #[cfg(feature = "postgres")]
+        if spec.identity.kind == SourceKind::Postgres {
+            return repark_connect::PostgresSource::mount(
+                &spec.identity,
+                spec.props.clone(),
+                Arc::new(self.zone.clone()),
+            );
+        }
+        let _ = &self.zone;
+        Arc::new(RefusingSourceCatalogProvider::new(spec))
+    }
+}
+
+impl SessionExtension for SourceMount {
+    fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
+        for spec in self.mounted() {
+            ctx.register_catalog(spec.identity.name.clone(), self.provider(spec));
+        }
+        Ok(())
     }
 }
 

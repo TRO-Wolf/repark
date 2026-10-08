@@ -40,7 +40,7 @@ datafusion.workspace = true
 # `Error` / `ErrorClass` / `Result` from `repark-common`, so v1's textually-identical
 # `repark_core::Error` lines now resolve through this crate — naming both would collide.
 # A compile-time type-identity test (`src/tests.rs`) pins that re-export.
-repark-core.workspace = true
+repark-core = { workspace = true, features = ["postgres"] }
 # The Spark date-function `Expr` builders (`repark_functions::expr_fn`) that `PyColumn` composes so a
 # standalone column expression carries the exact UDF the session registers for the SQL path.
 repark-functions.workspace = true

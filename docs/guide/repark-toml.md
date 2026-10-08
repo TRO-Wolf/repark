@@ -41,26 +41,24 @@ target_partitions = 16
 [write.conf]
 example.app.tag = "cfg-1-write"
 [write.database.postgres.company_db]
-dbname = "analytics"
+database = "analytics"
 host = "db.example.com"
+user = "reader"
 ```
 
 Two constraints apply to this file today, stated plainly:
 
-1. **A database source loads and registers lazily — it refuses only on use.** The `[write]`
-   profile above opens a session today: the source parses, validates, and its name
-   registers on the engine's catalog without opening a connection. Reaching for it in SQL
-   answers the connector message (run here under `REPARK_ENV=write`):
-
-   ```text
-   UnsupportedOperationException: This feature is not implemented: database source
-   `write.database.postgres.company_db` (kind `postgres`) is declared but cannot be used
-   yet — its connector arrives with roadmap 1.10 (Postgres, SQL Server, Trino)
-   ```
-
-   The connectors themselves land with roadmap 1.10. A per-source `auto_register = false`
-   inside the source table opts out of registration: the source still parses and stays
-   declared, and SQL under its name answers the engine's ordinary not-found error.
+1. **A database source mounts lazily — it connects only on use.** The `[write]` profile
+   above opens a session without a network round trip: the source registers its name on the
+   engine's catalog and its keys are checked at the first statement that resolves a table
+   under it (C-2d, 2026-10-07). A Postgres source then reads through the native connector:
+   `SELECT … FROM company_db.<schema>.<table>` plans one scan per table, and a statement may
+   join it with an Iceberg table in the same query. A malformed source refuses at that first
+   resolution, naming its key path and the key, and echoing no value. SQL Server and Trino
+   sources still refuse on use until their connectors land (roadmap 1.10). A per-source
+   `auto_register = false` inside the source table opts out of registration: the source still
+   parses and stays declared, and SQL under its name answers the engine's ordinary not-found
+   error.
 
 2. **`[<profile>.conf]` keys apply in sorted-key order, not file order.** The TOML table the
    loader reads does not retain file order, so the application order is the deterministic
@@ -131,21 +129,15 @@ print(repark.sources())
 ```
 
 ```text
-[SourceMetadata(name='company_db', kind='postgres', key_path='write.database.postgres.company_db', auto_register=True, properties={'dbname': 'analytics', 'host': 'db.example.com'})]
+[SourceMetadata(name='company_db', kind='postgres', key_path='write.database.postgres.company_db', auto_register=True, properties={'database': 'analytics', 'host': 'db.example.com', 'user': 'reader'})]
 ```
 
-`ping()` is the handle's only operation — the connector itself lands with roadmap 1.10,
-so it answers the pending message:
-
-```python
-repark.source("company_db").ping()
-```
-
-```text
-UnsupportedOperationException: database source
-`write.database.postgres.company_db` (kind `postgres`) is declared but cannot be used
-yet — its connector arrives with roadmap 1.10 (Postgres, SQL Server, Trino)
-```
+`ping()` is the handle's only operation. For a Postgres source it checks out one pooled
+connection, runs `SELECT 1` and returns it to the pool, each step under its own timeout
+(`pool_checkout_timeout_ms`, `connect_timeout_ms`, `read_timeout_ms`), and returns `None`. A
+failure names the source's key path and the failing setting, never a password or the URL. A
+source without `auto_register` pings through a pool of its own. SQL Server and Trino sources
+answer the pending message (roadmap 1.10). An undeclared name refuses naming the declared set:
 
 ```text
 PySparkException: datafusion engine error: unknown database source 'nope' — declared
@@ -154,8 +146,69 @@ sources: company_db
 
 `auto_register = false` inside the source table keeps the source listed while leaving
 its name unregistered — SQL under the name then answers the engine's ordinary not-found
-error rather than the connector message. The `repark.config` mirror accepts
-`auto_register` as a typed boolean on `DatabaseSource` and renders it only when set.
+error. The `repark.config` mirror accepts `auto_register` as a typed boolean on
+`DatabaseSource` and renders it only when set.
+
+### Postgres source keys
+
+A `[<profile>.database.postgres.<name>]` table takes exactly these keys, each a string; any
+other key refuses, listing the accepted ones (`CONNECT-DIV-pg-unknown-option` in
+[the parity registry](../spark-sql-iceberg-parity.md): Spark forwards unknown keys to the
+driver).
+
+| key | default | meaning |
+|---|---|---|
+| `url` | — | `postgresql://`, `postgres://` or `jdbc:postgresql://`; it may carry the user, password, host, port, database and query keys, and conflicts with the same key given twice |
+| `host`, `port`, `database`, `user`, `password` | port `5432`; `database` is the user's name | one host only (`CONNECT-DECL-pg-multi-host`); `host` and `user` are required, from the keys or the `url` |
+| `auth_method` | `password` | `iam_token` and `kerberos` are declared refusals |
+| `sslmode` | `verify-full` | see below |
+| `sslrootcert` | the system roots | a PEM bundle of the CA that signed the server certificate |
+| `connect_timeout_ms` | `10000` | each connection attempt |
+| `read_timeout_ms` | `60000` | every request and every streamed chunk; `0` refuses |
+| `query_timeout_ms` | `0` (unlimited) | the server's `statement_timeout` for a scan |
+| `lock_timeout_ms` | `10000` | the server's `lock_timeout` |
+| `batch_rows` | the session batch size | rows per Arrow batch (a batch also ends at 64 MiB) |
+| `prefer_timestamp_ntz` | `false` | read `timestamp` as the wall clock (`TimestampNTZType`) instead of placing it in the session zone |
+| `pushdown_predicate` | `true` | send the filters Postgres evaluates exactly to the server |
+| `pushdown_limit` | `true` | send `LIMIT n` to the server when no filter is left for the engine |
+| `pool_max_size` | `4` | connections per source, `1` to `64` |
+| `pool_checkout_timeout_ms` | `30000` | the wait for a free pooled connection |
+| `pool_idle_timeout_ms` | `300000` | an idle pooled connection closes after this |
+| `application_name` | `repark` | shown in `pg_stat_activity` |
+
+The `read_postgres` door (`spark.read.jdbc`, `format("postgres")`, `format("jdbc")`) takes the
+same keys plus Spark's spellings, matched case-insensitively: `queryTimeout`,
+`connectTimeout` and `socketTimeout` (seconds), `fetchsize`, `preferTimestampNTZ`,
+`pushDownPredicate`, `pushDownLimit`, `ApplicationName` and `driver` (only
+`org.postgresql.Driver`). `partitionColumn`, `lowerBound`, `upperBound`, `numPartitions` and
+`predicates` refuse there (`CONNECT-DECL-pg-partitioned-read`, roadmap C-3);
+`sessionInitStatement`, `customSchema` and `options` refuse everywhere
+(`CONNECT-DECL-pg-session-sql`).
+
+**`sslmode`.** The default, `verify-full`, encrypts and checks the server certificate against
+`sslrootcert` (or the system roots) and the host name. `disable` is the one explicit plaintext
+mode, for a server on a trusted network or a local container. `prefer`, `allow`, `require` and
+`verify-ca` refuse, because each can connect without checking whom it talks to
+(`CONNECT-DECL-sslmode-unverified`, `CONNECT-DIV-pg-sslmode`).
+
+**The grants a source needs.** Every connection is read-only (`default_transaction_read_only`),
+so the role needs read grants alone, three of them:
+
+```sql
+GRANT CONNECT ON DATABASE analytics TO reader;
+GRANT USAGE ON SCHEMA sales TO reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA sales TO reader;
+```
+
+A missing `USAGE` or `SELECT` refuses when the table resolves, naming the relation and the
+privilege. DDL under a source refuses as read-only (`CONNECT-DECL-pg-ddl`), and `INSERT`,
+`UPDATE` and `DELETE` refuse as not implemented; nothing is written.
+
+**`pushdown_limit` and `pushdown_predicate`.** They are separate switches, as Spark's
+`pushDownLimit` and `pushDownPredicate` are. With both on, `EXPLAIN` lists each scan's
+`pushed_filters`, `residual_filters` and `pushed_limit`: a limit is pushed only when every
+filter on the scan was pushed. `pushdown_predicate = false` keeps every filter in the engine;
+`pushdown_limit = false` keeps every limit there.
 
 ## Discovery and profiles
 

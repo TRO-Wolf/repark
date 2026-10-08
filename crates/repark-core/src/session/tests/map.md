@@ -9,6 +9,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `read_postgres.rs` — **C-2d fold 1 (2026-10-07), N6:** behind `postgres`.
+  `a_dbtable_property_is_the_target_never_a_setting`: a `dbtable` property, in any case, is
+  dropped before the settings check, so a read without `user` answers that refusal and never
+  names `dbtable` (the verifier's V2). pins: c-2/C-113
 - `attr_id.rs` — **ATTR-ID-1 S1 (2026-09-30):** the propagation pins for the `repark.attr`
   field-metadata key, measured on DataFusion 54.1.0 alone (a frame tagged by
   `alias_with_metadata`, ids read by position after each node). A bare column and an alias of a
