@@ -23,4 +23,4 @@ directory holds the piece split out of it. The test files of the module stay bes
   [the parent map](../map.md) under the MB-2c closing slice. Stopgap for
   [F-APPEND-PIN-BASE-1](../../../../../task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md);
   the file is deleted when the fork lands it and RP-N repins.
-  pins: mb-2c/C-008, C-009, C-010, C-011, C-012, C-013, C-014
+  pins: mb-2c/C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015

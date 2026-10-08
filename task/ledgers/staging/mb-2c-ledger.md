@@ -69,6 +69,7 @@ lines and the map row), the fork card and this ledger. `write_options.rs` change
 | C-012 | Fold 1, the verifier's S1 (2026-10-08). When the fence's walk finds no breach, `refuse` still runs the epoch check on the refreshed table and refuses on its error, carrying that typed error, latching a durable one (D-19). An expired stamp above an empty (`None`) base, which the walk cannot see because no summary on `main` carries the pair, therefore cannot land its epoch twice on either door. | Pins on both doors with the live ids and the snapshot count asserted; mutation MF9. | **PROVEN** | `write/sink_offsets_append_fence_tests.rs`: `an_expired_stamp_above_an_empty_base_refuses_the_append_door` and `an_expired_stamp_above_an_empty_base_refuses_the_stamp_only_door` (the view is empty; epoch 0 stamps, an unrelated append lands, the stamped snapshot is expired, then epoch 0 replays from the empty view: `RecoveryRequired{epoch 0, durable: epoch 0's record, StampedSnapshotExpired}` on each door, the snapshot count unchanged, ids `[1, 2]`, the scope `NotCommitted`). Code: `sink_offsets/append_fence.rs` `refuse`. The fork card carries the dated line (the fork validation must also consult the offsets property). pins: mb-2c/C-012 |
 | C-013 | Fold 1, the verifier's S2 (2026-10-08). A base removed by `expire_snapshots` while an unrelated append landed is refused like a rollback, by the non-ancestor rule of C-008 (b), with the same untyped `Catalog` text; no snapshot lands. A retry from a freshly loaded table, in a new scope, commits the epoch once (D-23). | One pin on the refusal text and the retry. | **PROVEN** | `write/sink_offsets_append_fence_tests.rs`: `an_expired_base_with_an_unrelated_append_is_refused_like_a_rollback_and_a_fresh_view_commits` (`Catalog("append fence: query … epoch 0 pinned base snapshot <base>, which is no longer an ancestor of main (head <head>); nothing can be proven about repark.cdc.query-id=… above it")`, the snapshot count and ids `[1, 2]` unchanged, no stamped snapshot; then from the reloaded table in a new scope the append commits, one stamped snapshot, ids `[1, 2, 3]`). pins: mb-2c/C-013 |
 | C-014 | Fold 1, the verifier's S2 (2026-10-08): the two branches the fold-1 suite left unpinned. (a) A commit that arrives without `TableCommit::base_table` is checked against one fresh load through the inner catalog (D-21). (b) A tokenless `commit_stamp_only` refusal latches only the scope entry of its own stamp, never another stamp's on the same sink. | A pin for each; mutations MF10 and MF11. | **PROVEN** | `write/sink_offsets_append_fence_tests.rs`: `a_commit_without_a_base_table_is_checked_against_a_fresh_load` (a: `TableCommit` has no public constructor, so the commit is captured from a real transaction through `ProbeMode::Capture` and its base taken with `take_base_table`; `AppendFence::update_table` refuses with `Fenced` naming the racer's run, the inner catalog sees exactly one load and no `update_table`, one stamped snapshot, ids `[1, 70]`), `a_tokenless_stamp_only_refusal_does_not_latch_another_stamps_scope` (b: the scope holds epoch 4 and is claimed; the stale tokenless epoch 3 is `Fenced`; a second claim of the scope still reads `SinkCommittedTwice{epoch 4}`, not the other stamp's `Fenced`). pins: mb-2c/C-014 |
+| C-015 | Fold 2, the re-verify's S2 (2026-10-08). The epoch check that `refuse` runs when the walk finds no breach (C-012) also holds on a commit whose claimed base is live: this query's stamp below a live base, expired after the view was loaded, refuses the next epoch from the stale view on both doors, and nothing lands. | Pins on both doors with a non-empty base; mutation MF12. | **PROVEN** | `write/sink_offsets_append_fence_tests.rs`: `an_expired_stamp_below_a_live_base_refuses_the_append_door` and `an_expired_stamp_below_a_live_base_refuses_the_stamp_only_door` (epoch 0 stamps, an unrelated append becomes the view's head, the stamped snapshot is expired, then epoch 1 from that stale view: `RecoveryRequired{epoch 0, durable: epoch 0's record, StampedSnapshotExpired}` on each door, the snapshot count unchanged, no stamped snapshot, ids `[1, 2]`, the scope `NotCommitted`). The re-verify's probe `rv_stamp_expired_below_a_live_base` is the source. pins: mb-2c/C-015 |
 
 ## Dated decision rows
 
@@ -274,13 +275,35 @@ lines and the map row), the fork card and this ledger. `write_options.rs` change
   claimed.** The verifier's S3, recorded, no code change. After the base-off-`main` and
   lower-epoch-same-run refusals, a later claim in the scope reads `SinkCommittedTwice`, the false
   statement D-19 removed for the durable refusals. D-19 already says a `Catalog` refusal does not
-  latch; the typed variant that would latch it is MB-3 round 2's (D-22).
+  latch; the typed variant that would latch it is MB-3 round 2's (D-22). Fold 2 (2026-10-08, the
+  re-verify's S3): the epoch-check branch of C-012 refuses with `RecoveryRequired` or `Catalog`
+  only, since a durable kind needs a stamp above the base, which is the other branch; so its
+  `latch_refusal` call never latches, and those refusals too leave the scope claimed and the next
+  claim reads `SinkCommittedTwice`. The latch rules hold: durable refusals only, and only the
+  scope entry of the refused stamp.
 - **D-25 (2026-10-08). Closing slice, fold 1: the MB-3 driver reloads the sink after each of its
   own commits.** The verifier's S3, recorded, no code change. The same run's next epoch from a
   table handle older than its own previous commit is refused by the fence ("newer snapshot … on
   main carries repark.cdc.query-id=…"), where before the slice it committed. It follows the rule
   (`an_empty_base_treats_every_snapshot_on_main_as_concurrent` pins the same shape), so the MB-3
   driver must load the sink after each of its own commits and claim the next epoch on that table.
+- **D-26 (2026-10-08). Closing slice, fold 2: the fence applies the claim's resume-point rule to
+  the refreshed table.** The re-verify's S3. With C-012 the fence no longer decides only on the
+  walk above the base: whenever the walk finds no breach it reads the refreshed table as the
+  claim reads the view. Three stale-view commits that landed at `5509fa8c` are now refused, each
+  refused the same way from a fresh view, so none is a legitimate commit lost. (a) This query's
+  stamp below a live base is expired after the view was loaded, and the next epoch comes from the
+  stale view: it was `Ok` (and healed the sink, a later fresh view read epoch 1 normally), and is
+  now `RecoveryRequired{StampedSnapshotExpired}`, so the query stays in recovery; pinned by C-015.
+  (b) This query's offsets property is written with no stamped snapshot after the view: it was
+  `Ok`, and is now `RecoveryRequired{StampedSnapshotExpired}`. (c) This query's offsets property
+  turns malformed after the view: it was `Ok` (it overwrote the property), and is now
+  `Catalog("repark.cdc stamp is not JSON")`. Everything else is unchanged on all three doors (one
+  load and one `update_table` each): the first epoch on an empty sink, the next and third epochs
+  from a fresh view, a resumed run, generation 2 on an empty sink, another query's property and
+  stamps (also landing above a stale view), a malformed or non-uuid foreign offsets property, and
+  a quiet stamp-only commit. A new generation above an existing stamp is `GenerationMismatch` at
+  the claim, so the fence does not decide it. Cases (b) and (c) are recorded, not pinned.
 
 ## Mutations — 2026-10-07
 
@@ -322,8 +345,9 @@ Each was a temporary edit to `sink_offsets/append_fence.rs` or `sink_offsets.rs`
 | MF7 | The commit sites drop the typed refusal (`refusal_of` returns nothing), so the fence reads as a bare catalog error. Mine. | The two race pins, `an_empty_base_treats_every_snapshot_on_main_as_concurrent`, `a_base_that_left_main_fails_the_commit_on_both_doors`. 950 passed, 4 failed. |
 | MF8 | The walk does not stop at the base, so this query's stamps at or below the base count as concurrent. Mine. | 18 pins, among them harness pins 1, 3, 4 and 5, `commit_stamp_only_commits_one_append_snapshot_with_both_halves` and `resume_reads_the_last_offset_from_one_loaded_table`: every second epoch refuses. 936 passed, 18 failed. |
 | MF9 | Fold 1, S1: remove the added `epoch_check` in `refuse` (a walk with no breach never refuses). The verifier's X1, reverted. | `an_expired_stamp_above_an_empty_base_refuses_the_append_door`, `an_expired_stamp_above_an_empty_base_refuses_the_stamp_only_door`. Run under `-- write::sink_offsets microbatch::crash_tests`: 82 passed, 2 failed. |
-| MF10 | Fold 1, S2: the verifier's V1, a commit without `base_table` skips the check (`None => None`). Survived the closing slice (79 passed). | `a_commit_without_a_base_table_is_checked_against_a_fresh_load` (82 passed, 1 failed, the other failure being the first draft of C-013's pin, since corrected). |
-| MF11 | Fold 1, S2: the verifier's V3, `latch_refusal` drops the `entry.stamp == *stamp` guard. Survived the closing slice (79 passed). | `a_tokenless_stamp_only_refusal_does_not_latch_another_stamps_scope` (82 passed, 1 failed, the other failure being the first draft of C-013's pin, since corrected). |
+| MF10 | Fold 1, S2: the verifier's V1, a commit without `base_table` skips the check (`None => None`). Survived the closing slice (79 passed). | `a_commit_without_a_base_table_is_checked_against_a_fresh_load` (83 passed, 1 failed on the final code, the verifier's re-run). 2026-10-08 correction: the first figures here, 82 passed with a second failure, came from a draft run in which C-013's pin carried a wrong ids assertion (later corrected). |
+| MF11 | Fold 1, S2: the verifier's V3, `latch_refusal` drops the `entry.stamp == *stamp` guard. Survived the closing slice (79 passed). | `a_tokenless_stamp_only_refusal_does_not_latch_another_stamps_scope` (83 passed, 1 failed on the final code, the verifier's re-run). 2026-10-08 correction: the first figures here, 82 passed with a second failure, came from a draft run in which C-013's pin carried a wrong ids assertion (later corrected). |
+| MF12 | Fold 2, S2: the re-verify's W2, the epoch-check branch of `refuse` runs only when the claimed base is `None`. Survived fold 1 (84 passed). | `an_expired_stamp_below_a_live_base_refuses_the_append_door`, `an_expired_stamp_below_a_live_base_refuses_the_stamp_only_door`. Run under `-- write::sink_offsets microbatch::crash_tests`: 84 passed, 2 failed. |
 
 ## Owner and ruling questions
 
@@ -365,3 +389,6 @@ The round-2 gate results are in the hand-back.
 Fold 1, 2026-10-08: `cargo test -p repark-iceberg --lib` reads `959 passed; 0 failed; 0 ignored`
 (954 plus the five pins of C-012 to C-014). `cargo test -p repark-iceberg --lib microbatch::crash_tests`
 reads `5 passed; 0 failed; 0 ignored`, and the four MB-2a tolerance pins are green.
+
+Fold 2, 2026-10-08: `cargo test -p repark-iceberg --lib` reads `961 passed; 0 failed; 0 ignored`
+(959 plus the two pins of C-015), and the crash gate still reads `5 passed; 0 failed; 0 ignored`.
