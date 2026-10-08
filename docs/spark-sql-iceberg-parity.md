@@ -3522,6 +3522,107 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   the stream; repark refuses at start rather than idling, so the failure lands when the query
   is launched, not on the first later append (NS-6, refuse loud). The only difference is when
   the refusal fires.
+### MB-3-LOOKAHEAD-1 — a capped processing-time stream delivers every append before a non-append; Spark stops one batch earlier when the files cap fills on a snapshot's last file
+- **repark** — under a processing-time trigger with `streaming-max-files-per-micro-batch`, the
+  window (`WindowLimit::Capped`, MB-1) takes each append's files up to the cap and never looks
+  past the window's last file. Two one-file appends `a` and `b`, then an `overwrite` (or a
+  `delete`), at max-files 1 deliver `a` in batch 0 and `b` in batch 1, and the next trigger
+  refuses `NonAppendSnapshot` (`Cannot process overwrite snapshot: <id>; Bronze is append-only
+  (O-5) …`). Every row before the non-append lands, so a restart after the documented
+  `repark.cdc.start-after-snapshot-id=<id>` advice loses nothing.
+- **Apache Spark** — the capped `latestOffset` checks the files cap only before adding the next
+  file inside a snapshot, so a window that fills exactly on a snapshot's last file still calls
+  `nextValidSnapshot`, which throws at the following `overwrite` or `delete`. The same history
+  delivers `a` (batch 0, offset `(a, 0)`) and then fails `STREAM_FAILED` / `XXKST`, `Cannot
+  process overwrite snapshot: <id>, to ignore overwrites, set
+  streaming-skip-overwrite-snapshots=true`; `b` is never delivered, and the delete twin is the
+  same. *(oracle: cell MB0b-R18, `trigger(processingTime="0 seconds")`, recorded 2026-10-07.)*
+- **Pin** — `crates/repark-iceberg/src/microbatch/window_fold2_pins.rs::capped_walk_delivers_both_appends_then_refuses_the_non_append`
+- **Rationale** — DECLARED 2026-10-07 (MB-3, beside MB-1 ledger D-5; MB-1 fold-2 ruling Q1
+  KEEP deliver-first). Both engines refuse the stream at the non-append; repark delivers the
+  appends ahead of it first, so the refusal lands one batch later and no appended row is held
+  back behind a snapshot the stream refuses anyway. Under `availableNow` and `Once` the two
+  agree (MB0b-R17): both refuse before batch 0.
+### MB-3-REPLAY-WINDOW-1 — a restart after a failed batch replans that batch's window; Spark replays the logged one
+- **repark** — the offsets live in the sink's summary and there is no offset log, so the window
+  of a batch that failed is not durable. The restart keeps the batch id (the epoch after the
+  durable record) and plans its window again from the durable offset to the source's head. When
+  the source grew between the failure and the restart, the same batch id covers a wider window:
+  source `(1, 2, 3)`, a `foreachBatch` body that fails at batch 0, an append `(4, 5)`, then the
+  restart delivers batch 0 as `(1, 2, 3, 4, 5)` under `availableNow` with no cap. With
+  `streaming-max-files-per-micro-batch=1` the restart delivers batch 0 `(1, 2, 3)` and batch 1
+  `(4, 5)`, because the cap cuts the window at the same file. No row is lost or skipped by the
+  driver in either shape, and the offset never advances past a batch whose body failed.
+- **Apache Spark** — writes the batch's offset range to `offsets/<batchId>` before the batch
+  runs, and a restart replays that range under the same batch id: the same history delivers
+  batch 0 `(1, 2, 3)` again and then batch 1 `(4, 5)`, with `offsets` `0, 1` and `commits`
+  `0, 1`. *(oracle: cell MB3-W9 in `mb3_fold_oracle.json`, `trigger(availableNow=True)`,
+  recorded 2026-10-07; MB0-W6 holds the unchanged-source half.)*
+- **Pin** — `crates/repark-core/src/microbatch/lifecycle_tests.rs::a_restart_after_a_failed_batch_replans_its_window_over_a_grown_source`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F4: no offset log in this fold;
+  beside the `foreachBatch` at-least-once declaration, MB-3 ledger C-005 (e) and D-2). The
+  consequence is for a body that deduplicates on the batch id, Spark's documented idempotence
+  recipe: if the body recorded batch 0 as done before it failed, it skips the wider replay,
+  and the trailing stamp then moves the offset past `(4, 5)`, which the body never wrote. A
+  body on repark deduplicates on its rows' keys, or writes the sink through the `toTable` door.
+  The pending-window stamp that would close the difference is filed as
+  `task/roadmap/mid-term/mb-pending-window-1-card-2026-10-07.md` for an owner decision.
+### MB-3-SINK-BUSY-1 — a second streaming query on a sink that already has an active query in the session refuses at start; Spark runs both
+- **repark** — one active query per sink per session. `start` refuses the second query with
+  `SinkBusy` (`sink <table> is busy: another streaming query or batch is active on it; one at a
+  time per sink`, MBE-13)
+  before anything runs, on both doors; the first query is not disturbed, and the refused query
+  stays registered and starts once the first one ends. Two sessions in one process can still
+  target one sink, because `start` sees only its own session: there each batch waits for the
+  sink's `BatchScope` up to `repark.cdc.catalog-timeout` (60 s) and then runs, so both queries
+  drain and neither fails on an overlap.
+- **Apache Spark** — lets two streaming queries with different checkpoints append to one
+  Iceberg table; each commits its own snapshots. *(oracle: documented behavior; no MB-0 cell
+  runs two queries on one sink.)*
+- **Pin** — `crates/repark-core/src/microbatch/lifecycle_tests.rs::a_second_query_on_an_active_sink_is_refused_at_start`,
+  `::two_sessions_on_one_sink_wait_for_the_scope`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F6). A process holds at most one
+  `BatchScope` per sink (sketch §0 line 5), because the scope is what ties a sink commit to
+  its batch stamp. Before this row the second query died `Failed` at whichever batch
+  overlapped the first; the refusal now lands at start, where the caller can act on it.
+### MB-3-STATIC-SIDE-1 — a streaming frame combined with a static frame refuses the shapes Spark refuses, under repark's own error
+- **repark** — `PlanTemplate::from_frame` refuses, with `StatefulOperatorRefused` (MBE-6:
+  `<operator> is not supported on a streaming DataFrame; use foreachBatch`), a union of the
+  stream and a static frame in either order, a full outer join, a left outer join with the
+  static frame on the left, a right outer join with the static frame on the right, and a left
+  semi or left anti join with the stream on the right. It accepts an inner join in either
+  order, a left outer join with the stream on the left, a right outer join with the stream on
+  the right, and a left semi or left anti join with the stream on the left, and lands Spark's
+  rows for each. It also refuses a streaming frame inside a subquery expression
+  (`a streaming DataFrame in a subquery`), which no cell measures.
+- **Apache Spark** — refuses the same union and join shapes at `start()` with
+  `AnalysisException` / `_LEGACY_ERROR_TEMP_3102`, no SQLSTATE, from
+  `UnsupportedOperationChecker` (`Union between streaming and batch DataFrames/Datasets is
+  not supported`; `LeftOuter join with a streaming DataFrame/Dataset on the right and a static
+  DataFrame/Dataset on the left is not supported`; and the twins), and runs the accepted
+  shapes. *(oracle: cell MB3-J1 in `mb3_fold_oracle.json`, fourteen shapes over a stream
+  `(1, 2, 3)`, `(4, 5)` and a static `(2, 900)`, recorded 2026-10-07.)*
+- **Pin** — `crates/repark-core/src/microbatch/relation_tests.rs::shapes_that_would_re_emit_the_static_side_refuse`,
+  `::shapes_that_preserve_the_stream_run_spark_s_rows`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F5). The template runs once per
+  batch, so a shape whose output keeps static rows would land them again on every batch. Both
+  engines refuse at start; the difference is the error class and text, which follow MBE-6's
+  SES-DECL shape. The subquery refusal is wider than what was measured and is kept until a
+  cell shows Spark answering a shape it covers.
+### MB-3-PROGRESS-RETENTION-0 — `numRecentProgressUpdates = 0` keeps the newest progress; Spark fails the query
+- **repark** — a `recentProgress` limit of `0` is read as `1`: the ring keeps the newest
+  progress, `lastProgress` answers it, and the query runs on.
+- **Apache Spark** — with `spark.sql.streaming.numRecentProgressUpdates=0` the query fails
+  after its first batch with `STREAM_FAILED` / `XXKST`, cause
+  `java.util.NoSuchElementException` (`empty collection`): `ProgressReporter.addNewProgress`
+  dequeues while the buffer's length is at least the retention, and an empty buffer still
+  satisfies that. `recentProgress` is empty and `lastProgress` is null. *(oracle: cell MB3-G1
+  in `mb3_fold_oracle.json`, recorded 2026-10-07; Spark 4.1.2
+  `sql/core/.../streaming/runtime/ProgressReporter.scala` lines 104–108.)*
+- **Pin** — `crates/repark-core/src/microbatch/progress_tests.rs::a_zero_limit_keeps_the_newest_progress`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1; MB-3 ledger D-9). Spark's answer is an
+  unhandled exception in its progress buffer, not a contract. repark keeps the query alive
+  and its last progress readable.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.
