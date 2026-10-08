@@ -18,7 +18,7 @@ pub(crate) const SOURCE: &str = "ice.sales.orders";
 pub(crate) const SINK: &str = "ice.sales.silver";
 
 pub(crate) struct Fixture {
-    pub(crate) _warehouse: TempDir,
+    pub(crate) warehouse: TempDir,
     pub(crate) session: Session,
 }
 
@@ -55,10 +55,11 @@ impl Fixture {
             .refresh_catalog_provider("ice")
             .await
             .expect("the provider refreshes");
-        Fixture {
-            _warehouse: warehouse,
-            session,
-        }
+        Fixture { warehouse, session }
+    }
+
+    pub(crate) fn root(&self) -> String {
+        self.warehouse.path().display().to_string()
     }
 
     pub(crate) async fn insert(&self, table: &str, values: &str) {
@@ -182,7 +183,7 @@ pub(crate) fn options(pairs: &[(&str, &str)]) -> SourceOptions {
     SourceOptions::from_options(&map).expect("the options parse")
 }
 
-fn creation(name: &str, location: &str) -> TableCreation {
+pub(crate) fn creation(name: &str, location: &str) -> TableCreation {
     let schema = Schema::builder()
         .with_fields(vec![
             NestedField::required(1, "id", Type::Primitive(PrimitiveType::Long)).into(),

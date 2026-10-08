@@ -38,6 +38,15 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
   never stops the query (rule 4): the manager keeps it until it terminates. Every lock is a
   `std::sync::Mutex` held for one read or write, never across an await.
   pins: mb-3/C-004, C-005
+  **Fold 1 (2026-10-07):**
+  - *One lifecycle lock.* The not-yet-started work (`Pending`) lives inside `Lifecycle`, so
+    `start` (take the work, admit, set `Running`, spawn, keep the `AbortHandle`) and `stop` on a
+    registered query (drop the work, set `Stopped`) are each one transition under the same
+    lock. There is no window in which `stop` reports `Stopped` and `start` then spawns. Lock
+    order: the query's own lifecycle, then the manager's registry, then the lifecycle of a
+    query already in the registry. `start` holds its own lifecycle while it is admitted, and
+    a query is in the registry only after that, so no path takes the registry while it holds
+    the lifecycle of a registered query. pins: mb-3/C-012
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and
@@ -76,10 +85,12 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005
+- `lifecycle_tests.rs` — the fold-1 pins (2026-10-07), with a recording `BatchBody` (`Probe`).
 - `table_door_tests.rs` — the `toTable` door pins: the stamped append with the Spark keys, the
   start check on a shared catalog, the unknown-outcome reconcile and walk over a fault-injecting
   catalog wrapper (`FaultCatalog`, the `crash_tests.rs` shape), and fencing by another run of the
-  same query across two sessions. The door's exactly-once guarantee against a racing driver is
+  same query across two sessions. `FaultCatalog` also takes a load hook (`on_load`), which the
+  fold-1 pins use to panic or to hold a table load. The door's exactly-once guarantee against a racing driver is
   not claimed until `F-APPEND-PIN-BASE-1` lands (ledger C-002).
   pins: mb-3/C-007
 - `testing.rs` — the test fixture: a session over a memory catalog with the `sales.orders`

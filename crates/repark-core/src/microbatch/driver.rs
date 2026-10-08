@@ -309,16 +309,18 @@ impl StreamingQueryManager {
                 checkpoint_location: spec.checkpoint_location,
                 manager: Arc::downgrade(self),
                 source_name,
-                lifecycle: Mutex::new(Lifecycle::default()),
+                lifecycle: Mutex::new(Lifecycle {
+                    pending: Some(Pending {
+                        source,
+                        plan: spec.plan,
+                        context: session.context().clone(),
+                        door,
+                    }),
+                    ..Lifecycle::default()
+                }),
                 progress: Mutex::new(ProgressLog::new(spec.recent_progress_limit)),
                 stop,
                 done,
-                pending: Mutex::new(Some(Pending {
-                    source,
-                    plan: spec.plan,
-                    context: session.context().clone(),
-                    door,
-                })),
             }),
         })
     }
@@ -376,6 +378,7 @@ struct Lifecycle {
     outcome: Option<ShutdownOutcome>,
     exception: Option<Arc<MicroBatchError>>,
     abort: Option<AbortHandle>,
+    pending: Option<Pending>,
 }
 
 pub(crate) struct QueryShared {
@@ -393,7 +396,6 @@ pub(crate) struct QueryShared {
     progress: Mutex<ProgressLog>,
     pub(crate) stop: watch::Sender<bool>,
     done: watch::Sender<bool>,
-    pending: Mutex<Option<Pending>>,
 }
 
 impl QueryShared {
@@ -439,7 +441,14 @@ impl QueryShared {
     }
 
     pub(crate) fn finish(&self, ending: Result<Ending, MicroBatchError>) -> ShutdownOutcome {
-        let mut lifecycle = self.lifecycle();
+        self.conclude(self.lifecycle(), ending)
+    }
+
+    fn conclude(
+        &self,
+        mut lifecycle: MutexGuard<'_, Lifecycle>,
+        ending: Result<Ending, MicroBatchError>,
+    ) -> ShutdownOutcome {
         if let Some(outcome) = &lifecycle.outcome {
             return outcome.clone();
         }
@@ -479,6 +488,7 @@ impl QueryShared {
         lifecycle.state = outcome.state();
         lifecycle.in_flight = None;
         lifecycle.abort = None;
+        lifecycle.pending = None;
         lifecycle.exception = exception;
         lifecycle.outcome = Some(outcome.clone());
         drop(lifecycle);
@@ -618,23 +628,18 @@ impl QueryHandle {
                 id = self.shared.id
             ))
         })?;
-        let mut pending = self
-            .shared
-            .pending
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
-        let Some(work) = pending.take() else {
+        let mut lifecycle = self.shared.lifecycle();
+        let Some(work) = lifecycle.pending.take() else {
             return Err(MicroBatchError::Catalog(format!(
                 "query {id} was already started; register a new query to run it again",
                 id = self.shared.id
             )));
         };
         if let Err(error) = manager.admit(self) {
-            *pending = Some(work);
+            lifecycle.pending = Some(work);
             return Err(error);
         }
-        drop(pending);
-        self.shared.lifecycle().state = QueryState::Running;
+        lifecycle.state = QueryState::Running;
         let run = Run::new(Arc::clone(&self.shared), work);
         #[expect(
             clippy::disallowed_methods,
@@ -643,10 +648,7 @@ impl QueryHandle {
                       it ends on drain, stop or failure"
         )]
         let task = tokio::spawn(run.drive());
-        let mut lifecycle = self.shared.lifecycle();
-        if lifecycle.outcome.is_none() {
-            lifecycle.abort = Some(task.abort_handle());
-        }
+        lifecycle.abort = Some(task.abort_handle());
         Ok(())
     }
 
@@ -680,13 +682,7 @@ impl QueryHandle {
                 return outcome.clone();
             }
             if lifecycle.state == QueryState::Registered {
-                drop(lifecycle);
-                self.shared
-                    .pending
-                    .lock()
-                    .unwrap_or_else(PoisonError::into_inner)
-                    .take();
-                return self.shared.finish(Ok(Ending::Stopped));
+                return self.shared.conclude(lifecycle, Ok(Ending::Stopped));
             }
             if lifecycle.state == QueryState::Running {
                 lifecycle.state = QueryState::Draining;

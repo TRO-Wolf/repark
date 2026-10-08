@@ -30,16 +30,30 @@ const ARMED_NONE: u8 = 0;
 const ARMED_LANDED: u8 = 1;
 const ARMED_LOST: u8 = 2;
 
-#[derive(Debug)]
-struct FaultCatalog {
+pub(super) type LoadHook = Arc<dyn Fn(&TableIdent) -> BoxFuture<'static, ()> + Send + Sync>;
+
+pub(super) struct FaultCatalog {
     inner: Arc<dyn Catalog>,
     armed: AtomicU8,
     fail_next_load: AtomicBool,
+    load_hook: Mutex<Option<LoadHook>>,
+}
+
+impl std::fmt::Debug for FaultCatalog {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("FaultCatalog")
+            .finish_non_exhaustive()
+    }
 }
 
 impl FaultCatalog {
     fn arm(&self, fault: u8) {
         self.armed.store(fault, Ordering::SeqCst);
+    }
+
+    pub(super) fn on_load(&self, hook: Option<LoadHook>) {
+        *self.load_hook.lock().expect("the load hook") = hook;
     }
 }
 
@@ -97,6 +111,10 @@ impl Catalog for FaultCatalog {
     }
 
     async fn load_table(&self, table: &TableIdent) -> iceberg::Result<Table> {
+        let hook = self.load_hook.lock().expect("the load hook").clone();
+        if let Some(hook) = hook {
+            hook(table).await;
+        }
         if self.fail_next_load.swap(false, Ordering::SeqCst) {
             return Err(iceberg::Error::new(
                 ErrorKind::Unexpected,
@@ -142,9 +160,10 @@ impl Catalog for FaultCatalog {
     }
 }
 
-const FLAKY_SINK: &str = "flaky.sales.silver";
+pub(super) const FLAKY_SINK: &str = "flaky.sales.silver";
+pub(super) const FLAKY_SOURCE: &str = "flaky.sales.orders";
 
-async fn flaky(fixture: &Fixture) -> Arc<FaultCatalog> {
+pub(super) async fn flaky(fixture: &Fixture) -> Arc<FaultCatalog> {
     let inner = fixture
         .session
         .catalogs_snapshot()
@@ -155,6 +174,7 @@ async fn flaky(fixture: &Fixture) -> Arc<FaultCatalog> {
         inner,
         armed: AtomicU8::new(ARMED_NONE),
         fail_next_load: AtomicBool::new(false),
+        load_hook: Mutex::new(None),
     });
     fixture
         .session

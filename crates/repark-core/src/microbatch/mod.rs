@@ -3,6 +3,8 @@
 pub mod driver;
 #[cfg(test)]
 mod foreach_tests;
+#[cfg(test)]
+mod lifecycle_tests;
 pub mod progress;
 pub mod relation;
 mod run;
