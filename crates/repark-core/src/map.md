@@ -701,7 +701,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the S3 prefix once per call through `object_store_s3`, so the infer read and
   the relaxed-schema re-read share the directory spelling.
   pins: s3-path-write-1/C-013
-- `column_resolution.rs` — **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
+- `column_resolution.rs` — **USING-PER-SIDE-KEYS-1 (2026-10-07):**
+  `plan_statement_with_column_repair` runs `using_keys::rewrite_using_keys` on the parsed
+  statement before the plan call and `using_keys::rekey_chained_using` on the plan after it,
+  only when a join carries `USING` or `NATURAL` (row in `column_resolution/map.md`).
+  pins: using-per-side-keys-1/C-006, C-008
+  Earlier: **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
   case-insensitive column fold with normalization ON
   (`plan_statement_with_column_repair` / `sql_with_column_repair` fold the parsed
   statement once against the valid fields under `spark.sql.caseSensitive = false`,

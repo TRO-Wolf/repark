@@ -367,6 +367,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `df_guards/frame_lineage.rs`, the self-join lineage core (`FrameNode` and the
   ambiguity walk), whose public items leave through `frame_names` (row in
   `df_guards/map.md`). No facade calls it yet.
+  **USING-PER-SIDE-KEYS-1 (2026-10-07):** `df_guards.rs` also declares
+  `df_guards/using_keys.rs`, the shown key and the hidden per-side keys of a DataFrame `USING`
+  join (row in `df_guards/map.md`); its public items leave through `frame_names`.
+  pins: using-per-side-keys-1/C-002
   **ATTR-ID-1 SJ-1b (2026-10-02):** it also declares the private `df_guards/self_join.rs`,
   the self-join condition preparer and post-join reference check (row in
   `df_guards/map.md`); its items leave through `frame_names`. No facade calls it yet.
