@@ -614,6 +614,30 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and RePark's loud refusal where Spark stores a NULL key. The native door runs the ANSI-on
   cells it can spell; its overflow cell is a dated strict xfail (it types `128` as BIGINT).
   pins: cast-map-spell-1/C-013, C-015, C-016
+- [test_zone_horizon_render_1.py](test_zone_horizon_render_1.py) +
+  [zone_horizon_render_1_spark_oracle.json](zone_horizon_render_1_spark_oracle.json) +
+  [zone_horizon_render_1_residue.json](zone_horizon_render_1_residue.json) +
+  [_record_zone_horizon_render_1.py](_record_zone_horizon_render_1.py) —
+  **ZONE-HORIZON-RENDER-1 (2026-10-08):** an instant after 2099 renders at Spark's wall clock.
+  The oracle holds 6972 cells recorded on live Spark 4.1.2: six session zones
+  (`America/New_York`, `Australia/Sydney`, `Australia/Lord_Howe`, `Asia/Kolkata`, `UTC`,
+  `-08:00`) x the years 2099 (control), 2100, 2104, 2500 and 9999 x a January and a July
+  instant plus both sides of each transition x 46 instant functions, the same walls (with one
+  gap and one overlap wall per shifting zone and year) x 16 wall-clock functions, and a CSV
+  and a JSON write per zone. An instant is spelled `TIMESTAMP '<wall> UTC'`, because RePark
+  has no `timestamp_micros`. The fixture stores the probes and one answer per cell in
+  recording order; the recorder rebuilds each statement from the probes. The residue file
+  lists the 832 cells RePark still answers differently, per zone. The pins: every cell outside
+  the residue answers Spark and every residue cell still differs (per zone, so a cell that
+  converges turns red); every residue cell after 2099 either differs in the 2099 control too
+  or is in a named class (the zone-blind built-in `extract` / `date_part`, the upstream
+  `from_utc_timestamp` / `to_utc_timestamp`, the nanosecond range, `months_between` on a
+  transition day); the card's three expressions answer noon in four zones and five years;
+  `collect` and the Arrow path carry the same instant. The live leg re-runs the committed
+  probes. On main 1516 cells differ; 700 of them answer Spark after the fix, and 16 that
+  agreed by accident now differ as their 2099 twins do (ledger R-5), which leaves the 832. `python _record_zone_horizon_render_1.py --engine repark --residue` rewrites
+  the residue from the facade.
+  pins: zone-horizon-render-1/C-001, C-002, C-005, C-006, C-007, C-008, C-009, C-010
 - [test_cast_ts_string_1.py](test_cast_ts_string_1.py) +
   [cast_ts_string_1_spark_oracle.json](cast_ts_string_1_spark_oracle.json) +
   [_record_cast_ts_string_1.py](_record_cast_ts_string_1.py) —
