@@ -45,7 +45,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   every malformed combination measured on live Spark 4.1.2 (C-001), one exported snapshot per
   scan, strides run on at most `pool_max_size` connections inside one DataFusion partition, a
   pushed `LIMIT` per stride capped above, and what `CONNECT-DECL-pg-partitioned-read` still
-  declares. `risk_tier: standard`. Branch `feat/c-3-partitioned-reads`.
+  declares. Then the slices: Spark's stride arithmetic checked against 740 recorded triples and
+  the option rule (C-002, C-003), the stride predicate (C-004), execution on one snapshot with
+  nine live cells (C-005), the three doors and the rewritten registry row (C-006), the 10M-row
+  benchmark against ConnectorX and pandas with its factor recorded and no pass declared
+  (C-007), and the ConnectorX and ADBC citations (C-008); thirteen mutations, all red.
+  `risk_tier: standard`. Branch `feat/c-3-partitioned-reads`.
 - [c-2-ledger.md](c-2-ledger.md) —
   **C-2, card 1.6 (2026-10-06), in flight:** the Postgres read path, slice by slice. **C-2a**, the
   pure slice: `ConnectError` folds C-1's two error enums (C-001); the COPY BINARY decoder's

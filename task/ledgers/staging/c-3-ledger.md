@@ -231,7 +231,39 @@ each, the median reported (§4).
 | C-004 | A stride is one conjunct after everything pushed (§0.4): the first is open below and carries the only NULL test, a middle one is closed below and open above, the last is open above; every compare is `OPERATOR(pg_catalog.…)`; every cut is bound through the `set_config` carriage and read back as `::pg_catalog.int8`; projection and `LIMIT` are untouched; a cut past the 1024-slot bound answers `None`. | `rendering::the_first_stride_is_open_below_and_takes_the_nulls`, `a_middle_stride_is_closed_below_and_open_above`, `the_last_stride_is_open_above`, `a_stride_follows_the_pushed_conjuncts_and_keeps_projection_and_limit`, `the_strides_of_one_plan_bind_every_cut_once_per_side`, `a_stride_refuses_past_the_slot_bound_or_the_columns`. | PROVEN | §1. |
 | C-005 | Execution (§0.2…§0.4). A partitioned scan is one DataFusion partition over between one and `min(strides, pool_max_size)` connections; `checkout_up_to` queues for its first connection only and never opens past the pool; every connection reads one exported snapshot, so a writer between strides changes nothing, on four connections and on one; the partitioned rows equal the unpartitioned rows value for value across the mapped types, with NULL and out-of-bounds rows exactly once; pushed filters, projection and a per-stride `LIMIT` capped by the scan compose with the strides; a refused value keeps its per-connection contract; a dropped stream leaves no backend; the connections return to the pool clean. | The no-server pins of `partition_plan.rs` and `pool.rs`; the nine live cells of `live_partition.rs`; `cargo test -p repark-connect -- --include-ignored`, three runs. | PROVEN | §3; 214 passed, 0 failed, three runs. |
 | C-006 | The doors (§0.1). `read_postgres`, `spark.read.jdbc` with Spark's four arguments, `format("postgres" \| "jdbc")` with the four options and the four spellings inside `properties` each partition a read and equal psycopg's reading; a `dbtable` subquery partitions; `query` with a column, an incomplete option bag, reversed bounds, a missing column, a `text` or `boolean` column and a bound that is not a 64-bit integer refuse in Spark's class and sentence, before any connection where Spark refuses before one; `numPartitions` alone, counts of `1`, `0` and `-1`, and equal bounds read unpartitioned; `predicates` and the `date`, timestamp, `numeric` and float columns refuse naming `CONNECT-DECL-pg-partitioned-read`, whose registry row is rewritten to what C-3 delivers and what it still declares; in `repark.toml` the spellings stay unknown keys. | `partition_options_refuse_as_spark_does_before_any_connection`, `num_partitions_alone_is_no_partitioning_and_never_a_setting` (core); `read_postgres_refusals_name_their_row_and_never_echo_credentials` (binding); `declared_keys_refuse_naming_their_row` (settings); the eight live cells of `test_c3_partitioned.py`; the facade subset. | PROVEN | §3; live_db 31 passed, 5 xfailed (C-0's strict xfails); facade subset 692 passed, 9 skipped. |
-| C-007 | The benchmark (§0.7) is recorded with its factor against ConnectorX. | Open until the harness runs. | OPEN | What is the measured factor? §4. |
+| C-007 | The benchmark (§0.7, order R-3) is a harness beside the live cells and a recorded run: `c3_bench.py` loads a 10M-row, nine-column table into the C-0 container and times `SELECT *` on RePark's release wheel (unpartitioned, 4 strides, 8 strides), ConnectorX `read_sql` with an Arrow return at the same partition settings and pandas over SQLAlchemy, three runs each in a fresh interpreter, the build lock held, the median reported with rows per second and the factor against ConnectorX. The acceptance factor is the owner's: the measurement is recorded and no pass is declared. | §4; the harness's JSON report, quoted. | PROVEN | §4. |
+| C-008 | The ledger cites ConnectorX (the partitioned-read design and the benchmark bar) and ADBC, order R-4. | §5. | PROVEN | §5. |
+
+## 1. Mutations (2026-10-08)
+
+Each mutation was applied to the committed tree (`2dc42c6d`) alone, the crate's integration
+binary run with the server up (`cargo test -p repark-connect --test it <filter> --
+--include-ignored`), and the file restored; `git status` was clean after the last one. "Red" is
+every pin that failed. Four are the brief's (m1 to m4; "let partitions exceed the pool" has two
+layers, the plan's cap and the pool's permits, so it is two mutations and a combined run); eight
+are the executor's own.
+
+| id | clause | mutation (file) | what it would let through | red? | red in |
+|---|---|---|---|---|---|
+| m1 | C-004, C-005 | the brief's: drop a stride's upper-open bound, `<` becomes `<=` (`src/read/postgres.rs`) | a row on a cut is read by two strides | RED | 13 pins: live `a_busy_pool_narrows_a_partitioned_read_and_never_fails_it`, live `a_partitioned_read_equals_the_unpartitioned_read_across_the_types`, live `a_refused_value_keeps_its_contract_in_every_stride`, live `cancel_aborts_every_connection_and_leaves_no_backend`, live `filters_projection_and_limit_compose_with_the_strides`, live `null_and_out_of_bounds_rows_arrive_exactly_once`, live `num_partitions_above_the_pool_never_opens_past_it`, live `one_connection_reads_its_strides_in_one_snapshot`, `rendering::a_middle_stride_is_closed_below_and_open_above`, `rendering::a_stride_follows_the_pushed_conjuncts_and_keeps_projection_and_limit`, `rendering::the_first_stride_is_open_below_and_takes_the_nulls`, `rendering::the_strides_of_one_plan_bind_every_cut_once_per_side`, `plan::explain_names_the_column_the_strides_and_the_connection_bound` |
+| m2 | C-004, C-005 | the brief's: drop the NULL stride, the first stride loses `OR col IS NULL` (`src/read/postgres.rs`) | NULL rows vanish | RED | 9 pins: live `a_partitioned_read_equals_the_unpartitioned_read_across_the_types`, live `a_writer_between_strides_never_changes_a_partitioned_read`, live `filters_projection_and_limit_compose_with_the_strides`, live `null_and_out_of_bounds_rows_arrive_exactly_once`, live `one_connection_reads_its_strides_in_one_snapshot`, `rendering::the_first_stride_is_open_below_and_takes_the_nulls`, `rendering::the_strides_of_one_plan_bind_every_cut_once_per_side`, `plan::every_stride_carries_the_pushed_filter_the_projection_and_the_limit`, `plan::explain_names_the_column_the_strides_and_the_connection_bound` |
+| m3a | C-005 | the brief's, the plan's half: `max_connections` no longer capped at `pool_max_size` (`src/provider/table.rs`) | the plan asks for 16 connections on a pool of 2 | RED | 2 pins: `plan::a_partitioned_scan_is_one_partition_over_bounded_connections`, `plan::explain_names_the_column_the_strides_and_the_connection_bound` |
+| m3b | C-005 | the brief's, the pool's half: the extra checkouts take permits from a fresh semaphore (`src/pool.rs`) | the pool opens past `max_size` | RED | 3 pins: live `a_busy_pool_narrows_a_partitioned_read_and_never_fails_it`, `pool::a_multi_checkout_queues_for_its_first_connection_only`, `pool::a_multi_checkout_takes_what_is_free_and_never_passes_the_pool` |
+| m4 | C-005 | the brief's: drop the snapshot import, the other connections open `REPEATABLE READ` without `SET TRANSACTION SNAPSHOT` (`src/read/postgres_lanes.rs`) | strides read after the writer see its rows | RED | 2 pins: live `a_writer_between_strides_never_changes_a_partitioned_read`, live `one_connection_reads_its_strides_in_one_snapshot` |
+| m5 | C-005 | own: `BEGIN_SNAPSHOT_SCAN` becomes `BEGIN READ ONLY`, so one connection's strides are `READ COMMITTED` statements (`src/read/postgres_lanes.rs`) | a connection's later strides see the writer | RED | 2 pins: live `one_connection_reads_its_strides_in_one_snapshot`, `plan::the_snapshot_statements_are_repeatable_read_and_read_only` |
+| m6 | C-005 | own: drop the scan's limit cap (`src/provider/partitioned.rs`) | the scan returns up to strides x limit rows | RED | 1 pins: live `filters_projection_and_limit_compose_with_the_strides` |
+| m7 | C-002 | own: drop the half-stride alignment (`src/partition.rs`) | cuts differ from Spark's | RED | 4 pins: `more_partitions_than_values_shrink_to_the_span`, `negative_and_straddling_ranges_follow_spark`, `strides_at_the_i64_bounds_neither_wrap_nor_repeat`, `strides_equal_sparks_recorded_grid` |
+| m8 | C-002 | own: keep the requested count when the span is smaller (`src/partition.rs`) | cuts differ from Spark's | RED | 4 pins: live `a_partitioned_read_equals_the_unpartitioned_read_across_the_types`, `more_partitions_than_values_shrink_to_the_span`, `strides_equal_sparks_recorded_grid`, `strides_hold_every_value_exactly_once` |
+| m9 | C-005 | own: accept any column type (`src/provider/table.rs`) | a `text` column partitions | RED | 1 pins: `plan::only_integer_columns_partition_and_the_rest_refuse_by_kind` |
+| m10 | C-005 | own: pool every connection of a partitioned scan (`src/read/postgres_lanes.rs`) | a frame keeps `pool_max_size` idle sessions | RED | 2 pins: live `a_writer_between_strides_never_changes_a_partitioned_read`, live `num_partitions_above_the_pool_never_opens_past_it` |
+| m11 | C-003 | own: `numPartitions` alone refuses (`src/partition.rs`) | Spark accepts it | RED | 1 pins: `the_four_options_are_all_or_none_as_spark_rules` |
+| m12 | C-005 | own: strides past the connection count are never queued (`src/read/postgres_lanes.rs`) | their rows vanish | RED | 4 pins: live `a_busy_pool_narrows_a_partitioned_read_and_never_fails_it`, live `a_partitioned_read_equals_the_unpartitioned_read_across_the_types`, live `num_partitions_above_the_pool_never_opens_past_it`, live `one_connection_reads_its_strides_in_one_snapshot` |
+| m3a+m3b | C-005 | both halves of the pool bound at once | sixteen connections on a pool of two | RED | live `num_partitions_above_the_pool_never_opens_past_it` (`(16, 16)` against `(16, 2)`) |
+
+Not mutated, and why: the cancel path is the lease's `Drop` (C-2b's, pinned there and by the
+live cancel cell here); there is no line of C-3's to remove that would leave a backend running
+short of deleting the task handles' drop, which is not a one-line mutation. The task join on
+channel close has no pin: nothing in the suite makes a connection task panic.
 
 ## 2. Four-line records (2026-10-07)
 
@@ -277,3 +309,181 @@ Four things the first live runs showed, each fixed before its commit:
   already finished may have pooled its connection, so "no backend" became "no busy backend and
   at most one pooled"; and the cancel cell's activity query matched an autovacuum worker on the
   table, so it now counts client backends of the cell's own application name.
+
+## 4. The benchmark (2026-10-08, order R-3)
+
+**The acceptance factor is the owner's. This section records the measurement and declares no
+pass.**
+
+**Setup.** [c3_bench.py](../../../python/repark-parity/tests/live_db/c3_bench.py), not collected
+by pytest. The table: `c3_bench.mixed`, 10 000 000 rows, 1.23 GB with its primary key, nine
+columns (`int8` key, `int4`, `int2`, `float8`, `numeric(12,2)`, `text`, `date`, `timestamptz`,
+`bool`). The query: `SELECT * FROM c3_bench.mixed`, partitioned on `id` with bounds `1` and
+`10000000`. The server: the C-0 container, Postgres 16.15, **capped at 2 CPUs and 2 GB** by its
+compose file. The client: 16 cores (`taskset -c 32-47`), Python 3.12.3. RePark 1.5.3 is the
+release wheel (`make build-wheel`, thin LTO) built from commit `2dc42c6d`, installed with
+ConnectorX 0.4.6, pandas 3.0.6, SQLAlchemy 2.1.4, psycopg2-binary 2.9.13 and pyarrow 25.0.1
+into a scratch environment under the clone (`.bench-venv`, git-excluded), never into `.venv`.
+Each case ran three times in its own fresh interpreter; the whole run held
+`/tmp/oc-worker/build-slots/opus-cargo.lock`, so no build ran under it (2026-10-08 05:00 UTC).
+RePark and ConnectorX materialise one Arrow table; pandas its own frame.
+
+| case | runs (s) | median (s) | rows / s | factor against ConnectorX |
+|---|---|---|---|---|
+| RePark, unpartitioned | 9.856, 9.323, 9.610 | 9.610 | 1 040 615 | **1.353** (ConnectorX unpartitioned) |
+| RePark, 4 strides on 4 connections | 8.365, 7.923, 8.021 | 8.021 | 1 246 704 | **0.980** (ConnectorX at 4) |
+| RePark, 8 strides on 8 connections (`pool_max_size = 8`) | 7.690, 6.997, 7.008 | 7.008 | 1 426 915 | **1.034** (ConnectorX at 8) |
+| RePark, 8 strides on the default pool of 4 | 6.877, 6.267, 6.236 | 6.267 | 1 595 644 | **1.156** (ConnectorX at 8) |
+| ConnectorX, unpartitioned | 13.433, 13.005, 12.751 | 13.005 | 768 913 | 1 |
+| ConnectorX, `partition_num = 4` | 8.133, 7.688, 7.862 | 7.862 | 1 271 913 | 1 |
+| ConnectorX, `partition_num = 8` | 7.485, 6.834, 7.244 | 7.244 | 1 380 538 | 1 |
+| pandas `read_sql` over SQLAlchemy | 54.742, 54.425, 54.310 | 54.425 | 183 738 | 0.239 of ConnectorX unpartitioned |
+
+RePark unpartitioned is 5.66 times pandas.
+
+**The Arrow each engine returned differs, so the work is not identical.** RePark:
+`id: int64 not null`, `amount: decimal128(12, 2)` (the column's own type), `at: timestamp[us,
+tz=UTC]`. ConnectorX: `id: int64` nullable, `amount: decimal128(38, 10)`, `at: timestamp[us,
+tz=+00:00]`. pandas: `amount` as `float64`, `day` as Python objects. RePark's partitioned reads
+also do what ConnectorX's do not: every stride reads one exported snapshot, and the first stride
+carries Spark's NULL test.
+
+**What bounds the numbers: the server.** The container has two CPUs, so adding client
+connections past two adds contention on the server and little throughput: RePark gains 1.37
+times from one connection to eight, ConnectorX 1.80 times from a slower start. Measured the
+same hour under the same lock with `psql … COPY (…) TO STDOUT (FORMAT BINARY) > /dev/null`
+(no decoding at all):
+
+| server-only probe | runs (s) |
+|---|---|
+| one stream, the whole table | 12.71, 12.66, 12.71 (`psql` itself is the bottleneck here) |
+| four streams, four index ranges (`id < a`, `id >= a AND id < b`, …) | 6.11, 6.13, 6.58 |
+| four streams, the first as Spark and RePark write it (`id < a OR id IS NULL`) | 7.37, 7.16, 7.46 |
+
+So four-stream RePark (8.02 s, decoding into Arrow and assembling one table) sits 0.6 s to 0.9 s
+above the server's own time for the same four statements.
+
+**A measured cost, not taken: the first stride's NULL test.** `EXPLAIN` shows the first stride
+as a sequential scan of the whole table (`Filter: (id < … OR id IS NULL)`), while every other
+stride is an index range scan; a bound cut plans exactly as a literal does (Postgres estimates
+a stable `current_setting` at plan time), so the binding costs nothing. The `OR … IS NULL` arm
+costs about 1.1 s of a 7.3 s four-stream read here (first stride alone: 3.79 s against 2.80
+s). Dropping the arm for a `NOT NULL` column would remove it, and was **not** done: a
+constraint dropped between planning and the scan would then lose NULL rows silently, the one
+failure this unit may not have. The safe forms (the NULL test as its own stride, or a catalog
+check inside the scan's snapshot) are a follow-up, filed in the hand-back.
+
+## 5. R-4 citations (ConnectorX and ADBC)
+
+- **ConnectorX is the bar and the nearest design.** Its `read_sql(conn, query, partition_on=,
+  partition_range=, partition_num=)` splits one query into `partition_num` range queries over
+  a numeric column, runs each on its own connection and thread, and writes straight into the
+  destination; with no `partition_range` it first asks the server for the column's `MIN` and
+  `MAX`. Its PostgreSQL source reads `COPY … TO STDOUT WITH BINARY`. C-3 keeps the shape (range
+  queries over one column, one connection each, straight into Arrow, the same COPY protocol
+  C-2 took from it) and its `read_sql` with `return_type="arrow"` is §4's bar. **Where C-3
+  departs, each for a recorded reason:** the surface and the stride arithmetic are Spark's,
+  not ConnectorX's even split (NS §2: Spark governs the surface; §0.1); rows outside the range
+  and NULL rows are returned, where ConnectorX's documentation requires a partition column
+  without NULLs and its range bounds the rows read (FL-2); every range reads one exported
+  snapshot, where ConnectorX's ranges are independent statements (FL-1); the cuts are bound,
+  where ConnectorX writes them into the query text (C-2's FL-13); connections come from the
+  source's bounded pool, so a count above it queues (FL-3); and the column and its bounds are
+  never chosen automatically (declared, §0.5). ConnectorX's documentation and its 0.4.6
+  wheel's behaviour in §4 are the sources; its code was read for nothing beyond that.
+- **Arrow ADBC.** C-2 took its type contract and its COPY-binary read from the ADBC PostgreSQL
+  driver's documentation and departed where Spark's dialect differs (c-2-ledger §4). ADBC's API
+  has a partitioned-result call (`AdbcStatementExecutePartitions`) for backends that hand back
+  partition descriptors a client can read in parallel; per its documentation the PostgreSQL
+  driver does not implement it, so ADBC offers no partitioned Postgres read to compare with
+  and C-3 takes nothing new from it. ADBC's cursor contract (one statement, batches until the
+  end, a typed error otherwise) is what each connection's stride sequence keeps: batches in
+  order per connection, the scan ending at the first error. The documentation was read;
+  nothing was run.
+
+## 6. Gates (2026-10-08)
+
+Run on the final tree in one hold of the build lock, the server up (2026-10-08). Every cargo
+command ran as `flock /tmp/oc-worker/build-slots/opus-cargo.lock nice -n 10 taskset -c 32-47 env
+CARGO_BUILD_JOBS=8 bash -c 'ulimit -v 67108864; …'`.
+
+| gate | exit | line that means green |
+|---|---|---|
+| `cargo fmt --check` | 0 | no diff |
+| `make rust-clippy` | 0 | no warning |
+| `make rust-panic-ban` | 0 | no finding |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1127 files clean (default ceiling 1000; 34 exceptions) |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean (ceilings held) |
+| `./scripts/check_crate_dag.sh` | 0 | 25 internal edges clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 369 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | silent |
+| `python3 scripts/check_docs_links.py` | 0 | 1364 files, 7352 links checked, clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 313 live ledgers clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc1 origin/main HEAD` | 0 | `comment-ban hits=0` |
+| `cargo test -p repark-connect` (no server) | 0 | 155 passed, 0 failed, 60 ignored |
+| `cargo test -p repark-connect -- --include-ignored` (server up) | 0 | 215 passed, 0 failed, 0 ignored |
+| `cargo test -p repark-core -p repark-python --lib` | 0 | 1288 passed, 1 ignored (core); 151 passed (binding) |
+| `make develop` | 0 | the editable module installed |
+| `pytest python/repark-parity/tests/live_db` | 0 | 31 passed, 5 xfailed (C-0's strict xfails) |
+| `pytest python/repark/tests -k "source or postgres or toml or named" -n 8` | 0 | 692 passed, 9 skipped |
+| `.venv/bin/python -I scripts/check_example_coverage.py --require-execute` | 0 | 1080 public names, 968 covered, 251 examples |
+| `cargo deny check` | 0 | advisories ok, bans ok, licenses ok, sources ok |
+| `./scripts/check_manifest.sh` | 0 | silent |
+
+Two process notes, recorded because the machine rules name them:
+
+- **One build ran outside the lock.** At 23:01 on 2026-10-07 a bare `uv sync` started a
+  from-source build of the native module and ran about nine minutes before its timeout, with no
+  lock held. No timing run existed yet. Every later environment step used
+  `--no-install-package repark` or `--no-install-workspace`, and every build ran under the lock.
+- **Four long steps ran as tracked jobs.** The release wheel's last crate, the benchmark, the
+  mutation battery and this gate run each need more than the ten minutes one foreground command
+  is given. They ran as jobs the session tracks, never detached, and the session waited on each
+  before doing anything else.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: c-3
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every item of the brief's step 0 is a subsection of the design note with its C-2 source line or a measurement; the order's three PENDING items are settled there; each delivered behaviour and each declared remainder is a clause; the departures from the first design (one pooled connection per frame, the NULL test kept on NOT NULL columns) are recorded where they were decided.
+      artifacts: [task/ledgers/staging/c-3-ledger.md, docs/spark-sql-iceberg-parity.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: The i64 extremes as bounds, equal bounds, a span of one, counts of 1, 0 and -1, a count above the span, negative and straddling ranges, 700 seeded triples against Spark's own numbers, cuts outside the column's own integer range, bounds wholly outside the data, NULL and out-of-bounds rows, a column in another case, quoted, missing and ambiguous, a bound that is not an i64, LIMIT 0 and a limit past the table, 16 strides on a pool of 2, a pool with one free permit and with none.
+      artifacts: [crates/repark-connect/tests/it/partition.rs, crates/repark-connect/tests/it/partition_plan.rs, crates/repark-connect/tests/it/live_partition.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Every refusal is a typed ConnectError with an enum reason folded to Spark's class; cuts that are not strictly increasing refuse instead of planning; the arithmetic is checked throughout and answers a refusal on overflow; a refused value ends the scan after its stride's earlier rows; a task that dies surfaces as ExecutionJoin when the channel closes; no unwrap, expect or panic in product code (panic-ban gate).
+      artifacts: [crates/repark-connect/src/partition.rs, crates/repark-connect/src/provider/partitioned.rs, crates/repark-connect/src/error.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: One execute call owns the export, every import and every COPY, so no stride can pair with another run's snapshot; imports complete before any COPY starts; the multi-checkout waits for its first connection only, so two scans cannot hold each other; connection tasks are tracked and aborted on drop; a writer between strides, a dropped stream, a busy pool and an exhausted pool are live cells; the whole live suite ran four times in parallel with the rest of the crate's cells.
+      artifacts: [crates/repark-connect/src/read/postgres_lanes.rs, crates/repark-connect/src/pool.rs, crates/repark-connect/tests/it/live_partition.rs, crates/repark-connect/tests/it/pool.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: Cuts are bound through the set_config carriage and never enter SQL text; the one value that must enter text, the snapshot id, is checked to be hex digits and dashes first; the column renders through PgIdent; every compare is pg_catalog-qualified; a bound that is not an integer and a predicates value are never echoed; EXPLAIN names no endpoint; every transaction is READ ONLY on a read-only session.
+      artifacts: [crates/repark-connect/src/read/postgres.rs, crates/repark-connect/src/read/postgres_lanes.rs, crates/repark-connect/tests/it/partition_plan.rs, crates/repark-core/src/session/tests/read_postgres.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Partitioned rows equal unpartitioned rows value for value and type for type across the mapped types through eight partition plans in Rust and nine doors in Python; every id arrives exactly once; twelve Python reads under a concurrent writer return every id once; pushed filters with pushdown on and off agree; the first live run's empty OFFSET result was traced to DataFusion alone and is not a partition plan changing an answer.
+      artifacts: [crates/repark-connect/tests/it/live_partition.rs, python/repark-parity/tests/live_db/test_c3_partitioned.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Decoding runs in one task per connection; the channel holds as many batches as there are connections and every batch carries its slice of the memory reservation; connections never exceed min(strides, pool_max_size) and a frame keeps one at rest; the 10M-row benchmark is recorded against ConnectorX and pandas with the server's two-CPU cap and the cost of the first stride's NULL test measured.
+      artifacts: [crates/repark-connect/src/provider/partitioned.rs, python/repark-parity/tests/live_db/c3_bench.py, task/ledgers/staging/c-3-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No dependency added and Cargo.toml and Cargo.lock unchanged (the decimal is Arrow's i256, the tasks DataFusion's SpawnedTask); no new crate edge; the provider trait and TableProvider::scan keep their signatures; C-2's one-statement scan runs the same statements through the refactored reader and its 51 live cells stay green; the facade's existing jdbc pins pass unchanged.
+      artifacts: [crates/repark-connect/src/read/postgres.rs, crates/repark-connect/Cargo.toml]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Spark's refusal sentences are kept where Spark was measured; the declared refusals name the registry row and the supported types; the query refusal names the dbtable subquery form; EXPLAIN shows the column, the strides and the connection bound; the guide gains a partitioned-reads section; the registry row states what is delivered, what is declared and the two deliberate differences.
+      artifacts: [crates/repark-connect/src/partition.rs, docs/guide/repark-toml.md, docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Thirteen mutations and one combined run, each red in named pins with the tree restored, the brief's four among them; the stride arithmetic is compared with a recording of live Spark rather than with itself; two things without a pin are named in section 1.
+      artifacts: [task/ledgers/staging/c-3-ledger.md, python/repark-parity/tests/live_spark/c3_stride_grid.txt]
+  complete: true
+```

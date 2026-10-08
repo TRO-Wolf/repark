@@ -18,6 +18,21 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   five S0 pins: crash after commit, snapshot-to-WAL handover, replay and
   duplicate delivery, schema change plus partial update image, lost slot.
 
+- `c3_bench.py` — **C-3 (2026-10-08):** the benchmark harness of order R-3, not collected by
+  pytest (no `test_` prefix, no test function). `load` creates `c3_bench.mixed` (10M rows by
+  default, `C3_BENCH_ROWS`; nine columns of mixed types, a primary key) in the container
+  `REPARK_PG_URL` names; `run` times `SELECT *` on RePark (unpartitioned, 4 strides, 8 strides
+  on a pool of 8, 8 strides on the default pool), ConnectorX `read_sql` with an Arrow return
+  (unpartitioned, 4, 8) and pandas `read_sql` over SQLAlchemy, each case `C3_BENCH_RUNS` times
+  (default 3) in its own fresh interpreter, and prints a JSON report: per case the runs, the
+  median, rows per second and the returned schema, then RePark's rows per second over
+  ConnectorX's at the same setting; `drop` removes the schema. Run it from a scratch
+  environment holding a release `repark` wheel, `connectorx`, `pandas`, `sqlalchemy`,
+  `psycopg2-binary` and `pyarrow`, never from `.venv`, and hold the build lock around `run`.
+  Delete the scratch environment before committing: the pre-commit `taplo` step walks the
+  whole clone and fails on the TOML files inside third-party packages.
+  The recorded run and its caveats are the C-3 ledger's §4; ConnectorX's `read_sql` is the
+  bar order R-4 cites (§5). pins: c-3/C-007, C-008
 - `test_c3_partitioned.py` — **C-3 (2026-10-07):** partitioned reads through the read door,
   on a session with no mounted source. `spark.read.jdbc` with Spark's four arguments,
   `format("postgres")` with the four options, the four spellings inside `properties`,
