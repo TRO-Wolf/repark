@@ -5181,12 +5181,14 @@ dependencies = [
  "repark-connect",
  "repark-iceberg",
  "serde",
+ "serde_json",
  "snap",
  "stacker",
  "tempfile",
  "tokio",
  "toml",
  "url",
+ "uuid",
  "zstd",
 ]
 

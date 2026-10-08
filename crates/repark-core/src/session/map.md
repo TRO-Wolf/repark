@@ -20,6 +20,22 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
   under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
   `<schema>.<table>`, and a `query` is named `jdbc`. pins: c-2/C-116
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** `PartitionOptions::of` is fallible: a
+  `num_partitions` outside Spark's 32-bit `Int` refuses before any connection.
+  pins: c-3/C-010
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
+  from its integer arguments; bounds given as text in `properties` reach
+  `PostgresTable::partitioned` unparsed, so they are judged after the column's type.
+  pins: c-3/C-009
+- `read_postgres.rs` — **C-3 (2026-10-07):** `PostgresRead` carries `partition_column`,
+  `lower_bound`, `upper_bound`, `num_partitions` and a `predicates` flag in place of the list
+  of option names C-2d refused by. The door refuses `predicates` first (still declared), lifts
+  the four Spark spellings out of `properties` (`PartitionOptions::with_props`), applies
+  Spark's all-or-none rule, refuses a `query` target with a partition column in Spark's
+  words, all before any connection, and then calls `PostgresTable::partitioned` on the
+  resolved table. `source_error` now keeps the `Analysis` and `NumberFormat` classes too.
+  `tests/read_postgres.rs` pins each refusal's class and sentence against an unroutable
+  address. pins: c-3/C-006
 - `read_postgres.rs` — **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
   partitioning }` and `PostgresTarget::{Relation, Query}`, re-exported at the crate root with
   `READ_POSTGRES_SOURCE` (`jdbc`). `ReparkSession::read_postgres` refuses a partitioned read

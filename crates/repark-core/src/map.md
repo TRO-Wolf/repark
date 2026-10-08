@@ -27,6 +27,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
+- `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
+  micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
+  `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
+  `pub mod microbatch;` line in `lib.rs`. pins: mb-3/C-003
 - `silver.rs` + [silver/](silver/map.md) — typed `SilverPlan` (SILVER-S1, 2026-09-12): TOML
   parse with key-path refusals, closed operation enums, parse-time structural validation,
   canonical identity bytes, deterministic `explain()`. `pub` from this crate, not bound

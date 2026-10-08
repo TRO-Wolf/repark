@@ -1,4 +1,4 @@
-"""MB-0 streaming oracle: 28 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
+"""MB-0 streaming oracle: 29 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ FAIL_ID = 3
 PROGRESS_TIMEOUT_S = 120.0
 FUTURE_MS = 3_600_000
 LANDING_MS = 6_000
-EXPECTED_CELLS = 28
+EXPECTED_CELLS = 29
 
 
 Cell = Callable[[Bench], tuple[str, dict[str, Any]]]
@@ -432,6 +432,52 @@ def cell_r17(bench: Bench) -> tuple[str, dict[str, Any]]:
     return "rows", answer
 
 
+def processing_time_run(
+    bench: Bench, source: str, checkpoint: str, options: dict[str, str]
+) -> dict[str, Any]:
+    collect = Collect()
+    query = (
+        bench.spark.readStream.format("iceberg")
+        .options(**options)
+        .load(source)
+        .writeStream.foreachBatch(collect)
+        .option("checkpointLocation", checkpoint)
+        .trigger(processingTime="0 seconds")
+        .start()
+    )
+    error = None
+    terminated = False
+    try:
+        terminated = query.awaitTermination(PROGRESS_TIMEOUT_S)
+    except PySparkException as exc:
+        error = error_of(exc)
+        terminated = True
+    still_active = query.isActive
+    if still_active:
+        query.stop()
+    return {
+        "error": error,
+        "terminated_on_its_own": terminated,
+        "active_after_wait": still_active,
+        "batches": collect.batches,
+        "progress_batches": progress_batches(query),
+        "offsets": offset_positions(bench, source, checkpoint),
+    }
+
+
+def cell_r18(bench: Bench) -> tuple[str, dict[str, Any]]:
+    answer: dict[str, Any] = {}
+    for name, mutate in (("r18", overwrite_snapshot), ("r18_delete", delete_snapshot)):
+        source = create_source(bench, name)
+        append(bench, source, [1])
+        append(bench, source, [2])
+        mutate(bench, source)
+        options = {"streaming-max-files-per-micro-batch": "1"}
+        run = processing_time_run(bench, source, bench.checkpoint(name), options)
+        answer[name] = {"operations": operations(bench, source), **run}
+    return "rows", answer
+
+
 def fanout_cell(bench: Bench, name: str, fanout: str) -> tuple[str, dict[str, Any]]:
     source = create_source(bench, f"{name}_src")
     append(bench, source, [1, 2, 3, 4], files=2)
@@ -772,6 +818,12 @@ CELLS: tuple[tuple[str, str, Cell, tuple[Any, ...]], ...] = (
         "read.available_now_capped_overwrite.answer",
         cell_r17,
         (option_run, offset_positions, overwrite_snapshot, delete_snapshot),
+    ),
+    (
+        "MB0b-R18",
+        "read.processing_time_capped_overwrite.answer",
+        cell_r18,
+        (processing_time_run, offset_positions, overwrite_snapshot, delete_snapshot),
     ),
     ("MB0-W1", "write.append_no_fanout.summary", cell_w1, (fanout_cell,)),
     ("MB0-W2", "write.append_fanout.summary", cell_w2, (fanout_cell,)),

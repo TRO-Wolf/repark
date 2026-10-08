@@ -995,6 +995,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   and `refuse_writer_save_format` are the `format("orc")` / `format("xml")` arms at
   `load()` / `save()`, with `save()`'s residual `DATA_SOURCE_NOT_FOUND` answer for
   every other non-path format kept byte-identical.
+  C-3 (2026-10-07): `reader_jdbc` passes its three integers through `_jdbc_i64`, so a value
+  outside 64 bits is `NumberFormatException` and never a binding `OverflowError`; the four
+  range arguments now partition the read. pins: c-3/C-006
+  C-3 fold 2 (2026-10-08): `reader_jdbc` takes `lowerBound`, `upperBound` and `numPartitions` as
+  int or str, as PySpark does, and hands each on as text in `properties` (`_put_jdbc_option_text`;
+  a properties key that already spells the option keeps its own spelling, so the engine door's
+  conflict refusal answers). The facade no longer compares, parses or counts them: the engine door
+  resolves the column first, then parses the bounds, and refuses an incomplete set in Spark's
+  sentence, so `_jdbc_i64` is no longer on this door. pins: c-3/C-006
   R-3 (2026-09-14 round 2): `reader_jdbc` is main's PostgreSQL read path —
   dbtable-from-properties resolution, the three `IllegalArgumentException` teaching
   errors, and the `read_postgres` delegation with main's argument names — behind
