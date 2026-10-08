@@ -803,13 +803,7 @@ pins: rp-4-fork-repin/C-005, C-006
   parity, oracle-pinned in `python/repark/tests/branch_ops_1_truth.json`).
   Details: [call/map.md](call/map.md).
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
-- `ctas.rs` — **FA-6 (2026-10-08):** `execute_ctas` refuses
-  `COLUMN_ALREADY_EXISTS` when the analyzed query's output carries a
-  duplicate-tolerant engine name (`repark_core::frame_names::first_duplicate_display`),
-  naming its display, before any table is staged: `CREATE TABLE … AS SELECT *`
-  over a temp view with repeated display names, as Spark refuses it. Under
-  either case flag, ahead of the folded-twin check. pins: fa-5-6/C-007
-  **U7 PR2 slice-1 round 2 (2026-09-25):** a replace loads the existing table
+- `ctas.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** a replace loads the existing table
   before the schema is built and the fork's `begin_replace` re-keys the query's fresh-id
   schema by name against the table's current schema (Java's RTAS); the staging reuses the
   loaded table. The AS-SELECT doors (`saveAsTable` overwrite, `createOrReplace`, `replace`,

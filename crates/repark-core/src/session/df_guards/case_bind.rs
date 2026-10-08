@@ -31,8 +31,7 @@ pub use super::attr_lineage::{
     sort_output_carries_twice, sort_sourced_twin_engine,
 };
 pub use super::duplicate_names::{
-    display_name, duplicate_display_names, duplicate_tolerant_names, first_duplicate_display,
-    rename_duplicate_tolerant,
+    DISPLAY_NAME_KEY, duplicate_tolerant_names, recorded_display_names, rename_duplicate_tolerant,
 };
 pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
 pub use super::frame_lineage::{all_ids, ambiguous, ambiguous_images, renewed_absent, shared_ids};

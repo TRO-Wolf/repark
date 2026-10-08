@@ -9663,9 +9663,18 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `partitionBy` over a repeated name refuses `AMBIGUOUS_REFERENCE` with the
   written spelling and creates nothing; a unique partition column writes and
   leaves the header. Controls: parquet and json keep refusing, and a
-  unique-name csv is unchanged. No module docstring: the no-comments ruling
+  unique-name csv is unchanged. **Fold 1 (2026-10-08):** a unique column
+  named `__repark_dup_0_id` or `__repark_dup_7_` keeps its name in the csv
+  header, beside a repeat too, and on the SQL, view, `DESCRIBE`,
+  `spark.table` and `listColumns` doors (`SELECT 1 AS __repark_dup_3_x`
+  included); the partition candidates are pinned sorted on reversed
+  aliases; the case-sensitive unmatched spelling answers Spark's not-found
+  text; the same-origin repeat refuses with clean text (`_divergence`); the
+  s3a csv route hands the engine a frame whose recorded names build the
+  display-header option; and a duplicate-name view stays refused, so no
+  bare name can bind beside one. No module docstring: the no-comments ruling
   covers the new file; the contract lives here.
-  pins: fa-5-6/C-002, C-003, C-004
+  pins: fa-5-6/C-002, C-003, C-004, C-005, C-008
 - [test_attr_id_1_sm2_dupwrites.py](test_attr_id_1_sm2_dupwrites.py) — **Fold
   SM-2 R2 (2026-10-06):** duplicate-display-name writes refuse
   `COLUMN_ALREADY_EXISTS` with Spark's exact text, condition and SQLSTATE, and
@@ -9701,39 +9710,16 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   where Spark shows `(id_0, id_1)`. No module docstring: the lane's
   no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-063
-- [test_fa_6_duplicate_views.py](test_fa_6_duplicate_views.py) — **FA-6
-  (2026-10-08):** temp views over frames with exact-duplicate display names,
-  against the live Spark 4.1.2 cells in the unit ledger. Both local doors
-  register; the star answers display names, rows and Arrow types; seventeen
-  SQL shapes answer (alias and derived stars, CTE, DISTINCT, UNION ALL,
-  positional ORDER BY, a column-alias list, unique names on the mixed and
-  `USING` views, a qualified name beside a plain relation); sixteen reference
-  shapes refuse `AMBIGUOUS_REFERENCE` with Spark's text and no internal name;
-  a missing name suggests display names; the case-sensitive session answers
-  the same; `DESCRIBE` and `listColumns` answer in schema order;
-  `spark.table` carries the names through `drop`, `toDF`, `withColumn`,
-  `filter`, `orderBy`; the frame's parquet write and `saveAsTable` refuse and
-  its csv write carries the header; a view frame registers again; CTAS and
-  `CREATE [TEMP] VIEW … AS SELECT *` refuse and create nothing while an
-  alias list or a unique selection creates; cached views answer the same;
-  replace and drop leave nothing behind; the global doors stay unsupported
-  for every frame. Seven `_divergence` cells pin loud refusals whose text or
-  condition differs from Spark; the `* EXCEPT (id, s)` cell accepts either
-  excepted name, because the engine reports one of them in hash order. No module docstring: the no-comments ruling
-  covers the new file; the contract lives here. Its plain-frame control and
-  the unchanged attr-id, sort, fill and self-join suites are the suite half
-  of the unit's no-regression clause.
-  pins: fa-5-6/C-005, C-006, C-007, C-008
 - [test_attr_id_1_sm2_dupviews.py](test_attr_id_1_sm2_dupviews.py) — **Fold
-  SM-2 R5 (2026-10-06), rewritten by FA-6 (2026-10-08):** the two local
-  temp-view doors over exact-duplicate-display frames register and answer the
-  display names (self, mixed, `USING`); the two global doors give the same
-  unsupported error as for any frame; no internal name shows in
-  `listTables`, the columns or `DESCRIBE`; the folded pin registers and
-  answers (SM-2b); guards pin plain register/read/describe, replace,
-  EXPLAIN-over-twins, and globals-still-unsupported. No module docstring:
-  the lane's no-comments ruling covers the file; the contract lives here.
-  pins: attr-id-1/C-064, fa-5-6/C-005
+  SM-2 R5 (2026-10-06):** the four temp-view doors over exact-duplicate-
+  display frames refuse `COLUMN_ALREADY_EXISTS` with Spark's exact text,
+  condition and SQLSTATE 42711, naming the first duplicate, and register
+  nothing (self, mixed, USING `s`); the folded pin registers and answers
+  (SM-2b narrowing); guards pin plain register/read/describe, replace,
+  EXPLAIN-over-twins, and globals-still-unsupported. The refusal is the
+  ruled divergence FA-6 (Spark registers the view). No module docstring:
+  the lane's no-comments ruling covers the new file; the contract lives
+  here. pins: attr-id-1/C-064
 - [test_attr_id_1_sm2_r7.py](test_attr_id_1_sm2_r7.py) — **Fold SM-2 R7
   (2026-10-06):** a qualified `DataFrame.__getitem__` repr keeps the
   qualifier (`Column<'r.t'>`, `Column<'b.v'>`, alias `Column<'x.id'>`,

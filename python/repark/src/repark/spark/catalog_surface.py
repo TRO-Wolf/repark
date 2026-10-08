@@ -11,7 +11,6 @@ import weakref
 from types import MethodType
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from repark import _native
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -309,22 +308,13 @@ def _note_view_registered(inner: Any, token: dict[str, Any], name: str, registra
 
 def _register_temp_view(frame: DataFrame, name: str, *, rename_fields: bool = True) -> None:
     """Register a temp view and note its object identity. pins: catalog-surface-1/C-009"""
-    from repark.spark.dataframe.writer_layout import _rename_duplicate_tolerant
+    from repark.spark.dataframe.writer_layout import _rename_to_unique_display_names
 
     registration = frame._native_for_registration()
     if rename_fields:
-        registration = _rename_duplicate_tolerant(frame, registration)
+        registration = _rename_to_unique_display_names(frame, registration)
     frame._session.create_or_replace_temp_view(name, registration)
     _note_view_registered(frame._session, frame._alive_token, name, registration)
-
-
-def _with_duplicate_display(frame: DataFrame) -> DataFrame:
-    """Overlay the display names a duplicate-name temp view carries. pins: fa-5-6/C-005"""
-    displays = _native.duplicate_display_names(frame._inner)
-    if displays is not None:
-        frame._engine_names = list(_native.logical_column_names(frame._inner))
-        frame._display_names = list(displays)
-    return frame
 
 
 def _builtin_function_names() -> list[str]:
@@ -359,9 +349,7 @@ def session_table(session: ReparkSession, table_name: str) -> DataFrame:
                 cached.pop(resolved, None)
                 frame.unpersist()
     _drop_stale_identity_frames(inner, token, resolved, kind)
-    frame = _with_duplicate_display(
-        DataFrame(inner.sql_built(f"SELECT * FROM {scan_ref}"), inner, token)
-    )
+    frame = DataFrame(inner.sql_built(f"SELECT * FROM {scan_ref}"), inner, token)
     _frame_identities(token)[frame] = (resolved, kind)
     return frame
 

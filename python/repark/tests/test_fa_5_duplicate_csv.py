@@ -322,3 +322,146 @@ def test_csv_of_unique_names_is_unchanged(tmp_path: Path) -> None:
     left.write.csv(str(target), header=True)
     _assert_csv(_parts(target)["."], "id,s,v", ["1,a,10", "2,b,20"])
     session.stop()
+
+
+@pytest.mark.parametrize("name", ["__repark_dup_0_id", "__repark_dup_7_"])
+def test_csv_keeps_a_unique_column_named_like_a_generated_one(tmp_path: Path, name: str) -> None:
+    session = sm2._open(tmp_path, "fa5-prefix")
+    target = tmp_path / "out"
+    left = session.createDataFrame([(1, "a", 10), (2, "b", 20)], ["id", "s", "v"])
+    frame = left.select(spark_functions.col("id").alias(name), "s", "v")
+    assert frame.columns == [name, "s", "v"]
+    frame.write.csv(str(target), header=True)
+    _assert_csv(_parts(target)["."], f"{name},s,v", ["1,a,10", "2,b,20"])
+    session.stop()
+
+
+def test_csv_repeat_beside_a_user_column_named_like_a_generated_one(tmp_path: Path) -> None:
+    session = sm2._open(tmp_path, "fa5-prefix-mixed")
+    target = tmp_path / "out"
+    frame = sm2._self_join(session).select(
+        spark_functions.col("l.id"),
+        spark_functions.col("r.id"),
+        spark_functions.col("l.v").alias("__repark_dup_0_id"),
+    )
+    frame.write.csv(str(target), header=True)
+    _assert_csv(_parts(target)["."], "id,id,__repark_dup_0_id", ["1,1,10", "2,2,20"])
+    session.stop()
+
+
+def test_no_sql_or_view_door_rewrites_a_name_of_the_generated_shape(tmp_path: Path) -> None:
+    session = sm2._open(tmp_path, "fa5-prefix-sql")
+    literal = session.sql("SELECT 1 AS `__repark_dup_3_x`, 2 AS y")
+    assert literal.columns == ["__repark_dup_3_x", "y"]
+    assert literal._display_names is None
+    assert [tuple(row) for row in literal.collect()] == [(1, 2)]
+    left = session.createDataFrame([(1, "a")], ["id", "s"])
+    left.select(spark_functions.col("id").alias("__repark_dup_0_id"), "s").createOrReplaceTempView(
+        "pfx"
+    )
+    assert session.sql("SELECT * FROM pfx").columns == ["__repark_dup_0_id", "s"]
+    assert session.sql("SELECT `__repark_dup_0_id` FROM pfx").columns == ["__repark_dup_0_id"]
+    assert session.table("pfx").columns == ["__repark_dup_0_id", "s"]
+    assert [row["col_name"] for row in session.sql("DESCRIBE pfx").collect()] == [
+        "__repark_dup_0_id",
+        "s",
+    ]
+    assert [column.name for column in session.catalog.listColumns("pfx")] == [
+        "__repark_dup_0_id",
+        "s",
+    ]
+    session.stop()
+
+
+def test_csv_partition_candidates_are_sorted_as_spark_sorts_them(tmp_path: Path) -> None:
+    session = sm2._open(tmp_path, "fa5-part-sorted")
+    target = tmp_path / "out"
+    left = session.createDataFrame([(1, "a", 10), (2, "b", 20)], ["id", "s", "v"])
+    frame = left.alias("z").join(
+        left.alias("a"), spark_functions.col("z.id") == spark_functions.col("a.id")
+    )
+    refused = sm2._refusal_of(lambda: frame.write.partitionBy("s").csv(str(target), header=True))
+    assert str(refused).splitlines()[0] == (
+        "[AMBIGUOUS_REFERENCE] Reference `s` is ambiguous, could be: "
+        "[`a`.`s`, `z`.`s`]. SQLSTATE: 42704"
+    )
+    assert not target.exists()
+    session.stop()
+
+
+def test_csv_partition_by_an_unmatched_spelling_is_not_found_when_case_sensitive(
+    tmp_path: Path,
+) -> None:
+    session = sm2._open(tmp_path, "fa5-part-sensitive")
+    session.conf.set("spark.sql.caseSensitive", "true")
+    target = tmp_path / "out"
+    frame = sm2._self_join(session)
+    refused = sm2._refusal_of(lambda: frame.write.partitionBy("S").csv(str(target), header=True))
+    assert isinstance(refused, AnalysisException)
+    assert sm2._condition_of(refused) == "_LEGACY_ERROR_TEMP_1155"
+    assert str(refused).splitlines()[0] == (
+        "Partition column `S` not found in schema "
+        "struct<id:bigint,s:string,v:bigint,id:bigint,s:string,v:bigint>."
+    )
+    assert "_repark_" not in str(refused)
+    assert not target.exists()
+    exact = sm2._refusal_of(lambda: frame.write.partitionBy("s").csv(str(target), header=True))
+    assert str(exact).splitlines()[0] == _ambiguous_message("s")
+    session.stop()
+
+
+def test_csv_partition_by_a_same_origin_repeat_refuses_cleanly_divergence(tmp_path: Path) -> None:
+    session = sm2._open(tmp_path, "fa5-part-same-origin")
+    target = tmp_path / "out"
+    left = session.createDataFrame([(1, "a", 10), (2, "b", 20)], ["id", "s", "v"])
+    frame = left.select("id", "id", "s")
+    refused = sm2._refusal_of(lambda: frame.write.partitionBy("id").csv(str(target), header=True))
+    assert isinstance(refused, AnalysisException)
+    assert str(refused).startswith("partitionBy column `id` is carried 2 times by the frame")
+    assert "_repark_" not in str(refused)
+    assert not target.exists()
+    session.stop()
+
+
+def test_s3_csv_route_hands_the_engine_recorded_display_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+
+    from repark import _native
+    from repark.spark.dataframe import writer_s3
+
+    session = sm2._open(tmp_path, "fa5-s3")
+    handed: list[Any] = []
+    monkeypatch.setattr(
+        writer_s3,
+        "_native",
+        SimpleNamespace(session_write_path=lambda *arguments: handed.append(arguments)),
+    )
+    sm2._self_join(session).write.option("header", "true").csv("s3a://fa5-bucket/out")
+    assert len(handed) == 1
+    engine_session, frame, url, stored_as = handed[0][:4]
+    assert (url, stored_as) == ("s3a://fa5-bucket/out", "csv")
+    engine_names = list(_native.logical_column_names(frame))
+    assert len(set(engine_names)) == 6
+    _, resolved, options = _native.session_text_write_copy_parts(
+        engine_session, frame, "v", {}, [], "CSV"
+    )
+    assert resolved == "repark_text_csv"
+    assert "'repark.text.display_header_hex' '6964,73,76,6964,73,76'" in options
+    session.stop()
+
+
+def test_a_duplicate_name_view_stays_refused_so_no_bare_name_binds_beside_it(
+    tmp_path: Path,
+) -> None:
+    session = sm2._open(tmp_path, "fa5-view-refused")
+    session.createDataFrame([(1, "w")], ["id", "w"]).createOrReplaceTempView("plain")
+    frame = sm2._self_join(session)
+    refused = sm2._refusal_of(lambda: frame.createOrReplaceTempView("vj"))
+    assert str(refused).splitlines()[0] == sm2._expected_dup_message("id")
+    assert session.catalog.tableExists("vj") is False
+    missing = sm2._refusal_of(lambda: session.sql("SELECT id FROM vj CROSS JOIN plain").collect())
+    assert isinstance(missing, AnalysisException)
+    assert "vj" in str(missing)
+    session.stop()

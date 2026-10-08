@@ -28,14 +28,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   Unit tests per form. The facade still prefixes one-part targets with
   `/* repark:bare-name */`; the engine never reads the mark — it only
   records that the user spelled the name bare (V-001, 2026-09-22).
-- `execute.rs` — **FA-6 (2026-10-08):** `execute_create_view` (when the
-  statement has no column-alias list) and the temp-view create refuse
-  `COLUMN_ALREADY_EXISTS` when the body's output carries a duplicate-tolerant
-  engine name, naming its display, so a stored or registered definition never
-  holds an internal name; an alias list renames the columns and the create
-  goes through. `temp_ddl.rs`'s `describe_temp_view` shows each such field by
-  its display name. pins: fa-5-6/C-005, C-007
-  `execute_create_view` (name completion, body prepare + plan
+- `execute.rs` — `execute_create_view` (name completion, body prepare + plan
   for the output schema, service call), `execute_drop_view`,
   `execute_show_views` (`namespace`/`viewName`/`isTemporary` rows, LIKE
   filter), `execute_alter_view` (**PR3:** `load_view` first; `ViewNotFound` and

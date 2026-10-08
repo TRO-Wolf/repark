@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use datafusion::catalog::Session;
 use datafusion::common::file_options::csv_writer::CsvWriterOptions;
 use datafusion::common::file_options::json_writer::JsonWriterOptions;
-use datafusion::common::{GetExt, Result, Statistics, not_impl_err};
+use datafusion::common::{GetExt, Result, Statistics, not_impl_err, plan_err};
 use datafusion::datasource::file_format::csv::{CsvFormat, CsvFormatFactory};
 use datafusion::datasource::file_format::file_compression_type::FileCompressionType;
 use datafusion::datasource::file_format::json::{JsonFormat, JsonFormatFactory};
@@ -133,11 +133,33 @@ impl FileFormat for ReparkTextFormat {
                     .with_has_header(has_header)
                     .with_newlines_in_values(newlines_in_values);
                 let writer_options = CsvWriterOptions::try_from(&options)?;
+                let header = match self.spec.display_header.as_ref() {
+                    Some(names) => {
+                        let schema = input.schema();
+                        if names.len() != schema.fields().len() {
+                            return plan_err!(
+                                "text csv display header carries {} names for {} columns",
+                                names.len(),
+                                schema.fields().len()
+                            );
+                        }
+                        Some(Arc::new(
+                            schema
+                                .fields()
+                                .iter()
+                                .zip(names)
+                                .map(|(field, name)| (field.name().clone(), name.clone()))
+                                .collect::<HashMap<_, _>>(),
+                        ))
+                    }
+                    None => None,
+                };
                 Arc::new(ReparkTextSink::for_csv(
                     conf,
                     writer_options,
                     Arc::clone(&self.spec),
                     created,
+                    header,
                 ))
             }
             TextKind::Json => {

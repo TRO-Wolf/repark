@@ -26,7 +26,6 @@ def run_sql(session: ReparkSession, query: str, *, built: bool) -> DataFrame:
     Returns:
         The result frame.
     """
-    from repark.spark.catalog_surface import _with_duplicate_display
     from repark.spark.dataframe import DataFrame
     from repark.spark.udtf import try_sql_registered_udtf
 
@@ -43,7 +42,7 @@ def run_sql(session: ReparkSession, query: str, *, built: bool) -> DataFrame:
         return udf_frame
     expanded = session._expand_bare_table_names_in_sql(query)
     native = inner.sql_built(expanded) if built else inner.sql(expanded)
-    frame = _with_duplicate_display(DataFrame(native, inner, session._alive_token))
+    frame = DataFrame(native, inner, session._alive_token)
     if _is_catalog_state_statement(query):
         session._sync_catalog_state_from_engine()
     return frame

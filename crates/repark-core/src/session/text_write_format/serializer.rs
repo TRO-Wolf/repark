@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use arrow::array::RecordBatch;
@@ -9,12 +9,14 @@ use datafusion::datasource::file_format::write::BatchSerializer;
 
 use super::spec::TextWriteSpec;
 use super::udf::format_batch_for_sink;
-use crate::session::df_guards::duplicate_names::display_name;
+
+pub(crate) type DisplayHeader = Arc<HashMap<String, String>>;
 
 pub(crate) struct ReparkTextSerializer {
     inner: Arc<dyn BatchSerializer>,
     spec: Arc<TextWriteSpec>,
     skip: Arc<HashSet<String>>,
+    header: Option<DisplayHeader>,
 }
 
 impl ReparkTextSerializer {
@@ -22,17 +24,26 @@ impl ReparkTextSerializer {
         inner: Arc<dyn BatchSerializer>,
         spec: Arc<TextWriteSpec>,
         skip: Arc<HashSet<String>>,
+        header: Option<DisplayHeader>,
     ) -> Self {
-        Self { inner, spec, skip }
+        Self {
+            inner,
+            spec,
+            skip,
+            header,
+        }
     }
 }
 
-pub(crate) fn with_display_header(batch: &RecordBatch) -> Result<RecordBatch> {
+pub(crate) fn with_display_header(
+    batch: &RecordBatch,
+    header: &HashMap<String, String>,
+) -> Result<RecordBatch> {
     let schema = batch.schema();
     let fields = schema
         .fields()
         .iter()
-        .map(|field| match display_name(field.name()) {
+        .map(|field| match header.get(field.name()) {
             Some(display) => Arc::new(Field::new(
                 display,
                 field.data_type().clone(),
@@ -48,11 +59,11 @@ pub(crate) fn with_display_header(batch: &RecordBatch) -> Result<RecordBatch> {
 impl BatchSerializer for ReparkTextSerializer {
     fn serialize(&self, batch: RecordBatch, initial: bool) -> Result<Bytes> {
         let formatted = format_batch_for_sink(&batch, &self.spec, &self.skip)?;
-        if self.spec.display_header {
-            return self
+        match self.header.as_deref() {
+            Some(header) => self
                 .inner
-                .serialize(with_display_header(&formatted)?, initial);
+                .serialize(with_display_header(&formatted, header)?, initial),
+            None => self.inner.serialize(formatted, initial),
         }
-        self.inner.serialize(formatted, initial)
     }
 }

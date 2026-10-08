@@ -687,26 +687,25 @@ wrapped optimizer rule) and declares this directory.
   `IgnoreCase`) and gains the sibling `resolve_bound_expr_with(expr, schema, rule)`,
   re-exported through `frame_names` (`session.rs` sits exactly at its ceiling, so the root
   re-export cannot grow). pins: casesens-1/C-009
-- `duplicate_names.rs` — **FA-5 and FA-6 (2026-10-08):** the one rule that lets a
-  relation repeat a display name while its engine names stay unique.
+- `duplicate_names.rs` — **FA-5 (2026-10-08, reworked in fold 1 the same
+  day):** how a csv write carries repeated display names past an engine that
+  cannot hold them. DataFusion refuses one `(qualifier, name)` pair twice
+  (`DFSchema::check_names`, under a `TableScan` or a `SubqueryAlias`), so the
+  csv door registers a copy of the frame under unique engine names.
   `duplicate_tolerant_names(displays)` answers `None` when no display repeats
-  exactly (case twins are not repeats); otherwise each repeated position becomes
-  `__repark_dup_<position>_<display>` and every other position keeps its display.
-  `display_name(engine)` reads the display back; it needs at least one position
-  digit and the separator, so `__repark_dup_id` and the `__repark_l_` twin names
-  answer `None`. `rename_duplicate_tolerant(frame, displays)` is the positional
-  projection over `rename_output_fields`, and returns the frame untouched when
-  nothing repeats. DataFusion cannot hold the repeat itself:
-  `DFSchema::check_names` refuses one `(qualifier, name)` pair twice under a
-  `TableScan` or a `SubqueryAlias`. The prefix starts with `__repark_`, so
-  `is_scratch_relation` already hides these names from suggestions. All three
-  are re-exported through `frame_names`. Pins: `../tests/duplicate_names.rs`.
-  pins: fa-5-6/C-001
-  **FA-6 (2026-10-08):** `duplicate_display_names(engines)` answers `None`
-  when no engine name is duplicate-tolerant and the display list otherwise
-  (the facade's overlay for a SQL-door frame); `first_duplicate_display`
-  answers the display of the first such name (the durable-SQL refusals).
-  pins: fa-5-6/C-005, C-007
+  exactly (case twins are not repeats); otherwise each repeated position gets
+  a generated name (`__repark_dup_<position>_<display>`, extended with `_`
+  until no display name or earlier generated name equals it) and every other
+  position keeps its display. `rename_duplicate_tolerant(frame, displays)` is
+  the positional projection, and it **records** each display name in the
+  output field's metadata under `DISPLAY_NAME_KEY` (`repark.display`), the
+  way ATTR-ID-1 carries attribute ids; a frame without a repeat is returned
+  untouched. `recorded_display_names(schema)` reads the record back.
+  **Nothing infers a display name from a field's name.** Round 1 read it back
+  from the generated prefix, which renamed a user's own column called
+  `__repark_dup_0_id` (verifier S1); the generated spelling is now only a way
+  to be unique. All of it is re-exported through `frame_names`. Pins:
+  `../tests/duplicate_names.rs`. pins: fa-5-6/C-001
 - `written_names.rs` — **CASESENS-2 port (2026-10-03):** what the ATTR-ID-1
   stack keeps of the charter's written-name matchers (cherry-picks `e4be1feb`,
   `581f91b1`, `28f6d28a`, `111e95b3`): `refuse_folded_duplicate_keys(keys, rule)`

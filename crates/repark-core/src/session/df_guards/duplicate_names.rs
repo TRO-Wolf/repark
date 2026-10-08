@@ -1,11 +1,12 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use datafusion::common::Result;
+use arrow::datatypes::Schema;
+use datafusion::common::metadata::FieldMetadata;
+use datafusion::common::{Column, Result, plan_err};
+use datafusion::logical_expr::Expr;
 use datafusion::prelude::DataFrame;
 
-use super::case_bind::rename_output_fields;
-
-const DUPLICATE_PREFIX: &str = "__repark_dup_";
+pub const DISPLAY_NAME_KEY: &str = "repark.display";
 
 #[must_use]
 pub fn duplicate_tolerant_names(displays: &[String]) -> Option<Vec<String>> {
@@ -16,59 +17,73 @@ pub fn duplicate_tolerant_names(displays: &[String]) -> Option<Vec<String>> {
     if counts.len() == displays.len() {
         return None;
     }
+    let mut taken: HashSet<String> = displays.iter().cloned().collect();
     Some(
         displays
             .iter()
             .enumerate()
             .map(|(position, display)| {
-                if counts.get(display.as_str()).copied().unwrap_or(0) > 1 {
-                    format!("{DUPLICATE_PREFIX}{position}_{display}")
-                } else {
-                    display.clone()
+                if counts.get(display.as_str()).copied().unwrap_or(0) < 2 {
+                    return display.clone();
                 }
+                let mut name = format!("__repark_dup_{position}_{display}");
+                while !taken.insert(name.clone()) {
+                    name.push('_');
+                }
+                name
             })
             .collect(),
     )
 }
 
-#[must_use]
-pub fn display_name(engine: &str) -> Option<&str> {
-    let rest = engine.strip_prefix(DUPLICATE_PREFIX)?;
-    let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
-    if digits == 0 {
-        return None;
-    }
-    rest[digits..].strip_prefix('_')
-}
-
 #[allow(clippy::missing_errors_doc)]
 pub fn rename_duplicate_tolerant(frame: DataFrame, displays: &[String]) -> Result<DataFrame> {
-    match duplicate_tolerant_names(displays) {
-        Some(names) => rename_output_fields(frame, &names),
-        None => Ok(frame),
+    let Some(names) = duplicate_tolerant_names(displays) else {
+        return Ok(frame);
+    };
+    let schema = frame.schema();
+    if names.len() != schema.fields().len() {
+        return plan_err!(
+            "rename needs one name per output field: {} fields, {} names",
+            schema.fields().len(),
+            names.len()
+        );
     }
+    let projection = schema
+        .iter()
+        .zip(names.iter().zip(displays.iter()))
+        .map(|((qualifier, field), (name, display))| {
+            let recorded = FieldMetadata::from(HashMap::from([(
+                DISPLAY_NAME_KEY.to_string(),
+                display.clone(),
+            )]));
+            Expr::Column(Column::new(qualifier.cloned(), field.name()))
+                .alias_with_metadata(name, Some(recorded))
+        })
+        .collect::<Vec<_>>();
+    frame.select(projection)
 }
 
 #[must_use]
-pub fn duplicate_display_names<'a>(
-    engines: impl IntoIterator<Item = &'a str> + Clone,
-) -> Option<Vec<String>> {
-    if !engines
-        .clone()
-        .into_iter()
-        .any(|engine| display_name(engine).is_some())
+pub fn recorded_display_names(schema: &Schema) -> Option<Vec<String>> {
+    if !schema
+        .fields()
+        .iter()
+        .any(|field| field.metadata().contains_key(DISPLAY_NAME_KEY))
     {
         return None;
     }
     Some(
-        engines
-            .into_iter()
-            .map(|engine| display_name(engine).unwrap_or(engine).to_string())
+        schema
+            .fields()
+            .iter()
+            .map(|field| {
+                field
+                    .metadata()
+                    .get(DISPLAY_NAME_KEY)
+                    .unwrap_or(field.name())
+                    .clone()
+            })
             .collect(),
     )
-}
-
-#[must_use]
-pub fn first_duplicate_display<'a>(engines: impl IntoIterator<Item = &'a str>) -> Option<&'a str> {
-    engines.into_iter().find_map(display_name)
 }

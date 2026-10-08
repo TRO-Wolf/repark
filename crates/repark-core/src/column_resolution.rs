@@ -79,17 +79,8 @@ async fn plan_case_sensitive(
     state: &SessionState,
     statement: datafusion::sql::parser::Statement,
 ) -> Result<LogicalPlan> {
-    let mut written = None;
     if let datafusion::sql::parser::Statement::Statement(inner) = &statement {
         strict_case_guard(state, inner).await?;
-        let catalog_options = &state.config().options().catalog;
-        written = Some(written_references(
-            inner,
-            [
-                catalog_options.default_catalog.clone(),
-                catalog_options.default_schema.clone(),
-            ],
-        ));
     }
     let mut exact = state.clone();
     exact
@@ -97,14 +88,10 @@ async fn plan_case_sensitive(
         .options_mut()
         .sql_parser
         .enable_ident_normalization = false;
-    let plan = exact
+    exact
         .statement_to_plan(statement)
         .await
-        .map_err(stamp_unresolved_exact)?;
-    if let Some(written) = written.as_ref() {
-        duplicate_views::refuse_shadowed_duplicates(&plan, written, true)?;
-    }
-    Ok(plan)
+        .map_err(stamp_unresolved_column)
 }
 
 async fn strict_case_guard(state: &SessionState, inner: &Statement) -> Result<()> {
@@ -165,7 +152,6 @@ async fn plan_with_repair(
                 ambiguity::audit_plan_for_ambiguity(&plan, &written)?;
             }
             struct_fields::refuse_ambiguous_struct_fields(&plan, &written)?;
-            duplicate_views::refuse_shadowed_duplicates(&plan, &written, false)?;
             return boxed_finish(state, original, inner, plan).await;
         }
         Err(error) => error,
@@ -208,7 +194,6 @@ async fn plan_with_repair(
             Ok(plan) => {
                 ambiguity::audit_plan_for_ambiguity(&plan, &written)?;
                 struct_fields::refuse_ambiguous_struct_fields(&plan, &written)?;
-                duplicate_views::refuse_shadowed_duplicates(&plan, &written, false)?;
                 return boxed_finish(state, original, inner, plan).await;
             }
             Err(next) => error = next,
@@ -292,22 +277,11 @@ fn missing_field(error: &DataFusionError) -> Option<(&Column, &[Column])> {
 }
 
 fn stamp_unresolved_column(error: DataFusionError) -> DataFusionError {
-    stamp_unresolved(error, false)
-}
-
-fn stamp_unresolved_exact(error: DataFusionError) -> DataFusionError {
-    stamp_unresolved(error, true)
-}
-
-fn stamp_unresolved(error: DataFusionError, exact: bool) -> DataFusionError {
     let Some((field, valid)) = missing_field(&error) else {
         return error;
     };
     if valid.is_empty() {
         return error;
-    }
-    if let Some(ambiguous) = duplicate_views::ambiguous_reference(field, valid, exact) {
-        return ambiguous;
     }
     let missing = field.name.as_str();
     let column_name = match field.relation.as_ref() {
@@ -316,14 +290,17 @@ fn stamp_unresolved(error: DataFusionError, exact: bool) -> DataFusionError {
     };
     let shown = valid
         .iter()
-        .filter_map(duplicate_views::suggested_name)
+        .filter(|column| !crate::frame_names::is_scratch_relation(&column.name))
         .collect::<Vec<_>>();
     if shown.is_empty() {
         return error;
     }
     let suggestions = shown
         .iter()
-        .map(|candidate| format!("`{candidate}`"))
+        .map(|column| {
+            let candidate = column.name.as_str();
+            format!("`{candidate}`")
+        })
         .collect::<Vec<String>>()
         .join(", ");
     DataFusionError::Plan(spark_error::message(
@@ -923,7 +900,6 @@ fn direct_tables(statement: &Statement) -> Vec<(String, TableReference)> {
 
 mod ambiguity;
 mod display;
-mod duplicate_views;
 mod fold;
 mod fold_text;
 mod inner_scopes;
@@ -936,7 +912,5 @@ mod twins;
 pub use fold_text::fold_query_text;
 pub use stack::{GrownStack, on_grown_stack_with, remaining_stack, run_on_grown_stack};
 
-#[cfg(test)]
-mod duplicate_views_tests;
 #[cfg(test)]
 mod tests;

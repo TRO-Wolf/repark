@@ -3308,65 +3308,73 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 ### FA-5 — csv writes of exact-duplicate display names carry the display header — **FIXED 2026-10-08 (FA-5)**
 
 - **repark** — a frame whose display names hold exact duplicates writes a csv
-  path: the header line is the display names (`id,s,v,id,s,v` on the fold's
-  self-join) and the rows follow, with or without `header`, under every
-  `mode`, both case flags, a separator or `quoteAll`, temporal columns, and
-  for an empty frame (header line only). A `partitionBy` over a name that two
+  path instead of refusing: the header line carries the display names
+  (`id,s,v,id,s,v` on the fold's self-join), with or without `header`, under
+  every `mode`, both case flags, and for temporal columns. Everything else
+  about the bytes is the csv door's own behaviour, the same as for a frame
+  of unique names (see the rationale). A `partitionBy` over a name that two
   attributes carry refuses `[AMBIGUOUS_REFERENCE]` (SQLSTATE 42704) with the
-  reference as written and one candidate per plan qualifier, before any file
-  is created; a unique partition column writes and leaves the header.
-  parquet, json, orc, `saveAsTable` and `writeTo` keep refusing
-  `[COLUMN_ALREADY_EXISTS]`, as Spark does.
-- **Apache Spark** — the same bytes and the same refusals. *(oracle: live
-  4.1.2, 2026-10-08, the csv cells in
-  `task/ledgers/staging/fa-5-6-ledger.md`.)*
+  reference as written and one candidate per plan qualifier, sorted, before
+  any file is created; a unique partition column writes and leaves the
+  header. parquet, json, orc, `saveAsTable` and `writeTo` keep refusing
+  `[COLUMN_ALREADY_EXISTS]`, as Spark does. A column a user names
+  `__repark_dup_0_id` keeps that name on every door: the display names
+  travel as a record beside the registration copy, never as a naming
+  convention.
+- **Apache Spark** — writes the file with the duplicate display header, and
+  refuses the same partition and non-csv cells. *(oracle: live 4.1.2,
+  2026-10-08, the csv cells in `task/ledgers/staging/fa-5-6-ledger.md`.)*
 - **Pin** — `python/repark/tests/test_fa_5_duplicate_csv.py`;
   `crates/repark-core/src/session/tests/duplicate_names.rs`
 - **Rationale** — was DECLARED as a deliberate refusal (orchestrator,
   2026-10-06) because the csv rows could only carry the twin engine names.
   The csv door now registers a copy of the frame under unique engine names
-  and the Rust text sink renames the batch schema before the header is
-  written, so the engine never plans a duplicate and the file never carries
-  an internal name. Two things still differ and are older than this row: the
-  door writes a header when the `header` option is absent, for every frame
-  (Spark's default is off), and a same-origin repeat used as the partition
-  column (`select('id', 'id', 's').write.partitionBy('id')`) fails the
-  partition lookup loudly where Spark writes.
+  that records each display name in field metadata, and hands the Rust text
+  sink that list, so the engine never plans a duplicate and the file never
+  carries an internal name. What this row does **not** claim: the bytes are
+  not Spark's in every cell. The csv door's existing differences apply to a
+  duplicate-name frame exactly as to any frame, measured 2026-10-08 by the
+  unit's verifier and listed in the ledger ("The csv door's own differences"):
+  the header is written when the `header` option is absent (Spark's default
+  is off); header and body values are not trimmed; an empty name or an empty
+  string is written as nothing where Spark writes `""`; a quote is escaped
+  as `""` where Spark writes `\"`; `quoteAll` does not reach the header of an
+  empty frame; binary is written as hex; an empty partitioned write leaves a
+  header-only file at the root. Two refusals are this row's own and loud: a
+  same-origin repeat used as the partition column
+  (`select('id', 'id', 's').write.partitionBy('id')`) refuses where Spark
+  writes `id=1/` with header `s`; and under `caseSensitive=true` a partition
+  spelling that matches a repeated name only by case refuses with Spark's
+  `Partition column … not found in schema` text.
 
-### FA-6 — temp views over exact-duplicate display names register and answer — **FIXED 2026-10-08 (FA-6)**
+### FA-6 — temp views over exact-duplicate display names refuse (Spark registers them)
 
-- **repark** — `createOrReplaceTempView` and `createTempView` register a frame
-  whose display names hold exact duplicates. `SELECT *`, `spark.table`,
-  `DESCRIBE` and `listColumns` answer the display names
-  (`id, s, v, id, s, v` on the fold's self-join) with Spark's rows and types,
-  cached or not. A reference to a repeated name refuses
-  `[AMBIGUOUS_REFERENCE]` (SQLSTATE 42704) with the relation as written on
-  each candidate (`v1`, an alias, a derived table, a CTE); a unique name on
-  the same view answers. `CREATE TABLE … AS SELECT *` and
-  `CREATE [TEMP] VIEW … AS SELECT *` over such a view refuse
-  `[COLUMN_ALREADY_EXISTS]`; a column-alias list or a unique selection
-  creates the object. Case-twin columns (`id`, `ID`) register as before.
-- **Apache Spark** — the same answers. *(oracle: live 4.1.2, 2026-10-08, the
-  view cells in `task/ledgers/staging/fa-5-6-ledger.md`.)*
-- **Pin** — `python/repark/tests/test_fa_6_duplicate_views.py`;
-  `python/repark/tests/test_attr_id_1_sm2_dupviews.py`;
-  `crates/repark-core/src/column_resolution/duplicate_views_tests.rs`
-- **Rationale** — was DECLARED as a deliberate refusal (orchestrator,
-  2026-10-06) because the engine cannot hold a duplicate `(qualifier, name)`
-  pair. It still cannot: the view keeps unique engine names and the display
-  names ride beside them, so nothing asks the engine to. What still differs,
-  each loud and each recorded in the ledger:
-  `createGlobalTempView` and `createOrReplaceGlobalTempView` stay unsupported
-  for every frame (no `global_temp` catalog; Spark registers);
-  `SELECT * FROM v ORDER BY <repeated name>` refuses `AMBIGUOUS_REFERENCE`
-  where Spark reports `UNRESOLVED_COLUMN.WITH_SUGGESTION`;
-  `SELECT * EXCEPT (id, s)` names either excepted column (the engine walks
-  them unordered) where Spark names the first; the DataFrame
-  door's ambiguity text lists bare candidates (`` `id` ``) where Spark
-  qualifies them with the view name; a reference written in upper case is
-  reported lowered under the default case rule; and a statement that writes a
-  bare name which both a plain relation and such a view carry refuses even
-  when the bare name is a select alias. `EXPLAIN` prints the true engine plan.
+- **repark** — a frame whose display names hold exact duplicates refuses
+  `createOrReplaceTempView`, `createTempView`, `createGlobalTempView` and
+  `createOrReplaceGlobalTempView` with `[COLUMN_ALREADY_EXISTS]`, naming the
+  first duplicate (SQLSTATE 42711), before anything is registered. Case-twin
+  columns (`id`, `ID`) register and answer, as Spark does (SM-2b narrowing,
+  2026-10-06). The global doors keep their existing unsupported error for
+  duplicate-free frames.
+- **Apache Spark** — registers the view; `SELECT *`, `spark.table` and
+  `DESCRIBE` all carry the duplicate display names (`id, s, v, id, s, v` on
+  the fold's self-join). *(oracle: live 4.1.2, 2026-10-06, `v_self`/`v_r`.)*
+- **Pin** — `python/repark/tests/test_attr_id_1_sm2_dupviews.py` (11 tests)
+- **Rationale** — DECLARED as a deliberate divergence (orchestrator, 2026-10-06):
+  the engine cannot hold duplicate names in a view schema (a duplicate
+  `(qualifier, name)` pair is unplannable), and registering the twin engine
+  names would ship a silent wrong answer; the loud refusal holds the line
+  until duplicate-name view schemas land (follow-up on the v1.5.3 card,
+  2026-10-06). The pins assert the refusal, so the follow-up reds them and
+  forces this row to be re-recorded together with the behavior.
+- **FA-6 follow-up (2026-10-08)** — a first design that registered the view
+  under unique engine names and re-created Spark's ambiguity afterwards was
+  built and withdrawn before merge: an independent verifier found silent
+  wrong answers in scopes the audit did not model (`NATURAL JOIN`, a bare name
+  inside `EXISTS` or `LATERAL`, a qualified reference beside a case twin).
+  The refusal stays. Record: `task/ledgers/staging/fa-5-6-ledger.md`, "Why
+  FA-6 was withdrawn (2026-10-08)"; the open ask is
+  `task/roadmap/mid-term/fa-6-duplicate-view-schemas-card-2026-10-08.md`.
 
 ### DF-STREAM-1 — `dropDuplicatesWithinWatermark` drops the appended plan dump
 

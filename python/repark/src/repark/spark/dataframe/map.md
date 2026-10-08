@@ -1890,17 +1890,13 @@ the native `rename_duplicate_tolerant` when a display name repeats (unique
 engine names that carry the display; otherwise the SM-2c rename above), and
 only the csv door asks for it: `_registration_frame(duplicate_tolerant=True)`
 through `run_through_temp_view` and the S3 forward, and
-`text_write_copy_parts` for the schema the Rust builder reads. The Rust
-sink then writes the display header. A csv `partitionBy` over a name that
-two attributes carry refuses in `qualified_names._refuse_ambiguous_partition_columns`
-with Spark's `AMBIGUOUS_REFERENCE` text before any view is registered.
+`text_write_copy_parts` for the schema the Rust builder reads. The copy
+records the display names in field metadata and the Rust sink writes the
+header from that record, so no column is ever renamed by its spelling
+(fold 1). A csv `partitionBy` over a repeated name refuses in
+`qualified_names._refuse_ambiguous_partition_columns` before any view is
+registered, so no refusal can name the scratch view.
 parquet, json, orc, `saveAsTable` and `writeTo` keep
 `_refuse_duplicate_output_columns`. `writer_readwriter.py` calls
 `writer_layout.run_through_temp_view` directly for the path `COPY`, which
 keeps the file under its ceiling. pins: fa-5-6/C-002, C-003, C-004
-**FA-6 (2026-10-08):** `core.py`'s `create_or_replace_temp_view` (and
-`createTempView` through it) and `create_global_temp_view` no longer call
-`_refuse_duplicate_output_columns`: the local doors register (the rename
-lives in `catalog_surface._register_temp_view`), and the global doors give
-the same unsupported error to every frame. `core.py` ratchets 3462 → 3456
-in `check_lib_py.py`. pins: fa-5-6/C-005

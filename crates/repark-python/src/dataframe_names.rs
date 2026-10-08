@@ -51,7 +51,6 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(refuse_folded_duplicate_keys, module)?)?;
     module.add_function(wrap_pyfunction!(rename_output_fields, module)?)?;
     module.add_function(wrap_pyfunction!(rename_duplicate_tolerant, module)?)?;
-    module.add_function(wrap_pyfunction!(duplicate_display_names, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
@@ -559,18 +558,6 @@ pub(crate) fn rename_duplicate_tolerant(
         .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(df, frame.runtime_handle()))
     })
-}
-
-#[pyfunction]
-pub(crate) fn duplicate_display_names(frame: &PyDataFrame) -> Option<Vec<String>> {
-    repark_core::frame_names::duplicate_display_names(
-        frame
-            .inner()
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| field.name().as_str()),
-    )
 }
 
 #[pyfunction]

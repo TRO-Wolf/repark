@@ -294,19 +294,24 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   OPTIONS keys reach `create` verbatim, part files keep the `.csv`/`.json`
   extension, and a serializer error surfaces with its message intact; a
   no-strip control shows unstripped custom keys fail the inner factory.
-- `duplicate_names.rs` — **FA-5 (2026-10-08):** the duplicate-tolerant name
+- `duplicate_names.rs` — **FA-5 (2026-10-08, fold 1):** the generated-name
   rule (no repeat answers `None`, case twins are not repeats, the position
-  makes repeats unique, `display_name` round-trips names that hold digits and
-  underscores and refuses the `__repark_l_` twin shape), the rename over a
-  SQL self-join (unique engine names that register as a view; a plain frame's
-  plan is returned unchanged), the copy-parts routing (duplicate csv to the
-  sink with the display-header option, json and plain csv untouched, temporal
-  csv without the option), the schema-only batch rename, and end-to-end csv
-  bytes through `write_path` on an in-memory store: Spark's recorded header
-  and rows with and without `header`, under a separator, with a unique
-  partition column dropped from the header, for an empty frame, and with
-  temporal twins formatted. Expected bytes are the live Spark 4.1.2 cells in
-  the unit ledger. pins: fa-5-6/C-001, C-002
+  makes repeats unique, a generated name steps around a user column of the
+  same spelling); the record (`recorded_display_names` answers `None` for
+  unrecorded fields named `__repark_dup_0_id` or `__repark_dup_7_`, and reads
+  the metadata otherwise); the hex option round trip for empty, comma,
+  quote and non-ASCII names, with bad hex refused; the rename over a SQL
+  self-join (unique engine names that register as a view, the record
+  present, a plain frame's plan returned unchanged); the copy-parts routing
+  (recorded csv to the sink with the list, json, plain and prefix-shaped
+  unrecorded csv untouched, temporal csv without the list); the map-driven
+  batch rename; and end-to-end csv bytes through `write_path` on an
+  in-memory store, which is the s3a route's engine half: the display header
+  with and without `header`, under a separator, with a unique partition
+  column dropped, for an empty frame, with temporal twins, a user column
+  named like a generated one kept as written, and a repeat beside such a
+  column. Expected bytes are the live Spark 4.1.2 cells in the unit ledger.
+  pins: fa-5-6/C-001, C-002
 - `text_write_sink.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round
   (2026-09-30):** end-to-end pins for the sink serializer: zone-correct
   CSV/JSON bytes, user patterns, raw partition directory names, lazy and

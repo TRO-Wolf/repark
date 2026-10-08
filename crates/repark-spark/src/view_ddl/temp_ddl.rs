@@ -149,9 +149,7 @@ async fn describe_temp_view(
                 .as_ref()
                 .and_then(|comments| comments.get(index).cloned().flatten());
             (
-                repark_core::frame_names::display_name(field.name())
-                    .unwrap_or(field.name())
-                    .to_string(),
+                field.name().clone(),
                 spark_ddl_type_name(field.data_type()),
                 comment,
             )

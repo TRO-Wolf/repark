@@ -1,6 +1,5 @@
 # map — scripts/
 
-FA-6 (2026-10-08): `check_lib_py.py` ratchets `dataframe/core.py` 3462 → 3456 (`create_or_replace_temp_view` and `create_global_temp_view` drop the duplicate-name refusal and its import), shrink-only, with the CAP-1 mirror. pins: fa-5-6/C-005
 SOURCE-URL-REDACT-2 fold 4 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3971 → 3965 (the redundant inner mapInArrow user-call handler is gone), `dataframe/joins_columns.py` 1169 → 1117 (`_grouped_agg_pandas` moves unchanged to `udf_bridge.py`) and `spark/functions_udf.py` 1300 → 1287 (`_refuse_udtf_as_scalar_udf` moves unchanged to `udtf.py`), with the CAP-1 mirror, shrink-only. pins: source-url-redact-1/C-076
 SOURCE-URL-REDACT-2 fold 4 H3 (2026-10-07): `check_lib_py.py` sets `dataframe/core.py` 3965 → 3969 for the mapInArrow `PySparkException` scrub, still below the 3971 base, with the CAP-1 mirror. pins: source-url-redact-1/C-077
 SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3969 → 3967 (the mapInArrow handler takes `scrub_user_failure` and drops its local `traceback` import), with the CAP-1 mirror. pins: source-url-redact-1/C-082
