@@ -665,3 +665,22 @@ declines it (a dated ruling in the intake, then the archive).
   PR #991):** the neighbouring Spark-door catalog and DDL doors answer a mounted source with
   misleading text (`getTable`, `listColumns`, `SHOW VIEWS`, `SHOW COLUMNS`, `DESCRIBE TABLE`,
   `TRUNCATE TABLE`, `USE`); none writes; each door gives the declared listing or names its registry row.
+- [offset-nested-sort-1-card-2026-10-08.md](offset-nested-sort-1-card-2026-10-08.md) — **card
+  OFFSET-NESTED-SORT-1 (2026-10-08, filed, not scheduled, from the C-3 hand-back, PR #998):** an
+  `OFFSET` under a nested `ORDER BY` answers 0 rows at one input partition where 16 partitions answer
+  5, a wrong answer reproduced with no Postgres scan in the plan; the ask is to reproduce it on main,
+  find whether it is the pinned DataFusion version's defect or RePark's planning, and add a parity cell.
+- [cross-join-condition-1-card-2026-10-08.md](cross-join-condition-1-card-2026-10-08.md) — **card
+  CROSS-JOIN-CONDITION-1 (2026-10-08, filed, not scheduled, from the STAMP-2-R5P6-2 hand-back, PR #997):**
+  `df.join(other, condition, "cross")` ignores the condition (12 rows where live Spark 4.1 answers 2),
+  on main and on the PR branch alike, because the H1 door emits `CROSS JOIN` with no `ON`; sequenced
+  after PR #997 merges, as both touch the same door.
+- [c-3-null-stride-1-card-2026-10-08.md](c-3-null-stride-1-card-2026-10-08.md) — **card
+  C-3-NULL-STRIDE-1 (2026-10-08, filed, not scheduled, from C-3 question Q3, PR #998):** the first
+  stride's `OR col IS NULL` arm is a sequential scan of the whole table (about 1.1 s of a 7.3 s
+  four-stream read); the lean is the NULL test as its own stride, measured on an unindexed column
+  before adopting.
+- [c-3-partition-types-1-card-2026-10-08.md](c-3-partition-types-1-card-2026-10-08.md) — **card
+  C-3-PARTITION-TYPES-1 (2026-10-08, filed, not scheduled, from C-3 question Q4, PR #998):** C-3 takes
+  `int2`/`int4`/`int8` partition columns and refuses the rest under `CONNECT-DECL-pg-partitioned-read`;
+  the ruled order is `date` first, then timestamp once the zone rule is ruled, each with its own Spark grid.
