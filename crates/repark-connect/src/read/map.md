@@ -60,6 +60,39 @@ feature. See [../map.md](../map.md).
     past the slot bound answers `None`. pins: c-3/C-004
   pins: c-2/C-038, C-039, C-040, C-041, C-053, C-054, C-056, C-059, C-062, C-074, C-076
 
+- `postgres.rs` — **C-3 (2026-10-07):** the COPY reader is split so a prepared connection can
+  run more than one statement. `ScanRequest::prepared(options)` builds a `Prepared` (the
+  statement, its decoder and the relation) before any network call; `Copying::start(pooled,
+  prepared, …)` binds the values and opens the `COPY` on a connection it is handed;
+  `next_batch()` is unchanged; `into_client()` drops the finished stream and hands the
+  connection back. The one-statement scan keeps its behaviour through them: `Copying::open`
+  checks out, opens `BEGIN READ ONLY` when a value or a query source needs it, and `finish`
+  commits and releases. pins: c-3/C-005
+- `postgres_lanes.rs` — **C-3 (2026-10-07)**, the connections of one partitioned scan
+  ([c-3-ledger.md](../../../../task/ledgers/staging/c-3-ledger.md) §0.2, §0.3).
+  `scan_lanes(pool, strides, max_lanes, options, meter)` prepares every stride, takes between
+  one and `min(max_lanes, strides)` connections (`checkout_up_to`), puts all of them on one
+  snapshot, and returns one `LaneStream` per connection.
+  - **One snapshot.** Every connection opens `BEGIN_SNAPSHOT_SCAN` (`BEGIN ISOLATION LEVEL
+    REPEATABLE READ READ ONLY`). With more than one, the first runs `EXPORT_SNAPSHOT` and
+    every other runs `SET TRANSACTION SNAPSHOT '<id>'` in the same batch as its `BEGIN`,
+    before any query; a query source's search-path statement follows the import, because
+    Postgres refuses an import after a query. The id enters the text only after it is checked
+    to be hex digits and dashes (a `SET` takes no bound parameter); anything else is
+    `Protocol(UnexpectedResponse)`. `scan_lanes` returns only when every import has
+    completed, so no `COPY` starts while a connection could still take a later snapshot, and
+    the exporter's transaction is open for every import (Postgres forgets the id when the
+    exporter ends).
+  - **Strides per connection.** Stride `i` goes to connection `i % L`, and each connection
+    runs its strides back to back in its one transaction: `Lane::step` starts the next
+    `COPY` when the last one ends, then commits and calls `release_clean`, whose reset and
+    pin check return the session to `READ COMMITTED` and the pool. An error or a drop leaves
+    the lease abandoned, as a one-statement scan does: the server's query is cancelled and
+    the connection is never pooled.
+  - `time_to_first_byte` is the first connection's alone; `bytes_received` and `decode` sum
+    over every connection.
+  pins: c-3/C-005
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

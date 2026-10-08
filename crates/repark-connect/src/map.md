@@ -61,7 +61,8 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `TEXT_COLLATION`, `UTF8_ENCODING`, `decimal_text`, `date_text`, `timestamp_text`) and
   `ScanMeter` and `scan_metered`. C-3 (2026-10-07) adds `mod partition;` (no feature gate) and
   re-exports `PartitionOptions`, `PartitionSpec`, `PartitionRefusal`, `Stride`, `stride_cuts`,
-  `strides`, the four option-key constants and `PARTITIONED_READ_ROW`.
+  `strides`, the four option-key constants and `PARTITIONED_READ_ROW`; under `postgres`,
+  `scan_lanes`, `LaneStream`, `BEGIN_SNAPSHOT_SCAN` and `EXPORT_SNAPSHOT`.
 - `error.rs` — **C-2d (2026-10-07):** `ValueRefusal::WallClockGap` and `WallClockOverlap`
   (registry row `ZONE_ROW`, `CONNECT-DIV-pg-timestamp-zone`, the message naming
   `prefer_timestamp_ntz`), `DDL_ROW` (`CONNECT-DECL-pg-ddl`) and `read_only_ddl(source)`, all
@@ -205,6 +206,13 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `TrackedTls` wraps `MakeRustlsConnect` and records whether the handshake began, so the
   connector can tell a server that refused TLS from every later failure without reading driver
   text. pins: c-2/C-028, C-029, C-030, C-058
+- `pool.rs` — **C-3 (2026-10-07):** `QueryPool::checkout_up_to(wanted)` takes the
+  connections of one partitioned scan (the C-3 ledger's §0.3). The first is an ordinary `checkout()`: it queues for `pool_checkout_timeout_ms` and
+  then refuses with `PoolExhausted`. Every further one is taken only if a permit is free at
+  that moment (`try_acquire_owned`), so the call returns between one and `wanted` leases, never
+  opens past `max_size`, and never waits while it holds a connection: two partitioned scans
+  on one pool cannot hold each other to a timeout. `lease(permit)` is the shared tail of both
+  checkouts (an idle connection, else a new one). pins: c-3/C-005
 - `pool.rs` — C-2b round 2 (2026-10-07; sketch §2.5, NS-7), behind `postgres`.
   - **`QueryPool<C: Connect>`**, one per mounted source: a semaphore of `pool_max_size` permits;
     `checkout()` waits at most `pool_checkout_timeout_ms` for one (else `PoolExhausted`), reaps
@@ -304,11 +312,12 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   and `qty NOT IN (1, NULL)` became a pushed `qty <> NULL` that later simplified to `NULL`,
   which nothing applied. `split` and `push` serve `scan`. With `pushdown_predicate = false`
   nothing renders; the limit is `pushdown_limit`'s, in `provider/table.rs`. pins: c-2/C-070, C-071, C-072, C-073, C-074, C-078
-- `provider.rs` — C-2c (2026-10-07): `mod catalog; mod scan; mod schema; mod table;` and their
+- `provider.rs` — C-2c (2026-10-07), C-3 adding `mod partitioned;`: `mod catalog; mod scan; mod schema; mod table;` and their
   re-exports.
 - `provider/` — [provider/map.md](provider/map.md): `PostgresSource`, the catalog, schema and
   table providers, `PostgresScanExec` and `WallClockLocaliser`.
-- `read.rs` — C-2b round 3 (2026-10-07): `pub(crate) mod postgres;`.
+- `read.rs` — C-2b round 3 (2026-10-07): `pub(crate) mod postgres;`, and since C-3
+  `pub(crate) mod postgres_lanes;`.
 - `read/` — [read/map.md](read/map.md): `postgres.rs`, the statement builder, the `set_config`
   carriage and the COPY stream.
 - `types.rs` — `pub mod postgres;` (`mssql` joins with C-5).

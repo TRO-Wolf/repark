@@ -10,15 +10,92 @@ use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
 use datafusion::physical_plan::ExecutionPlan;
 
 use super::catalog::{Mounted, PostgresSource};
+use super::partitioned::Partitioned;
 use super::scan::{PostgresScanExec, ScanPlan};
 use crate::copy_binary::{BatchLimits, DEFAULT_BATCH_BYTES, DEFAULT_BATCH_ROWS};
 use crate::discover::{ResolvedSource, ScanColumn};
+use crate::error::ConnectError;
+use crate::partition::{PartitionRefusal, PartitionSpec, Stride, stride_cuts, strides};
 use crate::pushdown::Pushdown;
 use crate::read::postgres::{MAX_PARAM_SLOTS, ScanOptions, ScanRequest};
 use crate::types::postgres::PostgresMapping;
 
 fn places(column: &ScanColumn) -> bool {
     column.planned.mapping() == PostgresMapping::Timestamp
+}
+
+fn refused<T>(refusal: PartitionRefusal) -> crate::error::Result<T> {
+    Err(ConnectError::PartitionedRead { refusal })
+}
+
+fn partition_column(resolved: &ResolvedSource, wanted: &str) -> crate::error::Result<usize> {
+    let names: Vec<&str> = resolved
+        .columns
+        .iter()
+        .map(|column| column.name.as_str())
+        .collect();
+    let quoted = wanted
+        .strip_prefix('"')
+        .and_then(|rest| rest.strip_suffix('"'))
+        .map(|inner| inner.replace("\"\"", "\""));
+    let exact = quoted.as_deref().unwrap_or(wanted);
+    if let Some(index) = names.iter().position(|name| *name == exact) {
+        return Ok(index);
+    }
+    let folded: Vec<usize> = names
+        .iter()
+        .enumerate()
+        .filter(|(_, name)| quoted.is_none() && name.eq_ignore_ascii_case(wanted))
+        .map(|(index, _)| index)
+        .collect();
+    match folded.as_slice() {
+        [index] => Ok(*index),
+        [] => refused(PartitionRefusal::ColumnNotFound {
+            column: wanted.to_string(),
+            columns: names.iter().map(ToString::to_string).collect(),
+        }),
+        several => refused(PartitionRefusal::AmbiguousColumn {
+            column: wanted.to_string(),
+            matches: several
+                .iter()
+                .filter_map(|index| names.get(*index))
+                .map(ToString::to_string)
+                .collect(),
+        }),
+    }
+}
+
+fn partition_type(column: &ScanColumn) -> crate::error::Result<()> {
+    let found = match column.planned.mapping() {
+        PostgresMapping::Int16 | PostgresMapping::Int32 | PostgresMapping::Int64 => return Ok(()),
+        PostgresMapping::Boolean => "boolean",
+        PostgresMapping::Binary => "binary",
+        PostgresMapping::Utf8
+        | PostgresMapping::Uuid
+        | PostgresMapping::Json
+        | PostgresMapping::Jsonb
+        | PostgresMapping::ServerText
+        | PostgresMapping::Declared { .. } => "string",
+        PostgresMapping::Float32
+        | PostgresMapping::Float64
+        | PostgresMapping::Numeric(_)
+        | PostgresMapping::Date
+        | PostgresMapping::Timestamp
+        | PostgresMapping::Timestamptz => {
+            return refused(PartitionRefusal::DeclaredColumnType {
+                column: column.name.as_str().to_string(),
+                postgres_type: column.planned.postgres_type(),
+            });
+        }
+    };
+    refused(PartitionRefusal::ColumnType { found })
+}
+
+#[derive(Debug)]
+struct Partitioning {
+    column: usize,
+    name: Arc<str>,
+    strides: Vec<Stride>,
 }
 
 #[derive(Debug)]
@@ -29,6 +106,7 @@ pub struct PostgresTable {
     schema: SchemaRef,
     zone: Option<Arc<str>>,
     pushdown: Pushdown,
+    partitioning: Option<Partitioning>,
 }
 
 impl PostgresTable {
@@ -58,7 +136,31 @@ impl PostgresTable {
             schema,
             zone,
             pushdown,
+            partitioning: None,
         }
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn partitioned(mut self, spec: &PartitionSpec) -> crate::error::Result<PostgresTable> {
+        let column = partition_column(&self.resolved, &spec.column)?;
+        let scanned = self.resolved.columns.get(column);
+        scanned.map_or(Ok(()), partition_type)?;
+        let cuts = stride_cuts(spec.lower_bound, spec.upper_bound, spec.num_partitions)?;
+        self.partitioning = scanned
+            .filter(|_| !cuts.is_empty())
+            .map(|scanned| Partitioning {
+                column,
+                name: scanned.name.as_str().into(),
+                strides: strides(&cuts),
+            });
+        Ok(self)
+    }
+
+    #[must_use]
+    pub fn strides(&self) -> &[Stride] {
+        self.partitioning
+            .as_ref()
+            .map_or(&[], |partitioning| &partitioning.strides)
     }
 
     #[must_use]
@@ -124,7 +226,29 @@ impl TableProvider for PostgresTable {
             Some(limit) => request.limit(limit),
             None => request,
         };
+        let too_many = || {
+            DataFusionError::Plan(format!(
+                "the filters and partition bounds pushed to Postgres source `{}` bind more than \
+                 {MAX_PARAM_SLOTS} values; narrow the filter or set `pushdown_predicate` to \
+                 false (registry row CONNECT-DECL-pg-bound-values in \
+                 docs/spark-sql-iceberg-parity.md)",
+                self.source.name()
+            ))
+        };
         let settings = &self.mounted.settings;
+        let partition = match &self.partitioning {
+            None => None,
+            Some(partitioning) => Some(Partitioned {
+                column: Arc::clone(&partitioning.name),
+                strides: partitioning
+                    .strides
+                    .iter()
+                    .map(|stride| request.clone().stride(partitioning.column, *stride))
+                    .collect::<Option<Vec<_>>>()
+                    .ok_or_else(too_many)?,
+                max_connections: partitioning.strides.len().min(settings.pool_max_size),
+            }),
+        };
         let rows = settings.batch_rows.unwrap_or_else(|| {
             NonZeroUsize::new(state.config().batch_size()).unwrap_or(DEFAULT_BATCH_ROWS)
         });
@@ -153,6 +277,7 @@ impl TableProvider for PostgresTable {
             pool: Arc::clone(&self.mounted.pool),
             placed,
             localiser: Arc::clone(self.source.localiser()),
+            partition,
         })))
     }
 }

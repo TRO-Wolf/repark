@@ -7,7 +7,7 @@ See [../map.md](../map.md).
 
 ## Contents
 
-- `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod partition; mod postgres_types; mod settings; mod url;`, plus
+- `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod partition; mod partition_plan; mod live_partition; mod postgres_types; mod settings; mod url;`, plus
   `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
   mod scan; mod tls;` under the `postgres` feature.
 - `partition.rs` — C-3 (2026-10-07), no network. `strides_equal_sparks_recorded_grid` reads
@@ -25,6 +25,42 @@ See [../map.md](../map.md).
   shapes byte for byte, the `int8` cast on every cut, the NULL test on the first stride
   alone, a stride after a pushed conjunct with projection and `LIMIT` kept, and the refusals
   past the slot bound. pins: c-3/C-002, C-003, C-004
+- `partition_plan.rs` — C-3 (2026-10-07), behind `postgres`, no network, over an injected
+  resolution. The column resolves in another case and when quoted, a quoted name is exact, a
+  missing column lists the relation's columns, two case-twins refuse as ambiguous unless one is
+  named exactly; every non-integer mapping refuses by kind (Spark's sentence, or the declared
+  row); the column is verified before the one-stride cases; a partitioned scan is one output
+  partition with `max_connections = min(strides, pool_max_size)`; every stride carries the
+  pushed filter, the projection and the `LIMIT`, and a residual keeps the limit above; EXPLAIN,
+  `VERBOSE` and the tree format name the column, the strides and the connection bound and no
+  endpoint; the two snapshot statements are pinned byte for byte.
+  pins: c-3/C-005
+- `live_partition.rs` — C-3 (2026-10-07), behind `postgres`, live like `live_pg.rs`. The cells
+  take turns (`TURN`) and share one pool per cell, so the suite stays under the container's 50
+  connections when it runs in parallel.
+  `a_partitioned_read_equals_the_unpartitioned_read_across_the_types`: 5000 rows of thirteen
+  columns (the eight mapped C-1 declared types, three integers, text) read `ORDER BY id`
+  through eight partition plans (`int4`, `int8` and `int2` columns, 16 strides on a pool of
+  4, bounds inside the data, bounds wholly outside it, the `i64` extremes, a shrunk count)
+  equal the unpartitioned batch value for value and type for type; `time` still refuses at
+  resolution. `null_and_out_of_bounds_rows_arrive_exactly_once`. The snapshot cells
+  (`a_writer_between_strides_never_changes_a_partitioned_read`,
+  `one_connection_reads_its_strides_in_one_snapshot`): after the first batch a writer moves
+  a third of the rows across strides, deletes a seventh, inserts 5000 and fills the NULLs,
+  and the read still returns the 40 000 rows it started on, on four connections, on one
+  connection running four strides, and on two running eight; the connections return to the
+  pool clean and the next read sees the present.
+  `filters_projection_and_limit_compose_with_the_strides`: six filters with pushdown on and
+  off equal the unpartitioned rows; `count(*)`; a pushed `LIMIT 7` is in every stride's
+  statement and the scan node alone returns 7 rows; a residual keeps the limit above;
+  `LIMIT 0`, a limit past the table and `OFFSET`.
+  `a_refused_value_keeps_its_contract_in_every_stride`,
+  `cancel_aborts_every_connection_and_leaves_no_backend`,
+  `num_partitions_above_the_pool_never_opens_past_it` (16 strides on two connections, pooled
+  clean and reused) and `a_busy_pool_narrows_a_partitioned_read_and_never_fails_it`.
+  pins: c-3/C-005
+- `pool.rs` — **C-3 (2026-10-07):** `a_multi_checkout_takes_what_is_free_and_never_passes_the_pool`
+  and `a_multi_checkout_queues_for_its_first_connection_only`. pins: c-3/C-005
 - `explain.rs` — C-2c (2026-10-07), behind `postgres`, no network: sketch §5.3 over the
   `pushdown.rs` fixture's injected resolution. `explain_renders_pushed_and_residual_per_scan`
   (the exact `PostgresScanExec` line for one pushed and one residual conjunct, and for a pushed

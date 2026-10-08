@@ -58,6 +58,8 @@ pub use read::postgres::{
     BEGIN_SCAN, CompareOp, MAX_PARAM_SLOTS, ParamSlot, ScanMeter, ScanOptions, ScanRequest,
     ScanStatement, scan, scan_metered,
 };
+#[cfg(feature = "postgres")]
+pub use read::postgres_lanes::{BEGIN_SNAPSHOT_SCAN, EXPORT_SNAPSHOT, LaneStream, scan_lanes};
 pub use settings::{
     AUTH_METHOD_KEY, AuthMethod, ConnectionSettings, DEFAULT_PORT, DeclaredSetting,
     POSTGRES_ALIASES, POSTGRES_DRIVER, POSTGRES_KEYS, PostgresSettings, SettingsDoor, SpecRefusal,
