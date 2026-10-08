@@ -89,6 +89,8 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
     fails `SinkBusy`. The sink is loaded again after each wait because the other query's
     commit moved it, and the resume-point check runs after the scope is held. A stop or a
     dropped session ends the wait with no batch run. pins: mb-3/C-016
+  - *The replay window is not durable.* A restart plans the failed batch's window again
+    (registry row `MB-3-REPLAY-WINDOW-1`). pins: mb-3/C-014
 - `progress.rs` — the `StreamingQuery` progress surface (sketch §3.6, MB0-T3):
   `StreamingQueryProgress`, `DurationMs`, `SourceProgress`, `SinkProgress`, `QueryStatus` and
   `StatusMessage`, serialised with T3's camelCase names, and the crate-private `ProgressLog` (the

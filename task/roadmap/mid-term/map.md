@@ -650,3 +650,9 @@ declines it (a dated ruling in the intake, then the archive).
   raises `DIVIDE_BY_ZERO` on `%`, answers `NULL` on `mod`/`pmod`, `NaN` on a `-0.0` divisor,
   and cannot parse infix `div`; the guard learns its operator, with the error text per operator;
   grade lean B, small.
+- [mb-pending-window-1-card-2026-10-07.md](mb-pending-window-1-card-2026-10-07.md) — **card
+  MB-PENDING-WINDOW-1 (2026-10-07, filed by claude-opus-5-5 for the orchestrator, from MB-3
+  fold 1, PR #994):** a restart after a failed batch replans that batch's window, so the same
+  batch id covers a wider window when the source grew (Spark replays the logged window, cell
+  MB3-W9); option (a) a pending-window stamp before the body at one more commit per batch,
+  option (b) leave registry row `MB-3-REPLAY-WINDOW-1` declared; needs an owner decision.

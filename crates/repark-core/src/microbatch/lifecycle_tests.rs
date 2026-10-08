@@ -521,6 +521,31 @@ async fn two_sessions_on_one_sink_wait_for_the_scope() {
     }
 }
 
+#[tokio::test]
+async fn a_restart_after_a_failed_batch_replans_its_window_over_a_grown_source() {
+    for (caps, replayed) in [
+        (&[][..], vec![(0, vec![1, 2, 3, 4, 5])]),
+        (ONE, vec![(0, vec![1, 2, 3]), (1, vec![4, 5])]),
+    ] {
+        let fixture = Fixture::new().await;
+        fixture.insert(SOURCE, "(1), (2), (3)").await;
+        let failing = Probe::new(Mode::FailAt(0));
+        let first = started(&fixture, foreach(&failing, Trigger::AvailableNow, caps)).await;
+        let error = ended(&first).await.expect_err("the body fails");
+        assert!(
+            matches!(error.as_ref(), MicroBatchError::BatchFailed { epoch, .. } if *epoch == Epoch::FIRST),
+            "{error:?}"
+        );
+        assert_eq!(failing.seen(), [(0, vec![1, 2, 3])]);
+        assert_eq!(first.durable(), None);
+        fixture.insert(SOURCE, "(4), (5)").await;
+        let body = Probe::new(Mode::Record);
+        let second = started(&fixture, foreach(&body, Trigger::AvailableNow, caps)).await;
+        assert_eq!(ended(&second).await, Ok(true));
+        assert_eq!(body.seen(), replayed);
+    }
+}
+
 fn wall_millis() -> u64 {
     let since = SystemTime::now()
         .duration_since(UNIX_EPOCH)

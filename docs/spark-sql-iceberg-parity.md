@@ -3543,6 +3543,30 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   appends ahead of it first, so the refusal lands one batch later and no appended row is held
   back behind a snapshot the stream refuses anyway. Under `availableNow` and `Once` the two
   agree (MB0b-R17): both refuse before batch 0.
+### MB-3-REPLAY-WINDOW-1 — a restart after a failed batch replans that batch's window; Spark replays the logged one
+- **repark** — the offsets live in the sink's summary and there is no offset log, so the window
+  of a batch that failed is not durable. The restart keeps the batch id (the epoch after the
+  durable record) and plans its window again from the durable offset to the source's head. When
+  the source grew between the failure and the restart, the same batch id covers a wider window:
+  source `(1, 2, 3)`, a `foreachBatch` body that fails at batch 0, an append `(4, 5)`, then the
+  restart delivers batch 0 as `(1, 2, 3, 4, 5)` under `availableNow` with no cap. With
+  `streaming-max-files-per-micro-batch=1` the restart delivers batch 0 `(1, 2, 3)` and batch 1
+  `(4, 5)`, because the cap cuts the window at the same file. No row is lost or skipped by the
+  driver in either shape, and the offset never advances past a batch whose body failed.
+- **Apache Spark** — writes the batch's offset range to `offsets/<batchId>` before the batch
+  runs, and a restart replays that range under the same batch id: the same history delivers
+  batch 0 `(1, 2, 3)` again and then batch 1 `(4, 5)`, with `offsets` `0, 1` and `commits`
+  `0, 1`. *(oracle: cell MB3-W9 in `mb3_fold_oracle.json`, `trigger(availableNow=True)`,
+  recorded 2026-10-07; MB0-W6 holds the unchanged-source half.)*
+- **Pin** — `crates/repark-core/src/microbatch/lifecycle_tests.rs::a_restart_after_a_failed_batch_replans_its_window_over_a_grown_source`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F4: no offset log in this fold;
+  beside the `foreachBatch` at-least-once declaration, MB-3 ledger C-005 (e) and D-2). The
+  consequence is for a body that deduplicates on the batch id, Spark's documented idempotence
+  recipe: if the body recorded batch 0 as done before it failed, it skips the wider replay,
+  and the trailing stamp then moves the offset past `(4, 5)`, which the body never wrote. A
+  body on repark deduplicates on its rows' keys, or writes the sink through the `toTable` door.
+  The pending-window stamp that would close the difference is filed as
+  `task/roadmap/mid-term/mb-pending-window-1-card-2026-10-07.md` for an owner decision.
 ### MB-3-SINK-BUSY-1 — a second streaming query on a sink that already has an active query in the session refuses at start; Spark runs both
 - **repark** — one active query per sink per session. `start` refuses the second query with
   `SinkBusy` (`sink <table> already has an active batch; one batch per sink at a time`, MBE-13)
