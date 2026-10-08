@@ -2830,6 +2830,91 @@
     },
     {
       "answer": {
+        "strings": {
+          "-1 seconds": {
+            "class": "IllegalArgumentException",
+            "params": null
+          },
+          "1 month": {
+            "class": "_LEGACY_ERROR_TEMP_3262",
+            "params": {
+              "interval": "1 month"
+            }
+          },
+          "1.5 minutes": {
+            "class": "INVALID_INTERVAL_FORMAT.INVALID_FRACTION",
+            "params": {
+              "input": "1.5 minutes",
+              "unit": "minutes"
+            }
+          },
+          "2147483647 days": {
+            "class": "ArithmeticException",
+            "params": null
+          },
+          "2147483648 days": {
+            "class": "INVALID_INTERVAL_FORMAT.ARITHMETIC_EXCEPTION",
+            "params": {
+              "input": "2147483648 days"
+            }
+          },
+          "5": {
+            "class": "INVALID_INTERVAL_FORMAT.MISSING_UNIT",
+            "params": {
+              "input": "5",
+              "word": "5"
+            }
+          },
+          "5 seconds -": {
+            "class": "INVALID_INTERVAL_FORMAT.MISSING_NUMBER",
+            "params": {
+              "input": "5 seconds -",
+              "word": "-"
+            }
+          },
+          "5 secs": {
+            "class": "INVALID_INTERVAL_FORMAT.INVALID_UNIT",
+            "params": {
+              "input": "5 secs",
+              "unit": "secs"
+            }
+          },
+          "5s": {
+            "class": "INVALID_INTERVAL_FORMAT.INVALID_VALUE",
+            "params": {
+              "input": "5s",
+              "value": "5s"
+            }
+          },
+          "bogus": {
+            "class": "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER",
+            "params": {
+              "input": "bogus",
+              "number": "bogus"
+            }
+          },
+          "interval": {
+            "class": "INVALID_INTERVAL_FORMAT.INPUT_IS_EMPTY",
+            "params": {
+              "input": "interval"
+            }
+          },
+          "interval5 seconds": {
+            "class": "INVALID_INTERVAL_FORMAT.INVALID_PREFIX",
+            "params": {
+              "input": "interval5 seconds",
+              "prefix": "interval5"
+            }
+          }
+        }
+      },
+      "cell": "MB0c-T4",
+      "field": "facade.trigger.error_params.answer",
+      "kind": "rows",
+      "statement": "def cell_t4(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"t4\")\n    append(bench, source, [1])\n    stream = bench.spark.readStream.format(\"iceberg\").load(source)\n    texts = [\n        \"bogus\",\n        \"5\",\n        \"5 secs\",\n        \"5s\",\n        \"1.5 minutes\",\n        \"interval5 seconds\",\n        \"5 seconds -\",\n        \"2147483648 days\",\n        \"2147483647 days\",\n        \"1 month\",\n        \"-1 seconds\",\n        \"interval\",\n    ]\n    outcomes: dict[str, dict[str, Any]] = {}\n    for text in texts:\n        try:\n            stream.writeStream.format(\"iceberg\").trigger(processingTime=text)\n            outcomes[text] = {\"outcome\": \"accepted\"}\n        except PySparkException as exc:\n            entry = error_of(exc)\n            outcomes[text] = {\"class\": entry[\"class\"], \"params\": exc.getMessageParameters()}\n    return \"rows\", {\"strings\": outcomes}\n"
+    },
+    {
+      "answer": {
         "calls": {
           "available_now_false": {
             "causes": [],

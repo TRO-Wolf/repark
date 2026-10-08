@@ -1,4 +1,4 @@
-"""MB-0c facade oracle: 30 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
+"""MB-0c facade oracle: 31 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from mb0_streaming_oracle import AppendTo, fresh_dir, preamble, scrub
 from pyspark.errors import PySparkException
 from pyspark.sql import DataFrame, SparkSession
 
-EXPECTED_CELLS = 30
+EXPECTED_CELLS = 31
 
 TRIGGER_MILLIS_RE = re.compile(r"^ProcessingTimeTrigger\((\d+)\)$")
 
@@ -434,6 +434,35 @@ def cell_t1c(bench: Bench) -> tuple[str, dict[str, Any]]:
     return "rows", {"strings": outcomes}
 
 
+def cell_t4(bench: Bench) -> tuple[str, dict[str, Any]]:
+    source = create_source(bench, "t4")
+    append(bench, source, [1])
+    stream = bench.spark.readStream.format("iceberg").load(source)
+    texts = [
+        "bogus",
+        "5",
+        "5 secs",
+        "5s",
+        "1.5 minutes",
+        "interval5 seconds",
+        "5 seconds -",
+        "2147483648 days",
+        "2147483647 days",
+        "1 month",
+        "-1 seconds",
+        "interval",
+    ]
+    outcomes: dict[str, dict[str, Any]] = {}
+    for text in texts:
+        try:
+            stream.writeStream.format("iceberg").trigger(processingTime=text)
+            outcomes[text] = {"outcome": "accepted"}
+        except PySparkException as exc:
+            entry = error_of(exc)
+            outcomes[text] = {"class": entry["class"], "params": exc.getMessageParameters()}
+    return "rows", {"strings": outcomes}
+
+
 def cell_t2(bench: Bench) -> tuple[str, dict[str, Any]]:
     source = create_source(bench, "t2")
     append(bench, source, [1])
@@ -665,6 +694,7 @@ CELLS: tuple[tuple[str, str, Cell, tuple[Any, ...]], ...] = (
         cell_t1c,
         (trigger_millis,),
     ),
+    ("MB0c-T4", "facade.trigger.error_params.answer", cell_t4, ()),
     ("MB0c-T2", "facade.trigger.client_checks.answer", cell_t2, ()),
     ("MB0c-T3", "facade.trigger.continuous.answer", cell_t3, ()),
     ("MB0c-O1", "facade.output_mode.unknown.error", cell_o1, ()),
