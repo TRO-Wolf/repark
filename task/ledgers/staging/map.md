@@ -4,6 +4,13 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [cross-join-condition-1-ledger.md](cross-join-condition-1-ledger.md) —
+  **CROSS-JOIN-CONDITION-1 (2026-10-08), from the STAMP-2-R5P6-2 hand-back:** a cross join with
+  a condition ignored it (12 rows where Spark answers 2); the H1 door now routes cross-with-condition
+  onto the inner path on both routes (C-001), `crossJoin` and `join(None, "cross")` are unmoved
+  (C-002), two self-join shapes answer as inner (C-003), shared-name and Column-list refusals are
+  kept (C-004), three mutations (C-005), neighbours unchanged (C-006), card and maps closed (C-007).
+  `risk_tier: standard`. Branch `fix/cross-join-condition-1`.
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
   under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort
