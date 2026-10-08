@@ -331,3 +331,46 @@ async fn an_expired_stamp_above_an_empty_base_refuses_the_stamp_only_door() {
     assert_eq!(reloaded.metadata().snapshots().count(), setup.snapshots);
     assert_eq!(live_ids(&reloaded).await, vec![1, 2]);
 }
+
+#[tokio::test]
+async fn an_expired_base_with_an_unrelated_append_is_refused_like_a_rollback_and_a_fresh_view_commits()
+ {
+    let (_warehouse, memory, ident) = fixture("af_expired_base").await;
+    let view = append_plain(&memory, &ident, &[1]).await;
+    let base = view.metadata().current_snapshot_id().expect("base");
+    let head = append_plain(&memory, &ident, &[2]).await;
+    let head_id = head.metadata().current_snapshot_id().expect("head");
+    let expired = expire(&memory, &ident, base).await;
+    assert!(expired.metadata().snapshot_by_id(base).is_none());
+    let snapshots = expired.metadata().snapshots().count();
+
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let guard = BatchScope::enter(TableUuid::of(&view), stamp.clone()).expect("enter");
+    let files = stage(&view, &[3]).await;
+    let error = commit_append_with_summary(&memory, &view, files, &scoped(&guard), None)
+        .await
+        .expect_err("an expired base is refused like a rollback");
+    assert_eq!(
+        microbatch_cause(&error),
+        &MicroBatchError::Catalog(format!(
+            "append fence: query {query} epoch 0 pinned base snapshot {base}, which is no longer an ancestor of main (head {head_id}); nothing can be proven about repark.cdc.query-id={query} above it",
+            query = query()
+        ))
+    );
+    assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    drop(guard);
+    let reloaded = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(reloaded.metadata().snapshots().count(), snapshots);
+    assert_eq!(stamped_snapshots(&reloaded), 0);
+    assert_eq!(live_ids(&reloaded).await, vec![1, 2]);
+
+    let guard = BatchScope::enter(TableUuid::of(&reloaded), stamp).expect("enter again");
+    let files = stage(&reloaded, &[3]).await;
+    let committed = commit_append_with_summary(&memory, &reloaded, files, &scoped(&guard), None)
+        .await
+        .expect("a retry from a freshly loaded table commits");
+    assert!(matches!(guard.outcome(), ScopeOutcome::Committed { .. }));
+    drop(guard);
+    assert_eq!(stamped_snapshots(&committed), 1);
+    assert_eq!(live_ids(&committed).await, vec![1, 2, 3]);
+}
