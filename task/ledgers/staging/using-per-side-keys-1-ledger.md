@@ -32,8 +32,11 @@ to refuse.
 | C-007 | SQL door: an unqualified `USING` key in `WHERE` answers on all six join types, aliased or not (ruling Q3). `main` refused all with `AMBIGUOUS_REFERENCE`. | Pins on six join types. | PROVEN | `unqualified_key_in_where_answers_on_six_join_types`; `test_sql_using_star_and_unqualified_key` (12 cells). M5 red. |
 | C-008 | A chained `USING` join matches on the merged key on both doors (`full`→`full`, `right`→`full`, `full`/`right`→`inner`). `main`, 1.5.2, 1.3.0 and 1.0.0 match on the left key and answer wrong rows (§8). | Value pins on both doors; mutation M4. | PROVEN | `test_chained_using_join_matches_on_the_merged_key`, `test_sql_chained_using_matches_on_the_merged_key`; Rust `chained_full_join_matches_on_the_coalesced_key`, `chained_using_joins_match_on_the_merged_key`. M1, M4 red. |
 | C-009 | Non-`USING` joins and `on=` expression joins are unchanged on both doors. | Control pins. | PROVEN | `test_on_expression_join_is_unchanged`, `test_sql_on_join_is_unchanged`, Rust `joins_without_using_are_unchanged`; the nine control cells of §2.5 are identical on `main` and head. |
-| C-010 | Mixed `INT`/`STRING` keys keep the left key's type (`INT`); `r.id` answers the right side's strings. Spark answers `STRING` on `right` and `BIGINT` on `full`. | A declared-divergence pin and registry row. | PROVEN | `test_mixed_type_using_keeps_the_left_key_type`; Rust `mixed_type_keys_keep_the_left_key_type`; registry row `USING-MIXED-KEY-TYPE-1`. |
+| C-010 | Mixed-type keys (fold 1, replacing the 2026-10-07 "keeps the left type"): the shown key is the right key in its own type on `right` and, on `full`, the `coalesce` of both sides in Spark's common type for the measured pairs; 48 `right`/`full` cells equal Spark's type and value. A pair without a rule shows the left key as before; no value is truncated. `r.id` answers the right side's own values. | A pin per measured cell; registry row; mutation N4. | PROVEN | `test_mixed_key_shows_sparks_type_and_value` (48), `test_mixed_type_using_shows_sparks_key_type`; Rust `spark_key_type_follows_the_measured_pairs`, `mixed_type_keys_show_the_right_key_on_right_and_the_common_type_on_full`; registry row `USING-MIXED-KEY-TYPE-1`; §13. |
 | C-011 | The unit has had its Critic pass and the coverage attestation is filed. | The `COVERAGE_ATTESTATION` block. | OPEN | Not run: this ledger was written by the builder. The Critic round closes it. |
+| C-012 | Never worse than `main` (fold 1): each of 182 SQL statements (32 without `USING`, 150 with `USING` or `NATURAL`) answers as Spark's recording or as `main`'s recording, column order aside, never a third thing; the 32 without `USING` answer exactly as `main`. On the 1,090-cell grid no cell that matched Spark on `main` differs on head. | The differential pin; the grid re-measured; mutation N3. | PROVEN | `test_using_per_side_keys_1_differential.py` (182 + 32 + 1); §13. |
+| C-013 | The verifier's SQL-door S1 and S2 repros hold: a lambda parameter named like the key shadows it on every join type; `SELECT DISTINCT id … ORDER BY id` plans; `ORDER BY l.id, t` with `t` outside the select list answers; output names stay `id, v, v` when both sides share a non-key name; a key spelled in another case follows `spark.sql.caseSensitive` in star, select list, `WHERE` and `ORDER BY`; `EXPLAIN` shows the plan that runs; helper names avoid user columns. | A pin per repro on both the Rust and the facade side; mutations M7, V4, N1, N2. | PROVEN | `column_resolution/using_keys_tests.rs` (18); `test_using_per_side_keys_1_sql.py` fold-1 tests; §13. |
+| C-014 | The verifier's DataFrame-door S2 and S3 repros hold: a second side-key operation after a side-key filter or sort answers; side keys answer the same before and after `cache`, `persist` and `localCheckpoint`, and hidden keys still reach no output, pandas frame or file; a user column with the reserved prefix cannot be mistaken for a hidden key; a stale right key in `sort` over `semi`/`anti` refuses as Spark and v1.5.2 do. | A pin per repro; mutation V2. | PROVEN | `test_using_per_side_keys_1_df.py`; Rust `a_second_side_key_is_reachable_after_a_narrowed_filter`, `a_user_column_named_like_the_alias_keeps_the_key_unexposed`; §13. |
 
 ## 1. Step 0 — how the grid was measured
 
@@ -731,3 +734,113 @@ The DataFrame door keeps §7's design. Its fold items: the shown key of a mixed-
 Spark's type (the right key's on `RIGHT`, the measured common type on `FULL`); the reach
 survives a filter or sort on a side key and a `cache()` or `localCheckpoint()`; the hidden
 alias cannot collide with a user column.
+
+## 13. Fold 1 as built (2026-10-08)
+
+**SQL door.** `column_resolution/using_marks.rs` (the statement side: `names_using`,
+`mark_explicit`, `qualify_keys`) and `column_resolution/using_keys.rs` (the plan pass,
+`merge_using_keys`). §7's statement rewrite, its `REPLACE` star and its `ORDER BY` wrapper are
+deleted. Three things differ from §12's sketch, each found by a pin:
+
+- *`ORDER BY` loses the marker.* DataFusion rebinds an `ORDER BY` reference that equals a select
+  expression to the projection's output and builds a new column without the span. Compound
+  identifiers under `ORDER BY` are therefore also wrapped in a doubled one-argument `coalesce`
+  before planning, and the plan pass unwraps them first. The wrap is semantically the
+  identity, is planned only in the attempt with spans, and a failure there falls back to
+  planning the untouched statement.
+- *A qualified star and a grouped select lose it too.* `l.*` expands to columns with no span,
+  and a `GROUP BY` rebases select and `HAVING` references onto the aggregate's output. A
+  statement whose `USING` select has a qualified star, or is grouped and names a side key in
+  its select list, `HAVING` or `ORDER BY`, is not merged at all and keeps `main`'s plan. Found
+  by the grid (four `sql · … · select · l.*` cells regressed in a first run) and by a probe of
+  `GROUP BY id HAVING l.id > 1`; both are now corpus statements.
+- *An unaliased relation is qualified by its whole name* when the unqualified key is qualified
+  after `main` refuses, so `sc.a.t JOIN sc.b.t USING (id) WHERE id > 2` cannot pick the wrong
+  `t`.
+
+**The allow-list predicate, where one is used.** `qualify_keys` runs only after `main`'s own
+planning has refused, and only for a select whose `FROM` is one relation followed by
+`INNER`/`LEFT`/`RIGHT`/`FULL` `USING` joins that all name the key. Both sides are pinned:
+`lambda_parameters_shadow_the_key` and `qualification_keeps_to_plain_using_chains`.
+
+**DataFrame door.**
+
+- *Mixed-type keys.* Spark's rule, measured on 14 pairs in both orders on four join types
+  (`using-per-side-keys-1-probes/mixed.py`, 112 cells): `inner`/`left` show the left key,
+  `right` shows the right key in its own type, `full` shows the `coalesce` in the common type.
+  `shown_key` no longer casts on `right`; `full_key` casts both sides to `spark_key_type` and
+  is shared with the SQL pass. 48 `right`/`full` cells equal Spark. A pair with no rule shows
+  the left key, as `main` does.
+- *Reach.* A projection that carries every non-hidden input column is pass-through for
+  exposure, so the narrowing projection a side-key filter or sort leaves, and a cached scan,
+  do not end the reach. `cache()` and `localCheckpoint()` materialise the frame with its
+  reachable hidden keys and bind a projection that hides them; the cache holds one or two
+  extra key columns for such a frame and nothing else changes.
+- *Collision.* A join whose schema already has a column starting with `__repark_using__` has
+  no hidden keys, so a user column can never be read as one; the SQL helper is numbered past
+  every name in the projection and its input.
+- *`semi`/`anti`.* `_bound_refs` runs the unemitted-attribute refusal that `filter` already
+  ran, so a stale right key in `sort` refuses with `MISSING_ATTRIBUTES`. Three builds: Spark
+  4.1.2 refuses, repark 1.5.2 refuses, `main` `3fbcb2ca` answers the left rows; head refuses.
+
+**The verifier's findings.**
+
+| # | Finding | Now |
+|---|---|---|
+| S1 | Lambda parameter named like the key | fixed: the statement is not rewritten; `[11, 21]` on six join types |
+| S1 | `SELECT DISTINCT id … ORDER BY id` fails to plan | fixed |
+| S1 | `ORDER BY l.id, t` with `t` outside the select list refuses | fixed |
+| S1 | `v:1` leaks from the wrapper | fixed: there is no wrapper; names and schema are `id, v, v` |
+| S1 | Mixed-type keys show a lossy cast | fixed: Spark's type and value on 48 cells |
+| S1 | A key in another case: star and `WHERE` disagree | fixed under both `caseSensitive` settings |
+| S2 | A second side-key operation refuses | fixed |
+| S2 | `cache()` / `localCheckpoint()` change the answer | fixed: the reach survives |
+| S2 | `EXPLAIN` not rewritten | fixed: it shows the merged plan and answers where the statement does |
+| S2 | Shapes inside the registry row's wording | a later `ON` join, `NATURAL` star, a derived side, a new-key chain, three-part names and `SELECT id` over a three-way chain or a `NATURAL` join now answer as Spark; four-way star and case-twin sides refuse as on `main`; the row is reworded |
+| S2 | `semi`/`anti` stale right key in `sort` | fixed (refuses as Spark and 1.5.2) |
+| S3 | Helper names can collide | fixed on both doors |
+| S3 | Wheel older than the sources; facade pins not mutated | the facade evidence below is from a wheel built at the committed sources; mutations ran against both pin sets |
+
+**Results.** Wheel built from the committed sources (`find crates -name '*.rs' -newer …_native.abi3.so`
+prints nothing).
+
+- Differential pin: 182 statements, each equal to Spark's or `main`'s recording; the 32
+  without `USING` equal `main` exactly.
+- Grid, 1,090 cells: 902 match Spark (679 on `main`, 885 before the fold), 223 moved to Spark's
+  answer, **0 regressed against `main`**; 243 cells differ from `main`. `grid-head.json` is
+  re-recorded.
+- Cost, the verifier's `cost.py`, best of two runs of seven rounds, head over `main`: `select`
+  0.992, `filter` 1.007, `filter_sql` 0.992, `sort` 1.000, `SELECT 1` 0.986, an `ON`-join
+  statement 1.007, `select` over an `ON` join 1.001. A statement without `USING` pays one AST
+  walk that finds no `USING`.
+- A statement with `USING` or `NATURAL` is planned once, with spans on. It is planned a second
+  time only when that attempt fails, and a third only when `main`'s planning refuses too.
+
+**Mutations (fold 1).** Each is one edit, run against the 32 Rust pins
+(`cargo test -p repark-core --lib using_keys`) and, on a wheel built from the mutated source,
+against the four facade pin files.
+
+| # | Mutation | Rust pins red | Facade pins red | Among the red pins |
+|---|---|---|---|---|
+| M1 | remove the coalesce: the DataFrame door shows the left key on full | 9 of 32 | 37 of 370 | `test_a_second_side_key_operation_keeps_the_reach`, `test_a_user_column_with_the_reserved_prefix_refuses_side_keys` |
+| M2 | drop a hidden field: join_hidden does not record the right key | 5 of 32 | 29 of 370 | `test_a_second_side_key_operation_keeps_the_reach`, `test_hidden_keys_never_reach_columns_schema_or_exports` |
+| M3 | leak a hidden field: the right key stays in the merge projection | 12 of 32 | 55 of 370 | `test_a_second_side_key_operation_keeps_the_reach`, `test_a_user_column_with_the_reserved_prefix_refuses_side_keys` |
+| M4 | SQL: a chained USING join keeps the planner's key | 2 of 32 | 6 of 370 | `test_every_statement_answers_as_spark_or_as_main`, `test_sql_chained_using_matches_on_the_merged_key` |
+| M5 | SQL: the unqualified key in WHERE is not qualified after main refuses | 7 of 32 | 15 of 370 | `test_sql_explain_shows_the_plan_that_runs`, `test_sql_key_case_follows_the_session` |
+| M6 | the shown key pairs with both sides on every emitting join | 1 of 32 | 1 of 370 | `test_outer_using_qualified_stars_carry_the_side_key` |
+| M7 | SQL: ORDER BY l.id is not carried below the sort | 4 of 32 | 15 of 370 | `test_every_statement_answers_as_spark_or_as_main`, `test_sql_distinct_and_order_by_outside_the_select_list` |
+| V1 | SQL: RIGHT JOIN USING treated as left-keyed | 9 of 32 | 12 of 370 | `test_every_statement_answers_as_spark_or_as_main`, `test_sql_chained_using_matches_on_the_merged_key` |
+| V2 | narrowed_frame does not project back | 0 of 32 | 17 of 370 | `test_a_second_side_key_operation_keeps_the_reach`, `test_hidden_keys_never_reach_columns_schema_or_exports` |
+| V3 | the DataFrame door shows the left key on right joins | 6 of 32 | 36 of 370 | `test_a_second_side_key_operation_keeps_the_reach`, `test_chained_using_join_matches_on_the_merged_key` |
+| V4 | SQL: key matching is always case-sensitive | 3 of 32 | 1 of 370 | `test_sql_key_case_follows_the_session` |
+| N1 | SQL: a lambda parameter does not shadow the key | 2 of 32 | 4 of 370 | `test_sql_lambda_parameters_shadow_the_key` |
+| N2 | SQL: no reference counts as explicit (every side key reads the merged key) | 5 of 32 | 28 of 370 | `test_every_statement_answers_as_spark_or_as_main`, `test_sql_distinct_and_order_by_outside_the_select_list` |
+| N3 | SQL: the bail flag is ignored | 0 of 32 | 2 of 370 | `test_every_statement_answers_as_spark_or_as_main` |
+| N4 | the mixed-type full key keeps the left type (no common type) | 2 of 32 | 1 of 370 | `test_mixed_type_using_shows_sparks_key_type` |
+
+M1 to M7 are round 2's mutations re-cut for the new code; V1 to V4 are the verifier's four that
+had not run; N1 to N4 are new. Every mutation turns facade pins red. V2 edits the binding crate,
+which the `repark-core` pins do not build, and N3 (ignoring the bail flag) is caught only by the
+differential pin: `GROUP BY`/`HAVING` shapes that would otherwise answer a third thing. After
+each batch the sources were restored, the wheel rebuilt, and both pin sets ran green (32 and
+370).

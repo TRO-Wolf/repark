@@ -13,13 +13,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
   **Fold SM-2d (2026-10-07):** C-071 rewritten to the nearest-visible sourced-twin rule.
 - [using-per-side-keys-1-ledger.md](using-per-side-keys-1-ledger.md) —
-  **USING-PER-SIDE-KEYS-1 (2026-10-07/08), built, awaiting the Critic:** the acceptance grid for
-  the coalesced `USING` key and per-side key references, 1,090 cells on Spark 4.1.2, `main`
-  `3fbcb2ca` and the head (C-001); both doors show the merged key on `right`/`full` (C-002,
-  C-006) and answer per-side keys (C-003) with hidden keys never in the output schema (C-004);
-  chained `USING` joins match on the merged key, wrong since 1.0.0 (C-008); the SQL `WHERE`
-  refusal is gone (C-007); controls and the mixed-key divergence are pinned (C-009, C-010).
-  206 cells moved to Spark's answer, none regressed. C-011 (the Critic pass) is `OPEN`.
+  **USING-PER-SIDE-KEYS-1 (2026-10-07/08), built, fold 1 applied, awaiting the Critic:** the
+  acceptance grid for the coalesced `USING` key and per-side key references, 1,090 cells on
+  Spark 4.1.2, `main` `3fbcb2ca` and the head (C-001); both doors show the merged key on
+  `right`/`full` (C-002, C-006) and answer per-side keys (C-003) with hidden keys never in the
+  output schema (C-004); chained `USING` joins match on the merged key, wrong since 1.0.0
+  (C-008); the SQL `WHERE` refusal is gone (C-007). Fold 1 (the verifier's FAIL at `61851c95`)
+  moves the SQL door from a statement rewrite to the plan and holds "never worse than `main`"
+  with a 182-statement differential pin (C-012, C-013); mixed-type keys take Spark's type
+  (C-010); the DataFrame-door reach survives side-key filters, sorts and caching (C-014). 902
+  grid cells match Spark, 223 moved, none regressed. C-011 (the Critic pass) is `OPEN`.
   `risk_tier: high`. Branch `fix/using-per-side-keys-1`. Evidence in
   [using-per-side-keys-1-probes/](using-per-side-keys-1-probes/map.md).
 - [foreach-wrap-1-ledger.md](foreach-wrap-1-ledger.md) —

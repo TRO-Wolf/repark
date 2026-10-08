@@ -39,13 +39,20 @@ On the SQL door `WHERE id > 2` over a `USING` join answers on every join type; i
 
 ## Known limits
 
-- A per-side key is reachable on the joined frame and after a `filter` or `sort` of it. After a
-  narrowing `select`, an `.alias`, in `groupBy` / `withColumn`, or written with backticks in a text
-  predicate it refuses with the same message as v1.5.3; Spark answers past a `select`.
-- Mixed `INT` / `STRING` keys keep the left key's type; Spark shows `STRING` on `right` and
-  `BIGINT` on `full`.
-- On the SQL door, a `USING` join followed by an `ON` join in the same `FROM`, a `NATURAL` join,
-  and `SELECT *, r.id` keep the left key in the star; `SELECT id, l.id, r.id` refuses.
+- A per-side key is reachable on the joined frame, after any chain of `filter` and `sort` over
+  it, and after `cache()`, `persist()` or `localCheckpoint()`. After a narrowing `select`, an
+  `.alias`, in `groupBy` / `withColumn`, or written with backticks in a text predicate it refuses
+  with the same message as v1.5.3; Spark answers past a `select`.
+- A key whose two sides have different types shows the right key's type on `right` and Spark's
+  common type on `full` for the measured pairs (integers, decimals, floats, an integer or a
+  double with a string, a date with a timestamp). A pair outside that list shows the left key
+  on `full`, as before.
+- On the SQL door a few shapes keep the previous answer: a select list with `l.*` or `r.*`, a
+  grouped select that names a side key, `SELECT *` over four or more `USING`-chained relations
+  (refuses), and `SELECT id, l.id, r.id` (refuses). The key keeps its position in the left
+  relation; Spark moves it to the front.
+- A stale right-side key in `sort` after a `left_semi` / `left_anti` join now refuses with
+  `MISSING_ATTRIBUTES`, as Spark and v1.5.2 do; v1.5.3 answered the left rows.
 
-The three limits are registry rows `USING-SIDE-KEY-REACH-1`, `USING-MIXED-KEY-TYPE-1` and
+The limits are registry rows `USING-SIDE-KEY-REACH-1`, `USING-MIXED-KEY-TYPE-1` and
 `USING-SQL-STAR-SHAPES-1` in [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md).
