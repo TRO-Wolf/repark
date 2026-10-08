@@ -13,6 +13,7 @@ Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md). Th
 the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3/C-009
 Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
 Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
+Fold 2's gates (2026-10-08) likewise. pins: mb-3/C-029
 
 ## Contents
 

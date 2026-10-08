@@ -28,7 +28,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-015), two queries on one sink (C-016), the trigger schedule (C-017) and the S3s (C-018);
   the catalog timeout stays open (C-010). **Round 2 (2026-10-08):** the typed panic and
   timeout variants (C-020), the session's drop as a signal with no poll (C-021), the catalog
-  timeout built and C-010 closed, and the fresh sink load per batch (C-022).
+  timeout built and C-010 closed, and the fresh sink load per batch (C-022). **Fold 2
+  (2026-10-08):** the re-verify's findings, a stop from inside a body (C-024), the timeout on
+  the catalog load only (C-025), the unstamped check (C-026), the unpinned branches (C-027)
+  and the session watch (C-028).
   `risk_tier: standard`.
   Branch `feat/mb-3-driver`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
