@@ -425,6 +425,102 @@ fn door_spec(door: &str, body: &Arc<Probe>, trigger: Trigger) -> StreamSpec {
     }
 }
 
+#[tokio::test]
+async fn a_second_query_on_an_active_sink_is_refused_at_start() {
+    for door in ["foreachBatch", "toTable"] {
+        let fixture = Fixture::new().await;
+        fixture.insert(SOURCE, "(1)").await;
+        let manager = StreamingQueryManager::of(&fixture.session);
+        let body = Probe::new(Mode::Record);
+        let running = Trigger::ProcessingTime(Duration::ZERO);
+        let first = started(&fixture, named(door_spec(door, &body, running), "a")).await;
+        let late = Probe::new(Mode::Record);
+        let second = manager
+            .register(
+                &fixture.session,
+                named(door_spec(door, &late, Trigger::AvailableNow), "b"),
+            )
+            .await
+            .expect("register");
+        assert_eq!(
+            second.start_below_catalog_check(),
+            Err(MicroBatchError::SinkBusy {
+                sink: SINK.to_string()
+            }),
+            "{door}"
+        );
+        assert_eq!(second.state(), QueryState::Registered);
+        assert_eq!(late.calls(), 0);
+        wait_for_epoch(&first, 0).await;
+        assert!(first.is_active(), "{door}");
+        assert!(matches!(
+            first.stop().await,
+            ShutdownOutcome::Stopped { .. }
+        ));
+        second
+            .start_below_catalog_check()
+            .expect("the sink is free again");
+        assert_eq!(ended(&second).await, Ok(true), "{door}");
+        assert_eq!(
+            second.durable().map(|record| record.epoch.get()),
+            Some(0),
+            "{door}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn two_sessions_on_one_sink_wait_for_the_scope() {
+    for door in ["foreachBatch", "toTable"] {
+        let fixture = Fixture::new().await;
+        for value in 1..=6 {
+            fixture.insert(SOURCE, &format!("({value})")).await;
+        }
+        let shared = fixture
+            .session
+            .catalogs_snapshot()
+            .get("ice")
+            .cloned()
+            .expect("the memory catalog");
+        let other = Session::builder().build().expect("a second session");
+        other
+            .register_iceberg_catalog("ice", shared)
+            .await
+            .expect("the shared catalog registers");
+        let pause = Duration::from_millis(30);
+        let (left, right) = (
+            Probe::new(Mode::Sleep(pause)),
+            Probe::new(Mode::Sleep(pause)),
+        );
+        let a = started(
+            &fixture,
+            named(door_spec(door, &left, Trigger::AvailableNow), "a"),
+        )
+        .await;
+        let b = StreamingQueryManager::of(&other)
+            .register(
+                &other,
+                named(door_spec(door, &right, Trigger::AvailableNow), "b"),
+            )
+            .await
+            .expect("register");
+        b.start_below_catalog_check().expect("start");
+        assert_eq!(ended(&a).await, Ok(true), "{door}");
+        assert_eq!(ended(&b).await, Ok(true), "{door}");
+        assert_eq!(a.durable().map(|record| record.epoch.get()), Some(5));
+        assert_eq!(b.durable().map(|record| record.epoch.get()), Some(5));
+        if door == "foreachBatch" {
+            assert_eq!(left.calls(), 6);
+            assert_eq!(right.calls(), 6);
+        } else {
+            assert_eq!(
+                fixture.ids(SINK).await,
+                [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]
+            );
+        }
+    }
+}
+
 fn wall_millis() -> u64 {
     let since = SystemTime::now()
         .duration_since(UNIX_EPOCH)

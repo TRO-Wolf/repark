@@ -3543,6 +3543,23 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   appends ahead of it first, so the refusal lands one batch later and no appended row is held
   back behind a snapshot the stream refuses anyway. Under `availableNow` and `Once` the two
   agree (MB0b-R17): both refuse before batch 0.
+### MB-3-SINK-BUSY-1 — a second streaming query on a sink that already has an active query in the session refuses at start; Spark runs both
+- **repark** — one active query per sink per session. `start` refuses the second query with
+  `SinkBusy` (`sink <table> already has an active batch; one batch per sink at a time`, MBE-13)
+  before anything runs, on both doors; the first query is not disturbed, and the refused query
+  stays registered and starts once the first one ends. Two sessions in one process can still
+  target one sink, because `start` sees only its own session: there each batch waits for the
+  sink's `BatchScope` up to `repark.cdc.catalog-timeout` (60 s) and then runs, so both queries
+  drain and neither fails on an overlap.
+- **Apache Spark** — lets two streaming queries with different checkpoints append to one
+  Iceberg table; each commits its own snapshots. *(oracle: documented behavior; no MB-0 cell
+  runs two queries on one sink.)*
+- **Pin** — `crates/repark-core/src/microbatch/lifecycle_tests.rs::a_second_query_on_an_active_sink_is_refused_at_start`,
+  `::two_sessions_on_one_sink_wait_for_the_scope`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F6). A process holds at most one
+  `BatchScope` per sink (sketch §0 line 5), because the scope is what ties a sink commit to
+  its batch stamp. Before this row the second query died `Failed` at whichever batch
+  overlapped the first; the refusal now lands at start, where the caller can act on it.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.

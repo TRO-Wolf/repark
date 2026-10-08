@@ -26,6 +26,8 @@ use crate::time_travel::microbatch_source::{MicroBatchSource, SourceOptions};
 
 pub const DEFAULT_POLLING_DELAY: Duration = Duration::from_millis(10);
 
+pub const DEFAULT_CATALOG_TIMEOUT: Duration = Duration::from_mins(1);
+
 const SESSION_WATCH: Duration = Duration::from_millis(100);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -173,6 +175,7 @@ pub struct StreamSpec {
     pub checkpoint_location: Option<RecordedLocation>,
     pub stop_timeout: Option<Duration>,
     pub polling_delay: Duration,
+    pub catalog_timeout: Duration,
     pub recent_progress_limit: usize,
 }
 
@@ -189,6 +192,7 @@ impl StreamSpec {
             checkpoint_location: None,
             stop_timeout: None,
             polling_delay: DEFAULT_POLLING_DELAY,
+            catalog_timeout: DEFAULT_CATALOG_TIMEOUT,
             recent_progress_limit: DEFAULT_RECENT_PROGRESS,
         }
     }
@@ -291,7 +295,8 @@ impl StreamingQueryManager {
         }
         let sink = TableTarget::resolve(session, spec.sink.sink())?;
         let table = sink.load().await?;
-        let id = QueryId::derive(TableUuid::of(&table), spec.query_name.as_deref());
+        let sink_uuid = TableUuid::of(&table);
+        let id = QueryId::derive(sink_uuid, spec.query_name.as_deref());
         let source = MicroBatchSource::open(session, &spec.source, spec.source_options).await?;
         let door = match spec.sink {
             SinkSpec::Table { .. } => Door::Table,
@@ -306,9 +311,11 @@ impl StreamingQueryManager {
                 run_id: RunId::fresh(),
                 name: spec.query_name,
                 sink,
+                sink_uuid,
                 trigger: spec.trigger,
                 stop_timeout: spec.stop_timeout.filter(|limit| !limit.is_zero()),
                 polling_delay: spec.polling_delay,
+                catalog_timeout: spec.catalog_timeout,
                 checkpoint_location: spec.checkpoint_location,
                 manager: Arc::downgrade(self),
                 session: Arc::downgrade(&session.catalogs),
@@ -362,6 +369,14 @@ impl StreamingQueryManager {
                 id = query.id()
             )));
         }
+        if registry
+            .iter()
+            .any(|entry| entry.shared.sink_uuid == query.shared.sink_uuid)
+        {
+            return Err(MicroBatchError::SinkBusy {
+                sink: query.shared.sink.name.clone(),
+            });
+        }
         registry.push(query.clone());
         Ok(())
     }
@@ -390,9 +405,11 @@ pub(crate) struct QueryShared {
     pub(crate) run_id: RunId,
     pub(crate) name: Option<String>,
     pub(crate) sink: TableTarget,
+    sink_uuid: TableUuid,
     pub(crate) trigger: Trigger,
     stop_timeout: Option<Duration>,
     pub(crate) polling_delay: Duration,
+    pub(crate) catalog_timeout: Duration,
     checkpoint_location: Option<RecordedLocation>,
     manager: Weak<StreamingQueryManager>,
     session: Weak<RwLock<CatalogRegistry>>,

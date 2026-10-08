@@ -52,6 +52,10 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
     `QueryShared::panicked` turns the payload into `BatchFailed { epoch, cause }` with the
     in-flight epoch, or the next one when the panic came before a batch began. The outcome,
     the done signal and the freed query id then follow the body-error path. pins: mb-3/C-011
+  - *One active query per sink per session.* `admit` refuses `SinkBusy` at start when an
+    active query of this session already targets the sink's table uuid (registry row
+    `MB-3-SINK-BUSY-1`); the refused query keeps its work and can start later.
+    pins: mb-3/C-016
   - *The session's end stops its queries.* An explicit session stop is
     `StreamingQueryManager::stop_all`, which stops each active query and waits for it as
     `stop` does. A session dropped without a stop is seen through a `Weak` to the session's
@@ -63,6 +67,8 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
     with it the manager alive for as long as the task runs, so the manager's `Drop` cannot
     fire first; `session.rs` is not edited (ledger D-11). A handle the caller still holds
     keeps the sink's catalog handle until it is dropped. pins: mb-3/C-013
+  - `StreamSpec` gains `catalog_timeout` (`DEFAULT_CATALOG_TIMEOUT`, 60 s), today the bound on
+    the scope wait only (ledger C-010 stays open for the per-call bound).
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and
@@ -76,6 +82,13 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
   unknown commit outcome goes to `resolve_unknown_outcome`. The `foreachBatch` door runs the body on
   the user's session without the token, then stamps once through `commit_stamp_only` (ledger D-2).
   pins: mb-3/C-004, C-005
+  **Fold 1 (2026-10-07):**
+  - *The scope wait.* `enter_scope` loads the sink and enters the `BatchScope`; when another
+    query in the process holds the sink's scope (two sessions on one sink), it waits
+    `pollingDelay`, reloads the sink and tries again, up to `catalog_timeout`, and only then
+    fails `SinkBusy`. The sink is loaded again after each wait because the other query's
+    commit moved it, and the resume-point check runs after the scope is held. A stop or a
+    dropped session ends the wait with no batch run. pins: mb-3/C-016
 - `progress.rs` — the `StreamingQuery` progress surface (sketch §3.6, MB0-T3):
   `StreamingQueryProgress`, `DurationMs`, `SourceProgress`, `SinkProgress`, `QueryStatus` and
   `StatusMessage`, serialised with T3's camelCase names, and the crate-private `ProgressLog` (the

@@ -116,7 +116,9 @@ impl Run {
                 let start_offset = self.shared.durable().map(|_| batch.start.clone());
                 let end_offset = Some(batch.end.clone());
                 let num_input_rows = batch.num_input_rows;
-                let done = self.run_batch(&mut cursor, batch).await?;
+                let Some(done) = self.run_batch(&mut cursor, batch).await? else {
+                    return Ok(Ending::Stopped);
+                };
                 TriggerReport {
                     executed: true,
                     epoch,
@@ -178,6 +180,26 @@ impl Run {
             () = tokio::time::sleep_until(deadline) => Wake::Tick,
             _ = stop.wait_for(|stopped| *stopped) => Wake::Stop,
             () = self.shared.session_dropped() => Wake::Stop,
+        }
+    }
+
+    async fn enter_scope(
+        &self,
+        stamp: &CommitStamp,
+    ) -> Result<Option<(Table, BatchScopeGuard)>, MicroBatchError> {
+        let deadline = Instant::now() + self.shared.catalog_timeout;
+        loop {
+            let sink = self.shared.sink.load().await?;
+            match BatchScope::enter(TableUuid::of(&sink), stamp.clone()) {
+                Ok(guard) => return Ok(Some((sink, guard))),
+                Err(MicroBatchError::SinkBusy { .. }) if Instant::now() < deadline => {
+                    let retry = (Instant::now() + self.shared.polling_delay).min(deadline);
+                    if let Wake::Stop = self.wait_until(retry).await {
+                        return Ok(None);
+                    }
+                }
+                Err(error) => return Err(error),
+            }
         }
     }
 
@@ -250,19 +272,9 @@ impl Run {
         &self,
         cursor: &mut Cursor,
         batch: SourceBatch,
-    ) -> Result<BatchDone, MicroBatchError> {
+    ) -> Result<Option<BatchDone>, MicroBatchError> {
         let epoch = cursor.epoch;
         self.shared.begin_batch(epoch);
-        let sink = self.shared.sink.load().await?;
-        if let Some(durable) = read_resume_point(&sink, self.shared.id)?
-            && durable.epoch.get() >= epoch.get()
-        {
-            self.already_durable(cursor, &durable)?;
-            return Ok(BatchDone {
-                add_batch: Duration::ZERO,
-                num_output_rows: None,
-            });
-        }
         let record = SinkRecord {
             format: OffsetFormatVersion::CURRENT,
             query: self.shared.id,
@@ -275,11 +287,22 @@ impl Run {
             record: record.clone(),
             door: self.door.kind(),
         };
+        let Some((sink, guard)) = self.enter_scope(&stamp).await? else {
+            return Ok(None);
+        };
+        if let Some(durable) = read_resume_point(&sink, self.shared.id)?
+            && durable.epoch.get() >= epoch.get()
+        {
+            self.already_durable(cursor, &durable)?;
+            return Ok(Some(BatchDone {
+                add_batch: Duration::ZERO,
+                num_output_rows: None,
+            }));
+        }
         let frame = match &self.plan {
             Some(template) => template.bind(&batch)?,
             None => batch.frame,
         };
-        let guard = BatchScope::enter(TableUuid::of(&sink), stamp.clone())?;
         let door_started = Instant::now();
         let committed = match &self.door {
             Door::Table => self.append(&guard, &stamp, &sink, frame).await.map(Some),
@@ -298,10 +321,10 @@ impl Run {
         self.shared.end_batch(Some(record));
         cursor.epoch = epoch.next();
         cursor.from = Some(batch.end);
-        Ok(BatchDone {
+        Ok(Some(BatchDone {
             add_batch,
             num_output_rows,
-        })
+        }))
     }
 
     fn already_durable(
