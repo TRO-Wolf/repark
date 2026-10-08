@@ -953,7 +953,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   The unit's answers gate (replay corpus, suites, sort grid) and its lane-side speed
   runs are in the ledger.
   Pins: `python/repark/tests/test_stamp_2_r5p6_2.py`.
-  pins: stamp-2-r5p6-2/C-001, C-003, C-005, C-006, C-007, C-008, C-011
+  pins: stamp-2-r5p6-2/C-001, C-003, C-005, C-006, C-007, C-008, C-011, C-012
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
   unemitted-id family (`_remember_unemitted_right_ids`/`_raise_if_id_not_emitted`/
   `_raise_unemitted_attr_tokens`/`_refuse_unemitted_ids`), split out of `core.py`

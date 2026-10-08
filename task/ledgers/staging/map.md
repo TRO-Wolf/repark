@@ -1013,7 +1013,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   analysis, and reads a frame's name rule once per handle instead of building
   a `TaskContext` per bound column. The stamp is measured and left. Lane-side,
   indicative: r5p6 0.953 and the whole set 0.948 against main `3fbcb2ca`;
-  43,989 replay cells, 0 deterministic changes. `risk_tier: standard`. Branch
+  43,989 replay cells, 0 deterministic changes. Two verifier rows (2026-10-08)
+  follow the attestation: C-012 the refused-join double plan, C-013 OPEN, the
+  native door's skipped Iceberg cache trim. `risk_tier: standard`. Branch
   `perf/stamp-2-r5p6-2`.
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
   S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
