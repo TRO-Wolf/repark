@@ -51,7 +51,7 @@ pub(crate) fn with_stream_poll_no_detach<T>(body: impl FnOnce() -> T) -> T {
     body()
 }
 
-fn join_type_from_str(how: &str) -> PyResult<JoinType> {
+pub(crate) fn join_type_from_str(how: &str) -> PyResult<JoinType> {
     match how {
         "inner" => Ok(JoinType::Inner),
         "left" | "left_outer" | "leftouter" => Ok(JoinType::Left),

@@ -1005,6 +1005,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   1.1035 → 1.0717, r5p6 1.182 → 1.128. `risk_tier: standard`. Branch
   `perf/stamp-2-r5p6-1`.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [stamp-2-r5p6-2-ledger.md](stamp-2-r5p6-2-ledger.md) —
+  **STAMP-2-R5P6-2 (2026-10-07), in flight:** profiles the remaining r5p6
+  construction cost on main (the H1 join door 0.88 s, the stamp 0.30 s, binding
+  about 1.6 s over the like cells) and plans the H1 join statement without the
+  SQL planner when its references are exact, keeping the SQL door's eager
+  analysis. `risk_tier: standard`. Branch `perf/stamp-2-r5p6-2`.
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
   S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
   **PERF-UNPIVOT-1 (2026-09-12), in flight:** step 1 (#542) shipped native

@@ -2319,17 +2319,15 @@ class DataFrame:
                 )
 
             if engine_how == "cross":
-                join_sql = (
-                    f"SELECT {', '.join(proj_parts)} FROM {left_alias} CROSS JOIN {right_alias}"
-                )
+                joined = f"{left_alias} CROSS JOIN {right_alias}"
             else:
-                join_sql = (
-                    f"SELECT {', '.join(proj_parts)} FROM {left_alias} "
-                    f"{how_sql} JOIN {right_alias} ON {on_sql}"
-                )
+                joined = f"{left_alias} {how_sql} JOIN {right_alias} ON {on_sql}"
+            join_sql = f"SELECT {', '.join(proj_parts)} FROM {joined}"
+            exact_on = None if engine_how == "cross" else on_sql
+            exact = (self, other, (left_alias, right_alias), engine_how, exact_on, engine_names)
             sides = (self._plan(), None if left_only else other._plan())
             planned, node = _native.requalify_join_sides(
-                self._session.sql_built(join_sql),
+                _join_exact_or_sql(*exact, join_sql),
                 *sides,
                 self._frame_node,
                 other._frame_node,
@@ -3385,6 +3383,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _rewrite_attr_tokens_local,
     _emit_join_side_columns,
     _join_condition_args,
+    _join_exact_or_sql,
     _spark_array_element_to_sql,
     _UNTYPED_NULL_ELEMENT,
     _sql_embed_expr_fragment,

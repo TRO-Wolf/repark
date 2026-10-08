@@ -315,3 +315,64 @@ def _emit_join_side_columns(
         )
         display_names.append(display_name)
         engine_names.append(engine_out)
+
+
+def _join_exact_or_sql(
+    frame: DataFrame,
+    other: DataFrame,
+    aliases: tuple[str, str],
+    engine_how: str,
+    on_sql: str | None,
+    engine_names: list[str],
+    join_sql: str,
+) -> Any:
+    """Plan one H1 join natively when its references are exact, else through SQL."""
+    planned = _join_exact_plan(frame, other, aliases, engine_how, on_sql, engine_names)
+    if planned is None:
+        return frame._session.sql_built(join_sql)
+    return planned
+
+
+def _join_exact_plan(
+    frame: DataFrame,
+    other: DataFrame,
+    aliases: tuple[str, str],
+    engine_how: str,
+    on_sql: str | None,
+    engine_names: list[str],
+) -> Any:
+    try:
+        return _join_exact_native(frame, other, aliases, engine_how, on_sql, engine_names)
+    except Exception:
+        return None
+
+
+def _join_exact_native(
+    frame: DataFrame,
+    other: DataFrame,
+    aliases: tuple[str, str],
+    engine_how: str,
+    on_sql: str | None,
+    engine_names: list[str],
+) -> Any:
+    if on_sql is not None:
+        return None
+    left = _join_side_engines(frame)
+    width = len(left)
+    right = _join_side_engines(other) if len(engine_names) > width else []
+    return _native.join_exact_sides(
+        frame._session,
+        frame._plan(),
+        other._plan(),
+        *aliases,
+        engine_how,
+        None,
+        list(zip(left, engine_names[:width], strict=True)),
+        list(zip(right, engine_names[width:], strict=True)),
+    )
+
+
+def _join_side_engines(side_frame: DataFrame) -> list[str]:
+    if side_frame._display_names is not None and side_frame._engine_names is not None:
+        return list(side_frame._engine_names)
+    return list(side_frame.columns)

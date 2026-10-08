@@ -927,6 +927,18 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pre-measure (r5p6 1.182 → 1.128 against main `575f57ca`) are in the unit ledger.
   Pins: `python/repark/tests/test_stamp_2_r5p6_1.py`.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-005, C-006
+  **STAMP-2-R5P6-2 (2026-10-07):** `_join_exact_or_sql` is the H1 join door's route
+  switch (`core.py`'s `_join_on_condition_h1` calls it in place of `sql_built`).
+  `_join_exact_plan` asks `_native.join_exact_sides` for the join built without the SQL
+  planner and returns `None` on a miss or on any exception, and then the SQL route runs
+  unchanged, so a refusal carries the SQL route's class and text. The cross door passes no
+  condition. The scratch views are still registered on both routes: it costs 35 µs a join,
+  it moves the session's deep-view mark that later statements read, and it leaves the SQL
+  route untouched. Why: the door's `sql_built` was 0.71 s of the r5p6 like cells; the native
+  call keeps the SQL door's eager analysis and saves the text, the parse and the SQL planner
+  (0.49 ms a cross join). The attribution is in the unit ledger.
+  Pins: `python/repark/tests/test_stamp_2_r5p6_2.py`.
+  pins: stamp-2-r5p6-2/C-001, C-003, C-005, C-006
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
   unemitted-id family (`_remember_unemitted_right_ids`/`_raise_if_id_not_emitted`/
   `_raise_unemitted_attr_tokens`/`_refuse_unemitted_ids`), split out of `core.py`

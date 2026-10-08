@@ -56,6 +56,11 @@ here and is re-exported in one line.
   `ORDER BY` with Spark's `DATATYPE_MISMATCH.INVALID_ORDERING_TYPE` text, and `SELECT
   DISTINCT` over a map column with `UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE` (verifier
   V-003). A MERGE `ON` and `GROUP BY` do not pass through it (residue R-19).
+  **STAMP-2-R5P6-2 (2026-10-07):** `analyze_built_plan(state, plan)` is what the passthrough
+  does to a planned SELECT after planning, `refuse_map_ordering` then
+  `repark_functions::analyze_eagerly`, exported for the binding's native join door so a join
+  built without the SQL planner is refused and analyzed exactly as the statement would be.
+  pins: stamp-2-r5p6-2/C-002, C-005
   pins: u9-types-1/C-012
 - `replace_table.rs` — **IPI-25 (2026-09-20):** `REPLACE TABLE [AS SELECT]` is Spark's elided
   spelling of `CREATE OR REPLACE TABLE`, and the behaviour behind it already shipped (registry

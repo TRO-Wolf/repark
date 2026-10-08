@@ -9746,3 +9746,20 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   binding-equivalence check reds the second-twin pin. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011
+- [test_stamp_2_r5p6_2.py](test_stamp_2_r5p6_2.py) — **STAMP-2-R5P6-2
+  (2026-10-07):** the H1 join door's differential pins. Each shape is built twice
+  over the same side frames, once with `_join_exact_plan` spied and once with it
+  forced to miss, and the two answers must be equal: columns, dtypes, the schema
+  with nullability, rows, display and engine names, the plan's field names,
+  where each attribute id comes from (a side position or a fresh mint), the
+  id-sharing pattern, the frame's case rule and the normalized plan text. The
+  cross door takes the native route over a filtered side, a self cross, twin
+  displays, aliased sides (with a qualified select after), a map column,
+  `join` with no condition, with `how="cross"`, with no keys, and with a
+  condition under `how="cross"`. A side with a spaced field name or with case
+  twins keeps the SQL route with equal answers. A `spark.sql.caseSensitive`
+  change between the frames and the join shows on the joined frame on both
+  routes (the native join takes the session state of the join call). A raising
+  native attempt keeps the SQL route's answer. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: stamp-2-r5p6-2/C-003, C-004, C-005, C-006

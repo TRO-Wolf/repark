@@ -284,6 +284,20 @@ wrapped optimizer rule) and declares this directory.
   the column by the display at that image's position (Spark's `ambiguousAttrs`);
   `ambiguous` now maps it to indices, its verdicts unchanged. `FrameId::from_raw` reads a
   frame id back from a reference token (crate-private).
+- `join_exact.rs` — **STAMP-2-R5P6-2 (2026-10-07):** `join_exact_sides(left, right, join)`
+  builds the plan of the facade's H1 join statement,
+  `SELECT l.f AS o, …, r.g AS p FROM l <how> JOIN r [ON l.k = r.k]`, without the SQL
+  planner: each side under its scratch alias, a cross join or a `join_on` with one equality
+  in the statement's operand order, and the projection, with a bare column where source and
+  output name are equal (DataFusion's SQL planner drops that alias too). It answers `None`,
+  and the facade keeps the SQL route, unless every reference resolves by exact name: the
+  alias is the three-part home reference, every field and output name is a plain identifier,
+  no two fields of a side are equal under ASCII case folding, and each source and key is held
+  exactly once. Key types carry no guard, because the binding runs the SQL door's own
+  analysis on the result and coercion happens there. It leaves through `frame_names` as
+  `ExactJoin`, `ExactKeys` and `join_exact_sides`. Pins: the binding's
+  `crates/repark-python/src/join_exact_tests.rs` (plan equality against `sql_built`).
+  pins: stamp-2-r5p6-2/C-002, C-004
 - `predicate_names.rs` — **CASESENS-2 port (2026-10-03):** the join-condition
   half of #881's `predicate_names.rs` (folds `15a7bb9d`, `b89a7d7f`, `3ac80920`),
   re-pointed at `attr_id::resolve`. `bind_condition_qualifiers(condition, left,
