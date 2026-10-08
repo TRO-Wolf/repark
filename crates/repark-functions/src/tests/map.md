@@ -48,6 +48,9 @@ Only tests; `mod.rs` is the module manifest.
   `a_zone_without_a_transition_in_2099_reads_the_table_end` pins Casablanca and
   El_Aaiun at 2112-09-11 12:34:56 UTC to 13:34:56 (string cast and hour). The
   facade grid keeps its six zones: the two zones are pinned in Rust only.
+  **Fold 1 Item C (2026-10-08):**
+  `unix_timestamp_of_an_overlap_answers_the_earlier_offset` pins a New York
+  overlap wall and its post-2099 twin to the earlier offset.
 
 ## Pointers
 

@@ -436,3 +436,15 @@ async fn a_zone_without_a_transition_in_2099_reads_the_table_end() {
         );
     }
 }
+
+#[tokio::test]
+async fn unix_timestamp_of_an_overlap_answers_the_earlier_offset() {
+    let ctx = context(NEW_YORK);
+    for (wall, expected) in [
+        ("2024-11-03 01:30:00", "1730611800"),
+        ("2100-11-07 01:30:00", "4129248600"),
+    ] {
+        let sql = format!("SELECT unix_timestamp('{wall}')");
+        assert_eq!(row(&ctx, &sql).await, vec![expected.to_string()], "{wall}");
+    }
+}
