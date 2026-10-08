@@ -2293,6 +2293,7 @@ class DataFrame:
             display_counts: dict[str, int] = {}
             for name in all_display:
                 display_counts[name] = display_counts.get(name, 0) + 1
+            from repark.spark.dataframe.join_attr_tokens import _join_exact_or_sql
 
             proj_parts: list[str] = []
             display_names: list[str] = []
@@ -3383,7 +3384,6 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _rewrite_attr_tokens_local,
     _emit_join_side_columns,
     _join_condition_args,
-    _join_exact_or_sql,
     _spark_array_element_to_sql,
     _UNTYPED_NULL_ELEMENT,
     _sql_embed_expr_fragment,
