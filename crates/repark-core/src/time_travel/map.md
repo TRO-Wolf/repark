@@ -121,6 +121,9 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
 (`offsets_at_wall`, the earlier instant in an overlap as before; `offset_at_instant`), so a
 bound after 2099 is placed and printed at the final rule. `tests.rs` pins both directions at
 2099 and 2100. pins: zone-horizon-render-1/C-011
+**Fold 1 Item A (2026-10-08):** `zoned_wall_to_ms` is the shared
+`wall_to_millis_earlier`, whose tabulated branch is main's `from_local_datetime`
+with `first.min(second)` in an overlap.
 
 ## Pointers
 

@@ -274,6 +274,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   messages), the micros-to-wall/zone conversions, and the option-key helpers.
   Child: [`text_write_format/`](text_write_format/map.md).
   pins: text-write-timestamp-zone-1/C-004
+  **ZONE-HORIZON-RENDER-1 fold 1 Item A (2026-10-08):** `micros_to_wall_zone` is
+  the shared `micros_to_wall_and_offset`, whose tabulated branch is main's
+  `with_timezone` expression.
   **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** Java quote-run
   scan, `y` runs past 6 refused, and the trailing-`]` class (RECOGNITION for
   LTZ/DATE when every letter is a legacy `SimpleDateFormat` letter, measured

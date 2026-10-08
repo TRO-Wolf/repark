@@ -1457,6 +1457,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the offset) and `text_partition.rs::timestamp_partition_text` (`wall_at_instant`). Each
   carries one pin at 2099 and 2100 in its own test module.
   pins: zone-horizon-render-1/C-011
+  **Fold 1 Item A (2026-10-08):** `writer_wall_to_utc` is the shared
+  `wall_to_micros_earlier` (tabulated: main's `from_local_datetime`);
+  `parse_timestamp_micros_zone` restores `zoned_wall_micros` and runs main's
+  expression at or before 2099, the helper only after.
 
 ## Pointers
 

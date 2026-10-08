@@ -81,6 +81,11 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `partition_discovery.rs`, `orc_scan.rs` (the writer zone), `time_travel/sql_text.rs` and
   `session/zone_localiser.rs`. No call site holds a copy of the rule. Tests:
   [zone_horizon/map.md](zone_horizon/map.md). pins: zone-horizon-render-1/C-003
+  **ZONE-HORIZON-RENDER-1 fold 1 Item A (2026-10-08):** four helpers whose tabulated
+  branch (a year at or before 2099) is the chrono-tz call the site held on main and
+  whose later branch is the proxy: `wall_to_unix_seconds`, `wall_to_micros_earlier`
+  (`from_local_datetime`, the earlier offset in an overlap), `wall_to_millis_earlier`
+  (the earlier instant) and `micros_to_wall_and_offset` (`with_timezone`).
 
 - `source.rs` — **C-1 (2026-10-05), the CC-2 identity move:** `SourceKind`
   (`Postgres`, `SqlServer`, `Trino`; `from_spelling` / `spelling` over the exact loader

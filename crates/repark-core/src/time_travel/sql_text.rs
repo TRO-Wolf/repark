@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
 use arrow::array::timezone::Tz;
-use chrono::{DateTime, FixedOffset, LocalResult, NaiveDateTime, TimeZone};
+use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::tokenizer::Token;
-use repark_common::zone_horizon::{offset_at_instant, offsets_at_wall};
+use repark_common::zone_horizon::{offset_at_instant, wall_to_millis_earlier};
 
 use crate::SessionTimeZone;
 
@@ -183,20 +183,7 @@ fn has_interval_unit_tail(tokens: &[Token]) -> bool {
 
 pub(crate) fn zoned_wall_to_ms(naive: NaiveDateTime, zone: &SessionTimeZone) -> Option<i64> {
     if let Ok(named) = Tz::from_str(zone.id()) {
-        let offset = match offsets_at_wall(&named, &naive) {
-            LocalResult::Single(current) => current,
-            LocalResult::Ambiguous(first, second) => {
-                if first.local_minus_utc() >= second.local_minus_utc() {
-                    first
-                } else {
-                    second
-                }
-            }
-            LocalResult::None => return None,
-        };
-        return naive
-            .checked_sub_offset(offset)
-            .map(|instant| instant.and_utc().timestamp_millis());
+        return wall_to_millis_earlier(&named, &naive);
     }
     fixed_offset_zone(zone.id()).and_then(|offset| {
         offset

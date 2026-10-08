@@ -124,5 +124,88 @@ pub fn offsets_at_wall<Z: TimeZone>(
     }
 }
 
+#[inline]
+#[must_use]
+pub fn wall_to_unix_seconds<Z: TimeZone>(zone: &Z, wall: &NaiveDateTime) -> Option<i64> {
+    if i64::from(wall.year()) <= LAST_TABULATED_YEAR {
+        match zone.from_local_datetime(wall) {
+            MappedLocalTime::Single(instant) | MappedLocalTime::Ambiguous(instant, _) => {
+                Some(instant.timestamp())
+            }
+            MappedLocalTime::None => None,
+        }
+    } else {
+        match offsets_outside_the_tables(zone, wall) {
+            MappedLocalTime::Single(offset) | MappedLocalTime::Ambiguous(offset, _) => wall
+                .checked_sub_offset(offset)
+                .map(|instant| instant.and_utc().timestamp()),
+            MappedLocalTime::None => None,
+        }
+    }
+}
+
+#[inline]
+#[must_use]
+pub fn wall_to_micros_earlier<Z: TimeZone>(zone: &Z, wall: &NaiveDateTime) -> Option<i64> {
+    if i64::from(wall.year()) <= LAST_TABULATED_YEAR {
+        match zone.from_local_datetime(wall) {
+            MappedLocalTime::Single(instant) | MappedLocalTime::Ambiguous(instant, _) => {
+                Some(instant.timestamp_micros())
+            }
+            MappedLocalTime::None => None,
+        }
+    } else {
+        match offsets_outside_the_tables(zone, wall) {
+            MappedLocalTime::Single(offset) | MappedLocalTime::Ambiguous(offset, _) => wall
+                .checked_sub_offset(offset)
+                .map(|instant| instant.and_utc().timestamp_micros()),
+            MappedLocalTime::None => None,
+        }
+    }
+}
+
+#[inline]
+#[must_use]
+pub fn wall_to_millis_earlier<Z: TimeZone>(zone: &Z, wall: &NaiveDateTime) -> Option<i64> {
+    if i64::from(wall.year()) <= LAST_TABULATED_YEAR {
+        match zone.from_local_datetime(wall) {
+            MappedLocalTime::Single(current) => Some(current.timestamp_millis()),
+            MappedLocalTime::Ambiguous(first, second) => Some(first.min(second).timestamp_millis()),
+            MappedLocalTime::None => None,
+        }
+    } else {
+        let offset = match offsets_outside_the_tables(zone, wall) {
+            MappedLocalTime::Single(current) => current,
+            MappedLocalTime::Ambiguous(first, second) => {
+                if first.local_minus_utc() >= second.local_minus_utc() {
+                    first
+                } else {
+                    second
+                }
+            }
+            MappedLocalTime::None => return None,
+        };
+        wall.checked_sub_offset(offset)
+            .map(|instant| instant.and_utc().timestamp_millis())
+    }
+}
+
+#[inline]
+#[must_use]
+pub fn micros_to_wall_and_offset<Z: TimeZone>(
+    zone: &Z,
+    micros: i64,
+) -> Option<(NaiveDateTime, FixedOffset)> {
+    let instant = DateTime::from_timestamp_micros(micros)?;
+    let utc = instant.naive_utc();
+    if i64::from(utc.year()) <= LAST_TABULATED_YEAR {
+        let zoned = instant.with_timezone(zone);
+        Some((zoned.naive_local(), zoned.offset().fix()))
+    } else {
+        let offset = offset_outside_the_tables(zone, &utc);
+        utc.checked_add_offset(offset).map(|wall| (wall, offset))
+    }
+}
+
 #[cfg(test)]
 mod tests;

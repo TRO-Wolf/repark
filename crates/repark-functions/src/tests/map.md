@@ -40,6 +40,10 @@ Only tests; `mod.rs` is the module manifest.
   it read the table end through `micros_from_local_datetime`, which now reads the horizon, so
   it reads chrono-tz itself for the table end (−4 at 2099, −5 at 2100) and the funnel for the
   placement (−4 at both).
+  **Fold 1 Item A (2026-10-08):** `an_offset_with_seconds_prints_main_text_before_2100`
+  pins `to_json` of a seconds-bearing offset (New York, Paris, Kolkata, Sydney at
+  1850, 1883 and 0001) to main's text, and the `from_json` round trip to a
+  non-empty document.
 
 ## Pointers
 

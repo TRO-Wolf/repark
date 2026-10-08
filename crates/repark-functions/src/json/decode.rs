@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
-use chrono::{MappedLocalTime, NaiveDate, NaiveDateTime};
+use chrono::{NaiveDate, NaiveDateTime};
 use datafusion::arrow::array::{
     ArrayRef, BinaryBuilder, BooleanBuilder, Date32Builder, Decimal128Builder, Float32Builder,
     Float64Builder, Int8Builder, Int16Builder, Int32Builder, Int64Builder, ListArray, MapArray,
@@ -10,7 +10,7 @@ use datafusion::arrow::array::{
 use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::datatypes::{DataType, Field, Fields};
 use datafusion::common::{Result, exec_err};
-use repark_common::zone_horizon::offsets_at_wall;
+use repark_common::zone_horizon::wall_to_micros_earlier;
 
 use super::reader::{JsonValue, json_number_text, write_compact};
 use crate::java_double::java_double_text;
@@ -587,12 +587,7 @@ fn timestamp_micros(text: &str, zone: Tz) -> Option<i64> {
 }
 
 fn local_micros(naive: NaiveDateTime, zone: Tz) -> Option<i64> {
-    match offsets_at_wall(&zone, &naive) {
-        MappedLocalTime::Single(offset) | MappedLocalTime::Ambiguous(offset, _) => naive
-            .checked_sub_offset(offset)
-            .map(|instant| instant.and_utc().timestamp_micros()),
-        MappedLocalTime::None => None,
-    }
+    wall_to_micros_earlier(&zone, &naive)
 }
 
 fn build_decimal(rows: &[Option<&JsonValue<'_>>], precision: u8, scale: i8) -> Result<Decoded> {

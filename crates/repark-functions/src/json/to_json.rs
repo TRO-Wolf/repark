@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
-use chrono::DateTime;
+use chrono::{DateTime, Datelike, MappedLocalTime, TimeZone};
 use datafusion::arrow::array::{Array, AsArray, StringBuilder};
 use datafusion::arrow::datatypes::{
     DataType, Date32Type, Decimal128Type, Field, FieldRef, Float32Type, Float64Type, Int8Type,
@@ -13,7 +13,7 @@ use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
 };
-use repark_common::zone_horizon::offset_at_instant;
+use repark_common::zone_horizon::{LAST_TABULATED_YEAR, offset_at_instant};
 
 use super::reader::write_escaped;
 use crate::java_double::{with_java_double_text, with_java_float_text};
@@ -72,6 +72,23 @@ fn timestamp_text(micros: i64, zone: Tz) -> String {
     else {
         return String::new();
     };
+    if i64::from(utc.year()) <= LAST_TABULATED_YEAR {
+        let seconds = micros.div_euclid(1_000_000);
+        let remainder = micros.rem_euclid(1_000_000);
+        let nanos = u32::try_from(remainder).unwrap_or(0) * 1_000;
+        return match zone.timestamp_opt(seconds, nanos) {
+            MappedLocalTime::Single(moment) => {
+                let stamp = moment.format("%Y-%m-%dT%H:%M:%S%.3f").to_string();
+                let offset = moment.format("%:z").to_string();
+                if offset == "+00:00" {
+                    format!("{stamp}Z")
+                } else {
+                    format!("{stamp}{offset}")
+                }
+            }
+            _ => String::new(),
+        };
+    }
     let offset = offset_at_instant(&zone, &utc);
     let Some(wall) = utc.checked_add_offset(offset) else {
         return String::new();

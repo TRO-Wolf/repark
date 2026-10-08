@@ -1325,6 +1325,8 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
   `timestamp_ltz_ntz.rs` (LTZ → NTZ) and `timestamp_ns_cast.rs` read the zone through
   `repark_common::zone_horizon`. Pins: [tests/map.md](tests/map.md).
   pins: zone-horizon-render-1/C-006, C-007
+  **Fold 1 Item A (2026-10-08):** `unix_seconds_from_string` is the shared
+  `wall_to_unix_seconds`, whose tabulated branch is main's `from_local_datetime`.
 
 ## Pointers
 

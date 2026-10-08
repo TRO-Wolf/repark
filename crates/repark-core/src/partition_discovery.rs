@@ -10,9 +10,9 @@ use arrow::array::{
     StringArray, StringBuilder, TimestampMicrosecondArray, new_null_array,
 };
 use arrow::datatypes::{DataType, Field, TimeUnit};
-use chrono::NaiveDate;
+use chrono::{DateTime, Datelike, NaiveDate, TimeZone as _};
 use datafusion::error::DataFusionError;
-use repark_common::zone_horizon::offsets_at_wall;
+use repark_common::zone_horizon::{LAST_TABULATED_YEAR, offsets_at_wall};
 
 use crate::Error;
 use crate::partition_timestamp::{
@@ -200,8 +200,19 @@ pub(crate) fn parse_decimal_scaled(raw: &str, precision: u8, scale: i8) -> Optio
     }
 }
 
+fn zoned_wall_micros(zoned: DateTime<Tz>) -> Option<i64> {
+    zoned
+        .timestamp()
+        .checked_mul(1_000_000)?
+        .checked_add(i64::from(zoned.timestamp_subsec_micros()))
+}
+
 pub(crate) fn parse_timestamp_micros_zone(raw: &str, zone: Tz) -> Option<i64> {
     let wall = parse_wall_naive(raw)?;
+    if i64::from(wall.year()) <= LAST_TABULATED_YEAR {
+        let zoned = zone.from_local_datetime(&wall).single()?;
+        return zoned_wall_micros(zoned);
+    }
     let offset = offsets_at_wall(&zone, &wall).single()?;
     Some(
         wall.checked_sub_offset(offset)?

@@ -343,3 +343,83 @@ async fn a_batch_reads_the_tables_only_when_every_instant_is_inside_them() {
         );
     }
 }
+
+#[tokio::test]
+async fn an_offset_with_seconds_prints_main_text_before_2100() {
+    let cells = [
+        (
+            NEW_YORK,
+            "1850-06-15 12:00:00 UTC",
+            "{\"t\":\"1850-06-15T07:03:58.000-04:56\"}",
+        ),
+        (
+            NEW_YORK,
+            "1883-11-18 17:00:00 UTC",
+            "{\"t\":\"1883-11-18T12:00:00.000-05:00\"}",
+        ),
+        (
+            NEW_YORK,
+            "0001-06-15 12:00:00 UTC",
+            "{\"t\":\"0001-06-15T07:03:58.000-04:56\"}",
+        ),
+        (
+            "Europe/Paris",
+            "1850-06-15 12:00:00 UTC",
+            "{\"t\":\"1850-06-15T12:09:21.000+00:09\"}",
+        ),
+        (
+            "Europe/Paris",
+            "1883-11-18 17:00:00 UTC",
+            "{\"t\":\"1883-11-18T17:09:21.000+00:09\"}",
+        ),
+        (
+            "Europe/Paris",
+            "0001-06-15 12:00:00 UTC",
+            "{\"t\":\"0001-06-15T12:09:21.000+00:09\"}",
+        ),
+        (
+            KOLKATA,
+            "1850-06-15 12:00:00 UTC",
+            "{\"t\":\"1850-06-15T17:53:28.000+05:53\"}",
+        ),
+        (
+            KOLKATA,
+            "1883-11-18 17:00:00 UTC",
+            "{\"t\":\"1883-11-18T22:21:10.000+05:21\"}",
+        ),
+        (
+            KOLKATA,
+            "0001-06-15 12:00:00 UTC",
+            "{\"t\":\"0001-06-15T17:53:28.000+05:53\"}",
+        ),
+        (
+            SYDNEY,
+            "1850-06-15 12:00:00 UTC",
+            "{\"t\":\"1850-06-15T22:04:52.000+10:05\"}",
+        ),
+        (
+            SYDNEY,
+            "1883-11-18 17:00:00 UTC",
+            "{\"t\":\"1883-11-19T03:04:52.000+10:05\"}",
+        ),
+        (
+            SYDNEY,
+            "0001-06-15 12:00:00 UTC",
+            "{\"t\":\"0001-06-15T22:04:52.000+10:05\"}",
+        ),
+    ];
+    for (session, instant, expected) in cells {
+        let ctx = context(session);
+        let direct = format!("SELECT to_json(named_struct('t', TIMESTAMP '{instant}'))");
+        assert_eq!(
+            row(&ctx, &direct).await,
+            vec![expected.to_string()],
+            "{session} {instant}"
+        );
+        let round = format!(
+            "SELECT to_json(from_json(to_json(named_struct('t', TIMESTAMP '{instant}')), 't TIMESTAMP'))"
+        );
+        let answered = row(&ctx, &round).await;
+        assert_ne!(answered, vec!["{}".to_string()], "{session} {instant}");
+    }
+}

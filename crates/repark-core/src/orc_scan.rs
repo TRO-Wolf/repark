@@ -26,7 +26,7 @@ use orc_rust::projection::ProjectionMask;
 use orc_rust::schema::TimestampPrecision;
 use orc_rust::{ArrowReader, ArrowReaderBuilder};
 use repark_common::spark_error;
-use repark_common::zone_horizon::offsets_at_wall;
+use repark_common::zone_horizon::wall_to_micros_earlier;
 
 use crate::orc_footer::file_writer_tz;
 use crate::orc_schema::{apply_user_orc_schema, infer_orc_schema, orc_types_equal};
@@ -709,15 +709,11 @@ fn writer_wall_to_utc(value: i64, zone: Tz) -> std::result::Result<i64, DataFusi
             DataFusionError::Execution(format!("orc read found an out-of-range timestamp {value}"))
         })?
         .naive_utc();
-    offsets_at_wall(&zone, &wall)
-        .earliest()
-        .and_then(|offset| wall.checked_sub_offset(offset))
-        .map(|moment| moment.and_utc().timestamp_micros())
-        .ok_or_else(|| {
-            DataFusionError::Execution(format!(
-                "orc read cannot place timestamp {value} in its writer zone"
-            ))
-        })
+    wall_to_micros_earlier(&zone, &wall).ok_or_else(|| {
+        DataFusionError::Execution(format!(
+            "orc read cannot place timestamp {value} in its writer zone"
+        ))
+    })
 }
 
 fn correct_writer_wall(
