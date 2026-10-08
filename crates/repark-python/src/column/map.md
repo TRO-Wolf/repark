@@ -461,3 +461,7 @@ sync after changes.
   binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary`
   takes the trailing columns as a vector (exact baseline 1012).
   pins: fnp-agg-1/C-002, C-003, C-004
+
+**USING-PER-SIDE-KEYS-1 fold 2 (2026-10-08):** `mod.rs` gains `PyColumn::held_expr`, the held
+expression by reference, so the hidden-key scan of `select` / `filter` / `sort` clones nothing.
+pins: using-per-side-keys-1/C-017

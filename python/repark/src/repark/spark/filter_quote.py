@@ -545,9 +545,7 @@ def _quote_select_expr_dotted(frame: Any, expr: str) -> str:
     from repark.spark import qualified_names as _qualified_names
 
     held_here = list(_native.attribute_ids(native))
-    _qualified_names._refuse_using_key_text(
-        _qualified_names._using_mark(frame), held_here, expr, exact, False
-    )
+    expr = _qualified_names._bind_using_key_text(frame, held_here, expr, exact)
     single = _DOTTED_TOKEN_PATTERN.fullmatch(expr.strip())
     if single is not None:
         aliased = _single_token_select_alias(
@@ -590,11 +588,21 @@ def _select_expr_frame(frame: Any, expr: tuple[str, ...]) -> Any:
             raise PySparkTypeError(f"selectExpr expressions must be str, got {type(item).__name__}")
     if len(expr) == 1 and expr[0].strip() == "*":
         return frame.select("*")
+    from repark.spark import qualified_names as _qualified_names
+
     view = scratch_view_name(frame._session, "__repark_selx_")
-    frame._session.create_or_replace_temp_view(view, frame._plan())
+    projection = ", ".join(_quote_select_expr_dotted(frame, item) for item in expr)
+    plan, shown = _qualified_names._expose_using_keys_in_text(frame, projection)
+    frame._session.create_or_replace_temp_view(view, plan)
     try:
-        projection = ", ".join(_quote_select_expr_dotted(frame, item) for item in expr)
         planned = frame._session.sql(f"SELECT {projection} FROM {view}")
+        if shown:
+            planned_names = list(_native.logical_column_names(planned))
+            names = planned_names
+            for alias, display in shown.items():
+                names = [name.replace(alias, display) for name in names]
+            if names != planned_names:
+                planned = _native.rename_output_fields(planned, names)
         return frame._spawn(planned)
     finally:
         frame._session.drop_temp_view(view)

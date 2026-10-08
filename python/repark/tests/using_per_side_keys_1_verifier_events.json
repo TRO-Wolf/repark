@@ -1,0 +1,3235 @@
+{
+"corpus": [
+[
+"rows",
+"tl",
+[
+[
+1,
+"a"
+],
+[
+2,
+"b"
+],
+[
+2,
+"b2"
+],
+[
+3,
+"c"
+],
+[
+null,
+"n"
+]
+],
+"id INT, s STRING"
+],
+[
+"rows",
+"tr",
+[
+[
+2,
+"x"
+],
+[
+3,
+"y"
+],
+[
+3,
+"y2"
+],
+[
+4,
+"z"
+],
+[
+null,
+"m"
+]
+],
+"id INT, t STRING"
+],
+[
+"rows",
+"tq",
+[
+[
+3,
+"p"
+],
+[
+4,
+"q"
+],
+[
+5,
+"r"
+],
+[
+null,
+"o"
+]
+],
+"id INT, u STRING"
+],
+[
+"rows",
+"tp",
+[
+[
+1,
+"k"
+],
+[
+4,
+"j"
+],
+[
+5,
+"i"
+],
+[
+6,
+"h"
+]
+],
+"id INT, w STRING"
+],
+[
+"rows",
+"ta",
+[
+[
+1,
+1,
+"a"
+],
+[
+2,
+2,
+"b"
+],
+[
+3,
+null,
+"c"
+],
+[
+null,
+4,
+"d"
+]
+],
+"a INT, b INT, s STRING"
+],
+[
+"rows",
+"tb",
+[
+[
+2,
+2,
+"x"
+],
+[
+3,
+null,
+"y"
+],
+[
+5,
+5,
+"z"
+],
+[
+null,
+4,
+"w"
+]
+],
+"a INT, b INT, t STRING"
+],
+[
+"rows",
+"tv1",
+[
+[
+1,
+10
+],
+[
+2,
+20
+]
+],
+"id INT, v INT"
+],
+[
+"rows",
+"tv2",
+[
+[
+2,
+200
+],
+[
+3,
+300
+]
+],
+"id INT, v INT"
+],
+[
+"sql",
+"SELECT * FROM VALUES (1, 7), (2, CAST(NULL AS INT)), (5, 9) AS v(id, `coalesce`)"
+],
+[
+"sqlview",
+"tcz",
+"SELECT * FROM VALUES (1, 7), (2, CAST(NULL AS INT)), (5, 9) AS v(id, `coalesce`)"
+],
+[
+"sql",
+"SELECT * FROM VALUES (1, 10, 'a'), (2, 20, 'b') AS v(`k.x`, `my key`, s)"
+],
+[
+"sqlview",
+"tk1",
+"SELECT * FROM VALUES (1, 10, 'a'), (2, 20, 'b') AS v(`k.x`, `my key`, s)"
+],
+[
+"sql",
+"SELECT * FROM VALUES (2, 20, 'x'), (3, 30, 'y') AS v(`k.x`, `my key`, t)"
+],
+[
+"sqlview",
+"tk2",
+"SELECT * FROM VALUES (2, 20, 'x'), (3, 30, 'y') AS v(`k.x`, `my key`, t)"
+],
+[
+"sql",
+"SELECT count(r.id) AS a, count(l.id) AS b, count(id) AS c, max(r.id) AS d, sum(l.id) AS e FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(r.id) AS a, count(l.id) AS b, count(id) AS c, max(r.id) AS d, sum(l.id) AS e FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(r.id) AS a, count(l.id) AS b, count(id) AS c, max(r.id) AS d, sum(l.id) AS e FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(r.id) AS a, count(l.id) AS b, count(id) AS c, max(r.id) AS d, sum(l.id) AS e FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT r.id AS k, count(*) AS c FROM tl l INNER JOIN tr r USING (id) GROUP BY r.id"
+],
+[
+"sql",
+"SELECT r.id AS k, count(*) AS c FROM tl l LEFT JOIN tr r USING (id) GROUP BY r.id"
+],
+[
+"sql",
+"SELECT r.id AS k, count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) GROUP BY r.id"
+],
+[
+"sql",
+"SELECT r.id AS k, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY r.id"
+],
+[
+"sql",
+"SELECT count(*) AS c FROM tl l INNER JOIN tr r USING (id) GROUP BY r.id"
+],
+[
+"sql",
+"SELECT count(*) AS c FROM tl l LEFT JOIN tr r USING (id) GROUP BY r.id"
+],
+[
+"sql",
+"SELECT count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) GROUP BY r.id"
+],
+[
+"sql",
+"SELECT count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY r.id"
+],
+[
+"sql",
+"SELECT id, count(r.id) AS c, max(l.id) AS m FROM tl l INNER JOIN tr r USING (id) GROUP BY id"
+],
+[
+"sql",
+"SELECT id, count(r.id) AS c, max(l.id) AS m FROM tl l LEFT JOIN tr r USING (id) GROUP BY id"
+],
+[
+"sql",
+"SELECT id, count(r.id) AS c, max(l.id) AS m FROM tl l RIGHT JOIN tr r USING (id) GROUP BY id"
+],
+[
+"sql",
+"SELECT id, count(r.id) AS c, max(l.id) AS m FROM tl l FULL JOIN tr r USING (id) GROUP BY id"
+],
+[
+"sql",
+"SELECT s, row_number() OVER (PARTITION BY r.id ORDER BY s, t) AS rn, t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT s, row_number() OVER (PARTITION BY r.id ORDER BY s, t) AS rn, t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT s, row_number() OVER (PARTITION BY r.id ORDER BY s, t) AS rn, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT s, row_number() OVER (PARTITION BY r.id ORDER BY s, t) AS rn, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, count(*) OVER (PARTITION BY l.id) AS c FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, count(*) OVER (PARTITION BY l.id) AS c FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, count(*) OVER (PARTITION BY l.id) AS c FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, count(*) OVER (PARTITION BY l.id) AS c FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, sum(id) OVER (PARTITION BY id) AS x, max(r.id) OVER () AS y FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, sum(id) OVER (PARTITION BY id) AS x, max(r.id) OVER () AS y FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, sum(id) OVER (PARTITION BY id) AS x, max(r.id) OVER () AS y FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, sum(id) OVER (PARTITION BY id) AS x, max(r.id) OVER () AS y FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, rank() OVER (ORDER BY r.id NULLS LAST) AS rk, s, t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, rank() OVER (ORDER BY r.id NULLS LAST) AS rk, s, t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, rank() OVER (ORDER BY r.id NULLS LAST) AS rk, s, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, rank() OVER (ORDER BY r.id NULLS LAST) AS rk, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, CASE WHEN r.id IS NULL THEN 'L' WHEN l.id IS NULL THEN 'R' ELSE 'B' END AS side, s, t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, CASE WHEN r.id IS NULL THEN 'L' WHEN l.id IS NULL THEN 'R' ELSE 'B' END AS side, s, t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, CASE WHEN r.id IS NULL THEN 'L' WHEN l.id IS NULL THEN 'R' ELSE 'B' END AS side, s, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, CASE WHEN r.id IS NULL THEN 'L' WHEN l.id IS NULL THEN 'R' ELSE 'B' END AS side, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) WHERE r.id IN (2, 4) OR l.id BETWEEN 1 AND 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE r.id IN (2, 4) OR l.id BETWEEN 1 AND 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE r.id IN (2, 4) OR l.id BETWEEN 1 AND 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE r.id IN (2, 4) OR l.id BETWEEN 1 AND 1"
+],
+[
+"sql",
+"SELECT id, cast(r.id AS string) AS rs, abs(l.id) AS la, s, t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, cast(r.id AS string) AS rs, abs(l.id) AS la, s, t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, cast(r.id AS string) AS rs, abs(l.id) AS la, s, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, cast(r.id AS string) AS rs, abs(l.id) AS la, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) WHERE r.id IN (SELECT id FROM tq)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE r.id IN (SELECT id FROM tq)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE r.id IN (SELECT id FROM tq)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE r.id IN (SELECT id FROM tq)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) WHERE EXISTS (SELECT 1 FROM tq q WHERE q.id = r.id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE EXISTS (SELECT 1 FROM tq q WHERE q.id = r.id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE EXISTS (SELECT 1 FROM tq q WHERE q.id = r.id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE EXISTS (SELECT 1 FROM tq q WHERE q.id = r.id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) WHERE NOT EXISTS (SELECT 1 FROM tq q WHERE q.id = l.id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE NOT EXISTS (SELECT 1 FROM tq q WHERE q.id = l.id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE NOT EXISTS (SELECT 1 FROM tq q WHERE q.id = l.id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE NOT EXISTS (SELECT 1 FROM tq q WHERE q.id = l.id)"
+],
+[
+"sql",
+"SELECT id, (SELECT max(u) FROM tq q WHERE q.id = r.id) AS m, s, t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, (SELECT max(u) FROM tq q WHERE q.id = r.id) AS m, s, t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, (SELECT max(u) FROM tq q WHERE q.id = r.id) AS m, s, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, (SELECT max(u) FROM tq q WHERE q.id = r.id) AS m, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) ORDER BY r.id + 1 DESC NULLS LAST, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY r.id + 1 DESC NULLS LAST, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY r.id + 1 DESC NULLS LAST, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY r.id + 1 DESC NULLS LAST, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) ORDER BY abs(l.id) NULLS FIRST, id, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY abs(l.id) NULLS FIRST, id, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY abs(l.id) NULLS FIRST, id, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY abs(l.id) NULLS FIRST, id, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) ORDER BY coalesce(r.id, -1), coalesce(l.id, -1), s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY coalesce(r.id, -1), coalesce(l.id, -1), s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY coalesce(r.id, -1), coalesce(l.id, -1), s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY coalesce(r.id, -1), coalesce(l.id, -1), s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) ORDER BY coalesce(coalesce(l.id)) NULLS LAST, coalesce(coalesce(id)) DESC NULLS LAST, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY coalesce(coalesce(l.id)) NULLS LAST, coalesce(coalesce(id)) DESC NULLS LAST, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY coalesce(coalesce(l.id)) NULLS LAST, coalesce(coalesce(id)) DESC NULLS LAST, s, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY coalesce(coalesce(l.id)) NULLS LAST, coalesce(coalesce(id)) DESC NULLS LAST, s, t"
+],
+[
+"sql",
+"SELECT coalesce(coalesce(l.id)) AS c1, coalesce(coalesce(id)) AS c2, coalesce(r.id) AS c3, s, t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT coalesce(coalesce(l.id)) AS c1, coalesce(coalesce(id)) AS c2, coalesce(r.id) AS c3, s, t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT coalesce(coalesce(l.id)) AS c1, coalesce(coalesce(id)) AS c2, coalesce(r.id) AS c3, s, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT coalesce(coalesce(l.id)) AS c1, coalesce(coalesce(id)) AS c2, coalesce(r.id) AS c3, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT coalesce(coalesce(s)), coalesce(coalesce(id)), coalesce(coalesce(r.id)) FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT coalesce(coalesce(s)), coalesce(coalesce(id)), coalesce(coalesce(r.id)) FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT coalesce(coalesce(s)), coalesce(coalesce(id)), coalesce(coalesce(r.id)) FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT coalesce(coalesce(s)), coalesce(coalesce(id)), coalesce(coalesce(r.id)) FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) ORDER BY 1 DESC NULLS LAST, 2, 3 LIMIT 3 OFFSET 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY 1 DESC NULLS LAST, 2, 3 LIMIT 3 OFFSET 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY 1 DESC NULLS LAST, 2, 3 LIMIT 3 OFFSET 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY 1 DESC NULLS LAST, 2, 3 LIMIT 3 OFFSET 1"
+],
+[
+"sql",
+"SELECT s AS id, t FROM tl l INNER JOIN tr r USING (id) ORDER BY id NULLS LAST, t"
+],
+[
+"sql",
+"SELECT s AS id, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY id NULLS LAST, t"
+],
+[
+"sql",
+"SELECT s AS id, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY id NULLS LAST, t"
+],
+[
+"sql",
+"SELECT s AS id, t FROM tl l FULL JOIN tr r USING (id) ORDER BY id NULLS LAST, t"
+],
+[
+"sql",
+"SELECT id AS s, s AS id FROM tl l INNER JOIN tr r USING (id) ORDER BY id NULLS LAST, s NULLS LAST"
+],
+[
+"sql",
+"SELECT id AS s, s AS id FROM tl l LEFT JOIN tr r USING (id) ORDER BY id NULLS LAST, s NULLS LAST"
+],
+[
+"sql",
+"SELECT id AS s, s AS id FROM tl l RIGHT JOIN tr r USING (id) ORDER BY id NULLS LAST, s NULLS LAST"
+],
+[
+"sql",
+"SELECT id AS s, s AS id FROM tl l FULL JOIN tr r USING (id) ORDER BY id NULLS LAST, s NULLS LAST"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) ORDER BY l.id NULLS LAST, r.id NULLS FIRST, s, t LIMIT 4"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY l.id NULLS LAST, r.id NULLS FIRST, s, t LIMIT 4"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY l.id NULLS LAST, r.id NULLS FIRST, s, t LIMIT 4"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY l.id NULLS LAST, r.id NULLS FIRST, s, t LIMIT 4"
+],
+[
+"sql",
+"SELECT DISTINCT r.id FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT DISTINCT r.id FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT DISTINCT r.id FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT DISTINCT r.id FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT DISTINCT id, l.id AS lid FROM tl l INNER JOIN tr r USING (id) ORDER BY id NULLS LAST, lid NULLS LAST"
+],
+[
+"sql",
+"SELECT DISTINCT id, l.id AS lid FROM tl l LEFT JOIN tr r USING (id) ORDER BY id NULLS LAST, lid NULLS LAST"
+],
+[
+"sql",
+"SELECT DISTINCT id, l.id AS lid FROM tl l RIGHT JOIN tr r USING (id) ORDER BY id NULLS LAST, lid NULLS LAST"
+],
+[
+"sql",
+"SELECT DISTINCT id, l.id AS lid FROM tl l FULL JOIN tr r USING (id) ORDER BY id NULLS LAST, lid NULLS LAST"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) QUALIFY row_number() OVER (PARTITION BY id ORDER BY s, t) = 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) QUALIFY row_number() OVER (PARTITION BY id ORDER BY s, t) = 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) QUALIFY row_number() OVER (PARTITION BY id ORDER BY s, t) = 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) QUALIFY row_number() OVER (PARTITION BY id ORDER BY s, t) = 1"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l INNER JOIN tr r USING (id) GROUP BY id HAVING max(r.id) IS NULL OR id = 3"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l LEFT JOIN tr r USING (id) GROUP BY id HAVING max(r.id) IS NULL OR id = 3"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) GROUP BY id HAVING max(r.id) IS NULL OR id = 3"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY id HAVING max(r.id) IS NULL OR id = 3"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l INNER JOIN tr r USING (id) GROUP BY ROLLUP (id)"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l LEFT JOIN tr r USING (id) GROUP BY ROLLUP (id)"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) GROUP BY ROLLUP (id)"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY ROLLUP (id)"
+],
+[
+"sql",
+"SELECT id, s, count(*) AS c FROM tl l INNER JOIN tr r USING (id) GROUP BY GROUPING SETS ((id), (s), ())"
+],
+[
+"sql",
+"SELECT id, s, count(*) AS c FROM tl l LEFT JOIN tr r USING (id) GROUP BY GROUPING SETS ((id), (s), ())"
+],
+[
+"sql",
+"SELECT id, s, count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) GROUP BY GROUPING SETS ((id), (s), ())"
+],
+[
+"sql",
+"SELECT id, s, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY GROUPING SETS ((id), (s), ())"
+],
+[
+"sql",
+"SELECT r.id AS rid, count(*) AS c FROM tl l INNER JOIN tr r USING (id) GROUP BY CUBE (r.id)"
+],
+[
+"sql",
+"SELECT r.id AS rid, count(*) AS c FROM tl l LEFT JOIN tr r USING (id) GROUP BY CUBE (r.id)"
+],
+[
+"sql",
+"SELECT r.id AS rid, count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) GROUP BY CUBE (r.id)"
+],
+[
+"sql",
+"SELECT r.id AS rid, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY CUBE (r.id)"
+],
+[
+"sql",
+"SELECT l.*, r.t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT l.*, r.t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT l.*, r.t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT l.*, r.t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT r.*, id FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT r.*, id FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT r.*, id FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT r.*, id FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT *, l.id AS lid, r.id AS rid FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT *, l.id AS lid, r.id AS rid FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT *, l.id AS lid, r.id AS rid FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT *, l.id AS lid, r.id AS rid FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT * FROM tl l INNER JOIN tr r USING (id) WHERE l.id IS NULL OR r.id IS NULL"
+],
+[
+"sql",
+"SELECT * FROM tl l LEFT JOIN tr r USING (id) WHERE l.id IS NULL OR r.id IS NULL"
+],
+[
+"sql",
+"SELECT * FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL OR r.id IS NULL"
+],
+[
+"sql",
+"SELECT * FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL OR r.id IS NULL"
+],
+[
+"sql",
+"WITH c AS (SELECT l.id AS lid, r.id AS rid, id, s, t FROM tl l INNER JOIN tr r USING (id)) SELECT * FROM c WHERE lid IS NULL OR rid IS NULL OR id > 2"
+],
+[
+"sql",
+"WITH c AS (SELECT l.id AS lid, r.id AS rid, id, s, t FROM tl l LEFT JOIN tr r USING (id)) SELECT * FROM c WHERE lid IS NULL OR rid IS NULL OR id > 2"
+],
+[
+"sql",
+"WITH c AS (SELECT l.id AS lid, r.id AS rid, id, s, t FROM tl l RIGHT JOIN tr r USING (id)) SELECT * FROM c WHERE lid IS NULL OR rid IS NULL OR id > 2"
+],
+[
+"sql",
+"WITH c AS (SELECT l.id AS lid, r.id AS rid, id, s, t FROM tl l FULL JOIN tr r USING (id)) SELECT * FROM c WHERE lid IS NULL OR rid IS NULL OR id > 2"
+],
+[
+"sql",
+"WITH c AS (SELECT * FROM tl l INNER JOIN tr r USING (id)) SELECT c.id AS cid, id, q.u FROM c FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"WITH c AS (SELECT * FROM tl l LEFT JOIN tr r USING (id)) SELECT c.id AS cid, id, q.u FROM c FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"WITH c AS (SELECT * FROM tl l RIGHT JOIN tr r USING (id)) SELECT c.id AS cid, id, q.u FROM c FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"WITH c AS (SELECT * FROM tl l FULL JOIN tr r USING (id)) SELECT c.id AS cid, id, q.u FROM c FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT x.id, x.lid, q.u FROM (SELECT id, l.id AS lid FROM tl l INNER JOIN tr r USING (id)) x LEFT JOIN tq q ON q.id = x.id"
+],
+[
+"sql",
+"SELECT x.id, x.lid, q.u FROM (SELECT id, l.id AS lid FROM tl l LEFT JOIN tr r USING (id)) x LEFT JOIN tq q ON q.id = x.id"
+],
+[
+"sql",
+"SELECT x.id, x.lid, q.u FROM (SELECT id, l.id AS lid FROM tl l RIGHT JOIN tr r USING (id)) x LEFT JOIN tq q ON q.id = x.id"
+],
+[
+"sql",
+"SELECT x.id, x.lid, q.u FROM (SELECT id, l.id AS lid FROM tl l FULL JOIN tr r USING (id)) x LEFT JOIN tq q ON q.id = x.id"
+],
+[
+"sql",
+"SELECT id, u, s, t FROM tl l INNER JOIN tr r USING (id) JOIN tq q ON q.id = r.id"
+],
+[
+"sql",
+"SELECT id, u, s, t FROM tl l LEFT JOIN tr r USING (id) JOIN tq q ON q.id = r.id"
+],
+[
+"sql",
+"SELECT id, u, s, t FROM tl l RIGHT JOIN tr r USING (id) JOIN tq q ON q.id = r.id"
+],
+[
+"sql",
+"SELECT id, u, s, t FROM tl l FULL JOIN tr r USING (id) JOIN tq q ON q.id = r.id"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, q.id AS c, s FROM tl l INNER JOIN tr r USING (id) LEFT JOIN tq q ON q.id = l.id"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, q.id AS c, s FROM tl l LEFT JOIN tr r USING (id) LEFT JOIN tq q ON q.id = l.id"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, q.id AS c, s FROM tl l RIGHT JOIN tr r USING (id) LEFT JOIN tq q ON q.id = l.id"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, q.id AS c, s FROM tl l FULL JOIN tr r USING (id) LEFT JOIN tq q ON q.id = l.id"
+],
+[
+"sql",
+"SELECT * FROM tq q JOIN (SELECT * FROM tl l INNER JOIN tr r USING (id)) j ON q.id = j.id"
+],
+[
+"sql",
+"SELECT * FROM tq q JOIN (SELECT * FROM tl l LEFT JOIN tr r USING (id)) j ON q.id = j.id"
+],
+[
+"sql",
+"SELECT * FROM tq q JOIN (SELECT * FROM tl l RIGHT JOIN tr r USING (id)) j ON q.id = j.id"
+],
+[
+"sql",
+"SELECT * FROM tq q JOIN (SELECT * FROM tl l FULL JOIN tr r USING (id)) j ON q.id = j.id"
+],
+[
+"sql",
+"SELECT q.id AS a, j.id AS b, j.lid, j.rid, id FROM tq q INNER JOIN (SELECT id, l.id AS lid, r.id AS rid FROM tl l INNER JOIN tr r USING (id)) j USING (id)"
+],
+[
+"sql",
+"SELECT q.id AS a, j.id AS b, j.lid, j.rid, id FROM tq q LEFT JOIN (SELECT id, l.id AS lid, r.id AS rid FROM tl l LEFT JOIN tr r USING (id)) j USING (id)"
+],
+[
+"sql",
+"SELECT q.id AS a, j.id AS b, j.lid, j.rid, id FROM tq q RIGHT JOIN (SELECT id, l.id AS lid, r.id AS rid FROM tl l RIGHT JOIN tr r USING (id)) j USING (id)"
+],
+[
+"sql",
+"SELECT q.id AS a, j.id AS b, j.lid, j.rid, id FROM tq q FULL JOIN (SELECT id, l.id AS lid, r.id AS rid FROM tl l FULL JOIN tr r USING (id)) j USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l INNER JOIN tr r USING (id) UNION SELECT r.id FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l LEFT JOIN tr r USING (id) UNION SELECT r.id FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l RIGHT JOIN tr r USING (id) UNION SELECT r.id FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l FULL JOIN tr r USING (id) UNION SELECT r.id FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT l.id FROM tl l INNER JOIN tr r USING (id) EXCEPT SELECT id FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT l.id FROM tl l LEFT JOIN tr r USING (id) EXCEPT SELECT id FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT l.id FROM tl l RIGHT JOIN tr r USING (id) EXCEPT SELECT id FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT l.id FROM tl l FULL JOIN tr r USING (id) EXCEPT SELECT id FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l INNER JOIN tr r USING (id) INTERSECT SELECT l.id FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l LEFT JOIN tr r USING (id) INTERSECT SELECT l.id FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l RIGHT JOIN tr r USING (id) INTERSECT SELECT l.id FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l FULL JOIN tr r USING (id) INTERSECT SELECT l.id FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l INNER JOIN tr r USING (id) WHERE id IN (SELECT r.id FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l LEFT JOIN tr r USING (id) WHERE id IN (SELECT r.id FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE id IN (SELECT r.id FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE id IN (SELECT r.id FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL)"
+],
+[
+"sql",
+"SELECT a.id AS x, b.id AS y, c.id AS z, id FROM tl a INNER JOIN tl b USING (id) INNER JOIN tl c USING (id)"
+],
+[
+"sql",
+"SELECT a.id AS x, b.id AS y, c.id AS z, id FROM tl a LEFT JOIN tl b USING (id) LEFT JOIN tl c USING (id)"
+],
+[
+"sql",
+"SELECT a.id AS x, b.id AS y, c.id AS z, id FROM tl a RIGHT JOIN tl b USING (id) RIGHT JOIN tl c USING (id)"
+],
+[
+"sql",
+"SELECT a.id AS x, b.id AS y, c.id AS z, id FROM tl a FULL JOIN tl b USING (id) FULL JOIN tl c USING (id)"
+],
+[
+"sql",
+"SELECT id, a.s AS s1, b.s AS s2 FROM tl a INNER JOIN tl b USING (id)"
+],
+[
+"sql",
+"SELECT id, a.s AS s1, b.s AS s2 FROM tl a LEFT JOIN tl b USING (id)"
+],
+[
+"sql",
+"SELECT id, a.s AS s1, b.s AS s2 FROM tl a RIGHT JOIN tl b USING (id)"
+],
+[
+"sql",
+"SELECT id, a.s AS s1, b.s AS s2 FROM tl a FULL JOIN tl b USING (id)"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, id FROM tl AS r INNER JOIN tr AS l USING (id)"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, id FROM tl AS r LEFT JOIN tr AS l USING (id)"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, id FROM tl AS r RIGHT JOIN tr AS l USING (id)"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, id FROM tl AS r FULL JOIN tr AS l USING (id)"
+],
+[
+"sql",
+"SELECT tl.id AS a, tr.id AS b, id FROM tl INNER JOIN tr USING (id)"
+],
+[
+"sql",
+"SELECT tl.id AS a, tr.id AS b, id FROM tl LEFT JOIN tr USING (id)"
+],
+[
+"sql",
+"SELECT tl.id AS a, tr.id AS b, id FROM tl RIGHT JOIN tr USING (id)"
+],
+[
+"sql",
+"SELECT tl.id AS a, tr.id AS b, id FROM tl FULL JOIN tr USING (id)"
+],
+[
+"sql",
+"SELECT `l`.`id` AS a, `r`.`id` AS b, `id` FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT `l`.`id` AS a, `r`.`id` AS b, `id` FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT `l`.`id` AS a, `r`.`id` AS b, `id` FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT `l`.`id` AS a, `r`.`id` AS b, `id` FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT a, x.b AS xb, y.a AS ya, y.b AS yb FROM ta x INNER JOIN tb y USING (a, b)"
+],
+[
+"sql",
+"SELECT a, x.b AS xb, y.a AS ya, y.b AS yb FROM ta x LEFT JOIN tb y USING (a, b)"
+],
+[
+"sql",
+"SELECT a, x.b AS xb, y.a AS ya, y.b AS yb FROM ta x RIGHT JOIN tb y USING (a, b)"
+],
+[
+"sql",
+"SELECT a, x.b AS xb, y.a AS ya, y.b AS yb FROM ta x FULL JOIN tb y USING (a, b)"
+],
+[
+"sql",
+"SELECT x.a AS xa, b, s, t FROM ta x INNER JOIN tb y USING (a, b) WHERE y.b IS NULL OR a > 1 ORDER BY x.a NULLS LAST, b NULLS LAST, s NULLS LAST, t"
+],
+[
+"sql",
+"SELECT x.a AS xa, b, s, t FROM ta x LEFT JOIN tb y USING (a, b) WHERE y.b IS NULL OR a > 1 ORDER BY x.a NULLS LAST, b NULLS LAST, s NULLS LAST, t"
+],
+[
+"sql",
+"SELECT x.a AS xa, b, s, t FROM ta x RIGHT JOIN tb y USING (a, b) WHERE y.b IS NULL OR a > 1 ORDER BY x.a NULLS LAST, b NULLS LAST, s NULLS LAST, t"
+],
+[
+"sql",
+"SELECT x.a AS xa, b, s, t FROM ta x FULL JOIN tb y USING (a, b) WHERE y.b IS NULL OR a > 1 ORDER BY x.a NULLS LAST, b NULLS LAST, s NULLS LAST, t"
+],
+[
+"sql",
+"SELECT count(x.a) AS c1, count(a) AS c2, count(y.b) AS c3 FROM ta x INNER JOIN tb y USING (a, b)"
+],
+[
+"sql",
+"SELECT count(x.a) AS c1, count(a) AS c2, count(y.b) AS c3 FROM ta x LEFT JOIN tb y USING (a, b)"
+],
+[
+"sql",
+"SELECT count(x.a) AS c1, count(a) AS c2, count(y.b) AS c3 FROM ta x RIGHT JOIN tb y USING (a, b)"
+],
+[
+"sql",
+"SELECT count(x.a) AS c1, count(a) AS c2, count(y.b) AS c3 FROM ta x FULL JOIN tb y USING (a, b)"
+],
+[
+"sql",
+"SELECT id, lag(r.id) OVER (ORDER BY id NULLS LAST, s NULLS LAST, t NULLS LAST) AS lg, s, t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, lag(r.id) OVER (ORDER BY id NULLS LAST, s NULLS LAST, t NULLS LAST) AS lg, s, t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, lag(r.id) OVER (ORDER BY id NULLS LAST, s NULLS LAST, t NULLS LAST) AS lg, s, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, lag(r.id) OVER (ORDER BY id NULLS LAST, s NULLS LAST, t NULLS LAST) AS lg, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT * FROM tl NATURAL INNER JOIN tr WHERE tr.id IS NULL OR tl.id IS NULL"
+],
+[
+"sql",
+"SELECT * FROM tl NATURAL LEFT JOIN tr WHERE tr.id IS NULL OR tl.id IS NULL"
+],
+[
+"sql",
+"SELECT * FROM tl NATURAL RIGHT JOIN tr WHERE tr.id IS NULL OR tl.id IS NULL"
+],
+[
+"sql",
+"SELECT * FROM tl NATURAL FULL JOIN tr WHERE tr.id IS NULL OR tl.id IS NULL"
+],
+[
+"sql",
+"SELECT tl.id AS a, tr.id AS b FROM tl NATURAL INNER JOIN tr"
+],
+[
+"sql",
+"SELECT tl.id AS a, tr.id AS b FROM tl NATURAL LEFT JOIN tr"
+],
+[
+"sql",
+"SELECT tl.id AS a, tr.id AS b FROM tl NATURAL RIGHT JOIN tr"
+],
+[
+"sql",
+"SELECT tl.id AS a, tr.id AS b FROM tl NATURAL FULL JOIN tr"
+],
+[
+"sql",
+"SELECT max(r.id) AS m, min(l.id) AS n FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT max(r.id) AS m, min(l.id) AS n FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT max(r.id) AS m, min(l.id) AS n FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT max(r.id) AS m, min(l.id) AS n FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) WHERE coalesce(r.id, l.id) = 4 OR coalesce(coalesce(l.id)) = 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE coalesce(r.id, l.id) = 4 OR coalesce(coalesce(l.id)) = 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE coalesce(r.id, l.id) = 4 OR coalesce(coalesce(l.id)) = 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE coalesce(r.id, l.id) = 4 OR coalesce(coalesce(l.id)) = 1"
+],
+[
+"sql",
+"SELECT id, greatest(l.id, r.id) AS g, least(id, 2) AS z, s, t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, greatest(l.id, r.id) AS g, least(id, 2) AS z, s, t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, greatest(l.id, r.id) AS g, least(id, 2) AS z, s, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, greatest(l.id, r.id) AS g, least(id, 2) AS z, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT if(r.id IS NULL, 'n', 'y') AS f, count(*) AS c FROM tl l INNER JOIN tr r USING (id) GROUP BY if(r.id IS NULL, 'n', 'y')"
+],
+[
+"sql",
+"SELECT if(r.id IS NULL, 'n', 'y') AS f, count(*) AS c FROM tl l LEFT JOIN tr r USING (id) GROUP BY if(r.id IS NULL, 'n', 'y')"
+],
+[
+"sql",
+"SELECT if(r.id IS NULL, 'n', 'y') AS f, count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) GROUP BY if(r.id IS NULL, 'n', 'y')"
+],
+[
+"sql",
+"SELECT if(r.id IS NULL, 'n', 'y') AS f, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY if(r.id IS NULL, 'n', 'y')"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) WHERE r.id = (SELECT max(id) FROM tr)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE r.id = (SELECT max(id) FROM tr)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE r.id = (SELECT max(id) FROM tr)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE r.id = (SELECT max(id) FROM tr)"
+],
+[
+"sql",
+"SELECT k.id, k.rid FROM (SELECT id, r.id AS rid FROM tl l INNER JOIN tr r USING (id) ORDER BY r.id NULLS LAST, s NULLS LAST, t LIMIT 3) k"
+],
+[
+"sql",
+"SELECT k.id, k.rid FROM (SELECT id, r.id AS rid FROM tl l LEFT JOIN tr r USING (id) ORDER BY r.id NULLS LAST, s NULLS LAST, t LIMIT 3) k"
+],
+[
+"sql",
+"SELECT k.id, k.rid FROM (SELECT id, r.id AS rid FROM tl l RIGHT JOIN tr r USING (id) ORDER BY r.id NULLS LAST, s NULLS LAST, t LIMIT 3) k"
+],
+[
+"sql",
+"SELECT k.id, k.rid FROM (SELECT id, r.id AS rid FROM tl l FULL JOIN tr r USING (id) ORDER BY r.id NULLS LAST, s NULLS LAST, t LIMIT 3) k"
+],
+[
+"sql",
+"SELECT id, s, t, r.id IS NULL AS rn, l.id <=> r.id AS same FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, r.id IS NULL AS rn, l.id <=> r.id AS same FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, r.id IS NULL AS rn, l.id <=> r.id AS same FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, r.id IS NULL AS rn, l.id <=> r.id AS same FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT * FROM (SELECT id, s FROM tl l INNER JOIN tr r USING (id)) PIVOT (count(*) FOR s IN ('a', 'b'))"
+],
+[
+"sql",
+"SELECT * FROM (SELECT id, s FROM tl l LEFT JOIN tr r USING (id)) PIVOT (count(*) FOR s IN ('a', 'b'))"
+],
+[
+"sql",
+"SELECT * FROM (SELECT id, s FROM tl l RIGHT JOIN tr r USING (id)) PIVOT (count(*) FOR s IN ('a', 'b'))"
+],
+[
+"sql",
+"SELECT * FROM (SELECT id, s FROM tl l FULL JOIN tr r USING (id)) PIVOT (count(*) FOR s IN ('a', 'b'))"
+],
+[
+"sql",
+"SELECT id, x.u FROM tl l INNER JOIN tr r USING (id), LATERAL (SELECT u FROM tq q WHERE q.id = r.id) x"
+],
+[
+"sql",
+"SELECT id, x.u FROM tl l LEFT JOIN tr r USING (id), LATERAL (SELECT u FROM tq q WHERE q.id = r.id) x"
+],
+[
+"sql",
+"SELECT id, x.u FROM tl l RIGHT JOIN tr r USING (id), LATERAL (SELECT u FROM tq q WHERE q.id = r.id) x"
+],
+[
+"sql",
+"SELECT id, x.u FROM tl l FULL JOIN tr r USING (id), LATERAL (SELECT u FROM tq q WHERE q.id = r.id) x"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) ORDER BY CASE WHEN r.id IS NULL THEN 0 ELSE 1 END, id NULLS LAST, s NULLS LAST, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY CASE WHEN r.id IS NULL THEN 0 ELSE 1 END, id NULLS LAST, s NULLS LAST, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY CASE WHEN r.id IS NULL THEN 0 ELSE 1 END, id NULLS LAST, s NULLS LAST, t"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY CASE WHEN r.id IS NULL THEN 0 ELSE 1 END, id NULLS LAST, s NULLS LAST, t"
+],
+[
+"sql",
+"SELECT id, sum(r.id) AS sr, sum(l.id) AS sl FROM tl l INNER JOIN tr r USING (id) GROUP BY id ORDER BY id NULLS LAST"
+],
+[
+"sql",
+"SELECT id, sum(r.id) AS sr, sum(l.id) AS sl FROM tl l LEFT JOIN tr r USING (id) GROUP BY id ORDER BY id NULLS LAST"
+],
+[
+"sql",
+"SELECT id, sum(r.id) AS sr, sum(l.id) AS sl FROM tl l RIGHT JOIN tr r USING (id) GROUP BY id ORDER BY id NULLS LAST"
+],
+[
+"sql",
+"SELECT id, sum(r.id) AS sr, sum(l.id) AS sl FROM tl l FULL JOIN tr r USING (id) GROUP BY id ORDER BY id NULLS LAST"
+],
+[
+"sql",
+"SELECT l.id AS k, count(*) AS c FROM tl l INNER JOIN tr r USING (id) GROUP BY l.id ORDER BY l.id NULLS LAST"
+],
+[
+"sql",
+"SELECT l.id AS k, count(*) AS c FROM tl l LEFT JOIN tr r USING (id) GROUP BY l.id ORDER BY l.id NULLS LAST"
+],
+[
+"sql",
+"SELECT l.id AS k, count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) GROUP BY l.id ORDER BY l.id NULLS LAST"
+],
+[
+"sql",
+"SELECT l.id AS k, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY l.id ORDER BY l.id NULLS LAST"
+],
+[
+"sql",
+"SELECT count(DISTINCT r.id) AS a, count(DISTINCT id) AS b, count(DISTINCT l.id) AS c FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(DISTINCT r.id) AS a, count(DISTINCT id) AS b, count(DISTINCT l.id) AS c FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(DISTINCT r.id) AS a, count(DISTINCT id) AS b, count(DISTINCT l.id) AS c FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(DISTINCT r.id) AS a, count(DISTINCT id) AS b, count(DISTINCT l.id) AS c FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) WHERE l.s = 'b' OR r.t = 'z' OR id = 3 ORDER BY r.t NULLS LAST, l.s"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE l.s = 'b' OR r.t = 'z' OR id = 3 ORDER BY r.t NULLS LAST, l.s"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE l.s = 'b' OR r.t = 'z' OR id = 3 ORDER BY r.t NULLS LAST, l.s"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE l.s = 'b' OR r.t = 'z' OR id = 3 ORDER BY r.t NULLS LAST, l.s"
+],
+[
+"sql",
+"SELECT t, first_value(r.id) OVER (PARTITION BY l.id ORDER BY t NULLS LAST, s) AS fv, s FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT t, first_value(r.id) OVER (PARTITION BY l.id ORDER BY t NULLS LAST, s) AS fv, s FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT t, first_value(r.id) OVER (PARTITION BY l.id ORDER BY t NULLS LAST, s) AS fv, s FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT t, first_value(r.id) OVER (PARTITION BY l.id ORDER BY t NULLS LAST, s) AS fv, s FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l INNER JOIN tr r USING (id) WHERE r.id IS NULL"
+],
+[
+"sql",
+"SELECT id FROM tl l LEFT JOIN tr r USING (id) WHERE r.id IS NULL"
+],
+[
+"sql",
+"SELECT id FROM tl l RIGHT JOIN tr r USING (id) WHERE r.id IS NULL"
+],
+[
+"sql",
+"SELECT id FROM tl l FULL JOIN tr r USING (id) WHERE r.id IS NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l INNER JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l LEFT JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT max(id) AS m, count(*) AS c FROM tl l INNER JOIN tr r USING (id) GROUP BY r.id, l.id"
+],
+[
+"sql",
+"SELECT max(id) AS m, count(*) AS c FROM tl l LEFT JOIN tr r USING (id) GROUP BY r.id, l.id"
+],
+[
+"sql",
+"SELECT max(id) AS m, count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) GROUP BY r.id, l.id"
+],
+[
+"sql",
+"SELECT max(id) AS m, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY r.id, l.id"
+],
+[
+"sql",
+"SELECT s, t, dense_rank() OVER (PARTITION BY r.id IS NULL ORDER BY id NULLS LAST) AS d FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT s, t, dense_rank() OVER (PARTITION BY r.id IS NULL ORDER BY id NULLS LAST) AS d FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT s, t, dense_rank() OVER (PARTITION BY r.id IS NULL ORDER BY id NULLS LAST) AS d FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT s, t, dense_rank() OVER (PARTITION BY r.id IS NULL ORDER BY id NULLS LAST) AS d FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) WHERE (l.id, r.id) IN ((2, 2), (3, 3)) OR id = 4"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE (l.id, r.id) IN ((2, 2), (3, 3)) OR id = 4"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE (l.id, r.id) IN ((2, 2), (3, 3)) OR id = 4"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE (l.id, r.id) IN ((2, 2), (3, 3)) OR id = 4"
+],
+[
+"sql",
+"SELECT id, concat(cast(r.id AS string), '-', coalesce(cast(l.id AS string), '?')) AS c, s, t FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, concat(cast(r.id AS string), '-', coalesce(cast(l.id AS string), '?')) AS c, s, t FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, concat(cast(r.id AS string), '-', coalesce(cast(l.id AS string), '?')) AS c, s, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, concat(cast(r.id AS string), '-', coalesce(cast(l.id AS string), '?')) AS c, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(*) FILTER (WHERE r.id IS NULL) AS a, count(*) FILTER (WHERE id IS NULL) AS b FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(*) FILTER (WHERE r.id IS NULL) AS a, count(*) FILTER (WHERE id IS NULL) AS b FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(*) FILTER (WHERE r.id IS NULL) AS a, count(*) FILTER (WHERE id IS NULL) AS b FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(*) FILTER (WHERE r.id IS NULL) AS a, count(*) FILTER (WHERE id IS NULL) AS b FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT z.lid, z.rid, z.id FROM (SELECT l.id AS lid, r.id AS rid, id FROM tl l INNER JOIN tr r USING (id) WHERE r.id IS NOT NULL OR l.id = 1) z WHERE z.id IS NOT NULL"
+],
+[
+"sql",
+"SELECT z.lid, z.rid, z.id FROM (SELECT l.id AS lid, r.id AS rid, id FROM tl l LEFT JOIN tr r USING (id) WHERE r.id IS NOT NULL OR l.id = 1) z WHERE z.id IS NOT NULL"
+],
+[
+"sql",
+"SELECT z.lid, z.rid, z.id FROM (SELECT l.id AS lid, r.id AS rid, id FROM tl l RIGHT JOIN tr r USING (id) WHERE r.id IS NOT NULL OR l.id = 1) z WHERE z.id IS NOT NULL"
+],
+[
+"sql",
+"SELECT z.lid, z.rid, z.id FROM (SELECT l.id AS lid, r.id AS rid, id FROM tl l FULL JOIN tr r USING (id) WHERE r.id IS NOT NULL OR l.id = 1) z WHERE z.id IS NOT NULL"
+],
+[
+"sql",
+"SELECT s, t FROM tl l INNER JOIN tr r USING (id) ORDER BY r.id DESC NULLS LAST, s NULLS LAST, t NULLS LAST"
+],
+[
+"sql",
+"SELECT s, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY r.id DESC NULLS LAST, s NULLS LAST, t NULLS LAST"
+],
+[
+"sql",
+"SELECT s, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY r.id DESC NULLS LAST, s NULLS LAST, t NULLS LAST"
+],
+[
+"sql",
+"SELECT s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY r.id DESC NULLS LAST, s NULLS LAST, t NULLS LAST"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l INNER JOIN tr r USING (id) ORDER BY id DESC NULLS FIRST, s NULLS FIRST, t NULLS FIRST LIMIT 5 OFFSET 2"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) ORDER BY id DESC NULLS FIRST, s NULLS FIRST, t NULLS FIRST LIMIT 5 OFFSET 2"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY id DESC NULLS FIRST, s NULLS FIRST, t NULLS FIRST LIMIT 5 OFFSET 2"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY id DESC NULLS FIRST, s NULLS FIRST, t NULLS FIRST LIMIT 5 OFFSET 2"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, q.id AS c, id FROM tl l INNER JOIN tr r USING (id) FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, q.id AS c, id FROM tl l LEFT JOIN tr r USING (id) FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, q.id AS c, id FROM tl l RIGHT JOIN tr r USING (id) FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b, q.id AS c, id FROM tl l FULL JOIN tr r USING (id) FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(r.id) AS b, count(q.id) AS c, count(id) AS d FROM tl l INNER JOIN tr r USING (id) RIGHT JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(r.id) AS b, count(q.id) AS c, count(id) AS d FROM tl l LEFT JOIN tr r USING (id) RIGHT JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(r.id) AS b, count(q.id) AS c, count(id) AS d FROM tl l RIGHT JOIN tr r USING (id) RIGHT JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(r.id) AS b, count(q.id) AS c, count(id) AS d FROM tl l FULL JOIN tr r USING (id) RIGHT JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT id, `coalesce` FROM tl FULL JOIN tcz USING (id) ORDER BY `coalesce` NULLS LAST, id NULLS LAST"
+],
+[
+"sql",
+"SELECT id, c.`coalesce` AS k FROM tl l FULL JOIN tcz c USING (id) ORDER BY c.`coalesce` NULLS LAST, c.id NULLS LAST, id NULLS LAST"
+],
+[
+"sql",
+"SELECT r.id AS `coalesce`, id FROM tl l FULL JOIN tr r USING (id) ORDER BY `coalesce` NULLS LAST, id NULLS LAST"
+],
+[
+"sql",
+"SELECT id, coalesce(`coalesce`) AS x, coalesce(coalesce(c.`coalesce`)) AS y FROM tl l RIGHT JOIN tcz c USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l FULL JOIN tr r USING (id) WHERE id IN (SELECT q.id FROM tq q ORDER BY coalesce(coalesce(q.id)) LIMIT 2)"
+],
+[
+"sql",
+"SELECT `k.x`, x.`k.x` AS a, y.`k.x` AS b, s, t FROM tk1 x FULL JOIN tk2 y USING (`k.x`)"
+],
+[
+"sql",
+"SELECT `my key`, s, t FROM tk1 x RIGHT JOIN tk2 y USING (`my key`) WHERE `my key` > 10 ORDER BY y.`my key` DESC"
+],
+[
+"sql",
+"SELECT * FROM tk1 FULL JOIN tk2 USING (`k.x`, `my key`)"
+],
+[
+"sql",
+"SELECT `k.x` FROM tk1 x FULL JOIN tk2 y USING (`k.x`) ORDER BY x.`k.x` NULLS LAST, t"
+],
+[
+"sql",
+"SELECT tr.id AS a, tl.id AS b, id FROM tl tr FULL JOIN tr tl USING (id)"
+],
+[
+"sql",
+"SELECT id.id AS a, id FROM tl id FULL JOIN tr USING (id)"
+],
+[
+"sql",
+"SELECT a.id AS x, b.id AS y, c.id AS z, id FROM tr a FULL JOIN tl b USING (id) FULL JOIN tq c USING (id)"
+],
+[
+"sql",
+"SELECT a.s AS x, b.s AS y, c.s AS z, id FROM tl a RIGHT JOIN tl b USING (id) LEFT JOIN tl c USING (id)"
+],
+[
+"sql",
+"SELECT * FROM tl FULL JOIN tr USING (id) FULL JOIN tq USING (id) FULL JOIN tp USING (id)"
+],
+[
+"sql",
+"SELECT tl.id AS a, tp.id AS b, id FROM tl FULL JOIN tr USING (id) RIGHT JOIN tq USING (id) FULL JOIN tp USING (id)"
+],
+[
+"sql",
+"SELECT * FROM ta FULL JOIN tb USING (a) LEFT JOIN tl ON tl.id = ta.b"
+],
+[
+"sql",
+"SELECT * FROM tv1 l FULL JOIN tv2 r USING (id) ORDER BY r.id NULLS LAST, l.id"
+],
+[
+"sql",
+"SELECT id, l.v, r.v FROM tv1 l FULL JOIN tv2 r USING (id) ORDER BY l.id NULLS LAST, r.v"
+],
+[
+"sql",
+"SELECT id, transform(array(10, 20), id -> id + 1) AS x, s, t FROM tl FULL JOIN tr USING (id)"
+],
+[
+"sql",
+"SELECT id, transform(array(10, 20), x -> x + coalesce(r.id, 0)) AS x, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE exists(array(2, 4), x -> x = r.id) AND exists(array(1, 4), id -> id = 4)"
+],
+[
+"sql",
+"SELECT DISTINCT id FROM tl FULL JOIN tr USING (id) ORDER BY id NULLS LAST"
+],
+[
+"sql",
+"SELECT DISTINCT id, l.id FROM tl l FULL JOIN tr r USING (id) ORDER BY l.id NULLS LAST, id NULLS LAST"
+],
+[
+"sql",
+"SELECT id FROM tl l FULL JOIN tr r USING (id) ORDER BY l.id NULLS LAST, t NULLS LAST, s"
+],
+[
+"sql",
+"SELECT * FROM tl l FULL JOIN tr r USING (ID) WHERE Id > 3"
+],
+[
+"sql",
+"SELECT L.ID AS a, R.Id AS b, iD FROM tl l FULL JOIN tr r USING (iD) ORDER BY R.ID NULLS LAST, L.id NULLS LAST"
+],
+[
+"sql",
+"SELECT id, l.id AS a FROM tl l LEFT SEMI JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, q.id AS a, l.id AS b FROM tl l LEFT ANTI JOIN tr r USING (id) FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT p.id AS a, l.id AS b, r.id AS c FROM tp p, tl l FULL JOIN tr r USING (id) WHERE p.id = 1"
+],
+[
+"sql",
+"SELECT p.w, l.id AS a, r.id AS b FROM tp p CROSS JOIN tl l RIGHT JOIN tr r USING (id) WHERE p.id = 6"
+],
+[
+"sql",
+"SELECT l.id AS a, q.id AS b, r.id AS c FROM tl l JOIN tq q ON l.id = q.id RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT q.id, q.u FROM tq q WHERE EXISTS (SELECT 1 FROM tl l FULL JOIN tr r USING (id) WHERE id = q.id AND l.id IS NULL)"
+],
+[
+"sql",
+"SELECT q.id, (SELECT count(r.id) FROM tl l FULL JOIN tr r USING (id) WHERE id = q.id) AS c FROM tq q"
+],
+[
+"sql",
+"SELECT u FROM tq WHERE id IN (SELECT id FROM tl FULL JOIN tr USING (id)) OR id IN (SELECT l.id FROM tl l RIGHT JOIN tr r USING (id))"
+],
+[
+"sql",
+"WITH j AS (SELECT id, l.id AS lid, r.id AS rid FROM tl l FULL JOIN tr r USING (id)) SELECT a.id AS x, b.lid, b.rid, id FROM j a FULL JOIN j b USING (id)"
+],
+[
+"sql",
+"WITH a AS (SELECT * FROM tl FULL JOIN tr USING (id)), b AS (SELECT a.id AS aid, id, u FROM a RIGHT JOIN tq USING (id)) SELECT aid, b.id AS bid, id, w FROM b FULL JOIN tp USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl FULL JOIN tr USING (id) UNION ALL SELECT r.id FROM tl l FULL JOIN tr r USING (id) ORDER BY id NULLS LAST"
+],
+[
+"sql",
+"(SELECT id, s FROM tl l FULL JOIN tr r USING (id) ORDER BY l.id NULLS LAST, s NULLS LAST LIMIT 3) UNION ALL (SELECT id, t FROM tl l FULL JOIN tr r USING (id) ORDER BY r.id NULLS LAST, t NULLS LAST LIMIT 3)"
+],
+[
+"sql",
+"SELECT id, v.id AS a, r.id AS b FROM (VALUES (1, 'a'), (4, 'd')) AS v(id, s) FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY ALL"
+],
+[
+"sql",
+"SELECT r.id AS k, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY 1"
+],
+[
+"sql",
+"SELECT id FROM tl l FULL JOIN tr r USING (id) GROUP BY id HAVING count(r.id) = 0"
+],
+[
+"sql",
+"SELECT id, row_number() OVER w AS rn, s, t FROM tl l FULL JOIN tr r USING (id) WINDOW w AS (PARTITION BY r.id ORDER BY s NULLS LAST, t)"
+],
+[
+"sql",
+"SELECT id, count(*) OVER w AS c, s, t FROM tl l FULL JOIN tr r USING (id) WINDOW w AS (PARTITION BY id)"
+],
+[
+"sql",
+"SELECT l.s, r.*, id FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT * FROM (SELECT l.* FROM tl l FULL JOIN tr r USING (id)) x FULL JOIN tq USING (id)"
+],
+[
+"sql",
+"SELECT id, x.c FROM tl FULL JOIN (SELECT r.id, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY r.id) x USING (id)"
+],
+[
+"sql",
+"SELECT id, max(s) AS m FROM tl l FULL JOIN tr r USING (id) WHERE r.id IS NULL GROUP BY id"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY id, r.t"
+],
+[
+"sql",
+"SELECT count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY r.id IS NULL, id"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM (SELECT id, r.id AS rid FROM tl l FULL JOIN tr r USING (id)) GROUP BY id"
+],
+[
+"sql",
+"SELECT max(id) AS m FROM tl l FULL JOIN tr r USING (id) HAVING max(r.id) > 0"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY id ORDER BY max(r.id) NULLS LAST, id NULLS LAST"
+],
+[
+"sql",
+"SELECT nosuchfn(id) FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, nope FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT z.id FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT * FROM tl l FULL JOIN tr r USING (nokey)"
+],
+[
+"sql",
+"SELECT id + s FROM tl l FULL JOIN tr r USING (id) WHERE id > 'x' + date'2020-01-01'"
+],
+[
+"sql",
+"SELECT id, s, count(*) FROM tl l FULL JOIN tr r USING (id) GROUP BY id"
+],
+[
+"sql",
+"SELECT * FROM tl FULL JOIN nosuch USING (id)"
+],
+[
+"sql",
+"SELECT id FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 1 AND nope = 2"
+],
+[
+"sql",
+"SELECT id FROM tl l RIGHT JOIN tr r USING (id) ORDER BY r.nope"
+],
+[
+"sql",
+"SELECT 1"
+],
+[
+"sql",
+"EXPLAIN SELECT 1"
+],
+[
+"sql",
+"SELECT id, s FROM tl WHERE id > 1 ORDER BY id, s"
+],
+[
+"sql",
+"EXPLAIN SELECT id, s FROM tl WHERE id > 1 ORDER BY id, s"
+],
+[
+"sql",
+"SELECT id, s FROM tl ORDER BY coalesce(coalesce(id)) NULLS LAST, s"
+],
+[
+"sql",
+"EXPLAIN SELECT id, s FROM tl ORDER BY coalesce(coalesce(id)) NULLS LAST, s"
+],
+[
+"sql",
+"SELECT l.id, l.s FROM tl l ORDER BY coalesce(coalesce(l.id)) DESC NULLS LAST, l.s"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, l.s FROM tl l ORDER BY coalesce(coalesce(l.id)) DESC NULLS LAST, l.s"
+],
+[
+"sql",
+"SELECT coalesce(coalesce(l.id)), coalesce(l.s) FROM tl l"
+],
+[
+"sql",
+"EXPLAIN SELECT coalesce(coalesce(l.id)), coalesce(l.s) FROM tl l"
+],
+[
+"sql",
+"SELECT id, `coalesce`, coalesce(`coalesce`, -1) FROM tcz ORDER BY `coalesce` NULLS LAST"
+],
+[
+"sql",
+"EXPLAIN SELECT id, `coalesce`, coalesce(`coalesce`, -1) FROM tcz ORDER BY `coalesce` NULLS LAST"
+],
+[
+"sql",
+"SELECT l.id, r.id FROM tl l FULL JOIN tr r ON l.id = r.id ORDER BY coalesce(coalesce(r.id)) NULLS LAST, l.id NULLS LAST, l.s, r.t"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, r.id FROM tl l FULL JOIN tr r ON l.id = r.id ORDER BY coalesce(coalesce(r.id)) NULLS LAST, l.id NULLS LAST, l.s, r.t"
+],
+[
+"sql",
+"SELECT l.id, r.id, coalesce(l.id, r.id) AS id FROM tl l FULL JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, r.id, coalesce(l.id, r.id) AS id FROM tl l FULL JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"SELECT * FROM tl l JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"EXPLAIN SELECT * FROM tl l JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"SELECT * FROM tl l FULL JOIN tr r ON l.id = r.id WHERE l.id IS NULL OR r.id IS NULL"
+],
+[
+"sql",
+"EXPLAIN SELECT * FROM tl l FULL JOIN tr r ON l.id = r.id WHERE l.id IS NULL OR r.id IS NULL"
+],
+[
+"sql",
+"SELECT l.id, count(r.id) FROM tl l LEFT JOIN tr r ON l.id = r.id GROUP BY l.id"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, count(r.id) FROM tl l LEFT JOIN tr r ON l.id = r.id GROUP BY l.id"
+],
+[
+"sql",
+"SELECT r.id, count(*) FROM tl l RIGHT JOIN tr r ON l.id = r.id GROUP BY r.id ORDER BY r.id NULLS LAST"
+],
+[
+"sql",
+"EXPLAIN SELECT r.id, count(*) FROM tl l RIGHT JOIN tr r ON l.id = r.id GROUP BY r.id ORDER BY r.id NULLS LAST"
+],
+[
+"sql",
+"SELECT l.id, row_number() OVER (PARTITION BY r.id ORDER BY l.s, r.t) AS rn FROM tl l FULL JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, row_number() OVER (PARTITION BY r.id ORDER BY l.s, r.t) AS rn FROM tl l FULL JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"WITH c AS (SELECT id FROM tl) SELECT * FROM c"
+],
+[
+"sql",
+"EXPLAIN WITH c AS (SELECT id FROM tl) SELECT * FROM c"
+],
+[
+"sql",
+"WITH a AS (SELECT * FROM tl), b AS (SELECT * FROM tr) SELECT a.id, b.t FROM a JOIN b ON a.id = b.id"
+],
+[
+"sql",
+"EXPLAIN WITH a AS (SELECT * FROM tl), b AS (SELECT * FROM tr) SELECT a.id, b.t FROM a JOIN b ON a.id = b.id"
+],
+[
+"sql",
+"SELECT * FROM (SELECT id, s FROM tl) x WHERE x.id IN (SELECT id FROM tr)"
+],
+[
+"sql",
+"EXPLAIN SELECT * FROM (SELECT id, s FROM tl) x WHERE x.id IN (SELECT id FROM tr)"
+],
+[
+"sql",
+"SELECT id FROM tl UNION ALL SELECT id FROM tr"
+],
+[
+"sql",
+"EXPLAIN SELECT id FROM tl UNION ALL SELECT id FROM tr"
+],
+[
+"sql",
+"SELECT id FROM tl INTERSECT SELECT id FROM tr"
+],
+[
+"sql",
+"EXPLAIN SELECT id FROM tl INTERSECT SELECT id FROM tr"
+],
+[
+"sql",
+"SELECT id FROM tl EXCEPT SELECT id FROM tr ORDER BY id"
+],
+[
+"sql",
+"EXPLAIN SELECT id FROM tl EXCEPT SELECT id FROM tr ORDER BY id"
+],
+[
+"sql",
+"SELECT id, row_number() OVER (PARTITION BY s ORDER BY id) AS rn FROM tl"
+],
+[
+"sql",
+"EXPLAIN SELECT id, row_number() OVER (PARTITION BY s ORDER BY id) AS rn FROM tl"
+],
+[
+"sql",
+"SELECT l.id, (SELECT max(r.id) FROM tr r WHERE r.id = l.id) AS m FROM tl l"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, (SELECT max(r.id) FROM tr r WHERE r.id = l.id) AS m FROM tl l"
+],
+[
+"sql",
+"SELECT * FROM tl l WHERE EXISTS (SELECT 1 FROM tr r WHERE r.id = l.id)"
+],
+[
+"sql",
+"EXPLAIN SELECT * FROM tl l WHERE EXISTS (SELECT 1 FROM tr r WHERE r.id = l.id)"
+],
+[
+"sql",
+"SELECT * FROM tl l WHERE NOT EXISTS (SELECT 1 FROM tr r WHERE r.id = l.id)"
+],
+[
+"sql",
+"EXPLAIN SELECT * FROM tl l WHERE NOT EXISTS (SELECT 1 FROM tr r WHERE r.id = l.id)"
+],
+[
+"sql",
+"SELECT l.id, r.id FROM tl l RIGHT JOIN tr r ON l.id = r.id WHERE r.id > 2"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, r.id FROM tl l RIGHT JOIN tr r ON l.id = r.id WHERE r.id > 2"
+],
+[
+"sql",
+"SELECT count(*) FROM tl CROSS JOIN tr"
+],
+[
+"sql",
+"EXPLAIN SELECT count(*) FROM tl CROSS JOIN tr"
+],
+[
+"sql",
+"SELECT * FROM tl, tr WHERE tl.id = tr.id"
+],
+[
+"sql",
+"EXPLAIN SELECT * FROM tl, tr WHERE tl.id = tr.id"
+],
+[
+"sql",
+"SELECT l.id, x.t FROM tl l, LATERAL (SELECT t FROM tr r WHERE r.id = l.id) x"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, x.t FROM tl l, LATERAL (SELECT t FROM tr r WHERE r.id = l.id) x"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl GROUP BY id HAVING count(*) > 0 ORDER BY id"
+],
+[
+"sql",
+"EXPLAIN SELECT id, count(*) AS c FROM tl GROUP BY id HAVING count(*) > 0 ORDER BY id"
+],
+[
+"sql",
+"SELECT DISTINCT s FROM tl ORDER BY s"
+],
+[
+"sql",
+"EXPLAIN SELECT DISTINCT s FROM tl ORDER BY s"
+],
+[
+"sql",
+"SELECT id, s FROM tl ORDER BY id DESC NULLS LAST, s LIMIT 2 OFFSET 1"
+],
+[
+"sql",
+"EXPLAIN SELECT id, s FROM tl ORDER BY id DESC NULLS LAST, s LIMIT 2 OFFSET 1"
+],
+[
+"sql",
+"SELECT transform(array(1, 2), id -> id + 1) AS x FROM tl"
+],
+[
+"sql",
+"EXPLAIN SELECT transform(array(1, 2), id -> id + 1) AS x FROM tl"
+],
+[
+"sql",
+"SELECT * FROM tl l LEFT SEMI JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"EXPLAIN SELECT * FROM tl l LEFT SEMI JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"SELECT * FROM tl l LEFT ANTI JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"EXPLAIN SELECT * FROM tl l LEFT ANTI JOIN tr r ON l.id = r.id"
+],
+[
+"sql",
+"SELECT a.id FROM tl a JOIN tl b ON a.id = b.id JOIN tr c ON b.id = c.id"
+],
+[
+"sql",
+"EXPLAIN SELECT a.id FROM tl a JOIN tl b ON a.id = b.id JOIN tr c ON b.id = c.id"
+],
+[
+"sql",
+"SELECT max(id), min(s) FROM tl"
+],
+[
+"sql",
+"EXPLAIN SELECT max(id), min(s) FROM tl"
+],
+[
+"sql",
+"SELECT * FROM VALUES (1, 'a'), (2, 'b') AS v(id, s) WHERE id = 1"
+],
+[
+"sql",
+"EXPLAIN SELECT * FROM VALUES (1, 'a'), (2, 'b') AS v(id, s) WHERE id = 1"
+],
+[
+"sql",
+"SELECT l.*, r.t FROM tl l JOIN tr r ON l.id = r.id ORDER BY l.id, l.s, r.t"
+],
+[
+"sql",
+"EXPLAIN SELECT l.*, r.t FROM tl l JOIN tr r ON l.id = r.id ORDER BY l.id, l.s, r.t"
+],
+[
+"sql",
+"SELECT id FROM tl WHERE id IN (SELECT id FROM tr WHERE id IN (SELECT id FROM tq))"
+],
+[
+"sql",
+"EXPLAIN SELECT id FROM tl WHERE id IN (SELECT id FROM tr WHERE id IN (SELECT id FROM tq))"
+],
+[
+"sql",
+"SELECT id, s FROM tl ORDER BY nosuch"
+],
+[
+"sql",
+"EXPLAIN SELECT id, s FROM tl ORDER BY nosuch"
+],
+[
+"sql",
+"SELECT nosuchfn(id) FROM tl"
+],
+[
+"sql",
+"EXPLAIN SELECT nosuchfn(id) FROM tl"
+],
+[
+"sql",
+"SELECT l.id FROM tl l JOIN tr r ON l.id = r.id WHERE id > 1"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id FROM tl l JOIN tr r ON l.id = r.id WHERE id > 1"
+],
+[
+"sql",
+"SELECT 'USING (id)' AS txt, id FROM tl"
+],
+[
+"sql",
+"EXPLAIN SELECT 'USING (id)' AS txt, id FROM tl"
+],
+[
+"sql",
+"SELECT id AS `using`, s AS `natural` FROM tl"
+],
+[
+"sql",
+"EXPLAIN SELECT id AS `using`, s AS `natural` FROM tl"
+],
+[
+"sql",
+"SELECT id, rollup_c FROM (SELECT id, count(*) AS rollup_c FROM tl GROUP BY ROLLUP (id)) ORDER BY id NULLS LAST, rollup_c"
+],
+[
+"sql",
+"EXPLAIN SELECT id, rollup_c FROM (SELECT id, count(*) AS rollup_c FROM tl GROUP BY ROLLUP (id)) ORDER BY id NULLS LAST, rollup_c"
+],
+[
+"sql",
+"SELECT l.id, r.t FROM tl l JOIN tr r ON l.id = r.id AND coalesce(coalesce(l.id)) = r.id"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, r.t FROM tl l JOIN tr r ON l.id = r.id AND coalesce(coalesce(l.id)) = r.id"
+],
+[
+"sql",
+"SELECT l.id, q.u FROM tl l LEFT JOIN tr r ON l.id = r.id FULL JOIN tq q ON r.id = q.id"
+],
+[
+"sql",
+"EXPLAIN SELECT l.id, q.u FROM tl l LEFT JOIN tr r ON l.id = r.id FULL JOIN tq q ON r.id = q.id"
+],
+[
+"sql",
+"SELECT `k.x`, `my key` FROM tk1 ORDER BY `k.x`"
+],
+[
+"sql",
+"EXPLAIN SELECT `k.x`, `my key` FROM tk1 ORDER BY `k.x`"
+],
+[
+"sql",
+"SELECT x.`k.x`, y.`my key` FROM tk1 x JOIN tk2 y ON x.`k.x` = y.`k.x`"
+],
+[
+"sql",
+"EXPLAIN SELECT x.`k.x`, y.`my key` FROM tk1 x JOIN tk2 y ON x.`k.x` = y.`k.x`"
+],
+[
+"sql",
+"SELECT id, sum(id) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS w FROM tp"
+],
+[
+"sql",
+"EXPLAIN SELECT id, sum(id) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS w FROM tp"
+],
+[
+"sql",
+"SELECT CASE WHEN id > 1 THEN 'x' ELSE s END AS c FROM tl"
+],
+[
+"sql",
+"EXPLAIN SELECT CASE WHEN id > 1 THEN 'x' ELSE s END AS c FROM tl"
+],
+[
+"sql",
+"CREATE OR REPLACE TEMP VIEW vsides AS SELECT l.id AS lid, r.id AS rid, id, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"CREATE OR REPLACE TEMP VIEW vstar AS SELECT * FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"CREATE OR REPLACE TEMP VIEW vkeep AS SELECT l.id, s FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"CREATE OR REPLACE TEMP VIEW vord AS SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) ORDER BY r.id NULLS LAST, s NULLS LAST LIMIT 4"
+],
+[
+"sql",
+"SELECT l.id AS lid, r.id AS rid, id, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sqlview",
+"dfsides",
+"SELECT l.id AS lid, r.id AS rid, id, s, t FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT l.id, s FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sqlview",
+"dfkeep",
+"SELECT l.id, s FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"skip",
+"dfapi"
+],
+[
+"sql",
+"SELECT l.id AS lid, r.id AS rid, id FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"skip",
+"dffilt"
+],
+[
+"sql",
+"SELECT * FROM vsides"
+],
+[
+"sql",
+"SELECT id, v.lid, v.rid, u FROM vsides v FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT * FROM vsides v RIGHT JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT * FROM vsides NATURAL FULL JOIN tq"
+],
+[
+"sql",
+"SELECT lid, rid, id FROM vsides v FULL JOIN tq q USING (id) WHERE v.lid IS NULL OR v.rid IS NULL ORDER BY v.rid NULLS LAST, lid NULLS LAST, id NULLS LAST"
+],
+[
+"sql",
+"SELECT id, v.id AS vid, w FROM vstar v FULL JOIN tp p USING (id)"
+],
+[
+"sql",
+"SELECT id, v.id AS vid, s, u FROM vkeep v FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT * FROM vkeep v FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT v.id, q.id, s FROM vkeep v JOIN tq q ON v.id = q.id"
+],
+[
+"sql",
+"SELECT * FROM vord"
+],
+[
+"sql",
+"SELECT id, v.id AS vid, u FROM vord v LEFT JOIN tq USING (id)"
+],
+[
+"sql",
+"SELECT a.lid, b.id AS bid, id FROM vsides a FULL JOIN vstar b USING (id)"
+],
+[
+"sql",
+"SELECT id, d.lid, d.rid, u FROM dfsides d FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT * FROM dfsides d RIGHT JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT id, d.id AS did, s, u FROM dfkeep d FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT * FROM dfkeep d FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT * FROM dfkeep NATURAL FULL JOIN tq"
+],
+[
+"sql",
+"SELECT id, d.id AS did, s, t, u FROM dfapi d FULL JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT * FROM dfapi d RIGHT JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT id, d.lid, d.rid FROM dffilt d FULL JOIN tq q USING (id)"
+]
+],
+"p10": [
+[
+"rows",
+"tl",
+[
+[
+1,
+"a"
+],
+[
+2,
+"b"
+],
+[
+3,
+"c"
+]
+],
+"id INT, s STRING"
+],
+[
+"rows",
+"tr",
+[
+[
+2,
+"x"
+],
+[
+3,
+"y"
+],
+[
+4,
+"z"
+]
+],
+"id INT, t STRING"
+],
+[
+"sql",
+"SELECT * FROM VALUES (1, 100, 7), (2, 200, 8), (5, 500, 9) AS v(id, `__repark_using_k0`, `__repark_using_order`)"
+],
+[
+"sqlview",
+"tu",
+"SELECT * FROM VALUES (1, 100, 7), (2, 200, 8), (5, 500, 9) AS v(id, `__repark_using_k0`, `__repark_using_order`)"
+],
+[
+"sql",
+"SELECT * FROM VALUES (1, 100), (2, 200), (5, 500) AS v(id, `__repark_using__r__id`)"
+],
+[
+"sqlview",
+"tu2",
+"SELECT * FROM VALUES (1, 100), (2, 200), (5, 500) AS v(id, `__repark_using__r__id`)"
+],
+[
+"sql",
+"SELECT * FROM VALUES (1, 100), (2, 200), (5, 500) AS v(id, `__repark_using__zz`)"
+],
+[
+"sql",
+"SELECT * FROM tu l FULL JOIN tr r USING (id) ORDER BY r.id NULLS LAST, l.id"
+],
+[
+"sql",
+"SELECT id, `__repark_using_k0` FROM tu l RIGHT JOIN tr r USING (id) ORDER BY l.id NULLS LAST, r.id"
+],
+[
+"sql",
+"SELECT id, `__repark_using_order`, l.`__repark_using_k0` AS k FROM tu l FULL JOIN tr r USING (id) ORDER BY l.`__repark_using_order` NULLS LAST, r.id"
+],
+[
+"sql",
+"SELECT id, coalesce(coalesce(`__repark_using_order`)) AS c FROM tu l FULL JOIN tr r USING (id) ORDER BY coalesce(coalesce(l.`__repark_using_order`)) NULLS LAST, id"
+],
+[
+"sql",
+"SELECT * FROM tu2 l FULL JOIN tr r USING (id) ORDER BY r.id NULLS LAST, l.id"
+],
+[
+"sql",
+"SELECT id, l.id AS a, r.id AS b, `__repark_using__r__id` FROM tu2 l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id AS `__repark_using_k0`, s FROM tl l FULL JOIN tr r USING (id) ORDER BY r.id NULLS LAST, l.id"
+]
+],
+"p11": [
+[
+"rows",
+"tl",
+[
+[
+1,
+"a"
+],
+[
+2,
+"b"
+],
+[
+3,
+"c"
+]
+],
+"id INT, s STRING"
+],
+[
+"rows",
+"tr",
+[
+[
+2,
+"x"
+],
+[
+3,
+"y"
+],
+[
+4,
+"z"
+]
+],
+"id INT, t STRING"
+],
+[
+"rows",
+"tq",
+[
+[
+3,
+"p"
+],
+[
+4,
+"q"
+],
+[
+5,
+"r"
+]
+],
+"id INT, u STRING"
+],
+[
+"rows",
+"tp",
+[
+[
+1,
+"k"
+],
+[
+4,
+"j"
+]
+],
+"id INT, w STRING"
+],
+[
+"sql",
+"SELECT id, s FROM tl l LEFT JOIN tr r USING (id) WHERE l.id IS NULL AND id > 0"
+],
+[
+"sql",
+"SELECT id, s FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0 AND r.id IS NULL"
+],
+[
+"sql",
+"SELECT id, l.id AS a, r.id AS b FROM tl l LEFT JOIN tr r USING (id) WHERE id > 1"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b FROM tl l LEFT JOIN tr r USING (id) WHERE id = 4 OR id = 1"
+],
+[
+"sql",
+"SELECT s, t FROM tl l LEFT JOIN tr r USING (id) WHERE id >= 1 ORDER BY l.id NULLS LAST, r.id NULLS LAST"
+],
+[
+"sql",
+"SELECT s, t, l.s FROM tl l LEFT JOIN tr r USING (id) WHERE id IN (1, 4)"
+],
+[
+"sql",
+"SELECT l.s, r.t FROM tl l LEFT JOIN tr r USING (id) WHERE id IN (1, 4) AND (l.s IS NULL OR r.t IS NULL)"
+],
+[
+"sql",
+"SELECT id, l.s FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0 AND l.s IS NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0 AND s IS NULL"
+],
+[
+"sql",
+"SELECT id, l.id AS a, count(*) AS c FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0 GROUP BY id, l.id"
+],
+[
+"sql",
+"SELECT id, count(l.id) AS c FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0 GROUP BY id"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(r.id) AS b FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(id) AS b, count(r.id) AS c FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT max(l.s) AS a, max(r.t) AS b FROM tl l LEFT JOIN tr r USING (id) WHERE id = 4 OR id = 1"
+],
+[
+"sql",
+"SELECT id, s, t, row_number() OVER (ORDER BY l.id NULLS LAST, r.id) AS rn FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT * FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT *, l.id AS a FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT l.id AS a, id FROM tl l LEFT JOIN tr r USING (id) WHERE id BETWEEN 1 AND 4 AND coalesce(l.id, 0) = 0"
+],
+[
+"sql",
+"SELECT DISTINCT l.id AS a FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT id, u, l.id AS a FROM tl l LEFT JOIN tr r USING (id) FULL JOIN tq q USING (id) WHERE id > 0 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT id, l.id AS a, r.id AS b, q.id AS c, p.id AS d FROM tl l LEFT JOIN tr r USING (id) FULL JOIN tq q USING (id) FULL JOIN tp p USING (id)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l LEFT JOIN tr r USING (id) FULL JOIN tq q USING (id) FULL JOIN tp p USING (id) WHERE l.id IS NULL"
+],
+[
+"sql",
+"SELECT count(id) AS a, count(l.id) AS b, count(p.id) AS c FROM tl l LEFT JOIN tr r USING (id) FULL JOIN tq q USING (id) FULL JOIN tp p USING (id)"
+],
+[
+"sql",
+"SELECT * FROM tp, tl l LEFT JOIN tr r USING (id) WHERE tp.id = 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0 AND EXISTS (SELECT 1 FROM tq q WHERE q.id = r.id)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l LEFT JOIN tr r USING (id) WHERE id > 0 AND l.id IS NULL ORDER BY id"
+],
+[
+"sql",
+"SELECT id, s FROM tl l LEFT JOIN tr r USING (id) GROUP BY id, s HAVING id > 0 AND max(l.id) IS NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL AND id > 0"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0 AND r.id IS NULL"
+],
+[
+"sql",
+"SELECT id, l.id AS a, r.id AS b FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 1"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b FROM tl l RIGHT JOIN tr r USING (id) WHERE id = 4 OR id = 1"
+],
+[
+"sql",
+"SELECT s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE id >= 1 ORDER BY l.id NULLS LAST, r.id NULLS LAST"
+],
+[
+"sql",
+"SELECT s, t, l.s FROM tl l RIGHT JOIN tr r USING (id) WHERE id IN (1, 4)"
+],
+[
+"sql",
+"SELECT l.s, r.t FROM tl l RIGHT JOIN tr r USING (id) WHERE id IN (1, 4) AND (l.s IS NULL OR r.t IS NULL)"
+],
+[
+"sql",
+"SELECT id, l.s FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0 AND l.s IS NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0 AND s IS NULL"
+],
+[
+"sql",
+"SELECT id, l.id AS a, count(*) AS c FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0 GROUP BY id, l.id"
+],
+[
+"sql",
+"SELECT id, count(l.id) AS c FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0 GROUP BY id"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(r.id) AS b FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(id) AS b, count(r.id) AS c FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT max(l.s) AS a, max(r.t) AS b FROM tl l RIGHT JOIN tr r USING (id) WHERE id = 4 OR id = 1"
+],
+[
+"sql",
+"SELECT id, s, t, row_number() OVER (ORDER BY l.id NULLS LAST, r.id) AS rn FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT * FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT *, l.id AS a FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT l.id AS a, id FROM tl l RIGHT JOIN tr r USING (id) WHERE id BETWEEN 1 AND 4 AND coalesce(l.id, 0) = 0"
+],
+[
+"sql",
+"SELECT DISTINCT l.id AS a FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT id, u, l.id AS a FROM tl l RIGHT JOIN tr r USING (id) FULL JOIN tq q USING (id) WHERE id > 0 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT id, l.id AS a, r.id AS b, q.id AS c, p.id AS d FROM tl l RIGHT JOIN tr r USING (id) FULL JOIN tq q USING (id) FULL JOIN tp p USING (id)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) FULL JOIN tq q USING (id) FULL JOIN tp p USING (id) WHERE l.id IS NULL"
+],
+[
+"sql",
+"SELECT count(id) AS a, count(l.id) AS b, count(p.id) AS c FROM tl l RIGHT JOIN tr r USING (id) FULL JOIN tq q USING (id) FULL JOIN tp p USING (id)"
+],
+[
+"sql",
+"SELECT * FROM tp, tl l RIGHT JOIN tr r USING (id) WHERE tp.id = 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0 AND EXISTS (SELECT 1 FROM tq q WHERE q.id = r.id)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE id > 0 AND l.id IS NULL ORDER BY id"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) GROUP BY id, s HAVING id > 0 AND max(l.id) IS NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL AND id > 0"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 AND r.id IS NULL"
+],
+[
+"sql",
+"SELECT id, l.id AS a, r.id AS b FROM tl l FULL JOIN tr r USING (id) WHERE id > 1"
+],
+[
+"sql",
+"SELECT l.id AS a, r.id AS b FROM tl l FULL JOIN tr r USING (id) WHERE id = 4 OR id = 1"
+],
+[
+"sql",
+"SELECT s, t FROM tl l FULL JOIN tr r USING (id) WHERE id >= 1 ORDER BY l.id NULLS LAST, r.id NULLS LAST"
+],
+[
+"sql",
+"SELECT s, t, l.s FROM tl l FULL JOIN tr r USING (id) WHERE id IN (1, 4)"
+],
+[
+"sql",
+"SELECT l.s, r.t FROM tl l FULL JOIN tr r USING (id) WHERE id IN (1, 4) AND (l.s IS NULL OR r.t IS NULL)"
+],
+[
+"sql",
+"SELECT id, l.s FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 AND l.s IS NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 AND s IS NULL"
+],
+[
+"sql",
+"SELECT id, l.id AS a, count(*) AS c FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 GROUP BY id, l.id"
+],
+[
+"sql",
+"SELECT id, count(l.id) AS c FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 GROUP BY id"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(r.id) AS b FROM tl l FULL JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(id) AS b, count(r.id) AS c FROM tl l FULL JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT max(l.s) AS a, max(r.t) AS b FROM tl l FULL JOIN tr r USING (id) WHERE id = 4 OR id = 1"
+],
+[
+"sql",
+"SELECT id, s, t, row_number() OVER (ORDER BY l.id NULLS LAST, r.id) AS rn FROM tl l FULL JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT * FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT *, l.id AS a FROM tl l FULL JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT l.id AS a, id FROM tl l FULL JOIN tr r USING (id) WHERE id BETWEEN 1 AND 4 AND coalesce(l.id, 0) = 0"
+],
+[
+"sql",
+"SELECT DISTINCT l.id AS a FROM tl l FULL JOIN tr r USING (id) WHERE id > 0"
+],
+[
+"sql",
+"SELECT id, u, l.id AS a FROM tl l FULL JOIN tr r USING (id) FULL JOIN tq q USING (id) WHERE id > 0 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT id, l.id AS a, r.id AS b, q.id AS c, p.id AS d FROM tl l FULL JOIN tr r USING (id) FULL JOIN tq q USING (id) FULL JOIN tp p USING (id)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) FULL JOIN tq q USING (id) FULL JOIN tp p USING (id) WHERE l.id IS NULL"
+],
+[
+"sql",
+"SELECT count(id) AS a, count(l.id) AS b, count(p.id) AS c FROM tl l FULL JOIN tr r USING (id) FULL JOIN tq q USING (id) FULL JOIN tp p USING (id)"
+],
+[
+"sql",
+"SELECT * FROM tp, tl l FULL JOIN tr r USING (id) WHERE tp.id = 1"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 AND EXISTS (SELECT 1 FROM tq q WHERE q.id = r.id)"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 AND l.id IS NULL ORDER BY id"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) GROUP BY id, s HAVING id > 0 AND max(l.id) IS NULL"
+]
+],
+"p7": [
+[
+"rows",
+"tl",
+[
+[
+1,
+"a"
+],
+[
+2,
+"b"
+],
+[
+3,
+"c"
+]
+],
+"id INT, s STRING"
+],
+[
+"rows",
+"tr",
+[
+[
+2,
+"x"
+],
+[
+3,
+"y"
+],
+[
+4,
+"z"
+]
+],
+"id INT, t STRING"
+],
+[
+"rows",
+"tq",
+[
+[
+3,
+"p"
+],
+[
+4,
+"q"
+],
+[
+5,
+"r"
+]
+],
+"id INT, u STRING"
+],
+[
+"sql",
+"SELECT count(DISTINCT id) AS b, count(DISTINCT l.id) AS c FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(DISTINCT l.id) AS c, count(DISTINCT id) AS b FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(id) AS b, count(l.id) AS c FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(l.id) AS c, count(id) AS b FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(id) AS b, count(l.id) AS c FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT max(id) AS b, max(l.id) AS c FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT sum(id) AS b, sum(l.id) AS c, sum(r.id) AS d FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT sum(id) AS b FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT sum(l.id) AS c FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(DISTINCT l.id) AS c FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, sum(id) OVER () AS a, sum(l.id) OVER () AS b FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, s, t, max(id) OVER (PARTITION BY s) AS a, max(l.id) OVER (PARTITION BY s) AS b FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, l.id AS a, id + 0 AS b, l.id + 0 AS c FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id IS NULL AS a, l.id IS NULL AS b, t FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT t FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT t FROM tl l RIGHT JOIN tr r USING (id) WHERE id IS NOT NULL AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT t FROM tl l FULL JOIN tr r USING (id) WHERE id = 4 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT t FROM tl l FULL JOIN tr r USING (id) WHERE id = 4"
+],
+[
+"sql",
+"SELECT id, t FROM tl l FULL JOIN tr r USING (id) WHERE id >= 3 AND r.id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE id > 0 AND r.id IS NULL"
+],
+[
+"sql",
+"SELECT id, t FROM tl l RIGHT JOIN tr r USING (id) WHERE CASE WHEN l.id IS NULL THEN id ELSE 0 END = 4"
+],
+[
+"sql",
+"SELECT count(id) AS d FROM tl l FULL JOIN tr r USING (id) RIGHT JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT count(l.id) AS a, count(id) AS d FROM tl l FULL JOIN tr r USING (id) RIGHT JOIN tq q USING (id)"
+],
+[
+"sql",
+"SELECT id, l.id AS a FROM tl l FULL JOIN tr r USING (id) RIGHT JOIN tq q USING (id) WHERE id > 3"
+],
+[
+"sql",
+"SELECT id, l.id AS a FROM tl l FULL JOIN tr r USING (id) FULL JOIN tq q USING (id) WHERE id > 3 AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL GROUP BY id"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l FULL JOIN tr r USING (id) WHERE id > 1 AND l.id IS NULL GROUP BY id"
+],
+[
+"sql",
+"SELECT id FROM tl l FULL JOIN tr r USING (id) WHERE id > 1 ORDER BY l.id NULLS LAST, id"
+],
+[
+"sql",
+"SELECT id, t FROM tl l RIGHT JOIN tr r USING (id) WHERE id IN (SELECT id FROM tq) AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT id, greatest(id, 0) AS g, greatest(l.id, 0) AS h FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT coalesce(id, -1) AS a, coalesce(l.id, -1) AS b FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, t FROM tl l RIGHT JOIN tr r USING (id) WHERE id BETWEEN 3 AND 4 AND l.id IS NULL ORDER BY id"
+],
+[
+"sql",
+"SELECT DISTINCT id, l.id FROM tl l FULL JOIN tr r USING (id) WHERE id > 2"
+]
+],
+"p8": [
+[
+"rows",
+"tl",
+[
+[
+1,
+"a"
+],
+[
+2,
+"b"
+],
+[
+3,
+"c"
+]
+],
+"id INT, s STRING"
+],
+[
+"rows",
+"tr",
+[
+[
+2,
+"x"
+],
+[
+3,
+"y"
+],
+[
+4,
+"z"
+]
+],
+"id INT, t STRING"
+],
+[
+"rows",
+"tq",
+[
+[
+3,
+"p"
+],
+[
+4,
+"q"
+],
+[
+5,
+"r"
+]
+],
+"id INT, u STRING"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id, t FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id FROM tl l RIGHT JOIN tr r USING (id) WHERE id IS NOT NULL AND l.id IS NULL"
+],
+[
+"sql",
+"SELECT id FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT * FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l RIGHT JOIN tr r USING (id) WHERE l.id IS NULL AND id > 0"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL AND id > 0"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id, s FROM tl l FULL JOIN tr r USING (id) WHERE l.id IS NULL OR id IS NULL"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE id IS NULL = l.id IS NULL"
+],
+[
+"sql",
+"SELECT id, s, t FROM tl l FULL JOIN tr r USING (id) WHERE id IS NOT NULL AND r.id IS NOT NULL AND l.id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id, t FROM tl l FULL JOIN tr r USING (id) FULL JOIN tq q USING (id) WHERE l.id IS NULL AND id IS NOT NULL"
+],
+[
+"sql",
+"SELECT id, t FROM tl l FULL JOIN tr r USING (id) WHERE l.id = id OR id = 4"
+],
+[
+"sql",
+"SELECT id, t FROM tl l RIGHT JOIN tr r USING (id) WHERE coalesce(l.id, 0) = 0 AND coalesce(id, 0) = 4"
+],
+[
+"sql",
+"SELECT id, CASE WHEN l.id IS NULL THEN 'n' END AS a, CASE WHEN id IS NULL THEN 'n' END AS b FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, l.id IS NULL AS a, id IS NULL AS b FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id IS NULL AS b, l.id IS NULL AS a FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id + 1 AS b, l.id + 1 AS a FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT abs(id) AS b, abs(l.id) AS a, abs(r.id) AS c FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT id, t FROM tl l RIGHT JOIN tr r USING (id) ORDER BY id IS NULL, l.id IS NULL DESC, t"
+],
+[
+"sql",
+"SELECT t FROM tl l FULL JOIN tr r USING (id) ORDER BY abs(id) DESC NULLS LAST, abs(l.id) NULLS LAST LIMIT 1"
+],
+[
+"sql",
+"SELECT id, count(*) AS c FROM tl l FULL JOIN tr r USING (id) GROUP BY id, l.id IS NULL"
+],
+[
+"sql",
+"SELECT t, row_number() OVER (ORDER BY id DESC) AS a, row_number() OVER (ORDER BY l.id DESC) AS b FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT t, lag(id) OVER (ORDER BY t) AS a, lag(l.id) OVER (ORDER BY t) AS b FROM tl l RIGHT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT x.b, x.c FROM (SELECT count(id) AS b, count(l.id) AS c FROM tl l FULL JOIN tr r USING (id)) x"
+],
+[
+"sql",
+"SELECT u, (SELECT count(id) FROM tl l FULL JOIN tr r USING (id)) AS b, (SELECT count(l.id) FROM tl l FULL JOIN tr r USING (id)) AS c FROM tq"
+],
+[
+"sql",
+"SELECT count(id) AS b FROM tl l FULL JOIN tr r USING (id) UNION ALL SELECT count(l.id) FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT min(id) AS a, min(r.id) AS b, max(id) AS c, max(l.id) AS d FROM tl l FULL JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT avg(id) AS a, count(*) AS n, avg(r.id) AS b FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(id) AS a, count(r.id) AS b FROM tl l LEFT JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(id) AS a, count(l.id) AS b FROM tl l INNER JOIN tr r USING (id)"
+],
+[
+"sql",
+"SELECT count(id) AS a, count(tl.id) AS b FROM tl FULL JOIN tr USING (id)"
+],
+[
+"sql",
+"SELECT count(id) AS a, count(tl.id) AS b FROM tl NATURAL FULL JOIN tr"
+]
+]
+}

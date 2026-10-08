@@ -331,7 +331,7 @@ class DataFrame:
         view_name = scratch_view_name(self._session, prefix)
         if not is_checkpoint:
             budgets = _resolve_cache_budgets(self._alive_token)
-            lineage = self._inner
+            lineage = _qualified_names._cache_lineage(self)
             self._session.materialize_as_cache_view(view_name, lineage, budgets)
             cache_handle.bind_registered_view(self, view_name, lineage)
             _register_cache_frame(self._alive_token, self)
@@ -1142,7 +1142,8 @@ class DataFrame:
         if isinstance(condition, Column):
             _reject_partition_transform(condition)
             condition._reject_nested_generator("filter")
-            self._refuse_self_join_refs([condition])
+            bound = _qualified_names._bound_refs(self, [condition], False)
+            condition = bound[0]
             join_sql = condition.join_sql_part()
             if "__REPARK_ATTR_" in join_sql and self._display_names is not None:
                 local_sql = _rewrite_attr_tokens_local(join_sql, self)
@@ -1230,7 +1231,7 @@ class DataFrame:
             if isinstance(item, Column):
                 _reject_partition_transform(item)
                 _reject_non_numeric_range_order(self, item)
-        self._refuse_self_join_refs([item for item in expanded if isinstance(item, Column)])
+        expanded = _qualified_names._bound_refs(self, expanded, True)
         projected = [self._column_of(item) for item in expanded]
         generators = [column for column in projected if getattr(column, "_generator", None)]
         if len(generators) > 1:
@@ -2125,7 +2126,7 @@ class DataFrame:
         the ``ascending`` keyword (a bool or a per-column list) overrides those. Null ordering
         follows Spark: ascending → nulls first, descending → nulls last.
         """
-        self._refuse_self_join_refs([column for column in cols if isinstance(column, Column)])
+        cols = _qualified_names._bound_refs(self, cols, False)
         columns, ascending_flags, nulls_first_flags = self._sort_specs(cols, ascending)
         return self._spawn_preserving_identity(
             self._plan().sort(columns, ascending_flags, nulls_first_flags)
@@ -2275,18 +2276,17 @@ class DataFrame:
             "leftanti": "LEFT ANTI",
         }.get(engine_how, "INNER")
         left_only = engine_how in _SEMI_JOIN_HOWS
-        self._session.create_or_replace_temp_view(left_alias, self._plan())
-        self._session.create_or_replace_temp_view(right_alias, other._plan())
+        sides = _qualified_names._cond_sides(self, other, condition)
+        self._session.create_or_replace_temp_view(left_alias, sides[0])
+        self._session.create_or_replace_temp_view(right_alias, sides[1])
         try:
             if condition is None:
                 remint = _native.join_shared_remint(self._frame_node, other._frame_node)
             else:
-                cond_sql = condition.join_sql_part()
-                _qualified_names._refuse_using_keys_in_cond(self, other, condition)
                 on_sql, remint = _native.prepare_join_condition(
-                    *_join_condition_args(self, other, cond_sql, left_alias, right_alias)
+                    *_qualified_names._cond_args(self, other, sides, left_alias, right_alias)
                 )
-                _native.refuse_ambiguous_join_condition(self._plan(), other._plan(), on_sql)
+                _native.refuse_ambiguous_join_condition(sides[0], sides[1], on_sql)
             left_cols = list(self.columns)
             right_cols = list(other.columns)
             all_display = left_cols if left_only else left_cols + right_cols

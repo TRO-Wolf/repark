@@ -261,9 +261,9 @@ def _expand_qualified_star(frame: Any, written: str) -> list[Any] | None:
         exact,
         _frame_qualifiers_for_bind(frame),
     )
+    expanded = _using_star_keys(frame, held, split[0], exact)
     if found is None:
-        return None
-    expanded = []
+        return expanded or None
     for position, parts in found:
         quoted = _quote_ident(engine_names[position])
         if parts:
@@ -286,6 +286,22 @@ def _expand_qualified_star(frame: Any, written: str) -> list[Any] | None:
     return expanded
 
 
+def _using_star_keys(
+    frame: Any, held: list[str | None], qualifier_parts: list[str], exact: bool
+) -> list[Any]:
+    mark = _using_mark(frame)
+    if mark is None or len(qualifier_parts) != 1 or not _using_mark_live(mark, held):
+        return []
+    folded = qualifier_parts[0] if exact else qualifier_parts[0].lower()
+    keys: list[Any] = []
+    for quals, display, _alias in mark[2]:
+        if _alias and any((cand if exact else cand.lower()) == folded for cand in quals):
+            bound = _using_key_name_column(frame, held, qualifier_parts, display)
+            if bound is not None:
+                keys.append(bound)
+    return keys
+
+
 def _resolve_sort_qualified_name(
     frame: Any, written: str, qualifier_parts: list[str], name: str
 ) -> Any:
@@ -298,7 +314,9 @@ def _resolve_sort_qualified_name(
         return frame._bind_schema_column(written)
     exact = _native.session_case_sensitive(frame._session)
     qualifier = ".".join(qualifier_parts)
-    _refuse_using_key_name(frame, held, qualifier_parts, name)
+    hidden = _using_key_name_column(frame, held, qualifier_parts, name)
+    if hidden is not None:
+        return hidden
     status, hits, plan_quals = _native.resolve_display_name(
         native, name, qualifier, displays, exact, _frame_qualifiers_for_bind(frame)
     )
@@ -400,12 +418,15 @@ def _raise_using_key_reference(ref: str) -> NoReturn:
 
 
 def _using_mark(frame: Any) -> Any:
+    if not _USING_MARKS:
+        return None
     return _USING_MARKS.get(frame)
 
 
 def _set_using_mark(frame: Any, mark: Any) -> None:
     if mark is None:
-        _USING_MARKS.pop(frame, None)
+        if _USING_MARKS:
+            _USING_MARKS.pop(frame, None)
     else:
         _USING_MARKS[frame] = mark
 
@@ -417,7 +438,8 @@ def _merge_using_marks(first: Any, second: Any) -> Any:
         return first
     kept = first[0] | second[0]
     keys = tuple(dict.fromkeys([*first[1], *second[1]]))
-    return (kept, keys, first[2] | second[2], first[3] | second[3])
+    names = tuple(dict.fromkeys([*first[2], *second[2]]))
+    return (kept, keys, names, {**first[3], **second[3]})
 
 
 def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how: str) -> None:
@@ -427,11 +449,8 @@ def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how:
         return
     exact = _session_exact(child)
     held = _stamped_frame_id_snapshot(child)[1]
-    left_held, left_engines = _stamped_frame_id_snapshot(left)[1:]
-    right_held, right_engines = _stamped_frame_id_snapshot(right)[1:]
-    right_map = right._frame_qualifiers or {}
+    left_engines = _stamped_frame_id_snapshot(left)[2]
     kept: list[str] = []
-    right_ids: list[str] = []
     for key in keys:
         folded = key if exact else key.lower()
         left_pos = next(
@@ -442,63 +461,142 @@ def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how:
             ),
             None,
         )
-        right_pos = next(
-            (
-                index
-                for index, name in enumerate(right_engines)
-                if (name if exact else name.lower()) == folded
-            ),
-            None,
-        )
-        if left_pos is None or left_pos >= len(held) or left_pos >= len(left_held):
+        if left_pos is None or left_pos >= len(held):
             continue
         kept_id = held[left_pos]
-        if kept_id is None:
-            continue
-        kept.append(kept_id)
-        if right_pos is not None and right_pos < len(right_held):
-            right_id = right_held[right_pos]
-            if right_id is not None:
-                right_ids.append(right_id)
-    refused = frozenset(name for values in right_map.values() for name in values)
-    if not refused or not kept:
+        if kept_id is not None:
+            kept.append(kept_id)
+    names: list[tuple[frozenset[str], str, str]] = []
+    ids: dict[str, tuple[str, str]] = {}
+    for is_right, position, alias, display in _native.using_hidden_key_fields(child._plan()):
+        side = right if is_right else left
+        side_held = _stamped_frame_id_snapshot(side)[1]
+        side_id = side_held[position] if position < len(side_held) else None
+        quals = frozenset((side._frame_qualifiers or {}).get(side_id) or ())
+        names.append((quals, display, alias))
+        if side_id is not None and side_id not in held:
+            ids[side_id] = (alias, display)
+    if kept and not names:
+        right_map = right._frame_qualifiers or {}
+        refused = frozenset(name for values in right_map.values() for name in values)
+        names = [(refused, key, "") for key in keys] if refused else []
+    if not kept or not names:
         _set_using_mark(child, merged)
         return
-    mark = _merge_using_marks(merged, (frozenset(kept), tuple(keys), refused, frozenset(right_ids)))
-    _set_using_mark(child, mark)
+    _set_using_mark(
+        child, _merge_using_marks(merged, (frozenset(kept), tuple(keys), tuple(names), ids))
+    )
 
 
 def _using_mark_live(mark: Any, held: list[str | None]) -> bool:
     return bool(mark and mark[0] and mark[2]) and any(kept_id in held for kept_id in mark[0])
 
 
-def _using_pair_hit(mark: Any, qualifier: str, name: str, exact: bool) -> bool:
+def _using_hidden_alias(mark: Any, qualifier: str, name: str, exact: bool) -> str | None:
     folded_qual = qualifier if exact else qualifier.lower()
     folded_name = name if exact else name.lower()
-    keys_hit = any((key if exact else key.lower()) == folded_name for key in mark[1])
-    if not keys_hit:
-        return False
-    return any((cand if exact else cand.lower()) == folded_qual for cand in mark[2])
+    for quals, display, alias in reversed(mark[2]):
+        if (display if exact else display.lower()) != folded_name:
+            continue
+        if any((cand if exact else cand.lower()) == folded_qual for cand in quals):
+            return str(alias)
+    return None
 
 
-def _refuse_using_key_name(
+def _reachable_using_alias(frame: Any, alias: str | None, ref: str) -> str | None:
+    if alias is None:
+        return None
+    if _native.expose_using_keys(frame._plan(), [alias]) is None:
+        _raise_using_key_reference(ref)
+    return alias
+
+
+def _using_key_name_column(
     frame: Any, held: list[str | None], qualifier_parts: list[str] | None, name: str
-) -> None:
+) -> Any:
     from repark.spark._idents import quote_ident as _quote_ident
+    from repark.spark.column import Column
 
     mark = _using_mark(frame)
     if mark is None or not qualifier_parts or len(qualifier_parts) != 1:
-        return
+        return None
     if not _using_mark_live(mark, held):
-        return
-    if not _using_pair_hit(mark, qualifier_parts[0], name, _session_exact(frame)):
-        return
-    _raise_using_key_reference(f"{_quote_ident(qualifier_parts[0])}.{_quote_ident(name)}")
+        return None
+    ref = f"{_quote_ident(qualifier_parts[0])}.{_quote_ident(name)}"
+    alias = _reachable_using_alias(
+        frame, _using_hidden_alias(mark, qualifier_parts[0], name, _session_exact(frame)), ref
+    )
+    if alias is None:
+        return None
+    quoted = _quote_ident(alias)
+    bound = Column(
+        _native.PyColumn.column(quoted).alias(name),
+        spark_display=name,
+        projection_name=name,
+        stable_name=True,
+        has_free_attribute=True,
+        birth_frame=frame,
+    )
+    bound._sql_expr = quoted
+    return bound
 
 
 _QUOTED_RUN_RE = re.compile(r'"(?:[^"]|"")+"(?:\."(?:[^"]|"")+")+')
 _SINGLE_QUOTED_RE = re.compile(r"('(?:[^']|'')*')")
 _DOUBLE_QUOTED_RE = re.compile(r'("(?:[^"]|"")*")')
+
+
+def _using_key_text_hits(mark: Any, sql: str, exact: bool, generated: bool) -> list[Any]:
+    hits: list[Any] = []
+    if generated:
+        for match in _QUOTED_RUN_RE.finditer(sql.replace("`", '"')):
+            parts = [part.replace('""', '"') for part in match.group(0).split('"."')]
+            parts[0] = parts[0][1:]
+            parts[-1] = parts[-1][:-1]
+            if len(parts) == 2:
+                alias = _using_hidden_alias(mark, parts[0], parts[1], exact)
+                if alias is not None:
+                    hits.append((match.start(), match.end(), parts[0], parts[1], alias))
+        return hits
+    offset = 0
+    for piece in _SINGLE_QUOTED_RE.split(sql):
+        inner = offset
+        offset += len(piece)
+        if piece.startswith("'"):
+            continue
+        for subpiece in _DOUBLE_QUOTED_RE.split(piece):
+            base = inner
+            inner += len(subpiece)
+            if subpiece.startswith('"'):
+                continue
+            for match in _DOTTED_TOKEN_PATTERN.finditer(subpiece):
+                parts = match.group(1).split(".")
+                if len(parts) != 2:
+                    continue
+                alias = _using_hidden_alias(mark, parts[0], parts[1], exact)
+                if alias is not None:
+                    hits.append(
+                        (base + match.start(1), base + match.end(1), parts[0], parts[1], alias)
+                    )
+    return hits
+
+
+def _bind_using_key_text(frame: Any, held: list[str | None], sql: str, exact: bool) -> str:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    mark = _using_mark(frame)
+    if mark is None or not _using_mark_live(mark, held):
+        return sql
+    if "`" in sql:
+        _refuse_using_key_text(mark, held, sql.replace("`", ""), exact, False)
+        return sql
+    for start, end, qualifier, name, alias in reversed(
+        _using_key_text_hits(mark, sql, exact, False)
+    ):
+        ref = f"{_quote_ident(qualifier)}.{_quote_ident(name)}"
+        _reachable_using_alias(frame, alias, ref)
+        sql = f"{sql[:start]}{_quote_ident(alias)}{sql[end:]}"
+    return sql
 
 
 def _refuse_using_key_text(
@@ -508,45 +606,32 @@ def _refuse_using_key_text(
 
     if mark is None or not _using_mark_live(mark, held):
         return
-    if generated:
-        for match in _QUOTED_RUN_RE.finditer(sql.replace("`", '"')):
-            parts = [part.replace('""', '"') for part in match.group(0).split('"."')]
-            parts[0] = parts[0][1:]
-            parts[-1] = parts[-1][:-1]
-            if len(parts) == 2 and _using_pair_hit(mark, parts[0], parts[1], exact):
-                _raise_using_key_reference(f"{_quote_ident(parts[0])}.{_quote_ident(parts[1])}")
-        return
-    for piece in _SINGLE_QUOTED_RE.split(sql):
-        if piece.startswith("'"):
-            continue
-        for subpiece in _DOUBLE_QUOTED_RE.split(piece):
-            if subpiece.startswith('"'):
-                continue
-            for match in _DOTTED_TOKEN_PATTERN.finditer(subpiece.replace("`", "")):
-                parts = match.group(1).split(".")
-                if len(parts) == 2 and _using_pair_hit(mark, parts[0], parts[1], exact):
-                    _raise_using_key_reference(f"{_quote_ident(parts[0])}.{_quote_ident(parts[1])}")
+    for _start, _end, qualifier, name, _alias in _using_key_text_hits(mark, sql, exact, generated):
+        _raise_using_key_reference(f"{_quote_ident(qualifier)}.{_quote_ident(name)}")
 
 
-def _refuse_using_key_tokens(frames: tuple[Any, ...], sql: str) -> None:
-    from repark.spark._idents import quote_ident as _quote_ident
+def _using_key_token_hits(frames: tuple[Any, ...], sql: str) -> list[Any]:
     from repark.spark.dataframe.join_attr_tokens import (
         _ATTR_TOKEN_RE,
         _token_leaf_display,
     )
 
     if "__REPARK_ATTR_" not in sql:
-        return
-    right_ids: set[str] = set()
-    for frame in frames:
+        return []
+    hidden: dict[str, Any] = {}
+    for position, frame in enumerate(frames):
         mark = _using_mark(frame)
-        if mark is not None:
-            right_ids |= mark[3]
-    if not right_ids:
-        return
+        if mark is None:
+            continue
+        for side_id, (alias, display) in mark[3].items():
+            hidden[side_id] = (position, alias, display)
+    if not hidden:
+        return []
     registry = frames[0]._alive_token.get("frame_registry", {})
+    hits: list[Any] = []
     for match in _ATTR_TOKEN_RE.finditer(sql):
-        if match.group(1) not in right_ids:
+        found = hidden.get(match.group(1))
+        if found is None:
             continue
         birth = registry.get(int(match.group(2)))
         if birth is None or not birth._alive_token.get("alive", False):
@@ -554,6 +639,14 @@ def _refuse_using_key_tokens(frames: tuple[Any, ...], sql: str) -> None:
         if any(birth is frame for frame in frames):
             continue
         leaf = _token_leaf_display(match) or match.group(1)
+        hits.append((match, leaf, *found))
+    return hits
+
+
+def _refuse_using_key_tokens(frames: tuple[Any, ...], sql: str) -> None:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    for _match, leaf, _position, _alias, _display in _using_key_token_hits(frames, sql):
         _raise_using_key_reference(_quote_ident(leaf))
 
 
@@ -569,12 +662,144 @@ def _refuse_using_key_columns(frame: Any, columns: list[Any]) -> None:
         _refuse_using_key_tokens((frame,), sql)
 
 
-def _refuse_using_keys_in_cond(self: Any, other: Any, condition: Any) -> None:
-    sql = condition.join_sql_part()
-    for frame in (self, other):
+def _bind_using_key_column(frame: Any, column: Any, keep_name: bool) -> Any:
+    from repark.spark._idents import quote_ident as _quote_ident
+    from repark.spark.dataframe.join_attr_tokens import _ATTR_TOKEN_RE, _token_leaf_display
+
+    mark = _using_mark(frame)
+    if mark is None:
+        return column
+    held = _stamped_frame_id_snapshot(frame)[1]
+    if not _using_mark_live(mark, held):
+        return column
+    exact = _session_exact(frame)
+    sql = column.join_sql_part()
+    named = _using_key_text_hits(mark, sql, exact, True)
+    tokens = _using_key_token_hits((frame,), sql)
+    if not named and not tokens:
+        return column
+    inner = column._inner
+    edits = [(start, end, alias) for start, end, _qual, _name, alias in named]
+    edits.extend((match.start(), match.end(), alias) for match, _l, _p, alias, _d in tokens)
+    for _start, _end, qualifier, name, alias in named:
+        ref = f"{_quote_ident(qualifier)}.{_quote_ident(name)}"
+        _reachable_using_alias(frame, alias, ref)
+        inner = _native.rebind_using_key(inner, qualifier, name, alias, exact, keep_name)
+    aliases = {alias for _match, _leaf, _position, alias, _display in tokens}
+    if tokens:
+        leaf = tokens[0][1]
+        display = tokens[0][4]
+        hidden_ids = {match.group(1) for match, *_rest in tokens}
+        rivals = [
+            match
+            for match in _ATTR_TOKEN_RE.finditer(sql)
+            if match.group(1) not in hidden_ids
+            and (_token_leaf_display(match) or "").lower() == display.lower()
+        ]
+        if len(aliases) != 1 or rivals:
+            _raise_using_key_reference(_quote_ident(leaf))
+        alias = _reachable_using_alias(frame, next(iter(aliases)), _quote_ident(leaf))
+        inner = _native.rebind_using_key(inner, None, display, alias, exact, keep_name)
+    rebound = _rewrap_rebound_column(column, inner)
+    for start, end, alias in sorted(set(edits), reverse=True):
+        sql = f"{sql[:start]}{_quote_ident(alias)}{sql[end:]}"
+    rebound._join_sql_expr = sql
+    return rebound
+
+
+def _bound_refs(frame: Any, items: Any, keep_name: bool) -> list[Any]:
+    from repark.spark.column import Column
+
+    if not _USING_MARKS or _USING_MARKS.get(frame) is None:
+        bound = items
+    else:
+        bound = [
+            _bind_using_key_column(frame, item, keep_name) if isinstance(item, Column) else item
+            for item in items
+        ]
+    held = [item for item in bound if isinstance(item, Column)]
+    frame._refuse_self_join_refs(held)
+    if frame._unemitted_attr_ids:
+        for item in held:
+            frame._refuse_unemitted_ids(item)
+    return bound
+
+
+def _cond_sides(self: Any, other: Any, condition: Any) -> tuple[Any, Any, Any]:
+    if condition is None:
+        return self._plan(), other._plan(), None
+    return _expose_using_keys_in_cond(self, other, condition.join_sql_part())
+
+
+def _cond_args(self: Any, other: Any, sides: Any, left_alias: str, right_alias: str) -> list[Any]:
+    from repark.spark.dataframe.join_attr_tokens import _join_condition_args
+
+    args = list(_join_condition_args(self, other, sides[2], left_alias, right_alias))
+    args[4], args[5] = sides[0], sides[1]
+    args[8] = [*args[8], *_native.logical_column_names(sides[0])[len(args[8]) :]]
+    args[9] = [*args[9], *_native.logical_column_names(sides[1])[len(args[9]) :]]
+    return args
+
+
+def _expose_using_keys_in_cond(self: Any, other: Any, cond_sql: str) -> tuple[Any, Any, str]:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    frames = (self, other)
+    plans = [self._plan(), other._plan()]
+    wanted: list[list[str]] = [[], []]
+    edits: list[tuple[int, int, str]] = []
+    for position, frame in enumerate(frames):
         mark = _using_mark(frame)
         if mark is None:
             continue
         held = _stamped_frame_id_snapshot(frame)[1]
-        _refuse_using_key_text(mark, held, sql, _session_exact(frame), True)
-    _refuse_using_key_tokens((self, other), sql)
+        if not _using_mark_live(mark, held):
+            continue
+        wanted[position].extend(
+            alias for _quals, _display, alias in mark[2] if alias and alias in cond_sql
+        )
+        hits = _using_key_text_hits(mark, cond_sql, _session_exact(frame), True)
+        for start, end, qualifier, name, alias in hits:
+            ref = f"{_quote_ident(qualifier)}.{_quote_ident(name)}"
+            _reachable_using_alias(frame, alias, ref)
+            wanted[position].append(alias)
+            edits.append((start, end, alias))
+    for match, leaf, position, alias, _display in _using_key_token_hits(frames, cond_sql):
+        _reachable_using_alias(frames[position], alias, _quote_ident(leaf))
+        wanted[position].append(alias)
+        edits.append((match.start(), match.end(), alias))
+    for start, end, alias in sorted(set(edits), reverse=True):
+        cond_sql = f"{cond_sql[:start]}{_quote_ident(alias)}{cond_sql[end:]}"
+    for position, names in enumerate(wanted):
+        if names:
+            plans[position] = _native.expose_using_keys(plans[position], list(dict.fromkeys(names)))
+    return plans[0], plans[1], cond_sql
+
+
+def _expose_using_keys_in_text(frame: Any, text: str) -> tuple[Any, dict[str, str]]:
+    mark = _using_mark(frame)
+    plan = frame._plan()
+    if mark is None or "__repark_using__" not in text:
+        return plan, {}
+    shown = {alias: display for _quals, display, alias in mark[2] if alias and alias in text}
+    if not shown:
+        return plan, {}
+    wide = _native.expose_using_keys(plan, list(shown))
+    if wide is None:
+        _raise_using_key_reference(", ".join(f"`{display}`" for display in shown.values()))
+    return wide, shown
+
+
+def _cache_lineage(frame: Any) -> Any:
+    inner = frame._inner
+    mark = _using_mark(frame)
+    if mark is None or not mark[2]:
+        return inner
+    reachable = [
+        alias
+        for _quals, _display, alias in mark[2]
+        if alias and _native.expose_using_keys(inner, [alias]) is not None
+    ]
+    if not reachable:
+        return inner
+    return _native.expose_using_keys(inner, list(dict.fromkeys(reachable))) or inner

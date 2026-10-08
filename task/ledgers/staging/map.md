@@ -21,6 +21,22 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
   **Fold SM-2d (2026-10-07):** C-071 rewritten to the nearest-visible sourced-twin rule.
+- [using-per-side-keys-1-ledger.md](using-per-side-keys-1-ledger.md) —
+  **USING-PER-SIDE-KEYS-1 (2026-10-07/08), built, fold 1 applied, awaiting the Critic:** the
+  acceptance grid for the coalesced `USING` key and per-side key references, 1,090 cells on
+  Spark 4.1.2, `main` `3fbcb2ca` and the head (C-001); both doors show the merged key on
+  `right`/`full` (C-002, C-006) and answer per-side keys (C-003) with hidden keys never in the
+  output schema (C-004); chained `USING` joins match on the merged key, wrong since 1.0.0
+  (C-008); the SQL `WHERE` refusal is gone (C-007). Fold 1 (the verifier's FAIL at `61851c95`)
+  moves the SQL door from a statement rewrite to the plan and holds "never worse than `main`"
+  with a 182-statement differential pin (C-012, C-013); mixed-type keys take Spark's type
+  (C-010); the DataFrame-door reach survives side-key filters, sorts and caching (C-014). 902
+  grid cells matched Spark after fold 1. Fold 2 (the re-verify's FAIL at `783942f3`, the last
+  fold) narrows: a select that names both the unqualified key and a side key, a comma join,
+  `QUALIFY` and a failed retry answer exactly as `main` (C-015, C-016, C-017); 1,355 statements,
+  zero third answers. C-011 (the Critic pass) is `OPEN`.
+  `risk_tier: high`. Branch `fix/using-per-side-keys-1`. Evidence in
+  [using-per-side-keys-1-probes/](using-per-side-keys-1-probes/map.md).
 - [fa-5-6-ledger.md](fa-5-6-ledger.md) —
   **FA-5 and FA-6 (2026-10-08; fold 1 the same day):** FA-5 ships: a csv path write of a
   frame with exact-duplicate display names writes instead of refusing, with the display names

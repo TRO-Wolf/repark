@@ -138,7 +138,10 @@ pub(crate) fn join_on_keys(
     right_node: &PyFrameNode,
 ) -> PyResult<(DataFrame, PyFrameNode)> {
     let rule = frame_rule(left.inner());
-    let (joined, node) = repark_core::frame_names::join_on_named_keys(
+    let ansi = repark_functions::ansi::spark_ansi_enabled_from_options(
+        left.inner().task_ctx().session_config().options(),
+    );
+    let (joined, node) = repark_core::frame_names::join_on_named_keys_with(
         crate::deep_stack::grown_clone_frame(left.inner(), &left.depths()),
         crate::deep_stack::grown_clone_frame(right.inner(), &right.depths()),
         on,
@@ -146,6 +149,7 @@ pub(crate) fn join_on_keys(
         rule,
         Arc::clone(&left_node.node),
         Arc::clone(&right_node.node),
+        ansi,
     )
     .map_err(datafusion_to_py_err)?;
     Ok((joined, PyFrameNode { node }))

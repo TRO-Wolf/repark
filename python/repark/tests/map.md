@@ -9746,15 +9746,62 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   reprs. No module docstring: the lane's no-comments ruling covers the
   new file; the contract lives here. pins: attr-id-1/C-065
 - [test_attr_id_1_sm2_r6.py](test_attr_id_1_sm2_r6.py) — **Fold SM-2 R6
-  (2026-10-06, R-R6-1…5):** DataFrame `USING` joins keep the left key
-  physically (left-side references answer Spark-exact on every join type;
-  `semi`/`anti` `42703` on the missing side; mixed-type keys follow main);
-  right-side references answer on `inner` and refuse explicit on
-  `left`/`right`/`full` on every choke (select, getitem, compound, sort,
-  filter, selectExpr, join condition) plus stale pre-join right keys, with
-  literal/unqualified/no-alias guards. No module docstring: the lane's
-  no-comments ruling covers the new file; the contract lives here.
-  pins: attr-id-1/C-066
+  (2026-10-06), rewritten by USING-PER-SIDE-KEYS-1 (2026-10-07):** DataFrame
+  `USING` joins show the merged key (the right key on `right`,
+  `coalesce` on `full`) in star, the unqualified key, `groupBy`,
+  `withColumn`, `distinct` and a second `USING` join, and answer `l.id` /
+  `r.id` per side in select, `selectExpr`, filter, sort, a join condition
+  and qualified stars, as strings, `col`, getitem and stale pre-join
+  references, aliased and not. Hidden keys never reach `columns`,
+  `schema`, pandas, arrow or a parquet file. The shown key's attribute id
+  follows the join type. Declared: a side key past a narrowing `select`,
+  an `.alias`, in `groupBy`/`withColumn` or written with backticks in a
+  text filter refuses with the R6 message; mixed-type keys keep the left
+  type. `semi`/`anti` keep `42703` on the right side; the `on=` controls
+  are unchanged. Every value is a Spark 4.1.2 grid cell. No module
+  docstring: the contract lives here.
+  pins: attr-id-1/C-066, using-per-side-keys-1/C-001, C-002, C-003, C-004, C-005, C-008, C-009, C-010
+- [test_using_per_side_keys_1_sql.py](test_using_per_side_keys_1_sql.py) —
+  **USING-PER-SIDE-KEYS-1 (2026-10-07):** the SQL door on the same data:
+  star, the unqualified key in select, `WHERE`, `ORDER BY`, `GROUP BY` and
+  an expression on six join types, aliased and not; per-side keys with
+  `ORDER BY l.id`; chained `right`/`full` joins; alias shadow, derived
+  table and `*, r.id`; the declared divergences (a `USING` join followed
+  by an `ON` join and `NATURAL` keep the left key in star; `SELECT id,
+  l.id, r.id` refuses) and the `ON` control. **Fold 1 (2026-10-08):** the
+  shapes the plan pass reaches (a later `ON` join, `NATURAL`, a derived
+  side), lambda parameters named like the key on four join types,
+  `DISTINCT … ORDER BY`, an `ORDER BY` column outside the select list,
+  shared non-key names, both `spark.sql.caseSensitive` settings, `EXPLAIN`
+  and helper-name collisions. No module docstring: the contract lives here.
+  pins: using-per-side-keys-1/C-001, C-006, C-007, C-008, C-009, C-013
+- [test_using_per_side_keys_1_differential.py](test_using_per_side_keys_1_differential.py) —
+  **USING-PER-SIDE-KEYS-1 folds 1 and 2 (2026-10-08):** the never-worse-than-main pin. Every
+  statement answers as Spark's recording or as `main`'s (rows and names, column order aside;
+  a refusal equals Spark's condition or `main`'s condition and text), never a third thing;
+  the 32 without `USING` answer exactly as `main`. 1,355 statements: 182 of
+  [_using_corpus.py](_using_corpus.py)'s own, 480 generated variants that read the
+  unqualified key and a side key in both orders under select list, `WHERE`, `GROUP BY`,
+  `HAVING`, `ORDER BY`, aggregates, window functions, sub-queries and a comma join, and the
+  re-verifier's 693 replayed with their own table setups from
+  [using_per_side_keys_1_verifier_events.json](using_per_side_keys_1_verifier_events.json)
+  (extracted by the ledger's `extract.py` probe). Data:
+  [using_per_side_keys_1_corpus_spark.json](using_per_side_keys_1_corpus_spark.json) (Spark
+  4.1.2) and [using_per_side_keys_1_corpus_main.json](using_per_side_keys_1_corpus_main.json)
+  (`main` `3fbcb2ca`), written by the `corpus.py` probe. No module docstring: the contract
+  lives here. pins: using-per-side-keys-1/C-012, C-015, C-016
+- [test_using_per_side_keys_1_df.py](test_using_per_side_keys_1_df.py) — **USING-PER-SIDE-KEYS-1
+  fold 1 (2026-10-08):** the DataFrame-door fold pins: the shown key of 48 mixed-type
+  `right`/`full` cells equals Spark's type and value
+  ([using_per_side_keys_1_mixed_spark.json](using_per_side_keys_1_mixed_spark.json), with
+  `main`'s leg in [using_per_side_keys_1_mixed_main.json](using_per_side_keys_1_mixed_main.json));
+  a second side-key operation after a side-key filter or sort; side keys before and after
+  `cache`, `persist` and `localCheckpoint`; the reserved `__repark_using__` prefix; and a
+  stale right key in `sort` over `semi`/`anti`, which refuses with `MISSING_ATTRIBUTES` as
+  Spark and v1.5.2 do. **Fold 2 (2026-10-08):** side keys refuse after
+  `localCheckpoint` as on `main`; a `__repark_using__` user column gives `main`'s answers;
+  with ANSI off a mixed-type `full` key shows the left key. No module docstring: the contract
+  lives here. pins: using-per-side-keys-1/C-010, C-014, C-017
 - [test_attr_id_1_sm2c_leak.py](test_attr_id_1_sm2c_leak.py) — **Fold SM-2c
   C-3 (2026-10-06):** a frame whose display names are unique but whose
   engine fields are twin names (a dropped self-join side, C-067; a dropped

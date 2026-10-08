@@ -336,7 +336,7 @@ fn constraint_mut(operator: &mut JoinOperator) -> Option<&mut JoinConstraint> {
     }
 }
 
-fn constraint(operator: &JoinOperator) -> Option<&JoinConstraint> {
+pub(super) fn constraint(operator: &JoinOperator) -> Option<&JoinConstraint> {
     match operator {
         JoinOperator::Join(constraint)
         | JoinOperator::Inner(constraint)

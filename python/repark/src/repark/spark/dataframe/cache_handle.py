@@ -102,8 +102,10 @@ def find_live_handle(frame: Any, view_name: str) -> CacheViewHandle | None:
 def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
     """Point ``frame`` at a freshly registered cache view and adopt its handle."""
     try:
-        frame._inner = frame._session.sql_built(f"SELECT * FROM {view_name}")
-        frame._inner = _native.copy_attribute_ids(frame._inner, lineage)
+        fresh = frame._session.sql_built(f"SELECT * FROM {view_name}")
+        if lineage is not frame._inner:
+            lineage, fresh = _native.hide_using_keys(lineage), _native.hide_using_keys(fresh)
+        frame._inner = _native.copy_attribute_ids(fresh, lineage)
     except Exception:
         frame._session.drop_temp_view(view_name)
         raise
@@ -121,6 +123,8 @@ def bind_checkpoint_scan(frame: Any, view_name: str, lineage: Any) -> None:
     """Point ``frame`` at a freshly materialized checkpoint view, keeping its ids."""
     frame._session.materialize_as_temp_view(view_name, lineage)
     fresh = frame._session.sql_built(f"SELECT * FROM {view_name}")
+    if lineage is not frame._inner:
+        lineage, fresh = _native.hide_using_keys(lineage), _native.hide_using_keys(fresh)
     frame._inner = _native.copy_attribute_ids(fresh, lineage)
 
 

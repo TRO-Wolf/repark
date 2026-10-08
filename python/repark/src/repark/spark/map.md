@@ -693,6 +693,38 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   value. No new registry and no `DataFrame` slot: the `_USING_MARKS` weak map
   holds the mark, copied by `_spawn` (SM-2b item 5).
   pins: attr-id-1/C-066
+  **USING-PER-SIDE-KEYS-1 (2026-10-07):** the mark now binds instead of
+  refusing. It is `(kept ids, keys, hidden names, hidden ids)`: each hidden
+  name is `(side qualifier names, key display, alias)` and each hidden id
+  maps a side key's attribute id to `(alias, display)`, both read from
+  `_native.using_hidden_key_fields`; `inner`/`semi`/`anti` still carry
+  none. `_using_key_name_column` (strings in select/getitem/sort and
+  qualified stars through `_using_star_keys`), `_bind_using_key_text`
+  (user SQL in `filter`/`selectExpr`), `_bind_using_key_column` (Column
+  arguments, through `_bound_refs`) and `_expose_using_keys_in_cond` (join
+  conditions, through `_cond_sides` / `_cond_args`) hand the engine the
+  alias of the hidden key; the engine exposes it. A key that
+  `_native.expose_using_keys` cannot reach, a backticked side key in text
+  and a Column mixing sides keep the R6 refusal, and every other choke
+  (`groupBy`, `withColumn`, …) still refuses through
+  `_refuse_using_key_columns`. `selectExpr` plans over the exposed frame
+  and renames the alias back to the key in output names.
+  pins: using-per-side-keys-1/C-003, C-004
+  **USING-PER-SIDE-KEYS-1 fold 1 (2026-10-08):** `_bound_refs` also runs
+  `_refuse_unemitted_ids` on each Column, so a stale right key in `sort`
+  over a `semi`/`anti` join refuses with `MISSING_ATTRIBUTES`, as `filter`
+  already did; `_cache_lineage` hands the cache and checkpoint paths the
+  frame with its reachable hidden keys exposed, so the keys stay
+  reachable after materialisation. pins: using-per-side-keys-1/C-014
+  **USING-PER-SIDE-KEYS-1 fold 2 (2026-10-08):** `_using_mark` and
+  `_set_using_mark` return at once while no mark exists, and `_bound_refs`
+  skips the bind and the unemitted-id loop for a frame without a mark or
+  unemitted ids, so a frame that never met a `USING` join pays nothing.
+  A join whose inputs carry a `__repark_using__` user column gets a mark
+  whose hidden entries have an empty alias: right-side references refuse
+  with the R6 message, as on `main`. `_cache_lineage` serves `cache` and
+  `persist` only; a checkpoint keeps no reach.
+  pins: using-per-side-keys-1/C-017
   **Fold SM-2c round B (2026-10-06):** `_route_sort_key_through_input`
   serves the ambiguous-Project arm of `_resolve_sort_name` after the sourced
   twin: it reads the input spelling from

@@ -11,6 +11,12 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
 
 - [`mod.rs`](mod.rs) — the binding: plan access, terminals, builders, schema, and
   stream export.
+  **USING-PER-SIDE-KEYS-1 (2026-10-07):** `select`, `filter`, `filter_sql` and
+  `sort` first ask `crate::using_keys` whether an expression (or the predicate
+  text) names a hidden `USING` key; when one does, the operation runs on the
+  exposed frame and filter and sort project back to this frame's output. A
+  call that names none pays one walk of its expressions.
+  pins: using-per-side-keys-1/C-003, C-004
   **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** the inline test
   module moved here to `tests.rs` untouched (the file would otherwise pass its
   ceiling); terminals and `analyzed_arrow_schema_native` drive through
