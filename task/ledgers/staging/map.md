@@ -39,6 +39,22 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pin each and declares nine (C-007, C-008); eleven `CONNECT-DECL-*` registry rows (C-009); ADBC
   and ConnectorX cited (C-010); gates (C-011). `risk_tier: standard`. Branch
   `feat/c-1-connect-skeleton`.
+- [c-3-ledger.md](c-3-ledger.md) —
+  **C-3, card 1.6 (2026-10-07), in flight:** partitioned parallel Postgres reads and the
+  ConnectorX benchmark. §0 is the design note: Spark's four JDBC options as the surface with
+  every malformed combination measured on live Spark 4.1.2 (C-001), one exported snapshot per
+  scan, strides run on at most `pool_max_size` connections inside one DataFusion partition, a
+  pushed `LIMIT` per stride capped above, and what `CONNECT-DECL-pg-partitioned-read` still
+  declares. Then the slices: Spark's stride arithmetic checked against 740 recorded triples and
+  the option rule (C-002, C-003), the stride predicate (C-004), execution on one snapshot with
+  nine live cells (C-005), the three doors and the rewritten registry row (C-006), the 10M-row
+  benchmark against ConnectorX and pandas with its factor recorded and no pass declared
+  (C-007), and the ConnectorX and ADBC citations (C-008); thirteen mutations, all red.
+  **Fold 1 (2026-10-08):** main merged; a declared column type names the registry row for
+  Spark's own bound spelling (C-009); `numPartitions` is Spark's 32-bit `Int` and a read stops
+  at 10 000 strides, after the shrink (C-010); a quoted column in another case resolves as
+  Spark's does (C-011); five more mutations, all red.
+  `risk_tier: standard`. Branch `feat/c-3-partitioned-reads`.
 - [c-2-ledger.md](c-2-ledger.md) —
   **C-2, card 1.6 (2026-10-06), in flight:** the Postgres read path, slice by slice. **C-2a**, the
   pure slice: `ConnectError` folds C-1's two error enums (C-001); the COPY BINARY decoder's

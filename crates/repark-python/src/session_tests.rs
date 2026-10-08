@@ -145,14 +145,35 @@ fn read_postgres_refusals_name_their_row_and_never_echo_credentials() {
             Some("public.t"),
             None,
             Some(properties.clone()),
+            None,
+            None,
+            None,
+            None,
+            Some(vec!["id > 0".to_owned()]),
+        ) else {
+            panic!("a `predicates` read stays declared")
+        };
+        let Err(incomplete) = session.read_postgres(
+            py,
+            "postgresql://user:sentinel-secret@203.0.113.1:5432/db",
+            Some("public.t"),
+            None,
+            Some(properties.clone()),
             Some("id"),
             Some(0),
-            Some(10),
-            Some(2),
+            None,
+            Some(-1),
             None,
         ) else {
-            panic!("a partitioned read is declared until C-3")
+            panic!("three of the four options refuse before any connection")
         };
+        assert!(incomplete.is_instance_of::<crate::IllegalArgumentException>(py));
+        let incomplete = incomplete.to_string();
+        assert!(
+            incomplete.contains("users need to specify all or none"),
+            "{incomplete}"
+        );
+        assert!(!incomplete.contains("sentinel"), "{incomplete}");
         assert!(partitioned.is_instance_of::<crate::UnsupportedOperationException>(py));
         let unknown_properties = HashMap::from([
             ("password".to_owned(), "sentinel-property-secret".to_owned()),
@@ -176,7 +197,8 @@ fn read_postgres_refusals_name_their_row_and_never_echo_credentials() {
         let unknown = unknown.to_string();
         assert!(
             partitioned.contains("CONNECT-DECL-pg-partitioned-read")
-                && partitioned.contains("partitionColumn"),
+                && partitioned.contains("`predicates`")
+                && !partitioned.contains("id > 0"),
             "{partitioned}"
         );
         assert!(unknown.contains("bogusKey"), "{unknown}");

@@ -180,10 +180,37 @@ The `read_postgres` door (`spark.read.jdbc`, `format("postgres")`, `format("jdbc
 same keys plus Spark's spellings, matched case-insensitively: `queryTimeout`,
 `connectTimeout` and `socketTimeout` (seconds), `fetchsize`, `preferTimestampNTZ`,
 `pushDownPredicate`, `pushDownLimit`, `ApplicationName` and `driver` (only
-`org.postgresql.Driver`). `partitionColumn`, `lowerBound`, `upperBound`, `numPartitions` and
-`predicates` refuse there (`CONNECT-DECL-pg-partitioned-read`, roadmap C-3);
+`org.postgresql.Driver`). `partitionColumn`, `lowerBound`, `upperBound` and `numPartitions`
+partition a read there over an `int2`, `int4` or `int8` column (see "Partitioned reads"
+below); `predicates` refuses (`CONNECT-DECL-pg-partitioned-read`);
 `sessionInitStatement`, `customSchema` and `options` refuse everywhere
 (`CONNECT-DECL-pg-session-sql`).
+
+**Partitioned reads.** On the `read_postgres` door the four Spark options split one read into
+ranges of an integer column and read them in parallel:
+
+```python
+orders = spark.read.jdbc(
+    "jdbc:postgresql://db.internal:5432/shop",
+    "public.orders",
+    column="id",
+    lowerBound=1,
+    upperBound=10_000_000,
+    numPartitions=8,
+    properties={"user": "reader", "password": password},
+)
+```
+
+The bounds choose where the ranges are cut; they never filter. Rows below `lowerBound`, above
+`upperBound` and rows whose column is NULL are all returned, as Spark returns them. Every range
+reads the same snapshot of the database, so the result equals an unpartitioned read even while
+other sessions write. The ranges run on at most `pool_max_size` connections (default 4): with
+`numPartitions = 8` and the default pool, four connections read two ranges each. Raise
+`pool_max_size` (up to 64) to use more. Give all four options or none; `numPartitions` alone
+is accepted and reads unpartitioned. At most 10 000 ranges run in one read; a larger
+`numPartitions` refuses and names the ceiling. A `query` cannot be partitioned: pass it as
+`dbtable = "(select …) as q"`. `EXPLAIN` shows `partition_column=`, `strides=` and
+`max_connections=` on the scan. Mounted `repark.toml` sources take no partition options.
 
 **`sslmode`.** The default, `verify-full`, encrypts and checks the server certificate against
 `sslrootcert` (or the system roots) and the host name. `disable` is the one explicit plaintext
