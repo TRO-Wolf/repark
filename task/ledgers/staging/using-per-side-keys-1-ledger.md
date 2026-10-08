@@ -678,3 +678,56 @@ cells; the engine answers the per-side value, by the ruling:
 
 The same getitem answers on Spark in filter, sort and a join condition, and the engine matches it
 there.
+
+## 12. Fold 1 (2026-10-08) — the verifier's verdict and the structure chosen
+
+The verifier failed `61851c95` with six S1s, five S2s and two S3s
+(`/tmp/oc-worker/direct/wo/using-per-side-keys-1/verify/verdict.json`). Five of the S1s are the
+SQL-door statement rewrite of §7 changing or breaking statements `main` answered: a lambda
+parameter named like the key, `SELECT DISTINCT … ORDER BY`, an `ORDER BY` column outside the
+select list, the `v:1` name leaking from the `ORDER BY` wrapper, and a key spelled in another
+case. The sixth is the DataFrame door's lossy cast of a mixed-type right key.
+
+**The rule for this fold: never worse than `main`.** Every statement answers as Spark does or
+as `main` does, never a third thing.
+
+**Option taken: the preferred one. The statement rewrite of §7 is deleted; the merged key is
+resolved on the plan.** Why it is reachable, and why it holds the rule by construction:
+
+- DataFusion can keep the source span of every identifier on the column it plans
+  (`sql_parser.collect_spans`). A statement that names `USING` or `NATURAL` is planned with that
+  option on, after every compound identifier in it (`l.id`) has had its span set to a marker.
+  Setting a span changes nothing the planner reads, so the plan is `main`'s plan.
+- In that plan a reference to a key column that carries the marker is one the user qualified.
+  Every other reference to it came from a star, from an unqualified key, or from the planner's
+  own join keys: the three things that mean "the merged key". Lambda parameters, select aliases,
+  `DISTINCT`, `ORDER BY` and subquery scopes were all resolved by the planner before the pass
+  looks, so the pass has no scopes to get wrong.
+- The pass (`column_resolution/using_keys.rs::merge_using_keys`) walks the plan once. Above each
+  `USING` join, while both side keys are still in the schema, a reference without the marker
+  reads the merged key (the left key, the right key on `RIGHT`, the common-type `coalesce` on
+  `FULL`, built left to right through chains). A projection keeps its output names and
+  qualifiers, so nothing above it changes; an aggregate or a window gets one projection below
+  it that redefines the key. An `ORDER BY l.id` that would now read the merged output gets the
+  side key carried as one extra projection column below the sort and dropped above it, on the
+  plan, so qualifiers and names are untouched.
+- Any shape the pass does not have a rule for sets a bail flag, and the statement keeps the plan
+  it had, which is `main`'s. A planning error with spans on falls back to planning exactly as
+  `main` does.
+- One statement shape was an error on `main` and is not reachable from the plan, because the
+  planner refuses before there is one: an unqualified key in `WHERE` (and in the select list of
+  a three-way chain). Only after `main`'s own planning has refused, and only when the `FROM` is
+  one relation followed by `USING` joins that all name the key, the unqualified key is
+  qualified with the first relation and the statement is planned again; a lambda parameter or a
+  select alias of that name shadows it. If that also fails the caller gets `main`'s error. This
+  is the allow-list predicate of the fallback option, applied only where `main` had no answer
+  to protect.
+
+What stays outside (registry row `USING-SQL-STAR-SHAPES-1`, reworded in this fold): a four-way
+chain's star and `SELECT id` over a `NATURAL` join still refuse as on `main`; `SELECT id, l.id,
+r.id` still refuses as on `main`.
+
+The DataFrame door keeps §7's design. Its fold items: the shown key of a mixed-type join takes
+Spark's type (the right key's on `RIGHT`, the measured common type on `FULL`); the reach
+survives a filter or sort on a side key and a `cache()` or `localCheckpoint()`; the hidden
+alias cannot collide with a user column.
