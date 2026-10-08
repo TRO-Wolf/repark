@@ -1871,6 +1871,12 @@ lines and the condition docstring one; the dropped "`drop` is a no-op"
 half-sentence named no frame; SM-2b rebalances the two refusal imports
 against the slot/`__init__` removals plus one filter-docstring join).
 pins: attr-id-1/C-066
+**USING-PER-SIDE-KEYS-1 (2026-10-07):** `filter`, `select` and `sort` bind
+side-key Columns through `qualified_names._bound_refs` (which also runs the
+self-join refusal), and the condition join takes its two plans and its
+preparer arguments from `_cond_sides` / `_cond_args`, so a condition over a
+hidden key joins on the exposed frame. Line-neutral at the exact 3462
+baseline. pins: using-per-side-keys-1/C-003
 **Fold SM-2c C-3 (2026-10-06):** every writer and temp-view door registers a
 frame whose output fields are renamed to the display names when they differ
 and are exactly unique, so a dropped-side twin engine name never reaches a

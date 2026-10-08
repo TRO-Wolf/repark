@@ -703,6 +703,27 @@ wrapped optimizer rule) and declares this directory.
   suggestion. Pin: `../tests/case_bind.rs`
   (`folded_with_columns_keys_refuse_only_under_ignore_case`).
   pins: casesens-2/C-004, C-010
+- `using_keys.rs` — **USING-PER-SIDE-KEYS-1 (2026-10-07):** the shown key and the hidden
+  per-side keys of a DataFrame `USING` join. `shown_key` is what `join_on_named_keys` projects
+  at the left key's position: the left key on `inner`/`left` (as before), the right key on
+  `right`, and `coalesce(left, right)` under a fresh attribute id on `full`, aliased with the
+  left key's qualifier and name so the output schema keeps its shape. Mixed key types keep the
+  left type: the right key is `try_cast` to it, and on `right` the alias carries the right
+  key's id. The `Join` node keeps both keys physically; a key the projection does not show is
+  a hidden key. `using_hidden_keys` reads them from the plan (through filter, sort, limit and
+  full-width pass-through projections, the shape `remint_shared` adds), one record per key:
+  side, position on its side, display name and the alias `__repark_using__<relation>__<field>`.
+  `expose_hidden_keys(plan, aliases)` appends the asked keys to the merge projection under
+  those aliases and carries them up the same nodes; it answers `None` past a narrowing
+  projection, an alias or any other node, which the facade turns into the R6 refusal.
+  `hidden_names_in` / `hidden_names_in_text` find the aliases an operation mentions,
+  `rebind_key_name` swaps a held or qualified key reference for the alias (keeping the
+  expression's name when asked), and `output_columns` is the projection that narrows an
+  exposed plan back. A hidden key is never an output field, so nothing that reads the output
+  schema can show it. `sort_names::join_output_sources` pairs the shown key with both sides
+  only on `inner`: on `left` it is the left key alone, on `right` the right key, on `full`
+  neither. Design and rulings: `task/ledgers/staging/using-per-side-keys-1-ledger.md`. Pins:
+  `../tests/using_keys.rs`. pins: using-per-side-keys-1/C-002, C-003, C-004, C-005, C-008
 
 ## Pointers
 

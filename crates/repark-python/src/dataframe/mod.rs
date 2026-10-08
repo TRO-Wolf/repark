@@ -447,6 +447,9 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn filter(&self, predicate: PyColumn) -> PyResult<Self> {
         fenced!("PyDataFrame.filter", {
+            if let Some(wide) = crate::using_keys::exposed_frame(self, [&predicate])? {
+                return crate::using_keys::narrowed_frame(&wide.filter(predicate)?, self);
+            }
             let carries_plan = carries_subquery_plan(std::slice::from_ref(&predicate));
             let ((df, expanded), bound) = drive_columns(
                 &self.runtime,
@@ -467,6 +470,9 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn filter_sql(&self, predicate: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.filter_sql", {
+            if let Some(wide) = crate::using_keys::exposed_for_text(self, predicate)? {
+                return crate::using_keys::narrowed_frame(&wide.filter_sql(predicate)?, self);
+            }
             let grown = sql_drive_grown(predicate)
                 || self.depths.plan > DEEP_NESTING_DEPTH
                 || self.depths.expression > DEEP_NESTING_DEPTH;
@@ -481,6 +487,9 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn select(&self, columns: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("PyDataFrame.select", {
+            if let Some(wide) = crate::using_keys::exposed_frame(self, &columns)? {
+                return wide.select(columns);
+            }
             let carries_plan = carries_subquery_plan(&columns);
             let ((df, expanded), bound) =
                 drive_columns(&self.runtime, &self.depths, &columns, || {
@@ -516,6 +525,10 @@ impl PyDataFrame {
                 return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                     "sort expects columns, ascending, and nulls_first vectors of equal length",
                 )));
+            }
+            if let Some(wide) = crate::using_keys::exposed_frame(self, &columns)? {
+                let sorted = wide.sort(columns, ascending, nulls_first)?;
+                return crate::using_keys::narrowed_frame(&sorted, self);
             }
             let carries_plan = carries_subquery_plan(&columns);
             let (df, bound) = drive_columns(&self.runtime, &self.depths, &columns, || {

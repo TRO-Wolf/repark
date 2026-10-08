@@ -32,6 +32,7 @@ mod temp_view_names;
 mod text_io;
 mod type_bridge;
 mod unresolved_routine;
+mod using_keys;
 mod writer_layout;
 
 use datafusion::error::DataFusionError;
@@ -157,6 +158,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     dataframe_fill::register(module)?;
     dataframe_names::register(module)?;
+    using_keys::register(module)?;
     dataframe_stack::register(module)?;
     dataframe_stats::register(module)?;
     frame_lineage::register(module)?;

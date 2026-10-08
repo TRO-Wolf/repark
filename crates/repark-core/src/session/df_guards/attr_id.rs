@@ -64,7 +64,7 @@ impl AttrId {
         field.metadata().get(ATTR_KEY).cloned().map(Self)
     }
 
-    fn metadata(&self) -> FieldMetadata {
+    pub(super) fn metadata(&self) -> FieldMetadata {
         FieldMetadata::from(BTreeMap::from([(ATTR_KEY.to_string(), self.0.clone())]))
     }
 }

@@ -18,6 +18,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
 use super::attr_id::same_relation;
+use super::using_keys;
 
 pub use super::attr_id::{
     AttrId, Resolution, alias_with_fresh_id, attribute_ids, copy_attribute_ids, stamp, strip,
@@ -45,6 +46,10 @@ pub use super::sort_names::{
     project_input_spelling, qualifier_star_positions, sort_shape, union_dup_below_wrappers,
 };
 pub use super::subquery::resolve_bound_expr_with;
+pub use super::using_keys::{
+    HIDDEN_PREFIX, HiddenKey, expose_hidden_keys, hidden_names_in, hidden_names_in_text,
+    output_columns, rebind_key_name, using_hidden_keys,
+};
 pub use super::written_names::refuse_folded_duplicate_keys;
 pub use repark_common::names::{NameHit, NameRule};
 
@@ -639,6 +644,7 @@ pub fn join_on_named_keys(
         .map(|key| bind_name(right.schema(), key, rule))
         .collect();
     let left_schema = left.schema().clone();
+    let right_schema = right.schema().clone();
     let right_outputs = attribute_ids(right.schema())
         .into_iter()
         .flatten()
@@ -649,7 +655,7 @@ pub fn join_on_named_keys(
         .join(
             right.into_unoptimized_plan(),
             join_type,
-            (left_keys, right_keys),
+            (left_keys.clone(), right_keys.clone()),
             None,
         )?
         .build()?;
@@ -664,18 +670,34 @@ pub fn join_on_named_keys(
     }
     let mut seen: HashSet<String> = HashSet::new();
     let mut right_kept = 0usize;
-    let projection: Vec<Expr> = joined
-        .schema()
-        .iter()
-        .enumerate()
-        .filter(|(index, (_, field))| {
-            let matched = keys.iter().find(|key| rule.matches(key, field.name()));
-            let keep = matched.is_none_or(|key| seen.insert(key.clone()));
-            right_kept += usize::from(keep && *index >= left_schema.fields().len());
-            keep
-        })
-        .map(|(_, (qualifier, field))| Expr::Column(Column::new(qualifier.cloned(), field.name())))
-        .collect();
+    let mut projection: Vec<Expr> = Vec::new();
+    for (index, (qualifier, field)) in joined.schema().iter().enumerate() {
+        let held = Expr::Column(Column::new(qualifier.cloned(), field.name()));
+        let matched = keys
+            .iter()
+            .zip(left_keys.iter().zip(right_keys.iter()))
+            .find(|(key, _)| rule.matches(key, field.name()));
+        let Some((key, (left_key, right_key))) = matched else {
+            right_kept += usize::from(index >= left_schema.fields().len());
+            projection.push(held);
+            continue;
+        };
+        if !seen.insert(key.clone()) {
+            continue;
+        }
+        if index >= left_schema.fields().len() {
+            right_kept += 1;
+            projection.push(held);
+            continue;
+        }
+        projection.push(using_keys::shown_key(
+            join_type,
+            left_key,
+            right_key,
+            &left_schema,
+            &right_schema,
+        )?);
+    }
     let right_start = projection.len() - right_kept;
     let (state, plan) = joined.select(projection)?.into_parts();
     let (plan, remint) = remint_shared(plan, right_start, &shared)?;

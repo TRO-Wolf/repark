@@ -9697,15 +9697,21 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   reprs. No module docstring: the lane's no-comments ruling covers the
   new file; the contract lives here. pins: attr-id-1/C-065
 - [test_attr_id_1_sm2_r6.py](test_attr_id_1_sm2_r6.py) — **Fold SM-2 R6
-  (2026-10-06, R-R6-1…5):** DataFrame `USING` joins keep the left key
-  physically (left-side references answer Spark-exact on every join type;
-  `semi`/`anti` `42703` on the missing side; mixed-type keys follow main);
-  right-side references answer on `inner` and refuse explicit on
-  `left`/`right`/`full` on every choke (select, getitem, compound, sort,
-  filter, selectExpr, join condition) plus stale pre-join right keys, with
-  literal/unqualified/no-alias guards. No module docstring: the lane's
-  no-comments ruling covers the new file; the contract lives here.
-  pins: attr-id-1/C-066
+  (2026-10-06), rewritten by USING-PER-SIDE-KEYS-1 (2026-10-07):** DataFrame
+  `USING` joins show the merged key (the right key on `right`,
+  `coalesce` on `full`) in star, the unqualified key, `groupBy`,
+  `withColumn`, `distinct` and a second `USING` join, and answer `l.id` /
+  `r.id` per side in select, `selectExpr`, filter, sort, a join condition
+  and qualified stars, as strings, `col`, getitem and stale pre-join
+  references, aliased and not. Hidden keys never reach `columns`,
+  `schema`, pandas, arrow or a parquet file. The shown key's attribute id
+  follows the join type. Declared: a side key past a narrowing `select`,
+  an `.alias`, in `groupBy`/`withColumn` or written with backticks in a
+  text filter refuses with the R6 message; mixed-type keys keep the left
+  type. `semi`/`anti` keep `42703` on the right side; the `on=` controls
+  are unchanged. Every value is a Spark 4.1.2 grid cell. No module
+  docstring: the contract lives here.
+  pins: attr-id-1/C-066, using-per-side-keys-1/C-001, C-002, C-003, C-004, C-005, C-008, C-009, C-010
 - [test_attr_id_1_sm2c_leak.py](test_attr_id_1_sm2c_leak.py) — **Fold SM-2c
   C-3 (2026-10-06):** a frame whose display names are unique but whose
   engine fields are twin names (a dropped self-join side, C-067; a dropped

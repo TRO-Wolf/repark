@@ -22,6 +22,7 @@ mod predicate_names;
 pub(crate) mod self_join;
 pub(crate) mod sort_names;
 pub(super) mod subquery;
+pub(crate) mod using_keys;
 mod window_rescan;
 mod written_names;
 

@@ -61,6 +61,13 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   written qualifier's hit and miss, the cast twin, the missing-id and
   display-count errors), with local copies of the `source`/`stamped`/`strings`
   helpers, as `attr_id_s3e.rs` already does. pins: attr-id-1/C-039
+- `using_keys.rs` — **USING-PER-SIDE-KEYS-1 (2026-10-07):** 10 pins for
+  `df_guards/using_keys.rs` on two qualified three-row sides: the shown key per join type,
+  its attribute id, the hidden keys of each type (none on `semi`/`anti`, none in the output
+  schema), per-side values through exposure, exposure through filter/sort/limit and its
+  refusal past a narrowing select or an alias, the chained `full` join on the coalesced
+  key, mixed key types, the `inner`-only side pairing and `rebind_key_name`.
+  pins: using-per-side-keys-1/C-002, C-003, C-004, C-005, C-008, C-010
 - `attr_id_s3e.rs` — **ATTR-ID-1 S3e (2026-10-01):** 14 pins for the
   qualified-name family: facade-over-plan matching, the using-key union, the
   free-ref rewriter (bind, pass-through, ambiguity), the grandchild key, the

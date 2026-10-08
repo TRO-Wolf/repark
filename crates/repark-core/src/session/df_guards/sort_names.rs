@@ -557,7 +557,7 @@ pub fn join_output_sources(plan: &LogicalPlan) -> Vec<Vec<(bool, usize)>> {
 }
 
 fn join_pairs_key_sides(joined: &Join, width: usize) -> bool {
-    if matches!(joined.join_type, JoinType::LeftSemi | JoinType::LeftAnti) {
+    if !matches!(joined.join_type, JoinType::Inner) {
         return false;
     }
     let joined_width = joined.left.schema().fields().len() + joined.right.schema().fields().len();
