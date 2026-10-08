@@ -50,6 +50,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   nine live cells (C-005), the three doors and the rewritten registry row (C-006), the 10M-row
   benchmark against ConnectorX and pandas with its factor recorded and no pass declared
   (C-007), and the ConnectorX and ADBC citations (C-008); thirteen mutations, all red.
+  **Fold 1 (2026-10-08):** main merged; a declared column type names the registry row for
+  Spark's own bound spelling (C-009); `numPartitions` is Spark's 32-bit `Int` and a read stops
+  at 10 000 strides, after the shrink (C-010); a quoted column in another case resolves as
+  Spark's does (C-011); five more mutations, all red.
   `risk_tier: standard`. Branch `feat/c-3-partitioned-reads`.
 - [c-2-ledger.md](c-2-ledger.md) —
   **C-2, card 1.6 (2026-10-06), in flight:** the Postgres read path, slice by slice. **C-2a**, the

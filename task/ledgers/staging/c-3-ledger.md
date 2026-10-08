@@ -404,6 +404,103 @@ check inside the scan's snapshot) are a follow-up, filed in the hand-back.
   order per connection, the scan ending at the first error. The documentation was read;
   nothing was run.
 
+## 7. Fold 1 (2026-10-08): main merged, two red checks, the verifier's S2s and S3s
+
+The verifier passed C-3 at `62ed1a6a` with three S2s and three S3s (PR #998). Rulings on the
+round-1 questions: Spark's meaning of the bounds stands; the NULL test as its own stride and the
+`date` and timestamp columns are follow-up cards; one pooled connection per frame stays.
+
+**Main merged (merge, not rebase).** PR #995 added `provider/scan/tests.rs`, a unit-test child
+that builds a `ScanPlan` by hand; C-3's `partition` field left it one field short ("Rust lint"
+and "Rust test" red). It carries `partition: None`. **No partitioned case was added there, and
+why:** a partitioned scan calls the same `place_until_refusal`, with the same plan, on each
+connection's batches, so the placement refusal has one behaviour whatever the stride; what
+differs per connection is which rows arrive before the refusal, and that is the live cell
+`a_refused_value_keeps_its_contract_in_every_stride`.
+
+**The red facade check.** `test_moved_symbol_bodies_match_the_integrated_baseline` failed on
+`_parse_jdbc_int_option` (the CI summary named its neighbour in the diff). C-3 changed that body
+on purpose: a bound that is not an integer raises `NumberFormatException`, Spark's measured class
+(`C3-B06`) and a subclass of the old one, and an integer outside 64 bits refuses there. The
+pin's docstring admits a current-main behaviour change, so the baseline hash moved to the new
+body; the file is green (11 passed).
+
+**The three S2s** are clauses C-009, C-010 and C-011, each with eleven new Spark cells behind it
+(`C3-C04`…`C10`, `N07`…`N09`, `T11`).
+
+**The stride ceiling, measured (2026-10-08).** The 10M-row benchmark table, `SELECT id, qty`
+partitioned on `id` over `1..10000000`, the debug build of round 1's tree (`62ed1a6a`), before the
+ceiling existed, default pool of 4, one run each, no lock held (a reading of scale, not a benchmark):
+
+| strides | total (s) | peak client memory |
+|---|---|---|
+| 4 | 10.0 | 0.45 GB |
+| 1 000 | 8.3 | 0.49 GB |
+| 10 000 | 12.7 | 1.57 GB |
+| 100 000 | 75.3 | 7.97 GB |
+
+Ten thousand strides cost a quarter more time and 1.1 GB; a hundred thousand cost seven times
+the time and 8 GB for the same ten million rows. The numbers do not argue for a higher ceiling,
+so **10 000 stands**. They also show the cost is the client's (one prepared statement and
+decoder per stride, and ten million rows arriving as hundred-row batches), a follow-up if a
+ceiling above 10 000 is ever wanted.
+
+**The S3s.**
+
+- *The `format("jdbc")` door's incomplete-set sentence.* Fixed: the facade no longer judges it;
+  the engine door refuses in Spark's sentence before any connection, so §0.1's "refuses with
+  the same sentence" now holds on every door.
+- *Dated note, 2026-10-08: a half-read partitioned stream holds every pool permit it took.* A
+  second read on the same frame then waits `pool_checkout_timeout_ms` and refuses with
+  `PoolExhausted` (the verifier: 1.5 s at its setting, 30 s at the default); an unpartitioned
+  frame in the same position held one permit of four and would have served it. This is a clean
+  refusal and it follows from §0.3 (a scan takes what is free and keeps it until it ends). Not
+  changed; the fix when wanted is a larger `pool_max_size` or reading the first stream to its
+  end.
+- *Dated note, 2026-10-08: padded bound text.* `lowerBound=" 1"` is accepted on the
+  `format("jdbc")` door, where the facade's Python `int()` parses it; Spark refuses it
+  (`NumberFormatException`). Pre-existing, the safe direction, no row changes. The `properties`
+  door and `numPartitions` on it are strict (`C3-N09`).
+- *Dated note, 2026-10-08: a bare `predicates` option.* `option("predicates", …)` with no
+  partition options refuses naming the registry row; Spark ignores the unknown option and reads
+  unpartitioned. A refusal where Spark answers, the safe direction, declared by the row.
+
+**Mutations (fold 1).** Each applied alone to `9af3d3f0`, `cargo test -p repark-connect --test it
+partition`, the file restored.
+
+| id | clause | mutation (file) | what it would let through | red? | red in |
+|---|---|---|---|---|---|
+| f1 | C-009 | parse the bounds before judging the column's type (`src/provider/table.rs`) | a date column with date bounds answers "must be an integer" and names no row | RED | `partition_plan::a_declared_column_type_refuses_naming_the_row_whatever_the_bound_spelling` |
+| f2 | C-010 | drop the stride ceiling (`src/partition.rs`) | 2 000 000 strides planned | RED | `partition::strides_above_the_ceiling_refuse_after_sparks_shrink` |
+| f3 | C-010 | apply the ceiling to the requested count, before the shrink (`src/partition.rs`) | `Int.MaxValue` over a span of three refuses where Spark plans three strides | RED | `partition::strides_above_the_ceiling_refuse_after_sparks_shrink` |
+| f4 | C-010 | parse `numPartitions` as 64 bits and clamp (`src/partition.rs`) | `3000000000` accepted where Spark refuses | RED | `partition::num_partitions_is_sparks_32_bit_int` |
+| f5 | C-011 | a quoted name matches exactly only (`src/provider/table.rs`) | `"mixed"` refuses against `"Mixed"` where Spark resolves it | RED | `partition_plan::the_partition_column_resolves_as_spark_resolves_it` |
+
+**Clippy at every commit.** `cargo fmt --check`, `cargo clippy -p repark-connect -p repark-core
+-p repark-python --all-targets -- -D warnings` and `cargo test -p repark-connect` were run at
+each commit of the fold that touches Rust, by checking each out in turn under one hold of the
+lock: `7190d60d` (the merge), `aca9b18b`, `54935e52`, `9af3d3f0`, all three exit 0 at each.
+
+**Gates (fold 1).**
+
+One hold of the build lock on the final tree, the server up; every command exit 0.
+
+| gate | exit | line that means green |
+|---|---|---|
+| `cargo fmt --check`, `make rust-clippy`, `make rust-panic-ban` | 0 | no diff, no warning, no finding |
+| `check_rust_file_size.py`, `check_lib_rs.sh`, `check_crate_dag.sh` | 0 | 1130 files clean; 11 crate roots clean; 25 edges clean |
+| `sync_map_md.py --check`, `check_map_md.sh --base origin/main`, `check_docs_links.py`, `check_ledger_grammar.py` | 0 | 371 maps clean; silent; 1370 files, 7366 links clean; 313 ledgers clean |
+| `comment_ban.py /tmp/xc1 origin/main HEAD` | 0 | `comment-ban hits=0` |
+| `cargo test -p repark-connect` (no server) | 0 | 159 passed, 60 ignored |
+| `cargo test -p repark-connect --lib` (#995's unit-test tier) | 0 | 3 passed |
+| `cargo test -p repark-connect -- --include-ignored` (server up) | 0 | 219 passed, 0 ignored |
+| `cargo test -p repark-core -p repark-python --lib` | 0 | all passed (binding 151) |
+| `make develop` | 0 | installed |
+| `pytest python/repark-parity/tests/live_db` | 0 | 33 passed, 5 xfailed (C-0's strict xfails) |
+| `pytest python/repark/tests -k "source or postgres or toml or named" -n 8` | 0 | 693 passed, 9 skipped |
+| `pytest python/repark/tests/test_production_file_size.py -q` | 0 | 11 passed |
+| `check_example_coverage.py --require-execute`, `cargo deny check`, `check_manifest.sh` | 0 | covered; advisories, bans, licenses, sources ok; silent |
+
 ## 6. Gates (2026-10-08)
 
 Run on the final tree in one hold of the build lock, the server up (2026-10-08). Every cargo
