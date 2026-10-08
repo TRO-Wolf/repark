@@ -66,16 +66,16 @@ pub(crate) fn frame_rule(frame: &DataFrame) -> NameRule {
     ))
 }
 
-pub(crate) fn bound_column(frame: &DataFrame, column: &PyColumn) -> PyResult<(Expr, usize)> {
+pub(crate) fn bound_column(
+    frame: &DataFrame,
+    rule: NameRule,
+    column: &PyColumn,
+) -> PyResult<(Expr, usize)> {
     let bound = column
         .expr()
         .resolve_lambda_variables(frame.schema())
         .and_then(|expr| {
-            repark_core::frame_names::resolve_bound_expr_with(
-                expr.data,
-                frame.schema(),
-                frame_rule(frame),
-            )
+            repark_core::frame_names::resolve_bound_expr_with(expr.data, frame.schema(), rule)
         })
         .map_err(datafusion_to_py_err)?;
     let bound = crate::column::series::bind_series(frame, bound)?;
@@ -83,16 +83,16 @@ pub(crate) fn bound_column(frame: &DataFrame, column: &PyColumn) -> PyResult<(Ex
     Ok((bound, depth))
 }
 
-pub(crate) fn bound_projection(frame: &DataFrame, column: &PyColumn) -> PyResult<(Expr, usize)> {
+pub(crate) fn bound_projection(
+    frame: &DataFrame,
+    rule: NameRule,
+    column: &PyColumn,
+) -> PyResult<(Expr, usize)> {
     let bound = column
         .expr()
         .resolve_lambda_variables(frame.schema())
         .and_then(|expr| {
-            repark_core::frame_names::bind_projection_expr(
-                expr.data,
-                frame.schema(),
-                frame_rule(frame),
-            )
+            repark_core::frame_names::bind_projection_expr(expr.data, frame.schema(), rule)
         })
         .map_err(datafusion_to_py_err)?;
     let bound = crate::column::series::bind_series(frame, bound)?;
@@ -105,7 +105,7 @@ pub(crate) fn filter_frame_with_sql(
     predicate: &str,
 ) -> PyResult<(DataFrame, usize, bool)> {
     repark_spark::refuse_sql_fragment(predicate).map_err(datafusion_to_py_err)?;
-    let parsed = match frame_rule(frame.inner()) {
+    let parsed = match frame.rule() {
         NameRule::Exact => parse_canonical_predicate_exact(frame, predicate),
         NameRule::IgnoreCase => parse_canonical_predicate(frame, predicate),
     }
@@ -119,7 +119,7 @@ pub(crate) fn filter_frame_with_sql(
                 if let Err(shaped) = repark_core::frame_names::resolve_bound_expr_with(
                     probe,
                     frame.inner().schema(),
-                    frame_rule(frame.inner()),
+                    frame.rule(),
                 ) {
                     return datafusion_to_py_err(shaped);
                 }
@@ -137,7 +137,7 @@ pub(crate) fn join_on_keys(
     left_node: &PyFrameNode,
     right_node: &PyFrameNode,
 ) -> PyResult<(DataFrame, PyFrameNode)> {
-    let rule = frame_rule(left.inner());
+    let rule = left.rule();
     let (joined, node) = repark_core::frame_names::join_on_named_keys(
         crate::deep_stack::grown_clone_frame(left.inner(), &left.depths()),
         crate::deep_stack::grown_clone_frame(right.inner(), &right.depths()),
@@ -156,7 +156,7 @@ pub(crate) fn union_frames(
     right: &PyDataFrame,
     allow_missing: bool,
 ) -> PyResult<DataFrame> {
-    let rule = frame_rule(left.inner());
+    let rule = left.rule();
     repark_core::frame_names::union_by_folded_name(
         crate::deep_stack::grown_clone_frame(left.inner(), &left.depths()),
         crate::deep_stack::grown_clone_frame(right.inner(), &right.depths()),
@@ -227,7 +227,7 @@ fn drop_frame_columns(
                 &names,
                 &references,
                 &attributes,
-                frame_rule(frame.inner()),
+                frame.rule(),
             )
         })
         .map_err(datafusion_to_py_err)?;
@@ -323,7 +323,7 @@ pub(crate) fn requalify_join_sides(
 
 #[pyfunction]
 fn frame_case_sensitive(frame: &PyDataFrame) -> bool {
-    matches!(frame_rule(frame.inner()), NameRule::Exact)
+    matches!(frame.rule(), NameRule::Exact)
 }
 
 #[pyfunction]
@@ -341,7 +341,7 @@ fn resolve_frame_names(frame: &PyDataFrame, names: Vec<String>) -> PyResult<Vec<
             repark_core::frame_names::resolve_written_names(
                 frame.inner().schema(),
                 &names,
-                frame_rule(frame.inner()),
+                frame.rule(),
             )
         })
         .map_err(datafusion_to_py_err)
@@ -847,10 +847,9 @@ pub(crate) fn grown_plan_rewrite<T>(
         rewrite(plan).map(|(plan, carried)| (state, plan, carried))
     })
     .map_err(datafusion_to_py_err)?;
-    Ok((
-        PyDataFrame::new(DataFrame::new(state, plan), frame.runtime_handle()),
-        carried,
-    ))
+    let rewritten = PyDataFrame::new(DataFrame::new(state, plan), frame.runtime_handle());
+    rewritten.inherit_rule(frame);
+    Ok((rewritten, carried))
 }
 
 #[cfg(test)]

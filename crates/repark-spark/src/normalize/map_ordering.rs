@@ -2,9 +2,15 @@ use datafusion::arrow::datatypes::DataType;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, ScalarValue};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::execution::SessionState;
 use datafusion::logical_expr::expr::{InList, ScalarFunction};
 use datafusion::logical_expr::{BinaryExpr, Distinct, Expr, ExprSchemable, LogicalPlan, Operator};
 use repark_functions::cast_map::spark_sql_name;
+
+#[allow(clippy::missing_errors_doc)]
+pub fn analyze_built_plan(state: &SessionState, plan: LogicalPlan) -> Result<LogicalPlan> {
+    repark_functions::analyze_eagerly(state, refuse_map_ordering(plan)?)
+}
 
 pub(crate) fn refuse_map_ordering(plan: LogicalPlan) -> Result<LogicalPlan> {
     plan.apply_with_subqueries(|node| {

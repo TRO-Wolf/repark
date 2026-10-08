@@ -14,6 +14,7 @@ use datafusion::prelude::col;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyCapsule;
+use repark_core::frame_names::NameRule;
 use tokio::runtime::Runtime;
 
 use crate::arrow_export::StreamingBatchReader;
@@ -51,7 +52,7 @@ pub(crate) fn with_stream_poll_no_detach<T>(body: impl FnOnce() -> T) -> T {
     body()
 }
 
-fn join_type_from_str(how: &str) -> PyResult<JoinType> {
+pub(crate) fn join_type_from_str(how: &str) -> PyResult<JoinType> {
     match how {
         "inner" => Ok(JoinType::Inner),
         "left" | "left_outer" | "leftouter" => Ok(JoinType::Left),
@@ -74,6 +75,7 @@ pub struct PyDataFrame {
     pub(crate) runtime: Arc<Runtime>,
     analyzed_schema: OnceLock<SchemaRef>,
     executable: OnceLock<DataFrame>,
+    rule: OnceLock<NameRule>,
     depths: PlanDepths,
 }
 
@@ -91,7 +93,7 @@ impl Drop for PyDataFrame {
 
 impl PyDataFrame {
     fn bound(&self, column: &PyColumn) -> PyResult<(Expr, usize)> {
-        crate::dataframe_names::bound_column(&self.df, column)
+        crate::dataframe_names::bound_column(&self.df, self.rule(), column)
     }
 
     pub(crate) fn new(df: DataFrame, runtime: Arc<Runtime>) -> Self {
@@ -109,8 +111,28 @@ impl PyDataFrame {
             runtime,
             analyzed_schema: OnceLock::new(),
             executable: OnceLock::new(),
+            rule: OnceLock::new(),
             depths,
         }
+    }
+
+    pub(crate) fn derived(&self, df: DataFrame, depths: PlanDepths) -> Self {
+        let child = Self::new_with_depths(df, Arc::clone(&self.runtime), depths);
+        child.inherit_rule(self);
+        child
+    }
+
+    pub(crate) fn inherit_rule(&self, parent: &Self) {
+        if let Some(rule) = parent.rule.get() {
+            debug_assert_eq!(*rule, crate::dataframe_names::frame_rule(&self.df));
+            let _ = self.rule.set(*rule);
+        }
+    }
+
+    pub(crate) fn rule(&self) -> NameRule {
+        *self
+            .rule
+            .get_or_init(|| crate::dataframe_names::frame_rule(&self.df))
     }
 
     pub(crate) fn executable(&self) -> PyResult<DataFrame> {
@@ -440,7 +462,7 @@ impl PyDataFrame {
                 },
             )?;
             let depths = child_depths(&self.depths, bound + 1, &df, carries_plan);
-            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
+            Ok(self.derived(df, depths))
         })
     }
 
@@ -460,7 +482,7 @@ impl PyDataFrame {
                 },
             )?;
             let depths = child_depths(&self.depths, bound, &df, carries_plan || expanded);
-            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
+            Ok(self.derived(df, depths))
         })
     }
 
@@ -474,7 +496,7 @@ impl PyDataFrame {
                 crate::dataframe_names::filter_frame_with_sql(self, predicate)
             })?;
             let depths = child_depths(&self.depths, bound, &df, carries_plan);
-            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
+            Ok(self.derived(df, depths))
         })
     }
 
@@ -484,11 +506,12 @@ impl PyDataFrame {
             let carries_plan = carries_subquery_plan(&columns);
             let ((df, expanded), bound) =
                 drive_columns(&self.runtime, &self.depths, &columns, || {
+                    let rule = self.rule();
                     let mut deepest = 0;
                     let mut expressions = Vec::with_capacity(columns.len());
                     for column in &columns {
                         let (bound, depth) =
-                            crate::dataframe_names::bound_projection(&self.df, column)?;
+                            crate::dataframe_names::bound_projection(&self.df, rule, column)?;
                         deepest = deepest.max(depth);
                         expressions.push(bound);
                     }
@@ -500,7 +523,7 @@ impl PyDataFrame {
                     Ok(((df, expanded), deepest))
                 })?;
             let depths = child_depths(&self.depths, bound, &df, carries_plan || expanded);
-            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
+            Ok(self.derived(df, depths))
         })
     }
 
@@ -540,7 +563,7 @@ impl PyDataFrame {
                 Ok((df, deepest))
             })?;
             let depths = child_depths(&self.depths, bound, &df, carries_plan);
-            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
+            Ok(self.derived(df, depths))
         })
     }
 
@@ -627,7 +650,7 @@ impl PyDataFrame {
                 Ok((df, deepest))
             })?;
             let depths = child_depths(&self.depths, bound, &df, carries_plan);
-            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
+            Ok(self.derived(df, depths))
         })
     }
 

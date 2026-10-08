@@ -9795,6 +9795,37 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   binding-equivalence check reds the second-twin pin. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011
+- [test_stamp_2_r5p6_2.py](test_stamp_2_r5p6_2.py) — **STAMP-2-R5P6-2
+  (2026-10-07):** the H1 join door's differential pins. Each shape is built twice
+  over the same side frames, once with `_join_exact_plan` spied and once with it
+  forced to miss, and the two answers must be equal: columns, dtypes, the schema
+  with nullability, rows, display and engine names, the plan's field names,
+  where each attribute id comes from (a side position or a fresh mint), the
+  id-sharing pattern, the frame's case rule and the normalized plan text. The
+  cross door takes the native route over a filtered side, a self cross, twin
+  displays, aliased sides (with a qualified select after), a map column,
+  `join` with no condition, with `how="cross"`, with no keys, and with a
+  condition under `how="cross"`. A side with a spaced field name or with case
+  twins keeps the SQL route with equal answers. A `spark.sql.caseSensitive`
+  change between the frames and the join shows on the joined frame on both
+  routes (the native join takes the session state of the join call). A raising
+  native attempt keeps the SQL route's answer. The condition door takes the
+  native route for one equality between a left and a right column: by column
+  handle over six join types in both operand orders, by alias-qualified names
+  (r5p6's `j_alias`, with its qualified select), a self-join, twin displays,
+  and `INT` against `BIGINT`; `STRING` against `INT` raises the same cast
+  error at the action on both routes. A conjunction, a literal comparand,
+  `<`, `<=>`, a text condition, bare names, arithmetic, a cast, a one-sided
+  equality and a spaced side field keep the SQL route with equal answers.
+  `_join_exact_keys` is pinned directly on 3 exact and 14 inexact prepared
+  conditions. The self-join, ambiguous-name and missing-attribute refusals
+  raise before the route is chosen, and a map key raises on the native attempt
+  and falls back: each carries the SQL route's class and text. A frame made
+  before a `spark.sql.caseSensitive` change and one made after each keep their
+  own case rule through `select`, `filter`, `orderBy` and `select` again (the
+  binding's per-handle rule cache). No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: stamp-2-r5p6-2/C-003, C-004, C-005, C-006, C-007, C-010
 - [test_threaded_collect_segv_1.py](test_threaded_collect_segv_1.py) —
   **THREADED-COLLECT-SEGV-1 (2026-10-08):** `collect`, `take`, `head`, `first`,
   `toLocalIterator` and `toArrow` each answer on six successive fresh non-main

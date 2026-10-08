@@ -19,6 +19,7 @@ pub(crate) mod attr_lineage;
 pub mod case_bind;
 pub(crate) mod duplicate_names;
 pub(crate) mod frame_lineage;
+pub(crate) mod join_exact;
 mod predicate_names;
 pub(crate) mod self_join;
 pub(crate) mod skipping_limit;
