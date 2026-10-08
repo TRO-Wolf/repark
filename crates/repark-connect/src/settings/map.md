@@ -44,9 +44,11 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
     `DeclaredSetting::UnverifiedSslmode` (`CONNECT-DECL-sslmode-unverified`).
   - **Declared keys.** `sslcert`, `sslkey` (`CONNECT-DECL-pg-client-cert`);
     `sessionInitStatement`, `customSchema`, `options` (`CONNECT-DECL-pg-session-sql`); a comma
-    in the host (`CONNECT-DECL-pg-multi-host`); and the five partitioned-read options on the
-    `read_postgres` door (`CONNECT-DECL-pg-partitioned-read`, whose registry row lands with
-    C-2d).
+    in the host (`CONNECT-DECL-pg-multi-host`); and `predicates` on the `read_postgres` door
+    (`CONNECT-DECL-pg-partitioned-read`). Since C-3 (2026-10-07) the four range options
+    (`partitionColumn`, `lowerBound`, `upperBound`, `numPartitions`) are not settings: the
+    door lifts them out of the property map (`PartitionOptions::with_props`, `../partition.rs`)
+    before `from_props` runs, so here they are unknown keys on both doors. pins: c-3/C-006
   - **Unknown keys.** Any other key refuses with `SpecRefusal::UnknownKey`, which lists the
     accepted keys and never echoes a value (`CONNECT-DIV-pg-unknown-option`). Inside the `url`
     query the key is named only as `Spelling::UrlPart("query key")`, and a malformed query value

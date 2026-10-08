@@ -144,6 +144,19 @@ async fn a_multi_checkout_takes_what_is_free_and_never_passes_the_pool() {
 }
 
 #[tokio::test]
+async fn a_retired_connection_is_closed_and_never_pooled() {
+    let (pool, opened) = fake_pool(2, 100, 60_000);
+    let mut pair = pool.checkout_up_to(2).await.expect("both");
+    pair.pop().expect("second").retire();
+    assert_eq!(pool.idle_count(), 0, "a retired connection is not kept");
+    pair.pop().expect("first").release_clean().await;
+    assert_eq!(pool.idle_count(), 1);
+    let again = pool.checkout_up_to(2).await.expect("both again");
+    assert_eq!(again.len(), 2, "the retired lease gave its permit back");
+    assert_eq!(opened.count(), 3, "one reused, one opened afresh");
+}
+
+#[tokio::test]
 async fn a_multi_checkout_queues_for_its_first_connection_only() {
     let (pool, _opened) = fake_pool(1, 100, 60_000);
     let held = pool.checkout().await.expect("the one permit");

@@ -22,6 +22,7 @@ type Client = PooledClient<PostgresConnector>;
 
 #[derive(Clone)]
 struct LaneSettings {
+    pooled_at_rest: bool,
     read_timeout: Duration,
     relation: Option<QualifiedRelation>,
     meter: ScanMeter,
@@ -55,7 +56,11 @@ impl Lane {
                     let Some(prepared) = queue.pop_front() else {
                         let commit = pooled.client().batch_execute("COMMIT");
                         request(settings.read_timeout, settings.relation.as_ref(), commit).await?;
-                        pooled.release_clean().await;
+                        if settings.pooled_at_rest {
+                            pooled.release_clean().await;
+                        } else {
+                            pooled.retire();
+                        }
                         return Ok(None);
                     };
                     let meter = settings.meter.clone();
@@ -176,6 +181,7 @@ pub async fn scan_lanes(
                 queue,
                 opened: (index == 0).then_some(opened),
                 settings: LaneSettings {
+                    pooled_at_rest: index == 0,
                     read_timeout,
                     relation: relation.clone(),
                     meter: meter.clone(),

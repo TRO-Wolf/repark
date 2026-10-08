@@ -104,7 +104,14 @@ not trigger (the four-line record is FL-1 in §2). The mechanism:
    `[0-9A-Fa-f-]` before it enters the text (a `SET` takes no bound parameter).
 3. Only when every connection holds the snapshot does the first `COPY` start. A connection that
    runs more than one stride runs them back to back in the same transaction.
-4. Each connection commits and goes through `release_clean`, as a C-2 scan does.
+4. Each connection commits. The first goes through `release_clean`, as a C-2 scan's does, and
+   is pooled; every other is closed (`retire`). A frame from the read door owns its own pool,
+   so pooling every connection would leave `pool_max_size` idle sessions per frame for as long
+   as the frame lives (the pool reaps idle connections only on its next checkout). The first
+   full run of the live Python cells showed it: nine partitioned frames held 36 idle sessions
+   and the container refused the next connection (`53300`). At rest a partitioned frame now
+   holds one idle connection, exactly what a C-2 frame holds; a repeated read reopens the
+   others in parallel.
 
 **Measured on the C-0 container (2026-10-07, `psql`, sessions opened with the pool's pins
 `default_transaction_read_only=on`, `search_path=`, `idle_in_transaction_session_timeout`):**
@@ -223,16 +230,33 @@ each, the median reported (§4).
 | C-003 | The option rule is Spark's (§0.1): a column or either bound needs all four, else the measured sentence; `numPartitions` alone is no partitioning; reversed bounds refuse in the measured sentence; the four spellings lift out of a property map case-insensitively; a bound that is not an `i64` refuses naming the option and never the value; `predicates` stays declared naming `CONNECT-DECL-pg-partitioned-read`. Each refusal folds to Spark's class: `IllegalArgument`, `NumberFormat`, `Analysis`, and `Unsupported` for a declared column type. | `the_four_options_are_all_or_none_as_spark_rules`, `reversed_bounds_refuse_in_sparks_words`, `the_four_spellings_lift_out_of_the_properties`, `a_bound_that_is_not_an_i64_refuses_naming_the_option_never_the_value`, `predicates_stay_declared_naming_the_row`, `a_declared_column_type_is_unsupported_and_names_the_row`. | PROVEN | §1. |
 | C-004 | A stride is one conjunct after everything pushed (§0.4): the first is open below and carries the only NULL test, a middle one is closed below and open above, the last is open above; every compare is `OPERATOR(pg_catalog.…)`; every cut is bound through the `set_config` carriage and read back as `::pg_catalog.int8`; projection and `LIMIT` are untouched; a cut past the 1024-slot bound answers `None`. | `rendering::the_first_stride_is_open_below_and_takes_the_nulls`, `a_middle_stride_is_closed_below_and_open_above`, `the_last_stride_is_open_above`, `a_stride_follows_the_pushed_conjuncts_and_keeps_projection_and_limit`, `the_strides_of_one_plan_bind_every_cut_once_per_side`, `a_stride_refuses_past_the_slot_bound_or_the_columns`. | PROVEN | §1. |
 | C-005 | Execution (§0.2…§0.4). A partitioned scan is one DataFusion partition over between one and `min(strides, pool_max_size)` connections; `checkout_up_to` queues for its first connection only and never opens past the pool; every connection reads one exported snapshot, so a writer between strides changes nothing, on four connections and on one; the partitioned rows equal the unpartitioned rows value for value across the mapped types, with NULL and out-of-bounds rows exactly once; pushed filters, projection and a per-stride `LIMIT` capped by the scan compose with the strides; a refused value keeps its per-connection contract; a dropped stream leaves no backend; the connections return to the pool clean. | The no-server pins of `partition_plan.rs` and `pool.rs`; the nine live cells of `live_partition.rs`; `cargo test -p repark-connect -- --include-ignored`, three runs. | PROVEN | §3; 214 passed, 0 failed, three runs. |
-| C-006 | The doors (§0.1): `read_postgres`, `spark.read.jdbc` and `format("jdbc")` carry the four options; the registry row is rewritten. | Open until the doors slice lands. | OPEN | Which cells pin each door? The doors slice's live Python cells. |
+| C-006 | The doors (§0.1). `read_postgres`, `spark.read.jdbc` with Spark's four arguments, `format("postgres" \| "jdbc")` with the four options and the four spellings inside `properties` each partition a read and equal psycopg's reading; a `dbtable` subquery partitions; `query` with a column, an incomplete option bag, reversed bounds, a missing column, a `text` or `boolean` column and a bound that is not a 64-bit integer refuse in Spark's class and sentence, before any connection where Spark refuses before one; `numPartitions` alone, counts of `1`, `0` and `-1`, and equal bounds read unpartitioned; `predicates` and the `date`, timestamp, `numeric` and float columns refuse naming `CONNECT-DECL-pg-partitioned-read`, whose registry row is rewritten to what C-3 delivers and what it still declares; in `repark.toml` the spellings stay unknown keys. | `partition_options_refuse_as_spark_does_before_any_connection`, `num_partitions_alone_is_no_partitioning_and_never_a_setting` (core); `read_postgres_refusals_name_their_row_and_never_echo_credentials` (binding); `declared_keys_refuse_naming_their_row` (settings); the eight live cells of `test_c3_partitioned.py`; the facade subset. | PROVEN | §3; live_db 31 passed, 5 xfailed (C-0's strict xfails); facade subset 692 passed, 9 skipped. |
 | C-007 | The benchmark (§0.7) is recorded with its factor against ConnectorX. | Open until the harness runs. | OPEN | What is the measured factor? §4. |
+
+## 2. Four-line records (2026-10-07)
+
+Questions no ruled row answered, each acted on under its default (North Star §1). Flink's
+answers are cited as documented for its JDBC connector; nothing in Flink was run. Spark's are
+recorded cells.
+
+| id | date | question | Flink | Spark | default acted on |
+|---|---|---|---|---|---|
+| FL-1 | 2026-10-07 | Do the partitions of one read see one snapshot? | No: each split is its own statement on its own connection. | No: each partition is its own query (`C3-P01`'s four `whereClause`s run as four statements). | Yes: one exported snapshot (§0.2). The two engines agree with each other and promise nothing; C-2's ruled guarantee (c-2-design §0 line 1) and order rule H-SKEW outrank both, and the stricter answer returns Spark's rows on unchanging data, so §8.2 does not trigger. |
+| FL-2 | 2026-10-07 | Do `lowerBound` and `upperBound` filter rows? | Yes: `scan.partition.lower-bound` and `upper-bound` bound the rows read. | No: they only place the strides; rows outside them and NULL rows are returned (`C3-P01`, `C3-B04`, `C3-B05`). | Spark's: the options are Spark's surface (NS §2 rank 2) and the brief pins it. Flink's reading would make a Spark workload lose rows; the disagreement is on the surface's meaning, and Spark governs the surface. Filed for the owner as a recorded disagreement, not a halt. |
+| FL-3 | 2026-10-07 | What does a partition count above the available connections do? | The source's parallelism is the job's; splits queue on the readers. | Opens `numPartitions` connections, one per task slot. | Strides queue on at most `pool_max_size` connections (§0.3); NS-7 bounds every resource, and c-2-design §0 line 5 already fixes the pool as the bound. |
+| FL-4 | 2026-10-07 | Is a `LIMIT` pushed into a partitioned read? | The JDBC source implements limit push-down per split. | No: a V1 JDBC scan pushes none (`C3-L01`). | Pushed per stride and capped by the scan (§0.4), C-2's FL-9 carried over. A pushed limit changes which rows an unordered `LIMIT` returns, never how many, in both engines. |
 
 ## 3. The live run (2026-10-07)
 
 `DOCKER_HOST=unix:///run/user/1000/docker.sock make pg-up` (Postgres 16.15, `max_connections=50`),
-then `cargo test -p repark-connect -- --include-ignored`: **214 passed, 0 failed, 0 ignored**,
-three consecutive runs (17.2 s to 17.9 s). The nine `live_partition` cells are part of it.
+then `cargo test -p repark-connect -- --include-ignored`: **215 passed, 0 failed, 0 ignored**,
+four consecutive runs (21.3 s to 22.7 s) on the final tree. The nine `live_partition` cells are
+part of it. Python, after `make develop`: `pytest python/repark-parity/tests/live_db` **31
+passed, 5 xfailed** (C-0's five strict xfails), the eight `test_c3_partitioned.py` cells among
+them; `pytest python/repark/tests -k "source or postgres or toml or named" -n 8` **692 passed, 9
+skipped**.
 
-Two things the first live runs showed, both fixed before the commit:
+Four things the first live runs showed, each fixed before its commit:
 
 - **The cells, not the product, exhausted the server.** The first equality cell opened one pool
   per partition plan (nine pools of four) and the suite hit `53300 too many clients`. The cells
@@ -245,3 +269,11 @@ Two things the first live runs showed, both fixed before the commit:
   scan in the plan (`generate_series` under `target_partitions = 1`) and on the unpartitioned
   C-2 scan, so it is not a partition plan changing an answer and H-SKEW does not apply. The cell
   uses the un-nested form; the engine defect is filed in the hand-back as out of scope.
+- **Idle connections per frame.** The first full Python run exhausted the container again, this
+  time through the product: every connection of a partitioned scan returned to its frame's
+  pool, so nine live frames held 36 idle sessions. §0.2 step 4 records the change: the first
+  connection is pooled, the rest are closed.
+- **Two cells asserted more than the contract.** After a refused value a stride that had
+  already finished may have pooled its connection, so "no backend" became "no busy backend and
+  at most one pooled"; and the cancel cell's activity query matched an autovacuum worker on the
+  table, so it now counts client backends of the cell's own application name.

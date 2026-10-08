@@ -115,6 +115,25 @@ async fn drained(cell: &Cell, expected: i64) {
     }
 }
 
+async fn none_busy(cell: &Cell) {
+    let sql = "SELECT count(*) FROM pg_stat_activity WHERE application_name = $1 AND state <> \
+               'idle' AND backend_type = 'client backend'";
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let busy: i64 = cell
+            .admin
+            .query_one(sql, &[&cell.app])
+            .await
+            .expect(sql)
+            .get(0);
+        if busy == 0 {
+            return;
+        }
+        assert!(Instant::now() < deadline, "{busy} backends still busy");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
 async fn a_partitioned_read_equals_the_unpartitioned_read_across_the_types() {
@@ -293,9 +312,8 @@ async fn snapshot_holds(max_lanes: usize, stride_count: i64) {
     let during = drain(lanes, vec![first]).await;
     assert_eq!(during.len(), before.len(), "no row twice, no row lost");
     assert_eq!(during, before, "the strides read one snapshot");
-    let lanes_count = i64::try_from(max_lanes).expect("lanes");
-    assert_eq!(cell.backends().await, lanes_count, "pooled clean");
-    assert_eq!(reader.pool.idle_count(), max_lanes);
+    drained(&cell, 1).await;
+    assert_eq!(reader.pool.idle_count(), 1, "one connection pooled clean");
     let after = drain(
         Vec::new(),
         reader
@@ -515,7 +533,11 @@ async fn a_refused_value_keeps_its_contract_in_every_stride() {
         "only the rows before the refusal leave its stride"
     );
     drop(stream);
-    drained(&cell, 0).await;
+    none_busy(&cell).await;
+    assert!(
+        cell.backends().await <= 1,
+        "at most the one pooled connection of a stride that had finished"
+    );
     let clean = read(&context, "SELECT id FROM parts WHERE id <> 2600").await;
     assert_eq!(clean.num_rows(), 3999, "the column is not selected");
     cell.close().await;
@@ -544,14 +566,7 @@ async fn cancel_aborts_every_connection_and_leaves_no_backend() {
     assert_eq!(cell.backends().await, 4, "four connections were copying");
     drop(stream);
     drained(&cell, 0).await;
-    let active = cell
-        .count(&format!(
-            "SELECT count(*) FROM pg_stat_activity WHERE query LIKE '%{}.big%' AND state <> \
-             'idle' AND pid <> pg_backend_pid()",
-            cell.schema
-        ))
-        .await;
-    assert_eq!(active, 0, "no backend is still copying");
+    none_busy(&cell).await;
     let again = read(&context, "SELECT count(*) FROM parts").await;
     assert_eq!(ids(&again), [400_000], "the source reads again afterwards");
     cell.close().await;
@@ -586,10 +601,10 @@ async fn num_partitions_above_the_pool_never_opens_past_it() {
     assert_eq!(most, 2, "sixteen strides ran on the pool's two connections");
     seen.sort_unstable();
     assert_eq!(seen, (1..=400_000).collect::<Vec<i64>>());
-    assert_eq!(cell.backends().await, 2, "both connections pooled clean");
+    drained(&cell, 1).await;
     let again = read(&context, "SELECT count(*) FROM parts").await;
     assert_eq!(ids(&again), [400_000]);
-    assert_eq!(cell.backends().await, 2, "the second read reused them");
+    drained(&cell, 1).await;
     cell.close().await;
 }
 

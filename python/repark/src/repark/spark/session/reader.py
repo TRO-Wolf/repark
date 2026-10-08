@@ -786,15 +786,12 @@ class DataFrameReader:
                 "format('postgres') requires option('dbtable', ...) or option('query', ...)"
             )
 
-        # Partition options (optional all-four bag).
         partition_column = options.get("partitioncolumn")
         lower_raw = options.get("lowerbound")
         upper_raw = options.get("upperbound")
         num_raw = options.get("numpartitions")
-        range_set = sum(
-            value is not None for value in (partition_column, lower_raw, upper_raw, num_raw)
-        )
-        if range_set not in (0, 4):
+        ranged = (partition_column, lower_raw, upper_raw)
+        if any(value is not None for value in ranged) and None in (*ranged, num_raw):
             raise IllegalArgumentException(
                 "partitionColumn, lowerBound, upperBound, and numPartitions must all be set "
                 "together (Spark JDBC parity)"

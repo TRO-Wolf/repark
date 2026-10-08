@@ -120,6 +120,7 @@ def reader_jdbc(
     pins: io-declared-1/C-003, C-007
     """
     from repark.errors import IllegalArgumentException
+    from repark.spark.session.reader_support import _jdbc_i64
 
     resolved_lower = _jdbc_alias("lowerBound", lowerBound, "lower_bound", lower_bound)
     resolved_upper = _jdbc_alias("upperBound", upperBound, "upper_bound", upper_bound)
@@ -162,9 +163,9 @@ def reader_jdbc(
         query=None,
         properties=props,
         partition_column=column,
-        lower_bound=resolved_lower,
-        upper_bound=resolved_upper,
-        num_partitions=resolved_num,
+        lower_bound=_jdbc_i64("lowerBound", resolved_lower),
+        upper_bound=_jdbc_i64("upperBound", resolved_upper),
+        num_partitions=_jdbc_i64("numPartitions", resolved_num),
         predicates=predicates,
     )
 

@@ -221,19 +221,28 @@ def _parse_as_of_timestamp_option(raw: Any) -> int:
     return parsed
 
 
+def _jdbc_i64(name: str, value: int | None) -> int | None:
+    """Refuse a JDBC partition integer outside the 64-bit range, as Spark's parse does."""
+    if value is not None and not -(2**63) <= value < 2**63:
+        from repark.errors import NumberFormatException
+
+        raise NumberFormatException(f"jdbc option {name} must be a 64-bit integer")
+    return value
+
+
 def _parse_jdbc_int_option(name: str, raw: str | None) -> int | None:
-    """Parse a JDBC partition integer option; map bad text to IllegalArgumentException."""
+    """Parse a JDBC partition integer option; bad text raises NumberFormatException."""
 
     if raw is None:
         return None
 
     try:
-        return int(raw)
+        return _jdbc_i64(name, int(raw))
 
     except (TypeError, ValueError) as exc:
-        from repark.errors import IllegalArgumentException
+        from repark.errors import NumberFormatException
 
-        raise IllegalArgumentException(
+        raise NumberFormatException(
             f"jdbc option {name} must be an integer, got {mask_credentials(raw)!r}"
         ) from exc
 

@@ -18,10 +18,24 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   five S0 pins: crash after commit, snapshot-to-WAL handover, replay and
   duplicate delivery, schema change plus partial update image, lost slot.
 
+- `test_c3_partitioned.py` — **C-3 (2026-10-07):** partitioned reads through the read door,
+  on a session with no mounted source. `spark.read.jdbc` with Spark's four arguments,
+  `format("postgres")` with the four options, the four spellings inside `properties`,
+  `read_postgres` with a column in another case and a partitioned `dbtable` subquery each equal
+  psycopg's reading of fourteen columns over `int4`, `int8` and `int2` columns, with 16
+  strides on the default pool and with bounds wholly outside the data; NULL and out-of-bounds
+  rows arrive exactly once; Spark's refusals keep Spark's class and sentence (the all-or-none
+  rule, reversed bounds, `query` with a column, a missing column, `text` and `boolean`
+  columns, a bound that is not a 64-bit integer); the one-stride cases read unpartitioned;
+  `predicates` and the `date`, timestamp, `numeric` and float columns refuse naming
+  `CONNECT-DECL-pg-partitioned-read`; filters with pushdown on and off, projection and limits
+  compose; 16 strides on `pool_max_size = 2` open two connections and leave none busy; and
+  twelve reads return every id exactly once while a second session moves rows across the
+  strides. pins: c-3/C-006
 - `test_c2_read.py` — **C-2d (2026-10-07):** the mounted source and the `read_postgres`
   door against C-0 (`sslmode = "disable"`): every mapped type equals psycopg's reading; `read.jdbc`
-  and `format("postgres")` with `query` equal it; the partitioned-read arguments refuse
-  (`CONNECT-DECL-pg-partitioned-read`); DDL refuses read-only and DML refuses not-implemented
+  and `format("postgres")` with `query` equal it (the partitioned-read cell moved to
+  `test_c3_partitioned.py` with C-3); DDL refuses read-only and DML refuses not-implemented
   through the Spark door, and DDL answers `CONNECT-DECL-pg-ddl` through `repark.sql`, with
   nothing written; `ping()` succeeds and names the source when unreachable; `timestamp` is
   placed in the session zone, kept as the wall clock under `prefer_timestamp_ntz`, and a gap

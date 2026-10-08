@@ -212,7 +212,9 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   that moment (`try_acquire_owned`), so the call returns between one and `wanted` leases, never
   opens past `max_size`, and never waits while it holds a connection: two partitioned scans
   on one pool cannot hold each other to a timeout. `lease(permit)` is the shared tail of both
-  checkouts (an idle connection, else a new one). pins: c-3/C-005
+  checkouts (an idle connection, else a new one). `PooledClient::retire()` closes a healthy
+  connection without pooling it and without the cancel a dropped lease fires; its permit
+  returns to the pool. pins: c-3/C-005
 - `pool.rs` — C-2b round 2 (2026-10-07; sketch §2.5, NS-7), behind `postgres`.
   - **`QueryPool<C: Connect>`**, one per mounted source: a semaphore of `pool_max_size` permits;
     `checkout()` waits at most `pool_checkout_timeout_ms` for one (else `PoolExhausted`), reaps

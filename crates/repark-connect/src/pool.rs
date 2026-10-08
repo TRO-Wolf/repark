@@ -251,6 +251,16 @@ impl<C: Connect> PooledClient<C> {
         lease.cancel = None;
         lease.pool.put_idle(connection);
     }
+
+    pub fn retire(self) {
+        let PooledClient {
+            mut lease,
+            connection,
+        } = self;
+        lease.abort = None;
+        lease.cancel = None;
+        drop(connection);
+    }
 }
 
 impl<C: Connect> Deref for PooledClient<C> {

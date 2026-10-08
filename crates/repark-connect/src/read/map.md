@@ -85,8 +85,10 @@ feature. See [../map.md](../map.md).
     exporter ends).
   - **Strides per connection.** Stride `i` goes to connection `i % L`, and each connection
     runs its strides back to back in its one transaction: `Lane::step` starts the next
-    `COPY` when the last one ends, then commits and calls `release_clean`, whose reset and
-    pin check return the session to `READ COMMITTED` and the pool. An error or a drop leaves
+    `COPY` when the last one ends, then commits. The first connection calls `release_clean`,
+    whose reset and pin check return the session to `READ COMMITTED` and the pool; every
+    other is closed with `retire`, so a frame holds one idle connection at rest, as a
+    one-statement scan's does, and never `pool_max_size` of them. An error or a drop leaves
     the lease abandoned, as a one-statement scan does: the server's query is cancelled and
     the connection is never pooled.
   - `time_to_first_byte` is the first connection's alone; `bytes_received` and `decode` sum
