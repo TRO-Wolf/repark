@@ -103,8 +103,9 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   **MB-3 (2026-10-07):** `available_now_target` returns the uncapped walk's end (Spark's
   `prepareForTriggerAvailableNow`), and `next_batch_until` plans a capped window and cuts it at
   that end by ancestry and position, so an `availableNow` drain never reads a snapshot committed
-  after it started. `table_uuid`, `table_identifier` and `name` serve the driver's resume check.
-  pins: mb-3/C-004
+  after it started. `table_uuid`, `table_identifier` and `name` serve the driver's resume check,
+  and `arrow_schema` presents the run's read schema to the streaming frame's placeholder.
+  pins: mb-3/C-004, C-008
 - `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
   under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027, C-028, C-029, C-030
 - `microbatch_source_fold2_tests.rs` — fold 2's source pins, a child of

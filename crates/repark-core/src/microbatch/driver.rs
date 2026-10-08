@@ -19,6 +19,7 @@ use crate::microbatch::progress::{
     DEFAULT_RECENT_PROGRESS, Identity, ProgressLog, QueryStatus, StreamingQueryProgress,
     TriggerReport,
 };
+use crate::microbatch::relation::PlanTemplate;
 use crate::microbatch::run::{Door, Run};
 use crate::time_travel::microbatch_source::{MicroBatchSource, SourceOptions};
 
@@ -162,6 +163,7 @@ impl fmt::Debug for RecordedLocation {
 pub struct StreamSpec {
     pub source: String,
     pub source_options: SourceOptions,
+    pub plan: Option<PlanTemplate>,
     pub sink: SinkSpec,
     pub trigger: Trigger,
     pub query_name: Option<String>,
@@ -177,6 +179,7 @@ impl StreamSpec {
         StreamSpec {
             source: source.into(),
             source_options,
+            plan: None,
             sink,
             trigger: Trigger::default(),
             query_name: None,
@@ -274,6 +277,15 @@ impl StreamingQueryManager {
         session: &Session,
         spec: StreamSpec,
     ) -> Result<QueryHandle, MicroBatchError> {
+        if let Some(plan) = &spec.plan
+            && plan.source() != spec.source
+        {
+            return Err(MicroBatchError::Catalog(format!(
+                "the streaming frame reads {frame} but the query names source {source}",
+                frame = plan.source(),
+                source = spec.source
+            )));
+        }
         let sink = TableTarget::resolve(session, spec.sink.sink())?;
         let table = sink.load().await?;
         let id = QueryId::derive(TableUuid::of(&table), spec.query_name.as_deref());
@@ -303,6 +315,7 @@ impl StreamingQueryManager {
                 done,
                 pending: Mutex::new(Some(Pending {
                     source,
+                    plan: spec.plan,
                     context: session.context().clone(),
                     door,
                 })),
@@ -350,6 +363,7 @@ impl StreamingQueryManager {
 
 pub(crate) struct Pending {
     pub(crate) source: MicroBatchSource,
+    pub(crate) plan: Option<PlanTemplate>,
     pub(crate) context: SessionContext,
     pub(crate) door: Door,
 }

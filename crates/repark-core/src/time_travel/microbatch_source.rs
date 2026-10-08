@@ -7,6 +7,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::{SchemaRef, TableMetadata};
 use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
+use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
 use repark_iceberg::microbatch::error::MicroBatchError;
 use repark_iceberg::microbatch::offset::{FilePosition, InputOffset, SnapshotId, TableUuid};
 use repark_iceberg::microbatch::provider::provider_for_plan;
@@ -304,6 +305,18 @@ impl MicroBatchSource {
     #[must_use]
     pub fn table_identifier(&self) -> String {
         self.ident.to_string()
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn arrow_schema(&self) -> Result<datafusion::arrow::datatypes::SchemaRef, MicroBatchError> {
+        presented_arrow_schema(&self.read_schema)
+            .map(Arc::new)
+            .map_err(|error| {
+                MicroBatchError::Catalog(format!(
+                    "microbatch source {name} has a schema Arrow cannot present: {error}",
+                    name = self.name
+                ))
+            })
     }
 
     #[allow(clippy::missing_errors_doc)]

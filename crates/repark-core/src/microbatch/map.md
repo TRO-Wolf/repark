@@ -9,12 +9,13 @@ shutdown rules and the `StreamingQuery` progress surface, over MB-1's
 `repark-iceberg`. Owned by the [MB-3 order](../../../../task/wo/microbatch/mb-3-driver.md) under
 the [design sketch](../../../../task/wo/microbatch/mb-design-2026-10-06.md) §3.5 and §3.6 and the
 [North Star](../../../../task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md).
-Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md).
+Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md). The round's gates,
+the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3/C-009
 
 ## Contents
 
 - `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) and the module declarations: `pub mod driver;`,
-  `pub mod progress;`, the private `run`, and the test-only modules. No re-exports: callers use full paths.
+  `pub mod progress;`, `pub mod relation;`, the private `run`, and the test-only modules. No re-exports: callers use full paths.
 - `driver.rs` — the driver's types (`Trigger`, `QueryState`, `ShutdownOutcome`, `BatchBody`,
   `SinkSpec`, `StreamSpec`, `RecordedLocation`), the `StreamingQueryManager` and the
   `QueryHandle`. **The Session seam (sketch §3.5):** `StreamingQueryManager::of` installs the
@@ -59,6 +60,16 @@ Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md).
   pins: mb-3/C-006
 - `progress_tests.rs` — the progress pins (`#[cfg(test)] #[path]` from `progress.rs`).
   pins: mb-3/C-006
+- `relation.rs` — the streaming frame and the plan template (sketch §3.5, Q3, MBE-6):
+  `streaming_frame` returns a frame over a `StreamingRelation` placeholder whose scan refuses a
+  batch action; `PlanTemplate::from_frame` refuses a stateful operator above the stream
+  (aggregation, `dropDuplicates`, sort, global limit, window function, stream-stream join) and
+  accepts a static side; `bind` swaps each batch's provider in for the placeholder;
+  `check_output_mode` refuses `complete` and `update`; `explain` renders the source, its reader
+  options and the plan.
+  pins: mb-3/C-008
+- `relation_tests.rs` — the template pins (`#[cfg(test)] #[path]` from `relation.rs`).
+  pins: mb-3/C-008
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).
 - `run_tests.rs` — the trigger-loop and lifecycle pins (`#[cfg(test)] #[path]` from `run.rs`).
   pins: mb-3/C-004

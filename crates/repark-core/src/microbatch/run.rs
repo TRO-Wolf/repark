@@ -24,6 +24,7 @@ use tokio::time::Instant;
 
 use crate::microbatch::driver::{BatchBody, Ending, Pending, QueryShared, Trigger};
 use crate::microbatch::progress::TriggerReport;
+use crate::microbatch::relation::PlanTemplate;
 use crate::time_travel::microbatch_source::{MicroBatchSource, SourceBatch};
 
 #[derive(Clone)]
@@ -60,6 +61,7 @@ enum Wake {
 pub(crate) struct Run {
     shared: Arc<QueryShared>,
     source: MicroBatchSource,
+    plan: Option<PlanTemplate>,
     context: SessionContext,
     door: Door,
 }
@@ -69,6 +71,7 @@ impl Run {
         Run {
             shared,
             source: pending.source,
+            plan: pending.plan,
             context: pending.context,
             door: pending.door,
         }
@@ -266,15 +269,16 @@ impl Run {
             record: record.clone(),
             door: self.door.kind(),
         };
+        let frame = match &self.plan {
+            Some(template) => template.bind(&batch)?,
+            None => batch.frame,
+        };
         let guard = BatchScope::enter(TableUuid::of(&sink), stamp.clone())?;
         let door_started = Instant::now();
         let committed = match &self.door {
-            Door::Table => self
-                .append(&guard, &stamp, &sink, batch.frame)
-                .await
-                .map(Some),
+            Door::Table => self.append(&guard, &stamp, &sink, frame).await.map(Some),
             Door::ForeachBatch(body) => self
-                .foreach_batch(&guard, &stamp, body.as_ref(), batch.frame)
+                .foreach_batch(&guard, &stamp, body.as_ref(), frame)
                 .await
                 .map(|()| None),
         };
