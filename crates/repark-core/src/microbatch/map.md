@@ -88,6 +88,9 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
     `ProcessingTimeExecutor.nextBatchTime`: `now / interval * interval + interval`, in epoch
     milliseconds); a batch that overruns the boundary is followed at once by the next
     trigger. pins: mb-3/C-017
+  - *Stop between planning and the body.* The loop reads the stop flag again after
+    `next_batch`, so a stop that arrives while a trigger plans never starts that batch's body.
+    pins: mb-3/C-018
   - *The scope wait.* `enter_scope` loads the sink and enters the `BatchScope`; when another
     query in the process holds the sink's scope (two sessions on one sink), it waits
     `pollingDelay`, reloads the sink and tries again, up to `catalog_timeout`, and only then
@@ -96,6 +99,10 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
     dropped session ends the wait with no batch run. pins: mb-3/C-016
   - *The replay window is not durable.* A restart plans the failed batch's window again
     (registry row `MB-3-REPLAY-WINDOW-1`). pins: mb-3/C-014
+  - *An unstamped batch.* The `NotCommitted` check after the door is reachable when the sink
+    table is replaced under a `foreachBatch` body: the trailing stamp lands on the new table,
+    outside the batch's scope, and the query ends `RecoveryRequired(UnstampedSinkCommit)`.
+    pins: mb-3/C-018
 - `progress.rs` — the `StreamingQuery` progress surface (sketch §3.6, MB0-T3):
   `StreamingQueryProgress`, `DurationMs`, `SourceProgress`, `SinkProgress`, `QueryStatus` and
   `StatusMessage`, serialised with T3's camelCase names, and the crate-private `ProgressLog` (the
@@ -129,7 +136,16 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005
-- `lifecycle_tests.rs` — the fold-1 pins (2026-10-07), with a recording `BatchBody` (`Probe`).
+- `lifecycle_tests.rs` — the fold-1 pins (2026-10-07): a panic in the body, in plan execution
+  and during planning; `start` racing `stop` (300 rounds, the task count and a later source
+  append); the session dropped and the session stopped; two queries on one sink in one
+  session and across two sessions; a stop during planning; a zero `stopTimeout`; a sink
+  replaced under the body; the replay window over a grown source; the trigger on the interval
+  boundary. The boundary pin sets the interval to a wall-clock instant two seconds ahead in
+  epoch milliseconds, so the first multiple of the interval is that instant and the schedule
+  is exact without an injected clock; the arithmetic itself is pinned on fixed instants in
+  `run_tests.rs`.
+  pins: mb-3/C-011, C-012, C-013, C-014, C-016, C-017, C-018
 - `table_door_tests.rs` — the `toTable` door pins: the stamped append with the Spark keys, the
   start check on a shared catalog, the unknown-outcome reconcile and walk over a fault-injecting
   catalog wrapper (`FaultCatalog`, the `crash_tests.rs` shape), and fencing by another run of the

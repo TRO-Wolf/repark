@@ -522,6 +522,95 @@ async fn two_sessions_on_one_sink_wait_for_the_scope() {
 }
 
 #[tokio::test]
+async fn a_stop_during_planning_never_starts_the_body() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    let catalog = flaky(&fixture).await;
+    let body = Probe::new(Mode::Record);
+    let mut spec = foreach(&body, Trigger::Once, &[]);
+    spec.source = FLAKY_SOURCE.to_string();
+    let handle = StreamingQueryManager::of(&fixture.session)
+        .register(&fixture.session, spec)
+        .await
+        .expect("register");
+    let (gate, arrivals) = (Arc::new(Semaphore::new(0)), Arc::new(AtomicUsize::new(0)));
+    catalog.on_load(Some(gate_on("orders", &gate, &arrivals)));
+    handle.start_below_catalog_check().expect("start");
+    eventually("planning never reached the catalog", || {
+        arrivals.load(Ordering::SeqCst) > 0
+    })
+    .await;
+    let stopping = {
+        let handle = handle.clone();
+        tokio::spawn(async move { handle.stop().await })
+    };
+    eventually("stop never began", || {
+        handle.state() == QueryState::Draining
+    })
+    .await;
+    gate.add_permits(Semaphore::MAX_PERMITS / 2);
+    let outcome = stopping.await.expect("stop joins");
+    assert_eq!(outcome, ShutdownOutcome::Stopped { durable: None });
+    assert_eq!(body.calls(), 0, "no batch starts after stop");
+    assert!(stamped_epochs(&fixture.table("silver").await).is_empty());
+}
+
+#[tokio::test]
+async fn a_zero_stop_timeout_waits_for_the_batch() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    let gate = Arc::new(Semaphore::new(0));
+    let body = Probe::new(Mode::Hold(Arc::clone(&gate)));
+    let mut spec = foreach(&body, Trigger::ProcessingTime(Duration::ZERO), ONE);
+    spec.stop_timeout = Some(Duration::ZERO);
+    let handle = started(&fixture, spec).await;
+    eventually("the body never ran", || body.calls() == 1).await;
+    let stopping = {
+        let handle = handle.clone();
+        tokio::spawn(async move { handle.stop().await })
+    };
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert!(!stopping.is_finished(), "a zero stopTimeout waits forever");
+    assert_eq!(handle.state(), QueryState::Draining);
+    gate.add_permits(1);
+    let outcome = stopping.await.expect("stop joins");
+    assert!(
+        matches!(&outcome, ShutdownOutcome::Stopped { durable: Some(record) } if record.epoch == Epoch::FIRST),
+        "{outcome:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_sink_replaced_under_the_body_ends_recovery_required() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SOURCE, "(1)").await;
+    let catalog = fixture
+        .session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("the memory catalog");
+    let location = format!("{root}/sales/silver_again", root = fixture.root());
+    let body = Probe::new(Mode::ReplaceSink(catalog, location));
+    let handle = started(&fixture, foreach(&body, Trigger::AvailableNow, ONE)).await;
+    let error = ended(&handle).await.expect_err("the batch is unstamped");
+    assert!(
+        matches!(
+            error.as_ref(),
+            MicroBatchError::RecoveryRequired {
+                epoch,
+                durable: None,
+                reason: RecoveryReason::UnstampedSinkCommit { .. },
+                ..
+            } if *epoch == Epoch::FIRST
+        ),
+        "{error:?}"
+    );
+    assert_eq!(handle.state(), QueryState::RecoveryRequired);
+    assert_eq!(handle.durable(), None, "the offset does not advance");
+}
+
+#[tokio::test]
 async fn a_restart_after_a_failed_batch_replans_its_window_over_a_grown_source() {
     for (caps, replayed) in [
         (&[][..], vec![(0, vec![1, 2, 3, 4, 5])]),

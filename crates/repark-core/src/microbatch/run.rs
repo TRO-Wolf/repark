@@ -110,6 +110,9 @@ impl Run {
             let batch = self.next_batch(&mut cursor, target.as_ref()).await?;
             let planned = Instant::now();
             let found = batch.is_some();
+            if found && self.shared.stop_requested() {
+                return Ok(Ending::Stopped);
+            }
             let report = if let Some(batch) = batch {
                 self.shared.progress().data_found();
                 let epoch = cursor.epoch;

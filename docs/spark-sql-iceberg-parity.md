@@ -3608,6 +3608,20 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   engines refuse at start; the difference is the error class and text, which follow MBE-6's
   SES-DECL shape. The subquery refusal is wider than what was measured and is kept until a
   cell shows Spark answering a shape it covers.
+### MB-3-PROGRESS-RETENTION-0 — `numRecentProgressUpdates = 0` keeps the newest progress; Spark fails the query
+- **repark** — a `recentProgress` limit of `0` is read as `1`: the ring keeps the newest
+  progress, `lastProgress` answers it, and the query runs on.
+- **Apache Spark** — with `spark.sql.streaming.numRecentProgressUpdates=0` the query fails
+  after its first batch with `STREAM_FAILED` / `XXKST`, cause
+  `java.util.NoSuchElementException` (`empty collection`): `ProgressReporter.addNewProgress`
+  dequeues while the buffer's length is at least the retention, and an empty buffer still
+  satisfies that. `recentProgress` is empty and `lastProgress` is null. *(oracle: cell MB3-G1
+  in `mb3_fold_oracle.json`, recorded 2026-10-07; Spark 4.1.2
+  `sql/core/.../streaming/runtime/ProgressReporter.scala` lines 104–108.)*
+- **Pin** — `crates/repark-core/src/microbatch/progress_tests.rs::a_zero_limit_keeps_the_newest_progress`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1; MB-3 ledger D-9). Spark's answer is an
+  unhandled exception in its progress buffer, not a contract. repark keeps the query alive
+  and its last progress readable.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.

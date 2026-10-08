@@ -174,6 +174,25 @@ fn the_ring_keeps_the_newest_limit_entries() {
 }
 
 #[test]
+fn a_zero_limit_keeps_the_newest_progress() {
+    let mut log = ProgressLog::new(0);
+    let start = Instant::now();
+    for epoch in 0..3 {
+        log.record(
+            &identity(),
+            &report(true, epoch, start + Duration::from_secs(epoch), 1),
+        );
+    }
+    let ids: Vec<u64> = log
+        .recent()
+        .iter()
+        .map(|progress| progress.batch_id.get())
+        .collect();
+    assert_eq!(ids, [2]);
+    assert_eq!(log.last().map(|progress| progress.batch_id.get()), Some(2));
+}
+
+#[test]
 fn an_idle_trigger_reports_at_most_once_per_interval() {
     let mut log = ProgressLog::new(DEFAULT_RECENT_PROGRESS);
     let start = Instant::now();
