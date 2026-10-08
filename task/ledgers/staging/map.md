@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
+  **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
+  under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort
+  over an offset-only limit answered the wrong rows at every partition count. Reproduction on
+  stock DataFusion 54.1.0 and on three facade doors (C-001, C-002), the 70-statement Spark grid
+  (C-003), the defect located in `EnforceSorting`'s sort pushdown (C-004), the guard and its
+  wiring (C-005), 840 cells right (C-006), the live cell (C-007), five mutations (C-008), the
+  perf guard (C-009), card and registry (C-010), gates (C-011). `risk_tier: standard`. Branch
+  `fix/offset-nested-sort-1`.
 - [attr-id-1-ledger.md](attr-id-1-ledger.md) —
   **WO ATTR-ID-1 (2026-09-30), in flight:** every output field of every DataFrame plan
   carries one attribute id in field metadata (`repark.attr`), and the DataFrame door resolves a

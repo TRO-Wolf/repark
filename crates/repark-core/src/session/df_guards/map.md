@@ -8,6 +8,41 @@ wrapped optimizer rule) and declares this directory.
 
 ## Contents
 
+- `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
+  defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
+  `datafusion-physical-optimizer` `enforce_sorting/sort_pushdown.rs`) treats a
+  `GlobalLimitExec` as if it had no `skip`. Two wrong plans follow. (1) It reads the limit's
+  `fetch` as a row cap for the plan below, so `GlobalLimitExec: skip=4990, fetch=5` over
+  `SortExec: TopK(fetch=4995)` becomes `TopK(fetch=5)`, and the statement answers no rows.
+  (2) A limit with a `skip` and no `fetch` maintains its input order, so the rule moves an outer
+  `SortExec` below the `OFFSET` and the statement skips rows of the wrong order.
+  `skip_safe_physical_optimizer_rules()` returns DataFusion's recommended physical rule list
+  with `EnforceSorting` replaced by `SkipSafeEnforceSorting`, which keeps the rule's name and
+  position. `../df_guards.rs` installs the list before the three RePark physical rules.
+  The wrapper runs the inner rule unchanged when the plan has no `GlobalLimitExec` with
+  `skip > 0`; the only added work is one walk of the plan (`TreeNode::exists`). Otherwise it
+  goes bottom-up: for each skipping limit it runs the inner rule on the limit's input as a plan
+  of its own, rebuilds the limit over the result, and replaces it with
+  `SealedSkippingLimitExec`, a leaf. The leaf reports the limit's own properties (ordering,
+  one partition), has no children and no `fetch`, so the rule can neither push a row cap nor a
+  sort through it. The wrapper then runs the inner rule on the sealed plan and puts every limit
+  back top-down. A seal never leaves the rule: the later rules cannot see the plan a seal
+  holds (`OutputRequirements` puts its marker node below a top-level limit, so the marker would
+  stay), so `execute` on a seal is an internal error and `no_seal_survives_into_a_final_plan`
+  pins the removal.
+  Why this is correct: a `GlobalLimitExec` has no ordering requirement on its input and its
+  one-partition requirement is met before this rule (EnforceDistribution runs first), so the
+  input of a skipping limit is a complete plan the rule can optimize alone. What the guard gives
+  up: DataFusion could merge an outer sort that refines the inner one (`ORDER BY v, k` over
+  `ORDER BY v`) into the sort below the limit; RePark now sorts the rows that remain after the
+  `OFFSET` a second time. That cost exists only in a statement with an `OFFSET` under a sort.
+  Routes not taken: a repair after the rule (the original `fetch` is gone by then); splitting
+  the limit into `skip` over `fetch` (the rule then pushes the sort through the skip-only half).
+  **Retire** at the DataFusion bump that fixes the pushdown: the two
+  `stock_enforce_sorting_still_*` pins in `../tests/skipping_limit.rs` go red when stock
+  DataFusion answers right; delete this file, its wiring line and those two pins then.
+  DataFusion 55.0.0 carries the same pushdown code (read in the registry copy, not run).
+  pins: offset-nested-sort-1/C-004, C-005, C-006, C-008, C-009, C-010
 - [window_rescan.rs](window_rescan.rs) — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule.
   Its design note, the DataFusion contracts it reads, and the routes it does not take are in
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and

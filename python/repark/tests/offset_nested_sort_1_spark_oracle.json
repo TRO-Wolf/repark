@@ -1,0 +1,1251 @@
+{
+ "spark": "4.1.2",
+ "recorded": "2026-10-08",
+ "statements": {
+  "reported": "SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY v",
+  "inner_alone": "SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990",
+  "offset_only": "SELECT v FROM (SELECT v FROM t ORDER BY v OFFSET 4990) ORDER BY v",
+  "limit_only": "SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5) ORDER BY v",
+  "offset_past": "SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 6000) ORDER BY v",
+  "offset_small": "SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 2) ORDER BY v",
+  "limit_past_end": "SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 50 OFFSET 4990) ORDER BY v",
+  "outer_other_key": "SELECT v, k FROM (SELECT v, k FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY k, v",
+  "outer_stricter_key": "SELECT v, k FROM (SELECT v, k FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY v, k",
+  "outer_looser_key": "SELECT v, k FROM (SELECT v, k FROM t ORDER BY v, k LIMIT 5 OFFSET 4990) ORDER BY v",
+  "outer_desc": "SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY v DESC",
+  "offset_only_other_key": "SELECT v, k FROM (SELECT v, k FROM t ORDER BY v OFFSET 4990) ORDER BY k, v",
+  "offset_only_desc": "SELECT v FROM (SELECT v FROM t ORDER BY v OFFSET 4990) ORDER BY v DESC",
+  "offset_only_union": "SELECT v FROM ((SELECT v FROM t ORDER BY v OFFSET 4990) UNION ALL (SELECT v FROM t ORDER BY v DESC OFFSET 4990)) ORDER BY v DESC",
+  "offset_only_window": "SELECT v, row_number() OVER (ORDER BY v DESC) AS r FROM (SELECT v FROM t ORDER BY v OFFSET 4990) ORDER BY r",
+  "join_inner": "SELECT v FROM (SELECT a.v FROM t a JOIN t b ON a.v = b.v ORDER BY a.v LIMIT 5 OFFSET 4990) ORDER BY v",
+  "outer_limit": "SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY v LIMIT 3",
+  "outer_limit_offset": "SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY v LIMIT 2 OFFSET 1",
+  "triple": "SELECT v FROM (SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY v) ORDER BY v",
+  "triple_offsets": "SELECT v FROM (SELECT v FROM (SELECT v FROM t ORDER BY v OFFSET 4000) ORDER BY v DESC OFFSET 990) ORDER BY v",
+  "count_over_sorted": "SELECT count(*) FROM (SELECT v FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY v)",
+  "distinct_inner": "SELECT v FROM (SELECT DISTINCT v FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY v",
+  "window_between": "SELECT v FROM (SELECT v, row_number() OVER (ORDER BY v) AS r FROM (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990)) ORDER BY v",
+  "cte": "WITH c AS (SELECT v FROM t ORDER BY v LIMIT 5 OFFSET 4990) SELECT v FROM c ORDER BY v",
+  "top_offset_only": "SELECT v FROM t ORDER BY v OFFSET 4990",
+  "top_limit_only": "SELECT v FROM t ORDER BY v LIMIT 5",
+  "group_inner": "SELECT k FROM (SELECT k FROM t GROUP BY k ORDER BY k LIMIT 2 OFFSET 4) ORDER BY k",
+  "group_inner_offset_only": "SELECT k FROM (SELECT k FROM t GROUP BY k ORDER BY k OFFSET 4) ORDER BY k DESC",
+  "window_below": "SELECT v, r FROM (SELECT v, row_number() OVER (ORDER BY v DESC) AS r FROM t ORDER BY v LIMIT 5 OFFSET 4990) ORDER BY v",
+  "window_below_offset_only": "SELECT v, r FROM (SELECT v, row_number() OVER (ORDER BY v DESC) AS r FROM t ORDER BY v OFFSET 4990) ORDER BY r",
+  "filter_below": "SELECT v FROM (SELECT v FROM t WHERE k < 5 ORDER BY v LIMIT 5 OFFSET 3000) ORDER BY v"
+ },
+ "sql": {
+  "reported": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "inner_alone": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "offset_only": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ],
+    [
+     4996
+    ],
+    [
+     4997
+    ],
+    [
+     4998
+    ],
+    [
+     4999
+    ],
+    [
+     5000
+    ]
+   ]
+  },
+  "limit_only": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  "offset_past": {
+   "types": [
+    "int64"
+   ],
+   "rows": []
+  },
+  "offset_small": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ]
+   ]
+  },
+  "limit_past_end": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ],
+    [
+     4996
+    ],
+    [
+     4997
+    ],
+    [
+     4998
+    ],
+    [
+     4999
+    ],
+    [
+     5000
+    ]
+   ]
+  },
+  "outer_other_key": {
+   "types": [
+    "int64",
+    "int64"
+   ],
+   "rows": [
+    [
+     4991,
+     0
+    ],
+    [
+     4992,
+     1
+    ],
+    [
+     4993,
+     2
+    ],
+    [
+     4994,
+     3
+    ],
+    [
+     4995,
+     4
+    ]
+   ]
+  },
+  "outer_stricter_key": {
+   "types": [
+    "int64",
+    "int64"
+   ],
+   "rows": [
+    [
+     4991,
+     0
+    ],
+    [
+     4992,
+     1
+    ],
+    [
+     4993,
+     2
+    ],
+    [
+     4994,
+     3
+    ],
+    [
+     4995,
+     4
+    ]
+   ]
+  },
+  "outer_looser_key": {
+   "types": [
+    "int64",
+    "int64"
+   ],
+   "rows": [
+    [
+     4991,
+     0
+    ],
+    [
+     4992,
+     1
+    ],
+    [
+     4993,
+     2
+    ],
+    [
+     4994,
+     3
+    ],
+    [
+     4995,
+     4
+    ]
+   ]
+  },
+  "outer_desc": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4995
+    ],
+    [
+     4994
+    ],
+    [
+     4993
+    ],
+    [
+     4992
+    ],
+    [
+     4991
+    ]
+   ]
+  },
+  "offset_only_other_key": {
+   "types": [
+    "int64",
+    "int64"
+   ],
+   "rows": [
+    [
+     4991,
+     0
+    ],
+    [
+     4998,
+     0
+    ],
+    [
+     4992,
+     1
+    ],
+    [
+     4999,
+     1
+    ],
+    [
+     4993,
+     2
+    ],
+    [
+     5000,
+     2
+    ],
+    [
+     4994,
+     3
+    ],
+    [
+     4995,
+     4
+    ],
+    [
+     4996,
+     5
+    ],
+    [
+     4997,
+     6
+    ]
+   ]
+  },
+  "offset_only_desc": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     5000
+    ],
+    [
+     4999
+    ],
+    [
+     4998
+    ],
+    [
+     4997
+    ],
+    [
+     4996
+    ],
+    [
+     4995
+    ],
+    [
+     4994
+    ],
+    [
+     4993
+    ],
+    [
+     4992
+    ],
+    [
+     4991
+    ]
+   ]
+  },
+  "offset_only_union": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     5000
+    ],
+    [
+     4999
+    ],
+    [
+     4998
+    ],
+    [
+     4997
+    ],
+    [
+     4996
+    ],
+    [
+     4995
+    ],
+    [
+     4994
+    ],
+    [
+     4993
+    ],
+    [
+     4992
+    ],
+    [
+     4991
+    ],
+    [
+     10
+    ],
+    [
+     9
+    ],
+    [
+     8
+    ],
+    [
+     7
+    ],
+    [
+     6
+    ],
+    [
+     5
+    ],
+    [
+     4
+    ],
+    [
+     3
+    ],
+    [
+     2
+    ],
+    [
+     1
+    ]
+   ]
+  },
+  "offset_only_window": {
+   "types": [
+    "int64",
+    "int32"
+   ],
+   "rows": [
+    [
+     5000,
+     1
+    ],
+    [
+     4999,
+     2
+    ],
+    [
+     4998,
+     3
+    ],
+    [
+     4997,
+     4
+    ],
+    [
+     4996,
+     5
+    ],
+    [
+     4995,
+     6
+    ],
+    [
+     4994,
+     7
+    ],
+    [
+     4993,
+     8
+    ],
+    [
+     4992,
+     9
+    ],
+    [
+     4991,
+     10
+    ]
+   ]
+  },
+  "join_inner": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "outer_limit": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ]
+   ]
+  },
+  "outer_limit_offset": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4992
+    ],
+    [
+     4993
+    ]
+   ]
+  },
+  "triple": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "triple_offsets": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4001
+    ],
+    [
+     4002
+    ],
+    [
+     4003
+    ],
+    [
+     4004
+    ],
+    [
+     4005
+    ],
+    [
+     4006
+    ],
+    [
+     4007
+    ],
+    [
+     4008
+    ],
+    [
+     4009
+    ],
+    [
+     4010
+    ]
+   ]
+  },
+  "count_over_sorted": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     5
+    ]
+   ]
+  },
+  "distinct_inner": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "window_between": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "cte": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "top_offset_only": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ],
+    [
+     4996
+    ],
+    [
+     4997
+    ],
+    [
+     4998
+    ],
+    [
+     4999
+    ],
+    [
+     5000
+    ]
+   ]
+  },
+  "top_limit_only": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  "group_inner": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  "group_inner_offset_only": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     6
+    ],
+    [
+     5
+    ],
+    [
+     4
+    ]
+   ]
+  },
+  "window_below": {
+   "types": [
+    "int64",
+    "int32"
+   ],
+   "rows": [
+    [
+     4991,
+     10
+    ],
+    [
+     4992,
+     9
+    ],
+    [
+     4993,
+     8
+    ],
+    [
+     4994,
+     7
+    ],
+    [
+     4995,
+     6
+    ]
+   ]
+  },
+  "window_below_offset_only": {
+   "types": [
+    "int64",
+    "int32"
+   ],
+   "rows": [
+    [
+     5000,
+     1
+    ],
+    [
+     4999,
+     2
+    ],
+    [
+     4998,
+     3
+    ],
+    [
+     4997,
+     4
+    ],
+    [
+     4996,
+     5
+    ],
+    [
+     4995,
+     6
+    ],
+    [
+     4994,
+     7
+    ],
+    [
+     4993,
+     8
+    ],
+    [
+     4992,
+     9
+    ],
+    [
+     4991,
+     10
+    ]
+   ]
+  },
+  "filter_below": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4201
+    ],
+    [
+     4202
+    ],
+    [
+     4203
+    ],
+    [
+     4204
+    ],
+    [
+     4207
+    ]
+   ]
+  }
+ },
+ "dataframe": {
+  "orderby_offset_limit_orderby": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "sort_limit_offset_orderby": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "orderby_offset_orderby": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ],
+    [
+     4996
+    ],
+    [
+     4997
+    ],
+    [
+     4998
+    ],
+    [
+     4999
+    ],
+    [
+     5000
+    ]
+   ]
+  },
+  "orderby_limit_orderby": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  "orderby_offset_limit": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "orderby_offset_limit_orderby_desc": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4995
+    ],
+    [
+     4994
+    ],
+    [
+     4993
+    ],
+    [
+     4992
+    ],
+    [
+     4991
+    ]
+   ]
+  },
+  "orderby_offset_limit_orderby_k_v": {
+   "types": [
+    "int64",
+    "int64"
+   ],
+   "rows": [
+    [
+     4991,
+     0
+    ],
+    [
+     4992,
+     1
+    ],
+    [
+     4993,
+     2
+    ],
+    [
+     4994,
+     3
+    ],
+    [
+     4995,
+     4
+    ]
+   ]
+  },
+  "orderby_offset_limit_orderby_v_k": {
+   "types": [
+    "int64",
+    "int64"
+   ],
+   "rows": [
+    [
+     4991,
+     0
+    ],
+    [
+     4992,
+     1
+    ],
+    [
+     4993,
+     2
+    ],
+    [
+     4994,
+     3
+    ],
+    [
+     4995,
+     4
+    ]
+   ]
+  },
+  "orderby_offset_past_the_end_orderby": {
+   "types": [
+    "int64"
+   ],
+   "rows": []
+  },
+  "orderby_offset_limit_filter_orderby": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4991
+    ],
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ]
+   ]
+  },
+  "orderby_offset_limit_select_orderby": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     4992
+    ],
+    [
+     4993
+    ],
+    [
+     4994
+    ],
+    [
+     4995
+    ],
+    [
+     4996
+    ]
+   ]
+  },
+  "orderby_offset_limit_orderby_count": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     5
+    ]
+   ]
+  },
+  "orderby_offset_orderby_desc": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     5000
+    ],
+    [
+     4999
+    ],
+    [
+     4998
+    ],
+    [
+     4997
+    ],
+    [
+     4996
+    ],
+    [
+     4995
+    ],
+    [
+     4994
+    ],
+    [
+     4993
+    ],
+    [
+     4992
+    ],
+    [
+     4991
+    ]
+   ]
+  },
+  "orderby_offset_orderby_k_v": {
+   "types": [
+    "int64",
+    "int64"
+   ],
+   "rows": [
+    [
+     4991,
+     0
+    ],
+    [
+     4998,
+     0
+    ],
+    [
+     4992,
+     1
+    ],
+    [
+     4999,
+     1
+    ],
+    [
+     4993,
+     2
+    ],
+    [
+     5000,
+     2
+    ],
+    [
+     4994,
+     3
+    ],
+    [
+     4995,
+     4
+    ],
+    [
+     4996,
+     5
+    ],
+    [
+     4997,
+     6
+    ]
+   ]
+  },
+  "sort_offset_sort_desc_limit": {
+   "types": [
+    "int64"
+   ],
+   "rows": [
+    [
+     5000
+    ],
+    [
+     4999
+    ],
+    [
+     4998
+    ]
+   ]
+  }
+ }
+}

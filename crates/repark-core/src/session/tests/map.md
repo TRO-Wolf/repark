@@ -9,6 +9,29 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `skipping_limit.rs` + `skipping_limit_grid.tsv` — **OFFSET-NESTED-SORT-1 (2026-10-08):** pins
+  for the `EnforceSorting` guard in `../df_guards/skipping_limit.rs`. The fixture holds 70
+  statements, one per line: name, family, SQL over a relation `t`, and the rows live Spark 4.1.2
+  answered (count, then values; columns joined by `/`). Family is what stock DataFusion 54.1.0
+  does on a memory table: `one-partition` (11 statements, wrong only when the scan has one
+  partition), `every-partition` (9, wrong at 1, 2 and 16), `control` (50, right). Each test
+  swaps `t` for a source: `m` (a `CREATE TABLE AS` memory table, whose partition count follows
+  `target_partitions`), `t` (a view over `generate_series`, a source that declares its order),
+  `p` (a one-file parquet scan written in shuffled order) and `ice.s.i` (an Iceberg table in a
+  memory catalog, inserted in shuffled order). `one_partition_family_answers_spark_rows_at_*`
+  are three tests so that the mutation "remove the guard" shows red at one partition and green
+  at two and sixteen. The other grid tests loop over 1, 2 and 16.
+  `stock_enforce_sorting_still_loses_the_rows_at_one_partition_only` and
+  `stock_enforce_sorting_still_sorts_below_an_offset` run DataFusion's own rule on the same
+  session state and assert today's wrong answers: they are the retirement signal for the guard.
+  `reported_plan_keeps_the_inner_top_k_as_wide_as_skip_plus_fetch` pins both plans' text.
+  `statements_without_offset_plan_exactly_as_stock_datafusion` and
+  `guarded_rule_list_is_stock_datafusion_in_order_then_the_repark_rules` hold the no-cost
+  claim: the same plan text and the same rule order when no `OFFSET` is present.
+  `no_seal_survives_into_a_final_plan` and
+  `seal_reports_its_limit_and_neither_runs_nor_takes_a_child`
+  pin the seal node. The fixture is regenerated from a live Spark recording, never edited by hand.
+  pins: offset-nested-sort-1/C-001, C-003, C-004, C-005, C-006, C-008, C-009, C-011
 - `read_postgres.rs` — **C-2d fold 1 (2026-10-07), N6:** behind `postgres`.
   `a_dbtable_property_is_the_target_never_a_setting`: a `dbtable` property, in any case, is
   dropped before the settings check, so a read without `user` answers that refusal and never
