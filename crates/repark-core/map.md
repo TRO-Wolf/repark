@@ -41,6 +41,13 @@ honestly"). SQL routing and session-build registration are seam-inverted
   (workspace) for the sink serializer's `BatchSerializer` impl
   (`src/session/text_write_format/serializer.rs`); already locked via DataFusion,
   so the lock gains only the edge.
+  **MB-3 (2026-10-07):** `tokio` declares the `sync` and `time` features (the micro-batch
+  driver's stop and done channels and its trigger timer, `src/microbatch/`), `serde_json`
+  (workspace) renders the progress JSON (`src/microbatch/progress.rs`), and `uuid` (workspace)
+  joins the dev-dependencies for the progress pins; all three are already locked, so the lock
+  gains only the edges. pins: mb-3/C-004, C-006
+- `src/microbatch/` + [src/microbatch/](src/microbatch/map.md) — the Session-owned micro-batch
+  driver (MB-3, 1.7). pins: mb-3/C-003
 - `src/silver.rs` + [src/silver/](src/silver/map.md) — typed `SilverPlan` (SILVER-S1):
   strict TOML parse, closed enums, canonical identity, deterministic explain. Public from
   this crate, not wired to Python. Unstable until SIL-1..SIL-10.

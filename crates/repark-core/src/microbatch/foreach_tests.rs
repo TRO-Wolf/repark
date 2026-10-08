@@ -234,6 +234,10 @@ async fn the_foreach_batch_door_stamps_once_after_the_body() {
         ["data", "data", "stamp 0", "data", "data", "stamp 1"]
     );
     assert_eq!(fixture.ids(SINK).await, [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+    let progress = handle.last_progress().expect("a progress").json();
+    assert_eq!(progress["batchId"], 1);
+    assert_eq!(progress["sink"]["numOutputRows"], -1);
+    assert_eq!(handle.recent_progress().len(), 2);
 }
 
 #[tokio::test]

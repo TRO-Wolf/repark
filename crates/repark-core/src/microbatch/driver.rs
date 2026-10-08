@@ -15,6 +15,10 @@ use tokio::task::AbortHandle;
 use crate::Session;
 use crate::catalog_state::LocationPolicy;
 use crate::idents::parse_table_identifier_segments;
+use crate::microbatch::progress::{
+    DEFAULT_RECENT_PROGRESS, Identity, ProgressLog, QueryStatus, StreamingQueryProgress,
+    TriggerReport,
+};
 use crate::microbatch::run::{Door, Run};
 use crate::time_travel::microbatch_source::{MicroBatchSource, SourceOptions};
 
@@ -164,6 +168,7 @@ pub struct StreamSpec {
     pub checkpoint_location: Option<RecordedLocation>,
     pub stop_timeout: Option<Duration>,
     pub polling_delay: Duration,
+    pub recent_progress_limit: usize,
 }
 
 impl StreamSpec {
@@ -178,6 +183,7 @@ impl StreamSpec {
             checkpoint_location: None,
             stop_timeout: None,
             polling_delay: DEFAULT_POLLING_DELAY,
+            recent_progress_limit: DEFAULT_RECENT_PROGRESS,
         }
     }
 }
@@ -276,6 +282,7 @@ impl StreamingQueryManager {
             SinkSpec::Table { .. } => Door::Table,
             SinkSpec::ForeachBatch { body, .. } => Door::ForeachBatch(body),
         };
+        let source_name = source.table_identifier();
         let (stop, _) = watch::channel(false);
         let (done, _) = watch::channel(false);
         Ok(QueryHandle {
@@ -289,7 +296,9 @@ impl StreamingQueryManager {
                 polling_delay: spec.polling_delay,
                 checkpoint_location: spec.checkpoint_location,
                 manager: Arc::downgrade(self),
+                source_name,
                 lifecycle: Mutex::new(Lifecycle::default()),
+                progress: Mutex::new(ProgressLog::new(spec.recent_progress_limit)),
                 stop,
                 done,
                 pending: Mutex::new(Some(Pending {
@@ -365,7 +374,9 @@ pub(crate) struct QueryShared {
     pub(crate) polling_delay: Duration,
     checkpoint_location: Option<RecordedLocation>,
     manager: Weak<StreamingQueryManager>,
+    source_name: String,
     lifecycle: Mutex<Lifecycle>,
+    progress: Mutex<ProgressLog>,
     pub(crate) stop: watch::Sender<bool>,
     done: watch::Sender<bool>,
     pending: Mutex<Option<Pending>>,
@@ -376,6 +387,21 @@ impl QueryShared {
         self.lifecycle
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    pub(crate) fn progress(&self) -> MutexGuard<'_, ProgressLog> {
+        self.progress.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    pub(crate) fn report(&self, report: &TriggerReport) {
+        let identity = Identity {
+            id: self.id,
+            run_id: self.run_id,
+            name: self.name.as_deref(),
+            source: &self.source_name,
+            sink: &self.sink.name,
+        };
+        self.progress().record(&identity, report);
     }
 
     pub(crate) fn resumed(&self, durable: Option<SinkRecord>) {
@@ -442,6 +468,7 @@ impl QueryShared {
         lifecycle.exception = exception;
         lifecycle.outcome = Some(outcome.clone());
         drop(lifecycle);
+        self.progress().stopped();
         self.done.send_replace(true);
         outcome
     }
@@ -521,6 +548,21 @@ impl QueryHandle {
     #[must_use]
     pub fn durable(&self) -> Option<SinkRecord> {
         self.shared.durable()
+    }
+
+    #[must_use]
+    pub fn status(&self) -> QueryStatus {
+        self.shared.progress().status()
+    }
+
+    #[must_use]
+    pub fn last_progress(&self) -> Option<StreamingQueryProgress> {
+        self.shared.progress().last()
+    }
+
+    #[must_use]
+    pub fn recent_progress(&self) -> Vec<StreamingQueryProgress> {
+        self.shared.progress().recent()
     }
 
     #[must_use]

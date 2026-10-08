@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::{Duration, SystemTime};
 
 use datafusion::error::DataFusionError;
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -22,6 +23,7 @@ use repark_iceberg::write::{
 use tokio::time::Instant;
 
 use crate::microbatch::driver::{BatchBody, Ending, Pending, QueryShared, Trigger};
+use crate::microbatch::progress::TriggerReport;
 use crate::time_travel::microbatch_source::{MicroBatchSource, SourceBatch};
 
 #[derive(Clone)]
@@ -37,6 +39,11 @@ impl Door {
             Door::ForeachBatch(_) => SinkDoor::ForeachBatch,
         }
     }
+}
+
+struct BatchDone {
+    add_batch: Duration,
+    num_output_rows: Option<u64>,
 }
 
 struct Cursor {
@@ -78,27 +85,65 @@ impl Run {
         self.shared.resumed(resumed.clone());
         let mut cursor = self.resume(resumed.as_ref())?;
         let target = match self.shared.trigger {
-            Trigger::AvailableNow => {
-                let Some(from) = self.start_offset(&mut cursor).await? else {
-                    return Ok(Ending::Drained);
-                };
-                match self.source.available_now_target(&from).await? {
-                    Some(target) => Some(target),
-                    None => return Ok(Ending::Drained),
-                }
-            }
+            Trigger::AvailableNow => match self.start_offset(&mut cursor).await? {
+                Some(from) => self.source.available_now_target(&from).await?,
+                None => None,
+            },
             Trigger::Once | Trigger::ProcessingTime(_) => None,
         };
+        let mut ran_batch = false;
         loop {
             if self.shared.stop_requested() {
                 return Ok(Ending::Stopped);
             }
             let started = Instant::now();
+            let started_at = SystemTime::now();
+            self.shared.progress().trigger_started();
             let batch = self.next_batch(&mut cursor, target.as_ref()).await?;
+            let planned = Instant::now();
             let found = batch.is_some();
-            if let Some(batch) = batch {
-                self.run_batch(&mut cursor, batch).await?;
+            let report = if let Some(batch) = batch {
+                self.shared.progress().data_found();
+                let epoch = cursor.epoch;
+                let start_offset = self.shared.durable().map(|_| batch.start.clone());
+                let end_offset = Some(batch.end.clone());
+                let num_input_rows = batch.num_input_rows;
+                let done = self.run_batch(&mut cursor, batch).await?;
+                TriggerReport {
+                    executed: true,
+                    epoch,
+                    started_at,
+                    started,
+                    planned,
+                    finished: Instant::now(),
+                    add_batch: done.add_batch,
+                    num_input_rows,
+                    start_offset,
+                    end_offset,
+                    num_output_rows: done.num_output_rows,
+                }
+            } else {
+                let committed = self.shared.durable().and(cursor.from.clone());
+                TriggerReport {
+                    executed: false,
+                    epoch: cursor.epoch,
+                    started_at,
+                    started,
+                    planned,
+                    finished: Instant::now(),
+                    add_batch: Duration::ZERO,
+                    num_input_rows: 0,
+                    start_offset: committed.clone(),
+                    end_offset: committed,
+                    num_output_rows: None,
+                }
+            };
+            let draining = matches!(self.shared.trigger, Trigger::AvailableNow | Trigger::Once);
+            if found || !(draining && ran_batch) {
+                self.shared.report(&report);
             }
+            ran_batch |= found;
+            self.shared.progress().trigger_finished(found);
             let next = match self.shared.trigger {
                 Trigger::AvailableNow if found => continue,
                 Trigger::Once | Trigger::AvailableNow => return Ok(Ending::Drained),
@@ -196,14 +241,18 @@ impl Run {
         &self,
         cursor: &mut Cursor,
         batch: SourceBatch,
-    ) -> Result<(), MicroBatchError> {
+    ) -> Result<BatchDone, MicroBatchError> {
         let epoch = cursor.epoch;
         self.shared.begin_batch(epoch);
         let sink = self.shared.sink.load().await?;
         if let Some(durable) = read_resume_point(&sink, self.shared.id)?
             && durable.epoch.get() >= epoch.get()
         {
-            return self.already_durable(cursor, durable);
+            self.already_durable(cursor, durable)?;
+            return Ok(BatchDone {
+                add_batch: Duration::ZERO,
+                num_output_rows: None,
+            });
         }
         let record = SinkRecord {
             format: OffsetFormatVersion::CURRENT,
@@ -218,23 +267,31 @@ impl Run {
             door: self.door.kind(),
         };
         let guard = BatchScope::enter(TableUuid::of(&sink), stamp.clone())?;
+        let door_started = Instant::now();
         let committed = match &self.door {
-            Door::Table => self.append(&guard, &stamp, &sink, batch.frame).await,
-            Door::ForeachBatch(body) => {
-                self.foreach_batch(&guard, &stamp, body.as_ref(), batch.frame)
-                    .await
-            }
+            Door::Table => self
+                .append(&guard, &stamp, &sink, batch.frame)
+                .await
+                .map(Some),
+            Door::ForeachBatch(body) => self
+                .foreach_batch(&guard, &stamp, body.as_ref(), batch.frame)
+                .await
+                .map(|()| None),
         };
+        let add_batch = door_started.elapsed();
         let outcome = guard.outcome();
         drop(guard);
-        committed?;
+        let num_output_rows = committed?;
         if let ScopeOutcome::NotCommitted = outcome {
             return Err(self.unstamped(epoch).await);
         }
         self.shared.end_batch(Some(record));
         cursor.epoch = epoch.next();
         cursor.from = Some(batch.end);
-        Ok(())
+        Ok(BatchDone {
+            add_batch,
+            num_output_rows,
+        })
     }
 
     fn already_durable(
@@ -323,7 +380,7 @@ impl Run {
         stamp: &CommitStamp,
         sink: &Table,
         frame: DataFrame,
-    ) -> Result<(), MicroBatchError> {
+    ) -> Result<u64, MicroBatchError> {
         let batch = self.batch_session(guard);
         let (extra, mut staging) =
             resolve_empty_session_write(&batch).map_err(|error| engine_error(&error))?;
@@ -341,14 +398,17 @@ impl Run {
         )
         .await
         .map_err(|error| engine_error(&error))?;
+        let rows = files
+            .iter()
+            .fold(0u64, |rows, file| rows.saturating_add(file.record_count()));
         let catalog = &self.shared.sink.catalog;
         match commit_append_with_summary(catalog, sink, files, &extra, None).await {
-            Ok(_) => Ok(()),
+            Ok(_) => Ok(rows),
             Err(error) if is_commit_state_unknown(&error) => {
                 let operation_id = unknown_operation_id(&error);
                 resolve_unknown_outcome(catalog, sink, stamp, operation_id.as_deref())
                     .await
-                    .map(|_| ())
+                    .map(|_| rows)
             }
             Err(error) => Err(engine_error(&error)),
         }

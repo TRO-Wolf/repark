@@ -14,7 +14,7 @@ Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md).
 ## Contents
 
 - `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) and the module declarations: `pub mod driver;`,
-  the private `run`, and the test-only modules. No re-exports: callers use full paths.
+  `pub mod progress;`, the private `run`, and the test-only modules. No re-exports: callers use full paths.
 - `driver.rs` — the driver's types (`Trigger`, `QueryState`, `ShutdownOutcome`, `BatchBody`,
   `SinkSpec`, `StreamSpec`, `RecordedLocation`), the `StreamingQueryManager` and the
   `QueryHandle`. **The Session seam (sketch §3.5):** `StreamingQueryManager::of` installs the
@@ -50,6 +50,15 @@ Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md).
   unknown commit outcome goes to `resolve_unknown_outcome`. The `foreachBatch` door runs the body on
   the user's session without the token, then stamps once through `commit_stamp_only` (ledger D-2).
   pins: mb-3/C-004, C-005
+- `progress.rs` — the `StreamingQuery` progress surface (sketch §3.6, MB0-T3):
+  `StreamingQueryProgress`, `DurationMs`, `SourceProgress`, `SinkProgress`, `QueryStatus` and
+  `StatusMessage`, serialised with T3's camelCase names, and the crate-private `ProgressLog` (the
+  `recentProgress` ring, the status, and Spark's `ProgressReporter` rates and idle-progress
+  throttle). The driver records one report per trigger; a draining trigger reports no trailing
+  idle progress after a batch (MB0b-R14, R15).
+  pins: mb-3/C-006
+- `progress_tests.rs` — the progress pins (`#[cfg(test)] #[path]` from `progress.rs`).
+  pins: mb-3/C-006
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).
 - `run_tests.rs` — the trigger-loop and lifecycle pins (`#[cfg(test)] #[path]` from `run.rs`).
   pins: mb-3/C-004

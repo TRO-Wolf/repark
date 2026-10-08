@@ -59,6 +59,16 @@ async fn available_now_honours_the_caps_one_batch_per_file() {
     let sink = fixture.table("silver").await;
     assert_eq!(stamped_epochs(&sink), [0, 1]);
     assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5]);
+    let batches: Vec<(u64, u64)> = handle
+        .recent_progress()
+        .iter()
+        .map(|progress| (progress.batch_id.get(), progress.num_input_rows))
+        .collect();
+    assert_eq!(
+        batches,
+        [(0, 3), (1, 2)],
+        "no trailing idle progress (MB0b-R15)"
+    );
 }
 
 #[tokio::test]
@@ -89,6 +99,12 @@ async fn available_now_on_an_empty_source_drains_without_a_commit() {
     assert_eq!(handle.await_termination(None).await, Ok(true));
     let outcome = handle.stop().await;
     assert_eq!(outcome, ShutdownOutcome::Drained { durable: None });
+    let batches: Vec<(u64, u64)> = handle
+        .recent_progress()
+        .iter()
+        .map(|progress| (progress.batch_id.get(), progress.num_input_rows))
+        .collect();
+    assert_eq!(batches, [(0, 0)], "one idle progress (MB0b-R14)");
     let sink = fixture.table("silver").await;
     assert!(sink.metadata().current_snapshot().is_none());
 }
@@ -415,4 +431,105 @@ async fn a_window_planned_past_the_available_now_end_is_cut_at_the_end() {
         .expect("plan")
         .expect("the later append");
     assert_eq!(past.num_input_rows, 2);
+}
+
+#[tokio::test]
+async fn progress_and_status_follow_t3() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let handle = started(
+        &fixture,
+        table_spec(
+            Trigger::ProcessingTime(Duration::from_hours(1)),
+            &options(&[]),
+        ),
+    )
+    .await;
+    assert_eq!(
+        handle.status().message,
+        crate::microbatch::progress::StatusMessage::Initializing
+    );
+    let deadline = std::time::Instant::now() + Duration::from_secs(30);
+    while handle.status().message
+        != crate::microbatch::progress::StatusMessage::WaitingForNextTrigger
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "{:?}",
+            handle.status()
+        );
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    assert_eq!(
+        handle.status().json(),
+        serde_json::json!({
+            "message": "Waiting for next trigger",
+            "isDataAvailable": true,
+            "isTriggerActive": false
+        })
+    );
+    let recent = handle.recent_progress();
+    assert_eq!(recent.len(), 1);
+    let json = handle.last_progress().expect("a progress").json();
+    assert_eq!(json, recent[0].json());
+    assert_eq!(json["id"], handle.id().to_string());
+    assert_eq!(json["runId"], handle.run_id().to_string());
+    assert_eq!(json["batchId"], 0);
+    assert_eq!(json["numInputRows"], 5);
+    assert_eq!(json["sink"]["description"], SINK);
+    assert_eq!(json["sink"]["numOutputRows"], 5);
+    let source = &json["sources"][0];
+    assert_eq!(
+        source["description"],
+        "IcebergMicroBatchStream[sales.orders]"
+    );
+    assert_eq!(source["startOffset"], serde_json::Value::Null);
+    let head = fixture
+        .table("orders")
+        .await
+        .metadata()
+        .current_snapshot_id()
+        .expect("a head");
+    assert_eq!(
+        source["endOffset"],
+        serde_json::json!({"version": 1, "snapshot_id": head, "position": 1, "scan_all_files": false})
+    );
+    handle.stop().await;
+    assert_eq!(
+        handle.status().json(),
+        serde_json::json!({
+            "message": "Stopped",
+            "isDataAvailable": false,
+            "isTriggerActive": false
+        })
+    );
+}
+
+#[tokio::test]
+async fn an_idle_restart_reports_the_next_batch_id_and_commits_nothing() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let spec = table_spec(Trigger::AvailableNow, &options(&[]));
+    let first = started(&fixture, spec.clone()).await;
+    assert_eq!(first.await_termination(None).await, Ok(true));
+    let snapshots = fixture.table("silver").await.metadata().snapshots().count();
+    let idle = started(&fixture, spec).await;
+    assert_eq!(idle.await_termination(None).await, Ok(true));
+    let recent = idle.recent_progress();
+    assert_eq!(recent.len(), 1);
+    let json = recent[0].json();
+    assert_eq!(json["batchId"], 1);
+    assert_eq!(json["numInputRows"], 0);
+    let source = &json["sources"][0];
+    assert_ne!(source["startOffset"], serde_json::Value::Null);
+    assert_eq!(source["startOffset"], source["endOffset"]);
+    assert_eq!(
+        fixture.table("silver").await.metadata().snapshots().count(),
+        snapshots
+    );
+    let next = first
+        .last_progress()
+        .expect("the first run's progress")
+        .json();
+    assert_eq!(source["endOffset"], next["sources"][0]["endOffset"]);
 }
