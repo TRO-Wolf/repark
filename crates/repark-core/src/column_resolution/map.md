@@ -70,6 +70,29 @@ pins: ice-error-conditions-1/C-011
   reference them (DataFusion's alias-list path resolves `col(field.name())`
   through its normalizer and cannot see stored case). pins:
   ice-mixed-case-1/C-013, C-014, casesens-1/C-003
+- `using_keys.rs` — **USING-PER-SIDE-KEYS-1 (2026-10-07):** the SQL-door half. Stock
+  DataFusion plans `USING` with both keys in the join schema, shows the left key in `*` and
+  for the unqualified key, matches a chained join on the left key, and refuses the
+  unqualified key in `WHERE`. `rewrite_using_keys` runs on the parsed statement before
+  `plan_with_repair` (no second plan): for a `SELECT` whose `FROM` is one relation followed
+  only by `USING` joins it builds the merged key left to right (the left key on
+  `inner`/`left`/`semi`/`anti`, the right key on `right`, `coalesce(merged, right)` on
+  `full`), replaces the unqualified key with it in the projection, `WHERE`, `GROUP BY`,
+  `HAVING`, `QUALIFY` and `ORDER BY` (not inside subqueries, and not in `ORDER BY` when a
+  select alias shadows the key), and gives a bare `*` a `REPLACE (merged AS key)` option.
+  The replaced output is an unqualified alias, which DataFusion cannot hold beside a
+  qualified field of the same name, so the select keeps main's answer when its list also
+  names `l.id` or a qualified star, and an `ORDER BY l.id` is carried as a helper column
+  through a wrapping `SELECT * EXCEPT (…) FROM (…)`. A `FROM` with an `ON` join, a comma
+  join, a nested join or `NATURAL` is left as DataFusion plans it. `rekey_chained_using`
+  then fixes the plan: a `USING` join whose left input is a `USING` join matches on that
+  join's merged key, so chained `right`/`full` joins answer the right rows (`NATURAL` chains
+  too). Pins: `using_keys_tests.rs`.
+  pins: using-per-side-keys-1/C-006, C-007, C-008, C-009
+- `using_keys_tests.rs` — the pins of `using_keys.rs` on three MemTables: star and
+  unqualified key per clause, `WHERE` on six join types (aliased and not), per-side keys
+  with `ORDER BY l.id`, chained joins, alias shadow, derived table, subquery scope, set
+  operation, `*, r.id`, the `ON` control and a case-sensitive session.
 - `stack.rs` — run 22b: the nesting-depth stack estimate and the grown-stack future that
   `plan_statement_with_column_repair` polls the repair through. The per-level 32 KiB is
   about 1.9× the measured debug cost of the derived `SetExpr::clone` (17,216 B per `UNION`

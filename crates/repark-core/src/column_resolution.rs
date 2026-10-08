@@ -21,8 +21,20 @@ pub async fn plan_statement_with_column_repair(
     statement: datafusion::sql::parser::Statement,
     case_insensitive: bool,
 ) -> Result<LogicalPlan> {
+    let mut statement = statement;
+    let using = match &mut statement {
+        datafusion::sql::parser::Statement::Statement(inner) => {
+            using_keys::rewrite_using_keys(inner, case_insensitive)
+        }
+        _ => false,
+    };
     let bytes = stack::stack_bytes_for(&statement);
-    stack::on_grown_stack(bytes, plan_with_repair(state, statement, case_insensitive)).await
+    let plan =
+        stack::on_grown_stack(bytes, plan_with_repair(state, statement, case_insensitive)).await?;
+    if using {
+        return using_keys::rekey_chained_using(plan);
+    }
+    Ok(plan)
 }
 
 async fn finish_with_display(
@@ -908,9 +920,12 @@ mod stack;
 mod star_twins;
 mod struct_fields;
 mod twins;
+mod using_keys;
 
 pub use fold_text::fold_query_text;
 pub use stack::{GrownStack, on_grown_stack_with, remaining_stack, run_on_grown_stack};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod using_keys_tests;

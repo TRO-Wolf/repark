@@ -9712,6 +9712,16 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   are unchanged. Every value is a Spark 4.1.2 grid cell. No module
   docstring: the contract lives here.
   pins: attr-id-1/C-066, using-per-side-keys-1/C-001, C-002, C-003, C-004, C-005, C-008, C-009, C-010
+- [test_using_per_side_keys_1_sql.py](test_using_per_side_keys_1_sql.py) —
+  **USING-PER-SIDE-KEYS-1 (2026-10-07):** the SQL door on the same data:
+  star, the unqualified key in select, `WHERE`, `ORDER BY`, `GROUP BY` and
+  an expression on six join types, aliased and not; per-side keys with
+  `ORDER BY l.id`; chained `right`/`full` joins; alias shadow, derived
+  table and `*, r.id`; the declared divergences (a `USING` join followed
+  by an `ON` join and `NATURAL` keep the left key in star; `SELECT id,
+  l.id, r.id` refuses) and the `ON` control. No module docstring: the
+  contract lives here.
+  pins: using-per-side-keys-1/C-001, C-006, C-007, C-008, C-009
 - [test_attr_id_1_sm2c_leak.py](test_attr_id_1_sm2c_leak.py) — **Fold SM-2c
   C-3 (2026-10-06):** a frame whose display names are unique but whose
   engine fields are twin names (a dropped self-join side, C-067; a dropped
