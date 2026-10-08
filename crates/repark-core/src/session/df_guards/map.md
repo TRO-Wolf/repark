@@ -227,6 +227,13 @@ wrapped optimizer rule) and declares this directory.
   node (semi/anti record the map with `emits_right=false` and skip the plan
   re-mint). Only `remint_cross_collisions` and `lateral_join` still pass the
   collision set. Pins: `../tests/frame_lineage.rs`.
+  **STAMP-2-R5P6-2 step 2 (2026-10-07):** `plan_is_stamped` and `stamp` were measured and
+  left as they are. On the r5p6 like cells 39,731 of 43,194 stamp calls find the plan stamped
+  (0.16 s together, 0.3 µs each warm) and 3,463 restamp (47 µs each, DataFusion's
+  `Projection::try_new` and one state clone). No short-circuit can gain 1 point. Field
+  metadata is Arrow's owned map inside `Field`, so there is nothing here to share behind an
+  `Arc`. The Projection arm's `maybe_index_of_column` per output makes the check quadratic in
+  width (14 µs at 40 columns), recorded for a wide-frame unit. pins: stamp-2-r5p6-2/C-009
 - `attr_lineage.rs` — **ATTR-ID-1 S4 (2026-10-02):** projection-output lineage,
   a pure move out of `attr_id.rs` when that file passed the 1000-line ceiling.
   `projection_source_ids` maps each `Projection` output to its input attribute id
@@ -342,6 +349,20 @@ wrapped optimizer rule) and declares this directory.
   the column by the display at that image's position (Spark's `ambiguousAttrs`);
   `ambiguous` now maps it to indices, its verdicts unchanged. `FrameId::from_raw` reads a
   frame id back from a reference token (crate-private).
+- `join_exact.rs` — **STAMP-2-R5P6-2 (2026-10-07):** `join_exact_sides(left, right, join)`
+  builds the plan of the facade's H1 join statement,
+  `SELECT l.f AS o, …, r.g AS p FROM l <how> JOIN r [ON l.k = r.k]`, without the SQL
+  planner: each side under its scratch alias, a cross join or a `join_on` with one equality
+  in the statement's operand order, and the projection, with a bare column where source and
+  output name are equal (DataFusion's SQL planner drops that alias too). It answers `None`,
+  and the facade keeps the SQL route, unless every reference resolves by exact name: the
+  alias is the three-part home reference, every field and output name is a plain identifier,
+  no two fields of a side are equal under ASCII case folding, and each source and key is held
+  exactly once. Key types carry no guard, because the binding runs the SQL door's own
+  analysis on the result and coercion happens there. It leaves through `frame_names` as
+  `ExactJoin`, `ExactKeys` and `join_exact_sides`. Pins: the binding's
+  `crates/repark-python/src/join_exact_tests.rs` (plan equality against `sql_built`).
+  pins: stamp-2-r5p6-2/C-002, C-004
 - `predicate_names.rs` — **CASESENS-2 port (2026-10-03):** the join-condition
   half of #881's `predicate_names.rs` (folds `15a7bb9d`, `b89a7d7f`, `3ac80920`),
   re-pointed at `attr_id::resolve`. `bind_condition_qualifiers(condition, left,

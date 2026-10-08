@@ -122,7 +122,6 @@ pub(crate) use namespace_ddl::{
     execute_alter_namespace, execute_create_namespace, execute_drop_namespace, execute_drop_table,
     try_parse_alter_namespace, try_parse_create_namespace,
 };
-pub use normalize::dialect_for_executing_parse;
 pub(crate) use normalize::{
     DmlSubqueryVerb, MorDmlKind, PartitionFieldSpec, PartitionedByElement, build_partition_spec,
     build_transform_field, delete_target_object_name, object_name_from_table_with_joins,
@@ -130,6 +129,7 @@ pub(crate) use normalize::{
     refuse_dml_subquery_predicate_in_statement, refuse_mor_unpartitioned_multi_spec_dml,
     refuse_multi_statement_sql, starts_with_branch_or_tag_ddl, starts_with_merge,
 };
+pub use normalize::{dialect_for_executing_parse, map_ordering::analyze_built_plan};
 pub use spark_type_names::{spark_ddl_type_name, spark_ddl_type_name_at_depth};
 pub(crate) use truncate::execute_truncate;
 pub(crate) use use_ddl::rename_dest;

@@ -2,13 +2,14 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use datafusion::common::DFSchema;
+use datafusion::dataframe::DataFrame;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3::wrap_pyfunction;
 use repark_core::frame_names::{
-    AttrId, FrameNode, JoinSide, Prepared, Refusal, SELF_JOIN_CONDITION, SelfJoinRules, check_refs,
-    missing_condition, missing_message, plan_is_relation, quoted_names, self_join_message,
-    shared_ids,
+    AttrId, ExactJoin, ExactKeys, FrameNode, JoinSide, Prepared, Refusal, SELF_JOIN_CONDITION,
+    SelfJoinRules, check_refs, missing_condition, missing_message, plan_is_relation, quoted_names,
+    self_join_message, shared_ids,
 };
 use repark_functions::case_sensitive::SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY;
 
@@ -51,6 +52,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(refuse_self_join_refs, module)?)?;
     module.add_function(wrap_pyfunction!(prepare_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(join_shared_remint, module)?)?;
+    module.add_function(wrap_pyfunction!(join_exact_sides, module)?)?;
     module.add_function(wrap_pyfunction!(join_plan_lineage, module)?)?;
     Ok(())
 }
@@ -321,6 +323,69 @@ pub fn join_shared_remint(
                 .map(|id| (id.as_str().to_string(), AttrId::mint().as_str().to_string()))
                 .collect();
         Ok(remint)
+    })
+}
+
+#[allow(
+    clippy::missing_errors_doc,
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments
+)]
+#[pyfunction]
+#[pyo3(signature = (
+    session, left, right, left_alias, right_alias, how, keys, left_outputs, right_outputs
+))]
+pub fn join_exact_sides(
+    session: &PyReparkSession,
+    left: &PyDataFrame,
+    right: &PyDataFrame,
+    left_alias: &str,
+    right_alias: &str,
+    how: &str,
+    keys: Option<(String, String, bool)>,
+    left_outputs: Vec<(String, String)>,
+    right_outputs: Vec<(String, String)>,
+) -> PyResult<Option<PyDataFrame>> {
+    fenced!("frame_lineage.join_exact_sides", {
+        let join_type = match how {
+            "cross" => None,
+            other => Some(crate::dataframe::join_type_from_str(other)?),
+        };
+        let join = ExactJoin {
+            left_alias,
+            right_alias,
+            join_type,
+            keys: keys.as_ref().map(|(left, right, left_first)| ExactKeys {
+                left,
+                right,
+                left_first: *left_first,
+            }),
+            left_outputs: &left_outputs,
+            right_outputs: &right_outputs,
+        };
+        let frames = crate::deep_stack::max_depths(&left.depths(), &right.depths());
+        let need = crate::deep_stack::clone_need_bytes(frames.plan, frames.expression);
+        let joined = crate::deep_stack::grown_sync(need, || {
+            let (_, left_plan) =
+                crate::deep_stack::grown_clone_frame(left.inner(), &left.depths()).into_parts();
+            let (_, right_plan) =
+                crate::deep_stack::grown_clone_frame(right.inner(), &right.depths()).into_parts();
+            let Some(plan) =
+                repark_core::frame_names::join_exact_sides(left_plan, right_plan, &join)?
+            else {
+                return Ok(None);
+            };
+            let state = session.session.context().state();
+            let plan = repark_spark::analyze_built_plan(&state, plan)?;
+            Ok(Some(DataFrame::new(state, plan)))
+        })
+        .map_err(datafusion_to_py_err)?;
+        Ok(joined.map(|df| {
+            let mut depths = crate::deep_stack::plan_depths(df.logical_plan());
+            depths.plan = depths.plan.max(session.deep_view_levels());
+            depths.expression = depths.expression.max(session.deep_view_levels());
+            PyDataFrame::new_with_depths(df, left.runtime_handle(), depths)
+        }))
     })
 }
 

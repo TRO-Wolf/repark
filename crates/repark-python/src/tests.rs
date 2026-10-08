@@ -6,6 +6,8 @@ use repark_core::Error;
 
 #[path = "executable_twin_tests.rs"]
 mod executable_twin;
+#[path = "join_exact_tests.rs"]
+mod join_exact;
 
 /// Pin exception classification, inheritance, message preservation, and parse-analysis relations.
 #[test]
