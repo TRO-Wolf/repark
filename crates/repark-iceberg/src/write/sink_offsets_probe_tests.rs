@@ -12,6 +12,7 @@ enum ProbeMode {
     UnknownWithoutLanding,
     LandedThenReconcileFails,
     UnknownThenLoadsFail,
+    Capture,
 }
 
 struct ProbeCatalog {
@@ -20,6 +21,7 @@ struct ProbeCatalog {
     seen: Mutex<Vec<String>>,
     racers: Mutex<Vec<Vec<DataFile>>>,
     stamped_racer: Mutex<Option<(CommitStamp, Vec<DataFile>)>>,
+    captured: Mutex<Option<TableCommit>>,
     failing_loads: AtomicUsize,
     loads: AtomicUsize,
 }
@@ -38,6 +40,7 @@ impl ProbeCatalog {
             seen: Mutex::new(Vec::new()),
             racers: Mutex::new(Vec::new()),
             stamped_racer: Mutex::new(None),
+            captured: Mutex::new(None),
             failing_loads: AtomicUsize::new(0),
             loads: AtomicUsize::new(0),
         }
@@ -45,6 +48,10 @@ impl ProbeCatalog {
 
     fn loads(&self) -> usize {
         self.loads.load(Ordering::SeqCst)
+    }
+
+    fn take_captured(&self) -> Option<TableCommit> {
+        self.captured.lock().expect("captured").take()
     }
 
     fn seen(&self) -> Vec<String> {
@@ -177,6 +184,14 @@ impl Catalog for ProbeCatalog {
         self.race_stamped(commit.identifier()).await?;
         match self.mode {
             ProbeMode::Forward => self.inner.update_table(commit).await,
+            ProbeMode::Capture => {
+                *self.captured.lock().expect("captured") = Some(commit);
+                Err(iceberg::Error::new(
+                    iceberg::ErrorKind::DataInvalid,
+                    "injected: the commit was captured, not applied",
+                )
+                .with_retryable(false))
+            }
             ProbeMode::FailBeforeLanding => Err(iceberg::Error::new(
                 iceberg::ErrorKind::Unexpected,
                 "injected: the catalog refused the commit",

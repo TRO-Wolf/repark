@@ -374,3 +374,89 @@ async fn an_expired_base_with_an_unrelated_append_is_refused_like_a_rollback_and
     assert_eq!(stamped_snapshots(&committed), 1);
     assert_eq!(live_ids(&committed).await, vec![1, 2, 3]);
 }
+
+#[tokio::test]
+async fn a_commit_without_a_base_table_is_checked_against_a_fresh_load() {
+    let (_warehouse, memory, ident) = fixture("af_no_base_table").await;
+    let view = append_plain(&memory, &ident, &[1]).await;
+    let base = view.metadata().current_snapshot_id().map(SnapshotId::new);
+    let racer = racer_of_this_query(3);
+    stamped_append(&memory, &ident, &racer, &[70]).await;
+
+    let capture = Arc::new(ProbeCatalog::new(Arc::clone(&memory), ProbeMode::Capture));
+    let capturing: Arc<dyn Catalog> = Arc::clone(&capture) as Arc<dyn Catalog>;
+    let files = stage(&view, &[2]).await;
+    let tx = Transaction::new(&view);
+    let tx = tx
+        .fast_append()
+        .add_data_files(files)
+        .apply(tx)
+        .expect("apply");
+    tx.commit(capturing.as_ref())
+        .await
+        .expect_err("the capturing catalog does not apply the commit");
+    let mut commit = capture
+        .take_captured()
+        .expect("the commit reached the catalog");
+    assert!(commit.take_base_table().is_some());
+    assert!(commit.base_table().is_none());
+
+    let (probe, inner) = probed(&memory);
+    let claimed = ClaimedStamp {
+        stamp: stamp_for(3, SinkDoor::Table),
+        base,
+    };
+    let fence = AppendFence::install(&inner, &claimed);
+    let error = fence
+        .update_table(commit)
+        .await
+        .expect_err("the fence must check a commit that carries no base table");
+    assert_eq!(
+        crate::write::sink_offsets::append_fence::refusal_of(&error),
+        Some(MicroBatchError::Fenced {
+            query: query(),
+            epoch: Epoch::new(3),
+            winner: racer_run(),
+        })
+    );
+    assert_eq!(probe.loads(), 1);
+    assert!(probe.seen().is_empty());
+    let reloaded = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(stamped_snapshots(&reloaded), 1);
+    assert_eq!(live_ids(&reloaded).await, vec![1, 70]);
+}
+
+#[tokio::test]
+async fn a_tokenless_stamp_only_refusal_does_not_latch_another_stamps_scope() {
+    let (_warehouse, memory, ident) = fixture("af_tokenless_latch").await;
+    let view = append_plain(&memory, &ident, &[1]).await;
+    let racer = racer_of_this_query(3);
+    stamped_append(&memory, &ident, &racer, &[70]).await;
+    let fresh = memory.load_table(&ident).await.expect("load");
+
+    let scope_stamp = stamp_for(4, SinkDoor::Table);
+    let guard = BatchScope::enter(TableUuid::of(&fresh), scope_stamp).expect("enter");
+    BatchScope::claim(&fresh, guard.token())
+        .expect("claim")
+        .expect("claimed");
+
+    let other = stamp_for(3, SinkDoor::ForeachBatch);
+    let refused = commit_stamp_only(&memory, &view, &other, None)
+        .await
+        .expect_err("the stale tokenless stamp-only commit must be fenced");
+    assert_eq!(
+        refused,
+        MicroBatchError::Fenced {
+            query: query(),
+            epoch: Epoch::new(3),
+            winner: racer_run(),
+        }
+    );
+    assert_eq!(
+        BatchScope::claim(&fresh, guard.token()),
+        Err(MicroBatchError::SinkCommittedTwice {
+            epoch: Epoch::new(4)
+        })
+    );
+    drop(guard);
+}
