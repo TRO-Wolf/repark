@@ -100,6 +100,22 @@ collected by pytest, and no RePark code runs.
 - `c3_partition_oracle.sha256` holds `sha256sum` of both files. Check it with `sha256sum -c`
   from this directory. pins: c-3/C-001
 
+## C-3 fold 1 cells (2026-10-08)
+
+The recorder gains eleven cells, so the recording holds 52; the stride grid re-recorded byte for
+byte. Two more tables: `c3o.mx` (one column `"Mixed"`) and `c3o.twins` (`"Mixed"` and `"mixed"`).
+
+- `C3-C04`…`C07`: a quoted name in another case resolves (`"N"` against `n`, `"mixed"` against
+  `"Mixed"`), as a bare name in another case does (`MIXED`), and the `whereClause` carries the
+  column's real name.
+- `C3-C08`…`C10`: a relation with two columns that differ only in case cannot be read at all,
+  partitioned or not: `AnalysisException` `COLUMN_ALREADY_EXISTS` (`42711`).
+- `C3-N07`: `numPartitions = 3000000000` is `NumberFormatException` (the option is a 32-bit
+  `Int`). `C3-N08`: `2147483647` over a span of 3 shrinks to three strides. `C3-N09`: a padded
+  `" 4"` is `NumberFormatException`.
+- `C3-T11`: a `timestamp` column partitions with date text as bounds.
+  pins: c-3/C-001
+
 ## C-3 measured notes (2026-10-07, read from the recording)
 
 - Rows below `lowerBound`, above `upperBound` and NULL rows are all returned: the first stride

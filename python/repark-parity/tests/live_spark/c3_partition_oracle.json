@@ -1962,6 +1962,552 @@
    ]
   },
   {
+   "error": null,
+   "id": "C3-C04-quoted-upper-case-column",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "\"N\""
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     101,
+     102,
+     103,
+     105
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 50 or \"n\" is null",
+    "\"n\" >= 50 AND \"n\" < 100",
+    "\"n\" >= 100 AND \"n\" < 150",
+    "\"n\" >= 150"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-C05-quoted-other-case",
+   "options": [
+    [
+     "dbtable",
+     "c3o.mx"
+    ],
+    [
+     "partitionColumn",
+     "\"mixed\""
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 20,
+   "where": [
+    "\"Mixed\" < 50 or \"Mixed\" is null",
+    "\"Mixed\" >= 50 AND \"Mixed\" < 100",
+    "\"Mixed\" >= 100 AND \"Mixed\" < 150",
+    "\"Mixed\" >= 150"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-C06-bare-other-case",
+   "options": [
+    [
+     "dbtable",
+     "c3o.mx"
+    ],
+    [
+     "partitionColumn",
+     "MIXED"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 20,
+   "where": [
+    "\"Mixed\" < 50 or \"Mixed\" is null",
+    "\"Mixed\" >= 50 AND \"Mixed\" < 100",
+    "\"Mixed\" >= 100 AND \"Mixed\" < 150",
+    "\"Mixed\" >= 150"
+   ]
+  },
+  {
+   "error": null,
+   "id": "C3-C07-quoted-exact",
+   "options": [
+    [
+     "dbtable",
+     "c3o.mx"
+    ],
+    [
+     "partitionColumn",
+     "\"Mixed\""
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4
+    ],
+    [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    [
+     10,
+     11,
+     12,
+     13,
+     14
+    ],
+    [
+     15,
+     16,
+     17,
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 20,
+   "where": [
+    "\"Mixed\" < 50 or \"Mixed\" is null",
+    "\"Mixed\" >= 50 AND \"Mixed\" < 100",
+    "\"Mixed\" >= 100 AND \"Mixed\" < 150",
+    "\"Mixed\" >= 150"
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.AnalysisException",
+    "error_class": "COLUMN_ALREADY_EXISTS",
+    "message": "[COLUMN_ALREADY_EXISTS] The column `mixed` already exists. Choose another name or rename the existing column. SQLSTATE: 42711",
+    "sqlstate": "42711"
+   },
+   "id": "C3-C08-twins-unpartitioned",
+   "options": [
+    [
+     "dbtable",
+     "c3o.twins"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.AnalysisException",
+    "error_class": "COLUMN_ALREADY_EXISTS",
+    "message": "[COLUMN_ALREADY_EXISTS] The column `mixed` already exists. Choose another name or rename the existing column. SQLSTATE: 42711",
+    "sqlstate": "42711"
+   },
+   "id": "C3-C09-twins-quoted-exact",
+   "options": [
+    [
+     "dbtable",
+     "c3o.twins"
+    ],
+    [
+     "partitionColumn",
+     "\"mixed\""
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.AnalysisException",
+    "error_class": "COLUMN_ALREADY_EXISTS",
+    "message": "[COLUMN_ALREADY_EXISTS] The column `mixed` already exists. Choose another name or rename the existing column. SQLSTATE: 42711",
+    "sqlstate": "42711"
+   },
+   "id": "C3-C10-twins-bare",
+   "options": [
+    [
+     "dbtable",
+     "c3o.twins"
+    ],
+    [
+     "partitionColumn",
+     "mixed"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.NumberFormatException",
+    "error_class": null,
+    "message": "For input string: \"3000000000\"",
+    "sqlstate": null
+   },
+   "id": "C3-N07-count-past-int",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     "3000000000"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-N08-count-int-max",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "3"
+    ],
+    [
+     "numPartitions",
+     "2147483647"
+    ]
+   ],
+   "placement": [
+    [
+     101,
+     102,
+     103,
+     105
+    ],
+    [],
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     104,
+     106
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"n\" < 1 or \"n\" is null",
+    "\"n\" >= 1 AND \"n\" < 2",
+    "\"n\" >= 2"
+   ]
+  },
+  {
+   "error": {
+    "class": "pyspark.errors.exceptions.captured.NumberFormatException",
+    "error_class": null,
+    "message": "For input string: \" 4\"",
+    "sqlstate": null
+   },
+   "id": "C3-N09-count-padded",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "n"
+    ],
+    [
+     "lowerBound",
+     "0"
+    ],
+    [
+     "upperBound",
+     "200"
+    ],
+    [
+     "numPartitions",
+     " 4"
+    ]
+   ],
+   "placement": null,
+   "rows": null,
+   "where": null
+  },
+  {
+   "error": null,
+   "id": "C3-T11-timestamp-date-bounds",
+   "options": [
+    [
+     "dbtable",
+     "c3o.t"
+    ],
+    [
+     "partitionColumn",
+     "ts"
+    ],
+    [
+     "lowerBound",
+     "2024-01-01"
+    ],
+    [
+     "upperBound",
+     "2024-01-02"
+    ],
+    [
+     "numPartitions",
+     "4"
+    ]
+   ],
+   "placement": [
+    [
+     1,
+     2,
+     3,
+     4,
+     5,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106
+    ],
+    [
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ],
+    [
+     12,
+     13,
+     14,
+     15,
+     16,
+     17
+    ],
+    [
+     18,
+     19,
+     20
+    ]
+   ],
+   "rows": 26,
+   "where": [
+    "\"ts\" < '2024-01-01 06:00:00' or \"ts\" is null",
+    "\"ts\" >= '2024-01-01 06:00:00' AND \"ts\" < '2024-01-01 12:00:00'",
+    "\"ts\" >= '2024-01-01 12:00:00' AND \"ts\" < '2024-01-01 18:00:00'",
+    "\"ts\" >= '2024-01-01 18:00:00'"
+   ]
+  },
+  {
    "error": {
     "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
     "error_class": null,
@@ -2189,7 +2735,7 @@
    ]
   },
   {
-   "explain": "== Physical Plan ==\nCollectLimit (2)\n+- * Scan JDBCRelation(c3o.t) [numPartitions=4]  (1)\n\n\n(1) Scan JDBCRelation(c3o.t) [numPartitions=4]  [codegen id : 1]\nOutput [10]: [id#584L, small#585, n#586, d#587, ts#588, tstz#589, num#590, f#591, b#592, s#593]\nReadSchema: struct<id:bigint,small:smallint,n:int,d:date,ts:timestamp,tstz:timestamp,num:decimal(10,2),f:double,b:boolean,s:string>\nExternal engine query: SELECT \"id\",\"small\",\"n\",\"d\",\"ts\",\"tstz\",\"num\",\"f\",\"b\",\"s\" FROM c3o.t      \n\n(2) CollectLimit\nInput [10]: [id#584L, small#585, n#586, d#587, ts#588, tstz#589, num#590, f#591, b#592, s#593]\nArguments: 3\n\n",
+   "explain": "== Physical Plan ==\nCollectLimit (2)\n+- * Scan JDBCRelation(c3o.t) [numPartitions=4]  (1)\n\n\n(1) Scan JDBCRelation(c3o.t) [numPartitions=4]  [codegen id : 1]\nOutput [10]: [id#686L, small#687, n#688, d#689, ts#690, tstz#691, num#692, f#693, b#694, s#695]\nReadSchema: struct<id:bigint,small:smallint,n:int,d:date,ts:timestamp,tstz:timestamp,num:decimal(10,2),f:double,b:boolean,s:string>\nExternal engine query: SELECT \"id\",\"small\",\"n\",\"d\",\"ts\",\"tstz\",\"num\",\"f\",\"b\",\"s\" FROM c3o.t      \n\n(2) CollectLimit\nInput [10]: [id#686L, small#687, n#688, d#689, ts#690, tstz#691, num#692, f#693, b#694, s#695]\nArguments: 3\n\n",
    "id": "C3-L01-limit-over-partitions",
    "rows": 3
   }
@@ -2208,7 +2754,11 @@
    "CREATE SCHEMA c3o",
    "CREATE TABLE c3o.t (id int8, small int2, n int4, d date, ts timestamp, tstz timestamptz, num numeric(10,2), f float8, b bool, s text)",
    "INSERT INTO c3o.t SELECT g, g, g * 10, DATE '2024-01-01' + g::int, TIMESTAMP '2024-01-01 00:00:00' + g * INTERVAL '1 hour', TIMESTAMPTZ '2024-01-01 00:00:00+00' + g * INTERVAL '1 hour', g * 1.5, g * 0.5, g % 2 = 0, 'r' || g FROM generate_series(1, 20) g",
-   "INSERT INTO c3o.t (id, n) VALUES (101, NULL), (102, NULL), (103, -500), (104, 5000), (105, 0), (106, 200)"
+   "INSERT INTO c3o.t (id, n) VALUES (101, NULL), (102, NULL), (103, -500), (104, 5000), (105, 0), (106, 200)",
+   "CREATE TABLE c3o.mx (id int8, \"Mixed\" int4)",
+   "INSERT INTO c3o.mx SELECT g, g * 10 FROM generate_series(1, 20) g",
+   "CREATE TABLE c3o.twins (id int8, \"Mixed\" int4, \"mixed\" int4)",
+   "INSERT INTO c3o.twins SELECT g, g * 10, g * 10 FROM generate_series(1, 20) g"
   ],
   "spark": "4.1.2"
  }

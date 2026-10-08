@@ -42,6 +42,10 @@ SETUP = (
     " g * 1.5, g * 0.5, g % 2 = 0, 'r' || g FROM generate_series(1, 20) g",
     "INSERT INTO c3o.t (id, n) VALUES (101, NULL), (102, NULL), (103, -500), (104, 5000),"
     " (105, 0), (106, 200)",
+    'CREATE TABLE c3o.mx (id int8, "Mixed" int4)',
+    "INSERT INTO c3o.mx SELECT g, g * 10 FROM generate_series(1, 20) g",
+    'CREATE TABLE c3o.twins (id int8, "Mixed" int4, "mixed" int4)',
+    "INSERT INTO c3o.twins SELECT g, g * 10, g * 10 FROM generate_series(1, 20) g",
 )
 ALL_FOUR = (
     ("partitionColumn", "n"),
@@ -237,6 +241,16 @@ def bounded(column: str, lower: str, upper: str, count: str) -> tuple[tuple[str,
     )
 
 
+def on_table(table: str, column: str) -> tuple[tuple[str, str], ...]:
+    return (
+        ("dbtable", table),
+        ("partitionColumn", column),
+        ("lowerBound", "0"),
+        ("upperBound", "200"),
+        ("numPartitions", "4"),
+    )
+
+
 def define_shapes() -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
     subquery = "(SELECT id, n FROM c3o.t WHERE id < 100) AS sub"
     return (
@@ -282,6 +296,20 @@ def define_shapes() -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
         ("C01-missing-column", bounded("nope", "0", "200", "4")),
         ("C02-upper-case-column", bounded("N", "0", "200", "4")),
         ("C03-quoted-column", bounded('"n"', "0", "200", "4")),
+        ("C04-quoted-upper-case-column", bounded('"N"', "0", "200", "4")),
+        ("C05-quoted-other-case", on_table("c3o.mx", '"mixed"')),
+        ("C06-bare-other-case", on_table("c3o.mx", "MIXED")),
+        ("C07-quoted-exact", on_table("c3o.mx", '"Mixed"')),
+        ("C08-twins-unpartitioned", (("dbtable", "c3o.twins"),)),
+        ("C09-twins-quoted-exact", on_table("c3o.twins", '"mixed"')),
+        ("C10-twins-bare", on_table("c3o.twins", "mixed")),
+        ("N07-count-past-int", replaced("numPartitions", "3000000000")),
+        ("N08-count-int-max", bounded("n", "0", "3", "2147483647")),
+        ("N09-count-padded", replaced("numPartitions", " 4")),
+        (
+            "T11-timestamp-date-bounds",
+            bounded("ts", "2024-01-01", "2024-01-02", "4"),
+        ),
         (
             "Q01-query-with-column",
             (("query", "SELECT id, n FROM c3o.t"), *ALL_FOUR),
