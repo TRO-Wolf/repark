@@ -209,6 +209,14 @@ pub(crate) async fn execute_ctas(
         repark_functions::analyze_eagerly(&ctx.state(), query.logical_plan().clone())?;
     let query = ctx.execute_logical_plan(analyzed_plan).await?;
     let arrow_schema = Arc::new(query.schema().as_arrow().clone());
+    if let Some(repeated) = repark_core::frame_names::first_duplicate_display(
+        arrow_schema
+            .fields()
+            .iter()
+            .map(|field| field.name().as_str()),
+    ) {
+        return Err(DataFusionError::Plan(column_already_exists(repeated)));
+    }
     if crate::spark_door_case_insensitive(ctx.state().config().options()) {
         let names = arrow_schema
             .fields()

@@ -702,6 +702,11 @@ wrapped optimizer rule) and declares this directory.
   `is_scratch_relation` already hides these names from suggestions. All three
   are re-exported through `frame_names`. Pins: `../tests/duplicate_names.rs`.
   pins: fa-5-6/C-001
+  **FA-6 (2026-10-08):** `duplicate_display_names(engines)` answers `None`
+  when no engine name is duplicate-tolerant and the display list otherwise
+  (the facade's overlay for a SQL-door frame); `first_duplicate_display`
+  answers the display of the first such name (the durable-SQL refusals).
+  pins: fa-5-6/C-005, C-007
 - `written_names.rs` — **CASESENS-2 port (2026-10-03):** what the ATTR-ID-1
   stack keeps of the charter's written-name matchers (cherry-picks `e4be1feb`,
   `581f91b1`, `28f6d28a`, `111e95b3`): `refuse_folded_duplicate_keys(keys, rule)`

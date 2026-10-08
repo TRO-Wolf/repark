@@ -4,75 +4,62 @@ from pathlib import Path
 from typing import Any
 
 import _sm2_shared as sm2
-import pytest
 
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import UnsupportedOperationException
 from repark.spark import functions as spark_functions
 
 
-def test_create_or_replace_temp_view_over_self_join_refuses_column_already_exists(
+def test_create_or_replace_temp_view_over_self_join_registers_display_names(
     tmp_path: Path,
 ) -> None:
     session = sm2._open(tmp_path, "sm2-dupviews-crotv-self")
     frame = sm2._self_join(session)
-    refused = sm2._refusal_of(lambda: frame.createOrReplaceTempView("vj"))
-    assert isinstance(refused, AnalysisException)
-    assert sm2._condition_of(refused) == "COLUMN_ALREADY_EXISTS"
-    assert sm2._sql_state_of(refused) == "42711"
-    assert str(refused).splitlines()[0] == sm2._expected_dup_message("id")
-    assert session.catalog.tableExists("vj") is False
+    frame.createOrReplaceTempView("vj")
+    assert session.catalog.tableExists("vj") is True
+    assert session.sql("SELECT * FROM vj").columns == ["id", "s", "v", "id", "s", "v"]
     session.stop()
 
 
-def test_create_temp_view_over_mixed_join_refuses_column_already_exists(
+def test_create_temp_view_over_mixed_join_registers_display_names(
     tmp_path: Path,
 ) -> None:
     session = sm2._open(tmp_path, "sm2-dupviews-ctv-mixed")
     frame = sm2._mixed_join(session)
-    refused = sm2._refusal_of(lambda: frame.createTempView("vj"))
-    assert isinstance(refused, AnalysisException)
-    assert sm2._condition_of(refused) == "COLUMN_ALREADY_EXISTS"
-    assert sm2._sql_state_of(refused) == "42711"
-    assert str(refused).splitlines()[0] == sm2._expected_dup_message("id")
-    assert session.catalog.tableExists("vj") is False
+    frame.createTempView("vj")
+    assert session.catalog.tableExists("vj") is True
+    assert session.table("vj").columns == ["id", "s", "v", "id", "t"]
     session.stop()
 
 
-def test_create_global_temp_view_over_self_join_refuses_column_already_exists(
+def test_create_global_temp_view_over_self_join_is_unsupported_like_any_frame(
     tmp_path: Path,
 ) -> None:
     session = sm2._open(tmp_path, "sm2-dupviews-cgtv-self")
     frame = sm2._self_join(session)
     refused = sm2._refusal_of(lambda: frame.createGlobalTempView("vj"))
-    assert isinstance(refused, AnalysisException)
-    assert sm2._condition_of(refused) == "COLUMN_ALREADY_EXISTS"
-    assert sm2._sql_state_of(refused) == "42711"
-    assert str(refused).splitlines()[0] == sm2._expected_dup_message("id")
+    assert isinstance(refused, UnsupportedOperationException)
     session.stop()
 
 
-def test_create_or_replace_global_temp_view_over_self_join_refuses(
+def test_create_or_replace_global_temp_view_over_self_join_is_unsupported(
     tmp_path: Path,
 ) -> None:
     session = sm2._open(tmp_path, "sm2-dupviews-crogtv-self")
     frame = sm2._self_join(session)
     refused = sm2._refusal_of(lambda: frame.createOrReplaceGlobalTempView("vj"))
-    assert isinstance(refused, AnalysisException)
-    assert sm2._condition_of(refused) == "COLUMN_ALREADY_EXISTS"
-    assert sm2._sql_state_of(refused) == "42711"
-    assert str(refused).splitlines()[0] == sm2._expected_dup_message("id")
+    assert isinstance(refused, UnsupportedOperationException)
     session.stop()
 
 
-def test_temp_view_over_using_join_names_first_duplicate_key(tmp_path: Path) -> None:
+def test_temp_view_over_using_join_registers_and_repeats_the_shared_columns(
+    tmp_path: Path,
+) -> None:
     session = sm2._open(tmp_path, "sm2-dupviews-using")
     left = session.createDataFrame([(1, "a", 10), (2, "b", 20)], ["id", "s", "v"])
     frame = left.alias("l").join(left.alias("r"), "id", "inner")
-    refused = sm2._refusal_of(lambda: frame.createOrReplaceTempView("vj"))
-    assert isinstance(refused, AnalysisException)
-    assert sm2._condition_of(refused) == "COLUMN_ALREADY_EXISTS"
-    assert str(refused).splitlines()[0] == sm2._expected_dup_message("s")
-    assert session.catalog.tableExists("vj") is False
+    frame.createOrReplaceTempView("vj")
+    assert session.catalog.tableExists("vj") is True
+    assert session.sql("SELECT * FROM vj").columns == ["id", "s", "v", "s", "v"]
     session.stop()
 
 
@@ -131,13 +118,13 @@ def test_global_temp_view_over_plain_frame_stays_unsupported(tmp_path: Path) -> 
     session.stop()
 
 
-def test_refused_temp_view_leaves_no_internal_view_names(tmp_path: Path) -> None:
+def test_registered_duplicate_view_shows_no_internal_names(tmp_path: Path) -> None:
     session = sm2._open(tmp_path, "sm2-dupviews-clean")
     frame = sm2._self_join(session)
-    sm2._refusal_of(lambda: frame.createOrReplaceTempView("vj"))
+    frame.createOrReplaceTempView("vj")
     names = [table.name for table in session.catalog.listTables()]
-    assert "vj" not in names
     assert not any("__repark_" in name for name in names)
-    with pytest.raises(AnalysisException, match="not found"):
-        session.table("vj")
+    assert not any("__repark_" in name for name in session.table("vj").columns)
+    described = session.sql("DESCRIBE vj").collect()
+    assert not any("__repark_" in row["col_name"] for row in described)
     session.stop()

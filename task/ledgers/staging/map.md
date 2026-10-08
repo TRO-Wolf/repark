@@ -13,10 +13,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
   **Fold SM-2d (2026-10-07):** C-071 rewritten to the nearest-visible sourced-twin rule.
 - [fa-5-6-ledger.md](fa-5-6-ledger.md) —
-  **FA-5 and FA-6 (2026-10-08), in flight:** csv path writes and temp views over frames with
-  exact-duplicate display names. Step 0 records every measured Spark 4.1.2 and main cell; the
-  design note keeps engine names unique (`__repark_dup_<position>_<display>`) and carries the
-  display names beside them. `risk_tier: standard`. Branch `fix/fa-5-6-duplicate-names`.
+  **FA-5 and FA-6 (2026-10-08):** csv path writes and temp views over frames with
+  exact-duplicate display names answer as Spark 4.1.2 does. Step 0 records every measured Spark
+  and main cell; the design keeps engine names unique (`__repark_dup_<position>_<display>`) and
+  carries the display names beside them, so DataFusion never holds a duplicate. The shared
+  rule (C-001), the csv header, partition refusal and controls (C-002 to C-004), the view
+  doors, references and durable-SQL refusals (C-005 to C-007), no regression on the sort grid,
+  the replay corpus and the suites (C-008), fifteen mutations, and the dated divergences left
+  on registry row FA-6. `risk_tier: standard`. Branch `fix/fa-5-6-duplicate-names`.
 - [foreach-wrap-1-ledger.md](foreach-wrap-1-ledger.md) —
   **FOREACH-WRAP-1 (2026-10-07), security follow-up to SOURCE-URL-REDACT-2:** `foreach` and
   `foreachPartition` raise `scrub_exception`'s masked copy of the user's class after the

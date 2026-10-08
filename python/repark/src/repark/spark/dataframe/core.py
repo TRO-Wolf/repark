@@ -851,9 +851,6 @@ class DataFrame:
 
     def create_or_replace_temp_view(self, name: str) -> None:
         """Register this DataFrame as a replaceable temporary view."""
-        from repark.spark.dataframe.writer_layout import _refuse_duplicate_output_columns
-
-        _refuse_duplicate_output_columns(self, exact_only=True)
         surface_b.register_view_without_fill(self, name)
 
     createOrReplaceTempView = create_or_replace_temp_view  # noqa: N815 — PySpark camelCase alias
@@ -2503,9 +2500,6 @@ class DataFrame:
 
     def create_global_temp_view(self, name: str) -> None:
         """Unsupported global_temp namespace (R- loud; use session temp views)."""
-        from repark.spark.dataframe.writer_layout import _refuse_duplicate_output_columns
-
-        _refuse_duplicate_output_columns(self, exact_only=True)
         from repark.errors import UnsupportedOperationException
 
         raise UnsupportedOperationException(

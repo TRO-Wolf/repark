@@ -1898,3 +1898,9 @@ parquet, json, orc, `saveAsTable` and `writeTo` keep
 `_refuse_duplicate_output_columns`. `writer_readwriter.py` calls
 `writer_layout.run_through_temp_view` directly for the path `COPY`, which
 keeps the file under its ceiling. pins: fa-5-6/C-002, C-003, C-004
+**FA-6 (2026-10-08):** `core.py`'s `create_or_replace_temp_view` (and
+`createTempView` through it) and `create_global_temp_view` no longer call
+`_refuse_duplicate_output_columns`: the local doors register (the rename
+lives in `catalog_surface._register_temp_view`), and the global doors give
+the same unsupported error to every frame. `core.py` ratchets 3462 → 3456
+in `check_lib_py.py`. pins: fa-5-6/C-005

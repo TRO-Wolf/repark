@@ -48,3 +48,27 @@ pub fn rename_duplicate_tolerant(frame: DataFrame, displays: &[String]) -> Resul
         None => Ok(frame),
     }
 }
+
+#[must_use]
+pub fn duplicate_display_names<'a>(
+    engines: impl IntoIterator<Item = &'a str> + Clone,
+) -> Option<Vec<String>> {
+    if !engines
+        .clone()
+        .into_iter()
+        .any(|engine| display_name(engine).is_some())
+    {
+        return None;
+    }
+    Some(
+        engines
+            .into_iter()
+            .map(|engine| display_name(engine).unwrap_or(engine).to_string())
+            .collect(),
+    )
+}
+
+#[must_use]
+pub fn first_duplicate_display<'a>(engines: impl IntoIterator<Item = &'a str>) -> Option<&'a str> {
+    engines.into_iter().find_map(display_name)
+}

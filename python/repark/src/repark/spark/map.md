@@ -154,7 +154,18 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `getDatabase` reads the stored comment and location through
   `_native.namespace_metadata` instead of parsing the display-masked `DESCRIBE NAMESPACE`.
   pins: source-url-redact-1/C-040
-- `catalog_surface.py` — **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
+- `catalog_surface.py` — **FA-6 (2026-10-08):** `_register_temp_view`
+  registers through `writer_layout._rename_duplicate_tolerant`, so a frame
+  with repeated display names registers under unique engine names instead of
+  refusing (the EXPLAIN scratch view still passes `rename_fields=False`).
+  `_with_duplicate_display(frame)` asks the native
+  `duplicate_display_names` once and, when the frame carries such names, sets
+  the ATTR-ID-1 display overlay (`_display_names` over `_engine_names`);
+  `session_table` and `session/sql_run.py` call it on the frame they return,
+  so `spark.table`, `spark.sql`, `listColumns` and every DataFrame operation
+  downstream read the display names. A frame without such names is returned
+  untouched. pins: fa-5-6/C-005, C-006
+  **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
   half of the `Catalog` surface — `getTable` / `listColumns` / `listFunctions` /
   `getFunction` metadata (DESCRIBE + SHOW PARTITIONS + the `repark.spark.functions`
   export table), the `cacheTable` / `isCached` / `uncacheTable` trio over EAGER-OWN-1

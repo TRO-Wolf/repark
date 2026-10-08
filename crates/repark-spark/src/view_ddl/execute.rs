@@ -51,6 +51,17 @@ pub(crate) async fn execute_create_view(
         prepare_view_body_sql(ctx, catalogs, &catalog, &namespace, &statement.body_sql).await?;
     let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins).await?;
     pins.release(ctx);
+    if statement.aliases.is_empty()
+        && let Some(repeated) = repark_core::frame_names::first_duplicate_display(
+            frame
+                .schema()
+                .fields()
+                .iter()
+                .map(|field| field.name().as_str()),
+        )
+    {
+        return Err(DataFusionError::Plan(column_already_exists(repeated)));
+    }
     if crate::spark_door_case_insensitive(ctx.state().config().options()) {
         let outputs = frame
             .schema()
@@ -153,6 +164,15 @@ pub(crate) async fn execute_create_temp_view(
     refuse_recursive_temp_view(ctx, &view).await?;
     let provider = Arc::clone(&view);
     let frame = ctx.read_table(provider)?;
+    if let Some(repeated) = repark_core::frame_names::first_duplicate_display(
+        frame
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().as_str()),
+    ) {
+        return Err(DataFusionError::Plan(column_already_exists(repeated)));
+    }
     if crate::spark_door_case_insensitive(ctx.state().config().options()) {
         let names = frame
             .schema()

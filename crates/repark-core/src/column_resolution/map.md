@@ -183,6 +183,36 @@ pins: ice-error-conditions-1/C-011
   relation back on the top projection (through `Sort` / `Limit` / `DISTINCT`), so a later
   DataFrame `F.col("t.ID")` still finds `t`; an explicit `AS` alias stays unqualified as in
   Spark. Pin `respelled_plain_references_keep_their_relation`. pins: u11-edge-1/C-018
+- `duplicate_views.rs` — **FA-6 (2026-10-08):** what the SQL door says about
+  a relation that carries duplicate-tolerant engine names
+  (`session/df_guards/duplicate_names.rs`), which a temp view over a frame
+  with repeated display names does. Three entries, all inert without such a
+  name in scope. `ambiguous_reference(field, valid, exact)` runs first in the
+  unresolved-column stamp: a missing name that at least two valid fields
+  display (under the session case rule, and under the written qualifier when
+  there is one) refuses `AMBIGUOUS_REFERENCE` with the reference as written
+  and one candidate per field under its relation's table name, as Spark names
+  `v1`, an alias, a derived table or a CTE. `suggested_name` maps such a
+  field to its display in the `UNRESOLVED_COLUMN` suggestions, so they never
+  list an internal name. `refuse_shadowed_duplicates(plan, written, exact)`
+  runs on every planned statement, on both case paths: DataFusion resolves a
+  bare `id` to a plain relation's `id` when the view beside it only carries
+  hidden twins of that name, where Spark refuses three candidates; the audit
+  refuses when a node reads a plain column whose name a hidden field in the
+  node's inputs displays and the statement wrote that name bare. The walk
+  reads input schemas only and returns per node on the first field check
+  when nothing is hidden. It cannot tell a bare select alias from a bare
+  reference, so `SELECT plain.id AS id … ORDER BY id` beside such a view
+  refuses loudly (a pinned divergence). `stamp_unresolved_exact` gives the
+  case-sensitive path the exact rule. Pins: `duplicate_views_tests.rs`.
+  pins: fa-5-6/C-006
+- `duplicate_views_tests.rs` — the battery for it, over views registered
+  through `rename_duplicate_tolerant`: each reference shape refuses with the
+  relation as written, under both case paths; a unique name, a star and a
+  count plan; a missing name suggests display names only; an upper-case
+  repeat is ambiguous folded and unresolved exact; a bare name shared with a
+  plain relation refuses three candidates while the qualified form plans.
+  pins: fa-5-6/C-006
 - `star_twins.rs` — **RP-56 merge (2026-09-28):** the twin-star guard split from
   `../column_resolution.rs` under the file-size gate, a pure move with no renamed
   items. `refuse_star_twins` refuses a written projection star over a non-scratch
