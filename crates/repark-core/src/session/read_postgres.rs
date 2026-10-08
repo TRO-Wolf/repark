@@ -94,7 +94,7 @@ mod door {
                 read.num_partitions,
             );
             let partitioning = partitioning
-                .with_props(&mut props)
+                .and_then(|given| given.with_props(&mut props))
                 .and_then(PartitionOptions::spec)
                 .map_err(refuse)?;
             if partitioning.is_some() && matches!(read.target, PostgresTarget::Query(_)) {

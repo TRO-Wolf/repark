@@ -36,7 +36,7 @@ INSERT INTO {s}.wide
   FROM generate_series(1, 5000) g;
 ";
 
-fn spec(column: &str, lower: i64, upper: i64, count: i64) -> PartitionSpec {
+fn spec(column: &str, lower: i64, upper: i64, count: i32) -> PartitionSpec {
     PartitionSpec {
         column: column.to_string(),
         lower_bound: lower.to_string(),

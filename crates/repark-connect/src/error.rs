@@ -268,7 +268,8 @@ impl From<ConnectError> for Error {
             | ConnectError::InvalidSpecification { .. }
             | ConnectError::InvalidIdentifier { .. } => Error::Config(error.to_string()),
             ConnectError::PartitionedRead { ref refusal } => match refusal {
-                PartitionRefusal::DeclaredColumnType { .. } => {
+                PartitionRefusal::DeclaredColumnType { .. }
+                | PartitionRefusal::TooManyStrides { .. } => {
                     Error::NotImplemented(error.to_string())
                 }
                 PartitionRefusal::NotInteger { .. } => Error::NumberFormat(error.to_string()),

@@ -146,7 +146,7 @@ impl PostgresTable {
         let scanned = self.resolved.columns.get(column);
         scanned.map_or(Ok(()), partition_type)?;
         let (lower, upper) = spec.bounds()?;
-        let cuts = stride_cuts(lower, upper, spec.num_partitions)?;
+        let cuts = stride_cuts(lower, upper, i64::from(spec.num_partitions))?;
         self.partitioning = scanned
             .filter(|_| !cuts.is_empty())
             .map(|scanned| Partitioning {

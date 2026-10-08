@@ -9,6 +9,8 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
+  argument refuses as `NumberFormat` before any connection. pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned
   on `numPartitions`; a bound is no longer parsed before the relation resolves, so a date bound
   beside a bad count still names the count. pins: c-3/C-009

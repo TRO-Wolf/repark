@@ -111,6 +111,14 @@ async fn partition_options_refuse_as_spark_does_before_any_connection() {
         "{message}"
     );
 
+    let past_int = (Some("id"), Some(0), Some(9), Some(3_000_000_000));
+    let (class, message) = refusal(&session, partitioned(read(&[("user", "u")]), past_int)).await;
+    assert_eq!(class, ErrorClass::NumberFormat, "{message}");
+    assert!(
+        message.contains("`numPartitions` must be a 32-bit integer"),
+        "{message}"
+    );
+
     let mut predicates = read(&[("user", "u")]);
     predicates.predicates = true;
     let (class, message) = refusal(&session, predicates).await;

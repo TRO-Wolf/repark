@@ -11,7 +11,7 @@ use repark_connect::{
 
 use crate::pushdown::{column, find_scan, orders, physical, resolved, source};
 
-fn spec(column: &str, lower: i64, upper: i64, count: i64) -> PartitionSpec {
+fn spec(column: &str, lower: i64, upper: i64, count: i32) -> PartitionSpec {
     PartitionSpec {
         column: column.to_string(),
         lower_bound: lower.to_string(),

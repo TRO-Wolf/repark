@@ -207,7 +207,8 @@ reads the same snapshot of the database, so the result equals an unpartitioned r
 other sessions write. The ranges run on at most `pool_max_size` connections (default 4): with
 `numPartitions = 8` and the default pool, four connections read two ranges each. Raise
 `pool_max_size` (up to 64) to use more. Give all four options or none; `numPartitions` alone
-is accepted and reads unpartitioned. A `query` cannot be partitioned: pass it as
+is accepted and reads unpartitioned. At most 10 000 ranges run in one read; a larger
+`numPartitions` refuses and names the ceiling. A `query` cannot be partitioned: pass it as
 `dbtable = "(select …) as q"`. `EXPLAIN` shows `partition_column=`, `strides=` and
 `max_connections=` on the scan. Mounted `repark.toml` sources take no partition options.
 

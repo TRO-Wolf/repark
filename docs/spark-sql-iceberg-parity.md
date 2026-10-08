@@ -3843,7 +3843,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   missing, and a `text`-like, `boolean` or `bytea` column. **Still declared**, each refusing
   with `ConnectError` naming this row, in the Unsupported class: `predicates` (before any
   connection); a partition column of type `date`, `timestamp`, `timestamptz`, `numeric`,
-  `float4` or `float8`. Not offered: automatic choice of the column and its bounds (Spark
+  `float4` or `float8` (whether its bounds are Spark's date text or integers); and a read of
+  more than **10 000 strides** (the count after Spark's shrink to the span), which refuses
+  with the ceiling in its text. Not offered: automatic choice of the column and its bounds (Spark
   has none). In `repark.toml` the five spellings are unknown keys: a mounted source is a
   catalog of every relation, so a per-relation column has no key to sit under. Two deliberate
   differences from Spark, both on the safe side: two columns that differ only in case, with
@@ -3864,6 +3866,14 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `crates/repark-python/src/session_tests.rs::read_postgres_refusals_name_their_row_and_never_echo_credentials`;
   live `crates/repark-connect/tests/it/live_partition.rs::a_writer_between_strides_never_changes_a_partitioned_read`;
   live `python/repark-parity/tests/live_db/test_c3_partitioned.py::test_what_stays_declared_refuses_naming_its_row`
+- **Dated divergence, 2026-10-08 (C-3 fold 1): the stride ceiling.** Spark has no ceiling on
+  `numPartitions` beyond its 32-bit `Int` (kept: a value outside it is `NumberFormatException`,
+  `C3-N07`). RePark refuses above 10 000 strides because every stride is one statement under
+  one open `REPEATABLE READ` snapshot and each costs client memory: measured on the 10M-row
+  table, 10 000 strides read in 12.7 s at 1.6 GB and 100 000 in 75 s at 8.0 GB, against 10.0 s
+  at 0.4 GB for four (ledger §7); the verifier's 2 000 000-stride read ran past nine minutes
+  at 2.6 GB before it was killed. The fix is a lower `numPartitions`; a large count over a
+  small span still shrinks as Spark's does (`C3-N08`) and is not refused.
 - **Rationale** — DECLARED 2026-10-07 (C-2d; sketch §2.11); REWRITTEN 2026-10-07 (C-3; design
   note `task/ledgers/staging/c-3-ledger.md` §0). C-3 delivers the integer range read on one
   snapshot. A `timestamp` stride depends on the zone Spark takes from the JVM (D-M2), and

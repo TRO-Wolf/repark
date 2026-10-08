@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use repark_common::{Error, ErrorClass};
 use repark_connect::{
-    ConnectError, PARTITIONED_READ_ROW, PartitionOptions, PartitionRefusal, PartitionSpec, Stride,
-    stride_cuts, strides,
+    ConnectError, MAX_STRIDES, PARTITIONED_READ_ROW, PartitionOptions, PartitionRefusal,
+    PartitionSpec, Stride, stride_cuts, strides,
 };
 
 const SPARK_GRID: &str =
@@ -201,6 +201,7 @@ fn options(
         upper_bound,
         num_partitions,
     )
+    .expect("a count inside Spark's Int")
 }
 
 #[test]
@@ -590,4 +591,95 @@ fn bounds_stay_text_until_the_column_is_known() {
             option: "lowerBound"
         }
     );
+}
+
+#[test]
+fn num_partitions_is_sparks_32_bit_int() {
+    let count = |text: &str| {
+        let mut given = props(&[("numPartitions", text)]);
+        PartitionOptions::default()
+            .with_props(&mut given)
+            .map(|lifted| lifted.num_partitions)
+    };
+    assert_eq!(count("2147483647"), Ok(Some(i32::MAX)));
+    assert_eq!(count("-2147483648"), Ok(Some(i32::MIN)));
+    assert_eq!(count("0"), Ok(Some(0)));
+    for refused in [
+        "3000000000",
+        "2147483648",
+        "-2147483649",
+        " 4",
+        "4 ",
+        "4.0",
+        "four",
+    ] {
+        let error = count(refused).expect_err(refused);
+        assert_eq!(
+            refusal(error.clone()),
+            PartitionRefusal::NotInteger {
+                option: "numPartitions"
+            },
+            "{refused}"
+        );
+        assert_eq!(
+            error.to_string(),
+            "`numPartitions` must be a 32-bit integer"
+        );
+        assert_eq!(
+            Error::from(error).exception_class(),
+            ErrorClass::NumberFormat
+        );
+    }
+    let from_arguments = PartitionOptions::of(None, None, None, Some(3_000_000_000));
+    assert_eq!(
+        refusal(from_arguments.expect_err("past Spark's Int")),
+        PartitionRefusal::NotInteger {
+            option: "numPartitions"
+        }
+    );
+    let bound = PartitionSpec {
+        column: "n".to_string(),
+        lower_bound: "9223372036854775808".to_string(),
+        upper_bound: "9".to_string(),
+        num_partitions: 4,
+    };
+    assert_eq!(
+        bound.bounds().expect_err("past i64").to_string(),
+        "`lowerBound` must be a 64-bit integer"
+    );
+}
+
+#[test]
+fn strides_above_the_ceiling_refuse_after_sparks_shrink() {
+    assert_eq!(MAX_STRIDES, 10_000);
+    let at_the_ceiling = stride_cuts(0, 10_000_000, MAX_STRIDES).expect("planned");
+    assert_eq!(at_the_ceiling.len(), 9_999);
+    let above = stride_cuts(0, 10_000_000, MAX_STRIDES + 1).expect_err("above the ceiling");
+    assert_eq!(
+        refusal(above.clone()),
+        PartitionRefusal::TooManyStrides { strides: 10_001 }
+    );
+    let message = above.to_string();
+    assert!(message.contains(PARTITIONED_READ_ROW), "{message}");
+    assert!(message.contains("at most 10000 strides"), "{message}");
+    assert_eq!(
+        Error::from(above).exception_class(),
+        ErrorClass::Unsupported
+    );
+
+    let int_max = i64::from(i32::MAX);
+    assert_eq!(stride_cuts(0, 3, int_max).expect("shrunk to 3"), [1, 2]);
+    let shrunk_to_the_ceiling = stride_cuts(0, MAX_STRIDES, int_max).expect("shrunk to 10000");
+    assert_eq!(shrunk_to_the_ceiling.len(), 9_999);
+    let shrunk_above = stride_cuts(0, MAX_STRIDES + 1, int_max).expect_err("shrunk to 10001");
+    assert_eq!(
+        refusal(shrunk_above),
+        PartitionRefusal::TooManyStrides { strides: 10_001 }
+    );
+    let wrapped = stride_cuts(i64::MIN, i64::MAX, MAX_STRIDES + 1).expect_err("an overflowed span");
+    assert_eq!(
+        refusal(wrapped),
+        PartitionRefusal::TooManyStrides { strides: 10_001 }
+    );
+    assert!(stride_cuts(0, 200, 1).expect("one stride").is_empty());
 }

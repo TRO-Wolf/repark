@@ -310,6 +310,39 @@ def test_what_stays_declared_refuses_naming_its_row(
         )
 
 
+def test_num_partitions_is_sparks_int_and_strides_have_a_ceiling(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    conn, names = pg_live
+    _, target = _wide(conn, names, rows=50)
+    past_int: list[Callable[[], Any]] = [
+        lambda: _jdbc(spark, target, "k", (0, 1000, 3_000_000_000)),
+        lambda: _options(
+            spark,
+            dbtable=target,
+            partitionColumn="k",
+            lowerBound="0",
+            upperBound="1000",
+            numPartitions="3000000000",
+        ).load(),
+    ]
+    for attempt in past_int:
+        with pytest.raises(errors.NumberFormatException, match="`numPartitions` must be a 32-bit"):
+            attempt()
+    shrunk = _jdbc(spark, target, "k", (0, 3, 2_147_483_647))
+    assert "strides=3, " in shrunk._explain_text()
+    assert shrunk.count() == 50
+    at_the_ceiling = _jdbc(spark, target, "id", (0, 10_000_000, 10_000))
+    assert "strides=10000, " in at_the_ceiling._explain_text()
+    for count, bounds in ((10_001, (0, 10_000_000)), (2_147_483_647, (0, 10_001))):
+        with pytest.raises(errors.UnsupportedOperationException) as excinfo:
+            _jdbc(spark, target, "id", (*bounds, count))
+        message = str(excinfo.value)
+        assert ROW in message
+        assert "10001 strides" in message
+        assert "at most 10000 strides" in message
+
+
 def test_filter_projection_and_limit_compose_with_the_strides(
     spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
 ) -> None:

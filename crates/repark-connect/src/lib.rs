@@ -33,7 +33,7 @@ pub use error::{
 };
 pub use ident::{DEFAULT_SCHEMA, IdentRefusal, MAX_IDENT_BYTES, PgIdent, QualifiedRelation};
 pub use partition::{
-    LOWER_BOUND_KEY, NUM_PARTITIONS_KEY, PARTITION_COLUMN_KEY, PARTITIONED_READ_ROW,
+    LOWER_BOUND_KEY, MAX_STRIDES, NUM_PARTITIONS_KEY, PARTITION_COLUMN_KEY, PARTITIONED_READ_ROW,
     PartitionOptions, PartitionRefusal, PartitionSpec, Stride, UPPER_BOUND_KEY, stride_cuts,
     strides,
 };

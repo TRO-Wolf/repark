@@ -25,6 +25,13 @@ See [../map.md](../map.md).
   shapes byte for byte, the `int8` cast on every cut, the NULL test on the first stride
   alone, a stride after a pushed conjunct with projection and `LIMIT` kept, and the refusals
   past the slot bound. pins: c-3/C-002, C-003, C-004
+- `partition.rs` — **C-3 fold 1 (2026-10-08):** `num_partitions_is_sparks_32_bit_int` (the
+  `Int` extremes parse; `3000000000`, one past either extreme, padded text and a fraction refuse
+  as `NumberFormat` naming the option, from the property and from a door's integer) and
+  `strides_above_the_ceiling_refuse_after_sparks_shrink` (10 000 strides plan, 10 001 refuse
+  naming the row and the ceiling; `Int.MaxValue` over a span of 3 is Spark's three strides,
+  over a span of 10 000 plans, over 10 001 refuses; an overflowed span keeps the count and
+  refuses). pins: c-3/C-010
 - `partition_plan.rs`, `partition.rs` — **C-3 fold 1 (2026-10-08):**
   `a_declared_column_type_refuses_naming_the_row_whatever_the_bound_spelling` (a `date`,
   `timestamp` or `timestamptz` column with Spark's date text, its timestamp text, integers or

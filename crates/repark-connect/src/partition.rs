@@ -12,6 +12,8 @@ pub const UPPER_BOUND_KEY: &str = "upperBound";
 pub const NUM_PARTITIONS_KEY: &str = "numPartitions";
 pub const PARTITIONED_READ_ROW: &str = "CONNECT-DECL-pg-partitioned-read";
 
+pub const MAX_STRIDES: i64 = 10_000;
+
 const PRECISION: u32 = 34;
 const STRIDE_SCALE: i32 = 18;
 const MAX_QUOTIENT_STEPS: u32 = 160;
@@ -43,6 +45,9 @@ pub enum PartitionRefusal {
         postgres_type: &'static str,
     },
     Strides,
+    TooManyStrides {
+        strides: i64,
+    },
 }
 
 impl fmt::Display for PartitionRefusal {
@@ -54,8 +59,19 @@ impl fmt::Display for PartitionRefusal {
                  'numPartitions'",
             ),
             PartitionRefusal::NotInteger { option } => {
-                write!(f, "`{option}` must be a 64-bit integer")
+                let bits = if *option == NUM_PARTITIONS_KEY {
+                    32
+                } else {
+                    64
+                };
+                write!(f, "`{option}` must be a {bits}-bit integer")
             }
+            PartitionRefusal::TooManyStrides { strides } => write!(
+                f,
+                "a partitioned read of {strides} strides is declared but not supported yet: at \
+                 most {MAX_STRIDES} strides run under one snapshot; lower `numPartitions` \
+                 (registry row {PARTITIONED_READ_ROW} in {REGISTRY})"
+            ),
             PartitionRefusal::Reversed { lower, upper } => write!(
                 f,
                 "Operation not allowed: the lower bound of partitioning column is larger than \
@@ -107,7 +123,7 @@ pub struct PartitionOptions {
     pub column: Option<String>,
     pub lower_bound: Option<String>,
     pub upper_bound: Option<String>,
-    pub num_partitions: Option<i64>,
+    pub num_partitions: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,7 +131,7 @@ pub struct PartitionSpec {
     pub column: String,
     pub lower_bound: String,
     pub upper_bound: String,
-    pub num_partitions: i64,
+    pub num_partitions: i32,
 }
 
 impl PartitionSpec {
@@ -168,20 +184,31 @@ fn integer(option: &'static str, text: &str) -> Result<i64> {
     }
 }
 
+fn not_a_count() -> PartitionRefusal {
+    PartitionRefusal::NotInteger {
+        option: NUM_PARTITIONS_KEY,
+    }
+}
+
 impl PartitionOptions {
-    #[must_use]
+    #[allow(clippy::missing_errors_doc)]
     pub fn of(
         column: Option<String>,
         lower_bound: Option<i64>,
         upper_bound: Option<i64>,
         num_partitions: Option<i64>,
-    ) -> PartitionOptions {
-        PartitionOptions {
+    ) -> Result<PartitionOptions> {
+        let num_partitions = match num_partitions.map(i32::try_from) {
+            None => None,
+            Some(Ok(count)) => Some(count),
+            Some(Err(_)) => return refuse(not_a_count()),
+        };
+        Ok(PartitionOptions {
             column,
             lower_bound: lower_bound.map(|bound| bound.to_string()),
             upper_bound: upper_bound.map(|bound| bound.to_string()),
             num_partitions,
-        }
+        })
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -199,7 +226,10 @@ impl PartitionOptions {
         let lower = take_key(props, LOWER_BOUND_KEY)?;
         let upper = take_key(props, UPPER_BOUND_KEY)?;
         let count = match take_key(props, NUM_PARTITIONS_KEY)? {
-            Some(text) => Some(integer(NUM_PARTITIONS_KEY, &text)?),
+            Some(text) => match text.parse::<i32>() {
+                Ok(count) => Some(count),
+                Err(_) => return refuse(not_a_count()),
+            },
             None => None,
         };
         Ok(PartitionOptions {
@@ -438,6 +468,9 @@ pub fn stride_cuts(lower: i64, upper: i64, num_partitions: i64) -> Result<Vec<i6
     } else {
         span
     };
+    if count > MAX_STRIDES {
+        return refuse(PartitionRefusal::TooManyStrides { strides: count });
+    }
     let cuts = spark_cuts(lower, upper, count).filter(|cuts| {
         cuts.windows(2)
             .all(|pair| matches!(pair, [low, high] if low < high))

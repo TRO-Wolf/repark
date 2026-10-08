@@ -6,6 +6,17 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
+- `partition.rs` — **C-3 fold 1 (2026-10-08), the verifier's S2 on the count:**
+  `numPartitions` is Spark's 32-bit `Int` (`C3-N07`: `3000000000` is `NumberFormatException`):
+  `PartitionOptions.num_partitions` is an `i32`, `with_props` parses the text as one and
+  `PartitionOptions::of` refuses a door's integer outside it, both as
+  `PartitionRefusal::NotInteger` naming `numPartitions` ("must be a 32-bit integer"; a bound
+  says 64). **`MAX_STRIDES` = 10 000**: `stride_cuts` refuses a stride count above it with
+  `TooManyStrides { strides }`, which names `PARTITIONED_READ_ROW` and the ceiling and folds
+  to `NotImplemented`. The ceiling applies to the count **after** Spark's shrink to the span,
+  so `2147483647` over a span of 3 is three strides as Spark plans it (`C3-N08`). The reason:
+  every stride is one statement under one open `REPEATABLE READ` snapshot, and each costs
+  client memory; the measurements are the C-3 ledger's §7. pins: c-3/C-010
 - `partition.rs` — **C-3 fold 1 (2026-10-08), the verifier's S2 on bound spelling:** the two
   bounds stay text until the column is known, as Spark keeps them. `PartitionOptions` and
   `PartitionSpec` carry `lower_bound` and `upper_bound` as `String`; `with_props` lifts them

@@ -20,6 +20,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
   under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
   `<schema>.<table>`, and a `query` is named `jdbc`. pins: c-2/C-116
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** `PartitionOptions::of` is fallible: a
+  `num_partitions` outside Spark's 32-bit `Int` refuses before any connection.
+  pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
   from its integer arguments; bounds given as text in `properties` reach
   `PostgresTable::partitioned` unparsed, so they are judged after the column's type.
