@@ -48,6 +48,9 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   **WO-C2 (2026-09-23):** after an `SQL error: ` prefix, the parser-error wrapper is
   removed before reading a leading condition. Native `SHOW CREATE TABLE` parse refusals now
   expose `INVALID_STATEMENT_OR_CLAUSE` through the same API as planning refusals.
+  **MB-4 round 2b (2026-10-08):** re-exports the native `StreamingQueryException` and
+  `RecoveryRequiredException` with structured-method loop entries and `__module__` re-homing.
+  pins: mb-4/C-022
   pins: wo-c2/C-005
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** re-exports `CommitStateUnknownException`
   (`PySparkException` subclass, `operation_id` attribute) for the ambiguous-commit alert

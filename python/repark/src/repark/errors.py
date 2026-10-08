@@ -29,6 +29,8 @@ from repark._native import (
     NumberFormatException,
     ParseException,
     PySparkException,
+    RecoveryRequiredException,
+    StreamingQueryException,
     UnsupportedOperationException,
 )
 
@@ -103,6 +105,8 @@ for _native_exception_type in (
     IllegalArgumentException,
     NumberFormatException,
     CommitStateUnknownException,
+    StreamingQueryException,
+    RecoveryRequiredException,
 ):
     if not hasattr(_native_exception_type, "getCondition"):
         _native_exception_type.getCondition = _native_get_condition  # type: ignore[attr-defined]
@@ -341,6 +345,8 @@ for _exception_type in (
     IllegalArgumentException,
     NumberFormatException,
     CommitStateUnknownException,
+    StreamingQueryException,
+    RecoveryRequiredException,
 ):
     _exception_type.__module__ = __name__
 del _exception_type
@@ -359,5 +365,7 @@ __all__ = [
     "PySparkRuntimeError",
     "PySparkTypeError",
     "PySparkValueError",
+    "RecoveryRequiredException",
+    "StreamingQueryException",
     "UnsupportedOperationException",
 ]

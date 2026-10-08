@@ -28,6 +28,7 @@ mod session_sources;
 mod session_tests;
 mod session_write_options;
 mod streaming;
+mod streaming_errors;
 mod subquery;
 mod temp_view_names;
 mod text_io;
