@@ -63,6 +63,10 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   lock type is not named) and takes one state snapshot per batch frame, building the frame as
   `SessionContext::read_table` does. A source therefore never keeps its session alive; a
   batch planned after the session ended refuses `Catalog` naming that. pins: mb-3/C-021
+  **MB-3 fold 2 (2026-10-08):** `with_catalog_timeout` gives the source a limit for its one
+  `load_table` call per planning call; past it the call fails `CatalogTimeout` (`load the
+  source`). The manifest walk after the load is not bounded. A source opened without it (the
+  streaming frame, the MB-1 pins) is unbounded as before. pins: mb-3/C-025
   pins: mb-1/C-014, C-015, C-016
   **MB-1 fold 1 round B (2026-10-07):** the source holds the catalog handle
   and the `TableIdent`, not a `Table`. `initial_offset` and `next_batch`

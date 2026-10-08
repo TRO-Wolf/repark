@@ -361,7 +361,9 @@ impl StreamingQueryManager {
         let sink_uuid = TableUuid::of(&table);
         let id = QueryId::derive(sink_uuid, spec.query_name.as_deref());
         let opening = MicroBatchSource::open(session, &spec.source, spec.source_options);
-        let source = bounded(limit, "open the source", opening).await?;
+        let source = bounded(limit, "open the source", opening)
+            .await?
+            .with_catalog_timeout(limit);
         let door = match spec.sink {
             SinkSpec::Table { .. } => Door::Table,
             SinkSpec::ForeachBatch { body, .. } => Door::ForeachBatch(body),

@@ -5,19 +5,22 @@ use std::time::Duration;
 use iceberg::TableIdent;
 use repark_iceberg::microbatch::error::{MicroBatchError, RecoveryReason};
 use repark_iceberg::microbatch::offset::Epoch;
+use repark_iceberg::microbatch::window::WindowLimit;
 use tokio::sync::Semaphore;
 
 use crate::microbatch::driver::{
     BatchBody, QueryHandle, QueryState, ShutdownOutcome, SinkSpec, StreamSpec,
     StreamingQueryManager, Trigger,
 };
-use crate::microbatch::lifecycle_tests::{BOUND, Mode, Probe, ended, eventually};
+use crate::microbatch::lifecycle_tests::{BOUND, Mode, Probe, ended, eventually, foreach};
 use crate::microbatch::table_door_tests::{
     ARMED_STALL_LANDED, ARMED_STALL_LOST, FLAKY_SINK, FLAKY_SOURCE, LoadHook, flaky,
 };
 use crate::microbatch::testing::{Fixture, SINK, SOURCE, options, stamped_epochs};
+use crate::time_travel::microbatch_source::MicroBatchSource;
 
 const LIMIT: Duration = Duration::from_millis(100);
+const SNAPSHOTS: i64 = 30;
 
 fn stall_from(name: &'static str, nth: usize) -> LoadHook {
     let seen = Arc::new(AtomicUsize::new(0));
@@ -90,15 +93,10 @@ async fn a_stalled_read_fails_the_batch_and_never_advances_the_offset() {
     for (trigger, table, nth, call) in [
         (Trigger::Once, "silver", 0, "load the sink"),
         (Trigger::Once, "silver", 1, "load the sink"),
-        (Trigger::Once, "orders", 0, "read the source's start"),
-        (Trigger::Once, "orders", 1, "plan the batch"),
-        (
-            Trigger::AvailableNow,
-            "orders",
-            1,
-            "fix the availableNow end",
-        ),
-        (Trigger::AvailableNow, "orders", 2, "plan the batch"),
+        (Trigger::Once, "orders", 0, "load the source"),
+        (Trigger::Once, "orders", 1, "load the source"),
+        (Trigger::AvailableNow, "orders", 1, "load the source"),
+        (Trigger::AvailableNow, "orders", 2, "load the source"),
     ] {
         let fixture = Fixture::new().await;
         fixture.insert(SOURCE, "(1)").await;
@@ -182,6 +180,57 @@ async fn a_stalled_commit_goes_to_the_unknown_outcome_walk() {
             assert_eq!(fixture.ids(SINK).await, [1, 2]);
         }
     }
+}
+
+async fn timed_walk(source: &MicroBatchSource) -> Duration {
+    let from = source
+        .initial_offset()
+        .await
+        .expect("the start plans")
+        .expect("the source has data");
+    let began = std::time::Instant::now();
+    source
+        .next_batch(&from, WindowLimit::Unbounded)
+        .await
+        .expect("the walk plans")
+        .expect("a batch");
+    began.elapsed()
+}
+
+#[tokio::test]
+async fn a_walk_longer_than_the_timeout_succeeds_over_a_fast_catalog() {
+    let fixture = Fixture::new().await;
+    for value in 0..SNAPSHOTS {
+        fixture.insert(SOURCE, &format!("({value})")).await;
+    }
+    let source = MicroBatchSource::open(&fixture.session, SOURCE, options(&[]))
+        .await
+        .expect("the source opens");
+    timed_walk(&source).await;
+    let limit = timed_walk(&source).await / 3;
+    assert!(limit > Duration::from_millis(1), "the walk is too short");
+    let body = Probe::new(Mode::Record);
+    let mut spec = foreach(&body, Trigger::Once, &[]);
+    spec.catalog_timeout = limit;
+    let handle = registered(&fixture, spec).await;
+    handle.start_below_catalog_check().expect("start");
+    let ending = ended(&handle).await;
+    let seen = body.seen();
+    assert_eq!(seen.len(), 1, "the walk outlived {limit:?}: {ending:?}");
+    assert_eq!(i64::try_from(seen[0].1.len()), Ok(SNAPSHOTS));
+    assert!(
+        match &ending {
+            Ok(drained) => *drained,
+            Err(error) => matches!(
+                error.as_ref(),
+                MicroBatchError::RecoveryRequired {
+                    reason: RecoveryReason::CommitOutcomeUnknown { .. },
+                    ..
+                }
+            ),
+        },
+        "{ending:?}"
+    );
 }
 
 #[tokio::test]

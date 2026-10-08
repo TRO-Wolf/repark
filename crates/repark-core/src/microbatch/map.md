@@ -88,7 +88,8 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
   - *Every catalog call is bounded* (round 2, 2026-10-08, ledger C-010). `StreamSpec` carries
     `catalog_timeout` (`DEFAULT_CATALOG_TIMEOUT`, 60 s; MB-4 maps `repark.cdc.catalog-timeout`
     onto it). `bounded` wraps one call and fails `CatalogTimeout { call, waited }`. `register`
-    bounds the sink load and the source open, and `stop` bounds its re-read of the sink after a
+    bounds the sink load and the source open and hands the limit to the source
+    (`with_catalog_timeout`, fold 2), and `stop` bounds its re-read of the sink after a
     stop timeout, falling back to the durable record it knows. pins: mb-3/C-010
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
@@ -126,15 +127,15 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
     pins: mb-3/C-018
   **Round 2 (2026-10-08):**
   - *The bounded calls.* Each catalog call of the task runs under `catalog_timeout`: the sink
-    load (`load_sink`: at start, at each batch's scope, after a `foreachBatch` body, and in
-    the unstamped check), the source's start (`read the source's start`), the `availableNow`
-    end (`fix the availableNow end`) and each window (`plan the batch`). A timed-out read
+    load (`load_sink`: at start, at each batch's scope and after a `foreachBatch` body) and
+    the source's one catalog load inside each planning call (`load the source`, bounded inside
+    `MicroBatchSource` since fold 2, 2026-10-08, so the manifest walk after the load is not
+    under the timeout). A timed-out read
     fails the batch with `CatalogTimeout` before the offset moves. A commit that times out
     (the trailing stamp, the `toTable` append) is an unknown outcome: it goes to
     `resolve_unknown_outcome` with no operation id, which finds the landed commit by its
-    record or ends `RecoveryRequired(CommitOutcomeUnknown)`; the walk is bounded too. The
-    bound on a source call covers that call's manifest reads as well as its catalog load,
-    because the load lives inside the source (ledger D-16). pins: mb-3/C-010
+    record or ends `RecoveryRequired(CommitOutcomeUnknown)`; the walk is bounded too
+    (ledger D-16). pins: mb-3/C-010, C-025, C-027
   - *A fresh sink for every batch.* `enter_scope` loads the sink for each batch, the `toTable`
     door stages and commits on that handle, and the `foreachBatch` door loads it again after
     the body before the trailing stamp. No handle is kept across batches, so an epoch never

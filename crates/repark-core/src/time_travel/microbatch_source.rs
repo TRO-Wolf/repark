@@ -2,6 +2,7 @@ use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, HashSet};
 use std::num::{NonZeroU32, NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
+use std::time::Duration;
 
 use datafusion::datasource::provider_as_source;
 use datafusion::execution::session_state::SessionState;
@@ -244,6 +245,7 @@ pub struct MicroBatchSource {
     caps: ReadCaps,
     start: StartPosition,
     read_schema: SchemaRef,
+    catalog_timeout: Option<Duration>,
 }
 
 async fn load_table(
@@ -295,11 +297,28 @@ impl MicroBatchSource {
             caps: options.caps,
             start: options.start,
             read_schema: opened.metadata().current_schema().clone(),
+            catalog_timeout: None,
         })
     }
 
+    #[must_use]
+    pub fn with_catalog_timeout(mut self, limit: Duration) -> Self {
+        self.catalog_timeout = Some(limit);
+        self
+    }
+
     async fn load(&self) -> Result<Table, MicroBatchError> {
-        load_table(&self.catalog, &self.ident, &self.name).await
+        let loading = load_table(&self.catalog, &self.ident, &self.name);
+        let Some(limit) = self.catalog_timeout else {
+            return loading.await;
+        };
+        match tokio::time::timeout(limit, loading).await {
+            Ok(loaded) => loaded,
+            Err(_) => Err(MicroBatchError::CatalogTimeout {
+                call: "load the source",
+                waited: limit,
+            }),
+        }
     }
 
     #[allow(clippy::missing_errors_doc)]

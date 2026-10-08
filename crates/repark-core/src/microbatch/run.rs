@@ -1,4 +1,3 @@
-use std::future::Future;
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -59,8 +58,6 @@ struct Cursor {
     from: Option<InputOffset>,
 }
 
-const PLAN_BATCH: &str = "plan the batch";
-
 enum Wake {
     Tick,
     Stop,
@@ -93,16 +90,13 @@ impl Run {
         self.shared.finish(ending);
     }
 
-    async fn bounded<T>(
-        &self,
-        call: &'static str,
-        work: impl Future<Output = Result<T, MicroBatchError>>,
-    ) -> Result<T, MicroBatchError> {
-        bounded(self.shared.catalog_timeout, call, work).await
-    }
-
     async fn load_sink(&self) -> Result<Table, MicroBatchError> {
-        self.bounded(LOAD_SINK, self.shared.sink.load()).await
+        bounded(
+            self.shared.catalog_timeout,
+            LOAD_SINK,
+            self.shared.sink.load(),
+        )
+        .await
     }
 
     async fn available_now_target(
@@ -112,8 +106,7 @@ impl Run {
         let Some(from) = self.start_offset(cursor).await? else {
             return Ok(None);
         };
-        let walk = self.source.available_now_target(&from);
-        self.bounded("fix the availableNow end", walk).await
+        self.source.available_now_target(&from).await
     }
 
     async fn trigger_loop(&self) -> Result<Ending, MicroBatchError> {
@@ -276,8 +269,7 @@ impl Run {
         cursor: &mut Cursor,
     ) -> Result<Option<InputOffset>, MicroBatchError> {
         if cursor.from.is_none() {
-            let start = self.source.initial_offset();
-            cursor.from = self.bounded("read the source's start", start).await?;
+            cursor.from = self.source.initial_offset().await?;
         }
         Ok(cursor.from.clone())
     }
@@ -290,17 +282,16 @@ impl Run {
         let Some(from) = self.start_offset(cursor).await? else {
             return Ok(None);
         };
-        let limit = match (self.shared.trigger, target) {
+        match (self.shared.trigger, target) {
             (Trigger::AvailableNow, Some(target)) => {
-                let window = self.source.next_batch_until(&from, target);
-                return self.bounded(PLAN_BATCH, window).await;
+                self.source.next_batch_until(&from, target).await
             }
-            (Trigger::AvailableNow, None) => return Ok(None),
-            (Trigger::Once, _) => WindowLimit::Unbounded,
-            (Trigger::ProcessingTime(_), _) => WindowLimit::Capped,
-        };
-        let window = self.source.next_batch(&from, limit);
-        self.bounded(PLAN_BATCH, window).await
+            (Trigger::AvailableNow, None) => Ok(None),
+            (Trigger::Once, _) => self.source.next_batch(&from, WindowLimit::Unbounded).await,
+            (Trigger::ProcessingTime(_), _) => {
+                self.source.next_batch(&from, WindowLimit::Capped).await
+            }
+        }
     }
 
     async fn run_batch(
