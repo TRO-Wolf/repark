@@ -27,3 +27,12 @@ product code lives here; the product rounds pin against these files.
 - [grid-head.json](grid-head.json) — the head leg: the same 1,090 cells on
   branch `fix/using-per-side-keys-1` after both doors were built, recorded
   2026-10-08.
+- [corpus.py](corpus.py) — fold 1 (2026-10-08): records the differential
+  corpus of `python/repark/tests/_using_corpus.py`. Usage
+  `corpus.py <spark|repark> <out.json>`; the two recordings the pin reads are
+  beside the test (`using_per_side_keys_1_corpus_spark.json`, Spark 4.1.2, and
+  `…_main.json`, a `main` `3fbcb2ca` build). Ruff-clean; no comments.
+- [mixed.py](mixed.py) — fold 1: the shown key's type and values for 14 pairs
+  of key types in both orders on four join types (112 cells). Usage as above;
+  the recordings are `using_per_side_keys_1_mixed_spark.json` and
+  `…_mixed_main.json` beside the tests. Ruff-clean; no comments.

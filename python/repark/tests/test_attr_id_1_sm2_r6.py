@@ -355,21 +355,25 @@ def test_semi_anti_using_refuse_right_key_unresolved(tmp_path: Path, how: str) -
 
 
 @pytest.mark.parametrize(
-    ("how", "star", "right_keys"),
+    ("how", "shown", "star", "right_keys"),
     [
-        ("left", [(1,), (2,)], [("2",), (None,)]),
-        ("right", [(2,), (3,)], [("2",), ("3",)]),
-        ("full", [(1,), (2,), (3,)], [("2",), ("3",), (None,)]),
+        ("left", "int", [(1,), (2,)], [("2",), (None,)]),
+        ("right", "string", [("2",), ("3",)], [("2",), ("3",)]),
+        ("full", "bigint", [(1,), (2,), (3,)], [("2",), ("3",), (None,)]),
     ],
 )
-def test_mixed_type_using_keeps_the_left_key_type(
-    tmp_path: Path, how: str, star: list[tuple[Any, ...]], right_keys: list[tuple[Any, ...]]
+def test_mixed_type_using_shows_sparks_key_type(
+    tmp_path: Path,
+    how: str,
+    shown: str,
+    star: list[tuple[Any, ...]],
+    right_keys: list[tuple[Any, ...]],
 ) -> None:
     session = sm2._open(tmp_path, f"sm2-r6-mixed-{how}")
     left = session.createDataFrame([(1,), (2,)], "id INT")
     right = session.createDataFrame([("2",), ("3",)], "id STRING")
     frame = left.alias("l").join(right.alias("r"), "id", how)
-    assert frame.schema.simpleString() == "struct<id:int>"
+    assert frame.schema.simpleString() == f"struct<id:{shown}>"
     assert _rows(frame.select("*")) == star
     assert _rows(frame.select("r.id")) == right_keys
     session.stop()
