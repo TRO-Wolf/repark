@@ -29,12 +29,12 @@ orchestrator's departure move).
 | C-003 | The cross door (`crossJoin`, `join` with no condition or no keys, `how="cross"`) plans natively when both sides are exact, with the SQL route's schema, column names, attribute ids, rows, session state and plan text. | `test_cross_join_plans_natively_with_the_sql_route_answers`. | **PROVEN** |
 | C-004 | A side that is not exact keeps the SQL route: a field or output name outside `[A-Za-z_][A-Za-z0-9_]*`, two fields equal under case folding, an output source the side does not hold exactly once, or a scratch alias that is not the three-part home reference. | `inexact_joins_are_left_to_the_sql_route`, `test_cross_join_over_an_inexact_side_keeps_the_sql_route`; mutation M6 below. | **PROVEN** |
 | C-005 | A native attempt that raises is a miss: the SQL route runs unchanged, so a refusal carries the SQL route's class and text. | `test_raising_native_cross_join_keeps_the_sql_route_answer`, `a_map_key_refuses_on_both_routes`. | **PROVEN** |
-| C-006 | The native join carries the session state of the join call, as `sql_built` does, not the left frame's older snapshot: a `spark.sql.caseSensitive` change between the frame and the join shows on the joined frame on both routes. | `test_native_cross_join_carries_the_session_state_of_the_join_call`; mutation M4 below. | **PROVEN** |
+| C-006 | The native join carries the session state of the join call, as `sql_built` does, not the left frame's older snapshot: a `spark.sql.caseSensitive` change between the frame and the join shows on the joined frame on both routes. | `test_native_cross_join_carries_the_session_state_of_the_join_call`, `native_join_carries_the_live_session_state`; mutations M4, M8 below. | **PROVEN** |
 | C-007 | The condition door plans natively when the prepared condition is exactly one equality between one left field and one right field, `(l.f = r.g)` in either operand order, with the SQL route's schema, column names, attribute ids, rows and plan text over six join types; every other condition keeps the SQL route unchanged, and a refusal carries the SQL route's class and text. | `test_exact_join_keys_are_one_equality_between_the_two_sides`, `test_exact_key_join_plans_natively_with_the_sql_route_answers`, `test_inexact_join_conditions_keep_the_sql_route`, `test_join_refusals_are_the_sql_route_refusals`; mutations M1, M2 below. | **PROVEN** |
-| C-008 | Answers: the attr-id, sort, fill and self-join suites, the 394-cell sort grid and the replay corpus are unchanged. | Does every answer gate come back identical on the final code? Step 4. | **OPEN** |
-| C-009 | The stamp is measured and left: 39,731 of the 43,194 stamp calls on the like cells find the plan stamped and cost 0.16 s together, so no short-circuit can gain more than 0.7 point; field metadata is Arrow's owned map and cannot be shared from this repository; and the hash-table clones the earlier attribution read as field metadata are mostly the session registries, which C-010 removes. | The step 2 table below. | **PROVEN** |
+| C-008 | Answers are unchanged: the replay corpus shows zero deterministic changes over 43,989 cells, the attr-id, sort, fill, self-join and join suites give main's counts plus this unit's pins, and the 394-cell sort grid is identical. | The answers table below. | **PROVEN** |
+| C-009 | The stamp is measured and left: 39,731 of the 43,194 stamp calls on the like cells find the plan stamped and cost 0.16 s together, so no short-circuit can gain more than 0.7 point; field metadata is Arrow's owned map and cannot be shared from this repository; and the hash-table clones the earlier attribution read as field metadata include the session registries that `frame_rule` cloned per bound column (1.7 of the 7.5 points of hash-table clone and drop time on the like cells), which C-010 removes. | The step 2 table below. | **PROVEN** |
 | C-010 | Binding has one measured hot spot, in the native binder: `frame_rule` built a DataFusion `TaskContext` (the session configuration and four function registries, about 12 µs) for every bound column, 72 % of a native `select`. `PyDataFrame` now reads the rule once per handle and hands it to children that keep the parent's state. The value is the one every call read, so no answer changes. | `name_rule_is_read_once_per_handle_and_children_inherit_their_parents`, `test_frames_keep_the_case_rule_of_their_own_session_state`; the debug assertion in `inherit_rule` under the binding's 158 tests; mutation M7 below; the step 3 table below. | **PROVEN** |
-| C-011 | Speed, lane side: the r5p6 family and the whole like set, three runs each, head against main. | What are the indicative ratios? Step 5. | **OPEN** |
+| C-011 | Speed, lane side, indicative only: against main `3fbcb2ca` the r5p6 family runs at 0.953 and the whole set at 0.948 (cell medians of three interleaved runs under the build lock; one run was taken under a load spike). On the gate record's like set that is 0.970 for r5p6 and 0.967 for the whole set. | The speed table below. | **PROVEN** |
 
 ## Step 0: where the time goes on main `3fbcb2ca` (C-001)
 
@@ -146,8 +146,9 @@ session-state clone for the new `DataFrame`.
 `hashbrown::RawTable::clone` as field metadata maps. `perf` with DWARF call graphs on a
 `select` loop puts the hash-table clones and drops under `TaskContext::from(&SessionState)`
 and its drop. On the like cells, hash-table clone plus drop self time is 7.5 % of all samples
-before C-010 and 5.8 % after. What remains is the one session-state clone DataFusion needs for
-every child `DataFrame`, the state snapshots of `sql` and `sql_built`, and the real field maps.
+before C-010 and 5.8 % after. What remains holds the one session-state clone DataFusion needs
+for every child `DataFrame`, the state snapshots of `sql` and `sql_built`, and the real field
+maps. Their split was not measured.
 
 ## Step 3: binding (C-010)
 
@@ -186,18 +187,125 @@ builders that make it from a clone of the parent through the DataFrame API, and 
 builds that the inherited rule equals the child's own; the binding's tests run with it. Frames
 from `sql`, `sql_built` and the native join start unread and read their own state.
 
+## Answers (C-008)
+
+| Check | Result |
+|---|---|
+| Replay corpus, 24 families, three runs a side (`replay_work.py`), head against main `3fbcb2ca` | 43,989 cells on both sides, 0 deterministic differences, no cell on one side only |
+| Join, attr-id, sort, fill and self-join suites (136 files, `-n 8`, release) on main | 5,149 passed, 180 skipped, 116 xfailed |
+| The same suites after the cross door | 5,153 passed, 180 skipped, 116 xfailed (main plus 4 pins) |
+| The same suites after the condition door | 5,157 passed, 180 skipped, 116 xfailed (main plus 8 pins) |
+| The same suites on the final code | 5,158 passed, 180 skipped, 116 xfailed (main plus 9 pins) |
+| Sort grid (`reverify2/sort4`, 394 cells) | 394/394 equal to `s4_orch.json`, to `s4_sm2d.json` and to a main run of the same day |
+| `cargo test -p repark-core -p repark-spark -p repark-python --lib` | 1,273 passed and 1 ignored; 2,630 passed and 5 ignored; 158 passed |
+
+## Speed, lane side (C-011)
+
+Indicative only; the gate record is the orchestrator's quiet three-run. Release builds of main
+`3fbcb2ca` and of head in this clone's venv (the main side reads a frozen copy of main's
+sources with its own native module), interleaved main then head, three rounds, the build lock
+held, `l4l_gate.py`'s method. Other lanes loaded the box throughout (load 4.5–17.8); round 1 of
+the head side ran under the spike and is the outlier in every row.
+
+| Set | Cells | Per-run ratio | Cell-median main | Cell-median head | Ratio |
+|---|---|---|---|---|---|
+| r5p6, every cell alike between the two builds | 20,386 | 1.290, 0.923, 0.944 | 38.88 s | 37.05 s | **0.953** |
+| whole set, every cell alike | 43,889 | 1.134, 0.928, 0.944 | 77.45 s | 73.40 s | **0.948** |
+| r5p6, the gate record's like set | 12,272 | 1.286, 0.940, 0.962 | 19.52 s | 18.93 s | **0.970** |
+| whole set, the gate record's like set | 26,032 | 1.131, 0.951, 0.963 | 41.84 s | 40.43 s | **0.967** |
+
+After step 1 alone (the two doors, before the rule cache), three r5p6 rounds gave 1.081,
+0.963, 0.961 over the 20,386 cells, cell-median 0.963: a gain above the 1-point bar, so steps
+2 and 3 ran.
+
+**Inferred, not measured:** multiplying the gate record's 1.135 (stack against main `575f57ca`)
+by 0.970 puts r5p6 near 1.10 against that older main, and the whole like set near 1.04 from
+1.077. The two factors come from different days and builds.
+
+By family, cell medians, head less main: r5p6 −1.83 s, r5p6t −0.65 s, r5p9 −0.55 s,
+r5p7 −0.37 s, r5p10 −0.32 s, r3 −0.11 s, r2 −0.10 s, r1 −0.09 s; no family above +0.02 s.
+
 ## Mutations (red-first)
 
-Filed with the answers and the speed runs in the unit's last commit.
+| ID | Mutation | Red |
+|---|---|---|
+| M1 | `_join_exact_keys` stops checking the placeholder shape, so a non-exact condition is admitted (the brief's first; also run as "any operator between the two references") | `test_exact_join_keys_are_one_equality_between_the_two_sides` and the differential `test_inexact_join_conditions_keep_the_sql_route`, both runs |
+| M2 | A refusal shape is routed natively: `_join_exact_plan` lets a raising native attempt through (the brief's second). Rust twin: `analyze_built_plan` drops `refuse_map_ordering` | `test_join_refusals_are_the_sql_route_refusals` (the map key) and `test_raising_native_cross_join_keeps_the_sql_route_answer`; the twin reds `a_map_key_refuses_on_both_routes` |
+| M3 | `analyze_built_plan` skips the eager analysis | `unanalyzed_sides_are_analyzed_as_the_sql_route_analyzes_them`, `exact_key_join_builds_the_sql_route_plan_for_every_key_type_and_how` |
+| M4 | The native join keeps the left frame's session state | `native_join_carries_the_live_session_state` |
+| M5 | The projection aliases every output, equal names included | all three plan-equality pins |
+| M6 | The case-twin guard is dropped | `inexact_joins_are_left_to_the_sql_route` |
+| M7 | The rule cache reads a constant instead of the frame's state | `name_rule_is_read_once_per_handle_and_children_inherit_their_parents` |
+| M8 | The native join's frame inherits its left side's rule | `native_join_carries_the_live_session_state` (the debug assertion in `inherit_rule`) |
+| M9 | The written operand order is ignored: in the builder, and separately in `_join_exact_keys` | `exact_key_join_builds_the_sql_route_plan_for_every_key_type_and_how`; `test_exact_join_keys_are_one_equality_between_the_two_sides` |
+| M10 | The plain-name guard is dropped | `inexact_joins_are_left_to_the_sql_route` |
+
+One mutation stayed green and is recorded as equivalent: the cross door handing a key to the
+native builder. The builder ignores keys for a cross join, as the H1 statement ignores its
+condition there, and `cross_join_builds_the_sql_route_plan` pins that with a key passed.
+
+The first version of the map-key refusal pin did not reach the native attempt (its bare-name
+condition is not exact), so M2 left it green. The pin now joins on column handles; the native
+attempt raises, falls back, and M2 reds it.
+
+`LOGIC_SCORE` = **11/11 `PROVEN`**.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: stamp-2-r5p6-2
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each clause walked against its pin or measurement. The card's premise that main built the doors natively was checked against main's code and corrected; the brief's reuse of the earlier predicate was applied as its shape test, with the reason its function does not fit recorded.
+      artifacts: [task/ledgers/staging/stamp-2-r5p6-2-ledger.md, python/repark/tests/test_stamp_2_r5p6_2.py, crates/repark-python/src/join_exact_tests.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundaries of the exactness rule pinned on both sides of each guard — spaced and case-twin fields, an unheld source, a missing key, a bare alias, 14 inexact prepared conditions, 20 key-type pairs with mixed types, six join types and both operand orders.
+      artifacts: [crates/repark-core/src/session/df_guards/join_exact.rs, crates/repark-python/src/join_exact_tests.rs, python/repark/tests/test_stamp_2_r5p6_2.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Refusals keep the SQL route's class and text — the preparer's refusals run before the route, a raising native attempt is a miss, and the map-key refusal is pinned on both routes and on the fallback; M2 reds it.
+      artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/test_stamp_2_r5p6_2.py]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The native join takes the live session state as sql_built does (pinned across a conf change); the rule cache is per handle over an immutable state snapshot, inherited only where the child keeps the parent's state, with a debug assertion under every binding test and a pin across a conf change.
+      artifacts: [crates/repark-python/src/dataframe/mod.rs, crates/repark-python/src/dataframe/tests.rs, crates/repark-python/src/join_exact_tests.rs]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, input parsing or secret handling changes; the native door builds a plan from field names the facade already holds and admits plain identifiers only.
+    - id: AT-6
+      status: ATTACKED
+      evidence: LogicalPlan equality against sql_built in Rust; the replay corpus of 43,989 cells shows no deterministic change; 136 suite files give main's counts plus the unit's pins; the sort grid is 394/394; every pinned row answer was measured equal on live Spark 4.1.
+      artifacts: [crates/repark-python/src/join_exact_tests.rs, python/repark/tests/test_stamp_2_r5p6_2.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The unit is a performance fix; cProfile, perf with DWARF call graphs, micro-benchmarks and three interleaved family runs are recorded above, with the load spike named and the gate-set ratios marked indicative.
+      artifacts: [task/ledgers/staging/stamp-2-r5p6-2-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: The SQL door's contract is reused, not re-derived — analyze_built_plan calls the door's own refuse_map_ordering and analyze_eagerly, the depth floors are sql_built's, and the scratch views are still registered so the SQL route and the session's deep-view mark are untouched.
+      artifacts: [crates/repark-spark/src/normalize/map_ordering.rs, crates/repark-python/src/frame_lineage.rs]
+    - id: AT-9
+      status: N/A
+      justification: No new log or metric surface.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Every guard and branch added has a pinned input that changes its output (M1 to M10); a key-type guard that the shared analysis made redundant was measured and deleted, and one equivalent mutant is recorded.
+      artifacts: [python/repark/tests/test_stamp_2_r5p6_2.py, crates/repark-python/src/join_exact_tests.rs]
+  complete: true
+```
 
 ## Out of scope, observed
 
 - Every native builder clones the parent `DataFrame`, and so its whole session state, to make
   a child (`grown_clone_frame`, 7.5 % of a `select` loop). DataFusion's `DataFrame` owns its
-  state by value, so this is one clone per frame by construction. It is most of the 5.8 % of
+  state by value, so this is one clone per frame by construction. It is part of the 5.8 % of
   hash-table clone and drop time left on the like cells.
 - `session_table` plans `S.table("tv")` through `sql_built`: 1,650 calls, 1.17 s on the like
   cells, the same on main before the stack.
+- `STRING = INT` join keys raise at the action on both routes with a `PySparkException`
+  ("Cannot cast string 'a' to value of Int32 type"); Spark 4.1 raises
+  `NumberFormatException` `[CAST_INVALID_INPUT]` casting to `BIGINT`. Same on main.
 - `df.join(other, condition, "cross")` ignores the condition on main and on this branch (12 rows
   where Spark 4.1 answers 2, measured live). The H1 door emits `CROSS JOIN` with no `ON`. The
   native route reproduces the SQL route here and the differential pin holds only their
