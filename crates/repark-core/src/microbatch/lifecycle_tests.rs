@@ -120,7 +120,7 @@ pub(super) fn foreach(body: &Arc<Probe>, trigger: Trigger, caps: &[(&str, &str)]
     spec
 }
 
-fn named(mut spec: StreamSpec, name: &str) -> StreamSpec {
+pub(super) fn named(mut spec: StreamSpec, name: &str) -> StreamSpec {
     spec.query_name = Some(name.to_string());
     spec
 }

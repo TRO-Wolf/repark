@@ -11,6 +11,8 @@ pub mod relation;
 mod reload_tests;
 mod run;
 #[cfg(test)]
+mod self_stop_tests;
+#[cfg(test)]
 mod table_door_tests;
 #[cfg(test)]
 pub(crate) mod testing;

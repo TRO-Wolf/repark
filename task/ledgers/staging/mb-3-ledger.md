@@ -51,6 +51,7 @@ the processing-time look-ahead cell measured first).
 | C-021 | Round 2, Q1 (2026-10-08): the session's drop is a signal, not a poll (D-11). (a) `MicroBatchSource`, the driver task and a registered handle's pending work hold a weak session state and take a snapshot per batch. (b) `StreamingQueryManager`'s `Drop` sends stop to every query it holds. (c) The 100 ms poll is removed; the `Weak` to the session's catalog registry stays as the fallback at each stop check. (d) A registered, never started handle does not keep the session state alive. (e) A query in a trigger wait ends at once when the session drops. C-013's pins still hold. | The pins in `microbatch/lifecycle_tests.rs`, plus mutations B1–B3. | **PROVEN** | 2 new pins green: `a_registered_query_does_not_keep_the_session_alive` (the state's strong count is 0 with the handle still held; `start` then refuses and `stop` reports `Stopped`), `the_session_drop_wakes_a_waiting_query_without_a_poll` (eight rounds of a query waiting out a one-hour interval; at least seven end within 25 ms of the drop, measured from before the drop). `dropping_the_session_stops_its_queries_and_releases_the_catalog` (P03) is unchanged and green. Mutations: B1 (the `Drop` sends nothing) red 2; B2 (the weak state holds the context) red 3; B3 (the `Drop` sends nothing and the wait polls the fallback every 100 ms, fold 1's mechanism) red 1. pins: mb-3/C-021 |
 | C-022 | Round 2, the append fence's driver contract (PR #996, 2026-10-08): the driver loads the sink fresh for every batch on both doors, so an epoch never commits from a handle older than the run's own previous commit. By reading: `enter_scope` loads per batch and the `toTable` door stages and commits on that handle; the `foreachBatch` door loads again after the body, before the trailing stamp; `Run` keeps no table handle across batches. The fence is not on this branch, so the pin holds the reload, not the fence. | The pin in `microbatch/reload_tests.rs`, plus mutations D1 and D2. | **PROVEN** | 1 pin green: `the_driver_loads_the_sink_fresh_for_every_batch` (three one-file batches per door over the event log of a wrapping catalog: before each commit the `toTable` door loads the sink once and the `foreachBatch` door twice, beside the fork's own one refresh inside the commit; the start adds one load before the first batch). Mutations: D1 (the batch's handle cached across batches) red 1; D2 (the trailing stamp commits from the handle loaded before the body) red 2. pins: mb-3/C-022 |
 | C-023 | Round 2's gates (2026-10-08): the fold-1 set, with `make rust-clippy` and the microbatch tests run at every commit of the round, and the race, drop and wake pins fifty times in a loop. | The gate runs, recorded in the hand-back. | **PROVEN** | See the hand-back's `gates[]` for each command and exit code. pins: mb-3/C-023 |
+| C-024 | Fold 2, G1 (S1, 2026-10-08): a stop from inside a `foreachBatch` body never waits on its own task (D-17). `stop` on the body's own query, and `stop_all` reached from the body, send the signal and return `Stopped` with the durable record known so far; the query ends `Stopped` after the body returns, its batch is stamped as any completed batch is, the id is free and the sink's scope released. `stop_all` from a body waits for the other queries. Two bodies stopping each other's query both end `Stopped`. `await_termination` from the body on its own query refuses `AwaitFromDriver`. The detection is structural: a task-local names the driving query and a wait edge is followed for a cycle; no timeout is involved. | The four pins in `microbatch/self_stop_tests.rs`, plus mutations G1a and G1b. | **PROVEN** | 4 pins green: `a_body_that_stops_its_own_query_ends_it_stopped` (the verifier's A1 for `stop` and for `stop_all`, default `stopTimeout`, `ProcessingTime(0)` over two one-file batches: `Ok(true)`, `Stopped`, one body call, the body's own stop answered `Stopped { durable: None }`, durable epoch 0, stamps `[0]`, no active query, the task count back at its baseline, and a restart under the same id stamps epoch 1), `stop_all_from_a_body_waits_for_the_other_queries` (a second query mid-interval on another sink is `Stopped` with its durable record in the body's answer), `two_bodies_stopping_each_other_both_end_stopped` (both meet at a barrier inside their bodies, then each stops the other: both `Ok(true)`, one stamp on each sink), `a_body_awaiting_its_own_termination_is_refused` (`AwaitFromDriver` with the query id; the query drains both batches). Mutations: G1a (a wait cycle is not detected, the stop waits) red 3, each by the 10 s bound; G1b (no check in `await_termination`) red 1. pins: mb-3/C-024 |
 ## Decisions
 
 - **D-1 (2026-10-07). `register` is async and takes the session.** The sketch's
@@ -201,3 +202,29 @@ the processing-time look-ahead cell measured first).
     `stop_timeout` and `polling_delay` carry theirs, and MB-4 maps the option onto it.
   - Registry row `MB-3-SINK-BUSY-1` (`docs/spark-sql-iceberg-parity.md`) quoted `SinkBusy`'s
     old text, so its quotation is updated with the text; nothing else in that file moves.
+- **D-17 (2026-10-08, fold 2, ruling G1). A stop from the driver task.**
+  - **The question:** what `stop`, `stop_all` and `await_termination` do when a
+    `foreachBatch` body calls them on the query that is running the body.
+  - **Spark:** `awaitTermination` on the query's own execution thread throws
+    `IllegalStateException`, `Cannot wait for a query state from the same thread that is
+    running the query` (Spark 4.1.2 `sql/core/.../streaming/runtime/StreamExecution.scala`,
+    `assertAwaitThread`, lines 556–561, called from `awaitTermination` at 602 and 610; code
+    reading, no cell). `stop` there interrupts the thread and the query ends stopped.
+  - **The contract:** `stop` sends the signal and, when waiting would wait on the caller's own
+    task, returns `Stopped` with the durable record known at that moment; the in-flight batch
+    still completes and is stamped, so the final outcome can carry a later record than the
+    one returned. `await_termination` on the caller's own query refuses `AwaitFromDriver`
+    with Spark's text.
+  - **How it is detected:** the driver task runs inside a task-local (`DRIVING`) that names
+    its query. A `stop` issued on a driver task records an edge "this query waits for that
+    one" and follows the target's edges up to 1024 hops; an edge back to the caller means
+    the wait can never end, whether the target is the caller itself or a peer whose body is
+    stopping the caller. The edge is recorded before the walk, so of two bodies that stop
+    each other at least one sees the cycle; when both do, both return at once. No timeout is
+    part of the decision, and `stopTimeout` keeps its meaning for every other stop.
+  - **Not covered:** a body that hands the stop to another task or thread and then waits for
+    it. The task-local does not follow a spawned task, so that stop waits for the batch and
+    the batch waits for it; with a `stopTimeout` it ends `RecoveryRequired(StopTimeout)`.
+    MB-4's Python body must run the callable inside the driver's task-local scope.
+    `await_termination` on another query from a body waits for that query and is not
+    checked for cycles; it takes a timeout.

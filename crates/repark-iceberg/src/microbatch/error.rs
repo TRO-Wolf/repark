@@ -124,6 +124,8 @@ pub enum MicroBatchError {
     MergeIsolationRefused { sink: String, property: String },
     #[error("batch {epoch} failed: {cause}")]
     BatchFailed { epoch: Epoch, cause: String },
+    #[error("Cannot wait for a query state from the same thread that is running the query")]
+    AwaitFromDriver { query: QueryId },
     #[error("the driver task panicked at batch {epoch}: {message}")]
     DriverPanicked { epoch: Epoch, message: String },
     #[error(
@@ -299,6 +301,10 @@ mod tests {
             }
             .to_string(),
             "sink silver.events is busy: another streaming query or batch is active on it; one at a time per sink"
+        );
+        assert_eq!(
+            MicroBatchError::AwaitFromDriver { query: query_id() }.to_string(),
+            "Cannot wait for a query state from the same thread that is running the query"
         );
         assert_eq!(
             MicroBatchError::DriverPanicked {

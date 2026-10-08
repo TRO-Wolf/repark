@@ -75,6 +75,8 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `CatalogTimeout { call, waited }`, and `SinkBusy` now reads `sink <sink> is busy: another
   streaming query or batch is active on it; one at a time per sink`, true for the scope's
   refusal and for the driver's refusal at start. pins: mb-3/C-020
+  MB-3 fold 2 (2026-10-08) adds `AwaitFromDriver { query }` with Spark's text, for
+  `await_termination` called from the query's own driver task. pins: mb-3/C-024
   MB-2a fold 1 (ruling V2, 2026-10-07) adds `RecoveryReason::StampNotInLineage`: a sink stamp
   that is retained but off the current lineage (a rollback), naming a new `queryName` or a
   restore; `StampedSnapshotExpired` keeps the stamp that is truly gone.

@@ -74,6 +74,17 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
     ended is a stop, not a failure, and the `toTable` door stops before its write when the
     state is gone. A handle the caller still holds keeps the sink's catalog handle until it is
     dropped. pins: mb-3/C-013, C-021
+  - *A stop from inside a body never waits on itself* (fold 2, 2026-10-08, ledger D-17). The
+    driver task runs inside the task-local `DRIVING`, a `Weak` to its own query. `stop` always
+    sends the signal first. Called from a driver task, it records a wait edge from that task's
+    query to the target (`WaitEdge`) and follows the target's edges: when they lead back to
+    the caller (the target is the caller's own query, or two bodies stop each other), it does
+    not wait and returns `Stopped` with the durable record known so far; the query then ends
+    `Stopped` after the body returns and its batch is stamped. Otherwise it waits as any
+    `stop` does, which is how `stop_all` from a body waits for the other queries and not for
+    itself. `await_termination` on the caller's own query refuses `AwaitFromDriver`, Spark's
+    answer. A body that stops its query from another task or thread must run that call inside
+    the driver's task-local scope; MB-4 owns that for the Python body. pins: mb-3/C-024
   - *Every catalog call is bounded* (round 2, 2026-10-08, ledger C-010). `StreamSpec` carries
     `catalog_timeout` (`DEFAULT_CATALOG_TIMEOUT`, 60 s; MB-4 maps `repark.cdc.catalog-timeout`
     onto it). `bounded` wraps one call and fails `CatalogTimeout { call, waited }`. `register`
@@ -179,6 +190,11 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
   the six read sites of the task, the reload after a body, a stalled commit on both doors
   (landed and lost), and `stop` over a stalled catalog.
   pins: mb-3/C-010
+- `self_stop_tests.rs` — the self-stop pins (fold 2, 2026-10-08), with a body that holds its
+  own query handle: `stop` and `stop_all` from the body under the default `stopTimeout`,
+  `stop_all` from a body with another query running, two bodies stopping each other, and
+  `await_termination` on the body's own query.
+  pins: mb-3/C-024
 - `reload_tests.rs` — the fresh-sink pin (round 2, 2026-10-08): `FaultCatalog`'s event log
   counts the sink loads before each commit over three batches, on both doors. One load per
   commit is the fork's own refresh inside the commit (`FORK_REFRESH`, measured 2026-10-08), so

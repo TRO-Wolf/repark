@@ -31,6 +31,41 @@ pub const DEFAULT_CATALOG_TIMEOUT: Duration = Duration::from_mins(1);
 
 pub(crate) const LOAD_SINK: &str = "load the sink";
 
+const WAIT_CHAIN_LIMIT: usize = 1024;
+
+tokio::task_local! {
+    static DRIVING: Weak<QueryShared>;
+}
+
+fn driving() -> Option<Arc<QueryShared>> {
+    DRIVING.try_with(Weak::upgrade).ok().flatten()
+}
+
+struct WaitEdge(Arc<QueryShared>);
+
+impl WaitEdge {
+    fn enter(waiter: &Arc<QueryShared>, target: &Arc<QueryShared>) -> Option<WaitEdge> {
+        *waiter.waiting_on() = Some(Arc::downgrade(target));
+        let edge = WaitEdge(Arc::clone(waiter));
+        let mut cursor = Arc::clone(target);
+        for _ in 0..WAIT_CHAIN_LIMIT {
+            let next = cursor.waiting_on().as_ref().and_then(Weak::upgrade);
+            match next {
+                Some(next) if Arc::ptr_eq(&next, waiter) => return None,
+                Some(next) => cursor = next,
+                None => return Some(edge),
+            }
+        }
+        None
+    }
+}
+
+impl Drop for WaitEdge {
+    fn drop(&mut self) {
+        *self.0.waiting_on() = None;
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trigger {
     ProcessingTime(Duration),
@@ -359,6 +394,7 @@ impl StreamingQueryManager {
                     ..Lifecycle::default()
                 }),
                 progress: Mutex::new(ProgressLog::new(spec.recent_progress_limit)),
+                waiting_on: Mutex::new(None),
                 stop,
                 done,
             }),
@@ -445,6 +481,7 @@ pub(crate) struct QueryShared {
     source_name: String,
     lifecycle: Mutex<Lifecycle>,
     progress: Mutex<ProgressLog>,
+    waiting_on: Mutex<Option<Weak<QueryShared>>>,
     pub(crate) stop: watch::Sender<bool>,
     done: watch::Sender<bool>,
 }
@@ -458,6 +495,18 @@ impl QueryShared {
 
     pub(crate) fn progress(&self) -> MutexGuard<'_, ProgressLog> {
         self.progress.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn waiting_on(&self) -> MutexGuard<'_, Option<Weak<QueryShared>>> {
+        self.waiting_on
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn stopping(&self) -> ShutdownOutcome {
+        ShutdownOutcome::Stopped {
+            durable: self.durable(),
+        }
     }
 
     pub(crate) fn report(&self, report: &TriggerReport) {
@@ -719,7 +768,7 @@ impl QueryHandle {
                       in the QueryHandle, stop() waits for it and aborts it on stopTimeout, and \
                       it ends on drain, stop or failure"
         )]
-        let task = tokio::spawn(run.drive());
+        let task = tokio::spawn(DRIVING.scope(Arc::downgrade(&self.shared), run.drive()));
         lifecycle.abort = Some(task.abort_handle());
         Ok(())
     }
@@ -729,6 +778,11 @@ impl QueryHandle {
         &self,
         timeout: Option<Duration>,
     ) -> Result<bool, Arc<MicroBatchError>> {
+        if driving().is_some_and(|driver| Arc::ptr_eq(&driver, &self.shared)) {
+            return Err(Arc::new(MicroBatchError::AwaitFromDriver {
+                query: self.shared.id,
+            }));
+        }
         if !self.wait_done(timeout).await {
             return Ok(false);
         }
@@ -761,6 +815,14 @@ impl QueryHandle {
             }
         }
         self.shared.stop.send_replace(true);
+        let driver = driving();
+        let _edge = match &driver {
+            Some(driver) => match WaitEdge::enter(driver, &self.shared) {
+                Some(edge) => Some(edge),
+                None => return self.shared.stopping(),
+            },
+            None => None,
+        };
         let limit = self.shared.stop_timeout;
         if self.wait_done(limit).await {
             let finished = self.shared.lifecycle().outcome.clone();
