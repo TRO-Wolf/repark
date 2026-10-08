@@ -26,10 +26,10 @@ use crate::microbatch::testing::{
     wait_for_epoch,
 };
 
-const ONE: &[(&str, &str)] = &[("streaming-max-files-per-micro-batch", "1")];
-const BOUND: Duration = Duration::from_secs(10);
+pub(super) const ONE: &[(&str, &str)] = &[("streaming-max-files-per-micro-batch", "1")];
+pub(super) const BOUND: Duration = Duration::from_secs(10);
 
-enum Mode {
+pub(super) enum Mode {
     Record,
     PanicAt(u64),
     FailAt(u64),
@@ -38,14 +38,14 @@ enum Mode {
     ReplaceSink(Arc<dyn Catalog>, String),
 }
 
-struct Probe {
+pub(super) struct Probe {
     mode: Mode,
     seen: Mutex<Vec<(u64, Vec<i64>)>>,
     calls: AtomicUsize,
 }
 
 impl Probe {
-    fn new(mode: Mode) -> Arc<Probe> {
+    pub(super) fn new(mode: Mode) -> Arc<Probe> {
         Arc::new(Probe {
             mode,
             seen: Mutex::default(),
@@ -53,11 +53,11 @@ impl Probe {
         })
     }
 
-    fn seen(&self) -> Vec<(u64, Vec<i64>)> {
+    pub(super) fn seen(&self) -> Vec<(u64, Vec<i64>)> {
         self.seen.lock().expect("seen").clone()
     }
 
-    fn calls(&self) -> usize {
+    pub(super) fn calls(&self) -> usize {
         self.calls.load(Ordering::SeqCst)
     }
 
@@ -107,7 +107,7 @@ impl BatchBody for Probe {
     }
 }
 
-fn foreach(body: &Arc<Probe>, trigger: Trigger, caps: &[(&str, &str)]) -> StreamSpec {
+pub(super) fn foreach(body: &Arc<Probe>, trigger: Trigger, caps: &[(&str, &str)]) -> StreamSpec {
     let mut spec = StreamSpec::new(
         SOURCE,
         options(caps),
@@ -125,13 +125,13 @@ fn named(mut spec: StreamSpec, name: &str) -> StreamSpec {
     spec
 }
 
-async fn ended(handle: &QueryHandle) -> Result<bool, Arc<MicroBatchError>> {
+pub(super) async fn ended(handle: &QueryHandle) -> Result<bool, Arc<MicroBatchError>> {
     tokio::time::timeout(BOUND, handle.await_termination(None))
         .await
         .expect("the query ends within the bound")
 }
 
-async fn eventually(what: &str, check: impl Fn() -> bool) {
+pub(super) async fn eventually(what: &str, check: impl Fn() -> bool) {
     let deadline = std::time::Instant::now() + BOUND;
     while !check() {
         assert!(std::time::Instant::now() < deadline, "{what}");

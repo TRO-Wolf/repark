@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::fmt;
+use std::future::Future;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, RwLock, Weak};
 use std::time::Duration;
 
@@ -27,6 +28,8 @@ use crate::time_travel::microbatch_source::{MicroBatchSource, SourceOptions, Wea
 pub const DEFAULT_POLLING_DELAY: Duration = Duration::from_millis(10);
 
 pub const DEFAULT_CATALOG_TIMEOUT: Duration = Duration::from_mins(1);
+
+pub(crate) const LOAD_SINK: &str = "load the sink";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trigger {
@@ -262,6 +265,20 @@ impl Drop for StreamingQueryManager {
     }
 }
 
+pub(crate) async fn bounded<T>(
+    limit: Duration,
+    call: &'static str,
+    work: impl Future<Output = Result<T, MicroBatchError>>,
+) -> Result<T, MicroBatchError> {
+    match tokio::time::timeout(limit, work).await {
+        Ok(done) => done,
+        Err(_) => Err(MicroBatchError::CatalogTimeout {
+            call,
+            waited: limit,
+        }),
+    }
+}
+
 impl fmt::Debug for StreamingQueryManager {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
@@ -304,10 +321,12 @@ impl StreamingQueryManager {
             )));
         }
         let sink = TableTarget::resolve(session, spec.sink.sink())?;
-        let table = sink.load().await?;
+        let limit = spec.catalog_timeout;
+        let table = bounded(limit, LOAD_SINK, sink.load()).await?;
         let sink_uuid = TableUuid::of(&table);
         let id = QueryId::derive(sink_uuid, spec.query_name.as_deref());
-        let source = MicroBatchSource::open(session, &spec.source, spec.source_options).await?;
+        let opening = MicroBatchSource::open(session, &spec.source, spec.source_options);
+        let source = bounded(limit, "open the source", opening).await?;
         let door = match spec.sink {
             SinkSpec::Table { .. } => Door::Table,
             SinkSpec::ForeachBatch { body, .. } => Door::ForeachBatch(body),
@@ -773,7 +792,8 @@ impl QueryHandle {
 
     async fn read_durable(&self) -> Option<SinkRecord> {
         let known = self.durable();
-        let Ok(table) = self.shared.sink.load().await else {
+        let loading = self.shared.sink.load();
+        let Ok(table) = bounded(self.shared.catalog_timeout, LOAD_SINK, loading).await else {
             return known;
         };
         match read_resume_point(&table, self.shared.id) {

@@ -73,8 +73,11 @@ Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
     ended is a stop, not a failure, and the `toTable` door stops before its write when the
     state is gone. A handle the caller still holds keeps the sink's catalog handle until it is
     dropped. pins: mb-3/C-013, C-021
-  - `StreamSpec` gains `catalog_timeout` (`DEFAULT_CATALOG_TIMEOUT`, 60 s), today the bound on
-    the scope wait only (ledger C-010 stays open for the per-call bound).
+  - *Every catalog call is bounded* (round 2, 2026-10-08, ledger C-010). `StreamSpec` carries
+    `catalog_timeout` (`DEFAULT_CATALOG_TIMEOUT`, 60 s; MB-4 maps `repark.cdc.catalog-timeout`
+    onto it). `bounded` wraps one call and fails `CatalogTimeout { call, waited }`. `register`
+    bounds the sink load and the source open, and `stop` bounds its re-read of the sink after a
+    stop timeout, falling back to the durable record it knows. pins: mb-3/C-010
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and
@@ -109,6 +112,17 @@ Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
     table is replaced under a `foreachBatch` body: the trailing stamp lands on the new table,
     outside the batch's scope, and the query ends `RecoveryRequired(UnstampedSinkCommit)`.
     pins: mb-3/C-018
+  **Round 2 (2026-10-08):**
+  - *The bounded calls.* Each catalog call of the task runs under `catalog_timeout`: the sink
+    load (`load_sink`: at start, at each batch's scope, after a `foreachBatch` body, and in
+    the unstamped check), the source's start (`read the source's start`), the `availableNow`
+    end (`fix the availableNow end`) and each window (`plan the batch`). A timed-out read
+    fails the batch with `CatalogTimeout` before the offset moves. A commit that times out
+    (the trailing stamp, the `toTable` append) is an unknown outcome: it goes to
+    `resolve_unknown_outcome` with no operation id, which finds the landed commit by its
+    record or ends `RecoveryRequired(CommitOutcomeUnknown)`; the walk is bounded too. The
+    bound on a source call covers that call's manifest reads as well as its catalog load,
+    because the load lives inside the source (ledger D-16). pins: mb-3/C-010
 - `progress.rs` — the `StreamingQuery` progress surface (sketch §3.6, MB0-T3):
   `StreamingQueryProgress`, `DurationMs`, `SourceProgress`, `SinkProgress`, `QueryStatus` and
   `StatusMessage`, serialised with T3's camelCase names, and the crate-private `ProgressLog` (the
@@ -154,11 +168,17 @@ Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
   alive and the wake pin: eight rounds of a query in a one-hour wait, at least seven of which
   must end within 25 ms of the session's drop, which a 100 ms poll cannot do.
   pins: mb-3/C-011, C-012, C-013, C-014, C-016, C-017, C-018, C-020, C-021
+- `timeout_tests.rs` — the catalog-timeout pins (round 2, 2026-10-08), one per call site over
+  `FaultCatalog`'s load hook and its two stalling commit modes, with a 100 ms bound: `register`,
+  the six read sites of the task, the reload after a body, a stalled commit on both doors
+  (landed and lost), and `stop` over a stalled catalog.
+  pins: mb-3/C-010
 - `table_door_tests.rs` — the `toTable` door pins: the stamped append with the Spark keys, the
   start check on a shared catalog, the unknown-outcome reconcile and walk over a fault-injecting
   catalog wrapper (`FaultCatalog`, the `crash_tests.rs` shape), and fencing by another run of the
   same query across two sessions. `FaultCatalog` also takes a load hook (`on_load`), which the
-  fold-1 pins use to panic or to hold a table load. The door's exactly-once guarantee against a racing driver is
+  fold-1 pins use to panic or to hold a table load; round 2 adds two stalling commit
+  modes. The door's exactly-once guarantee against a racing driver is
   not claimed until `F-APPEND-PIN-BASE-1` lands (ledger C-002).
   pins: mb-3/C-007
 - `testing.rs` — the test fixture: a session over a memory catalog with the `sales.orders`

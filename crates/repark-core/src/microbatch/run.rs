@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -10,7 +11,8 @@ use repark_common::Generation;
 use repark_common::redaction::mask_value_credentials;
 use repark_iceberg::microbatch::error::{MicroBatchError, RecoveryReason};
 use repark_iceberg::microbatch::offset::{
-    Epoch, InputOffset, OffsetFormatVersion, OffsetVector, SinkDoor, SinkRecord, TableUuid,
+    Epoch, InputOffset, OffsetFormatVersion, OffsetVector, SinkDoor, SinkRecord, SnapshotId,
+    TableUuid,
 };
 use repark_iceberg::microbatch::window::WindowLimit;
 use repark_iceberg::write::sink_offsets::{
@@ -24,7 +26,9 @@ use repark_iceberg::write::{
 };
 use tokio::time::Instant;
 
-use crate::microbatch::driver::{BatchBody, Ending, Pending, QueryShared, Trigger};
+use crate::microbatch::driver::{
+    BatchBody, Ending, LOAD_SINK, Pending, QueryShared, Trigger, bounded,
+};
 use crate::microbatch::progress::TriggerReport;
 use crate::microbatch::relation::PlanTemplate;
 use crate::time_travel::microbatch_source::{MicroBatchSource, SourceBatch, WeakSessionState};
@@ -54,6 +58,8 @@ struct Cursor {
     epoch: Epoch,
     from: Option<InputOffset>,
 }
+
+const PLAN_BATCH: &str = "plan the batch";
 
 enum Wake {
     Tick,
@@ -87,16 +93,36 @@ impl Run {
         self.shared.finish(ending);
     }
 
+    async fn bounded<T>(
+        &self,
+        call: &'static str,
+        work: impl Future<Output = Result<T, MicroBatchError>>,
+    ) -> Result<T, MicroBatchError> {
+        bounded(self.shared.catalog_timeout, call, work).await
+    }
+
+    async fn load_sink(&self) -> Result<Table, MicroBatchError> {
+        self.bounded(LOAD_SINK, self.shared.sink.load()).await
+    }
+
+    async fn available_now_target(
+        &self,
+        cursor: &mut Cursor,
+    ) -> Result<Option<InputOffset>, MicroBatchError> {
+        let Some(from) = self.start_offset(cursor).await? else {
+            return Ok(None);
+        };
+        let walk = self.source.available_now_target(&from);
+        self.bounded("fix the availableNow end", walk).await
+    }
+
     async fn trigger_loop(&self) -> Result<Ending, MicroBatchError> {
-        let sink = self.shared.sink.load().await?;
+        let sink = self.load_sink().await?;
         let resumed = read_resume_point(&sink, self.shared.id)?;
         self.shared.resumed(resumed.clone());
         let mut cursor = self.resume(resumed.as_ref())?;
         let target = match self.shared.trigger {
-            Trigger::AvailableNow => match self.start_offset(&mut cursor).await? {
-                Some(from) => self.source.available_now_target(&from).await?,
-                None => None,
-            },
+            Trigger::AvailableNow => self.available_now_target(&mut cursor).await?,
             Trigger::Once | Trigger::ProcessingTime(_) => None,
         };
         let mut ran_batch = false;
@@ -196,7 +222,7 @@ impl Run {
     ) -> Result<Option<(Table, BatchScopeGuard)>, MicroBatchError> {
         let deadline = Instant::now() + self.shared.catalog_timeout;
         loop {
-            let sink = self.shared.sink.load().await?;
+            let sink = self.load_sink().await?;
             match BatchScope::enter(TableUuid::of(&sink), stamp.clone()) {
                 Ok(guard) => return Ok(Some((sink, guard))),
                 Err(MicroBatchError::SinkBusy { .. }) if Instant::now() < deadline => {
@@ -250,7 +276,8 @@ impl Run {
         cursor: &mut Cursor,
     ) -> Result<Option<InputOffset>, MicroBatchError> {
         if cursor.from.is_none() {
-            cursor.from = self.source.initial_offset().await?;
+            let start = self.source.initial_offset();
+            cursor.from = self.bounded("read the source's start", start).await?;
         }
         Ok(cursor.from.clone())
     }
@@ -263,16 +290,17 @@ impl Run {
         let Some(from) = self.start_offset(cursor).await? else {
             return Ok(None);
         };
-        match (self.shared.trigger, target) {
+        let limit = match (self.shared.trigger, target) {
             (Trigger::AvailableNow, Some(target)) => {
-                self.source.next_batch_until(&from, target).await
+                let window = self.source.next_batch_until(&from, target);
+                return self.bounded(PLAN_BATCH, window).await;
             }
-            (Trigger::AvailableNow, None) => Ok(None),
-            (Trigger::Once, _) => self.source.next_batch(&from, WindowLimit::Unbounded).await,
-            (Trigger::ProcessingTime(_), _) => {
-                self.source.next_batch(&from, WindowLimit::Capped).await
-            }
-        }
+            (Trigger::AvailableNow, None) => return Ok(None),
+            (Trigger::Once, _) => WindowLimit::Unbounded,
+            (Trigger::ProcessingTime(_), _) => WindowLimit::Capped,
+        };
+        let window = self.source.next_batch(&from, limit);
+        self.bounded(PLAN_BATCH, window).await
     }
 
     async fn run_batch(
@@ -366,7 +394,7 @@ impl Run {
     }
 
     async fn unstamped(&self, epoch: Epoch) -> MicroBatchError {
-        let snapshot = match self.shared.sink.load().await {
+        let snapshot = match self.load_sink().await {
             Ok(table) => table.metadata().current_snapshot_id(),
             Err(error) => return error,
         };
@@ -376,7 +404,7 @@ impl Run {
                 epoch,
                 durable: self.shared.durable().map(Box::new),
                 reason: RecoveryReason::UnstampedSinkCommit {
-                    snapshot: repark_iceberg::microbatch::offset::SnapshotId::new(snapshot),
+                    snapshot: SnapshotId::new(snapshot),
                 },
             },
             None => MicroBatchError::Catalog(format!(
@@ -400,6 +428,28 @@ impl Run {
         Some(batch)
     }
 
+    async fn resolve_unknown(
+        &self,
+        sink: &Table,
+        stamp: &CommitStamp,
+        operation_id: Option<&str>,
+    ) -> Result<SnapshotId, MicroBatchError> {
+        let catalog = &self.shared.sink.catalog;
+        let walk = resolve_unknown_outcome(catalog, sink, stamp, operation_id);
+        match tokio::time::timeout(self.shared.catalog_timeout, walk).await {
+            Ok(resolved) => resolved,
+            Err(_) => Err(MicroBatchError::RecoveryRequired {
+                query: self.shared.id,
+                epoch: stamp.record.epoch,
+                durable: self.shared.durable().map(Box::new),
+                reason: RecoveryReason::CommitOutcomeUnknown {
+                    operation_id: operation_id.map(str::to_string),
+                    resume_refusal: None,
+                },
+            }),
+        }
+    }
+
     async fn foreach_batch(
         &self,
         guard: &BatchScopeGuard,
@@ -414,10 +464,13 @@ impl Run {
                 epoch,
                 cause: mask_value_credentials(&error.to_string()),
             })?;
-        let sink = self.shared.sink.load().await?;
-        commit_stamp_only(&self.shared.sink.catalog, &sink, stamp, Some(guard.token()))
-            .await
-            .map(|_| ())
+        let sink = self.load_sink().await?;
+        let commit =
+            commit_stamp_only(&self.shared.sink.catalog, &sink, stamp, Some(guard.token()));
+        match tokio::time::timeout(self.shared.catalog_timeout, commit).await {
+            Ok(committed) => committed.map(|_| ()),
+            Err(_) => self.resolve_unknown(&sink, stamp, None).await.map(|_| ()),
+        }
     }
 
     async fn append(
@@ -447,16 +500,18 @@ impl Run {
             .iter()
             .fold(0u64, |rows, file| rows.saturating_add(file.record_count()));
         let catalog = &self.shared.sink.catalog;
-        match commit_append_with_summary(catalog, sink, files, &extra, None).await {
-            Ok(_) => Ok(rows),
-            Err(error) if is_commit_state_unknown(&error) => {
+        let commit = commit_append_with_summary(catalog, sink, files, &extra, None);
+        let resolved = match tokio::time::timeout(self.shared.catalog_timeout, commit).await {
+            Ok(Ok(_)) => return Ok(rows),
+            Ok(Err(error)) if is_commit_state_unknown(&error) => {
                 let operation_id = unknown_operation_id(&error);
-                resolve_unknown_outcome(catalog, sink, stamp, operation_id.as_deref())
+                self.resolve_unknown(sink, stamp, operation_id.as_deref())
                     .await
-                    .map(|_| rows)
             }
-            Err(error) => Err(engine_error(&error)),
-        }
+            Ok(Err(error)) => return Err(engine_error(&error)),
+            Err(_) => self.resolve_unknown(sink, stamp, None).await,
+        };
+        resolved.map(|_| rows)
     }
 }
 

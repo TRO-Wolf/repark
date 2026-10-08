@@ -29,6 +29,8 @@ use crate::microbatch::testing::{
 const ARMED_NONE: u8 = 0;
 const ARMED_LANDED: u8 = 1;
 const ARMED_LOST: u8 = 2;
+pub(super) const ARMED_STALL_LANDED: u8 = 3;
+pub(super) const ARMED_STALL_LOST: u8 = 4;
 
 pub(super) type LoadHook = Arc<dyn Fn(&TableIdent) -> BoxFuture<'static, ()> + Send + Sync>;
 
@@ -48,7 +50,7 @@ impl std::fmt::Debug for FaultCatalog {
 }
 
 impl FaultCatalog {
-    fn arm(&self, fault: u8) {
+    pub(super) fn arm(&self, fault: u8) {
         self.armed.store(fault, Ordering::SeqCst);
     }
 
@@ -146,6 +148,11 @@ impl Catalog for FaultCatalog {
 
     async fn update_table(&self, commit: TableCommit) -> iceberg::Result<Table> {
         match self.armed.swap(ARMED_NONE, Ordering::SeqCst) {
+            ARMED_STALL_LANDED => {
+                self.inner.update_table(commit).await?;
+                futures::future::pending().await
+            }
+            ARMED_STALL_LOST => futures::future::pending().await,
             ARMED_LANDED => {
                 self.inner.update_table(commit).await?;
                 self.fail_next_load.store(true, Ordering::SeqCst);
