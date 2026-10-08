@@ -517,7 +517,10 @@ async fn materialize_empty_part(
 ) -> Result<()> {
     let bytes = match format {
         WriteFormat::Parquet => empty_parquet_bytes(schema)?,
-        WriteFormat::Csv => empty_csv_bytes(columns, options),
+        WriteFormat::Csv => match recorded_display_names(schema) {
+            Some(displays) => empty_csv_bytes(&displays, options),
+            None => empty_csv_bytes(columns, options),
+        },
         WriteFormat::Json => Vec::new(),
     };
     store
@@ -586,8 +589,6 @@ impl ReparkSession {
             .map(|field| field.name().clone())
             .collect();
         let resolved_partitions = resolve_partition_columns(&frame_columns, partition_by)?;
-        let header_columns =
-            recorded_display_names(frame.schema().inner()).unwrap_or_else(|| frame_columns.clone());
         let options_clause = copy_options_sql(&format, options)?;
         self.ensure_s3_bucket_registered(&bucket)?;
         let store_url = ObjectStoreUrl::parse(format!("s3://{bucket}")).map_err(engine_err)?;
@@ -670,7 +671,7 @@ impl ReparkSession {
             url,
             format: &format,
             frame,
-            columns: &header_columns,
+            columns: &frame_columns,
             partitioned: !resolved_partitions.is_empty(),
             options,
             copy_sql: &copy_sql,

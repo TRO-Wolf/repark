@@ -225,8 +225,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   catalog this session builds through the same `CatalogCaches`, so no registration path changed.
   Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report
   there is no settle step before reading. pins: ice-footer-cache-1/C-006, C-007
-- `path_write.rs` — **FA-5 (2026-10-08, fold 1):** `write_path` hands the
-  empty-part writer the frame's recorded display names
+- `path_write.rs` — **FA-5 (2026-10-08, fold 1):** `materialize_empty_part`
+  writes the csv header from the frame schema's recorded display names
   (`duplicate_names::recorded_display_names`) when it carries them, so the
   header-only part of an empty duplicate-name csv write shows the display
   names, as the sink serializer does for a non-empty one; a frame without
