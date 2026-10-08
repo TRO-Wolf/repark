@@ -3584,6 +3584,30 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `BatchScope` per sink (sketch §0 line 5), because the scope is what ties a sink commit to
   its batch stamp. Before this row the second query died `Failed` at whichever batch
   overlapped the first; the refusal now lands at start, where the caller can act on it.
+### MB-3-STATIC-SIDE-1 — a streaming frame combined with a static frame refuses the shapes Spark refuses, under repark's own error
+- **repark** — `PlanTemplate::from_frame` refuses, with `StatefulOperatorRefused` (MBE-6:
+  `<operator> is not supported on a streaming DataFrame; use foreachBatch`), a union of the
+  stream and a static frame in either order, a full outer join, a left outer join with the
+  static frame on the left, a right outer join with the static frame on the right, and a left
+  semi or left anti join with the stream on the right. It accepts an inner join in either
+  order, a left outer join with the stream on the left, a right outer join with the stream on
+  the right, and a left semi or left anti join with the stream on the left, and lands Spark's
+  rows for each. It also refuses a streaming frame inside a subquery expression
+  (`a streaming DataFrame in a subquery`), which no cell measures.
+- **Apache Spark** — refuses the same union and join shapes at `start()` with
+  `AnalysisException` / `_LEGACY_ERROR_TEMP_3102`, no SQLSTATE, from
+  `UnsupportedOperationChecker` (`Union between streaming and batch DataFrames/Datasets is
+  not supported`; `LeftOuter join with a streaming DataFrame/Dataset on the right and a static
+  DataFrame/Dataset on the left is not supported`; and the twins), and runs the accepted
+  shapes. *(oracle: cell MB3-J1 in `mb3_fold_oracle.json`, fourteen shapes over a stream
+  `(1, 2, 3)`, `(4, 5)` and a static `(2, 900)`, recorded 2026-10-07.)*
+- **Pin** — `crates/repark-core/src/microbatch/relation_tests.rs::shapes_that_would_re_emit_the_static_side_refuse`,
+  `::shapes_that_preserve_the_stream_run_spark_s_rows`
+- **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1, ruling F5). The template runs once per
+  batch, so a shape whose output keeps static rows would land them again on every batch. Both
+  engines refuse at start; the difference is the error class and text, which follow MBE-6's
+  SES-DECL shape. The subquery refusal is wider than what was measured and is kept until a
+  cell shows Spark answering a shape it covers.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.

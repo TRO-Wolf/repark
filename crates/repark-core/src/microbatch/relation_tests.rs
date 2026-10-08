@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use datafusion::functions_aggregate::expr_fn::count;
-use datafusion::logical_expr::{JoinType, ident, lit};
+use datafusion::functions_aggregate::expr_fn::{count, max};
+use datafusion::logical_expr::{JoinType, ident, in_subquery, lit, scalar_subquery};
 use datafusion::prelude::{DataFrame, col};
 
 use super::*;
@@ -154,6 +154,150 @@ fn only_append_output_mode_runs() {
         check_output_mode("sideways"),
         Err(MicroBatchError::Catalog(_))
     ));
+}
+
+async fn fixed(fixture: &Fixture) -> DataFrame {
+    fixture
+        .session
+        .sql("SELECT id AS key FROM ice.sales.other")
+        .await
+        .expect("a static frame")
+}
+
+fn joined(left: DataFrame, right: DataFrame, how: JoinType, stream_on_the_left: bool) -> DataFrame {
+    let (left_key, right_key) = if stream_on_the_left {
+        ("id", "key")
+    } else {
+        ("key", "id")
+    };
+    left.join(right, how, &[left_key], &[right_key], None)
+        .expect("the join plans")
+}
+
+#[tokio::test]
+async fn shapes_that_would_re_emit_the_static_side_refuse() {
+    let fixture = Fixture::new().await;
+    let frame = stream(&fixture).await;
+    let other = fixed(&fixture).await;
+    let union = "union of a streaming and a static DataFrame";
+    let full = "full outer join of a streaming and a static DataFrame";
+    assert_eq!(
+        refused(&frame.clone().union(other.clone()).expect("union")),
+        union
+    );
+    assert_eq!(
+        refused(&other.clone().union(frame.clone()).expect("union")),
+        union
+    );
+    for (how, stream_on_the_left, operator) in [
+        (
+            JoinType::Left,
+            false,
+            "left outer join with the static DataFrame on the left",
+        ),
+        (
+            JoinType::Right,
+            true,
+            "right outer join with the static DataFrame on the right",
+        ),
+        (JoinType::Full, true, full),
+        (JoinType::Full, false, full),
+        (
+            JoinType::LeftSemi,
+            false,
+            "left semi join with the streaming DataFrame on the right",
+        ),
+        (
+            JoinType::LeftAnti,
+            false,
+            "left anti join with the streaming DataFrame on the right",
+        ),
+        (
+            JoinType::RightSemi,
+            true,
+            "right semi join with the streaming DataFrame on the left",
+        ),
+        (
+            JoinType::RightAnti,
+            true,
+            "right anti join with the streaming DataFrame on the left",
+        ),
+    ] {
+        let plan = if stream_on_the_left {
+            joined(frame.clone(), other.clone(), how, true)
+        } else {
+            joined(other.clone(), frame.clone(), how, false)
+        };
+        assert_eq!(refused(&plan), operator, "{how:?}");
+    }
+    let streamed = frame.clone().select(vec![col("id")]).expect("select");
+    let membership = other
+        .clone()
+        .filter(in_subquery(
+            col("key"),
+            std::sync::Arc::new(streamed.logical_plan().clone()),
+        ))
+        .expect("filter");
+    assert_eq!(refused(&membership), "a streaming DataFrame in a subquery");
+    let error = PlanTemplate::from_frame(&frame.union(other).expect("union"))
+        .expect_err("a union with a static frame");
+    assert_eq!(
+        error.to_string(),
+        "union of a streaming and a static DataFrame is not supported on a streaming DataFrame; use foreachBatch"
+    );
+}
+
+#[tokio::test]
+async fn shapes_that_preserve_the_stream_run_spark_s_rows() {
+    for (how, stream_on_the_left, landed) in [
+        (JoinType::Inner, true, vec![2]),
+        (JoinType::Inner, false, vec![2]),
+        (JoinType::Left, true, vec![1, 2, 3, 4, 5]),
+        (JoinType::Right, false, vec![1, 2, 3, 4, 5]),
+        (JoinType::LeftSemi, true, vec![2]),
+        (JoinType::LeftAnti, true, vec![1, 3, 4, 5]),
+    ] {
+        let fixture = Fixture::new().await;
+        fixture.insert(SOURCE, "(1), (2), (3)").await;
+        fixture.insert(SOURCE, "(4), (5)").await;
+        fixture.insert("ice.sales.other", "(2), (900)").await;
+        let frame = stream(&fixture).await;
+        let other = fixed(&fixture).await;
+        let plan = if stream_on_the_left {
+            joined(frame, other, how, true)
+        } else {
+            joined(other, frame, how, false)
+        };
+        let plan = plan.select(vec![col("id")]).expect("select");
+        let mut spec = StreamSpec::new(
+            SOURCE,
+            options(&[("streaming-max-files-per-micro-batch", "1")]),
+            SinkSpec::Table {
+                sink: SINK.to_string(),
+            },
+        );
+        spec.plan = Some(PlanTemplate::from_frame(&plan).expect("the stream is preserved"));
+        spec.trigger = Trigger::AvailableNow;
+        let handle = started(&fixture, spec).await;
+        assert_eq!(handle.await_termination(None).await, Ok(true), "{how:?}");
+        assert_eq!(
+            fixture.ids(SINK).await,
+            landed,
+            "{how:?} {stream_on_the_left}"
+        );
+    }
+    let fixture = Fixture::new().await;
+    let other = fixed(&fixture).await;
+    let ceiling = other
+        .aggregate(vec![], vec![max(col("key"))])
+        .expect("a static aggregate");
+    let bounded = stream(&fixture)
+        .await
+        .filter(col("id").lt(scalar_subquery(std::sync::Arc::new(
+            ceiling.logical_plan().clone(),
+        ))))
+        .expect("filter");
+    PlanTemplate::from_frame(&bounded).expect("a static scalar subquery");
 }
 
 #[tokio::test]

@@ -108,6 +108,14 @@ the crash gate's 3 passed and 2 ignored included, are recorded there. pins: mb-3
   `check_output_mode` refuses `complete` and `update`; `explain` renders the source, its reader
   options and the plan.
   pins: mb-3/C-008
+  **Fold 1 (2026-10-07):** the template runs once per batch, so a shape whose output keeps
+  rows of a static frame would land them again on every batch. `static_side_operator` refuses
+  what Spark's `UnsupportedOperationChecker` refuses (cell MB3-J1): a union of the stream and a
+  static frame, a full outer join, an outer join whose preserved side is the static frame, and
+  a semi or anti join whose output side is the static frame (DataFusion's `LeftMark` and
+  `RightMark` follow the semi rule). A streaming frame inside a subquery expression refuses
+  too (unmeasured). Registry row `MB-3-STATIC-SIDE-1`.
+  pins: mb-3/C-015
 - `relation_tests.rs` — the template pins (`#[cfg(test)] #[path]` from `relation.rs`).
   pins: mb-3/C-008
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).

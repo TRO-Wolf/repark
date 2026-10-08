@@ -8,7 +8,7 @@ use datafusion::catalog::Session as CatalogSession;
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::datasource::{TableProvider, TableType, provider_as_source, source_as_provider};
 use datafusion::error::DataFusionError;
-use datafusion::logical_expr::{LogicalPlan, LogicalPlanBuilder, TableScan};
+use datafusion::logical_expr::{JoinType, LogicalPlan, LogicalPlanBuilder, TableScan};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{DataFrame, Expr};
 use datafusion::sql::TableReference;
@@ -245,12 +245,58 @@ fn stateful_operator(node: &LogicalPlan) -> Option<&'static str> {
     }
 }
 
+fn static_side_operator(node: &LogicalPlan) -> Option<&'static str> {
+    match node {
+        LogicalPlan::Union(union) => {
+            let streaming = union.inputs.iter().filter(|input| streams(input)).count();
+            (streaming < union.inputs.len())
+                .then_some("union of a streaming and a static DataFrame")
+        }
+        LogicalPlan::Join(join) => {
+            let stream_on_the_left = streams(&join.left);
+            match join.join_type {
+                JoinType::Inner => None,
+                JoinType::Full => Some("full outer join of a streaming and a static DataFrame"),
+                JoinType::Left => (!stream_on_the_left)
+                    .then_some("left outer join with the static DataFrame on the left"),
+                JoinType::Right => stream_on_the_left
+                    .then_some("right outer join with the static DataFrame on the right"),
+                JoinType::LeftSemi | JoinType::LeftMark => (!stream_on_the_left)
+                    .then_some("left semi join with the streaming DataFrame on the right"),
+                JoinType::LeftAnti => (!stream_on_the_left)
+                    .then_some("left anti join with the streaming DataFrame on the right"),
+                JoinType::RightSemi | JoinType::RightMark => stream_on_the_left
+                    .then_some("right semi join with the streaming DataFrame on the left"),
+                JoinType::RightAnti => stream_on_the_left
+                    .then_some("right anti join with the streaming DataFrame on the left"),
+            }
+        }
+        _ => None,
+    }
+}
+
+fn streams_in_a_subquery(node: &LogicalPlan) -> bool {
+    let mut found = false;
+    let _ = node.apply_subqueries(|subquery| {
+        found |= streams(subquery);
+        Ok(TreeNodeRecursion::Continue)
+    });
+    found
+}
+
+fn refused_operator(node: &LogicalPlan) -> Option<&'static str> {
+    if !streams(node) {
+        return None;
+    }
+    stateful_operator(node)
+        .or_else(|| static_side_operator(node))
+        .or_else(|| streams_in_a_subquery(node).then_some("a streaming DataFrame in a subquery"))
+}
+
 fn refuse_stateful(plan: &LogicalPlan) -> Result<(), MicroBatchError> {
     let mut refused = None;
     let _ = plan.apply_with_subqueries(|node| {
-        if let Some(operator) = stateful_operator(node)
-            && streams(node)
-        {
+        if let Some(operator) = refused_operator(node) {
             refused = Some(operator);
             return Ok(TreeNodeRecursion::Stop);
         }
