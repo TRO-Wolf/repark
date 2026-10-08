@@ -670,6 +670,11 @@ declines it (a dated ruling in the intake, then the archive).
   `OFFSET` under a nested `ORDER BY` answers 0 rows at one input partition where 16 partitions answer
   5, a wrong answer reproduced with no Postgres scan in the plan; the ask is to reproduce it on main,
   find whether it is the pinned DataFusion version's defect or RePark's planning, and add a parity cell.
+- [threaded-collect-segv-1-card-2026-10-08.md](threaded-collect-segv-1-card-2026-10-08.md) — **card
+  THREADED-COLLECT-SEGV-1 (2026-10-08, filed, not scheduled, from the orchestrator's measurements, PR #998):**
+  `collect()` on a second thread segfaults with pyarrow 25.0.0 and survives with 25.0.1, in 1.5.1 through
+  1.5.3 alike; the ask is to find whether pyarrow or RePark's native row export faults, fix or pin it with a
+  threaded test, and decide the dependency floor, an owner ruling.
 - [cross-join-condition-1-card-2026-10-08.md](cross-join-condition-1-card-2026-10-08.md) — **card
   CROSS-JOIN-CONDITION-1 (2026-10-08, filed, not scheduled, from the STAMP-2-R5P6-2 hand-back, PR #997):**
   `df.join(other, condition, "cross")` ignores the condition (12 rows where live Spark 4.1 answers 2),
