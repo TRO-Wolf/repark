@@ -651,10 +651,12 @@ declines it (a dated ruling in the intake, then the archive).
   and cannot parse infix `div`; the guard learns its operator, with the error text per operator;
   grade lean B, small.
 - [zone-horizon-render-1-card-2026-10-07.md](zone-horizon-render-1-card-2026-10-07.md) — **card
-  ZONE-HORIZON-RENDER-1 (2026-10-07, filed, not scheduled, from the C-2d fold 1 re-verify verdict,
-  PR #991):** an instant past 2099 in a DST zone renders at standard time (`11:00` where Spark gives
-  `12:00` for 2100-07-01 in New York), in the cast to string, `hour` and `date_format`, not in the
-  C-2 diff; the ask is to read the localiser's `zone_horizon::proxy_year`.
+  ZONE-HORIZON-RENDER-1 (2026-10-07, from the C-2d fold 1 re-verify verdict, PR #991; closed
+  2026-10-08 by the unit of the same name):** an instant past 2099 in a DST zone rendered at
+  standard time (`11:00` where Spark gives `12:00` for 2100-07-01 in New York), in the cast to
+  string, `hour` and `date_format`. Every workspace site now reads
+  `repark_common::zone_horizon`; `from_utc_timestamp` / `to_utc_timestamp` (an upstream kernel)
+  stay open as the ledger's C-012.
 - [preview-bounded-source-1-card-2026-10-07.md](preview-bounded-source-1-card-2026-10-07.md) — **card
   PREVIEW-BOUNDED-SOURCE-1 (2026-10-07, filed, not scheduled, from the C-2d fold 1 re-verify verdict,
   PR #991):** the styled `show(n)` on a lazy frame counts once and reads the tail once under the

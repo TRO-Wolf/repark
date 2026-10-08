@@ -637,7 +637,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   probes. On main 1516 cells differ; 700 of them answer Spark after the fix, and 16 that
   agreed by accident now differ as their 2099 twins do (ledger R-5), which leaves the 832. `python _record_zone_horizon_render_1.py --engine repark --residue` rewrites
   the residue from the facade.
-  pins: zone-horizon-render-1/C-001, C-002, C-005, C-006, C-007, C-008, C-009, C-010
+  The card row, the registry row and the closed CAST-TS-STRING-1 residue are C-015.
+  pins: zone-horizon-render-1/C-001, C-002, C-005, C-006, C-007, C-008, C-009, C-010, C-015
 - [test_cast_ts_string_1.py](test_cast_ts_string_1.py) +
   [cast_ts_string_1_spark_oracle.json](cast_ts_string_1_spark_oracle.json) +
   [_record_cast_ts_string_1.py](_record_cast_ts_string_1.py) —

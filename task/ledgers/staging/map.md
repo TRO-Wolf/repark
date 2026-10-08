@@ -12,6 +12,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
   **Fold SM-2d (2026-10-07):** C-071 rewritten to the nearest-visible sourced-twin rule.
+- [zone-horizon-render-1-ledger.md](zone-horizon-render-1-ledger.md) +
+  [zone-horizon-render-1-main-answers.json](zone-horizon-render-1-main-answers.json) —
+  **ZONE-HORIZON-RENDER-1 (2026-10-08), from the C-2d fold 1 re-verify's S2 finding:** an
+  instant after 2099 renders at the zone's final rule. The grid measured on live Spark 4.1.2
+  and on main (6972 cells, 1516 differing; main's answers for those cells are the JSON
+  beside the ledger), the one helper for both directions in `repark_common::zone_horizon`
+  (C-003, C-004), the 19 routed sites (C-011), the facade and Rust pins (C-001, C-002,
+  C-005..C-010), eight mutations (C-014) and the closed card and registry row (C-015). Two
+  clauses are OPEN: `from_utc_timestamp` / `to_utc_timestamp` are an upstream kernel
+  (C-012, Q1), and the perf guard holds by instruction count but not by this machine's wall
+  clock (C-013, Q2). `risk_tier: standard`. Branch `fix/zone-horizon-render-1`.
 - [foreach-wrap-1-ledger.md](foreach-wrap-1-ledger.md) —
   **FOREACH-WRAP-1 (2026-10-07), security follow-up to SOURCE-URL-REDACT-2:** `foreach` and
   `foreachPartition` raise `scrub_exception`'s masked copy of the user's class after the
