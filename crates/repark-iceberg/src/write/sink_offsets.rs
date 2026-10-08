@@ -19,6 +19,11 @@ use crate::write::merge::{CommitScope, IsolationLevel, OPERATION_ID_PROP};
 use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
 
+#[path = "sink_offsets_append_fence.rs"]
+mod append_fence;
+
+use append_fence::AppendFence;
+
 pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";
 
 const STAMP_KEY_PREFIXES: [&str; 2] = ["repark.cdc.", "spark.sql.streaming."];
@@ -241,6 +246,17 @@ fn mark_committed(sink: &Table, stamp: &CommitStamp, snapshot: SnapshotId) {
     }
 }
 
+fn latch_refusal(sink: &Table, stamp: &CommitStamp, refusal: &MicroBatchError) {
+    if let Some(entry) = scopes().get_mut(&TableUuid::of(sink))
+        && entry.claimed
+        && entry.stamp == *stamp
+        && durable_refusal(refusal)
+    {
+        entry.claimed = false;
+        entry.refused = Some(refusal.clone());
+    }
+}
+
 fn durable_refusal(error: &MicroBatchError) -> bool {
     matches!(
         error,
@@ -443,12 +459,15 @@ pub async fn commit_stamp_only(
         .apply(tx)
         .map_err(|error| masked(&error))?;
     let tx = claimed.stamp_transaction(tx)?;
-    let committed = match tx.commit(catalog.as_ref()).await {
+    let fenced = AppendFence::install(catalog, &claimed);
+    let committed = match tx.commit(fenced.as_ref()).await {
         Ok(committed) => committed,
         Err(error) if error.kind() == ErrorKind::CommitStateUnknown => {
             return resolve_unknown_outcome(catalog, table, stamp, Some(&operation_id)).await;
         }
-        Err(error) => return Err(masked(&error)),
+        Err(error) => {
+            return Err(append_fence::refusal_of(&error).unwrap_or_else(|| masked(&error)));
+        }
     };
     let snapshot = committed
         .metadata()
@@ -605,6 +624,28 @@ impl SiteStamp {
         match &self.claimed {
             Some(claimed) => claimed.stamp_transaction(tx).map_err(microbatch_error),
             None => Ok(tx),
+        }
+    }
+
+    pub(crate) fn fenced(&self, catalog: &Arc<dyn Catalog>) -> Arc<dyn Catalog> {
+        match &self.claimed {
+            Some(claimed) => AppendFence::install(catalog, claimed),
+            None => Arc::clone(catalog),
+        }
+    }
+
+    pub(crate) async fn commit_append(
+        &self,
+        tx: Transaction,
+        catalog: &Arc<dyn Catalog>,
+    ) -> datafusion::error::Result<iceberg::Result<Table>> {
+        let result = tx.commit(self.fenced(catalog).as_ref()).await;
+        match (&self.claimed, result) {
+            (Some(_), Err(error)) => match append_fence::refusal_of(&error) {
+                Some(refusal) => Err(microbatch_error(refusal)),
+                None => Ok(Err(error)),
+            },
+            (_, result) => Ok(result),
         }
     }
 

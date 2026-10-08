@@ -21,6 +21,7 @@ struct ProbeCatalog {
     racers: Mutex<Vec<Vec<DataFile>>>,
     stamped_racer: Mutex<Option<(CommitStamp, Vec<DataFile>)>>,
     failing_loads: AtomicUsize,
+    loads: AtomicUsize,
 }
 
 impl std::fmt::Debug for ProbeCatalog {
@@ -38,7 +39,12 @@ impl ProbeCatalog {
             racers: Mutex::new(Vec::new()),
             stamped_racer: Mutex::new(None),
             failing_loads: AtomicUsize::new(0),
+            loads: AtomicUsize::new(0),
         }
+    }
+
+    fn loads(&self) -> usize {
+        self.loads.load(Ordering::SeqCst)
     }
 
     fn seen(&self) -> Vec<String> {
@@ -129,6 +135,7 @@ impl Catalog for ProbeCatalog {
     }
 
     async fn load_table(&self, table: &TableIdent) -> iceberg::Result<Table> {
+        self.loads.fetch_add(1, Ordering::SeqCst);
         if self
             .failing_loads
             .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |left| {
@@ -816,3 +823,6 @@ mod walk;
 
 #[path = "sink_offsets_isolation_tests.rs"]
 mod isolation;
+
+#[path = "sink_offsets_append_fence_tests.rs"]
+mod append_fence;

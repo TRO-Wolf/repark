@@ -124,6 +124,65 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets_append_fence.rs`, `sink_offsets_append_fence_tests.rs`, `sink_offsets.rs`,
+  `sink_offsets_fence_tests.rs`, `sink_offsets_probe_tests.rs`, `write_options.rs` — **MB-2c
+  closing slice, the append fence (2026-10-07, owner ruling ~20:55 EDT: `F-APPEND-PIN-BASE-1` is
+  not built in the fork now, and the RePark-side stopgap is allowed):** `AppendFence` is a
+  catalog wrapper, the `#[path]` child `append_fence` of `sink_offsets.rs`. It is installed for
+  one commit only, and only when the commit holds a claimed stamp: on the append arm
+  (`SiteStamp::commit_append`, the one call `commit_append_with_summary` makes in place of
+  `tx.commit`) and on the stamp-only door (`commit_stamp_only`). The two MERGE sites keep the
+  caller's catalog; their own `validate_from_snapshot` fences them (MBE-15).
+  - **The rule** is the fork card's "The request", read at `update_table`. The fork re-bases
+    before every `update_table` (`fork:crates/iceberg/src/transaction/mod.rs` `do_commit`: one
+    `load_table`, the staleness swap, validate, re-apply, then the one `update_table`, and
+    `commit` has no other path to it), and it hands the refreshed base to the catalog in
+    `TableCommit::base_table`. The wrapper reads that table, so the check costs no extra load;
+    it loads through the inner catalog only if a commit arrives without one. It walks `main`
+    from the head down to `ClaimedStamp::base`. A snapshot above the base whose summary carries
+    this query's `repark.cdc.query-id` refuses. A base that is not reached (rolled back, or the
+    ref reset past it) refuses. A `None` base has nothing to stop at, so every snapshot on
+    `main` is concurrent. A newer snapshot without the pair never refuses: an unrelated append,
+    another query's stamp, a `replace` (MB-2a's tolerance). The gap between the fork's load and
+    the write is covered by the commit's own `main` requirement: a racer landing there fails
+    the write retryably, and the next attempt's re-base shows it to the wrapper.
+  - **The refusal** is an `iceberg::Error` of kind `DataInvalid`, not retryable, so the
+    transaction's retry loop stops on it. Its message names the base, the newer snapshot (or
+    the head, when the base left `main`) and the key. Its source is the typed
+    `MicroBatchError`, which `append_fence::refusal_of` reads back at the two commit sites: the
+    epoch check re-run on the refreshed table (`AlreadyCommitted`, `Fenced`,
+    `GenerationMismatch`, or a recovery refusal); when that check passes, `Fenced` naming the
+    concurrent stamp's run if it is another run; otherwise `Catalog` with the message. A
+    durable refusal latches on the scope (`latch_refusal`), as a refused epoch check does
+    (fold 1, K3), so a later claim in the scope returns it and not `SinkCommittedTwice`.
+  - **Everything else passes through.** Each of the trait's other methods forwards to the
+    inner catalog, the provided ones too (`name`, `properties`, the view calls, the namespace
+    property calls, `publish_*`, `invalidate_*`), so a catalog's own overrides are kept. An
+    unstamped commit never meets the wrapper: `SiteStamp::fenced` returns the caller's own
+    `Arc`.
+  - **Pins.** `sink_offsets_append_fence_tests.rs` (a `#[path]` child of the probe module):
+    the race on the append arm and on the stamp-only door (`Fenced` naming the racer, one
+    `update_table` seen, two loads, the scope latched); the empty base (`AlreadyCommitted` for
+    the same epoch, and the named `Catalog` refusal for a higher one); the base off `main` on
+    both doors; the unstamped append (the caller's `Arc`, and it re-bases past this query's
+    stamp); the forwarding. `sink_offsets_fence_tests.rs` adds two DM-6 measurements under the
+    wrapper: the quiet commit lands one `append` (the case branch A failed), and so does a
+    commit raced by an unrelated append. `ProbeCatalog` counts loads.
+  - **Retirement.** This is a stopgap for
+    [F-APPEND-PIN-BASE-1](../../../../task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md).
+    When the fork lands it and RP-N repins, delete: `sink_offsets_append_fence.rs`; the
+    `append_fence` module lines and the `AppendFence` import in `sink_offsets.rs`;
+    `SiteStamp::fenced`; the `AppendFence::install` line in `commit_stamp_only`; the pins
+    `the_fence_forwards_every_other_catalog_call` and
+    `an_unstamped_append_commits_through_the_callers_own_catalog`'s two `fenced` assertions;
+    the `Fence::Catalog` arm of `sink_offsets_fence_tests.rs`. In their place
+    `SiteStamp::commit_append` and `commit_stamp_only` set
+    `validate_from_snapshot(ClaimedStamp::base)` and
+    `validate_no_concurrent_snapshot_with_summary("repark.cdc.query-id", <query>)` on the
+    append action and map the fork's validation error to the same typed refusal (`typed` and
+    `latch_refusal` move to that mapping). Every other pin stays as written and must stay
+    green; the two-loads assertions are re-measured.
+  pins: mb-2c/C-002, C-006, C-008, C-009, C-010
 - `sink_offsets.rs`, `sink_offsets_isolation_tests.rs`, `sink_offsets_probe_tests.rs`,
   `predicate_dml.rs` — **MB-2c fold 1, K2, MBE-15 (2026-10-07, ruling Q3):**
   `SiteStamp::claim_isolated` is the claim at the two MERGE sites in `merge/snapshot_commit.rs`.
@@ -162,7 +221,7 @@ repark-core's error map.
   reload's resume point itself refuses (a rolled-back attempt), the refusal keeps the attempt's
   epoch and operation-id and carries the durable record and that refusal in `resume_refusal`
   (fold 2).
-  The append fence (step 3) waits for `F-APPEND-PIN-BASE-1`.
+  The append fence (step 3) is the closing slice's row above.
   pins: mb-2c/C-003, C-004
 - `sink_offsets_tests.rs`, `sink_offsets_fence_tests.rs` — **MB-2c step 0, DM-6 (2026-10-07):**
   the sketch's Q8 branch A measured on the fork pin `076d5f98`. The stamped `merge_append` plus
@@ -171,7 +230,8 @@ repark-core's error map.
   commit at validation (`DataInvalid`), but refuses every quiet commit (`PreconditionFailed`,
   an empty snapshot), and with `allow_empty_commit()` the two snapshot producers in one
   transaction both assert `main` and never commit (`CatalogCommitConflicts`). Branch A is not
-  green; MB-2c halts on order rule 1 until `F-APPEND-PIN-BASE-1` merges. The four
+  green, so the fence is the closing slice's catalog wrapper (the row above), which
+  re-read these four and changed none: they commit through the bare catalog. The four
   measurements sit in the `#[path]` child `sink_offsets_fence_tests.rs`.
   pins: mb-2c/C-001
 - `sink_offsets.rs`, `sink_offsets_scope_tests.rs`, `write_options.rs` — **MB-2a fold 2 (2026-10-07, rulings

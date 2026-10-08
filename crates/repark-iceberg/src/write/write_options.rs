@@ -440,7 +440,7 @@ pub async fn commit_append_with_summary(
         .set_snapshot_properties(summary);
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
-    let committed = commit_result(tx.commit(catalog.as_ref()).await, &operation_id)?;
+    let committed = commit_result(stamp.commit_append(tx, catalog).await?, &operation_id)?;
     stamp.record(&committed)?;
     Ok(committed)
 }
