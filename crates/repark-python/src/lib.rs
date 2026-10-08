@@ -27,6 +27,7 @@ mod session_sources;
 #[cfg(test)]
 mod session_tests;
 mod session_write_options;
+mod streaming;
 mod subquery;
 mod temp_view_names;
 mod text_io;
@@ -46,7 +47,8 @@ pub use {column::PyColumn, dataframe::PyDataFrame};
 mod exceptions;
 pub use exceptions::{
     AnalysisException, ArithmeticException, CommitStateUnknownException, IllegalArgumentException,
-    NumberFormatException, ParseException, PySparkException, UnsupportedOperationException,
+    NumberFormatException, ParseException, PySparkException, RecoveryRequiredException,
+    StreamingQueryException, UnsupportedOperationException,
 };
 
 /// Convert a crate error to its PySpark-shaped Python exception.
@@ -66,19 +68,7 @@ pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
         ErrorClass::Unsupported => UnsupportedOperationException::new_err(message),
         ErrorClass::IllegalArgument => IllegalArgumentException::new_err(message),
         ErrorClass::NumberFormat => NumberFormatException::new_err(message),
-        ErrorClass::CommitStateUnknown => {
-            let operation_id = match &err {
-                repark_core::Error::CommitStateUnknown { operation_id, .. } => operation_id.clone(),
-                _ => None,
-            };
-            let raised = CommitStateUnknownException::new_err(message);
-            Python::attach(|py| {
-                if let Err(failure) = raised.value(py).setattr("operation_id", operation_id) {
-                    tracing::warn!(error = %failure, "operation_id setattr failed");
-                }
-                raised
-            })
-        }
+        ErrorClass::CommitStateUnknown => exceptions::commit_state_unknown_py_err(message, &err),
         ErrorClass::Base => PySparkException::new_err(message),
     }
 }
@@ -155,6 +145,14 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         "CommitStateUnknownException",
         module.py().get_type::<CommitStateUnknownException>(),
     )?;
+    module.add(
+        "StreamingQueryException",
+        module.py().get_type::<StreamingQueryException>(),
+    )?;
+    module.add(
+        "RecoveryRequiredException",
+        module.py().get_type::<RecoveryRequiredException>(),
+    )?;
     dataframe_fill::register(module)?;
     dataframe_names::register(module)?;
     dataframe_stack::register(module)?;
@@ -172,6 +170,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     session_runtime::register(module)?;
     session_sources::register(module)?;
     session_write_options::register(module)?;
+    streaming::register(module)?;
     subquery::register(module)?;
     temp_view_names::register(module)?;
     text_io::register(module)?;

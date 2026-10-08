@@ -3,7 +3,7 @@
 //! user input), and a per-call-site `#[expect]` cannot reach inside the macro expansion
 #![expect(
     clippy::disallowed_methods,
-    reason = "pyo3::create_exception! expands to Result::expect at the eight macro \
+    reason = "pyo3::create_exception! expands to Result::expect at the ten macro \
               sites below; the expansion is compile-time-constant registration, not a \
               reachable panic path. Scoped here so the spawn/panic bans stay live for \
               the whole crate (p3c ledger P-4/P-5)."
@@ -80,6 +80,36 @@ pyo3::create_exception!(
      (pyspark.errors.NumberFormatException); subclasses IllegalArgumentException, so \
      `except IllegalArgumentException` keeps catching it."
 );
+pyo3::create_exception!(
+    repark._native,
+    StreamingQueryException,
+    PySparkException,
+    "A streaming query terminated with an error: STREAM_FAILED, SQLSTATE XXKST. The PySpark \
+     name; subclasses PySparkException (hence RuntimeError)."
+);
+pyo3::create_exception!(
+    repark._native,
+    RecoveryRequiredException,
+    PySparkException,
+    "A streaming query needs operator recovery: an ambiguous commit outcome, a stop timeout, \
+     or a sink offset disagreement. Carries `query_id`, `epoch` and `durable_offset`. \
+     Subclasses PySparkException (hence RuntimeError), never StreamingQueryException."
+);
+
+#[must_use]
+pub(crate) fn commit_state_unknown_py_err(message: String, err: &repark_core::Error) -> PyErr {
+    let operation_id = match err {
+        repark_core::Error::CommitStateUnknown { operation_id, .. } => operation_id.clone(),
+        _ => None,
+    };
+    let raised = CommitStateUnknownException::new_err(message);
+    Python::attach(|py| {
+        if let Err(failure) = raised.value(py).setattr("operation_id", operation_id) {
+            tracing::warn!(error = %failure, "operation_id setattr failed");
+        }
+        raised
+    })
+}
 
 #[must_use]
 pub(crate) fn mask_user_visible(message: impl AsRef<str>) -> String {
