@@ -124,6 +124,18 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets/body_scope.rs`, `sink_offsets_body_scope_tests.rs`, `sink_offsets.rs`,
+  `session_write_conf.rs` — **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT"):**
+  `foreachBatch` exactly-once on the declared sink. `sink_offsets.rs` declares the child
+  `body_scope` and re-exports `guard_body_catalog`, `in_body_scope` and `unstamped_above`;
+  `SiteStamp::claim_with` falls back to the ambient body scope when the extras carry no
+  token; a scope entry also keeps the first `SinkCommittedTwice` or `UnstampedSinkWrite` it
+  refused (`BatchScopeGuard::body_refusal`, after a latched durable refusal) and whether a
+  commit's outcome was unknown (`outcome_unknown`). `session_write_conf_is_set` answers true
+  inside a body scope. `sink_offsets_body_scope_tests.rs` holds the eight unit pins, the
+  table-replacement refusal among them. The design, the limits and the pin list are in the
+  child directory's map, `sink_offsets/map.md`, under `body_scope.rs`.
+  pins: mb-4-foreach-eo/C-001, C-004, C-006
 - `sink_offsets/append_fence.rs`, `sink_offsets_append_fence_tests.rs`, `sink_offsets.rs`,
   `sink_offsets_fence_tests.rs`, `sink_offsets_probe_tests.rs`, `write_options.rs` — **MB-2c
   closing slice, the append fence (2026-10-07, owner ruling ~20:55 EDT: `F-APPEND-PIN-BASE-1` is

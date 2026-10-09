@@ -3694,6 +3694,72 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1; MB-3 ledger D-9). Spark's answer is an
   unhandled exception in its progress buffer, not a contract. repark keeps the query alive
   and its last progress readable.
+### MB-4-FOREACH-EO-1 — `foreachBatch` is exactly-once on its declared sink; Spark's is at-least-once
+- **repark** — the body's own write to the table named by `repark.cdc.sink` carries the batch's
+  stamp: the six `repark.cdc.*` summary keys and the `repark.cdc.offsets.<query-id>` property
+  land in the same snapshot as the rows. A body that writes the sink and then raises, and a
+  process that dies after the write, leave the batch durable: the restart resumes at the next
+  batch id and the body does not run again for the committed one (it is skipped entirely, not
+  re-run with the write held back). A batch whose body made no sink commit still gets the
+  driver's stamp-only snapshot. Source `(1, 2)`, `(3)` at one file per batch, a body that
+  appends to the sink and raises at batch 0, then a restart: sink `1, 2, 3`, snapshots
+  `append / epoch 0 / 2 rows`, `append / epoch 1 / 1 row`.
+- **Apache Spark** — `foreachBatch` is at-least-once: the batch's writes carry no streaming
+  keys and a batch that failed after its write replays under the same batch id, so the same
+  history leaves `1, 1, 2, 2, 3`. *(oracle: cells MB0-W4 and MB0-W6, recorded 2026-10-06.)*
+- **Pin** — `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_write_then_raise_restarts_without_a_duplicate`,
+  `::test_exit_after_the_sink_write_restarts_without_a_duplicate`,
+  `::test_kills_at_sink_commits_restart_without_a_duplicate`,
+  `::test_random_kills_restart_without_a_duplicate`;
+  `crates/repark-core/src/microbatch/foreach_tests.rs::a_body_that_fails_after_its_sink_write_leaves_the_epoch_durable`
+- **Rationale** — DECLARED 2026-10-09 (owner ruling "FIX IT" on the MB-4 verify's S1;
+  MB-4-FOREACH-EO ledger R-1, R-2, R-5). It replaces the at-least-once default MB-3 acted on
+  (MB-3 ledger D-2, C-005 b, c and e) with the design sketch's Q9 answer. The guarantee covers
+  the declared sink's main branch and a write issued on the thread that runs the body.
+### MB-4-FOREACH-SIDE-EFFECTS-1 — what a `foreachBatch` body does outside its declared sink is not exactly-once
+- **repark** — a write to any other table and a call to an external system are not stamped and
+  not fenced. The sink commit is the batch's commit point. A side effect the body runs
+  **before** its sink write is at-least-once: a batch that fails before the commit replays and
+  the side effect runs again. A side effect the body runs **after** its sink write is
+  at-most-once on a failure: when the body raises, or the process dies, after the commit, the
+  batch is durable and the body does not run again for it. Write the sink last, or make the
+  side effect idempotent on the batch id. A sink write from another thread or process started
+  by the body is such a side effect: it commits unstamped, and when the body itself made no
+  stamped commit the query ends `RecoveryRequiredException`, reason `UnstampedSinkCommit`
+  (MBE-14), naming the snapshot.
+- **Apache Spark** — every write of the body is at-least-once, the sink included. *(oracle:
+  cells MB0-W4 and MB0-W6.)*
+- **Pin** — `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_second_table_is_a_side_output_and_the_sink_stays_exact`,
+  `::test_sink_write_from_another_thread_ends_recovery_required`;
+  `crates/repark-core/src/microbatch/exactly_once_tests.rs::a_foreign_snapshot_beside_a_stamped_epoch_is_tolerated`
+- **Rationale** — DECLARED 2026-10-09 (MB-4-FOREACH-EO ledger R-3, "Side effects"). Flink's
+  two-phase-commit sink has the same shape: only the sink's own commit is exactly-once, and
+  work after the commit is not replayed.
+### MB-4-FOREACH-SINK-SHAPES-1 — inside a `foreachBatch` body the declared sink takes one stamped commit; other shapes refuse
+- **repark** — the sink takes one commit per batch from the body, through an append
+  (`writeTo(sink).append()`, `INSERT INTO`, `df.write.insertInto`, `saveAsTable` in append
+  mode), a `MERGE INTO`, or a row-level `UPDATE` / `DELETE`; the row-level statements need the
+  matching `write.{merge,update,delete}.isolation-level=serializable` (MBE-15). A second such
+  commit in the batch refuses `SinkCommittedTwice`
+  (`[REPARK_MICROBATCH.SINK_COMMITTED_TWICE]`, MBE-13). Every other commit to the sink refuses
+  before it lands with `[REPARK_MICROBATCH.UNSTAMPED_SINK_WRITE]` (MBE-19): `INSERT
+  OVERWRITE`, `overwritePartitions()`, `overwrite(condition)`, `createOrReplace()` and RTAS,
+  `saveAsTable` in overwrite mode, `TRUNCATE`, a `DELETE` with no predicate, a `DELETE` that
+  matches no row, `ALTER TABLE`, `CREATE BRANCH`, a write to a branch, and the maintenance
+  procedures (`expire_snapshots`, `rewrite_data_files`, `rewrite_manifests`,
+  `rollback_to_snapshot`). The error reaches the callable; when it leaves the callable the
+  query ends `StreamingQueryException` / `STREAM_FAILED` with that cause. `DROP TABLE` on the
+  sink and a drop-and-recreate keep their MB-3 answer (the sink the batch entered is gone:
+  `STREAM_FAILED`, or `RecoveryRequiredException` with `UnstampedSinkCommit`).
+- **Apache Spark** — runs every one of these shapes; none is tied to the batch. *(oracle:
+  cell MB0-W4; the refused shapes have no MB-0 cell.)*
+- **Pin** — `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_unstampable_sink_write_refuses_before_it_commits`
+  (eleven shapes), `::test_second_append_in_one_epoch_refuses_mbe13`,
+  `::test_merge_body_is_stamped_under_serializable_isolation`,
+  `::test_row_level_statement_is_stamped_under_serializable_isolation`
+- **Rationale** — DECLARED 2026-10-09 (MB-4-FOREACH-EO ledger R-4). A commit that cannot carry
+  the stamp would move the sink outside the batch, and a restart could not tell it from a
+  replay; the North Star's rule for a case no ruled row covers is to refuse with a dated row.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.

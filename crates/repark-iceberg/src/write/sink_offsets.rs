@@ -20,8 +20,10 @@ use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
 
 mod append_fence;
+mod body_scope;
 
 use append_fence::AppendFence;
+pub use body_scope::{guard_body_catalog, in_body_scope, unstamped_above};
 
 pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";
 
@@ -64,6 +66,8 @@ struct ScopeEntry {
     claimed: bool,
     committed: Option<SnapshotId>,
     refused: Option<MicroBatchError>,
+    violation: Option<MicroBatchError>,
+    outcome_unknown: bool,
 }
 
 fn scopes() -> MutexGuard<'static, HashMap<TableUuid, ScopeEntry>> {
@@ -127,6 +131,8 @@ impl BatchScope {
                 claimed: false,
                 committed: None,
                 refused: None,
+                violation: None,
+                outcome_unknown: false,
             },
         );
         Ok(BatchScopeGuard { sink, token })
@@ -153,9 +159,11 @@ impl BatchScope {
             return Ok(None);
         };
         if entry.claimed {
-            return Err(MicroBatchError::SinkCommittedTwice {
+            let twice = MicroBatchError::SinkCommittedTwice {
                 epoch: entry.stamp.record.epoch,
-            });
+            };
+            entry.violation = Some(twice.clone());
+            return Err(twice);
         }
         if let Some(refused) = &entry.refused {
             return Err(refused.clone());
@@ -187,6 +195,20 @@ impl BatchScopeGuard {
             Some(snapshot) => ScopeOutcome::Committed { snapshot },
             None => ScopeOutcome::NotCommitted,
         }
+    }
+
+    #[must_use]
+    pub fn body_refusal(&self) -> Option<MicroBatchError> {
+        let entries = scopes();
+        let entry = entries.get(&self.sink)?;
+        entry.refused.clone().or_else(|| entry.violation.clone())
+    }
+
+    #[must_use]
+    pub fn outcome_unknown(&self) -> bool {
+        scopes()
+            .get(&self.sink)
+            .is_some_and(|entry| entry.outcome_unknown)
     }
 }
 
@@ -589,7 +611,9 @@ impl SiteStamp {
         if branch.is_some_and(|name| name != MAIN_BRANCH) {
             return Ok(SiteStamp::default());
         }
-        let Some(token) = ScopeToken::carried_by(extra) else {
+        let Some(token) =
+            ScopeToken::carried_by(extra).or_else(|| body_scope::ambient_token(table))
+        else {
             return Ok(SiteStamp::default());
         };
         let claimed = BatchScope::claim_checked(table, &token, |stamp| {

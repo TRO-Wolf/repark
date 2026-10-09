@@ -16,7 +16,7 @@ use repark_iceberg::microbatch::offset::{
 use repark_iceberg::microbatch::window::WindowLimit;
 use repark_iceberg::write::sink_offsets::{
     BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, commit_stamp_only,
-    read_resume_point, resolve_unknown_outcome,
+    read_resume_point, resolve_unknown_outcome, unstamped_above,
 };
 use repark_iceberg::write::{
     CommitStateUnknownError, SESSION_SNAPSHOT_PREFIX, apply_session_write_key,
@@ -345,7 +345,7 @@ impl Run {
                 appended.map(|(rows, snapshot)| (Some(rows), snapshot))
             }
             Door::ForeachBatch(body) => self
-                .foreach_batch(&guard, &stamp, body.as_ref(), frame)
+                .foreach_batch(&guard, &stamp, &sink, body.as_ref(), frame)
                 .await
                 .map(|snapshot| (None, snapshot)),
         };
@@ -436,17 +436,44 @@ impl Run {
         &self,
         guard: &BatchScopeGuard,
         stamp: &CommitStamp,
+        base: &Table,
         body: &dyn BatchBody,
         frame: DataFrame,
     ) -> Result<SnapshotId, MicroBatchError> {
         let epoch = stamp.record.epoch;
-        body.run(frame, epoch)
-            .await
-            .map_err(|error| MicroBatchError::BatchFailed {
-                epoch,
-                cause: mask_value_credentials(&error.to_string()),
-            })?;
+        let ran = guard.scope_body(body.run(frame, epoch)).await;
+        let landed = match guard.outcome() {
+            ScopeOutcome::Committed { snapshot } => Some(snapshot),
+            ScopeOutcome::NotCommitted if guard.outcome_unknown() => {
+                Some(self.resolve_unknown(base, stamp, None).await?)
+            }
+            ScopeOutcome::NotCommitted => None,
+        };
+        if let Err(error) = ran {
+            if landed.is_some() {
+                self.shared.end_batch(Some(stamp.record.clone()));
+            }
+            return Err(guard
+                .body_refusal()
+                .unwrap_or_else(|| MicroBatchError::BatchFailed {
+                    epoch,
+                    cause: mask_value_credentials(&error.to_string()),
+                }));
+        }
+        if let Some(snapshot) = landed {
+            return Ok(snapshot);
+        }
         let sink = self.load_sink().await?;
+        if TableUuid::of(&sink) == TableUuid::of(base)
+            && let Some(snapshot) = unstamped_above(&sink, base.metadata().current_snapshot_id())
+        {
+            return Err(MicroBatchError::RecoveryRequired {
+                query: self.shared.id,
+                epoch,
+                durable: self.shared.durable().map(Box::new),
+                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+            });
+        }
         let commit =
             commit_stamp_only(&self.shared.sink.catalog, &sink, stamp, Some(guard.token()));
         match tokio::time::timeout(self.shared.catalog_timeout, commit).await {

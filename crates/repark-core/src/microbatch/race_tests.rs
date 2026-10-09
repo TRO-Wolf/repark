@@ -24,17 +24,24 @@ use crate::microbatch::driver::{
 };
 use crate::microbatch::lifecycle_tests::{Mode, ONE, Probe, ended, named};
 use crate::microbatch::table_door_tests::{FLAKY_SINK, FaultCatalog, LoadHook, flaky};
-use crate::microbatch::testing::{Fixture, SINK, SOURCE, options, stamped_epochs};
+use crate::microbatch::testing::{Fixture, SINK, SOURCE, SinkWriter, options, stamped_epochs};
 use crate::time_travel::microbatch_source::MicroBatchSource;
 
 const ITERATIONS: usize = 50;
 const FENCE_FLOOR: usize = 10;
+const BODY_FLOOR: usize = 10;
 const SEED: u64 = 0x9E37_79B9_7F4A_7C15;
 const SLOWEST_LOAD_MILLIS: u64 = 12;
 const SLOW_SINK: &str = "slow.sales.silver";
 const BATCHES: u64 = 3;
 const ROWS_PER_BATCH: u64 = 2;
 const ADDED_FILES_KEY: &str = "added-data-files";
+
+#[derive(Clone, Copy)]
+enum Raced {
+    Table,
+    ForeachBatch,
+}
 
 struct SlowCatalog {
     inner: Arc<dyn Catalog>,
@@ -164,11 +171,16 @@ async fn slowed(session: &Session, seed: u64) {
         .expect("the slowed catalog registers");
 }
 
-fn racing_spec(name: &str) -> StreamSpec {
-    let sink = SinkSpec::Table {
-        sink: SLOW_SINK.to_string(),
+fn racing_spec(session: &Session, door: Raced, name: &str) -> StreamSpec {
+    let mut spec = match door {
+        Raced::Table => {
+            let sink = SinkSpec::Table {
+                sink: SLOW_SINK.to_string(),
+            };
+            StreamSpec::new(SOURCE, options(ONE), sink)
+        }
+        Raced::ForeachBatch => SinkWriter::new(session, SLOW_SINK, 1).spec(&options(ONE)),
     };
-    let mut spec = StreamSpec::new(SOURCE, options(ONE), sink);
     spec.trigger = Trigger::AvailableNow;
     spec.polling_delay = Duration::ZERO;
     named(spec, name)
@@ -269,7 +281,7 @@ fn lost_to(ending: &Result<bool, Arc<MicroBatchError>>, winner: RunId) -> bool {
     }
 }
 
-async fn race_once(iteration: usize) -> bool {
+async fn race_once(iteration: usize, door: Raced) -> bool {
     let fixture = Fixture::new().await;
     let seed = SEED.wrapping_mul(u64::try_from(iteration).expect("a small count") + 1);
     let every_row: Vec<i64> = (1..=BATCHES * ROWS_PER_BATCH)
@@ -282,8 +294,12 @@ async fn race_once(iteration: usize) -> bool {
     let other = second_session(&fixture).await;
     slowed(&fixture.session, seed).await;
     slowed(&other, seed.rotate_left(32)).await;
-    let a = registered(&fixture.session, racing_spec("raced")).await;
-    let b = registered(&other, racing_spec("raced")).await;
+    let a = registered(
+        &fixture.session,
+        racing_spec(&fixture.session, door, "raced"),
+    )
+    .await;
+    let b = registered(&other, racing_spec(&other, door, "raced")).await;
     assert_eq!(a.id(), b.id());
     assert_ne!(a.run_id(), b.run_id());
     start_on_a_barrier([&a, &b]);
@@ -337,11 +353,23 @@ async fn race_once(iteration: usize) -> bool {
 async fn two_sessions_racing_one_query_land_every_row_exactly_once() {
     let mut refused_at_the_commit = 0usize;
     for iteration in 0..ITERATIONS {
-        refused_at_the_commit += usize::from(race_once(iteration).await);
+        refused_at_the_commit += usize::from(race_once(iteration, Raced::Table).await);
     }
     assert!(
         refused_at_the_commit >= FENCE_FLOOR,
         "{refused_at_the_commit} of {ITERATIONS} iterations reached the append fence, under the floor of {FENCE_FLOOR}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn two_sessions_racing_foreach_bodies_land_every_row_exactly_once() {
+    let mut refused_after_staging = 0usize;
+    for iteration in 0..ITERATIONS {
+        refused_after_staging += usize::from(race_once(iteration, Raced::ForeachBatch).await);
+    }
+    assert!(
+        refused_after_staging >= BODY_FLOOR,
+        "{refused_after_staging} of {ITERATIONS} iterations refused a body's staged write, under the floor of {BODY_FLOOR}"
     );
 }
 

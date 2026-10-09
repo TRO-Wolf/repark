@@ -109,7 +109,7 @@ impl ReparkSession {
             return Ok(frame);
         }
         self.trim_iceberg_caches().await;
-        let catalogs = self.catalogs_snapshot();
+        let catalogs = self.catalogs_snapshot().guarded_in_batch_body();
         let read_only = self.postgres_catalog_names_snapshot();
         let mut cx = EngineContext::new_with_time_zone(
             self.context(),

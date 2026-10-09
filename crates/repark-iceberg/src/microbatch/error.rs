@@ -53,6 +53,10 @@ pub enum MicroBatchError {
         "epoch {epoch} already stamped the sink; refusing a second sink write in the same batch: a restart resumes after epoch {epoch}, so this write's rows would never land. Write the sink once per batch body, or combine the writes into a single write"
     )]
     SinkCommittedTwice { epoch: Epoch },
+    #[error(
+        "epoch {epoch}: this write to the declared sink {sink} cannot carry the epoch stamp, so it is refused before it commits. Inside a foreachBatch body the declared sink takes one append, INSERT INTO, MERGE, UPDATE or DELETE on its main branch; write any other table freely"
+    )]
+    UnstampedSinkWrite { sink: String, epoch: Epoch },
     #[error("query {query} epoch {epoch} is already committed")]
     AlreadyCommitted { query: QueryId, epoch: Epoch },
     #[error("query {query} epoch {epoch} lost the sink to run {winner}; stop this driver")]
@@ -523,6 +527,18 @@ mod tests {
         assert_eq!(
             required.to_string(),
             "recovery required for query 00000000-0000-0000-0000-000000000000 epoch 3: stamped snapshot expired; raise history.expire.min-snapshots-to-keep retention"
+        );
+    }
+
+    #[test]
+    fn unstamped_sink_write_names_the_sink_the_epoch_and_what_the_sink_takes() {
+        let refused = MicroBatchError::UnstampedSinkWrite {
+            sink: String::from("silver.events"),
+            epoch: Epoch::new(4),
+        };
+        assert_eq!(
+            refused.to_string(),
+            "epoch 4: this write to the declared sink silver.events cannot carry the epoch stamp, so it is refused before it commits. Inside a foreachBatch body the declared sink takes one append, INSERT INTO, MERGE, UPDATE or DELETE on its main branch; write any other table freely"
         );
     }
 
