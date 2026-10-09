@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use super::*;
-use crate::exceptions::{IllegalArgumentException, ParseException};
+use crate::exceptions::{AnalysisException, IllegalArgumentException, ParseException};
+use crate::session::PyReparkSession;
 
 fn options(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
     pairs
@@ -204,6 +206,59 @@ fn trigger_build_maps_kinds_and_refuses_loud_misuse() {
                 .expect("condition is str"),
             "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER"
         );
+    });
+}
+
+fn session_with_tables(py: Python<'_>, tag: &str) -> (Py<PyReparkSession>, PathBuf) {
+    let warehouse = std::env::temp_dir().join(format!(
+        "repark-py-streaming-guard-{tag}-{id}",
+        id = std::process::id()
+    ));
+    let session = Py::new(
+        py,
+        PyReparkSession::new(py, None, None, None, None, None).expect("a session"),
+    )
+    .expect("a session object");
+    session
+        .bind(py)
+        .borrow()
+        .register_memory_catalog(py, "sc", &warehouse.to_string_lossy())
+        .expect("a memory catalog");
+    for statement in [
+        "CREATE NAMESPACE sc.mb5",
+        "CREATE TABLE sc.mb5.source (id BIGINT, k STRING)",
+        "INSERT INTO sc.mb5.source VALUES (1, 'k1'), (2, 'k0'), (3, 'k1')",
+    ] {
+        session
+            .bind(py)
+            .borrow()
+            .sql(py, statement)
+            .expect("a seed statement");
+    }
+    (session, warehouse)
+}
+
+#[test]
+fn refuse_streaming_action_pins_dm3_on_a_streaming_frame_only() {
+    Python::attach(|py| {
+        let (session, warehouse) = session_with_tables(py, "dm3");
+        let owned = session.bind(py).borrow();
+        let frame =
+            load_stream(py, &owned, "sc.mb5.source", BTreeMap::new()).expect("a stream loads");
+        let refused = refuse_streaming_action(py, &frame).expect_err("a stream refuses");
+        assert!(refused.is_instance_of::<AnalysisException>(py));
+        assert_eq!(condition(&refused, py), "_LEGACY_ERROR_TEMP_3102");
+        assert_eq!(
+            message(&refused, py),
+            "Queries with streaming sources must be executed with writeStream.start(), or from a \
+             streaming table or flow definition within a Spark Declarative Pipeline.;\niceberg"
+        );
+        let batch = owned
+            .sql(py, "SELECT * FROM sc.mb5.source")
+            .expect("a batch frame");
+        refuse_streaming_action(py, &batch).expect("a batch frame passes");
+        drop(owned);
+        let _ = std::fs::remove_dir_all(&warehouse);
     });
 }
 

@@ -8029,6 +8029,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Fold 1b pins `toTable('')`/`toTable('   ')` to Spark's
   `PARSE_EMPTY_STATEMENT` text and `toTable(5)`/`toTable(None)`/`get(5)`/
   `get(None)` to `NOT_STR`. pins: mb-4/C-041
+  Fold 1b pins `query.stop()` raising `RecoveryRequired` after the sink is
+  replaced under a `foreachBatch` body. pins: mb-4/C-042
 
 ## I want to...
 

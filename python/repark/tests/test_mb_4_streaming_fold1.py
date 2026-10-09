@@ -2,6 +2,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from repark.errors import (
     ParseException,
     PySparkNotImplementedError,
     PySparkTypeError,
+    RecoveryRequiredException,
     StreamingQueryException,
 )
 from repark.spark.dataframe import DataFrame
@@ -553,3 +555,27 @@ def test_manager_get_non_str_id_refuses_not_str(spark: ReparkSession) -> None:
             "arg_name": "id",
             "arg_type": type(bad).__name__,
         }
+
+
+def _replace_sink_table(spark: ReparkSession, sink: str, frame: DataFrame, batch_id: int) -> None:
+    spark.sql(f"DROP TABLE {sink}")
+    spark.sql(f"CREATE TABLE {sink} (id BIGINT, k STRING)")
+
+
+def test_query_stop_raises_recovery_required_after_sink_replace(
+    spark: ReparkSession, stream_table: str, tmp_path: Path
+) -> None:
+    sink = "sc.mb4.silver_stop_rm5"
+    spark.sql(f"CREATE TABLE {sink} (id BIGINT, k STRING)")
+    query = (
+        DataStreamWriter(_reader(spark).format("iceberg").load(stream_table))
+        .foreachBatch(partial(_replace_sink_table, spark, sink))
+        .option("repark.cdc.sink", sink)
+        .option("checkpointLocation", str(tmp_path / "rm5ckpt"))
+        .trigger(availableNow=True)
+        .start()
+    )
+    with pytest.raises(RecoveryRequiredException):
+        query.awaitTermination()
+    with pytest.raises(RecoveryRequiredException):
+        query.stop()
