@@ -142,6 +142,11 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   snapshot is only checked to exist. Every task is re-stamped with that
   schema and its top-level field ids.
   pins: mb-1/C-012, C-015, C-016, C-022, C-033
+  **EMPTY-PROJECTION-COUNT-1 step 1 (2026-10-09):** the red-first
+  `provider_counts_rows_through_an_empty_projection` pin — `COUNT(*)` over a
+  three-file window holding an empty file, read through the shared
+  `conform_batch` with no product change on this branch.
+  pins: empty-projection-count-1/C-005
 
 ## Design notes
 

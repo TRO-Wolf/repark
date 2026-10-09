@@ -752,3 +752,9 @@ declines it (a dated ruling in the intake, then the archive).
   or unread in one more pass (aggregate and window, the retry binding the left key, the WINDOW clause: 18 third
   answers of 575 statements). Asks how a qualified side key resolves structurally; governing rule: never worse than
   main, a third answer is an S1.
+- [empty-projection-count-1-card-2026-10-09.md](empty-projection-count-1-card-2026-10-09.md) — **card
+  EMPTY-PROJECTION-COUNT-1 (2026-10-09, closed by the unit the same day):** `COUNT(*)` planned
+  an empty projection and the shared `conform_batch` rebuild refused it, failing the changelog,
+  incremental and lineage readers engine-internal. The shared-site fix serves all three plus the
+  micro-batch caller; the ledger holds the base/head tables and the Spark oracle. The MB-4 branch
+  carries an open copy of this card that the later merge must reconcile (ledger D-1).

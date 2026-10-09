@@ -9874,3 +9874,16 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   reproduces without RePark. With the skip bypassed on 25.0.0 the worker dies with
   signal 11 on five of the six doors.
   pins: threaded-collect-segv-1/C-001, C-002
+- [test_empty_projection_count_1.py](test_empty_projection_count_1.py) —
+  **EMPTY-PROJECTION-COUNT-1 (2026-10-09):** `COUNT(*)` over the changelog,
+  incremental and lineage readers. Twenty pins: the changelog reader on v2,
+  v3, single-file, ten-file and MOR-delete histories; the incremental reader
+  over plain, ten-snapshot, v3 and delete-holding windows; the lineage reader's
+  `COUNT(*) AS _row_id` and `df.count()` on the v3 DV fixture; guards for the
+  v2 alias, empty results, filtered counts, the `V3-ROWID-2` lineage refusal and
+  the neighbouring plain, snapshot, metadata-column and changelog-view counts.
+  Expected values are the row-returning forms, equal to live PySpark 4.1.2 on
+  both shared doors (incremental 3, changes 5, v3 incremental 2, v3 changes 4).
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here.
+  pins: empty-projection-count-1/C-002, C-003, C-004, C-007, C-008, C-009
