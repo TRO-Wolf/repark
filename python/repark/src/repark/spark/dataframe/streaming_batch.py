@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from decimal import Decimal
 from types import MethodType
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from repark.errors import (
     AnalysisException,
@@ -85,14 +85,58 @@ def _refuse_interval_string(delay_threshold: str) -> NoReturn:
     )
 
 
+def streaming_root_inner(frame: DataFrame) -> Any | None:
+    """Walk the map-bridge chain to the streaming ancestor's native frame, if any.
+
+    A ``mapInArrow`` frame (and every door built on it: scalar and pandas UDFs,
+    ``mapInPandas``, ``applyInPandas``) holds a placeholder plan; only the walk
+    through ``_map_bridge`` parents reaches the streaming scan underneath.
+    pins: mb-4/C-039
+    """
+    from repark import _native
+
+    node: DataFrame = frame
+    while True:
+        if _native.is_streaming_frame(node._inner):
+            return node._inner
+        bridge = node._map_bridge
+        if bridge is None:
+            return None
+        node = bridge["parent"]
+
+
+def is_streaming(frame: DataFrame) -> bool:
+    """Whether the frame or any map-bridge ancestor holds a streaming scan."""
+    return streaming_root_inner(frame) is not None
+
+
+def has_python_udf_over_stream(frame: DataFrame) -> bool:
+    """Whether a Python-executed bridge sits between the frame and a stream."""
+    return frame._map_bridge is not None and is_streaming(frame)
+
+
+def refuse_streaming_action_on_bridge(frame: DataFrame) -> None:
+    """Refuse a batch action on a Python-UDF-over-stream frame with the DM-3 guard.
+
+    The refusal runs through the native guard against the streaming ancestor, so
+    the class, text and parameters equal a plain streaming frame's refusal.
+    """
+    if frame._map_bridge is None:
+        return
+    root = streaming_root_inner(frame)
+    if root is None:
+        return
+    from repark import _native
+
+    _native.refuse_streaming_action(root)
+
+
 def write_stream(frame: DataFrame) -> DataStreamWriter:
     """Answer ``DataFrame.writeStream`` on a stream; refuse it on a batch frame.
 
     pins: df-stream-batch-1/C-001, mb-4/C-031
     """
-    from repark import _native
-
-    if not _native.is_streaming_frame(frame._inner):
+    if not is_streaming(frame):
         _raise_analysis(
             "[WRITE_STREAM_NOT_ALLOWED] `writeStream` can be called only on streaming "
             "Dataset/DataFrame. SQLSTATE: 42601",
@@ -181,9 +225,7 @@ def with_watermark(
         raise IllegalArgumentException(
             f"requirement failed: delay threshold ({delayThreshold}) should not be negative."
         )
-    from repark import _native
-
-    if _native.is_streaming_frame(frame._inner):
+    if is_streaming(frame):
         raise PySparkNotImplementedError(
             "[NOT_IMPLEMENTED] withWatermark is not implemented.",
             errorClass="NOT_IMPLEMENTED",

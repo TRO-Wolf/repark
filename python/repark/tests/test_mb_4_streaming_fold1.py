@@ -14,6 +14,7 @@ from repark.errors import (
     StreamingQueryException,
 )
 from repark.spark.dataframe import DataFrame
+from repark.spark.functions import col, pandas_udf, udf
 from repark.spark.session.session_core import ReparkSession
 from repark.spark.streaming import DataStreamReader, DataStreamWriter
 
@@ -41,6 +42,70 @@ def stream_table(spark: ReparkSession, tmp_path: Path) -> str:
 
 def _reader(spark: ReparkSession) -> DataStreamReader:
     return DataStreamReader(spark)
+
+
+_DM3_TEXT = (
+    "Queries with streaming sources must be executed with writeStream.start(), "
+    "or from a streaming table or flow definition within a Spark Declarative Pipeline.;\niceberg"
+)
+
+_MBE18_TEXT = "[NOT_IMPLEMENTED] Python UDF over a streaming DataFrame is not implemented."
+_MBE18_PARAMS = {"feature": "Python UDF over a streaming DataFrame"}
+
+
+def _udf_frames(stream: DataFrame) -> dict[str, DataFrame]:
+    identity = udf(lambda value: value, "long")(col("id"))
+    vectorized = pandas_udf(lambda series: series, "long")(col("id"))
+    return {
+        "udf": stream.withColumn("id", identity),
+        "pandas_udf": stream.withColumn("id", vectorized),
+        "mapInArrow": stream.mapInArrow(lambda batches: batches, "id long"),
+        "mapInPandas": stream.mapInPandas(lambda frames: frames, "id long"),
+        "applyInPandas": stream.groupBy("id").applyInPandas(lambda key, pdf: pdf, "id long"),
+    }
+
+
+def _udf_start_doors(
+    frame: DataFrame, sink: str, checkpoint: str
+) -> dict[str, Callable[[], object]]:
+    return {
+        "toTable": lambda: (
+            frame.writeStream.option("checkpointLocation", checkpoint)
+            .trigger(availableNow=True)
+            .toTable(sink)
+        ),
+        "start": lambda: (
+            frame.writeStream.format("iceberg")
+            .option("checkpointLocation", checkpoint)
+            .trigger(availableNow=True)
+            .start(sink)
+        ),
+        "foreach": lambda: (
+            frame.writeStream.foreachBatch(lambda batch, epoch: None)
+            .option("repark.cdc.sink", sink)
+            .option("checkpointLocation", checkpoint)
+            .trigger(availableNow=True)
+            .start()
+        ),
+    }
+
+
+def _batch_action_doors(frame: DataFrame) -> dict[str, Callable[[], object]]:
+    return {
+        "collect": frame.collect,
+        "take": lambda: frame.take(1),
+        "head": lambda: frame.head(1),
+        "first": frame.first,
+        "tail": lambda: frame.tail(1),
+        "isEmpty": frame.isEmpty,
+        "toLocalIterator": lambda: list(frame.toLocalIterator()),
+        "count": frame.count,
+        "show": lambda: frame.show(2),
+        "to_arrow": frame.to_arrow,
+        "to_arrow_batches": lambda: list(frame.to_arrow_batches()),
+        "to_pandas": frame.to_pandas,
+        "to_numpy": frame.to_numpy,
+    }
 
 
 _SIGINT_CHILD = """
@@ -187,6 +252,56 @@ def test_test_seam_runs_on_memory_catalog(tmp_path: Path) -> None:
         assert spark.table(sink).count() == 3
     finally:
         spark.stop()
+
+
+def test_python_udf_doors_keep_streaming_true(spark: ReparkSession, stream_table: str) -> None:
+    stream = spark.readStream.table(stream_table)
+    for name, frame in _udf_frames(stream).items():
+        assert frame.isStreaming is True, name
+        assert isinstance(frame.writeStream, DataStreamWriter), name
+        with pytest.raises(PySparkNotImplementedError) as watermarked:
+            frame.withWatermark("id", "1 second")
+        assert watermarked.value.getErrorClass() == "NOT_IMPLEMENTED", name
+
+
+def test_python_udf_over_stream_start_doors_refuse_mbe18(
+    spark: ReparkSession, stream_table: str, tmp_path: Path
+) -> None:
+    spark.sql("CREATE TABLE sc.mb4.silver_udf (id BIGINT)")
+    stream = spark.readStream.table(stream_table)
+    checkpoint = str(tmp_path / "ck")
+    for name, frame in _udf_frames(stream).items():
+        for door, run in _udf_start_doors(frame, "sc.mb4.silver_udf", checkpoint).items():
+            with pytest.raises(PySparkNotImplementedError) as excinfo:
+                run()
+            assert excinfo.value.getErrorClass() == "NOT_IMPLEMENTED", (name, door)
+            assert excinfo.value.getMessageParameters() == _MBE18_PARAMS, (name, door)
+            assert excinfo.value.getSqlState() is None, (name, door)
+            assert str(excinfo.value) == _MBE18_TEXT, (name, door)
+
+
+def test_python_udf_over_stream_batch_actions_refuse_dm3(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    stream = spark.readStream.table(stream_table)
+    frames = _udf_frames(stream)
+    for name, frame in frames.items():
+        with pytest.raises(AnalysisException) as excinfo:
+            frame.collect()
+        assert (
+            excinfo.value.getCondition(),
+            excinfo.value.getSqlState(),
+            str(excinfo.value),
+        ) == ("_LEGACY_ERROR_TEMP_3102", None, _DM3_TEXT), name
+    for name in ("udf", "mapInArrow"):
+        for door, run in _batch_action_doors(frames[name]).items():
+            with pytest.raises(AnalysisException) as excinfo:
+                run()
+            assert (
+                excinfo.value.getCondition(),
+                excinfo.value.getSqlState(),
+                str(excinfo.value),
+            ) == ("_LEGACY_ERROR_TEMP_3102", None, _DM3_TEXT), (name, door)
 
 
 def test_test_seam_not_referenced_by_public_package() -> None:

@@ -77,6 +77,13 @@ declines it (a dated ruling in the intake, then the archive).
   matching slice. The product keeps the W8 refusal. Closes when a slice lands it or the
   owner declines it.
   pins: mb-4/C-034
+- [stream-python-udf-1-card-2026-10-09.md](stream-python-udf-1-card-2026-10-09.md) — **card
+  STREAM-PYTHON-UDF-1 (2026-10-09, MB-4 fold 1, from the Opus verify S2-UDF):** the
+  Spark-matching answer for Python UDFs over a streaming frame — Spark runs all five
+  doors (verify cells `plan.udf.*`), only `complete` output mode refuses; the product
+  refuses MBE-18 at start and answers DM-3 on batch actions. Closes when a slice
+  executes the function per micro-batch or the owner declines it.
+  pins: mb-4/C-039
 - [empty-projection-count-1-card-2026-10-09.md](empty-projection-count-1-card-2026-10-09.md) — **card
   EMPTY-PROJECTION-COUNT-1 (2026-10-09, MB-4 round 4, from ledger D-44):** `COUNT(*)` fails
   with the engine-internal row-count error over the changelog reader, the incremental

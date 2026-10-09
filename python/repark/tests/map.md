@@ -8020,6 +8020,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The SIGINT pin runs all four wait variants in a subprocess, interrupts at
   2 s, and asserts the wait raises with the query still active within 10 s.
   pins: mb-4/C-038
+  `isStreaming` stays True through the five Python-UDF doors with `writeStream`
+  answering and `withWatermark` refusing MBE-7; every start door refuses MBE-18;
+  batch actions answer DM-3 through the native guard. pins: mb-4/C-039
 
 ## I want to...
 

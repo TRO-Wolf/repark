@@ -151,6 +151,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   holds the GIL and abort. Use `Table.from_batches`, not `RecordBatchReader.from_batches`,
   so tests that patch `pa.RecordBatchReader` keep tracking `from_stream`. Exact baseline
   ratchets 4485 → 4473 → 4470. pins: facade-1/C-001, C-002, C-006
+  **MB-4 fold 1 (2026-10-09):** `_action_inner` and `_consume_map_in_arrow_batches`
+  refuse DM-3 on a bridge rooted at a stream before executing; plan snapshots keep
+  the batch-only reader. pins: mb-4/C-039
   DF-SURFACE-A-1 step 1 (2026-09-14): the `localCheckpoint` body moves to
   `surface_a.py` (checkpoint's sibling) and the seven surface-a names bind
   one-line each. Critic round 1 (rulings R-5/R-6): `inputFiles` and
@@ -451,6 +454,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `udf_schema.py` owns mapInArrow schema coercion and batch validation (DFCORE-1, moved from
   `core.py`). Arrow widths match the session `createDataFrame` path, so `SMALLINT` / `TINYINT`
   / `FLOAT` stay narrow. pins: dfcore-1/C-006
+- `map_bridge.py` owns mapInArrow bridge execution (MB-4 fold 1, moved from `core.py`):
+  iterate, consume, execute (C-stream and IPC fallback), the plan snapshot, the MIA view
+  tracker and the finalizer. The functions bind as `DataFrame` methods from `core.py`;
+  bodies are byte-identical to the move source. pins: mb-4/C-039
 - `grouped_udf.py` owns contiguous-group assembly for the applyInPandas bridge (DFCORE-1,
   moved from `core.py`). The key-missing sentinel marks "no group seen yet" in the single-pass
   boundary scan; it is never a real key. An empty returned frame with no columns is an empty
@@ -1289,6 +1296,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_integral.py`'s `_spark_error_class` attach helpers; the helpers are bound
   as real class members so `__getattr__` column access can never shadow them.
   pins: df-stream-batch-1/C-001, C-002, C-003, C-004
+  **MB-4 fold 1 (2026-10-09):** `is_streaming` walks the map-bridge chain to
+  the streaming scan underneath, so `isStreaming` stays True through UDF and
+  map doors; `write_stream` answers and `withWatermark` refuses MBE-7 on such
+  frames; `refuse_streaming_action_on_bridge` runs batch actions through the
+  native DM-3 guard against the streaming ancestor. pins: mb-4/C-039
   **MB-4 round 2b (2026-10-08):** `withWatermark` refuses MBE-7 on a streaming frame
   after Spark's own validation passes. pins: mb-4/C-023
   **MB-4 item 10 (2026-10-09):** `writeStream` answers a `DataStreamWriter` on a

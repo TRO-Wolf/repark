@@ -51,6 +51,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module
     )?)?;
     module.add_function(wrap_pyfunction!(check_stream_format, module)?)?;
+    module.add_function(wrap_pyfunction!(refuse_streaming_action, module)?)?;
     Ok(())
 }
 
@@ -428,6 +429,12 @@ pub fn load_stream(
 #[pyfunction]
 pub fn is_streaming_frame(frame: &PyDataFrame) -> bool {
     relation::is_streaming_frame(frame.inner())
+}
+
+#[pyfunction]
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_streaming_action(py: Python<'_>, frame: &PyDataFrame) -> PyResult<()> {
+    crate::streaming_errors::refuse_streaming_action(py, frame.inner())
 }
 
 #[pyfunction]

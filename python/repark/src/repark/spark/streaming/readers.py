@@ -29,6 +29,21 @@ _DEFAULT_TRIGGER = "default"
 _PROCESSING_TIME_TRIGGER = "processingTime"
 _ONCE_TRIGGER = "once"
 _CONTINUOUS_TRIGGER = "continuous"
+
+_PYTHON_UDF_OVER_STREAM_FEATURE = "Python UDF over a streaming DataFrame"
+
+
+def _refuse_python_udf_over_stream(frame: DataFrame) -> None:
+    from repark.spark.dataframe.streaming_batch import has_python_udf_over_stream
+
+    if has_python_udf_over_stream(frame):
+        raise PySparkNotImplementedError(
+            f"[NOT_IMPLEMENTED] {_PYTHON_UDF_OVER_STREAM_FEATURE} is not implemented.",
+            errorClass="NOT_IMPLEMENTED",
+            messageParameters={"feature": _PYTHON_UDF_OVER_STREAM_FEATURE},
+        )
+
+
 _AVAILABLE_NOW_TRIGGER = "availableNow"
 
 
@@ -415,6 +430,7 @@ class DataStreamWriter:
         self._frame._ensure_alive()
         session = self._frame.sparkSession
         inner_session = session._ensure_alive()
+        _refuse_python_udf_over_stream(self._frame)
         handle = _native.start_stream(
             inner_session,
             self._frame._inner,
@@ -463,6 +479,7 @@ class DataStreamWriter:
         self._frame._ensure_alive()
         session = self._frame.sparkSession
         inner_session = session._ensure_alive()
+        _refuse_python_udf_over_stream(self._frame)
         handle = _native.to_table_stream(
             inner_session,
             self._frame._inner,
