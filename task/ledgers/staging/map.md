@@ -13,6 +13,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Fold 1 (2026-10-08): route assertions with the inequality and false cells SQL-only, live Spark
   self-join literals, and the Spark-refused leniency pinned as cross-equals-inner, carried OPEN
   (C-008) to card JOIN-CONDITION-REFUSALS-1.
+  Fold 2 (2026-10-08): the `JoinConditionRefusals` analyzer rule refuses those conditions with
+  Spark's class, condition and text on every how of both doors (C-008 PROVEN); the card is closed.
   `risk_tier: standard`. Branch `fix/cross-join-condition-1`.
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`

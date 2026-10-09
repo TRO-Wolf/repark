@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-08. **Filed by:** Muse Spark (muse-spark-1.3-contributor), CROSS-JOIN-CONDITION-1 fold 1, from the orchestrator's brief and the Opus verifier's verdict on that unit.
 
-**Status:** open. Not scheduled. Not attributed to any unit.
+**Status:** closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2 (same unit that filed it).
 
 **Retires:** when every join door refuses the conditions Spark refuses with Spark's error class, pinned per condition and per join type.
 
@@ -45,3 +45,17 @@ Scope is the conditions above. Other refusal gaps are not in the ask.
 
 - [cross-join-condition-1-ledger.md](../../ledgers/staging/cross-join-condition-1-ledger.md), clause C-008, which carries the eight cells and the ruling.
 - The cross-equals-inner pins in [test_cross_join_condition_1.py](../../../python/repark/tests/test_cross_join_condition_1.py), which hold the current leniency until this card lands.
+
+## Close (2026-10-08)
+
+Landed in CROSS-JOIN-CONDITION-1 fold 2: the `JoinConditionRefusals` analyzer rule
+(`crates/repark-spark/src/normalize/join_condition.rs`) refuses nondeterministic
+conditions with `INVALID_NON_DETERMINISTIC_EXPRESSIONS` and non-boolean conditions
+with `JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE` for every `how` on the DataFrame door
+and the SQL door, with Spark's head lines byte-equal. Pins per condition and per
+join type in `test_join_condition_refusals_1.py` (134 legs over the
+`join_condition_refusals_1_spark_oracle.json` recording) and
+`crates/repark-spark/src/tests/join_condition_refusals.rs`; the card's Step 0
+grid is the oracle. Residue, pinned as out of scope: SQL `CROSS JOIN ... ON`
+stays a parse refusal where Spark answers, and a nondeterministic Python UDF in
+a DF-door condition still answers.

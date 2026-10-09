@@ -700,11 +700,11 @@ declines it (a dated ruling in the intake, then the archive).
   after PR #997 merges, as both touch the same door. The unit routes a cross with a condition onto the
   inner path on both routes; `crossJoin` and shared-name/list refusals are unmoved.
 - [join-condition-refusals-1-card-2026-10-08.md](join-condition-refusals-1-card-2026-10-08.md) — **card
-  JOIN-CONDITION-REFUSALS-1 (2026-10-08, open, from the CROSS-JOIN-CONDITION-1 Opus verifier):**
-  every join door answers conditions Spark 4.1.2 refuses (non-deterministic expressions, an untyped
-  NULL condition); a cross with such a condition answers as the inner door, lenient on main for
-  `"inner"`. Step 0 measures Spark's error class and text per condition and per join type before
-  any fix.
+  JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2,
+  from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions
+  Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's
+  `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and
+  text on every `how` of both doors.
 - [c-3-null-stride-1-card-2026-10-08.md](c-3-null-stride-1-card-2026-10-08.md) — **card
   C-3-NULL-STRIDE-1 (2026-10-08, filed, not scheduled, from C-3 question Q3, PR #998):** the first
   stride's `OR col IS NULL` arm is a sequential scan of the whole table (about 1.1 s of a 7.3 s
