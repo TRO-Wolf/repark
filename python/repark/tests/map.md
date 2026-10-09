@@ -7977,8 +7977,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-10-08):** the foreach-door battery, split out so the wireup battery stays
   under its ceiling: MB0-T2 batches, MB0-R1 resume rows, MB0-W4 stamped appends,
   the raising body with the Python error in the `STREAM_FAILED` cause (MB0-W6,
-  MBE-16), the W8-rule refusal, `collect`/`show` in the body, and MBE-10 through
-  the live door. `count` in the body is C-027 OPEN. pins: mb-4/C-026
+  MBE-16), the W8-rule refusal, `collect`/`count`/`show` in the body, and MBE-10
+  through the live door. Round 3c (2026-10-08) lands the `count` leg on the
+  batch-action pin. pins: mb-4/C-026, C-027
 
 ## I want to...
 

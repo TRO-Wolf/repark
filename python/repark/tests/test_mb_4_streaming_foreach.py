@@ -93,9 +93,11 @@ def _boom(frame: DataFrame, batch_id: int) -> None:
 class _Actions:
     def __init__(self) -> None:
         self.seen: list[tuple[int, list[list[object]]]] = []
+        self.counts: list[tuple[int, int]] = []
 
     def __call__(self, frame: DataFrame, batch_id: int) -> None:
         self.seen.append((batch_id, sorted([list(row) for row in frame.collect()])))
+        self.counts.append((batch_id, frame.count()))
         frame.show()
 
 
@@ -242,7 +244,7 @@ def test_foreach_door_missing_checkpoint_refuses_w8_rule(
     assert str(excinfo.value) == _W8_TEXT
 
 
-def test_foreach_door_collect_and_show_in_body_complete(
+def test_foreach_door_batch_actions_in_body_complete(
     spark: ReparkSession, stream_table: str
 ) -> None:
     _append(spark, stream_table, "(1, 'k1'), (2, 'k0'), (3, 'k1')")
@@ -258,6 +260,7 @@ def test_foreach_door_collect_and_show_in_body_complete(
     )
     assert query.awaitTermination() is None
     assert body.seen == [(0, [[1, "k1"], [2, "k0"], [3, "k1"]])]
+    assert body.counts == [(0, 3)]
     assert query.exception() is None
 
 
