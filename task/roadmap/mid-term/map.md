@@ -77,6 +77,13 @@ declines it (a dated ruling in the intake, then the archive).
   matching slice. The product keeps the W8 refusal. Closes when a slice lands it or the
   owner declines it.
   pins: mb-4/C-034
+- [empty-projection-count-1-card-2026-10-09.md](empty-projection-count-1-card-2026-10-09.md) — **card
+  EMPTY-PROJECTION-COUNT-1 (2026-10-09, MB-4 round 4, from ledger D-44):** `COUNT(*)` fails
+  with the engine-internal row-count error over the changelog reader, the incremental
+  snapshot-windowed reader and the lineage reader, with the three repros quoted verbatim and
+  the `WHERE` control answering; the shared site is `scan_batches.rs::conform_batch` and the
+  pattern is the micro-batch provider's `zero_column_batch`. Closes when the three repros
+  answer or the owner declines them.
 - [ice-variant-1-6.md](ice-variant-1-6.md) — **card ICE-VARIANT (2026-09-27, v1.6.0, owner ruling C-4):**
   the `variant` type leaves the v1.5.0 gate (cell `TY-VARIANT-V3`, shredded Parquet in the Spark leg, fork issue
   R88 open) and is scheduled as integration of the upstream `parquet-variant*` crates the fork already links
