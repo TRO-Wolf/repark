@@ -19,7 +19,7 @@ use crate::exceptions::{IllegalArgumentException, mask_user_visible, masked_mess
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::streaming_errors::microbatch_py_err;
-use crate::streaming_query::PyStreamingQuery;
+use crate::streaming_query::{BatchBodyAdapter, PyStreamingQuery};
 use crate::trigger_interval::check_trigger_interval;
 
 const CHECKPOINT_KEY: &str = "checkpointLocation";
@@ -288,10 +288,10 @@ fn check_start_mode(py: Python<'_>, output_mode: Option<&str>) -> Result<(), PyE
 }
 
 #[allow(clippy::missing_errors_doc, clippy::too_many_arguments)]
-fn build_table_spec(
+fn build_stream_spec(
     py: Python<'_>,
     frame: &PyDataFrame,
-    sink: &str,
+    sink: SinkSpec,
     trigger_kind: &str,
     trigger_interval: Option<&str>,
     options: &BTreeMap<String, String>,
@@ -309,13 +309,7 @@ fn build_table_spec(
         None => DEFAULT_CATALOG_TIMEOUT,
         Some(text) => check_trigger_interval(text).map(Duration::from_millis)?,
     };
-    let mut spec = StreamSpec::new(
-        template.source(),
-        source_options,
-        SinkSpec::Table {
-            sink: sink.to_string(),
-        },
-    );
+    let mut spec = StreamSpec::new(template.source(), source_options, sink);
     spec.plan = Some(template);
     spec.trigger = trigger;
     spec.query_name = query_name;
@@ -354,19 +348,17 @@ fn start_spec(
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub(crate) fn check_sink_declared(
+pub(crate) fn check_sink_declared<'a>(
     py: Python<'_>,
-    options: &BTreeMap<String, String>,
-) -> Result<(), PyErr> {
-    let declared = options.keys().any(|key| key.eq_ignore_ascii_case(SINK_KEY));
-    if declared {
-        Ok(())
-    } else {
-        Err(microbatch_py_err(
+    options: &'a BTreeMap<String, String>,
+) -> Result<&'a str, PyErr> {
+    match writer_option(options, SINK_KEY) {
+        Some(sink) => Ok(sink),
+        None => Err(microbatch_py_err(
             py,
             &MicroBatchError::SinkUndeclared,
             None,
-        ))
+        )),
     }
 }
 
@@ -412,7 +404,7 @@ pub fn is_streaming_frame(frame: &PyDataFrame) -> bool {
 )]
 pub fn start_stream(
     py: Python<'_>,
-    session: &PyReparkSession,
+    session: Py<PyReparkSession>,
     frame: &PyDataFrame,
     trigger_kind: &str,
     trigger_interval: Option<String>,
@@ -423,14 +415,42 @@ pub fn start_stream(
     path: Option<String>,
     partition_by: Vec<String>,
     output_mode: Option<String>,
+    alive_token: Py<PyAny>,
 ) -> PyResult<PyStreamingQuery> {
     let _ = partition_by;
     check_start_mode(py, output_mode.as_deref())?;
-    if foreach.is_some() {
-        check_checkpoint(py, &options, &streaming_confs, DoorKind::ForeachBatch)?;
-        check_sink_declared(py, &options)?;
+    let bound = session.bind(py);
+    let inner = bound.borrow();
+    if let Some(body) = foreach {
+        let checkpoint = check_checkpoint(py, &options, &streaming_confs, DoorKind::ForeachBatch)?;
+        let sink = check_sink_declared(py, &options)?.to_string();
         validate_writer_options(py, &options)?;
-        return Err(stub_terminal());
+        let dataframe_class = py
+            .import("repark.spark.dataframe")?
+            .getattr("DataFrame")?
+            .unbind();
+        let adapter = BatchBodyAdapter::new(
+            body,
+            session.clone_ref(py),
+            alive_token,
+            dataframe_class,
+            Arc::clone(&inner.runtime),
+        );
+        let spec = build_stream_spec(
+            py,
+            frame,
+            SinkSpec::ForeachBatch {
+                sink,
+                body: Arc::new(adapter),
+            },
+            trigger_kind,
+            trigger_interval.as_deref(),
+            &options,
+            &streaming_confs,
+            query_name,
+            checkpoint,
+        )?;
+        return start_spec(py, &inner, spec);
     }
     let sink = match path {
         Some(given) => given,
@@ -441,10 +461,10 @@ pub fn start_stream(
     };
     let checkpoint = check_checkpoint(py, &options, &streaming_confs, DoorKind::Table)?;
     validate_writer_options(py, &options)?;
-    let spec = build_table_spec(
+    let spec = build_stream_spec(
         py,
         frame,
-        &sink,
+        SinkSpec::Table { sink },
         trigger_kind,
         trigger_interval.as_deref(),
         &options,
@@ -452,7 +472,7 @@ pub fn start_stream(
         query_name,
         checkpoint,
     )?;
-    start_spec(py, session, spec)
+    start_spec(py, &inner, spec)
 }
 
 #[pyfunction]
@@ -486,10 +506,12 @@ pub fn to_table_stream(
         )));
     }
     validate_writer_options(py, &options)?;
-    let spec = build_table_spec(
+    let spec = build_stream_spec(
         py,
         frame,
-        table,
+        SinkSpec::Table {
+            sink: table.to_string(),
+        },
         trigger_kind,
         trigger_interval.as_deref(),
         &options,
@@ -506,7 +528,7 @@ mod tests {
 
     use pyo3::exceptions::{PyNotImplementedError, PyRuntimeError};
     use pyo3::prelude::*;
-    use pyo3::types::PyDict;
+    use pyo3::types::{PyDict, PyModule};
 
     use super::*;
     use crate::exceptions::{
@@ -743,15 +765,42 @@ mod tests {
         });
     }
 
+    fn stub_dataframe_module(py: Python<'_>) {
+        let grandparent = PyModule::new(py, "repark").expect("a stub grandparent package");
+        let parent = PyModule::new(py, "repark.spark").expect("a stub parent package");
+        let module = PyModule::new(py, "repark.spark.dataframe").expect("a stub module");
+        module
+            .dict()
+            .set_item("DataFrame", py.None())
+            .expect("the stub class installs");
+        let modules = py
+            .import("sys")
+            .expect("sys imports")
+            .getattr("modules")
+            .expect("sys.modules reads");
+        modules
+            .set_item("repark", grandparent)
+            .expect("the grandparent installs");
+        modules
+            .set_item("repark.spark", parent)
+            .expect("the parent installs");
+        modules
+            .set_item("repark.spark.dataframe", module)
+            .expect("the stub installs");
+    }
+
     #[test]
     fn start_stream_orders_checkpoint_before_sink_before_unknowns() {
         Python::attach(|py| {
-            let session = door_session(py);
-            let frame = session.sql(py, "SELECT 1 AS id").expect("a frame");
+            let session = Py::new(py, door_session(py)).expect("a session object");
+            let frame = session
+                .borrow(py)
+                .sql(py, "SELECT 1 AS id")
+                .expect("a frame");
             let start = |options: BTreeMap<String, String>, foreach: bool| {
                 start_stream(
                     py,
-                    &session,
+                    session.clone_ref(py),
                     &frame,
                     "availableNow",
                     None,
@@ -762,6 +811,7 @@ mod tests {
                     None,
                     Vec::new(),
                     None,
+                    py.None().into_any(),
                 )
             };
             let refused = start(options(&[]), true).expect_err("refuses");
@@ -785,15 +835,17 @@ mod tests {
             )
             .expect_err("refuses");
             assert_eq!(condition(&refused, py), "REPARK_MICROBATCH.SINK_UNDECLARED");
-            let terminal = start(
+            stub_dataframe_module(py);
+            let refused = start(
                 options(&[
                     ("checkpointLocation", "/tmp/x"),
                     (SINK_KEY, "ice.sales.silver"),
                 ]),
                 true,
             )
-            .expect_err("a foreach start stops at the stub");
-            assert!(terminal.is_instance_of::<PyNotImplementedError>(py));
+            .expect_err("a valid foreach start reaches the frame");
+            assert!(refused.is_instance_of::<AnalysisException>(py));
+            assert!(message(&refused, py).contains("needs a streaming DataFrame"));
             let refused = start(options(&[("checkpointLocation", "/tmp/x")]), false)
                 .expect_err("a pathless start refuses");
             assert!(refused.is_instance_of::<IllegalArgumentException>(py));

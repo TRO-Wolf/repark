@@ -707,6 +707,46 @@ def test_table_door_bad_confs_refuse_like_spark_set(
         spark.conf.unset(key)
 
 
+class _AppendTo:
+    def __init__(self, table: str) -> None:
+        self.table = table
+        self.seen: list[tuple[int, list[list[object]]]] = []
+
+    def __call__(self, frame: DataFrame, batch_id: int) -> None:
+        self.seen.append((batch_id, sorted([list(row) for row in frame.collect()])))
+        frame.writeTo(self.table).append()
+
+
+def test_foreach_door_first_pin_write_to_commits_once_stamped(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    _append(spark, stream_table, "(1, 'k1'), (2, 'k0'), (3, 'k1')")
+    sink = _make_sink(spark, "sc.mb4.silver_fb1")
+    body = _AppendTo(sink)
+    query = (
+        _stream_writer(spark, stream_table)
+        .foreachBatch(body)
+        .option("repark.cdc.sink", sink)
+        .option("checkpointLocation", "/tmp/mb4-fb1")
+        .trigger(availableNow=True)
+        .start()
+    )
+    assert query.awaitTermination() is None
+    assert body.seen == [(0, [[1, "k1"], [2, "k0"], [3, "k1"]])]
+    assert _rows(spark, sink) == [[1, "k1"], [2, "k0"], [3, "k1"]]
+    log = _snapshot_log(spark, sink)
+    assert len(log) == 2
+    stamped = [
+        (operation, summary) for operation, summary in log if "repark.cdc.epoch" in summary
+    ]
+    assert len(stamped) == 1
+    assert stamped[0][1]["repark.cdc.epoch"] == "0"
+    assert stamped[0][1]["repark.cdc.query-id"] == query.id
+    assert "spark.sql.streaming.epochId" not in stamped[0][1]
+    unstamped = [summary for _, summary in log if "repark.cdc.epoch" not in summary]
+    assert unstamped[0]["added-records"] == "3"
+
+
 def test_start_with_file_path_refuses_as_unresolved_sink(
     spark: ReparkSession, stream_table: str
 ) -> None:

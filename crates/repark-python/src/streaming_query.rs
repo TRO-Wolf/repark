@@ -1,12 +1,17 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use datafusion::prelude::DataFrame;
+use futures::future::BoxFuture;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
+use repark_core::microbatch::Epoch;
 use repark_core::microbatch::MicroBatchError;
-use repark_core::microbatch::driver::{QueryHandle, ShutdownOutcome};
+use repark_core::microbatch::driver::{BatchBody, QueryHandle, ShutdownOutcome};
 use tokio::runtime::Runtime;
 
+use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
+use crate::session::PyReparkSession;
 use crate::streaming_errors::{QueryHead, microbatch_py_err};
 
 const MAX_AWAIT_SECS: f64 = 1_000_000_000_000.0;
@@ -132,6 +137,63 @@ impl PyStreamingQuery {
                 .clone()
                 .into_any()
                 .unbind()
+        })
+    }
+}
+
+pub(crate) struct BatchBodyAdapter {
+    body: Py<PyAny>,
+    session: Py<PyReparkSession>,
+    alive_token: Py<PyAny>,
+    dataframe_class: Py<PyAny>,
+    runtime: Arc<Runtime>,
+}
+
+impl BatchBodyAdapter {
+    pub(crate) fn new(
+        body: Py<PyAny>,
+        session: Py<PyReparkSession>,
+        alive_token: Py<PyAny>,
+        dataframe_class: Py<PyAny>,
+        runtime: Arc<Runtime>,
+    ) -> Self {
+        BatchBodyAdapter {
+            body,
+            session,
+            alive_token,
+            dataframe_class,
+            runtime,
+        }
+    }
+
+    fn call_body(&self, frame: DataFrame, epoch: Epoch) -> Result<(), MicroBatchError> {
+        with_stream_poll_no_detach(|| {
+            Python::attach(|py| {
+                let native = Bound::new(py, PyDataFrame::new(frame, Arc::clone(&self.runtime)))
+                    .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+                let facade = self
+                    .dataframe_class
+                    .bind(py)
+                    .call1((native, self.session.bind(py), self.alive_token.bind(py)))
+                    .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+                self.body
+                    .bind(py)
+                    .call1((facade, epoch.get()))
+                    .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+                Ok(())
+            })
+        })
+    }
+}
+
+impl BatchBody for BatchBodyAdapter {
+    fn run(&self, frame: DataFrame, epoch: Epoch) -> BoxFuture<'_, Result<(), MicroBatchError>> {
+        Box::pin(async move {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                tokio::task::block_in_place(|| self.call_body(frame, epoch))
+            } else {
+                self.call_body(frame, epoch)
+            }
         })
     }
 }

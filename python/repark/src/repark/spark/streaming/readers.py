@@ -418,6 +418,7 @@ class DataStreamWriter:
             path,
             self._partition_by,
             self._output_mode,
+            session._alive_token,
         )
         return StreamingQuery(handle)
 
