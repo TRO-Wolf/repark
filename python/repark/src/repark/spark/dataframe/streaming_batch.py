@@ -170,6 +170,14 @@ def with_watermark(
         raise IllegalArgumentException(
             f"requirement failed: delay threshold ({delayThreshold}) should not be negative."
         )
+    from repark import _native
+
+    if _native.is_streaming_frame(frame._inner):
+        raise PySparkNotImplementedError(
+            "[NOT_IMPLEMENTED] withWatermark is not implemented.",
+            errorClass="NOT_IMPLEMENTED",
+            messageParameters={"feature": "withWatermark"},
+        )
     return frame
 
 

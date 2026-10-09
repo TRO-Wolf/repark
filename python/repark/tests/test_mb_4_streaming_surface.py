@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from repark.errors import (
@@ -22,12 +24,19 @@ _W8_TEXT = (
     'or SparkSession.conf.set("spark.sql.streaming.checkpointLocation", ...).'
 )
 
-
 @pytest.fixture
 def spark() -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-mb-4-streaming-surface").getOrCreate()
     yield session
     session.stop()
+
+
+@pytest.fixture
+def stream_table(spark: ReparkSession, tmp_path: Path) -> str:
+    spark.register_memory_catalog("sc", str(tmp_path / "wh"))
+    spark.sql("CREATE NAMESPACE sc.mb4")
+    spark.sql("CREATE TABLE sc.mb4.orders (id BIGINT, k STRING)")
+    return "sc.mb4.orders"
 
 
 def _batch_frame(spark: ReparkSession) -> DataFrame:
@@ -97,12 +106,6 @@ def test_reader_format_must_be_iceberg_mbe7(spark: ReparkSession) -> None:
     assert str(excinfo.value) == "[NOT_IMPLEMENTED] readStream.format(parquet) is not implemented."
 
 
-def test_reader_format_match_is_case_sensitive_mbe7(spark: ReparkSession) -> None:
-    with pytest.raises(PySparkNotImplementedError) as excinfo:
-        _reader(spark).format("Iceberg").load("ice.bronze.orders")
-    assert excinfo.value.getMessageParameters() == {"feature": "readStream.format(Iceberg)"}
-
-
 def test_reader_missing_format_defaults_to_parquet_refusal_mbe7(spark: ReparkSession) -> None:
     with pytest.raises(PySparkNotImplementedError) as excinfo:
         _reader(spark).load("ice.bronze.orders")
@@ -140,16 +143,15 @@ def test_reader_skip_delete_true_refuses_mbe3_mb0_r6(spark: ReparkSession) -> No
     assert excinfo.value.getSqlState() is None
 
 
-def test_reader_skip_false_passes_to_stub(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        (
-            _reader(spark)
-            .format("iceberg")
-            .option("streaming-skip-overwrite-snapshots", "false")
-            .option("streaming-skip-delete-snapshots", "false")
-            .load("ice.bronze.orders")
-        )
-    _terminal_type(excinfo)
+def test_reader_skip_false_returns_frame(spark: ReparkSession, stream_table: str) -> None:
+    frame = (
+        _reader(spark)
+        .format("iceberg")
+        .option("streaming-skip-overwrite-snapshots", "false")
+        .option("streaming-skip-delete-snapshots", "false")
+        .load(stream_table)
+    )
+    assert frame.isStreaming is True
 
 
 def test_reader_unknown_prefixed_option_refuses_mbe17(spark: ReparkSession) -> None:
@@ -169,77 +171,83 @@ def test_reader_unknown_prefixed_option_refuses_mbe17(spark: ReparkSession) -> N
     )
 
 
-def test_reader_plain_unknown_option_passes_to_stub(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        _reader(spark).format("iceberg").option("unrelated", "1").load("ice.bronze.orders")
-    _terminal_type(excinfo)
+def test_reader_plain_unknown_option_returns_frame(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = _reader(spark).format("iceberg").option("unrelated", "1").load(stream_table)
+    assert frame.isStreaming is True
 
 
-def test_reader_option_max_files_passes_to_stub(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        (
-            _reader(spark)
-            .format("iceberg")
-            .option("streaming-max-files-per-micro-batch", "1")
-            .load("ice.bronze.orders")
-        )
-    _terminal_type(excinfo)
+def test_reader_option_max_files_returns_frame(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = (
+        _reader(spark)
+        .format("iceberg")
+        .option("streaming-max-files-per-micro-batch", "1")
+        .load(stream_table)
+    )
+    assert frame.isStreaming is True
 
 
-def test_reader_option_max_rows_passes_to_stub(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        (
-            _reader(spark)
-            .format("iceberg")
-            .option("streaming-max-rows-per-micro-batch", 1)
-            .table("ice.bronze.orders")
-        )
-    _terminal_type(excinfo)
+def test_reader_option_max_rows_returns_frame(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = (
+        _reader(spark)
+        .format("iceberg")
+        .option("streaming-max-rows-per-micro-batch", 1)
+        .table(stream_table)
+    )
+    assert frame.isStreaming is True
 
 
-def test_reader_option_from_timestamp_passes_to_stub(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        (
-            _reader(spark)
-            .format("iceberg")
-            .option("stream-from-timestamp", "0")
-            .load("ice.bronze.orders")
-        )
-    _terminal_type(excinfo)
+def test_reader_option_from_timestamp_returns_frame(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = (
+        _reader(spark).format("iceberg").option("stream-from-timestamp", "0").load(stream_table)
+    )
+    assert frame.isStreaming is True
 
 
-def test_reader_option_start_after_snapshot_passes_to_stub(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        (
-            _reader(spark)
-            .format("iceberg")
-            .option("repark.cdc.start-after-snapshot-id", "7")
-            .table("ice.bronze.orders")
-        )
-    _terminal_type(excinfo)
+def test_reader_option_start_after_snapshot_returns_frame(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = (
+        _reader(spark)
+        .format("iceberg")
+        .option("repark.cdc.start-after-snapshot-id", "7")
+        .table(stream_table)
+    )
+    assert frame.isStreaming is True
 
 
-def test_reader_none_option_value_drops_before_validation(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        (
-            _reader(spark)
-            .format("iceberg")
-            .option("streaming-something-new", None)
-            .load("ice.bronze.orders")
-        )
-    _terminal_type(excinfo)
+def test_reader_none_option_value_drops_before_validation(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = (
+        _reader(spark)
+        .format("iceberg")
+        .option("streaming-something-new", None)
+        .load(stream_table)
+    )
+    assert frame.isStreaming is True
 
 
-def test_reader_load_without_path_or_option_refuses(spark: ReparkSession) -> None:
-    with pytest.raises(AnalysisException) as excinfo:
+def test_reader_load_without_path_or_option_refuses_mb0c_f7(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException) as excinfo:
         _reader(spark).format("iceberg").load()
-    assert str(excinfo.value) == "Iceberg streaming load requires a table identifier argument"
+    assert excinfo.value.getCondition() is None
+    assert excinfo.value.getSqlState() is None
+    assert str(excinfo.value) == "Cannot open table: path is not set"
 
 
-def test_reader_load_uses_path_option_when_arg_omitted(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        _reader(spark).format("iceberg").option("path", "ice.bronze.orders").load()
-    _terminal_type(excinfo)
+def test_reader_load_uses_path_option_when_arg_omitted(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = _reader(spark).format("iceberg").option("path", stream_table).load()
+    assert frame.isStreaming is True
 
 
 def test_writer_builders_return_self_for_chaining(spark: ReparkSession) -> None:
@@ -425,7 +433,6 @@ def test_writer_foreach_without_sink_refuses_mbe10_mb0_w4(spark: ReparkSession) 
     with pytest.raises(IllegalArgumentException) as excinfo:
         (
             _writer(spark)
-            .format("iceberg")
             .foreachBatch(_ignore_batch)
             .start(checkpointLocation="/tmp/x")
         )

@@ -392,6 +392,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `spark.sql.transposeMaxValues` off the session conf, calls the native `transpose`
   kernel, and attaches `_spark_error_class` / `_spark_message_parameters` /
   `_spark_sql_state` from the conditioned engine error. pins: df-rust-3/C-003, C-004
+  **MB-4 round 2b (2026-10-08):** `isStreaming` answers the native
+  `is_streaming_frame` door instead of constant `False`. pins: mb-4/C-023
   **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
   **ATTR-ID-1 SJ-2 (2026-10-02):** `checkpoint` re-roots the child's frame
   node with `frame_root`. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
@@ -1287,6 +1289,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_integral.py`'s `_spark_error_class` attach helpers; the helpers are bound
   as real class members so `__getattr__` column access can never shadow them.
   pins: df-stream-batch-1/C-001, C-002, C-003, C-004
+  **MB-4 round 2b (2026-10-08):** `withWatermark` refuses MBE-7 on a streaming frame
+  after Spark's own validation passes. pins: mb-4/C-023
 - `subquery.py` owns the DF-SUBQUERY-1 method bodies (2026-09-15), bound on the class
   from `core.py` as four individual class-body assignments (`scalar = subquery.scalar`
   &c.) so the AST inventory walk sees them: `scalar` / `exists` raise Spark's

@@ -399,8 +399,10 @@ def sparkSession(frame: DataFrame) -> SparkSession:  # noqa: N802
 
 
 def isStreaming(frame: DataFrame) -> bool:  # noqa: N802
-    """Whether this is a streaming DataFrame; always ``False`` (batch-only)."""
-    return False
+    """Whether this is a streaming DataFrame. pins: mb-4/C-023"""
+    from repark import _native
+
+    return bool(_native.is_streaming_frame(frame._inner))
 
 
 def isLocal(frame: DataFrame) -> bool:  # noqa: N802

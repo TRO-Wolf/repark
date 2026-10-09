@@ -28,6 +28,10 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   `partitionBy`, `resetTerminated`, `processAllAvailable`, `load`'s `format`/`schema`
   kwargs) are wire-up-owned.
   pins: mb-4/C-004, C-005, C-006
+  **MB-4 round 2b (2026-10-08):** the reader wire-up: `load`/`table` wrap the native
+  streaming frame in a facade `DataFrame` and return it; the format check folds case and
+  leaves `table`, `toTable` and the `foreachBatch` start alone; a sourceless `load` is
+  `IllegalArgumentException` with Spark's text. pins: mb-4/C-023
 - `query.py` — **MB-4 surface half (2026-10-08):** `StreamingQuery` carries the §3.7
   surface with the driver-owned bodies behind the stub terminal; only the
   `awaitTermination` timeout check (`VALUE_NOT_POSITIVE`, `<= 0`) is real.

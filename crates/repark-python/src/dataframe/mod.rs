@@ -296,6 +296,7 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn count(&self, py: Python<'_>) -> PyResult<usize> {
         fenced_span!("py.action", "PyDataFrame.count", {
+            crate::streaming_errors::refuse_streaming_action(py, self.inner())?;
             let segment = frame_drive_segment_cached(&self.depths)?;
             let twin = self.executable()?;
             py.detach(|| block_on_grown_sized(&self.runtime, twin.count(), segment))
@@ -387,6 +388,7 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn show(&self, py: Python<'_>, n: usize) -> PyResult<String> {
         fenced_span!("py.action", "PyDataFrame.show", {
+            crate::streaming_errors::refuse_streaming_action(py, self.inner())?;
             let need = clone_need_bytes(self.depths.plan, self.depths.expression);
             let twin = self.executable()?;
             let limited =
@@ -413,6 +415,7 @@ impl PyDataFrame {
         display_names: Option<Vec<String>>,
     ) -> PyResult<Bound<'py, PyCapsule>> {
         fenced_span!("py.action", "PyDataFrame.__arrow_c_stream__", {
+            crate::streaming_errors::refuse_streaming_action(py, self.inner())?;
             let _ = requested_schema;
             let schema: SchemaRef = self.analyzed_arrow_schema_native()?;
             let schema = crate::arrow_export::coerced_export_schema(&schema);

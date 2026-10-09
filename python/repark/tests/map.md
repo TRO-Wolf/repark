@@ -7953,6 +7953,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   proofs, each asserting class, condition, SQLSTATE, text and message parameters
   against its MB-0c cell; the full 152-string sweep lives in the Rust tests.
   pins: mb-4/C-020 **MB-4 round 2 (2026-10-08):** two mutant-hardening pins, the `toTable` unknown-option refusal and the sink-before-unknowns order. pins: mb-4/C-021
+  **MB-4 round 2b (2026-10-08):** the stub-terminal reader tests return frames; the
+  sourceless-load and `foreachBatch` MBE-10 pins take their ruled shapes.
+  pins: mb-4/C-023
+- [test_mb_4_streaming_wireup.py](test_mb_4_streaming_wireup.py) — **MB-4 round 2b
+  (2026-10-08):** the reader wire-up battery, split out so the surface battery stays
+  under its ceiling: MB0-R1 schema through `load` and `table`, the folded and ignored
+  format doors, every C-014 option case with `from_options`' answer, DM-3 on every
+  batch-action door with per-family batch controls, and MBE-7 `withWatermark`.
+  pins: mb-4/C-023
 
 ## I want to...
 

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 
 from repark import _native
 from repark.errors import (
-    AnalysisException,
+    IllegalArgumentException,
     PySparkNotImplementedError,
     PySparkTypeError,
     PySparkValueError,
@@ -61,7 +61,7 @@ def _not_implemented(feature: str) -> NoReturn:
 def _refuse_format(door: str, source: str | None) -> None:
     if source is None:
         _not_implemented(f"{door}.format(parquet)")
-    elif source != "iceberg":
+    elif source.lower() != "iceberg":
         _not_implemented(f"{door}.format({source[:64]})")
 
 
@@ -132,9 +132,12 @@ class DataStreamReader:
         _refuse_format("readStream", self._format)
         effective = path if path is not None else _option_path(self._options)
         if effective is None:
-            raise AnalysisException("Iceberg streaming load requires a table identifier argument")
+            raise IllegalArgumentException("Cannot open table: path is not set")
         inner = self._session._ensure_alive()
-        _native.load_stream(inner, effective, _without_none_values(self._options))
+        native = _native.load_stream(inner, effective, _without_none_values(self._options))
+        from repark.spark.dataframe import DataFrame
+
+        return DataFrame(native, inner, self._session._alive_token)
 
     def table(self, tableName: str) -> DataFrame:  # noqa: N803 — PySpark kwarg name
         """Define a Streaming DataFrame on a Table.
@@ -152,9 +155,11 @@ class DataStreamReader:
                     "arg_type": type(tableName).__name__,
                 },
             )
-        _refuse_format("readStream", self._format)
         inner = self._session._ensure_alive()
-        _native.load_stream(inner, tableName, _without_none_values(self._options))
+        native = _native.load_stream(inner, tableName, _without_none_values(self._options))
+        from repark.spark.dataframe import DataFrame
+
+        return DataFrame(native, inner, self._session._alive_token)
 
 
 class DataStreamWriter:
@@ -354,7 +359,6 @@ class DataStreamWriter:
             self.queryName(queryName)
 
     def _start_checks(self) -> None:
-        _refuse_format("writeStream", self._format)
         if self._output_mode is not None:
             _refuse_output_mode(self._output_mode)
         if self._trigger_kind == _CONTINUOUS_TRIGGER:
@@ -393,6 +397,8 @@ class DataStreamWriter:
             for most streams, however it is not required for a `memory` stream.
         """
         self._apply_start_kwargs(outputMode, partitionBy, format, queryName, options)
+        if self._foreach is None:
+            _refuse_format("writeStream", self._format)
         self._start_checks()
         self._frame._ensure_alive()
         session = self._frame.sparkSession

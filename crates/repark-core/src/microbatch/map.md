@@ -200,6 +200,9 @@ pins: mb-3/C-031
   `RightMark` follow the semi rule). A streaming frame inside a subquery expression refuses
   too (unmeasured). Registry row `MB-3-STATIC-SIDE-1`.
   pins: mb-3/C-015
+  **MB-4 round 2b (2026-10-08):** `is_streaming_frame` exposes the plan predicate over
+  `DataFrame::logical_plan` for the binding's action guard and `isStreaming` door.
+  pins: mb-4/C-023
 - `relation_tests.rs` — the template pins (`#[cfg(test)] #[path]` from `relation.rs`).
   pins: mb-3/C-008
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).

@@ -1,3 +1,4 @@
+use datafusion::prelude::DataFrame;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use repark_core::microbatch::MicroBatchError;
@@ -28,6 +29,9 @@ const TRUNCATED_HISTORY: &str = "REPARK_MICROBATCH.TRUNCATED_HISTORY";
 const UNSUPPORTED_OFFSET_FORMAT: &str = "REPARK_MICROBATCH.UNSUPPORTED_OFFSET_FORMAT";
 const SINK_COMMITTED_TWICE: &str = "REPARK_MICROBATCH.SINK_COMMITTED_TWICE";
 const SINK_BUSY: &str = "REPARK_MICROBATCH.SINK_BUSY";
+const STREAMING_ACTION_REFUSED: &str = "_LEGACY_ERROR_TEMP_3102";
+
+const STREAMING_ACTION_REFUSED_TEXT: &str = "Queries with streaming sources must be executed with writeStream.start(), or from a streaming table or flow definition within a Spark Declarative Pipeline.;\niceberg";
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct QueryHead<'a> {
@@ -208,6 +212,19 @@ pub(crate) fn microbatch_py_err(
             None => AnalysisException::new_err(mask_user_visible(error.to_string())),
         },
     }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn refuse_streaming_action(py: Python<'_>, frame: &DataFrame) -> PyResult<()> {
+    if repark_core::microbatch::relation::is_streaming_frame(frame) {
+        return Err(attached(
+            py,
+            AnalysisException::new_err(STREAMING_ACTION_REFUSED_TEXT),
+            STREAMING_ACTION_REFUSED,
+            &[],
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(test)]
