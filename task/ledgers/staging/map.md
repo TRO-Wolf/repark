@@ -89,6 +89,21 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pin each and declares nine (C-007, C-008); eleven `CONNECT-DECL-*` registry rows (C-009); ADBC
   and ConnectorX cited (C-010); gates (C-011). `risk_tier: standard`. Branch
   `feat/c-1-connect-skeleton`.
+- [c-4-ledger.md](c-4-ledger.md) —
+  **C-4, card 1.6 (2026-10-08), in flight:** Postgres writes. Step 1 is the write core in
+  `repark-connect`: one binary encoder for every mapped type (C-001…C-003), the
+  `COPY … FROM STDIN (FORMAT BINARY)` stream (C-004), the `bulk | row` selector with `interval`
+  as the one row-only type (C-005), the bulk-versus-row parity pin on the server (C-006…C-009),
+  one transaction per write with its failure table (C-010, C-011), and the ConnectorX and ADBC
+  citations (C-012). The both-door routing, the `write.path` option and the verifier pass are
+  `OPEN` (C-013…C-015), another lane's.
+  **Fold 1 (2026-10-09), after the verifier's FAIL on relation properties:** a dropped
+  `write` poisons the writer (C-016); a named identity or generated column refuses on both
+  paths (C-017); the selector reads the relation, and rules, views, policies, statement
+  triggers and foreign tables take rows, with one ledger row and one live pin per property
+  (C-018, C-019); the idle-timeout class and value redaction (C-020); other Arrow encodings
+  (C-021); arrival order in place of `ctid` (C-022).
+  `risk_tier: standard`. Branch `feat/c-4-writes`.
 - [c-3-ledger.md](c-3-ledger.md) —
   **C-3, card 1.6 (2026-10-07), in flight:** partitioned parallel Postgres reads and the
   ConnectorX benchmark. §0 is the design note: Spark's four JDBC options as the surface with

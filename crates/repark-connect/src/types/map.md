@@ -6,6 +6,13 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
 
 ## Contents
 
+- `postgres.rs` — **C-4 step 1 (2026-10-08):** encode covers every mapped row.
+  `PostgresTypeRow::encode` and the new `PlannedColumn::encode` are thin wrappers over
+  `postgres/encode.rs`'s `ColumnEncoder`, as `decode` wraps `ColumnAppender`, so C-1's round
+  trips exercise the write path's codec. `ConnectError::EncodeNotBuilt` is retired.
+  `PlannedColumn::carriage()` answers `WriteCarriage::CopyBinary` or `RowText`; only
+  `ServerText` (`interval`) is `RowText`. `mod encode;` joins the codec modules.
+  pins: c-4/C-001, C-005
 - `postgres.rs` — C-1 (2026-10-05), extended by C-2a (2026-10-06; sketch
   [c-2-design.md](../../../../task/wo/c-2-design.md) §2.7). `POSTGRES_TYPES` is the table: one
   `PostgresTypeRow` per Postgres type, keyed by its `pg_type.typname` (`int4`, `bpchar`,
@@ -52,8 +59,9 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
     index. `PlannedColumn::decode` and C-1's `PostgresTypeRow::decode` are thin wrappers over
     it (the row wrapper names the column after its type), so C-1's round trips exercise the
     same codec as the stream. pins: c-2/C-012
-  - **Encode** stays C-1's ten types; the C-2a mappings answer
-    `ConnectError::EncodeNotBuilt`, which names the write path (C-4). pins: c-2/C-011
+  - **Encode** was C-1's ten types until C-4 step 1 (2026-10-08), which built the rest and
+    retired `ConnectError::EncodeNotBuilt`; the entry above is the current state.
+    pins: c-2/C-011
 
 - `postgres.rs` — **C-3 (2026-10-07):** `PlannedColumn::postgres_type()` returns the row's
   Postgres type name, which a partition-column refusal names. pins: c-3/C-005

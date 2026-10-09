@@ -171,3 +171,57 @@ pub(super) fn decode(bytes: &[u8], target: DecimalTarget) -> std::result::Result
     }
     Ok(if negative { -magnitude } else { magnitude })
 }
+
+const WIRE_GROUPS: usize = 20;
+const UNITS_GROUP: usize = 10;
+const UNITS_WEIGHT: i16 = 9;
+const GROUP_DIGITS: u32 = 4;
+const GROUP_BASE: u128 = 10_000;
+
+pub(super) fn encode(value: i128, target: DecimalTarget, out: &mut Vec<u8>) {
+    let scale = u32::from(target.scale.unsigned_abs());
+    let point = 10_u128.pow(scale);
+    let magnitude = value.unsigned_abs();
+    let mut groups = [0_u16; WIRE_GROUPS];
+    let mut whole = magnitude / point;
+    let mut slot = UNITS_GROUP;
+    while whole > 0 && slot > 0 {
+        slot -= 1;
+        groups[slot] = u16::try_from(whole % GROUP_BASE).unwrap_or_default();
+        whole /= GROUP_BASE;
+    }
+    let mut fraction = magnitude % point;
+    let mut remaining = scale;
+    let mut slot = UNITS_GROUP;
+    while remaining > 0 && slot < WIRE_GROUPS {
+        let taken = remaining.min(GROUP_DIGITS);
+        let below = 10_u128.pow(remaining - taken);
+        let group = (fraction / below) * 10_u128.pow(GROUP_DIGITS - taken);
+        groups[slot] = u16::try_from(group).unwrap_or_default();
+        fraction %= below;
+        remaining -= taken;
+        slot += 1;
+    }
+    let first = groups.iter().position(|&group| group != 0);
+    let last = groups.iter().rposition(|&group| group != 0);
+    let (digits, weight) = match (first, last) {
+        (Some(first), Some(last)) => (
+            &groups[first..=last],
+            UNITS_WEIGHT - i16::try_from(first).unwrap_or_default(),
+        ),
+        _ => (&groups[..0], 0),
+    };
+    let sign = if value < 0 && !digits.is_empty() {
+        NEGATIVE
+    } else {
+        POSITIVE
+    };
+    let count = u16::try_from(digits.len()).unwrap_or_default();
+    out.extend_from_slice(&count.to_be_bytes());
+    out.extend_from_slice(&weight.to_be_bytes());
+    out.extend_from_slice(&sign.to_be_bytes());
+    out.extend_from_slice(&u16::try_from(scale).unwrap_or_default().to_be_bytes());
+    for digit in digits {
+        out.extend_from_slice(&digit.to_be_bytes());
+    }
+}

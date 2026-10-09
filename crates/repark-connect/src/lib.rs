@@ -16,6 +16,8 @@ mod settings;
 #[cfg(feature = "postgres")]
 mod tls;
 mod types;
+#[cfg(feature = "postgres")]
+mod write;
 
 pub use copy_binary::{
     BatchLimits, COPY_SIGNATURE, CopyBinaryDecoder, DEFAULT_BATCH_BYTES, DEFAULT_BATCH_ROWS,
@@ -28,8 +30,8 @@ pub use discover::{
     check_server_version, discover,
 };
 pub use error::{
-    ConnectError, DDL_ROW, ProtocolViolation, Result, UNMAPPED_ROW, ValueRefusal, ZONE_ROW,
-    read_only_ddl,
+    ConnectError, DDL_ROW, ProtocolViolation, Result, UNMAPPED_ROW, ValueRefusal, WriteRefusal,
+    WriteValueRefusal, ZONE_ROW, read_only_ddl,
 };
 pub use ident::{DEFAULT_SCHEMA, IdentRefusal, MAX_IDENT_BYTES, PgIdent, QualifiedRelation};
 pub use partition::{
@@ -68,3 +70,12 @@ pub use settings::{
 #[cfg(feature = "postgres")]
 pub use tls::{TlsFailure, verify_full_config};
 pub use types::postgres;
+#[cfg(feature = "postgres")]
+pub use write::postgres_copy::{CopyBinaryEncoder, CopyChunks};
+#[cfg(feature = "postgres")]
+pub use write::target::{RowFallback, TARGET_FACTS};
+#[cfg(feature = "postgres")]
+pub use write::{
+    BEGIN_WRITE, DEFAULT_COPY_CHUNK_BYTES, DEFAULT_ROWS_PER_INSERT, MAX_INSERT_PARAMS,
+    PostgresWriter, WriteOptions, WritePath, WriteReport, WriteRequest,
+};

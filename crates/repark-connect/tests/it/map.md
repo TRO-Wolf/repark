@@ -9,7 +9,89 @@ See [../map.md](../map.md).
 
 - `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod partition; mod partition_plan; mod live_partition; mod postgres_types; mod settings; mod url;`, plus
   `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
-  mod scan; mod tls;` under the `postgres` feature.
+  mod scan; mod tls;` under the `postgres` feature, and since C-4 `mod live_write; mod live_write_faults;
+  mod live_write_relations; mod write;` under it too, and `mod write_shapes;` with no gate.
+- `write_shapes.rs` — **C-4 fold 1 (2026-10-09)**, no network: nine column families, each
+  encoded from its plain array and from up to five other encodings of the same values
+  (`cast` builds them), with equal bytes required; and four encodings of other types that
+  must still refuse naming the type that came. pins: c-4/C-021
+- `live_write_faults.rs` — **C-4 fold 1 (2026-10-09), the S3 cells:**
+  `rows_arrive_in_input_order_on_both_paths` (a `bigserial` the write does not name numbers
+  the arrivals; it replaces the three `ctid` assertions `live_write.rs` carried, which the
+  verifier showed do not hold once widths vary), `a_server_refusal_names_no_written_value`,
+  `a_row_write_idle_past_the_read_timeout_ends_as_that_timeout` (700 ms timeout, 2.2 s idle,
+  with a second `write`, with a remainder `commit` must flush, and with a full group so that
+  `COMMIT` is the first request after the wait; the bulk path commits under the same waits) and
+  `other_arrow_encodings_store_the_same_table_on_both_paths`. pins: c-4/C-020, C-021, C-022
+- `live_write_relations.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. One
+  `Property` row per relation property: the DDL (run twice, for a `_b` twin written by a
+  `Bulk` request and an `_r` twin written by a `Row` request), the target, the written
+  columns, the batch, the `RowFallback` a `Bulk` request must report, the outcome (a row
+  count, a SQLSTATE, or one of the three refusals) and a signature query whose answer must be
+  equal for the twins and equal to the expected text. `measure` runs one row; the signature
+  reads the target and any side table (an audit table, the base table of a view, the far
+  table of a foreign table), so "the same table" covers what a rule or a trigger wrote.
+  The cells: `identity_generated_and_default_columns_agree_or_refuse_on_both_paths`,
+  `rules_and_views_take_the_row_path_and_leave_the_same_tables`,
+  `row_triggers_stay_bulk_and_statement_triggers_take_the_row_path`,
+  `partitions_inheritance_persistence_and_constraints_agree_on_both_paths`,
+  `row_security_and_grants_are_judged_the_same_on_both_paths` (a second role),
+  `a_foreign_table_or_partition_takes_the_row_path` (a loopback `postgres_fdw` server, dropped
+  at the end; `CREATE EXTENSION IF NOT EXISTS` leaves the extension in the disposable
+  database) and `another_sessions_temporary_table_is_refused_the_same_on_both_paths`.
+  pins: c-4/C-017, C-018, C-019
+- `live_write.rs`, `write.rs` — **C-4 fold 1 (2026-10-09):**
+  `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` is now
+  `a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked`: its counting
+  trigger is a statement trigger, so a `Bulk` request on that table now takes rows, and the
+  cell holds both requests to the same statement counts. The pure pins gain
+  `a_named_identity_or_generated_column_refuses_in_one_class_and_names_the_fix` and
+  `every_fallback_reason_says_why_copy_was_not_used`. pins: c-4/C-017, C-018
+- `live_write_faults.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. It shares
+  `live_write.rs`'s helpers (now `pub(crate)`); new fault cells live here because
+  `live_write.rs` is at the file-size ceiling.
+  `a_write_dropped_mid_flight_poisons_the_writer_and_stores_nothing` is the verifier's repro on
+  both paths: a 200 000-row `write` under a 500 µs timeout, then `write` and `commit` both
+  answer `Interrupted` and the table stays empty. pins: c-4/C-016
+- `write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`, no network. It holds the sample
+  matrix both write suites share (`samples()`: one column per mapped type the bulk path
+  carries, `numeric` at four scales, an enum and a domain, eight rows with two NULLs each, the
+  boundary values of every type) and the pins of the pure half: every mapped type encodes to
+  the wire form C-2's decoder reads back, and the matrix is checked against `POSTGRES_TYPES`
+  so a new mapped row cannot be left out; twelve `numeric` byte anchors and a decode-back grid
+  over 39 scales; `uuid_in`'s grammar form by form; the date and timestamp words the wire
+  cannot carry; the COPY stream against the decoder, byte-identical under five chunk sizes and
+  three batch cuts, with the empty stream as header and trailer; one tuple byte for byte; a
+  refused value's row counted over the whole stream; the selector (`interval` is the only
+  row-only type); the two statements byte for byte; the refusals before any connection and
+  the class each write error folds to. pins: c-4/C-001, C-002, C-003, C-004, C-005
+- `live_write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`, live like `live_pg.rs`
+  (`#[ignore]`, `make pg-up`, `REPARK_PG_URL`). Every cell writes the same Arrow batches by
+  the bulk path into `bulk` and by the row path into `row`, and `diverging` compares the two
+  tables on the server: a `FULL JOIN` on `id` that returns every row whose `*_send` bytes
+  differ in any column, or that one table lacks. `stored_order` reads `ctid` order.
+  - `bulk_and_row_store_byte_identical_tables_for_every_declared_type` is the parity pin over
+    the sample matrix; both tables also read back to the input batch. pins: c-4/C-006
+  - `an_interval_column_takes_the_row_path_whatever_was_asked`: three interval types, seven
+    spellings, a third table filled through the server's own text input as the oracle, and
+    `22007` on both requests for nonsense. pins: c-4/C-007
+  - `type_modifiers_and_text_forms_store_what_the_server_itself_parses`: `varchar(5)`,
+    `char(4)`, `timestamp(3)`, `timestamptz(0)`, five `uuid` spellings, `jsonb` and `json`,
+    against the same kind of oracle table. pins: c-4/C-003, C-008
+  - `empty_and_multi_batch_streams_store_the_same_rows_in_the_same_order` (five option sets)
+    and `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` (a statement-level
+    trigger counts the statements each path runs). pins: c-4/C-009
+  - The failure cells: `a_server_refusal_is_the_same_on_both_paths_and_stores_nothing` (six
+    SQLSTATEs), `a_refused_value_poisons_the_writer_and_stores_nothing`,
+    `a_writer_dropped_or_killed_before_commit_stores_nothing`,
+    `a_commit_refused_is_definite_and_a_commit_unanswered_is_unknown` (a deferred unique key,
+    and a deferred trigger that sleeps past `read_timeout_ms`) and
+    `a_role_without_insert_is_refused_naming_the_privilege`. pins: c-4/C-010
+  - `a_write_returns_its_connection_clean_and_names_only_its_columns`. pins: c-4/C-011
+- `postgres_types.rs` — **C-4 step 1 (2026-10-08):** `new_mappings_wait_for_the_write_path_to_encode`
+  is replaced by `every_mapped_row_encodes_and_a_wrong_array_names_both_types`: the eight
+  C-2a mappings now encode, so every mapped row refuses an array of another type with
+  `ArrowType` and encodes an empty array. pins: c-4/C-001
 - `partition.rs` — C-3 (2026-10-07), no network. `strides_equal_sparks_recorded_grid` reads
   [c3_stride_grid.txt](../../../../python/repark-parity/tests/live_spark/c3_stride_grid.txt),
   the 740 triples recorded on live Spark 4.1.2, and compares `stride_cuts` with every recorded

@@ -11,6 +11,12 @@ mod live_pg;
 mod live_pool;
 #[cfg(feature = "postgres")]
 mod live_pushdown;
+#[cfg(feature = "postgres")]
+mod live_write;
+#[cfg(feature = "postgres")]
+mod live_write_faults;
+#[cfg(feature = "postgres")]
+mod live_write_relations;
 mod partition;
 #[cfg(feature = "postgres")]
 mod partition_plan;
@@ -27,3 +33,6 @@ mod settings;
 #[cfg(feature = "postgres")]
 mod tls;
 mod url;
+#[cfg(feature = "postgres")]
+mod write;
+mod write_shapes;

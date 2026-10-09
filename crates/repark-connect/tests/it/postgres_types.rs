@@ -779,27 +779,32 @@ fn unmapped_types_refuse_at_resolution() {
 }
 
 #[test]
-fn new_mappings_wait_for_the_write_path_to_encode() {
-    for postgres_name in [
-        "numeric",
-        "date",
-        "timestamp",
-        "timestamptz",
-        "interval",
-        "uuid",
-        "json",
-        "jsonb",
-    ] {
-        let error = row(postgres_name)
-            .encode(&StringArray::from(vec!["x"]))
-            .expect_err("no encoder before C-4");
+fn every_mapped_row_encodes_and_a_wrong_array_names_both_types() {
+    for row in POSTGRES_TYPES {
+        let Some(expected) = row.mapping.data_type() else {
+            continue;
+        };
+        let wrong: ArrayRef = if expected == DataType::Boolean {
+            Arc::new(Int32Array::from(vec![1]))
+        } else {
+            Arc::new(BooleanArray::from(vec![true]))
+        };
+        let error = row.encode(wrong.as_ref()).expect_err("a wrong array");
         assert_eq!(
             error,
-            ConnectError::EncodeNotBuilt {
-                postgres_name: row(postgres_name).postgres_name
+            ConnectError::ArrowType {
+                postgres_name: row.postgres_name,
+                expected: expected.clone(),
+                actual: wrong.data_type().clone(),
             }
         );
-        assert!(error.to_string().contains("C-4"), "{error}");
+        let empty = arrow::array::new_empty_array(&expected);
+        assert_eq!(
+            row.encode(empty.as_ref()),
+            Ok(Vec::new()),
+            "{}",
+            row.postgres_name
+        );
     }
 }
 
