@@ -3171,7 +3171,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   writes it since RP-28, fork #296 — the fixture's `blocked_on_fork` marker still names
   the closed ask until the recorder re-runs).
 - [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-MERGE-WALL-1
-  (2026-10-09):** every cell of the write-door matrix, one test per zone × target × door.
+  fold 1 (2026-10-09), the pin budget:** the module is cut from 464 tests to 179. Kept: the 57
+  `timestamp_ns` door tests in all three zones, and the control doors in **one** zone,
+  America/New_York (95 tests); they are the pins that kill the lane's mutant M5 and the
+  verify's X2. Dropped: the controls of UTC and Asia/Kolkata (190 tests) and the 108 carry
+  tests, which `crates/repark-spark/tests/timestamp_ns_wall_doors.rs` now holds at the Rust
+  door. Added, for doors only the facade has: a nested `struct<v: timestamp_ns>` through five
+  DataFrame writers, and a `TIMESTAMP_NTZ` or `DATE` past the range through
+  `overwritePartitions` and `insertInto(overwrite=True)`, ANSI on and off. The sentences below
+  describe the module before the cut.
+  pins: ice-tsns-merge-wall-1/C-016, C-019, C-023
+  **(2026-10-09):** every cell of the write-door matrix, one test per zone × target × door.
   A `timestamp_ns` target must store the rule (`expected_wall`) or main's ratified refusal;
   the 38 cells main got wrong and the 9 where it raised a raw Arrow error are named by
   `main_was_wrong` / `main_refused_an_answer`, and
@@ -3202,6 +3212,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   a build of main only; one fresh session and warehouse per door, the three zones in parallel.
   `--output <path>` measures another build without touching the fixture.
   pins: ice-tsns-merge-wall-1/C-003
+  **Fold 1 (2026-10-09):** the fixture keeps the 760 cells the pins read
+  (`doors.in_fixture`: every `timestamp_ns` door cell, and the control door cells of
+  America/New_York), 195 kB from 501 kB; they are the cells recorded at `40fc916f`, filtered,
+  not re-recorded. `--whole` records all 1926 cells for a comparison; run on the fold's head
+  it gives the 47 moved cells of the first fix and no other, the first line of the restated
+  count (the ledger's §9.4).
+  pins: ice-tsns-merge-wall-1/C-021, C-023
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and

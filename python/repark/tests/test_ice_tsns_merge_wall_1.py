@@ -6,9 +6,12 @@ every door. Spark 4.1.2 with Iceberg 1.11.0 cannot read or write the type, so th
 the rule INSERT already follows (ICE-TSNS-SQL-1), computed here with ``zoneinfo``.
 
 Every other target type is a control: its cells must answer exactly what main ``40fc916f``
-answered, recorded in ``ice_tsns_merge_wall_1_main.json``.
+answered, recorded in ``ice_tsns_merge_wall_1_main.json`` for one zone, the one with a DST rule.
+The carries and the other zones' controls are pinned at the Rust door
+(``crates/repark-spark/tests/timestamp_ns_wall_doors.rs``).
 
-pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-010, C-011, C-012
+pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-016, C-019
+pins: ice-tsns-merge-wall-1/C-023, C-025
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import _ice_tsns_merge_wall_1_doors as doors
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
@@ -40,6 +44,7 @@ INSTANT_WRONG_DOORS = (
 )
 UNFILTERED_UPDATE_SOURCES = ("l", "n", "tzns")
 CONTROL_TARGETS = tuple(target for target in doors.TARGETS if target != "ts_ns")
+CONTROL_ZONE = doors.CONTROL_ZONE
 
 
 def main_cell(zone: str, target: str, door: str, part: str) -> dict[str, Any]:
@@ -115,30 +120,14 @@ def test_every_door_stores_the_session_wall_in_timestamp_ns(
         assert cells[source] == expected_wall_cell(zone, door, source), (zone, door, source)
 
 
-@pytest.mark.parametrize("carry", list(doors.CARRIES))
-@pytest.mark.parametrize("target", list(doors.TARGETS))
-@pytest.mark.parametrize("zone", doors.ZONES)
-def test_untouched_rows_carry_their_ticks(
-    tmp_path: Path, zone: str, target: str, carry: str
-) -> None:
-    """DELETE, sibling UPDATE and MERGE, and the maintenance rewrites move no stored tick."""
-    cells = measured(tmp_path, zone, target, f"carry_{carry}")
-    for mode in doors.MODES:
-        assert "error" not in cells[mode], (zone, target, carry, mode, cells[mode])
-        assert cells[mode]["values"] == cells[mode]["seeded"], (zone, target, carry, mode)
-        assert cells[mode] == main_cell(zone, target, f"carry_{carry}", mode)
-
-
 @pytest.mark.parametrize("door", list(doors.DOORS))
 @pytest.mark.parametrize("target", CONTROL_TARGETS)
-@pytest.mark.parametrize("zone", doors.ZONES)
-def test_control_targets_answer_what_main_answered(
-    tmp_path: Path, zone: str, target: str, door: str
-) -> None:
+def test_control_targets_answer_what_main_answered(tmp_path: Path, target: str, door: str) -> None:
     """A ``timestamptz_ns`` target and the microsecond targets, v3 and v2, do not move."""
-    cells = measured(tmp_path, zone, target, door)
+    cells = measured(tmp_path, CONTROL_ZONE, target, door)
     for source in doors.SOURCES:
-        assert cells[source] == main_cell(zone, target, door, source), (zone, target, door, source)
+        recorded = main_cell(CONTROL_ZONE, target, door, source)
+        assert cells[source] == recorded, (target, door, source)
 
 
 @pytest.mark.parametrize("zone", doors.ZONES)
@@ -235,5 +224,81 @@ def test_update_with_no_where_stores_a_literal(
         spark.sql("INSERT INTO ice.ns.t VALUES (1, TIMESTAMP '2020-01-01 00:00:00')")
         spark.sql(f"UPDATE ice.ns.t SET v = {assigned}")
         assert stored_ticks(spark) == [expected]
+    finally:
+        spark.stop()
+
+
+NESTED_TYPE = "STRUCT<v: timestamp_ns, n: INT>"
+NESTED_FRAME_DOORS = {
+    "df_append": lambda frame: frame.writeTo("ice.ns.t").append(),
+    "df_overwrite_partitions": lambda frame: frame.writeTo("ice.ns.t").overwritePartitions(),
+    "df_insert_into": lambda frame: frame.write.insertInto("ice.ns.t"),
+    "df_insert_into_overwrite": lambda frame: frame.write.insertInto("ice.ns.t", overwrite=True),
+    "df_save_append": lambda frame: frame.write.mode("append").saveAsTable("ice.ns.t"),
+}
+
+
+@pytest.mark.parametrize("door", list(NESTED_FRAME_DOORS))
+def test_a_nested_field_stores_the_session_wall_through_the_dataframe_doors(
+    tmp_path: Path, door: str
+) -> None:
+    """A ``struct<v: timestamp_ns>`` field stores the wall the top-level column stores."""
+    spark = open_edge_session(tmp_path, "true")
+    try:
+        v3 = "USING iceberg TBLPROPERTIES ('format-version' = '3')"
+        spark.sql("DROP TABLE ice.ns.t")
+        spark.sql(f"CREATE TABLE ice.ns.t (id INT, st {NESTED_TYPE}, top timestamp_ns) {v3}")
+        frame = spark.table("ice.ns.far").where("id = 2")
+        NESTED_FRAME_DOORS[door](
+            frame.selectExpr("id", "named_struct('v', c, 'n', 1) AS st", "c AS top")
+        )
+        stored = spark.sql("SELECT st.v AS nested, t.top FROM ice.ns.t t").to_arrow()
+        assert str(stored.column("nested").type) == NS_WALL
+        assert stored.column("nested").cast("int64").to_pylist() == [NEAR_NEW_YORK_WALL]
+        assert stored.column("top").cast("int64").to_pylist() == [NEAR_NEW_YORK_WALL]
+    finally:
+        spark.stop()
+
+
+WALL_SOURCES = {
+    "n": (pa.timestamp("us"), 32_503_680_000_000_001, 1_767_323_045_123_456),
+    "d": (pa.date32(), 376_200, 20_455),
+}
+WALL_SOURCE_NORMAL = {"n": 1_767_323_045_123_456_000, "d": 1_767_312_000_000_000_000}
+FRAME_OVERWRITE_DOORS = {
+    "df_overwrite_partitions": lambda frame: frame.writeTo("ice.ns.t").overwritePartitions(),
+    "df_insert_into_overwrite": lambda frame: frame.write.insertInto("ice.ns.t", overwrite=True),
+}
+
+
+def wall_source_frame(spark: Any, source: str) -> Any:
+    """Return a frame of one value past the nanosecond range and one inside it."""
+    arrow_type, far, normal = WALL_SOURCES[source]
+    width = pa.int32() if source == "d" else pa.int64()
+    table = pa.table(
+        {
+            "id": pa.array([1, 2], pa.int32()),
+            "v": pa.array([far, normal], width).cast(arrow_type),
+        }
+    )
+    return doors.frame_of(spark, table)
+
+
+@pytest.mark.parametrize("door", list(FRAME_OVERWRITE_DOORS))
+@pytest.mark.parametrize("source", list(WALL_SOURCES))
+@pytest.mark.parametrize("ansi", ["true", "false"])
+def test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors(
+    tmp_path: Path, ansi: str, source: str, door: str
+) -> None:
+    """A ``TIMESTAMP_NTZ`` or ``DATE`` past 2262 is ``CAST_OVERFLOW`` under ANSI, else NULL."""
+    spark = open_edge_session(tmp_path, ansi)
+    try:
+        frame = wall_source_frame(spark, source)
+        if ansi == "true":
+            with pytest.raises(Exception, match=r"\[CAST_OVERFLOW\].*\"TIMESTAMP_NS\""):
+                FRAME_OVERWRITE_DOORS[door](frame)
+        else:
+            FRAME_OVERWRITE_DOORS[door](frame)
+            assert stored_ticks(spark) == [None, WALL_SOURCE_NORMAL[source]]
     finally:
         spark.stop()

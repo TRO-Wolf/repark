@@ -20,6 +20,7 @@ import pyarrow as pa
 from repark import ReparkSession, functions
 
 ZONES = ("UTC", "Asia/Kolkata", "America/New_York")
+CONTROL_ZONE = "America/New_York"
 MOMENTS = (
     "2026-01-02 03:04:05.123456789",
     "1969-12-31 23:59:59.999999999",
@@ -464,3 +465,10 @@ def measure(spark: Any, target: str, door: str) -> dict[str, Any]:
 
 
 ALL_DOORS = (*DOORS, *(f"carry_{name}" for name in CARRIES))
+
+
+def in_fixture(zone: str, target: str, door: str) -> bool:
+    """Return whether the fixture keeps this cell: every wall door, and one zone of controls."""
+    if door.startswith("carry_"):
+        return False
+    return target == "ts_ns" or zone == CONTROL_ZONE
