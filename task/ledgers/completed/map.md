@@ -348,6 +348,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   audit sit in the ledger's Decisions section. Step 2 (docs paragraph, review
   archival) remains. `risk_tier: standard`. Branch `fix/eager-own-1`.
   pins: eager-own-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+- [empty-projection-count-1-ledger.md](empty-projection-count-1-ledger.md) — Unit ledger — EMPTY-PROJECTION-COUNT-1 · `COUNT(*)` over the changelog, incremental and lineage readers
 - [ex-15-dataframe-a-ledger.md](ex-15-dataframe-a-ledger.md) — Unit ledger — EX-15 · v1.1 example backfill, `DataFrame.*` (a)
 - [ex-16-dataframe-b-ledger.md](ex-16-dataframe-b-ledger.md) — Unit ledger — EX-16 · v1.1 example backfill, `DataFrame.*` (b)
 - [ex-17-column-a-ledger.md](ex-17-column-a-ledger.md) — Unit ledger — EX-17 · v1.1 example backfill, `Column.*` (a)

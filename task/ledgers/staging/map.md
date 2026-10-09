@@ -2237,7 +2237,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   is the owner's decision. `risk_tier: standard`. Branch
   `fix/threaded-collect-segv-1`.
   pins: threaded-collect-segv-1/C-001, C-002
-- [empty-projection-count-1-ledger.md](empty-projection-count-1-ledger.md) —
+- [empty-projection-count-1-ledger.md](../completed/empty-projection-count-1-ledger.md) —
   **EMPTY-PROJECTION-COUNT-1 (2026-10-09), in flight:** `COUNT(*)` plans an
   empty projection and the shared `conform_batch` rebuild refused it, so the
   changelog, incremental, lineage and micro-batch readers failed
