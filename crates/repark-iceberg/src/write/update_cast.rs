@@ -20,6 +20,9 @@ pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
         let instant = super::ntz_store::ltz_instant_cast_sql(expr);
         return format!("arrow_cast(({instant}), '{type_name}')");
     }
+    if let Some(conformed) = super::ntz_store::nested_wall_conform_sql(expr, target) {
+        return format!("arrow_cast({conformed}, '{type_name}')");
+    }
     format!("arrow_cast(({expr}), '{type_name}')")
 }
 
@@ -306,6 +309,17 @@ mod tests {
         assert_eq!(
             store_assignment_cast_sql("s.v", &zoned_nanos),
             "arrow_cast((s.v), 'Timestamp(ns, \"UTC\")')"
+        );
+        let nested = DataType::Struct(vec![Field::new("v", nanos, true)].into());
+        assert_eq!(
+            store_assignment_cast_sql("s.st", &nested),
+            "arrow_cast(__repark_cast_timestamp_ns__((s.st), arrow_cast(NULL, \
+             'Struct(\"v\": Timestamp(ns))')), 'Struct(\"v\": Timestamp(ns))')"
+        );
+        let nested_micros = DataType::Struct(vec![Field::new("v", micros, true)].into());
+        assert_eq!(
+            store_assignment_cast_sql("s.st", &nested_micros),
+            "arrow_cast((s.st), 'Struct(\"v\": Timestamp(µs))')"
         );
     }
 

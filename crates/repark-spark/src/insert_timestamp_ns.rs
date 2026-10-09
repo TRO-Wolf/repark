@@ -1,16 +1,24 @@
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType;
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, ExprSchema, Result};
 use datafusion::logical_expr::{
-    DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, Values, WriteOp,
+    Cast, DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, Values, WriteOp,
 };
 use datafusion::sql::sqlparser::ast::{
     DataType as SqlDataType, Expr as SqlExpr, SetExpr, Statement,
 };
 use repark_functions::timestamp_ns_cast::{
-    is_temporal_source, timestamp_ns_cast_expr, timestamp_ns_target,
+    is_temporal_source, timestamp_ns_cast_expr, timestamp_ns_conform_expr, timestamp_ns_target,
 };
+use repark_iceberg::write::ntz_store::holds_nested_ns_wall;
+
+#[derive(Clone, Copy)]
+enum Store {
+    Leaf(bool),
+    Nested,
+}
 
 pub(crate) fn before_analysis(
     plan: LogicalPlan,
@@ -30,7 +38,7 @@ pub(crate) fn before_analysis(
     let mut values_columns: Vec<(String, bool)> = Vec::new();
     let mut changed = false;
     for (expr, target) in projection.expr.iter().zip(&targets) {
-        let Some(zoned) = *target else {
+        let Some(Store::Leaf(zoned)) = *target else {
             exprs.push(expr.clone());
             continue;
         };
@@ -76,6 +84,7 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
     };
     let source_schema = Arc::clone(projection.input.schema());
     let mut exprs = Vec::with_capacity(projection.expr.len());
+    let mut nested_columns: Vec<&str> = Vec::new();
     let mut changed = false;
     for ((expr, target), field) in projection
         .expr
@@ -83,9 +92,22 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
         .zip(&targets)
         .zip(dml.target.schema().fields())
     {
-        let Some(zoned) = *target else {
-            exprs.push(expr.clone());
-            continue;
+        let zoned = match *target {
+            Some(Store::Leaf(zoned)) => zoned,
+            Some(Store::Nested) => {
+                let conformed = conform_nested(expr, field.data_type(), source_schema.as_ref())?;
+                if let (Expr::Column(column), false) = (split_alias(expr).0, conformed.transformed)
+                {
+                    nested_columns.push(column.name.as_str());
+                }
+                changed |= conformed.transformed;
+                exprs.push(conformed.data);
+                continue;
+            }
+            None => {
+                exprs.push(expr.clone());
+                continue;
+            }
         };
         let Ok(found) = expr.get_type(source_schema.as_ref()) else {
             exprs.push(expr.clone());
@@ -103,11 +125,79 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
         ));
         changed = true;
     }
-    let input = Arc::clone(&projection.input);
+    let input = match projection.input.as_ref() {
+        LogicalPlan::Values(values) if !nested_columns.is_empty() => {
+            match conform_nested_values(values, &nested_columns)? {
+                Some(rewritten) => {
+                    changed = true;
+                    Arc::new(LogicalPlan::Values(rewritten))
+                }
+                None => Arc::clone(&projection.input),
+            }
+        }
+        _ => Arc::clone(&projection.input),
+    };
     rebuild(dml, exprs, input, changed)
 }
 
-fn ns_store_targets(plan: &LogicalPlan) -> Option<Vec<Option<bool>>> {
+fn conform_nested_values(values: &Values, columns: &[&str]) -> Result<Option<Values>> {
+    let empty = DFSchema::empty();
+    let mut rows = values.values.clone();
+    let mut changed = false;
+    for name in columns {
+        let Some(index) = values.schema.index_of_column_by_name(None, name) else {
+            continue;
+        };
+        for row in &mut rows {
+            let conformed = conform_nested_casts(&row[index], &empty)?;
+            changed |= conformed.transformed;
+            row[index] = conformed.data;
+        }
+    }
+    Ok(changed.then(|| Values {
+        schema: Arc::clone(&values.schema),
+        values: rows,
+    }))
+}
+
+fn conform_nested_casts(expr: &Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+    expr.clone().transform_down(|node| {
+        let Expr::Cast(cast) = &node else {
+            return Ok(Transformed::no(node));
+        };
+        let shape = cast.field.data_type();
+        if !holds_nested_ns_wall(shape) {
+            return Ok(Transformed::no(node));
+        }
+        if cast
+            .expr
+            .get_type(schema)
+            .is_ok_and(|found| found == *shape)
+        {
+            return Ok(Transformed::new(node, false, TreeNodeRecursion::Jump));
+        }
+        let inner = timestamp_ns_conform_expr(cast.expr.as_ref().clone(), shape)?;
+        let outer = Cast::new_from_field(Box::new(inner), Arc::clone(&cast.field));
+        Ok(Transformed::new(
+            Expr::Cast(outer),
+            true,
+            TreeNodeRecursion::Jump,
+        ))
+    })
+}
+
+fn conform_nested(expr: &Expr, target: &DataType, schema: &DFSchema) -> Result<Transformed<Expr>> {
+    let conformed = conform_nested_casts(expr, schema)?;
+    if conformed.transformed || !expr.get_type(schema).is_ok_and(|found| found != *target) {
+        return Ok(conformed);
+    }
+    let (inner, name) = split_alias(expr);
+    let name = name.unwrap_or_else(|| expr.schema_name().to_string());
+    let whole = timestamp_ns_conform_expr(inner.clone(), target)?;
+    Ok(Transformed::yes(realias(whole, Some(name))))
+}
+
+fn ns_store_targets(plan: &LogicalPlan) -> Option<Vec<Option<Store>>> {
     let LogicalPlan::Dml(dml) = plan else {
         return None;
     };
@@ -124,9 +214,16 @@ fn ns_store_targets(plan: &LogicalPlan) -> Option<Vec<Option<bool>>> {
     if projection.expr.len() != fields.len() {
         return None;
     }
-    let targets: Vec<Option<bool>> = fields
+    let targets: Vec<Option<Store>> = fields
         .iter()
-        .map(|field| timestamp_ns_target(field.data_type()).filter(|zoned| !(wall_only && *zoned)))
+        .map(|field| {
+            let leaf = timestamp_ns_target(field.data_type())
+                .filter(|zoned| !(wall_only && *zoned))
+                .map(Store::Leaf);
+            let nested =
+                (!wall_only && holds_nested_ns_wall(field.data_type())).then_some(Store::Nested);
+            leaf.or(nested)
+        })
         .collect();
     targets.iter().any(Option::is_some).then_some(targets)
 }

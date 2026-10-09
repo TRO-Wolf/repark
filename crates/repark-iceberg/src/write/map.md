@@ -602,6 +602,31 @@ repark-core's error map.
   parity row ICE-TSNS-SQL-1-R-008), and `refuse_ntz_writes` still gates the microsecond wall
   target only.
   pins: ice-tsns-merge-wall-1/C-008
+  **Fold 1 (2026-10-09), after the verify.** Three things changed at these sites.
+  *Nested leaves.* `holds_nested_ns_wall(target)` answers whether a struct, list or map type
+  holds a `Timestamp(ns, None)` leaf at any depth, and `nested_wall_conform_sql(expr, target)`
+  renders the kernel's two-argument call
+  `__repark_cast_timestamp_ns__((expr), arrow_cast(NULL, '<target type>'))`.
+  `store_assignment_cast_sql` wraps it in the store cast it already rendered (whole-struct
+  MERGE UPDATE SET and the nested-assignment fold's non-struct leaves), the MERGE INSERT and
+  identity-UPDATE projections emit it for such a column, and `zone_stores` names a nested
+  Iceberg column that holds such a leaf (its Arrow type without field metadata) so
+  `zone_store_frame` wraps the source column in the same call. Before, field assignment
+  (`SET t.st.v = …`) reached the leaf kernel and stored the session wall while nested INSERT,
+  MERGE INSERT, whole-struct assignment and the overwrite doors took the plain cast and stored
+  the UTC wall: two walls in one table for one input. A nested microsecond `TIMESTAMP_NTZ`
+  leaf is **not** conformed here: it is a control and its split is main's (parity row
+  ICE-TSNS-SQL-1-R-011).
+  *Wall-typed sources on the overwrite doors.* `wall_kernel_reads(source, target)` decides
+  whether `zone_store_frame` hands a column to the kernel. A microsecond NTZ target still takes
+  an instant source only (anything else would move microsecond controls). A nanosecond wall
+  target takes every temporal source that is not already the target type, so a
+  `TIMESTAMP_NTZ` or `DATE` past the nanosecond range answers `[CAST_OVERFLOW]` under ANSI and
+  NULL without it, as `INSERT … SELECT` does; before, the plain cast raised a raw Arrow
+  overflow in both modes and, for a `DATE` under ANSI, panicked on a multiplication. In range
+  the kernel and the cast give the same ticks.
+  *The kernel's nullability* is the `repark-functions` change (its directory map).
+  pins: ice-tsns-merge-wall-1/C-016, C-018, C-019
 - `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
   (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI
   matrix stores anywhere. `refuse_negated_null_writes(ctx, table, plan, targets)` follows

@@ -1034,6 +1034,16 @@ pins: rp-4-fork-repin/C-005, C-006
   wraps what is still not the target type. A `timestamptz_ns` target is left out: it is the
   unit's control and stays as main answers (parity row ICE-TSNS-SQL-1-R-008).
   pins: ice-tsns-merge-wall-1/C-006
+  **Fold 1 (2026-10-09):** an INSERT target column that holds a nested `timestamp_ns` leaf
+  (`Store::Nested`, by `ntz_store::holds_nested_ns_wall`) is conformed in `after_analysis`
+  only: the analyzer does not rewrite a struct-to-struct cast, so there is nothing to peel
+  before it. `conform_nested_casts` finds the planner's cast to the nested type wherever it
+  sits in the expression and puts the kernel's two-argument call under it; `INSERT … VALUES`
+  carries that cast inside the `VALUES` rows, so `conform_nested_values` rewrites those cells;
+  an expression with no cast whose type is not the target's is wrapped whole. A nested target
+  of an `UPDATE` with no `WHERE` is left out: that statement raises a raw Arrow error for
+  every nested struct on main and stores nothing (parity row ICE-TSNS-SQL-1-R-014).
+  pins: ice-tsns-merge-wall-1/C-016
 - `insert_timestamp_ns.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door's INSERT conform
   for Iceberg `timestamp_ns` / `timestamptz_ns` target columns, called from `spark_ast`.
   `before_analysis` replaces the planner's `CAST(… AS Timestamp(ns))` over a non-column source

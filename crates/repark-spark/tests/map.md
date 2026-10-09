@@ -78,6 +78,25 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   The expected walls are the facade matrix's `zoneinfo` values. Mutants M1, M2 and M3 of
   the ledger each red the wall test at the door they break.
   pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-011
+  **Fold 1 (2026-10-09), six pins from the verify.**
+  `nested_struct_doors_store_one_wall` is the verify's repro in three zones: six doors into
+  `struct<v: timestamp_ns>` store the wall the top-level column stores.
+  `a_nested_nanosecond_leaf_stores_the_session_wall_at_any_depth` runs eight doors over six
+  shapes (struct in struct, array of struct, array, struct of array, map value, map of
+  struct) and names, per shape, the doors that refuse: MERGE refuses every array-bearing
+  column with its store-assignment text, and `INSERT … VALUES` of `array(TIMESTAMP '…')`
+  raises main's raw Arrow error. `a_nested_microsecond_ntz_field_keeps_the_split_main_has`
+  holds the control: field assignment stores the session wall, the other four doors the UTC
+  wall (parity row ICE-TSNS-SQL-1-R-011, OPEN).
+  `an_overflowing_literal_stores_null_without_ansi_as_insert_does` is the 42 cells' shape:
+  four far literals and each zone's edge instant through `UPDATE … WHERE` (both row-level
+  modes) and `MERGE … INSERT VALUES`.
+  `an_overflowing_wall_source_answers_as_insert_select_on_the_overwrite_doors` puts a
+  `TIMESTAMP_NTZ` and a `DATE` past each end of the range through `INSERT OVERWRITE` and
+  `INSERT … BY NAME`, ANSI on and off. `untouched_rows_carry_their_nanosecond_ticks` is the
+  carry pin the facade module gave up: DELETE, sibling UPDATE and MERGE and the three
+  maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
+  pins: ice-tsns-merge-wall-1/C-016, C-017, C-018, C-019, C-023
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to

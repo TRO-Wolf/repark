@@ -108,7 +108,10 @@ fn zone_wrapping_stream_sql(
     plan: &datafusion::logical_expr::LogicalPlan,
     write_schema: &ArrowSchema,
 ) -> Option<String> {
-    use crate::write::ntz_store::{is_ltz_instant_target, wall_cast_sql, wall_cast_udf_name};
+    use crate::write::ntz_store::{
+        holds_nested_ns_wall, is_ltz_instant_target, nested_wall_conform_sql, wall_cast_sql,
+        wall_cast_udf_name,
+    };
     let fields = write_schema.fields();
     let planned = if fields
         .iter()
@@ -125,9 +128,10 @@ fn zone_wrapping_stream_sql(
                 && crate::write::ntz_store::needs_ltz_instant_cast(&types[index])
         })
     };
-    if !(0..fields.len())
-        .any(|index| wall_cast_udf_name(fields[index].data_type()).is_some() || instant(index))
-    {
+    if !(0..fields.len()).any(|index| {
+        let target = fields[index].data_type();
+        wall_cast_udf_name(target).is_some() || holds_nested_ns_wall(target) || instant(index)
+    }) {
         return None;
     }
     let inner = "__repark_merge_insert_rows";
@@ -137,7 +141,9 @@ fn zone_wrapping_stream_sql(
         .map(|(index, field)| {
             let quoted = quote_ident(field.name());
             let column = format!("{inner}.{quoted}");
-            if let Some(wall) = wall_cast_sql(&column, field.data_type()) {
+            if let Some(wall) = wall_cast_sql(&column, field.data_type())
+                .or_else(|| nested_wall_conform_sql(&column, field.data_type()))
+            {
                 format!("({wall}) AS {quoted}")
             } else if instant(index) {
                 let cast = crate::write::update_cast::store_assignment_cast_sql(

@@ -290,6 +290,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   through `store_assignment_cast_sql`. Before, both arms stored an instant's UTC wall in a
   `timestamp_ns` column. Reason and scope: the `ntz_store.rs` row of the parent directory map.
   pins: ice-tsns-merge-wall-1/C-004
+  **Fold 1 (2026-10-09):** the same projection emits `ntz_store::nested_wall_conform_sql` for a
+  column that holds a nested `timestamp_ns` leaf. pins: ice-tsns-merge-wall-1/C-016
 - `insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the MERGE INSERT and UPDATE SET
   stream builders plan through `analyzed_store_source` and `wrap_store_outputs`, so a
   fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column named; the

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
-use datafusion::common::Column;
+use datafusion::common::{Column, ScalarValue};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::FunctionRegistry;
 use datafusion::logical_expr::expr::ScalarFunction;
@@ -10,6 +10,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::{PrimitiveType, Type};
 use iceberg::table::Table;
 
+use super::store_assign::without_field_metadata;
 use super::update_cast::incompatible_update_message;
 
 pub const NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ntz__";
@@ -40,6 +41,48 @@ pub fn wall_cast_udf_name(data_type: &DataType) -> Option<&'static str> {
 #[must_use]
 pub fn wall_cast_sql(expr_sql: &str, target: &DataType) -> Option<String> {
     wall_cast_udf_name(target).map(|name| format!("{name}(({expr_sql}))"))
+}
+
+#[must_use]
+pub fn holds_nested_ns_wall(data_type: &DataType) -> bool {
+    let holds = |field: &Field| {
+        matches!(
+            field.data_type(),
+            DataType::Timestamp(TimeUnit::Nanosecond, None)
+        ) || holds_nested_ns_wall(field.data_type())
+    };
+    match data_type {
+        DataType::Struct(fields) => fields.iter().any(|field| holds(field)),
+        DataType::Map(field, _)
+        | DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::FixedSizeList(field, _) => holds(field),
+        _ => false,
+    }
+}
+
+#[must_use]
+pub fn nested_wall_conform_sql(expr_sql: &str, target: &DataType) -> Option<String> {
+    holds_nested_ns_wall(target).then(|| {
+        let shape = without_field_metadata(target)
+            .to_string()
+            .replace('\'', "''");
+        format!("{NS_WALL_CAST_UDF_NAME}(({expr_sql}), arrow_cast(NULL, '{shape}'))")
+    })
+}
+
+#[must_use]
+pub fn wall_kernel_reads(source: &DataType, target: &DataType) -> bool {
+    match target {
+        DataType::Timestamp(TimeUnit::Nanosecond, None) => {
+            source != target
+                && matches!(
+                    source,
+                    DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64
+                )
+        }
+        _ => matches!(source, DataType::Timestamp(_, Some(_))),
+    }
 }
 
 #[must_use]
@@ -117,7 +160,11 @@ pub fn zone_stores(
                     TimeUnit::Microsecond,
                     Some(Arc::from("+00:00")),
                 )),
-                _ => None,
+                Type::Primitive(_) => None,
+                nested => iceberg::arrow::type_to_arrow_type(nested)
+                    .ok()
+                    .map(|arrow| without_field_metadata(&arrow))
+                    .filter(holds_nested_ns_wall),
             }
         })
         .collect();
@@ -162,11 +209,25 @@ fn zone_store_frame(
             let column = Expr::Column(Column::from((qualifier, field.as_ref())));
             let wall = target
                 .as_ref()
-                .filter(|_| matches!(source, DataType::Timestamp(_, Some(_))))
+                .filter(|target| wall_kernel_reads(source, target))
                 .and_then(wall_cast_udf_name)
                 .and_then(|name| ctx.udf(name).ok());
+            let nested = target
+                .as_ref()
+                .filter(|target| holds_nested_ns_wall(target) && source != *target)
+                .and_then(|target| ScalarValue::try_from(target).ok())
+                .zip(ctx.udf(NS_WALL_CAST_UDF_NAME).ok());
             let store = match (target, wall) {
                 (_, Some(udf)) => Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![column])),
+                (_, None) if nested.is_some() => {
+                    let Some((shape, udf)) = nested else {
+                        return column;
+                    };
+                    Expr::ScalarFunction(ScalarFunction::new_udf(
+                        udf,
+                        vec![column, Expr::Literal(shape, None)],
+                    ))
+                }
                 (Some(target), None)
                     if is_ltz_instant_target(target) && needs_ltz_instant_cast(source) =>
                 {
@@ -219,4 +280,50 @@ pub fn refuse_ntz_writes<'a>(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
+
+    use super::{holds_nested_ns_wall, wall_kernel_reads};
+
+    #[test]
+    fn the_kernel_reads_what_its_target_cannot_take_by_a_plain_cast() {
+        let instant = DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC")));
+        let micros = DataType::Timestamp(TimeUnit::Microsecond, None);
+        let nanos = DataType::Timestamp(TimeUnit::Nanosecond, None);
+        for (source, into_micros, into_nanos) in [
+            (&instant, true, true),
+            (&micros, false, true),
+            (&DataType::Date32, false, true),
+            (&nanos, false, false),
+            (&DataType::Utf8, false, false),
+            (&DataType::Int64, false, false),
+        ] {
+            assert_eq!(wall_kernel_reads(source, &micros), into_micros, "{source}");
+            assert_eq!(wall_kernel_reads(source, &nanos), into_nanos, "{source}");
+        }
+    }
+
+    #[test]
+    fn only_a_naive_nanosecond_leaf_makes_a_nested_wall_target() {
+        let nanos = DataType::Timestamp(TimeUnit::Nanosecond, None);
+        let wrap = |leaf: DataType| DataType::Struct(vec![Field::new("v", leaf, true)].into());
+        let list = |item: DataType| DataType::List(Arc::new(Field::new("element", item, true)));
+        assert!(holds_nested_ns_wall(&wrap(nanos.clone())));
+        assert!(holds_nested_ns_wall(&list(wrap(nanos.clone()))));
+        assert!(holds_nested_ns_wall(&wrap(list(nanos.clone()))));
+        assert!(!holds_nested_ns_wall(&nanos));
+        assert!(!holds_nested_ns_wall(&wrap(DataType::Timestamp(
+            TimeUnit::Microsecond,
+            None
+        ))));
+        assert!(!holds_nested_ns_wall(&wrap(DataType::Timestamp(
+            TimeUnit::Nanosecond,
+            Some(Arc::from("UTC"))
+        ))));
+    }
 }

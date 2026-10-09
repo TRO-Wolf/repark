@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use datafusion::arrow::array::{AsArray, TimestampNanosecondArray};
+use datafusion::arrow::array::{Array, ArrayRef, AsArray, TimestampNanosecondArray};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Int64Type, TimeUnit};
 use repark_core::ReparkSession;
@@ -502,5 +502,339 @@ async fn an_overflowing_wall_source_answers_as_insert_select_on_the_overwrite_do
                 }
             }
         }
+    }
+}
+
+fn leaf_ticks(array: &ArrayRef) -> Vec<Option<i64>> {
+    match array.data_type() {
+        DataType::Struct(_) => leaf_ticks(array.as_struct().column(0)),
+        DataType::List(_) => leaf_ticks(array.as_list::<i32>().values()),
+        DataType::Map(_, _) => leaf_ticks(array.as_map().entries().column(1)),
+        _ => {
+            let ints = cast(array, &DataType::Int64).expect("ticks as int64");
+            ints.as_primitive::<Int64Type>().iter().collect()
+        }
+    }
+}
+
+async fn nested_ticks(session: &ReparkSession, table: &str) -> Vec<Option<i64>> {
+    let batches = session
+        .sql(&format!("SELECT st FROM {table} ORDER BY id"))
+        .await
+        .expect("read")
+        .collect()
+        .await
+        .expect("collect");
+    batches
+        .iter()
+        .flat_map(|batch| leaf_ticks(batch.column(0)))
+        .collect()
+}
+
+const NESTED_SHAPES: [(&str, &str, &str, &[&str]); 6] = [
+    (
+        "struct in struct",
+        "STRUCT<i: STRUCT<v: timestamp_ns, n: INT>, m: INT>",
+        "named_struct('i', named_struct('v', {x}, 'n', 1), 'm', 2)",
+        &[],
+    ),
+    (
+        "array of struct",
+        "ARRAY<STRUCT<v: timestamp_ns, n: INT>>",
+        "array(named_struct('v', {x}, 'n', 1))",
+        &["merge insert", "merge update"],
+    ),
+    (
+        "array",
+        "ARRAY<timestamp_ns>",
+        "array({x})",
+        &["insert values", "merge insert", "merge update"],
+    ),
+    (
+        "struct of array",
+        "STRUCT<a: ARRAY<timestamp_ns>, n: INT>",
+        "named_struct('a', array({x}), 'n', 1)",
+        &["merge insert", "merge update"],
+    ),
+    (
+        "map value",
+        "MAP<STRING, timestamp_ns>",
+        "map({key}, {x})",
+        &[],
+    ),
+    (
+        "map of struct",
+        "MAP<STRING, STRUCT<v: timestamp_ns, n: INT>>",
+        "map({key}, named_struct('v', {x}, 'n', 1))",
+        &[],
+    ),
+];
+const ROW_KEY: &str = "concat('k', CAST(id AS STRING))";
+const MERGE_KEY: &str = "concat('k', CAST(s.id AS STRING))";
+const NESTED_DOORS: [(&str, &str, &str, &str); 8] = [
+    (
+        "insert values",
+        "INSERT INTO {t} VALUES (1, {st}, 0)",
+        NESTED_INSTANT,
+        "'k1'",
+    ),
+    (
+        "insert select",
+        "INSERT INTO {t} SELECT id, {st} AS st, 0 AS k FROM ice.ns.src",
+        "x",
+        ROW_KEY,
+    ),
+    (
+        "insert by name",
+        "INSERT INTO {t} BY NAME SELECT 0 AS k, {st} AS st, id FROM ice.ns.src",
+        "x",
+        ROW_KEY,
+    ),
+    (
+        "insert overwrite",
+        "INSERT OVERWRITE {t} SELECT id, {st} AS st, 0 AS k FROM ice.ns.src",
+        "x",
+        ROW_KEY,
+    ),
+    (
+        "replace where",
+        "INSERT INTO {t} REPLACE WHERE id >= 0 SELECT id, {st} AS st, 0 AS k FROM ice.ns.src",
+        "x",
+        ROW_KEY,
+    ),
+    (
+        "merge insert",
+        "MERGE INTO {t} t USING ice.ns.src s ON t.id = s.id \
+         WHEN NOT MATCHED THEN INSERT (id, st, k) VALUES (s.id, {st}, 0)",
+        "s.x",
+        MERGE_KEY,
+    ),
+    (
+        "merge update",
+        "MERGE INTO {t} t USING ice.ns.src s ON t.id = s.id \
+         WHEN MATCHED THEN UPDATE SET t.st = {st}",
+        "s.x",
+        MERGE_KEY,
+    ),
+    (
+        "update where",
+        "UPDATE {t} SET st = {st} WHERE id >= 0",
+        NESTED_INSTANT,
+        "'k1'",
+    ),
+];
+
+#[tokio::test]
+async fn a_nested_nanosecond_leaf_stores_the_session_wall_at_any_depth() {
+    let mut unexpected = Vec::new();
+    for (zone, wall) in NESTED_WALLS {
+        let session = session_at(zone);
+        let _warehouse = catalog(&session).await;
+        run(
+            &session,
+            "CREATE TABLE ice.ns.src (id INT, x TIMESTAMP) USING iceberg \
+             TBLPROPERTIES ('format-version'='3')",
+        )
+        .await;
+        run(
+            &session,
+            &format!("INSERT INTO ice.ns.src VALUES (1, {NESTED_INSTANT})"),
+        )
+        .await;
+        for (shape_index, (shape, column_type, build, refused)) in NESTED_SHAPES.iter().enumerate()
+        {
+            let mut refusals = Vec::new();
+            for (door_index, (door, write, value, key)) in NESTED_DOORS.iter().enumerate() {
+                let table = format!("ice.ns.n{shape_index}_{door_index}");
+                run(
+                    &session,
+                    &format!(
+                        "CREATE TABLE {table} (id INT, st {column_type}, k INT) USING iceberg \
+                         TBLPROPERTIES ('format-version'='3')"
+                    ),
+                )
+                .await;
+                if door.contains("update") {
+                    run(
+                        &session,
+                        &format!("INSERT INTO {table} VALUES (1, NULL, 0)"),
+                    )
+                    .await;
+                }
+                let built = build.replace("{x}", value).replace("{key}", key);
+                let write = write.replace("{t}", &table).replace("{st}", &built);
+                if let Err(error) = attempt(&session, &write).await {
+                    println!("{zone} {shape} {door}: {error}");
+                    refusals.push(*door);
+                    continue;
+                }
+                assert_eq!(
+                    nested_ticks(&session, &table).await,
+                    vec![Some(wall)],
+                    "{zone} {shape} {door}"
+                );
+            }
+            if refusals != refused.to_vec() {
+                unexpected.push(format!("{zone} {shape}: {refusals:?}"));
+            }
+        }
+    }
+    assert_eq!(unexpected, Vec::<String>::new());
+}
+
+const CARRY_SEED: [&str; 4] = [
+    "2026-01-02 03:04:05.123456789",
+    "1969-12-31 23:59:59.999999999",
+    "2026-03-08 02:30:00.000000001",
+    "2026-11-01 01:30:00.000000001",
+];
+const CARRY_TICKS: [i64; 4] = [
+    1_767_323_045_123_456_789,
+    -1,
+    1_772_937_000_000_000_001,
+    1_793_496_600_000_000_001,
+];
+const CARRIES: [(&str, &[&str]); 6] = [
+    ("delete", &["DELETE FROM ice.ns.t WHERE id = 0"]),
+    (
+        "update sibling",
+        &[
+            "UPDATE ice.ns.t SET k = k + 1 WHERE id > 0",
+            "DELETE FROM ice.ns.t WHERE id = 0",
+        ],
+    ),
+    (
+        "merge sibling",
+        &[
+            "MERGE INTO ice.ns.t t USING (SELECT id FROM ice.ns.t) s ON t.id = s.id \
+             WHEN MATCHED AND t.id = 0 THEN DELETE WHEN MATCHED THEN UPDATE SET k = 7",
+        ],
+    ),
+    (
+        "rewrite data files",
+        &[
+            "DELETE FROM ice.ns.t WHERE id = 0",
+            "CALL ice.system.rewrite_data_files(table => 'ns.t', \
+             options => map('min-input-files', '2', 'rewrite-all', 'true'))",
+        ],
+    ),
+    (
+        "rewrite manifests",
+        &[
+            "DELETE FROM ice.ns.t WHERE id = 0",
+            "CALL ice.system.rewrite_manifests(table => 'ns.t')",
+        ],
+    ),
+    (
+        "rewrite position delete files",
+        &[
+            "DELETE FROM ice.ns.t WHERE id = 0",
+            "CALL ice.system.rewrite_position_delete_files(table => 'ns.t')",
+        ],
+    ),
+];
+
+#[tokio::test]
+async fn untouched_rows_carry_their_nanosecond_ticks() {
+    for (column_type, suffix) in [("timestamp_ns", ""), ("timestamptz_ns", "+00:00")] {
+        for properties in ["", MERGE_ON_READ] {
+            for (carry, statements) in CARRIES {
+                let session = session_at("America/New_York");
+                let _warehouse = catalog(&session).await;
+                run(
+                    &session,
+                    &format!(
+                        "CREATE TABLE ice.ns.t (id INT, v {column_type}, k INT) USING iceberg \
+                         TBLPROPERTIES ('format-version'='3'{properties})"
+                    ),
+                )
+                .await;
+                for half in [0..2, 2..4] {
+                    let rows = half
+                        .map(|index| {
+                            let text = CARRY_SEED[index];
+                            format!("({index}, CAST('{text}{suffix}' AS {column_type}), 0)")
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    run(&session, &format!("INSERT INTO ice.ns.t VALUES {rows}")).await;
+                }
+                let label = format!("{column_type} {carry} mor={}", !properties.is_empty());
+                let (_, seeded) = ticks(&session, "SELECT v FROM ice.ns.t ORDER BY id").await;
+                assert_eq!(seeded, CARRY_TICKS.map(Some).to_vec(), "{label} seed");
+                for statement in statements {
+                    run(&session, statement).await;
+                }
+                let (_, carried) = ticks(&session, "SELECT v FROM ice.ns.t ORDER BY id").await;
+                assert_eq!(
+                    carried,
+                    CARRY_TICKS[1..]
+                        .iter()
+                        .map(|v| Some(*v))
+                        .collect::<Vec<_>>(),
+                    "{label}"
+                );
+            }
+        }
+    }
+}
+
+const NTZ_NESTED_DOORS: [(&str, bool); 6] = [
+    ("insert values", false),
+    ("insert select", false),
+    ("merge set field", true),
+    ("merge set struct", false),
+    ("update set field", true),
+    ("merge insert", false),
+];
+
+#[tokio::test]
+async fn a_nested_microsecond_ntz_field_keeps_the_split_main_has() {
+    let lit = NESTED_INSTANT;
+    for (zone, wall) in NESTED_WALLS {
+        let session = session_at(zone);
+        let _warehouse = catalog(&session).await;
+        run(
+            &session,
+            "CREATE TABLE ice.ns.t (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>) \
+             USING iceberg TBLPROPERTIES ('format-version'='3')",
+        )
+        .await;
+        let writes = [
+            format!("INSERT INTO ice.ns.t VALUES (1, named_struct('v', {lit}, 'n', 1))"),
+            format!("INSERT INTO ice.ns.t SELECT 2, named_struct('v', {lit}, 'n', 1)"),
+            "INSERT INTO ice.ns.t VALUES (3, named_struct('v', NULL, 'n', 1)), \
+             (4, named_struct('v', NULL, 'n', 1)), (5, named_struct('v', NULL, 'n', 1))"
+                .to_string(),
+            format!(
+                "MERGE INTO ice.ns.t t USING (SELECT 3 AS id, {lit} AS x) s ON t.id = s.id \
+                 WHEN MATCHED THEN UPDATE SET t.st.v = s.x"
+            ),
+            format!(
+                "MERGE INTO ice.ns.t t USING (SELECT 4 AS id, {lit} AS x) s ON t.id = s.id \
+                 WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.x, 'n', 1)"
+            ),
+            format!("UPDATE ice.ns.t SET st.v = {lit} WHERE id = 5"),
+            format!(
+                "MERGE INTO ice.ns.t t USING (SELECT 6 AS id, {lit} AS x) s ON t.id = s.id \
+                 WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('v', s.x, 'n', 1))"
+            ),
+        ];
+        for write in &writes {
+            run(&session, write).await;
+        }
+        let stored = nested_ticks(&session, "ice.ns.t").await;
+        let utc_wall = NESTED_WALLS[0].1 / 1_000;
+        let expected: Vec<Option<i64>> = NTZ_NESTED_DOORS
+            .iter()
+            .map(|(_, session_wall)| {
+                Some(if *session_wall {
+                    wall / 1_000
+                } else {
+                    utc_wall
+                })
+            })
+            .collect();
+        assert_eq!(stored, expected, "{zone}");
     }
 }

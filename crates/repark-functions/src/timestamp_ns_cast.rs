@@ -19,7 +19,7 @@ use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
     Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
-    ScalarUDF, ScalarUDFImpl, Signature, Values, Volatility,
+    ScalarUDF, ScalarUDFImpl, Signature, TypeSignature, Values, Volatility,
 };
 
 use crate::ansi::spark_ansi_enabled_from_options;
@@ -57,6 +57,15 @@ pub fn timestamp_ns_cast_expr(expr: Expr, zoned: bool) -> Expr {
         timestamp_ns_cast_udf(zoned),
         vec![expr],
     ))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn timestamp_ns_conform_expr(expr: Expr, target: &DataType) -> Result<Expr> {
+    let shape = Expr::Literal(ScalarValue::try_from(target)?, None);
+    Ok(Expr::ScalarFunction(ScalarFunction::new_udf(
+        timestamp_ns_cast_udf(false),
+        vec![expr, shape],
+    )))
 }
 
 #[must_use]
@@ -117,7 +126,10 @@ impl SparkTimestampNsCast {
     fn new(zoned: bool) -> Self {
         Self {
             zoned,
-            signature: Signature::any(1, Volatility::Volatile),
+            signature: Signature::one_of(
+                vec![TypeSignature::Any(1), TypeSignature::Any(2)],
+                Volatility::Volatile,
+            ),
         }
     }
 
@@ -164,6 +176,9 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
     }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        if let [source, shape] = arg_types {
+            return Ok(nested::conformed_type(source, shape, self.zoned));
+        }
         if let Some(source) = arg_types.first() {
             self.checked_source(source)?;
         }
@@ -171,10 +186,19 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        if let [source, shape] = args.arg_fields {
+            let conformed =
+                nested::conformed_type(source.data_type(), shape.data_type(), self.zoned);
+            return Ok(Arc::new(Field::new(
+                self.name(),
+                conformed,
+                source.is_nullable(),
+            )));
+        }
         let nullable = match args.arg_fields.first() {
             Some(field) => {
                 self.checked_source(field.data_type())?;
-                field.is_nullable() || is_string_source(field.data_type())
+                field.is_nullable() || *field.data_type() != target_type(self.zoned)
             }
             None => true,
         };
@@ -194,12 +218,15 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
             zone,
             ansi,
         };
+        let shape = (args.args.len() == 2).then(|| args.return_field.data_type());
+        let convert = |array: &ArrayRef| match shape {
+            Some(shape) => nested::conform(&conversion, array, shape),
+            None => conversion.convert(array),
+        };
         match args.args.first() {
-            Some(ColumnarValue::Array(array)) => {
-                Ok(ColumnarValue::Array(conversion.convert(array)?))
-            }
+            Some(ColumnarValue::Array(array)) => Ok(ColumnarValue::Array(convert(array)?)),
             Some(ColumnarValue::Scalar(scalar)) => {
-                let converted = conversion.convert(&scalar.to_array()?)?;
+                let converted = convert(&scalar.to_array()?)?;
                 Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
                     &converted, 0,
                 )?))
@@ -895,7 +922,10 @@ fn values_cell_needs_rewrite(cell: &Expr) -> bool {
         && interesting
 }
 
+mod nested;
 mod values_evidence;
 
+#[cfg(test)]
+mod nested_tests;
 #[cfg(test)]
 mod tests;
