@@ -40,18 +40,20 @@ rule 2 does not bind.
 | C-006 | The query surface is complete and honest: `StreamingQuery` carries every §3.7 member with the driver-owned bodies behind the stub terminal and a real `awaitTermination` timeout check; `StreamingQueryManager` answers `active == []` and `get() is None` for real, validates the `awaitAnyTermination` timeout, and checks the session is alive on all three methods. | The manager and query pins in `python/repark/tests/test_mb_4_streaming_surface.py`. | **PROVEN** | 9 pins green: `test_manager_active_is_empty_on_idle_session` (the `streams_active` oracle cell), `test_manager_get_returns_none_without_queries`, `test_manager_await_any_termination_validates_timeout` (`< 0` refuses, `0` passes validation, then the terminal), `test_manager_methods_refuse_on_stopped_session`, `test_query_await_termination_validates_timeout` (`<= 0` refuses, the valid shapes reach the terminal), `test_query_surface_raises_stub_terminal` (all nine members). Terminal assertions are type-only. pins: mb-4/C-006 |
 | C-007 | The three IPI-47 cells run through the stubbed surface and answer: `R-STREAM-READ` validates and stops at the stub terminal; `R-STREAM-READ-SKIP` refuses MBE-3; `W-STREAM-WRITE-FILESRC` refuses MBE-7 on both doors. The inventory's verdicts are untouched, and the session-surface neighbours answer byte-identical to the unmodified tree (57 passed, 9 skipped, 22 pre-existing collection errors for the missing `repark_parity` module, same before and after). | The probe run and the neighbour runs, recorded here. | **PROVEN** | Probe of 2026-10-08 through the module-direct builders: `R-STREAM-READ` raises builtin `NotImplementedError` (the Q1 terminal); `R-STREAM-READ-SKIP` raises `IllegalArgumentException` `[REPARK_MICROBATCH.SKIP_OPTION_REFUSED]` with `{option}` and no SQLSTATE; `W-STREAM-WRITE-FILESRC` raises `PySparkNotImplementedError` `NOT_IMPLEMENTED` with `{feature: readStream.format(parquet)}` on the read and `{feature: writeStream.format(parquet)}` on the write. What each needs is D-17. Neighbours: `pytest python/repark/tests -k "session_surface or ses_decl or readStream or streams or writeStream"` reads 57 passed, 9 skipped, 22 pre-existing errors on the unmodified tree and identical at head. pins: mb-4/C-007 |
 | C-009 | The wire-up round replaces the stub terminal: `load`/`table` return streaming frames, `start`/`toTable` register and run, the manager waits and the query members answer, per Q7 and Q9. | The wire-up round's brief and pins. | **OPEN** | The closing question is the hand-back's Q1: what a validated spec answers in the stub. The implemented lean is the builtin `NotImplementedError` terminal, asserted type-only so the ruling flips no text. |
-| C-010 | Writer-side unknown options are ruled: the mirror-reader lean (prefixed unknowns refuse MBE-17, plain keys pass, over the four named writer keys) or ruling 4's letter (every unnamed writer key refuses MBE-17). | The orchestrator's ruling on the hand-back's Q2. | **OPEN** | The stub implements the mirror-reader lean in `validate_writer_options` with the Q2 pin beside it; a strict ruling reworks one function and one pin. |
-| C-011 | The format gaps are ruled: the missing-format default and the writer `NOT_IMPLEMENTED` feature shape. | The orchestrator's ruling on the hand-back's Q3. | **OPEN** | The stub implements the lean (the PySpark `parquet` default refused as `readStream.format(parquet)` / `writeStream.format(parquet)`); the alternative is the builder-flavoured feature. Pins sit beside the lean. |
-| C-012 | The `processingTime` interval grammar is ruled: which strings parse, to what durations, and which error answers an unparsable one. | The orchestrator's ruling on the hand-back's Q4. | **OPEN** | The stub stores the validated strings unparsed; the parse belongs to the wire-up in Rust. |
-| C-013 | A sourceless `load()` is ruled: `load()` with no path argument and no `path` option under the iceberg format. | The orchestrator's ruling on the hand-back's Q5. | **OPEN** | The stub implements the lean (a batch-mirrored plain `AnalysisException` naming the fix) with the pin beside it. |
-| C-014 | The option cases with no §4 row are classified at wire-up: cap, timestamp and snapshot-id value parsing, non-boolean skip values, the four unsupported Spark keys, the two start keys together, and folded-key collisions. The stub passes all of them to the terminal; the wire-up refuses them with whatever classes the ruling gives. | The wire-up round's brief and pins. | **OPEN** | `from_options` refuses each of these as `Catalog`, which §4 does not class; ruling 5 keeps them out of the stub. Deliberately unpinned here so the wire-up writes the pins once. |
+| C-010 | Writer-side unknown options are ruled: the mirror-reader lean (prefixed unknowns refuse MBE-17, plain keys pass, over the four named writer keys) or ruling 4's letter (every unnamed writer key refuses MBE-17). | The orchestrator's ruling on the hand-back's Q2. | **PROVEN** | The read ruled Q2 (the mirror-reader lean stands) and the brief left it uncontradicted; `validate_writer_options` keeps the lean and routes the refusal through the mapper. The M1 pins (`test_writer_totable_unknown_option_refuses_mbe17`, the Rust `to_table` unknown case) pin it on the second door. W-Q6's value questions stay open for items 6–7. pins: mb-4/C-010 |
+| C-011 | The format gaps are ruled: the missing-format default and the writer `NOT_IMPLEMENTED` feature shape. | The orchestrator's ruling on the hand-back's Q3. | **PROVEN** | The read ruled Q3 and the brief confirmed it: `load` and plain `start` refuse a missing format as the `parquet` default and any non-iceberg format as MBE-7, matching case-insensitively; `table`, `toTable` and the `foreachBatch` start never look at the format. Implemented in `readers.py`; pins cover the fold (F4/F5), the ignored doors (F6, F9/F11, foreach) and keep the `load`/plain-`start` refusals. Spark's own answers on the refused doors (F1, F13, F15) are the dated file-source card's. pins: mb-4/C-011 |
+| C-012 | The `processingTime` interval grammar is ruled: which strings parse, to what durations, and which error answers an unparsable one. | The orchestrator's ruling on the hand-back's Q4. | **PROVEN** | Closed by C-020: the brief ruled Q4 and the Rust parser plus 16 facade pins implement the measured grammar. pins: mb-4/C-012 |
+| C-013 | A sourceless `load()` is ruled: `load()` with no path argument and no `path` option under the iceberg format. | The orchestrator's ruling on the hand-back's Q5. | **PROVEN** | The brief ruled Q5 for `load()`: `IllegalArgumentException`, Spark's text, no condition, no SQLSTATE; pin `test_reader_load_without_path_or_option_refuses_mb0c_f7` asserts class, `None` condition, `None` SQLSTATE and the F7 text. The `start()`-side no-path refusal moves to item 6 with the sink mapping (D-33). pins: mb-4/C-013 |
+| C-014 | The option cases with no §4 row are classified at wire-up: cap, timestamp and snapshot-id value parsing, non-boolean skip values, the four unsupported Spark keys, the two start keys together, and folded-key collisions. The stub passes all of them to the terminal; the wire-up refuses them with whatever classes the ruling gives. | The wire-up round's brief and pins. | **PROVEN** | Each listed case refuses through `from_options` as `Catalog`, rendered at start as `AnalysisException` with the passthrough verbatim, no condition, no SQLSTATE (W-Q1). Pins: the value-cases loop (skip `maybe`, both caps bad and zero, bad timestamp, bad snapshot id), the unsupported-keys loop (all four), both start keys, and the folded-key collision through the module door. pins: mb-4/C-014 |
 | C-015 | Step 4 flips `spark.readStream` / `spark.streams` (with the `session_core.py` stops-every-query fold and its lowered baseline), flips the SES-DECL rows and files the registry rows drafted in this ledger. | The wire-up round's brief and pins. | **OPEN** | Nothing in this round touches `session_surface.py`, `session_core.py` or the parity doc. |
-| C-016 | The two exceptions gain their `errors.py` re-export and structured-method loop entries in the wire-up round. | The wire-up round's brief and pins. | **OPEN** | The facade imports them from `repark._native` until then; no stub test needs the structured methods. |
+| C-016 | The two exceptions gain their `errors.py` re-export and structured-method loop entries in the wire-up round. | The wire-up round's brief and pins. | **PROVEN** | `errors.py` re-exports both exceptions with structured-method loop entries and `__module__` re-homing; verified live (`getCondition`/`getSqlState`/`getMessageParameters` on a `STREAM_FAILED` instance). pins: mb-4/C-016 |
 | C-017 | The PySpark members outside §3.7 land in the wire-up round or a dated card: the reader's `csv`, `json`, `orc`, `parquet`, `schema`, `text` and `xml`, the writer's `clusterBy`, `foreach` and `partitionBy`, the manager's `resetTerminated`, the query's `processAllAvailable`, and `load`'s `format`/`schema` kwargs. | The wire-up round's brief and pins. | **OPEN** | The stub implements exactly the §3.7 surface; anything else is an `AttributeError` or `TypeError` today. |
 | C-018 | The driver-owned start checks land at wire-up: MBE-8 (local catalog), MBE-15 (isolation), MBE-13 at start (sink busy), the stateful-operator arm of MBE-6, and the run-time rows MBE-1, MBE-2, MBE-11, MBE-12 and MBE-16 — with the streaming frame, `isStreaming` and the `writeStream` answer. | The wire-up round's brief and pins. | **OPEN** | The stub cannot reach a session's catalogs without re-implementing resolution, and `surface_a.py` / `streaming_batch.py` stay vacuous-correct until frames exist. |
 | C-019 | MB-0c records the facade oracle on live Spark 4.1.2 + Iceberg 1.11.0: 31 cells covering the no-format doors, format case, sourceless load, 152 trigger strings with millisecond durations, client checks, invalid output mode, DM-1, DM-3, the manager gets, the duplicate query name and the writer runs. A re-run is byte-identical; every read-scratch pair matches; the MB-0 and MB-3 recordings are untouched; the JSON carries a `sha256sum -c` pin. | The recorder, the recording, the re-run diff and the scratch comparison. | **PROVEN** | `mb0c_facade_oracle.py` (752 lines) records F1–F15, T1/T1B/T1C/T4, T2, T3, O1–O2, D1–D2, M1–M3, W1–W3; two full runs diff zero cells; the `MB0C_CELLS` merge path re-verified byte-identical; all 22 read trigger strings, all client checks and all error cells match the scratch probe in class and full text (F2 differs only by the scrubbed warehouse path, M3 only by the chosen query name, both by design). `mb0_streaming_oracle.json` and `mb3_fold_oracle.json` verify against their shas. pins: mb-4/C-019 |
 | C-020 | The trigger interval grammar is parsed in Rust and called from `trigger()`, refusing with Spark's class, condition, SQLSTATE and text: all 152 recorded strings pinned to millis-or-refusal in three Rust sweep tables, and 16 facade pins (one per refusal class plus accepts and padded-input strip proofs) asserting class, condition, SQLSTATE, text and message parameters. The neighbour selection answers identical to baseline. | The parser, the Rust sweeps and the facade pins. | **PROVEN** | `trigger_interval.rs` implements the measured grammar (single `interval` prefix, case-insensitive units, fraction on seconds only, `i32` month/day counts, the measured raw-versus-wrapped overflow split, month refusal before negativity, truncation to millis); `sweep_t1/t1b/t1c_matches_mb0c_t1*` pin all 152 cells with full texts and the T4 params; 16 `test_writer_trigger_*_mb0c_*` pins cover every class through the door; neighbours read 68 passed, 9 skipped, identical to the unmodified tree. This closes the C-012 question; threading the `Duration` into the start spec belongs to item 6. pins: mb-4/C-020 |
 | C-021 | The M1 and M4 weak pins are fixed at both levels and all four read mutants re-run by hand: M1 and M4 go red on the new pins, M2 stays red as found, M3 survives because its fix is item 3's `from_options`. | The new pins and the mutant re-runs, recorded here. | **PROVEN** | Rust: a `to_table_stream` unknown-option case (M1) and a both-violations order case asserting `SINK_UNDECLARED` (M4) extend the two door tests. Facade: `test_writer_totable_unknown_option_refuses_mbe17` and `test_writer_sink_refusal_precedes_unknown_option`. Re-runs: M1 red, M4 red, M2 red, M3 survived — no pin added for M3 because it would codify behaviour item 3 reverses (C-014 keeps those cases unpinned deliberately). pins: mb-4/C-021 |
+| C-022 | P1 plus item 2 land: `MicroBatchError` and its direct field types re-export through `repark-core`; `microbatch_py_err` maps every variant to its §4 shape plus the W-Q1 start/run split, with one Rust unit test per variant asserting class, condition, SQLSTATE and text (MBE-1/2/16 against R2/R5/W6, MBE-4 against W8); the two exceptions gain their `errors.py` re-export. | The re-export, the mapper, the 30 Rust tests and the live re-export check. | **PROVEN** | `microbatch/mod.rs` re-exports the error, `RecoveryReason`, the seven offset ids, `Generation` and `iceberg::spec::Operation` (D-28). `streaming_errors.rs` maps all 29 variants: §4 classes and conditions, `Some(QueryHead)` selecting the run rendering with Spark's `STREAM_FAILED` head, `None` the start rendering; MBE-6/MBE-7 raise the Python class by import; the recovery class carries its three attributes; the writer checks route through the mapper. 30 `streaming_errors::tests` green (NonAppend split by operation, the four W-Q1 duals both phases, all six recovery reasons); the MBE-6/MBE-7 tests inject a stub `repark.errors` at the real import path. `errors.py` re-export verified live. pins: mb-4/C-022 |
+| C-023 | Item 3 lands: `load_stream` calls `streaming_frame` and the facade returns the frame; the stub reader validation is deleted; the format rule folds case and leaves `table`/`toTable`/foreach-start alone; the sourceless `load` takes its ruled shape; the is-streaming predicate backs `isStreaming`; every batch-action door refuses DM-3 with per-family batch controls; `withWatermark` refuses MBE-7 on a stream; the wireup battery splits out; neighbours answer identical and all four mutants re-kill. | The wire-up, the pins, the neighbour runs and the mutant re-runs. | **PROVEN** | `load`/`table` return streaming frames with the MB0-R1 schema through both doors; the eight stub-terminal reader tests return frames; the Q3/Q5 pins take their ruled shapes and the MBE-10 pin drops its format. `count`/`show`/`__arrow_c_stream__` call `refuse_streaming_action` first; the DM-3 pin covers 13 doors with the D1 class and text verbatim; four batch controls hold. `test_mb_4_streaming_wireup.py` (13 tests) splits out at 270 lines, the surface battery at 805. Batteries: 83 passed. Neighbours: 69 passed, 9 skipped — baseline 68/9 plus the one new watermark pin, zero flips. M1/M2/M3/M4 all red on re-run, M3 killed by the new C-014 pin. pins: mb-4/C-023 |
 
 ## Decisions
 
@@ -204,6 +206,108 @@ rule 2 does not bind.
 - **D-27 (2026-10-08). Round-2 clause numbers.** C-017/C-018 were already taken by
   round-1 OPEN clauses, so the round-2 clauses are C-019 (oracle), C-020 (parser)
   and C-021 (mutant pins); the `pins:` citations in the touched maps use these.
+- **D-28 (2026-10-08). P1 record: the re-export set.** `microbatch/mod.rs`
+  re-exports `MicroBatchError`, `RecoveryReason`, the seven offset ids (`Epoch`,
+  `FilePosition`, `QueryId`, `RunId`, `SinkRecord`, `SnapshotId`, `TableUuid`),
+  `repark_common::Generation` and `iceberg::spec::Operation`: the error plus its
+  direct field types, nothing else — no driver machinery, no `StreamSpec`, no
+  `Uuid`, no `SinkRecord` components, no `Cargo.toml` edit, no new DAG edge.
+  Follows the three `repark_iceberg::write` precedents (`partition_overwrite_mode.rs`,
+  `session/writer_layout.rs`, `error_map.rs`). Two consequences for the mapper
+  tests: id values come from `RunId::fresh().get()` with the `Uuid` type inferred
+  and never named, and the `RecoveryRequired` pin covers `durable: None` only —
+  a `Some` needs the un-re-exported offset-container types for a two-line
+  `Debug` branch (round-3 call whether to extend P1).
+- **D-29 (2026-10-08). Mapper rendering rules.** `microbatch_py_err` takes an
+  optional `QueryHead`: `Some` selects the run rendering (Spark's `STREAM_FAILED`
+  head with the live query and run ids, no progress dump — the dump needs live
+  query state at the item-5/8 call sites), `None` the start rendering. The head
+  presence never changes a variant's class. Run causes: MBE-1/2/16 carry the
+  `Display` verbatim (Spark's prefix for MBE-1/2); MBE-11 carries its four named
+  conditions; MBE-12/13 follow the same SCREAMING-variant pattern
+  (`SOURCE_SNAPSHOT_EXPIRED`, `TRUNCATED_HISTORY`, `UNSUPPORTED_OFFSET_FORMAT`,
+  `SINK_COMMITTED_TWICE`, `SINK_BUSY`); the W-Q1 run causes carry the `Display`
+  with no condition bracket, the records' literal "as the cause". A run-class
+  variant with no head renders headless (`[STREAM_FAILED] <cause> SQLSTATE:
+  XXKST`) — total but unreachable via `load_stream`, since `open()` never
+  produces MBE-12. `durable_offset` renders the `SinkRecord` `Debug`, the only
+  total rendering that names no new type; no oracle cell measures the shape.
+  Every `Display`-derived message and param is masked. The `#[non_exhaustive]`
+  wildcard mirrors the duals' passthrough with the `error_map.rs`
+  `match_same_arms` allow; a fork-added variant renders instead of failing the
+  build, and the repin duties re-verify.
+- **D-30 (2026-10-08). MBE-6/MBE-7 test seam.** The mapper imports
+  `repark.errors` for the Python-defined class (the `cdf_infer/named.rs`
+  precedent); the facade package is not importable from `cargo test`, so the
+  three tests inject a stub `repark` parent plus a stub `repark.errors` carrying
+  the real constructor shape into `sys.modules` and assert the exact message,
+  condition, params and SQLSTATE the mapper passes. The real class accepts those
+  kwargs — every facade MBE-6/MBE-7 pin proves it — so the only unverified step
+  is the import succeeding in the wheel, where the facade imports the same
+  module. The stubs are same-content idempotent and never removed, so parallel
+  test threads cannot flake each other; no other `cargo test` imports under
+  `repark.*`.
+- **D-31 (2026-10-08). DM-3 placement and text.** The guard is one helper in
+  the binding (`refuse_streaming_action`), called first by `count`, `show` and
+  `__arrow_c_stream__`, which carry every facade batch action (collect, take,
+  head, first, tail, `isEmpty`, `toLocalIterator`, count, show, `to_arrow`,
+  batches, pandas, numpy). The class and text are MB-0c cell D1 verbatim —
+  the brief's "cell D2" is a numbering slip (D2 is the DM-1 rows cell); the
+  named class `_LEGACY_ERROR_TEMP_3102` disambiguates. The recorded tail
+  (`;\niceberg`) ships verbatim per the "text as recorded" ruling. Deliberately
+  unguarded, each with its reason: `transpose` (no Spark twin), ML
+  `open_stream`, `input_files` (physical planning calls `scan`), batch writes
+  (Spark's write-on-streaming answer is unmeasured and not DM-3-shaped) —
+  all fail loud through the pinned scan refusal instead. No Rust unit test for
+  the helper by design: building a streaming frame needs a catalog, which the
+  facade pins own.
+- **D-32 (2026-10-08). Item-3 reader rules.** `withWatermark` runs Spark's full
+  validation first and refuses MBE-7 last, so argument errors keep their batch
+  answers on both frame kinds. The format check folds inside `_refuse_format`
+  (the refusal echoes the input's case); `table`, `toTable` and the
+  `foreachBatch` start never call it, `load` and plain `start` always do, and
+  the check order on plain `start` is unchanged (format, mode, continuous).
+- **D-33 (2026-10-08). Q5-start deferred to item 6.** The `start()`-side
+  no-path refusal and the path-to-sink mapping belong with the `StreamSpec`
+  sink work, not the reader wire-up; item 3 implements the Q5 `load` half
+  only. No existing pin breaks: every `start()` pin either passes a sink or
+  reaches its check before any path rule could fire.
+- **D-34 (2026-10-08). Superseded round-1 pins.** C-001's seven stub-validation
+  pins are deleted with `validate_reader_options` (the cases now belong to
+  `from_options` plus the C-014 facade pins); C-002's `load_stream` pin is
+  replaced by the open-through-the-mapper pin while the writer pins hold
+  through the mapper routing; the surface battery's `passes_to_stub` tests
+  return frames and the case-sensitive-format pin becomes the fold pin. The
+  C-001/C-002/C-004/C-005 rows keep their round-1 verdicts as history; this
+  decision is the forward pointer.
+- **D-35 (2026-10-08). Round-2b findings disposition.** Closed: S1 (every
+  door), S2-format, S2-case-fold, S2-Q5-class, S2-reader-dup, S3-None-return.
+  Still open for round 3: S2-output-mode (item 6), S2-binding-shape (items
+  5–8), S3-empty-checkpoint (W-Q7), plus the new carry: Q5-start (D-33), the
+  stale `isStreaming` docstring on `core.py` (out of fence), the
+  `durable: Some` pin (D-28), and `dropDuplicatesWithinWatermark`/`writeStream`
+  on streaming frames (still refusing; unmeasured, unwired).
+- **D-36 (2026-10-08). Round-2b mutant re-runs.** M1 red (writer unknowns
+  forced to pass; the `toTable` MBE-17 pin), M2 red (the format arm forced to
+  accept `parquet`; the load MBE-7 pin), M3 red (the `from_options` skip flag
+  forced to refuse non-`false`; the new C-014 value-cases pin — the kill
+  round 2 deferred), M4 red (the sink check moved after unknowns; the order
+  pin). Each mutation applied, observed red, reverted, and re-observed green;
+  the tree is clean.
+- **D-37 (2026-10-08). Round-2b size and neighbours.** Five commits: P1
+  (14+/1−), item 2 (979+/1−: ~230 product, ~730 tests, 8 errors.py), item 3
+  (486+/308−), the one-line clippy allow, the ruff-format pass. Batteries:
+  83 passed (70 surface + 13 wireup). Binding suite 202, core microbatch 113.
+  Neighbours: 69 passed, 9 skipped against a 68/9 baseline — the delta is the
+  one new watermark pin, zero flips. Largest files: `streaming_errors.rs` 982
+  (default ceiling 1000; the next mapper extension splits tests to a `#[path]`
+  child), `lib.rs` 186/190, surface battery 805.
+- **D-38 (2026-10-08). Observed, unruled, left alone.** A `load`/`table` of a
+  missing table answers `AnalysisException` with the `Catalog` passthrough
+  verbatim (no MB-0c cell pins our answer). `open()` never resolves offsets,
+  so no MBE-12 variant reaches the mapper at load. A no-query `STREAM_FAILED`
+  is mapper-total but caller-unreachable in this round. `core.py` is untouched
+  per P2, so its `isStreaming` docstring still says batch-only.
 
 ## W-Q1 records (2026-10-08, brief ruling of 2026-10-08)
 
@@ -242,6 +346,15 @@ cause. One record per variant with no §4 row, for item 2's mapper round.
   `bogusfmt`/missing-table doors (`Py4JJavaError`), output-mode runs (D-26).
 - W-Q2/W-Q5 pending with owner/orchestrator; empty-`checkpointLocation` text (W-Q7)
   untouched; outputMode and the format rule stay Python-side until item 6 (D-20).
+
+## Round-2b carry-over (2026-10-08)
+
+- Items 2–3 landed (C-022, C-023); P1/P2 answered and implemented.
+- Items 5–15 untouched; `readStream`/`streams`/`writeStream` still refuse as on
+  main; Q5-start, the `core.py` docstring, the `durable: Some` pin and the
+  streaming `dropDuplicatesWithinWatermark`/`writeStream` answers ride with
+  their items (D-35).
+- Deferred cells, W-Q2/W-Q5 and W-Q7 unchanged from the round-3 carry-over.
 
 ## Registry drafts (step 4 files these; not yet added to the registry doc)
 

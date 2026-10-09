@@ -7961,7 +7961,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   under its ceiling: MB0-R1 schema through `load` and `table`, the folded and ignored
   format doors, every C-014 option case with `from_options`' answer, DM-3 on every
   batch-action door with per-family batch controls, and MBE-7 `withWatermark`.
-  pins: mb-4/C-023
+  pins: mb-4/C-023, C-014
 
 ## I want to...
 
