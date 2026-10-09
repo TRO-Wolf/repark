@@ -1,5 +1,20 @@
+use std::collections::BTreeMap;
+
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use repark_core::microbatch::MicroBatchError;
+
+use crate::exceptions::IllegalArgumentException;
+use crate::streaming::{CATALOG_TIMEOUT_KEY, DoorKind, SINK_KEY};
+use crate::streaming_errors::microbatch_py_err;
+
+const CHECKPOINT_KEY: &str = "checkpointLocation";
+pub(crate) const FANOUT_KEY: &str = "fanout-enabled";
+const STREAMING_PREFIX: &str = "streaming-";
+const STREAM_PREFIX: &str = "stream-";
+const REPARK_CDC_PREFIX: &str = "repark.cdc.";
+pub(crate) const CONF_CHECKPOINT: &str = "spark.sql.streaming.checkpointLocation";
+pub(crate) const EMPTY_CHECKPOINT_TEXT: &str = "Can not create a Path from an empty string";
 
 #[pyfunction]
 #[allow(clippy::missing_errors_doc)]
@@ -38,6 +53,88 @@ pub fn stream_option_path(options: &Bound<'_, PyDict>) -> PyResult<Option<String
         }
     }
     Ok(None)
+}
+
+fn has_interpreted_prefix(folded: &str) -> bool {
+    folded.starts_with(STREAMING_PREFIX)
+        || folded.starts_with(STREAM_PREFIX)
+        || folded.starts_with(REPARK_CDC_PREFIX)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn validate_writer_options(
+    py: Python<'_>,
+    options: &BTreeMap<String, String>,
+) -> Result<(), PyErr> {
+    for key in options.keys() {
+        let known = key.eq_ignore_ascii_case(CHECKPOINT_KEY)
+            || key.eq_ignore_ascii_case(SINK_KEY)
+            || key.eq_ignore_ascii_case(FANOUT_KEY)
+            || key.eq_ignore_ascii_case(CATALOG_TIMEOUT_KEY);
+        if !known && has_interpreted_prefix(&key.to_ascii_lowercase()) {
+            return Err(microbatch_py_err(
+                py,
+                &MicroBatchError::UnknownOption { key: key.clone() },
+                None,
+            ));
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn writer_option<'a>(
+    options: &'a BTreeMap<String, String>,
+    key: &str,
+) -> Option<&'a str> {
+    options
+        .iter()
+        .find_map(|(known, value)| known.eq_ignore_ascii_case(key).then_some(value.as_str()))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn check_checkpoint(
+    py: Python<'_>,
+    options: &BTreeMap<String, String>,
+    streaming_confs: &BTreeMap<String, String>,
+    door: DoorKind,
+) -> Result<Option<String>, PyErr> {
+    let value = writer_option(options, CHECKPOINT_KEY)
+        .or_else(|| writer_option(streaming_confs, CONF_CHECKPOINT))
+        .map(str::to_string);
+    match value {
+        Some(location) if location.is_empty() => {
+            Err(IllegalArgumentException::new_err(EMPTY_CHECKPOINT_TEXT))
+        }
+        Some(location) => Ok(Some(location)),
+        None => match door {
+            DoorKind::Table => Err(microbatch_py_err(
+                py,
+                &MicroBatchError::CheckpointLocationMissing,
+                None,
+            )),
+            #[allow(clippy::match_same_arms)]
+            DoorKind::ForeachBatch => Err(microbatch_py_err(
+                py,
+                &MicroBatchError::CheckpointLocationMissing,
+                None,
+            )),
+        },
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn check_sink_declared<'a>(
+    py: Python<'_>,
+    options: &'a BTreeMap<String, String>,
+) -> Result<&'a str, PyErr> {
+    match writer_option(options, SINK_KEY) {
+        Some(sink) => Ok(sink),
+        None => Err(microbatch_py_err(
+            py,
+            &MicroBatchError::SinkUndeclared,
+            None,
+        )),
+    }
 }
 
 #[cfg(test)]

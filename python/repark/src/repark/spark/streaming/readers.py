@@ -463,6 +463,14 @@ class DataStreamWriter:
         session = self._frame.sparkSession
         inner_session = session._ensure_alive()
         _refuse_python_udf_over_stream(self._frame)
+        if not isinstance(tableName, str):
+            raise PySparkTypeError(
+                errorClass="NOT_STR",
+                messageParameters={
+                    "arg_name": "tableName",
+                    "arg_type": type(tableName).__name__,
+                },
+            )
         handle = _native.to_table_stream(
             inner_session,
             self._frame._inner,

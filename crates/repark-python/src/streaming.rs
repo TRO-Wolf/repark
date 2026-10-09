@@ -14,32 +14,31 @@ use repark_core::microbatch::{MicroBatchError, relation};
 use repark_core::time_travel::microbatch_source::SourceOptions;
 
 use crate::dataframe::PyDataFrame;
-use crate::exceptions::{IllegalArgumentException, mask_user_visible, masked_message_params};
+use crate::exceptions::{
+    IllegalArgumentException, ParseException, mask_user_visible, masked_message_params,
+};
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::streaming_errors::microbatch_py_err;
-use crate::streaming_options::{store_stream_option, stream_option_path};
+use crate::streaming_options::{
+    check_checkpoint, check_sink_declared, store_stream_option, stream_option_path,
+    validate_writer_options, writer_option,
+};
 use crate::streaming_query::{
     BatchBodyAdapter, PyStreamingQuery, note_started, session_allows_local_catalog_for_tests,
 };
 use crate::trigger_interval::check_trigger_interval;
 
-const CHECKPOINT_KEY: &str = "checkpointLocation";
-const SINK_KEY: &str = "repark.cdc.sink";
-const FANOUT_KEY: &str = "fanout-enabled";
-const CATALOG_TIMEOUT_KEY: &str = "repark.cdc.catalog-timeout";
+pub(crate) const SINK_KEY: &str = "repark.cdc.sink";
+pub(crate) const CATALOG_TIMEOUT_KEY: &str = "repark.cdc.catalog-timeout";
 const PATH_KEY: &str = "path";
-const STREAMING_PREFIX: &str = "streaming-";
-const STREAM_PREFIX: &str = "stream-";
-const REPARK_CDC_PREFIX: &str = "repark.cdc.";
-const CONF_CHECKPOINT: &str = "spark.sql.streaming.checkpointLocation";
 const CONF_STOP_TIMEOUT: &str = "spark.sql.streaming.stopTimeout";
 const CONF_POLLING_DELAY: &str = "spark.sql.streaming.pollingDelay";
 const CONF_RECENT_LIMIT: &str = "spark.sql.streaming.numRecentProgressUpdates";
 const OUTPUT_MODE_CONDITION: &str = "STREAMING_OUTPUT_MODE.INVALID";
 const INVALID_CONF_VALUE: &str = "INVALID_CONF_VALUE.TYPE_MISMATCH";
-const EMPTY_CHECKPOINT_TEXT: &str = "Can not create a Path from an empty string";
 const NO_PATH_TEXT: &str = "Cannot open table: path is not set";
+const PARSE_EMPTY_STATEMENT: &str = "PARSE_EMPTY_STATEMENT";
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(load_stream, module)?)?;
@@ -81,72 +80,8 @@ pub(crate) fn attached(
     raised
 }
 
-fn has_interpreted_prefix(folded: &str) -> bool {
-    folded.starts_with(STREAMING_PREFIX)
-        || folded.starts_with(STREAM_PREFIX)
-        || folded.starts_with(REPARK_CDC_PREFIX)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub(crate) fn validate_writer_options(
-    py: Python<'_>,
-    options: &BTreeMap<String, String>,
-) -> Result<(), PyErr> {
-    for key in options.keys() {
-        let known = key.eq_ignore_ascii_case(CHECKPOINT_KEY)
-            || key.eq_ignore_ascii_case(SINK_KEY)
-            || key.eq_ignore_ascii_case(FANOUT_KEY)
-            || key.eq_ignore_ascii_case(CATALOG_TIMEOUT_KEY);
-        if !known && has_interpreted_prefix(&key.to_ascii_lowercase()) {
-            return Err(microbatch_py_err(
-                py,
-                &MicroBatchError::UnknownOption { key: key.clone() },
-                None,
-            ));
-        }
-    }
-    Ok(())
-}
-
-fn writer_option<'a>(options: &'a BTreeMap<String, String>, key: &str) -> Option<&'a str> {
-    options
-        .iter()
-        .find_map(|(known, value)| known.eq_ignore_ascii_case(key).then_some(value.as_str()))
-}
-
 fn catalog_refusal(py: Python<'_>, text: String) -> PyErr {
     microbatch_py_err(py, &MicroBatchError::Catalog(text), None)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub(crate) fn check_checkpoint(
-    py: Python<'_>,
-    options: &BTreeMap<String, String>,
-    streaming_confs: &BTreeMap<String, String>,
-    door: DoorKind,
-) -> Result<Option<String>, PyErr> {
-    let value = writer_option(options, CHECKPOINT_KEY)
-        .or_else(|| writer_option(streaming_confs, CONF_CHECKPOINT))
-        .map(str::to_string);
-    match value {
-        Some(location) if location.is_empty() => {
-            Err(IllegalArgumentException::new_err(EMPTY_CHECKPOINT_TEXT))
-        }
-        Some(location) => Ok(Some(location)),
-        None => match door {
-            DoorKind::Table => Err(microbatch_py_err(
-                py,
-                &MicroBatchError::CheckpointLocationMissing,
-                None,
-            )),
-            #[allow(clippy::match_same_arms)]
-            DoorKind::ForeachBatch => Err(microbatch_py_err(
-                py,
-                &MicroBatchError::CheckpointLocationMissing,
-                None,
-            )),
-        },
-    }
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -321,6 +256,22 @@ fn check_start_mode(py: Python<'_>, output_mode: Option<&str>) -> Result<(), PyE
     Ok(())
 }
 
+#[allow(clippy::missing_errors_doc)]
+fn check_table_name_not_blank(py: Python<'_>, table: &str) -> Result<(), PyErr> {
+    if table.trim().is_empty() {
+        return Err(attached(
+            py,
+            ParseException::new_err(format!(
+                "\n[{PARSE_EMPTY_STATEMENT}] Syntax error, unexpected empty statement. SQLSTATE: \
+                 42617 (line 1, pos 0)\n\n== SQL ==\n{table}\n^^^\n"
+            )),
+            PARSE_EMPTY_STATEMENT,
+            &[],
+        ));
+    }
+    Ok(())
+}
+
 #[allow(clippy::missing_errors_doc, clippy::too_many_arguments)]
 fn build_stream_spec(
     py: Python<'_>,
@@ -389,21 +340,6 @@ fn start_spec(
     started.map_err(|error| microbatch_py_err(py, &error, None))?;
     note_started(session, &handle);
     Ok(PyStreamingQuery::new(handle, runtime))
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub(crate) fn check_sink_declared<'a>(
-    py: Python<'_>,
-    options: &'a BTreeMap<String, String>,
-) -> Result<&'a str, PyErr> {
-    match writer_option(options, SINK_KEY) {
-        Some(sink) => Ok(sink),
-        None => Err(microbatch_py_err(
-            py,
-            &MicroBatchError::SinkUndeclared,
-            None,
-        )),
-    }
 }
 
 #[pyfunction]
@@ -570,6 +506,7 @@ pub fn to_table_stream(
         query_name,
         checkpoint,
     )?;
+    check_table_name_not_blank(py, table)?;
     start_spec(py, session, spec)
 }
 
@@ -585,6 +522,10 @@ mod tests {
     use crate::exceptions::{
         AnalysisException, IllegalArgumentException, PySparkException, RecoveryRequiredException,
         StreamingQueryException,
+    };
+    use crate::streaming_options::{
+        CONF_CHECKPOINT, EMPTY_CHECKPOINT_TEXT, FANOUT_KEY, check_checkpoint, check_sink_declared,
+        validate_writer_options,
     };
 
     fn options(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {

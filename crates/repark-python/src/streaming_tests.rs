@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use super::*;
-use crate::exceptions::IllegalArgumentException;
+use crate::exceptions::{IllegalArgumentException, ParseException};
 
 fn options(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
     pairs
@@ -204,5 +204,25 @@ fn trigger_build_maps_kinds_and_refuses_loud_misuse() {
                 .expect("condition is str"),
             "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER"
         );
+    });
+}
+
+#[test]
+fn blank_table_name_refuses_parse_empty_statement_like_spark() {
+    Python::attach(|py| {
+        for table in ["", "   "] {
+            let refused = check_table_name_not_blank(py, table).expect_err("a blank name refuses");
+            assert!(refused.is_instance_of::<ParseException>(py));
+            assert_eq!(condition(&refused, py), "PARSE_EMPTY_STATEMENT");
+            assert_eq!(
+                message(&refused, py),
+                format!(
+                    "\n[PARSE_EMPTY_STATEMENT] Syntax error, unexpected empty statement. SQLSTATE: \
+                     42617 (line 1, pos 0)\n\n== SQL ==\n{table}\n^^^\n"
+                )
+            );
+            assert_eq!(params(&refused, py), BTreeMap::new());
+        }
+        check_table_name_not_blank(py, "sc.db.sink").expect("a name passes");
     });
 }

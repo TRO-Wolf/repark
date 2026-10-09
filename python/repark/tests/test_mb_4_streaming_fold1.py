@@ -10,13 +10,16 @@ from repark import _native
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
+    ParseException,
     PySparkNotImplementedError,
+    PySparkTypeError,
     StreamingQueryException,
 )
 from repark.spark.dataframe import DataFrame
 from repark.spark.functions import col, pandas_udf, udf
 from repark.spark.session.session_core import ReparkSession
 from repark.spark.streaming import DataStreamReader, DataStreamWriter
+from repark.spark.streaming.query import StreamingQueryManager
 
 _MBE8_TEXT = (
     "[REPARK_MICROBATCH.LOCAL_CATALOG_REFUSED] streaming needs a shared catalog; "
@@ -490,3 +493,63 @@ def test_writer_folded_path_option_feeds_plain_start(
             .start()
         )
     assert excinfo.value.getErrorClass() == "_LEGACY_ERROR_TEMP_1298"
+
+
+_SPARK_EMPTY_STATEMENT_TEXT = (
+    "\n[PARSE_EMPTY_STATEMENT] Syntax error, unexpected empty statement. SQLSTATE: 42617 "
+    "(line 1, pos 0)\n\n== SQL ==\n\n^^^\n"
+)
+
+
+def test_totable_empty_name_refuses_parse_empty_statement_like_spark(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = _reader(spark).format("iceberg").load(stream_table)
+    with pytest.raises(ParseException) as excinfo:
+        (
+            frame.writeStream.option("checkpointLocation", "/tmp/mb4-totable-empty")
+            .trigger(availableNow=True)
+            .toTable("")
+        )
+    assert excinfo.value.getErrorClass() == "PARSE_EMPTY_STATEMENT"
+    assert str(excinfo.value) == _SPARK_EMPTY_STATEMENT_TEXT
+    assert excinfo.value.getSqlState() == "42617"
+    assert excinfo.value.getMessageParameters() == {}
+
+
+def test_totable_blank_name_echoes_the_input_in_parse_empty_statement(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = _reader(spark).format("iceberg").load(stream_table)
+    with pytest.raises(ParseException) as excinfo:
+        (
+            frame.writeStream.option("checkpointLocation", "/tmp/mb4-totable-blank")
+            .trigger(availableNow=True)
+            .toTable("   ")
+        )
+    assert excinfo.value.getErrorClass() == "PARSE_EMPTY_STATEMENT"
+    assert str(excinfo.value) == _SPARK_EMPTY_STATEMENT_TEXT.replace("\n\n^^^\n", "\n   \n^^^\n")
+
+
+def test_totable_non_str_name_refuses_not_str(spark: ReparkSession, stream_table: str) -> None:
+    frame = _reader(spark).format("iceberg").load(stream_table)
+    for bad in (5, None):
+        with pytest.raises(PySparkTypeError) as excinfo:
+            frame.writeStream.toTable(bad)
+        assert excinfo.value.getErrorClass() == "NOT_STR"
+        assert excinfo.value.getMessageParameters() == {
+            "arg_name": "tableName",
+            "arg_type": type(bad).__name__,
+        }
+
+
+def test_manager_get_non_str_id_refuses_not_str(spark: ReparkSession) -> None:
+    manager = StreamingQueryManager(spark)
+    for bad in (5, None):
+        with pytest.raises(PySparkTypeError) as excinfo:
+            manager.get(bad)
+        assert excinfo.value.getErrorClass() == "NOT_STR"
+        assert excinfo.value.getMessageParameters() == {
+            "arg_name": "id",
+            "arg_type": type(bad).__name__,
+        }

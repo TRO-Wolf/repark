@@ -8026,6 +8026,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Fold 1b pins the folded `PATH` option on the reader `load` fallback and on
   the plain-`start` path fallback, and the surface continuous pin gains the
   path its start now needs to reach the trigger check. pins: mb-4/C-040
+  Fold 1b pins `toTable('')`/`toTable('   ')` to Spark's
+  `PARSE_EMPTY_STATEMENT` text and `toTable(5)`/`toTable(None)`/`get(5)`/
+  `get(None)` to `NOT_STR`. pins: mb-4/C-041
 
 ## I want to...
 

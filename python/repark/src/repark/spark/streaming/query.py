@@ -4,7 +4,7 @@ import json
 from typing import TYPE_CHECKING
 
 from repark import _native
-from repark.errors import PySparkValueError
+from repark.errors import PySparkTypeError, PySparkValueError
 
 if TYPE_CHECKING:
     from repark._native import PyStreamingQuery, StreamingQueryException
@@ -106,6 +106,14 @@ class StreamingQueryManager:
             The unique id of specified query.
         """
         inner = self._session._ensure_alive()
+        if not isinstance(id, str):
+            raise PySparkTypeError(
+                errorClass="NOT_STR",
+                messageParameters={
+                    "arg_name": "id",
+                    "arg_type": type(id).__name__,
+                },
+            )
         handle = _native.streams_get(inner, id)
         return None if handle is None else StreamingQuery(handle)
 

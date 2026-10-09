@@ -53,6 +53,9 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   output mode), and `_store_option` / the `load` fallback delegate to the
   native `store_stream_option` / `stream_option_path` over the facade dict.
   pins: mb-4/C-040
+  **MB-4 fold 1b (2026-10-09):** `toTable` refuses a non-str table name
+  `NOT_STR` at the native-call boundary, after the kwargs, alive and UDF
+  checks. pins: mb-4/C-041
 - `query.py` — **MB-4 surface half (2026-10-08):** `StreamingQuery` carries the §3.7
   surface with the driver-owned bodies behind the stub terminal; only the
   `awaitTermination` timeout check (`VALUE_NOT_POSITIVE`, `<= 0`) is real.
@@ -68,6 +71,8 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   `awaitAnyTermination` delegate to the native `streams_*` doors,
   `resetTerminated` joins the surface, and the stub terminal is gone.
   pins: mb-4/C-028
+  **MB-4 fold 1b (2026-10-09):** `get` refuses a non-str id `NOT_STR`
+  after the alive check, at the native-call boundary. pins: mb-4/C-041
 - `__init__.py` — **MB-4 surface half (2026-10-08):** re-exports the four public names.
   pins: mb-4/C-004
 
