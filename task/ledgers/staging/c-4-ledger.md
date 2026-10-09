@@ -189,9 +189,9 @@ One write holds one pooled connection. Nothing is spawned.
 | C-020 | Fold 1, the verifier's S3s on class and text. A row write left idle in its transaction past `read_timeout_ms` ends as `Timeout { which: Read }` at the next `write` and at `commit` (the pool now keeps the SQLSTATE that closed a connection, and `25P03` folds to the timeout), never as `Disconnected` and never as `CommitUnknown`; the bulk path does not meet that timer. A server refusal in SQLSTATE class `22` keeps the server's sentence up to the first `:` or `"` and ends in `***`, so the written value is not in the error: `22P02` for an enum, `22007` for an interval, while `22001` (no value in it) is kept whole. | live `a_row_write_idle_past_the_read_timeout_ends_as_that_timeout`, `a_server_refusal_names_no_written_value`. | PROVEN | §8.4. |
 | C-021 | Fold 1, the verifier's S3 on Arrow encodings. A column takes any encoding of its planned type's values: `LargeUtf8` and `Utf8View` for a text-like column, `LargeBinary` and `BinaryView` for `bytea`, and a `Dictionary` with any key type over any of those or over the planned type itself. The encoded bytes equal the plain array's on every mapped family tried, both paths store the same table as the plain batch, and an encoding of another type still refuses with `ArrowType` naming the type that came. | `write_shapes::another_encoding_of_the_same_values_encodes_to_the_same_bytes`, `write_shapes::another_encoding_of_other_values_is_still_refused_naming_what_came`; live `other_arrow_encodings_store_the_same_table_on_both_paths`. | PROVEN | §8.4. |
 | C-022 | Fold 1, the verifier's S3 on row order. Rows are sent in input order on both paths: a `bigserial` column the write does not name numbers the rows as they arrive, and ordering by it gives the input order under the default sizes and under 4 KiB chunks with seven-row groups, across six batches of varying width. Nothing is claimed about `ctid` or an unordered scan; step 1's three `ctid` assertions are removed. | live `rows_arrive_in_input_order_on_both_paths`. | PROVEN | §8.5. |
-| C-013 | `INSERT INTO <source>.<schema>.<table> SELECT …` routes to the sink on the ANSI door and on the Spark door, one test row per door (order R-3). | Step 2, another lane. | OPEN | Does the routing call `WriteRequest::open` with `WritePath::Bulk` on both doors, with one pin per door? |
-| C-014 | The Spark-door writer option `write.path = bulk \| row` reaches `WritePath`, default `bulk`, and the C-6 Python convenience maps onto the same option (ruled 2026-10-08). | Step 2, another lane. | OPEN | Does an unknown value refuse, and does `row` force the INSERT path for a table with no row-only column? |
-| C-015 | DIFF-PROBE and the verifier pass (order R-1), and the unit's last live run on the C-0 container. | Step 3. | OPEN | Which verifier, and on which tree? |
+| C-013 | `INSERT INTO <source>.<schema>.<table> SELECT …` routes to the sink on the ANSI door and on the Spark door, one test row per door (order R-3). | Both doors ask bulk through the one driver and read the taken path plus the fallback sentence off the open writer (§10.1, §10.2); ANSI pins `crates/repark-sql/src/pg_insert.rs::tests` (offline routing plus 3 ignored live cells), Spark pins `crates/repark-spark/src/tests/pg_insert.rs` plus live `python/repark-parity/tests/live_db/test_c4_write.py` (14 cells). | PROVEN | §10. |
+| C-014 | The Spark-door writer option `write.path = bulk \| row` reaches `WritePath`, default `bulk`, and the C-6 Python convenience maps onto the same option (ruled 2026-10-08). | The shared parser refuses an unknown value naming both values and `row` forces the INSERT path with no fallback reason; default bulk and row-forced writes agree byte for byte live; no second path exists, so the future C-6 convenience has exactly this option to map onto (§10.1, §10.6). | PROVEN | §10. |
+| C-015 | DIFF-PROBE and the verifier pass (order R-1), and the unit's last live run on the C-0 container. | Step 2's live runs are recorded in §10.4; DIFF-PROBE and the verifier run on the merged tree in step 3, after this slice. | OPEN | §10.6. |
 
 ## 2. Four-line records (2026-10-08)
 
@@ -796,3 +796,116 @@ require), both update paths (upsert arm), the ANSI text guard (§9.5),
 `io_declared.py` + `writer_readwriter.py` (writer door), the two registry rows
 plus the `pg-ddl` amendment, the two refusal tests of §9.2, this ledger. No
 `Cargo.toml`, no `.github`, no ceiling raise.
+
+## 10. Step 2 (2026-10-09): what the routing slice built (Muse, after code)
+
+Branch `feat/c-4-routing`. The fold (`ae020b9f`) merged in; the doors below are
+written against the folded core. The slice's §9 plan held to the file: the only
+deviations are the fold adoption (§10.2) and the decisions in §10.3.
+
+### 10.1 The shape
+
+One driver, `repark_core::session::write_postgres::execute_postgres_write`:
+resolve the target, build settings, discover, resolve the listed columns, check
+the frame width (short: Spark `INSERT_COLUMN_ARITY_MISMATCH`, core-rendered;
+wide: DataFusion's count text), open the selector, shape each batch (cast real
+type changes, unplace session-zone timestamps for `timestamp` columns,
+forward-place zoneless ones for `timestamptz`), stream every batch through
+`PostgresWriter::write`, commit. Both SQL doors and the writer binding call it;
+nothing else touches `WriteRequest`. Each door records the report on the
+builder-installed `LastPostgresWriteReport` carrier; the take-report binding
+reads it back once. Both doors return `read_empty()` (`[Row()]`, pinned), the
+writer returns `None`.
+
+- Spark door: `repark-spark/src/router/pg_insert.rs` reads `write.path` off the
+  statement write options (shared core parser: absent means bulk, `row` forces
+  the INSERT path, anything else refuses as `Configuration` naming both values).
+- ANSI door: `repark-sql/src/pg_insert.rs` always asks bulk; the text guard lets
+  a plain `INSERT` at a Postgres-kind source with specs through to the router.
+- Writer door: `session_write_postgres` pyfunction (URL targets, exact column
+  names) plus `session_take_postgres_write_report`; facade `writer_jdbc` (mode
+  argument wins, else the writer's mode; only append writes; options merge under
+  `properties` case-insensitively; `write.path` lifts; url/dbtable/path strip)
+  and `format("jdbc").save()` off url/dbtable options. `save()` changed two
+  lines in place (`writer_readwriter.py` holds 999 of 1000).
+- Refusals: non-append modes and `INSERT OVERWRITE` under
+  `CONNECT-DECL-pg-write-modes`; `UPDATE` and `REPLACE INTO` under
+  `CONNECT-DECL-pg-write-upsert`; `MERGE`/`CREATE TABLE AS` keep the `pg-ddl`
+  text; `DELETE` untouched. The `pg-ddl` row's DML sentence is amended (dated).
+
+### 10.2 Fold-1 adoption
+
+The report carries the taken path and the fallback sentence (`RowFallback`'s
+Display), both read off the open writer; encoder-accepted encodings (view,
+large, dictionary forms) pass through uncast while real type changes still
+cast. `open()` errors (`PermissionDenied { Insert }`, `WriteRefused`,
+`RelationNotFound`) flow through the existing `External` + `database source`
+context. `write()` was already awaited directly, never in a timeout or
+`select!`. The writer door and both SQL doors take all of this through the one
+driver.
+
+### 10.3 Decisions the build forced
+
+- **Writer columns are exact names** (`case_insensitive: false`): Spark quotes
+  the DataFrame's names into its INSERT list, so a case mismatch fails there;
+  it refuses here. Recorded choice.
+- **The identity/generated refusal class on the doors is `PySparkException`**,
+  the shared `External` flattening (`error_map.rs` keeps `Config` and
+  `NotImplemented` and flattens the rest, read door included); the core-direct
+  conversion is `Analysis`. The sentence is the core's, naming the column.
+  Changing the classifier would move read-door neighbors, so the door class is
+  pinned as is; it is also the closer Spark shape (a failed JDBC write is an
+  `ERROR`, not analysis). Recorded choice, owner-visible.
+- **`REPLACE INTO` parses only on `GenericDialect`**: the ANSI door names the
+  upsert row (pinned), the Spark door's parser refuses the statement first
+  (pinned live); the Spark `replace_into` arm stays as sink-side defense.
+- **Unconstrained numeric dscale**: the door writes the Arrow scale, so a
+  server-parsed seed (`0.5`, dscale 1) differs by bytes from the door's value;
+  bulk-vs-row agree byte for byte, the seed compares by value. Recorded.
+- **No ANSI door from Python** (standing `repark-sql` NON-edge): the ANSI fold
+  pins are `#[ignore]`d Rust live cells (`psql` setup, no new dev-deps);
+  `repark.sql` keeps the default-hook refusal.
+- **`batchsize` and unmapped write options still refuse as unknown keys**
+  (FL-15 carried; the owner question stands).
+- **Citations**: §6 stands; step 2 adds no ingest contract (the doors call the
+  cited core), so no second citation.
+
+### 10.4 Live runs (2026-10-09, the C-0 container, Postgres 16.15)
+
+- `python/repark-parity/tests/live_db/test_c4_write.py`: 14 cells green,
+  including the fold pins on the Spark door and the writer (view/rule take the
+  row path and say why; the named identity column refuses with the core text),
+  the byte-identical bulk-vs-row tables, the DST-zone timestamp round trip, and
+  the two owner-question pins (a write-only role names the missing `SELECT`
+  privilege; an unmapped column names its row even when unnamed).
+- `crates/repark-sql/src/pg_insert.rs`: the 3 ignored ANSI live cells green
+  with `REPARK_PG_URL`.
+- `cargo test -p repark-connect -- --include-ignored`: 260 green, re-validating
+  the merged fold on this branch.
+- Whole `live_db/`: 46 passed, 5 xfailed (the pre-existing S0 strict xfails).
+  No schema, role, publication or slot left behind (counted after; one probe
+  schema and one role from a failed run removed by hand).
+- Live-Spark re-measure attempted the same day: the JVM gateway will not start
+  on this box (no jars offline), so the Spark halves stay read-not-run per
+  §9.4; the `INVALID_SAVE_MODE` oracle cells re-ran green against
+  `facade_reader_writer_oracle.json`.
+
+### 10.5 Gates
+
+`cargo fmt --check`; `make rust-clippy`; `make rust-panic-ban`; `cargo test
+--locked` on repark-core, repark-spark, repark-sql, repark-python and
+repark-connect in one invocation (lib: 1428 + 2639 + 400 + 158 + 3, all green;
+integration binaries green); `make develop`; `test_io_declared_1.py` (29) plus
+`test_pg_jdbc_options.py` green; `uvx ruff@0.15.22 check .` and `format --check
+.`; `python3 scripts/sync_map_md.py --check`; `bash scripts/check_map_md.sh
+--base origin/main`; `make check-ledger-grammar`; the pre-commit hook on every
+commit. `build()` carries `#[allow(clippy::too_many_lines)]`, paid for by a
+shed WHAT-comment (`session.rs` holds 1000 of 1000).
+
+### 10.6 What stays open
+
+C-014's C-6 half is future work mapping onto the shipped option (no second
+path exists). C-015 is step 3's: DIFF-PROBE and the verifier run on the merged
+tree, after this slice. The owner questions standing: a write-only role, an
+unmapped column, `batchsize` onto `rows_per_insert`, and the §10.3 class
+record.
