@@ -366,6 +366,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `apply_with_subqueries` (IN / EXISTS / scalar subqueries count as reads) and
   `scan_url_hits_prefix` compares the decoded `ListingTableUrl::prefix` plus
   the `object_store` bucket, so percent-encoded keys refuse self-overwrite.
+- `error_map.rs` — **C-4 step 2 (2026-10-09):** the `Connect` fold keeps
+  `Error::CommitStateUnknown` (operation id through), so a Postgres commit whose outcome the
+  driver could not prove surfaces as `CommitStateUnknownException`, matching the
+  `source_error` fold. No other producer wraps `ConnectError::CommitUnknown`. pins: c-4/C-013
 - `error_map.rs` — **C-2d (2026-10-07):** `classify_external_tail` downcasts
   `repark_connect::ConnectError` to `EngineErrorKind::Connect`; `engine_err` takes the class from
   `From<ConnectError>` (`Config`, `NotImplemented`, else `DataFusion`) and flattens the
@@ -1008,6 +1012,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **PR-B hadoop naming (2026-09-24):** also holds `kind_from_bare_catalog_value` (moved from
   `catalog_config.rs`), `is_hadoop_type`, and `with_type_naming`. `with_type_naming` inserts
   the fork's `metadata-naming` key with `hadoop` only when the key is absent.
+- `catalog_state.rs` — **C-4 step 2 (2026-10-09):** `CatalogRegistry::database_source_kind`
+  reports a mount's `SourceKind`, so the SQL doors route a Postgres target to the sink while
+  a SQL Server or Trino mount falls through to today's behavior. pins: c-4/C-013
 - `catalog_state.rs` — **C-2d fold 1 (2026-10-07), N5:** `CatalogRegistry::is_database_source(name)` and
   `source_read_only_message(name)` (the `read_only_ddl` text for a Postgres source), so the
   Spark door's catalog lookups answer a mounted source by its own rows instead of the P11

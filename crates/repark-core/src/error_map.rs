@@ -221,6 +221,10 @@ pub fn engine_err(err: DataFusionError) -> Error {
             match Error::from(connect.clone()) {
                 Error::Config(_) => Error::Config(message),
                 Error::NotImplemented(_) => Error::NotImplemented(message),
+                Error::CommitStateUnknown { operation_id, .. } => Error::CommitStateUnknown {
+                    message,
+                    operation_id,
+                },
                 _ => Error::DataFusion(message),
             }
         }
@@ -303,6 +307,29 @@ mod tests {
         assert!(
             matches!(error, Error::NumberFormat(message) if message == "For input string: \"x\"")
         );
+    }
+
+    #[cfg(feature = "postgres")]
+    #[test]
+    fn connect_commit_unknown_maps_to_commit_state_unknown() {
+        let relation =
+            repark_connect::QualifiedRelation::parse("public.t").expect("a test relation");
+        let error = engine_err(
+            DataFusionError::External(Box::new(repark_connect::ConnectError::CommitUnknown {
+                relation,
+            }))
+            .context("database source `jdbc`".to_string()),
+        );
+        assert!(matches!(
+            error,
+            Error::CommitStateUnknown {
+                operation_id: None,
+                ..
+            }
+        ));
+        let message = error.to_string();
+        assert!(message.contains("database source `jdbc`"), "{message}");
+        assert!(message.contains("ended without an answer"), "{message}");
     }
 
     #[test]

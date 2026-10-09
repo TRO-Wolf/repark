@@ -59,6 +59,16 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   H-TZ did not fire. `session.rs` holds 1000 lines: its two new `mod` lines are paid for by two
   shed comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
   pins: c-2/C-098, C-108, C-109, C-110, C-111
+- `write_postgres.rs` — **C-4 step 2 (2026-10-09):** `execute_postgres_write` is the one
+  Postgres sink driver both SQL doors and the `df.write.jdbc` binding call. It builds a
+  fresh pool from mounted specs (`ReparkToml` door) or URL properties (`ReadPostgres` door,
+  partition keys lifted and ignored), discovers, resolves the listed columns, checks the
+  frame width (short: Spark `INSERT_COLUMN_ARITY_MISMATCH`; wide: DataFusion's count text),
+  casts each batch to the encoder's Arrow types with the timestamp clock rules of
+  `zone_localiser.rs` (unplace at the session zone, forward-place for `timestamptz`), and
+  commits. Connect failures travel as
+  `External` with the `database source` context, so the Python classes match the read door.
+  pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
   pins: ice-views-1/C-018

@@ -45,6 +45,7 @@ pub(crate) mod spill;
 mod temp_views;
 mod text_write_format;
 mod write_options;
+pub mod write_postgres;
 pub mod writer_layout;
 pub(crate) mod zone_localiser;
 

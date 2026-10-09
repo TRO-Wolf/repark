@@ -24,6 +24,11 @@ The pins of [../zone_localiser.rs](../zone_localiser.rs) (`#[cfg(all(test, featu
   - **Fold 1, S3:** at the end of chrono's calendar, `262142-12-31 23:00` in `-12:00` or New
     York and `262143-01-01 00:00` in UTC refuse as
     `ValueRefusal::TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`), never as a gap.
+  - **C-4 step 2 (2026-10-09):** the write direction. `unplace` turns an instant back into
+    the wall clock through `zone_horizon::wall_at_instant` (the same final rule `place`
+    reads, so place-then-unplace is the identity, including the fold, where two instants
+    share one wall); `localise_at` places at an explicit zone id. Both are shared through
+    one `convert` helper with `localise`, whose behavior is unchanged.
   pins: c-2/C-098, C-108, C-109, C-110, C-111, C-117
 
 ## Pointers

@@ -34,6 +34,11 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `seal_reports_its_limit_and_neither_runs_nor_takes_a_child`
   pin the seal node. The fixture is regenerated from a live Spark recording, never edited by hand.
   pins: offset-nested-sort-1/C-001, C-003, C-004, C-005, C-006, C-008, C-009, C-011
+- `write_postgres.rs` — **C-4 step 2 (2026-10-09):** the pre-connection pins: an unknown
+  mounted source and a non-Postgres mount refuse before any connection; an unknown property
+  refuses as `Config` naming `jdbc` without the password; a refused port refuses as
+  operational (`DataFusion` fold); partition keys and `predicates` on a write are ignored,
+  never refused. pins: c-4/C-013
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
   argument refuses as `NumberFormat` before any connection. pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned
