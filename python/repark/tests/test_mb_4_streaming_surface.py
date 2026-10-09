@@ -468,8 +468,8 @@ def test_writer_foreach_without_sink_refuses_mbe10_mb0_w4(spark: ReparkSession) 
     )
 
 
-def test_writer_foreach_with_sink_passes(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
+def test_writer_foreach_with_sink_needs_streaming_frame(spark: ReparkSession) -> None:
+    with pytest.raises(AnalysisException) as excinfo:
         (
             _writer(spark)
             .format("iceberg")
@@ -477,7 +477,11 @@ def test_writer_foreach_with_sink_passes(spark: ReparkSession) -> None:
             .option("repark.cdc.sink", "ice.sales.silver")
             .start(checkpointLocation="/tmp/x")
         )
-    _terminal_type(excinfo)
+    assert excinfo.value.getCondition() is None
+    assert excinfo.value.getSqlState() is None
+    assert str(excinfo.value) == (
+        'writeStream needs a streaming DataFrame (readStream.format("iceberg").load(...))'
+    )
 
 
 def test_writer_start_without_foreach_needs_no_sink(spark: ReparkSession) -> None:

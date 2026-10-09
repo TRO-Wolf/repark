@@ -7969,6 +7969,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   replays, start-by-path and start-by-path-option, MBE-13, W3, M3, the dated
   missing-sink row, the sink-option match arm, the catalog-timeout grammar, and the
   conf map effects and refusals. pins: mb-4/C-025
+  **MB-4 round 3b (2026-10-08):** the first foreach pin (a `writeTo` body commits
+  once, stamped with the `repark.cdc` keys); the foreach format-ignored test now
+  runs through the live arm. The remaining foreach pins split out below.
+  pins: mb-4/C-026
+- [test_mb_4_streaming_foreach.py](test_mb_4_streaming_foreach.py) — **MB-4 round 3b
+  (2026-10-08):** the foreach-door battery, split out so the wireup battery stays
+  under its ceiling: MB0-T2 batches, MB0-R1 resume rows, MB0-W4 stamped appends,
+  the raising body with the Python error in the `STREAM_FAILED` cause (MB0-W6,
+  MBE-16), the W8-rule refusal, `collect`/`show` in the body, and MBE-10 through
+  the live door. `count` in the body is C-027 OPEN. pins: mb-4/C-026
 
 ## I want to...
 

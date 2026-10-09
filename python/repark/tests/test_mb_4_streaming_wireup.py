@@ -58,14 +58,6 @@ def _writer(spark: ReparkSession) -> DataStreamWriter:
     return DataStreamWriter(_batch_frame(spark))
 
 
-def _terminal_type(excinfo: pytest.ExceptionInfo[BaseException]) -> None:
-    assert type(excinfo.value) is NotImplementedError
-
-
-def _ignore_batch(frame: DataFrame, batch_id: int) -> None:
-    raise AssertionError("the stub never runs a batch body")
-
-
 def test_reader_load_folds_format_case_mb0c_f4_f5(spark: ReparkSession, stream_table: str) -> None:
     for source in ("ICEBERG", "Iceberg"):
         frame = _reader(spark).format(source).load(stream_table)
@@ -260,16 +252,20 @@ def test_writer_totable_ignores_format_mb0c_f9_f11(spark: ReparkSession) -> None
         assert "needs a streaming DataFrame" in str(excinfo.value)
 
 
-def test_writer_foreach_start_ignores_format(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        (
-            _writer(spark)
-            .format("bogusfmt")
-            .foreachBatch(_ignore_batch)
-            .option("repark.cdc.sink", "ice.sales.silver")
-            .start(checkpointLocation="/tmp/x")
-        )
-    _terminal_type(excinfo)
+def test_writer_foreach_start_ignores_format(spark: ReparkSession, stream_table: str) -> None:
+    _append(spark, stream_table, "(1, 'k1'), (2, 'k0')")
+    sink = _make_sink(spark, "sc.mb4.silver_fbfmt")
+    query = (
+        _stream_writer(spark, stream_table)
+        .format("bogusfmt")
+        .foreachBatch(_AppendTo(sink))
+        .option("repark.cdc.sink", sink)
+        .option("checkpointLocation", "/tmp/mb4-fb-fmt")
+        .trigger(availableNow=True)
+        .start()
+    )
+    assert query.awaitTermination() is None
+    assert _rows(spark, sink) == [[1, "k1"], [2, "k0"]]
 
 
 def _stream_writer(spark: ReparkSession, table: str) -> DataStreamWriter:
@@ -736,9 +732,7 @@ def test_foreach_door_first_pin_write_to_commits_once_stamped(
     assert _rows(spark, sink) == [[1, "k1"], [2, "k0"], [3, "k1"]]
     log = _snapshot_log(spark, sink)
     assert len(log) == 2
-    stamped = [
-        (operation, summary) for operation, summary in log if "repark.cdc.epoch" in summary
-    ]
+    stamped = [(operation, summary) for operation, summary in log if "repark.cdc.epoch" in summary]
     assert len(stamped) == 1
     assert stamped[0][1]["repark.cdc.epoch"] == "0"
     assert stamped[0][1]["repark.cdc.query-id"] == query.id

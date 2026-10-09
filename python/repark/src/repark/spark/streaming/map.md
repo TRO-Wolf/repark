@@ -36,6 +36,9 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   (MB-0c O1 at the setter); `start`/`toTable` pass the conf map and the output mode
   and return `StreamingQuery` over the native handle. The MBE-6 refusal moved to Rust
   (`check_output_mode` at the doors). pins: mb-4/C-025
+  **MB-4 round 3b (2026-10-08):** `start` passes the session alive token so the
+  native foreach adapter can build the batch `DataFrame` against a live session.
+  pins: mb-4/C-026
 - `query.py` — **MB-4 surface half (2026-10-08):** `StreamingQuery` carries the §3.7
   surface with the driver-owned bodies behind the stub terminal; only the
   `awaitTermination` timeout check (`VALUE_NOT_POSITIVE`, `<= 0`) is real.
