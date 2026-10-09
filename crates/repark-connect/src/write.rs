@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use arrow::array::RecordBatch;
+use repark_common::redaction::REDACTED;
 
 use self::postgres_copy::CopyLane;
 use self::row::RowLane;
@@ -25,6 +26,9 @@ pub const DEFAULT_ROWS_PER_INSERT: usize = 256;
 pub const MAX_INSERT_PARAMS: usize = 65_535;
 
 const INSUFFICIENT_PRIVILEGE: &str = "42501";
+const IDLE_IN_TRANSACTION: &str = "25P03";
+const DATA_EXCEPTION: &str = "22";
+const CLOSING_WAIT: Duration = Duration::from_secs(1);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WritePath {
@@ -239,14 +243,27 @@ fn write_error(error: &tokio_postgres::Error, relation: &QualifiedRelation) -> C
             sqlstate: INSUFFICIENT_PRIVILEGE.to_string(),
             message: refused.message().to_string(),
         },
+        Some(refused) if refused.code().code().starts_with(DATA_EXCEPTION) => {
+            ConnectError::Server {
+                sqlstate: refused.code().code().to_string(),
+                message: without_value(refused.message()),
+            }
+        }
         _ => request_error(error, Some(relation)),
     }
 }
 
-pub(crate) fn encoders<'a>(
+fn without_value(message: &str) -> String {
+    match message.find([':', '"']) {
+        Some(cut) => format!("{} {REDACTED}", message[..cut].trim_end()),
+        None => message.to_string(),
+    }
+}
+
+pub(crate) fn encoders(
     columns: &[PlannedColumn],
-    batch: &'a RecordBatch,
-) -> Result<Vec<ColumnEncoder<'a>>> {
+    batch: &RecordBatch,
+) -> Result<Vec<ColumnEncoder>> {
     if batch.num_columns() != columns.len() {
         return Err(ConnectError::WriteRefused {
             refusal: WriteRefusal::ColumnCount {
@@ -260,6 +277,18 @@ pub(crate) fn encoders<'a>(
         .zip(batch.columns())
         .map(|(column, array)| ColumnEncoder::new(column, array.as_ref()))
         .collect()
+}
+
+async fn settled(pooled: &PooledClient<PostgresConnector>, error: ConnectError) -> ConnectError {
+    if error != ConnectError::Disconnected {
+        return error;
+    }
+    match pooled.closing_sqlstate(CLOSING_WAIT).await.as_deref() {
+        Some(IDLE_IN_TRANSACTION) => ConnectError::Timeout {
+            which: TimeoutSetting::Read,
+        },
+        _ => error,
+    }
 }
 
 enum Lane {
@@ -302,6 +331,10 @@ impl PostgresWriter {
             Lane::Copy(lane) => lane.write(batch).await,
             Lane::Row(lane) => lane.write(self.pooled.client(), batch).await,
         };
+        let written = match written {
+            Err(error) => Err(settled(&self.pooled, error).await),
+            written => written,
+        };
         self.failed = written.as_ref().err().cloned();
         written
     }
@@ -319,20 +352,28 @@ impl PostgresWriter {
         if let Some(failed) = failed {
             return Err(failed);
         }
-        let (path, rows) = match lane {
-            Lane::Copy(lane) => (WritePath::Bulk, lane.finish().await?),
-            Lane::Row(lane) => (WritePath::Row, lane.finish(pooled.client()).await?),
+        let (path, finished) = match lane {
+            Lane::Copy(lane) => (WritePath::Bulk, lane.finish().await),
+            Lane::Row(lane) => (WritePath::Row, lane.finish(pooled.client()).await),
+        };
+        let rows = match finished {
+            Ok(rows) => rows,
+            Err(error) => return Err(settled(&pooled, error).await),
         };
         let commit = pooled.client().batch_execute("COMMIT");
-        asked(read_timeout, &relation, commit)
-            .await
-            .map_err(|error| match error {
-                ConnectError::Disconnected
-                | ConnectError::Timeout {
+        if let Err(error) = asked(read_timeout, &relation, commit).await {
+            let unanswered = ConnectError::CommitUnknown { relation };
+            return Err(match error {
+                ConnectError::Timeout {
                     which: TimeoutSetting::Read,
-                } => ConnectError::CommitUnknown { relation },
+                } => unanswered,
+                ConnectError::Disconnected => match settled(&pooled, error).await {
+                    ConnectError::Disconnected => unanswered,
+                    idle => idle,
+                },
                 definite => definite,
-            })?;
+            });
+        }
         pooled.release_clean().await;
         Ok(WriteReport { path, rows })
     }

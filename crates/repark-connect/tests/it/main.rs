@@ -35,3 +35,4 @@ mod tls;
 mod url;
 #[cfg(feature = "postgres")]
 mod write;
+mod write_shapes;

@@ -98,12 +98,6 @@ pub(crate) async fn diverging(
     rows.iter().map(|row| row.get(0)).collect()
 }
 
-async fn stored_order(cell: &Cell, table: &str) -> Vec<i32> {
-    let sql = format!("SELECT id FROM {}.{table} ORDER BY ctid", cell.schema);
-    let rows = cell.admin.query(sql.as_str(), &[]).await.expect(&sql);
-    rows.iter().map(|row| row.get(0)).collect()
-}
-
 pub(crate) async fn rows_in(cell: &Cell, table: &str) -> i64 {
     cell.count(&format!("SELECT count(*) FROM {}.{table}", cell.schema))
         .await
@@ -172,11 +166,6 @@ async fn bulk_and_row_store_byte_identical_tables_for_every_declared_type() {
         .collect();
     assert_eq!(diverging(&cell, "bulk", "row", &sends).await, [0_i32; 0]);
     assert_eq!(rows_in(&cell, "bulk").await, 8);
-    assert_eq!(
-        stored_order(&cell, "bulk").await,
-        (0..8).collect::<Vec<_>>()
-    );
-    assert_eq!(stored_order(&cell, "row").await, (0..8).collect::<Vec<_>>());
     drop(store);
     cell.close().await;
 }
@@ -480,11 +469,6 @@ async fn empty_and_multi_batch_streams_store_the_same_rows_in_the_same_order() {
             assert_eq!(
                 report,
                 Ok(WriteReport { path, rows }),
-                "{table} {options:?}"
-            );
-            assert_eq!(
-                stored_order(&cell, table).await,
-                (0..total).collect::<Vec<_>>(),
                 "{table} {options:?}"
             );
         }
@@ -962,10 +946,6 @@ async fn a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked() 
         fired,
         1 + 5,
         "one statement of 65 535 parameters, then five rows"
-    );
-    assert_eq!(
-        stored_order(&cell, "row").await,
-        (0..total).collect::<Vec<_>>()
     );
     drop(store);
     cell.close().await;

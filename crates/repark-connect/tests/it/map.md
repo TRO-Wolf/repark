@@ -10,7 +10,19 @@ See [../map.md](../map.md).
 - `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod partition; mod partition_plan; mod live_partition; mod postgres_types; mod settings; mod url;`, plus
   `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
   mod scan; mod tls;` under the `postgres` feature, and since C-4 `mod live_write; mod live_write_faults;
-  mod live_write_relations; mod write;` under it too.
+  mod live_write_relations; mod write;` under it too, and `mod write_shapes;` with no gate.
+- `write_shapes.rs` — **C-4 fold 1 (2026-10-09)**, no network: nine column families, each
+  encoded from its plain array and from up to five other encodings of the same values
+  (`cast` builds them), with equal bytes required; and four encodings of other types that
+  must still refuse naming the type that came. pins: c-4/C-021
+- `live_write_faults.rs` — **C-4 fold 1 (2026-10-09), the S3 cells:**
+  `rows_arrive_in_input_order_on_both_paths` (a `bigserial` the write does not name numbers
+  the arrivals; it replaces the three `ctid` assertions `live_write.rs` carried, which the
+  verifier showed do not hold once widths vary), `a_server_refusal_names_no_written_value`,
+  `a_row_write_idle_past_the_read_timeout_ends_as_that_timeout` (700 ms timeout, 2.2 s idle,
+  with a second `write`, with a remainder `commit` must flush, and with a full group so that
+  `COMMIT` is the first request after the wait; the bulk path commits under the same waits) and
+  `other_arrow_encodings_store_the_same_table_on_both_paths`. pins: c-4/C-020, C-021, C-022
 - `live_write_relations.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. One
   `Property` row per relation property: the DDL (run twice, for a `_b` twin written by a
   `Bulk` request and an `_r` twin written by a `Row` request), the target, the written

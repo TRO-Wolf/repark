@@ -11,6 +11,13 @@ inverse, from an Arrow value to the field, and `encode.rs` dispatches to those. 
 
 ## Contents
 
+- `encode.rs` — **C-4 fold 1 (2026-10-09):** `ColumnEncoder` owns its typed arrays and takes
+  other encodings of the planned type's values. `plain_type` names what came with its
+  encoding removed (`Dictionary` unpacked to its values, `LargeUtf8` and `Utf8View` as `Utf8`,
+  `LargeBinary` and `BinaryView` as `Binary`); the type check is made on that, and Arrow's
+  `cast` runs only when the given array is not already plain. A mismatch still names the
+  type that came, encoding included. The engine hands out `Utf8View` and dictionaries, and a
+  refusal by encoding would be a refusal of values the column can hold. pins: c-4/C-021
 - `encode.rs` — **C-4 step 1 (2026-10-08).** `ColumnEncoder<'a>` (crate-private) is the write
   direction of `ColumnAppender`: one variant per wire form, each borrowing its typed Arrow
   array. `new(column, array)` refuses an array whose type is not the planned column's with
