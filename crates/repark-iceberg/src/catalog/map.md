@@ -379,6 +379,10 @@ Source comments retain only API and safety contracts; implementation narration i
   the red-first pins — three `empty_projection_*` unit tests beside
   `conform_batch`, the provider pin in `microbatch/provider.rs`, and the facade
   pins in `python/repark/tests/test_empty_projection_count_1.py`.
+  Step 2 (same date): `conform_batch` serves an empty projected schema through
+  `RecordBatch::try_new_with_options` with the incoming batch's row count, so
+  all four readers answer the empty projection; non-empty projections read
+  unchanged.
   pins: empty-projection-count-1/C-001, C-002, C-003, C-004, C-006
 - `lineage_columns.rs` — **ICE-EVO-DML-1 (2026-09-17):** `scan_lineage_batches` plans the current
   snapshot with the fork's `project_current_schema()` and reads the tasks with

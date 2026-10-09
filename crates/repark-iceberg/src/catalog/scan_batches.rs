@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::SchemaRef;
-use datafusion::arrow::record_batch::RecordBatch;
+use datafusion::arrow::record_batch::{RecordBatch, RecordBatchOptions};
 use datafusion::common::ScalarValue;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{Expr, Operator};
@@ -41,6 +41,13 @@ pub fn conform_batch(
     schema: &SchemaRef,
     projection: &mut Option<(SchemaRef, Vec<usize>)>,
 ) -> Result<RecordBatch> {
+    if schema.fields().is_empty() {
+        let options = RecordBatchOptions::new().with_row_count(Some(batch.num_rows()));
+        return RecordBatch::try_new_with_options(Arc::clone(schema), Vec::new(), &options)
+            .map_err(|error| {
+                DataFusionError::Internal(format!("iceberg scan could not rebuild batch: {error}"))
+            });
+    }
     let batch_schema = batch.schema();
     let cached = match projection {
         Some((cached_schema, indices)) if Arc::ptr_eq(cached_schema, &batch_schema) => indices,
