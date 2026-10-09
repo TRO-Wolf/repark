@@ -65,6 +65,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `session.rs` — **C-2d fold 1 (2026-10-07), N5:** `table_exists` asks `source_table_exists` first, so a
   three-part name under a mounted source resolves through the source. Three comment lines
   were shed to pay for the three new lines; the file holds 999 of 1000. pins: c-2/C-115
+  **C-4 step 2 (2026-10-09):** the builder installs the last-Postgres-write-report carrier;
+  the install line is paid for by one shed comment, so the file holds 1000 of 1000.
+  pins: c-4/C-013
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats instead of the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**

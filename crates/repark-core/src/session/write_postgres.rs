@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 #[cfg(feature = "postgres")]
 use std::sync::Arc;
 
+use datafusion::common::config::{ConfigEntry, ConfigExtension, ExtensionOptions};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::DataFrame;
 
@@ -73,6 +74,106 @@ pub fn parse_write_path_option(raw: Option<&str>) -> Result<PostgresWritePath> {
             "write.path must be 'bulk' or 'row', got '{value}'"
         ))),
     }
+}
+
+/// The session carrier for the last Postgres write report: a test hook, not a knob.
+///
+/// Both SQL doors record here after a sink write; the binding reads it back. Sessions built
+/// outside the builder carry nothing and record nowhere.
+#[derive(Debug, Clone, Default)]
+pub struct LastPostgresWriteReport {
+    report: std::sync::Arc<std::sync::Mutex<Option<PostgresWriteReport>>>,
+}
+
+impl ConfigExtension for LastPostgresWriteReport {
+    const PREFIX: &'static str = "repark.pg_write_report";
+}
+
+impl ExtensionOptions for LastPostgresWriteReport {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    fn cloned(&self) -> Box<dyn ExtensionOptions> {
+        Box::new(self.clone())
+    }
+
+    fn set(&mut self, key: &str, _value: &str) -> Result<()> {
+        Err(DataFusionError::Configuration(format!(
+            "`{}.{key}` is not a settable option: the last-write report is a test hook the \
+             sink writes; read it back, never set it",
+            Self::PREFIX
+        )))
+    }
+
+    fn entries(&self) -> Vec<ConfigEntry> {
+        Vec::new()
+    }
+}
+
+impl LastPostgresWriteReport {
+    /// Remember one write, replacing whatever the previous write left.
+    pub fn record(&self, report: PostgresWriteReport) {
+        *self
+            .report
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(report);
+    }
+
+    /// Take the remembered write, leaving nothing behind.
+    pub fn take(&self) -> Option<PostgresWriteReport> {
+        self.report
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take()
+    }
+}
+
+/// Install the report carrier on a session config under construction.
+#[must_use]
+pub fn with_last_postgres_write_report(
+    config: datafusion::prelude::SessionConfig,
+) -> datafusion::prelude::SessionConfig {
+    let mut config = config;
+    config
+        .options_mut()
+        .extensions
+        .insert(LastPostgresWriteReport::default());
+    config
+}
+
+/// Record one sink write on the session carrier, if the session carries one.
+pub fn record_postgres_write_report(
+    ctx: &datafusion::prelude::SessionContext,
+    report: PostgresWriteReport,
+) {
+    let state = ctx.state();
+    if let Some(carrier) = state
+        .config()
+        .options()
+        .extensions
+        .get::<LastPostgresWriteReport>()
+    {
+        carrier.record(report);
+    }
+}
+
+/// Take the session carrier's remembered write, if the session carries one.
+#[must_use]
+pub fn take_postgres_write_report(
+    ctx: &datafusion::prelude::SessionContext,
+) -> Option<PostgresWriteReport> {
+    let state = ctx.state();
+    state
+        .config()
+        .options()
+        .extensions
+        .get::<LastPostgresWriteReport>()?
+        .take()
 }
 
 /// What one write did: the taken path and the committed row count.

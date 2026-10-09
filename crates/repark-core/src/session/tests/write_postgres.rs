@@ -6,7 +6,8 @@ use datafusion::prelude::SessionContext;
 use crate::Error;
 use crate::session::ReparkSessionBuilder;
 use crate::session::write_postgres::{
-    PostgresWrite, PostgresWritePath, PostgresWriteTarget, execute_postgres_write,
+    PostgresWrite, PostgresWritePath, PostgresWriteReport, PostgresWriteTarget,
+    execute_postgres_write, record_postgres_write_report, take_postgres_write_report,
 };
 
 const REFUSED_URL: &str = "postgresql://127.0.0.1:1/postgres";
@@ -187,4 +188,33 @@ fn write_path_option_defaults_to_bulk_and_names_both_values_on_refusal() {
     let message = error.to_string();
     assert!(message.contains("'bulk'"), "{message}");
     assert!(message.contains("'row'"), "{message}");
+}
+
+#[test]
+fn last_write_report_records_on_builder_sessions_and_nowhere_else() {
+    let session = ReparkSessionBuilder::default()
+        .build()
+        .expect("a session builds");
+    let context = session.context();
+    assert!(take_postgres_write_report(context).is_none());
+    record_postgres_write_report(
+        context,
+        PostgresWriteReport {
+            path: PostgresWritePath::Row,
+            rows: 7,
+        },
+    );
+    let taken = take_postgres_write_report(context).expect("a recorded report reads back once");
+    assert_eq!(taken.path, PostgresWritePath::Row);
+    assert_eq!(taken.rows, 7);
+    assert!(take_postgres_write_report(context).is_none());
+    let bare = SessionContext::new();
+    record_postgres_write_report(
+        &bare,
+        PostgresWriteReport {
+            path: PostgresWritePath::Bulk,
+            rows: 1,
+        },
+    );
+    assert!(take_postgres_write_report(&bare).is_none());
 }

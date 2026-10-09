@@ -8,6 +8,7 @@ use repark_core::CatalogRegistry;
 use repark_core::write_postgres::{
     PostgresWrite, PostgresWritePath, PostgresWriteTarget, execute_postgres_write,
     parse_write_path_option, postgres_write_modes_refusal, postgres_write_upsert_refusal,
+    record_postgres_write_report,
 };
 
 use crate::write_options::StatementWriteOptions;
@@ -105,7 +106,8 @@ async fn execute_postgres_insert(
         case_insensitive: crate::spark_door_case_insensitive(options),
         path: postgres_write_path(write_options)?,
     };
-    execute_postgres_write(catalogs, frame, write, zone).await?;
+    let report = execute_postgres_write(catalogs, frame, write, zone).await?;
+    record_postgres_write_report(ctx, report);
     ctx.read_empty()
 }
 

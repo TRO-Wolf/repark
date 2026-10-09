@@ -6,7 +6,7 @@ use datafusion::sql::sqlparser::ast::{Insert, ObjectName, Statement, TableObject
 use repark_common::SourceKind;
 use repark_core::write_postgres::{
     PostgresWrite, PostgresWritePath, PostgresWriteTarget, execute_postgres_write,
-    postgres_write_modes_refusal, postgres_write_upsert_refusal,
+    postgres_write_modes_refusal, postgres_write_upsert_refusal, record_postgres_write_report,
 };
 use repark_core::{CatalogRegistry, EngineContext};
 
@@ -96,7 +96,8 @@ pub(crate) async fn execute_postgres_insert(
         case_insensitive: true,
         path: PostgresWritePath::Bulk,
     };
-    execute_postgres_write(cx.catalogs, frame, write, zone).await?;
+    let report = execute_postgres_write(cx.catalogs, frame, write, zone).await?;
+    record_postgres_write_report(cx.ctx, report);
     cx.ctx.read_empty()
 }
 

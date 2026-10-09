@@ -104,6 +104,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `execute_insert_overwrite` and `execute_insert_routed` rather than in the router match, so a
   non-Postgres statement crosses no new code in the dispatch arms. The write future is heap-boxed
   at the module boundary: at ~17KB it trips clippy's large-futures ceiling in every ancestor await.
+  Each write records its report on the session carrier.
   pins: c-4/C-013
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic

@@ -292,9 +292,9 @@ impl ReparkSessionBuilder {
         config = repark_iceberg::write::with_write_concurrency(config, write_concurrency);
         config = with_parallel_single_partition(config, self.parallel_single_partition);
         config = crate::series_order::with_series_order_notice(config);
+        config = write_postgres::with_last_postgres_write_report(config);
         // Explicit DataFusion keys override typed setters and defaults before extension configure.
         apply_datafusion_config_keys(&mut config, &self.config)?;
-        // Configure runs after engine options and before runtime assembly.
         config = ext
             .configure(
                 SessionBuildConf {

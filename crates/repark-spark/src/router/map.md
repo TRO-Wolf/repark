@@ -78,7 +78,8 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `CONNECT-DECL-pg-write-upsert` row. The `write.path` writer option is read off
   `StatementWriteOptions::raw` and parsed by the shared core parser (`bulk` default, `row`
   forces the INSERT path, anything else refuses as `Configuration`/IllegalArgumentException).
-  The write future is heap-boxed at the module boundary (clippy large-futures). Door pins are
+  The write future is heap-boxed at the module boundary (clippy large-futures). Each write
+  records its report on the session carrier. Door pins are
   [../tests/pg_insert.rs](../tests/pg_insert.rs).
   pins: c-4/C-013, C-014
 - `update.rs` — **C-4 step 2 (2026-10-09):** `execute_update` moved verbatim out of
