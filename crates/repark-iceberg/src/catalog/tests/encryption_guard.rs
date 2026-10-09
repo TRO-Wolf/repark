@@ -522,3 +522,302 @@ fn the_refusal_is_found_through_a_source_chain_and_through_rendered_text() {
     let unrelated = datafusion::error::DataFusionError::Execution("Table t is busy".to_string());
     assert_eq!(EncryptedTableRefusal::find(&unrelated), None);
 }
+
+#[derive(Debug)]
+#[allow(dead_code)]
+struct TableCommit<Update> {
+    ident: TableIdent,
+    requirements: Vec<String>,
+    updates: Vec<Update>,
+    base_metadata_location: Option<String>,
+    base_table: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+enum FutureUpdate {
+    RewriteDataInPlace { path: String },
+    Checkpoint(String),
+    Compact,
+}
+
+fn rendered<Update: std::fmt::Debug>(updates: Vec<Update>, hostile: &str) -> String {
+    let commit = TableCommit {
+        ident: TableIdent::from_strs([hostile, hostile]).expect("ident"),
+        requirements: vec![hostile.to_string()],
+        updates,
+        base_metadata_location: Some(hostile.to_string()),
+        base_table: Some(HashMap::from([(hostile.to_string(), hostile.to_string())])),
+    };
+    format!("{commit:#?}")
+}
+
+fn variant_name(update: &iceberg::TableUpdate) -> &'static str {
+    use iceberg::TableUpdate as U;
+    match update {
+        U::UpgradeFormatVersion { .. } => "UpgradeFormatVersion",
+        U::AssignUuid { .. } => "AssignUuid",
+        U::AddSchema { .. } => "AddSchema",
+        U::SetCurrentSchema { .. } => "SetCurrentSchema",
+        U::AddSpec { .. } => "AddSpec",
+        U::SetDefaultSpec { .. } => "SetDefaultSpec",
+        U::AddSortOrder { .. } => "AddSortOrder",
+        U::SetDefaultSortOrder { .. } => "SetDefaultSortOrder",
+        U::AddSnapshot { .. } => "AddSnapshot",
+        U::SetSnapshotRef { .. } => "SetSnapshotRef",
+        U::RemoveSnapshots { .. } => "RemoveSnapshots",
+        U::RemoveSnapshotRef { .. } => "RemoveSnapshotRef",
+        U::SetLocation { .. } => "SetLocation",
+        U::SetProperties { .. } => "SetProperties",
+        U::RemoveProperties { .. } => "RemoveProperties",
+        U::RemovePartitionSpecs { .. } => "RemovePartitionSpecs",
+        U::SetStatistics { .. } => "SetStatistics",
+        U::RemoveStatistics { .. } => "RemoveStatistics",
+        U::SetPartitionStatistics { .. } => "SetPartitionStatistics",
+        U::RemovePartitionStatistics { .. } => "RemovePartitionStatistics",
+        U::RemoveSchemas { .. } => "RemoveSchemas",
+        U::AddEncryptionKey { .. } => "AddEncryptionKey",
+        U::RemoveEncryptionKey { .. } => "RemoveEncryptionKey",
+    }
+}
+
+fn writes_no_file(update: &iceberg::TableUpdate) -> bool {
+    use iceberg::TableUpdate as U;
+    match update {
+        U::UpgradeFormatVersion { .. }
+        | U::AddSchema { .. }
+        | U::SetCurrentSchema { .. }
+        | U::RemoveSchemas { .. }
+        | U::AddSpec { .. }
+        | U::SetDefaultSpec { .. }
+        | U::RemovePartitionSpecs { .. }
+        | U::AddSortOrder { .. }
+        | U::SetDefaultSortOrder { .. }
+        | U::SetSnapshotRef { .. }
+        | U::RemoveSnapshotRef { .. }
+        | U::RemoveSnapshots { .. }
+        | U::RemoveStatistics { .. }
+        | U::RemovePartitionStatistics { .. }
+        | U::SetLocation { .. }
+        | U::SetProperties { .. }
+        | U::RemoveProperties { .. } => true,
+        U::AddSnapshot { .. }
+        | U::SetStatistics { .. }
+        | U::SetPartitionStatistics { .. }
+        | U::AssignUuid { .. }
+        | U::AddEncryptionKey { .. }
+        | U::RemoveEncryptionKey { .. } => false,
+    }
+}
+
+fn from_json(json: &str) -> iceberg::TableUpdate {
+    serde_json::from_str(json).expect("a table update in the REST spelling")
+}
+
+fn every_update(hostile: &str) -> Vec<iceberg::TableUpdate> {
+    use iceberg::TableUpdate as U;
+    let schema = Schema::builder()
+        .with_schema_id(1)
+        .with_fields(vec![
+            NestedField::optional(1, hostile, Type::Primitive(PrimitiveType::Int))
+                .with_doc(hostile)
+                .into(),
+        ])
+        .build()
+        .expect("schema");
+    vec![
+        U::UpgradeFormatVersion {
+            format_version: iceberg::spec::FormatVersion::V3,
+        },
+        U::AssignUuid {
+            uuid: uuid::Uuid::nil(),
+        },
+        U::AddSchema { schema },
+        U::SetCurrentSchema { schema_id: 1 },
+        U::AddSpec {
+            spec: iceberg::spec::UnboundPartitionSpec::builder().build(),
+        },
+        U::SetDefaultSpec { spec_id: 0 },
+        U::AddSortOrder {
+            sort_order: iceberg::spec::SortOrder::unsorted_order(),
+        },
+        U::SetDefaultSortOrder { sort_order_id: 0 },
+        from_json(
+            r#"{"action":"add-snapshot","snapshot":{"snapshot-id":7,"timestamp-ms":1,
+            "sequence-number":1,"manifest-list":"s3://b/snap-7.avro","schema-id":0,
+            "summary":{"operation":"append"}}}"#,
+        ),
+        U::SetSnapshotRef {
+            ref_name: hostile.to_string(),
+            reference: iceberg::spec::SnapshotReference::new(
+                7,
+                iceberg::spec::SnapshotRetention::Tag {
+                    max_ref_age_ms: None,
+                },
+            ),
+        },
+        U::RemoveSnapshots {
+            snapshot_ids: vec![7],
+        },
+        U::RemoveSnapshotRef {
+            ref_name: hostile.to_string(),
+        },
+        U::SetLocation {
+            location: hostile.to_string(),
+        },
+        U::SetProperties {
+            updates: HashMap::from([(hostile.to_string(), hostile.to_string())]),
+        },
+        U::RemoveProperties {
+            removals: vec![hostile.to_string()],
+        },
+        U::RemovePartitionSpecs { spec_ids: vec![0] },
+        U::SetStatistics {
+            statistics: iceberg::spec::StatisticsFile {
+                snapshot_id: 7,
+                statistics_path: hostile.to_string(),
+                file_size_in_bytes: 1,
+                file_footer_size_in_bytes: 1,
+                key_metadata: None,
+                blob_metadata: Vec::new(),
+            },
+        },
+        U::RemoveStatistics { snapshot_id: 7 },
+        U::SetPartitionStatistics {
+            partition_statistics: iceberg::spec::PartitionStatisticsFile {
+                snapshot_id: 7,
+                statistics_path: hostile.to_string(),
+                file_size_in_bytes: 1,
+            },
+        },
+        U::RemovePartitionStatistics { snapshot_id: 7 },
+        U::RemoveSchemas {
+            schema_ids: vec![0],
+        },
+        U::AddEncryptionKey {
+            encryption_key: iceberg::spec::EncryptedKey::builder()
+                .key_id(hostile)
+                .encrypted_key_metadata(vec![1_u8])
+                .build(),
+        },
+        U::RemoveEncryptionKey {
+            key_id: hostile.to_string(),
+        },
+    ]
+}
+
+#[test]
+fn every_fork_update_variant_is_classified_and_only_the_named_ones_pass() {
+    use crate::catalog::encryption_guard::{
+        METADATA_ONLY_UPDATES, is_metadata_only, update_variants,
+    };
+    let mut seen = std::collections::BTreeSet::new();
+    for hostile in HOSTILE_VALUES.into_iter().chain(["plain"]) {
+        for update in every_update(hostile) {
+            let name = variant_name(&update);
+            let allowed = writes_no_file(&update);
+            seen.insert(name);
+            assert_eq!(METADATA_ONLY_UPDATES.contains(&name), allowed, "{name}");
+            let text = rendered(vec![update.clone()], hostile);
+            assert_eq!(update_variants(&text), Some(vec![name]), "{text}");
+            assert_eq!(is_metadata_only(&text), allowed, "{name} with {hostile:?}");
+            let property = iceberg::TableUpdate::SetProperties {
+                updates: HashMap::from([(hostile.to_string(), hostile.to_string())]),
+            };
+            let mixed = rendered(vec![property.clone(), update, property], hostile);
+            assert_eq!(
+                update_variants(&mixed),
+                Some(vec!["SetProperties", name, "SetProperties"])
+            );
+            assert_eq!(is_metadata_only(&mixed), allowed, "{name} mixed");
+        }
+    }
+    assert_eq!(seen.len(), 23, "one sample per variant of the fork enum");
+    assert!(
+        METADATA_ONLY_UPDATES
+            .iter()
+            .all(|allowed| seen.contains(allowed))
+    );
+}
+
+#[test]
+fn an_unknown_update_variant_or_an_unreadable_commit_is_not_metadata_only() {
+    use crate::catalog::encryption_guard::{is_metadata_only, update_variants};
+    for future in [
+        FutureUpdate::RewriteDataInPlace {
+            path: "SetProperties {".to_string(),
+        },
+        FutureUpdate::Checkpoint("SetProperties {".to_string()),
+        FutureUpdate::Compact,
+    ] {
+        let text = rendered(vec![future], "plain");
+        assert_eq!(update_variants(&text).map(|names| names.len()), Some(1));
+        assert!(!is_metadata_only(&text), "{text}");
+    }
+    assert!(is_metadata_only(&rendered(
+        Vec::<FutureUpdate>::new(),
+        "plain"
+    )));
+    assert_eq!(update_variants("TableCommit { updates: [] }"), None);
+    assert!(!is_metadata_only("TableCommit { updates: [] }"));
+    assert!(!is_metadata_only(""));
+    assert!(!is_metadata_only(
+        "TableCommit {\n    updates: [\n        SetProperties {\n"
+    ));
+    assert!(!is_metadata_only(
+        "TableCommit {\n    updates: [\n      odd,\n    ],\n}"
+    ));
+}
+
+#[tokio::test]
+async fn a_commit_without_a_base_table_reads_the_key_from_the_catalog() {
+    use crate::catalog::encryption_guard::base_is_keyed;
+    let keyed = bed(&[("encryption.key-id", KEY)]).await;
+    assert!(
+        base_is_keyed(keyed.raw.as_ref(), &ident(), None)
+            .await
+            .expect("load")
+    );
+    let plain = bed(&[]).await;
+    assert!(
+        !base_is_keyed(plain.raw.as_ref(), &ident(), None)
+            .await
+            .expect("load")
+    );
+    let stale = plain.raw.load_table(&ident()).await.expect("load");
+    assert!(
+        !base_is_keyed(keyed.raw.as_ref(), &ident(), Some(&stale))
+            .await
+            .expect("the base the commit names decides")
+    );
+}
+
+#[test]
+fn the_metadata_json_rule_is_a_direct_child_with_a_full_suffix() {
+    use crate::catalog::encryption_guard::is_table_metadata_json;
+    let directories = vec!["/w/t/metadata".to_string()];
+    assert!(is_table_metadata_json(
+        "/w/t/metadata/00001-a.metadata.json",
+        &directories
+    ));
+    assert!(is_table_metadata_json(
+        "/w/t/metadata/v3.metadata.json.gz",
+        &directories
+    ));
+    for refused in [
+        "/w/t/metadata/.metadata.json",
+        "/w/t/metadata/a.metadata.json.parquet",
+        "/w/t/metadata/a.METADATA.JSON",
+        "/w/t/metadata/sub/a.metadata.json",
+        "/w/t/metadata-x/a.metadata.json",
+        "/w/t/data/a.metadata.json",
+        "/w/t/a.metadata.json",
+        "a.metadata.json",
+    ] {
+        assert!(!is_table_metadata_json(refused, &directories), "{refused}");
+    }
+    assert!(!is_table_metadata_json(
+        "/w/t/metadata/00001-a.metadata.json",
+        &[]
+    ));
+}

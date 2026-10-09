@@ -19,16 +19,38 @@ use serde::{Serialize, Serializer};
 
 use crate::write::encryption::{EncryptedTableRefusal, carries_encryption_key};
 
-const FILE_ADDING_UPDATES: [&str; 3] = [
-    "AddSnapshot {",
-    "SetStatistics {",
-    "SetPartitionStatistics {",
+pub(crate) const METADATA_ONLY_UPDATES: [&str; 17] = [
+    "UpgradeFormatVersion",
+    "AddSchema",
+    "SetCurrentSchema",
+    "RemoveSchemas",
+    "AddSpec",
+    "SetDefaultSpec",
+    "RemovePartitionSpecs",
+    "AddSortOrder",
+    "SetDefaultSortOrder",
+    "SetSnapshotRef",
+    "RemoveSnapshotRef",
+    "RemoveSnapshots",
+    "RemoveStatistics",
+    "RemovePartitionStatistics",
+    "SetLocation",
+    "SetProperties",
+    "RemoveProperties",
 ];
 const METADATA_JSON_SUFFIXES: [&str; 2] = [".metadata.json", ".metadata.json.gz"];
+const WRITE_METADATA_PATH: &str = "write.metadata.path";
+const COMMIT_FIELD_INDENT: &str = "    ";
+const UPDATE_ENTRY_INDENT: &str = "        ";
 
-#[derive(Debug)]
 pub struct EncryptionGuardCatalog {
     inner: Arc<dyn Catalog>,
+}
+
+impl std::fmt::Debug for EncryptionGuardCatalog {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(formatter)
+    }
 }
 
 impl EncryptionGuardCatalog {
@@ -42,11 +64,70 @@ fn is_keyed(table: &Table) -> bool {
     carries_encryption_key(table.metadata().properties())
 }
 
-fn commit_adds_files(commit: &TableCommit) -> bool {
-    let rendered = format!("{commit:?}");
-    FILE_ADDING_UPDATES
-        .iter()
-        .any(|update| rendered.contains(update))
+pub(crate) fn update_variants(rendered: &str) -> Option<Vec<&str>> {
+    let opened = format!("{COMMIT_FIELD_INDENT}updates: [");
+    let empty = format!("{COMMIT_FIELD_INDENT}updates: [],");
+    let closed = format!("{COMMIT_FIELD_INDENT}],");
+    let mut lines = rendered.lines();
+    loop {
+        let line = lines.next()?;
+        if line == empty {
+            return Some(Vec::new());
+        }
+        if line == opened {
+            break;
+        }
+    }
+    let mut variants = Vec::new();
+    for line in lines {
+        if line == closed {
+            return Some(variants);
+        }
+        if line.is_empty() {
+            continue;
+        }
+        let entry = line.strip_prefix(UPDATE_ENTRY_INDENT)?;
+        if entry.starts_with([' ', '}', ')', ']']) {
+            continue;
+        }
+        let end = entry
+            .find(|character: char| !character.is_ascii_alphanumeric())
+            .unwrap_or(entry.len());
+        if end == 0 {
+            return None;
+        }
+        variants.push(&entry[..end]);
+    }
+    None
+}
+
+pub(crate) fn is_metadata_only(rendered: &str) -> bool {
+    update_variants(rendered).is_some_and(|variants| {
+        variants
+            .iter()
+            .all(|variant| METADATA_ONLY_UPDATES.contains(variant))
+    })
+}
+
+pub(crate) async fn base_is_keyed(
+    inner: &dyn Catalog,
+    ident: &TableIdent,
+    base: Option<&Table>,
+) -> Result<bool> {
+    match base {
+        Some(base) => Ok(is_keyed(base)),
+        None => Ok(is_keyed(&inner.load_table(ident).await?)),
+    }
+}
+
+fn metadata_directories(location: &str, properties: &HashMap<String, String>) -> Vec<String> {
+    match properties.get(WRITE_METADATA_PATH) {
+        Some(directory) => vec![directory.trim_end_matches('/').to_string()],
+        None => vec![
+            format!("{location}/metadata"),
+            format!("{}/metadata", location.trim_end_matches('/')),
+        ],
+    }
 }
 
 fn refuse_keyed_publish(staged: &Table) -> Result<()> {
@@ -62,7 +143,11 @@ pub fn guard_table(table: Table) -> Result<Table> {
         return Ok(table);
     }
     let mut builder = Table::builder()
-        .file_io(guard_file_io(table.file_io(), table.identifier()))
+        .file_io(guard_file_io(
+            table.file_io(),
+            table.identifier(),
+            metadata_directories(table.metadata().location(), table.metadata().properties()),
+        ))
         .metadata(table.metadata_ref())
         .identifier(table.identifier().clone())
         .readonly(table.readonly())
@@ -83,16 +168,26 @@ pub async fn begin_staged_create(
     creation: TableCreation,
 ) -> Result<StagedTableTransaction> {
     let file_io = if carries_encryption_key(&creation.properties) {
-        guard_file_io(&file_io, &ident)
+        let directories = creation
+            .location
+            .as_deref()
+            .map(|location| metadata_directories(location, &creation.properties))
+            .unwrap_or_default();
+        guard_file_io(&file_io, &ident, directories)
     } else {
         file_io
     };
     StagedTableTransaction::begin_create(file_io, ident, creation).await
 }
 
-fn guard_file_io(file_io: &FileIO, ident: &TableIdent) -> FileIO {
+fn guard_file_io(
+    file_io: &FileIO,
+    ident: &TableIdent,
+    metadata_directories: Vec<String>,
+) -> FileIO {
     let factory = EncryptionGuardStorageFactory {
         refusal: EncryptedTableRefusal::of(ident),
+        metadata_directories,
         inner: file_io.clone(),
     };
     FileIOBuilder::new(Arc::new(factory))
@@ -100,15 +195,23 @@ fn guard_file_io(file_io: &FileIO, ident: &TableIdent) -> FileIO {
         .build()
 }
 
-fn is_metadata_json(path: &str) -> bool {
-    METADATA_JSON_SUFFIXES
-        .iter()
-        .any(|suffix| path.ends_with(suffix))
+pub(crate) fn is_table_metadata_json(path: &str, metadata_directories: &[String]) -> bool {
+    metadata_directories.iter().any(|directory| {
+        path.strip_prefix(directory.as_str())
+            .and_then(|rest| rest.strip_prefix('/'))
+            .is_some_and(|name| {
+                !name.contains('/')
+                    && METADATA_JSON_SUFFIXES
+                        .iter()
+                        .any(|suffix| name.len() > suffix.len() && name.ends_with(suffix))
+            })
+    })
 }
 
 #[derive(Debug, Clone)]
 struct EncryptionGuardStorageFactory {
     refusal: EncryptedTableRefusal,
+    metadata_directories: Vec<String>,
     inner: FileIO,
 }
 
@@ -124,6 +227,7 @@ impl StorageFactory for EncryptionGuardStorageFactory {
     fn build(&self, _config: &StorageConfig) -> Result<Arc<dyn Storage>> {
         Ok(Arc::new(EncryptionGuardStorage {
             refusal: self.refusal.clone(),
+            metadata_directories: self.metadata_directories.clone(),
             inner: self.inner.clone(),
         }))
     }
@@ -138,12 +242,13 @@ impl StorageFactory for EncryptionGuardStorageFactory {
 #[derive(Debug, Clone)]
 struct EncryptionGuardStorage {
     refusal: EncryptedTableRefusal,
+    metadata_directories: Vec<String>,
     inner: FileIO,
 }
 
 impl EncryptionGuardStorage {
     fn refuse_file_create(&self, path: &str) -> Result<()> {
-        if is_metadata_json(path) {
+        if is_table_metadata_json(path, &self.metadata_directories) {
             return Ok(());
         }
         Err(self.refusal.clone().into_iceberg())
@@ -319,11 +424,13 @@ impl Catalog for EncryptionGuardCatalog {
     }
 
     async fn update_table(&self, commit: TableCommit) -> Result<Table> {
-        let keyed = match commit.base_table() {
-            Some(base) => is_keyed(base),
-            None => is_keyed(&self.inner.load_table(commit.identifier()).await?),
-        };
-        if keyed && commit_adds_files(&commit) {
+        let keyed = base_is_keyed(
+            self.inner.as_ref(),
+            commit.identifier(),
+            commit.base_table(),
+        )
+        .await?;
+        if keyed && !is_metadata_only(&format!("{commit:#?}")) {
             return Err(EncryptedTableRefusal::of(commit.identifier()).into_iceberg());
         }
         guard_table(self.inner.update_table(commit).await?)

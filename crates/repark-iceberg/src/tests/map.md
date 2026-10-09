@@ -121,7 +121,11 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   `output_spec.rs` builds a read-only table view; `iceberg_path.rs` builds a read-only
   `StaticTable`; `location.rs` builds the `FileIO` a staged create receives, and its three
   callers hand it to `begin_staged_create` or to the read-only path table.
-  pins: enc-1/C-009
+  Fold 2 (2026-10-09): the scan also names the qualified spellings the verifier's mutant
+  used (`<iceberg::table::Table>::builder()`, `table::TableBuilder`, an import alias of
+  `Table`). The gate stays textual: it matches spellings, not resolved paths, so a new
+  alias can still walk past it. Recorded on card ENC-1-RESIDUE-1.
+  pins: enc-1/C-009, C-010
 
 ## Pointers
 

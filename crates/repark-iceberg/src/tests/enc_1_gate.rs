@@ -26,8 +26,11 @@ const PRIMITIVES: &[(&str, &[&str])] = &[
             "repark-iceberg/src/write/sink_offsets/append_fence.rs",
         ],
     ),
+    ("Table>::builder()", &[]),
+    ("table::TableBuilder", &[]),
+    ("table::Table as ", &[]),
     (
-        "Table::builder()",
+        "Table::builder",
         &[GUARD, "repark-iceberg/src/write/output_spec.rs"],
     ),
     ("StaticTable::", &["repark-core/src/iceberg_path.rs"]),

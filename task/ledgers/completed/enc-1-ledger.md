@@ -597,3 +597,137 @@ Each file was restored from a byte copy and the guard and gate pins re-ran green
 - The fast-forward `cherrypick_snapshot` and `fast_forward` stay allowed (ref moves);
   `publish_changes` keeps its round-2 refusal.
 
+## Fold 2 (2026-10-09, Opus worker, after the re-verify of `78349722`)
+
+**The re-verify (`reverify/verdict.json`):** the keyed-table claim HOLDS: 862 keyed write
+attempts, 0 plaintext data, delete, manifest, puffin or stats files written into a keyed
+table, 0 orphans, unkeyed 0 moved, no perf cost over 2%. Verdict FAIL on one S2 outside
+the claim, with S3 findings on the decorator. Rulings on fold 1's questions (orchestrator,
+2026-10-09): the `Debug`-text classification is accepted for v1.5.4 with the hardening
+below and a fork-accessor card; `CREATE BRANCH` on an empty keyed table, the two stats
+procedures and `rewrite_table_path` keep refusing, interim, listed for the owner.
+
+**Errata to §Fold 1:** "the commit guard ... matches the variant names in the commit's
+derived `Debug` rendering" described a substring search over the whole text, and "It
+fails closed" was true only for the three names it knew: an unknown variant passed. The
+file-create exception was a bare suffix test, not "narrow". All three are changed below.
+
+### Red pins (C-010, commit `96e8dc6c`)
+
+```
+$ cargo test --locked -p repark-iceberg --lib -- encryption        (on 78349722 plus the pins)
+test result: FAILED. 13 passed; 5 failed
+  the_guard_renders_exactly_what_the_catalog_it_wraps_renders      left: "EncryptionGuardCatalog { inner: MemoryCatalog { ...
+  metadata_text_that_names_a_file_adding_update_does_not_brick_a_keyed_table      property set: FeatureUnsupported => Table sales.t carries ...
+  the_metadata_json_exception_holds_only_in_the_table_metadata_directory, ..._follows_write_metadata_path      a keyed table must refuse: ()
+  publishing_a_keyed_staged_create_with_a_snapshot_refuses_at_the_catalog      (a slip in the pin's expected table name; fixed before the commit)
+$ cargo test --locked -p repark-spark --lib tests::enc_1_fold
+test result: FAILED. 13 passed; 1 failed      keyed_table_with_hostile_metadata_text_still_alters_expires_and_unsets
+```
+
+Green from the start, added to close the verifier's surviving mutants: the registered
+handle is guarded, and a statistics commit and both publish calls refuse at the catalog
+for a handle that is not guarded.
+
+### Fixes
+
+The design reasons and the variant table live in
+`crates/repark-iceberg/src/catalog/map.md` (fold 2 block). In short:
+
+| Finding | Fix |
+|---|---|
+| S2: the guard's `Debug` name breaks `repark-distributed` | `EncryptionGuardCatalog`'s `Debug` writes exactly what the wrapped catalog writes |
+| S3: a property value or column comment with `AddSnapshot {` bricks a keyed table | `update_variants` reads the pretty rendering by structure: the `updates` field line at indent 4 and the head of each entry at indent 8; text inside fields cannot land there |
+| S3: the deny-list fails open | `METADATA_ONLY_UPDATES` is an allow-list of 17 of the fork's 23 `TableUpdate` variants; any other or unknown name on a keyed base refuses; a pin with no-wildcard `match` blocks stops compiling when the fork adds a variant |
+| S3: the file-name exception is a bare suffix test | a `*.metadata.json(.gz)` write passes only as a direct child of the table's metadata directory (`write.metadata.path`, else `<location>/metadata`) |
+| S3: six surviving mutants | a pin per decorator branch; `base_is_keyed` holds the no-base branch so a pin can reach it; the gate names the qualified `Table` spellings |
+
+### `repark-distributed --features cluster`
+
+`cargo test --locked --no-fail-fast -p repark-distributed --features cluster --test codec --test iceberg_scan`
+
+| Side | `tests/codec.rs` | `tests/iceberg_scan.rs` |
+|---|---|---|
+| base `ca5a062a` (scratch worktree) | 11 passed, 1 failed | 8 passed |
+| head (this tree) | 11 passed, 1 failed | 8 passed |
+
+The per-test result lines are identical on both sides. The one failure on both is
+`date_and_timestamp_predicates_measure_the_pushdown_surface`; it is left as it is. Before
+the fix head showed 5 passed, 7 failed in `tests/codec.rs` (the verifier's run). Without
+`--no-fail-fast` cargo stops after `tests/codec.rs`, so `tests/iceberg_scan.rs` does not
+run; the command is recorded with the flag. **No CI job and no `make` target enables the
+`cluster` feature**, which is why this went unseen: card CLUSTER-FEATURE-CI-1.
+
+### Re-run of the re-verify's probes, as they are (debug build of this tree)
+
+| Probe | Attempts | Writes into a keyed table | Orphans / moved pointer |
+|---|---|---|---|
+| `probe.py keyed 2` and `keyed 3` (350 shapes each) | 700 | 0 | 0 |
+| `late.py`, `extra.py`, `extra2.py` | 68 + 30 + 4 lines | 0 | 0 |
+| `zz_verify_probe.rs` (ANSI doors, Rust API, cross-session, stale staging, the guarded `FileIO`) | 3 tests, 260 probe lines | 0 | 0 through a current handle; R-1 below through a stale one |
+| `mb_probe_append.rs` (micro-batch table sink) | 1 | 0 | 0 (`EncryptedSinkRefused`, `added=[]`) |
+
+Against the verifier's own head run, case by case, the only class changes are the seven
+hostile-text cases per version (`x_prop_value_*`, `x_base_prop_marker_*`,
+`x_column_comment_marker`): REFUSE to metadata-only, as intended. `classify.py` labels 8
+rows WRITE and 4 ORPHAN per version, the same rows as on the verifier's run: writes into
+a NEW unkeyed table (three rows), a path Parquet write, two INSERT statements after UNSET,
+the two co-located-table rows of R-2, and the metadata JSON of the CREATE or ALTER that
+introduces the key or moves a path (four rows). The guarded `FileIO` probe lines:
+`x.metadata.json` at the table root and `data/evil.parquet.metadata.json` now REFUSED
+(they WROTE on `78349722`); `metadata/v1.metadata.json.gz` WROTE; the rest REFUSED.
+
+### Unkeyed controls
+
+`probe.py unkeyed 2|3` on this tree against the verifier's base recordings (main
+`ca5a062a`), 340 statements per version, `cmp.py`: **0 moved.** Loose mode shows one row
+per version, a parse-error column number that follows the scratch path length. Strict
+mode adds `added-files-size` byte jitter only (22 rows on v2, 3 on v3: merge-on-read
+delete files, one copy-on-write update, two rewrites); the verifier's own head run shows
+the same jitter against base (20 and 3 rows).
+Lib suites on the final tree: `repark-iceberg` 991, `repark-sql` 392, `repark-spark`
+2682 passed, `repark-core --lib microbatch` 114.
+
+### Hand mutants (fold 2)
+
+| Mutant | Change | Red pin | Result |
+|---|---|---|---|
+| H1 | the guard's `Debug` names the guard | `the_guard_renders_exactly_what_the_catalog_it_wraps_renders` | KILLED |
+| H2 | `AddSnapshot` put on the allow-list | `every_fork_update_variant_is_classified_…`, `a_snapshot_commit_refuses_at_the_catalog_…` and two more | KILLED |
+| H3 | entry heads read at any indent | `an_unknown_update_variant_or_an_unreadable_commit_is_not_metadata_only`, `metadata_text_that_names_a_file_adding_update_…` and two more | KILLED |
+| H4 | the direct-child test dropped from the metadata-JSON rule | `the_metadata_json_rule_is_a_direct_child_with_a_full_suffix`, `the_metadata_json_exception_holds_only_in_the_table_metadata_directory` | KILLED |
+| H5 | a commit without a base table counts as unkeyed (the verifier's G6) | `a_commit_without_a_base_table_reads_the_key_from_the_catalog` | KILLED |
+| H6 | `register_table` returns the plain handle (G3) | `a_registered_keyed_table_comes_back_guarded` | KILLED |
+| H7 | `publish_replace_table` drops its check (G4) | `publishing_a_keyed_staged_replace_with_a_snapshot_refuses_at_the_catalog` | KILLED |
+| H8 | the classifier reads the compact rendering | `property_commits_pass_on_a_keyed_table_…`, `metadata_text_that_names_…` (fails closed: every keyed commit refuses) | KILLED |
+| H9 | product code calls `<iceberg::table::Table>::builder()` (G5) | `every_catalog_table_handle_and_file_io_is_built_inside_the_guarded_wrappers` | KILLED |
+
+G1 (suffix `contains`) and G2 (statistics names removed) no longer apply as written: the
+rule is now a directory-bound full-suffix test (H4 and the `a.metadata.json.parquet`
+rows) and an allow-list (H2). Each file was restored from a byte copy (`cmp` clean) and
+the guard and gate pins re-ran 24/24 green.
+
+### Recorded, not changed (2026-10-09; card ENC-1-RESIDUE-1)
+
+| # | Residue | State |
+|---|---|---|
+| R-1 | A handle loaded before the key was added stages one orphan Parquet; the commit then refuses, no snapshot, no pointer move. Re-measured on this tree: `stale-handle staging … STAGED 1 file(s)`, `stale-handle commit … ERR … files left=["parquet"] snaps_now=1`; a fresh handle refuses at staging with `added=[]`. No deterministic product path reaches it. | open, owner call |
+| R-2 | An unkeyed table created or registered under a keyed table's location writes plaintext there. The files belong to the other table; main does the same. | open, owner call |
+| R-3 | Ref-only commits publish rows staged before the key was added: the fast-forward `cherrypick_snapshot`, `set_current_snapshot`, `fast_forward` and `CREATE OR REPLACE BRANCH main AS OF VERSION` run; `publish_changes` refuses, by its entry check only. The rows were plaintext on disk before the key existed. | open, owner call |
+| R-4 | Thirteen refused shapes are clean (no moved ref, no stray metadata JSON, no success without work) only through their entry checks; plaintext safety does not rest on them (guard alone: 0 files over 700 + 117 attempts in the re-verify). | recorded |
+| R-5 | The gate test is textual; a catalog an embedder builds itself is outside the guard unless it calls `EncryptionGuardCatalog::install`. | recorded |
+| R-6 | New in fold 2: on a catalog that writes commit metadata through the base table's `FileIO` (Glue), a commit that moves a keyed table's metadata directory refuses. Read from the fork source; not run against AWS. | recorded |
+
+Cards filed: ENC-1-RESIDUE-1, FORK-TABLECOMMIT-UPDATES-1 (a `TableCommit::updates()`
+accessor in the fork, so the `Debug` reader can go), CLUSTER-FEATURE-CI-1.
+
+### Decisions for owner (fold 2)
+
+- Interim, kept by the orchestrator 2026-10-09: `CREATE BRANCH` on a keyed table with no
+  snapshot, `compute_table_stats`, `compute_partition_stats` and `rewrite_table_path`
+  refuse.
+- On a keyed base the commit guard also refuses `AssignUuid`, `AddEncryptionKey` and
+  `RemoveEncryptionKey`. No RePark path sends them; they are off the allow-list because
+  nothing proves them file-free or supported.
+- R-1, R-2, R-3 and the two choices on card ENC-1-RESIDUE-1 items 5 and 6.
+

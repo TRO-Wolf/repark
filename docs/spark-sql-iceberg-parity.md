@@ -1726,6 +1726,11 @@ perfectly good read.
   sentence on every door and names the table as `<namespace>.<table>`. Also refused on a
   keyed table: `compute_table_stats`, `compute_partition_stats`, `rewrite_table_path` and
   `CREATE BRANCH` on a table with no snapshot.
+  Fold 2 (2026-10-09): the commit check is an allow-list of the metadata-only update
+  kinds (an unknown kind refuses), read from the structure of the commit and not from its
+  text, so no property value or column comment can lock a keyed table; table-metadata JSON
+  is writable only in the table's metadata directory. Open residue: card ENC-1-RESIDUE-1
+  (`../task/roadmap/mid-term/enc-1-residue-1-card-2026-10-09.md`).
   Implementing envelope encryption stays fork work (GAP_MATRIX R130) and is not on the
   v1.0 slate.
 - **Divergence (2026-10-09, by ruling, owner can overturn):** the ruling's phrase "as Spark
