@@ -6,6 +6,12 @@ ICE-TSNS-SQL-1 support. The parent `timestamp_ns_cast.rs` holds the two embedded
 casts to Iceberg `timestamp_ns` / `timestamptz_ns` and the `VALUES` timestamp-column conform the
 `spark_ltz_timestamp_cast` analyzer rule calls.
 
+**ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `__repark_cast_timestamp_ns__` is the one conversion
+into a nanosecond wall for every write door, not INSERT's only. `repark-iceberg`'s
+`ntz_store::wall_cast_udf_name` emits its name for a `Timestamp(ns, None)` target from the
+MERGE, UPDATE and overwrite sites; the ANSI door registers it beside the NTZ kernel. The
+kernel itself did not change. pins: ice-tsns-merge-wall-1/C-008
+
 ## Contents
 
 - `tests.rs` — the module's `#[cfg(test)]` suite: nine fraction digits from strings, an explicit

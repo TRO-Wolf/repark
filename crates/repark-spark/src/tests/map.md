@@ -688,6 +688,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and the sweep pins the temporary spellings, the lowercase keyword, an
   `options` alias in the CTAS select list, further non-iceberg providers,
   and the missing-USING shape at their exact end states.
+- `v3_timestamp_ns_door.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):**
+  `ns_wall_udf_name_matches_the_registered_udf` pins `ntz_store::NS_WALL_CAST_UDF_NAME` equal
+  to `timestamp_ns_cast::TIMESTAMP_NS_CAST_NAME`: the write path renders the name as SQL text
+  and cannot import it. pins: ice-tsns-merge-wall-1/C-008
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door on
   `timestamp_ns` / `timestamptz_ns` — string casts keep nine digits (offset honoured),
   INSERT VALUES widens `TIMESTAMP` literals and strings, INSERT SELECT widens microsecond

@@ -141,6 +141,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `dialect.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `on_session_built` also registers
+  the nanosecond wall kernel (`__repark_cast_timestamp_ns__`). The shared MERGE and UPDATE
+  sites in `repark-iceberg` now emit it for a `timestamp_ns` target, as they emit the NTZ
+  kernel for a microsecond one; without the registration the ANSI door answers
+  `UNRESOLVED_ROUTINE` where main stored a value. pins: ice-tsns-merge-wall-1/C-009
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
   onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait).
   `on_session_built` installs integer overflow so a bare `ReparkSession` + this

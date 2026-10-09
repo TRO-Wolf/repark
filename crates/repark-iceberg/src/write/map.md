@@ -578,6 +578,30 @@ repark-core's error map.
   `ltz_instant_cast_sql` / `needs_ltz_instant_cast` / `analyzed_types` serve the MERGE
   renderers. Callers: repark-spark `insert_by_name.rs` and `insert_overwrite.rs`.
   pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
+- `ntz_store.rs`, `update_cast.rs`, `merge/insert.rs`, `predicate_dml/lineage.rs` —
+  **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** a wall-clock target has two units, and each has one
+  kernel. `wall_cast_udf_name(target)` answers the kernel's registered name:
+  `Timestamp(µs, None)` → `__repark_cast_timestamp_ntz__` (`NTZ_WALL_CAST_UDF_NAME`),
+  `Timestamp(ns, None)` → `__repark_cast_timestamp_ns__` (`NS_WALL_CAST_UDF_NAME`, pinned equal
+  to the registered UDF); `wall_cast_sql(expr, target)` renders the call and replaces
+  `ntz_wall_cast_sql`. The four store sites ask it instead of matching microseconds:
+  `store_assignment_cast_sql` (MERGE UPDATE SET and the nested-assignment fold), the MERGE
+  INSERT projection, the identity-UPDATE projection, and `zone_stores`, which now names an
+  Iceberg `timestamp_ns` column as a wall target and wraps an instant source in the kernel of
+  that unit. Before, a nanosecond wall target fell through to the instant path's plain Arrow
+  cast, so an instant stored its UTC wall instead of its session-zone wall.
+  **Why the nanosecond target does not go through the NTZ cast:** that kernel returns and
+  builds microsecond arrays, so it would drop the digits below the microsecond; the
+  nanosecond wall conversion already exists in `repark-functions/src/timestamp_ns_cast.rs`
+  and is the one INSERT's conform runs, so every door now reaches INSERT's kernel and no
+  second nanosecond conversion exists. An overflow (an instant past 2262) therefore answers
+  as INSERT answers: `[CAST_OVERFLOW]` under ANSI, NULL without it; before, these doors
+  raised a raw Arrow overflow in both modes.
+  **Not changed, on purpose:** `is_ltz_instant_target` still matches microseconds only, so a
+  `timestamptz_ns` target takes no wrap (the brief's control; the open mirror finding is
+  parity row ICE-TSNS-SQL-1-R-008), and `refuse_ntz_writes` still gates the microsecond wall
+  target only.
+  pins: ice-tsns-merge-wall-1/C-008
 - `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
   (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI
   matrix stores anywhere. `refuse_negated_null_writes(ctx, table, plan, targets)` follows

@@ -3170,6 +3170,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with the read-back each must produce (`hours(tz)` derived from the spec; the fork
   writes it since RP-28, fork #296 — the fixture's `blocked_on_fork` marker still names
   the closed ask until the recorder re-runs).
+- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-MERGE-WALL-1
+  (2026-10-09):** every cell of the write-door matrix, one test per zone × target × door.
+  A `timestamp_ns` target must store the rule (`expected_wall`) or main's ratified refusal;
+  the 38 cells main got wrong and the 9 where it raised a raw Arrow error are named by
+  `main_was_wrong` / `main_refused_an_answer`, and
+  `test_main_recorded_the_rule_wherever_it_answered_right` checks the fixture against that
+  split (178 right, 38 wrong, 9 raw errors). Every control target (`timestamptz_ns`, and
+  microsecond `TIMESTAMP_NTZ` / `TIMESTAMP` on v3 and v2) must answer main's recorded cell
+  exactly, refusals included. Every carry (DELETE, sibling UPDATE and MERGE, the three
+  maintenance rewrites, both row-level modes) must read back the seeded ticks. Edge pins: an
+  instant past 2262 raises INSERT's `[CAST_OVERFLOW]` under ANSI and stores INSERT's NULL
+  without it on four doors; `UPDATE` with no `WHERE` stores a literal and a NULL. The matrix
+  takes about two minutes on eight workers. Mutant M5 (the UPDATE conform taking zoned
+  targets) reds the `tz_ns` `update_column` control in all three zones.
+  pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-010, C-011, C-012
 - [_ice_tsns_merge_wall_1_doors.py](_ice_tsns_merge_wall_1_doors.py) —
   **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the write-door matrix: three session zones, six
   target column types, nineteen doors over five source types and six carries in both row-level
@@ -3185,6 +3200,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the recorder and what main `40fc916f` stores in each
   of the 1926 cells (the Arrow type and int64 ticks read back, or the refusal). Run it against
   a build of main only; one fresh session and warehouse per door, the three zones in parallel.
+  `--output <path>` measures another build without touching the fixture.
   pins: ice-tsns-merge-wall-1/C-003
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the

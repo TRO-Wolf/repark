@@ -3106,7 +3106,7 @@ still open is `isModifiable`.
   re-read at nine digits. A bare string still keeps nine digits. `EXPLAIN` now lowers ns casts.
   Not in this row: `CAST(ns AS TIMESTAMP)` under `spark.sql.timestampType=TIMESTAMP_NTZ`,
   which still keeps `Timestamp(ns)`, and
-  [R-007](#ice-tsns-sql-1-r-007--open-measured-2026-09-18-merge-writes-a-timestamp-into-timestamp_ns-as-its-utc-wall).
+  [R-007](#ice-tsns-sql-1-r-007--fixed-2026-10-09-ice-tsns-merge-wall-1-every-write-door-stores-the-same-nanosecond-wall).
 - **Apache Spark** — Spark 4.1.2 cannot read or write either type
   (`UnsupportedOperationException: Cannot convert unsupported type to Spark: timestamp_ns`,
   measured by the 2026-09-16 rating), so there is no Spark answer to match; the SQL door
@@ -3127,20 +3127,89 @@ still open is `isModifiable`.
   V3-04. Every value decision is in Rust: the embedded casts in `repark-functions`, the SQL-door
   lowering and INSERT conform in `repark-spark`.
 
-### ICE-TSNS-SQL-1-R-007 — OPEN (measured 2026-09-18): MERGE writes a `TIMESTAMP` into `timestamp_ns` as its UTC wall
+### ICE-TSNS-SQL-1-R-007 — FIXED 2026-10-09 (ICE-TSNS-MERGE-WALL-1): every write door stores the same nanosecond wall
 
-- **repark** — in a session whose zone is not UTC, a MERGE insert or update that writes a
-  `TIMESTAMP` value into a `timestamp_ns` column stores the instant's UTC wall. `INSERT … VALUES`
-  and `INSERT … SELECT` store the session-zone wall (ledger A-1). Measured in America/New_York:
-  `TIMESTAMP '2026-01-02 03:04:05.123456789'` stores `1767341045123456000` through MERGE and
-  `1767323045123456000` through INSERT. In UTC the two paths agree. `timestamptz_ns` columns
-  agree in every zone.
-- **Apache Spark** — cannot write the type. *(oracle: documented — ledger A-1 is this door's
-  rule for a µs instant written into a naive ns column.)*
-- **Pin** — none yet; recorded in `task/ledgers/staging/ice-tsns-sql-1-ledger.md` (R-007).
-- **Rationale** — OPEN, dated 2026-09-18. MERGE widens through the Iceberg write path's Arrow
-  cast, not through the SQL door's INSERT conform. Found while measuring round 2 of this unit.
-  Round 2 did not change it.
+- **repark** — a `timestamp_ns` column is a wall clock, and every write door now stores the
+  same one: an instant (`TIMESTAMP`, `timestamptz_ns`) stores its wall in the session zone, a
+  wall (`TIMESTAMP_NTZ`, `timestamp_ns`, a nine-digit string literal in `INSERT … VALUES`) is
+  stored as it is, and no digit below the microsecond is dropped. Before (main `40fc916f`,
+  measured 2026-10-09 over 321 `timestamp_ns` cells in UTC, Asia/Kolkata and
+  America/New_York): in a zone other than UTC an instant stored its **UTC** wall through
+  `INSERT OVERWRITE`, MERGE insert and update (column, `*` and literal spellings),
+  `UPDATE … SET` of a literal, `writeTo().overwritePartitions()` and
+  `insertInto(overwrite=True)` — 38 cells, for example `TIMESTAMP '2026-01-02 03:04:05.123456789'`
+  in America/New_York stored `1767341045123456000` through MERGE and `1767323045123456000`
+  through INSERT — and `UPDATE t SET v = <column or literal>` with no `WHERE` raised the raw
+  `Arrow error: … arguments need to have the same data type` from a `TIMESTAMP`,
+  `TIMESTAMP_NTZ` or `timestamptz_ns` source. The INSERT doors, `append`,
+  `overwrite(condition)`, `insertInto` and `saveAsTable` were right before and did not move.
+  An instant past the nanosecond range (year 2262) now answers as INSERT does on every door:
+  `[CAST_OVERFLOW]` under ANSI, NULL without it; before, the other doors raised a raw Arrow
+  overflow in both modes. The native ANSI door registers the same kernel. `timestamptz_ns`
+  and microsecond targets, format v2 tables, and the DELETE, UPDATE, MERGE and maintenance
+  carries answer exactly what main answered (1605 control cells).
+- **Apache Spark** — cannot create, describe, read or write the type: Spark 4.1.2 with
+  Iceberg 1.11.0 refuses the DDL (`[UNSUPPORTED_DATATYPE] Unsupported data type "TIMESTAMP_NS"`)
+  and, on a table made through the Iceberg Java API, every statement
+  (`UnsupportedOperationException: Cannot convert unsupported type to Spark: timestamp_ns`),
+  measured 2026-10-09. *(oracle: documented — the rule is the one INSERT already follows,
+  ICE-TSNS-SQL-1 clause 2 and ledger A-1; the pins compute it with Python `zoneinfo`.)*
+- **Pin** — `python/repark/tests/test_ice_tsns_merge_wall_1.py` over the 1926-cell matrix of
+  `_ice_tsns_merge_wall_1_doors.py`, with main's answers in `ice_tsns_merge_wall_1_main.json`;
+  `crates/repark-spark/tests/timestamp_ns_wall_doors.rs` (the review's test and eight doors
+  on the Rust door); `crates/repark-sql/src/v3/create.rs` (the ANSI door);
+  `crates/repark-iceberg/src/write/update_cast.rs` (the kernel per unit).
+- **Rationale** — FIXED 2026-10-09. The four store sites in `repark-iceberg` matched a
+  microsecond wall target only, so a nanosecond one took the instant path's plain Arrow cast.
+  They now ask `ntz_store::wall_cast_udf_name`, which names the NTZ kernel for microseconds
+  and INSERT's own `__repark_cast_timestamp_ns__` for nanoseconds; the unfiltered `UPDATE`
+  runs INSERT's conform. One conversion per unit, no new kernel. Ledger:
+  `task/ledgers/staging/ice-tsns-merge-wall-1-ledger.md`.
+
+### ICE-TSNS-SQL-1-R-008 — OPEN (measured 2026-10-09): a wall written into `timestamptz_ns` is read as UTC by the overwrite and MERGE doors
+
+- **repark** — the mirror of R-007, on the zoned type. In a session whose zone is not UTC, a
+  wall (`TIMESTAMP_NTZ`, `timestamp_ns`) written into a `timestamptz_ns` column is read in the
+  session zone by the INSERT doors (`2026-01-02 03:04:05.123456789` in America/New_York
+  stores `1767341045123456789`) and as UTC (`1767323045123456789`) by `INSERT OVERWRITE`,
+  MERGE insert and update, `overwritePartitions` and `insertInto(overwrite=True)`: 38 of the
+  measured cells. `UPDATE t SET v = <column>` with no `WHERE` from a `TIMESTAMP` or
+  `TIMESTAMP_NTZ` column raises the raw Arrow `arguments need to have the same data type`
+  (6 cells). An instant source agrees on every door.
+- **Apache Spark** — cannot write the type. *(oracle: documented — INSERT's rule, as R-007.)*
+- **Pin** — the recorded cells in `ice_tsns_merge_wall_1_main.json`, held as they are by
+  `test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered`.
+- **Rationale** — OPEN, dated 2026-10-09. ICE-TSNS-MERGE-WALL-1 held a `timestamptz_ns`
+  target as a control that must not move, so it measured this and left it; the kernel
+  (`__repark_cast_timestamptz_ns__`) and the sites are the ones R-007 used. Ledger question Q1.
+
+### ICE-TSNS-SQL-1-R-009 — OPEN (measured 2026-10-09): a nanosecond source into a microsecond column truncates toward zero on some doors
+
+- **repark** — into a microsecond `TIMESTAMP` column, `INSERT OVERWRITE`, MERGE insert,
+  `overwritePartitions` and `insertInto(overwrite=True)` store a `timestamp_ns` or
+  `timestamptz_ns` value truncated toward zero (`-1 ns` stores `0 µs`) and read a wall as
+  UTC, where INSERT floors (`-1 µs`) and reads a wall in the session zone: 36 cells on each
+  format version, UTC included. Into a `TIMESTAMP_NTZ` column every door, INSERT included,
+  truncates a `timestamp_ns` value toward zero.
+- **Apache Spark** — cannot read the source types. *(oracle: documented — ruling Q-21c-8
+  floors a nanosecond value narrowed to microseconds.)*
+- **Pin** — the recorded cells in `ice_tsns_merge_wall_1_main.json`, held as they are by the
+  control test of `test_ice_tsns_merge_wall_1.py`.
+- **Rationale** — OPEN, dated 2026-10-09. Only values before the epoch with digits below
+  the microsecond differ by the truncation. Microsecond targets were a control of
+  ICE-TSNS-MERGE-WALL-1. Ledger question Q2.
+
+### ICE-TSNS-SQL-1-R-010 — OPEN (measured 2026-10-09): `UPDATE` and `DELETE` do not lower the nanosecond cast spellings
+
+- **repark** — `CAST(… AS timestamp_ns)` / `CAST(… AS timestamptz_ns)` inside an `UPDATE`
+  (`SET` or `WHERE`) or a `DELETE … WHERE` refuses `Unsupported SQL type timestamp_ns`;
+  `SELECT`, INSERT and MERGE lower them. A nanosecond column as the `SET` source works.
+- **Apache Spark** — has no such type name. *(oracle: none.)*
+- **Pin** — the `update_literal` cells of `ice_tsns_merge_wall_1_main.json` for the `ns` and
+  `tzns` sources, held as refusals by `test_ice_tsns_merge_wall_1.py`.
+- **Rationale** — OPEN, dated 2026-10-09. A lowering gap in the Spark door's `UPDATE` and
+  `DELETE` statements, not a stored-value defect; out of ICE-TSNS-MERGE-WALL-1's scope.
+  Ledger question Q3.
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 

@@ -13,6 +13,7 @@ use iceberg::table::Table;
 use super::update_cast::incompatible_update_message;
 
 pub const NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ntz__";
+pub const NS_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ns__";
 
 #[must_use]
 pub fn is_ntz_wall_target(data_type: &DataType) -> bool {
@@ -28,8 +29,17 @@ pub fn is_ltz_instant_target(data_type: &DataType) -> bool {
 }
 
 #[must_use]
-pub fn ntz_wall_cast_sql(expr_sql: &str) -> String {
-    format!("{NTZ_WALL_CAST_UDF_NAME}(({expr_sql}))")
+pub fn wall_cast_udf_name(data_type: &DataType) -> Option<&'static str> {
+    match data_type {
+        DataType::Timestamp(TimeUnit::Microsecond, None) => Some(NTZ_WALL_CAST_UDF_NAME),
+        DataType::Timestamp(TimeUnit::Nanosecond, None) => Some(NS_WALL_CAST_UDF_NAME),
+        _ => None,
+    }
+}
+
+#[must_use]
+pub fn wall_cast_sql(expr_sql: &str, target: &DataType) -> Option<String> {
+    wall_cast_udf_name(target).map(|name| format!("{name}(({expr_sql}))"))
 }
 
 #[must_use]
@@ -100,6 +110,9 @@ pub fn zone_stores(
                 Type::Primitive(PrimitiveType::Timestamp) => {
                     Some(DataType::Timestamp(TimeUnit::Microsecond, None))
                 }
+                Type::Primitive(PrimitiveType::TimestampNs) => {
+                    Some(DataType::Timestamp(TimeUnit::Nanosecond, None))
+                }
                 Type::Primitive(PrimitiveType::Timestamptz) => Some(DataType::Timestamp(
                     TimeUnit::Microsecond,
                     Some(Arc::from("+00:00")),
@@ -140,7 +153,6 @@ fn zone_store_frame(
     if planned.len() != targets.len() {
         return Ok(frame);
     }
-    let wall = ctx.udf(NTZ_WALL_CAST_UDF_NAME).ok();
     let mut converted = false;
     let exprs: Vec<Expr> = frame
         .schema()
@@ -148,14 +160,14 @@ fn zone_store_frame(
         .zip(planned.iter().zip(targets))
         .map(|((qualifier, field), (source, target))| {
             let column = Expr::Column(Column::from((qualifier, field.as_ref())));
-            let store = match (target, &wall) {
-                (Some(target), Some(udf))
-                    if is_ntz_wall_target(target)
-                        && matches!(source, DataType::Timestamp(_, Some(_))) =>
-                {
-                    Expr::ScalarFunction(ScalarFunction::new_udf(Arc::clone(udf), vec![column]))
-                }
-                (Some(target), _)
+            let wall = target
+                .as_ref()
+                .filter(|_| matches!(source, DataType::Timestamp(_, Some(_))))
+                .and_then(wall_cast_udf_name)
+                .and_then(|name| ctx.udf(name).ok());
+            let store = match (target, wall) {
+                (_, Some(udf)) => Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![column])),
+                (Some(target), None)
                     if is_ltz_instant_target(target) && needs_ltz_instant_cast(source) =>
                 {
                     let instant = Field::new(field.name(), target.clone(), field.is_nullable());

@@ -8,8 +8,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **ICE-TSNS-MERGE-WALL-1 (2026-10-09), readiness finding R-007:** every write door stores
   the same nanosecond wall. Step 0: the review's test red on main (C-001), Spark 4.1.2 with
   Iceberg 1.11.0 cannot touch `timestamp_ns` (C-002), main measured over 1926 cells with 38
-  wrong `timestamp_ns` values and 15 refusals that have an answer (C-003).
-  `risk_tier: standard`. Branch `fix/ice-tsns-merge-wall-1`.
+  wrong `timestamp_ns` values and 15 refusals that have an answer (C-003). The fix: the 38
+  right (C-004), 1605 control cells and every carry unmoved (C-005), the unfiltered `UPDATE`
+  (C-006), no digit dropped (C-007), one kernel per unit and no new one (C-008), the ANSI
+  door (C-009), overflow as INSERT answers (C-010), five mutants (C-011), gates (C-012).
+  Three clauses are OPEN, each a question: the `timestamptz_ns` mirror (C-013, Q1), the
+  nanosecond-to-microsecond narrowing (C-014, Q2), `UPDATE` / `DELETE` cast lowering
+  (C-015, Q3). `risk_tier: standard`. Branch `fix/ice-tsns-merge-wall-1`.
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
   under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort

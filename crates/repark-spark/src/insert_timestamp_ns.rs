@@ -16,7 +16,7 @@ pub(crate) fn before_analysis(
     plan: LogicalPlan,
     timestamp_cells: &[(usize, usize)],
 ) -> Result<LogicalPlan> {
-    let Some(targets) = ns_insert_targets(&plan) else {
+    let Some(targets) = ns_store_targets(&plan) else {
         return Ok(plan);
     };
     let LogicalPlan::Dml(dml) = plan else {
@@ -65,7 +65,7 @@ pub(crate) fn before_analysis(
 }
 
 pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
-    let Some(targets) = ns_insert_targets(&plan) else {
+    let Some(targets) = ns_store_targets(&plan) else {
         return Ok(plan);
     };
     let LogicalPlan::Dml(dml) = plan else {
@@ -107,31 +107,28 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
     rebuild(dml, exprs, input, changed)
 }
 
-fn ns_insert_targets(plan: &LogicalPlan) -> Option<Vec<Option<bool>>> {
+fn ns_store_targets(plan: &LogicalPlan) -> Option<Vec<Option<bool>>> {
     let LogicalPlan::Dml(dml) = plan else {
         return None;
     };
-    if !matches!(dml.op, WriteOp::Insert(_)) {
-        return None;
-    }
+    let wall_only = match dml.op {
+        WriteOp::Insert(_) => false,
+        WriteOp::Update => true,
+        _ => return None,
+    };
     let schema = dml.target.schema();
     let fields = schema.fields();
     let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
         return None;
     };
-    if projection.expr.len() != fields.len()
-        || !fields
-            .iter()
-            .any(|field| timestamp_ns_target(field.data_type()).is_some())
-    {
+    if projection.expr.len() != fields.len() {
         return None;
     }
-    Some(
-        fields
-            .iter()
-            .map(|field| timestamp_ns_target(field.data_type()))
-            .collect(),
-    )
+    let targets: Vec<Option<bool>> = fields
+        .iter()
+        .map(|field| timestamp_ns_target(field.data_type()).filter(|zoned| !(wall_only && *zoned)))
+        .collect();
+    targets.iter().any(Option::is_some).then_some(targets)
 }
 
 pub(crate) fn timestamp_typed_values_cells(statement: &Statement) -> Vec<(usize, usize)> {

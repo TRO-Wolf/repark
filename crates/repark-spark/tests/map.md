@@ -67,6 +67,17 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   literal into a `timestamp_ns` column must store one value. Red on main `40fc916f`
   (INSERT `1767323045123456000`, MERGE `1767341045123456000`).
   pins: ice-tsns-merge-wall-1/C-001
+  **The Rust-door matrix (same unit):** six `timestamptz_ns` instants with non-zero digits
+  below the microsecond (before the epoch, on each side of New York's gap, the two instants
+  of one overlap wall) go through eight doors — `INSERT … SELECT`, `INSERT OVERWRITE`,
+  `REPLACE WHERE`, MERGE insert, MERGE `INSERT *`, MERGE update, `UPDATE` with and without a
+  `WHERE` — in UTC, America/New_York and Asia/Kolkata.
+  `every_door_stores_a_nanosecond_instant_as_its_session_wall` asserts the Arrow type and the
+  int64 walls of a `timestamp_ns` target;
+  `every_door_keeps_a_nanosecond_instant_in_a_zoned_column` is the `timestamptz_ns` control.
+  The expected walls are the facade matrix's `zoneinfo` values. Mutants M1, M2 and M3 of
+  the ledger each red the wall test at the door they break.
+  pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-011
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to

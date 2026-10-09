@@ -1,12 +1,15 @@
 """ICE-TSNS-MERGE-WALL-1: record what the installed build stores in every matrix cell.
 
 Run it against a build of main to refresh ``ice_tsns_merge_wall_1_main.json``:
-``python _record_ice_tsns_merge_wall_1_main.py <commit> [<zone>]``. With a zone it prints that
-zone's cells as JSON, which is how the three zones record in parallel.
+``python _record_ice_tsns_merge_wall_1_main.py <commit>``. ``--output <path>`` writes
+elsewhere, which is how a head build is measured for comparison without touching the fixture.
+``--zone <zone>`` prints that zone's cells as JSON; the parent uses it to record the three
+zones in parallel.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 import sys
@@ -36,14 +39,20 @@ def record_zone(zone: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    """Record one zone to stdout, or every zone in parallel into the fixture."""
-    if len(sys.argv) == 3:
-        json.dump(record_zone(sys.argv[2]), sys.stdout)
+    """Record one zone to stdout, or every zone in parallel into the fixture or ``--output``."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("commit")
+    parser.add_argument("--zone")
+    parser.add_argument("--output", type=Path, default=FIXTURE)
+    arguments = parser.parse_args()
+    if arguments.zone:
+        json.dump(record_zone(arguments.zone), sys.stdout)
         return
-    commit = sys.argv[1]
     workers = [
         subprocess.Popen(
-            [sys.executable, __file__, commit, zone], stdout=subprocess.PIPE, text=True
+            [sys.executable, __file__, arguments.commit, "--zone", zone],
+            stdout=subprocess.PIPE,
+            text=True,
         )
         for zone in doors.ZONES
     ]
@@ -53,8 +62,12 @@ def main() -> None:
         if worker.returncode != 0:
             raise SystemExit(worker.returncode)
         cells.update(json.loads(output))
-    document = {"recorded_at_commit": commit, "moments": list(doors.MOMENTS), "cells": cells}
-    FIXTURE.write_text(json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n")
+    document = {
+        "recorded_at_commit": arguments.commit,
+        "moments": list(doors.MOMENTS),
+        "cells": cells,
+    }
+    arguments.output.write_text(json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n")
     print(len(cells), "cells")
 
 

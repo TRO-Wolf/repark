@@ -1024,6 +1024,16 @@ pins: rp-4-fork-repin/C-005, C-006
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.
   pins: unresolved-routine-1/C-006
+- `insert_timestamp_ns.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the conform also runs
+  for an `UPDATE` plan (`ns_store_targets`), on its naive `timestamp_ns` targets only. An
+  `UPDATE` with no `WHERE` is not an identity DML: DataFusion plans it as a `Dml(Update)` over
+  a projection that casts each `SET` value to the column type, and the fork's update node
+  then raised `arguments need to have the same data type` for a microsecond or zoned source.
+  `before_analysis` peels that planner cast into the nanosecond wall kernel before the
+  session analyzer can narrow a `timestamptz_ns` source to microseconds; `after_analysis`
+  wraps what is still not the target type. A `timestamptz_ns` target is left out: it is the
+  unit's control and stays as main answers (parity row ICE-TSNS-SQL-1-R-008).
+  pins: ice-tsns-merge-wall-1/C-006
 - `insert_timestamp_ns.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door's INSERT conform
   for Iceberg `timestamp_ns` / `timestamptz_ns` target columns, called from `spark_ast`.
   `before_analysis` replaces the planner's `CAST(… AS Timestamp(ns))` over a non-column source
