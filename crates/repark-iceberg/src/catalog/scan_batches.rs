@@ -100,3 +100,55 @@ fn scalar_to_datum(value: &ScalarValue) -> Option<Datum> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use datafusion::arrow::array::Int32Array;
+    use datafusion::arrow::datatypes::{DataType, Field, Schema};
+
+    use super::*;
+
+    fn source_batch(rows: usize) -> RecordBatch {
+        let schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int32, false)]));
+        let ids = Int32Array::from(vec![1_i32; rows]);
+        RecordBatch::try_new(schema, vec![Arc::new(ids)]).expect("source batch")
+    }
+
+    fn empty_schema() -> SchemaRef {
+        Arc::new(Schema::empty())
+    }
+
+    #[test]
+    fn empty_projection_keeps_the_batch_row_count() {
+        let source = source_batch(4);
+        let schema = empty_schema();
+        let mut projection = None;
+        let conformed = conform_batch(&source, &schema, &mut projection).expect("conforms");
+        assert_eq!(conformed.schema(), schema);
+        assert_eq!(conformed.num_columns(), 0);
+        assert_eq!(conformed.num_rows(), 4);
+    }
+
+    #[test]
+    fn empty_projection_keeps_an_empty_batch_empty() {
+        let source = source_batch(0);
+        let schema = empty_schema();
+        let mut projection = None;
+        let conformed = conform_batch(&source, &schema, &mut projection).expect("conforms");
+        assert_eq!(conformed.schema(), schema);
+        assert_eq!(conformed.num_columns(), 0);
+        assert_eq!(conformed.num_rows(), 0);
+    }
+
+    #[test]
+    fn empty_projection_counts_each_batch_across_a_stream() {
+        let schema = empty_schema();
+        let mut projection = None;
+        for rows in [3_usize, 0, 1] {
+            let conformed =
+                conform_batch(&source_batch(rows), &schema, &mut projection).expect("conforms");
+            assert_eq!(conformed.num_columns(), 0);
+            assert_eq!(conformed.num_rows(), rows);
+        }
+    }
+}
