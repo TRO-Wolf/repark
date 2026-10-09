@@ -8,7 +8,7 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 
 ## Contents
 
-- `pyproject.toml` — hatchling package; `pyarrow>=25` and `pydantic>=2.10,<3`
+- `pyproject.toml` — hatchling package; `pyarrow>=25.0.1` (in step with the wheel, 2026-10-09) and `pydantic>=2.10,<3`
   (**PYC-4**, 2026-08-22 — harness records are BaseModel; dual-wire stays a
   dataclass because it runs as bare `python3`); `record` extra (`pyspark`) for
   golden refresh; `live-db` extra (`psycopg[binary]`) for the C-0 live cells.

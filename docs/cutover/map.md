@@ -23,7 +23,9 @@ named only as "the cutover pipeline" here.
   replace-publish path, so a second gold `dbt run` failed) is **FIXED at pin `edc38c6a`, live
   pending** (F-GLUE-REPLACE-1 + RP-20); the twice legs and gold twice in `aws-acceptance.yml`
   (ICE-GOLD-TWICE-1) await their first run — the post-merge dispatch.
-  Inventory §8 carries the rulings.
+  Inventory §8 carries the rulings. §12 (2026-10-09) is a readiness note: the qualified scope, the
+  v3 declared subset with links to each row or card, and the two qualification gaps. The
+  assessment is superseded on its own header (2026-09-16); §12 points and adds no rows.
 
 ## Pointers
 

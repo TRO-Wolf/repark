@@ -24,6 +24,20 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   question: the nested microsecond `TIMESTAMP_NTZ` split (C-017, Q4, first for the owner), the
   unfiltered `UPDATE`'s overflow class under ANSI (C-020, Q5), the kernel name on the ANSI
   door (C-022, Q6), three raw nested refusals (C-026, Q7).
+- [cross-join-condition-1-ledger.md](cross-join-condition-1-ledger.md) —
+  **CROSS-JOIN-CONDITION-1 (2026-10-08), from the STAMP-2-R5P6-2 hand-back:** a cross join with
+  a condition ignored it (12 rows where Spark answers 2); the H1 door now routes cross-with-condition
+  onto the inner path on both routes (C-001), `crossJoin` and `join(None, "cross")` are unmoved
+  (C-002), two self-join shapes answer as inner (C-003), shared-name and Column-list refusals are
+  kept (C-004), four mutations (C-005), neighbours unchanged (C-006), card and maps closed (C-007).
+  Fold 1 (2026-10-08): route assertions with the inequality and false cells SQL-only, live Spark
+  self-join literals, and the Spark-refused leniency pinned as cross-equals-inner, carried OPEN
+  (C-008) to card JOIN-CONDITION-REFUSALS-1.
+  Fold 2 (2026-10-08): the `JoinConditionRefusals` analyzer rule refuses those conditions with
+  Spark's class, condition and text on every how of both doors (C-008 PROVEN); the card is closed.
+  Fold 3 (2026-10-09): the refusals answer the accessors with no rule header (pins assert them);
+  the card re-opens narrowed to residues R-CJC-1..R-CJC-5.
+  `risk_tier: standard`. Branch `fix/cross-join-condition-1`.
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
   under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort
@@ -2257,3 +2271,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   is the owner's decision. `risk_tier: standard`. Branch
   `fix/threaded-collect-segv-1`.
   pins: threaded-collect-segv-1/C-001, C-002
+- [empty-projection-count-1-ledger.md](../completed/empty-projection-count-1-ledger.md) —
+  **EMPTY-PROJECTION-COUNT-1 (2026-10-09), in flight:** `COUNT(*)` plans an
+  empty projection and the shared `conform_batch` rebuild refused it, so the
+  changelog, incremental, lineage and micro-batch readers failed
+  engine-internal. The four-caller audit (C-001), the base + Spark measurement
+  (C-008), the changelog (C-002), incremental (C-003), lineage (C-004) and
+  micro-batch (C-005) pins, the shared-site units (C-006), the neighbour guards
+  (C-007) and the gates + card filing (C-009). `risk_tier: standard`. Branch
+  `fix/empty-projection-count-1`.
+  pins: empty-projection-count-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
