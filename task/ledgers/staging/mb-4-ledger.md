@@ -384,6 +384,25 @@ cause. One record per variant with no §4 row, for item 2's mapper round.
   (first trigger): `STREAM_FAILED` with the variant as the cause.
   Text: the corrupt-offset guidance with table, snapshot, position and file count.
 
+## Round-3c carry-over (2026-10-08)
+
+- Items 5–8 landed (C-024, C-025, C-026, C-027, C-028); items 9–12 move to
+  round 4, item 15 (registry rows, ledger close) after them.
+- `readStream`/`streams`/`writeStream` still refuse exactly as on main: no
+  `session_core.py` edit, no SES-DECL row flips.
+- DM-1 stays a dated divergence with an oracle cell and a Spark-matching card
+  owed in round 4 (D-39); the zero-column `count(*)` failures on the
+  changelog, incremental and lineage doors each owe a card too (D-44).
+- `awaitAnyTermination`/`resetTerminated` are wired and pinned to the scratch
+  y-sequence, but no MB-0c oracle cell covers them; the remaining deferred
+  cells ride with their items. W-Q4 binds item 9 by its lean; W-Q5 is still
+  with the orchestrator for item 12.
+- Neighbours at close: the round-2 selection collects 69 tests with per-test
+  outcomes identical at 6c463029 and head (69 passed both, zero flips). Summary
+  skips read 6 at base and 9 at head; the 3 extra are whole-module collection
+  skips for missing `duckdb` in the older `.venv` (the fresh worktree sync has
+  it), in smoke files this round never touches.
+
 ## Round-3 carry-over (2026-10-08)
 
 - Items 2–3: blocked on the hand-back's P1 (mapper home) and P2 (DM-3 home).
