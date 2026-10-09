@@ -8003,7 +8003,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_mb_4_streaming_foreach.py::test_foreach_door_replays_mb0_w4_stamped` and
   `test_mb_4_streaming_wireup.py::test_foreach_door_first_pin_write_to_commits_once_stamped`
   now read one stamped snapshot per batch.
-  pins: mb-4-foreach-eo/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-014
+  The kill pins mirror the MB-4 verify's choreographies, which were also re-run from its own
+  scripts (the MB-4-FOREACH-EO ledger holds the counts).
+  pins: mb-4-foreach-eo/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012, C-014
 - [test_mb_4_streaming_foreach.py](test_mb_4_streaming_foreach.py) — **MB-4 round 3b
   (2026-10-08):** the foreach-door battery, split out so the wireup battery stays
   under its ceiling: MB0-T2 batches, MB0-R1 resume rows, MB0-W4 stamped appends,

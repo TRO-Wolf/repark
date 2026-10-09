@@ -48,7 +48,8 @@ directory holds the piece split out of it. The test files of the module stay bes
   - **Pins.** `sink_offsets_body_scope_tests.rs` (a `#[path]` child of the probe module, in
     `write/`): the claim with no token in the extras and the second write's refusal; no claim
     outside the scope; `unstamped_above` over a stamped and a foreign snapshot; the guard's
-    refusal, with another table passing; the stamped commit through the guard and the refusal
+    refusal of a commit and of a table replacement, with another table passing both; the
+    stamped commit through the guard and the refusal
     of what follows it; a stale guard; a spawned task; the unknown outcome latched.
   pins: mb-4-foreach-eo/C-001, C-004, C-006, C-009
 - `append_fence.rs` — **MB-2c closing slice (2026-10-07, owner ruling ~20:55 EDT:

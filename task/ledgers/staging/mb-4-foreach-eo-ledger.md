@@ -203,21 +203,137 @@ one process the two bodies never overlap: `BatchScope::enter` holds one scope pe
   - **Default acted on:** the `toTable` door's rule (MB-3 C-007 d, e): the C-008 walk; found is
     durable, not found is `RecoveryRequired(CommitOutcomeUnknown)`; never a re-submit.
 
+## Amendments to the design note — 2026-10-09 (found while building; the note above is as committed)
+
+- **A-1. The ambient scope is a thread-local, not a Tokio task-local.** `repark-iceberg` has no
+  Tokio dependency outside its tests and the brief forbids a dependency edit. `scope_body` wraps
+  the body's future and sets the thread-local for each poll, restoring the outer value when the
+  poll returns. The reach is the same as the note describes.
+- **A-2. A third reader of the scope: the SQL doors' routing.** The first public-door run was
+  red: a plain `INSERT INTO sink` from the body landed unstamped and unseen by the guard. Both
+  SQL doors send a plain `INSERT`, `UPDATE` and `DELETE` to the fork's table provider unless a
+  session snapshot property is set (`session_write_conf_is_set`), and only the RePark-owned arms
+  claim a stamp. That is why the sketch put the token in the session config. Inside a body scope
+  `session_write_conf_is_set` now answers true, so those statements take the owned arms, the same
+  route any session with a snapshot property takes. Mutant M8 pins it.
+- **A-3. `DROP TABLE sink` and a drop-and-recreate are not refused.** The guard does not cover
+  `drop_table` or `rename_table`: the public pin
+  `test_spark_stop_raises_first_recovery_after_releasing` already holds the MB-3 answer
+  (C-018 d), and a narrow fix leaves it. A drop alone ends `STREAM_FAILED` (the sink no longer
+  loads); a drop-and-recreate ends `RecoveryRequired(UnstampedSinkCommit)`. `ALTER TABLE …
+  RENAME` fails on its own on the memory catalog and was not measured further.
+- **A-4. Table replacement is refused through `publish_replace_table`.** `createOrReplace()`, RTAS
+  and `saveAsTable` in overwrite mode commit through that catalog call, not `update_table`; the
+  first measurement showed them landing and being caught only after the fact. The guard now
+  refuses them before they land.
+- **A-5. A failed body is not audited for unstamped snapshots.** The outcome table's row "raises
+  before its sink commit" stands as written; a body that raised after a write that slipped the
+  scope ends `BatchFailed`, not `UnstampedSinkCommit`. The check would cost a sink load on every
+  failure and would replace the body's own error text. The slipped write is named on the first
+  batch that returns.
+- **A-6. Two `DELETE` shapes refuse MBE-19.** A `DELETE` with no predicate and a `DELETE` that
+  matches no row commit outside the two row-level arms, so the guard refuses them. A row-level
+  `DELETE` that rewrites a file is stamped. The no-match refusal depends on the data; it is safe
+  (nothing lands) and it is recorded as an observation for the owner.
+- **A-7. The typed refusal wins over the body's own error.** When the scope holds a refusal and
+  the body raised, the query ends with the refusal even if the body caught it and later raised
+  something else. The scope cannot tell the two apart.
+- **A-8. A `MERGE` with only `WHEN NOT MATCHED THEN INSERT`** commits through the append arm and
+  needs no isolation property (measured: `append`, epoch 0).
+
+## Measured write shapes — 2026-10-09 (public door, one body each, sink seeded with two snapshots)
+
+| shape | measured answer |
+|---|---|
+| `writeTo(sink).append()`, `INSERT INTO … SELECT`, `INSERT INTO … VALUES`, `df.write.insertInto`, `saveAsTable` (append) | stamped `append` |
+| `MERGE INTO` with a matched clause, serializable | stamped `overwrite` |
+| `MERGE INTO`, insert-only, default isolation | stamped `append` |
+| `UPDATE`, row-level `DELETE`, serializable | stamped `overwrite` |
+| second append in one epoch | `SinkCommittedTwice`; the first lands once |
+| `INSERT OVERWRITE`, `overwritePartitions()`, `overwrite(condition)`, `createOrReplace()`, RTAS, `saveAsTable` (overwrite), `TRUNCATE`, `DELETE` with no predicate, `DELETE` matching no row, `ALTER TABLE … SET TBLPROPERTIES`, `ADD COLUMN`, `CREATE BRANCH`, `INSERT INTO sink.branch_x`, `expire_snapshots`, `rewrite_data_files`, `rewrite_manifests`, `rollback_to_snapshot` | `UnstampedSinkWrite`; sink rows, snapshots and properties unchanged |
+| CTAS onto the sink | `TABLE_OR_VIEW_ALREADY_EXISTS`, as on main |
+| `DROP TABLE sink` | `STREAM_FAILED`, the sink does not load (unchanged) |
+| a sink write from another Python thread, no stamped commit | `RecoveryRequiredException`, `UnstampedSinkCommit` |
+
+## Hand mutants — 2026-10-09
+
+| id | mutant | red pins |
+|---|---|---|
+| M1 | the claim ignores the ambient scope (`ambient_token` filtered out) | 4 in `sink_offsets` body-scope pins, 11 in `repark-core` microbatch (the stamp pin, the durable-epoch pin, the second-write pin, the foreach race, both unknown-outcome pins and five more) |
+| M2 | the guard admits a sink commit whenever nothing is committed yet | 2 guard pins, 1 driver pin (`an_unstampable_commit_to_the_sink_refuses_before_it_lands`) |
+| M3 | a body that fails after its commit does not record the epoch durable | 2 driver pins |
+| M4 | the driver never runs the unstamped-head check | 2 driver pins |
+| M5 | the driver ignores the scope's typed refusal | 3 driver pins, the foreach race among them (the loser no longer names the winner) |
+| M6 | the body scope is not restored after a poll | 2 `sink_offsets` pins, 2 driver pins |
+| M7 | the guard's replacement check is inverted | 1 guard pin (added after the mutant first survived at the Rust level) |
+| M8 | the SQL routing ignores the body scope (native build) | 9 of 25 public-door pins |
+
+M1 is also the red-first evidence for the Rust pins: it restores the base's claim behaviour. The
+public-door battery was run red on a native build of the base tree before the fix: 14 of its
+first 15 pins failed, each on the defect (unstamped snapshots, duplicated ids, no refusal), and
+the no-sink-write pin passed.
+
+## Exactly-once through the public doors — 2026-10-09
+
+The verify's scripts were run from a scratch copy with two edits and no other change: the
+interpreter and script directory point at this branch's build, and each session calls the private
+`_native._streaming_tests_allow_local_catalog` seam, because fold 1 made the public start doors
+refuse a memory catalog (MBE-8) after the verify ran. The verdict does not list its 18 scenarios
+by name; the 12 choreographies of its driver script and the 9 cases of its multi-query script were
+run.
+
+| scenario | source rows | sink rows | duplicates | lost | epochs |
+|---|---|---|---|---|---|
+| `f_writeraise` | 24 | 24 | 0 | 0 | 6, no gap |
+| `f_exitafterwrite` | 24 | 24 | 0 | 0 | 6, no gap |
+| `f_kill` (10 random kills) | 120 | 120 | 0 | 0 | 30, no gap |
+| `f_killcommit` (8 kills at a commit) | 80 | 80 | 0 | 0 | 20, no gap |
+| `f_raise`, `f_exitbody` | 24 | 24 | 0 | 0 | 6, no gap |
+| `f_stop`, `t_stop` | 136 | 136 | 0 | 0 | 34, no gap |
+| `f_sparkstop`, `t_sparkstop` | 100 | 100 | 0 | 0 | 25, no gap |
+| `t_kill` | 120 | 120 | 0 | 0 | 30, no gap |
+| `t_killcommit` | 80 | 80 | 0 | 0 | 20, no gap |
+
+The four that the verify counted as violations (4, 4, 12 and 16 duplicates) are exact, and each
+sink now holds one snapshot per epoch (6, 6, 30, 20) where it held two. The six kill and
+write-then-raise scenarios were run again on the final build with the same counts. The verify's
+one-process repro ends `sink 1, 2, 3`, one snapshot `append / epoch 0 / 3 rows`.
+
+The multi-query script's nine cases answer as its own text expects (refusals `INPUTS_CHANGED`,
+`SINK_BUSY`, the duplicate-name refusal; the two-door and batch-insert cases exact), with one
+artefact: the case "same name, same checkpoint, source swapped" showed sink `0, 1, 2, 3, 3, 4`.
+Run alone it shows `0, 1, 2, 3, 4`. The extra row comes from the script: an earlier case leaves a
+`toTable` query running when its second start refuses, and the script then drops and re-creates
+the sink under it. See "Observed, out of scope".
+
+## Observed, out of scope — 2026-10-09
+
+- **A running `toTable` query keeps writing after its sink is dropped and re-created under the
+  same name.** The driver loads the sink by name for each batch and does not compare its uuid with
+  the one the query registered on, so the next batch lands in the new table. The `foreachBatch`
+  door has had this check since MB-3 C-018 (d). Not touched: the `toTable` door is out of scope.
+- **The no-match `DELETE` refusal** (A-6) would go away if the metadata-delete commit claimed the
+  stamp as a fourth site; the sketch names three.
+- **The scratch clone the verify's scripts name** now holds another lane's branch. One probe file
+  was copied into its `tests` directory by mistake during the red run, failed at import, and was
+  removed at once; `git status` there was clean before and after.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | A body's append to the declared sink lands as one snapshot that carries the epoch stamp and the offsets property, and the driver writes no trailing stamp-only snapshot for that epoch. | Driver-level pin plus the public-door pin. | **OPEN** | Closes when the red pins of step 2 are green. |
-| C-002 | A body that writes the sink and then raises leaves the epoch durable; the restart resumes at the next epoch and the sink holds each source row once. | Driver-level pin, the public-door pin, the verify's `f_writeraise`. | **OPEN** | As C-001. |
-| C-003 | A process that dies after the body's sink write, at a random moment, or at a sink commit, restarts with each source row once in the sink. | Subprocess pins on the public door; the verify's `f_exitafterwrite`, `f_kill`, `f_killcommit`. | **OPEN** | As C-001. |
-| C-004 | A second stamped write to the sink in one epoch refuses `SinkCommittedTwice`, the query ends with that typed error, and the sink holds the first write once. | Driver-level pin plus the public-door pin. | **OPEN** | As C-001. |
-| C-005 | `MERGE INTO sink` from a body is stamped in its own snapshot under serializable isolation. | Public-door pin. | **OPEN** | As C-001. |
-| C-006 | An overwrite of the sink from a body refuses `UnstampedSinkWrite` before anything commits, and so does every other shape the design table refuses. | Public-door pins per shape; guard pins in `repark-iceberg`. | **OPEN** | As C-001. |
-| C-007 | A body that never writes the sink still gets the driver's stamp-only snapshot, one per epoch. | Driver-level pin plus the public-door pin. | **OPEN** | As C-001. |
-| C-008 | A body that writes a second table leaves that table unstamped and unfenced, and the sink exactly-once. | Public-door pin. | **OPEN** | As C-001. |
-| C-009 | A body that made no stamped commit while an unstamped snapshot moved the sink's head ends `RecoveryRequired(UnstampedSinkCommit)` and writes no stamp. | Driver-level pin. | **OPEN** | As C-001. |
-| C-010 | Two runs of one query racing through `foreachBatch` bodies land every row once; the loser ends `Fenced`. | Driver-level race pin, 5 runs. | **OPEN** | As C-001. |
-| C-011 | The `toTable` door is unchanged: its pins, the race pins and its kill scenarios answer as at the base. | `table_door_tests.rs`, `race_tests.rs` 5 times, the verify's `t_*` scenarios. | **OPEN** | As C-001. |
-| C-012 | The verify's 18 exactly-once scenarios through the public doors report 0 violations. | The verify's own scripts, run unchanged apart from the interpreter path. | **OPEN** | As C-001. |
-| C-013 | Five hand mutants of the new code each turn at least one pin red. | The mutant table. | **OPEN** | As C-001. |
-| C-014 | The registry carries the side-effect contract (both halves), MBE-13 and `UnstampedSinkCommit` as reachable through the public door, and MBE-19. | The registry rows and the sketch §4 row. | **OPEN** | As C-001. |
+| C-001 | A body's append to the declared sink lands as one snapshot that carries the epoch stamp and the offsets property, and the driver writes no trailing stamp-only snapshot for that epoch. | Driver-level pin plus the public-door pin. | **PROVEN** | `foreach_tests.rs::the_foreach_batch_door_stamps_the_body_s_own_commit` (`stamp 0 with 3 rows, stamp 1 with 2 rows`, no Spark key, no token key, no token in the shared session); `sink_offsets_body_scope_tests.rs::a_commit_inside_the_body_scope_claims_without_a_token_in_its_extras`; public door `test_body_append_carries_the_epoch_stamp_in_its_own_snapshot` and `test_body_insert_into_carries_the_epoch_stamp` (`append / 0 / 2`, `append / 1 / 1`). Mutants M1, M8. pins: mb-4-foreach-eo/C-001 |
+| C-002 | A body that writes the sink and then raises leaves the epoch durable; the restart resumes at the next epoch and the sink holds each source row once. | Driver-level pin, the public-door pin, the verify's `f_writeraise`. | **PROVEN** | `foreach_tests.rs::a_body_that_fails_after_its_sink_write_leaves_the_epoch_durable` (`BatchFailed`, durable epoch 0, the restart sees only epoch 1, ids `1..5` once); `test_write_then_raise_restarts_without_a_duplicate`; `f_writeraise` 24 of 24, 0 duplicates. Mutant M3. pins: mb-4-foreach-eo/C-002 |
+| C-003 | A process that dies after the body's sink write, at a random moment, or at a sink commit, restarts with each source row once in the sink. | Subprocess pins on the public door; the verify's `f_exitafterwrite`, `f_kill`, `f_killcommit`. | **PROVEN** | `test_exit_after_the_sink_write_restarts_without_a_duplicate` (24 rows), `test_kills_at_sink_commits_restart_without_a_duplicate` (5 kills, 48 rows), `test_random_kills_restart_without_a_duplicate` (6 kills, 64 rows); the three verify scenarios exact (table above). pins: mb-4-foreach-eo/C-003 |
+| C-004 | A second stamped write to the sink in one epoch refuses `SinkCommittedTwice`, the query ends with that typed error, and the sink holds the first write once. | Driver-level pin plus the public-door pin. | **PROVEN** | `exactly_once_tests.rs::a_second_sink_write_in_one_epoch_refuses_and_the_first_stays_once` (the typed error, durable epoch 0, one snapshot, ids `1, 2, 3`); `test_second_append_in_one_epoch_refuses_mbe13` (`STREAM_FAILED`, `[REPARK_MICROBATCH.SINK_COMMITTED_TWICE]`); `test_swallowed_second_append_leaves_one_commit_per_epoch`. Mutants M1, M3, M5. pins: mb-4-foreach-eo/C-004 |
+| C-005 | `MERGE INTO sink` from a body is stamped in its own snapshot under serializable isolation. | Public-door pin. | **PROVEN** | `test_merge_body_is_stamped_under_serializable_isolation` (a raise after the merge at epoch 1, the restart runs no body, ids `1, 2, 3`, epochs `0, 1`); `test_row_level_statement_is_stamped_under_serializable_isolation` for `UPDATE` and `DELETE` (`append / none`, `overwrite / 0`, `overwrite / 1`). pins: mb-4-foreach-eo/C-005 |
+| C-006 | An overwrite of the sink from a body refuses `UnstampedSinkWrite` before anything commits, and so does every other shape the measured table refuses. | Public-door pins per shape; guard pins in `repark-iceberg`. | **PROVEN** | `test_unstampable_sink_write_refuses_before_it_commits` over eleven shapes (rows, snapshot log and properties unchanged each time); the six further shapes of the measured table by probe; `sink_offsets_body_scope_tests.rs::the_guard_refuses_an_unstampable_sink_commit_and_passes_another_table` and `::the_guard_admits_the_stamped_commit_and_refuses_what_follows_it`; `exactly_once_tests.rs::an_unstampable_commit_to_the_sink_refuses_before_it_lands`. Mutants M2, M7. A-3 records the two shapes the design note listed as refused and that are not. pins: mb-4-foreach-eo/C-006 |
+| C-007 | A body that never writes the sink still gets the driver's stamp-only snapshot, one per epoch. | Driver-level pin plus the public-door pin. | **PROVEN** | `exactly_once_tests.rs::a_body_without_a_sink_write_gets_one_stamp_only_snapshot_per_epoch`; `test_body_without_a_sink_write_gets_the_stamp_only_commit` (green on the base build too: the behaviour is kept). pins: mb-4-foreach-eo/C-007 |
+| C-008 | A body that writes a second table leaves that table unstamped and unfenced, and the sink exactly-once. | Public-door pin. | **PROVEN** | `test_second_table_is_a_side_output_and_the_sink_stays_exact`: the side write runs before the sink write, the body raises after both at epoch 0, and after the restart the side table holds `1, 2, 3` in two unstamped snapshots and the sink `1, 2, 3` in epochs `0, 1`. The side table shows no duplicate here because the failed epoch had committed; the registry row states the at-least-once half, which the failed-before-commit pin (`a_failed_body_fails_the_query_and_the_restart_replays_its_epoch`) shows as a replayed body. pins: mb-4-foreach-eo/C-008 |
+| C-009 | A body that made no stamped commit while an unstamped snapshot moved the sink's head ends `RecoveryRequired(UnstampedSinkCommit)` and writes no stamp. | Driver-level pin. | **PROVEN** | `exactly_once_tests.rs::a_sink_write_outside_the_body_scope_with_no_stamped_commit_ends_recovery_required` (the reason names the unstamped snapshot, no stamp, durable none) and `::a_sink_write_the_guard_cannot_see_ends_recovery_required`; `::a_foreign_snapshot_beside_a_stamped_epoch_is_tolerated` for the other half of R-3; public door `test_sink_write_from_another_thread_ends_recovery_required`. Mutants M4, M6. pins: mb-4-foreach-eo/C-009 |
+| C-010 | Two runs of one query racing through `foreachBatch` bodies land every row once; the loser ends `Fenced`. | Driver-level race pin, 5 runs. | **PROVEN** | `race_tests.rs::two_sessions_racing_foreach_bodies_land_every_row_exactly_once`: 50 seeded iterations, every row once, every epoch stamped once by one run, the loser drained or naming the winner; 43 of 50 iterations refused a staged write (floor 10). 5 of 5 runs green. Mutants M1, M5. pins: mb-4-foreach-eo/C-010 |
+| C-011 | The `toTable` door is unchanged: its pins, the race pins and its kill scenarios answer as at the base. | `table_door_tests.rs`, `race_tests.rs` 5 times, the verify's `t_*` scenarios. | **PROVEN** | `table_door_tests.rs`, `fence_tests.rs` and the `toTable` race pin are unedited in their assertions and green (the only edits: two constants made visible to a sibling test module, and `race_once` takes the door); `race_tests` 5 of 5; `t_stop`, `t_kill`, `t_killcommit`, `t_sparkstop` exact with the base's row and epoch counts; the 137 pins of the five existing MB-4 batteries green with two foreach pins re-read. Nothing in `Run::append` changed. pins: mb-4-foreach-eo/C-011 |
+| C-012 | The verify's exactly-once scenarios through the public doors report 0 violations. | The verify's own scripts, run unchanged apart from the interpreter path and the test seam. | **PROVEN** | 12 of 12 choreographies exit 0 on their own check with 0 duplicates, 0 lost, 0 extra, no epoch gap (table above); the nine multi-query cases as described there. pins: mb-4-foreach-eo/C-012 |
+| C-013 | Five hand mutants of the new code each turn at least one pin red. | The mutant table. | **PROVEN** | Eight mutants, eight red (table above); M7 survived the Rust pins first and got a pin. pins: mb-4-foreach-eo/C-013 |
+| C-014 | The registry carries the side-effect contract (both halves), MBE-13 and `UnstampedSinkCommit` as reachable through the public door, and MBE-19. | The registry rows and the sketch §4 row. | **PROVEN** | `docs/spark-sql-iceberg-parity.md` rows `MB-4-FOREACH-EO-1`, `MB-4-FOREACH-SIDE-EFFECTS-1`, `MB-4-FOREACH-SINK-SHAPES-1`, each dated 2026-10-09 with its pins; the sketch's §4 gains MBE-19; `streaming_errors.rs` renders it (`sink_committed_twice_renders_stream_failed`). pins: mb-4-foreach-eo/C-014 |
+| C-015 | The two limits under "What the design does not close" and the observations A-5 and A-6 are accepted, or the owner names the one to close. | An owner ruling on the hand-back's questions. | **OPEN** | Closes on the ruling. Leans are in the hand-back: keep both limits, keep A-5, file the metadata-delete stamp as a follow-up card. The coverage attestation is the Critic's and is filed when this clause closes. |

@@ -294,12 +294,13 @@ pins: mb-3/C-031
     once" is now `a_body_that_fails_after_its_sink_write_leaves_the_epoch_durable`.
   - **`race_tests.rs`**: `race_once` takes the door, and
     `two_sessions_racing_foreach_bodies_land_every_row_exactly_once` runs the 50 seeded
-    iterations with a body that appends to the sink. Its floor is 1 iteration that refused a
-    staged write, because the body loads the sink itself and the window is narrower than the
-    `toTable` door's.
+    iterations with a body that appends to the sink. Its floor is 10 iterations that refused a
+    staged write (measured 2026-10-09: 43 of 50).
   - **`testing.rs`** gains `append_frame` (the body's append, through the registry snapshot
     the statement funnel builds) and `SinkWriter`, a `BatchBody` that appends N times.
-  pins: mb-4-foreach-eo/C-001, C-002, C-004, C-007, C-009, C-010, C-011
+  - **Mutants (2026-10-09).** Eight hand mutants, eight red; the table is in the
+    MB-4-FOREACH-EO ledger.
+  pins: mb-4-foreach-eo/C-001, C-002, C-004, C-007, C-009, C-010, C-011, C-013
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005

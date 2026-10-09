@@ -82,7 +82,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **MB-4-FOREACH-EO (2026-10-09), `foreachBatch` exactly-once on the declared sink (owner
   ruling "FIX IT" on the MB-4 verify's S1):** the design note (the ambient body scope, the
   write-shape table, the body's outcomes, the restart cases, the side-effect contract), the
-  six four-line records, and the clauses C-001..C-014.
+  six four-line records, the amendments found while building, the measured write shapes, the
+  eight mutants, the verify's scenarios re-run, and the clauses C-001..C-014 proven; C-015
+  stays open for the owner's ruling on the two limits.
   `risk_tier: high`.
   Branch `feat/mb-4-foreach-exactly-once`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —

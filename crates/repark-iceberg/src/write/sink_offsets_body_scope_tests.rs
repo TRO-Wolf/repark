@@ -133,13 +133,15 @@ async fn the_guard_refuses_an_unstampable_sink_commit_and_passes_another_table()
     let side = catalog.load_table(&side_ident).await.expect("load side");
     assert!(Arc::ptr_eq(&guard_body_catalog(&catalog), &catalog));
     let guard = BatchScope::enter(TableUuid::of(&table), body_stamp(3)).expect("enter");
-    let (refused, passed) = guard
+    let (refused, passed, replaced, side_replaced) = guard
         .scope_body(async {
             let guarded = guard_body_catalog(&catalog);
             assert!(!Arc::ptr_eq(&guarded, &catalog));
             (
                 set_property(&guarded, &table).await,
                 set_property(&guarded, &side).await,
+                guarded.publish_replace_table(table.clone(), None).await,
+                guarded.publish_replace_table(side.clone(), None).await,
             )
         })
         .await;
@@ -148,6 +150,11 @@ async fn the_guard_refuses_an_unstampable_sink_commit_and_passes_another_table()
         epoch: Epoch::new(3),
     };
     assert_eq!(refusal_in(&refused.expect_err("the sink commit")), refusal);
+    assert_eq!(
+        refusal_in(&replaced.expect_err("the sink's replacement")),
+        refusal
+    );
+    assert!(side_replaced.is_ok_and(|table| table.identifier() == &side_ident));
     assert_eq!(guard.body_refusal(), Some(refusal));
     assert!(
         passed

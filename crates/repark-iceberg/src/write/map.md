@@ -132,8 +132,9 @@ repark-core's error map.
   token; a scope entry also keeps the first `SinkCommittedTwice` or `UnstampedSinkWrite` it
   refused (`BatchScopeGuard::body_refusal`, after a latched durable refusal) and whether a
   commit's outcome was unknown (`outcome_unknown`). `session_write_conf_is_set` answers true
-  inside a body scope. The design, the limits and the pins are in the child directory's
-  map, `sink_offsets/map.md`, under `body_scope.rs`.
+  inside a body scope. `sink_offsets_body_scope_tests.rs` holds the eight unit pins, the
+  table-replacement refusal among them. The design, the limits and the pin list are in the
+  child directory's map, `sink_offsets/map.md`, under `body_scope.rs`.
   pins: mb-4-foreach-eo/C-001, C-004, C-006
 - `sink_offsets/append_fence.rs`, `sink_offsets_append_fence_tests.rs`, `sink_offsets.rs`,
   `sink_offsets_fence_tests.rs`, `sink_offsets_probe_tests.rs`, `write_options.rs` — **MB-2c
