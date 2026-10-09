@@ -179,6 +179,7 @@ mod tests {
     use std::fs;
 
     use datafusion::arrow::array::{Array, Int32Array, Int64Array, StringArray};
+    use datafusion::arrow::record_batch::RecordBatch;
     use datafusion::prelude::SessionContext;
     use iceberg::spec::{
         DataContentType, DataFile, DataFileBuilder, DataFileFormat, NestedField, PrimitiveType,
@@ -534,8 +535,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn provider_counts_rows_through_an_empty_projection() {
+    async fn counted_table() -> (TempDir, Table) {
         let warehouse = TempDir::new().expect("warehouse");
         let catalog = crate::memory_catalog(warehouse.path().to_str().expect("utf8"))
             .await
@@ -583,6 +583,12 @@ mod tests {
             tx.commit(catalog.as_ref()).await.expect("commit append");
         }
         let table = catalog.load_table(&ident).await.expect("load table");
+        (warehouse, table)
+    }
+
+    #[tokio::test]
+    async fn provider_counts_rows_through_an_empty_projection() {
+        let (_warehouse, table) = counted_table().await;
         let planner = WindowPlanner::new(table.clone(), ReadCaps::default());
         let from = planner
             .initial_offset(&StartPosition::Earliest)
@@ -622,7 +628,7 @@ mod tests {
             .collect()
             .await
             .expect("collect");
-        let listed_rows: usize = listed.iter().map(|batch| batch.num_rows()).sum();
+        let listed_rows: usize = listed.iter().map(RecordBatch::num_rows).sum();
         assert_eq!(listed_rows, 3);
         let state = ctx.state();
         let empty: Vec<usize> = Vec::new();
@@ -631,12 +637,11 @@ mod tests {
             .await
             .expect("scan");
         let stream = scan.execute(0, ctx.task_ctx()).expect("execute");
-        let projected: Vec<datafusion::arrow::record_batch::RecordBatch> =
-            futures::TryStreamExt::try_collect(stream)
-                .await
-                .expect("stream");
+        let projected: Vec<RecordBatch> = futures::TryStreamExt::try_collect(stream)
+            .await
+            .expect("stream");
         assert!(projected.iter().all(|batch| batch.num_columns() == 0));
-        let rows: usize = projected.iter().map(|batch| batch.num_rows()).sum();
+        let rows: usize = projected.iter().map(RecordBatch::num_rows).sum();
         assert_eq!(rows, 3);
     }
 }
