@@ -136,7 +136,14 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   Fold 2 (G2, 2026-10-07): the caller passes the read schema, and the end
   snapshot is only checked to exist. Every task is re-stamped with that
   schema and its top-level field ids.
+  MB-4 round 3c (2026-10-08): `read_batches` serves an empty projection
+  through `zero_column_batch`, which rebuilds the batch with the incoming
+  row count stated explicitly — `RecordBatch::try_new` cannot infer a row
+  count from zero columns, so `count(*)` over a batch frame failed
+  engine-Internal before. Non-empty projections still read through the
+  crate's `conform_batch`, untouched.
   pins: mb-1/C-012, C-015, C-016, C-022, C-033
+  pins: mb-4/C-027
 
 ## Design notes
 

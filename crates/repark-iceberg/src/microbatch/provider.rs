@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
+use datafusion::arrow::record_batch::{RecordBatch, RecordBatchOptions};
 use datafusion::catalog::Session;
 use datafusion::datasource::{TableProvider, TableType};
+use datafusion::error::DataFusionError;
 use datafusion::error::Result;
 use datafusion::execution::TaskContext;
 use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
@@ -168,9 +170,20 @@ fn read_batches(
     let schema_for_map = Arc::clone(&schema);
     let mut projection: Option<(SchemaRef, Vec<usize>)> = None;
     let conformed = inner.and_then(move |batch| {
-        futures::future::ready(conform_batch(&batch, &schema_for_map, &mut projection))
+        futures::future::ready(if schema_for_map.fields().is_empty() {
+            zero_column_batch(&batch, &schema_for_map)
+        } else {
+            conform_batch(&batch, &schema_for_map, &mut projection)
+        })
     });
     Ok(Box::pin(RecordBatchStreamAdapter::new(schema, conformed)))
+}
+
+fn zero_column_batch(batch: &RecordBatch, schema: &SchemaRef) -> Result<RecordBatch> {
+    let options = RecordBatchOptions::new().with_row_count(Some(batch.num_rows()));
+    RecordBatch::try_new_with_options(Arc::clone(schema), Vec::new(), &options).map_err(|error| {
+        DataFusionError::Internal(format!("iceberg scan could not rebuild batch: {error}"))
+    })
 }
 
 #[cfg(test)]
@@ -481,6 +494,124 @@ mod tests {
                 (4, Some(String::from("x")))
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn provider_serves_an_empty_projection_with_the_planned_row_count() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = crate::memory_catalog(warehouse.path().to_str().expect("utf8"))
+            .await
+            .expect("catalog");
+        catalog
+            .create_namespace(&NamespaceIdent::new("sales".to_string()), HashMap::new())
+            .await
+            .expect("namespace");
+        let ident = TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "counts".to_string(),
+        );
+        let table = catalog
+            .create_table(
+                ident.namespace(),
+                TableCreation::builder()
+                    .name("counts".to_string())
+                    .schema(id_schema())
+                    .build(),
+            )
+            .await
+            .expect("create table");
+        let data_dir = std::path::PathBuf::from(
+            table
+                .metadata()
+                .location()
+                .strip_prefix("file://")
+                .unwrap_or(table.metadata().location()),
+        )
+        .join("data");
+        fs::create_dir_all(&data_dir).expect("data dir");
+        for (name, ids) in [
+            ("f1.parquet", vec![1, 2]),
+            ("f2.parquet", Vec::new()),
+            ("f3.parquet", vec![3]),
+        ] {
+            let file = stored_file(&data_dir.join(name), &ids);
+            let head = catalog.load_table(&ident).await.expect("load table");
+            let tx = Transaction::new(&head);
+            let tx = tx
+                .fast_append()
+                .add_data_files(vec![file])
+                .apply(tx)
+                .expect("apply append");
+            tx.commit(catalog.as_ref()).await.expect("commit append");
+        }
+        let table = catalog.load_table(&ident).await.expect("load table");
+        let planner = WindowPlanner::new(table.clone(), ReadCaps::default());
+        let from = planner
+            .initial_offset(&StartPosition::Earliest)
+            .await
+            .expect("initial")
+            .expect("some");
+        let plan = planner
+            .next_window(&from, WindowLimit::Unbounded)
+            .await
+            .expect("window")
+            .expect("some");
+        assert_eq!(plan.files.len(), 3);
+        let read_schema = table.metadata().current_schema().clone();
+        let provider = provider_for_plan(table, &plan, &read_schema).expect("provider");
+        let ctx = SessionContext::new();
+        ctx.register_table("counts", Arc::clone(&provider))
+            .expect("register");
+        let batches = ctx
+            .sql("SELECT COUNT(*) AS total FROM counts")
+            .await
+            .expect("sql")
+            .collect()
+            .await
+            .expect("collect");
+        assert_eq!(batches.len(), 1);
+        let total = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::Int64Array>()
+            .expect("Int64")
+            .value(0);
+        assert_eq!(total, 3);
+        let state = ctx.state();
+        let empty: Vec<usize> = Vec::new();
+        let scan = provider
+            .scan(&state, Some(&empty), &[], None)
+            .await
+            .expect("scan");
+        let stream = scan.execute(0, ctx.task_ctx()).expect("execute");
+        let projected: Vec<datafusion::arrow::record_batch::RecordBatch> =
+            futures::TryStreamExt::try_collect(stream)
+                .await
+                .expect("stream");
+        assert!(
+            projected.len() > 1,
+            "one batch per file, got {}",
+            projected.len()
+        );
+        assert!(projected.iter().all(|batch| batch.num_columns() == 0));
+        let rows: usize = projected.iter().map(|batch| batch.num_rows()).sum();
+        assert_eq!(rows, 3);
+        let empty_schema: SchemaRef = Arc::new(datafusion::arrow::datatypes::Schema::empty());
+        let one_column = Arc::new(datafusion::arrow::datatypes::Schema::new(vec![
+            datafusion::arrow::datatypes::Field::new(
+                "id",
+                datafusion::arrow::datatypes::DataType::Int32,
+                false,
+            ),
+        ]));
+        let vacant = datafusion::arrow::record_batch::RecordBatch::try_new(
+            one_column,
+            vec![Arc::new(Int32Array::from(Vec::<i32>::new()))],
+        )
+        .expect("vacant");
+        let kept = zero_column_batch(&vacant, &empty_schema).expect("kept");
+        assert_eq!(kept.num_columns(), 0);
+        assert_eq!(kept.num_rows(), 0);
     }
 
     #[tokio::test]
