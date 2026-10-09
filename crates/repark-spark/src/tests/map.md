@@ -46,6 +46,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   file listing are unchanged. Controls: ref, expiry and property commits still run on a
   keyed table; the unkeyed and lookalike-key twins still write.
   pins: enc-1/C-007, C-008, C-009
+  Fold 2 (2026-10-09) adds `keyed_table_with_hostile_metadata_text_still_alters_expires_and_unsets`:
+  a property value or column comment that spells `AddSnapshot {`, `SetStatistics {` or
+  `SetPartitionStatistics {` leaves ALTER, expiry and UNSET working on a keyed table.
+  pins: enc-1/C-010
 - `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
   pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
   source/target/column named and nothing written; in-range, int-to-int and string stores

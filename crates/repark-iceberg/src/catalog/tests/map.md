@@ -126,6 +126,15 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   UNSET restores writes; the refusal is found through a source chain and through
   rendered text.
   pins: enc-1/C-008
+  **Fold 2 (2026-10-09), from the re-verify:** the guard's `Debug` renders exactly what the
+  wrapped catalog renders (`repark-distributed` reads the catalog kind from that text);
+  metadata text that names a file-adding update (a property value, with the verifier's
+  hostile values and two that forge a list element) does not brick a keyed table; the
+  metadata-JSON exception holds only for a direct child of the table's metadata directory
+  and follows `write.metadata.path`; and one pin per decorator branch the verifier's
+  mutants walked through: `register_table` returns a guarded handle, a statistics commit
+  and both publish calls refuse at the catalog for a handle that is not guarded.
+  pins: enc-1/C-010
 
 ## Pointers
 

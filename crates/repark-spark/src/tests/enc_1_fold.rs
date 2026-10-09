@@ -700,3 +700,65 @@ async fn unkeyed_twins_of_the_fold_shapes_still_write() {
         assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 2);
     }
 }
+
+#[tokio::test]
+async fn keyed_table_with_hostile_metadata_text_still_alters_expires_and_unsets() {
+    for version in VERSIONS {
+        for marker in [
+            "AddSnapshot { x }",
+            "SetStatistics {",
+            "SetPartitionStatistics {",
+        ] {
+            let warehouse = TempDir::new().unwrap();
+            let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+            run(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "CREATE TABLE ice.sales.t (id INT, name STRING, cat STRING) USING iceberg \
+                     TBLPROPERTIES ('format-version' = '{version}', 'note' = '{marker}')"
+                ),
+            )
+            .await;
+            run(
+                &ctx,
+                &catalogs,
+                "INSERT INTO ice.sales.t VALUES (1, 'a', 'x'), (2, 'b', 'y')",
+            )
+            .await;
+            add_key(&ctx, &catalogs, "t").await;
+            for statement in [
+                "ALTER TABLE ice.sales.t SET TBLPROPERTIES ('foo' = 'bar')".to_string(),
+                format!("ALTER TABLE ice.sales.t SET TBLPROPERTIES ('second' = '{marker}')"),
+                format!("ALTER TABLE ice.sales.t ADD COLUMN extra INT COMMENT '{marker}'"),
+                "ALTER TABLE ice.sales.t CREATE BRANCH `AddSnapshot`".to_string(),
+                "CALL ice.system.expire_snapshots(table => 'sales.t', retain_last => 1)"
+                    .to_string(),
+                "ALTER TABLE ice.sales.t UNSET TBLPROPERTIES ('note')".to_string(),
+            ] {
+                run(&ctx, &catalogs, &statement).await;
+            }
+            let error = outcome(
+                &ctx,
+                &catalogs,
+                "INSERT INTO ice.sales.t VALUES (3, 'c', 'x', 1)",
+            )
+            .await
+            .expect_err("the keyed table still refuses a write");
+            assert!(refusal_faults(error, "sales.t").is_empty());
+            run(
+                &ctx,
+                &catalogs,
+                "ALTER TABLE ice.sales.t UNSET TBLPROPERTIES ('encryption.key-id')",
+            )
+            .await;
+            run(
+                &ctx,
+                &catalogs,
+                "INSERT INTO ice.sales.t VALUES (3, 'c', 'x', 1)",
+            )
+            .await;
+            assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 3);
+        }
+    }
+}

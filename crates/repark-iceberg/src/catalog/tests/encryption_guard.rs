@@ -263,6 +263,250 @@ async fn a_staged_create_with_the_key_gets_the_guarded_file_io_and_still_publish
     assert_eq!(created.metadata().snapshots().count(), 0);
 }
 
+async fn set_property(catalog: &dyn Catalog, table: &Table, key: &str, value: &str) -> Table {
+    let tx = Transaction::new(table);
+    let tx = tx
+        .update_table_properties()
+        .set(key.to_string(), value.to_string())
+        .apply(tx)
+        .expect("apply");
+    tx.commit(catalog).await.expect("property set")
+}
+
+const HOSTILE_VALUES: [&str; 5] = [
+    "AddSnapshot { x }",
+    "SetStatistics {",
+    "SetPartitionStatistics {",
+    "},\n        AddSnapshot {\n            snapshot: x,\n        },\n        SetProperties {",
+    "\n    ],\n    updates: [\n        AddSnapshot {\n        },\n    ],",
+];
+
+#[test]
+fn the_guard_renders_exactly_what_the_catalog_it_wraps_renders() {
+    let runtime = tokio::runtime::Runtime::new().expect("runtime");
+    let bed = runtime.block_on(bed(&[]));
+    assert_eq!(format!("{:?}", bed.guarded), format!("{:?}", bed.raw));
+    assert_eq!(format!("{:#?}", bed.guarded), format!("{:#?}", bed.raw));
+    assert!(!format!("{:?}", bed.guarded).contains("EncryptionGuard"));
+}
+
+#[tokio::test]
+async fn metadata_text_that_names_a_file_adding_update_does_not_brick_a_keyed_table() {
+    for hostile in HOSTILE_VALUES {
+        let bed = bed(&[("note", hostile)]).await;
+        let table = bed.guarded.load_table(&ident()).await.expect("load");
+        let table = set_property(bed.guarded.as_ref(), &table, "encryption.key-id", KEY).await;
+        let table = set_property(bed.guarded.as_ref(), &table, "foo", "bar").await;
+        let table = set_property(bed.guarded.as_ref(), &table, "second-note", hostile).await;
+        assert_refused(snapshot_commit(bed.guarded.as_ref(), &table).await);
+        let tx = Transaction::new(&table);
+        let tx = tx
+            .update_table_properties()
+            .remove("note".to_string())
+            .remove("encryption.key-id".to_string())
+            .apply(tx)
+            .expect("apply");
+        let table = tx
+            .commit(bed.guarded.as_ref())
+            .await
+            .expect("UNSET of the key passes whatever text the metadata carries");
+        let committed = snapshot_commit(bed.guarded.as_ref(), &table)
+            .await
+            .expect("writes return once the key is gone");
+        assert_eq!(committed.metadata().snapshots().count(), 1, "{hostile}");
+    }
+}
+
+#[tokio::test]
+async fn the_metadata_json_exception_holds_only_in_the_table_metadata_directory() {
+    let bed = bed(&[("encryption.key-id", KEY)]).await;
+    let table = bed.guarded.load_table(&ident()).await.expect("load");
+    let location = table.metadata().location().to_string();
+    let file_io = table.file_io();
+    for refused in [
+        format!("{location}/x.metadata.json"),
+        format!("{location}/data/evil.parquet.metadata.json"),
+        format!("{location}/data/a.metadata.json.gz"),
+        format!("{location}/metadata/sub/00001-a.metadata.json"),
+        format!("{location}/metadata/a.metadata.json.parquet"),
+        format!("{location}/metadata/a.metadata.json.gz.avro"),
+        format!("{location}-other/metadata/00001-a.metadata.json"),
+        format!("{location}/metadata/../data/00001-a.metadata.json"),
+    ] {
+        let output = file_io.new_output(&refused).expect("output handle");
+        assert_refused(output.write(Bytes::from_static(b"{}")).await);
+        assert_refused(output.writer().await.map(|_| ()));
+        assert_refused(file_io.write_new(&refused, Bytes::from_static(b"{}")).await);
+    }
+    for allowed in [
+        format!("{location}/metadata/00001-a.metadata.json"),
+        format!("{location}/metadata/v2.metadata.json.gz"),
+    ] {
+        file_io
+            .write_new(&allowed, Bytes::from_static(b"{}"))
+            .await
+            .expect("table metadata JSON under the metadata directory");
+    }
+}
+
+#[tokio::test]
+async fn the_metadata_json_exception_follows_write_metadata_path() {
+    let elsewhere = TempDir::new().expect("metadata directory");
+    let root = elsewhere.path().to_str().expect("utf-8 path").to_string();
+    let bed = bed(&[
+        ("encryption.key-id", KEY),
+        ("write.metadata.path", root.as_str()),
+    ])
+    .await;
+    let table = bed.guarded.load_table(&ident()).await.expect("load");
+    let file_io = table.file_io();
+    file_io
+        .write_new(
+            format!("{root}/00009-a.metadata.json"),
+            Bytes::from_static(b"{}"),
+        )
+        .await
+        .expect("the configured metadata directory");
+    assert_refused(
+        file_io
+            .write_new(
+                format!(
+                    "{}/metadata/00009-a.metadata.json",
+                    table.metadata().location()
+                ),
+                Bytes::from_static(b"{}"),
+            )
+            .await,
+    );
+}
+
+#[tokio::test]
+async fn a_registered_keyed_table_comes_back_guarded() {
+    let bed = bed(&[("encryption.key-id", KEY)]).await;
+    let source = bed.raw.load_table(&ident()).await.expect("raw load");
+    let twin = TableIdent::from_strs(["sales", "twin"]).expect("ident");
+    let registered = bed
+        .guarded
+        .register_table(
+            &twin,
+            source
+                .metadata_location()
+                .expect("metadata location")
+                .to_string(),
+        )
+        .await
+        .expect("register is metadata only");
+    let path = data_path(&registered, "a.parquet");
+    let error = registered
+        .file_io()
+        .new_output(&path)
+        .expect("output handle")
+        .write(Bytes::from_static(b"x"))
+        .await
+        .expect_err("the registered handle is guarded");
+    assert!(EncryptedTableRefusal::find(&error).is_some());
+}
+
+#[tokio::test]
+async fn a_statistics_commit_refuses_at_the_catalog_for_a_handle_that_is_not_guarded() {
+    let bed = bed(&[("encryption.key-id", KEY)]).await;
+    let unguarded = bed.raw.load_table(&ident()).await.expect("raw load");
+    let pointer = unguarded.metadata_location().map(str::to_string);
+    let tx = Transaction::new(&unguarded);
+    let tx = tx
+        .update_statistics()
+        .set_statistics(iceberg::spec::StatisticsFile {
+            snapshot_id: 1,
+            statistics_path: data_path(&unguarded, "a.stats"),
+            file_size_in_bytes: 1,
+            file_footer_size_in_bytes: 1,
+            key_metadata: None,
+            blob_metadata: Vec::new(),
+        })
+        .apply(tx)
+        .expect("apply");
+    assert_refused(tx.commit(bed.guarded.as_ref()).await);
+    let after = bed.raw.load_table(&ident()).await.expect("raw load");
+    assert_eq!(after.metadata_location().map(str::to_string), pointer);
+}
+
+async fn staged_with_snapshot(staged: iceberg::transaction::StagedTableTransaction) -> Table {
+    let table = staged.table().clone();
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .fast_append()
+        .set_snapshot_properties(HashMap::from([("probe".to_string(), "1".to_string())]))
+        .apply(tx)
+        .expect("apply");
+    drop(staged);
+    tx.apply_locally().await.expect("staged snapshot")
+}
+
+fn keyed_creation(name: &str, source: &Table, location: Option<String>) -> TableCreation {
+    let schema = source.metadata().current_schema().as_ref().clone();
+    let properties = [("encryption.key-id".to_string(), KEY.to_string())];
+    match location {
+        Some(location) => TableCreation::builder()
+            .name(name.to_string())
+            .location(location)
+            .schema(schema)
+            .properties(properties)
+            .build(),
+        None => TableCreation::builder()
+            .name(name.to_string())
+            .schema(schema)
+            .properties(properties)
+            .build(),
+    }
+}
+
+#[tokio::test]
+async fn publishing_a_keyed_staged_create_with_a_snapshot_refuses_at_the_catalog() {
+    let bed = bed(&[]).await;
+    let source = bed.raw.load_table(&ident()).await.expect("raw load");
+    let staged_ident = TableIdent::from_strs(["sales", "staged"]).expect("ident");
+    let location = format!("{}-staged", source.metadata().location());
+    let staged = iceberg::transaction::StagedTableTransaction::begin_create(
+        source.file_io().clone(),
+        staged_ident.clone(),
+        keyed_creation("staged", &source, Some(location)),
+    )
+    .await
+    .expect("staged create");
+    let table = staged_with_snapshot(staged).await;
+    let error = bed
+        .guarded
+        .publish_create_table(table)
+        .await
+        .expect_err("a keyed staged create with a snapshot must refuse");
+    assert_eq!(
+        EncryptedTableRefusal::find(&error).map(|refusal| refusal.table().to_string()),
+        Some("sales.staged".to_string())
+    );
+    assert!(!bed.raw.table_exists(&staged_ident).await.expect("exists"));
+}
+
+#[tokio::test]
+async fn publishing_a_keyed_staged_replace_with_a_snapshot_refuses_at_the_catalog() {
+    let bed = bed(&[]).await;
+    let existing = bed.raw.load_table(&ident()).await.expect("raw load");
+    let pointer = existing.metadata_location().map(str::to_string);
+    let staged = iceberg::transaction::StagedTableTransaction::begin_replace(
+        &existing,
+        keyed_creation("t", &existing, None),
+    )
+    .await
+    .expect("staged replace");
+    let table = staged_with_snapshot(staged).await;
+    assert_refused(
+        bed.guarded
+            .publish_replace_table(table, pointer.clone())
+            .await,
+    );
+    let after = bed.raw.load_table(&ident()).await.expect("raw load");
+    assert_eq!(after.metadata_location().map(str::to_string), pointer);
+}
+
 #[test]
 fn the_refusal_is_found_through_a_source_chain_and_through_rendered_text() {
     let refusal = EncryptedTableRefusal::of(&ident());
