@@ -488,6 +488,7 @@ async fn a_restart_after_the_fences_recovery_required_ending_refuses_by_name() {
                 },
                 "{context}"
             );
+            assert_eq!(restart.durable(), Some(racer.clone()), "{context}");
             assert_eq!(
                 resumed.calls(),
                 0,

@@ -253,11 +253,13 @@ pins: mb-3/C-031
   and starts, twice. The answer is the refusal the sketch names for a property with no stamped
   snapshot behind it (Q10 and §3.4, `read_resume_point`): `RecoveryRequired` with
   `StampedSnapshotExpired`, epoch 0 and the property's record as the durable offset, the same
-  on the exception and on the `ShutdownOutcome`. It does not resume: no body runs, the sink
+  on the exception, on the `ShutdownOutcome` and, since the round-4 race-lane Q1 ruling
+  (2026-10-09, `conclude` adopts the reported record when the lifecycle holds none), on
+  `QueryHandle::durable()`. It does not resume: no body runs, the sink
   keeps no snapshot, no stamp and no row, so nothing is duplicated and nothing is skipped past.
   The helpers that build the ending repeat `fence_tests.rs`'s private ones, because that file
   is outside this slice's footprint.
-  pins: mb-4/C-114
+  pins: mb-4/C-114, C-029
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005

@@ -600,6 +600,9 @@ impl QueryShared {
                 durable: reported,
                 reason,
             }) => {
+                if lifecycle.durable.is_none() {
+                    lifecycle.durable = reported.as_deref().cloned();
+                }
                 let durable = reported.as_deref().cloned().or(durable);
                 let error = MicroBatchError::RecoveryRequired {
                     query,
