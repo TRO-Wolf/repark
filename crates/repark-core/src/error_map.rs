@@ -43,6 +43,9 @@ const CAUSED_BY_SEPARATOR: &str = "\ncaused by\n";
 const COERCION_FAILED_MARKER: &str = "user-defined coercion failed with: ";
 const GROUPING_MISMATCH_HEAD: &str = "[GROUPING_ID_COLUMN_MISMATCH]";
 const GROUPING_UNSUPPORTED_HEAD: &str = "[UNSUPPORTED_GROUPING_EXPRESSION]";
+const JOIN_NONDET_HEAD: &str = "[INVALID_NON_DETERMINISTIC_EXPRESSIONS]";
+const JOIN_NOT_BOOLEAN_HEAD: &str = "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE]";
+const JOIN_RULE_HEADER: &str = "join_condition_refusals\ncaused by\n";
 const PLAN_DISPLAY_PREFIX: &str = "Error during planning: ";
 const SQLSTATE_MARKER: &str = "SQLSTATE: ";
 const SQLSTATE_LEN: usize = 5;
@@ -67,6 +70,20 @@ fn grouping_refusal_message(display: &str) -> Option<String> {
         .map_or(display, |(_, tail)| tail);
     let rest = rest.strip_prefix(PLAN_DISPLAY_PREFIX).unwrap_or(rest);
     if !rest.starts_with(GROUPING_MISMATCH_HEAD) && !rest.starts_with(GROUPING_UNSUPPORTED_HEAD) {
+        return None;
+    }
+    let state_start = rest.find(SQLSTATE_MARKER)? + SQLSTATE_MARKER.len();
+    let state = rest.get(state_start..state_start + SQLSTATE_LEN)?;
+    if !state.bytes().all(|byte| byte.is_ascii_alphanumeric()) {
+        return None;
+    }
+    rest.get(..state_start + SQLSTATE_LEN).map(str::to_string)
+}
+
+fn join_refusal_message(display: &str) -> Option<String> {
+    let rest = display.strip_prefix(JOIN_RULE_HEADER)?;
+    let rest = rest.strip_prefix(PLAN_DISPLAY_PREFIX).unwrap_or(rest);
+    if !rest.starts_with(JOIN_NONDET_HEAD) && !rest.starts_with(JOIN_NOT_BOOLEAN_HEAD) {
         return None;
     }
     let state_start = rest.find(SQLSTATE_MARKER)? + SQLSTATE_MARKER.len();
@@ -202,6 +219,7 @@ pub fn engine_err(err: DataFusionError) -> Error {
             Error::Analysis(
                 grouping_refusal_message(&display)
                     .or_else(|| coercion_refusal_message(&display))
+                    .or_else(|| join_refusal_message(&display))
                     .unwrap_or(display),
             )
         }
@@ -412,6 +430,49 @@ mod tests {
              used with GroupingSets/Cube/Rollup. SQLSTATE: 42K0E";
         let error = engine_err(DataFusionError::Plan(payload.to_string()));
         assert!(matches!(error, Error::Analysis(text) if text == payload));
+    }
+
+    #[test]
+    fn join_rule_wrap_peels_to_the_bare_refusal() {
+        for payload in [
+            "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic \
+             expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E",
+            "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid \
+             type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+        ] {
+            let wrapped = DataFusionError::Context(
+                "join_condition_refusals".to_string(),
+                Box::new(DataFusionError::Plan(payload.to_string())),
+            );
+            let error = engine_err(wrapped);
+            assert!(matches!(error, Error::Analysis(text) if text == payload));
+        }
+    }
+
+    #[test]
+    fn join_head_without_the_rule_wrap_keeps_the_full_display() {
+        let payload = "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the \
+             invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E";
+        let error = engine_err(DataFusionError::Plan(payload.to_string()));
+        let Error::Analysis(text) = error else {
+            panic!("expected an Analysis error, got {error:?}");
+        };
+        assert_eq!(text, format!("Error during planning: {payload}"));
+    }
+
+    #[test]
+    fn foreign_rule_wrap_with_a_join_head_keeps_the_full_display() {
+        let payload = "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a \
+             deterministic expression, but the actual expression is \"(rand(1) >= 0)\". \
+             SQLSTATE: 42K0E";
+        let wrapped = DataFusionError::Context(
+            "spark_expr_semantics".to_string(),
+            Box::new(DataFusionError::Plan(payload.to_string())),
+        );
+        let error = engine_err(wrapped);
+        assert!(
+            matches!(error, Error::Analysis(text) if text.contains("spark_expr_semantics\ncaused by\n"))
+        );
     }
 
     #[test]

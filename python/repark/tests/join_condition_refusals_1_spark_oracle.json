@@ -43,7 +43,8 @@
    "df": "a.join(b, <cond>, <how>) then collect",
    "sql": "SELECT * FROM l <JOIN> r ON <cond> over temp views l, r then collect"
   },
-  "text": "err cells carry the head line of Spark's message (before the first ';'); plan tails carry generated attr ids and are not pinned"
+  "text": "err cells carry the head line of Spark's message (before the first ';'); plan tails carry generated attr ids and are not pinned",
+  "accessors": "2026-10-09: getCondition(), getErrorClass(), getMessageParameters() and getSqlState() measured on live Spark 4.1.2 (banner 4.1.2, /tmp/sparkenv, local[1]) for the 11 refusing conditions on the DataFrame door plus rand_lt_half and null_untyped on the SQL door: getErrorClass() equals getCondition() on every cell, getMessageParameters() equals the recorded params (values carry their double quotes), getSqlState() is 42K0E."
  },
  "cells": {
   "df/cross/current_ts": {
@@ -96,6 +97,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -106,6 +108,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -117,6 +120,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -137,6 +141,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -148,6 +153,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -158,6 +164,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -168,6 +175,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -178,6 +186,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -188,6 +197,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -282,6 +292,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -374,6 +385,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -384,6 +396,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -395,6 +408,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -458,6 +472,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -469,6 +484,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -479,6 +495,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -489,6 +506,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -499,6 +517,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -509,6 +528,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -603,6 +623,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -659,6 +680,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -669,6 +691,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -680,6 +703,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -700,6 +724,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -711,6 +736,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -721,6 +747,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -731,6 +758,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -741,6 +769,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -751,6 +780,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -845,6 +875,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -881,6 +912,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -891,6 +923,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -902,6 +935,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -933,6 +967,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -944,6 +979,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -954,6 +990,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -964,6 +1001,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -974,6 +1012,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -984,6 +1023,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -1003,6 +1043,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -1047,6 +1088,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -1057,6 +1099,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -1068,6 +1111,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -1086,6 +1130,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -1097,6 +1142,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -1107,6 +1153,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -1117,6 +1164,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -1127,6 +1175,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -1137,6 +1186,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -1169,6 +1219,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -1237,6 +1288,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -1247,6 +1299,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -1258,6 +1311,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -1297,6 +1351,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -1308,6 +1363,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -1318,6 +1374,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -1328,6 +1385,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -1338,6 +1396,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -1348,6 +1407,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -1442,6 +1502,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -1522,6 +1583,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -1532,6 +1594,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -1543,6 +1606,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -1588,6 +1652,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -1599,6 +1664,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -1609,6 +1675,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -1619,6 +1686,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -1629,6 +1697,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -1639,6 +1708,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -1733,6 +1803,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -1789,6 +1860,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -1800,6 +1872,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -1812,6 +1885,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -1833,6 +1907,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -1845,6 +1920,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -1856,6 +1932,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -1867,6 +1944,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -1878,6 +1956,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -1889,6 +1968,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -1984,6 +2064,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -2077,6 +2158,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -2088,6 +2170,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -2100,6 +2183,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -2164,6 +2248,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -2176,6 +2261,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -2187,6 +2273,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -2198,6 +2285,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -2209,6 +2297,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -2220,6 +2309,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -2315,6 +2405,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -2372,6 +2463,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -2383,6 +2475,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -2395,6 +2488,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -2416,6 +2510,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -2428,6 +2523,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -2439,6 +2535,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -2450,6 +2547,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -2461,6 +2559,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -2472,6 +2571,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -2567,6 +2667,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -2604,6 +2705,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -2615,6 +2717,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -2627,6 +2730,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -2659,6 +2763,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -2671,6 +2776,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -2682,6 +2788,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -2693,6 +2800,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -2704,6 +2812,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -2715,6 +2824,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -2735,6 +2845,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -2780,6 +2891,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -2791,6 +2903,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -2803,6 +2916,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -2822,6 +2936,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -2834,6 +2949,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -2845,6 +2961,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -2856,6 +2973,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -2867,6 +2985,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -2878,6 +2997,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -2911,6 +3031,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -2980,6 +3101,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -2991,6 +3113,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -3003,6 +3126,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -3043,6 +3167,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -3055,6 +3180,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -3066,6 +3192,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -3077,6 +3204,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -3088,6 +3216,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -3099,6 +3228,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -3194,6 +3324,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""
@@ -3275,6 +3406,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
@@ -3286,6 +3418,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"1\"",
@@ -3298,6 +3431,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
@@ -3344,6 +3478,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"NULL\"",
@@ -3356,6 +3491,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
@@ -3367,6 +3503,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(rand(7) < 0.5)\""
@@ -3378,6 +3515,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(randn(3) < 0)\""
@@ -3389,6 +3527,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
@@ -3400,6 +3539,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
    "sqlstate": "42K0E",
    "params": {
     "joinCondition": "\"true\"",
@@ -3495,6 +3635,7 @@
    "outcome": "err",
    "class": "AnalysisException",
    "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
    "sqlstate": "42K0E",
    "params": {
     "sqlExprs": "\"(uuid() IS NOT NULL)\""

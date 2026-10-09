@@ -1,14 +1,11 @@
 """Join-condition refusals: nondeterministic and non-boolean conditions refuse like Spark.
 
 The oracle is ``join_condition_refusals_1_spark_oracle.json`` (live Spark 4.1.2,
-196 cells over 7 hows, 14 conditions, the DataFrame and SQL doors). Every
-refusal pin compares the class, the condition, SQLSTATE and the full head line;
-the head line carries Spark's sentence with RePark's condition rendering. The
-engine prefixes the analyzer-rule header (``join_condition_refusals`` /
-``caused by``), which defeats the condition parser the way the
-``spark_expr_semantics`` header does elsewhere, so the pins strip the header
-and read the condition off the head line. Controls replay the oracle's rows
-and columns.
+196 cells over 7 hows, 14 conditions, the DataFrame and SQL doors, plus the
+2026-10-09 accessor recording). Every refusal pin compares the class, the
+condition, SQLSTATE and the message parameters through the exception
+accessors; the engine surfaces the bare bracketed condition with no
+analyzer-rule header. Controls replay the oracle's rows and columns.
 """
 
 from __future__ import annotations
@@ -23,19 +20,9 @@ from repark import ReparkSession
 from repark.errors import AnalysisException, ParseException
 from repark.spark import functions as spark_functions
 
-_NONDET_HEAD = (
-    "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic "
-    "expression, but the actual expression is {condition}. SQLSTATE: 42K0E"
-)
+_NONDET = "INVALID_NON_DETERMINISTIC_EXPRESSIONS"
 
-_NOT_BOOLEAN_HEAD = (
-    '[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition "{condition}" has the '
-    'invalid type "{spark_type}", expected "BOOLEAN". SQLSTATE: 42K0E'
-)
-
-_RULE_HEADER = "join_condition_refusals\ncaused by\n"
-
-_ENGINE_PREFIX = "Error during planning: "
+_NOT_BOOLEAN = "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE"
 
 _HOWS = ["inner", "cross", "left", "right", "full", "left_semi", "left_anti"]
 
@@ -72,19 +59,15 @@ def _rows(frame: Any) -> list[tuple[Any, ...]]:
     return sorted((tuple(row) for row in frame.collect()), key=repr)
 
 
-def _head_of(error: BaseException) -> str:
-    text = str(error)
-    assert text.startswith(_RULE_HEADER + _ENGINE_PREFIX)
-    return text[len(_RULE_HEADER + _ENGINE_PREFIX) :]
-
-
-def _assert_refusal(build: Any, condition: str, head: str) -> None:
+def _assert_refusal(build: Any, condition: str, params: dict[str, str]) -> None:
     with pytest.raises(AnalysisException) as caught:
         build()
     assert type(caught.value) is AnalysisException
+    assert caught.value.getCondition() == condition
+    assert caught.value.getErrorClass() == condition
+    assert caught.value.getMessageParameters() == params
     assert caught.value.getSqlState() == "42K0E"
-    assert _head_of(caught.value) == head
-    assert head.startswith(f"[{condition}]")
+    assert str(caught.value).startswith(f"[{condition}]")
 
 
 def _df_conditions(frames: dict[str, Any]) -> dict[str, Any]:
@@ -109,84 +92,75 @@ _SQL_CONDITIONS = {
     "bare_rand": "rand(1)",
 }
 
-_HEADS = {
-    "rand_lt_half": (
-        "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
-        _NONDET_HEAD.format(condition='"(rand(7) < 0.5)"'),
-    ),
-    "eq_and_rand": (
-        "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
-        _NONDET_HEAD.format(condition='"((id = k) AND (rand(1) >= 0))"'),
-    ),
+_REFUSALS = {
+    "rand_lt_half": (_NONDET, {"sqlExprs": '"(rand(7) < 0.5)"'}),
+    "eq_and_rand": (_NONDET, {"sqlExprs": '"((id = k) AND (rand(1) >= 0))"'}),
     "null_untyped": (
-        "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
-        _NOT_BOOLEAN_HEAD.format(condition="NULL", spark_type="VOID"),
+        _NOT_BOOLEAN,
+        {"joinCondition": '"NULL"', "conditionType": '"VOID"'},
     ),
     "int_lit": (
-        "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
-        _NOT_BOOLEAN_HEAD.format(condition="1", spark_type="INT"),
+        _NOT_BOOLEAN,
+        {"joinCondition": '"1"', "conditionType": '"INT"'},
     ),
     "str_lit": (
-        "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
-        _NOT_BOOLEAN_HEAD.format(condition="true", spark_type="STRING"),
+        _NOT_BOOLEAN,
+        {"joinCondition": '"true"', "conditionType": '"STRING"'},
     ),
     "bare_rand": (
-        "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
-        _NOT_BOOLEAN_HEAD.format(condition="rand(1)", spark_type="DOUBLE"),
+        _NOT_BOOLEAN,
+        {"joinCondition": '"rand(1)"', "conditionType": '"DOUBLE"'},
     ),
 }
 
 
 @pytest.mark.parametrize("how", _HOWS)
-@pytest.mark.parametrize("name", list(_HEADS))
+@pytest.mark.parametrize("name", list(_REFUSALS))
 def test_dataframe_door_refuses_per_how(spark: ReparkSession, how: str, name: str) -> None:
     frames = _frames(spark)
-    condition_text, head = _HEADS[name]
+    condition, params = _REFUSALS[name]
     _assert_refusal(
         lambda: frames["left"].join(frames["right"], _df_conditions(frames)[name], how),
-        condition_text,
-        head,
+        condition,
+        params,
     )
 
 
 @pytest.mark.parametrize("how", list(_SQL_HOWS))
-@pytest.mark.parametrize("name", list(_HEADS))
+@pytest.mark.parametrize("name", list(_REFUSALS))
 def test_sql_door_refuses_per_how(spark: ReparkSession, how: str, name: str) -> None:
     _frames(spark)
-    condition_text, head = _HEADS[name]
+    condition, params = _REFUSALS[name]
     query = f"SELECT * FROM l {_SQL_HOWS[how]} r ON {_SQL_CONDITIONS[name]}"
-    _assert_refusal(lambda: spark.sql(query), condition_text, head)
+    _assert_refusal(lambda: spark.sql(query), condition, params)
 
 
 @pytest.mark.parametrize(
-    ("build_name", "condition", "head_condition", "head_rendering"),
+    ("build_name", "condition", "rendering"),
     [
         (
             "uuid",
             "uuid() is not null",
-            "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
             "(uuid() IS NOT NULL)",
         ),
         (
             "shuffle",
             "size(shuffle(array(l.id, r.k))) = 2",
-            "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
             "(size(shuffle(array(id, k))) = 2)",
         ),
-        ("randn", "randn(3) < 0", "INVALID_NON_DETERMINISTIC_EXPRESSIONS", "(randn(3) < 0)"),
+        ("randn", "randn(3) < 0", "(randn(3) < 0)"),
     ],
 )
 def test_other_nondeterministic_functions_refuse_on_both_doors(
     spark: ReparkSession,
     build_name: str,
     condition: str,
-    head_condition: str,
-    head_rendering: str,
+    rendering: str,
 ) -> None:
     frames = _frames(spark)
     left = frames["left"]
     right = frames["right"]
-    head = _NONDET_HEAD.format(condition=f'"{head_rendering}"')
+    params = {"sqlExprs": f'"{rendering}"'}
     if build_name == "uuid":
         df_condition: Any = spark_functions.expr("uuid() is not null")
     elif build_name == "shuffle":
@@ -194,11 +168,11 @@ def test_other_nondeterministic_functions_refuse_on_both_doors(
         df_condition = spark_functions.size(shuffled) == 2
     else:
         df_condition = spark_functions.randn(3) < 0
-    _assert_refusal(lambda: left.join(right, df_condition, "inner"), head_condition, head)
+    _assert_refusal(lambda: left.join(right, df_condition, "inner"), _NONDET, params)
     _assert_refusal(
         lambda: spark.sql(f"SELECT * FROM l INNER JOIN r ON {condition}"),
-        head_condition,
-        head,
+        _NONDET,
+        params,
     )
 
 
