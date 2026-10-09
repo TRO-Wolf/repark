@@ -119,15 +119,17 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   URL with a password; neither password nor any URL form appears on stdout or stderr.
   pins: c-2/C-107
 - `test_c4_write.py` — **C-4 step 2 (2026-10-09):** Postgres INSERT routing on the Spark
-  door and the writer, twelve cells: rows land through VALUES and SELECT with an empty-frame
+  door and the writer, fourteen cells: rows land through VALUES and SELECT with an empty-frame
   return; every declared type round-trips byte-identical through the read path (`nu` by
   value: the door writes the Arrow scale, the seed carries dscale 1); reordered lists write
   by name and unlisted columns default; a duplicate key stores nothing and records nothing;
   a DST-zone session writes read timestamps back as their wall clocks; a view and an
   INSERT-rule target take the row path and say why on both doors; a named GENERATED ALWAYS
   identity column refuses with the core text on both doors; default and `write.path=row`
-  writer writes agree byte for byte; non-append modes name the modes row and UPDATE names
-  the upsert row while REPLACE parses nowhere here and MERGE/CTAS keep the pg-ddl text.
+  writer writes agree byte for byte; a write-only role names the missing SELECT privilege
+  and an unmapped column names its row even when unnamed (the two owner questions);
+  non-append modes name the modes row and UPDATE names the upsert row while REPLACE parses
+  nowhere here and MERGE/CTAS keep the pg-ddl text.
   pins: c-4/C-013, C-014
 - `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
   drops its INSERT case (append INSERT writes now; the write pins live in

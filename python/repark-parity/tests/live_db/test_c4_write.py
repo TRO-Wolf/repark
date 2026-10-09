@@ -7,9 +7,11 @@ which path each write took and why a bulk request took rows.
 from __future__ import annotations
 
 import os
+import secrets
 from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 
@@ -370,6 +372,49 @@ def test_refused_modes_name_the_row_on_every_door(
             frame.write.jdbc(_url(), f"{schema}.t", mode=mode, properties={"sslmode": "disable"})
         assert "CONNECT-DECL-pg-write-modes" in str(excinfo.value), mode
     assert conn.execute(f'SELECT count(*) FROM "{schema}".t').fetchone() == (0,)
+
+
+def test_write_only_role_refuses_at_discovery(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """A role with INSERT but no SELECT refuses before the write core, naming SELECT."""
+    conn, names = pg_live
+    schema = names["schema"]
+    role = f"{schema}_w"
+    password = secrets.token_hex(8)
+    conn.execute(f'CREATE TABLE "{schema}".t (id int8 PRIMARY KEY, name text)')
+    conn.execute(f"CREATE ROLE \"{role}\" LOGIN PASSWORD '{password}'")
+    conn.execute(f'GRANT USAGE ON SCHEMA "{schema}" TO "{role}"')
+    conn.execute(f'GRANT INSERT ON "{schema}".t TO "{role}"')
+    try:
+        parts = urlsplit(_url())
+        wurl = urlunsplit(
+            (parts.scheme, f"{role}:{password}@{parts.hostname}:{parts.port}", parts.path, "", "")
+        )
+        frame = spark.createDataFrame([(1, "a")], "id long, name string")
+        with pytest.raises(errors.PySparkException) as excinfo:
+            frame.write.jdbc(wurl, f"{schema}.t", mode="append", properties={"sslmode": "disable"})
+        assert type(excinfo.value).__name__ == "PySparkException"
+        assert "SELECT privilege" in str(excinfo.value)
+        assert _take(spark) is None
+    finally:
+        conn.execute(f'REVOKE ALL PRIVILEGES ON SCHEMA "{schema}" FROM "{role}"')
+        conn.execute(f'REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA "{schema}" FROM "{role}"')
+        conn.execute(f'DROP ROLE "{role}"')
+    assert conn.execute(f'SELECT count(*) FROM "{schema}".t').fetchone() == (0,)
+
+
+def test_unmapped_column_refuses_even_when_unnamed(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """A relation with an unmapped column refuses the write, naming the pg-time row."""
+    conn, names = pg_live
+    schema = names["schema"]
+    conn.execute(f'CREATE TABLE "{schema}".u (id int8 PRIMARY KEY, when_time time)')
+    with pytest.raises(errors.UnsupportedOperationException) as excinfo:
+        spark.sql(f'INSERT INTO pg."{schema}".u (id) VALUES (1)').collect()
+    assert "CONNECT-DECL-pg-time" in str(excinfo.value)
+    assert _take(spark) is None
 
 
 def test_row_changing_statements_refuse_on_both_doors(
