@@ -25,7 +25,8 @@ use crate::streaming_options::{
     validate_writer_options, writer_option,
 };
 use crate::streaming_query::{
-    BatchBodyAdapter, PyStreamingQuery, note_started, session_allows_local_catalog_for_tests,
+    BatchBodyAdapter, BodyCause, PyStreamingQuery, note_body_cause, note_started,
+    session_allows_local_catalog_for_tests,
 };
 use crate::trigger_interval::check_trigger_interval;
 
@@ -311,6 +312,7 @@ fn start_spec(
     py: Python<'_>,
     session: &PyReparkSession,
     spec: StreamSpec,
+    cause: Option<BodyCause>,
 ) -> Result<PyStreamingQuery, PyErr> {
     let manager = StreamingQueryManager::of(&session.session);
     if let Some(name) = &spec.query_name
@@ -339,7 +341,10 @@ fn start_spec(
     });
     started.map_err(|error| microbatch_py_err(py, &error, None))?;
     note_started(session, &handle);
-    Ok(PyStreamingQuery::new(handle, runtime))
+    if let Some(cause) = cause {
+        note_body_cause(session, &handle, cause);
+    }
+    Ok(PyStreamingQuery::of(session, handle))
 }
 
 #[pyfunction]
@@ -421,6 +426,7 @@ pub fn start_stream(
             dataframe_class,
             Arc::clone(&inner.runtime),
         );
+        let cause = adapter.cause();
         let spec = build_stream_spec(
             py,
             frame,
@@ -435,7 +441,7 @@ pub fn start_stream(
             query_name,
             checkpoint,
         )?;
-        return start_spec(py, &inner, spec);
+        return start_spec(py, &inner, spec, Some(cause));
     }
     let sink = match path {
         Some(given) => given,
@@ -457,7 +463,7 @@ pub fn start_stream(
         query_name,
         checkpoint,
     )?;
-    start_spec(py, &inner, spec)
+    start_spec(py, &inner, spec, None)
 }
 
 #[pyfunction]
@@ -507,7 +513,7 @@ pub fn to_table_stream(
         checkpoint,
     )?;
     check_table_name_not_blank(py, table)?;
-    start_spec(py, session, spec)
+    start_spec(py, session, spec, None)
 }
 
 #[cfg(test)]

@@ -929,6 +929,12 @@ pins: rp-4-fork-repin/C-005, C-006
   **RP-56 DIFF-PROBE fold (2026-09-29):** tag selectors refuse like branch selectors
   (`ref_selector` refuses 42711 under `false` on twin schemas; `VERSION`/`TIMESTAMP AS OF`
   still answer).
+- `spark_ast.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09):** the passthrough sink runs its
+  planned statement through `repark_core::PreExecute::execute` in place of the bare
+  `ctx.execute_logical_plan`, so the pre-execute belt's `foreachBatch` refusal (a planned
+  DML against the declared sink, `EXPLAIN ANALYZE` included) covers the Spark door. Outside
+  a body the call is the same execution.
+  pins: mb-4-foreach-eo/C-018
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `canonicalize_identity_selection` canonicalises the selection and each SET *value* through
   `rewrite_fragment_case` (a SQL fragment in, a SQL fragment out — the repair backticks a

@@ -844,3 +844,6 @@ mod append_fence;
 
 #[path = "sink_offsets_body_scope_tests.rs"]
 mod body_scope;
+
+#[path = "sink_offsets_lineage_tests.rs"]
+mod lineage_pins;

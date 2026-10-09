@@ -598,7 +598,7 @@ async fn record_commit_refuses_a_head_without_the_stamp() {
         MicroBatchError::RecoveryRequired {
             epoch,
             durable: None,
-            reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+            reason: RecoveryReason::UnstampedSinkCommit { snapshot, .. },
             ..
         } => {
             assert_eq!(epoch, Epoch::new(2));

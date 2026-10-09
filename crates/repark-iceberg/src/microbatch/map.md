@@ -67,6 +67,11 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `Catalog` as a corrupt stamp, not `UnsupportedOffsetFormat`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-024
   pins: mb-2a/C-016
+- `error.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09):** `RecoveryReason::UnstampedSinkCommit`
+  gains `operation: Option<String>` (rendered ` (append)` after the snapshot id when known;
+  the text without it is unchanged) and `UnstampedSinkChange { what }` joins it for a change
+  that made no snapshot. MBE-19's text no longer lists `DELETE` without its condition.
+  pins: mb-4-foreach-eo/C-017, C-027
 - `error.rs` — **MB-4-FOREACH-EO (2026-10-09):** `UnstampedSinkWrite { sink, epoch }`
   (MBE-19), the refusal of a commit to the declared sink that cannot carry the epoch stamp.
   Its text names the shapes the sink does take inside a `foreachBatch` body.

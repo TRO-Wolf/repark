@@ -225,9 +225,11 @@ pub(crate) async fn commit_overwrite_on_ref(
         action.apply(tx).map_err(iceberg_err)?
     };
     let tx = stamp.transaction(tx)?;
+    stamp.attempt();
     match tx.commit(catalog.as_ref()).await {
         Ok(committed) => stamp.record(&committed),
         Err(error) => {
+            stamp.failed(&error);
             abort::delete_written_files_best_effort(table, &new_file_paths, &error).await;
             Err(commit_err(error, &operation_id))
         }
@@ -446,6 +448,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         action.to_branch(name)
     });
     let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
+    stamp.attempt();
     match tx
         .commit(catalog.as_ref())
         .instrument(tracing::info_span!(
@@ -457,6 +460,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     {
         Ok(committed) => stamp.record(&committed),
         Err(error) => {
+            stamp.failed(&error);
             let mut abort_paths = data_file_paths;
             abort_paths.extend(delete_file_paths);
             abort::delete_written_files_best_effort(table, &abort_paths, &error).await;

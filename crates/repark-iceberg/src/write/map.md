@@ -124,6 +124,27 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets/lineage.rs`, `sink_offsets_lineage_tests.rs`, `sink_offsets.rs`,
+  `merge/snapshot_commit.rs`, `insert_defaults.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09,
+  orchestrator ruling after the re-verify):** the lineage invariant and the claimed state.
+  - `sink_offsets.rs` declares the child `lineage` and re-exports `SinkMark`,
+    `unstamped_since_stamp` and `refuse_planned_sink_write`.
+  - **A failed stamped attempt releases the claim.** `SiteStamp` now remembers its sink and
+    whether its commit was attempted. A site that drops it before the commit (a staging
+    failure after the claim) releases the claim; a commit that fails releases it unless the
+    failure is `CommitStateUnknown`. The guard then refuses unstamped commits again and a
+    retry of the write is admitted as the batch's one stamped commit. The append arm does this
+    in `commit_append`; the two merge arms call `attempt` before and `failed` after their
+    commit. Before, the claim stayed held, the guard admitted everything, and a retry was
+    refused `SinkCommittedTwice` although nothing had landed.
+  - **`SinkCommittedTwice` beside an unknown outcome.** A second claim while the first one's
+    outcome is unknown is refused with its own text, not MBE-13's, because nothing is known to
+    have landed. A held claim with a known outcome still answers `SinkCommittedTwice`.
+  - `insert_defaults::table_reference_target` is public: the pre-execute belt in `repark-core`
+    resolves a DML node's target with it.
+  - This touches the append arm the `toTable` door commits through. On that door a failed
+    commit ends the query and drops the scope, so the released claim is never read.
+  pins: mb-4-foreach-eo/C-016, C-017, C-020
 - `sink_offsets/body_scope.rs`, `sink_offsets_body_scope_tests.rs`, `sink_offsets.rs`,
   `session_write_conf.rs` — **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT"):**
   `foreachBatch` exactly-once on the declared sink. `sink_offsets.rs` declares the child

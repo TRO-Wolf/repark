@@ -365,6 +365,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   (comment-free per the owner ban).
 - `mod.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** MERGE staging and
   insert-stream sites take the session write conf through `session_staging`.
+- `snapshot_commit.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09):** both arms tell their
+  `SiteStamp` when the commit is attempted and when it failed, so a stamped write that
+  failed for a known reason releases the batch's claim (the rule is in the parent
+  directory's map under MB-4-FOREACH-EO fold 2).
+  pins: mb-4-foreach-eo/C-020
 - `snapshot_commit.rs` — **MB-2a (2026-10-07):** both MERGE arms, copy-on-write
   (`commit_overwrite_on_ref`) and merge-on-read (`commit_row_delta_kind_on_ref`), claim the
   active micro-batch stamp through `../sink_offsets.rs` (`SiteStamp`) after their early empty

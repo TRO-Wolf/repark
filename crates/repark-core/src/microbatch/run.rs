@@ -15,8 +15,8 @@ use repark_iceberg::microbatch::offset::{
 };
 use repark_iceberg::microbatch::window::WindowLimit;
 use repark_iceberg::write::sink_offsets::{
-    BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, commit_stamp_only,
-    read_resume_point, resolve_unknown_outcome, unstamped_above,
+    BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, SinkMark,
+    commit_stamp_only, read_resume_point, resolve_unknown_outcome, unstamped_since_stamp,
 };
 use repark_iceberg::write::{
     CommitStateUnknownError, SESSION_SNAPSHOT_PREFIX, apply_session_write_key,
@@ -56,6 +56,7 @@ struct Cursor {
     generation: Generation,
     epoch: Epoch,
     from: Option<InputOffset>,
+    baseline: Option<i64>,
 }
 
 enum Wake {
@@ -114,6 +115,10 @@ impl Run {
         let resumed = read_resume_point(&sink, self.shared.id)?;
         self.shared.resumed(resumed.clone());
         let mut cursor = self.resume(resumed.as_ref())?;
+        if resumed.is_none() {
+            cursor.baseline = sink.metadata().current_snapshot_id();
+        }
+        self.refuse_moved_sink(&sink, &cursor)?;
         let target = match self.shared.trigger {
             Trigger::AvailableNow => self.available_now_target(&mut cursor).await?,
             Trigger::Once | Trigger::ProcessingTime(_) => None,
@@ -244,6 +249,7 @@ impl Run {
                 generation,
                 epoch: Epoch::FIRST,
                 from: None,
+                baseline: None,
             });
         };
         let current = self.source.table_identifier();
@@ -267,7 +273,39 @@ impl Run {
             generation: record.generation,
             epoch: record.epoch.next(),
             from: record.offsets.inputs().first().cloned(),
+            baseline: None,
         })
+    }
+
+    fn recovery(&self, epoch: Epoch, reason: RecoveryReason) -> MicroBatchError {
+        MicroBatchError::RecoveryRequired {
+            query: self.shared.id,
+            epoch,
+            durable: self.shared.durable().map(Box::new),
+            reason,
+        }
+    }
+
+    fn refuse_moved_sink(&self, sink: &Table, cursor: &Cursor) -> Result<(), MicroBatchError> {
+        if !matches!(self.door, Door::ForeachBatch(_)) {
+            return Ok(());
+        }
+        let found = TableUuid::of(sink);
+        if found != self.shared.sink_uuid {
+            return Err(self.recovery(
+                cursor.epoch,
+                RecoveryReason::UnstampedSinkChange {
+                    what: format!(
+                        "the table under the sink's name was replaced (uuid {was}, now {found})",
+                        was = self.shared.sink_uuid
+                    ),
+                },
+            ));
+        }
+        match unstamped_since_stamp(sink, self.shared.id, cursor.baseline) {
+            Some(reason) => Err(self.recovery(cursor.epoch, reason)),
+            None => Ok(()),
+        }
     }
 
     async fn start_offset(
@@ -331,6 +369,7 @@ impl Run {
                 num_output_rows: None,
             }));
         }
+        self.refuse_moved_sink(&sink, cursor)?;
         let frame = match &self.plan {
             Some(template) => template.bind(&batch)?,
             None => batch.frame,
@@ -358,7 +397,10 @@ impl Run {
                 query: self.shared.id,
                 epoch,
                 durable: self.shared.durable().map(Box::new),
-                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+                reason: RecoveryReason::UnstampedSinkCommit {
+                    snapshot,
+                    operation: None,
+                },
             });
         }
         self.shared.end_batch(Some(record));
@@ -441,6 +483,7 @@ impl Run {
         frame: DataFrame,
     ) -> Result<SnapshotId, MicroBatchError> {
         let epoch = stamp.record.epoch;
+        let mark = SinkMark::of(base);
         let ran = guard.scope_body(body.run(frame, epoch)).await;
         let landed = match guard.outcome() {
             ScopeOutcome::Committed { snapshot } => Some(snapshot),
@@ -449,6 +492,10 @@ impl Run {
             }
             ScopeOutcome::NotCommitted => None,
         };
+        let sink = self.load_sink().await?;
+        if let Some(reason) = mark.violation(&sink) {
+            return Err(self.recovery(epoch, reason));
+        }
         if let Err(error) = ran {
             if landed.is_some() {
                 self.shared.end_batch(Some(stamp.record.clone()));
@@ -462,17 +509,6 @@ impl Run {
         }
         if let Some(snapshot) = landed {
             return Ok(snapshot);
-        }
-        let sink = self.load_sink().await?;
-        if TableUuid::of(&sink) == TableUuid::of(base)
-            && let Some(snapshot) = unstamped_above(&sink, base.metadata().current_snapshot_id())
-        {
-            return Err(MicroBatchError::RecoveryRequired {
-                query: self.shared.id,
-                epoch,
-                durable: self.shared.durable().map(Box::new),
-                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
-            });
         }
         let commit =
             commit_stamp_only(&self.shared.sink.catalog, &sink, stamp, Some(guard.token()));

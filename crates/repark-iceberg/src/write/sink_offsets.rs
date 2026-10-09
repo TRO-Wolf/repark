@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use datafusion::error::DataFusionError;
@@ -21,9 +22,11 @@ use crate::write::write_options::summary_with_extras;
 
 mod append_fence;
 mod body_scope;
+mod lineage;
 
 use append_fence::AppendFence;
-pub use body_scope::{guard_body_catalog, in_body_scope, unstamped_above};
+pub use body_scope::{guard_body_catalog, in_body_scope, refuse_planned_sink_write};
+pub use lineage::{SinkMark, unstamped_since_stamp};
 
 pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";
 
@@ -158,6 +161,12 @@ impl BatchScope {
         else {
             return Ok(None);
         };
+        if entry.claimed && entry.outcome_unknown && entry.committed.is_none() {
+            return Err(MicroBatchError::Catalog(format!(
+                "epoch {epoch}: an earlier stamped commit of this batch to the sink is still in flight or its outcome is unknown, so a second one is refused",
+                epoch = entry.stamp.record.epoch
+            )));
+        }
         if entry.claimed {
             let twice = MicroBatchError::SinkCommittedTwice {
                 epoch: entry.stamp.record.epoch,
@@ -250,7 +259,10 @@ impl ClaimedStamp {
                 query: record.query,
                 epoch: record.epoch,
                 durable: None,
-                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+                reason: RecoveryReason::UnstampedSinkCommit {
+                    snapshot,
+                    operation: None,
+                },
             });
         }
         mark_committed(committed, &self.stamp, snapshot);
@@ -264,6 +276,16 @@ fn mark_committed(sink: &Table, stamp: &CommitStamp, snapshot: SnapshotId) {
         && entry.stamp == *stamp
     {
         entry.committed = Some(snapshot);
+    }
+}
+
+fn release_claim(sink: &Table, stamp: &CommitStamp) {
+    if let Some(entry) = scopes().get_mut(&TableUuid::of(sink))
+        && entry.claimed
+        && entry.committed.is_none()
+        && entry.stamp == *stamp
+    {
+        entry.claimed = false;
     }
 }
 
@@ -576,6 +598,16 @@ fn landed_attempt(
 #[derive(Debug, Default)]
 pub(crate) struct SiteStamp {
     claimed: Option<ClaimedStamp>,
+    sink: Option<Table>,
+    attempted: AtomicBool,
+}
+
+impl Drop for SiteStamp {
+    fn drop(&mut self) {
+        if !self.attempted.load(Ordering::SeqCst) {
+            self.release();
+        }
+    }
 }
 
 impl SiteStamp {
@@ -621,7 +653,27 @@ impl SiteStamp {
             isolation()
         })
         .map_err(microbatch_error)?;
-        Ok(SiteStamp { claimed })
+        Ok(SiteStamp {
+            sink: claimed.is_some().then(|| table.clone()),
+            claimed,
+            attempted: AtomicBool::new(false),
+        })
+    }
+
+    fn release(&self) {
+        if let (Some(claimed), Some(sink)) = (&self.claimed, &self.sink) {
+            release_claim(sink, &claimed.stamp);
+        }
+    }
+
+    pub(crate) fn attempt(&self) {
+        self.attempted.store(true, Ordering::SeqCst);
+    }
+
+    pub(crate) fn failed(&self, error: &iceberg::Error) {
+        if error.kind() != ErrorKind::CommitStateUnknown {
+            self.release();
+        }
     }
 
     pub(crate) fn extras<'extra>(
@@ -662,18 +714,23 @@ impl SiteStamp {
         tx: Transaction,
         catalog: &Arc<dyn Catalog>,
     ) -> datafusion::error::Result<iceberg::Result<Table>> {
+        self.attempt();
         let result = tx.commit(self.fenced(catalog).as_ref()).await;
         match (&self.claimed, result) {
-            (Some(_), Err(error)) => match append_fence::refusal_of(&error) {
-                Some(refusal) => Err(microbatch_error(refusal)),
-                None => Ok(Err(error)),
-            },
+            (Some(_), Err(error)) => {
+                self.failed(&error);
+                match append_fence::refusal_of(&error) {
+                    Some(refusal) => Err(microbatch_error(refusal)),
+                    None => Ok(Err(error)),
+                }
+            }
             (_, result) => Ok(result),
         }
     }
 
-    pub(crate) fn record(self, committed: &Table) -> datafusion::error::Result<()> {
-        match self.claimed {
+    pub(crate) fn record(mut self, committed: &Table) -> datafusion::error::Result<()> {
+        self.attempt();
+        match self.claimed.take() {
             Some(claimed) => claimed.record_commit(committed).map_err(microbatch_error),
             None => Ok(()),
         }

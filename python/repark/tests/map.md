@@ -7988,6 +7988,31 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   once, stamped with the `repark.cdc` keys); the foreach format-ignored test now
   runs through the live arm. The remaining foreach pins split out below.
   pins: mb-4/C-026
+- [test_mb_4_streaming_foreach_lineage.py](test_mb_4_streaming_foreach_lineage.py) —
+  **MB-4-FOREACH-EO fold 2 (2026-10-09, orchestrator ruling after the re-verify):** the
+  lineage invariant through the public doors, built from the re-verify's repros. Five thread
+  routes (`threading.Thread` `INSERT`, `writeTo.append` and `INSERT OVERWRITE`,
+  `ThreadPoolExecutor`, `asyncio.to_thread`), each followed by a raise (the query ends
+  `RecoveryRequiredException` naming the snapshot and its operation, with the body's error as
+  `__cause__`, and two restarts refuse without calling the body) and each beside the body's
+  own stamped append (the same ending; the restart runs no body and adds no row); a
+  main-thread statement while a body runs; `EXPLAIN ANALYZE` of an `INSERT ... SELECT`, an
+  `INSERT ... VALUES`, an `UPDATE` and a `DELETE` refused MBE-19 before landing, raised or
+  swallowed, and a plain `EXPLAIN` passing; the retry after a failed stamped write (the sink's
+  metadata directory read-only for the first attempt) landing stamped once, and an `ALTER`
+  and an `INSERT OVERWRITE` after such a failure still refused; the body's exception as
+  `__cause__` on all three raising doors; drop-and-recreate after the stamped write; a
+  foreign `INSERT` between runs refusing the restart, and a rollback to the newest stamped
+  snapshot recovering it. The helper threads never call `collect()` (card
+  THREADED-COLLECT-SEGV-1).
+  pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022
+- [test_dfcore_1_exports.py](test_dfcore_1_exports.py),
+  [_dfcore_1_expected.py](_dfcore_1_expected.py) — **MB-4 fold 2 (2026-10-09):** the export
+  pin declares the delta of fold 1's `map_bridge.py` split, which had left it red: `core` and
+  the package lose `_drop_mia_temp_views`, `contextlib` and `weakref`, both new-submodule sets
+  gain `map_bridge`, and `EXPECTED_DATAFRAME_REBOUND` lists the seven private class names
+  that now bind a `map_bridge` function of another name. No public name moves.
+  pins: mb-4-foreach-eo/C-021
 - [test_mb_4_streaming_foreach_eo.py](test_mb_4_streaming_foreach_eo.py) —
   **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT" on the MB-4 verify's S1):** the
   `foreachBatch` exactly-once battery through the public doors. One process: the body's
@@ -8005,6 +8030,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   now read one stamped snapshot per batch.
   The kill pins mirror the MB-4 verify's choreographies, which were also re-run from its own
   scripts (the MB-4-FOREACH-EO ledger holds the counts).
+  **Fold 2 (2026-10-09):** the kill harness re-attaches on the newest metadata file that
+  parses (a kill can leave the newest one empty, which made the random-kill pin fail about
+  once in a hundred runs), and the MBE-19 pins read the reworded text.
   pins: mb-4-foreach-eo/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012, C-014
 - [test_mb_4_streaming_foreach.py](test_mb_4_streaming_foreach.py) — **MB-4 round 3b
   (2026-10-08):** the foreach-door battery, split out so the wireup battery stays

@@ -9,6 +9,41 @@ directory holds the piece split out of it. The test files of the module stay bes
 
 ## Contents
 
+- `lineage.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09, orchestrator ruling after the
+  re-verify: an invariant on the sink's lineage, checked by the driver, not a list of
+  routes).** The two checks the `foreachBatch` driver runs.
+  - **`unstamped_since_stamp(table, query, baseline)`**, check (a): walk `main` from the head
+    down to the newest snapshot this query stamped (or to `baseline`, the head a query with no
+    stamp found at start) and name the first snapshot that carries no `repark.cdc.query-id`,
+    with its operation. A snapshot stamped by another query is passed over: it is that query's
+    own commit and cannot be a stray write of this body.
+  - **`SinkMark::of(table)` / `violation(after)`**, check (b): the mark holds the table as it
+    was when the batch entered its scope. `violation` answers none when the metadata location
+    is the same. Otherwise it names, in this order: another table uuid; a new snapshot with no
+    stamp (on `main` first, then anywhere, so a branch write and a staged snapshot count); a
+    removed snapshot; `main` moved to a snapshot that already existed; a table property other
+    than a `repark.cdc.offsets.*` key; a schema, partition-spec or sort-order id; a branch or
+    tag. The fork's metadata has no public iterator over refs, so refs are read from the
+    serialized metadata, and only when the cheaper test fails: one new snapshot and the newest
+    entry of the metadata log equal to the mark's location mean exactly one commit landed,
+    the stamped one. Correctness does not rest on the metadata log; a catalog that does not
+    keep one pays the serialization every batch.
+  - **The reasons** are `RecoveryReason::UnstampedSinkCommit { snapshot, operation }` and the
+    new `UnstampedSinkChange { what }`.
+  - **Pins.** `sink_offsets_lineage_tests.rs` (a `#[path]` child of the probe module, in
+    `write/`): the walk's two bounds and what lies below them; another query's stamp; the
+    mark over nothing and over the one stamped commit; a stray before and after the stamped
+    commit; a property change with and without it; a branch, a rollback and a replaced table.
+  pins: mb-4-foreach-eo/C-016, C-017
+- `body_scope.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09):** `unstamped_above` is gone (the
+  lineage module replaces it). `refuse_planned_sink_write(table)` refuses, inside a body scope
+  and for the scope's own sink only, a write the engine planned through DataFusion and that no
+  stamped arm will commit; `repark-core`'s pre-execute belt calls it for every DML node a
+  statement will run. Three pins joined `sink_offsets_body_scope_tests.rs` for the re-verify's
+  surviving mutants and the claimed state: the guard loads the table when the commit brings
+  no base, a token in the extras decides before the ambient scope, and a failed stamped
+  attempt releases the claim (see the parent map).
+  pins: mb-4-foreach-eo/C-018, C-020, C-023
 - `body_scope.rs` — **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT"):** how a commit
   issued by a `foreachBatch` body finds its batch's stamp, and what stops a commit that cannot
   carry it.

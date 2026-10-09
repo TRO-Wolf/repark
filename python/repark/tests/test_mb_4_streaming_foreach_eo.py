@@ -38,7 +38,14 @@ _KILL_HARNESS = textwrap.dedent(
             name = os.path.basename(path)
             found = re.match(r"v(\\d+)\\.", name) or re.match(r"(\\d+)-", name)
             return int(found.group(1))
-        return max(files, key=version)
+        def whole(path):
+            try:
+                with open(path, encoding="utf-8") as handle:
+                    json.load(handle)
+            except ValueError:
+                return False
+            return True
+        return max((path for path in files if whole(path)), key=version)
 
     def metadata_files():
         return len(glob.glob(f"{root}/wh/eo/snk/metadata/*.metadata.json"))
@@ -362,7 +369,7 @@ def test_unstampable_sink_write_refuses_before_it_commits(
     properties = spark.sql(f"SHOW TBLPROPERTIES {_SINK}").collect()
     failure = _failure(_start(spark, _Body(spark, shape), tables))
     assert failure.getCondition() == "STREAM_FAILED"
-    assert f"[{_UNSTAMPED_WRITE}] epoch 0: this write to the declared sink" in str(failure)
+    assert f"[{_UNSTAMPED_WRITE}] epoch 0: this commit to the declared sink" in str(failure)
     assert _ids(spark, _SINK) == [90, 91]
     assert _log(spark, _SINK) == before
     assert spark.sql(f"SHOW TBLPROPERTIES {_SINK}").collect() == properties

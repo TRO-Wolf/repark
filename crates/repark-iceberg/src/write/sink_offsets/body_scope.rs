@@ -13,9 +13,9 @@ use iceberg::{
     TableIdent, ViewCreation,
 };
 
-use super::{BatchScopeGuard, ScopeToken, main_lineage, scopes};
+use super::{BatchScopeGuard, ScopeToken, scopes};
 use crate::microbatch::error::MicroBatchError;
-use crate::microbatch::offset::{QUERY_ID_KEY, SnapshotId, TableUuid};
+use crate::microbatch::offset::TableUuid;
 
 thread_local! {
     static BODY: RefCell<Option<BodyScope>> = const { RefCell::new(None) };
@@ -101,16 +101,18 @@ pub fn guard_body_catalog(catalog: &Arc<dyn Catalog>) -> Arc<dyn Catalog> {
 }
 
 #[must_use]
-pub fn unstamped_above(table: &Table, base: Option<i64>) -> Option<SnapshotId> {
-    main_lineage(table.metadata())
-        .take_while(|snapshot| Some(snapshot.snapshot_id()) != base)
-        .find(|snapshot| {
-            !snapshot
-                .summary()
-                .additional_properties
-                .contains_key(QUERY_ID_KEY)
-        })
-        .map(|snapshot| SnapshotId::new(snapshot.snapshot_id()))
+pub fn refuse_planned_sink_write(table: &Table) -> Option<MicroBatchError> {
+    let scope = ambient().filter(|scope| scope.sink == TableUuid::of(table))?;
+    let mut entries = scopes();
+    let entry = entries
+        .get_mut(&scope.sink)
+        .filter(|entry| entry.token == scope.token)?;
+    let refusal = MicroBatchError::UnstampedSinkWrite {
+        sink: table.identifier().to_string(),
+        epoch: entry.stamp.record.epoch,
+    };
+    entry.violation = Some(refusal.clone());
+    Some(refusal)
 }
 
 fn admit_sink_commit(scope: &BodyScope, sink: &TableIdent) -> Option<MicroBatchError> {

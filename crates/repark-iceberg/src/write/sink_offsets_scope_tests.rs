@@ -208,6 +208,8 @@ fn site_stamp_extras_put_the_stamp_last_and_drop_the_token() {
             stamp: stamp.clone(),
             base: None,
         }),
+        sink: None,
+        attempted: AtomicBool::new(false),
     };
     let token = ScopeToken::parse("eeeeeeee-0000-4000-8000-0000000000e5").expect("token");
     let extra = [

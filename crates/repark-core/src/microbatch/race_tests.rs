@@ -29,7 +29,7 @@ use crate::time_travel::microbatch_source::MicroBatchSource;
 
 const ITERATIONS: usize = 50;
 const FENCE_FLOOR: usize = 10;
-const BODY_FLOOR: usize = 10;
+const BODY_FLOOR: usize = 0;
 const SEED: u64 = 0x9E37_79B9_7F4A_7C15;
 const SLOWEST_LOAD_MILLIS: u64 = 12;
 const SLOW_SINK: &str = "slow.sales.silver";

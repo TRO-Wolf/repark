@@ -54,7 +54,7 @@ pub enum MicroBatchError {
     )]
     SinkCommittedTwice { epoch: Epoch },
     #[error(
-        "epoch {epoch}: this write to the declared sink {sink} cannot carry the epoch stamp, so it is refused before it commits. Inside a foreachBatch body the declared sink takes one append, INSERT INTO, MERGE, UPDATE or DELETE on its main branch; write any other table freely"
+        "epoch {epoch}: this commit to the declared sink {sink} cannot carry the epoch stamp, so it is refused before it lands. Inside a foreachBatch body the sink takes one commit per batch, from an append, an INSERT INTO, a MERGE, or an UPDATE or DELETE that rewrites rows inside data files; every other commit is refused, including a DELETE that drops whole files or matches no row, an overwrite, DDL and maintenance. Write any other table freely"
     )]
     UnstampedSinkWrite { sink: String, epoch: Epoch },
     #[error("query {query} epoch {epoch} is already committed")]
@@ -171,9 +171,19 @@ pub enum RecoveryReason {
     )]
     StampNotInLineage { snapshot: SnapshotId },
     #[error(
-        "sink advanced to snapshot {snapshot} without a stamp; a commit bypassed the batch scope"
+        "sink advanced to snapshot {snapshot}{} without a stamp; a commit bypassed the batch scope",
+        operation_suffix(.operation.as_deref())
     )]
-    UnstampedSinkCommit { snapshot: SnapshotId },
+    UnstampedSinkCommit {
+        snapshot: SnapshotId,
+        operation: Option<String>,
+    },
+    #[error("the sink changed without a stamp during the batch: {what}")]
+    UnstampedSinkChange { what: String },
+}
+
+fn operation_suffix(operation: Option<&str>) -> String {
+    operation.map_or_else(String::new, |name| format!(" ({name})"))
 }
 
 #[cfg(test)]
@@ -348,6 +358,10 @@ mod tests {
             },
             RecoveryReason::UnstampedSinkCommit {
                 snapshot: SnapshotId::new(11),
+                operation: Some(String::from("append")),
+            },
+            RecoveryReason::UnstampedSinkChange {
+                what: String::from("table property owner changed"),
             },
         ];
         for reason in reasons {
@@ -538,7 +552,7 @@ mod tests {
         };
         assert_eq!(
             refused.to_string(),
-            "epoch 4: this write to the declared sink silver.events cannot carry the epoch stamp, so it is refused before it commits. Inside a foreachBatch body the declared sink takes one append, INSERT INTO, MERGE, UPDATE or DELETE on its main branch; write any other table freely"
+            "epoch 4: this commit to the declared sink silver.events cannot carry the epoch stamp, so it is refused before it lands. Inside a foreachBatch body the sink takes one commit per batch, from an append, an INSERT INTO, a MERGE, or an UPDATE or DELETE that rewrites rows inside data files; every other commit is refused, including a DELETE that drops whole files or matches no row, an overwrite, DDL and maintenance. Write any other table freely"
         );
     }
 

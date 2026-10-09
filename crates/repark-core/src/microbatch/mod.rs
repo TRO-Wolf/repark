@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub(crate) mod body_statements;
 pub mod driver;
 #[cfg(test)]
 mod exactly_once_tests;

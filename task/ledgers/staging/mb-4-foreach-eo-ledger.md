@@ -318,6 +318,135 @@ the sink under it. See "Observed, out of scope".
   was copied into its `tests` directory by mistake during the red run, failed at import, and was
   removed at once; `git status` there was clean before and after.
 
+## Fold 2 — the lineage invariant — 2026-10-09 (after the re-verify; branch `feat/mb-4-facade` at `2877da20`)
+
+The re-verify (a different Opus session) closed the first verdict's S1 and four S2 in fact
+(343 kills, no duplicate) and failed the build on two S1 that are one defect: the refusal set
+was a block-list by route. A sink write that passed neither the guarded registry nor a stamped
+arm landed unstamped and unrefused, and beside the body's own stamped write the query ran on;
+one raise or kill between the two then duplicated rows silently. Its routes were `EXPLAIN
+ANALYZE` of a DML on the body's own thread and any write from another thread.
+
+**Ruling (orchestrator, 2026-10-09).** Enforce the sketch's rule by construction, wherever the
+write came from: a sink head that moved without the stamp ends
+`RecoveryRequired(UnstampedSinkCommit)`. This fold builds that. Where it differs from the
+sections above, this section holds; the earlier text stays as the record of what was built
+first.
+
+### What this fold overturns in the sections above
+
+- **A-5** ("a failed body is not audited") and the outcome table's row "raises before its sink
+  commit": every body is audited, and a violation wins over the body's own error.
+- **R-3's default** ("a stamped epoch tolerates a foreign snapshot beside it") and the pin
+  `a_foreign_snapshot_beside_a_stamped_epoch_is_tolerated`: an unstamped snapshot beside the
+  stamped commit ends the query.
+- **"What the design does not close", limit 1** (a write from another thread, then a crash):
+  closed for every epoch after the first stamped one. **Limit 2** (a restart after
+  `UnstampedSinkCommit` replays): closed the same way. Epoch 0 keeps a limit, below.
+- **A-3** claimed a drop-and-recreate ends `RecoveryRequired` and that the door checks the
+  sink's uuid. That held only inside a batch whose body made no stamped commit. It holds now
+  for every batch: the table under the sink's name is compared with the one the query
+  registered on before every body and after it.
+- **A-6 and the measured-shapes table** listed two refused `DELETE` shapes. There are three:
+  a `DELETE` whose predicate covers whole data files refuses as well (measured by the
+  re-verify). The registry row says so.
+- **Hand-back Q2** ("should a sink write from another thread be closed inside the process"):
+  answered by the invariant, with no per-catalog guard.
+
+### The invariant, as built
+
+From the first start of a query on a sink, every snapshot on the sink's `main` above the
+query's newest stamped epoch is the running epoch's one stamped snapshot, or the query ends.
+
+- **(a) Before any body** (`Run::refuse_moved_sink`): at the start of the trigger loop, so at
+  every restart, and again on the sink each batch loads. The table must be the one the query
+  registered on. Walking `main` from the head to the query's newest stamp, no snapshot may be
+  unstamped. For a query with no stamp, the walk ends at the head it found at start.
+- **(b) After every body, returned or raised, before the epoch is recorded durable**
+  (`SinkMark`): nothing on the sink may differ from what the batch found, except the one
+  stamped commit. The differences it names: another table uuid; a new unstamped snapshot
+  anywhere in the table (a branch write and a staged snapshot count); a removed snapshot;
+  `main` moved to an older snapshot; a table property other than an offsets key; a schema,
+  partition-spec or sort-order id; a branch or tag.
+- **The ending** is `RecoveryRequired` with `UnstampedSinkCommit { snapshot, operation }` or
+  the new `UnstampedSinkChange { what }`, and the durable record the handle reports is the last
+  epoch that passed the audit.
+- **It is detection after landing.** The rows are in the sink. The query stops and does not
+  replay over them.
+
+### Two readings of the ruling I made, for the orchestrator to overrule
+
+1. **A snapshot stamped by a different streaming query is not a violation.** The ruling's
+   words are "either this epoch's one stamped snapshot or a violation". A stray write of this
+   body cannot carry another query's stamp, the error's own name is "unstamped", and the
+   merged pin `two_sessions_on_one_sink_wait_for_the_scope` runs two queries on one sink
+   through this door. The offsets properties of other queries are passed over for the same
+   reason. A snapshot stamped by this query under another run is left to the epoch check and
+   the fence (`Fenced`), as before.
+2. **Check (a) is on snapshots only.** A property-only change between two runs does not
+   refuse a restart; "property-only commits and ref changes" are the ruling's words for
+   changes "during an epoch", and they are check (b)'s.
+
+### Where the invariant stops
+
+- **Epoch 0.** A query that never committed its first batch has no stamp. The ruling names
+  "the registered starting head for epoch 0" as its baseline, and that head is in memory.
+  After a refused or killed batch 0 a restart takes the head it finds as the baseline, runs
+  the body again, and check (b) stops it again if the stray write recurs. So at epoch 0 a
+  stray write can land once per start; it is never silent (the pin
+  `at_epoch_zero_a_restart_replays_and_is_stopped_again`, and the re-verify's
+  `explain_only_raise`). Closing it needs a durable mark of the starting head (a table
+  property written once at the first start), which the sketch's state rule (NS-2: the summary
+  and the offsets property, nothing else) does not allow without a ruling. It is the
+  hand-back's question.
+- **A stray write below the stamped commit, then a kill before the audit.** The restart finds
+  the stamp at the head and resumes after it. Nothing is duplicated: the epoch is durable and
+  the stray landed once. It is not reported.
+- **`DROP TABLE` alone** still ends `STREAM_FAILED` (the sink does not load), and a restart
+  after a drop-and-recreate is a new query: the query id comes from the table's uuid.
+- **The sink is single-writer while the query lives.** A batch `INSERT`, a compaction or any
+  other maintenance on the sink, between runs included, refuses the next start. Recovery is a
+  rollback to the newest stamped snapshot, or a new `queryName`. This is the ruling's letter
+  and it is a real restriction (a `foreachBatch` sink cannot be compacted under a live query
+  name); it is in the registry row and in the hand-back.
+
+### Refused before landing (defence in depth)
+
+- **The `EXPLAIN ANALYZE` route.** The statement head is `EXPLAIN`, so both SQL doors hand it
+  to DataFusion, whose registered table provider holds the unguarded catalog and commits with
+  no stamped arm. The same is true of every statement the doors do not own. The one place
+  such a plan runs is `PreExecute::execute` (the Spark door's passthrough now calls it too).
+  Inside a body it finds every `Dml` node the statement will execute and refuses
+  `UnstampedSinkWrite` when the target is the sink. A plain `EXPLAIN` executes nothing and
+  passes.
+- **The claimed state (the re-verify's first S2).** A stamped write that failed left the
+  scope claimed: the guard then admitted every commit, and a retry got MBE-13's text although
+  nothing was stamped. A `SiteStamp` now releases its claim when its commit fails for a known
+  reason or is never attempted. A retry is the epoch's one stamped commit. Beside an unknown
+  outcome a second claim is refused with its own text. MBE-13 is shown only for a commit that
+  landed, or for a claim that is held with a known outcome.
+
+### Recorded, not changed (the re-verify's S3)
+
+- Statements on other tables answer differently inside a body (39 of 120 compared): the
+  routing switch sends `INSERT`, `UPDATE` and `DELETE` to the engine's own arms, so a plain
+  `INSERT` returns one empty row, an `INSERT` into a missing table words its error
+  differently, and a branch `UPDATE` or `DELETE` gains `engine.operation-id`. Rows, snapshot
+  operations and counts are equal. Registry row `MB-4-FOREACH-SINK-SHAPES-1`.
+- The data-dependent `DELETE` refusals and the untyped in-body refusals: the same row. Giving
+  the in-body refusal its type is not one site: the error crosses the generic engine-error
+  mapper as a DataFusion external error, and the mapper's arm for it belongs to every door.
+- A second catalog entry for the sink's metadata takes the stamp: the same row.
+- The helper-thread crash in pyarrow's allocator: card THREADED-COLLECT-SEGV-1, extended.
+- `toTable` writing on after a drop-and-recreate: card STREAM-SURFACE-RESIDUE-1, a line.
+- **The "three trigger strings" regression is not one.** `'  bogus'`, `'bogus  '` and
+  `' 1 month '` differ from the oracle's `parsed` record only through the private
+  `_native.check_trigger_interval`, which has trimmed its input since the parser landed
+  (`7c31d0cf`, before the first verdict's head); its own Rust pin of that date expects the
+  trimmed echo. The public `trigger(processingTime=...)` strips first, as PySpark's does, and
+  equals the oracle's `trigger` record. The only later commit to the parser file (fold 1's
+  mask, `983f5632`) leaves these texts alone. Recorded on the residue card; no code change.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
@@ -336,4 +465,16 @@ the sink under it. See "Observed, out of scope".
 | C-012 | The verify's exactly-once scenarios through the public doors report 0 violations. | The verify's own scripts, run unchanged apart from the interpreter path and the test seam. | **PROVEN** | 12 of 12 choreographies exit 0 on their own check with 0 duplicates, 0 lost, 0 extra, no epoch gap (table above); the nine multi-query cases as described there. pins: mb-4-foreach-eo/C-012 |
 | C-013 | Five hand mutants of the new code each turn at least one pin red. | The mutant table. | **PROVEN** | Eight mutants, eight red (table above); M7 survived the Rust pins first and got a pin. pins: mb-4-foreach-eo/C-013 |
 | C-014 | The registry carries the side-effect contract (both halves), MBE-13 and `UnstampedSinkCommit` as reachable through the public door, and MBE-19. | The registry rows and the sketch §4 row. | **PROVEN** | `docs/spark-sql-iceberg-parity.md` rows `MB-4-FOREACH-EO-1`, `MB-4-FOREACH-SIDE-EFFECTS-1`, `MB-4-FOREACH-SINK-SHAPES-1`, each dated 2026-10-09 with its pins; the sketch's §4 gains MBE-19; `streaming_errors.rs` renders it (`sink_committed_twice_renders_stream_failed`). pins: mb-4-foreach-eo/C-014 |
+| C-016 | Check (a): on the `foreachBatch` door a start, a restart and every batch refuse `RecoveryRequired` before any body runs when an unstamped snapshot sits above the query's newest stamp or the table under the sink's name was replaced. | Driver pins, public-door pins. | **OPEN** | Closes with the fold-2 proof. |
+| C-017 | Check (b): after every body, returned or raised, any change to the sink other than the epoch's one stamped commit ends `RecoveryRequired` naming the snapshot and its operation, or the change, before the epoch is recorded durable. | Unit pins on the mark, driver pins, public-door pins. | **OPEN** | As C-016. |
+| C-018 | A DML the engine planned through DataFusion against the sink from a body (`EXPLAIN ANALYZE` of an `INSERT`, `UPDATE` or `DELETE`, a bare `INSERT`) refuses MBE-19 before it lands; a plain `EXPLAIN` passes. | Driver pin, public-door pins. | **OPEN** | As C-016. |
+| C-019 | The re-verify's thread routes (five, and a main-thread statement while a body runs) each end `RecoveryRequired` naming the unstamped snapshot, and a restart after a raise refuses without running a body. | Public-door pins. | **OPEN** | As C-016. |
+| C-020 | A stamped write that failed releases the claim: the guard refuses unstamped commits again, a retry lands stamped once, and MBE-13's text is not shown for a write that did not land. | Unit pins, public-door pins. | **OPEN** | As C-016. |
+| C-021 | `tests/test_dfcore_1_exports.py` is green with the `map_bridge` delta declared, and no same-named test of the facade suite passes on base and fails on head. | The pin; the per-test suite comparison. | **OPEN** | As C-016. |
+| C-022 | MBE-16: the body's Python exception is the `__cause__` of the query's exception on every raising door. | Public-door pin. | **OPEN** | As C-016. |
+| C-023 | Ten hand mutants, the re-verify's three survivors among them, each turn a pin red. | The fold-2 mutant table. | **OPEN** | As C-016. |
+| C-024 | The re-verify's scripts and kill set, and the first verdict's choreographies, show no silent duplicate. | The scripts, run from a copy with only their paths changed. | **OPEN** | As C-016. |
+| C-025 | The `toTable` door is unchanged by fold 2. | Its pins, its kill scenarios, the race pins 5 times. | **OPEN** | As C-016. |
+| C-026 | The audit's cost on a 200-epoch `availableNow` run is measured before and after. | The timing table. | **OPEN** | As C-016. |
+| C-027 | None of the seven lines the re-verify listed under "the contract as documented could mislead" is true any more. | The registry rows, the MBE-13 and MBE-19 texts. | **OPEN** | As C-016. |
 | C-015 | The two limits under "What the design does not close" and the observations A-5 and A-6 are accepted, or the owner names the one to close. | An owner ruling on the hand-back's questions. | **OPEN** | Closes on the ruling. Leans are in the hand-back: keep both limits, keep A-5, file the metadata-delete stamp as a follow-up card. The coverage attestation is the Critic's and is filed when this clause closes. |

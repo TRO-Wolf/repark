@@ -27,24 +27,76 @@ const AWAIT_SIGNAL_SLICE: Duration = Duration::from_millis(50);
 pub struct PyStreamingQuery {
     handle: QueryHandle,
     runtime: Arc<Runtime>,
+    cause: Option<BodyCause>,
+}
+
+#[derive(Clone, Default)]
+pub(crate) struct BodyCause(Arc<Mutex<Option<Py<PyAny>>>>);
+
+impl std::fmt::Debug for BodyCause {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("BodyCause(..)")
+    }
+}
+
+impl BodyCause {
+    fn slot(&self) -> std::sync::MutexGuard<'_, Option<Py<PyAny>>> {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn record(&self, py: Python<'_>, error: &PyErr) {
+        *self.slot() = Some(error.value(py).clone().into_any().unbind());
+    }
+
+    fn clear(&self) {
+        *self.slot() = None;
+    }
+
+    fn attach(&self, py: Python<'_>, raised: PyErr) -> PyErr {
+        if let Some(cause) = self.slot().as_ref() {
+            raised.set_cause(py, Some(PyErr::from_value(cause.bind(py).clone())));
+        }
+        raised
+    }
+}
+
+fn caused(py: Python<'_>, cause: Option<&BodyCause>, raised: PyErr) -> PyErr {
+    match cause {
+        Some(cause) => cause.attach(py, raised),
+        None => raised,
+    }
 }
 
 impl PyStreamingQuery {
     pub(crate) fn new(handle: QueryHandle, runtime: Arc<Runtime>) -> Self {
-        PyStreamingQuery { handle, runtime }
+        PyStreamingQuery {
+            handle,
+            runtime,
+            cause: None,
+        }
+    }
+
+    pub(crate) fn of(session: &PyReparkSession, handle: QueryHandle) -> Self {
+        let cause = BindingManagerState::of(session).cause_of(&handle);
+        PyStreamingQuery {
+            handle,
+            runtime: Arc::clone(&session.runtime),
+            cause,
+        }
     }
 
     fn run_error(&self, py: Python<'_>, error: &MicroBatchError) -> PyErr {
         let query = self.handle.id().to_string();
         let run = self.handle.run_id().to_string();
-        microbatch_py_err(
+        let raised = microbatch_py_err(
             py,
             error,
             Some(QueryHead {
                 query_id: &query,
                 run_id: &run,
             }),
-        )
+        );
+        caused(py, self.cause.as_ref(), raised)
     }
 }
 
@@ -163,6 +215,7 @@ impl PyStreamingQuery {
 struct BindingManagerState {
     known: Mutex<Vec<QueryHandle>>,
     terminated: Mutex<Vec<QueryHandle>>,
+    causes: Mutex<Vec<(String, BodyCause)>>,
 }
 
 impl BindingManagerState {
@@ -188,6 +241,16 @@ impl BindingManagerState {
                 terminated.push(handle.clone());
             }
         }
+    }
+
+    fn cause_of(&self, handle: &QueryHandle) -> Option<BodyCause> {
+        let run = handle.run_id().to_string();
+        self.causes
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .iter()
+            .find(|(known, _)| *known == run)
+            .map(|(_, cause)| cause.clone())
     }
 
     fn first_terminated(&self) -> Option<QueryHandle> {
@@ -236,6 +299,12 @@ pub(crate) fn note_started(session: &PyReparkSession, handle: &QueryHandle) {
         .push(handle.clone());
 }
 
+pub(crate) fn note_body_cause(session: &PyReparkSession, handle: &QueryHandle, cause: BodyCause) {
+    let state = BindingManagerState::of(session);
+    let mut causes = state.causes.lock().unwrap_or_else(PoisonError::into_inner);
+    causes.push((handle.run_id().to_string(), cause));
+}
+
 fn parse_query_uuid(text: &str) -> Option<u128> {
     let mut parts = text.split('-');
     let mut words = [0u64; 5];
@@ -271,10 +340,7 @@ fn wrap_query(
     session: &PyReparkSession,
     handle: QueryHandle,
 ) -> PyResult<Py<PyStreamingQuery>> {
-    Py::new(
-        py,
-        PyStreamingQuery::new(handle, Arc::clone(&session.runtime)),
-    )
+    Py::new(py, PyStreamingQuery::of(session, handle))
 }
 
 #[pyfunction]
@@ -313,18 +379,24 @@ fn streams_get(
 }
 
 #[allow(clippy::missing_errors_doc)]
-fn report_terminated(py: Python<'_>, handle: &QueryHandle, timed: bool) -> PyResult<Option<bool>> {
+fn report_terminated(
+    py: Python<'_>,
+    state: &BindingManagerState,
+    handle: &QueryHandle,
+    timed: bool,
+) -> PyResult<Option<bool>> {
     if let Some(error) = handle.exception() {
         let query = handle.id().to_string();
         let run = handle.run_id().to_string();
-        return Err(microbatch_py_err(
+        let raised = microbatch_py_err(
             py,
             &error,
             Some(QueryHead {
                 query_id: &query,
                 run_id: &run,
             }),
-        ));
+        );
+        return Err(caused(py, state.cause_of(handle).as_ref(), raised));
     }
     Ok(timed.then_some(true))
 }
@@ -352,14 +424,14 @@ fn streams_await_any_termination(
     let state = BindingManagerState::of(session);
     state.reap();
     if let Some(done) = state.first_terminated() {
-        return report_terminated(py, &done, timeout.is_some());
+        return report_terminated(py, &state, &done, timeout.is_some());
     }
     let runtime = Arc::clone(&session.runtime);
     let start = Instant::now();
     loop {
         state.reap();
         if let Some(done) = state.first_terminated() {
-            return report_terminated(py, &done, timeout.is_some());
+            return report_terminated(py, &state, &done, timeout.is_some());
         }
         if timeout.is_some_and(|limit| start.elapsed() >= limit) {
             return Ok(Some(false));
@@ -380,7 +452,7 @@ fn streams_stop_all(py: Python<'_>, session: &PyReparkSession) -> PyResult<()> {
         .clone();
     let mut first: Option<PyErr> = None;
     for handle in known {
-        let query = PyStreamingQuery::new(handle, Arc::clone(&session.runtime));
+        let query = PyStreamingQuery::of(session, handle);
         let stopped = query.stop(py);
         if first.is_none() {
             first = stopped.err();
@@ -418,6 +490,7 @@ pub(crate) struct BatchBodyAdapter {
     alive_token: Py<PyAny>,
     dataframe_class: Py<PyAny>,
     runtime: Arc<Runtime>,
+    cause: BodyCause,
 }
 
 impl BatchBodyAdapter {
@@ -434,7 +507,12 @@ impl BatchBodyAdapter {
             alive_token,
             dataframe_class,
             runtime,
+            cause: BodyCause::default(),
         }
+    }
+
+    pub(crate) fn cause(&self) -> BodyCause {
+        self.cause.clone()
     }
 
     fn call_body(&self, frame: DataFrame, epoch: Epoch) -> Result<(), MicroBatchError> {
@@ -447,10 +525,14 @@ impl BatchBodyAdapter {
                     .bind(py)
                     .call1((native, self.session.bind(py), self.alive_token.bind(py)))
                     .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+                self.cause.clear();
                 self.body
                     .bind(py)
                     .call1((facade, epoch.get()))
-                    .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+                    .map_err(|error| {
+                        self.cause.record(py, &error);
+                        MicroBatchError::Catalog(error.to_string())
+                    })?;
                 Ok(())
             })
         })

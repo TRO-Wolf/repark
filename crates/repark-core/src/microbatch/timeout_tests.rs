@@ -224,21 +224,24 @@ async fn an_unstamped_batch_ends_recovery_required_over_a_stalled_catalog() {
     handle.start_below_catalog_check().expect("start");
     let error = ended(&handle).await.expect_err("the batch is unstamped");
     catalog.on_load(None);
-    let stamp = fixture
-        .table("silver")
-        .await
-        .metadata()
-        .current_snapshot_id()
-        .expect("the stamp landed on the replaced sink");
+    assert_eq!(
+        fixture
+            .table("silver")
+            .await
+            .metadata()
+            .current_snapshot_id(),
+        None,
+        "no stamp lands on the replaced sink"
+    );
     assert!(
         matches!(
             error.as_ref(),
             MicroBatchError::RecoveryRequired {
                 epoch,
                 durable: None,
-                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+                reason: RecoveryReason::UnstampedSinkChange { .. },
                 ..
-            } if *epoch == Epoch::FIRST && snapshot.get() == stamp
+            } if *epoch == Epoch::FIRST
         ),
         "{error:?}"
     );

@@ -946,6 +946,7 @@ mod tests {
                 },
                 RecoveryReason::UnstampedSinkCommit {
                     snapshot: SnapshotId::new(11),
+                    operation: None,
                 },
             ];
             for reason in reasons {

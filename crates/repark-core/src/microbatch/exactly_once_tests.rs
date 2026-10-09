@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use datafusion::prelude::DataFrame;
 use futures::future::BoxFuture;
@@ -37,30 +38,54 @@ fn unstamped_snapshots(fixture_sink: &iceberg::table::Table) -> Vec<i64> {
         .collect()
 }
 
-enum Shape {
-    SpawnedOnly,
-    SpawnedThenOwn,
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Stray {
+    SpawnedAppend,
+    SpawnedProperty,
     BareInsert,
-    PropertyChange,
+    ExplainAnalyzeInsert,
+    ExplainInsert,
+    GuardedProperty,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Own {
+    Nothing,
+    AppendAfter,
+    AppendBefore,
+    RaiseAfter,
 }
 
 struct Shaped {
     session: Session,
-    shape: Shape,
+    stray: Stray,
+    at: u64,
+    own: Own,
+    calls: AtomicUsize,
 }
 
 impl Shaped {
-    fn spec(session: &Session, shape: Shape) -> StreamSpec {
-        let body = Arc::new(Shaped {
+    fn new(session: &Session, stray: Stray, at: u64, own: Own) -> Arc<Shaped> {
+        Arc::new(Shaped {
             session: session.clone(),
-            shape,
-        });
+            stray,
+            at,
+            own,
+            calls: AtomicUsize::new(0),
+        })
+    }
+
+    fn calls(&self) -> usize {
+        self.calls.load(Ordering::SeqCst)
+    }
+
+    fn spec(self: &Arc<Self>) -> StreamSpec {
         let mut spec = StreamSpec::new(
             SOURCE,
             options(ONE),
             SinkSpec::ForeachBatch {
                 sink: SINK.to_string(),
-                body: body as Arc<dyn BatchBody>,
+                body: Arc::clone(self) as Arc<dyn BatchBody>,
             },
         );
         spec.trigger = Trigger::AvailableNow;
@@ -74,32 +99,11 @@ impl Shaped {
             .map_err(|error| MicroBatchError::Catalog(error.to_string()))?
     }
 
-    async fn touch_the_sink(&self) -> Result<(), MicroBatchError> {
-        let catalog = self
-            .session
-            .catalogs_snapshot()
-            .guarded_in_batch_body()
-            .get("ice")
-            .cloned()
-            .ok_or_else(|| MicroBatchError::Catalog("no catalog".to_string()))?;
-        let ident = TableIdent::new(
-            NamespaceIdent::new("sales".to_string()),
-            "silver".to_string(),
-        );
-        let sink = catalog
-            .load_table(&ident)
+    async fn spawned_property(&self) -> Result<(), MicroBatchError> {
+        let session = self.session.clone();
+        tokio::spawn(async move { touch_the_sink(&session).await })
             .await
-            .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
-        let tx = Transaction::new(&sink);
-        let tx = tx
-            .update_table_properties()
-            .set("eo.touched".to_string(), "yes".to_string())
-            .apply(tx)
-            .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
-        tx.commit(catalog.as_ref())
-            .await
-            .map(|_| ())
-            .map_err(|error| MicroBatchError::Catalog(error.to_string()))
+            .map_err(|error| MicroBatchError::Catalog(error.to_string()))?
     }
 
     fn statement(&self, text: &str) -> Result<(), MicroBatchError> {
@@ -116,25 +120,105 @@ impl Shaped {
             })
         })
     }
+
+    async fn stray(&self, frame: DataFrame, epoch: Epoch) -> Result<(), MicroBatchError> {
+        let id = 70 + epoch.get();
+        match self.stray {
+            Stray::SpawnedAppend => self.spawned(frame).await,
+            Stray::SpawnedProperty => self.spawned_property().await,
+            Stray::GuardedProperty => touch_the_sink(&self.session).await,
+            Stray::BareInsert => self.statement(&format!("INSERT INTO {SINK} VALUES ({id})")),
+            Stray::ExplainAnalyzeInsert => {
+                self.statement(&format!("EXPLAIN ANALYZE INSERT INTO {SINK} VALUES ({id})"))
+            }
+            Stray::ExplainInsert => {
+                self.statement(&format!("EXPLAIN INSERT INTO {SINK} VALUES ({id})"))
+            }
+        }
+    }
+}
+
+async fn touch_the_sink(session: &Session) -> Result<(), MicroBatchError> {
+    let catalog = session
+        .catalogs_snapshot()
+        .guarded_in_batch_body()
+        .get("ice")
+        .cloned()
+        .ok_or_else(|| MicroBatchError::Catalog("no catalog".to_string()))?;
+    let ident = TableIdent::new(
+        NamespaceIdent::new("sales".to_string()),
+        "silver".to_string(),
+    );
+    let sink = catalog
+        .load_table(&ident)
+        .await
+        .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+    let tx = Transaction::new(&sink);
+    let tx = tx
+        .update_table_properties()
+        .set("eo.touched".to_string(), "yes".to_string())
+        .apply(tx)
+        .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+    tx.commit(catalog.as_ref())
+        .await
+        .map(|_| ())
+        .map_err(|error| MicroBatchError::Catalog(error.to_string()))
 }
 
 impl BatchBody for Shaped {
     fn run(&self, frame: DataFrame, epoch: Epoch) -> BoxFuture<'_, Result<(), MicroBatchError>> {
         Box::pin(async move {
-            match self.shape {
-                Shape::SpawnedOnly => self.spawned(frame).await,
-                Shape::SpawnedThenOwn => {
-                    self.spawned(frame.clone()).await?;
-                    append_frame(&self.session, SINK, frame).await
-                }
-                Shape::BareInsert => {
-                    let id = 70 + epoch.get();
-                    self.statement(&format!("INSERT INTO {SINK} VALUES ({id})"))
-                }
-                Shape::PropertyChange => self.touch_the_sink().await,
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            let hit = epoch.get() == self.at;
+            if self.own == Own::AppendBefore || (self.own != Own::Nothing && !hit) {
+                append_frame(&self.session, SINK, frame.clone()).await?;
             }
+            if hit {
+                self.stray(frame.clone(), epoch).await?;
+                match self.own {
+                    Own::AppendAfter => append_frame(&self.session, SINK, frame).await?,
+                    Own::RaiseAfter => {
+                        return Err(MicroBatchError::Catalog("the body raised".to_string()));
+                    }
+                    Own::Nothing | Own::AppendBefore => {}
+                }
+            }
+            Ok(())
         })
     }
+}
+
+fn unstamped_commit(error: &MicroBatchError) -> (u64, Option<u64>, i64, String) {
+    match error {
+        MicroBatchError::RecoveryRequired {
+            epoch,
+            durable,
+            reason:
+                RecoveryReason::UnstampedSinkCommit {
+                    snapshot,
+                    operation: Some(operation),
+                },
+            ..
+        } => (
+            epoch.get(),
+            durable.as_ref().map(|record| record.epoch.get()),
+            snapshot.get(),
+            operation.clone(),
+        ),
+        other => panic!("expected an unstamped commit, got {other:?}"),
+    }
+}
+
+async fn ended_with(fixture: &Fixture, body: &Arc<Shaped>) -> Arc<MicroBatchError> {
+    let handle = started(fixture, body.spec()).await;
+    let error = handle
+        .await_termination(None)
+        .await
+        .expect_err("the query ends with an error");
+    if matches!(error.as_ref(), MicroBatchError::RecoveryRequired { .. }) {
+        assert_eq!(handle.state(), QueryState::RecoveryRequired);
+    }
+    error
 }
 
 #[tokio::test]
@@ -179,60 +263,193 @@ async fn a_body_without_a_sink_write_gets_one_stamp_only_snapshot_per_epoch() {
 }
 
 #[tokio::test]
-async fn a_sink_write_outside_the_body_scope_with_no_stamped_commit_ends_recovery_required() {
+async fn a_stray_sink_write_with_no_stamped_commit_ends_recovery_required() {
     let fixture = Fixture::new().await;
     bronze(&fixture).await;
-    let handle = started(&fixture, Shaped::spec(&fixture.session, Shape::SpawnedOnly)).await;
-    let error = handle
-        .await_termination(None)
-        .await
-        .expect_err("the unstamped commit is named");
+    let body = Shaped::new(&fixture.session, Stray::SpawnedAppend, 0, Own::Nothing);
+    let error = ended_with(&fixture, &body).await;
     let sink = fixture.table("silver").await;
     let unstamped = unstamped_snapshots(&sink);
+    assert_eq!(
+        unstamped_commit(&error),
+        (0, None, unstamped[0], String::from("append"))
+    );
     assert_eq!(unstamped.len(), 1);
+    assert!(stamped_epochs(&sink).is_empty());
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3]);
+}
+
+#[tokio::test]
+async fn a_stray_sink_write_beside_the_stamped_commit_ends_recovery_required() {
+    for own in [Own::AppendAfter, Own::AppendBefore] {
+        let fixture = Fixture::new().await;
+        bronze(&fixture).await;
+        let body = Shaped::new(&fixture.session, Stray::SpawnedAppend, 1, own);
+        let error = ended_with(&fixture, &body).await;
+        let sink = fixture.table("silver").await;
+        let unstamped = unstamped_snapshots(&sink);
+        assert_eq!(unstamped.len(), 1);
+        assert_eq!(
+            unstamped_commit(&error),
+            (1, Some(0), unstamped[0], String::from("append")),
+            "the handle does not record the epoch durable"
+        );
+        assert_eq!(stamped_epochs(&sink), [0, 1]);
+        assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5]);
+        fixture.insert(SOURCE, "(6)").await;
+        let resumed = Shaped::new(&fixture.session, Stray::SpawnedAppend, 9, Own::AppendAfter);
+        let restart = started(&fixture, resumed.spec()).await;
+        let ending = restart.await_termination(None).await;
+        if own == Own::AppendAfter {
+            assert_eq!(
+                ending,
+                Ok(true),
+                "the stamp is the head: epoch 1 is durable"
+            );
+            assert_eq!(resumed.calls(), 1);
+            assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5, 6]);
+        } else {
+            let refused = ending.expect_err("the stray is above the newest stamp");
+            assert_eq!(
+                unstamped_commit(&refused),
+                (2, Some(1), unstamped[0], String::from("append"))
+            );
+            assert_eq!(resumed.calls(), 0, "a refused restart runs no body");
+            assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5]);
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_failed_body_is_audited_and_the_restart_refuses_before_any_body() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let body = Shaped::new(&fixture.session, Stray::SpawnedAppend, 1, Own::RaiseAfter);
+    let error = ended_with(&fixture, &body).await;
+    let sink = fixture.table("silver").await;
+    let stray = unstamped_snapshots(&sink)[0];
+    assert_eq!(
+        unstamped_commit(&error),
+        (1, Some(0), stray, String::from("append"))
+    );
+    assert_eq!(stamped_epochs(&sink), [0]);
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5]);
+    for attempt in 0..2 {
+        let resumed = Shaped::new(&fixture.session, Stray::SpawnedAppend, 1, Own::AppendAfter);
+        let refused = ended_with(&fixture, &resumed).await;
+        assert_eq!(
+            unstamped_commit(&refused),
+            (1, Some(0), stray, String::from("append")),
+            "restart {attempt}"
+        );
+        assert_eq!(resumed.calls(), 0, "restart {attempt} ran a body");
+        assert_eq!(
+            fixture.ids(SINK).await,
+            [1, 2, 3, 4, 5],
+            "restart {attempt}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn at_epoch_zero_a_restart_replays_and_is_stopped_again() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let body = Shaped::new(&fixture.session, Stray::SpawnedAppend, 0, Own::RaiseAfter);
+    let first = unstamped_commit(ended_with(&fixture, &body).await.as_ref());
+    assert_eq!((first.0, first.1), (0, None));
+    let resumed = Shaped::new(&fixture.session, Stray::SpawnedAppend, 0, Own::RaiseAfter);
+    let second = unstamped_commit(ended_with(&fixture, &resumed).await.as_ref());
+    assert_eq!((second.0, second.1), (0, None));
+    assert_ne!(first.2, second.2, "the replay's own stray is the one named");
+    assert_eq!(
+        resumed.calls(),
+        1,
+        "no stamp exists, so the restart cannot refuse"
+    );
+    assert_eq!(fixture.ids(SINK).await, [1, 1, 2, 2, 3, 3]);
+    assert!(stamped_epochs(&fixture.table("silver").await).is_empty());
+}
+
+#[tokio::test]
+async fn rows_already_in_the_sink_and_a_seeded_restart_are_not_violations() {
+    let fixture = Fixture::new().await;
+    fixture.insert(SINK, "(90)").await;
+    fixture.insert(SINK, "(91)").await;
+    bronze(&fixture).await;
+    let body = SinkWriter::new(&fixture.session, SINK, 1);
+    let handle = started(&fixture, body.spec(&options(ONE))).await;
+    assert_eq!(handle.await_termination(None).await, Ok(true));
+    fixture.insert(SOURCE, "(6)").await;
+    let resumed = SinkWriter::new(&fixture.session, SINK, 1);
+    let restart = started(&fixture, resumed.spec(&options(ONE))).await;
+    assert_eq!(restart.await_termination(None).await, Ok(true));
+    assert_eq!(resumed.calls(), 1);
+    let sink = fixture.table("silver").await;
+    assert_eq!(stamped_epochs(&sink), [0, 1, 2]);
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5, 6, 90, 91]);
+}
+
+#[tokio::test]
+async fn a_foreign_snapshot_between_runs_refuses_the_restart() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let body = SinkWriter::new(&fixture.session, SINK, 1);
+    let handle = started(&fixture, body.spec(&options(ONE))).await;
+    assert_eq!(handle.await_termination(None).await, Ok(true));
+    fixture.insert(SINK, "(99)").await;
+    fixture.insert(SOURCE, "(6)").await;
+    let foreign = fixture
+        .table("silver")
+        .await
+        .metadata()
+        .current_snapshot_id()
+        .expect("the foreign head");
+    let resumed = SinkWriter::new(&fixture.session, SINK, 1);
+    let restart = started(&fixture, resumed.spec(&options(ONE))).await;
+    let refused = restart
+        .await_termination(None)
+        .await
+        .expect_err("the head is not the newest stamp");
+    assert_eq!(
+        unstamped_commit(&refused),
+        (2, Some(1), foreign, String::from("append"))
+    );
+    assert_eq!(resumed.calls(), 0);
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5, 99]);
+}
+
+#[tokio::test]
+async fn a_property_change_beside_the_stamped_commit_ends_recovery_required() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let body = Shaped::new(
+        &fixture.session,
+        Stray::SpawnedProperty,
+        1,
+        Own::AppendAfter,
+    );
+    let error = ended_with(&fixture, &body).await;
     assert!(
         matches!(
             error.as_ref(),
             MicroBatchError::RecoveryRequired {
                 epoch,
-                durable: None,
-                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+                reason: RecoveryReason::UnstampedSinkChange { what },
                 ..
-            } if *epoch == Epoch::FIRST && snapshot.get() == unstamped[0]
+            } if epoch.get() == 1 && what == "table property eo.touched changed"
         ),
         "{error:?}"
     );
-    assert_eq!(handle.state(), QueryState::RecoveryRequired);
-    assert!(stamped_epochs(&sink).is_empty());
-    assert_eq!(sink.metadata().snapshots().count(), 1);
-    assert_eq!(fixture.ids(SINK).await, [1, 2, 3]);
-}
-
-#[tokio::test]
-async fn a_foreign_snapshot_beside_a_stamped_epoch_is_tolerated() {
-    let fixture = Fixture::new().await;
-    bronze(&fixture).await;
-    let handle = started(
-        &fixture,
-        Shaped::spec(&fixture.session, Shape::SpawnedThenOwn),
-    )
-    .await;
-    assert_eq!(handle.await_termination(None).await, Ok(true));
-    let sink = fixture.table("silver").await;
-    assert_eq!(stamped_epochs(&sink), [0, 1]);
-    assert_eq!(unstamped_snapshots(&sink).len(), 2);
-    assert_eq!(fixture.ids(SINK).await, [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+    assert_eq!(stamped_epochs(&fixture.table("silver").await), [0, 1]);
 }
 
 #[tokio::test]
 async fn an_unstampable_commit_to_the_sink_refuses_before_it_lands() {
     let fixture = Fixture::new().await;
     bronze(&fixture).await;
-    let handle = started(
-        &fixture,
-        Shaped::spec(&fixture.session, Shape::PropertyChange),
-    )
-    .await;
+    let body = Shaped::new(&fixture.session, Stray::GuardedProperty, 0, Own::Nothing);
+    let handle = started(&fixture, body.spec()).await;
     let error = handle
         .await_termination(None)
         .await
@@ -258,27 +475,32 @@ async fn an_unstampable_commit_to_the_sink_refuses_before_it_lands() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_sink_write_the_guard_cannot_see_ends_recovery_required() {
+async fn a_planned_write_to_the_sink_refuses_before_it_lands_and_a_plain_explain_passes() {
+    for stray in [Stray::BareInsert, Stray::ExplainAnalyzeInsert] {
+        let fixture = Fixture::new().await;
+        bronze(&fixture).await;
+        let body = Shaped::new(&fixture.session, stray, 0, Own::AppendAfter);
+        let error = ended_with(&fixture, &body).await;
+        assert!(
+            matches!(
+                error.as_ref(),
+                MicroBatchError::UnstampedSinkWrite { sink, epoch }
+                    if sink == "sales.silver" && *epoch == Epoch::FIRST
+            ),
+            "{error:?}"
+        );
+        assert_eq!(
+            fixture.table("silver").await.metadata().snapshots().count(),
+            0
+        );
+    }
     let fixture = Fixture::new().await;
     bronze(&fixture).await;
-    let handle = started(&fixture, Shaped::spec(&fixture.session, Shape::BareInsert)).await;
-    let error = handle
-        .await_termination(None)
-        .await
-        .expect_err("the unstamped commit is named");
-    assert!(
-        matches!(
-            error.as_ref(),
-            MicroBatchError::RecoveryRequired {
-                durable: None,
-                reason: RecoveryReason::UnstampedSinkCommit { .. },
-                ..
-            }
-        ),
-        "{error:?}"
-    );
-    assert!(stamped_epochs(&fixture.table("silver").await).is_empty());
-    assert_eq!(fixture.ids(SINK).await, [70]);
+    let body = Shaped::new(&fixture.session, Stray::ExplainInsert, 0, Own::AppendAfter);
+    let handle = started(&fixture, body.spec()).await;
+    assert_eq!(handle.await_termination(None).await, Ok(true));
+    assert_eq!(stamped_epochs(&fixture.table("silver").await), [0, 1]);
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5]);
 }
 
 #[tokio::test]

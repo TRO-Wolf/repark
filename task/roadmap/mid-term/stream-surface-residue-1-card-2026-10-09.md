@@ -97,3 +97,19 @@ ruling is revisited.
   unsupported shapes; a streaming fix rides the batch fix.
 - The older fence test keeps its name and its passing runs; only its
   record says it never reaches the fence.
+- **`toTable` keeps writing after its sink is dropped and re-created under the same
+  name (recorded 2026-10-09, MB-4 fold 2; measured by the MB-4 re-verify and identical
+  on the merged MB-3 driver).** The driver loads the sink by name for each batch and does
+  not compare its uuid with the one the query registered on, so the next batch lands in
+  the new table with a stamp. The `foreachBatch` door ends
+  `RecoveryRequired(UnstampedSinkChange)` in the same case since fold 2. Not changed here:
+  the fold's ruling keeps `toTable`'s commit path as it is.
+- **The three trigger strings `'  bogus'`, `'bogus  '` and `' 1 month '` (recorded
+  2026-10-09, MB-4 fold 2).** The private `_native.check_trigger_interval` trims its
+  input and echoes the trimmed text, as it has since the parser landed (`7c31d0cf`); the
+  public `trigger(processingTime=...)` strips first, as PySpark's does, and answers the
+  oracle's `trigger` record for all three. Only the oracle's `parsed` record (the JVM
+  parser called without PySpark's strip) keeps the padding, and no public door reaches
+  it. The re-verify counted the three against `parsed` through the private door; the
+  only later change to the parser file is fold 1's credential mask, which leaves these
+  texts alone.

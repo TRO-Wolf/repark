@@ -93,6 +93,15 @@ The evidence, the tables and the recommendation are in the
 - The dependency floor: item 3 of the ask, whether the requirement rises to `pyarrow>=25.0.1`.
 - Whether a patch release carries it.
 
+## A `foreachBatch` body makes the shape ordinary (recorded 2026-10-09, MB-4 fold 2)
+
+A `foreachBatch` callable runs on a non-main thread. A helper thread it starts that calls
+`spark.sql("INSERT ...").collect()` is the nested-thread shape of this card, and the MB-4
+re-verify crashed it the same way on the base tree with no streaming at all (2 of 2) and on
+the MB-4 head from inside a body (6 of 6): `SIGSEGV` in pyarrow 25.0.0's bundled allocator
+under `RecordBatch.__arrow_c_array__`. It is this card's defect, not the streaming door's.
+The MB-4 thread pins start their helper threads without `collect()` for that reason.
+
 ## Pointers
 
 - The C-3 verifier's out-of-scope observation, PR #998.

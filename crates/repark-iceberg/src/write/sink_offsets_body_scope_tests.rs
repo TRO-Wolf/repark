@@ -76,43 +76,149 @@ async fn a_commit_outside_the_body_scope_never_claims() {
     let committed = append_plain(&catalog, &ident, &[1]).await;
     assert_unstamped(&committed);
     assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
-    let head = committed.metadata().current_snapshot_id().expect("head");
-    assert_eq!(
-        unstamped_above(&committed, None),
-        Some(SnapshotId::new(head))
-    );
-    assert_eq!(unstamped_above(&committed, Some(head)), None);
 }
 
 #[tokio::test]
-async fn unstamped_above_skips_stamped_snapshots_and_stops_at_the_base() {
-    let (_warehouse, catalog, ident) = fixture("body_above").await;
-    let seeded = append_plain(&catalog, &ident, &[1]).await;
-    let base = seeded.metadata().current_snapshot_id();
-    let guard = BatchScope::enter(TableUuid::of(&seeded), body_stamp(0)).expect("enter");
-    let files = stage(&seeded, &[2]).await;
-    let stamped = guard
+async fn a_token_in_the_extras_decides_before_the_ambient_scope() {
+    let (_warehouse, catalog, ident) = fixture("body_order").await;
+    let table = append_plain(&catalog, &ident, &[1]).await;
+    let guard = BatchScope::enter(TableUuid::of(&table), body_stamp(0)).expect("enter");
+    let foreign = ScopeToken::parse("eeeeeeee-0000-4000-8000-0000000000e5").expect("token");
+    let files = stage(&table, &[2]).await;
+    let committed = guard
         .scope_body(commit_append_with_summary(
             &catalog,
-            &seeded,
+            &table,
             files,
-            &[],
+            &[foreign.summary_entry()],
             None,
         ))
         .await
-        .expect("the stamped append");
-    assert_eq!(unstamped_above(&stamped, base), None);
-    assert_eq!(
-        unstamped_above(&stamped, None).map(SnapshotId::get),
-        base,
-        "with no base the walk reaches the seeded snapshot"
+        .expect("the append commits as on main");
+    assert_unstamped(&committed);
+    assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+}
+
+#[tokio::test]
+async fn a_failed_stamped_attempt_releases_the_claim_and_the_retry_is_the_stamped_commit() {
+    let (_warehouse, inner, ident) = fixture("body_retry").await;
+    let table = append_plain(&inner, &ident, &[1]).await;
+    let failing: Arc<dyn Catalog> = Arc::new(ProbeCatalog::new(
+        Arc::clone(&inner),
+        ProbeMode::FailBeforeLanding,
+    ));
+    let stamp = body_stamp(0);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let first = stage(&table, &[2]).await;
+    let again = stage(&table, &[2]).await;
+    let (failed, unstamped_after, retried) = guard
+        .scope_body(async {
+            let failed = commit_append_with_summary(&failing, &table, first, &[], None).await;
+            let guarded = guard_body_catalog(&inner);
+            let unstamped_after = set_property(&guarded, &table).await;
+            let retried = commit_append_with_summary(&guarded, &table, again, &[], None).await;
+            (failed, unstamped_after, retried)
+        })
+        .await;
+    assert!(failed.is_err());
+    assert!(matches!(
+        refusal_in(&unstamped_after.expect_err("the claim was released")),
+        MicroBatchError::UnstampedSinkWrite { .. }
+    ));
+    let committed = retried.expect("the retry is admitted");
+    assert_stamped_head(&committed, &stamp);
+    assert_eq!(stamped_snapshots(&committed), 1);
+    assert_eq!(live_ids(&committed).await, vec![1, 2]);
+    assert!(!committed.metadata().properties().contains_key("eo.touched"));
+}
+
+#[tokio::test]
+async fn a_stamped_attempt_that_never_reached_its_commit_releases_the_claim() {
+    let (_warehouse, catalog, ident) = fixture("body_dropped").await;
+    let table = append_plain(&catalog, &ident, &[1]).await;
+    let stamp = body_stamp(0);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
+    let files = stage(&table, &[2]).await;
+    let committed = guard
+        .scope_body(async {
+            drop(SiteStamp::claim(&table, None, &[]).expect("the first claim"));
+            commit_append_with_summary(&catalog, &table, files, &[], None).await
+        })
+        .await
+        .expect("the claim was free again");
+    assert_stamped_head(&committed, &stamp);
+}
+
+#[tokio::test]
+async fn a_second_claim_beside_an_unknown_outcome_refuses_without_the_twice_text() {
+    let (_warehouse, inner, ident) = fixture("body_unknown_retry").await;
+    let table = append_plain(&inner, &ident, &[1]).await;
+    let catalog: Arc<dyn Catalog> = Arc::new(ProbeCatalog::new(
+        Arc::clone(&inner),
+        ProbeMode::UnknownWithoutLanding,
+    ));
+    let guard = BatchScope::enter(TableUuid::of(&table), body_stamp(0)).expect("enter");
+    let first = stage(&table, &[2]).await;
+    let again = stage(&table, &[2]).await;
+    let (unknown, retried) = guard
+        .scope_body(async {
+            let guarded = guard_body_catalog(&catalog);
+            let unknown = commit_append_with_summary(&guarded, &table, first, &[], None).await;
+            let retried = commit_append_with_summary(&inner, &table, again, &[], None).await;
+            (unknown, retried)
+        })
+        .await;
+    assert!(unknown.is_err());
+    let refusal = retried.expect_err("the retry is refused");
+    let text = microbatch_cause(&refusal).to_string();
+    assert!(
+        text.contains("still in flight or its outcome is unknown"),
+        "{text}"
     );
-    drop(guard);
-    let foreign = append_plain(&catalog, &ident, &[3]).await;
+    assert!(!text.contains("already stamped"), "{text}");
+    assert_eq!(guard.body_refusal(), None);
+}
+
+#[tokio::test]
+async fn the_guard_loads_the_table_when_the_commit_brings_no_base() {
+    let (_warehouse, inner, ident) = fixture("body_nobase").await;
+    let table = append_plain(&inner, &ident, &[1]).await;
+    let probe = Arc::new(ProbeCatalog::new(Arc::clone(&inner), ProbeMode::Capture));
+    let capturing = Arc::clone(&probe) as Arc<dyn Catalog>;
+    assert!(set_property(&capturing, &table).await.is_err());
+    let mut commit = probe.take_captured().expect("a captured commit");
+    commit.take_base_table();
+    let guard = BatchScope::enter(TableUuid::of(&table), body_stamp(2)).expect("enter");
+    let refused = guard
+        .scope_body(async { guard_body_catalog(&inner).update_table(commit).await })
+        .await;
     assert_eq!(
-        unstamped_above(&foreign, base).map(SnapshotId::get),
-        foreign.metadata().current_snapshot_id()
+        refusal_in(&refused.expect_err("the sink commit")),
+        MicroBatchError::UnstampedSinkWrite {
+            sink: ident.to_string(),
+            epoch: Epoch::new(2),
+        }
     );
+    let reloaded = inner.load_table(&ident).await.expect("reload");
+    assert!(!reloaded.metadata().properties().contains_key("eo.touched"));
+}
+
+#[tokio::test]
+async fn a_planned_write_to_the_sink_refuses_inside_the_scope_only() {
+    let (_warehouse, catalog, ident) = fixture("body_planned").await;
+    let table = append_plain(&catalog, &ident, &[1]).await;
+    assert_eq!(refuse_planned_sink_write(&table), None);
+    let guard = BatchScope::enter(TableUuid::of(&table), body_stamp(5)).expect("enter");
+    assert_eq!(refuse_planned_sink_write(&table), None);
+    let refused = guard
+        .scope_body(async { refuse_planned_sink_write(&table) })
+        .await;
+    let refusal = MicroBatchError::UnstampedSinkWrite {
+        sink: ident.to_string(),
+        epoch: Epoch::new(5),
+    };
+    assert_eq!(refused, Some(refusal.clone()));
+    assert_eq!(guard.body_refusal(), Some(refusal));
 }
 
 #[tokio::test]

@@ -3694,72 +3694,133 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-10-07 (MB-3 fold 1; MB-3 ledger D-9). Spark's answer is an
   unhandled exception in its progress buffer, not a contract. repark keeps the query alive
   and its last progress readable.
-### MB-4-FOREACH-EO-1 — `foreachBatch` is exactly-once on its declared sink; Spark's is at-least-once
+### MB-4-FOREACH-EO-1 — `foreachBatch` is exactly-once on its declared sink, and the sink is single-writer while the query lives; Spark's is at-least-once
 - **repark** — the body's own write to the table named by `repark.cdc.sink` carries the batch's
   stamp: the six `repark.cdc.*` summary keys and the `repark.cdc.offsets.<query-id>` property
   land in the same snapshot as the rows. A body that writes the sink and then raises, and a
   process that dies after the write, leave the batch durable: the restart resumes at the next
   batch id and the body does not run again for the committed one (it is skipped entirely, not
-  re-run with the write held back). A batch whose body made no sink commit still gets the
-  driver's stamp-only snapshot. Source `(1, 2)`, `(3)` at one file per batch, a body that
-  appends to the sink and raises at batch 0, then a restart: sink `1, 2, 3`, snapshots
-  `append / epoch 0 / 2 rows`, `append / epoch 1 / 1 row`.
+  re-run with the write held back). A batch whose body made no sink commit gets the driver's
+  stamp-only snapshot. Source `(1, 2)`, `(3)` at one file per batch, a body that appends to the
+  sink and raises at batch 0, then a restart: sink `1, 2, 3`, snapshots `append / epoch 0 / 2
+  rows`, `append / epoch 1 / 1 row`.
+  **The lineage rule.** From the first start of a query on a sink, every snapshot on the sink's
+  main branch above the query's newest stamped batch must be the running batch's one stamped
+  snapshot. The driver checks it twice. (a) Before any body runs, at every start and before
+  every batch: the head must be the newest stamped snapshot (for a query with no stamp yet,
+  the head it found at start). (b) After every body, whether it returned or raised and before
+  the batch is recorded durable: nothing may have changed on the sink except the batch's one
+  stamped commit. A new unstamped snapshot, a removed snapshot, `main` moved to an older
+  snapshot, a branch or tag change, a table-property change, a schema, partition-spec or
+  sort-order change, and a different table under the sink's name all count. The query then ends
+  `RecoveryRequiredException` (MBE-14), reason `UnstampedSinkCommit` naming the snapshot id and
+  its operation, or `UnstampedSinkChange` naming what changed. It does not matter where the
+  write came from: another thread, another session, another process, a statement the engine
+  did not route to a stamped write.
+  **This is detection after the write landed.** The rows are in the sink. The query stops
+  loudly, never continues past them and never replays over them: a restart finds the unstamped
+  snapshot above the newest stamp and refuses again before any body runs. To recover, roll the
+  sink back to its newest stamped snapshot (`CALL <catalog>.system.rollback_to_snapshot`) and
+  start again, or start a new query (a new `queryName`) with
+  `repark.cdc.start-after-snapshot-id`.
+  **Three consequences.** The sink takes no other writer while the query lives, between runs
+  included: a batch `INSERT`, a compaction or any other maintenance run on it ends the next
+  start `RecoveryRequiredException`. A snapshot stamped by a different streaming query is not a
+  finding. And a query that has not yet committed its first batch has no stamp to compare with:
+  a restart after a refused batch 0 replays that batch, and is stopped again if the stray write
+  happens again.
+  `checkpointLocation` is required and recorded and holds no state (MBE-5): nothing is written
+  there. The state is the sink plus the query name. Clearing or swapping the checkpoint
+  directory resets nothing; a new `queryName` starts a new query.
 - **Apache Spark** — `foreachBatch` is at-least-once: the batch's writes carry no streaming
   keys and a batch that failed after its write replays under the same batch id, so the same
-  history leaves `1, 1, 2, 2, 3`. *(oracle: cells MB0-W4 and MB0-W6, recorded 2026-10-06.)*
+  history leaves `1, 1, 2, 2, 3`. Spark keeps its state in the checkpoint directory and takes
+  any other writer on the table. *(oracle: cells MB0-W4 and MB0-W6, recorded 2026-10-06.)*
 - **Pin** — `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_write_then_raise_restarts_without_a_duplicate`,
   `::test_exit_after_the_sink_write_restarts_without_a_duplicate`,
   `::test_kills_at_sink_commits_restart_without_a_duplicate`,
   `::test_random_kills_restart_without_a_duplicate`;
-  `crates/repark-core/src/microbatch/foreach_tests.rs::a_body_that_fails_after_its_sink_write_leaves_the_epoch_durable`
+  `python/repark/tests/test_mb_4_streaming_foreach_lineage.py::test_thread_route_then_raise_ends_recovery_required_and_the_restart_refuses`,
+  `::test_thread_route_beside_the_stamped_write_ends_recovery_required`,
+  `::test_main_thread_statement_while_a_body_runs_ends_recovery_required`,
+  `::test_foreign_insert_between_runs_refuses_the_restart`,
+  `::test_sink_dropped_and_recreated_after_the_stamped_write_ends_recovery_required`;
+  `crates/repark-core/src/microbatch/exactly_once_tests.rs::a_failed_body_is_audited_and_the_restart_refuses_before_any_body`,
+  `::at_epoch_zero_a_restart_replays_and_is_stopped_again`
 - **Rationale** — DECLARED 2026-10-09 (owner ruling "FIX IT" on the MB-4 verify's S1;
-  MB-4-FOREACH-EO ledger R-1, R-2, R-5). It replaces the at-least-once default MB-3 acted on
-  (MB-3 ledger D-2, C-005 b, c and e) with the design sketch's Q9 answer. The guarantee covers
-  the declared sink's main branch and a write issued on the thread that runs the body.
+  orchestrator ruling of the same day after the re-verify: an invariant on the sink's lineage,
+  checked by the driver, not a list of routes; MB-4-FOREACH-EO ledger, fold 2). It replaces the
+  at-least-once default MB-3 acted on (MB-3 ledger D-2, C-005 b, c and e) with the design
+  sketch's Q9 answer.
 ### MB-4-FOREACH-SIDE-EFFECTS-1 — what a `foreachBatch` body does outside its declared sink is not exactly-once
 - **repark** — a write to any other table and a call to an external system are not stamped and
   not fenced. The sink commit is the batch's commit point. A side effect the body runs
   **before** its sink write is at-least-once: a batch that fails before the commit replays and
   the side effect runs again. A side effect the body runs **after** its sink write is
-  at-most-once on a failure: when the body raises, or the process dies, after the commit, the
-  batch is durable and the body does not run again for it. Write the sink last, or make the
-  side effect idempotent on the batch id. A sink write from another thread or process started
-  by the body is such a side effect: it commits unstamped, and when the body itself made no
-  stamped commit the query ends `RecoveryRequiredException`, reason `UnstampedSinkCommit`
-  (MBE-14), naming the snapshot.
-- **Apache Spark** — every write of the body is at-least-once, the sink included. *(oracle:
-  cells MB0-W4 and MB0-W6.)*
-- **Pin** — `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_second_table_is_a_side_output_and_the_sink_stays_exact`,
-  `::test_sink_write_from_another_thread_ends_recovery_required`;
-  `crates/repark-core/src/microbatch/exactly_once_tests.rs::a_foreign_snapshot_beside_a_stamped_epoch_is_tolerated`
-- **Rationale** — DECLARED 2026-10-09 (MB-4-FOREACH-EO ledger R-3, "Side effects"). Flink's
-  two-phase-commit sink has the same shape: only the sink's own commit is exactly-once, and
-  work after the commit is not replayed.
-### MB-4-FOREACH-SINK-SHAPES-1 — inside a `foreachBatch` body the declared sink takes one stamped commit; other shapes refuse
-- **repark** — the sink takes one commit per batch from the body, through an append
-  (`writeTo(sink).append()`, `INSERT INTO`, `df.write.insertInto`, `saveAsTable` in append
-  mode), a `MERGE INTO`, or a row-level `UPDATE` / `DELETE`; the row-level statements need the
-  matching `write.{merge,update,delete}.isolation-level=serializable` (MBE-15). A second such
-  commit in the batch refuses `SinkCommittedTwice`
-  (`[REPARK_MICROBATCH.SINK_COMMITTED_TWICE]`, MBE-13). Every other commit to the sink refuses
-  before it lands with `[REPARK_MICROBATCH.UNSTAMPED_SINK_WRITE]` (MBE-19): `INSERT
-  OVERWRITE`, `overwritePartitions()`, `overwrite(condition)`, `createOrReplace()` and RTAS,
-  `saveAsTable` in overwrite mode, `TRUNCATE`, a `DELETE` with no predicate, a `DELETE` that
-  matches no row, `ALTER TABLE`, `CREATE BRANCH`, a write to a branch, and the maintenance
-  procedures (`expire_snapshots`, `rewrite_data_files`, `rewrite_manifests`,
-  `rollback_to_snapshot`). The error reaches the callable; when it leaves the callable the
-  query ends `StreamingQueryException` / `STREAM_FAILED` with that cause. `DROP TABLE` on the
-  sink and a drop-and-recreate keep their MB-3 answer (the sink the batch entered is gone:
-  `STREAM_FAILED`, or `RecoveryRequiredException` with `UnstampedSinkCommit`).
+  **at-most-once on a failure**: when the body raises, or the process dies, after the commit,
+  the batch is durable and the body does not run again for it, so the side effect is lost.
+  **Write the sink last, or key the side effect on the batch id.** A body ported from Spark
+  that relied on the whole body replaying must be reordered.
+- **Apache Spark** — every write of the body is at-least-once, the sink included: a failed
+  batch replays the whole body. *(oracle: cells MB0-W4 and MB0-W6.)*
+- **Pin** — `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_second_table_is_a_side_output_and_the_sink_stays_exact`;
+  `crates/repark-core/src/microbatch/foreach_tests.rs::a_body_that_fails_after_its_sink_write_leaves_the_epoch_durable`,
+  `::a_failed_body_fails_the_query_and_the_restart_replays_its_epoch`
+- **Rationale** — DECLARED 2026-10-09 (MB-4-FOREACH-EO ledger R-1, R-5, "Side effects"). It
+  follows from skipping a committed batch. Flink's two-phase-commit sink has the same shape.
+  Whether this is the contract the owner wants is the ledger's open question Q1; the row
+  describes what is built.
+### MB-4-FOREACH-SINK-SHAPES-1 — inside a `foreachBatch` body the declared sink takes one stamped commit; other commits refuse where the engine can see them
+- **repark** — the sink takes one commit per batch from the body, and that commit must add or
+  rewrite rows through a stamped write: an append (`writeTo(sink).append()`, `INSERT INTO`,
+  `df.write.insertInto`, `saveAsTable` in append mode, `write.format("iceberg").save(name)`),
+  a `MERGE INTO`, or an `UPDATE` or `DELETE` that rewrites rows inside data files. `MERGE`,
+  `UPDATE` and `DELETE` under `write.{merge,update,delete}.isolation-level=snapshot` refuse
+  MBE-15.
+  **Refused before it lands, `[REPARK_MICROBATCH.UNSTAMPED_SINK_WRITE]` (MBE-19):** every
+  other commit the engine can see from the body's own thread. `INSERT OVERWRITE`,
+  `overwritePartitions()`, `overwrite(condition)`, `createOrReplace()` and RTAS, `saveAsTable`
+  in overwrite mode, `TRUNCATE`, `ALTER TABLE`, branch and tag statements, a write to a
+  branch, the maintenance procedures, and `EXPLAIN ANALYZE` of any `INSERT`, `UPDATE` or
+  `DELETE` on the sink (it executes the statement). **A `DELETE` is refused or stamped by the
+  data it meets:** one with no predicate, one that matches no row, and one whose predicate
+  covers whole data files (the usual partition-aligned delete) are answered from metadata and
+  refuse; one that removes some rows of a file is stamped. The same body can therefore pass on
+  one batch and refuse on the next.
+  **A second stamped commit** in the batch refuses `SinkCommittedTwice`
+  (`[REPARK_MICROBATCH.SINK_COMMITTED_TWICE]`, MBE-13), and only when the first one landed. A
+  stamped write that failed (a commit conflict, a storage error) releases the batch's claim:
+  the body may retry it, and the retry is the batch's one stamped commit.
+  **Inside the callable these errors are plain engine errors** (`PySparkException`, the
+  condition in the text only); the typed `StreamingQueryException` with the condition appears
+  on the query when the error leaves the callable.
+  **What the engine cannot see** is caught by the lineage rule of `MB-4-FOREACH-EO-1` after it
+  landed: a write from another thread or process, and `DROP TABLE` plus `CREATE TABLE` under
+  the sink's name (a new table is a violation). `DROP TABLE` alone ends `STREAM_FAILED`: the
+  sink no longer loads.
+  **Statements on other tables answer differently inside a body in one way.** Inside a body
+  `INSERT`, `UPDATE` and `DELETE` take the engine's own commit path, the one a session with a
+  snapshot property takes. The rows, the snapshot operations and the counts are the same;
+  a plain `INSERT` returns one empty row where it returns `Row(count=N)` on main, an `INSERT`
+  into a missing table words its error differently, and an `UPDATE` or `DELETE` on a branch
+  gains the summary key `engine.operation-id`. A body that reads the `INSERT` count must not.
+  **A second catalog entry for the sink's metadata** (`register_table` on the sink's newest
+  metadata file, then a write to the alias) takes the stamp: the claim is by the table's uuid,
+  not by its name.
 - **Apache Spark** — runs every one of these shapes; none is tied to the batch. *(oracle:
   cell MB0-W4; the refused shapes have no MB-0 cell.)*
 - **Pin** — `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_unstampable_sink_write_refuses_before_it_commits`
   (eleven shapes), `::test_second_append_in_one_epoch_refuses_mbe13`,
   `::test_merge_body_is_stamped_under_serializable_isolation`,
-  `::test_row_level_statement_is_stamped_under_serializable_isolation`
-- **Rationale** — DECLARED 2026-10-09 (MB-4-FOREACH-EO ledger R-4). A commit that cannot carry
-  the stamp would move the sink outside the batch, and a restart could not tell it from a
-  replay; the North Star's rule for a case no ruled row covers is to refuse with a dated row.
+  `::test_row_level_statement_is_stamped_under_serializable_isolation`;
+  `python/repark/tests/test_mb_4_streaming_foreach_lineage.py::test_explain_analyze_of_a_sink_write_refuses_before_it_lands`,
+  `::test_retry_after_a_failed_stamped_write_is_the_stamped_commit`,
+  `::test_unstampable_commit_after_a_failed_stamped_write_still_refuses`
+- **Rationale** — DECLARED 2026-10-09 (MB-4-FOREACH-EO ledger R-4; fold 2 after the re-verify).
+  The refusal is defence in depth; the safety argument is the lineage rule. The statements on
+  other tables, the data-dependent `DELETE`, the untyped in-body errors and the alias entry
+  were measured by the re-verify (2026-10-09: 39 of 120 compared statements differ inside a
+  body, none in rows) and are recorded here, not changed.
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.

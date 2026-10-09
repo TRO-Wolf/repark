@@ -170,6 +170,14 @@ SOURCE-URL-REDACT-2 fold 3 (2026-10-07): ``core`` imports ``scrub_exception`` fo
 doors, so the frozen ``core`` and package surfaces each gain exactly that one name.
 SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07): ``core``'s mapInArrow handler imports
 ``scrub_user_failure``, so the frozen ``core`` and package surfaces each gain exactly that name.
+MB-4 fold 1 (2026-10-09, declared in fold 2 after the re-verify found the pin red): the
+map-bridge execution family moved ``core.py`` -> ``map_bridge.py`` as a pure move. ``core``
+and the package each lose exactly ``_drop_mia_temp_views`` (it lives in ``map_bridge`` and
+nothing re-imports it) and the two stdlib bindings ``contextlib`` and ``weakref`` (their only
+users moved with it); both new-submodule sets gain exactly ``map_bridge``. Seven private
+class names (``EXPECTED_DATAFRAME_REBOUND``) now bind a ``map_bridge`` function whose own
+name has no leading underscore, so the alias walk finds them; they alias nothing and
+``EXPECTED_DATAFRAME_DIR`` is unchanged. No public name moves.
 """
 
 from __future__ import annotations
@@ -182,6 +190,7 @@ from _dfcore_1_expected import (
     EXPECTED_CORE_EXPORTS,
     EXPECTED_DATAFRAME_ALIASES,
     EXPECTED_DATAFRAME_DIR,
+    EXPECTED_DATAFRAME_REBOUND,
     EXPECTED_DATAFRAME_SLOTS,
     EXPECTED_NEW_CORE_SUBMODULES,
     EXPECTED_NEW_PACKAGE_SUBMODULES,
@@ -308,7 +317,7 @@ def test_dataframe_aliases_unchanged() -> None:
         and isinstance(value, type(DataFrame.filter))
         and value.__name__ != name
     )
-    assert found == sorted(seen)
+    assert found == sorted(seen | EXPECTED_DATAFRAME_REBOUND)
 
 
 def test_dataframe_overloads_unchanged() -> None:

@@ -65,7 +65,6 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "_column_window_spec",
     "_data_type_has_required_child",
     "_display_type_labels_from_arrow",
-    "_drop_mia_temp_views",
     "_emit_join_side_columns",
     "_export_engine_error",
     "_export_error_message",
@@ -134,7 +133,6 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "_window_spec_structural_key",
     "actions_export",
     "annotations",
-    "contextlib",
     "core",
     "frame_nodes",
     "functools",
@@ -151,7 +149,6 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "sort_nulls_first_for",
     "udf_bridge",
     "uuid",
-    "weakref",
     "writer_readwriter",
 ]
 
@@ -218,7 +215,6 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "_column_window_spec",
     "_data_type_has_required_child",
     "_display_type_labels_from_arrow",
-    "_drop_mia_temp_views",
     "_emit_join_side_columns",
     "_export_engine_error",
     "_export_error_message",
@@ -286,7 +282,6 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "_warn_storage_level_cosmetic_once",
     "_window_spec_structural_key",
     "annotations",
-    "contextlib",
     "functools",
     "home_view_ref",
     "logger",
@@ -298,7 +293,6 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "scrub_user_failure",
     "sort_nulls_first_for",
     "uuid",
-    "weakref",
 ]
 
 EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (
@@ -692,6 +686,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "streaming_batch",
     "subquery",
     "surface_a",
+    "map_bridge",
     "surface_b",
     "udf_projection",
     "udf_schema",
@@ -720,9 +715,22 @@ EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
     "streaming_batch",
     "subquery",
     "surface_a",
+    "map_bridge",
     "surface_b",
     "udf_projection",
     "udf_window_projection",
     "unemitted_ids",
     "_native",
 }
+
+EXPECTED_DATAFRAME_REBOUND: frozenset[str] = frozenset(
+    {
+        "_consume_map_in_arrow_batches",
+        "_ensure_mia_view_cleanup",
+        "_execute_map_in_arrow_bridge",
+        "_execute_map_in_arrow_bridge_ipc",
+        "_iter_map_in_arrow_output",
+        "_materialize_map_bridge_once",
+        "_track_mia_view",
+    }
+)
