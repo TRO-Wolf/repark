@@ -4002,8 +4002,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   read-only`), because every mounted Postgres source is in the session's read-only catalog set.
   A DDL statement that names a table resolves it first, as every statement does, so a malformed
   source answers its settings refusal and a live one opens a connection before the guard
-  refuses. `INSERT`, `UPDATE` and `DELETE` refuse as not implemented; nothing is written in
-  either case. `repark_connect::DDL_ROW` names this row.
+  refuses. AMENDED 2026-10-09 (C-4 step 2): append `INSERT` writes rows; `UPDATE` and
+  `REPLACE INTO` refuse under `CONNECT-DECL-pg-write-upsert`; `MERGE INTO` keeps this row's
+  catalog text; `DELETE FROM` is untouched (DataFusion's default-hook text, no row).
+  `repark_connect::DDL_ROW` names this row.
 - **Apache Spark** — the JDBC table catalog runs `CREATE TABLE` and `DROP TABLE` against the
   server, and the JDBC source writes rows (`df.write.jdbc`). *(oracle: documented — the JDBC
   table catalog's `createTable` / `dropTable`; no value claim.)*
@@ -4110,6 +4112,39 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 ### CONNECT-DECL-pg-jsonb — RETIRED (2026-10-06, C-2a): Postgres `jsonb` reads as its canonical text
 
 > **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `jsonb` maps to `Utf8`: the version byte `01` is stripped and the rest is `jsonb_out`'s canonical text; any other version byte is a malformed stream (`ConnectError::Protocol`). The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::jsonb_strips_version_one_and_refuses_others`. Retired per §6.
+
+### CONNECT-DECL-pg-write-modes — a Postgres source takes append writes only
+- **repark** — `df.write.jdbc(url, table, mode)` and `format("jdbc").save()` refuse every
+  save mode but append with `df.write.jdbc(mode='<mode>') refuses: a Postgres source takes
+  append writes only (registry row CONNECT-DECL-pg-write-modes …)` in the Unsupported
+  class; a bare `jdbc()` carries the writer's mode (default `error`) and refuses the same
+  way. `INSERT OVERWRITE` into a mounted source refuses on both SQL doors with the same
+  row (`INSERT OVERWRITE refuses: …`). `CREATE TABLE … AS SELECT` into Postgres keeps
+  answering the `CONNECT-DECL-pg-ddl` read-only text.
+- **Apache Spark** — `df.write.jdbc(mode="overwrite")` replaces the table's rows, and
+  `INSERT OVERWRITE` over a JDBC catalog replaces them too. *(oracle: documented — no
+  value claim.)*
+- **Pin** — `crates/repark-spark/src/tests/pg_insert.rs::pg_overwrite_names_the_modes_row`;
+  `crates/repark-sql/src/pg_insert.rs::tests::pg_overwrite_names_the_modes_row`;
+  `python/repark/tests/test_io_declared_1.py::test_writer_jdbc_bare_uses_the_writer_mode`;
+  live `python/repark-parity/tests/live_db/test_c4_write.py::test_refused_modes_name_the_row_on_every_door`
+- **Rationale** — DECLARED 2026-10-09 (C-4 step 2). Overwrite needs a truncate-or-replace
+  protocol the write core does not have yet. Retire when every save mode lands.
+### CONNECT-DECL-pg-write-upsert — changing stored Postgres rows is not implemented
+- **repark** — `UPDATE` and `REPLACE INTO` against a mounted Postgres source refuse on both
+  SQL doors with `<verb> refuses: a Postgres source takes append writes only; changing
+  stored rows is not implemented (registry row CONNECT-DECL-pg-write-upsert …)` in the
+  Unsupported class. `MERGE INTO` a mounted source keeps answering the
+  `CONNECT-DECL-pg-ddl` catalog text through catalog resolution. `DELETE FROM` is untouched:
+  DataFusion's default-hook text, no row.
+- **Apache Spark** — Spark routes `UPDATE`, `DELETE` and `MERGE` to the table catalog where
+  the catalog supports row-level operations. *(oracle: documented — no value claim.)*
+- **Pin** — `crates/repark-spark/src/tests/pg_insert.rs::pg_update_names_the_upsert_row`;
+  `crates/repark-sql/src/pg_insert.rs::tests::pg_update_names_the_upsert_row`;
+  live `python/repark-parity/tests/live_db/test_c4_write.py::test_row_changing_statements_refuse_on_both_doors`
+- **Rationale** — DECLARED 2026-10-09 (C-4 step 2). The write core appends; matching stored
+  rows to new values needs a read-modify-write protocol it does not have yet. Retire when
+  row-changing writes land.
 
 ### CONNECT-DIV-url-userinfo — a credential inside a property value is masked where Spark shows it; secret keys redact at least as Spark does
 - **repark** — every display of a source, catalog, conf, namespace, table or view property
