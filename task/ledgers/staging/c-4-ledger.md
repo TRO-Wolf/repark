@@ -335,3 +335,240 @@ source was read.
   stores no field over 1 GiB, so only a row of several near-limit fields reaches it. Not
   pinned: the cell would need gigabytes.
 - **Sizes are not measured for speed** (FL-3).
+
+## 8. Step 2 (2026-10-09): the both-door routing seam (Muse, before code)
+
+Branch `feat/c-4-routing` from `dd49a376`. Step 1's `crates/repark-connect/src/write/`
+and the encoder are not edited in this slice. The native module is rebuilt
+(`make develop`, 1m20s). The C-0 container was already running when this slice
+started (another lane's), so this slice uses `make pg-url` and never runs
+`make pg-down`. `psycopg[binary]` was installed into the project's `.venv`
+(the live-db extra) for the oracle side of the live cells.
+
+### 8.1 Where each door plans an INSERT today
+
+Both doors plan an Iceberg-target INSERT through DataFusion's DML planner
+(`insert_to_plan`: column-list mapping, NULL fill for unlisted columns, a cast
+of every source column to the target field type) and execute it through the
+fork's `TableProvider::insert_into`. Owned paths intercept first: the ANSI
+door's `session_insert.rs` (session write conf) and the Spark door's
+`append_with_options.rs` (statement write options). Both owned paths plan the
+whole INSERT with DataFusion, take the DML input as the source frame, stream it,
+and return `read_empty()`.
+
+A connect-source target walks the same code until the provider hook: every
+door-level check passes it through (details in §8.2), DataFusion plans the DML
+against `PostgresTable`, and the default `TableProvider::insert_into`
+(`datafusion-catalog 54.1`, `table.rs:340`, `InsertOp` flavor) refuses. No door
+implements the hook for `PostgresTable` and this slice does not add it (§8.5).
+
+### 8.2 What a connect-source target does today (measured 2026-10-09)
+
+Live facade session mounting the C-0 container as `pg`, table
+`pg."seamprobe".t`, both doors. Every row below is a measured refusal; nothing
+is written in any case.
+
+| statement | Spark door | ANSI door |
+|---|---|---|
+| `INSERT INTO pg.s.t (cols) VALUES …` | `UnsupportedOperationException`: `This feature is not implemented: Insert into not implemented for this table` | same text, same class |
+| `INSERT INTO pg.s.t SELECT …` | same | same |
+| `INSERT OVERWRITE pg.s.t SELECT …` | same | same |
+| `UPDATE pg.s.t SET …` | `UnsupportedOperationException`: `UPDATE operation on table 'pg.seamprobe.t' caused by This feature is not implemented: UPDATE not supported for Base table` | same shape |
+| `DELETE FROM pg.s.t` | the DELETE shape of the same | same shape |
+| `CREATE TABLE pg.s.fresh AS SELECT …` | `UnsupportedOperationException`: the `CONNECT-DECL-pg-ddl` read-only text | same text, same class |
+| `MERGE INTO pg.s.t …` | the same `CONNECT-DECL-pg-ddl` text (catalog resolution) | `Unsupported SQL statement` (the ANSI door has no MERGE-into-source path; measured) |
+| `df.write.jdbc(url, table, mode="append")` | `PySparkNotImplementedError`: `[NOT_IMPLEMENTED] jdbc is not implemented.` (after the save-mode check) | n/a |
+| `df.write.format("jdbc").save()` (no path) | `AnalysisException`: `'path' is not specified.` | n/a |
+| `df.write.format("jdbc").save(path)` | `AnalysisException`: `DATA_SOURCE_NOT_FOUND …` | n/a |
+
+Two findings that shape the routing:
+
+- Neither door's P11 read-only check fires for a mounted source in a live
+  session: `TRUNCATE TABLE pg.s.t` answers `TABLE_OR_VIEW_NOT_FOUND`, and every
+  INSERT reaches DataFusion's default hook. P11 is pinned only in unit tests
+  with a hand-set read-only set (`router/tests.rs::read_only_set_reaches_p11_refusal`,
+  `guards/tests.rs`). The routing keys on `CatalogRegistry::is_database_source`
+  (populated live: the CTAS/MERGE texts prove the specs are visible to the
+  doors), never on the read-only set, so it behaves one way whether or not the
+  set is populated. The ANSI text guard is made spec-aware for the same reason
+  (§8.5): a hand-set read-only set without specs keeps refusing exactly as its
+  pins assert.
+- `INSERT OVERWRITE` into `pg` answers the same default-hook text as append
+  today (the overwrite arms' P11 checks do not fire live either). The slice
+  replaces it with the named modes refusal (§8.7).
+
+Neighbors that must not change (measured on this tree): `INSERT INTO nosuch.s.t
+SELECT 1` → `AnalysisException: table 'nosuch.s.t' not found` (both spellings);
+`CREATE TABLE nosuch.s.fresh AS SELECT 1` → `unknown catalog `nosuch``;
+`TRUNCATE TABLE pg.s.t` → `TABLE_OR_VIEW_NOT_FOUND`; every `writer.jdbc` bad-mode
+cell (`INVALID_SAVE_MODE`, caller spelling kept); the `test_c2_read.py` DDL arms.
+
+A plain Iceberg `INSERT INTO ice.ns.t VALUES (1), (2)` on the Spark door returns
+`[Row(count=2)]` (measured); the ANSI door executes the same DML plan shape
+(code-derived). Owned Iceberg appends return `read_empty()` on both doors.
+
+### 8.3 The exact function each door will call
+
+One driver, in `repark-core` (the only crate both doors and the binding reach):
+
+```rust
+pub async fn execute_postgres_write(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    frame: DataFrame,
+    write: PostgresWrite,
+    session_zone: &str,
+) -> datafusion::error::Result<WriteReport>
+```
+
+`PostgresWrite` carries a `PostgresWriteTarget::Mounted { source, schema, table }`
+or `::Url { url, dbtable, props }`, the listed columns (`None` for all in
+order), the door's case rule, and the requested `WritePath` (re-exported through
+`repark-core`). `ReparkSession::write_postgres(&self, frame, write)` is the thin
+`&self` wrapper (zone, context and catalog snapshot from the session) that the
+binding's new `session_write_postgres` pyfunction calls. The driver is the only
+caller of step 1's selector; the doors never touch `WriteRequest` directly.
+
+- SQL doors: a new `pg` arm at the bottom of each `execute_insert_routed`
+  (ANSI `crates/repark-sql/src/router.rs`, Spark
+  `crates/repark-spark/src/router.rs`), where the P11 refusal is computed today:
+  when the target's first segment is a Postgres-kind database source (new
+  `CatalogRegistry::database_source_kind` accessor; a SQL Server/Trino mount
+  falls through to today's behavior), an append plans its source SQL through the
+  door's own SELECT path (Spark: `spark_ast::execute_passthrough`; ANSI:
+  `delegate`), resolves the listed columns, and calls the driver with
+  `WritePath::Bulk`. Overwrite and `REPLACE INTO` refuse there with the named
+  rows of §8.7 and never reach the driver. The zone string comes from
+  `repark_functions::session_time_zone::session_time_zone_from_options` (the
+  extractors' existing accessor; both doors already depend on
+  `repark-functions`).
+- Writer door: `writer_jdbc` (facade `io_declared.py`) validates the effective
+  save mode (the `mode` argument when given, else the writer's mode, per
+  PySpark 4.1.2's `self.mode(mode)._jwrite.jdbc(url, table, jprop)`, read on
+  this box), merges `writer._options` under the `properties` argument
+  (case-insensitive, properties win), lifts `write.path` (default `bulk`,
+  anything else an `IllegalArgumentException` naming `bulk` and `row`), and
+  calls `session_write_postgres` for `append` only. Every other mode refuses
+  with the modes row of §8.7. `format("jdbc").save()` routes to the same helper
+  (url/dbtable from options); `format("postgres").save()` keeps today's
+  `DATA_SOURCE_NOT_FOUND`, which is Spark's answer for an unknown format.
+
+No new trait. No change to the merged C-2 provider's public shape at all: the
+slice deliberately does not implement `insert_into`, so the read path the step-1
+verifier is reading is untouched. Each door has one routing place. No HALT.
+
+Why the doors route around DataFusion's DML planner instead of implementing
+`insert_into`: `insert_to_plan` fills unlisted columns with NULL, which would
+write NULL where the server's default belongs (step 1 C-011: a write names only
+its columns and the others take their defaults). The driver projects the source
+frame to the listed columns and names exactly those, so defaults survive, and it
+keeps the timestamp unplacement (§8.4) explicit per array instead of inheriting
+an implicit cast.
+
+### 8.4 Batches, casts, the clock, the transaction, the return
+
+The driver resolves the target with C-2's `discover` (unchanged: a role without
+`SELECT` and a relation with an unmapped column refuse exactly as today, pinned
+as the brief's owner questions), checks the source width against the listed
+width (Spark's `INSERT_COLUMN_ARITY_MISMATCH` shape, core-rendered, for VALUES
+and SELECT alike), then pulls the source stream batch by batch. Each batch is
+cast column by column to the encoder's Arrow type with Arrow's cast kernel,
+except the two timestamp columns: a zoned array into a `timestamp` column is
+converted instant by instant to the wall clock in the session zone (unique per
+instant, so the gap/overlap refusals of `CONNECT-DIV-pg-timestamp-zone` cannot
+fire in this direction; past the calendar refuses); a zoneless array into a
+`timestamp` column is already the wall clock and passes through; a zoneless
+array into a `timestamptz` column is placed forward in the session zone with the
+read path's gap/overlap refusals. A stream error drops the writer, which rolls
+the transaction back; otherwise every batch goes through `PostgresWriter::write`
+and the driver commits.
+
+The Postgres `COMMIT` runs inside the statement's execution. There is no engine
+commit and no two-phase anything: a process death after `COMMIT` leaves the rows
+committed, exactly as Spark's one-partition JDBC write does (FL-18). Step 1's
+`CommitUnknown` contract is unchanged.
+
+The statement returns an empty frame (`read_empty()`) on both doors, and the
+writer returns `None`. That is Spark's answer for `INSERT` (brief-given) and
+both doors' owned-append convention. It differs from a plain Iceberg `INSERT`,
+which returns `[Row(count=N)]` through the DataFusion-passthrough path the pg
+write deliberately bypasses (§8.3): recorded difference, pinned on both doors.
+
+Spark's JDBC `df.write.jdbc(...)` / `INSERT INTO` over a JDBC catalog was not
+measured: no Postgres JDBC driver is on this box (searched `/tmp/sparkenv` and
+`/`, no `postgresql-*.jar`), and the brief forbids downloading one. PySpark
+4.1.2's `readwriter.py` (in `/tmp/sparkenv`) was read instead for the mode and
+option-merge semantics used above.
+
+### 8.5 Guards touched, precisely
+
+- ANSI `refuse_read_only_catalog_dml` (text guard): a plain-`INSERT` verb whose
+  target's first segment is a Postgres-kind database source with specs is let
+  through to the router; every other verb, and every read-only name without
+  specs, refuses exactly as today. Net door behavior for `INSERT OVERWRITE`
+  stays a refusal (now the named modes error from the router). Listed in the
+  hand-back under `guards_relaxed` with the Spark cells (R-3 routing; brief pins).
+- Spark `execute_insert_routed`: the new `pg` arm sits where the P11 refusal is
+  computed, after the write-options/owned-append arm (a pg target with statement
+  write options keeps today's P11 refusal: the SQL door takes no flag, and
+  options must not be silently ignored) and after `prepare_positional_insert`
+  (a `PARTITION` clause on a pg target keeps today's `NON_PARTITION_COLUMN` /
+  clause refusal). `routes_positional_by_name`, `refuse_insert_source_types`
+  and both doors' `insert_arity` pass a pg target through untouched (verified:
+  each returns early when the catalog handle is missing).
+- No P11 text changes; no `insert_into` implementation, so a shape the arm
+  misses still ends at DataFusion's default-hook refusal, never at a silent
+  wrong write.
+
+### 8.6 What stays refused, and the rows
+
+- Save modes other than append and SQL `INSERT OVERWRITE`: new row
+  `CONNECT-DECL-pg-write-modes` (dated 2026-10-09), named by the writer-door
+  `PySparkNotImplementedError` and by both doors' `NotImplemented` texts.
+- `UPDATE` and `REPLACE INTO`: new row `CONNECT-DECL-pg-write-upsert` (dated
+  2026-10-09), named by a `pg` arm at the top of each door's update path and by
+  the insert arm. `MERGE INTO pg…` keeps answering the `CONNECT-DECL-pg-ddl`
+  catalog text through `catalog_handle` (a named error with a dated row already;
+  re-routing it would touch the shared catalog lookup for no behavioral gain),
+  and the upsert row says so. `DELETE FROM pg…` is untouched (not in the
+  slice): DataFusion's default text, no row.
+- `CREATE TABLE … AS SELECT` into Postgres: already the `CONNECT-DECL-pg-ddl`
+  text on both doors (measured §8.2); pinned, not changed.
+- The `CONNECT-DECL-pg-ddl` row's `INSERT, UPDATE and DELETE refuse as not
+  implemented` sentence is rewritten (dated): append INSERT writes, the rest as
+  above.
+
+### 8.7 Four-line records (2026-10-09; Spark halves read, not run)
+
+PySpark halves come from PySpark 4.1.2's `sql/readwriter.py` on this box; JDBC
+server halves are documented, no value claim (no pgjdbc on the box, §8.4).
+
+| id | date | question | Flink | Spark | default acted on |
+|---|---|---|---|---|---|
+| FL-6 | 2026-10-09 | What does the write statement return? | n/a (no JDBC SQL return) | `spark.sql("INSERT …")` returns an empty frame | Empty frame both doors; writer `None` (§8.4). Spark governs the surface. |
+| FL-7 | 2026-10-09 | Unlisted columns in a column-list INSERT? | n/a | `DEFAULT` fill | Server defaults via `WriteRequest::columns` (§8.3). |
+| FL-8 | 2026-10-09 | Zoned input into a `timestamp` column? | n/a | pgjdbc renders the instant in the JVM zone | Wall clock in the session zone (§8.4). The session zone is the JVM zone's stand-in per `CONNECT-DIV-pg-timestamp-zone`. |
+| FL-9 | 2026-10-09 | Zoneless input into a `timestamp` column? | n/a | a `LocalDateTime` goes as its wall clock | Pass through as the wall clock; the encoder takes zoneless for `timestamp` (C-003). |
+| FL-10 | 2026-10-09 | Zoneless input into a `timestamptz` column? | n/a | pgjdbc assumes the JVM zone | Forward-place in the session zone with the read path's gap/overlap refusals. The encoder refuses zoneless (C-003), so passing it through would refuse where Spark writes. |
+| FL-11 | 2026-10-09 | Effective save mode of `df.write.jdbc(url, table, mode, properties)`? | n/a | `self.mode(mode)._jwrite.jdbc(url, table, jprop)`: the argument overrides, `None` keeps the writer's (default `error`) | The argument when given, else the writer's mode; the argument is validated case-insensitively with `INVALID_SAVE_MODE` (pinned). A bare `jdbc()` is `error` and refuses under the modes row, as Spark errors on an existing table. |
+| FL-12 | 2026-10-09 | `.option()`s and the `properties` argument on `jdbc()`? | n/a | PySpark passes `properties` as `jprop` beside the writer's options; the JVM merge order was not read on this box | Merge case-insensitively, `properties` win (recorded assumption). Only `write.path` is lifted; every other key goes to `PostgresSettings::from_props`, which judges unknown keys as on the read door. |
+| FL-13 | 2026-10-09 | `format("jdbc").save()` without a path? | n/a | pathless `save()` works off options | Route to the same helper (url/dbtable required). `format("postgres").save()` keeps `DATA_SOURCE_NOT_FOUND`: Spark has no `postgres` format. |
+| FL-14 | 2026-10-09 | `partitionColumn` et al on a write? | n/a | forwarded to the driver, which ignores them | Lift and ignore (documented): refusing a known key as unknown would misname it, and Spark proceeds. |
+| FL-15 | 2026-10-09 | `batchsize` and other unmapped Spark write options? | n/a | accepted and used | `from_props` refuses them as unknown keys under `CONNECT-DIV-pg-unknown-option` (NS rank 4). Mapping `batchsize` onto `rows_per_insert` needs the owner (step-1 FL-3 left it open); filed as an owner question, no Spark cells to justify an exemption. |
+| FL-16 | 2026-10-09 | A `query`/`dbtable`-subquery write target? | n/a | the writer needs a table | `WriteRefused::QueryTarget` (step 1, unchanged). |
+| FL-17 | 2026-10-09 | Missing/extra source columns vs the target? | n/a | `INSERT_COLUMN_ARITY_MISMATCH` (VALUES shape established on both doors) | That shape, core-rendered, for VALUES and SELECT alike. |
+| FL-18 | 2026-10-09 | Crash between `COMMIT` and the return? | XA resolves by id | the task fails; a retry may double-write | Committed stays committed; no retry anywhere (step-1 FL-1/FL-2 carry over). |
+
+### 8.8 Step-2 files (plan; map.md lockstep in the same commits)
+
+New: `crates/repark-core/src/session/write_postgres.rs` (the driver) with its
+tests beside `session/tests/`; `crates/repark-python/src/session_write_postgres.rs`
+(the pyfunction; `session_write_options.rs` is near its ceiling);
+`python/repark-parity/tests/live_db/test_c4_write.py` (the live cells).
+Edited: `session.rs` (one `mod` line), `session/zone_localiser.rs` (unplace +
+zoned forward-place), `catalog_state.rs` (`database_source_kind`), both
+`router.rs` files (one `pg` arm each, bodies in new sibling modules if ceilings
+require), both update paths (upsert arm), the ANSI text guard (§8.5),
+`io_declared.py` + `writer_readwriter.py` (writer door), the two registry rows
+plus the `pg-ddl` amendment, the two refusal tests of §8.2, this ledger. No
+`Cargo.toml`, no `.github`, no ceiling raise.
