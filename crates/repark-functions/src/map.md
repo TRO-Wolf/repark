@@ -409,6 +409,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `registration.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the `analyzer_rules()`
   home moved out of `lib.rs` so the crate root stays under its `check_lib_rs`
   ceiling; `SparkSessionWindow` registers beside the window rules.
+  **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `analyze_eagerly` moves out of `lib.rs`
+  the same way (re-exported at the root, all call paths unchanged) to hold room for
+  the epoch-constructor registration.
   **FNP-GEN-1 step 2 (2026-09-16):** `generator::GeneratorRewrite` joins the tail
   of the list, after the closing `TypeCoercion`, so the rule sees post-coercion
   projections on both doors.
@@ -428,9 +431,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   lives in `csv/map.md`.
   pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003, C-004, C-006, L-002, L-003,
   L-004, L-005, R-18a-14, PERF-001, PERF-002, PERF-004, PERF-005, PERF-006
-- `lib.rs` — crate-root stays at **182** under `check_lib_rs` (D-8 one-time
-  FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
-  `registration.rs`).
+- `lib.rs` — crate-root stays under `check_lib_rs` (D-8 one-time FNP-WIN-1 grant;
+  step 4 moved the `analyzer_rules()` home to `registration.rs`;
+  SQL-EPOCH-CONSTRUCTORS-1 moves `analyze_eagerly` there the same way and registers
+  the epoch constructors beside the other families).
 - `higher_order/` — FNP-4c Spark higher-order kernels (`transform`, `filter`, `forall`,
   `aggregate`/`reduce`, `zip_with`, `transform_keys`, `transform_values`, `map_filter`,
   `map_zip_with`) plus native `exists`. Registry both doors

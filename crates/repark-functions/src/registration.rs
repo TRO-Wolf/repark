@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use datafusion::execution::SessionState;
+use datafusion::logical_expr::LogicalPlan;
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
 use datafusion::prelude::SessionContext;
@@ -47,4 +49,16 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
 #[must_use]
 pub fn grouping_rule() -> Arc<dyn AnalyzerRule + Send + Sync> {
     Arc::new(crate::grouping::ResolveGroupingId)
+}
+
+/// Run Spark analyzer rules until schema changes reach the `TypeCoercion` fixpoint.
+/// # Errors
+/// Propagates analyzer-rule failures as [`datafusion::error::DataFusionError`].
+pub fn analyze_eagerly(
+    state: &SessionState,
+    plan: LogicalPlan,
+) -> datafusion::error::Result<LogicalPlan> {
+    state
+        .analyzer()
+        .execute_and_check(plan, state.config_options(), |_, _| {})
 }

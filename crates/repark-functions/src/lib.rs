@@ -89,10 +89,9 @@ mod tests;
 
 pub use grouping::ResolveGroupingId;
 pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
+pub use registration::analyze_eagerly;
 pub use registration::analyzer_rules;
 
-use datafusion::execution::SessionState;
-use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionContext;
 
 /// Register the full Spark-compatible scalar/aggregate/window function set into `ctx`.
@@ -175,16 +174,4 @@ pub fn register_all(ctx: &SessionContext) {
     registration::register_udf_families(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
-}
-
-/// Run Spark analyzer rules until schema changes reach the `TypeCoercion` fixpoint.
-/// # Errors
-/// Propagates analyzer-rule failures as [`datafusion::error::DataFusionError`].
-pub fn analyze_eagerly(
-    state: &SessionState,
-    plan: LogicalPlan,
-) -> datafusion::error::Result<LogicalPlan> {
-    state
-        .analyzer()
-        .execute_and_check(plan, state.config_options(), |_, _| {})
 }
