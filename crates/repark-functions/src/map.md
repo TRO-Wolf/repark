@@ -274,6 +274,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
   even for non-null input — live-measured on 4.1.2). pins: types-1/C-006
+- `spark_epoch_ctor.rs` — **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** Spark
+  `timestamp_seconds` / `timestamp_millis` / `timestamp_micros` over one parameterized
+  UDF, registered from `lib.rs::register_all` and embedded by the facade through
+  `dispatch_spark.rs` — one kernel per name on both doors. Answers LTZ micros; seconds
+  takes NUMERIC (fractional kept, double NaN/Inf answer NULL, huge doubles saturate,
+  decimal exact-or-error), millis/micros take INTEGRAL; rejected types refuse
+  `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]` 42K09 and overflows refuse with Spark's
+  unclassified `long overflow` / `Overflow` / `Rounding necessary` texts.
+  pins: sql-epoch-constructors-1/C-002, C-003, C-004, C-005, C-008
 - `spark_year_pad.rs` — **TYPES-1 round 5 (2026-09-05):** the Java-pattern year arm
   extracted from `datetime.rs` (`datetime.rs` 1709→1700): negative years pad the digits
   and re-attach the sign (`-0499`), `yy` is `abs(year) % 100` (`-499` → `99`), 5+-digit

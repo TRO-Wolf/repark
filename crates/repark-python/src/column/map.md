@@ -177,6 +177,14 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   its name and grows by max argument depth around a renamed inner match, so the
   arm clones of a deep argument run on a sized segment.
   pins: deep-filter-chain-crash-1/C-012
+  **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** the `timestamp_seconds` /
+  `timestamp_millis` / `timestamp_micros` arms move to
+  [`function_dispatch/dispatch_spark.rs`](function_dispatch/dispatch_spark.rs) over the
+  converged `repark_functions::spark_epoch_ctor` kernels; the parent keeps the legacy
+  non-Spark `to_timestamp_*` DataFusion-kernel arms untouched and routes the three Spark
+  spellings through the `dispatch_spark` fall-through (+1 line, 997 of 1000).
+  `door_parity_tests.rs` gains the three spellings.
+  pins: sql-epoch-constructors-1/C-004, C-008
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,

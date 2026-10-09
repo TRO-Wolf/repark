@@ -49,6 +49,7 @@ pub mod spark_base64;
 pub mod spark_chr;
 pub mod spark_degrees;
 pub mod spark_elt;
+pub mod spark_epoch_ctor;
 pub mod spark_from_unixtime;
 pub mod spark_hash;
 pub mod spark_initcap;
@@ -122,6 +123,9 @@ pub fn register_all(ctx: &SessionContext) {
     ctx.register_udf(timestamp_cast::date_udf().as_ref().clone());
     ctx.register_udf(timestamp_cast::unix_timestamp_udf().as_ref().clone());
     ctx.register_udf(spark_from_unixtime::from_unixtime_udf().as_ref().clone());
+    for udf in spark_epoch_ctor::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
     for udf in instant_ts::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
