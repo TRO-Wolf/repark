@@ -6,6 +6,17 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
+- `write.rs`, `error.rs`, `lib.rs` — **C-4 fold 1 (2026-10-09), the verifier's three S1:**
+  `open` calls `write/target.rs`'s `route` after `BEGIN_WRITE` and before either lane, so
+  the path a writer takes depends on the relation as well as on the column types.
+  `PostgresWriter::fallback()` answers the `RowFallback` reason when a `Bulk` request took
+  rows, and `None` otherwise. `WriteRequest::path` is unchanged: it still answers from the
+  column types alone, with no connection, and so can say `Bulk` for a write `open` routes to
+  rows. `asked` no longer rewrites every `42501` into a missing `INSERT` grant: the grant is
+  read at `open`, and a later `42501` keeps the server's SQLSTATE and text (a policy, a
+  sequence). `WriteRefusal` gains `IdentityAlways { column }` and `GeneratedColumn { column }`
+  (`Analysis` class) and is no longer `Copy`. `lib.rs` re-exports `RowFallback` and
+  `TARGET_FACTS`. pins: c-4/C-017, C-018, C-019
 - `write.rs`, `error.rs` — **C-4 fold 1 (2026-10-09), the verifier's S2:** `write` sets the
   kept error to `WriteRefused { Interrupted }` before its lane runs and replaces it with the
   lane's result after, so a `write` future dropped at an `.await` (a timeout, a `select!`)

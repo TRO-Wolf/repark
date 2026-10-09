@@ -10,7 +10,31 @@ See [../map.md](../map.md).
 - `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod partition; mod partition_plan; mod live_partition; mod postgres_types; mod settings; mod url;`, plus
   `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
   mod scan; mod tls;` under the `postgres` feature, and since C-4 `mod live_write; mod live_write_faults;
-  mod write;` under it too.
+  mod live_write_relations; mod write;` under it too.
+- `live_write_relations.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. One
+  `Property` row per relation property: the DDL (run twice, for a `_b` twin written by a
+  `Bulk` request and an `_r` twin written by a `Row` request), the target, the written
+  columns, the batch, the `RowFallback` a `Bulk` request must report, the outcome (a row
+  count, a SQLSTATE, or one of the three refusals) and a signature query whose answer must be
+  equal for the twins and equal to the expected text. `measure` runs one row; the signature
+  reads the target and any side table (an audit table, the base table of a view, the far
+  table of a foreign table), so "the same table" covers what a rule or a trigger wrote.
+  The cells: `identity_generated_and_default_columns_agree_or_refuse_on_both_paths`,
+  `rules_and_views_take_the_row_path_and_leave_the_same_tables`,
+  `row_triggers_stay_bulk_and_statement_triggers_take_the_row_path`,
+  `partitions_inheritance_persistence_and_constraints_agree_on_both_paths`,
+  `row_security_and_grants_are_judged_the_same_on_both_paths` (a second role),
+  `a_foreign_table_or_partition_takes_the_row_path` (a loopback `postgres_fdw` server, dropped
+  at the end; `CREATE EXTENSION IF NOT EXISTS` leaves the extension in the disposable
+  database) and `another_sessions_temporary_table_is_refused_the_same_on_both_paths`.
+  pins: c-4/C-017, C-018, C-019
+- `live_write.rs`, `write.rs` — **C-4 fold 1 (2026-10-09):**
+  `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` is now
+  `a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked`: its counting
+  trigger is a statement trigger, so a `Bulk` request on that table now takes rows, and the
+  cell holds both requests to the same statement counts. The pure pins gain
+  `a_named_identity_or_generated_column_refuses_in_one_class_and_names_the_fix` and
+  `every_fallback_reason_says_why_copy_was_not_used`. pins: c-4/C-017, C-018
 - `live_write_faults.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. It shares
   `live_write.rs`'s helpers (now `pub(crate)`); new fault cells live here because
   `live_write.rs` is at the file-size ceiling.

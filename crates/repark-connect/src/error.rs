@@ -239,12 +239,14 @@ impl fmt::Display for WriteValueRefusal {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WriteRefusal {
     QueryTarget,
     NoColumns,
     ColumnCount { expected: usize, actual: usize },
     Interrupted,
+    IdentityAlways { column: String },
+    GeneratedColumn { column: String },
 }
 
 impl fmt::Display for WriteRefusal {
@@ -261,6 +263,16 @@ impl fmt::Display for WriteRefusal {
             WriteRefusal::Interrupted => f.write_str(
                 "an earlier call was dropped before it finished, so the writer takes no more \
                  rows and commits nothing; drop it and write again",
+            ),
+            WriteRefusal::IdentityAlways { column } => write!(
+                f,
+                "column `{column}` is a GENERATED ALWAYS identity, which takes no written \
+                 value; leave it out of the write and the server assigns it"
+            ),
+            WriteRefusal::GeneratedColumn { column } => write!(
+                f,
+                "column `{column}` is a generated column, which takes no written value; leave \
+                 it out of the write and the server computes it"
             ),
         }
     }
@@ -356,7 +368,9 @@ impl From<ConnectError> for Error {
                 WriteRefusal::QueryTarget | WriteRefusal::NoColumns => {
                     Error::Config(error.to_string())
                 }
-                WriteRefusal::ColumnCount { .. } => Error::Analysis(error.to_string()),
+                WriteRefusal::ColumnCount { .. }
+                | WriteRefusal::IdentityAlways { .. }
+                | WriteRefusal::GeneratedColumn { .. } => Error::Analysis(error.to_string()),
                 WriteRefusal::Interrupted => Error::DataFusion(error.to_string()),
             },
             #[cfg(feature = "postgres")]

@@ -12,8 +12,8 @@ use repark_common::{Error, ErrorClass};
 use repark_connect::postgres::{PgTypeKind, PlannedColumn, TypeMod, UTC_ZONE_LABEL, WriteCarriage};
 use repark_connect::{
     BatchLimits, COPY_SIGNATURE, ConnectError, CopyBinaryDecoder, CopyBinaryEncoder, PgIdent,
-    Privilege, QualifiedRelation, ResolvedSource, ScanColumn, ScanSource, WritePath, WriteRefusal,
-    WriteRequest, WriteValueRefusal,
+    Privilege, QualifiedRelation, ResolvedSource, RowFallback, ScanColumn, ScanSource,
+    TARGET_FACTS, WritePath, WriteRefusal, WriteRequest, WriteValueRefusal,
 };
 
 pub(crate) const ROWS: usize = 8;
@@ -863,4 +863,71 @@ fn write_errors_fold_by_class_and_carry_no_value() {
         Error::from(no_columns).exception_class(),
         ErrorClass::IllegalArgument
     );
+}
+
+#[test]
+fn a_named_identity_or_generated_column_refuses_in_one_class_and_names_the_fix() {
+    let column = String::from("n");
+    let identity = ConnectError::WriteRefused {
+        refusal: WriteRefusal::IdentityAlways {
+            column: column.clone(),
+        },
+    };
+    assert_eq!(
+        identity.to_string(),
+        "a write to a Postgres source refuses: column `n` is a GENERATED ALWAYS identity, which \
+         takes no written value; leave it out of the write and the server assigns it"
+    );
+    let generated = ConnectError::WriteRefused {
+        refusal: WriteRefusal::GeneratedColumn { column },
+    };
+    assert_eq!(
+        generated.to_string(),
+        "a write to a Postgres source refuses: column `n` is a generated column, which takes no \
+         written value; leave it out of the write and the server computes it"
+    );
+    for refused in [identity, generated] {
+        assert_eq!(Error::from(refused).exception_class(), ErrorClass::Analysis);
+    }
+}
+
+#[test]
+fn every_fallback_reason_says_why_copy_was_not_used() {
+    let reasons = [
+        (
+            RowFallback::View,
+            "the target is a view, which COPY cannot write",
+        ),
+        (
+            RowFallback::ForeignTable,
+            "the target is, or routes rows to, a foreign table",
+        ),
+        (
+            RowFallback::InsertRule,
+            "the target has an INSERT rule, which COPY does not fire",
+        ),
+        (
+            RowFallback::RowSecurity,
+            "row-level security applies to the role, and COPY FROM refuses under it",
+        ),
+        (
+            RowFallback::StatementTrigger,
+            "the target has a statement-level INSERT trigger, which COPY fires once",
+        ),
+        (
+            RowFallback::ColumnType,
+            "a written column's type has no COPY BINARY form here",
+        ),
+    ];
+    for (reason, text) in reasons {
+        assert_eq!(reason.to_string(), text);
+    }
+    assert_eq!(TARGET_FACTS.matches('$').count(), 5, "three bound values");
+    for qualified in [
+        "pg_catalog.pg_class",
+        "pg_catalog.pg_rewrite",
+        "pg_catalog.pg_trigger",
+    ] {
+        assert!(TARGET_FACTS.contains(qualified), "{qualified}");
+    }
 }

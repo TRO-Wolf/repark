@@ -1,5 +1,6 @@
 pub(crate) mod postgres_copy;
 pub(crate) mod row;
+pub(crate) mod target;
 
 use std::future::Future;
 use std::sync::Arc;
@@ -9,11 +10,12 @@ use arrow::array::RecordBatch;
 
 use self::postgres_copy::CopyLane;
 use self::row::RowLane;
-use crate::discover::{Privilege, ResolvedSource};
+use self::target::RowFallback;
+use crate::discover::ResolvedSource;
 use crate::error::{ConnectError, Result, WriteRefusal};
 use crate::ident::{PgIdent, QualifiedRelation};
-use crate::pool::{PooledClient, PostgresConnector, PostgresPool, TimeoutSetting};
-use crate::read::postgres::request;
+use crate::pool::{PooledClient, PostgresConnector, PostgresPool, TimeoutSetting, within};
+use crate::read::postgres::request_error;
 use crate::settings::PostgresSettings;
 use crate::types::postgres::{ColumnEncoder, PlannedColumn, WriteCarriage};
 
@@ -21,6 +23,8 @@ pub const BEGIN_WRITE: &str = "BEGIN READ WRITE";
 pub const DEFAULT_COPY_CHUNK_BYTES: usize = 1 << 20;
 pub const DEFAULT_ROWS_PER_INSERT: usize = 256;
 pub const MAX_INSERT_PARAMS: usize = 65_535;
+
+const INSUFFICIENT_PRIVILEGE: &str = "42501";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WritePath {
@@ -109,15 +113,25 @@ impl WriteRequest {
             .collect()
     }
 
+    pub(crate) fn column_fallback(&self) -> Option<RowFallback> {
+        self.columns
+            .iter()
+            .any(|column| column.planned.carriage() == WriteCarriage::RowText)
+            .then_some(RowFallback::ColumnType)
+    }
+
+    pub(crate) fn column_names(&self) -> Vec<&str> {
+        self.columns
+            .iter()
+            .map(|column| column.name.as_str())
+            .collect()
+    }
+
     #[must_use]
     pub fn path(&self, requested: WritePath) -> WritePath {
-        let bulk = self
-            .columns
-            .iter()
-            .all(|column| column.planned.carriage() == WriteCarriage::CopyBinary);
-        match requested {
-            WritePath::Bulk if bulk => WritePath::Bulk,
-            WritePath::Bulk | WritePath::Row => WritePath::Row,
+        match (requested, self.column_fallback()) {
+            (WritePath::Bulk, None) => WritePath::Bulk,
+            (WritePath::Bulk, Some(_)) | (WritePath::Row, _) => WritePath::Row,
         }
     }
 
@@ -189,12 +203,12 @@ impl WriteRequest {
                 refusal: WriteRefusal::NoColumns,
             });
         }
-        let path = self.path(path);
         let pooled = pool.checkout().await?;
         let timeout = options.read_timeout;
         let relation = &self.relation;
         let begin = pooled.client().batch_execute(BEGIN_WRITE);
         asked(timeout, relation, begin).await?;
+        let (path, fallback) = target::route(pooled.client(), &self, path, timeout).await?;
         let lane = match path {
             WritePath::Bulk => Lane::Copy(CopyLane::open(pooled.client(), &self, options).await?),
             WritePath::Row => Lane::Row(RowLane::open(pooled.client(), &self, options).await?),
@@ -204,6 +218,7 @@ impl WriteRequest {
             lane,
             relation: self.relation,
             read_timeout: timeout,
+            fallback,
             failed: None,
         })
     }
@@ -214,15 +229,18 @@ pub(crate) async fn asked<T>(
     relation: &QualifiedRelation,
     work: impl Future<Output = std::result::Result<T, tokio_postgres::Error>>,
 ) -> Result<T> {
-    request(read_timeout, Some(relation), work)
-        .await
-        .map_err(|error| match error {
-            ConnectError::PermissionDenied { relation, .. } => ConnectError::PermissionDenied {
-                relation,
-                privilege: Privilege::Insert,
-            },
-            other => other,
-        })
+    let classified = async { work.await.map_err(|error| write_error(&error, relation)) };
+    within(TimeoutSetting::Read, read_timeout, classified).await
+}
+
+fn write_error(error: &tokio_postgres::Error, relation: &QualifiedRelation) -> ConnectError {
+    match error.as_db_error() {
+        Some(refused) if refused.code().code() == INSUFFICIENT_PRIVILEGE => ConnectError::Server {
+            sqlstate: INSUFFICIENT_PRIVILEGE.to_string(),
+            message: refused.message().to_string(),
+        },
+        _ => request_error(error, Some(relation)),
+    }
 }
 
 pub(crate) fn encoders<'a>(
@@ -254,10 +272,16 @@ pub struct PostgresWriter {
     lane: Lane,
     relation: QualifiedRelation,
     read_timeout: Duration,
+    fallback: Option<RowFallback>,
     failed: Option<ConnectError>,
 }
 
 impl PostgresWriter {
+    #[must_use]
+    pub fn fallback(&self) -> Option<RowFallback> {
+        self.fallback
+    }
+
     #[must_use]
     pub fn path(&self) -> WritePath {
         match self.lane {
@@ -290,6 +314,7 @@ impl PostgresWriter {
             relation,
             read_timeout,
             failed,
+            ..
         } = self;
         if let Some(failed) = failed {
             return Err(failed);

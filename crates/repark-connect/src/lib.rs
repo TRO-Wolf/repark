@@ -73,6 +73,8 @@ pub use types::postgres;
 #[cfg(feature = "postgres")]
 pub use write::postgres_copy::{CopyBinaryEncoder, CopyChunks};
 #[cfg(feature = "postgres")]
+pub use write::target::{RowFallback, TARGET_FACTS};
+#[cfg(feature = "postgres")]
 pub use write::{
     BEGIN_WRITE, DEFAULT_COPY_CHUNK_BYTES, DEFAULT_ROWS_PER_INSERT, MAX_INSERT_PARAMS,
     PostgresWriter, WriteOptions, WritePath, WriteReport, WriteRequest,

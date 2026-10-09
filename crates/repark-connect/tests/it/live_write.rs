@@ -875,7 +875,7 @@ async fn a_write_returns_its_connection_clean_and_names_only_its_columns() {
 
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
-async fn the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts() {
+async fn a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked() {
     let cell = Cell::open().await;
     let schema = &cell.schema;
     cell.sql(&format!(
@@ -928,14 +928,14 @@ async fn the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts() {
         for (path, table) in PATHS {
             let resolved = store.target(&cell, table).await;
             let report = store_with(store.pool(), &resolved, path, options, &batches).await;
+            let path = WritePath::Row;
             assert_eq!(report, Ok(WriteReport { path, rows }), "{table}");
             let fired = cell
                 .count(&format!(
                     "SELECT statements FROM {schema}.fired WHERE name = '{table}'"
                 ))
                 .await;
-            let expected = if path == WritePath::Bulk { 1 } else { inserts };
-            assert_eq!(fired, expected, "{table} {options:?}");
+            assert_eq!(fired, inserts, "{table} {options:?}");
         }
     }
     let widest = i32::try_from(MAX_INSERT_PARAMS / 3).expect("a row count");
