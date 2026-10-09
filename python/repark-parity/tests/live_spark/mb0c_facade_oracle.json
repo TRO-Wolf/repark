@@ -3111,6 +3111,66 @@
     },
     {
       "answer": {
+        "first_batches": [
+          {
+            "batchId": 0,
+            "numInputRows": 3
+          }
+        ],
+        "rows": [
+          [
+            1,
+            "k1"
+          ],
+          [
+            1,
+            "k1"
+          ],
+          [
+            2,
+            "k0"
+          ],
+          [
+            2,
+            "k0"
+          ],
+          [
+            3,
+            "k1"
+          ],
+          [
+            3,
+            "k1"
+          ]
+        ],
+        "schema": [
+          [
+            "id",
+            "bigint",
+            true
+          ],
+          [
+            "k",
+            "string",
+            true
+          ]
+        ],
+        "second_batches": [
+          {
+            "batchId": 0,
+            "numInputRows": 3
+          }
+        ],
+        "warning": "WARN ResolveWriteToStream: Temporary checkpoint location created which is deleted normally when the query didn't fail: $TEMP_CHECKPOINT. If it's required to delete it under any circumstances, please set spark.sql.streaming.forceDeleteTempCheckpointLocation to true. Important to know deleting temp checkpoint folder is best effort.",
+        "warning_firings": 2
+      },
+      "cell": "MB0c-D3",
+      "field": "facade.foreach_batch.no_checkpoint_warns_and_replays.rows",
+      "kind": "rows",
+      "statement": "def cell_d3(bench: Bench) -> tuple[str, dict[str, Any]]:\n    source = create_source(bench, \"d3\")\n    append(bench, source, [1, 2])\n    append(bench, source, [3])\n    sink = create_sink(bench, \"d3_sink\")\n    bench.spark.sparkContext.setLogLevel(\"WARN\")\n    try:\n        with captured_driver_log(bench.spark) as log_path:\n            first = (\n                bench.spark.readStream.format(\"iceberg\")\n                .load(source)\n                .writeStream.foreachBatch(AppendTo(sink))\n                .trigger(availableNow=True)\n                .start()\n            )\n            first.awaitTermination()\n            second = (\n                bench.spark.readStream.format(\"iceberg\")\n                .load(source)\n                .writeStream.foreachBatch(AppendTo(sink))\n                .trigger(availableNow=True)\n                .start()\n            )\n            second.awaitTermination()\n        captured = log_path.read_text()\n        log_path.unlink()\n    except PySparkException as exc:\n        return \"error\", error_of(exc)\n    finally:\n        bench.spark.sparkContext.setLogLevel(\"ERROR\")\n    lines = [\n        TEMP_CHECKPOINT_RE.sub(\"$TEMP_CHECKPOINT\", line[line.index(\"WARN \") :])\n        for line in captured.splitlines()\n        if \"Temporary checkpoint location\" in line\n    ]\n    if not lines:\n        raise SystemExit(\"D3 recorded no temp-checkpoint warning\")\n    return \"rows\", {\n        \"warning\": lines[0],\n        \"warning_firings\": len(lines),\n        \"first_batches\": progress_batches(first),\n        \"second_batches\": progress_batches(second),\n        **table_rows(bench, sink),\n    }\n\nclass AppendTo:\n    def __init__(self, table: str) -> None:\n        self.table = table\n\n    def __call__(self, frame: DataFrame, batch_id: int) -> None:\n        frame.writeTo(self.table).append()\n\n@contextlib.contextmanager\ndef captured_driver_log(spark: SparkSession) -> Iterator[Path]:\n    jvm = spark._jvm\n    manager = jvm.org.apache.logging.log4j.LogManager\n    level = jvm.org.apache.logging.log4j.Level\n    context = manager.getContext(False)\n    config = context.getConfiguration()\n    layout = (\n        jvm.org.apache.logging.log4j.core.layout.PatternLayout.newBuilder()\n        .withPattern(\"%p %c{1}: %m%n\")\n        .build()\n    )\n    handle, path = tempfile.mkstemp(prefix=\"mb0c-d3-log-\")\n    os.close(handle)\n    appender = (\n        jvm.org.apache.logging.log4j.core.appender.FileAppender.newBuilder()\n        .setName(\"MB0C-D3\")\n        .withFileName(path)\n        .setLayout(layout)\n        .build()\n    )\n    appender.start()\n    config.addAppender(appender)\n    root = config.getRootLogger()\n    root.addAppender(appender, level.WARN, None)\n    context.updateLoggers()\n    try:\n        yield Path(path)\n    finally:\n        root.removeAppender(\"MB0C-D3\")\n        context.updateLoggers()\n        appender.stop()\n"
+    },
+    {
+      "answer": {
         "causes": [
           "java.lang.IllegalArgumentException"
         ],

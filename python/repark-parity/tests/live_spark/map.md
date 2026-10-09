@@ -98,7 +98,15 @@ collected by pytest, and no RePark code runs.
   list of cell ids) records a subset merged into the existing JSON. A re-run is
   byte-identical.
   pins: mb-4/C-019
-- `mb0c_facade_oracle.json` is that recording: the MB-0 preamble shape and the 31 cells.
+  **MB-4 round 4 (2026-10-09):** cell `MB0c-D3` (W-Q2 follow-through) records
+  `foreachBatch` with no `checkpointLocation`: the run rows, the exact
+  `ResolveWriteToStream` temporary-checkpoint warning captured through a log4j2
+  `FileAppender` the cell attaches over the JVM door (the gateway owns `stderr`, so
+  an fd redirect cannot see it; the random temp path normalizes to
+  `$TEMP_CHECKPOINT`), and a second start replaying from the start. 32 cells; the
+  31 older entries stay byte-identical through the merge.
+  pins: mb-4/C-034
+- `mb0c_facade_oracle.json` is that recording: the MB-0 preamble shape and the 32 cells.
 - `mb0c_facade_oracle.sha256` holds `sha256sum` of the JSON. Check it with `sha256sum -c`
   from this directory.
 - `c2_jdbc_oracle.py` is the D-M2 recorder. Cells are data (`define_cells`),

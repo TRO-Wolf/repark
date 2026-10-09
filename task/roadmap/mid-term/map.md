@@ -69,6 +69,14 @@ declines it (a dated ruling in the intake, then the archive).
   as the match target, step 0 the unmeasured file-to-Iceberg combination, and the MB-5 design
   questions. Closes when MB-5 lands file sources or the owner declines them.
   pins: mb-4/C-033
+- [temp-checkpoint-1-card-2026-10-09.md](temp-checkpoint-1-card-2026-10-09.md) — **card
+  TEMP-CHECKPOINT-1 (2026-10-09, MB-4 round 4, W-Q2 follow-through):** the Spark-matching
+  answer for `foreachBatch` with no `checkpointLocation` — runs on a temporary checkpoint
+  with the exact `ResolveWriteToStream` warning quoted (MB-0c cell D3), the temp dir deleted
+  on clean termination, a restart replaying from the start; the design questions for the
+  matching slice. The product keeps the W8 refusal. Closes when a slice lands it or the
+  owner declines it.
+  pins: mb-4/C-034
 - [ice-variant-1-6.md](ice-variant-1-6.md) — **card ICE-VARIANT (2026-09-27, v1.6.0, owner ruling C-4):**
   the `variant` type leaves the v1.5.0 gate (cell `TY-VARIANT-V3`, shredded Parquet in the Spark leg, fork issue
   R88 open) and is scheduled as integration of the upstream `parquet-variant*` crates the fork already links

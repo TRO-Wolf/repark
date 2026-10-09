@@ -1,13 +1,15 @@
-"""MB-0c facade oracle: 31 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
+"""MB-0c facade oracle: 32 Spark 4.1.2 + Iceberg 1.11.0 cells recorded verbatim."""
 
 from __future__ import annotations
 
+import contextlib
 import inspect
 import json
 import os
 import re
 import sys
-from collections.abc import Callable
+import tempfile
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -27,9 +29,11 @@ from mb0_streaming_oracle import AppendTo, fresh_dir, preamble, scrub
 from pyspark.errors import PySparkException
 from pyspark.sql import DataFrame, SparkSession
 
-EXPECTED_CELLS = 31
+EXPECTED_CELLS = 32
 
 TRIGGER_MILLIS_RE = re.compile(r"^ProcessingTimeTrigger\((\d+)\)$")
+
+TEMP_CHECKPOINT_RE = re.compile(r"/tmp/temporary-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}")
 
 Cell = Callable[[Bench], tuple[str, dict[str, Any]]]
 
@@ -567,6 +571,86 @@ def cell_d2(bench: Bench) -> tuple[str, dict[str, Any]]:
     return "rows", {"progress_batches": progress_batches(query), **table_rows(bench, sink)}
 
 
+@contextlib.contextmanager
+def captured_driver_log(spark: SparkSession) -> Iterator[Path]:
+    jvm = spark._jvm
+    manager = jvm.org.apache.logging.log4j.LogManager
+    level = jvm.org.apache.logging.log4j.Level
+    context = manager.getContext(False)
+    config = context.getConfiguration()
+    layout = (
+        jvm.org.apache.logging.log4j.core.layout.PatternLayout.newBuilder()
+        .withPattern("%p %c{1}: %m%n")
+        .build()
+    )
+    handle, path = tempfile.mkstemp(prefix="mb0c-d3-log-")
+    os.close(handle)
+    appender = (
+        jvm.org.apache.logging.log4j.core.appender.FileAppender.newBuilder()
+        .setName("MB0C-D3")
+        .withFileName(path)
+        .setLayout(layout)
+        .build()
+    )
+    appender.start()
+    config.addAppender(appender)
+    root = config.getRootLogger()
+    root.addAppender(appender, level.WARN, None)
+    context.updateLoggers()
+    try:
+        yield Path(path)
+    finally:
+        root.removeAppender("MB0C-D3")
+        context.updateLoggers()
+        appender.stop()
+
+
+def cell_d3(bench: Bench) -> tuple[str, dict[str, Any]]:
+    source = create_source(bench, "d3")
+    append(bench, source, [1, 2])
+    append(bench, source, [3])
+    sink = create_sink(bench, "d3_sink")
+    bench.spark.sparkContext.setLogLevel("WARN")
+    try:
+        with captured_driver_log(bench.spark) as log_path:
+            first = (
+                bench.spark.readStream.format("iceberg")
+                .load(source)
+                .writeStream.foreachBatch(AppendTo(sink))
+                .trigger(availableNow=True)
+                .start()
+            )
+            first.awaitTermination()
+            second = (
+                bench.spark.readStream.format("iceberg")
+                .load(source)
+                .writeStream.foreachBatch(AppendTo(sink))
+                .trigger(availableNow=True)
+                .start()
+            )
+            second.awaitTermination()
+        captured = log_path.read_text()
+        log_path.unlink()
+    except PySparkException as exc:
+        return "error", error_of(exc)
+    finally:
+        bench.spark.sparkContext.setLogLevel("ERROR")
+    lines = [
+        TEMP_CHECKPOINT_RE.sub("$TEMP_CHECKPOINT", line[line.index("WARN ") :])
+        for line in captured.splitlines()
+        if "Temporary checkpoint location" in line
+    ]
+    if not lines:
+        raise SystemExit("D3 recorded no temp-checkpoint warning")
+    return "rows", {
+        "warning": lines[0],
+        "warning_firings": len(lines),
+        "first_batches": progress_batches(first),
+        "second_batches": progress_batches(second),
+        **table_rows(bench, sink),
+    }
+
+
 def cell_m1(bench: Bench) -> tuple[str, dict[str, Any]]:
     try:
         found = bench.spark.streams.get("bogus")
@@ -701,6 +785,12 @@ CELLS: tuple[tuple[str, str, Cell, tuple[Any, ...]], ...] = (
     ("MB0c-O2", "facade.output_mode.empty.error", cell_o2, ()),
     ("MB0c-D1", "facade.batch_action.collect_on_stream.error", cell_d1, ()),
     ("MB0c-D2", "facade.foreach_batch.no_checkpoint_runs.rows", cell_d2, (AppendTo,)),
+    (
+        "MB0c-D3",
+        "facade.foreach_batch.no_checkpoint_warns_and_replays.rows",
+        cell_d3,
+        (AppendTo, captured_driver_log),
+    ),
     ("MB0c-M1", "facade.manager.get_malformed_id.error", cell_m1, ()),
     ("MB0c-M2", "facade.manager.get_unknown_id.rows", cell_m2, ()),
     ("MB0c-M3", "facade.manager.duplicate_query_name.error", cell_m3, ()),
