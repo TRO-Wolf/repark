@@ -68,6 +68,7 @@ fn caused(py: Python<'_>, cause: Option<&BodyCause>, raised: PyErr) -> PyErr {
 }
 
 impl PyStreamingQuery {
+    #[cfg(test)]
     pub(crate) fn new(handle: QueryHandle, runtime: Arc<Runtime>) -> Self {
         PyStreamingQuery {
             handle,

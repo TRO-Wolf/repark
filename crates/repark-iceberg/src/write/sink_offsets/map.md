@@ -18,8 +18,9 @@ directory holds the piece split out of it. The test files of the module stay bes
     with its operation. A snapshot stamped by another query is passed over: it is that query's
     own commit and cannot be a stray write of this body.
   - **`SinkMark::of(table)` / `violation(after)`**, check (b): the mark holds the table as it
-    was when the batch entered its scope. `violation` answers none when the metadata location
-    is the same. Otherwise it names, in this order: another table uuid; a new snapshot with no
+    was when the batch entered its scope and nothing else, so taking it costs one clone;
+    the set of snapshot ids is built only when the metadata location changed. `violation`
+    answers none when the location is the same. Otherwise it names, in this order: another table uuid; a new snapshot with no
     stamp (on `main` first, then anywhere, so a branch write and a staged snapshot count); a
     removed snapshot; `main` moved to a snapshot that already existed; a table property other
     than a `repark.cdc.offsets.*` key; a schema, partition-spec or sort-order id; a branch or

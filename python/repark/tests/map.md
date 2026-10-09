@@ -8004,8 +8004,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `__cause__` on all three raising doors; drop-and-recreate after the stamped write; a
   foreign `INSERT` between runs refusing the restart, and a rollback to the newest stamped
   snapshot recovering it. The helper threads never call `collect()` (card
-  THREADED-COLLECT-SEGV-1).
-  pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022
+  THREADED-COLLECT-SEGV-1). The re-verify's own scripts and kill set were re-run beside
+  these pins; the MB-4-FOREACH-EO ledger's fold-2 proof holds the table.
+  pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022, C-024
 - [test_dfcore_1_exports.py](test_dfcore_1_exports.py),
   [_dfcore_1_expected.py](_dfcore_1_expected.py) — **MB-4 fold 2 (2026-10-09):** the export
   pin declares the delta of fold 1's `map_bridge.py` split, which had left it red: `core` and

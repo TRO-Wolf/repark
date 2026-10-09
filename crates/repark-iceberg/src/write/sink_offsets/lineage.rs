@@ -13,7 +13,6 @@ use crate::microbatch::offset::{
 #[derive(Debug, Clone)]
 pub struct SinkMark {
     before: Table,
-    snapshots: BTreeSet<i64>,
 }
 
 fn refs_of(metadata: &TableMetadata) -> BTreeMap<String, Value> {
@@ -79,11 +78,6 @@ impl SinkMark {
     pub fn of(table: &Table) -> SinkMark {
         SinkMark {
             before: table.clone(),
-            snapshots: table
-                .metadata()
-                .snapshots()
-                .map(|snapshot| snapshot.snapshot_id())
-                .collect(),
         }
     }
 
@@ -109,7 +103,11 @@ impl SinkMark {
         {
             return None;
         }
-        let added = |snapshot: &&SnapshotRef| !self.snapshots.contains(&snapshot.snapshot_id());
+        let known: BTreeSet<i64> = was
+            .snapshots()
+            .map(|snapshot| snapshot.snapshot_id())
+            .collect();
+        let added = |snapshot: &&SnapshotRef| !known.contains(&snapshot.snapshot_id());
         if let Some(stray) = main_lineage(metadata)
             .chain(metadata.snapshots())
             .filter(added)
@@ -117,15 +115,14 @@ impl SinkMark {
         {
             return Some(commit_of(stray));
         }
-        if let Some(gone) = self
-            .snapshots
+        if let Some(gone) = known
             .iter()
             .find(|id| metadata.snapshot_by_id(**id).is_none())
         {
             return Some(change(format!("snapshot {gone} was removed")));
         }
         let head = metadata.current_snapshot_id();
-        if head != was.current_snapshot_id() && head.is_none_or(|id| self.snapshots.contains(&id)) {
+        if head != was.current_snapshot_id() && head.is_none_or(|id| known.contains(&id)) {
             return Some(change(format!(
                 "main was moved to the existing snapshot {to}",
                 to = head.map_or_else(|| String::from("none"), |id| id.to_string())

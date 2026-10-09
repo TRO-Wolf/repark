@@ -301,7 +301,16 @@ pins: mb-3/C-031
     assertion, so the test asserts the per-iteration invariants only. The replaced-sink pins in
     `lifecycle_tests.rs` and `timeout_tests.rs` read `UnstampedSinkChange`, and no stamp
     lands on the new table.
-  pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-023, C-025
+  - **Cost (measured 2026-10-09, 200 epochs, `availableNow`, one file per batch, a memory
+    catalog, medians of three runs on a shared box).** Before the fold and after it, run one
+    after the other: a body that appends to the sink 60.6 s and 61.3 s (+1.1 %); a body that
+    writes nothing 7.8 s and 8.7 s (+10.8 %, over the 5 % line); `toTable`, whose code did
+    not change, 55.8 s and 57.3 s (+2.6 %). The mark's snapshot set was then made lazy and
+    the final build measured alone twenty minutes later: 63.4 s, 6.5 s and 57.2 s. The
+    no-write reading did not reproduce (it is 16 % under the "before" figure) and the
+    writing body read 4.5 % over it, so the box does not resolve a difference under about
+    5 %, and no reading puts the audit above it twice.
+  pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-023, C-025, C-026
 - `run.rs`, `exactly_once_tests.rs`, `foreach_tests.rs`, `race_tests.rs`, `testing.rs` —
   **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT" on the MB-4 verify's S1):** the
   `foreachBatch` door is exactly-once on the declared sink. This overturns MB-3 D-2 and
