@@ -173,6 +173,7 @@ pub(crate) fn microbatch_py_err(
         MicroBatchError::AlreadyCommitted { .. }
         | MicroBatchError::AwaitFromDriver { .. }
         | MicroBatchError::DriverPanicked { .. } => stream_failed(py, &error.to_string(), head),
+        #[allow(clippy::match_same_arms)]
         MicroBatchError::Catalog(_)
         | MicroBatchError::CatalogTimeout { .. }
         | MicroBatchError::SnapshotNotInLineage { .. }
