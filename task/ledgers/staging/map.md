@@ -24,6 +24,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   question: the nested microsecond `TIMESTAMP_NTZ` split (C-017, Q4, first for the owner), the
   unfiltered `UPDATE`'s overflow class under ANSI (C-020, Q5), the kernel name on the ANSI
   door (C-022, Q6), three raw nested refusals (C-026, Q7).
+  **Fold 2 (2026-10-09), after a re-verify failed `59462d6a` at the edges of the nested
+  form:** the conform pairs struct fields as its door pairs them (C-027), reads every Arrow
+  layout or refuses it (C-028), and a nested `timestamp_ns` leaf is stored as the rule's wall
+  or refused by one named text, parity row R-015 (C-029: 5009 answering cells of 9430, all the
+  rule's wall, 3052 named refusals, 1369 whose own source does not evaluate); a value narrowed
+  from nanoseconds is refused, not cut (C-030); the required `timestamptz_ns` control's text
+  is main's again (C-031); `UPDATE` with no `WHERE` is refused by name (C-032); the red check
+  of the pull request was the map lockstep guard (C-033); sixteen mutants (C-034); the
+  matrices re-run with no control moved (C-035); gates (C-036). Three more clauses are OPEN,
+  each a question: struct pairing against Spark's (C-037, Q8), the typing of a nanosecond
+  value beside a NULL (C-038, Q9), `VALUES` spellings that fail before any store (C-039,
+  Q10); and Q11 asks whether a named refusal is right where main stored a NULL leaf.
 - [cross-join-condition-1-ledger.md](cross-join-condition-1-ledger.md) —
   **CROSS-JOIN-CONDITION-1 (2026-10-08), from the STAMP-2-R5P6-2 hand-back:** a cross join with
   a condition ignored it (12 rows where Spark answers 2); the H1 door now routes cross-with-condition

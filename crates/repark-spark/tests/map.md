@@ -111,6 +111,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   control's text to its last word. `what_cannot_feed_the_leaf_is_refused_by_name` covers
   `UPDATE` with no `WHERE`, an integer leaf, a misnested source and too few positional
   fields, and that an unrelated `UPDATE` with no `WHERE` still runs.
+  `a_field_beside_the_leaf_may_be_narrowed_and_merge_is_guarded_too` stores nine digits
+  beside a microsecond field narrowed on purpose through INSERT, UPDATE and MERGE, and refuses
+  three MERGE spellings whose leaf was narrowed in the USING subquery.
+  `a_null_struct_and_a_null_typed_field_store_as_they_are` is the pin the first commit of the
+  fold lacked: a NULL struct and a struct with an untyped NULL field through four doors.
+  Sixteen hand mutants die on these and the kernel's pins (the ledger's section 10.7).
   pins: ice-tsns-merge-wall-1/C-027, C-028, C-029, C-030, C-032, C-034
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
