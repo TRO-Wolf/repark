@@ -8,9 +8,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
   `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
   `repark_functions::spark_epoch_ctor` kernel per spelling, with Spark's values, refusal
-  classes and `timestamp` schema (C-002..C-005, C-008); the 216-cell live Spark 4.1.2
-  oracle (C-001) and its live drift check (C-007) sit under `python/repark/tests`; the
-  native door stays a declared refusal (C-006). `risk_tier: standard`. Branch
+  classes and `timestamp` schema (C-002..C-005, C-008); the 304-cell live Spark 4.1.2
+  oracle (C-001, C-009) and its live drift check (C-007) sit under `python/repark/tests`;
+  the native door stays a declared refusal (C-006); fold 1 (2026-10-09) pins the
+  decimal-boundary order (C-010). `risk_tier: standard`. Branch
   `fix/sql-epoch-constructors-1`.
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`

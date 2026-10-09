@@ -31,9 +31,11 @@ type, plus `to_timestamp_*` probes. All four zone×ANSI groups are byte-identica
 - `timestamp_millis` / `timestamp_micros` take INTEGRAL only; doubles, floats, decimals,
   strings, booleans and timestamps refuse.
 - Every type refusal is `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` 42K09, including a
-  NULL of the wrong type. Every overflow is unclassified: integral `long overflow`,
-  decimal out-of-range `Overflow` (range wins over exactness), decimal inexact
-  `Rounding necessary`. Both errors ignore ANSI.
+  NULL of the wrong type. Every overflow is unclassified: integral `long overflow`;
+  decimal `Overflow` only when the micros integer part passes 19 digits or exact
+  micros leave the bigint range, else inexact micros refuse `Rounding necessary`
+  even past the bound (fold 1, 2026-10-09, corrects "range wins over exactness").
+  Both errors ignore ANSI.
 - Spark refuses `to_timestamp_seconds` / `to_timestamp_millis` / `to_timestamp_micros`
   as `UNRESOLVED_ROUTINE`.
 
@@ -69,6 +71,8 @@ type. The native door keeps refusing the three names (declared, pinned).
 | C-006 | The native `repark.sql` door refuses all three names. | One refusal pin per name. | PROVEN | `test_native_door_refuses_the_spark_spellings`, green. |
 | C-007 | Live Spark 4.1.2 re-derives every fixture cell. | The recorder's `--check` mode and the live pin. | PROVEN | `test_live_oracle_matches_committed_fixture` (runs under `REPARK_PARITY_LIVE=1`); the unit ran the recorder's `--check` against live Spark 4.1.2 with no drift. |
 | C-008 | Each spelling resolves one kernel on both doors. | The door-parity guard over the converged arms. | PROVEN | `door_parity_tests.rs` `SCALAR_NAMES` gains the three spellings; `repark-python --lib` green. |
+| C-009 | The 88-cell decimal-boundary extension (22 inputs × 4 groups) is recorded from live Spark 4.1.2 and replays equal on the SQL and DataFrame doors. | The recorder INPUTS, the 304-cell fixture, the both-doors replay. | PROVEN | `test_sql_door_matches_spark` + `test_dataframe_door_matches_spark` over 76 inputs (4 groups × 228 legs), green; the 216 older cells byte-identical. |
+| C-010 | The kernel answers Spark's decimal order: inexact micros with at most 19 integer digits refuse `Rounding necessary` even past the bigint bound; `Overflow` only past 19 digits or for exact out-of-range micros. | The Rust boundary battery plus the order mutants. | PROVEN | `decimal_boundary_answers_spark_order` (17 refusals + 5 values), green; old-order restore and 1e19-drop mutants red. |
 
 ## 4. No worse than main
 
@@ -94,6 +98,26 @@ multiply and defaults overflow to 0 (the overflow test killed), M4 drops the UTC
 - **O-2.** A `Decimal256` unscaled value past the `i128` range refuses `Overflow`
   without attempting the exact division; Spark has no 256-bit decimal (max precision
   38), so no Spark input reaches it.
+
+## Fold 1 (2026-10-09) — the decimal boundary order
+
+The verify verdict (FAIL, one S2, 8,514 cells, 0 regressions, 0 third answers) caught
+`timestamp_seconds(decimal)`: inexact micros with at most 19 integer digits at or past
+the bigint bound refused `Overflow` where Spark 4.1.2 refuses `Rounding necessary`
+(120 cells). Cause: `decimal_seconds_to_micros` checked the `i64` range before the
+remainder; Spark's `BigDecimal.longValueExact` answers `Overflow` first only past 19
+integer digits. The §1 "range wins over exactness" line stated the wrong rule.
+
+Re-measured on live Spark 4.1.2: the verdict's five values plus one each side of
+every edge (MAX/MIN exact, ±half/±1/±1.5 micro, 19- vs 20-digit micros both signs,
+exact vs inexact, a trailing-zero `(p,s)` twin) — 22 inputs, SQL literal, SQL
+column, DataFrame column and parquet column, both doors, all agreeing (C-009). The
+fix checks `|quotient| >= 10^19` first, then the remainder, then the `i64` range;
+the Rust battery pins 17 refusals + 5 values and kills the old-order restore and
+the 1e19-drop mutants (C-010). The harness now parses fractional literals as
+decimals like the Spark door (`parse_float_as_decimal`); huge doubles spell
+through string casts there since exponent literals never reach the kernel
+(`spark_literals` rewrites them on the door).
 
 ## Coverage attestation
 

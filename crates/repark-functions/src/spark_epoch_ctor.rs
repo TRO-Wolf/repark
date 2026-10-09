@@ -16,6 +16,7 @@ use datafusion::logical_expr::{
 
 const MICROS_PER_SECOND: i128 = 1_000_000;
 const MICROS_PER_MILLI: i128 = 1_000;
+const TEN_POW_19: i128 = 10_000_000_000_000_000_000;
 const TWO_POW_63_AS_F64: f64 = 9_223_372_036_854_775_808.0;
 
 /// Build the Spark `timestamp_seconds` epoch-constructor UDF.
@@ -352,11 +353,7 @@ fn decimal_seconds_to_micros(unscaled: i128, decimal_scale: i8) -> Result<i64> {
         let divisor = divisor.ok_or_else(decimal_overflow)?;
         let quotient = unscaled / divisor;
         let remainder = unscaled % divisor;
-        if quotient > i128::from(i64::MAX) || quotient < i128::from(i64::MIN) {
-            return Err(decimal_overflow());
-        }
-        if (quotient == i128::from(i64::MAX) || quotient == i128::from(i64::MIN)) && remainder != 0
-        {
+        if quotient >= TEN_POW_19 || quotient <= -TEN_POW_19 {
             return Err(decimal_overflow());
         }
         if remainder != 0 {
@@ -376,10 +373,12 @@ mod tests {
     use super::*;
     use datafusion::arrow::array::TimestampMicrosecondArray;
     use datafusion::arrow::record_batch::RecordBatch;
-    use datafusion::prelude::SessionContext;
+    use datafusion::prelude::{SessionConfig, SessionContext};
 
     fn ctx_with_epoch_ctors() -> SessionContext {
-        let ctx = SessionContext::new();
+        let mut config = SessionConfig::new();
+        config.options_mut().sql_parser.parse_float_as_decimal = true;
+        let ctx = SessionContext::new_with_config(config);
         for udf in functions() {
             ctx.register_udf(udf.as_ref().clone());
         }
@@ -530,16 +529,123 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn decimal_boundary_answers_spark_order() {
+        let ctx = ctx_with_epoch_ctors();
+        for (sql, message) in [
+            (
+                "SELECT timestamp_seconds(CAST(9223372036854.7758075 AS DECIMAL(20, 7))) AS v",
+                "Rounding necessary",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(9223372036854.7758085 AS DECIMAL(20, 7))) AS v",
+                "Rounding necessary",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-9223372036854.7758085 AS DECIMAL(20, 7))) AS v",
+                "Rounding necessary",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-9223372036854.7758095 AS DECIMAL(20, 7))) AS v",
+                "Rounding necessary",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(9999999999999.9999995 AS DECIMAL(20, 7))) AS v",
+                "Rounding necessary",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(9999999999999.9999999 AS DECIMAL(20, 7))) AS v",
+                "Rounding necessary",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-9999999999999.9999995 AS DECIMAL(20, 7))) AS v",
+                "Rounding necessary",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(9223372036854.7758065 AS DECIMAL(20, 7))) AS v",
+                "Rounding necessary",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-9223372036854.7758075 AS DECIMAL(20, 7))) AS v",
+                "Rounding necessary",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(9223372036854.775808 AS DECIMAL(19, 6))) AS v",
+                "Overflow",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-9223372036854.775809 AS DECIMAL(19, 6))) AS v",
+                "Overflow",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(9999999999999.999999 AS DECIMAL(19, 6))) AS v",
+                "Overflow",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(10000000000000.0000005 AS DECIMAL(21, 7))) AS v",
+                "Overflow",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(10000000000000.000000 AS DECIMAL(20, 6))) AS v",
+                "Overflow",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-9999999999999.999999 AS DECIMAL(19, 6))) AS v",
+                "Overflow",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-10000000000000.0000005 AS DECIMAL(21, 7))) AS v",
+                "Overflow",
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-10000000000000.000000 AS DECIMAL(20, 6))) AS v",
+                "Overflow",
+            ),
+        ] {
+            let failure = ctx.sql(sql).await.unwrap().collect().await;
+            let error = failure.expect_err("boundary must refuse");
+            assert!(error.to_string().contains(message), "got {error} for {sql}");
+        }
+        for (sql, micros) in [
+            (
+                "SELECT timestamp_seconds(CAST(9223372036854.775807 AS DECIMAL(19, 6))) AS v",
+                9_223_372_036_854_775_807,
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(9223372036854.7758070 AS DECIMAL(20, 7))) AS v",
+                9_223_372_036_854_775_807,
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(9223372036854.775806 AS DECIMAL(19, 6))) AS v",
+                9_223_372_036_854_775_806,
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-9223372036854.775808 AS DECIMAL(19, 6))) AS v",
+                -9_223_372_036_854_775_808,
+            ),
+            (
+                "SELECT timestamp_seconds(CAST(-9223372036854.775807 AS DECIMAL(19, 6))) AS v",
+                -9_223_372_036_854_775_807,
+            ),
+        ] {
+            assert_eq!(one_micros(&ctx, sql).await, Some(micros));
+        }
+    }
+
+    #[tokio::test]
     async fn double_edges_follow_spark() {
         let ctx = ctx_with_epoch_ctors();
         assert_eq!(
-            one_micros(&ctx, "SELECT timestamp_seconds(CAST(1E300 AS DOUBLE)) AS v").await,
+            one_micros(
+                &ctx,
+                "SELECT timestamp_seconds(CAST('1E300' AS DOUBLE)) AS v"
+            )
+            .await,
             Some(i64::MAX)
         );
         assert_eq!(
             one_micros(
                 &ctx,
-                "SELECT timestamp_seconds(CAST(-1E300 AS DOUBLE)) AS v"
+                "SELECT timestamp_seconds(CAST('-1E300' AS DOUBLE)) AS v"
             )
             .await,
             Some(i64::MIN)

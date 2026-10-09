@@ -282,7 +282,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   decimal exact-or-error), millis/micros take INTEGRAL; rejected types refuse
   `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]` 42K09 and overflows refuse with Spark's
   unclassified `long overflow` / `Overflow` / `Rounding necessary` texts.
-  pins: sql-epoch-constructors-1/C-002, C-003, C-004, C-005, C-008
+  Fold 1 (2026-10-09): decimal seconds answer Spark's order — inexact micros with at
+  most 19 integer digits refuse `Rounding necessary` even past the bigint bound,
+  `Overflow` only past 19 digits or for exact out-of-range micros; the Rust battery
+  pins 17 refusals + 5 values and the harness parses fractional literals as decimals
+  like the Spark door.
+  pins: sql-epoch-constructors-1/C-002, C-003, C-004, C-005, C-008, C-010
 - `spark_year_pad.rs` — **TYPES-1 round 5 (2026-09-05):** the Java-pattern year arm
   extracted from `datetime.rs` (`datetime.rs` 1709→1700): negative years pad the digits
   and re-attach the sign (`-0499`), `yy` is `abs(year) % 100` (`-499` → `99`), 5+-digit

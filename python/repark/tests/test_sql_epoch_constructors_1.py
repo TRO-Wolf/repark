@@ -1,7 +1,7 @@
 """SQL-EPOCH-CONSTRUCTORS-1 — ``timestamp_seconds``/``millis``/``micros`` equal Spark 4.1.2.
 
 Every cell reads its expected answer from ``sql_epoch_constructors_1_spark_oracle.json``:
-54 inputs x session zones ``UTC`` / ``America/New_York`` x ANSI off / on, each with the
+76 inputs x session zones ``UTC`` / ``America/New_York`` x ANSI off / on, each with the
 ``unix_micros`` value or Spark's error condition and message on the SQL door and the
 DataFrame door, plus the ``timestamp`` result type. The pins run each cell on the facade
 ``spark.sql`` door as a literal and through ``F.timestamp_*`` over a column, on the Arrow
@@ -9,7 +9,7 @@ path (``timestamp[us, tz=UTC]``, value and type). The native ``repark.sql`` door
 Spark built-ins, so it keeps refusing the three names. The live tier re-derives every cell
 from live Spark and asserts the committed fixture still matches.
 
-pins: sql-epoch-constructors-1/C-002, C-003, C-004, C-005, C-006, C-007
+pins: sql-epoch-constructors-1/C-002, C-003, C-004, C-005, C-006, C-007, C-009
 """
 
 from __future__ import annotations
@@ -147,7 +147,7 @@ def _leg_mismatches(session: ReparkSession, zone: str, ansi: str, door: str, key
 def test_sql_door_matches_spark(spark: ReparkSession, zone: str, ansi: str) -> None:
     """The Spark SQL door answers every oracle cell, value and refusal.
 
-    pins: sql-epoch-constructors-1/C-002, C-003
+    pins: sql-epoch-constructors-1/C-002, C-003, C-009
     """
     _configure(spark, zone, ansi)
     assert _leg_mismatches(spark, zone, ansi, "sql", "sql") == []
@@ -157,7 +157,7 @@ def test_sql_door_matches_spark(spark: ReparkSession, zone: str, ansi: str) -> N
 def test_dataframe_door_matches_spark(spark: ReparkSession, zone: str, ansi: str) -> None:
     """The DataFrame door answers every oracle cell, value and refusal.
 
-    pins: sql-epoch-constructors-1/C-004, C-005
+    pins: sql-epoch-constructors-1/C-004, C-005, C-009
     """
     _configure(spark, zone, ansi)
     assert _leg_mismatches(spark, zone, ansi, "df", "df") == []
