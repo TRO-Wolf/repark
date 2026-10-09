@@ -59,11 +59,7 @@ def _store_option(options: dict[str, str | None], key: object, value: object) ->
     text = _to_option_text(value)
     if text is not None:
         register_config_value(text)
-    key_text = str(key)
-    for existing in list(options):
-        if existing.lower() == key_text.lower():
-            del options[existing]
-    options[key_text] = text
+    _native.store_stream_option(options, str(key), text)
 
 
 def _without_none_values(options: dict[str, str | None]) -> dict[str, str]:
@@ -76,13 +72,6 @@ def _not_implemented(feature: str) -> NoReturn:
         errorClass="NOT_IMPLEMENTED",
         messageParameters={"feature": feature},
     )
-
-
-def _option_path(options: dict[str, str | None]) -> str | None:
-    for key, value in options.items():
-        if key.lower() == "path" and value:
-            return value
-    return None
 
 
 def _streaming_confs(session: ReparkSession) -> dict[str, str]:
@@ -150,7 +139,7 @@ class DataStreamReader:
                 messageParameters={"arg_name": "path", "arg_value": str(path)},
             )
         _native.check_stream_format("readStream", self._format)
-        effective = path if path is not None else _option_path(self._options)
+        effective = path if path is not None else _native.stream_option_path(self._options)
         if effective is None:
             raise IllegalArgumentException("Cannot open table: path is not set")
         inner = self._session._ensure_alive()
@@ -387,10 +376,6 @@ class DataStreamWriter:
         if queryName is not None:
             self.queryName(queryName)
 
-    def _start_checks(self) -> None:
-        if self._trigger_kind == _CONTINUOUS_TRIGGER:
-            _not_implemented("trigger(continuous)")
-
     def start(
         self,
         path: str | None = None,
@@ -426,7 +411,6 @@ class DataStreamWriter:
         self._apply_start_kwargs(outputMode, partitionBy, format, queryName, options)
         if self._foreach is None:
             _native.check_stream_format("writeStream", self._format)
-        self._start_checks()
         self._frame._ensure_alive()
         session = self._frame.sparkSession
         inner_session = session._ensure_alive()
@@ -475,7 +459,6 @@ class DataStreamWriter:
             All other string options. You may want to provide a `checkpointLocation`.
         """
         self._apply_start_kwargs(outputMode, partitionBy, format, queryName, options)
-        self._start_checks()
         self._frame._ensure_alive()
         session = self._frame.sparkSession
         inner_session = session._ensure_alive()

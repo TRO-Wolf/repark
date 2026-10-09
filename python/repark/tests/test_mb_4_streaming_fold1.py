@@ -469,3 +469,24 @@ def test_microbatch_no_credential_on_any_surface_1(spark: ReparkSession, stream_
         assert secret_option not in text, name
         assert "hunter2ckpt9x" not in text, name
         assert "hunter2opt9x" not in text, name
+
+
+def test_reader_folded_path_option_loads_the_stream(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = _reader(spark).format("iceberg").option("PATH", stream_table).load()
+    assert frame.isStreaming is True
+
+
+def test_writer_folded_path_option_feeds_plain_start(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = _reader(spark).format("iceberg").load(stream_table)
+    with pytest.raises(AnalysisException) as excinfo:
+        (
+            frame.writeStream.format("iceberg")
+            .option("PATH", "sc.mb4.silver_folded_path")
+            .trigger(availableNow=True)
+            .start()
+        )
+    assert excinfo.value.getErrorClass() == "_LEGACY_ERROR_TEMP_1298"

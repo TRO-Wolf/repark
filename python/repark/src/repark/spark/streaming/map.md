@@ -46,6 +46,13 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   **MB-4 fold 1 (2026-10-09):** `start` and `toTable` refuse MBE-18
   (`NOT_IMPLEMENTED`, Python UDF over a streaming DataFrame) after the session
   check, before the native call. pins: mb-4/C-039
+  **MB-4 fold 1b (2026-10-09):** the continuous-trigger refusal, the
+  `path`-option lookup and the option de-duplication move to Rust:
+  `_start_checks` is deleted (`build_trigger` is the single home, so a
+  continuous trigger now refuses after path, checkpoint, unknown options and
+  output mode), and `_store_option` / the `load` fallback delegate to the
+  native `store_stream_option` / `stream_option_path` over the facade dict.
+  pins: mb-4/C-040
 - `query.py` — **MB-4 surface half (2026-10-08):** `StreamingQuery` carries the §3.7
   surface with the driver-owned bodies behind the stub terminal; only the
   `awaitTermination` timeout check (`VALUE_NOT_POSITIVE`, `<= 0`) is real.

@@ -29,6 +29,7 @@ mod session_tests;
 mod session_write_options;
 mod streaming;
 mod streaming_errors;
+mod streaming_options;
 mod streaming_query;
 mod subquery;
 mod temp_view_names;

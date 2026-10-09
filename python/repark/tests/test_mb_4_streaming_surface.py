@@ -430,7 +430,7 @@ def test_writer_continuous_trigger_refuses_mbe7(spark: ReparkSession) -> None:
             _writer(spark)
             .format("iceberg")
             .trigger(continuous="5 seconds")
-            .start(checkpointLocation="/tmp/x")
+            .start("/tmp/mb4-continuous", checkpointLocation="/tmp/x")
         )
     assert excinfo.value.getErrorClass() == "NOT_IMPLEMENTED"
     assert excinfo.value.getMessageParameters() == {"feature": "trigger(continuous)"}

@@ -8023,6 +8023,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `isStreaming` stays True through the five Python-UDF doors with `writeStream`
   answering and `withWatermark` refusing MBE-7; every start door refuses MBE-18;
   batch actions answer DM-3 through the native guard. pins: mb-4/C-039
+  Fold 1b pins the folded `PATH` option on the reader `load` fallback and on
+  the plain-`start` path fallback, and the surface continuous pin gains the
+  path its start now needs to reach the trigger check. pins: mb-4/C-040
 
 ## I want to...
 

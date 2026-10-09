@@ -18,6 +18,7 @@ use crate::exceptions::{IllegalArgumentException, mask_user_visible, masked_mess
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::streaming_errors::microbatch_py_err;
+use crate::streaming_options::{store_stream_option, stream_option_path};
 use crate::streaming_query::{
     BatchBodyAdapter, PyStreamingQuery, note_started, session_allows_local_catalog_for_tests,
 };
@@ -52,6 +53,8 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     module.add_function(wrap_pyfunction!(check_stream_format, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_streaming_action, module)?)?;
+    module.add_function(wrap_pyfunction!(store_stream_option, module)?)?;
+    module.add_function(wrap_pyfunction!(stream_option_path, module)?)?;
     Ok(())
 }
 
