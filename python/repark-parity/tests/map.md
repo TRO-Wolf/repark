@@ -531,6 +531,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   across it. pins: api-freeze/C-002
 - `test_api_freeze.py` — **API-FREEZE (2026-09-02; release 2026-09-03: the STATUS pointer now names the cut tag, not the waiting gate):** the v1.0 freeze pin. Holds three things
 - `test_api_freeze.py` — **U7 PR1 (2026-09-24):** the frozen-names count pin moves 890 → 891 with the regenerated register (`NumberFormatException` added to `errors.py`). No other pin moves.
+- `test_api_freeze.py` — **MB-4 round 3c (2026-10-08):** the frozen-names count pin moves 891 → 893 with the regenerated register (`RecoveryRequiredException` and `StreamingQueryException` added to `errors.py`). No other pin moves.
   at once: every packet row's `decision` equals its `recommend` (15 YES / 15 YES-except / 5 NO,
   dated 2026-09-02, the owner's rule sentence byte-equal in packet, inventory and
   `docs/release.md`); the checked-in register
