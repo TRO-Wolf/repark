@@ -303,4 +303,200 @@ mod tests {
             "{update}"
         );
     }
+
+    static LIVE_SCHEMA_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+    struct LiveSchema {
+        url: String,
+        name: String,
+    }
+
+    fn live_schema_name() -> String {
+        let id = LIVE_SCHEMA_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        format!("c4ansi_{}_{id}", std::process::id())
+    }
+
+    impl LiveSchema {
+        fn create(url: &str, name: String, setup: &str) -> Self {
+            let schema = Self {
+                url: url.to_string(),
+                name,
+            };
+            schema.psql(&format!("CREATE SCHEMA \"{}\"", schema.name));
+            schema.psql(setup);
+            schema
+        }
+
+        fn psql(&self, sql: &str) {
+            let output = std::process::Command::new("psql")
+                .arg(&self.url)
+                .arg("-v")
+                .arg("ON_ERROR_STOP=1")
+                .arg("-c")
+                .arg(sql)
+                .output()
+                .expect("psql runs");
+            assert!(
+                output.status.success(),
+                "psql failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+
+    impl Drop for LiveSchema {
+        fn drop(&mut self) {
+            let _ = std::process::Command::new("psql")
+                .arg(&self.url)
+                .arg("-c")
+                .arg(format!("DROP SCHEMA \"{}\" CASCADE", self.name))
+                .output();
+        }
+    }
+
+    fn live_url() -> String {
+        std::env::var("REPARK_PG_URL").expect("REPARK_PG_URL names the C-0 container")
+    }
+
+    fn live_session(url: &str) -> (tempfile::TempDir, ReparkSession) {
+        mounted_session(&format!(
+            "[default.database.postgres.pg]\nurl = \"{url}\"\nsslmode = \"disable\"\n"
+        ))
+    }
+
+    async fn stored_rows(session: &ReparkSession, catalogs: &CatalogRegistry, sql: &str) -> usize {
+        let frame = run(session, catalogs, &HashSet::new(), sql)
+            .await
+            .expect("the read-back select runs");
+        frame
+            .collect()
+            .await
+            .expect("the read-back select collects")
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum()
+    }
+
+    #[tokio::test]
+    #[ignore = "needs REPARK_PG_URL"]
+    async fn live_view_target_takes_the_row_path_and_says_why() {
+        use repark_core::write_postgres::{PostgresWritePath, take_postgres_write_report};
+
+        let url = live_url();
+        let (_directory, session) = live_session(&url);
+        let catalogs = session.catalogs_snapshot();
+        let name = live_schema_name();
+        let setup = format!(
+            "CREATE TABLE \"{name}\".t (id bigint PRIMARY KEY, name text); \
+             CREATE VIEW \"{name}\".v AS SELECT * FROM \"{name}\".t"
+        );
+        let schema = LiveSchema::create(&url, name, &setup);
+        run(
+            &session,
+            &catalogs,
+            &HashSet::new(),
+            &format!(
+                "INSERT INTO pg.\"{}\".v (id, name) VALUES (1, 'a')",
+                schema.name
+            ),
+        )
+        .await
+        .expect("a view target writes through the row path");
+        let report =
+            take_postgres_write_report(session.context()).expect("the write leaves its report");
+        assert_eq!(report.path, PostgresWritePath::Row);
+        assert_eq!(report.rows, 1);
+        assert_eq!(
+            report.fallback.as_deref(),
+            Some("the target is a view, which COPY cannot write")
+        );
+        assert_eq!(
+            stored_rows(
+                &session,
+                &catalogs,
+                &format!("SELECT id FROM pg.\"{}\".t", schema.name)
+            )
+            .await,
+            1
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs REPARK_PG_URL"]
+    async fn live_insert_rule_target_takes_the_row_path_and_says_why() {
+        use repark_core::write_postgres::{PostgresWritePath, take_postgres_write_report};
+
+        let url = live_url();
+        let (_directory, session) = live_session(&url);
+        let catalogs = session.catalogs_snapshot();
+        let name = live_schema_name();
+        let setup = format!(
+            "CREATE TABLE \"{name}\".t (id bigint PRIMARY KEY, name text); \
+             CREATE RULE no_rows AS ON INSERT TO \"{name}\".t DO INSTEAD NOTHING"
+        );
+        let schema = LiveSchema::create(&url, name, &setup);
+        run(
+            &session,
+            &catalogs,
+            &HashSet::new(),
+            &format!(
+                "INSERT INTO pg.\"{}\".t (id, name) VALUES (1, 'a')",
+                schema.name
+            ),
+        )
+        .await
+        .expect("a rule target writes through the row path");
+        let report =
+            take_postgres_write_report(session.context()).expect("the write leaves its report");
+        assert_eq!(report.path, PostgresWritePath::Row);
+        assert_eq!(
+            report.fallback.as_deref(),
+            Some("the target has an INSERT rule, which COPY does not fire")
+        );
+        assert_eq!(
+            stored_rows(
+                &session,
+                &catalogs,
+                &format!("SELECT id FROM pg.\"{}\".t", schema.name)
+            )
+            .await,
+            0
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs REPARK_PG_URL"]
+    async fn live_named_identity_column_refuses_with_the_core_refusal() {
+        let url = live_url();
+        let (_directory, session) = live_session(&url);
+        let catalogs = session.catalogs_snapshot();
+        let name = live_schema_name();
+        let setup = format!(
+            "CREATE TABLE \"{name}\".g (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text)"
+        );
+        let schema = LiveSchema::create(&url, name, &setup);
+        let error = run(
+            &session,
+            &catalogs,
+            &HashSet::new(),
+            &format!(
+                "INSERT INTO pg.\"{}\".g (id, name) VALUES (1, 'a')",
+                schema.name
+            ),
+        )
+        .await
+        .expect_err("a named GENERATED ALWAYS identity column refuses");
+        let message = error.to_string();
+        assert!(message.contains("GENERATED ALWAYS"), "{message}");
+        assert!(message.contains("`id`"), "{message}");
+        assert_eq!(
+            stored_rows(
+                &session,
+                &catalogs,
+                &format!("SELECT id FROM pg.\"{}\".g", schema.name)
+            )
+            .await,
+            0
+        );
+    }
 }
