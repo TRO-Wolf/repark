@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from repark import _native
 from repark.errors import RecoveryRequiredException, StreamingQueryException
 from repark.spark.dataframe import DataFrame
 from repark.spark.session.session_core import ReparkSession
@@ -14,6 +15,7 @@ from repark.spark.streaming.query import StreamingQuery, StreamingQueryManager
 @pytest.fixture
 def spark() -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-mb-4-streaming-manager").getOrCreate()
+    _native._streaming_tests_allow_local_catalog(session._ensure_alive())
     yield session
     session.stop()
 

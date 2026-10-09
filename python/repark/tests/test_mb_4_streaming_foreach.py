@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from repark import _native
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -21,6 +22,7 @@ _W8_TEXT = (
 @pytest.fixture
 def spark() -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-mb-4-streaming-foreach").getOrCreate()
+    _native._streaming_tests_allow_local_catalog(session._ensure_alive())
     yield session
     session.stop()
 

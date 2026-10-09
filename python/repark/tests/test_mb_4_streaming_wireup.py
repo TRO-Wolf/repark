@@ -24,6 +24,7 @@ _DM3_TEXT = (
 @pytest.fixture
 def spark() -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-mb-4-streaming-wireup").getOrCreate()
+    _native._streaming_tests_allow_local_catalog(session._ensure_alive())
     yield session
     session.stop()
 

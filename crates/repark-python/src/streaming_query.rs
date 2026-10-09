@@ -186,6 +186,34 @@ impl BindingManagerState {
     }
 }
 
+#[derive(Debug, Default)]
+struct TestLocalCatalogAllowed;
+
+pub(crate) fn mark_session_allowing_local_catalog_for_tests(session: &PyReparkSession) {
+    let state = session.session.context().state_ref();
+    let mut state = state.write();
+    if state
+        .config()
+        .get_extension::<TestLocalCatalogAllowed>()
+        .is_none()
+    {
+        state
+            .config_mut()
+            .set_extension(Arc::new(TestLocalCatalogAllowed));
+    }
+}
+
+pub(crate) fn session_allows_local_catalog_for_tests(session: &PyReparkSession) -> bool {
+    session
+        .session
+        .context()
+        .state_ref()
+        .write()
+        .config()
+        .get_extension::<TestLocalCatalogAllowed>()
+        .is_some()
+}
+
 pub(crate) fn note_started(session: &PyReparkSession, handle: &QueryHandle) {
     let state = BindingManagerState::of(session);
     state
@@ -781,6 +809,30 @@ mod tests {
             assert!(query.exception(py).is_none());
             drop(owned);
             let _ = std::fs::remove_dir_all(&warehouse);
+        });
+    }
+
+    #[test]
+    fn local_catalog_test_mark_covers_only_the_marked_session() {
+        Python::attach(|py| {
+            let first = Py::new(
+                py,
+                PyReparkSession::new(py, None, None, None, None, None).expect("a session"),
+            )
+            .expect("a session object");
+            let second = Py::new(
+                py,
+                PyReparkSession::new(py, None, None, None, None, None).expect("a session"),
+            )
+            .expect("a session object");
+            let first = first.borrow(py);
+            let second = second.borrow(py);
+            assert!(!session_allows_local_catalog_for_tests(&first));
+            assert!(!session_allows_local_catalog_for_tests(&second));
+            mark_session_allowing_local_catalog_for_tests(&first);
+            mark_session_allowing_local_catalog_for_tests(&first);
+            assert!(session_allows_local_catalog_for_tests(&first));
+            assert!(!session_allows_local_catalog_for_tests(&second));
         });
     }
 }

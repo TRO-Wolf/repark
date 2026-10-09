@@ -18,7 +18,9 @@ use crate::exceptions::{IllegalArgumentException, mask_user_visible, masked_mess
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::streaming_errors::microbatch_py_err;
-use crate::streaming_query::{BatchBodyAdapter, PyStreamingQuery, note_started};
+use crate::streaming_query::{
+    BatchBodyAdapter, PyStreamingQuery, note_started, session_allows_local_catalog_for_tests,
+};
 use crate::trigger_interval::check_trigger_interval;
 
 const CHECKPOINT_KEY: &str = "checkpointLocation";
@@ -44,6 +46,10 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(check_output_mode, module)?)?;
     module.add_function(wrap_pyfunction!(start_stream, module)?)?;
     module.add_function(wrap_pyfunction!(to_table_stream, module)?)?;
+    module.add_function(wrap_pyfunction!(
+        _streaming_tests_allow_local_catalog,
+        module
+    )?)?;
     Ok(())
 }
 
@@ -341,7 +347,16 @@ fn start_spec(
     let runtime = Arc::clone(&session.runtime);
     let handle = py.detach(|| runtime.block_on(manager.register(&session.session, spec)));
     let handle = handle.map_err(|error| microbatch_py_err(py, &error, None))?;
-    let started = py.detach(|| runtime.block_on(async { handle.start_below_catalog_check() }));
+    let below = session_allows_local_catalog_for_tests(session);
+    let started = py.detach(|| {
+        runtime.block_on(async {
+            if below {
+                handle.start_below_catalog_check()
+            } else {
+                handle.start().await
+            }
+        })
+    });
     started.map_err(|error| microbatch_py_err(py, &error, None))?;
     note_started(session, &handle);
     Ok(PyStreamingQuery::new(handle, runtime))
@@ -388,6 +403,11 @@ pub fn load_stream(
 #[pyfunction]
 pub fn is_streaming_frame(frame: &PyDataFrame) -> bool {
     relation::is_streaming_frame(frame.inner())
+}
+
+#[pyfunction]
+fn _streaming_tests_allow_local_catalog(session: &PyReparkSession) {
+    crate::streaming_query::mark_session_allowing_local_catalog_for_tests(session);
 }
 
 #[pyfunction]

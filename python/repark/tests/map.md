@@ -8005,6 +8005,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   recovery-required query (the sink replaced under the body) raises the first
   RecoveryRequired after the warehouse and artifact dirs are gone.
   pins: mb-4/C-030
+- [test_mb_4_streaming_fold1.py](test_mb_4_streaming_fold1.py) — **MB-4 fold 1
+  (2026-10-09):** the verify-follow-up battery. MBE-8: `toTable`, `start(path)`
+  and `foreachBatch` start refuse `LOCAL_CATALOG_REFUSED` on a memory catalog
+  and on a `type=hadoop` catalog through the public doors; the private
+  `_native` test seam runs on a memory catalog and is unreferenced by the
+  public package. The four older batteries' `spark` fixtures opt in through
+  that seam. pins: mb-4/C-036
 
 ## I want to...
 
