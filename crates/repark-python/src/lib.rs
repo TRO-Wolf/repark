@@ -27,6 +27,7 @@ mod session_sources;
 #[cfg(test)]
 mod session_tests;
 mod session_write_options;
+mod session_write_postgres;
 mod subquery;
 mod temp_view_names;
 mod text_io;
@@ -172,6 +173,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     session_runtime::register(module)?;
     session_sources::register(module)?;
     session_write_options::register(module)?;
+    session_write_postgres::register(module)?;
     subquery::register(module)?;
     temp_view_names::register(module)?;
     text_io::register(module)?;
