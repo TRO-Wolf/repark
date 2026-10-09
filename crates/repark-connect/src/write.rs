@@ -271,13 +271,14 @@ impl PostgresWriter {
         if let Some(failed) = &self.failed {
             return Err(failed.clone());
         }
+        self.failed = Some(ConnectError::WriteRefused {
+            refusal: WriteRefusal::Interrupted,
+        });
         let written = match &mut self.lane {
             Lane::Copy(lane) => lane.write(batch).await,
             Lane::Row(lane) => lane.write(self.pooled.client(), batch).await,
         };
-        if let Err(error) = &written {
-            self.failed = Some(error.clone());
-        }
+        self.failed = written.as_ref().err().cloned();
         written
     }
 

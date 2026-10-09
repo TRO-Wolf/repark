@@ -6,6 +6,11 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
+- `write.rs`, `error.rs` — **C-4 fold 1 (2026-10-09), the verifier's S2:** `write` sets the
+  kept error to `WriteRefused { Interrupted }` before its lane runs and replaces it with the
+  lane's result after, so a `write` future dropped at an `.await` (a timeout, a `select!`)
+  leaves the writer poisoned. Without the mark a later `commit` stored a prefix of the
+  cancelled batch on the bulk path and a group twice on the row path. pins: c-4/C-016
 - `write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`: the write core's root
   ([c-4-ledger.md](../../../task/ledgers/staging/c-4-ledger.md) §1). No door calls it yet.
   - **`WriteRequest`** is built from a `ResolvedSource` (C-2's `discover`, unchanged) and

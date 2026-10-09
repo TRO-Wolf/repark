@@ -182,6 +182,7 @@ One write holds one pooled connection. Nothing is spawned.
 | C-010 | Failure semantics (§1.5): a write is one transaction. A server refusal (NOT NULL, a length, a date out of range, a domain check, a unique key, a NUL byte) has the same SQLSTATE on both paths and stores nothing, with good batches before and after it; a refused value poisons the writer, and `commit` answers the same error and stores nothing; a writer dropped or a backend killed before `commit` stores nothing and leaves no backend, and the pool serves the next write; a `COMMIT` the server refuses is that server error; a `COMMIT` with no answer inside `read_timeout_ms` is `CommitUnknown`, class `CommitStateUnknown`; a role without `INSERT` is `PermissionDenied` naming `INSERT` on both paths. | live `a_server_refusal_is_the_same_on_both_paths_and_stores_nothing`, `a_refused_value_poisons_the_writer_and_stores_nothing`, `a_writer_dropped_or_killed_before_commit_stores_nothing`, `a_commit_refused_is_definite_and_a_commit_unanswered_is_unknown`, `a_role_without_insert_is_refused_naming_the_privilege`. | PROVEN | §4. |
 | C-011 | A write names only its columns, in its own order, and the others take their defaults; nothing shows before `COMMIT`; after it the connection is back in the pool, it is the one connection, and its session is still read-only by default. | live `a_write_returns_its_connection_clean_and_names_only_its_columns`. | PROVEN | §4. |
 | C-012 | The ledger cites ConnectorX and ADBC (order R-5), with ADBC's bulk-ingest contract as the bar. | §6. | PROVEN | §6. |
+| C-016 | Fold 1, the verifier's S2. A `write` future dropped before it finishes poisons the writer: every later `write` and `commit` answers `WriteRefused { Interrupted }`, nothing is committed, and dropping the writer rolls back. On the verdict's repro (100 rows, a 200 000-row write cut by a 500 µs timeout, 100 rows, commit, groups of 50) both paths store nothing and the pool serves the next write. | live `a_write_dropped_mid_flight_poisons_the_writer_and_stores_nothing`; red without the in-flight mark (`Ok(())` where the refusal is due). | PROVEN | §8.1. |
 | C-013 | `INSERT INTO <source>.<schema>.<table> SELECT …` routes to the sink on the ANSI door and on the Spark door, one test row per door (order R-3). | Step 2, another lane. | OPEN | Does the routing call `WriteRequest::open` with `WritePath::Bulk` on both doors, with one pin per door? |
 | C-014 | The Spark-door writer option `write.path = bulk \| row` reaches `WritePath`, default `bulk`, and the C-6 Python convenience maps onto the same option (ruled 2026-10-08). | Step 2, another lane. | OPEN | Does an unknown value refuse, and does `row` force the INSERT path for a table with no row-only column? |
 | C-015 | DIFF-PROBE and the verifier pass (order R-1), and the unit's last live run on the C-0 container. | Step 3. | OPEN | Which verifier, and on which tree? |
@@ -335,3 +336,22 @@ source was read.
   stores no field over 1 GiB, so only a row of several near-limit fields reaches it. Not
   pinned: the cell would need gigabytes.
 - **Sizes are not measured for speed** (FL-3).
+
+## 8. Fold 1 (2026-10-09): the verifier's three S1, one S2 and seven S3
+
+The Opus verifier's verdict on `dd49a376`: the per-type claim held (6 491 495 value cells
+compared by `*_send`, none differing; failure semantics, quoting and the read path held; seven
+hand mutants red) and the unit **failed** on relation properties (three S1), on a cancelled
+write (one S2) and on seven S3. The orchestrator ruled on 2026-10-09; the rule behind the
+rulings is that the two paths must leave the same table, and where Postgres gives `COPY` and
+`INSERT` different meanings, `INSERT`'s meaning is the contract and bulk only optimises it.
+
+### 8.1 S2: a cancelled write
+
+`PostgresWriter::write` marked the writer failed only when the lane returned an error. A
+future dropped at an `.await` returned nothing, so the writer stayed usable: the bulk lane had
+sent a prefix of the batch, and the row lane had sent a group it had not yet cleared from its
+buffer, which the next flush sent again. Now `write` sets the kept error to
+`WriteRefused { Interrupted }` before the lane runs and replaces it with the lane's own
+result after. A drop in between leaves the mark. `commit` takes the writer by value and
+cannot be resumed, so it needs no mark. The class is `DataFusion` (operational).

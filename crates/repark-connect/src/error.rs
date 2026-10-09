@@ -244,6 +244,7 @@ pub enum WriteRefusal {
     QueryTarget,
     NoColumns,
     ColumnCount { expected: usize, actual: usize },
+    Interrupted,
 }
 
 impl fmt::Display for WriteRefusal {
@@ -256,6 +257,10 @@ impl fmt::Display for WriteRefusal {
             WriteRefusal::ColumnCount { expected, actual } => write!(
                 f,
                 "the write names {expected} columns and a batch carries {actual}"
+            ),
+            WriteRefusal::Interrupted => f.write_str(
+                "an earlier call was dropped before it finished, so the writer takes no more \
+                 rows and commits nothing; drop it and write again",
             ),
         }
     }
@@ -352,6 +357,7 @@ impl From<ConnectError> for Error {
                     Error::Config(error.to_string())
                 }
                 WriteRefusal::ColumnCount { .. } => Error::Analysis(error.to_string()),
+                WriteRefusal::Interrupted => Error::DataFusion(error.to_string()),
             },
             #[cfg(feature = "postgres")]
             ConnectError::DeclaredServerVersion { .. } => Error::NotImplemented(error.to_string()),

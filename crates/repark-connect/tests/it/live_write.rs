@@ -14,30 +14,31 @@ use repark_connect::{
 use crate::live_pg::{Cell, LIVE, Reader, tag, url};
 use crate::write::{ROWS, Sample, batch_of, sample_batch, samples};
 
-const PATHS: [(WritePath, &str); 2] = [(WritePath::Bulk, "bulk"), (WritePath::Row, "row")];
+pub(crate) const PATHS: [(WritePath, &str); 2] =
+    [(WritePath::Bulk, "bulk"), (WritePath::Row, "row")];
 
-struct Store {
-    reader: Reader,
-    options: WriteOptions,
+pub(crate) struct Store {
+    pub(crate) reader: Reader,
+    pub(crate) options: WriteOptions,
 }
 
 impl Store {
-    fn new(settings: &PostgresSettings) -> Store {
+    pub(crate) fn new(settings: &PostgresSettings) -> Store {
         Store {
             reader: Reader::new(settings),
             options: WriteOptions::from_settings(settings),
         }
     }
 
-    fn pool(&self) -> &Arc<PostgresPool> {
+    pub(crate) fn pool(&self) -> &Arc<PostgresPool> {
         &self.reader.pool
     }
 
-    async fn target(&self, cell: &Cell, table: &str) -> Arc<ResolvedSource> {
+    pub(crate) async fn target(&self, cell: &Cell, table: &str) -> Arc<ResolvedSource> {
         self.reader.resolve(cell.relation(table)).await.expect(LIVE)
     }
 
-    async fn store(
+    pub(crate) async fn store(
         &self,
         resolved: &ResolvedSource,
         path: WritePath,
@@ -46,7 +47,7 @@ impl Store {
         store_with(self.pool(), resolved, path, self.options, batches).await
     }
 
-    async fn read_back(&self, resolved: Arc<ResolvedSource>) -> RecordBatch {
+    pub(crate) async fn read_back(&self, resolved: Arc<ResolvedSource>) -> RecordBatch {
         let batches = self
             .reader
             .read(ScanRequest::new(resolved))
@@ -56,7 +57,7 @@ impl Store {
     }
 }
 
-async fn store_with(
+pub(crate) async fn store_with(
     pool: &Arc<PostgresPool>,
     resolved: &ResolvedSource,
     path: WritePath,
@@ -71,11 +72,16 @@ async fn store_with(
     writer.commit().await
 }
 
-fn ids(range: std::ops::Range<i32>) -> ArrayRef {
+pub(crate) fn ids(range: std::ops::Range<i32>) -> ArrayRef {
     Arc::new(Int32Array::from_iter_values(range))
 }
 
-async fn diverging(cell: &Cell, left: &str, right: &str, sends: &[(&str, &str)]) -> Vec<i32> {
+pub(crate) async fn diverging(
+    cell: &Cell,
+    left: &str,
+    right: &str,
+    sends: &[(&str, &str)],
+) -> Vec<i32> {
     let schema = &cell.schema;
     let differs: Vec<String> = sends
         .iter()
@@ -98,12 +104,12 @@ async fn stored_order(cell: &Cell, table: &str) -> Vec<i32> {
     rows.iter().map(|row| row.get(0)).collect()
 }
 
-async fn rows_in(cell: &Cell, table: &str) -> i64 {
+pub(crate) async fn rows_in(cell: &Cell, table: &str) -> i64 {
     cell.count(&format!("SELECT count(*) FROM {}.{table}", cell.schema))
         .await
 }
 
-async fn no_backend_remains(cell: &Cell) {
+pub(crate) async fn no_backend_remains(cell: &Cell) {
     let deadline = Instant::now() + Duration::from_secs(15);
     while cell.backends().await > 0 {
         assert!(Instant::now() < deadline, "a backend outlived its writer");
@@ -111,7 +117,7 @@ async fn no_backend_remains(cell: &Cell) {
     }
 }
 
-fn sqlstate(outcome: Result<WriteReport, ConnectError>) -> String {
+pub(crate) fn sqlstate(outcome: Result<WriteReport, ConnectError>) -> String {
     match outcome {
         Err(ConnectError::Server { sqlstate, .. }) => sqlstate,
         other => panic!("expected a server refusal, got {other:?}"),
@@ -402,7 +408,7 @@ async fn type_modifiers_and_text_forms_store_what_the_server_itself_parses() {
     cell.close().await;
 }
 
-fn stream_batches(sizes: &[i32]) -> (Vec<RecordBatch>, i32) {
+pub(crate) fn stream_batches(sizes: &[i32]) -> (Vec<RecordBatch>, i32) {
     let long = "y".repeat(300_000);
     let mut next = 0;
     let batches = sizes

@@ -13,6 +13,8 @@ mod live_pool;
 mod live_pushdown;
 #[cfg(feature = "postgres")]
 mod live_write;
+#[cfg(feature = "postgres")]
+mod live_write_faults;
 mod partition;
 #[cfg(feature = "postgres")]
 mod partition_plan;

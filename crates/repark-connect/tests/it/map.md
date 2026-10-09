@@ -9,8 +9,14 @@ See [../map.md](../map.md).
 
 - `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod partition; mod partition_plan; mod live_partition; mod postgres_types; mod settings; mod url;`, plus
   `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
-  mod scan; mod tls;` under the `postgres` feature, and since C-4 `mod live_write; mod write;`
-  under it too.
+  mod scan; mod tls;` under the `postgres` feature, and since C-4 `mod live_write; mod live_write_faults;
+  mod write;` under it too.
+- `live_write_faults.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. It shares
+  `live_write.rs`'s helpers (now `pub(crate)`); new fault cells live here because
+  `live_write.rs` is at the file-size ceiling.
+  `a_write_dropped_mid_flight_poisons_the_writer_and_stores_nothing` is the verifier's repro on
+  both paths: a 200 000-row `write` under a 500 µs timeout, then `write` and `commit` both
+  answer `Interrupted` and the table stays empty. pins: c-4/C-016
 - `write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`, no network. It holds the sample
   matrix both write suites share (`samples()`: one column per mapped type the bulk path
   carries, `numeric` at four scales, an enum and a domain, eight rows with two NULLs each, the
