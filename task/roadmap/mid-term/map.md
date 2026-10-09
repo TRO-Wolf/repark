@@ -62,6 +62,13 @@ declines it (a dated ruling in the intake, then the archive).
   re-pointed to 1.7 on 2026-10-04):** structured streaming read and write of Iceberg tables leaves the v1.5.0
   parity gate (3 inventory cells, IPI-47); the design is ruled in the epic-term micro-batch plan, step 0 is slice
   MB-0.
+- [file-source-1-card-2026-10-09.md](file-source-1-card-2026-10-09.md) — **card FILE-SOURCE-1
+  (2026-10-09, MB-4 item 12, W-Q5 ruling; slot MB-5 multi-source):** inventory cell
+  `W-STREAM-WRITE-FILESRC` defined (a file-source stream into the Iceberg sink), registered
+  refusal MBE-7 on both doors with today's answers quoted, Spark's MB-0c file-source answers
+  as the match target, step 0 the unmeasured file-to-Iceberg combination, and the MB-5 design
+  questions. Closes when MB-5 lands file sources or the owner declines them.
+  pins: mb-4/C-033
 - [ice-variant-1-6.md](ice-variant-1-6.md) — **card ICE-VARIANT (2026-09-27, v1.6.0, owner ruling C-4):**
   the `variant` type leaves the v1.5.0 gate (cell `TY-VARIANT-V3`, shredded Parquet in the Spark leg, fork issue
   R88 open) and is scheduled as integration of the upstream `parquet-variant*` crates the fork already links
