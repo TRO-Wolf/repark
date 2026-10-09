@@ -84,6 +84,13 @@ declines it (a dated ruling in the intake, then the archive).
   refuses MBE-18 at start and answers DM-3 on batch actions. Closes when a slice
   executes the function per micro-batch or the owner declines it.
   pins: mb-4/C-039
+- [stream-surface-residue-1-card-2026-10-09.md](stream-surface-residue-1-card-2026-10-09.md) — **card
+  STREAM-SURFACE-RESIDUE-1 (2026-10-09, MB-4 fold 1b, from the Opus verify S3s):**
+  the 31 action/writer doors whose class or text differs from Spark on a
+  streaming frame (none returns rows, none hangs), the five now-declared
+  absent members, and the fence test that never reaches the append fence.
+  Closes when a slice lands the Spark shapes or the owner declines them.
+  pins: mb-4/C-044
 - [empty-projection-count-1-card-2026-10-09.md](empty-projection-count-1-card-2026-10-09.md) — **card
   EMPTY-PROJECTION-COUNT-1 (2026-10-09, MB-4 round 4, from ledger D-44):** `COUNT(*)` fails
   with the engine-internal row-count error over the changelog reader, the incremental

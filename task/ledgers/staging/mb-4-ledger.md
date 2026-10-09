@@ -75,6 +75,7 @@ rule 2 does not bind.
 | C-041 | `toTable('')` refuses `ParseException` `PARSE_EMPTY_STATEMENT` with Spark's text byte-exact (a blank name echoes itself in the `== SQL ==` section); `toTable(5)`, `toTable(None)`, `streams.get(5)` and `streams.get(None)` refuse `PySparkTypeError` `NOT_STR`. | The native blank-name check with its unit test and the four facade pins. | **PROVEN** | `check_table_name_not_blank` runs in `to_table_stream` after the spec builds, so checkpoint, sink-match, unknown-option, trigger and mode refusals keep their order; the unit test pins the class, condition, both texts and the empty params. The facade `NOT_STR` checks sit at the native-call boundary (after kwargs/alive/UDF in `toTable`, after the alive check in `get`), the same position the builtin `TypeError` failed at, and PySpark's `toTable` applies its kwargs first too. Spark's own `toTable(5)`/`toTable(None)` answers are py4j-gateway shapes with no native twin, so read 1's `NOT_STR` is the ruled translation (the C-037 `format(5)` precedent). The writer-option check family moves unchanged to `streaming_options.rs` to fund `streaming.rs`'s ceiling (929 lines); the 60 streaming Rust tests stay green. pins: mb-4/C-041 |
 | C-042 | Verify RM5 dies on a `query.stop()` pin: after the sink is replaced under a `foreachBatch` body, `awaitTermination` and `stop` both raise `RecoveryRequiredException`. `refuse_streaming_action` has a direct Rust pin (DM-3 on a streaming frame, pass on a batch frame). The `microbatch_py_err` wildcard stands: all 29 variants are named with a test each, the arm is unreachable today, and `#[non_exhaustive]` in `repark-iceberg` mandates it — the standing control is the repin duty, not an exhaustive match. | The facade pin, the Rust pin with its hand mutant, and the variant count. | **PROVEN** | The stop pin mirrors item 9's deterministic trigger; `stop` re-raises the stored `RecoveryRequired` outcome, and the raise is `stop`'s only `Err` arm, so the mutant (no raise) provably goes red. The guard pin loads a stream through `load_stream` on a memory catalog and asserts the DM-3 class, condition and verbatim text, plus the batch-frame pass; the inverted-predicate mutant goes red on it (the verdict's un-run mutant) and is restored green. The option-store, option-lookup and blank-name mutants each go red on exactly their new unit test and are restored green. pins: mb-4/C-042 |
 | C-043 | The five absent surface members are declared (SES-DECL): `DataStreamWriter.partitionBy`, `StreamingQuery.processAllAvailable`, `StreamingQuery.explain` and `StreamingQueryManager.addListener`/`removeListener` raise `PySparkNotImplementedError` naming themselves instead of a bare `AttributeError`. | The five declarations and their pins. | **PROVEN** | Each member follows the `session_data_source` declared shape (the alive check where the receiver has one, then the member-naming `NOT_IMPLEMENTED` with `pins:` in the docstring); the pins assert class, text, parameters and SQLSTATE on the live door (`explain` in both arities). The `partitionBy=` start keyword stays accepted and ignored: Spark ignores it on existing v2 tables (PySpark `toTable` notes; the verify's three cells ran). `explain` and the listener methods were never in C-017's enumeration; C-017 stays OPEN for the remaining members. pins: mb-4/C-043 |
+| C-044 | Fold 1b records the residue: the STREAM-SURFACE-RESIDUE-1 card lists the 31 divergent action/writer doors, the five declared absent members and the fence test that never reaches the append fence; MBE-16 (`__cause__`) is carried to the Opus lane with the placement analysis. | The card, the dated rows, and the handoff note. | **PROVEN** | The card groups the 31 by shape with both sides' answers and Spark's match target, notes the four no-pandas artefacts for re-measure, and records the fence counts (0 refusals in 5 runs of the old test; the race pin refuses 47 of 50 at the shipped delay). MBE-16 stays open: `BatchBodyAdapter::call_body` maps the body `PyErr` with `error.to_string()`, so the Python exception object is gone before the driver stores the error and `exception()` cannot rebuild a `__cause__`; the adapter is Opus-owned. pins: mb-4/C-044 |
 
 ## Decisions
 
@@ -510,6 +511,29 @@ rule 2 does not bind.
   over a `#[non_exhaustive]` fork enum is a compile error, so the verdict's
   "exhaustive match" expectation is unimplementable and the repin duty in the
   crate map is the control that keeps the 29 named arms complete. C-042.
+- **D-62 (2026-10-09). Fold 1b records the 31 divergent doors without
+  touching them.** Groups: 9 batch writes (`PySparkException` scan refusal
+  vs `CALL_ON_STREAMING_DATASET_UNSUPPORTED`), 3 lazy-ok returns, 2
+  `explain` prints, 6 generic-scan-instead-of-DM-3, 4
+  `UnsupportedOperationException`, 1 `crosstab` condition variant (3102 vs
+  Spark's 3063), 4 no-pandas artefacts owed a re-measure, 2 miscellaneous
+  (`rdd`, `__arrow_c_stream__`). The 53 matching doors keep the recorded
+  `;\niceberg` DM-3 tail; only the text-as-recorded ruling moves it. C-044.
+- **D-63 (2026-10-09). The old fence test is recorded, not rewritten.**
+  `two_drivers_on_one_sink_land_each_epoch_exactly_once` lands 0 fence
+  refusals in each of 5 runs (verdict logs `fence_old_two_drivers_1..5`);
+  the race pin refuses 47 of 50 at the shipped 0–12 ms delay and stays
+  green at 0, 0–3 and 0–60 ms. The older test's name claims a fence it
+  does not exercise. C-044.
+- **D-64 (2026-10-09). MBE-16 rides the Opus lane.** The body's Python
+  exception object is dropped in `BatchBodyAdapter::call_body`
+  (`MicroBatchError::Catalog(error.to_string())`), so only type and
+  message reach the stored error and `query.exception()` has no object
+  to chain. Attaching the `__cause__` needs the adapter to preserve the
+  `PyErr`, which the fold-1b brief assigns to the Opus lane with the
+  driver and `repark-iceberg` microbatch. This round edits none of
+  `streaming_query.rs`'s adapter, `driver.rs` or anything under
+  `crates/repark-iceberg/` or `crates/repark-core/`. C-044.
 
 ## W-Q1 records (2026-10-08, brief ruling of 2026-10-08)
 
