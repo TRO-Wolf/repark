@@ -20,6 +20,7 @@ use crate::streaming_errors::{QueryHead, microbatch_py_err};
 
 const MAX_AWAIT_SECS: f64 = 1_000_000_000_000.0;
 const AWAIT_ANY_POLL: Duration = Duration::from_millis(10);
+const AWAIT_SIGNAL_SLICE: Duration = Duration::from_millis(50);
 
 #[derive(Debug)]
 #[pyclass(name = "PyStreamingQuery", module = "repark._native")]
@@ -104,15 +105,27 @@ impl PyStreamingQuery {
                 ));
             }
         };
-        let done = py.detach(|| {
-            self.runtime
-                .block_on(self.handle.await_termination(timeout))
-        });
-        match done {
-            Ok(true) if timeout.is_some() => Ok(Some(true)),
-            Ok(true) => Ok(None),
-            Ok(false) => Ok(Some(false)),
-            Err(error) => Err(self.run_error(py, &error)),
+        let deadline = timeout.and_then(|limit| Instant::now().checked_add(limit));
+        loop {
+            let slice = deadline.map_or(AWAIT_SIGNAL_SLICE, |end| {
+                end.saturating_duration_since(Instant::now())
+                    .min(AWAIT_SIGNAL_SLICE)
+            });
+            let done = py.detach(|| {
+                self.runtime
+                    .block_on(self.handle.await_termination(Some(slice)))
+            });
+            py.check_signals()?;
+            match done {
+                Ok(true) if timeout.is_some() => return Ok(Some(true)),
+                Ok(true) => return Ok(None),
+                Ok(false) => {
+                    if deadline.is_some_and(|end| Instant::now() >= end) {
+                        return Ok(Some(false));
+                    }
+                }
+                Err(error) => return Err(self.run_error(py, &error)),
+            }
         }
     }
 
@@ -342,24 +355,17 @@ fn streams_await_any_termination(
         return report_terminated(py, &done, timeout.is_some());
     }
     let runtime = Arc::clone(&session.runtime);
-    let ended: Option<QueryHandle> = py.detach(|| {
-        runtime.block_on(async {
-            let start = Instant::now();
-            loop {
-                state.reap();
-                if let Some(done) = state.first_terminated() {
-                    return Some(done);
-                }
-                if timeout.is_some_and(|limit| start.elapsed() >= limit) {
-                    return None;
-                }
-                tokio::time::sleep(AWAIT_ANY_POLL).await;
-            }
-        })
-    });
-    match ended {
-        None => Ok(Some(false)),
-        Some(done) => report_terminated(py, &done, timeout.is_some()),
+    let start = Instant::now();
+    loop {
+        state.reap();
+        if let Some(done) = state.first_terminated() {
+            return report_terminated(py, &done, timeout.is_some());
+        }
+        if timeout.is_some_and(|limit| start.elapsed() >= limit) {
+            return Ok(Some(false));
+        }
+        py.detach(|| runtime.block_on(async { tokio::time::sleep(AWAIT_ANY_POLL).await }));
+        py.check_signals()?;
     }
 }
 

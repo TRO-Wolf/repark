@@ -1,3 +1,6 @@
+import subprocess
+import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -38,6 +41,55 @@ def stream_table(spark: ReparkSession, tmp_path: Path) -> str:
 
 def _reader(spark: ReparkSession) -> DataStreamReader:
     return DataStreamReader(spark)
+
+
+_SIGINT_CHILD = """
+import os
+import signal
+import sys
+import threading
+import time
+
+from repark import _native
+from repark.spark.session.session_core import ReparkSession
+
+warehouse, checkpoint, variant = sys.argv[1], sys.argv[2], sys.argv[3]
+session = ReparkSession.builder.appName("pytest-mb-4-fold1-sigint").getOrCreate()
+_native._streaming_tests_allow_local_catalog(session._ensure_alive())
+session.register_memory_catalog("sc", warehouse)
+session.sql("CREATE NAMESPACE sc.mb4")
+session.sql("CREATE TABLE sc.mb4.src (id BIGINT)")
+session.sql("CREATE TABLE sc.mb4.snk (id BIGINT)")
+session.sql("INSERT INTO sc.mb4.src VALUES (1), (2), (3)")
+query = (
+    session.readStream.table("sc.mb4.src")
+    .writeStream.option("checkpointLocation", checkpoint)
+    .trigger(processingTime="1 second")
+    .toTable("sc.mb4.snk")
+)
+threading.Timer(2.0, lambda: os.kill(os.getpid(), signal.SIGINT)).start()
+started = time.time()
+try:
+    if variant == "await":
+        query.awaitTermination()
+    elif variant == "await_timeout":
+        query.awaitTermination(60.0)
+    elif variant == "await_any":
+        session.streams.awaitAnyTermination()
+    else:
+        session.streams.awaitAnyTermination(60.0)
+except KeyboardInterrupt:
+    print(
+        f"WAIT-INTERRUPTED active={query.isActive} elapsed={time.time() - started:.1f}",
+        flush=True,
+    )
+    assert query.isActive
+    query.stop()
+    session.stop()
+else:
+    print("WAIT-RETURNED", flush=True)
+    raise SystemExit(3)
+"""
 
 
 def _memory_session(app: str, warehouse: Path) -> ReparkSession:
@@ -146,6 +198,24 @@ def test_test_seam_not_referenced_by_public_package() -> None:
         if "_streaming_tests_allow_local_catalog" in path.read_text(encoding="utf-8")
     )
     assert hits == []
+
+
+@pytest.mark.parametrize("variant", ["await", "await_timeout", "await_any", "await_any_timeout"])
+def test_await_variants_honor_sigint_and_leave_query_running(tmp_path: Path, variant: str) -> None:
+    warehouse = tmp_path / "wh"
+    warehouse.mkdir()
+    checkpoint = tmp_path / "ck"
+    checkpoint.mkdir()
+    started = time.time()
+    completed = subprocess.run(
+        [sys.executable, "-c", _SIGINT_CHILD, str(warehouse), str(checkpoint), variant],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert time.time() - started < 10.0, completed.stdout + completed.stderr
+    assert completed.returncode == 0, completed.stdout + completed.stderr[-2000:]
+    assert "WAIT-INTERRUPTED active=True" in completed.stdout
 
 
 def _fail_batch(frame: DataFrame, batch_id: int) -> None:

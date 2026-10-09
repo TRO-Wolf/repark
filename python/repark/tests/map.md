@@ -8017,6 +8017,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   that seam. pins: mb-4/C-036 The credential pin lands here with the masked
   echoing-refusal legs (catalog-timeout interval refusal on both doors, the
   sink mismatch, both format refusals with parameters). pins: mb-4/C-037
+  The SIGINT pin runs all four wait variants in a subprocess, interrupts at
+  2 s, and asserts the wait raises with the query still active within 10 s.
+  pins: mb-4/C-038
 
 ## I want to...
 
