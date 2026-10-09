@@ -11,6 +11,7 @@ use crate::streaming_errors::{QueryHead, microbatch_py_err};
 
 const MAX_AWAIT_SECS: f64 = 1_000_000_000_000.0;
 
+#[derive(Debug)]
 #[pyclass(name = "PyStreamingQuery", module = "repark._native")]
 pub struct PyStreamingQuery {
     handle: QueryHandle,
@@ -80,7 +81,7 @@ impl PyStreamingQuery {
     ) -> PyResult<Option<bool>> {
         let timeout = match timeout_secs {
             None => None,
-            Some(secs) if secs >= 0.0 && secs < MAX_AWAIT_SECS => {
+            Some(secs) if (0.0..MAX_AWAIT_SECS).contains(&secs) => {
                 Some(Duration::from_secs_f64(secs))
             }
             Some(secs) => {

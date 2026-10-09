@@ -373,15 +373,39 @@ def test_writer_update_mode_refuses_mbe6(spark: ReparkSession) -> None:
 
 
 def test_writer_append_mode_passes(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        _writer(spark).format("iceberg").outputMode("Append").start(checkpointLocation="/tmp/x")
-    _terminal_type(excinfo)
+    with pytest.raises(AnalysisException) as excinfo:
+        (
+            _writer(spark)
+            .format("iceberg")
+            .outputMode("Append")
+            .start("sc.mb4.silver", checkpointLocation="/tmp/x")
+        )
+    assert excinfo.value.getCondition() is None
+    assert "needs a streaming DataFrame" in str(excinfo.value)
 
 
-def test_writer_unknown_mode_passes_to_wireup(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        _writer(spark).format("iceberg").outputMode("sideways").start(checkpointLocation="/tmp/x")
-    _terminal_type(excinfo)
+def test_writer_unknown_mode_refuses_mb0c_o1(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException) as excinfo:
+        _writer(spark).format("iceberg").outputMode("sideways")
+    assert excinfo.value.getCondition() == "STREAMING_OUTPUT_MODE.INVALID"
+    assert excinfo.value.getSqlState() == "42KDE"
+    assert excinfo.value.getMessageParameters() == {"outputMode": "sideways"}
+    assert str(excinfo.value) == (
+        "[STREAMING_OUTPUT_MODE.INVALID] Invalid streaming output mode: sideways. "
+        "Accepted output modes are 'Append', 'Complete', 'Update'. SQLSTATE: 42KDE"
+    )
+
+
+def test_writer_output_mode_case_folds(spark: ReparkSession) -> None:
+    for mode in ("Append", "APPEND", "Complete", "COMPLETE", "Update", "UPDATE"):
+        assert _writer(spark).outputMode(mode) is not None
+
+
+def test_writer_output_mode_empty_refuses_mb0c_o2(spark: ReparkSession) -> None:
+    with pytest.raises(PySparkValueError) as excinfo:
+        _writer(spark).format("iceberg").outputMode("")
+    assert excinfo.value.getErrorClass() == "VALUE_NOT_NON_EMPTY_STR"
+    assert excinfo.value.getMessageParameters() == {"arg_name": "outputMode", "arg_value": ""}
 
 
 def test_writer_continuous_trigger_refuses_mbe7(spark: ReparkSession) -> None:
@@ -399,7 +423,7 @@ def test_writer_continuous_trigger_refuses_mbe7(spark: ReparkSession) -> None:
 
 def test_writer_missing_checkpoint_refuses_mbe4_mb0_w8(spark: ReparkSession) -> None:
     for run in (
-        lambda: _writer(spark).format("iceberg").start(),
+        lambda: _writer(spark).format("iceberg").start("sc.mb4.silver"),
         lambda: _writer(spark).format("iceberg").toTable("ice.sales.silver"),
     ):
         with pytest.raises(AnalysisException) as excinfo:
@@ -410,14 +434,26 @@ def test_writer_missing_checkpoint_refuses_mbe4_mb0_w8(spark: ReparkSession) -> 
         assert str(excinfo.value) == _W8_TEXT
 
 
+def test_writer_start_without_path_refuses_q5(spark: ReparkSession) -> None:
+    for run in (
+        lambda: _writer(spark).format("iceberg").start(),
+        lambda: _writer(spark).format("iceberg").start(checkpointLocation="/tmp/x"),
+    ):
+        with pytest.raises(IllegalArgumentException) as excinfo:
+            run()
+        assert excinfo.value.getCondition() is None
+        assert excinfo.value.getSqlState() is None
+        assert str(excinfo.value) == "Cannot open table: path is not set"
+
+
 def test_writer_checkpoint_option_or_conf_passes(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        _writer(spark).format("iceberg").start(checkpointLocation="/tmp/x")
-    _terminal_type(excinfo)
+    with pytest.raises(AnalysisException) as excinfo:
+        _writer(spark).format("iceberg").start("sc.mb4.silver", checkpointLocation="/tmp/x")
+    assert "needs a streaming DataFrame" in str(excinfo.value)
     spark.conf.set("spark.sql.streaming.checkpointLocation", "/tmp/conf-check")
-    with pytest.raises(NotImplementedError) as excinfo:
+    with pytest.raises(AnalysisException) as excinfo:
         _writer(spark).format("iceberg").toTable("ice.sales.silver")
-    _terminal_type(excinfo)
+    assert "needs a streaming DataFrame" in str(excinfo.value)
 
 
 def test_writer_foreach_without_sink_refuses_mbe10_mb0_w4(spark: ReparkSession) -> None:
@@ -445,9 +481,9 @@ def test_writer_foreach_with_sink_passes(spark: ReparkSession) -> None:
 
 
 def test_writer_start_without_foreach_needs_no_sink(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
+    with pytest.raises(IllegalArgumentException) as excinfo:
         _writer(spark).format("iceberg").start(checkpointLocation="/tmp/x")
-    _terminal_type(excinfo)
+    assert str(excinfo.value) == "Cannot open table: path is not set"
 
 
 def test_writer_unknown_prefixed_option_refuses_mbe17(spark: ReparkSession) -> None:
@@ -456,7 +492,7 @@ def test_writer_unknown_prefixed_option_refuses_mbe17(spark: ReparkSession) -> N
             _writer(spark)
             .format("iceberg")
             .option("streaming-zzz", "1")
-            .start(checkpointLocation="/tmp/x")
+            .start("sc.mb4.silver", checkpointLocation="/tmp/x")
         )
     assert excinfo.value.getCondition() == "REPARK_MICROBATCH.UNKNOWN_OPTION"
     assert excinfo.value.getMessageParameters() == {"key": "streaming-zzz"}
@@ -491,27 +527,29 @@ def test_writer_sink_refusal_precedes_unknown_option(spark: ReparkSession) -> No
 
 
 def test_writer_partitionby_accepted_and_ignored(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
-        _writer(spark).format("iceberg").start(checkpointLocation="/tmp/x", partitionBy="dt")
-    _terminal_type(excinfo)
-    with pytest.raises(NotImplementedError) as excinfo:
+    with pytest.raises(AnalysisException) as excinfo:
+        _writer(spark).format("iceberg").start(
+            "sc.mb4.silver", checkpointLocation="/tmp/x", partitionBy="dt"
+        )
+    assert "needs a streaming DataFrame" in str(excinfo.value)
+    with pytest.raises(AnalysisException) as excinfo:
         _writer(spark).format("iceberg").toTable(
             "ice.sales.silver", checkpointLocation="/tmp/x", partitionBy=["a", "b"]
         )
-    _terminal_type(excinfo)
+    assert "needs a streaming DataFrame" in str(excinfo.value)
 
 
 def test_writer_path_passes_through_opaquely(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
+    with pytest.raises(AnalysisException) as excinfo:
         _writer(spark).format("iceberg").start(path="/tmp/x", checkpointLocation="/tmp/y")
-    _terminal_type(excinfo)
+    assert "needs a streaming DataFrame" in str(excinfo.value)
 
 
 def test_totable_merges_kwargs_like_start(spark: ReparkSession) -> None:
     with pytest.raises(PySparkValueError) as excinfo:
         _writer(spark).format("iceberg").toTable("ice.sales.silver", outputMode="")
     assert excinfo.value.getErrorClass() == "VALUE_NOT_NON_EMPTY_STR"
-    with pytest.raises(NotImplementedError) as excinfo:
+    with pytest.raises(AnalysisException) as excinfo:
         _writer(spark).toTable(
             "ice.sales.silver",
             format="iceberg",
@@ -519,13 +557,13 @@ def test_totable_merges_kwargs_like_start(spark: ReparkSession) -> None:
             queryName="q",
             checkpointLocation="/tmp/x",
         )
-    _terminal_type(excinfo)
+    assert "needs a streaming DataFrame" in str(excinfo.value)
 
 
 def test_totable_needs_no_sink_option(spark: ReparkSession) -> None:
-    with pytest.raises(NotImplementedError) as excinfo:
+    with pytest.raises(AnalysisException) as excinfo:
         _writer(spark).format("iceberg").toTable("ice.sales.silver", checkpointLocation="/tmp/x")
-    _terminal_type(excinfo)
+    assert "needs a streaming DataFrame" in str(excinfo.value)
 
 
 def test_manager_active_is_empty_on_idle_session(spark: ReparkSession) -> None:

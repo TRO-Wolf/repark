@@ -1,32 +1,57 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use pyo3::exceptions::PyNotImplementedError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 use pyo3::wrap_pyfunction;
+use repark_core::microbatch::driver::{
+    DEFAULT_CATALOG_TIMEOUT, DEFAULT_POLLING_DELAY, RecordedLocation, SinkSpec, StreamSpec,
+    StreamingQueryManager, Trigger,
+};
+use repark_core::microbatch::progress::DEFAULT_RECENT_PROGRESS;
 use repark_core::microbatch::{MicroBatchError, relation};
+use repark_core::time_travel::microbatch_source::SourceOptions;
 
 use crate::dataframe::PyDataFrame;
-use crate::exceptions::masked_message_params;
+use crate::exceptions::{IllegalArgumentException, mask_user_visible, masked_message_params};
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::streaming_errors::microbatch_py_err;
+use crate::streaming_query::PyStreamingQuery;
+use crate::trigger_interval::check_trigger_interval;
 
 const CHECKPOINT_KEY: &str = "checkpointLocation";
 const SINK_KEY: &str = "repark.cdc.sink";
 const FANOUT_KEY: &str = "fanout-enabled";
 const CATALOG_TIMEOUT_KEY: &str = "repark.cdc.catalog-timeout";
+const PATH_KEY: &str = "path";
 const STREAMING_PREFIX: &str = "streaming-";
 const STREAM_PREFIX: &str = "stream-";
 const REPARK_CDC_PREFIX: &str = "repark.cdc.";
+const CONF_CHECKPOINT: &str = "spark.sql.streaming.checkpointLocation";
+const CONF_STOP_TIMEOUT: &str = "spark.sql.streaming.stopTimeout";
+const CONF_POLLING_DELAY: &str = "spark.sql.streaming.pollingDelay";
+const CONF_RECENT_LIMIT: &str = "spark.sql.streaming.numRecentProgressUpdates";
+const OUTPUT_MODE_CONDITION: &str = "STREAMING_OUTPUT_MODE.INVALID";
+const INVALID_CONF_VALUE: &str = "INVALID_CONF_VALUE.TYPE_MISMATCH";
+const EMPTY_CHECKPOINT_TEXT: &str = "Can not create a Path from an empty string";
+const NO_PATH_TEXT: &str = "Cannot open table: path is not set";
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(load_stream, module)?)?;
     module.add_function(wrap_pyfunction!(is_streaming_frame, module)?)?;
+    module.add_function(wrap_pyfunction!(check_output_mode, module)?)?;
     module.add_function(wrap_pyfunction!(start_stream, module)?)?;
     module.add_function(wrap_pyfunction!(to_table_stream, module)?)?;
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DoorKind {
+    Table,
+    ForeachBatch,
 }
 
 pub(crate) fn attached(
@@ -73,24 +98,259 @@ pub(crate) fn validate_writer_options(
     Ok(())
 }
 
+fn writer_option<'a>(options: &'a BTreeMap<String, String>, key: &str) -> Option<&'a str> {
+    options
+        .iter()
+        .find_map(|(known, value)| known.eq_ignore_ascii_case(key).then_some(value.as_str()))
+}
+
+fn catalog_refusal(py: Python<'_>, text: String) -> PyErr {
+    microbatch_py_err(py, &MicroBatchError::Catalog(text), None)
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub(crate) fn check_checkpoint(
     py: Python<'_>,
     options: &BTreeMap<String, String>,
-    checkpoint_conf: Option<&str>,
-) -> Result<(), PyErr> {
-    let optioned = options
-        .keys()
-        .any(|key| key.eq_ignore_ascii_case(CHECKPOINT_KEY));
-    if optioned || checkpoint_conf.is_some() {
-        Ok(())
-    } else {
-        Err(microbatch_py_err(
-            py,
-            &MicroBatchError::CheckpointLocationMissing,
-            None,
-        ))
+    streaming_confs: &BTreeMap<String, String>,
+    door: DoorKind,
+) -> Result<Option<String>, PyErr> {
+    let value = writer_option(options, CHECKPOINT_KEY)
+        .or_else(|| writer_option(streaming_confs, CONF_CHECKPOINT))
+        .map(str::to_string);
+    match value {
+        Some(location) if location.is_empty() => {
+            Err(IllegalArgumentException::new_err(EMPTY_CHECKPOINT_TEXT))
+        }
+        Some(location) => Ok(Some(location)),
+        None => match door {
+            DoorKind::Table => Err(microbatch_py_err(
+                py,
+                &MicroBatchError::CheckpointLocationMissing,
+                None,
+            )),
+            #[allow(clippy::match_same_arms)]
+            DoorKind::ForeachBatch => Err(microbatch_py_err(
+                py,
+                &MicroBatchError::CheckpointLocationMissing,
+                None,
+            )),
+        },
     }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn check_output_mode_value(py: Python<'_>, mode: &str) -> Result<(), PyErr> {
+    if matches!(
+        mode.to_ascii_lowercase().as_str(),
+        "append" | "complete" | "update"
+    ) {
+        return Ok(());
+    }
+    Err(attached(
+        py,
+        IllegalArgumentException::new_err(mask_user_visible(format!(
+            "[{OUTPUT_MODE_CONDITION}] Invalid streaming output mode: {mode}. Accepted output \
+             modes are 'Append', 'Complete', 'Update'. SQLSTATE: 42KDE"
+        ))),
+        OUTPUT_MODE_CONDITION,
+        &[("outputMode", mode)],
+    ))
+}
+
+#[pyfunction]
+#[allow(clippy::missing_errors_doc)]
+pub fn check_output_mode(py: Python<'_>, mode: &str) -> PyResult<()> {
+    check_output_mode_value(py, mode)
+}
+
+fn time_conf_micros(text: &str) -> Option<u128> {
+    let body = text.trim().to_ascii_lowercase();
+    let digits = body.strip_prefix('-').unwrap_or(&body);
+    let split = digits
+        .find(|cell: char| cell.is_ascii_alphabetic())
+        .unwrap_or(digits.len());
+    let (count_text, suffix) = digits.split_at(split);
+    if count_text.is_empty() || !count_text.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let factor: u128 = match suffix {
+        "" | "ms" => 1_000,
+        "us" => 1,
+        "s" => 1_000_000,
+        "m" | "min" => 60_000_000,
+        "h" => 3_600_000_000,
+        "d" => 86_400_000_000,
+        _ => return None,
+    };
+    count_text.parse::<u128>().ok()?.checked_mul(factor)
+}
+
+pub(crate) fn parse_time_conf(text: &str) -> Option<Duration> {
+    let negative = text.trim().starts_with('-');
+    let micros = time_conf_micros(text)?;
+    if negative {
+        return Some(Duration::ZERO);
+    }
+    u64::try_from(micros).ok().map(Duration::from_micros)
+}
+
+fn invalid_conf_value(py: Python<'_>, key: &str, value: &str, conf_type: &str) -> PyErr {
+    attached(
+        py,
+        IllegalArgumentException::new_err(mask_user_visible(format!(
+            "[{INVALID_CONF_VALUE}] The value '{value}' in the config \"{key}\" is invalid. It \
+             should be a/an '{conf_type}' value. SQLSTATE: 22022"
+        ))),
+        INVALID_CONF_VALUE,
+        &[
+            ("confName", key),
+            ("confValue", value),
+            ("confType", conf_type),
+        ],
+    )
+}
+
+#[derive(Debug)]
+struct StreamConfs {
+    stop_timeout: Option<Duration>,
+    polling_delay: Duration,
+    recent_limit: usize,
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn parse_streaming_confs(
+    py: Python<'_>,
+    streaming_confs: &BTreeMap<String, String>,
+) -> Result<StreamConfs, PyErr> {
+    let stop_timeout = match writer_option(streaming_confs, CONF_STOP_TIMEOUT) {
+        None => None,
+        Some(text) => Some(parse_time_conf(text).ok_or_else(|| {
+            invalid_conf_value(py, CONF_STOP_TIMEOUT, text, "time in MILLISECONDS")
+        })?),
+    };
+    let polling_delay = match writer_option(streaming_confs, CONF_POLLING_DELAY) {
+        None => DEFAULT_POLLING_DELAY,
+        Some(text) => parse_time_conf(text).ok_or_else(|| {
+            invalid_conf_value(py, CONF_POLLING_DELAY, text, "time in MILLISECONDS")
+        })?,
+    };
+    let recent_limit = match writer_option(streaming_confs, CONF_RECENT_LIMIT) {
+        None => DEFAULT_RECENT_PROGRESS,
+        Some(text) => match text.parse::<i32>() {
+            Ok(count) if count > 0 => usize::try_from(count).unwrap_or(usize::MAX),
+            Ok(_) => 1,
+            Err(_) => {
+                return Err(invalid_conf_value(py, CONF_RECENT_LIMIT, text, "int"));
+            }
+        },
+    };
+    Ok(StreamConfs {
+        stop_timeout,
+        polling_delay,
+        recent_limit,
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn build_trigger(py: Python<'_>, kind: &str, interval: Option<&str>) -> Result<Trigger, PyErr> {
+    match kind {
+        "default" => Ok(Trigger::default()),
+        "processingTime" => {
+            let text = interval.ok_or_else(|| {
+                catalog_refusal(
+                    py,
+                    String::from("a processingTime trigger needs an interval string"),
+                )
+            })?;
+            check_trigger_interval(text)
+                .map(|millis| Trigger::ProcessingTime(Duration::from_millis(millis)))
+        }
+        "once" => Ok(Trigger::Once),
+        "availableNow" => Ok(Trigger::AvailableNow),
+        "continuous" => Err(microbatch_py_err(
+            py,
+            &MicroBatchError::FeatureRefused {
+                feature: String::from("trigger(continuous)"),
+            },
+            None,
+        )),
+        _ => Err(catalog_refusal(py, format!("unknown trigger kind {kind}"))),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn check_start_mode(py: Python<'_>, output_mode: Option<&str>) -> Result<(), PyErr> {
+    if let Some(mode) = output_mode {
+        relation::check_output_mode(mode).map_err(|error| microbatch_py_err(py, &error, None))?;
+    }
+    Ok(())
+}
+
+#[allow(clippy::missing_errors_doc, clippy::too_many_arguments)]
+fn build_table_spec(
+    py: Python<'_>,
+    frame: &PyDataFrame,
+    sink: &str,
+    trigger_kind: &str,
+    trigger_interval: Option<&str>,
+    options: &BTreeMap<String, String>,
+    streaming_confs: &BTreeMap<String, String>,
+    query_name: Option<String>,
+    checkpoint: Option<String>,
+) -> Result<StreamSpec, PyErr> {
+    let trigger = build_trigger(py, trigger_kind, trigger_interval)?;
+    let template = relation::PlanTemplate::from_frame(frame.inner())
+        .map_err(|error| microbatch_py_err(py, &error, None))?;
+    let source_options = SourceOptions::from_options(template.source_options())
+        .map_err(|error| microbatch_py_err(py, &error, None))?;
+    let confs = parse_streaming_confs(py, streaming_confs)?;
+    let catalog_timeout = match writer_option(options, CATALOG_TIMEOUT_KEY) {
+        None => DEFAULT_CATALOG_TIMEOUT,
+        Some(text) => check_trigger_interval(text).map(Duration::from_millis)?,
+    };
+    let mut spec = StreamSpec::new(
+        template.source(),
+        source_options,
+        SinkSpec::Table {
+            sink: sink.to_string(),
+        },
+    );
+    spec.plan = Some(template);
+    spec.trigger = trigger;
+    spec.query_name = query_name;
+    spec.checkpoint_location = checkpoint.map(RecordedLocation::new);
+    spec.stop_timeout = confs.stop_timeout;
+    spec.polling_delay = confs.polling_delay;
+    spec.catalog_timeout = catalog_timeout;
+    spec.recent_progress_limit = confs.recent_limit;
+    Ok(spec)
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn start_spec(
+    py: Python<'_>,
+    session: &PyReparkSession,
+    spec: StreamSpec,
+) -> Result<PyStreamingQuery, PyErr> {
+    let manager = StreamingQueryManager::of(&session.session);
+    if let Some(name) = &spec.query_name
+        && manager
+            .active()
+            .iter()
+            .any(|query| query.name().as_deref() == Some(name.as_str()))
+    {
+        return Err(IllegalArgumentException::new_err(format!(
+            "Cannot start query with name {name} as a query with that name is already active \
+             in this SparkSession"
+        )));
+    }
+    let runtime = Arc::clone(&session.runtime);
+    let handle = py.detach(|| runtime.block_on(manager.register(&session.session, spec)));
+    let handle = handle.map_err(|error| microbatch_py_err(py, &error, None))?;
+    let started = py.detach(|| runtime.block_on(async { handle.start_below_catalog_check() }));
+    started.map_err(|error| microbatch_py_err(py, &error, None))?;
+    Ok(PyStreamingQuery::new(handle, runtime))
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -157,27 +417,42 @@ pub fn start_stream(
     trigger_kind: &str,
     trigger_interval: Option<String>,
     options: BTreeMap<String, String>,
-    checkpoint_conf: Option<String>,
+    streaming_confs: BTreeMap<String, String>,
     query_name: Option<String>,
     foreach: Option<Py<PyAny>>,
     path: Option<String>,
     partition_by: Vec<String>,
-) -> PyResult<Py<PyAny>> {
-    let _ = (
-        session,
-        frame,
-        trigger_kind,
-        trigger_interval,
-        query_name,
-        path,
-        partition_by,
-    );
-    check_checkpoint(py, &options, checkpoint_conf.as_deref())?;
+    output_mode: Option<String>,
+) -> PyResult<PyStreamingQuery> {
+    let _ = partition_by;
+    check_start_mode(py, output_mode.as_deref())?;
     if foreach.is_some() {
+        check_checkpoint(py, &options, &streaming_confs, DoorKind::ForeachBatch)?;
         check_sink_declared(py, &options)?;
+        validate_writer_options(py, &options)?;
+        return Err(stub_terminal());
     }
+    let sink = match path {
+        Some(given) => given,
+        None => match writer_option(&options, PATH_KEY) {
+            Some(found) if !found.is_empty() => found.to_string(),
+            _ => return Err(IllegalArgumentException::new_err(NO_PATH_TEXT)),
+        },
+    };
+    let checkpoint = check_checkpoint(py, &options, &streaming_confs, DoorKind::Table)?;
     validate_writer_options(py, &options)?;
-    Err(stub_terminal())
+    let spec = build_table_spec(
+        py,
+        frame,
+        &sink,
+        trigger_kind,
+        trigger_interval.as_deref(),
+        &options,
+        &streaming_confs,
+        query_name,
+        checkpoint,
+    )?;
+    start_spec(py, session, spec)
 }
 
 #[pyfunction]
@@ -194,22 +469,35 @@ pub fn to_table_stream(
     trigger_kind: &str,
     trigger_interval: Option<String>,
     options: BTreeMap<String, String>,
-    checkpoint_conf: Option<String>,
+    streaming_confs: BTreeMap<String, String>,
     query_name: Option<String>,
     partition_by: Vec<String>,
-) -> PyResult<Py<PyAny>> {
-    let _ = (
-        session,
+    output_mode: Option<String>,
+) -> PyResult<PyStreamingQuery> {
+    let _ = partition_by;
+    check_start_mode(py, output_mode.as_deref())?;
+    let checkpoint = check_checkpoint(py, &options, &streaming_confs, DoorKind::Table)?;
+    if let Some(declared) = writer_option(&options, SINK_KEY)
+        && declared != table
+    {
+        return Err(IllegalArgumentException::new_err(format!(
+            "option \"repark.cdc.sink\" names \"{declared}\" but toTable names \"{table}\"; pass \
+             one sink"
+        )));
+    }
+    validate_writer_options(py, &options)?;
+    let spec = build_table_spec(
+        py,
         frame,
         table,
         trigger_kind,
-        trigger_interval,
+        trigger_interval.as_deref(),
+        &options,
+        &streaming_confs,
         query_name,
-        partition_by,
-    );
-    check_checkpoint(py, &options, checkpoint_conf.as_deref())?;
-    validate_writer_options(py, &options)?;
-    Err(stub_terminal())
+        checkpoint,
+    )?;
+    start_spec(py, session, spec)
 }
 
 #[cfg(test)]
@@ -297,30 +585,86 @@ mod tests {
     #[test]
     fn missing_checkpoint_refuses_with_the_w8_text() {
         Python::attach(|py| {
-            let refused = check_checkpoint(py, &options(&[]), None)
-                .expect_err("a missing checkpoint refuses");
-            assert!(refused.is_instance_of::<AnalysisException>(py));
-            assert!(refused.is_instance_of::<PySparkException>(py));
-            assert_eq!(
-                message(&refused, py),
-                "checkpointLocation must be specified either through \
-                 option(\"checkpointLocation\", ...) or SparkSession.conf.set(\
-                 \"spark.sql.streaming.checkpointLocation\", ...)."
-            );
-            assert_eq!(condition(&refused, py), "_LEGACY_ERROR_TEMP_1298");
-            assert!(params(&refused, py).is_empty());
-            assert!(!message(&refused, py).contains("SQLSTATE"));
+            for door in [DoorKind::Table, DoorKind::ForeachBatch] {
+                let refused = check_checkpoint(py, &options(&[]), &options(&[]), door)
+                    .expect_err("a missing checkpoint refuses");
+                assert!(refused.is_instance_of::<AnalysisException>(py));
+                assert!(refused.is_instance_of::<PySparkException>(py));
+                assert_eq!(
+                    message(&refused, py),
+                    "checkpointLocation must be specified either through \
+                     option(\"checkpointLocation\", ...) or SparkSession.conf.set(\
+                     \"spark.sql.streaming.checkpointLocation\", ...)."
+                );
+                assert_eq!(condition(&refused, py), "_LEGACY_ERROR_TEMP_1298");
+                assert!(params(&refused, py).is_empty());
+                assert!(!message(&refused, py).contains("SQLSTATE"));
+            }
         });
     }
 
     #[test]
     fn checkpoint_option_or_conf_passes() {
         Python::attach(|py| {
-            check_checkpoint(py, &options(&[("CheckpointLocation", "/tmp/x")]), None)
-                .expect("the option passes");
-            check_checkpoint(py, &options(&[("checkpointLocation", "")]), None)
-                .expect("an empty option counts as specified");
-            check_checkpoint(py, &options(&[]), Some("/tmp/x")).expect("the session conf passes");
+            assert_eq!(
+                check_checkpoint(
+                    py,
+                    &options(&[("CheckpointLocation", "/tmp/x")]),
+                    &options(&[]),
+                    DoorKind::Table,
+                )
+                .expect("the option passes"),
+                Some(String::from("/tmp/x"))
+            );
+            assert_eq!(
+                check_checkpoint(
+                    py,
+                    &options(&[]),
+                    &options(&[(CONF_CHECKPOINT, "/tmp/conf")]),
+                    DoorKind::Table,
+                )
+                .expect("the session conf passes"),
+                Some(String::from("/tmp/conf"))
+            );
+            assert_eq!(
+                check_checkpoint(
+                    py,
+                    &options(&[("checkpointLocation", "/tmp/opt")]),
+                    &options(&[(CONF_CHECKPOINT, "/tmp/conf")]),
+                    DoorKind::Table,
+                )
+                .expect("the option wins over the conf"),
+                Some(String::from("/tmp/opt"))
+            );
+        });
+    }
+
+    #[test]
+    fn empty_checkpoint_refuses_with_sparks_path_text() {
+        Python::attach(|py| {
+            for (options, confs) in [
+                (options(&[("checkpointLocation", "")]), options(&[])),
+                (
+                    options(&[("checkpointLocation", "")]),
+                    options(&[(CONF_CHECKPOINT, "/tmp/conf")]),
+                ),
+                (options(&[]), options(&[(CONF_CHECKPOINT, "")])),
+            ] {
+                let refused = check_checkpoint(py, &options, &confs, DoorKind::Table)
+                    .expect_err("empty refuses");
+                assert!(refused.is_instance_of::<IllegalArgumentException>(py));
+                assert_eq!(message(&refused, py), EMPTY_CHECKPOINT_TEXT);
+            }
+            assert_eq!(
+                check_checkpoint(
+                    py,
+                    &options(&[("checkpointLocation", "/tmp/opt")]),
+                    &options(&[(CONF_CHECKPOINT, "")]),
+                    DoorKind::Table,
+                )
+                .expect("a set option wins over an empty conf"),
+                Some(String::from("/tmp/opt"))
+            );
         });
     }
 
@@ -412,11 +756,12 @@ mod tests {
                     "availableNow",
                     None,
                     options,
-                    None,
+                    BTreeMap::new(),
                     None,
                     foreach.then(|| py.None().into_any()),
                     None,
                     Vec::new(),
+                    None,
                 )
             };
             let refused = start(options(&[]), true).expect_err("refuses");
@@ -447,61 +792,68 @@ mod tests {
                 ]),
                 true,
             )
-            .expect_err("a valid start stops at the stub");
+            .expect_err("a foreach start stops at the stub");
             assert!(terminal.is_instance_of::<PyNotImplementedError>(py));
-            let terminal = start(options(&[("checkpointLocation", "/tmp/x")]), false)
-                .expect_err("a start without a body needs no sink");
-            assert!(terminal.is_instance_of::<PyNotImplementedError>(py));
+            let refused = start(options(&[("checkpointLocation", "/tmp/x")]), false)
+                .expect_err("a pathless start refuses");
+            assert!(refused.is_instance_of::<IllegalArgumentException>(py));
+            assert_eq!(message(&refused, py), NO_PATH_TEXT);
         });
     }
 
     #[test]
-    fn to_table_stream_validates_then_stops_at_the_stub() {
+    fn to_table_stream_validates_then_reaches_the_frame() {
         Python::attach(|py| {
             let session = door_session(py);
             let frame = session.sql(py, "SELECT 1 AS id").expect("a frame");
-            let refused = to_table_stream(
-                py,
-                &session,
-                &frame,
-                "ice.sales.silver",
-                "availableNow",
-                None,
-                options(&[]),
-                None,
-                None,
-                Vec::new(),
-            )
-            .expect_err("the door validates");
+            let start = |table: &str, options: BTreeMap<String, String>| {
+                to_table_stream(
+                    py,
+                    &session,
+                    &frame,
+                    table,
+                    "availableNow",
+                    None,
+                    options,
+                    BTreeMap::new(),
+                    None,
+                    Vec::new(),
+                    None,
+                )
+            };
+            let refused = start("ice.sales.silver", options(&[])).expect_err("the door validates");
             assert_eq!(condition(&refused, py), "_LEGACY_ERROR_TEMP_1298");
-            let refused = to_table_stream(
-                py,
-                &session,
-                &frame,
+            let refused = start(
                 "ice.sales.silver",
-                "availableNow",
-                None,
                 options(&[("checkpointLocation", "/tmp/x"), ("streaming-zzz", "1")]),
-                None,
-                None,
-                Vec::new(),
             )
             .expect_err("unknown writer options refuse");
             assert_eq!(condition(&refused, py), "REPARK_MICROBATCH.UNKNOWN_OPTION");
-            let terminal = to_table_stream(
-                py,
-                &session,
-                &frame,
+            let refused = start(
                 "ice.sales.silver",
-                "availableNow",
-                None,
-                options(&[("checkpointLocation", "/tmp/x")]),
-                None,
-                None,
-                Vec::new(),
+                options(&[
+                    ("checkpointLocation", "/tmp/x"),
+                    (SINK_KEY, "ice.sales.other"),
+                ]),
             )
-            .expect_err("a valid start stops at the stub");
-            assert!(terminal.is_instance_of::<PyNotImplementedError>(py));
+            .expect_err("a differing sink option refuses");
+            assert!(refused.is_instance_of::<IllegalArgumentException>(py));
+            assert_eq!(
+                message(&refused, py),
+                "option \"repark.cdc.sink\" names \"ice.sales.other\" but toTable names \
+                 \"ice.sales.silver\"; pass one sink"
+            );
+            let refused = start(
+                "ice.sales.silver",
+                options(&[("checkpointLocation", "/tmp/x")]),
+            )
+            .expect_err("a batch frame refuses");
+            assert!(refused.is_instance_of::<AnalysisException>(py));
+            assert!(message(&refused, py).contains("needs a streaming DataFrame"));
         });
     }
 }
+
+#[cfg(test)]
+#[path = "streaming_tests.rs"]
+mod spec_tests;

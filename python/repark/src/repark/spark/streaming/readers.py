@@ -11,13 +11,18 @@ from repark.errors import (
     PySparkValueError,
 )
 from repark.spark._secrets import register_config_value
+from repark.spark.streaming.query import StreamingQuery
 
 if TYPE_CHECKING:
     from repark.spark.dataframe import DataFrame
     from repark.spark.session.session_core import ReparkSession
-    from repark.spark.streaming.query import StreamingQuery
 
-_CHECKPOINT_CONF_KEY = "spark.sql.streaming.checkpointLocation"
+_STREAMING_CONF_KEYS = (
+    "spark.sql.streaming.checkpointLocation",
+    "spark.sql.streaming.stopTimeout",
+    "spark.sql.streaming.pollingDelay",
+    "spark.sql.streaming.numRecentProgressUpdates",
+)
 
 _DEFAULT_TRIGGER = "default"
 
@@ -65,12 +70,6 @@ def _refuse_format(door: str, source: str | None) -> None:
         _not_implemented(f"{door}.format({source[:64]})")
 
 
-def _refuse_output_mode(mode: str) -> None:
-    folded = mode.lower()
-    if folded in ("complete", "update"):
-        _not_implemented(f"outputMode({folded})")
-
-
 def _option_path(options: dict[str, str | None]) -> str | None:
     for key, value in options.items():
         if key.lower() == "path" and value:
@@ -78,8 +77,13 @@ def _option_path(options: dict[str, str | None]) -> str | None:
     return None
 
 
-def _conf_checkpoint(session: ReparkSession) -> str | None:
-    return session.conf.get(_CHECKPOINT_CONF_KEY, None)
+def _streaming_confs(session: ReparkSession) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for key in _STREAMING_CONF_KEYS:
+        value = session.conf.get(key, None)
+        if value is not None:
+            found[key] = value
+    return found
 
 
 class DataStreamReader:
@@ -209,6 +213,7 @@ class DataStreamWriter:
                     "arg_value": str(outputMode),
                 },
             )
+        _native.check_output_mode(outputMode)
         self._output_mode = outputMode
         return self
 
@@ -359,8 +364,6 @@ class DataStreamWriter:
             self.queryName(queryName)
 
     def _start_checks(self) -> None:
-        if self._output_mode is not None:
-            _refuse_output_mode(self._output_mode)
         if self._trigger_kind == _CONTINUOUS_TRIGGER:
             _not_implemented("trigger(continuous)")
 
@@ -403,18 +406,20 @@ class DataStreamWriter:
         self._frame._ensure_alive()
         session = self._frame.sparkSession
         inner_session = session._ensure_alive()
-        _native.start_stream(
+        handle = _native.start_stream(
             inner_session,
             self._frame._inner,
             self._trigger_kind or _DEFAULT_TRIGGER,
             self._trigger_interval,
             _without_none_values(self._options),
-            _conf_checkpoint(session),
+            _streaming_confs(session),
             self._query_name,
             self._foreach,
             path,
             self._partition_by,
+            self._output_mode,
         )
+        return StreamingQuery(handle)
 
     def toTable(  # noqa: N802 — PySpark method name
         self,
@@ -448,14 +453,16 @@ class DataStreamWriter:
         self._frame._ensure_alive()
         session = self._frame.sparkSession
         inner_session = session._ensure_alive()
-        _native.to_table_stream(
+        handle = _native.to_table_stream(
             inner_session,
             self._frame._inner,
             tableName,
             self._trigger_kind or _DEFAULT_TRIGGER,
             self._trigger_interval,
             _without_none_values(self._options),
-            _conf_checkpoint(session),
+            _streaming_confs(session),
             self._query_name,
             self._partition_by,
+            self._output_mode,
         )
+        return StreamingQuery(handle)

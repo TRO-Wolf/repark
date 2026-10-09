@@ -7956,12 +7956,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **MB-4 round 2b (2026-10-08):** the stub-terminal reader tests return frames; the
   sourceless-load and `foreachBatch` MBE-10 pins take their ruled shapes.
   pins: mb-4/C-023
+  **MB-4 round 3 (2026-10-08):** the query members delegate to the native handle;
+  `outputMode` pins O1/O2 at the setter; the terminal-reaching writer tests pin the
+  frame refusal past validation. pins: mb-4/C-024, C-025
 - [test_mb_4_streaming_wireup.py](test_mb_4_streaming_wireup.py) — **MB-4 round 2b
   (2026-10-08):** the reader wire-up battery, split out so the surface battery stays
   under its ceiling: MB0-R1 schema through `load` and `table`, the folded and ignored
   format doors, every C-014 option case with `from_options`' answer, DM-3 on every
   batch-action door with per-family batch controls, and MBE-7 `withWatermark`.
   pins: mb-4/C-023, C-014
+  **MB-4 round 3 (2026-10-08):** the Table-door run battery: MB0-W1/W2/W5/W7/T1/T3
+  replays, start-by-path and start-by-path-option, MBE-13, W3, M3, the dated
+  missing-sink row, the sink-option match arm, the catalog-timeout grammar, and the
+  conf map effects and refusals. pins: mb-4/C-025
 
 ## I want to...
 
