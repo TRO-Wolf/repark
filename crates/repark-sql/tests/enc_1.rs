@@ -158,18 +158,14 @@ fn assert_refusal(error: datafusion::error::DataFusionError, table: &str) {
         repark_core::ErrorClass::Unsupported
     );
     let message = mapped.to_string();
-    for needle in [
-        table,
-        "encryption.key-id",
-        "no table encryption",
-        "plaintext",
-        "ENC-1",
-    ] {
-        assert!(
-            message.contains(needle),
-            "refusal must name {needle}, got: {message}"
-        );
-    }
+    let short = table.rsplit('.').next().unwrap_or(table);
+    assert_eq!(
+        message,
+        format!(
+            "Table sales.{short} carries property 'encryption.key-id': RePark has no table \
+             encryption and refuses to write plaintext into a table that asks for it (ENC-1)."
+        )
+    );
     assert!(
         !message.contains(KEY),
         "refusal must never echo the key value, got: {message}"

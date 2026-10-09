@@ -128,6 +128,47 @@ Source comments retain only API and safety contracts; implementation narration i
   it, so the wrapper reproduces the table-bucket contract on `LocalFs` and the Spark-door OR
   REPLACE pin commits through it. Test-only: no product path builds it.
   pins: aws-accept-replace-1/C-001
+- `encryption_guard.rs` — **ENC-1 fold 1 (2026-10-09):** the two places every Iceberg write
+  passes, guarded by construction. `EncryptionGuardCatalog::install(inner)` wraps a catalog;
+  the three builders in `builders.rs` return through it, so every catalog a session holds is
+  guarded. Reason: the round-2 lane guarded some forty call sites one by one and the verifier
+  walked around them (branch targets, WAP sessions, `run_maintenance`, cherry-pick, the
+  micro-batch sink); the owned fork's `IcebergTableProvider` also writes and commits inside
+  the fork, where RePark has no call site to guard.
+  **File create:** `load_table`, `create_table`, `register_table` and every commit result
+  pass `guard_table`. A table whose properties carry `encryption.key-id` comes back with a
+  `FileIO` whose storage refuses `write`, `write_new` and `writer`. Every data file, delete
+  file, puffin file, manifest, manifest list and stats file of this tree and of the fork is
+  opened through the table handle's `FileIO`, so a refused write opens no file and leaves no
+  orphan. Reads, `exists`, `list` and deletes delegate unchanged (expiry and orphan sweeps
+  still run). **The one exception, named narrowly:** a path whose file name ends in
+  `.metadata.json` or `.metadata.json.gz` is written. That is the table-metadata JSON of the
+  commits the interim ruling allows (expiry, ref moves, ALTER, UNSET of the key itself); the
+  Glue catalog writes it through the base table's `FileIO`. A metadata JSON alone publishes
+  nothing: the pointer swap is the commit guard's.
+  **Commit:** `update_table` reads the properties of the metadata the commit is about to
+  replace (`TableCommit::base_table`, which `Transaction::do_commit` refreshed from the
+  catalog in the same attempt and which the catalog's base-location compare-and-swap binds;
+  a commit without one loads from the inner catalog). On a keyed base it refuses a commit
+  that carries `AddSnapshot`, `SetStatistics` or `SetPartitionStatistics`. Ref-only,
+  expiry-only, schema and property commits pass. This closes the stale-handle case: a handle
+  loaded before the key was added refuses at commit. `publish_create_table` and
+  `publish_replace_table` refuse a staged table that carries the key and has a current
+  snapshot (a staged replace inherits the replaced table's properties, so a keyed target
+  is seen without a second load; a schema-only CREATE or REPLACE has no current snapshot
+  and publishes).
+  **Known limit (fork API):** `TableCommit` exposes its updates only through
+  `take_updates`, and its builder is crate-private, so a decorator cannot read the updates
+  and still forward the commit. `commit_adds_files` therefore matches the variant names in
+  the commit's derived `Debug` rendering. It fails closed, and
+  `a_snapshot_commit_refuses_at_the_catalog_for_a_handle_that_is_not_guarded` goes red if a
+  fork repin changes that rendering. A `TableCommit::updates()` accessor in the fork would
+  replace the match; that is a fork change and is not made here.
+  `begin_staged_create` is the one door to `StagedTableTransaction::begin_create`: a
+  creation that carries the key gets the guarded `FileIO`, so a CTAS with the key writes no
+  data file even without its entry check.
+  The refusal is `write::encryption::EncryptedTableRefusal`: one text, built in one function.
+  pins: enc-1/C-008
 - `files.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `write_text_file(file_io, path,
   contents)` writes one small text object through the table's fork `FileIO`
   (the Spark `rewrite_table_path` copy-plan file list). The helper lives here,

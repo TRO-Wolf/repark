@@ -82,7 +82,8 @@ pub mod writer_props;
 
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
 pub use encryption::{
-    ENCRYPTION_KEY_ID_PROPERTY, refuse_encrypted_properties, refuse_encrypted_table,
+    ENCRYPTION_KEY_ID_PROPERTY, EncryptedTableRefusal, carries_encryption_key,
+    normalize_encrypted_refusal, refuse_encrypted_properties, refuse_encrypted_table,
     refuse_encrypted_write,
 };
 pub use illegal_argument::{

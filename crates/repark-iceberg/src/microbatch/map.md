@@ -93,6 +93,8 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   pins: mb-2a/C-014, C-022
   ENC-1 round 2 (2026-10-09) adds `EncryptedSinkRefused { sink }` with the house
   one-sentence text, raised by `commit_stamp_only` before scope claim.
+  Fold 1 (2026-10-09): its text is `write::encryption::refusal_text`, the one function, and
+  `From<EncryptedTableRefusal>` builds it.
   pins: enc-1/C-005
 - `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
   `WindowLimit`, `PlannedFile`, `WindowPlan`, and

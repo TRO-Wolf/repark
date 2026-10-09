@@ -103,6 +103,25 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   **C-005 (2026-09-01):** `write_default` fills an omitted column on append
   (red-first vs the old refuse pin), a supplied column is kept, and `initial_default`
   reads into files missing the column. pins: v3-6-v3-types/C-001, C-002, C-005
+- `enc_1_gate.rs` — **ENC-1 fold 1 (2026-10-09):** the source-scan gate that keeps the two
+  chokepoints closed. It reads every Rust source under `crates/`, drops test code
+  (`tests/`, `benches/`, `#[cfg(test)]` items and modules, and every module a test module
+  declares) and comment lines, and fails when product code builds a catalog
+  (`MemoryCatalogBuilder`, `GlueCatalogBuilder`, `S3TablesCatalogBuilder`, `impl Catalog
+  for`), a table handle (`Table::builder()`, `StaticTable::`,
+  `StagedTableTransaction::begin_create`) or a `FileIO` (`FileIOBuilder::new`,
+  `FileIO::new_with_`, `FileIO::from_path`, `file_io_for_location(`) outside the files the
+  list names. Reason: a catalog that does not pass `EncryptionGuardCatalog::install`, or a
+  table handle or `FileIO` built beside it, is a write path the guard does not see. An
+  allowance that no longer matches also fails, so the list stays exact. A second test
+  holds that each of the three builders returns through the guard. The allowed files and
+  why: `builders.rs` and `cache_wiring.rs` build the three catalogs and return them
+  guarded; `provider.rs` (`NamespaceScopedCatalog`) and `append_fence.rs` (`AppendFence`)
+  wrap a catalog that is already guarded and delegate every table call to it;
+  `output_spec.rs` builds a read-only table view; `iceberg_path.rs` builds a read-only
+  `StaticTable`; `location.rs` builds the `FileIO` a staged create receives, and its three
+  callers hand it to `begin_staged_create` or to the read-only path table.
+  pins: enc-1/C-009
 
 ## Pointers
 

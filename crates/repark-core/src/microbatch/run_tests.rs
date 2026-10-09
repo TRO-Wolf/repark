@@ -595,7 +595,10 @@ async fn a_keyed_sink_refuses_the_batch_and_stages_no_file() {
     let refusal = MicroBatchError::EncryptedSinkRefused {
         sink: String::from("sales.silver"),
     };
-    assert_eq!(ended.as_deref(), Err(&refusal));
+    assert_eq!(
+        ended.map_err(|error| error.as_ref().clone()),
+        Err(refusal.clone())
+    );
     assert_eq!(handle.exception().as_deref(), Some(&refusal));
     let _ = handle.stop().await;
     let after = files_under(&fixture.root());

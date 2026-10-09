@@ -254,8 +254,7 @@ pub(crate) async fn refuse_encrypted_write_target(
     let Some(catalog) = cx.catalogs.get(&catalog_name) else {
         return Ok(());
     };
-    repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident, &table_name.to_string())
-        .await
+    repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await
 }
 
 #[allow(clippy::missing_errors_doc)]

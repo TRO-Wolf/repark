@@ -122,9 +122,7 @@ pub enum MicroBatchError {
     },
     #[error("stamped write into {sink} needs {property}=serializable")]
     MergeIsolationRefused { sink: String, property: String },
-    #[error(
-        "Table {sink} carries property 'encryption.key-id': RePark has no table encryption and refuses to write plaintext into a table that asks for it (ENC-1)."
-    )]
+    #[error("{}", crate::write::encryption::refusal_text(sink))]
     EncryptedSinkRefused { sink: String },
     #[error("batch {epoch} failed: {cause}")]
     BatchFailed { epoch: Epoch, cause: String },
@@ -174,6 +172,14 @@ pub enum RecoveryReason {
         "sink advanced to snapshot {snapshot} without a stamp; a commit bypassed the batch scope"
     )]
     UnstampedSinkCommit { snapshot: SnapshotId },
+}
+
+impl From<crate::write::EncryptedTableRefusal> for MicroBatchError {
+    fn from(refusal: crate::write::EncryptedTableRefusal) -> Self {
+        MicroBatchError::EncryptedSinkRefused {
+            sink: refusal.table().to_string(),
+        }
+    }
 }
 
 #[cfg(test)]

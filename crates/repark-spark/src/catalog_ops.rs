@@ -274,8 +274,7 @@ pub(crate) async fn refuse_encrypted_write_target(
         return Ok(());
     };
     let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
-    repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident, &table_name.to_string())
-        .await
+    repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await
 }
 
 // === Catalog-provider refresh path Product DDL invalidates the touched namespace in O.

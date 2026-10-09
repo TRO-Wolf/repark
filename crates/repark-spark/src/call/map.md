@@ -72,6 +72,17 @@ and measured-parity contract would grow `call.rs` beyond its exact
   it, before any rewrite stages or commits. Expiry, orphan sweep, ref moves and dry-run
   planning are untouched and run. Pinned in `../tests/enc_1.rs`.
   pins: enc-1/C-005
+- `run_maintenance_apply.rs`, `branch_ops.rs` (`cherrypick_snapshot`), `compute_table_stats.rs`,
+  `compute_partition_stats.rs`, `rewrite_table_path.rs` — **ENC-1 fold 1 (2026-10-09):**
+  `apply_steps` refuses a keyed target before the first step when the plan holds a rewrite
+  step (data files, position deletes, manifests): the round-2 survey filed
+  `run_maintenance` as writing no data file, which was wrong, because `dry_run => false`
+  compacts through `run_rewrite` below the procedure's own check. An expiry-only plan still
+  runs. The non-fast-forward cherry-pick, the two stats procedures and
+  `rewrite_table_path` carry no check of their own: each opens a file through the table
+  handle and the catalog guard refuses it there (`repark-iceberg` `catalog/map.md`). The
+  fast-forward cherry-pick is a ref move and runs. Pinned in `../tests/enc_1_fold.rs`.
+  pins: enc-1/C-007, C-008
 - `branch_ops.rs` — **IPI-05 (2026-09-21):** `execute_publish_changes` publishes a staged WAP
   snapshot: it looks the snapshot up with the fork's `staged_snapshot_for_wap_id`, re-raising that
   error's **bare message** (never `to_string()`, which would prefix the error kind and diverge from

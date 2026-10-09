@@ -93,13 +93,7 @@ pub(crate) async fn execute_merge(
     let (catalog_name, mut spec) = lower(table, source, on, folded.as_deref().unwrap_or(clauses))?;
     spec.schema_evolution = schema_evolution;
     if let Some(catalog) = catalogs.get(&catalog_name) {
-        let display = format!(
-            "{catalog_name}.{}.{}",
-            spec.target.namespace(),
-            spec.target.name()
-        );
-        repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &spec.target, &display)
-            .await?;
+        repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &spec.target).await?;
     }
     let handle = catalog_handle(catalogs, &catalog_name)?;
     crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, handle, &mut spec).await?;

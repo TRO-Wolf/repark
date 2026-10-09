@@ -499,6 +499,18 @@ repark-core's error map.
   with the house text and unchanged snapshots and warehouse objects; a lookalike
   key stamps one snapshot.
   pins: enc-1/C-005
+- `encryption.rs`, fold 1 (2026-10-09): `EncryptedTableRefusal` is the one refusal. Its
+  `Display` is the one text (`Table <namespace>.<table> carries property
+  'encryption.key-id': …(ENC-1).`), rendered from the table identifier, never from the SQL
+  spelling, so every door and every seat shows the same sentence (the verifier found four
+  renderings). `into_iceberg` carries it as the source of a `FeatureUnsupported` error;
+  `find` recovers it from a source chain, or from rendered text where a layer flattened the
+  chain to a string. `repark-core`'s `engine_err` and the micro-batch `engine_error` call
+  `find` first, so the class is `UnsupportedOperationException` and
+  `MicroBatchError::EncryptedSinkRefused` from any depth. The per-seat entry checks stay
+  where they refuse earlier and more clearly; nothing depends on them for safety: the
+  guard in `../catalog/encryption_guard.rs` holds without them.
+  pins: enc-1/C-008
 - `conform.rs` — batch conforming for the append write path (name resolution, WI-1 store
   assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01;
   append.rs baseline 1886). A missing

@@ -1,0 +1,280 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use bytes::Bytes;
+use iceberg::io::LocalFsStorageFactory;
+use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
+use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
+use iceberg::table::Table;
+use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
+use tempfile::TempDir;
+
+use crate::catalog::EncryptionGuardCatalog;
+use crate::write::EncryptedTableRefusal;
+
+const KEY: &str = "SEKRETKEYVAL9f3a7";
+const REFUSAL: &str = "Table sales.t carries property 'encryption.key-id': RePark has no table \
+                       encryption and refuses to write plaintext into a table that asks for it \
+                       (ENC-1).";
+
+struct Bed {
+    _warehouse: TempDir,
+    raw: Arc<dyn Catalog>,
+    guarded: Arc<dyn Catalog>,
+}
+
+fn ident() -> TableIdent {
+    TableIdent::from_strs(["sales", "t"]).expect("ident")
+}
+
+async fn bed(properties: &[(&str, &str)]) -> Bed {
+    let warehouse = TempDir::new().expect("warehouse");
+    let root = warehouse.path().to_str().expect("utf-8 path").to_string();
+    let raw: Arc<dyn Catalog> = Arc::new(
+        MemoryCatalogBuilder::default()
+            .with_storage_factory(Arc::new(LocalFsStorageFactory))
+            .load(
+                "memory",
+                HashMap::from([(MEMORY_CATALOG_WAREHOUSE.to_string(), root)]),
+            )
+            .await
+            .expect("memory catalog"),
+    );
+    let guarded = EncryptionGuardCatalog::install(Arc::clone(&raw));
+    let namespace = NamespaceIdent::new("sales".to_string());
+    guarded
+        .create_namespace(&namespace, HashMap::new())
+        .await
+        .expect("namespace");
+    let schema = Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![
+            NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+        ])
+        .build()
+        .expect("schema");
+    let creation = TableCreation::builder()
+        .name("t".to_string())
+        .schema(schema)
+        .properties(
+            properties
+                .iter()
+                .map(|(key, value)| ((*key).to_string(), (*value).to_string())),
+        )
+        .build();
+    guarded
+        .create_table(&namespace, creation)
+        .await
+        .expect("create");
+    Bed {
+        _warehouse: warehouse,
+        raw,
+        guarded,
+    }
+}
+
+fn data_path(table: &Table, name: &str) -> String {
+    format!("{}/data/{name}", table.metadata().location())
+}
+
+fn assert_refused<T: std::fmt::Debug>(result: iceberg::Result<T>) {
+    let error = result.expect_err("a keyed table must refuse");
+    assert_eq!(error.kind(), iceberg::ErrorKind::FeatureUnsupported);
+    let refusal = EncryptedTableRefusal::find(&error).expect("typed refusal in the chain");
+    assert_eq!(refusal.to_string(), REFUSAL);
+    assert!(!error.to_string().contains(KEY), "{error}");
+}
+
+async fn snapshot_commit(catalog: &dyn Catalog, table: &Table) -> iceberg::Result<Table> {
+    let tx = Transaction::new(table);
+    let tx = tx
+        .fast_append()
+        .set_snapshot_properties(HashMap::from([("probe".to_string(), "1".to_string())]))
+        .apply(tx)?;
+    tx.commit(catalog).await
+}
+
+#[tokio::test]
+async fn a_keyed_table_handle_creates_no_file_but_metadata_json() {
+    let bed = bed(&[("encryption.key-id", KEY)]).await;
+    let table = bed.guarded.load_table(&ident()).await.expect("load");
+    let file_io = table.file_io();
+    for name in [
+        "a.parquet",
+        "a-deletes.parquet",
+        "a.puffin",
+        "a-m0.avro",
+        "snap-1.avro",
+        "a.stats",
+        "partition-stats-1.parquet",
+        "file-list",
+        "metadata.json.bak",
+    ] {
+        let path = data_path(&table, name);
+        let output = file_io.new_output(&path).expect("output handle");
+        assert_refused(output.write(Bytes::from_static(b"x")).await);
+        assert_refused(output.writer().await.map(|_| ()));
+        assert_refused(file_io.write_new(&path, Bytes::from_static(b"x")).await);
+        assert!(!file_io.exists(&path).await.expect("exists"), "{path}");
+    }
+    let metadata_json = format!(
+        "{}/metadata/00009-probe.metadata.json",
+        table.metadata().location()
+    );
+    file_io
+        .new_output(&metadata_json)
+        .expect("output handle")
+        .write(Bytes::from_static(b"{}"))
+        .await
+        .expect("metadata JSON is the one named exception");
+    assert_eq!(
+        file_io
+            .new_input(&metadata_json)
+            .expect("input")
+            .read()
+            .await
+            .expect("read"),
+        Bytes::from_static(b"{}")
+    );
+    file_io.delete(&metadata_json).await.expect("delete");
+}
+
+#[tokio::test]
+async fn an_unkeyed_or_lookalike_table_handle_writes_as_before() {
+    let bed = bed(&[
+        ("encryption.keyid", KEY),
+        ("encryption.key-id-x", KEY),
+        ("Encryption.Key-ID", KEY),
+    ])
+    .await;
+    let table = bed.guarded.load_table(&ident()).await.expect("load");
+    let path = data_path(&table, "a.parquet");
+    table
+        .file_io()
+        .new_output(&path)
+        .expect("output handle")
+        .write(Bytes::from_static(b"x"))
+        .await
+        .expect("an unkeyed table writes");
+    let committed = snapshot_commit(bed.guarded.as_ref(), &table)
+        .await
+        .expect("an unkeyed table commits a snapshot");
+    assert_eq!(committed.metadata().snapshots().count(), 1);
+}
+
+#[tokio::test]
+async fn a_snapshot_commit_refuses_at_the_catalog_for_a_handle_that_is_not_guarded() {
+    let bed = bed(&[("encryption.key-id", KEY)]).await;
+    let unguarded = bed.raw.load_table(&ident()).await.expect("raw load");
+    let pointer = unguarded.metadata_location().map(str::to_string);
+    assert_refused(snapshot_commit(bed.guarded.as_ref(), &unguarded).await);
+    let after = bed.raw.load_table(&ident()).await.expect("raw load");
+    assert_eq!(after.metadata().snapshots().count(), 0);
+    assert_eq!(after.metadata_location().map(str::to_string), pointer);
+}
+
+#[tokio::test]
+async fn a_stale_handle_commit_reads_the_key_at_commit_time() {
+    let bed = bed(&[]).await;
+    let stale = bed.guarded.load_table(&ident()).await.expect("load");
+    let tx = Transaction::new(&stale);
+    let tx = tx
+        .update_table_properties()
+        .set("encryption.key-id".to_string(), KEY.to_string())
+        .apply(tx)
+        .expect("apply");
+    tx.commit(bed.guarded.as_ref()).await.expect("key added");
+    let pointer = bed
+        .raw
+        .load_table(&ident())
+        .await
+        .expect("raw load")
+        .metadata_location()
+        .map(str::to_string);
+    assert_refused(snapshot_commit(bed.guarded.as_ref(), &stale).await);
+    let after = bed.raw.load_table(&ident()).await.expect("raw load");
+    assert_eq!(after.metadata().snapshots().count(), 0);
+    assert_eq!(after.metadata_location().map(str::to_string), pointer);
+}
+
+#[tokio::test]
+async fn property_commits_pass_on_a_keyed_table_and_unset_restores_writes() {
+    let bed = bed(&[("encryption.key-id", KEY)]).await;
+    let table = bed.guarded.load_table(&ident()).await.expect("load");
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .update_table_properties()
+        .set("comment".to_string(), "still alterable".to_string())
+        .apply(tx)
+        .expect("apply");
+    let table = tx.commit(bed.guarded.as_ref()).await.expect("property set");
+    assert_refused(snapshot_commit(bed.guarded.as_ref(), &table).await);
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .update_table_properties()
+        .remove("encryption.key-id".to_string())
+        .apply(tx)
+        .expect("apply");
+    let table = tx.commit(bed.guarded.as_ref()).await.expect("key unset");
+    let committed = snapshot_commit(bed.guarded.as_ref(), &table)
+        .await
+        .expect("writes return once the key is gone");
+    assert_eq!(committed.metadata().snapshots().count(), 1);
+}
+
+#[tokio::test]
+async fn a_staged_create_with_the_key_gets_the_guarded_file_io_and_still_publishes_empty() {
+    let bed = bed(&[]).await;
+    let existing = bed.guarded.load_table(&ident()).await.expect("load");
+    let creation = TableCreation::builder()
+        .name("staged".to_string())
+        .location(format!("{}-staged", existing.metadata().location()))
+        .schema(existing.metadata().current_schema().as_ref().clone())
+        .properties([("encryption.key-id".to_string(), KEY.to_string())])
+        .build();
+    let staged_ident = TableIdent::from_strs(["sales", "staged"]).expect("ident");
+    let staged = crate::catalog::begin_staged_create(
+        existing.file_io().clone(),
+        staged_ident.clone(),
+        creation,
+    )
+    .await
+    .expect("the staged metadata JSON is written");
+    let path = data_path(staged.table(), "a.parquet");
+    let error = staged
+        .table()
+        .file_io()
+        .new_output(&path)
+        .expect("output handle")
+        .write(Bytes::from_static(b"x"))
+        .await
+        .expect_err("a keyed staged table must refuse");
+    assert_eq!(
+        EncryptedTableRefusal::find(&error).map(|refusal| refusal.table().to_string()),
+        Some("sales.staged".to_string())
+    );
+    staged
+        .add_data_files(Vec::new())
+        .commit(bed.guarded.as_ref())
+        .await
+        .expect("CREATE with the key keeps succeeding");
+    let created = bed.guarded.load_table(&staged_ident).await.expect("load");
+    assert_eq!(created.metadata().snapshots().count(), 0);
+}
+
+#[test]
+fn the_refusal_is_found_through_a_source_chain_and_through_rendered_text() {
+    let refusal = EncryptedTableRefusal::of(&ident());
+    assert_eq!(refusal.to_string(), REFUSAL);
+    let wrapped = datafusion::error::DataFusionError::External(Box::new(
+        iceberg::Error::new(iceberg::ErrorKind::Unexpected, "writer closed")
+            .with_source(refusal.clone().into_iceberg()),
+    ));
+    assert_eq!(EncryptedTableRefusal::find(&wrapped), Some(refusal.clone()));
+    let flattened =
+        datafusion::error::DataFusionError::Execution(format!("External error: {REFUSAL}"));
+    assert_eq!(EncryptedTableRefusal::find(&flattened), Some(refusal));
+    let unrelated = datafusion::error::DataFusionError::Execution("Table t is busy".to_string());
+    assert_eq!(EncryptedTableRefusal::find(&unrelated), None);
+}

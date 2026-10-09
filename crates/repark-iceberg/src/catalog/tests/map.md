@@ -117,6 +117,15 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   path succeeds; a second `writer()` on an existing path fails `Unexpected` with the same text
   `write()` refuses with.
   pins: aws-accept-replace-1/C-001
+- `encryption_guard.rs` — **ENC-1 fold 1 (2026-10-09):** the guard's own pins, with no
+  entry check in the way: a keyed table handle creates no data, delete, puffin, manifest,
+  manifest-list or stats file and does write a `.metadata.json`; an unkeyed or
+  lookalike-key handle writes and commits as before; a snapshot commit through a handle
+  that is NOT guarded refuses at `update_table` and leaves the pointer; a handle loaded
+  before the key was added refuses at commit; property commits pass on a keyed table and
+  UNSET restores writes; the refusal is found through a source chain and through
+  rendered text.
+  pins: enc-1/C-008
 
 ## Pointers
 

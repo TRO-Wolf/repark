@@ -260,6 +260,8 @@ holds behavior observed from outside the crate.
   value, lookalike and no-key controls, and CREATE-plus-SELECT running. Every refusal
   pins `UnsupportedOperationException` with RePark's one-sentence text and unchanged
   snapshots, live files and warehouse objects.
+  Fold 1 (2026-10-09): the text assertion is exact, not a set of needles.
+  pins: enc-1/C-008
   pins: enc-1/C-005
 
 ## Pointers

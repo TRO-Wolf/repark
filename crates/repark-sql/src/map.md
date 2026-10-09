@@ -183,6 +183,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `delegate_plan` sees through `EXPLAIN ANALYZE` (this door spells no `EXPLAIN`, so that
   arm is defensive parity with the Spark pin). Pinned in `../tests/enc_1.rs`.
   pins: enc-1/C-005
+  **Fold 1 (2026-10-09):** every seat passes the table identifier, so the ANSI door shows
+  the same one text as the Spark door (MERGE rendered the catalog name before);
+  `create_table.rs` opens a staged create through
+  `repark_iceberg::catalog::begin_staged_create`.
+  pins: enc-1/C-008
 - `sniff.rs` — the error-path wrong-door sniff (Q10/G3): on parse/plan FAILURE, name the token,
   the native equivalent, and the Spark door. Tests: [sniff/map.md](sniff/map.md).
   **ICE-RTAS-BYNAME-1 (2026-09-17):** the composite arm steers `INSERT … BY NAME`

@@ -81,12 +81,14 @@ async fn freeze(
         &format!("SELECT name, type, snapshot_id FROM ice.sales.{table}.refs ORDER BY name"),
     )
     .await
-    .map(|batches| {
-        datafusion::arrow::util::pretty::pretty_format_batches(&batches)
-            .map(|table| table.to_string())
-            .unwrap_or_default()
-    })
-    .unwrap_or_else(|error| error.to_string());
+    .map_or_else(
+        |error| error.to_string(),
+        |batches| {
+            datafusion::arrow::util::pretty::pretty_format_batches(&batches)
+                .map(|table| table.to_string())
+                .unwrap_or_default()
+        },
+    );
     Frozen {
         snapshots,
         refs,

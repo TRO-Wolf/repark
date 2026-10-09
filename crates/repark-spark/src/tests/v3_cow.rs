@@ -638,7 +638,7 @@ async fn v3_create_with_encryption_key_id_refuses_first_write() {
     );
     let message = mapped.to_string();
     for needle in [
-        "ice.sales.enc",
+        "sales.enc",
         "encryption.key-id",
         "no table encryption",
         "plaintext",

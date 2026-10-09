@@ -1706,9 +1706,26 @@ perfectly good read.
   (create and scan as before, first write refuses) plus `crates/repark-spark/src/tests/enc_1.rs`
   (35 Spark-door pins), `crates/repark-sql/tests/enc_1.rs` (15 ANSI-door pins),
   `crates/repark-iceberg/src/write/encryption_tests.rs` (the streaming-sink stamp pin) and
-  `python/repark/tests/test_enc_1.py` (9 facade pins). Every refusal pin also asserts the
+  `python/repark/tests/test_enc_1.py` (15 facade pins). Every refusal pin also asserts the
   snapshot list and the file listing under the table location are unchanged.
+  **Fold 1 (2026-10-09):** `crates/repark-spark/src/tests/enc_1_fold.rs` (branch targets,
+  WAP sessions, the empty-table branch, `run_maintenance(dry_run => false)`, the
+  non-fast-forward cherry-pick, a stale-handle commit, the stats procedures,
+  `rewrite_table_path`, the public `write::append`; v2 and v3, with refs and the metadata
+  pointer unchanged), `crates/repark-iceberg/src/catalog/tests/encryption_guard.rs` (the
+  guard itself) and `crates/repark-iceberg/src/tests/enc_1_gate.rs` (the source scan that
+  fails when a catalog, table handle or `FileIO` is built outside the guard).
 - **Rationale** — FIXED 2026-10-09 (ENC-1 rounds 2–3, enacting the 2026-10-01 ES-3 ruling).
+  The first form guarded write paths one by one and an independent verification found 38
+  shapes that still wrote plaintext (branch targets, WAP sessions, `run_maintenance`,
+  cherry-pick) and 5 that left an orphan file or a moved pointer. Fold 1 (2026-10-09)
+  moved the refusal to the two places every write passes: the table handle's `FileIO`
+  (no data, delete, puffin, manifest, manifest-list or stats file is created; table
+  metadata JSON is the one exception) and the catalog commit (no commit that adds a
+  snapshot or statistics, judged on the properties read at commit time). The text is one
+  sentence on every door and names the table as `<namespace>.<table>`. Also refused on a
+  keyed table: `compute_table_stats`, `compute_partition_stats`, `rewrite_table_path` and
+  `CREATE BRANCH` on a table with no snapshot.
   Implementing envelope encryption stays fork work (GAP_MATRIX R130) and is not on the
   v1.0 slate.
 - **Divergence (2026-10-09, by ruling, owner can overturn):** the ruling's phrase "as Spark

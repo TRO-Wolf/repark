@@ -116,6 +116,11 @@ pins: mb-3/C-031
     bounds the sink load and the source open and hands the limit to the source
     (`with_catalog_timeout`, fold 2), and `stop` bounds its re-read of the sink after a
     stop timeout, falling back to the durable record it knows. pins: mb-3/C-010
+- `run.rs`, ENC-1 fold 1 (2026-10-09): `engine_error` maps the keyed-table refusal to
+  `MicroBatchError::EncryptedSinkRefused` (the verifier saw `Catalog("External error: …")`).
+  The table sink staged Parquet before the commit refused; the catalog guard now refuses the
+  first file, so no orphan is left under the sink.
+  pins: enc-1/C-007, C-008
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and

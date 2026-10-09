@@ -1,5 +1,6 @@
 mod cache_wiring;
 mod catalog;
+mod encryption_guard;
 mod evolved_lineage_read;
 mod footer_cache;
 mod io_stats;

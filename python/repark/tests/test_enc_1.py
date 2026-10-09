@@ -90,8 +90,10 @@ def _assert_refusal(error: BaseException, table: str) -> None:
     assert type(error) is UnsupportedOperationException
     message = str(error)
     short = table.rsplit(".", 1)[-1]
-    for needle in (short, "encryption.key-id", "no table encryption", "plaintext", "ENC-1"):
-        assert needle in message, f"refusal must name {needle}, got: {message}"
+    assert message == (
+        f"Table ns.{short} carries property 'encryption.key-id': RePark has no table "
+        "encryption and refuses to write plaintext into a table that asks for it (ENC-1)."
+    )
     assert KEY not in message, f"refusal must never echo the key value, got: {message}"
 
 
@@ -188,6 +190,59 @@ def test_v1_insert_into_refuses(spark: ReparkSession, warehouse: Path) -> None:
                 _frame(spark).write.format("iceberg").insertInto(table, overwrite=True)
         _assert_refusal(caught.value, table)
         assert _state(spark, warehouse, table) == before
+
+
+def _refs(spark: ReparkSession, table: str) -> list[list[Any]]:
+    """Every ref as ``[name, type, snapshot_id]``, ordered by name."""
+    rows = spark.sql(f"SELECT name, type, snapshot_id FROM {table}.refs ORDER BY name").collect()
+    return [list(row) for row in rows]
+
+
+@pytest.mark.parametrize("version", ["2", "3"])
+def test_write_to_branch_append_refuses(
+    spark: ReparkSession, warehouse: Path, version: str
+) -> None:
+    """pins: enc-1/C-007"""
+    table = f"{NS}.branch{version}"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT, data STRING, cat STRING) USING iceberg "
+        f"TBLPROPERTIES ('format-version' = '{version}')"
+    )
+    spark.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x')")
+    spark.sql(f"ALTER TABLE {table} CREATE BRANCH b1")
+    spark.sql(f"ALTER TABLE {table} SET TBLPROPERTIES ('encryption.key-id' = '{KEY}')")
+    before = (_state(spark, warehouse, table), _refs(spark, table))
+    with pytest.raises(UnsupportedOperationException) as caught:
+        _frame(spark).writeTo(f"{table}.branch_b1").append()
+    _assert_refusal(caught.value, table)
+    assert (_state(spark, warehouse, table), _refs(spark, table)) == before
+
+
+@pytest.mark.parametrize("version", ["2", "3"])
+@pytest.mark.parametrize("conf", ["spark.wap.branch", "spark.wap.id"])
+def test_wap_session_writes_refuse(
+    spark: ReparkSession, warehouse: Path, version: str, conf: str
+) -> None:
+    """pins: enc-1/C-007"""
+    table = f"{NS}.wap{version}"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT, data STRING, cat STRING) USING iceberg "
+        f"TBLPROPERTIES ('format-version' = '{version}', 'write.wap.enabled' = 'true')"
+    )
+    spark.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x')")
+    spark.sql(f"ALTER TABLE {table} SET TBLPROPERTIES ('encryption.key-id' = '{KEY}')")
+    before = (_state(spark, warehouse, table), _refs(spark, table))
+    spark.conf.set(conf, "w1")
+    try:
+        with pytest.raises(UnsupportedOperationException) as caught:
+            spark.sql(f"INSERT INTO {table} VALUES (4, 'd', 'x')")
+        _assert_refusal(caught.value, table)
+        with pytest.raises(UnsupportedOperationException) as caught:
+            _frame(spark).writeTo(table).append()
+        _assert_refusal(caught.value, table)
+    finally:
+        spark.conf.unset(conf)
+    assert (_state(spark, warehouse, table), _refs(spark, table)) == before
 
 
 def test_writers_onto_unkeyed_and_lookalike_tables_run(

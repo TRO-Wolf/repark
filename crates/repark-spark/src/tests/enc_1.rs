@@ -67,18 +67,14 @@ fn assert_refusal(error: datafusion::error::DataFusionError, table: &str) {
         repark_core::ErrorClass::Unsupported
     );
     let message = mapped.to_string();
-    for needle in [
-        table,
-        "encryption.key-id",
-        "no table encryption",
-        "plaintext",
-        "ENC-1",
-    ] {
-        assert!(
-            message.contains(needle),
-            "refusal must name {needle}, got: {message}"
-        );
-    }
+    let short = table.rsplit('.').next().unwrap_or(table);
+    assert_eq!(
+        message,
+        format!(
+            "Table sales.{short} carries property 'encryption.key-id': RePark has no table \
+             encryption and refuses to write plaintext into a table that asks for it (ENC-1)."
+        )
+    );
     assert!(
         !message.contains(KEY),
         "refusal must never echo the key value, got: {message}"
@@ -129,7 +125,7 @@ async fn encrypted_table_write_must_refuse_without_encryption_support() {
     create_keyed(&ctx, &catalogs, "enc").await;
     let before = capture(&warehouse, &catalogs, "enc").await;
     let error = attempt(&ctx, &catalogs, "INSERT INTO ice.sales.enc VALUES (1, 'a')").await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 
@@ -145,7 +141,7 @@ async fn encrypted_table_insert_select_refuses() {
         "INSERT INTO ice.sales.enc SELECT * FROM src",
     )
     .await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 
@@ -201,7 +197,7 @@ async fn encrypted_table_insert_overwrite_refuses() {
         "INSERT OVERWRITE ice.sales.enc SELECT 3, 'c'",
     )
     .await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 
@@ -252,7 +248,7 @@ async fn encrypted_ctas_refuses_without_leaving_a_table() {
         ),
     )
     .await;
-    assert_refusal(error, "ice.sales.ctas_enc");
+    assert_refusal(error, "sales.ctas_enc");
     let ident = TableIdent::from_strs(["sales", "ctas_enc"]).expect("ident");
     assert!(
         catalogs
@@ -286,7 +282,7 @@ async fn encrypted_create_or_replace_refuses_and_keeps_the_existing_table() {
         ),
     )
     .await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.enc").await,
@@ -323,7 +319,7 @@ async fn encrypted_table_merge_refuses() {
          WHEN MATCHED THEN UPDATE SET name = s.name WHEN NOT MATCHED THEN INSERT *",
     )
     .await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 
@@ -339,7 +335,7 @@ async fn encrypted_table_update_refuses() {
         "UPDATE ice.sales.enc SET name = 'z' WHERE id = 1",
     )
     .await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 
@@ -350,7 +346,7 @@ async fn encrypted_table_delete_refuses() {
     seed_keyed(&ctx, &catalogs, "enc").await;
     let before = capture(&warehouse, &catalogs, "enc").await;
     let error = attempt(&ctx, &catalogs, "DELETE FROM ice.sales.enc WHERE id = 1").await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 
@@ -361,7 +357,7 @@ async fn encrypted_table_whole_delete_refuses() {
     seed_keyed(&ctx, &catalogs, "enc").await;
     let before = capture(&warehouse, &catalogs, "enc").await;
     let error = attempt(&ctx, &catalogs, "DELETE FROM ice.sales.enc").await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 
@@ -399,7 +395,7 @@ async fn encrypted_table_aliased_delete_refuses() {
         "DELETE FROM ice.sales.enc AS x WHERE x.id = 1",
     )
     .await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 
@@ -686,7 +682,7 @@ async fn encrypted_table_unset_key_restores_writes() {
     let (ctx, catalogs) = setup_enc(&warehouse).await;
     seed_keyed(&ctx, &catalogs, "enc").await;
     let error = attempt(&ctx, &catalogs, "INSERT INTO ice.sales.enc VALUES (3, 'c')").await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     run(
         &ctx,
         &catalogs,
@@ -717,7 +713,7 @@ async fn encrypted_table_empty_key_value_refuses() {
     .await;
     let before = capture(&warehouse, &catalogs, "enc").await;
     let error = attempt(&ctx, &catalogs, "INSERT INTO ice.sales.enc VALUES (1, 'a')").await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 
@@ -829,7 +825,7 @@ async fn version_two_table_with_key_refuses_insert() {
     .await;
     let before = capture(&warehouse, &catalogs, "enc").await;
     let error = attempt(&ctx, &catalogs, "INSERT INTO ice.sales.enc VALUES (1, 'a')").await;
-    assert_refusal(error, "ice.sales.enc");
+    assert_refusal(error, "sales.enc");
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 

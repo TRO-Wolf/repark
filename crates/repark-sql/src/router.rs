@@ -318,9 +318,7 @@ pub(crate) async fn delegate_plan(
         .and_then(|(name, ident)| cx.catalogs.get(&name).map(|catalog| (catalog, ident)));
     let plan = match target {
         Some((catalog, ident)) => {
-            let display = format!("{}.{}", ident.namespace(), ident.name());
-            repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident, &display)
-                .await?;
+            repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await?;
             insert_defaults::fill_insert_plan(catalog, &ident, listed, plan, preloaded).await?
         }
         None => plan,

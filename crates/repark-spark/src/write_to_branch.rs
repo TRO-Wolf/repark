@@ -463,6 +463,7 @@ async fn commit_write_staged<'a>(
 ) -> Result<Cow<'a, str>> {
     let qualified = qualify_table_parts(ctx, staged.table_parts);
     let (_catalog_name, ident, catalog) = load_target_table(catalogs, &qualified)?;
+    repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await?;
     let provider =
         IcebergTableProvider::try_new(catalog, ident.namespace().clone(), ident.name().to_string())
             .await
@@ -548,6 +549,7 @@ async fn commit_write_on_branch<'a>(
     let qualified = qualify_table_parts(ctx, target.table_parts);
     let (_catalog_name, ident, catalog) = load_target_table(catalogs, &qualified)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    repark_iceberg::write::refuse_encrypted_table(&table)?;
     if target.require_existing_branch && table.metadata().snapshot_for_ref(&target.branch).is_none()
     {
         return Err(missing_branch_error(&target.branch));

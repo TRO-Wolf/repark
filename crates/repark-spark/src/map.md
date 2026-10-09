@@ -43,6 +43,16 @@ pins: rp-4-fork-repin/C-005, C-006
   entry, `ctas.rs` checks staged properties and the replace target, and `spark_ast.rs` re-checks
   the post-plan DML target (case-folding and `EXPLAIN ANALYZE`). Pinned in `tests/enc_1.rs`.
   pins: enc-1/C-005
+  **Fold 1 (2026-10-09):** `write_to_branch.rs` runs before the router's arms and rewrites
+  the target, so the arms never saw a branch or WAP write. `commit_write_on_branch` and
+  `commit_write_staged` now refuse a keyed table right after resolving it, before the WAP
+  branch is created, so a refused write leaves refs and the metadata pointer unmoved.
+  `create_table.rs` and `ctas.rs` open a staged create through
+  `repark_iceberg::catalog::begin_staged_create`. Every seat passes the table identifier,
+  so the text is one. Safety does not rest on these seats: the catalog guard in
+  `repark-iceberg` refuses the file and the commit without them. Pinned in
+  `tests/enc_1_fold.rs`.
+  pins: enc-1/C-007, C-008
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)
