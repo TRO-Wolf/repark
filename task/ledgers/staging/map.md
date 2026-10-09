@@ -4,6 +4,14 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
+  **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
+  `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
+  `repark_functions::spark_epoch_ctor` kernel per spelling, with Spark's values, refusal
+  classes and `timestamp` schema (C-002..C-005, C-008); the 216-cell live Spark 4.1.2
+  oracle (C-001) and its live drift check (C-007) sit under `python/repark/tests`; the
+  native door stays a declared refusal (C-006). `risk_tier: standard`. Branch
+  `fix/sql-epoch-constructors-1`.
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
   under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort
