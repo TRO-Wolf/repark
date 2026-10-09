@@ -202,11 +202,16 @@ fn last_write_report_records_on_builder_sessions_and_nowhere_else() {
         PostgresWriteReport {
             path: PostgresWritePath::Row,
             rows: 7,
+            fallback: Some("the target is a view, which COPY cannot write".to_string()),
         },
     );
     let taken = take_postgres_write_report(context).expect("a recorded report reads back once");
     assert_eq!(taken.path, PostgresWritePath::Row);
     assert_eq!(taken.rows, 7);
+    assert_eq!(
+        taken.fallback.as_deref(),
+        Some("the target is a view, which COPY cannot write")
+    );
     assert!(take_postgres_write_report(context).is_none());
     let bare = SessionContext::new();
     record_postgres_write_report(
@@ -214,6 +219,7 @@ fn last_write_report_records_on_builder_sessions_and_nowhere_else() {
         PostgresWriteReport {
             path: PostgresWritePath::Bulk,
             rows: 1,
+            fallback: None,
         },
     );
     assert!(take_postgres_write_report(&bare).is_none());

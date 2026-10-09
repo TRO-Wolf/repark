@@ -73,7 +73,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `Configuration` (the binding raises `IllegalArgumentException`) naming both values.
   `LastPostgresWriteReport` is the session carrier for the last write report, installed by
   the builder: both doors record through `record_postgres_write_report` and the binding
-  reads it back with `take_postgres_write_report`.
+  reads it back with `take_postgres_write_report`. Fold 1 (2026-10-09): the report carries
+  the open write's taken path and the fallback sentence (`RowFallback`'s Display) read off
+  the writer after `open`, and batches pass encoder-accepted encodings (view, large,
+  dictionary forms) through uncast while real type changes still cast.
   pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.

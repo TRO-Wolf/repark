@@ -176,13 +176,15 @@ pub fn take_postgres_write_report(
         .take()
 }
 
-/// What one write did: the taken path and the committed row count.
+/// What one write did: the taken path, the committed row count and the fallback reason.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PostgresWriteReport {
-    /// The path the selector took.
+    /// The path the open write took.
     pub path: PostgresWritePath,
     /// The rows committed.
     pub rows: u64,
+    /// Why a bulk request took rows, when it did.
+    pub fallback: Option<String>,
 }
 
 /// One Postgres write: its target, its columns and its requested path.
@@ -276,6 +278,8 @@ pub async fn execute_postgres_write(
             DataFusionError::External(Box::new(error))
                 .context(format!("database source `{display}`"))
         })?;
+    let taken = writer.path();
+    let fallback = writer.fallback().map(|reason| reason.to_string());
     let shaped = shape_columns(&resolved, &indexes)?;
     let mut stream = frame.execute_stream().await?;
     while let Some(batch) = stream.next().await {
@@ -290,11 +294,12 @@ pub async fn execute_postgres_write(
         DataFusionError::External(Box::new(error)).context(format!("database source `{display}`"))
     })?;
     Ok(PostgresWriteReport {
-        path: match report.path {
+        path: match taken {
             WritePath::Bulk => PostgresWritePath::Bulk,
             WritePath::Row => PostgresWritePath::Row,
         },
         rows: report.rows,
+        fallback,
     })
 }
 
@@ -521,6 +526,16 @@ fn shape_columns(resolved: &ResolvedSource, indexes: &[usize]) -> Result<Vec<Sha
 }
 
 #[cfg(feature = "postgres")]
+fn plain_values_type(given: &DataType) -> DataType {
+    match given {
+        DataType::Dictionary(_, values) => plain_values_type(values),
+        DataType::LargeUtf8 | DataType::Utf8View => DataType::Utf8,
+        DataType::LargeBinary | DataType::BinaryView => DataType::Binary,
+        plain => plain.clone(),
+    }
+}
+
+#[cfg(feature = "postgres")]
 fn shape_batch(
     batch: &RecordBatch,
     shaped: &[ShapedColumn],
@@ -571,7 +586,7 @@ fn shape_batch(
                 }
             },
             _ => {
-                if array.data_type() == &column.expected {
+                if plain_values_type(array.data_type()) == column.expected {
                     Arc::clone(array)
                 } else {
                     cast_to(&column.expected)?
