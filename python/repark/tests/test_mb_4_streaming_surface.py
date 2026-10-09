@@ -10,6 +10,7 @@ from repark.errors import (
     PySparkNotImplementedError,
     PySparkTypeError,
     PySparkValueError,
+    StreamingQueryException,
 )
 from repark.spark.dataframe import DataFrame
 from repark.spark.session.session_core import ReparkSession
@@ -55,6 +56,10 @@ def _writer(spark: ReparkSession) -> DataStreamWriter:
 
 def _ignore_batch(frame: DataFrame, batch_id: int) -> None:
     raise AssertionError("the stub never runs a batch body")
+
+
+def _fail_batch(frame: DataFrame, batch_id: int) -> None:
+    raise RuntimeError("mb4 injected failure at batch")
 
 
 def test_reader_format_returns_self_for_chaining(spark: ReparkSession) -> None:
@@ -857,3 +862,76 @@ def test_public_read_stream_loads_a_streaming_frame(
 ) -> None:
     frame = spark.readStream.format("iceberg").load(stream_table)
     assert frame.isStreaming is True
+
+
+def test_microbatch_no_credential_on_any_surface_1(spark: ReparkSession, stream_table: str) -> None:
+    checkpoint = "s3://ckptuser:hunter2ckpt9x@example.com/mb4-cred-ckpt"
+    secret_option = "s3://optuser:hunter2opt9x@example.com/mb4-cred-opt"
+    spark.sql(f"INSERT INTO {stream_table} VALUES (1, 'k1'), (2, 'k0')")
+    spark.sql("CREATE TABLE sc.mb4.silver_cred1 (id BIGINT, k STRING)")
+    frame = _reader(spark).format("iceberg").option("unrelated", secret_option).load(stream_table)
+    try:
+        explained = frame._explain_text()
+    except AnalysisException as error:
+        explained = str(error)
+    query = (
+        DataStreamWriter(frame)
+        .format("iceberg")
+        .option("checkpointLocation", checkpoint)
+        .trigger(availableNow=True)
+        .toTable("sc.mb4.silver_cred1")
+    )
+    assert query.awaitTermination() is None
+    spark.sql("CREATE TABLE sc.mb4.silver_cred2 (id BIGINT, k STRING)")
+    failing_frame = (
+        _reader(spark).format("iceberg").option("unrelated", secret_option).load(stream_table)
+    )
+    failing = (
+        DataStreamWriter(failing_frame)
+        .foreachBatch(_fail_batch)
+        .option("repark.cdc.sink", "sc.mb4.silver_cred2")
+        .option("checkpointLocation", checkpoint)
+        .trigger(availableNow=True)
+        .start()
+    )
+    with pytest.raises(StreamingQueryException):
+        failing.awaitTermination()
+    failure_text = str(failing.exception())
+    with pytest.raises(AnalysisException) as refused:
+        (
+            _reader(spark)
+            .format("iceberg")
+            .option("stream-from-timestamp", secret_option)
+            .load(stream_table)
+        )
+    value_refusal = str(refused.value)
+    assert "***" in value_refusal
+    summaries = str(
+        [
+            (row.operation, dict(row.summary))
+            for row in spark.sql(
+                "SELECT operation, summary FROM sc.mb4.silver_cred1.snapshots ORDER BY committed_at"
+            ).collect()
+        ]
+    )
+    properties = str(
+        [
+            (row.key, row.value)
+            for row in spark.sql("SHOW TBLPROPERTIES sc.mb4.silver_cred1").collect()
+        ]
+    )
+    surfaces = {
+        "status": str(query.status),
+        "last_progress": str(query.lastProgress),
+        "repr": repr(query),
+        "error": failure_text,
+        "explain": explained,
+        "summaries": summaries,
+        "properties": properties,
+        "value_refusal": value_refusal,
+    }
+    for name, text in surfaces.items():
+        assert checkpoint not in text, name
+        assert secret_option not in text, name
+        assert "hunter2ckpt9x" not in text, name
+        assert "hunter2opt9x" not in text, name
