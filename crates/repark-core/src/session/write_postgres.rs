@@ -59,6 +59,22 @@ pub enum PostgresWritePath {
     Row,
 }
 
+/// Parse the `write.path` writer option onto the requested path; absent means bulk.
+///
+/// # Errors
+/// A bad value refuses as `Configuration` (the binding raises `IllegalArgumentException`),
+/// naming both values.
+pub fn parse_write_path_option(raw: Option<&str>) -> Result<PostgresWritePath> {
+    match raw {
+        None => Ok(PostgresWritePath::Bulk),
+        Some(value) if value.trim().eq_ignore_ascii_case("bulk") => Ok(PostgresWritePath::Bulk),
+        Some(value) if value.trim().eq_ignore_ascii_case("row") => Ok(PostgresWritePath::Row),
+        Some(value) => Err(DataFusionError::Configuration(format!(
+            "write.path must be 'bulk' or 'row', got '{value}'"
+        ))),
+    }
+}
+
 /// What one write did: the taken path and the committed row count.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PostgresWriteReport {

@@ -68,6 +68,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `zone_localiser.rs` (unplace at the session zone, forward-place for `timestamptz`), and
   commits. Connect failures travel as
   `External` with the `database source` context, so the Python classes match the read door.
+  `parse_write_path_option` parses the `write.path` writer option for both doors and the
+  binding: absent means bulk, `row` forces the INSERT path, anything else refuses as
+  `Configuration` (the binding raises `IllegalArgumentException`) naming both values.
   pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.

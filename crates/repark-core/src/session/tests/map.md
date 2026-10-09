@@ -38,7 +38,8 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   mounted source and a non-Postgres mount refuse before any connection; an unknown property
   refuses as `Config` naming `jdbc` without the password; a refused port refuses as
   operational (`DataFusion` fold); partition keys and `predicates` on a write are ignored,
-  never refused. pins: c-4/C-013
+  never refused; the `write.path` option defaults to bulk, takes `row` case-insensitively, and
+  refuses anything else as `Configuration` naming both values. pins: c-4/C-013, C-014
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
   argument refuses as `NumberFormat` before any connection. pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned

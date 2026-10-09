@@ -2402,6 +2402,10 @@ part of that section's pin — changing either one changes both.
   `CatalogRegistry::default_namespace_for`, and `complete_name` answers `CATALOG_NOT_FOUND` for
   one- and two-part names when the current catalog does not resolve. `extension.rs` installs the
   `current_catalog()` carrier from `spark.sql.defaultCatalog`. pins: catalog-1/C-003, C-004
+- **C-4 step 2 (2026-10-09):** `execute_update` moves verbatim to `router/update.rs` plus the
+  Postgres upsert check, and `execute_insert_routed` routes Postgres targets first through the
+  new `router/pg_insert.rs` (the `write.path` writer option rides `StatementWriteOptions`),
+  so `router.rs` drops to 974 lines. pins: c-4/C-013, C-014
 
 
 ## I want to...

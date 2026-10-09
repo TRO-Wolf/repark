@@ -163,3 +163,28 @@ async fn partition_options_on_a_write_are_ignored_not_refused() {
     assert!(!message.contains("unknown"), "{message}");
     assert!(!message.contains("declared"), "{message}");
 }
+
+#[test]
+fn write_path_option_defaults_to_bulk_and_names_both_values_on_refusal() {
+    use crate::session::write_postgres::{PostgresWritePath, parse_write_path_option};
+    assert_eq!(
+        parse_write_path_option(None).expect("absent means bulk"),
+        PostgresWritePath::Bulk
+    );
+    assert_eq!(
+        parse_write_path_option(Some("bulk")).expect("bulk parses"),
+        PostgresWritePath::Bulk
+    );
+    assert_eq!(
+        parse_write_path_option(Some("ROW")).expect("row parses case-insensitively"),
+        PostgresWritePath::Row
+    );
+    let error = parse_write_path_option(Some("columnar")).expect_err("a bad value refuses");
+    assert!(
+        matches!(error, DataFusionError::Configuration(_)),
+        "{error:?}"
+    );
+    let message = error.to_string();
+    assert!(message.contains("'bulk'"), "{message}");
+    assert!(message.contains("'row'"), "{message}");
+}

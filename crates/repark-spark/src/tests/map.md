@@ -2443,6 +2443,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   The setup installs production's
   integer planner so `id + 1` is `Int32` as on the facade.
   pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-012
+- `pg_insert.rs` — **C-4 step 2 (2026-10-09):** the Spark-door Postgres routing pins over a
+  user-less `pg` mount (the driver refuses before connecting, so every pin asserts the refusal
+  text): append routes to the sink driver instead of the default hook, overwrite names the
+  `CONNECT-DECL-pg-write-modes` row, UPDATE the `-upsert` row, a source-less INSERT keeps
+  DataFusion's text, unknown and two-part names keep today's `not found` texts, a populated
+  read-only set lets a spec-backed INSERT through while UPDATE keeps the P11 read-only text,
+  and `write.path=row` routes while a bad value refuses as `Configuration` naming `bulk` and
+  `row`.
+  pins: c-4/C-013, C-014
 
 ## Mapping rule
 

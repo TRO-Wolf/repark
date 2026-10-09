@@ -71,6 +71,21 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs) and
   [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
   (first linked from the `comment_on_table.rs` row above).
+- `pg_insert.rs` — **C-4 step 2 (2026-10-09):** Postgres-target INSERT routing on this door
+  (a router child because `../router.rs` is at its line ceiling and `../lib.rs` at its
+  re-export ceiling). Appends drive the shared `repark_core::write_postgres` sink; overwrite
+  refuses with the `CONNECT-DECL-pg-write-modes` row, REPLACE and UPDATE with the
+  `CONNECT-DECL-pg-write-upsert` row. The `write.path` writer option is read off
+  `StatementWriteOptions::raw` and parsed by the shared core parser (`bulk` default, `row`
+  forces the INSERT path, anything else refuses as `Configuration`/IllegalArgumentException).
+  The write future is heap-boxed at the module boundary (clippy large-futures). Door pins are
+  [../tests/pg_insert.rs](../tests/pg_insert.rs).
+  pins: c-4/C-013, C-014
+- `update.rs` — **C-4 step 2 (2026-10-09):** `execute_update` moved verbatim out of
+  `../router.rs` (line ceiling) plus the Postgres upsert check after the P11 refusal, so a
+  populated read-only set keeps refusing with the P11 text and an unpopulated one names the
+  `CONNECT-DECL-pg-write-upsert` row.
+  pins: c-4/C-013
 
 ## Pointers
 
