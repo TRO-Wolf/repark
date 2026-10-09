@@ -217,7 +217,7 @@ def test_cross_join_of_two_derivations_answers_as_inner(
     _assert_route_taken(route, route_hits, 2)
 
 
-def test_cross_join_with_a_nondeterministic_condition_answers_as_inner(
+def test_cross_join_with_a_nondeterministic_condition_refuses_as_inner(
     spark: ReparkSession,
 ) -> None:
     frames = _frames(spark)
@@ -234,10 +234,12 @@ def test_cross_join_with_a_nondeterministic_condition_answers_as_inner(
         )
     )
     assert cross == inner
-    assert cross[0] == "rows"
+    assert cross[0] == "refused"
+    assert cross[1] == "AnalysisException"
+    assert "[INVALID_NON_DETERMINISTIC_EXPRESSIONS]" in cross[2]
 
 
-def test_cross_join_with_an_untyped_null_condition_answers_as_inner(
+def test_cross_join_with_an_untyped_null_condition_refuses_as_inner(
     spark: ReparkSession,
 ) -> None:
     frames = _frames(spark)
@@ -246,4 +248,6 @@ def test_cross_join_with_an_untyped_null_condition_answers_as_inner(
     cross = _outcome(lambda: left.join(right, spark_functions.lit(None), "cross"))
     inner = _outcome(lambda: left.join(right, spark_functions.lit(None), "inner"))
     assert cross == inner
-    assert cross[0] == "rows"
+    assert cross[0] == "refused"
+    assert cross[1] == "AnalysisException"
+    assert "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE]" in cross[2]
