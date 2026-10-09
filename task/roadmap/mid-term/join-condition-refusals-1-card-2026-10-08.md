@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-08. **Filed by:** Muse Spark (muse-spark-1.3-contributor), CROSS-JOIN-CONDITION-1 fold 1, from the orchestrator's brief and the Opus verifier's verdict on that unit.
 
-**Status:** closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2 (same unit that filed it).
+**Status:** re-opened 2026-10-09 by CROSS-JOIN-CONDITION-1 fold 3, narrowed to the five residues below (the fold-2 close stands for the landed refusal grid).
 
 **Retires:** when every join door refuses the conditions Spark refuses with Spark's error class, pinned per condition and per join type.
 
@@ -59,3 +59,26 @@ join type in `test_join_condition_refusals_1.py` (134 legs over the
 grid is the oracle. Residue, pinned as out of scope: SQL `CROSS JOIN ... ON`
 stays a parse refusal where Spark answers, and a nondeterministic Python UDF in
 a DF-door condition still answers.
+
+## Re-open (2026-10-09)
+
+CROSS-JOIN-CONDITION-1 fold 3 closes the Opus re-verify S2 (the accessors
+answer the condition and parameters; pins assert them) and re-opens this card
+narrowed to the re-verify's five S3 residues, recorded as R-CJC-1..R-CJC-5 in
+[cross-join-condition-1-ledger.md](../../ledgers/staging/cross-join-condition-1-ledger.md):
+
+- R-CJC-1 (DML reach): the rule also refuses under MERGE, INSERT ... SELECT
+  and CTAS, unpinned; MERGE ON a non-deterministic condition carries the join
+  condition name where Spark names the merge condition.
+- R-CJC-2 (lateral): a lateral join with a non-deterministic ON carries the
+  generic condition name where Spark names the lateral-join condition.
+- R-CJC-3 (rendering): the refusal text is byte-equal for the oracle's 14
+  conditions only; internal names leak into the rendering outside that set.
+- R-CJC-4 (UDF correction): the fold-2 line that a non-deterministic Python
+  UDF still answers is wrong — every UDF form already refuses, as on main.
+- R-CJC-5 (struct equality): the struct-equality cross join refuses where
+  Spark answers 0 rows and main answered 12 wrong rows (a refusal in place of
+  wrong rows, ruled S3 by the orchestrator).
+
+The fold-2 gates stay satisfied for the landed grid; the re-opened scope
+retires when each residue is fixed or carded onward with its own gate.

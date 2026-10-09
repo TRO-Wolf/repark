@@ -27,7 +27,7 @@ shared names under `"cross"` answering as inner-USING (ruling 3 fallback, kept r
 | C-005 | Each pin fails for its reason: four mutations, each red, each reverted. | §Mutations. | PROVEN | M1 reds the SQL legs, M2 the native legs, M3 the unmoved cell, M4 (fold 1) the route assertions. |
 | C-006 | No test outside the new file changes its result against main. | The neighbour run §Gates. | PROVEN | The same 3 pre-existing `test_fa_5_duplicate_csv.py` failures (missing native `rename_duplicate_tolerant`, unrelated to joins) before and after; +20 new passes, zero flips. |
 | C-007 | The card reads closed with the date, every touched directory's `map.md` moves in the same change, and the parity registry carries no cross-join row to update. | Diff of the card, `task/roadmap/mid-term/map.md`, the three `map.md` rows; `check_docs_links.py`. | PROVEN | `grep cross docs/spark-sql-iceberg-parity.md` names only the ANSI `cross_door` suite and branch cross-read legs, neither a cross-join registry row. |
-| C-008 | Every join door refuses the conditions Spark refuses for every join type, with Spark's class, condition and text. | `test_join_condition_refusals_1.py` (per how per door: the DataFrame door over 7 hows, the SQL door over 6, for `rand(7) < 0.5`, eq-and-`rand`, untyped NULL, `1`, `'true'`, bare `rand(1)`; uuid/shuffle/randn generality; oracle-replayed controls) plus `crates/repark-spark/src/tests/join_condition_refusals.rs` and the two cross-refuses-as-inner pins in `test_cross_join_condition_1.py`. | PROVEN | Fold 2 (2026-10-08): the fold-1 accept ruling below is SUPERSEDED by the owner's-delegate ruling of 2026-10-08 (refuse with Spark's class, condition and text; this fold). The `JoinConditionRefusals` analyzer rule refuses nondeterministic conditions (`INVALID_NON_DETERMINISTIC_EXPRESSIONS`) and non-boolean conditions (`JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE`, type check first per the Spark ordering probe) for every how on both doors; 104 grid cells moved rows-or-DataFusion-text to Spark's class (all Spark-equal), zero other cells moved, controls replay the oracle. Original fold-1 record kept: eight cells from the Opus verifier (grid `cond/rand`, extra `eq-and-rand`/`rand-lt-half`/`null-untyped`) where head's cross equalled head's inner and main's inner while Spark refused; ruled then (orchestrator, owner informed): carried to card JOIN-CONDITION-REFUSALS-1 ([join-condition-refusals-1-card-2026-10-08.md](../../roadmap/mid-term/join-condition-refusals-1-card-2026-10-08.md)), now closed by this fold. |
+| C-008 | Every join door refuses the conditions Spark refuses for every join type, with Spark's class, condition and text. | `test_join_condition_refusals_1.py` (per how per door: the DataFrame door over 7 hows, the SQL door over 6, for `rand(7) < 0.5`, eq-and-`rand`, untyped NULL, `1`, `'true'`, bare `rand(1)`; uuid/shuffle/randn generality; oracle-replayed controls) plus `crates/repark-spark/src/tests/join_condition_refusals.rs` and the two cross-refuses-as-inner pins in `test_cross_join_condition_1.py`. | PROVEN | Fold 2 (2026-10-08): the fold-1 accept ruling below is SUPERSEDED by the owner's-delegate ruling of 2026-10-08 (refuse with Spark's class, condition and text; this fold). The `JoinConditionRefusals` analyzer rule refuses nondeterministic conditions (`INVALID_NON_DETERMINISTIC_EXPRESSIONS`) and non-boolean conditions (`JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE`, type check first per the Spark ordering probe) for every how on both doors; 104 grid cells moved rows-or-DataFusion-text to Spark's class (all Spark-equal), zero other cells moved, controls replay the oracle. Original fold-1 record kept: eight cells from the Opus verifier (grid `cond/rand`, extra `eq-and-rand`/`rand-lt-half`/`null-untyped`) where head's cross equalled head's inner and main's inner while Spark refused; ruled then (orchestrator, owner informed): carried to card JOIN-CONDITION-REFUSALS-1 ([join-condition-refusals-1-card-2026-10-08.md](../../roadmap/mid-term/join-condition-refusals-1-card-2026-10-08.md)), now closed by this fold. Fold 3 (2026-10-09): the accessors answer the condition and parameters with no rule header in `str(e)` (pins assert them); the card re-opens narrowed to residues R-CJC-1..R-CJC-5. |
 
 ## The fix
 
@@ -126,6 +126,42 @@ Out of scope, observed while measuring:
   prefixes the rule header, the known house pattern (condition asserted off the
   head line instead).
 
+## Fold 3 record (2026-10-09)
+
+- Step 1 (the Opus re-verify S2, the fold's only product goal): the two join
+  refusals travel the classified-error path in Rust. `engine_err` peels the
+  `join_condition_refusals` rule wrap to the bare `[CONDITION] … SQLSTATE: 42K0E`
+  payload (`join_refusal_message` in `crates/repark-core/src/error_map.rs`,
+  gated on the rule name and the two join heads, beside the grouping and
+  coercion peels), and `to_py_err`'s `Analysis` arm
+  (`crates/repark-python/src/join_refusal.rs`) attaches `_spark_error_class`
+  and `_spark_message_parameters` parsed from the bare payload. `getCondition()`,
+  `getErrorClass()`, `getMessageParameters()` and `getSqlState()` now answer
+  Spark's values and `str(e)` no longer shows the rule header. Foreign rule
+  wraps (`spark_expr_semantics`/ntz, `lambda_rebind`) and bare heads keep the
+  full display (pinned); the replace-where `INVALID_NON_DETERMINISTIC_EXPRESSIONS`
+  (no rule header) keeps its `Error during planning: ` display with its
+  pre-existing `None` parameters. `lib.rs` stays under its 190 ceiling (185).
+- Step 1 measurement: `getCondition()`, `getErrorClass()`,
+  `getMessageParameters()` and `getSqlState()` re-measured on live Spark 4.1.2
+  (banner `4.1.2`, `/tmp/sparkenv`, `local[1]`) for the 11 refusing conditions
+  on the DataFrame door plus `rand_lt_half` and `null_untyped` on the SQL door:
+  `getErrorClass()` equals `getCondition()` on every cell,
+  `getMessageParameters()` equals the oracle's recorded params (values carry
+  their double quotes), `getSqlState()` is `42K0E`. The recording gains
+  `errorClass` on every refusing cell plus the provenance note. Pins assert the
+  accessors, no longer the head line; the pin literals equal the fresh Spark
+  values on all 11 conditions (0 mismatches on the 10 oracle-covered cells).
+- Step 2 (the m5 S3): `test_refused_join_inside_a_subquery_expression_refuses`
+  (SQL door, refused join inside an `IN` subquery) plus the matching Rust case.
+  Both kill m5: with `apply_with_subqueries` weakened to `apply` the Rust test
+  and (after `make develop`) the Python pin fail; reverted, all green.
+- C-008 stays PROVEN (evidence appended below); the refusal card re-opens
+  narrowed to the five dated residues R-CJC-1..R-CJC-5.
+- Bite: `join_rule_wrap_peels_to_the_bare_refusal` fails with the wiring
+  disabled; the accessor pins fail on the pre-fix build (`None` accessors,
+  recorded in the hand-back repro).
+
 ## Fold 1 record (2026-10-08)
 
 - The five condition cells' literals re-derived on live Spark 4.1.2 (banner `4.1.2`,
@@ -139,6 +175,16 @@ Out of scope, observed while measuring:
 - M4: forcing `_join_exact_plan` to miss reds the 6 native route assertions and nothing
   else; reverted. `test_cross_join_condition_1.py`: 20 passed (8 tests on 2 routes,
   inequality and false SQL-only, 2 unrouted leniency pins).
+
+## Residues
+
+| # | Residue |
+|---|---|
+| R-CJC-1 | **OPEN 2026-10-09** (Opus re-verify S3, fold 3): the rule also refuses under MERGE, INSERT ... SELECT and CTAS (4 verdict cells moved rows to refusal, all Spark-equal, none pinned): MERGE ON a non-deterministic condition carries the join condition name where Spark names `UNSUPPORTED_MERGE_CONDITION.NON_DETERMINISTIC`. Homed to the refusal card's remaining scope. |
+| R-CJC-2 | **OPEN 2026-10-09** (Opus re-verify S3, fold 3): a lateral join with a non-deterministic ON carries `INVALID_NON_DETERMINISTIC_EXPRESSIONS` where Spark names `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.LATERAL_JOIN_CONDITION_NON_DETERMINISTIC` (both refuse). Homed to the refusal card's remaining scope. |
+| R-CJC-3 | **OPEN 2026-10-09** (Opus re-verify S3, fold 3): the refusal text is byte-equal for the oracle's 14 conditions only (394 of 818 in the re-verify probe): internal names (`__repark_spark_int_add__`, `_repark_jl_<hex>`, `rand(Int32(1))` under some shapes) and some type spellings (DECIMAL vs DOUBLE, TIMESTAMP_NTZ, `Interval(MonthDayNano)`, BIGINT vs INT) leak outside the oracle set. Class, SQLSTATE and the sentence match on all 818. Homed to the refusal card's remaining scope. |
+| R-CJC-4 | **OPEN 2026-10-09** (Opus re-verify S3, fold 3): the fold-2 record's line that a non-deterministic Python UDF in a DF-door join condition still answers is wrong — every UDF form refuses before reaching the rule (bare-column `PySparkTypeError`, comparison/cast `UnsupportedOperationException`), same as main, where Spark refuses non-deterministic UDFs with `INVALID_NON_DETERMINISTIC_EXPRESSIONS` and answers deterministic ones for inner and cross. Wrong in the safe direction; behavior unchanged. Homed to the refusal card's remaining scope. |
+| R-CJC-5 | **OPEN 2026-10-09** (Opus re-verify S3, ruled by the orchestrator in the fold-3 brief): the struct-equality cross join refuses (`Unsupported CAST from Struct`, inherited from the inner door) where Spark answers 0 rows and main answered 12 wrong rows — a refusal in place of wrong rows, not worse than main. Homed to the refusal card's remaining scope. |
 
 ## Coverage attestation
 

@@ -701,6 +701,7 @@ declines it (a dated ruling in the intake, then the archive).
   inner path on both routes; `crossJoin` and shared-name/list refusals are unmoved.
 - [join-condition-refusals-1-card-2026-10-08.md](join-condition-refusals-1-card-2026-10-08.md) — **card
   JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2,
+  re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5,
   from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions
   Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's
   `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and

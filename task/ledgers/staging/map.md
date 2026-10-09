@@ -15,6 +15,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-008) to card JOIN-CONDITION-REFUSALS-1.
   Fold 2 (2026-10-08): the `JoinConditionRefusals` analyzer rule refuses those conditions with
   Spark's class, condition and text on every how of both doors (C-008 PROVEN); the card is closed.
+  Fold 3 (2026-10-09): the refusals answer the accessors with no rule header (pins assert them);
+  the card re-opens narrowed to residues R-CJC-1..R-CJC-5.
   `risk_tier: standard`. Branch `fix/cross-join-condition-1`.
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
