@@ -9,8 +9,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   arithmetic column raises the aggregate input-schema check. Step 0 shrinks to `%` +
   `TIMESTAMP` cast + view + column aggregate over non-nullable input (C-001), records
   Spark 4.1.2 values and types (C-002), and names RePark's `wrap_as_ltz` as the site
-  (C-003); the fix and pins are C-004.
+  (C-003); the default-field fix and the 10 facade pins are C-004, the sweep C-005.
   `risk_tier: standard`. Branch `fix/cast-view-agg-nullability-1`.
+  pins: cast-view-agg-nullability-1/C-001, C-002, C-003, C-004, C-005
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
   under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort

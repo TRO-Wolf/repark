@@ -142,8 +142,67 @@ the same` error, the 7 controls pass. Post-fix run: 10 pass.
 | C-001 | Step 0 shrink recorded: each reduced form and whether it raises; `%` + `TIMESTAMP` cast + view + column aggregate + non-nullable input needed, `+`/`*` not | **PROVEN** | §0.1 tables; `test_cast_view_agg_nullability_1.py` |
 | C-002 | Spark 4.1.2 values and types recorded for the full repro and the reduced forms | **PROVEN** | §0.1 Spark column; full repro max is epoch 946698993 |
 | C-003 | Site is RePark's `wrap_as_ltz`, with the logical/physical functions named | **PROVEN** | §0.2–§0.3; `EXPLAIN VERBOSE` stage trace |
-| C-004 | Fix at the site; full repro answers Spark's value and type; controls pinned; one pin red on the old behaviour for the named reason; gates green | OPEN | §1; `test_cast_view_agg_nullability_1.py`; gate runs below (facade subset running) |
-| C-005 | Sweep: neighbours compared, parity-doc row checked, card closed, attestation filed | OPEN | §2 in the sweep commit |
+| C-004 | Fix at the site; full repro answers Spark's value and type; controls pinned; one pin red on the old behaviour for the named reason; gates green | **PROVEN** | §1; `test_cast_view_agg_nullability_1.py`; gate runs below |
+| C-005 | Sweep: neighbours compared, parity-doc row checked, card closed, attestation filed | **PROVEN** | §2; attestation above |
+
+## 2. Sweep
+
+- Neighbours: §1 comparison stands (6 fixed, 20 byte-identical, 0 moved).
+- Boundary probes post-fix, all matching Spark 4.1.2's instants: empty `range(0)`
+  max is NULL; NULL modulo input gives max epoch 1 / `count(ts)` 2 / `count(*)` 3;
+  negative divisor gives max epoch 2 / min epoch 0; `id % 0` still raises
+  `[DIVIDE_BY_ZERO]` under ANSI (error path unchanged).
+- Parity-doc row: none names this defect (`docs/spark-sql-iceberg-parity.md`
+  nullability hits are the `fillna` and explode rows); no registry change.
+- Facade subset `pytest python/repark/tests -k "cast or view or agg"` (serial, no
+  xdist plugin in the fresh venv): 1470 passed, 48 skipped, 14 xfailed, 0 failed.
+- Card closed in this commit (Status fixed, §Resolution).
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: cast-view-agg-nullability-1
+  complete: true
+  reattested: []
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses walked against behavior — the 26-form shrink matrix re-run post-fix (§1), the Spark values asserted in the pins, the EXPLAIN VERBOSE stage trace naming the site (§0.2–§0.3), the fix with its pre/post pin runs and the gate list.
+      artifacts: [task/ledgers/staging/cast-view-agg-nullability-1-ledger.md, python/repark/tests/test_cast_view_agg_nullability_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary shapes exercised post-fix and matched to Spark 4.1.2 — empty input (NULL max), NULL modulo input (skipped by max, counted by count(*)), negative divisor, literal-only modulo, nullable VALUES input, non-timestamp cast targets, division, plus/star rewrites, count(*) beside count(col).
+      artifacts: [task/ledgers/staging/cast-view-agg-nullability-1-ledger.md]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The ANSI zero-divisor error path is unchanged — id % 0 still raises DIVIDE_BY_ZERO through the same view-plus-aggregate shape; the removed internal error was the defect, not a handled mode.
+      artifacts: [task/ledgers/staging/cast-view-agg-nullability-1-ledger.md]
+    - id: AT-4
+      status: N/A
+      justification: A stateless analyzer rewrite over an immutable plan; no shared state, no ordering assumption, no concurrency surface.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, no secret, no deserialized input, no path handling; the change narrows an Arrow field constructor call.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The 20 previously-answering neighbour forms are byte-identical post-fix; the logical side is untouched so every analyzed schema is unchanged; the parquet roundtrip control pins the materialized path.
+      artifacts: [task/ledgers/staging/cast-view-agg-nullability-1-ledger.md, python/repark/tests/test_cast_view_agg_nullability_1.py]
+    - id: AT-7
+      status: N/A
+      justification: No added pass or allocation — the fix removes one nullability computation and one field construction per wrapped cast.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The DataFusion contract is read at its source — Cast::new builds the default field, cast_output_field derives logical nullability from the child, CastExpr::nullable honors a named target field — and the fix uses the default-field path both sides derive from; nothing about upstream is presumed.
+      artifacts: [task/ledgers/staging/cast-view-agg-nullability-1-ledger.md]
+    - id: AT-9
+      status: N/A
+      justification: No new log, metric, or error text; the failure the fix removes diagnosed itself with the field-level mismatch message.
+    - id: AT-10
+      status: ATTACKED
+      evidence: The pre-fix run is the revert mutation — the 3 raising-form pins fail with the card's named error while the 7 controls pass, and all 10 pass post-fix; the diff removes a branch and adds none, so every changed line is covered by a pin that reds without it.
+      artifacts: [python/repark/tests/test_cast_view_agg_nullability_1.py]
+```
 
 ## Residues
 
@@ -161,8 +220,8 @@ the same` error, the 7 controls pass. Post-fix run: 10 pass.
 - `cargo test --locked -p repark-functions --lib`: 902 passed, 0 failed, 1 ignored.
 - `make develop`: exit 0 (rebuilt with the fix; rebuilt again after the extras sync).
 - Unit test file (10 tests): 3 fail pre-fix with the card's error, 7 pass; 10 pass post-fix.
-- `pytest python/repark/tests -k "cast or view or agg"`: running at commit time (serial; no
-  xdist plugin in the fresh venv); result recorded in the sweep commit.
+- `pytest python/repark/tests -k "cast or view or agg"` (serial; no xdist plugin in the
+  fresh venv): 1470 passed, 48 skipped, 14 xfailed, 0 failed.
 - `uvx ruff@0.15.22 check .` / `format --check .`: clean (3 UP017 autofixes + 1 format on
   the new test file).
 - `python3 scripts/sync_map_md.py --check`: 374 maps clean.

@@ -2,7 +2,9 @@
 
 **Date:** 2026-10-08. **Filed by:** Claude (Haiku 5.5), docs lane, from the orchestrator's brief.
 
-**Status:** open. Not scheduled. Not attributed to any unit.
+**Status:** fixed 2026-10-08 by the CAST-VIEW-AGG-NULLABILITY-1 unit (branch
+`fix/cast-view-agg-nullability-1`). Ledger:
+[../../ledgers/staging/cast-view-agg-nullability-1-ledger.md](../../ledgers/staging/cast-view-agg-nullability-1-ledger.md).
 
 **Retires:** when the cause is fixed at its source, or when it is reported upstream and the
 repo records the upstream reference and a pin that fails on the wrong answer.
@@ -69,3 +71,16 @@ Scope is the one shape above. Other nullability paths are not in the ask.
 ## Pointers
 
 - The shape of a card: [fa-6-duplicate-view-schemas-card-2026-10-08.md](fa-6-duplicate-view-schemas-card-2026-10-08.md).
+
+## Resolution (2026-10-08)
+
+The site was RePark's `wrap_as_ltz` (`crates/repark-functions/src/instant_ts.rs`),
+which wrapped `CAST(<integer> AS TIMESTAMP)` in a cast carrying a named field with
+analyzer-time nullability. After `simplify_expressions` folded the modulo
+zero-guard, the logical side said non-nullable while the physical side honored the
+stale named field, and the aggregate input check raised. The fix builds the cast
+with `Cast::new` so both sides derive nullability from the child. The full repro
+answers Spark 4.1.2's instant (epoch 946698993) and type; all 26 Step 0 neighbours
+compared (6 fixed, 20 byte-identical); pins in
+`python/repark/tests/test_cast_view_agg_nullability_1.py`. The `TIMESTAMP_NTZ`
+twin (`wrap_as_ntz`) is an untested residue (ledger R-1).

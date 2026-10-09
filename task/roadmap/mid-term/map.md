@@ -713,10 +713,11 @@ declines it (a dated ruling in the intake, then the archive).
   where Spark has all three as built-ins; the DataFrame door answers `timestamp_micros`. Step 0 records Spark's
   answers and types; the native-door spelling is an open question for the owner.
 - [cast-view-agg-nullability-1-card-2026-10-08.md](cast-view-agg-nullability-1-card-2026-10-08.md) — **card
-  CAST-VIEW-AGG-NULLABILITY-1 (2026-10-08, open, not scheduled, not attributed to a unit):** `max` over a view of
-  `CAST(… AS TIMESTAMP)` of arithmetic over `range` raises a DataFusion internal schema error (a field nullability
-  mismatch at `ts`); `count(*)`, a plain `SELECT` and a parquet round trip answer. Step 0 shrinks the repro and
-  records Spark's answer; the fix is at the source or reported upstream.
+  CAST-VIEW-AGG-NULLABILITY-1 (2026-10-08, fixed 2026-10-08 by the unit on branch
+  `fix/cast-view-agg-nullability-1`):** `max` over a view of `CAST(… AS TIMESTAMP)` of arithmetic over `range`
+  raised a DataFusion internal schema error (a field nullability mismatch at `ts`); the site was RePark's
+  `wrap_as_ltz`, fixed with a default cast field, and the repro answers Spark's instant and type with the
+  Step 0 controls pinned. pins: cast-view-agg-nullability-1/C-005
 - [utc-timestamp-port-1-card-2026-10-08.md](utc-timestamp-port-1-card-2026-10-08.md) — **card
   UTC-TIMESTAMP-PORT-1 (2026-10-08, open, not scheduled, ruled 2026-10-08 as a follow-up to ZONE-HORIZON-RENDER-1,
   from its C-012, R-1 and R-12):** `from_utc_timestamp` and `to_utc_timestamp` read standard time after 2099 because

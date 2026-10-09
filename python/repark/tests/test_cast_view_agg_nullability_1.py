@@ -1,6 +1,6 @@
 """Max over a view of a cast modulo column answers Spark's value and type.
 
-pins: cast-view-agg-nullability-1/C-001, C-002, C-003, C-004
+pins: cast-view-agg-nullability-1/C-001, C-002, C-003, C-004, C-005
 """
 
 from __future__ import annotations
