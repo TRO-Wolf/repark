@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -564,39 +565,49 @@ def test_manager_methods_refuse_on_stopped_session() -> None:
         manager.awaitAnyTermination()
 
 
+def test_query_constructor_needs_a_handle() -> None:
+    with pytest.raises(TypeError):
+        StreamingQuery()
+
+
 def test_query_await_termination_validates_timeout() -> None:
     for bad in (-1, 0, "x"):
         with pytest.raises(PySparkValueError) as excinfo:
-            StreamingQuery().awaitTermination(bad)
+            StreamingQuery(object()).awaitTermination(bad)
         assert excinfo.value.getErrorClass() == "VALUE_NOT_POSITIVE"
         assert excinfo.value.getMessageParameters() == {
             "arg_name": "timeout",
             "arg_value": type(bad).__name__,
         }
-    with pytest.raises(NotImplementedError) as excinfo:
-        StreamingQuery().awaitTermination()
-    _terminal_type(excinfo)
-    with pytest.raises(NotImplementedError) as excinfo:
-        StreamingQuery().awaitTermination(5)
-    _terminal_type(excinfo)
+    seen: list[object] = []
+    handle = SimpleNamespace(await_termination=lambda timeout: seen.append(timeout))
+    assert StreamingQuery(handle).awaitTermination() is None
+    assert StreamingQuery(handle).awaitTermination(5) is None
+    assert seen == [None, 5]
 
 
-def test_query_surface_raises_stub_terminal() -> None:
-    query = StreamingQuery()
-    for probe in (
-        lambda: query.id,
-        lambda: query.runId,
-        lambda: query.name,
-        lambda: query.isActive,
-        lambda: query.status,
-        lambda: query.lastProgress,
-        lambda: query.recentProgress,
-        query.stop,
-        query.exception,
-    ):
-        with pytest.raises(NotImplementedError) as excinfo:
-            probe()
-        _terminal_type(excinfo)
+def test_query_members_delegate_to_the_handle() -> None:
+    handle = SimpleNamespace(
+        id=lambda: "q-1",
+        run_id=lambda: "r-1",
+        name=lambda: "named",
+        is_active=lambda: True,
+        status=lambda: '{"isTriggerActive": true}',
+        last_progress=lambda: None,
+        recent_progress=lambda: ['{"batchId": 0}'],
+        stop=lambda: None,
+        exception=lambda: None,
+    )
+    query = StreamingQuery(handle)
+    assert query.id == "q-1"
+    assert query.runId == "r-1"
+    assert query.name == "named"
+    assert query.isActive is True
+    assert query.status == {"isTriggerActive": True}
+    assert query.lastProgress is None
+    assert query.recentProgress == [{"batchId": 0}]
+    assert query.stop() is None
+    assert query.exception() is None
 
 
 def test_writer_trigger_accepts_five_seconds_mb0c_t1(spark: ReparkSession) -> None:

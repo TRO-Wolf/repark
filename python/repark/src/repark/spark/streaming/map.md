@@ -39,6 +39,10 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   for real and validates the `awaitAnyTermination` timeout (`< 0`) before the
   terminal. All three manager methods check the session is alive.
   pins: mb-4/C-006
+  **MB-4 round 3 (2026-10-08):** `StreamingQuery(handle)` binds the native
+  `PyStreamingQuery`; every member delegates to it (`status`/`lastProgress`/
+  `recentProgress` parse the native JSON). The manager keeps its stub terminal
+  until item 8. pins: mb-4/C-024
 - `__init__.py` — **MB-4 surface half (2026-10-08):** re-exports the four public names.
   pins: mb-4/C-004
 

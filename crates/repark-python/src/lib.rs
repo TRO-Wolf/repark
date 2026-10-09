@@ -29,6 +29,7 @@ mod session_tests;
 mod session_write_options;
 mod streaming;
 mod streaming_errors;
+mod streaming_query;
 mod subquery;
 mod temp_view_names;
 mod text_io;
@@ -173,6 +174,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     session_sources::register(module)?;
     session_write_options::register(module)?;
     streaming::register(module)?;
+    streaming_query::register(module)?;
     subquery::register(module)?;
     temp_view_names::register(module)?;
     text_io::register(module)?;

@@ -122,6 +122,10 @@ pins: mb-3/C-031
     bounds the sink load and the source open and hands the limit to the source
     (`with_catalog_timeout`, fold 2), and `stop` bounds its re-read of the sink after a
     stop timeout, falling back to the durable record it knows. pins: mb-3/C-010
+  **MB-4 round 3 (2026-10-08):** the R-12/OQ-5 private seam for the facade pins:
+  `start_below_catalog_check` is `pub` and no longer `cfg(test)` (the `Skip` arm with it),
+  so the `_native` doors start on the memory catalogs the pins run on; `start` keeps the
+  MBE-8 refusal. pins: mb-4/C-024
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and

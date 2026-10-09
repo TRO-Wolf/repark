@@ -658,7 +658,6 @@ pub(crate) enum Ending {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CatalogCheck {
     Enforce,
-    #[cfg(test)]
     Skip,
 }
 
@@ -751,8 +750,8 @@ impl QueryHandle {
         self.launch(CatalogCheck::Enforce)
     }
 
-    #[cfg(test)]
-    pub(crate) fn start_below_catalog_check(&self) -> Result<(), MicroBatchError> {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn start_below_catalog_check(&self) -> Result<(), MicroBatchError> {
         self.launch(CatalogCheck::Skip)
     }
 

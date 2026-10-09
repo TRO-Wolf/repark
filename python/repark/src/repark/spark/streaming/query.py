@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, NoReturn
 
 from repark.errors import PySparkValueError
 
 if TYPE_CHECKING:
-    from repark._native import StreamingQueryException
+    from repark._native import PyStreamingQuery, StreamingQueryException
     from repark.spark.session.session_core import ReparkSession
 
 
@@ -19,40 +20,45 @@ class StreamingQuery:
     All these methods are thread-safe.
     """
 
+    def __init__(self, handle: PyStreamingQuery) -> None:
+        """Bind to a native query handle; only the writer start doors construct queries."""
+        self._handle = handle
+
     @property
     def id(self) -> str:
         """Returns the unique id of this query."""
-        _stub_terminal()
+        return self._handle.id()
 
     @property
     def runId(self) -> str:  # noqa: N802 — PySpark property name
         """Returns the unique id of this run of the query."""
-        _stub_terminal()
+        return self._handle.run_id()
 
     @property
     def name(self) -> str | None:
         """Returns the name of the query, or None if not specified."""
-        _stub_terminal()
+        return self._handle.name()
 
     @property
     def isActive(self) -> bool:  # noqa: N802 — PySpark property name
         """Whether this query is currently active."""
-        _stub_terminal()
+        return self._handle.is_active()
 
     @property
     def status(self) -> dict[str, object]:
         """Returns the current status of the query."""
-        _stub_terminal()
+        return json.loads(self._handle.status())
 
     @property
     def recentProgress(self) -> list[dict[str, object]]:  # noqa: N802 — PySpark property name
         """Returns an array of the most recent progress updates for this query."""
-        _stub_terminal()
+        return [json.loads(text) for text in self._handle.recent_progress()]
 
     @property
     def lastProgress(self) -> dict[str, object] | None:  # noqa: N802 — PySpark property name
         """Returns the most recent progress update of this streaming query."""
-        _stub_terminal()
+        text = self._handle.last_progress()
+        return None if text is None else json.loads(text)
 
     def awaitTermination(self, timeout: int | None = None) -> bool | None:  # noqa: N802
         """Waits for the termination of `this` query, either by query.stop() or by an exception.
@@ -70,15 +76,15 @@ class StreamingQuery:
                     "arg_value": type(timeout).__name__,
                 },
             )
-        _stub_terminal()
+        return self._handle.await_termination(timeout)
 
     def stop(self) -> None:
         """Stop this streaming query."""
-        _stub_terminal()
+        self._handle.stop()
 
     def exception(self) -> StreamingQueryException | None:
         """Returns the StreamingQueryException if the query was terminated by an exception."""
-        _stub_terminal()
+        return self._handle.exception()
 
 
 class StreamingQueryManager:
