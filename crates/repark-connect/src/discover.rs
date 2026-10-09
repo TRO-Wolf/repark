@@ -75,6 +75,16 @@ ORDER BY col.attnum";
 pub enum Privilege {
     Usage,
     Select,
+    Insert,
+}
+
+impl Privilege {
+    pub(crate) fn action(self) -> &'static str {
+        match self {
+            Privilege::Usage | Privilege::Select => "reading",
+            Privilege::Insert => "writing to",
+        }
+    }
 }
 
 impl fmt::Display for Privilege {
@@ -82,6 +92,7 @@ impl fmt::Display for Privilege {
         f.write_str(match self {
             Privilege::Usage => "USAGE",
             Privilege::Select => "SELECT",
+            Privilege::Insert => "INSERT",
         })
     }
 }

@@ -43,6 +43,14 @@ statement pushed and what it left (CC-1). D-M6 measured DataFusion 54.1 first: i
 fire. The crate gains `async-trait` (already in the tree), optional under `postgres`.
 pins: c-2/C-068, C-075, C-080, C-088
 
+**C-4 step 1 (2026-10-08)** adds the write core behind `postgres` (`write.rs`, `write/`):
+`COPY … FROM STDIN (FORMAT BINARY)` as the bulk path, a row `INSERT` path, and the selector
+`WriteRequest::open(pool, WritePath, WriteOptions)`. Both paths send one encoder's bytes
+(`types/postgres/encode.rs`), so they store byte-identical tables; `interval` is the one type
+COPY BINARY cannot carry and puts a write on the row path. One write is one transaction. No
+door calls it yet: the routing and the `write.path` option are the next slice. No new
+dependency. pins: c-4/C-005, C-006
+
 ## Contents
 
 - `Cargo.toml` — workspace inheritance for edition, version, license, rust-version, repository,
@@ -88,6 +96,14 @@ keeps the ten C-1 rows; for `numeric`, `interval` and `uuid`, ADBC's documented 
 because Spark governs the surface (North Star §2). Both bars are documents, not runs; the full
 citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4. pins: c-2/C-013
 
+**C-4 step 1.** ADBC is the bar for the write: append into an existing table as one COPY
+statement, a typed refusal when a batch does not fit the table, and one type table for the bulk
+path and the bound-parameter path, which here is one encoder. C-4 departs where C-2 did (the
+Arrow types are the ones Spark's dialect surfaces) and writes `interval` from the server's text
+on the row path. ConnectorX has no load into a database; its binary COPY codec shape is reused
+in the write direction. Both are documents, not runs; the citations are in the
+[C-4 ledger](../../task/ledgers/staging/c-4-ledger.md) §6. pins: c-4/C-012
+
 ## I want to...
 
 | ...do this | go to |
@@ -102,6 +118,8 @@ citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
 | Read a resolved source | `src/read/postgres.rs`: `scan(pool, ScanRequest::new(resolved), ScanOptions::from_settings(&settings))`; push a value with `compare`, never by editing SQL text |
 | Mount a Postgres source | `src/provider/catalog.rs`: `PostgresSource::mount(&identity, props, localiser)` gives the `Arc<dyn CatalogProvider>`; `PostgresSource::table(resolved)` builds a table from an injected resolution, with no network |
 | Push a new predicate shape | `src/pushdown.rs`: a `render` arm that is exact for every eligible column, a pin with its live half (rows equal with `pushdown_predicate = false`), and the mutation that turns it red |
+| Write Arrow batches into a Postgres table | `src/write.rs`: `WriteRequest::new(&resolved)?`, optionally `.columns(&[…])`, then `.open(&pool, WritePath::Bulk, WriteOptions::from_settings(&settings))`, `write(&batch)` per batch and `commit()`; drop the writer to roll back |
+| Make a new mapped type writable | `src/types/postgres/encode.rs`: a `ColumnEncoder` arm (the match is exhaustive) and its `carriage()`; a column in `tests/it/write.rs` `samples()`, which the parity cell picks up |
 | Add the SQL Server map | `src/types/mssql.rs` beside `postgres.rs` (C-5) |
 
 ## Component contract
@@ -145,7 +163,8 @@ citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
 
 - Up: [../map.md](../map.md)
 - Ledgers: [c-1-ledger.md](../../task/ledgers/staging/c-1-ledger.md),
-  [c-2-ledger.md](../../task/ledgers/staging/c-2-ledger.md)
+  [c-2-ledger.md](../../task/ledgers/staging/c-2-ledger.md),
+  [c-4-ledger.md](../../task/ledgers/staging/c-4-ledger.md)
 - Registry rows: [docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md) §5,
   the `CONNECT-DECL-*` family beside `SES-DECL`. pins: c-1/C-009
 
@@ -159,6 +178,8 @@ citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
 | A batch differs with chunking | `copy_decode_is_independent_of_chunking`: a field or fixed word that straddles a chunk must go through the carry buffer |
 | `TlsRequired` against a server with TLS | the server answered the SSLRequest with `N`; check its `ssl = on`. `sslmode=disable` is the only plaintext switch |
 | `TlsHandshake { UntrustedCertificate }` | the server's chain does not reach the system roots or `sslrootcert`; point `sslrootcert` at the CA bundle |
+| A write fails with `Timeout { Read }` between batches | the row path is idle in its transaction while the `SELECT` computes; raise `read_timeout_ms`, or write without the `interval` column so the bulk path runs |
+| `CommitUnknown` | no answer to `COMMIT` in `read_timeout_ms`: the rows are all stored or all absent; read the table before any retry |
 | `PoolExhausted` | every permit is leased: a stream held unpolled, or `pool_max_size` too small for the concurrency |
 
 First checks: `cargo test -p repark-connect`. Escalate to: [../map.md#debug](../map.md).

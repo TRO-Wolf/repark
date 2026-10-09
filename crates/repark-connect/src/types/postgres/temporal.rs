@@ -1,5 +1,5 @@
 use super::{CodecError, fixed};
-use crate::error::ValueRefusal;
+use crate::error::{ValueRefusal, WriteValueRefusal};
 
 pub const POSTGRES_EPOCH_DAYS: i32 = 10_957;
 pub const POSTGRES_EPOCH_MICROS: i64 = 946_684_800_000_000;
@@ -22,4 +22,19 @@ pub(super) fn timestamp(bytes: &[u8]) -> Result<i64, CodecError> {
     micros
         .checked_add(POSTGRES_EPOCH_MICROS)
         .ok_or(CodecError::Refused(ValueRefusal::TimestampOutOfRange))
+}
+
+pub(super) fn date_wire(days: i32) -> Result<[u8; 4], WriteValueRefusal> {
+    days.checked_sub(POSTGRES_EPOCH_DAYS)
+        .filter(|&wire| wire != i32::MIN)
+        .map(i32::to_be_bytes)
+        .ok_or(WriteValueRefusal::DateOutOfRange)
+}
+
+pub(super) fn timestamp_wire(micros: i64) -> Result<[u8; 8], WriteValueRefusal> {
+    micros
+        .checked_sub(POSTGRES_EPOCH_MICROS)
+        .filter(|&wire| wire != i64::MIN)
+        .map(i64::to_be_bytes)
+        .ok_or(WriteValueRefusal::TimestampOutOfRange)
 }
