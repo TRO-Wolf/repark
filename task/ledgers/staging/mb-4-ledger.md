@@ -45,7 +45,7 @@ rule 2 does not bind.
 | C-012 | The `processingTime` interval grammar is ruled: which strings parse, to what durations, and which error answers an unparsable one. | The orchestrator's ruling on the hand-back's Q4. | **PROVEN** | Closed by C-020: the brief ruled Q4 and the Rust parser plus 16 facade pins implement the measured grammar. pins: mb-4/C-012 |
 | C-013 | A sourceless `load()` is ruled: `load()` with no path argument and no `path` option under the iceberg format. | The orchestrator's ruling on the hand-back's Q5. | **PROVEN** | The brief ruled Q5 for `load()`: `IllegalArgumentException`, Spark's text, no condition, no SQLSTATE; pin `test_reader_load_without_path_or_option_refuses_mb0c_f7` asserts class, `None` condition, `None` SQLSTATE and the F7 text. The `start()`-side no-path refusal moves to item 6 with the sink mapping (D-33). pins: mb-4/C-013 |
 | C-014 | The option cases with no §4 row are classified at wire-up: cap, timestamp and snapshot-id value parsing, non-boolean skip values, the four unsupported Spark keys, the two start keys together, and folded-key collisions. The stub passes all of them to the terminal; the wire-up refuses them with whatever classes the ruling gives. | The wire-up round's brief and pins. | **PROVEN** | Each listed case refuses through `from_options` as `Catalog`, rendered at start as `AnalysisException` with the passthrough verbatim, no condition, no SQLSTATE (W-Q1). Pins: the value-cases loop (skip `maybe`, both caps bad and zero, bad timestamp, bad snapshot id), the unsupported-keys loop (all four), both start keys, and the folded-key collision through the module door. pins: mb-4/C-014 |
-| C-015 | Step 4 flips `spark.readStream` / `spark.streams` (with the `session_core.py` stops-every-query fold and its lowered baseline), flips the SES-DECL rows and files the registry rows drafted in this ledger. | The wire-up round's brief and pins. | **OPEN** | Nothing in this round touches `session_surface.py`, `session_core.py` or the parity doc. |
+| C-015 | Step 4 flips `spark.readStream` / `spark.streams` (with the `session_core.py` stops-every-query fold and its lowered baseline), flips the SES-DECL rows and files the registry rows drafted in this ledger. | The wire-up round's brief and pins. | **OPEN** | Round 4: the stops-every-query fold (C-030), the flip (C-031) and the SES-DECL retirements all landed; only the registry rows drafted in this ledger still ride item 15. |
 | C-016 | The two exceptions gain their `errors.py` re-export and structured-method loop entries in the wire-up round. | The wire-up round's brief and pins. | **PROVEN** | `errors.py` re-exports both exceptions with structured-method loop entries and `__module__` re-homing; verified live (`getCondition`/`getSqlState`/`getMessageParameters` on a `STREAM_FAILED` instance). pins: mb-4/C-016 |
 | C-017 | The PySpark members outside §3.7 land in the wire-up round or a dated card: the reader's `csv`, `json`, `orc`, `parquet`, `schema`, `text` and `xml`, the writer's `clusterBy`, `foreach` and `partitionBy`, the manager's `resetTerminated`, the query's `processAllAvailable`, and `load`'s `format`/`schema` kwargs. | The wire-up round's brief and pins. | **OPEN** | The stub implements exactly the §3.7 surface; anything else is an `AttributeError` or `TypeError` today. |
 | C-018 | The driver-owned start checks land at wire-up: MBE-8 (local catalog), MBE-15 (isolation), MBE-13 at start (sink busy), the stateful-operator arm of MBE-6, and the run-time rows MBE-1, MBE-2, MBE-11, MBE-12 and MBE-16 — with the streaming frame, `isStreaming` and the `writeStream` answer. | The wire-up round's brief and pins. | **OPEN** | The stub cannot reach a session's catalogs without re-implementing resolution, and `surface_a.py` / `streaming_batch.py` stay vacuous-correct until frames exist. |
@@ -60,6 +60,12 @@ rule 2 does not bind.
 | C-026 | Item 7 lands except the `count` leg: the foreach arm checks checkpoint, then the declared sink, then writer unknowns, then starts through the shared spec builder with `SinkSpec::ForeachBatch`; `BatchBodyAdapter` wraps the epoch frame as the facade `DataFrame` and calls the body under `block_in_place` with the stream-poll no-detach hatch; a raising body fails the query with the Python error in the `STREAM_FAILED` cause. | The arm, the adapter, and the pins. | **PROVEN** | First pin: a `writeTo` body commits once, stamped with the `repark.cdc` keys. Replays: MB0-T2 batches, MB0-R1 resume rows, MB0-W4 rows with one body append plus one stamp per epoch. MBE-16: full `STREAM_FAILED` text with Spark's head and `batch 0 failed: RuntimeError: ...`; MBE-10 and the W8-rule refusal through the live door; `collect`/`show` in the body complete. Mutant (sink check replaced by a fixed sink): both MBE-10 pins red; restored green. `count` in the body is C-027 OPEN. pins: mb-4/C-026 |
 | C-027 | A `count()` on the batch frame inside a `foreachBatch` body completes, as `collect` and `show` do under C-026. | The batch-action pin's `count` leg. | **PROVEN** | Round 3c: `test_foreach_door_batch_actions_in_body_complete` pins `counts == [(0, 3)]` beside the `collect`/`show` legs on one 3-row batch. The leg rides the granted provider fix (D-43): `count` pushes an empty projection and the provider now rebuilds zero columns with the row count stated. pins: mb-4/C-027 |
 | C-028 | Item 8 lands: `active` lists running queries and drops stopped ones, `get` parses the id and returns the active query or `None`, `awaitAnyTermination` reports a termination (`None` without a timeout, `True` with one, `False` on a timeout, the query's error when it failed), and `resetTerminated` clears the record; the stub terminal is gone. | The manager pins: the M1/M2 `get` pins in the surface battery, the manager battery, and the two Rust manager tests. | **PROVEN** | `active` lists one running daemon query and drops it after `stop`; `get` returns the query by id; malformed ids refuse MB0c-M1 verbatim and unknown ids answer MB0c-M2 `None`; `awaitAnyTermination` answers `None`/`True` after one of two queries stops, `False` on a timeout, and raises the failed query's `STREAM_FAILED` text; `resetTerminated` clears and the next stop re-reports. Rust pins cover folded/short-form ids, the refusal shapes, and the reset-then-clear wait. Mutant (the reap keeps running queries instead of terminated ones): the Rust await-any pin red; restored green. pins: mb-4/C-028 |
+| C-029 | Race-lane Q1 lands: `conclude()` adopts the reported durable record into `Lifecycle.durable` when the lifecycle holds none, so `QueryHandle::durable()`, the exception and the `ShutdownOutcome` agree on a query that ends `RecoveryRequired` before its first resume; the item-14 test pins `restart.durable()`. | The driver lines, the pin, and the no-op argument on the other ending paths. | **PROVEN** | A 3-line `if lifecycle.durable.is_none()` in `conclude`'s `RecoveryRequired` arm; `assert_eq!(restart.durable(), Some(racer.clone()))` beside the outcome pin in `a_restart_after_the_fences_recovery_required_ending_refuses_by_name`, green. No-op elsewhere, shown by reading the callers: the in-run `RecoveryRequired` paths report `shared.durable()` (already adopted) and the stop-timeout path calls `resumed()` before `finish`, so only the pre-resume case changes; every existing `durable() == None` pin ends `Failed`/`Stopped`/`RecoveryRequired`-with-`None`. The mutant case is R-4, which measured `durable()` as `None` on the refused restart. pins: mb-4/C-029 |
+| C-030 | Item 9 lands: native `streams_stop_all` stops every known query through the shared `stop` (the first `RecoveryRequired` raises, `Failed` never does) and prunes known to still-active handles; `spark.stop()` calls `session_surface.release_session_resources` in one line, which takes the live handle first, stops the queries, runs the auto-warehouse and artifact-dir cleanups unchanged, then raises the first `RecoveryRequiredException` (W-Q4); `session_core.py` ratchets 2277 → 2269. | The native function, the release function, the one-line call, the ceiling records, and the pins. | **PROVEN** | `streams_stop_all` reuses `PyStreamingQuery::stop` per known handle and prunes after; `release_session_resources` catches the first `RecoveryRequiredException`, runs both cleanups, clears `_inner` first so the raise path still reads stopped, then raises; `stop` keeps its teardown line. Pins: a running query goes inactive and a second stop is quiet, a failed query never raises, a recovery-required query (sink replaced under the body) raises after both dirs are gone and a second stop is quiet. Rust pins cover the stop, the prune (a cleared wait answers `Some(false)`) and the empty session. Mutant (the raise moved before the cleanups): the recovery pin red on the uncleared token; restored green. The auto-warehouse and artifact-dir pins pass unchanged; `check_lib_py.sh` accepts the lowered baseline. pins: mb-4/C-030 |
+| C-031 | Item 10 lands: `spark.readStream` / `spark.streams` answer a fresh reader / manager per access, `df.writeStream` answers a writer on a streaming frame and keeps `WRITE_STREAM_NOT_ALLOWED` on a batch frame; the two SES-DECL rows retire; the three declared pins flip to the oracle cells `readStream_type`, `streams_type`, `streams_active`; every other session/DataFrame-surface pin answers identical to main; the `isStreaming` docstring is corrected line-neutrally; the freeze inventory is untouched. | The doors, the retired rows, the flipped pins, the base-vs-head neighbour diff, and the freeze test. | **PROVEN** | The doors construct through local imports after `_ensure_alive`; `streaming_batch.write_stream` branches on `is_streaming_frame` with the batch refusal verbatim. The three pins are renamed to answer pins asserting the oracle cells (`test_read_stream_declared` → `test_read_stream_answers_reader`, `test_streams_declared` → `test_streams_answers_manager`, `test_declared_properties_raise_under_hasattr` → `test_streaming_properties_answer_under_hasattr` with `dataSource`/`client` still raising). Neighbours: the round-2 selection reads 68 passed on `40fc916f` (the verified `read1/main` copy) and 69 passed at head — the delta is exactly the three renames plus the branch's watermark pin, zero flips. `core.py` stays 3461 lines; `test_api_freeze.py` green, no regen. pins: mb-4/C-031 |
+| C-032 | Item 11 lands: a credential-bearing `checkpointLocation` and option value appear in none of status, lastProgress, `repr(query)`, the run error, EXPLAIN, the snapshot summaries and the table properties, and the value-echo refusal carries the masked form. | The pin; any shown surface would have halted the item. | **PROVEN** | `test_microbatch_no_credential_on_any_surface_1` runs a `toTable` query and a failing `foreachBatch` query with userinfo-shaped secrets, then asserts all four secret strings absent from all eight surfaces; the `stream-from-timestamp` echo refusal shows `s3://u:***@h/x` (probed first, pinned with the `***` presence assert so the leg bites both ways). No surface shows a credential. pins: mb-4/C-032 |
+| C-033 | Item 12 lands: the three IPI-47 dispositions measured through the public doors — `R-STREAM-READ` reads EQUAL to MB0-R1, `R-STREAM-READ-SKIP` is the registered refusal MBE-3, `W-STREAM-WRITE-FILESRC` is defined in inventory row 55 as the Iceberg sink fed by a file-source stream with disposition registered refusal MBE-7 — and the FILE-SOURCE-1 card is filed under MB-5. | The probe run, the inventory row, and the card. | **PROVEN** | Probe of 2026-10-09 through `spark.readStream` / `df.writeStream`: R batches `[(0, [1, 2, 3]), (1, [4, 5])]` with the MB0-R1 schema; SKIP-true refuses `IllegalArgumentException` `[REPARK_MICROBATCH.SKIP_OPTION_REFUSED]` (SKIP-`maybe` refuses the C-014 value check, Spark reads it as false — the second divergence, folded into the MB-4-SKIP-OPTIONS-1 draft); FILESRC refuses `NOT_IMPLEMENTED` with `{feature: readStream.format(parquet)}` on the read and `{feature: writeStream.format(parquet)}` on the write. Row 55 carries the definition and all three dispositions; the card quotes both doors, cites the MB-0c F-cells as Spark's match target, and leaves the exact file-to-Iceberg combination for MB-5 step 0. pins: mb-4/C-033 |
+| C-034 | The W-Q2 follow-through lands: MB-0c cell D3 records `foreachBatch` with no `checkpointLocation` on live Spark — rows, the exact temporary-checkpoint warning, and a second start replaying from the start — with the `sha256` pin in step; the TEMP-CHECKPOINT-1 card holds the Spark-matching answer; the product keeps the W8 refusal. | The recorder extension, the recording with its byte-identity proof, the sha check, and the card. | **PROVEN** | `cell_d3` (with `captured_driver_log`, a log4j2 `FileAppender` over the JVM door — the gateway owns `stderr`, so an fd redirect cannot see it) records D3: both starts read batch 0 with 3 rows, the warning fires twice with the temp path normalized to `$TEMP_CHECKPOINT`, the sink holds each row twice. Two runs diff zero; the merge keeps the 31 older entries and the preamble byte-identical; all three oracle shas verify. DM-1's owed cell and card from D-39 are filed. pins: mb-4/C-034 |
 
 ## Decisions
 
@@ -354,6 +360,49 @@ rule 2 does not bind.
   overlong groups refuse `Invalid UUID string` where Java raises
   `NumberFormatException`; that corner is unmeasured and kept as the one
   deviation.
+- **D-47 (2026-10-09). Race-lane Q1: `durable()` joins the exception and the
+  outcome.** The race lane measured (R-4) that a query ending `RecoveryRequired`
+  before its first resume reports the record on the exception and the
+  `ShutdownOutcome` but `QueryHandle::durable()` stays `None`; the ruling adopts
+  the reported record into `Lifecycle.durable` in `conclude`, guarded to the
+  unset case so resumed queries never change. C-029.
+- **D-48 (2026-10-09). Item 9 stops every known query, then releases, then
+  raises (W-Q4).** `streams_stop_all` iterates the binding's known handles (an
+  active-only sweep would leave the W-Q4 raise nearly dead, since most
+  `RecoveryRequired` endings happen asynchronously) and prunes known after, so
+  a second stop finds nothing and stays quiet. The facade takes `_inner` first:
+  `_inner is None` is the stopped marker, so the raise path must clear it
+  before the cleanups run. The deterministic recovery trigger is the sink
+  replaced under a `foreachBatch` body. C-030.
+- **D-49 (2026-10-09). Item 10 renames the three flipped pins.** Keeping
+  `test_read_stream_declared` on an answering pin would lie; the rename map is
+  in C-031 and the battery map row. Neighbours run against `40fc916f` through
+  the `read1/main` copy, verified byte-identical to the base tree (4963 blobs;
+  the prebuilt native module predates streaming), driven by this lane's venv
+  with `PYTHONPATH` shadowing. The `refuse_write_stream` → `write_stream`
+  rename moves no frozen name. C-031.
+- **D-50 (2026-10-09). Item 11's error legs split vacuous from biting.** Seven
+  surfaces assert absence as regression guards; the value-echo refusal leg
+  bites on the mapper masking today (`s3://u:***@h/x`), pinned both ways so it
+  fails on a leak and on a silenced echo alike. EXPLAIN on a stream raises the
+  fixed scan refusal, so that leg pins the refusal text. C-032.
+- **D-51 (2026-10-09). Item 12 folds the skip-`maybe` second divergence into
+  the draft.** D-17's owed disposition: the MB-4-SKIP-OPTIONS-1 draft below now
+  records that a non-boolean skip value refuses at the C-014 value check while
+  Spark reads it as false (MB0-R5 scratch, per the wireup plan). The registry
+  doc itself is untouched — item 15 files both rows. C-033.
+- **D-52 (2026-10-09). W-Q2's owed cell and card are filed; DM-1's record now
+  cites them.** D3's capture attaches a log4j2 `FileAppender` over the JVM
+  door: the first attempt (fd redirect around the starts) caught nothing
+  because the gateway child inherits `stderr` at spawn. The temp path
+  normalizes to `$TEMP_CHECKPOINT`; zero warnings is a recorder crash, never a
+  recorded row. D-39's owe is closed; the TEMP-CHECKPOINT-1 card holds the
+  Spark-matching answer and the product keeps refusing. C-034.
+- **D-53 (2026-10-09). EMPTY-PROJECTION-COUNT-1 re-measured first-hand.**
+  All three D-44 repros fail on this tree with the texts the card quotes; the
+  lineage `WHERE` control answers 4. One delta from D-44: the batch changelog
+  read answers its rows here (D-44 recorded a clean MBE planning-error
+  refusal), so only the empty projection fails on that door now.
 
 ## W-Q1 records (2026-10-08, brief ruling of 2026-10-08)
 
@@ -383,6 +432,24 @@ cause. One record per variant with no §4 row, for item 2's mapper round.
 - **`OffsetPositionOutOfRange`.** Start (resume planning): `AnalysisException`. Run
   (first trigger): `STREAM_FAILED` with the variant as the cause.
   Text: the corrupt-offset guidance with table, snapshot, position and file count.
+
+## Round-4 carry-over (2026-10-09)
+
+- Items 9–12 landed (C-030, C-031, C-032, C-033): `stop` releases through the
+  native stop-all, the public doors answer, credentials appear on no surface,
+  and the IPI-47 dispositions are recorded with the FILE-SOURCE-1 card under
+  MB-5. Race-lane Q1 landed (C-029); the W-Q2 cell and card landed (C-034,
+  TEMP-CHECKPOINT-1); EMPTY-PROJECTION-COUNT-1 covers the D-44 doors.
+- Round 5 is item 15 only: file the MB-4-SKIP-OPTIONS-1 and MB-4-FORMAT-1 rows
+  (drafts above, the skip row now carrying the `maybe` arm), close the ledger
+  to `completed/`, and settle C-009, C-015, C-017 and C-018.
+- C-015 stays OPEN with the flip, the stop fold and the SES-DECL retirements
+  landed; only its registry rows ride item 15.
+- Neighbours at close: the round-2 selection reads 68 passed on `40fc916f`
+  and 69 passed at head — the delta is exactly the three item-10 renames plus
+  the branch's watermark pin, zero flips. The full gate roster is green
+  (ledger grammar, map sync, manifest, freeze, example coverage, the touched
+  crates, the MB-4 batteries).
 
 ## Round-3c carry-over (2026-10-08)
 
@@ -434,6 +501,10 @@ cause. One record per variant with no §4 row, for item 2's mapper round.
     `::test_reader_skip_delete_true_refuses_mbe3_mb0_r6`
   - **Rationale** — DECLARED 2026-10-08 (MB-4, sketch O-5). Bronze is append-only; a
     skip hides rows in a store that cannot rewind, so the read refuses instead.
+    A non-boolean value (measured `maybe`, item 12) refuses at the C-014 value
+    check with `streaming-skip-delete-snapshots needs true or false, got
+    "maybe"`; Spark reads it as false and runs (MB0-R5 scratch, per the wireup
+    plan), and that second divergence stands refused with this row.
 - **MB-4-UNKNOWN-OPTION-1** — an unknown option under an interpreted prefix refuses.
   - **repark** — `load`/`table`/`start`/`toTable` refuse an unknown `streaming-*`,
     `stream-*` or `repark.cdc.*` key with `IllegalArgumentException`

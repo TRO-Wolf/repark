@@ -163,6 +163,44 @@ def test_foreach_door_replays_mb0_r1_resume(
     ]
 
 
+def test_public_doors_replay_mb0_r1_resume(
+    spark: ReparkSession, stream_table: str, tmp_path: Path
+) -> None:
+    _append(spark, stream_table, "(1, 'k1'), (2, 'k0')")
+    _append(spark, stream_table, "(3, 'k1')")
+    _make_sink(spark, "sc.mb4.silver_pubr1")
+    body = _Collect()
+    checkpoint = str(tmp_path / "fb-pubr1")
+    for ids in ("(4, 'k0'), (5, 'k1')", None):
+        query = (
+            spark.readStream.format("iceberg")
+            .load(stream_table)
+            .writeStream.foreachBatch(body)
+            .option("repark.cdc.sink", "sc.mb4.silver_pubr1")
+            .option("checkpointLocation", checkpoint)
+            .trigger(availableNow=True)
+            .start()
+        )
+        assert query.awaitTermination() is None
+        if ids is not None:
+            _append(spark, stream_table, ids)
+    query = (
+        spark.readStream.format("iceberg")
+        .load(stream_table)
+        .writeStream.foreachBatch(body)
+        .option("repark.cdc.sink", "sc.mb4.silver_pubr1")
+        .option("checkpointLocation", checkpoint)
+        .trigger(availableNow=True)
+        .start()
+    )
+    assert query.awaitTermination() is None
+    assert body.schema == [("id", "bigint", True), ("k", "string", True)]
+    assert body.batches == [
+        (0, [[1, "k1"], [2, "k0"], [3, "k1"]]),
+        (1, [[4, "k0"], [5, "k1"]]),
+    ]
+
+
 def test_foreach_door_replays_mb0_w4_stamped(spark: ReparkSession, stream_table: str) -> None:
     _append(spark, stream_table, "(1, 'k1'), (2, 'k0')")
     sink = _make_sink(spark, "sc.mb4.silver_fbw4")
