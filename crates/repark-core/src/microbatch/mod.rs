@@ -8,6 +8,8 @@ mod foreach_tests;
 #[cfg(test)]
 mod lifecycle_tests;
 pub mod progress;
+#[cfg(test)]
+mod race_tests;
 pub mod relation;
 #[cfg(test)]
 mod reload_tests;
