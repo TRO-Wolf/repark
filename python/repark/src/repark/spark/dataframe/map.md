@@ -1291,6 +1291,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pins: df-stream-batch-1/C-001, C-002, C-003, C-004
   **MB-4 round 2b (2026-10-08):** `withWatermark` refuses MBE-7 on a streaming frame
   after Spark's own validation passes. pins: mb-4/C-023
+  **MB-4 item 10 (2026-10-09):** `writeStream` answers a `DataStreamWriter` on a
+  streaming frame and keeps the `WRITE_STREAM_NOT_ALLOWED` batch refusal; `core.py`
+  only gains the corrected `isStreaming` docstring. pins: mb-4/C-031
 - `subquery.py` owns the DF-SUBQUERY-1 method bodies (2026-09-15), bound on the class
   from `core.py` as four individual class-body assignments (`scalar = subquery.scalar`
   &c.) so the AST inventory walk sees them: `scalar` / `exists` raise Spark's

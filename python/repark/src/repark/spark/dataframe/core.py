@@ -810,7 +810,7 @@ class DataFrame:
 
     @property
     def isStreaming(self) -> bool:  # noqa: N802
-        """Whether this is a streaming DataFrame; always ``False`` (batch-only)."""
+        """Whether this is a streaming DataFrame; ``True`` on a stream, else ``False``."""
         return surface_a.isStreaming(self)
 
     is_streaming = isStreaming

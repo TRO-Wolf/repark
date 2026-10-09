@@ -3555,33 +3555,23 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   callers. The non-str `op_id` `NOT_STR` is a declared difference (ruling R-4,
   2026-09-15): reproducing a Py4J reflection leak requires a JVM, and the structured
   refusal carries the same information in repark's error taxonomy.
-### SES-DECL-readStream — no `DataStreamReader` without a streaming engine
-- **repark** — `spark.readStream` raises `PySparkNotImplementedError` with condition
-  `NOT_IMPLEMENTED` and parameters `{"feature": "readStream"}`.
-- **Apache Spark** — returns a `DataStreamReader` bound to the session's streaming context.
-  *(oracle: cell `readStream_type`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_read_stream_declared`,
-  `::test_declared_properties_raise_under_hasattr`
-- **Rationale** — DECLARED 2026-09-14. Structured Streaming needs an execution engine repark
-  does not have; the property refuses loudly rather than returning a hollow reader. Known
-  consequence (ruling R-5, 2026-09-15): because the refusal lives in the property getter,
-  `hasattr(spark, "readStream")` raises `NOT_IMPLEMENTED` rather than answering `False` —
-  the same shape classic's `client` property already has (it raises
-  `ONLY_SUPPORTED_WITH_SPARK_CONNECT`, not `AttributeError`).
-- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19; re-pointed to 1.7 on 2026-10-04) →
-  [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
-### SES-DECL-streams — no `StreamingQueryManager` without a streaming engine
-- **repark** — `spark.streams` raises `PySparkNotImplementedError` with condition
-  `NOT_IMPLEMENTED` and parameters `{"feature": "streams"}`.
-- **Apache Spark** — returns a `StreamingQueryManager` whose `active` is `[]` on an idle
-  session. *(oracle: cells `streams_type`, `streams_active`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_streams_declared`,
-  `::test_declared_properties_raise_under_hasattr`
-- **Rationale** — DECLARED 2026-09-14. Same engine gap as `readStream`; an `active == []`
-  facade would be a silent lie about query lifecycle support. The R-5 `hasattr`
-  consequence from the `readStream` row applies identically here.
-- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19; re-pointed to 1.7 on 2026-10-04) →
-  [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
+### SES-DECL-readStream — RETIRED (2026-10-09, MB-4 item 10): `spark.readStream` answers a `DataStreamReader`
+
+> **CLOSED 2026-10-09 (MB-4 item 10, ledger C-031).** The micro-batch engine wires the door:
+> `spark.readStream` answers a fresh `DataStreamReader` per access, `type(...).__name__`
+> equal to the oracle cell `readStream_type`, so the premise of this row is gone. The R-5
+> `hasattr` consequence is gone with it on this door. The replacing pins are
+> `python/repark/tests/test_session_surface_1.py::test_read_stream_answers_reader` and
+> `::test_streaming_properties_answer_under_hasattr`. Retired per §6.
+### SES-DECL-streams — RETIRED (2026-10-09, MB-4 item 10): `spark.streams` answers a `StreamingQueryManager`
+
+> **CLOSED 2026-10-09 (MB-4 item 10, ledger C-031).** The micro-batch engine wires the door:
+> `spark.streams` answers a fresh `StreamingQueryManager` per access, `type(...).__name__`
+> equal to the oracle cell `streams_type` and `active == []` on an idle session per the cell
+> `streams_active`, so the premise of this row is gone. The R-5 `hasattr` consequence is gone
+> with it on this door. The replacing pins are
+> `python/repark/tests/test_session_surface_1.py::test_streams_answers_manager` and
+> `::test_streaming_properties_answer_under_hasattr`. Retired per §6.
 ### MB-1-FL-9 — a micro-batch stream starting on an overwrite or delete with no added data files refuses at start; Spark idles while no snapshot follows it
 - **repark** — the micro-batch source (`MicroBatchSource::initial_offset`, MB-1) started with
   `Earliest` or `stream-from-timestamp`, whose start snapshot is an `overwrite` or `delete`

@@ -21,6 +21,7 @@ from repark.spark._integral import (
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
+    from repark.spark.streaming.readers import DataStreamWriter
 
 _INTERVAL_UNITS = (
     "nanoseconds?|microseconds?|milliseconds?|seconds?|minutes?|hours?|days?|weeks?|months?|years?"
@@ -84,15 +85,25 @@ def _refuse_interval_string(delay_threshold: str) -> NoReturn:
     )
 
 
-def refuse_write_stream(frame: DataFrame) -> NoReturn:
-    """Refuse ``DataFrame.writeStream`` on a batch frame. pins: df-stream-batch-1/C-001"""
-    _raise_analysis(
-        "[WRITE_STREAM_NOT_ALLOWED] `writeStream` can be called only on streaming "
-        "Dataset/DataFrame. SQLSTATE: 42601",
-        "WRITE_STREAM_NOT_ALLOWED",
-        message_parameters={},
-        sql_state="42601",
-    )
+def write_stream(frame: DataFrame) -> DataStreamWriter:
+    """Answer ``DataFrame.writeStream`` on a stream; refuse it on a batch frame.
+
+    pins: df-stream-batch-1/C-001, mb-4/C-031
+    """
+    from repark import _native
+
+    if not _native.is_streaming_frame(frame._inner):
+        _raise_analysis(
+            "[WRITE_STREAM_NOT_ALLOWED] `writeStream` can be called only on streaming "
+            "Dataset/DataFrame. SQLSTATE: 42601",
+            "WRITE_STREAM_NOT_ALLOWED",
+            message_parameters={},
+            sql_state="42601",
+        )
+
+    from repark.spark.streaming.readers import DataStreamWriter
+
+    return DataStreamWriter(frame)
 
 
 def refuse_rdd(frame: DataFrame) -> NoReturn:
@@ -233,6 +244,6 @@ def drop_duplicates_within_watermark(frame: DataFrame, subset: object = None) ->
 DECLARED_MEMBERS = (
     property(refuse_rdd),
     property(refuse_plot),
-    property(refuse_write_stream),
+    property(write_stream),
     pandas_api,
 )

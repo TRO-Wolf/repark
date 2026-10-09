@@ -32,6 +32,8 @@ from repark.spark.column import Column
 if TYPE_CHECKING:
     from repark.spark.dataframe import DataFrame
     from repark.spark.session.session_core import ReparkSession
+    from repark.spark.streaming.query import StreamingQueryManager
+    from repark.spark.streaming.readers import DataStreamReader
 
 _EXECUTION_ID_RE = re.compile(r"[+-]?[0-9]+")
 
@@ -245,22 +247,26 @@ def clear_progress_handlers(session: ReparkSession) -> NoReturn:
     _connect_only("SparkSession.clearProgressHandlers")
 
 
-def session_read_stream(session: ReparkSession) -> NoReturn:
-    """PySpark ``readStream`` — declared: no Structured Streaming engine.
+def session_read_stream(session: ReparkSession) -> DataStreamReader:
+    """PySpark ``readStream`` — a fresh ``DataStreamReader`` per access.
 
-    pins: session-surface-1/C-004
+    pins: mb-4/C-031
     """
     session._ensure_alive()
-    _not_implemented("readStream")
+    from repark.spark.streaming.readers import DataStreamReader
+
+    return DataStreamReader(session)
 
 
-def session_streams(session: ReparkSession) -> NoReturn:
-    """PySpark ``streams`` — declared: no StreamingQueryManager without streaming.
+def session_streams(session: ReparkSession) -> StreamingQueryManager:
+    """PySpark ``streams`` — a fresh ``StreamingQueryManager`` per access.
 
-    pins: session-surface-1/C-004
+    pins: mb-4/C-031
     """
     session._ensure_alive()
-    _not_implemented("streams")
+    from repark.spark.streaming.query import StreamingQueryManager
+
+    return StreamingQueryManager(session)
 
 
 def session_data_source(session: ReparkSession) -> NoReturn:

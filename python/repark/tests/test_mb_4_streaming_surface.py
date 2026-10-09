@@ -843,3 +843,17 @@ def test_writer_trigger_continuous_bogus_refuses_at_trigger_mb0c_t3(spark: Repar
     assert excinfo.value.getCondition() == "INVALID_INTERVAL_FORMAT.UNRECOGNIZED_NUMBER"
     assert excinfo.value.getSqlState() == "22006"
     assert excinfo.value.getMessageParameters() == {"input": "bogus", "number": "bogus"}
+
+
+def test_write_stream_answers_writer_on_streaming_frame(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = _reader(spark).format("iceberg").load(stream_table)
+    assert type(frame.writeStream).__name__ == "DataStreamWriter"
+
+
+def test_public_read_stream_loads_a_streaming_frame(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = spark.readStream.format("iceberg").load(stream_table)
+    assert frame.isStreaming is True

@@ -4038,6 +4038,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `DUPLICATED_ARTIFACT` arm, `render`'s `type`-check-first order, and `tvf.json_tuple`'s
   string-literal-Column field conversion (R-4/R-5/R-6).
   pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  **MB-4 item 10 (2026-10-09):** the SES-DECL-readStream/-streams pins flip to answer
+  pins — `test_read_stream_declared` becomes `test_read_stream_answers_reader` (cell
+  `readStream_type`), `test_streams_declared` becomes `test_streams_answers_manager`
+  (cells `streams_type`, `streams_active`), `test_declared_properties_raise_under_hasattr`
+  becomes `test_streaming_properties_answer_under_hasattr` (the wired doors answer
+  `True`; `dataSource` and `client` still raise). pins: mb-4/C-031
 - `test_io_text_1.py` + `facade_reader_writer_oracle.json` — **IO-TEXT-1 (2026-09-14):**
   the `text` reader/writer card against the run-15b live-PySpark-4.1.2 fixture copied
   unchanged. Reads pin the universal-newline split with one trailing terminator dropped,
@@ -7959,6 +7965,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **MB-4 round 3 (2026-10-08):** the query members delegate to the native handle;
   `outputMode` pins O1/O2 at the setter; the terminal-reaching writer tests pin the
   frame refusal past validation. pins: mb-4/C-024, C-025
+  **MB-4 item 10 (2026-10-09):** `writeStream` answers a writer on a streaming frame
+  and the public `readStream` door loads one. pins: mb-4/C-031
 - [test_mb_4_streaming_wireup.py](test_mb_4_streaming_wireup.py) — **MB-4 round 2b
   (2026-10-08):** the reader wire-up battery, split out so the surface battery stays
   under its ceiling: MB0-R1 schema through `load` and `table`, the folded and ignored
