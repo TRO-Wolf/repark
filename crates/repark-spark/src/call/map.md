@@ -66,6 +66,12 @@ and measured-parity contract would grow `call.rs` beyond its exact
   ordinal). Sorting and equality both go through one Arrow `RowConverter`, whose default
   ascending / nulls-first order is Spark's `sortWithinPartitions`.
   pins: ice-changelog-1/C-011, C-012, C-013
+- `rewrite_data_files.rs`, `rewrite_manifests.rs`, `../call.rs` (`execute_rewrite_position_delete_files`),
+  `add_files.rs`, `branch_ops.rs` (`execute_publish_changes`) — **ENC-1 round 2 (2026-10-09):**
+  each file-writing procedure refuses a target carrying `encryption.key-id` right after loading
+  it, before any rewrite stages or commits. Expiry, orphan sweep, ref moves and dry-run
+  planning are untouched and run. Pinned in `../tests/enc_1.rs`.
+  pins: enc-1/C-005
 - `branch_ops.rs` — **IPI-05 (2026-09-21):** `execute_publish_changes` publishes a staged WAP
   snapshot: it looks the snapshot up with the fork's `staged_snapshot_for_wap_id`, re-raising that
   error's **bare message** (never `to_string()`, which would prefix the error kind and diverge from

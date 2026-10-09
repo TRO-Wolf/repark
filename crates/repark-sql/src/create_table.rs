@@ -131,6 +131,13 @@ pub(crate) async fn execute_create_table(
     let format_version =
         iceberg_create_format_version(cx.ctx, properties.format_version.as_deref())?;
 
+    if query.is_some() {
+        repark_iceberg::write::refuse_encrypted_properties(&properties.extra_properties, &display)?;
+        if let Some(existing) = existing.as_ref() {
+            repark_iceberg::write::refuse_encrypted_table(existing)?;
+        }
+    }
+
     // Resolve the placement before running the SELECT so target errors fail before writes.
     let placement = resolve_placement(&target, &properties, cx.catalogs, existing).await?;
     let replace_write = create.or_replace && query.is_some();

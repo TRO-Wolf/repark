@@ -428,6 +428,16 @@ pub async fn commit_stamp_only(
     stamp: &CommitStamp,
     token: Option<&ScopeToken>,
 ) -> Result<SnapshotId, MicroBatchError> {
+    if table
+        .metadata()
+        .properties()
+        .contains_key(crate::write::encryption::ENCRYPTION_KEY_ID_PROPERTY)
+    {
+        let ident = table.identifier();
+        return Err(MicroBatchError::EncryptedSinkRefused {
+            sink: format!("{}.{}", ident.namespace(), ident.name()),
+        });
+    }
     let active = match token {
         Some(token) => BatchScope::claim_checked(table, token, |active| {
             if active == stamp {

@@ -35,6 +35,14 @@ pins: rp-4-fork-repin/C-005, C-006
   **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s
   `analyze_built_plan` on the existing `normalize` line (the root stays at 156), for the
   binding's native join door. pins: stamp-2-r5p6-2/C-002
+- `router.rs`, `catalog_ops.rs`, `merge.rs`, `insert_overwrite.rs`, `insert_by_name.rs`,
+  `append_with_options.rs`, `truncate.rs`, `ctas.rs`, `spark_ast.rs` — **ENC-1 round 2
+  (2026-10-09):** the Spark seats of the keyed-table refusal. `catalog_ops.rs` gains
+  `refuse_encrypted_write_target`; the INSERT, DELETE/UPDATE (now in `router/delete_update.rs`,
+  a pure move off the ceiling), MERGE, OVERWRITE, BY NAME, options and TRUNCATE arms check at
+  entry, `ctas.rs` checks staged properties and the replace target, and `spark_ast.rs` re-checks
+  the post-plan DML target (case-folding and `EXPLAIN ANALYZE`). Pinned in `tests/enc_1.rs`.
+  pins: enc-1/C-005
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)

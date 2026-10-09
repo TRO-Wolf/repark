@@ -63,6 +63,7 @@ mod describe_view_routing;
 mod dml;
 mod dyn_by_name_overwrite;
 mod dyn_partition_overwrite;
+mod enc_1;
 mod float_agg;
 mod hadoop_rename;
 mod ice_ddl_clauses_1;

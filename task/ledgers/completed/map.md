@@ -348,6 +348,15 @@ else. The next pickup's `make ledger-archive` files everything here under
   audit sit in the ledger's Decisions section. Step 2 (docs paragraph, review
   archival) remains. `risk_tier: standard`. Branch `fix/eager-own-1`.
   pins: eager-own-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+- [enc-1-ledger.md](enc-1-ledger.md) —
+  **ENC-1 (2026-10-09), done:** the first write to a table carrying `encryption.key-id`
+  refuses `UnsupportedOperationException` (owner ruling 2026-10-01, ES-3, enacted under
+  interim rulings IR-1…IR-3). The ledger records the ruling rows, the live-Spark recording
+  (Spark ignores the key on v3, refuses CREATE on v2 — the one dated divergence), the
+  23-path survey, the one-helper + seats refusal, the 35 + 15 + 2 + 9 pins with the flipped
+  `v3_cow` pin, the four hand mutants, and the registry FIXED flip.
+  `risk_tier: standard`. Branch `fix/enc-1-first-write-refusal`.
+  pins: enc-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ex-15-dataframe-a-ledger.md](ex-15-dataframe-a-ledger.md) — Unit ledger — EX-15 · v1.1 example backfill, `DataFrame.*` (a)
 - [ex-16-dataframe-b-ledger.md](ex-16-dataframe-b-ledger.md) — Unit ledger — EX-16 · v1.1 example backfill, `DataFrame.*` (b)
 - [ex-17-column-a-ledger.md](ex-17-column-a-ledger.md) — Unit ledger — EX-17 · v1.1 example backfill, `Column.*` (a)

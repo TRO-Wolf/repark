@@ -214,6 +214,7 @@ pub async fn execute_predicate_dml(
         .load_table(&spec.target)
         .await
         .map_err(iceberg_err)?;
+    crate::write::refuse_encrypted_table(&table)?;
     let write_schema =
         Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
     reserved_name_guard(&write_schema)?;
@@ -291,6 +292,7 @@ async fn execute_identity_update(
         .load_table(&spec.target)
         .await
         .map_err(iceberg_err)?;
+    crate::write::refuse_encrypted_table(&table)?;
     let write_schema =
         Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
     reserved_name_guard(&write_schema)?;

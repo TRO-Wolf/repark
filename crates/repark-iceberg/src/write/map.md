@@ -233,6 +233,11 @@ repark-core's error map.
   (fold 2).
   The append fence (step 3) is the closing slice's row above.
   pins: mb-2c/C-003, C-004
+- `sink_offsets.rs` — **ENC-1 round 2 (2026-10-09):** `commit_stamp_only` refuses
+  `EncryptedSinkRefused` before claiming scope when the sink carries
+  `encryption.key-id`, so a stamped streaming commit never writes plaintext into a
+  keyed table. Pinned in `encryption_tests.rs` (this directory).
+  pins: enc-1/C-005
 - `sink_offsets_tests.rs`, `sink_offsets_fence_tests.rs` — **MB-2c step 0, DM-6 (2026-10-07):**
   the sketch's Q8 branch A measured on the fork pin `076d5f98`. The stamped `merge_append` plus
   its property update re-bases past a moved base and lands. An empty `overwrite_files()` with
@@ -479,6 +484,21 @@ repark-core's error map.
   the murmur goldens (U2), the recorded orders at shuffle 4 (U3), the reducer ties
   (U4), the shuffle-1 registry rows (U4b), the fallbacks (U5) and the conf parse (U6).
   pins: row-lineage-order-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `encryption.rs` — **ENC-1 round 2 (2026-10-09):** the one helper every
+  data-, delete- or manifest-writing path calls before staging, planning or
+  delegation: `refuse_encrypted_properties` / `refuse_encrypted_table` /
+  `refuse_encrypted_write` refuse with `UnsupportedOperationException` and one
+  sentence naming the table, the property, no table encryption, no plaintext and
+  ENC-1, never echoing the key value. Exact key `encryption.key-id`, any value
+  including empty; lookalikes unmoved. Missing tables load-fail open (the door's
+  own missing-table error owns that shape).
+  pins: enc-1/C-003, C-004, C-005
+- `encryption_tests.rs` — **ENC-1 round 3 (2026-10-09):** the streaming-sink
+  stamp pin lives here, not in `sink_offsets_tests.rs` (983 lines, at the 1000
+  ceiling): `commit_stamp_only` onto a keyed sink refuses `EncryptedSinkRefused`
+  with the house text and unchanged snapshots and warehouse objects; a lookalike
+  key stamps one snapshot.
+  pins: enc-1/C-005
 - `conform.rs` — batch conforming for the append write path (name resolution, WI-1 store
   assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01;
   append.rs baseline 1886). A missing

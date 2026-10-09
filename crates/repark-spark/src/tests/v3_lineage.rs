@@ -427,6 +427,7 @@ fn v3_rowid_1_is_fixed_in_the_registry() {
 fn cow_keep_refusal_files_are_byte_untouched() {
     let _: &str = "pins: v3-9-mor-predicate-dml-dv/C-005";
     let _: &str = "pins: v3-11-row-id-determinism/C-004";
+    let _: &str = "pins: enc-1/C-005";
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("crates/")
@@ -440,7 +441,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
         ),
         (
             "crates/repark-spark/src/tests/v3_cow.rs",
-            0x9339_d979_508a_32b0,
+            0xfdd4_3ee0_2c53_d65c,
         ),
         ("crates/repark-sql/src/v3/cow.rs", 0x7ebd_0d5d_c784_1b0f),
         (
@@ -461,7 +462,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
              (feat/v3-11-row-id-determinism) re-records the `v3/cow.rs` hash for the two ANSI \
              same-commit file-order twins it adds there, and again in its remediation round \
              when those two were renamed off the misleading `sparks_..._order` spelling; \
-             later units re-record only for a change they themselves made;              ICE-SESSION-WRITE-CONF-1 round 3 re-records `v3_subquery_dml.rs` for the              `V3_8_UPDATE_FILES` 2 -> 1 layout close it makes"
+             later units re-record only for a change they themselves made;              ICE-SESSION-WRITE-CONF-1 round 3 re-records `v3_subquery_dml.rs` for the              `V3_8_UPDATE_FILES` 2 -> 1 layout close it makes;              ENC-1 round 2 re-records `v3_cow.rs` for the ruled flip (the pin now refuses the first write)"
         );
     }
 }

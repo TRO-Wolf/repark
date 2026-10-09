@@ -45,6 +45,15 @@ pub(crate) async fn execute_merge(cx: &EngineContext<'_>, merge: &Merge) -> Resu
         ));
     }
     let (catalog_name, spec) = lower(&merge.table, &merge.source, &merge.on, &merge.clauses)?;
+    if let Some(catalog) = cx.catalogs.get(&catalog_name) {
+        let display = format!(
+            "{catalog_name}.{}.{}",
+            spec.target.namespace(),
+            spec.target.name()
+        );
+        repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &spec.target, &display)
+            .await?;
+    }
     let handle = catalog_handle(cx.catalogs, &catalog_name)?;
     repark_iceberg::write::merge::execute_merge(cx.ctx, handle, &spec).await?;
     cx.ctx.read_empty()

@@ -1681,27 +1681,44 @@ perfectly good read.
   (ICE-CATALOG-SESSION-1); DataFusion cannot serve it (`SHOW TABLES LIKE` is unimplemented
   upstream and `information_schema` is off by default), so the router owns it.
 
-#### ENC-1 — Iceberg table encryption keys are stored, never applied
+#### ENC-1 — Iceberg table encryption keys are stored, never applied — **FIXED 2026-10-09**
 
-- **repark** — `CREATE TABLE … TBLPROPERTIES ('encryption.key-id' = …)` on a format-v3 table
-  succeeds. The property is stored. `INSERT` writes ordinary unencrypted Parquet
+- **Before** — `CREATE TABLE … TBLPROPERTIES ('encryption.key-id' = …)` on a format-v3 table
+  succeeds; the property is stored; `INSERT` writes ordinary unencrypted Parquet
   (byte-magic `PAR1`, readable with no key — measured 2026-09-18) with no error raised;
   `SELECT` returns the rows; table-metadata `encryption-keys` stays empty. There is no
-  KMS client and no file encryption. Owner ruling 2026-08-24: dated DECLARED exclusion
-  from the v1.0 gate.
+  KMS client and no file encryption. Dated DECLARED exclusion, owner 2026-08-24.
+- **After** — the first write to a table carrying `encryption.key-id` refuses with
+  `UnsupportedOperationException` and one sentence naming the table, the property, no
+  table encryption, no plaintext and ENC-1, never echoing the key value (owner ruling
+  2026-10-01, ES-3). `CREATE` keeps succeeding; scans, `SELECT`, snapshot expiry, orphan
+  sweep, ref moves, `ALTER` and dry-run planning run as before.
 - **Apache Spark** — with a configured Iceberg KMS, `encryption.key-id` encrypts data,
-  delete, manifest, and manifest-list files (Iceberg table-encryption docs). Without a KMS
-  the Spark session fails to write. *(oracle: documented — Iceberg table property
-  `encryption.key-id`; this engine never talks to a KMS, so there is no value oracle.)*
-- **Pin** —
-  `crates/repark-spark/src/tests/v3_cow.rs::v3_create_with_encryption_key_id_still_scans_without_a_kms`
-- **Rationale** — DECLARED exclusion, owner-dated 2026-08-24. Implementing envelope encryption
-  is fork work (GAP_MATRIX R130) and is not on the v1.0 slate. The pin holds the honest
-  current behavior so a later encryption landing reds it on purpose. **Owner ruling 2026-10-01
-  (ES-3 of [../task/roadmap/epic-term/contracts-ahead-of-code-2026-10-01.md](../task/roadmap/epic-term/contracts-ahead-of-code-2026-10-01.md)):
-  refuse** — the first write to a table carrying `encryption.key-id` refuses, as Spark does
-  without a KMS; `CREATE` keeps succeeding as in Spark; a product card, release the owner's,
-  flipping the pin above on purpose.
+  delete, manifest, and manifest-list files (Iceberg table-encryption docs). Without a KMS,
+  measured 2026-10-09 on Spark 4.1.2 + Iceberg 1.11.0 (Hadoop catalog, no KMS): a v3 table
+  stores the key and then every write shape runs and lands plaintext Parquet (`PAR1` read
+  off the E02 data file); a v2 `CREATE` with the key refuses `IllegalArgumentException`
+  `Invalid properties for v2: [encryption.key-id]` before any write runs.
+  *(oracle: live — `../python/repark-parity/tests/live_spark/enc1_encryption_oracle.json`,
+  cells E01–E23, recorded 2026-10-09.)*
+- **Pin** — the flipped
+  `crates/repark-spark/src/tests/v3_cow.rs::v3_create_with_encryption_key_id_refuses_first_write`
+  (create and scan as before, first write refuses) plus `crates/repark-spark/src/tests/enc_1.rs`
+  (35 Spark-door pins), `crates/repark-sql/tests/enc_1.rs` (15 ANSI-door pins),
+  `crates/repark-iceberg/src/write/encryption_tests.rs` (the streaming-sink stamp pin) and
+  `python/repark/tests/test_enc_1.py` (9 facade pins). Every refusal pin also asserts the
+  snapshot list and the file listing under the table location are unchanged.
+- **Rationale** — FIXED 2026-10-09 (ENC-1 rounds 2–3, enacting the 2026-10-01 ES-3 ruling).
+  Implementing envelope encryption stays fork work (GAP_MATRIX R130) and is not on the
+  v1.0 slate.
+- **Divergence (2026-10-09, by ruling, owner can overturn):** the ruling's phrase "as Spark
+  does without a KMS" does not match what Spark 4.1.2 + Iceberg 1.11.0 does. Spark IGNORES
+  the key on a v3 table and writes plaintext (INSERT VALUES/SELECT/OVERWRITE, CTAS, RTAS,
+  MERGE, UPDATE, DELETE, TRUNCATE, `df.writeTo().append()`, `rewrite_data_files`,
+  `rewrite_manifests` all run — cells E02–E15, E19), and refuses `CREATE` on v2 (E23).
+  RePark refuses the first write regardless and keeps `CREATE` succeeding on every format
+  version, per the owner's ES-3 words and the never-write-plaintext rule: writing plaintext
+  into a table that asked for encryption is the outcome the ruling forbids.
 
 #### D-SHOW-TBLPROPERTIES — `SHOW TBLPROPERTIES t` answers Spark's rows on Iceberg tables — **FIXED 2026-09-26**
 

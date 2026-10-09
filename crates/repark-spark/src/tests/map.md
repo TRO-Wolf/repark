@@ -30,6 +30,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `enc_1.rs` — **ENC-1 round 2 (2026-10-09):** 35 pins over tables carrying
+  `encryption.key-id`: every write path refuses with `UnsupportedOperationException` and
+  RePark's one-sentence text (never echoing the key value) with snapshots, live files
+  and warehouse objects unchanged; expiry, orphan sweep, rollback, dry-run planning,
+  SELECT, CREATE and the lookalike keys run. The step-1 ported probe is the first pin.
+  pins: enc-1/C-001, C-002, C-003, C-004, C-005
 - `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
   pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
   source/target/column named and nothing written; in-range, int-to-int and string stores

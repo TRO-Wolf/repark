@@ -262,6 +262,10 @@ pub(crate) async fn execute_ctas(
         // Create: location + FileIO were resolved above the SELECT (ADV-3).
         let mut properties = catalogs.table_creation_properties(&ctas.catalog, &ctas.properties);
         crate::create_table::stamp_owner(ctx, &mut properties);
+        repark_iceberg::write::refuse_encrypted_properties(
+            &properties,
+            &format!("{}.{}.{}", ctas.catalog, ctas.namespace, ctas.table),
+        )?;
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
             .location(plan.location)
@@ -288,6 +292,11 @@ pub(crate) async fn execute_ctas(
             format_version,
         );
         crate::create_table::stamp_owner(ctx, &mut properties);
+        repark_iceberg::write::refuse_encrypted_properties(
+            &properties,
+            &format!("{}.{}.{}", ctas.catalog, ctas.namespace, ctas.table),
+        )?;
+        repark_iceberg::write::refuse_encrypted_table(&existing)?;
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
             .schema(iceberg_schema)
@@ -636,6 +645,10 @@ pub(crate) async fn execute_ctas_service_managed(
     // Location deliberately not set: the service assigns it.
     let mut properties = catalogs.table_creation_properties(&ctas.catalog, &ctas.properties);
     crate::create_table::stamp_owner(ctx, &mut properties);
+    repark_iceberg::write::refuse_encrypted_properties(
+        &properties,
+        &format!("{}.{}.{}", ctas.catalog, ctas.namespace, ctas.table),
+    )?;
     let creation = TableCreation::builder()
         .name(ctas.table.clone())
         .schema(iceberg_schema)
