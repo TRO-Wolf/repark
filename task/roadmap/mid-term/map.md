@@ -694,10 +694,18 @@ declines it (a dated ruling in the intake, then the archive).
   25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in 25.0.1), reproduced without RePark; the
   threaded test is in the facade suite and the floor awaits the owner.
 - [cross-join-condition-1-card-2026-10-08.md](cross-join-condition-1-card-2026-10-08.md) — **card
-  CROSS-JOIN-CONDITION-1 (2026-10-08, filed, not scheduled, from the STAMP-2-R5P6-2 hand-back, PR #997):**
+  CROSS-JOIN-CONDITION-1 (2026-10-08, closed 2026-10-08 by its unit, from the STAMP-2-R5P6-2 hand-back, PR #997):**
   `df.join(other, condition, "cross")` ignores the condition (12 rows where live Spark 4.1 answers 2),
   on main and on the PR branch alike, because the H1 door emits `CROSS JOIN` with no `ON`; sequenced
-  after PR #997 merges, as both touch the same door.
+  after PR #997 merges, as both touch the same door. The unit routes a cross with a condition onto the
+  inner path on both routes; `crossJoin` and shared-name/list refusals are unmoved.
+- [join-condition-refusals-1-card-2026-10-08.md](join-condition-refusals-1-card-2026-10-08.md) — **card
+  JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2,
+  re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5,
+  from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions
+  Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's
+  `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and
+  text on every `how` of both doors.
 - [c-3-null-stride-1-card-2026-10-08.md](c-3-null-stride-1-card-2026-10-08.md) — **card
   C-3-NULL-STRIDE-1 (2026-10-08, filed, not scheduled, from C-3 question Q3, PR #998):** the first
   stride's `OR col IS NULL` arm is a sequential scan of the whole table (about 1.1 s of a 7.3 s

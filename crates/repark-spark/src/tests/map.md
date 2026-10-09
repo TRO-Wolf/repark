@@ -1,5 +1,9 @@
 # map — repark-spark/src/tests
 
+CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09): `join_condition_refusals.rs` gains the `IN`-subquery cell (a refused join nested in a subquery expression, killing the m5 plan-descent mutant). pins: cross-join-condition-1/C-008
+
+CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `join_condition_refusals.rs` pins the join-condition rule through production-built sessions (two Iceberg tables, the oracle frames): nondeterministic conditions refuse with Spark's `INVALID_NON_DETERMINISTIC_EXPRESSIONS` head on inner/left/left-semi (plus uuid, shuffle and an EXISTS-subquery recursion cell), non-boolean conditions with `JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE` (NULL/VOID, 1/INT, 'true'/STRING, bare `rand(1)`/DOUBLE for the type-first order), and the equality/TRUE/typed-NULL/current_timestamp controls answer their rows. pins: cross-join-condition-1/C-008
+
 **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `property_display_redaction.rs` adds one SQL pin per property display for the key rule (`*_redacts_secret_keys_like_spark`, the keyed `SHOW TBLPROPERTIES` forms) and `a_credential_free_storage_location_is_shown_as_spark_shows_it`; `describe_show.rs`'s truth table carries Spark's rows plus the key rule. pins: source-url-redact-1/C-041, C-042
 
 **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `describe_show.rs` gains `describe_namespace_masks_comment_location_and_owner_credentials` (SQL). pins: source-url-redact-1/C-029

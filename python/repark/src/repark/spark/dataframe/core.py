@@ -2263,6 +2263,7 @@ class DataFrame:
         Semi/anti joins project only the left side; a ``None`` condition skips the preparer
         and still records the lineage remint.
         """
+        engine_how = "inner" if engine_how == "cross" and condition is not None else engine_how
         left_alias = scratch_view_name(self._session, "_repark_jl_")
         right_alias = scratch_view_name(self._session, "_repark_jr_")
         how_sql = {
@@ -2270,7 +2271,6 @@ class DataFrame:
             "left": "LEFT OUTER",
             "right": "RIGHT OUTER",
             "full": "FULL OUTER",
-            "cross": "CROSS",
             "leftsemi": "LEFT SEMI",
             "leftanti": "LEFT ANTI",
         }.get(engine_how, "INNER")

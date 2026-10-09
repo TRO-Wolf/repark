@@ -70,6 +70,7 @@ mod identifier_fields;
 mod input_file_name;
 mod insert_arity;
 mod insert_overwrite;
+mod join_condition_refusals;
 mod join_null_keys;
 mod lambda_door;
 mod list_null_compound;
