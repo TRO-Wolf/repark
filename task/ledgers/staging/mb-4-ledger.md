@@ -66,6 +66,7 @@ rule 2 does not bind.
 | C-032 | Item 11 lands: a credential-bearing `checkpointLocation` and option value appear in none of status, lastProgress, `repr(query)`, the run error, EXPLAIN, the snapshot summaries and the table properties, and the value-echo refusal carries the masked form. | The pin; any shown surface would have halted the item. | **PROVEN** | `test_microbatch_no_credential_on_any_surface_1` runs a `toTable` query and a failing `foreachBatch` query with userinfo-shaped secrets, then asserts all four secret strings absent from all eight surfaces; the `stream-from-timestamp` echo refusal shows `s3://u:***@h/x` (probed first, pinned with the `***` presence assert so the leg bites both ways). No surface shows a credential. pins: mb-4/C-032 |
 | C-033 | Item 12 lands: the three IPI-47 dispositions measured through the public doors — `R-STREAM-READ` reads EQUAL to MB0-R1, `R-STREAM-READ-SKIP` is the registered refusal MBE-3, `W-STREAM-WRITE-FILESRC` is defined in inventory row 55 as the Iceberg sink fed by a file-source stream with disposition registered refusal MBE-7 — and the FILE-SOURCE-1 card is filed under MB-5. | The probe run, the inventory row, and the card. | **PROVEN** | Probe of 2026-10-09 through `spark.readStream` / `df.writeStream`: R batches `[(0, [1, 2, 3]), (1, [4, 5])]` with the MB0-R1 schema; SKIP-true refuses `IllegalArgumentException` `[REPARK_MICROBATCH.SKIP_OPTION_REFUSED]` (SKIP-`maybe` refuses the C-014 value check, Spark reads it as false — the second divergence, folded into the MB-4-SKIP-OPTIONS-1 draft); FILESRC refuses `NOT_IMPLEMENTED` with `{feature: readStream.format(parquet)}` on the read and `{feature: writeStream.format(parquet)}` on the write. Row 55 carries the definition and all three dispositions; the card quotes both doors, cites the MB-0c F-cells as Spark's match target, and leaves the exact file-to-Iceberg combination for MB-5 step 0. pins: mb-4/C-033 |
 | C-034 | The W-Q2 follow-through lands: MB-0c cell D3 records `foreachBatch` with no `checkpointLocation` on live Spark — rows, the exact temporary-checkpoint warning, and a second start replaying from the start — with the `sha256` pin in step; the TEMP-CHECKPOINT-1 card holds the Spark-matching answer; the product keeps the W8 refusal. | The recorder extension, the recording with its byte-identity proof, the sha check, and the card. | **PROVEN** | `cell_d3` (with `captured_driver_log`, a log4j2 `FileAppender` over the JVM door — the gateway owns `stderr`, so an fd redirect cannot see it) records D3: both starts read batch 0 with 3 rows, the warning fires twice with the temp path normalized to `$TEMP_CHECKPOINT`, the sink holds each row twice. Two runs diff zero; the merge keeps the 31 older entries and the preamble byte-identical; all three oracle shas verify. DM-1's owed cell and card from D-39 are filed. pins: mb-4/C-034 |
+| C-035 | The `foreachBatch` door is exactly-once through the public doors: a body that writes and an epoch that then fails or a process that dies before the trailing stamp never lands a row twice. | The owner's ruling on the hand-back's open question (parity-with-Spark at-least-once vs the exactly-once claim), then the ruling's pins. | **OPEN** | The Opus verify FAIL S1 (D-54): a single-write body duplicates (sink 1,1,2,2,3,3; f_writeraise/f_exitafterwrite/f_kill/f_killcommit dup 4/4/12/16), the merged MB-3 default, parity with Spark's at-least-once contract and a breach of sketch Q9. Fold 1 records it and touches no driver line. |
 
 ## Decisions
 
@@ -322,7 +323,7 @@ rule 2 does not bind.
   per P2, so its `isStreaming` docstring still says batch-only.
 - **D-39 (2026-10-08). W-Q2 answered: REFUSE EVERYWHERE.** The owner's delegate rules the `foreachBatch` door keeps the W8 refusal (no `checkpointLocation`, no query). DM-1 is no longer an open owner question: it is a dated divergence (Spark runs the door on a temporary checkpoint directory plus a warning), with an oracle cell and a Spark-matching card owed in round 4. The refusal pins as the W8 rule with the citation, not as a parity answer.
 - **D-40 (2026-10-08). The no-detach hatch in the adapter.** `BatchBodyAdapter::call_body` runs under `with_stream_poll_no_detach` (the hatch already used by the stream-poll path in `dataframe.rs`): it keeps the body on a thread the GIL bridge never detaches, because a batch action in the body (`collect`, `count`, `show`) re-enters the runtime from a `block_in_place` worker and detaching there crashed the process with a fatal GIL error. Without the hatch the first pin died; with it the body completes.
-- **D-41 (2026-10-08). W4 stamp shape.** Each foreach epoch lands two sink snapshots: the body's append (`added-records` only) and the driver's stamp-only commit (`repark.cdc.*` keys, no `spark.sql.streaming.*` keys, per the R-5 driver rule). The query id is stable across a resume, the run id fresh. Spark's W4 has the appends only; the stamps are the offset mechanism, recorded here, not a divergence row.
+- **D-41 (2026-10-08; corrected 2026-10-09, fold 1). W4 stamp shape.** Each foreach epoch lands two sink snapshots: the body's append (`added-records` only) and the driver's stamp-only commit (`repark.cdc.*` keys, no `spark.sql.streaming.*` keys, per the R-5 driver rule). The query id is stable across a resume, the run id fresh. The 2026-10-08 tail ("not a divergence row") was wrong: the Opus verify measured the door duplicating rows when the body writes and the epoch then fails before the trailing stamp (D-54, C-035 OPEN). The two-snapshot shape is still the offset mechanism, but the stamp history hides replays, so the shape is evidence for the open question, not a closed record.
 - **D-42 (2026-10-08). Round-3b halt.** The batch-action pin's `count` leg fails (C-027 OPEN): the micro-batch provider cannot serve the empty projection `count` plans. `collect` and `show` pin green on their own test; the count fix sits in `repark-iceberg`, outside the fence. Item 8, the inventory regen, neighbours and the round-3 close ride the next round after the ruling.
 - **D-43 (2026-10-08). The count-in-body fix (round-3c Q1, option a).** Granted
   narrow: `read_batches` in `crates/repark-iceberg/src/microbatch/provider.rs`
@@ -403,6 +404,42 @@ rule 2 does not bind.
   lineage `WHERE` control answers 4. One delta from D-44: the batch changelog
   read answers its rows here (D-44 recorded a clean MBE planning-error
   refusal), so only the empty projection fails on that door now.
+- **D-54 (2026-10-09). Fold-1 S1 recorded, not fixed: the `foreachBatch`
+  door duplicates rows in its declared sink when the body writes and the epoch
+  then fails or the process dies before the trailing stamp.** The stamping is
+  the merged MB-3 default and an owner question, so fold 1 touches no driver
+  line. Verbatim from the Opus verify (`verdict.json`, FAIL S1; one-process
+  repro `p/repro_s1.py`; choreographies `p/eo_all.sh f_writeraise |
+  f_exitafterwrite | f_kill | f_killcommit` over harness `p/eo.py`, public
+  doors only, memory catalog re-attached per process with `CALL
+  sc.system.register_table` on the newest metadata file; source 6..30 one-file
+  commits of 4 rows, `streaming-max-files-per-micro-batch=1`, body =
+  `df.writeTo('sc.db.snk').append()`, option `repark.cdc.sink=sc.db.snk`, same
+  `checkpointLocation` and `queryName` on every start): "Interleaving: epoch N
+  body appends (unstamped snapshot, summary has no `repark.cdc.*` key) -> body
+  raises / `os._exit` before the driver's trailing `commit_stamp_only` ->
+  restart with the same checkpoint and query name starts silently (no
+  `RecoveryRequired`, no `UnstampedSinkCommit`), resumes at epoch N, body
+  appends the same rows again. `f_writeraise` (`ValueError` after the write at
+  epoch 2, one restart): src 24, sink 28, dup 4. `f_exitafterwrite`
+  (`os._exit(42)` after the write at epoch 2): sink 28, dup 4. `f_kill` (10
+  `os._exit` at random 150-1350 ms): src 120, sink 132, dup 12. `f_killcommit`
+  (8 kills on seeing a new sink metadata file): src 80, sink 96, dup 16. Epoch
+  stamps stay unique and gapless in every run, so the summary history hides the
+  duplicates. In-process a body that appends twice is not refused either (sink
+  1,1,2,2,3,3)." The minimal repro (source 1,2,3; body appends then raises
+  once; second start, same checkpoint and name) lands sink 1,1,2,2,3,3 with
+  snapshots append/None, append/None, append/epoch 0. Origin is the merged
+  MB-3 driver default (MB-3 ledger D-2 / C-005 b-c, "acted on the default,
+  open for the owner to overrule"), worded there as "at-least-once on
+  multi-write bodies"; the verify shows a single-write body duplicates too.
+  Spark's own `foreachBatch` contract is at-least-once (MB-0 W4/W6, not
+  re-measured by the verify), so the measured behaviour is parity with Spark
+  and a breach of the exactly-once claim and sketch Q9; which binds is the
+  owner's call. Raise-before-write, kill-before-write, stop/restart x8 and
+  `spark.stop` x5 on this door were exact, and the `toTable` door was exact
+  through 8 stop/restarts, 6 random kills, 8 kills at commit and 5 `spark.stop`
+  cycles. C-035 OPEN.
 
 ## W-Q1 records (2026-10-08, brief ruling of 2026-10-08)
 
