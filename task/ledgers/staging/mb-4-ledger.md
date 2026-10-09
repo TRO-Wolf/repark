@@ -423,3 +423,24 @@ cause. One record per variant with no §4 row, for item 2's mapper round.
   - **Rationale** — DECLARED 2026-10-08 (MB-4, sketch Q9). The stamp lands on the
     declared sink; without one the query has nowhere to record itself.
 
+
+## Race pins carried from MB-3 — plan items 13 and 14 (2026-10-08, Opus worker lane)
+
+Branch `test/mb-4-race-pins`, cut from `feat/mb-4-facade` at `6c463029`. Test-only: no
+product file changes. The clause ids are the item numbers plus 100 so they cannot collide
+with the rows the parallel lane adds to the table above.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-113 | Item 13: two drivers of one query (one `QueryId`, two `RunId`s) in two sessions over one catalog, started off a barrier with no injected commit, land every source row in the `toTable` sink exactly once and stamp each epoch once, over 50 iterations; the driver that lost ends `Fenced` or `RecoveryRequired` naming the winner's run; and the race reaches the append fence, not only the in-process resume-point check. | `crates/repark-core/src/microbatch/race_tests.rs::two_sessions_racing_one_query_land_every_row_exactly_once`, three runs, plus one hand mutant on the fence. | **PROVEN** | Green three times: 19.64 s, 23.76 s, 17.87 s test time (debug build, cores 48-63, 8 jobs), under the 60 s bound, so the count stays 50. The loser was refused at the commit in 46, 48 and 46 of 50 iterations. Mutant M13 (`AppendFence::update_table` forwards every commit, `append_fence.rs`): red at iteration 1, sink rows `[1, 1, 2, 2, 3, 4]`, history epoch 0 stamped by both runs; restored. |
+
+- **R-1 (2026-10-08). The free-running in-process race does not reach the fence.** Measured
+  first without `SlowCatalog`, with the drivers' polling delay at zero: 50 of 50 iterations
+  correct, 0 of 50 with a staged file the sink never added. The sink's `BatchScope` serialises
+  the two drivers and the later one is fenced by `run.rs`'s resume-point check. A pin that
+  only exercised that path would stay green with the append fence deleted, so the pin holds
+  each loaded sink view for a seeded 0 to 12 ms (a test catalog wrapper, no product hook) and
+  asserts at least 10 of 50 iterations were refused at the commit.
+- **R-2 (2026-10-08). `RecoveryRequired` as the loser's ending was never observed.** Every
+  losing driver in the three green runs ended `Fenced`. The pin accepts `RecoveryRequired`
+  only when its durable record names the winner's run, as the plan's item 13 allows.

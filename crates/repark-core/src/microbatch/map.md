@@ -40,7 +40,8 @@ pins: mb-3/C-031
 ## Contents
 
 - `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) and the module declarations: `pub mod driver;`,
-  `pub mod progress;`, `pub mod relation;`, the private `run`, and the test-only modules.
+  `pub mod progress;`, `pub mod relation;`, the private `run`, and the test-only modules
+  (`race_tests` joined them in MB-4 items 13 and 14).
   **MB-4 round 2b (2026-10-08):** re-exports `MicroBatchError` and its direct field types
   (`RecoveryReason`, the offset ids, `Generation`, `iceberg::spec::Operation`) so the binding
   names the mapper's input without a `repark-iceberg` edge, following the three
@@ -217,6 +218,29 @@ pins: mb-3/C-031
   needs recovery); and a driver that resumed before another run committed. The restart of the
   refused query continues at the next epoch each time.
   pins: mb-3/C-002, C-030
+- `race_tests.rs` — the two race pins carried from MB-3 (MB-4 items 13 and 14, 2026-10-08).
+  **Item 13, `two_sessions_racing_one_query_land_every_row_exactly_once`:** fifty iterations,
+  each on a fresh warehouse with three source files of two rows. Two sessions over the one
+  memory catalog register the same sink and `queryName` (one `QueryId`, two `RunId`s) on the
+  `toTable` door, and two threads start them off a `std::sync::Barrier`. No commit is injected:
+  both commits are the drivers' own. Each iteration asserts the sink holds ids 1 to 6 once each,
+  epochs 0, 1 and 2 are each stamped once over every retained snapshot and on the main lineage,
+  one run stamped all three, that run drained, and the other driver either drained with
+  nothing to do or ended `Fenced`, or `RecoveryRequired` with a durable record, naming that run.
+  *Why the catalog is slowed.* In one process the sink's `BatchScope` serialises the two
+  drivers, and a driver that enters the scope with a current view of the sink is fenced by the
+  batch's resume-point check in `run.rs` before it writes; measured on the unslowed catalog,
+  none of fifty iterations reached the append fence. `SlowCatalog` wraps each session's catalog
+  and holds every loaded view of the sink for a seeded 0 to 12 ms, which is what a catalog
+  round trip gives a driver in another process: a view that is stale by the time it commits.
+  With it the loser stages its file and is refused at the commit in 46 to 48 of fifty
+  iterations (three runs). The pin counts those iterations, as parquet files under the sink
+  that no snapshot added, and fails under a floor of ten, so it cannot go quiet if the race
+  stops reaching the fence. The seed fixes the pauses and not the scheduler; a failure prints
+  the iteration, the seed, both endings, the sink's rows and the summary history. The door is
+  `toTable` only: the `foreachBatch` body is at-least-once by contract (see the door
+  guarantees above), so "each row once in the sink" is not its promise.
+  pins: mb-4/C-113
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005
