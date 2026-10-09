@@ -161,7 +161,7 @@ pub fn session_write_conf_from_ctx(ctx: &SessionContext) -> SessionWriteView {
 
 #[must_use]
 pub fn session_write_conf_is_set(ctx: &SessionContext) -> bool {
-    !session_write_conf_from_ctx(ctx).is_empty()
+    crate::write::sink_offsets::in_body_scope() || !session_write_conf_from_ctx(ctx).is_empty()
 }
 
 #[must_use]

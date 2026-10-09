@@ -7988,6 +7988,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   once, stamped with the `repark.cdc` keys); the foreach format-ignored test now
   runs through the live arm. The remaining foreach pins split out below.
   pins: mb-4/C-026
+- [test_mb_4_streaming_foreach_eo.py](test_mb_4_streaming_foreach_eo.py) —
+  **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT" on the MB-4 verify's S1):** the
+  `foreachBatch` exactly-once battery through the public doors. One process: the body's
+  append and `INSERT INTO` carry the stamp in their own snapshot; write-then-raise restarts
+  without a duplicate; a second append refuses MBE-13, raised or swallowed; `MERGE`, `UPDATE`
+  and `DELETE` are stamped under serializable isolation; eleven shapes that cannot carry the
+  stamp refuse MBE-19 with the sink, its snapshots and its properties unchanged; a body with
+  no sink write gets the stamp-only snapshot; a second table is an unstamped side output; a
+  sink write from another thread ends `RecoveryRequiredException`. Subprocesses, over a memory
+  catalog re-attached with `register_table` on the newest metadata file: exit after the sink
+  write, kills at sink commits, kills at fixed delays. Measured red on the base build: 14 of
+  the first 15 pins failed and the no-sink-write pin passed.
+  `test_mb_4_streaming_foreach.py::test_foreach_door_replays_mb0_w4_stamped` and
+  `test_mb_4_streaming_wireup.py::test_foreach_door_first_pin_write_to_commits_once_stamped`
+  now read one stamped snapshot per batch.
+  pins: mb-4-foreach-eo/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-014
 - [test_mb_4_streaming_foreach.py](test_mb_4_streaming_foreach.py) — **MB-4 round 3b
   (2026-10-08):** the foreach-door battery, split out so the wireup battery stays
   under its ceiling: MB0-T2 batches, MB0-R1 resume rows, MB0-W4 stamped appends,

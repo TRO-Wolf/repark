@@ -29,6 +29,7 @@ const TRUNCATED_HISTORY: &str = "REPARK_MICROBATCH.TRUNCATED_HISTORY";
 const UNSUPPORTED_OFFSET_FORMAT: &str = "REPARK_MICROBATCH.UNSUPPORTED_OFFSET_FORMAT";
 const SINK_COMMITTED_TWICE: &str = "REPARK_MICROBATCH.SINK_COMMITTED_TWICE";
 const SINK_BUSY: &str = "REPARK_MICROBATCH.SINK_BUSY";
+const UNSTAMPED_SINK_WRITE: &str = "REPARK_MICROBATCH.UNSTAMPED_SINK_WRITE";
 const STREAMING_ACTION_REFUSED: &str = "_LEGACY_ERROR_TEMP_3102";
 
 const STREAMING_ACTION_REFUSED_TEXT: &str = "Queries with streaming sources must be executed with writeStream.start(), or from a streaming table or flow definition within a Spark Declarative Pipeline.;\niceberg";
@@ -169,6 +170,9 @@ pub(crate) fn microbatch_py_err(
         }
         MicroBatchError::SinkBusy { .. } => {
             stream_failed(py, &format!("[{SINK_BUSY}] {error}"), head)
+        }
+        MicroBatchError::UnstampedSinkWrite { .. } => {
+            stream_failed(py, &format!("[{UNSTAMPED_SINK_WRITE}] {error}"), head)
         }
         MicroBatchError::AlreadyCommitted { .. }
         | MicroBatchError::AwaitFromDriver { .. }
@@ -630,6 +634,15 @@ mod tests {
                 &microbatch_py_err(py, &error, Some(HEAD)),
                 py,
                 &format!("[{SINK_COMMITTED_TWICE}] {error}"),
+            );
+            let error = MicroBatchError::UnstampedSinkWrite {
+                sink: String::from("silver.events"),
+                epoch: Epoch::FIRST,
+            };
+            failed_shape(
+                &microbatch_py_err(py, &error, Some(HEAD)),
+                py,
+                &format!("[{UNSTAMPED_SINK_WRITE}] {error}"),
             );
         });
     }

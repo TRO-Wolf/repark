@@ -59,6 +59,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   H-TZ did not fire. `session.rs` holds 1000 lines: its two new `mod` lines are paid for by two
   shed comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
   pins: c-2/C-098, C-108, C-109, C-110, C-111
+- `write_options.rs` — **MB-4-FOREACH-EO (2026-10-09):** the statement funnel passes its
+  registry snapshot through `CatalogRegistry::guarded_in_batch_body`, which wraps each catalog
+  in `repark-iceberg`'s `BodySinkGuard` when the statement runs inside a `foreachBatch` body
+  and changes nothing otherwise. The session's own registry is never changed.
+  pins: mb-4-foreach-eo/C-006
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
   pins: ice-views-1/C-018

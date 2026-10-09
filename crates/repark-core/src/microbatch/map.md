@@ -260,6 +260,46 @@ pins: mb-3/C-031
   The helpers that build the ending repeat `fence_tests.rs`'s private ones, because that file
   is outside this slice's footprint.
   pins: mb-4/C-114, C-029
+- `run.rs`, `exactly_once_tests.rs`, `foreach_tests.rs`, `race_tests.rs`, `testing.rs` —
+  **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT" on the MB-4 verify's S1):** the
+  `foreachBatch` door is exactly-once on the declared sink. This overturns MB-3 D-2 and
+  C-005 (b), (c), (e): the body's own sink commit carries the stamp, and the trailing
+  `commit_stamp_only` runs only for a body that made no sink commit.
+  - **`Run::foreach_batch`** polls the body inside `BatchScopeGuard::scope_body`, so a commit
+    the body issues on the driver's task claims the batch stamp at the stamped arms of
+    `repark-iceberg` (the design is in
+    [write/sink_offsets/map.md](../../../repark-iceberg/src/write/sink_offsets/map.md)).
+  - **After the body**, in this order. A stamped commit the scope recorded is the batch's
+    commit. A commit whose outcome the guard saw as unknown goes through
+    `resolve_unknown_outcome`, the `toTable` door's rule: found is durable, not found ends
+    `RecoveryRequired(CommitOutcomeUnknown)`. A body that raised fails the query, but an epoch
+    that committed is recorded durable first, so the restart resumes after it and the body is
+    not replayed (skipped entirely, as the sketch's §3.5 step 2 and Flink's committer do). The
+    error is the scope's typed refusal when it has one (`Fenced` from a lost race,
+    `SinkCommittedTwice`, `UnstampedSinkWrite`), else `BatchFailed` with the body's masked
+    text. A body that returned with no stamped commit while an unstamped snapshot landed on
+    the sink above the batch's base ends `RecoveryRequired(UnstampedSinkCommit)` and writes no
+    stamp; otherwise the stamp-only commit runs as before.
+  - **A failed body is not audited for unstamped snapshots.** The check costs a sink load, and
+    a body's own error is the answer the caller needs (MBE-16). A write that slips the scope is
+    caught on the first batch that returns.
+  - **`exactly_once_tests.rs`**: the second write (`SinkCommittedTwice`, the first lands once),
+    the body with no sink write, a sink write from a spawned task with and without the body's
+    own stamped commit, a guarded property change (`UnstampedSinkWrite`, nothing lands), a
+    bare-dialect `INSERT` the guard cannot see (`UnstampedSinkCommit`), the two unknown
+    outcomes over `FaultCatalog`, and the scope ending with the batch.
+  - **`foreach_tests.rs`**: three pins rewritten for the new contract. The stamp pin reads
+    `stamp 0 with 3 rows, stamp 1 with 2 rows` and no trailing snapshot; the failed-body pin
+    fails before any sink write and replays its epoch; the pin that read "replays at least
+    once" is now `a_body_that_fails_after_its_sink_write_leaves_the_epoch_durable`.
+  - **`race_tests.rs`**: `race_once` takes the door, and
+    `two_sessions_racing_foreach_bodies_land_every_row_exactly_once` runs the 50 seeded
+    iterations with a body that appends to the sink. Its floor is 1 iteration that refused a
+    staged write, because the body loads the sink itself and the window is narrower than the
+    `toTable` door's.
+  - **`testing.rs`** gains `append_frame` (the body's append, through the registry snapshot
+    the statement funnel builds) and `SinkWriter`, a `BatchBody` that appends N times.
+  pins: mb-4-foreach-eo/C-001, C-002, C-004, C-007, C-009, C-010, C-011
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005

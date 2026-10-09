@@ -1008,6 +1008,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **PR-B hadoop naming (2026-09-24):** also holds `kind_from_bare_catalog_value` (moved from
   `catalog_config.rs`), `is_hadoop_type`, and `with_type_naming`. `with_type_naming` inserts
   the fork's `metadata-naming` key with `hadoop` only when the key is absent.
+- `catalog_state.rs` — **MB-4-FOREACH-EO (2026-10-09):** `CatalogRegistry::guarded_in_batch_body`
+  maps a registry snapshot's catalogs through `repark-iceberg`'s `guard_body_catalog`. Outside a
+  `foreachBatch` body it returns the snapshot unchanged; the caller is the statement funnel
+  ([session/map.md](session/map.md), `write_options.rs`) and the microbatch test helper.
+  pins: mb-4-foreach-eo/C-006
 - `catalog_state.rs` — **C-2d fold 1 (2026-10-07), N5:** `CatalogRegistry::is_database_source(name)` and
   `source_read_only_message(name)` (the `read_only_ddl` text for a Postgres source), so the
   Spark door's catalog lookups answer a mounted source by its own rows instead of the P11

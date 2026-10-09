@@ -841,3 +841,6 @@ mod isolation;
 
 #[path = "sink_offsets_append_fence_tests.rs"]
 mod append_fence;
+
+#[path = "sink_offsets_body_scope_tests.rs"]
+mod body_scope;

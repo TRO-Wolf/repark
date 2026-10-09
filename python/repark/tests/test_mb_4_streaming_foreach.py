@@ -225,10 +225,9 @@ def test_foreach_door_replays_mb0_w4_stamped(spark: ReparkSession, stream_table:
     assert body.seen == [0, 1]
     assert _rows(spark, sink) == [[1, "k1"], [2, "k0"], [3, "k1"], [4, "k0"]]
     log = _snapshot_log(spark, sink)
-    assert len(log) == 4
-    writes = [summary for _, summary in log if "repark.cdc.epoch" not in summary]
-    assert [summary["added-records"] for summary in writes] == ["2", "2"]
+    assert len(log) == 2
     stamps = [summary for _, summary in log if "repark.cdc.epoch" in summary]
+    assert [summary["added-records"] for summary in stamps] == ["2", "2"]
     assert [summary["repark.cdc.epoch"] for summary in stamps] == ["0", "1"]
     assert stamps[0]["repark.cdc.query-id"] == queries[0].id
     assert stamps[1]["repark.cdc.query-id"] == queries[0].id

@@ -10,6 +10,7 @@ use datafusion::prelude::SessionContext;
 use iceberg::Catalog;
 use repark_common::SourceKind;
 use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
+use repark_iceberg::write::sink_offsets::guard_body_catalog;
 
 use crate::catalog_config::refusal::CatalogRefusal;
 use crate::config_file::maintenance::MaintenancePolicy;
@@ -189,6 +190,14 @@ impl CatalogRegistry {
                 warehouse_layout_root: None,
             },
         );
+    }
+
+    #[must_use]
+    pub(crate) fn guarded_in_batch_body(mut self) -> Self {
+        for entry in self.entries.values_mut() {
+            entry.catalog = guard_body_catalog(&entry.catalog);
+        }
+        self
     }
 
     pub fn set_warehouse_layout_root(&mut self, name: &str, root: PathBuf) {

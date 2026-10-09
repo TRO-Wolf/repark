@@ -67,6 +67,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `Catalog` as a corrupt stamp, not `UnsupportedOffsetFormat`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-024
   pins: mb-2a/C-016
+- `error.rs` — **MB-4-FOREACH-EO (2026-10-09):** `UnstampedSinkWrite { sink, epoch }`
+  (MBE-19), the refusal of a commit to the declared sink that cannot carry the epoch stamp.
+  Its text names the shapes the sink does take inside a `foreachBatch` body.
+  pins: mb-4-foreach-eo/C-006
 - `error.rs` — the sketch's §3.2: `MicroBatchError` with every variant,
   `thiserror`, `#[non_exhaustive]` (NS-15), plus `RecoveryReason`. Fold 1
   adds `OffsetPositionOutOfRange`, and `UnsupportedOffsetFormat.found`
