@@ -433,6 +433,7 @@ with the rows the parallel lane adds to the table above.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-113 | Item 13: two drivers of one query (one `QueryId`, two `RunId`s) in two sessions over one catalog, started off a barrier with no injected commit, land every source row in the `toTable` sink exactly once and stamp each epoch once, over 50 iterations; the driver that lost ends `Fenced` or `RecoveryRequired` naming the winner's run; and the race reaches the append fence, not only the in-process resume-point check. | `crates/repark-core/src/microbatch/race_tests.rs::two_sessions_racing_one_query_land_every_row_exactly_once`, three runs, plus one hand mutant on the fence. | **PROVEN** | Green three times: 19.64 s, 23.76 s, 17.87 s test time (debug build, cores 48-63, 8 jobs), under the 60 s bound, so the count stays 50. The loser was refused at the commit in 46, 48 and 46 of 50 iterations. Mutant M13 (`AppendFence::update_table` forwards every commit, `append_fence.rs`): red at iteration 1, sink rows `[1, 1, 2, 2, 3, 4]`, history epoch 0 stamped by both runs; restored. |
+| C-114 | Item 14: after the fence's `RecoveryRequired` ending (a property-only foreign commit inside the driver's commit refresh), a restart of the same sink and `queryName` on a fresh session and manager refuses with the error the sketch names, `RecoveryRequired(StampedSnapshotExpired)` carrying the property's record as the durable offset, on both doors and on a second restart; it runs no body and leaves the sink with no snapshot, stamp or row. | `crates/repark-core/src/microbatch/race_tests.rs::a_restart_after_the_fences_recovery_required_ending_refuses_by_name`, plus hand mutants on the resume. | **PROVEN** | Green, 0.20 s. Sketch Q10 and §3.4: "Property present but no stamped snapshot retained: `RecoveryRequired(StampedSnapshotExpired)`". Mutant M14a (`read_resume_point` returns the bare property as the resume point, `sink_offsets.rs`): red, on the first run's ending (`Fenced` instead of `RecoveryRequired`), because the fence shares the function. Mutant M14b (both `read_resume_point` calls in `run.rs` accept the durable record of a `RecoveryRequired`): red on the `foreachBatch` door, "the refused restart ran a body", 1 call for 0; the `toTable` door stayed green under M14b because the claim's epoch check refuses the commit with the identical error. Both restored. |
 
 - **R-1 (2026-10-08). The free-running in-process race does not reach the fence.** Measured
   first without `SlowCatalog`, with the drivers' polling delay at zero: 50 of 50 iterations
@@ -444,3 +445,15 @@ with the rows the parallel lane adds to the table above.
 - **R-2 (2026-10-08). `RecoveryRequired` as the loser's ending was never observed.** Every
   losing driver in the three green runs ended `Fenced`. The pin accepts `RecoveryRequired`
   only when its durable record names the winner's run, as the plan's item 13 allows.
+- **R-3 (2026-10-08). The restart's answer is a refusal, and it is stable.** The property-only
+  commit leaves the sink with this query's offsets property and no stamped snapshot. The
+  restart reads that in `trigger_loop` before it plans anything and ends
+  `RecoveryRequired(StampedSnapshotExpired)`; a second restart answers the same. The reason's
+  text names snapshot retention as the fix, which is the expiry case; here no stamped snapshot
+  ever existed. The sketch gives both cases the one reason, so the pin holds it as written.
+- **R-4 (2026-10-08). Observed, not changed: `QueryHandle::durable()` is `None` on the refused
+  restart** while its exception and its `ShutdownOutcome` both carry the property's record.
+  `conclude` puts the reported record on the outcome and the exception and leaves the
+  lifecycle's own copy unset when the driver failed before `resumed` ran. The pin asserts the
+  outcome and the exception and makes no claim on `durable()`. `driver.rs` is outside this
+  slice; the question goes to the orchestrator in the hand-back.

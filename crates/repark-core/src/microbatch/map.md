@@ -241,6 +241,19 @@ pins: mb-3/C-031
   `toTable` only: the `foreachBatch` body is at-least-once by contract (see the door
   guarantees above), so "each row once in the sink" is not its promise.
   pins: mb-4/C-113
+  **Item 14, `a_restart_after_the_fences_recovery_required_ending_refuses_by_name`:** on both
+  doors, drives a query to the ending of `fence_tests.rs`'s
+  `a_fence_refusal_that_needs_recovery_ends_recovery_required` (a foreign commit sets this
+  query's offsets property, with no stamped snapshot, inside the driver's commit refresh), then
+  registers the same sink and `queryName` on a fresh session and manager over the same catalog
+  and starts, twice. The answer is the refusal the sketch names for a property with no stamped
+  snapshot behind it (Q10 and §3.4, `read_resume_point`): `RecoveryRequired` with
+  `StampedSnapshotExpired`, epoch 0 and the property's record as the durable offset, the same
+  on the exception and on the `ShutdownOutcome`. It does not resume: no body runs, the sink
+  keeps no snapshot, no stamp and no row, so nothing is duplicated and nothing is skipped past.
+  The helpers that build the ending repeat `fence_tests.rs`'s private ones, because that file
+  is outside this slice's footprint.
+  pins: mb-4/C-114
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005

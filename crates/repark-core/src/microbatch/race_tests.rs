@@ -1,22 +1,31 @@
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Barrier};
 use std::time::Duration;
 
 use async_trait::async_trait;
 use iceberg::table::Table;
+use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Namespace, NamespaceIdent, TableCommit, TableCreation, TableIdent};
-use repark_iceberg::microbatch::error::MicroBatchError;
-use repark_iceberg::microbatch::offset::{EPOCH_KEY, QUERY_ID_KEY, QueryId, RUN_ID_KEY, RunId};
+use repark_common::Generation;
+use repark_iceberg::microbatch::error::{MicroBatchError, RecoveryReason};
+use repark_iceberg::microbatch::offset::{
+    EPOCH_KEY, Epoch, OffsetFormatVersion, OffsetVector, QUERY_ID_KEY, QueryId, RUN_ID_KEY, RunId,
+    SinkRecord,
+};
+use repark_iceberg::microbatch::window::WindowLimit;
 use tokio::runtime::Handle;
 
 use crate::Session;
 use crate::microbatch::driver::{
-    QueryHandle, SinkSpec, StreamSpec, StreamingQueryManager, Trigger,
+    BatchBody, QueryHandle, QueryState, ShutdownOutcome, SinkSpec, StreamSpec,
+    StreamingQueryManager, Trigger,
 };
-use crate::microbatch::lifecycle_tests::{ONE, ended, named};
+use crate::microbatch::lifecycle_tests::{Mode, ONE, Probe, ended, named};
+use crate::microbatch::table_door_tests::{FLAKY_SINK, FaultCatalog, LoadHook, flaky};
 use crate::microbatch::testing::{Fixture, SINK, SOURCE, options, stamped_epochs};
+use crate::time_travel::microbatch_source::MicroBatchSource;
 
 const ITERATIONS: usize = 50;
 const FENCE_FLOOR: usize = 10;
@@ -334,4 +343,160 @@ async fn two_sessions_racing_one_query_land_every_row_exactly_once() {
         refused_at_the_commit >= FENCE_FLOOR,
         "{refused_at_the_commit} of {ITERATIONS} iterations reached the append fence, under the floor of {FENCE_FLOOR}"
     );
+}
+
+fn recovering_spec(body: Option<&Arc<Probe>>) -> StreamSpec {
+    let sink = FLAKY_SINK.to_string();
+    let sink = match body {
+        Some(body) => SinkSpec::ForeachBatch {
+            sink,
+            body: Arc::clone(body) as Arc<dyn BatchBody>,
+        },
+        None => SinkSpec::Table { sink },
+    };
+    let mut spec = StreamSpec::new(SOURCE, options(ONE), sink);
+    spec.trigger = Trigger::AvailableNow;
+    named(spec, "raced")
+}
+
+async fn first_epoch_of(fixture: &Fixture, query: QueryId, run: RunId) -> SinkRecord {
+    let source = MicroBatchSource::open(&fixture.session, SOURCE, options(ONE))
+        .await
+        .expect("the source opens");
+    let from = source
+        .initial_offset()
+        .await
+        .expect("the start plans")
+        .expect("the source has data");
+    let window = source
+        .next_batch(&from, WindowLimit::Capped)
+        .await
+        .expect("the window plans")
+        .expect("a batch");
+    SinkRecord {
+        format: OffsetFormatVersion::CURRENT,
+        query,
+        run,
+        epoch: Epoch::FIRST,
+        generation: Generation::new(1).expect("generation 1"),
+        offsets: OffsetVector::single(window.end),
+    }
+}
+
+async fn set_the_offsets_property(inner: &Arc<dyn Catalog>, record: &SinkRecord) {
+    let silver = TableIdent::new(
+        NamespaceIdent::new("sales".to_string()),
+        "silver".to_string(),
+    );
+    let sink = inner.load_table(&silver).await.expect("the sink loads");
+    let (key, value) = record.property().expect("the offsets property");
+    let tx = Transaction::new(&sink);
+    let tx = tx
+        .update_table_properties()
+        .set(key, value)
+        .apply(tx)
+        .expect("the property applies");
+    tx.commit(inner.as_ref())
+        .await
+        .expect("the property commit lands");
+}
+
+fn property_race(inner: &Arc<dyn Catalog>, record: &SinkRecord, nth: usize) -> LoadHook {
+    let (inner, record) = (Arc::clone(inner), record.clone());
+    let seen = Arc::new(AtomicUsize::new(0));
+    Arc::new(move |table: &TableIdent| {
+        let fires = table.name() == "silver" && seen.fetch_add(1, Ordering::SeqCst) == nth;
+        let (inner, record) = (Arc::clone(&inner), record.clone());
+        Box::pin(async move {
+            if fires {
+                set_the_offsets_property(&inner, &record).await;
+            }
+        })
+    })
+}
+
+async fn restarted_session(inner: &Arc<dyn Catalog>, flaky: &Arc<FaultCatalog>) -> Session {
+    let session = Session::builder().build().expect("a restarted session");
+    session
+        .register_iceberg_catalog("ice", Arc::clone(inner))
+        .await
+        .expect("the shared catalog registers");
+    session
+        .register_iceberg_catalog("flaky", Arc::clone(flaky) as Arc<dyn Catalog>)
+        .await
+        .expect("the wrapped catalog registers");
+    session
+}
+
+#[tokio::test]
+async fn a_restart_after_the_fences_recovery_required_ending_refuses_by_name() {
+    for foreach in [false, true] {
+        let fixture = Fixture::new().await;
+        fixture.insert(SOURCE, "(1)").await;
+        fixture.insert(SOURCE, "(2)").await;
+        let catalog = flaky(&fixture).await;
+        let inner = fixture
+            .session
+            .catalogs_snapshot()
+            .get("ice")
+            .cloned()
+            .expect("the memory catalog");
+        let body = Probe::new(Mode::Record);
+        let first = registered(&fixture.session, recovering_spec(foreach.then_some(&body))).await;
+        let racer = first_epoch_of(&fixture, first.id(), RunId::fresh()).await;
+        let refresh_inside_the_commit = if foreach { 3 } else { 2 };
+        catalog.on_load(Some(property_race(
+            &inner,
+            &racer,
+            refresh_inside_the_commit,
+        )));
+        first.start_below_catalog_check().expect("start");
+        let ending = ended(&first).await.expect_err("the fence refuses");
+        catalog.on_load(None);
+        assert!(
+            matches!(
+                ending.as_ref(),
+                MicroBatchError::RecoveryRequired { epoch, .. } if *epoch == Epoch::FIRST
+            ),
+            "foreachBatch: {foreach}: {ending:?}"
+        );
+        assert_eq!(first.state(), QueryState::RecoveryRequired);
+        assert_eq!(body.calls(), usize::from(foreach));
+
+        let refusal = MicroBatchError::RecoveryRequired {
+            query: first.id(),
+            epoch: Epoch::FIRST,
+            durable: Some(Box::new(racer.clone())),
+            reason: RecoveryReason::StampedSnapshotExpired,
+        };
+        for attempt in 0..2 {
+            let context = format!("foreachBatch: {foreach}, restart {attempt}");
+            let session = restarted_session(&inner, &catalog).await;
+            let resumed = Probe::new(Mode::Record);
+            let restart = registered(&session, recovering_spec(foreach.then_some(&resumed))).await;
+            assert_eq!(restart.id(), first.id(), "{context}");
+            assert_ne!(restart.run_id(), first.run_id(), "{context}");
+            restart.start_below_catalog_check().expect("start");
+            let answer = ended(&restart).await.expect_err("the restart refuses");
+            assert_eq!(*answer, refusal, "{context}");
+            assert_eq!(restart.state(), QueryState::RecoveryRequired, "{context}");
+            assert_eq!(
+                restart.stop().await,
+                ShutdownOutcome::RecoveryRequired {
+                    durable: Some(racer.clone()),
+                    reason: RecoveryReason::StampedSnapshotExpired,
+                },
+                "{context}"
+            );
+            assert_eq!(
+                resumed.calls(),
+                0,
+                "the refused restart ran a body: {context}"
+            );
+            let sink = fixture.table("silver").await;
+            assert!(history_of(&sink, first.id()).is_empty(), "{context}");
+            assert_eq!(sink.metadata().snapshots().count(), 0, "{context}");
+            assert!(fixture.ids(SINK).await.is_empty(), "{context}");
+        }
+    }
 }
