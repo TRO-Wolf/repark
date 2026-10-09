@@ -8031,6 +8031,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `get(None)` to `NOT_STR`. pins: mb-4/C-041
   Fold 1b pins `query.stop()` raising `RecoveryRequired` after the sink is
   replaced under a `foreachBatch` body. pins: mb-4/C-042
+  Fold 1b pins the five declared members (`partitionBy`,
+  `processAllAvailable`, `explain`, `addListener`, `removeListener`) to
+  `NOT_IMPLEMENTED` with the member-naming text and parameters.
+  pins: mb-4/C-043
 
 ## I want to...
 

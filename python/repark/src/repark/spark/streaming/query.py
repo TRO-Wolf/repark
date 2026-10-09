@@ -1,14 +1,26 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NoReturn
 
 from repark import _native
-from repark.errors import PySparkTypeError, PySparkValueError
+from repark.errors import (
+    PySparkNotImplementedError,
+    PySparkTypeError,
+    PySparkValueError,
+)
 
 if TYPE_CHECKING:
     from repark._native import PyStreamingQuery, StreamingQueryException
     from repark.spark.session.session_core import ReparkSession
+
+
+def _not_implemented(feature: str) -> NoReturn:
+    raise PySparkNotImplementedError(
+        f"[NOT_IMPLEMENTED] {feature} is not implemented.",
+        errorClass="NOT_IMPLEMENTED",
+        messageParameters={"feature": feature},
+    )
 
 
 class StreamingQuery:
@@ -83,6 +95,24 @@ class StreamingQuery:
         """Returns the StreamingQueryException if the query was terminated by an exception."""
         return self._handle.exception()
 
+    def processAllAvailable(self) -> None:  # noqa: N802 — PySpark method name
+        """Blocks until all available data in the source has been processed.
+
+        Declared: the blocking drain is deferred.
+
+        pins: mb-4/C-043
+        """
+        _not_implemented("processAllAvailable")
+
+    def explain(self, extended: bool = False) -> None:
+        """Prints the (logical and physical) plans to the console.
+
+        Declared: query-plan printing is deferred.
+
+        pins: mb-4/C-043
+        """
+        _not_implemented("explain")
+
 
 class StreamingQueryManager:
     """A class to manage all the StreamingQuery StreamingQueries active."""
@@ -140,3 +170,23 @@ class StreamingQueryManager:
         """Clears the terminated-query record so awaitAnyTermination waits for a new one."""
         inner = self._session._ensure_alive()
         _native.streams_reset_terminated(inner)
+
+    def addListener(self, listener: object) -> None:  # noqa: N802 — PySpark method name
+        """Registers a listener for query life cycle events.
+
+        Declared: listener up-calls are deferred.
+
+        pins: mb-4/C-043
+        """
+        self._session._ensure_alive()
+        _not_implemented("addListener")
+
+    def removeListener(self, listener: object) -> None:  # noqa: N802 — PySpark method name
+        """Deregisters a query life cycle listener.
+
+        Declared: listener up-calls are deferred.
+
+        pins: mb-4/C-043
+        """
+        self._session._ensure_alive()
+        _not_implemented("removeListener")

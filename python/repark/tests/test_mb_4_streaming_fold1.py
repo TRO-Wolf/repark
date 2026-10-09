@@ -21,7 +21,7 @@ from repark.spark.dataframe import DataFrame
 from repark.spark.functions import col, pandas_udf, udf
 from repark.spark.session.session_core import ReparkSession
 from repark.spark.streaming import DataStreamReader, DataStreamWriter
-from repark.spark.streaming.query import StreamingQueryManager
+from repark.spark.streaming.query import StreamingQuery, StreamingQueryManager
 
 _MBE8_TEXT = (
     "[REPARK_MICROBATCH.LOCAL_CATALOG_REFUSED] streaming needs a shared catalog; "
@@ -579,3 +579,72 @@ def test_query_stop_raises_recovery_required_after_sink_replace(
         query.awaitTermination()
     with pytest.raises(RecoveryRequiredException):
         query.stop()
+
+
+def test_writer_partition_by_is_declared_not_implemented(
+    spark: ReparkSession, stream_table: str
+) -> None:
+    frame = _reader(spark).format("iceberg").load(stream_table)
+    with pytest.raises(PySparkNotImplementedError) as excinfo:
+        frame.writeStream.partitionBy("id")
+    assert excinfo.value.getErrorClass() == "NOT_IMPLEMENTED"
+    assert str(excinfo.value) == "[NOT_IMPLEMENTED] partitionBy is not implemented."
+    assert excinfo.value.getMessageParameters() == {"feature": "partitionBy"}
+    assert excinfo.value.getSqlState() is None
+
+
+def _run_available_now_query(
+    spark: ReparkSession, stream_table: str, sink: str, tmp_path: Path
+) -> StreamingQuery:
+    spark.sql(f"CREATE TABLE {sink} (id BIGINT, k STRING)")
+    query = (
+        DataStreamWriter(_reader(spark).format("iceberg").load(stream_table))
+        .option("checkpointLocation", str(tmp_path / "declared"))
+        .trigger(availableNow=True)
+        .toTable(sink)
+    )
+    query.awaitTermination()
+    return query
+
+
+def test_query_process_all_available_is_declared_not_implemented(
+    spark: ReparkSession, stream_table: str, tmp_path: Path
+) -> None:
+    query = _run_available_now_query(spark, stream_table, "sc.mb4.silver_declared_paa", tmp_path)
+    with pytest.raises(PySparkNotImplementedError) as excinfo:
+        query.processAllAvailable()
+    assert excinfo.value.getErrorClass() == "NOT_IMPLEMENTED"
+    assert str(excinfo.value) == "[NOT_IMPLEMENTED] processAllAvailable is not implemented."
+    assert excinfo.value.getMessageParameters() == {"feature": "processAllAvailable"}
+    assert excinfo.value.getSqlState() is None
+
+
+def test_query_explain_is_declared_not_implemented(
+    spark: ReparkSession, stream_table: str, tmp_path: Path
+) -> None:
+    query = _run_available_now_query(
+        spark, stream_table, "sc.mb4.silver_declared_explain", tmp_path
+    )
+    for extended in (False, True):
+        with pytest.raises(PySparkNotImplementedError) as excinfo:
+            query.explain(extended=extended)
+        assert excinfo.value.getErrorClass() == "NOT_IMPLEMENTED"
+        assert str(excinfo.value) == "[NOT_IMPLEMENTED] explain is not implemented."
+        assert excinfo.value.getMessageParameters() == {"feature": "explain"}
+        assert excinfo.value.getSqlState() is None
+
+
+def test_manager_listeners_are_declared_not_implemented(spark: ReparkSession) -> None:
+    manager = StreamingQueryManager(spark)
+    with pytest.raises(PySparkNotImplementedError) as excinfo:
+        manager.addListener(object())
+    assert excinfo.value.getErrorClass() == "NOT_IMPLEMENTED"
+    assert str(excinfo.value) == "[NOT_IMPLEMENTED] addListener is not implemented."
+    assert excinfo.value.getMessageParameters() == {"feature": "addListener"}
+    assert excinfo.value.getSqlState() is None
+    with pytest.raises(PySparkNotImplementedError) as excinfo:
+        manager.removeListener(object())
+    assert excinfo.value.getErrorClass() == "NOT_IMPLEMENTED"
+    assert str(excinfo.value) == "[NOT_IMPLEMENTED] removeListener is not implemented."
+    assert excinfo.value.getMessageParameters() == {"feature": "removeListener"}
+    assert excinfo.value.getSqlState() is None

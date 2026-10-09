@@ -355,6 +355,17 @@ class DataStreamWriter:
         self._foreach = func
         return self
 
+    def partitionBy(self, *cols: str) -> DataStreamWriter:  # noqa: N802 — PySpark method name
+        """Partitions the output by the given columns on the file system.
+
+        Declared: file-layout partitioning is deferred. The ``partitionBy``
+        start keyword stays accepted and ignored.
+
+        pins: mb-4/C-043
+        """
+        self._frame._ensure_alive()
+        _not_implemented("partitionBy")
+
     def _apply_start_kwargs(
         self,
         outputMode: str | None,  # noqa: N803 — PySpark kwarg name
