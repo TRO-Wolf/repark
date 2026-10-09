@@ -98,6 +98,10 @@ async fn nondeterministic_join_conditions_refuse_with_spark_class_and_text() {
             "SELECT * FROM ice.ns.l INNER JOIN ice.ns.r ON l.id = r.k AND EXISTS (SELECT 1 WHERE rand(1) > 2)",
             "[INVALID_NON_DETERMINISTIC_EXPRESSIONS]",
         ),
+        (
+            "SELECT * FROM ice.ns.l WHERE id IN (SELECT l2.id FROM ice.ns.l l2 JOIN ice.ns.r r2 ON l2.id = r2.k AND rand(1) >= 0)",
+            "[INVALID_NON_DETERMINISTIC_EXPRESSIONS]",
+        ),
     ];
     for (sql, text) in cases {
         let wh = TempDir::new().unwrap();

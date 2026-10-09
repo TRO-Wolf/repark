@@ -135,6 +135,18 @@ def test_sql_door_refuses_per_how(spark: ReparkSession, how: str, name: str) -> 
     _assert_refusal(lambda: spark.sql(query), condition, params)
 
 
+def test_refused_join_inside_a_subquery_expression_refuses(spark: ReparkSession) -> None:
+    _frames(spark)
+    _assert_refusal(
+        lambda: spark.sql(
+            "SELECT * FROM l WHERE id IN "
+            "(SELECT l2.id FROM l l2 JOIN r r2 ON l2.id = r2.k AND rand(1) >= 0)"
+        ),
+        _NONDET,
+        {"sqlExprs": '"((id = k) AND (rand(1) >= 0))"'},
+    )
+
+
 @pytest.mark.parametrize(
     ("build_name", "condition", "rendering"),
     [
