@@ -219,6 +219,14 @@ async fn dml_subquery_not_in_delete_executes_and_honors_three_valued_logic() {
 /// `DELETE … [NOT] EXISTS` handles uncorrelated and correlated predicates.
 #[tokio::test]
 async fn dml_subquery_exists_delete_executes_uncorrelated_and_correlated() {
+    boxed_dml_subquery_exists_delete().await;
+}
+
+fn boxed_dml_subquery_exists_delete() -> std::pin::Pin<Box<dyn std::future::Future<Output = ()>>> {
+    Box::pin(dml_subquery_exists_delete_body())
+}
+
+async fn dml_subquery_exists_delete_body() {
     let uncorrelated = AnsiDoor::new().await;
     uncorrelated
         .ok("CREATE TABLE ice.sales.sqtgt AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3")

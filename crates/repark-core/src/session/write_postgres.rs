@@ -181,6 +181,25 @@ pub async fn execute_postgres_write(
     })
 }
 
+/// The shared refusal for a non-append write: only append lands on Postgres.
+#[must_use]
+pub fn postgres_write_modes_refusal(what: &str) -> String {
+    format!(
+        "{what} refuses: a Postgres source takes append writes only (registry row \
+         CONNECT-DECL-pg-write-modes in docs/spark-sql-iceberg-parity.md)"
+    )
+}
+
+/// The shared refusal for a row-changing write that is not an append.
+#[must_use]
+pub fn postgres_write_upsert_refusal(what: &str) -> String {
+    format!(
+        "{what} refuses: a Postgres source takes append writes only; changing stored rows is \
+         not implemented (registry row CONNECT-DECL-pg-write-upsert in \
+         docs/spark-sql-iceberg-parity.md)"
+    )
+}
+
 /// Write one planned frame to Postgres through step 1's selector.
 ///
 /// # Errors

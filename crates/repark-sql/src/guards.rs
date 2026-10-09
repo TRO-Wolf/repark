@@ -76,6 +76,9 @@ pub(crate) fn refuse_read_only_catalog_dml(
     };
     let catalog = catalog.trim_matches('"');
     if catalogs.is_read_only_catalog(catalog) {
+        if verb == "INSERT" && crate::pg_insert::is_postgres_source(catalogs, catalog) {
+            return Ok(());
+        }
         return Err(DataFusionError::Plan(read_only_catalog_message(
             catalog, verb,
         )));

@@ -97,6 +97,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   before `try_execute_session_insert` and `delegate`; every other shape falls through.
   Pins: [../tests/ansi_write_defaults.rs](../tests/ansi_write_defaults.rs).
   pins: ice-error-conditions-1/C-011
+- `pg_insert.rs` — **C-4 step 2 (2026-10-09):** Postgres-target INSERT routing on this door.
+  Appends drive the shared `repark_core::write_postgres` sink (bulk with automatic row fallback,
+  no flag); overwrite refuses with the `CONNECT-DECL-pg-write-modes` row, REPLACE and UPDATE
+  with the `CONNECT-DECL-pg-write-upsert` row. The route is checked inside
+  `execute_insert_overwrite` and `execute_insert_routed` rather than in the router match, so a
+  non-Postgres statement crosses no new code in the dispatch arms. The write future is heap-boxed
+  at the module boundary: at ~17KB it trips clippy's large-futures ceiling in every ancestor await.
+  pins: c-4/C-013
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic
   `replace-partitions=true`, empty-dynamic refuse) and the remaining Q9 whole-table refuse.

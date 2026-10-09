@@ -173,10 +173,10 @@ async fn execute_time_travelled(
         // --- Delegated DML: allow-list first, then G3-E8 and async MoR/V3 valves.
         Statement::Delete(_) => execute_identity_or_delegate(cx, sql, statement.as_ref()).await,
         Statement::Update(_) => {
-            guards::refuse_dml_subquery_predicate(statement.as_ref())?;
-            guards::refuse_mor_multi_spec_dml(cx, statement.as_ref()).await?;
-            crate::update_cast::refuse_incompatible_update_cast(cx, statement.as_ref()).await?;
-            execute_identity_or_delegate(cx, sql, statement.as_ref()).await
+            if let Some(error) = crate::pg_insert::postgres_update_refusal(cx, statement.as_ref()) {
+                return Err(error);
+            }
+            execute_update_routed(cx, sql, statement.as_ref()).await
         }
         _ => {
             delegate(
@@ -190,6 +190,17 @@ async fn execute_time_travelled(
     }
 }
 
+async fn execute_update_routed(
+    cx: &EngineContext<'_>,
+    sql: &str,
+    statement: &Statement,
+) -> Result<DataFrame> {
+    guards::refuse_dml_subquery_predicate(statement)?;
+    guards::refuse_mor_multi_spec_dml(cx, statement).await?;
+    crate::update_cast::refuse_incompatible_update_cast(cx, statement).await?;
+    execute_identity_or_delegate(cx, sql, statement).await
+}
+
 async fn execute_insert_routed(
     cx: &EngineContext<'_>,
     insert: &Insert,
@@ -198,6 +209,9 @@ async fn execute_insert_routed(
     preloaded: Option<iceberg::table::Table>,
 ) -> Result<DataFrame> {
     insert_arity::refuse_if_short_values(cx.catalogs, insert).await?;
+    if let Some(frame) = crate::pg_insert::route_postgres_insert(cx, insert).await? {
+        return Ok(frame);
+    }
     if let Some(frame) = crate::session_insert::try_execute_session_insert(
         cx,
         insert,
