@@ -9,6 +9,27 @@ carriages a write can take and nothing a door needs to parse. The module root
 
 ## Contents
 
+- `target.rs` — **C-4 fold 1 (2026-10-09).** What the target relation is, read once at `open`
+  inside the write's transaction ([c-4-ledger.md](../../../../task/ledgers/staging/c-4-ledger.md)
+  §8.2, §8.3).
+  - **`TARGET_FACTS`** is one statement over `pg_class`, `pg_rewrite`, `pg_trigger`,
+    `pg_partition_tree` and `pg_attribute`, with the schema, the table and the written column
+    names bound. It answers the relation kind, `row_security_active`, whether an enabled
+    `INSERT` rule exists (`ev_type = '3'`), whether an enabled statement-level `INSERT`
+    trigger exists (`tgtype & 5 = 4`: the row bit clear, the insert bit set), whether a
+    partition is a foreign table, `has_column_privilege(…, 'INSERT')` over the written
+    columns, and the first written column that is a `GENERATED ALWAYS` identity or a
+    generated column.
+  - **`route(client, request, requested, timeout)`** refuses first (`PermissionDenied
+    { Insert }`, `WriteRefused { IdentityAlways | GeneratedColumn }`), then answers the path
+    and the reason. The reasons are tried in one fixed order (`View`, `ForeignTable`,
+    `InsertRule`, `RowSecurity`, `StatementTrigger`, then the column-type reason), so a
+    target with two properties always reports the same one.
+  - **`RowFallback`** (public) is that reason; its `Display` is the sentence a door shows.
+    The rule behind every variant: where Postgres gives `COPY` and `INSERT` different
+    meanings, `INSERT`'s is the contract. A foreign table agreed under `postgres_fdw` and
+    still takes rows, because no other wrapper can be measured here.
+  pins: c-4/C-017, C-018, C-019
 - `postgres_copy.rs` — the bulk path.
   - **`CopyBinaryEncoder`** (public, pure) frames Arrow batches as a
     `COPY … FROM STDIN (FORMAT BINARY)` stream: `batch(&RecordBatch)` checks the batch against

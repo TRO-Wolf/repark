@@ -51,6 +51,13 @@ COPY BINARY cannot carry and puts a write on the row path. One write is one tran
 door calls it yet: the routing and the `write.path` option are the next slice. No new
 dependency. pins: c-4/C-005, C-006
 
+**C-4 fold 1 (2026-10-09).** The selector also reads the target relation at `open`
+(`write/target.rs`): where Postgres gives `COPY` and `INSERT` different meanings (an `INSERT`
+rule, a view, a row-security policy, a statement trigger, a foreign table), a `Bulk` request
+takes the row path and `PostgresWriter::fallback()` says why; a named identity or generated
+column refuses on both paths. `INSERT`'s meaning is the contract and bulk only optimises it.
+pins: c-4/C-017, C-018
+
 ## Contents
 
 - `Cargo.toml` — workspace inheritance for edition, version, license, rust-version, repository,
@@ -178,6 +185,7 @@ in the write direction. Both are documents, not runs; the citations are in the
 | A batch differs with chunking | `copy_decode_is_independent_of_chunking`: a field or fixed word that straddles a chunk must go through the carry buffer |
 | `TlsRequired` against a server with TLS | the server answered the SSLRequest with `N`; check its `ssl = on`. `sslmode=disable` is the only plaintext switch |
 | `TlsHandshake { UntrustedCertificate }` | the server's chain does not reach the system roots or `sslrootcert`; point `sslrootcert` at the CA bundle |
+| A `Bulk` request reports `WritePath::Row` | `PostgresWriter::fallback()` names the relation property that moved it (`RowFallback`); the property table is the C-4 ledger's §8.3 |
 | A write fails with `Timeout { Read }` between batches | the row path is idle in its transaction while the `SELECT` computes; raise `read_timeout_ms`, or write without the `interval` column so the bulk path runs |
 | `CommitUnknown` | no answer to `COMMIT` in `read_timeout_ms`: the rows are all stored or all absent; read the table before any retry |
 | `PoolExhausted` | every permit is leased: a stream held unpolled, or `pool_max_size` too small for the concurrency |

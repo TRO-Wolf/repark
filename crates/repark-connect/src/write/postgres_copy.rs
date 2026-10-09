@@ -66,7 +66,7 @@ impl CopyBinaryEncoder {
 
 pub struct CopyChunks<'a> {
     encoder: &'a mut CopyBinaryEncoder,
-    fields: Vec<ColumnEncoder<'a>>,
+    fields: Vec<ColumnEncoder>,
     row: usize,
     rows: usize,
 }

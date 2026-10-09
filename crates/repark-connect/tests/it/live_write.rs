@@ -14,30 +14,31 @@ use repark_connect::{
 use crate::live_pg::{Cell, LIVE, Reader, tag, url};
 use crate::write::{ROWS, Sample, batch_of, sample_batch, samples};
 
-const PATHS: [(WritePath, &str); 2] = [(WritePath::Bulk, "bulk"), (WritePath::Row, "row")];
+pub(crate) const PATHS: [(WritePath, &str); 2] =
+    [(WritePath::Bulk, "bulk"), (WritePath::Row, "row")];
 
-struct Store {
-    reader: Reader,
-    options: WriteOptions,
+pub(crate) struct Store {
+    pub(crate) reader: Reader,
+    pub(crate) options: WriteOptions,
 }
 
 impl Store {
-    fn new(settings: &PostgresSettings) -> Store {
+    pub(crate) fn new(settings: &PostgresSettings) -> Store {
         Store {
             reader: Reader::new(settings),
             options: WriteOptions::from_settings(settings),
         }
     }
 
-    fn pool(&self) -> &Arc<PostgresPool> {
+    pub(crate) fn pool(&self) -> &Arc<PostgresPool> {
         &self.reader.pool
     }
 
-    async fn target(&self, cell: &Cell, table: &str) -> Arc<ResolvedSource> {
+    pub(crate) async fn target(&self, cell: &Cell, table: &str) -> Arc<ResolvedSource> {
         self.reader.resolve(cell.relation(table)).await.expect(LIVE)
     }
 
-    async fn store(
+    pub(crate) async fn store(
         &self,
         resolved: &ResolvedSource,
         path: WritePath,
@@ -46,7 +47,7 @@ impl Store {
         store_with(self.pool(), resolved, path, self.options, batches).await
     }
 
-    async fn read_back(&self, resolved: Arc<ResolvedSource>) -> RecordBatch {
+    pub(crate) async fn read_back(&self, resolved: Arc<ResolvedSource>) -> RecordBatch {
         let batches = self
             .reader
             .read(ScanRequest::new(resolved))
@@ -56,7 +57,7 @@ impl Store {
     }
 }
 
-async fn store_with(
+pub(crate) async fn store_with(
     pool: &Arc<PostgresPool>,
     resolved: &ResolvedSource,
     path: WritePath,
@@ -71,11 +72,16 @@ async fn store_with(
     writer.commit().await
 }
 
-fn ids(range: std::ops::Range<i32>) -> ArrayRef {
+pub(crate) fn ids(range: std::ops::Range<i32>) -> ArrayRef {
     Arc::new(Int32Array::from_iter_values(range))
 }
 
-async fn diverging(cell: &Cell, left: &str, right: &str, sends: &[(&str, &str)]) -> Vec<i32> {
+pub(crate) async fn diverging(
+    cell: &Cell,
+    left: &str,
+    right: &str,
+    sends: &[(&str, &str)],
+) -> Vec<i32> {
     let schema = &cell.schema;
     let differs: Vec<String> = sends
         .iter()
@@ -92,18 +98,12 @@ async fn diverging(cell: &Cell, left: &str, right: &str, sends: &[(&str, &str)])
     rows.iter().map(|row| row.get(0)).collect()
 }
 
-async fn stored_order(cell: &Cell, table: &str) -> Vec<i32> {
-    let sql = format!("SELECT id FROM {}.{table} ORDER BY ctid", cell.schema);
-    let rows = cell.admin.query(sql.as_str(), &[]).await.expect(&sql);
-    rows.iter().map(|row| row.get(0)).collect()
-}
-
-async fn rows_in(cell: &Cell, table: &str) -> i64 {
+pub(crate) async fn rows_in(cell: &Cell, table: &str) -> i64 {
     cell.count(&format!("SELECT count(*) FROM {}.{table}", cell.schema))
         .await
 }
 
-async fn no_backend_remains(cell: &Cell) {
+pub(crate) async fn no_backend_remains(cell: &Cell) {
     let deadline = Instant::now() + Duration::from_secs(15);
     while cell.backends().await > 0 {
         assert!(Instant::now() < deadline, "a backend outlived its writer");
@@ -111,7 +111,7 @@ async fn no_backend_remains(cell: &Cell) {
     }
 }
 
-fn sqlstate(outcome: Result<WriteReport, ConnectError>) -> String {
+pub(crate) fn sqlstate(outcome: Result<WriteReport, ConnectError>) -> String {
     match outcome {
         Err(ConnectError::Server { sqlstate, .. }) => sqlstate,
         other => panic!("expected a server refusal, got {other:?}"),
@@ -166,11 +166,6 @@ async fn bulk_and_row_store_byte_identical_tables_for_every_declared_type() {
         .collect();
     assert_eq!(diverging(&cell, "bulk", "row", &sends).await, [0_i32; 0]);
     assert_eq!(rows_in(&cell, "bulk").await, 8);
-    assert_eq!(
-        stored_order(&cell, "bulk").await,
-        (0..8).collect::<Vec<_>>()
-    );
-    assert_eq!(stored_order(&cell, "row").await, (0..8).collect::<Vec<_>>());
     drop(store);
     cell.close().await;
 }
@@ -402,7 +397,7 @@ async fn type_modifiers_and_text_forms_store_what_the_server_itself_parses() {
     cell.close().await;
 }
 
-fn stream_batches(sizes: &[i32]) -> (Vec<RecordBatch>, i32) {
+pub(crate) fn stream_batches(sizes: &[i32]) -> (Vec<RecordBatch>, i32) {
     let long = "y".repeat(300_000);
     let mut next = 0;
     let batches = sizes
@@ -474,11 +469,6 @@ async fn empty_and_multi_batch_streams_store_the_same_rows_in_the_same_order() {
             assert_eq!(
                 report,
                 Ok(WriteReport { path, rows }),
-                "{table} {options:?}"
-            );
-            assert_eq!(
-                stored_order(&cell, table).await,
-                (0..total).collect::<Vec<_>>(),
                 "{table} {options:?}"
             );
         }
@@ -869,7 +859,7 @@ async fn a_write_returns_its_connection_clean_and_names_only_its_columns() {
 
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
-async fn the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts() {
+async fn a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked() {
     let cell = Cell::open().await;
     let schema = &cell.schema;
     cell.sql(&format!(
@@ -922,14 +912,14 @@ async fn the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts() {
         for (path, table) in PATHS {
             let resolved = store.target(&cell, table).await;
             let report = store_with(store.pool(), &resolved, path, options, &batches).await;
+            let path = WritePath::Row;
             assert_eq!(report, Ok(WriteReport { path, rows }), "{table}");
             let fired = cell
                 .count(&format!(
                     "SELECT statements FROM {schema}.fired WHERE name = '{table}'"
                 ))
                 .await;
-            let expected = if path == WritePath::Bulk { 1 } else { inserts };
-            assert_eq!(fired, expected, "{table} {options:?}");
+            assert_eq!(fired, inserts, "{table} {options:?}");
         }
     }
     let widest = i32::try_from(MAX_INSERT_PARAMS / 3).expect("a row count");
@@ -956,10 +946,6 @@ async fn the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts() {
         fired,
         1 + 5,
         "one statement of 65 535 parameters, then five rows"
-    );
-    assert_eq!(
-        stored_order(&cell, "row").await,
-        (0..total).collect::<Vec<_>>()
     );
     drop(store);
     cell.close().await;

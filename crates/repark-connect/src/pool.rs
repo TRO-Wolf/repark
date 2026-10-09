@@ -8,7 +8,7 @@ use std::{fmt, io};
 use futures::future::try_join_all;
 use rustls::pki_types::InvalidDnsNameError;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use tokio::sync::{OwnedSemaphorePermit, Semaphore, watch};
 use tokio::task::{AbortHandle, JoinHandle};
 use tokio_postgres::config::SslMode as WireSslMode;
 use tokio_postgres::types::{ToSql, Type};
@@ -342,11 +342,18 @@ fn as_set<'a>(key: &str, setting: &'a str) -> &'a str {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ConnectionEnd {
+    Open,
+    Closed { sqlstate: Option<String> },
+}
+
 pub struct PgConnection {
     client: Client,
     task: JoinHandle<()>,
     session: Arc<SessionPins>,
     cancel: Canceller,
+    end: watch::Receiver<ConnectionEnd>,
 }
 
 impl PgConnection {
@@ -360,19 +367,38 @@ impl PgConnection {
         S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
         T: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     {
+        let (closed, end) = watch::channel(ConnectionEnd::Open);
         #[expect(
             clippy::disallowed_methods,
             reason = "the connection task is tracked: PgConnection holds its handle, and a \
                       lease dropped before release_clean aborts it"
         )]
         let task = tokio::spawn(async move {
-            let _ = connection.await;
+            let mut connection = connection;
+            let ended = (&mut connection).await;
+            let sqlstate = ended
+                .err()
+                .and_then(|error| error.code().map(|code| code.code().to_string()));
+            let _ = closed.send(ConnectionEnd::Closed { sqlstate });
         });
         Self {
             client,
             task,
             session,
             cancel,
+            end,
+        }
+    }
+
+    pub async fn closing_sqlstate(&self, wait: Duration) -> Option<String> {
+        let mut end = self.end.clone();
+        let closed = end.wait_for(|state| *state != ConnectionEnd::Open);
+        match tokio::time::timeout(wait, closed).await {
+            Ok(Ok(state)) => match &*state {
+                ConnectionEnd::Closed { sqlstate } => sqlstate.clone(),
+                ConnectionEnd::Open => None,
+            },
+            _ => None,
         }
     }
 

@@ -9,8 +9,50 @@ See [../map.md](../map.md).
 
 - `main.rs` — `mod copy_accounting; mod copy_binary; mod ident; mod partition; mod partition_plan; mod live_partition; mod postgres_types; mod settings; mod url;`, plus
   `mod explain; mod live_pg; mod live_pool; mod live_pushdown; mod pool; mod pushdown; mod read;
-  mod scan; mod tls;` under the `postgres` feature, and since C-4 `mod live_write; mod write;`
-  under it too.
+  mod scan; mod tls;` under the `postgres` feature, and since C-4 `mod live_write; mod live_write_faults;
+  mod live_write_relations; mod write;` under it too, and `mod write_shapes;` with no gate.
+- `write_shapes.rs` — **C-4 fold 1 (2026-10-09)**, no network: nine column families, each
+  encoded from its plain array and from up to five other encodings of the same values
+  (`cast` builds them), with equal bytes required; and four encodings of other types that
+  must still refuse naming the type that came. pins: c-4/C-021
+- `live_write_faults.rs` — **C-4 fold 1 (2026-10-09), the S3 cells:**
+  `rows_arrive_in_input_order_on_both_paths` (a `bigserial` the write does not name numbers
+  the arrivals; it replaces the three `ctid` assertions `live_write.rs` carried, which the
+  verifier showed do not hold once widths vary), `a_server_refusal_names_no_written_value`,
+  `a_row_write_idle_past_the_read_timeout_ends_as_that_timeout` (700 ms timeout, 2.2 s idle,
+  with a second `write`, with a remainder `commit` must flush, and with a full group so that
+  `COMMIT` is the first request after the wait; the bulk path commits under the same waits) and
+  `other_arrow_encodings_store_the_same_table_on_both_paths`. pins: c-4/C-020, C-021, C-022
+- `live_write_relations.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. One
+  `Property` row per relation property: the DDL (run twice, for a `_b` twin written by a
+  `Bulk` request and an `_r` twin written by a `Row` request), the target, the written
+  columns, the batch, the `RowFallback` a `Bulk` request must report, the outcome (a row
+  count, a SQLSTATE, or one of the three refusals) and a signature query whose answer must be
+  equal for the twins and equal to the expected text. `measure` runs one row; the signature
+  reads the target and any side table (an audit table, the base table of a view, the far
+  table of a foreign table), so "the same table" covers what a rule or a trigger wrote.
+  The cells: `identity_generated_and_default_columns_agree_or_refuse_on_both_paths`,
+  `rules_and_views_take_the_row_path_and_leave_the_same_tables`,
+  `row_triggers_stay_bulk_and_statement_triggers_take_the_row_path`,
+  `partitions_inheritance_persistence_and_constraints_agree_on_both_paths`,
+  `row_security_and_grants_are_judged_the_same_on_both_paths` (a second role),
+  `a_foreign_table_or_partition_takes_the_row_path` (a loopback `postgres_fdw` server, dropped
+  at the end; `CREATE EXTENSION IF NOT EXISTS` leaves the extension in the disposable
+  database) and `another_sessions_temporary_table_is_refused_the_same_on_both_paths`.
+  pins: c-4/C-017, C-018, C-019
+- `live_write.rs`, `write.rs` — **C-4 fold 1 (2026-10-09):**
+  `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` is now
+  `a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked`: its counting
+  trigger is a statement trigger, so a `Bulk` request on that table now takes rows, and the
+  cell holds both requests to the same statement counts. The pure pins gain
+  `a_named_identity_or_generated_column_refuses_in_one_class_and_names_the_fix` and
+  `every_fallback_reason_says_why_copy_was_not_used`. pins: c-4/C-017, C-018
+- `live_write_faults.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. It shares
+  `live_write.rs`'s helpers (now `pub(crate)`); new fault cells live here because
+  `live_write.rs` is at the file-size ceiling.
+  `a_write_dropped_mid_flight_poisons_the_writer_and_stores_nothing` is the verifier's repro on
+  both paths: a 200 000-row `write` under a 500 µs timeout, then `write` and `commit` both
+  answer `Interrupted` and the table stays empty. pins: c-4/C-016
 - `write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`, no network. It holds the sample
   matrix both write suites share (`samples()`: one column per mapped type the bulk path
   carries, `numeric` at four scales, an enum and a domain, eight rows with two NULLs each, the

@@ -6,6 +6,34 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
+- `pool.rs`, `write.rs` — **C-4 fold 1 (2026-10-09), the verifier's S3s:**
+  `PgConnection::closing_sqlstate(wait)` answers the SQLSTATE of the error that ended the
+  connection, or `None`. The connection task polls the driver's connection by reference,
+  fills a `watch` cell with the outcome and only then drops the connection. The driver
+  closes its request channel inside that last poll, so a caller can see `Disconnected` a
+  moment before the cell is filled; the method waits for the cell, at most `wait`. The
+  writer's `settled` uses it: `Disconnected` with `25P03` behind it is
+  `Timeout { which: Read }` (the server's idle-in-transaction timer, which fires while no
+  request is pending). At `COMMIT` that case is a definite failure, not `CommitUnknown`.
+  `write_error` cuts a class `22` server message at its first `:` or `"` and appends
+  `repark_common::redaction::REDACTED`, so a refused value is not echoed. The read path
+  calls neither. pins: c-4/C-020
+- `write.rs`, `error.rs`, `lib.rs` — **C-4 fold 1 (2026-10-09), the verifier's three S1:**
+  `open` calls `write/target.rs`'s `route` after `BEGIN_WRITE` and before either lane, so
+  the path a writer takes depends on the relation as well as on the column types.
+  `PostgresWriter::fallback()` answers the `RowFallback` reason when a `Bulk` request took
+  rows, and `None` otherwise. `WriteRequest::path` is unchanged: it still answers from the
+  column types alone, with no connection, and so can say `Bulk` for a write `open` routes to
+  rows. `asked` no longer rewrites every `42501` into a missing `INSERT` grant: the grant is
+  read at `open`, and a later `42501` keeps the server's SQLSTATE and text (a policy, a
+  sequence). `WriteRefusal` gains `IdentityAlways { column }` and `GeneratedColumn { column }`
+  (`Analysis` class) and is no longer `Copy`. `lib.rs` re-exports `RowFallback` and
+  `TARGET_FACTS`. pins: c-4/C-017, C-018, C-019
+- `write.rs`, `error.rs` — **C-4 fold 1 (2026-10-09), the verifier's S2:** `write` sets the
+  kept error to `WriteRefused { Interrupted }` before its lane runs and replaces it with the
+  lane's result after, so a `write` future dropped at an `.await` (a timeout, a `select!`)
+  leaves the writer poisoned. Without the mark a later `commit` stored a prefix of the
+  cancelled batch on the bulk path and a group twice on the row path. pins: c-4/C-016
 - `write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`: the write core's root
   ([c-4-ledger.md](../../../task/ledgers/staging/c-4-ledger.md) §1). No door calls it yet.
   - **`WriteRequest`** is built from a `ResolvedSource` (C-2's `discover`, unchanged) and
