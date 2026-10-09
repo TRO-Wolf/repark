@@ -1058,6 +1058,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `arguments need to have the same data type`. The refusal of a narrowed value is not here:
   it is the optimizer rule of `repark-functions/src/timestamp_ns_cast/lineage.rs`, which sees
   the nested call this hook emits.
+  `extension.rs` adds that rule (`NestedNanosecondGuard`) to the session beside
+  `register_all`.
   pins: ice-tsns-merge-wall-1/C-027, C-029, C-030
 - `insert_timestamp_ns.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door's INSERT conform
   for Iceberg `timestamp_ns` / `timestamptz_ns` target columns, called from `spark_ast`.

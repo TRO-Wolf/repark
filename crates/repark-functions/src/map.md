@@ -1071,7 +1071,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   four-argument form `(value, shape, pairing, column)` conforms the `timestamp_ns` leaves of a
   nested value, pairs struct fields as the named door pairs them, and refuses by one named
   text what it cannot store; the optimizer rule `NestedNanosecondGuard`
-  (`timestamp_ns_cast/lineage.rs`, added by `register_all`) refuses a nested value narrowed
+  (`timestamp_ns_cast/lineage.rs`, added to the session by each door) refuses a nested value narrowed
   from nanoseconds anywhere in its lineage. Mechanics, the pairing words, the layout table and the refusal are in
   that directory's map (`timestamp_ns_cast/map.md`). The narrowing UDF moved to
   `timestamp_ns_cast/narrow.rs` with no change, to keep this file under the size ceiling.

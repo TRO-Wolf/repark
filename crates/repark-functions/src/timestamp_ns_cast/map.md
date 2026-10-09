@@ -93,8 +93,9 @@ pins: ice-tsns-merge-wall-1/C-016, C-018, C-027, C-028, C-029, C-031
   then follows the columns that argument reads down the plan (`narrows_nanoseconds`:
   projections, aliases, filters, sorts, limits, unions, joins by side, `VALUES`; any other
   node is searched whole, and whatever it cannot see through counts as narrowing).
-  `register_all` adds the rule for the Spark door and the ANSI door's `on_session_built` for
-  its own, so every door that emits the nested call is guarded by the one rule and no door
+  The Spark extension (`repark-spark/src/extension.rs`) adds the rule for the Spark door and
+  the ANSI door's `on_session_built` for its own (not `register_all`: this crate's `lib.rs` is
+  at its size ceiling), so every door that emits the nested call is guarded by the one rule and no door
   carries its own check. **Why here and not at the cause:** `array(ns, NULL)`,
   `coalesce(ns, NULL)` and `CASE … ELSE NULL END` are typed `Timestamp(µs, "UTC")` before any
   store sees them (a NULL beside a nanosecond value is typed as the SQL `TIMESTAMP`, and the

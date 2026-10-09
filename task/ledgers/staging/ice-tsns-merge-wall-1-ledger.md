@@ -788,9 +788,10 @@ Run 2026-10-09 on `6aef7f87`, one cargo command at a time under the build lock o
 | `bash scripts/check_map_md.sh --base ca5a062a` (the merged main; §10.6) | 0 | |
 | `make check-ledger-grammar` | 0 | |
 | `./scripts/check_rust_file_size.sh` | 0 | the narrowing UDF moved to its own file to keep `timestamp_ns_cast.rs` under the ceiling |
+| `./scripts/check_lib_rs.sh` | 0 | on the fold's last commit; see (4) below |
 | the other checks of `ci.yml` that need no build (crate DAG, `lib.rs`, manifest, ledgers, docs compaction and links, owner ruling, dual wire, matrix-test liveness, Python lint, format, conventions, docstrings, example coverage, lock, TOML, spelling) | 0 | run on `59462d6a` for §10.6 and again on the fold's tree |
 
-Three things about the run itself. (1) `c01f764c` passed these gates and still carried a
+Four things about the run itself. (1) `c01f764c` passed these gates and still carried a
 regression: a struct with a Null-typed child raised a raw Arrow error on every door. No pin
 had such a child; the re-run of the re-verify's own matrix found it (180 cells of its
 `nullstruct` shape), `6aef7f87` fixes it with a kernel pin and a four-door pin, and every gate
@@ -799,6 +800,20 @@ the red check was found by running the workflow's steps (§10.6). (3) The matric
 ran on the module built from `6aef7f87`, except the first verify's door matrix and this unit's
 whole matrix, which exercise no nested value: those two are from the build of `c01f764c` and
 were not repeated after the fix.
+
+(4) One guard was not in the list above and failed after the ledger was first committed:
+`./scripts/check_lib_rs.sh` (the `Repo guards` job) reported
+`repark-functions src/lib.rs is 189 lines (ceiling 186)`, the three lines that added the
+optimizer rule in `register_all`. A ceiling in the way is not edited: the fold's last commit
+moves the registration to `repark-spark/src/extension.rs`, beside its call of `register_all`,
+and `lib.rs` is back to 186 lines. Re-run on that commit: `cargo fmt --check`,
+`make rust-clippy`, `make rust-panic-ban`, `make develop`, the `repark-functions`,
+`repark-spark` and `repark-sql` lib suites (916, 2634, 393), the four Rust door files and the
+three ANSI ones, the facade module and the Python gate, every no-build check of `ci.yml`
+(all exit 0), and seven shapes of the re-verify's `nx.py` in both zones (1330 cells, identical
+to the run on `6aef7f87`, the narrowing refusals among them). The mutants and the full
+matrices were not repeated for it: the rule and every site are unchanged, only where the
+session learns of the rule.
 
 Scratch (the copies of both verifiers' scripts, their outputs for this head, the Spark pairing
 probe, the mutant and gate logs) is in `/tmp/oc-worker/tsns-wall-f1/`, outside the
