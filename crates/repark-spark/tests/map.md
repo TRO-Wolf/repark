@@ -96,7 +96,9 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `INSERT … BY NAME`, ANSI on and off. `untouched_rows_carry_their_nanosecond_ticks` is the
   carry pin the facade module gave up: DELETE, sibling UPDATE and MERGE and the three
   maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
-  pins: ice-tsns-merge-wall-1/C-016, C-017, C-018, C-019, C-023
+  Mutants F1, F2 and F5 of the ledger's §9.6 red the nested pins at the door each breaks, F3
+  the literal pin, F4 the wall-source pin.
+  pins: ice-tsns-merge-wall-1/C-016, C-017, C-018, C-019, C-023, C-024
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to

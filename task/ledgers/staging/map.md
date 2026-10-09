@@ -15,6 +15,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Three clauses are OPEN, each a question: the `timestamptz_ns` mirror (C-013, Q1), the
   nanosecond-to-microsecond narrowing (C-014, Q2), `UPDATE` / `DELETE` cast lowering
   (C-015, Q3). `risk_tier: standard`. Branch `fix/ice-tsns-merge-wall-1`.
+  **Fold 1 (2026-10-09), after an independent verify failed `1be18c26`:** nested
+  `timestamp_ns` leaves store one wall from every door, fixed forward (C-016); an
+  out-of-range literal with ANSI off stores INSERT's NULL (C-018) and a wall-typed source
+  past the range answers as INSERT on the overwrite doors (C-019); the moved count restated on
+  the verify's wider matrix (C-021); the facade pins cut to 179 tests with carry at the Rust
+  door (C-023); six mutants (C-024); gates (C-025). Four more clauses are OPEN, each a
+  question: the nested microsecond `TIMESTAMP_NTZ` split (C-017, Q4, first for the owner), the
+  unfiltered `UPDATE`'s overflow class under ANSI (C-020, Q5), the kernel name on the ANSI
+  door (C-022, Q6), three raw nested refusals (C-026, Q7).
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
   under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort
