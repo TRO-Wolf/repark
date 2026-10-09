@@ -113,14 +113,37 @@ Owner: **repark**. DataFusion functions involved (`cast_output_field`,
 `CastExpr::nullable`, `simplify_expressions`, the aggregate schema check) behave as
 documented; the stale contract is baked on the RePark side.
 
+## 1. Fix
+
+`wrap_as_ltz` builds its cast with `Cast::new` (the default target field) instead of
+`Cast::new_from_field` with the named `"ts"` field that sampled analyzer-time
+nullability; `wrap_ns_literal` drops its now-unused schema parameter. No other
+product line changes. No code comment added; the reason lives in
+`crates/repark-functions/src/map.md`.
+
+What moves: only the physical nullability of `CAST(<integer> AS TIMESTAMP)` shapes
+whose child nullability changes after analysis — exactly the shapes that raised the
+aggregate input check. The logical side is untouched (`to_field` never read the
+baked field), so every analyzed schema is byte-identical before and after.
+
+Neighbour comparison (all §0.1 forms, pre-fix vs post-fix): the 6 raising forms now
+answer with Spark's instants and types (full max/min/count, no-plus, no-mult,
+minimal); the 20 answering forms are byte-identical, including every Step 0
+control. Zero moved answers.
+
+Pins: `python/repark/tests/test_cast_view_agg_nullability_1.py` (10 tests). Pre-fix
+run: the 3 raising-form tests fail with the card's `Physical input schema should be
+the same` error, the 7 controls pass. Post-fix run: 10 pass.
+
 ## Clauses
 
 | ID | Clause | Verdict | Evidence / proof obligation |
 |---|---|---|---|
-| C-001 | Step 0 shrink recorded: each reduced form and whether it raises; `%` + `TIMESTAMP` cast + view + column aggregate + non-nullable input needed, `+`/`*` not | OPEN | §0.1 tables; pins land with the fix |
-| C-002 | Spark 4.1.2 values and types recorded for the full repro and the reduced forms | OPEN | §0.1 Spark column; full repro max is epoch 946698993 |
-| C-003 | Site is RePark's `wrap_as_ltz`, with the logical/physical functions named | OPEN | §0.2–§0.3; `EXPLAIN VERBOSE` stage trace |
-| C-004 | Fix at the site; full repro answers Spark's value and type; controls pinned; one pin red on the old behaviour for the named reason; gates green | OPEN | product commit + test file + gate runs below |
+| C-001 | Step 0 shrink recorded: each reduced form and whether it raises; `%` + `TIMESTAMP` cast + view + column aggregate + non-nullable input needed, `+`/`*` not | **PROVEN** | §0.1 tables; `test_cast_view_agg_nullability_1.py` |
+| C-002 | Spark 4.1.2 values and types recorded for the full repro and the reduced forms | **PROVEN** | §0.1 Spark column; full repro max is epoch 946698993 |
+| C-003 | Site is RePark's `wrap_as_ltz`, with the logical/physical functions named | **PROVEN** | §0.2–§0.3; `EXPLAIN VERBOSE` stage trace |
+| C-004 | Fix at the site; full repro answers Spark's value and type; controls pinned; one pin red on the old behaviour for the named reason; gates green | OPEN | §1; `test_cast_view_agg_nullability_1.py`; gate runs below (facade subset running) |
+| C-005 | Sweep: neighbours compared, parity-doc row checked, card closed, attestation filed | OPEN | §2 in the sweep commit |
 
 ## Residues
 
@@ -132,4 +155,16 @@ documented; the stale contract is baked on the RePark side.
 
 ## Gates
 
-No gate run yet; Step 0 only.
+- `cargo fmt --check`: exit 0.
+- `make rust-clippy`: exit 0.
+- `make rust-panic-ban`: exit 0.
+- `cargo test --locked -p repark-functions --lib`: 902 passed, 0 failed, 1 ignored.
+- `make develop`: exit 0 (rebuilt with the fix; rebuilt again after the extras sync).
+- Unit test file (10 tests): 3 fail pre-fix with the card's error, 7 pass; 10 pass post-fix.
+- `pytest python/repark/tests -k "cast or view or agg"`: running at commit time (serial; no
+  xdist plugin in the fresh venv); result recorded in the sweep commit.
+- `uvx ruff@0.15.22 check .` / `format --check .`: clean (3 UP017 autofixes + 1 format on
+  the new test file).
+- `python3 scripts/sync_map_md.py --check`: 374 maps clean.
+- `bash scripts/check_map_md.sh --base origin/main`: exit 0.
+- `make check-ledger-grammar`: clean.
