@@ -336,6 +336,34 @@ fn streams_await_any_termination(
 }
 
 #[pyfunction]
+#[allow(clippy::missing_errors_doc)]
+fn streams_stop_all(py: Python<'_>, session: &PyReparkSession) -> PyResult<()> {
+    let state = BindingManagerState::of(session);
+    let known = state
+        .known
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone();
+    let mut first: Option<PyErr> = None;
+    for handle in known {
+        let query = PyStreamingQuery::new(handle, Arc::clone(&session.runtime));
+        let stopped = query.stop(py);
+        if first.is_none() {
+            first = stopped.err();
+        }
+    }
+    state
+        .known
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .retain(QueryHandle::is_active);
+    if let Some(error) = first {
+        return Err(error);
+    }
+    Ok(())
+}
+
+#[pyfunction]
 fn streams_reset_terminated(session: &PyReparkSession) {
     let state = BindingManagerState::of(session);
     state
@@ -413,6 +441,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(streams_get, module)?)?;
     module.add_function(wrap_pyfunction!(streams_await_any_termination, module)?)?;
     module.add_function(wrap_pyfunction!(streams_reset_terminated, module)?)?;
+    module.add_function(wrap_pyfunction!(streams_stop_all, module)?)?;
     Ok(())
 }
 
@@ -682,6 +711,36 @@ mod tests {
                 streams_await_any_termination(py, inner, Some(-1.0)).expect_err("a bad timeout");
             assert!(message(&bad, py).contains("awaitAnyTermination timeout"));
             let _ = runtime.block_on(second.stop());
+            drop(owned);
+            let _ = std::fs::remove_dir_all(&warehouse);
+        });
+    }
+
+    #[test]
+    fn stop_all_stops_every_known_query_and_a_second_call_is_quiet() {
+        Python::attach(|py| {
+            let (session, warehouse, first, second) = started_pair(py, "stopall");
+            let owned = session.borrow(py);
+            let inner: &PyReparkSession = &owned;
+            streams_stop_all(py, inner).expect("a first stop-all");
+            assert!(!first.is_active());
+            assert!(!second.is_active());
+            assert_eq!(
+                streams_await_any_termination(py, inner, Some(0.0)).expect("a cleared wait"),
+                Some(false)
+            );
+            streams_stop_all(py, inner).expect("a second stop-all");
+            drop(owned);
+            let _ = std::fs::remove_dir_all(&warehouse);
+        });
+    }
+
+    #[test]
+    fn stop_all_without_queries_is_quiet() {
+        Python::attach(|py| {
+            let (session, warehouse) = session_with_tables(py, "stopallempty");
+            let owned = session.borrow(py);
+            streams_stop_all(py, &owned).expect("an empty stop-all");
             drop(owned);
             let _ = std::fs::remove_dir_all(&warehouse);
         });

@@ -7986,6 +7986,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `resetTerminated` clears the record, and a failed query's error raises through
   `awaitAnyTermination`. The M1/M2 `get` pins stay in the surface battery.
   pins: mb-4/C-028
+  **MB-4 item 9 (2026-10-09):** the `spark.stop` pins: a running query goes
+  inactive and a second stop is quiet, a failed query never raises, and a
+  recovery-required query (the sink replaced under the body) raises the first
+  RecoveryRequired after the warehouse and artifact dirs are gone.
+  pins: mb-4/C-030
 
 ## I want to...
 

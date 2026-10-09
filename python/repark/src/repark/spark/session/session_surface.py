@@ -5,6 +5,7 @@ pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 
 from __future__ import annotations
 
+import contextlib
 import filecmp
 import re
 import shutil
@@ -14,6 +15,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn
 
+from repark import _native
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -22,6 +24,7 @@ from repark.errors import (
     PySparkRuntimeError,
     PySparkTypeError,
     PySparkValueError,
+    RecoveryRequiredException,
 )
 from repark.spark.catalog import DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
 from repark.spark.column import Column
@@ -304,6 +307,38 @@ def cleanup_artifact_dir(root: str) -> None:
     if root in sys.path:
         sys.path.remove(root)
     shutil.rmtree(root, ignore_errors=True)
+
+
+def release_session_resources(session: ReparkSession) -> None:
+    """Stop every streaming query, then release the session-scoped temp dirs.
+
+    The stops run first so no query outlives its session. A stop that ends
+    RecoveryRequired raises only after both cleanups ran; Failed stops never
+    raise. The live handle is taken first, so the session reads stopped even
+    on the raising path. Idempotent: without a live handle nothing runs.
+
+    Raises:
+        RecoveryRequiredException: The first query stop that ended
+            RecoveryRequired, raised after the release finished.
+    """
+    inner = session._inner
+    session._inner = None
+    first_error: RecoveryRequiredException | None = None
+    if inner is not None:
+        try:
+            _native.streams_stop_all(inner)
+        except RecoveryRequiredException as error:
+            first_error = error
+    auto_warehouse = session._alive_token.pop("auto_catalog_warehouse", None)
+    if auto_warehouse is not None:
+        with contextlib.suppress(Exception):
+            auto_warehouse.cleanup()
+    artifact_dir = session._alive_token.pop("artifact_dir", None)
+    if artifact_dir is not None:
+        with contextlib.suppress(Exception):
+            cleanup_artifact_dir(artifact_dir)
+    if first_error is not None:
+        raise first_error
 
 
 def add_artifacts(
