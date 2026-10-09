@@ -107,6 +107,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Each write records its report on the session carrier. The fold pins are `#[ignore]`d live
   cells here (`psql` setup, no new dev-deps): a view and an INSERT-rule target take the row
   path and say why, a named GENERATED ALWAYS identity column refuses with the core text.
+  `REPLACE INTO` parses on this door's Generic dialect and names the upsert row.
   pins: c-4/C-013
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic

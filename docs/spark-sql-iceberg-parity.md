@@ -4131,16 +4131,18 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-10-09 (C-4 step 2). Overwrite needs a truncate-or-replace
   protocol the write core does not have yet. Retire when every save mode lands.
 ### CONNECT-DECL-pg-write-upsert — changing stored Postgres rows is not implemented
-- **repark** — `UPDATE` and `REPLACE INTO` against a mounted Postgres source refuse on both
-  SQL doors with `<verb> refuses: a Postgres source takes append writes only; changing
-  stored rows is not implemented (registry row CONNECT-DECL-pg-write-upsert …)` in the
-  Unsupported class. `MERGE INTO` a mounted source keeps answering the
-  `CONNECT-DECL-pg-ddl` catalog text through catalog resolution. `DELETE FROM` is untouched:
-  DataFusion's default-hook text, no row.
+- **repark** — `UPDATE` against a mounted Postgres source refuses on both SQL doors, and
+  `REPLACE INTO` refuses where the door's dialect parses it (the ANSI door's Generic
+  dialect; the Spark door's parser refuses the statement first), with `<verb> refuses: a
+  Postgres source takes append writes only; changing stored rows is not implemented
+  (registry row CONNECT-DECL-pg-write-upsert …)` in the Unsupported class. `MERGE INTO` a
+  mounted source keeps answering the `CONNECT-DECL-pg-ddl` catalog text through catalog
+  resolution. `DELETE FROM` is untouched: DataFusion's default-hook text, no row.
 - **Apache Spark** — Spark routes `UPDATE`, `DELETE` and `MERGE` to the table catalog where
   the catalog supports row-level operations. *(oracle: documented — no value claim.)*
 - **Pin** — `crates/repark-spark/src/tests/pg_insert.rs::pg_update_names_the_upsert_row`;
   `crates/repark-sql/src/pg_insert.rs::tests::pg_update_names_the_upsert_row`;
+  `crates/repark-sql/src/pg_insert.rs::tests::pg_replace_names_the_upsert_row`;
   live `python/repark-parity/tests/live_db/test_c4_write.py::test_row_changing_statements_refuse_on_both_doors`
 - **Rationale** — DECLARED 2026-10-09 (C-4 step 2). The write core appends; matching stored
   rows to new values needs a read-modify-write protocol it does not have yet. Retire when

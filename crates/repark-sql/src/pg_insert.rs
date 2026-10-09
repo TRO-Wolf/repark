@@ -219,6 +219,25 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn pg_replace_names_the_upsert_row() {
+        let (_directory, session) = mounted_session(MOUNT);
+        let catalogs = session.catalogs_snapshot();
+        let error = run(
+            &session,
+            &catalogs,
+            &HashSet::new(),
+            "REPLACE INTO pg.public.t VALUES (1)",
+        )
+        .await
+        .expect_err("replace refuses");
+        let message = error.to_string();
+        assert!(
+            message.contains("CONNECT-DECL-pg-write-upsert"),
+            "{message}"
+        );
+    }
+
+    #[tokio::test]
     async fn pg_insert_without_a_source_refuses_like_datafusion() {
         let (_directory, session) = mounted_session(MOUNT);
         let catalogs = session.catalogs_snapshot();
