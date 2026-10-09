@@ -217,18 +217,15 @@ fn zone_store_frame(
                 .filter(|target| holds_nested_ns_wall(target) && source != *target)
                 .and_then(|target| ScalarValue::try_from(target).ok())
                 .zip(ctx.udf(NS_WALL_CAST_UDF_NAME).ok());
-            let store = match (target, wall) {
-                (_, Some(udf)) => Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![column])),
-                (_, None) if nested.is_some() => {
-                    let Some((shape, udf)) = nested else {
-                        return column;
-                    };
-                    Expr::ScalarFunction(ScalarFunction::new_udf(
-                        udf,
-                        vec![column, Expr::Literal(shape, None)],
-                    ))
+            let store = match (target, wall, nested) {
+                (_, Some(udf), _) => {
+                    Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![column]))
                 }
-                (Some(target), None)
+                (_, None, Some((shape, udf))) => Expr::ScalarFunction(ScalarFunction::new_udf(
+                    udf,
+                    vec![column, Expr::Literal(shape, None)],
+                )),
+                (Some(target), None, None)
                     if is_ltz_instant_target(target) && needs_ltz_instant_cast(source) =>
                 {
                     let instant = Field::new(field.name(), target.clone(), field.is_nullable());

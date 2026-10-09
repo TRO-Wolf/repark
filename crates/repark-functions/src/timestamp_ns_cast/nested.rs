@@ -33,26 +33,10 @@ pub(super) fn conformed_type(source: &DataType, target: &DataType, zoned: bool) 
         (DataType::Struct(sources), DataType::Struct(targets)) => {
             DataType::Struct(conformed_fields(sources, targets, zoned))
         }
-        (DataType::Map(entries, sorted), DataType::Map(targets, _)) => {
-            let conformed = conformed_field(entries, targets.data_type(), zoned);
-            let conformed = match conformed.data_type() {
-                DataType::Struct(fields) if fields.len() == 2 && !fields[0].is_nullable() => {
-                    conformed
-                }
-                DataType::Struct(fields) if fields.len() == 2 => {
-                    let key = Arc::new(fields[0].as_ref().clone().with_nullable(false));
-                    let pair = Fields::from(vec![key, Arc::clone(&fields[1])]);
-                    Arc::new(
-                        conformed
-                            .as_ref()
-                            .clone()
-                            .with_data_type(DataType::Struct(pair)),
-                    )
-                }
-                _ => Arc::clone(entries),
-            };
-            DataType::Map(conformed, *sorted)
-        }
+        (DataType::Map(entries, sorted), DataType::Map(targets, _)) => DataType::Map(
+            conformed_entries(entries, targets.data_type(), zoned),
+            *sorted,
+        ),
         (DataType::List(field), _) => match element(target) {
             Some(to) => DataType::List(conformed_field(field, to.data_type(), zoned)),
             None => source.clone(),
@@ -93,6 +77,26 @@ fn conformed_fields(sources: &Fields, targets: &Fields, zoned: bool) -> Fields {
             }
         })
         .collect()
+}
+
+fn conformed_entries(entries: &FieldRef, target: &DataType, zoned: bool) -> FieldRef {
+    let conformed = conformed_field(entries, target, zoned);
+    let DataType::Struct(pair) = conformed.data_type() else {
+        return conformed;
+    };
+    let Some(key) = pair.first().filter(|key| key.is_nullable()) else {
+        return conformed;
+    };
+    let key = Arc::new(key.as_ref().clone().with_nullable(false));
+    let pair: Fields = std::iter::once(key)
+        .chain(pair.iter().skip(1).cloned())
+        .collect();
+    Arc::new(
+        conformed
+            .as_ref()
+            .clone()
+            .with_data_type(DataType::Struct(pair)),
+    )
 }
 
 fn conformed_field(source: &FieldRef, target: &DataType, zoned: bool) -> FieldRef {
