@@ -15,9 +15,11 @@ import pytest
 from repark import ReparkSession
 from repark.errors import (
     AnalysisException,
+    IllegalArgumentException,
     PySparkNotImplementedError,
     PySparkTypeError,
     PySparkValueError,
+    UnsupportedOperationException,
 )
 
 _ORACLE: dict[str, Any] = json.loads(
@@ -206,19 +208,56 @@ def test_writer_jdbc_bad_mode_is_invalid_save_mode(spark: ReparkSession) -> None
     assert raised.value.getSqlState() == "42000"
 
 
-def test_writer_jdbc_mixed_case_modes_are_valid_then_refuse(spark: ReparkSession) -> None:
-    """Spark's mode(String) lowercases before matching; mixed-case valid modes refuse.
+class _WriteCapture:
+    """Capture one session_write_postgres call for the forwarding pins."""
 
-    L-001: ``Append`` / ``OVERWRITE`` / ``ErrorIfExists`` / ``ERROR`` / ``Ignore`` /
-    ``DEFAULT`` are valid Spark save modes, so under R-2/R-3 they reach
-    ``NOT_IMPLEMENTED`` ``{"feature": "jdbc"}`` instead of ``INVALID_SAVE_MODE``.
+    def __init__(self) -> None:
+        """Start with no captured call."""
+        self.calls: list[dict[str, object]] = []
 
-    pins: io-declared-1/C-008
+    def __call__(
+        self,
+        session: object,
+        frame: object,
+        url: str,
+        dbtable: str,
+        props: dict[str, str],
+        write_path: str | None,
+        columns: list[str],
+    ) -> tuple[str, int, None]:
+        """Record one call and answer a bulk report with no fallback."""
+        self.calls.append(
+            {
+                "url": url,
+                "dbtable": dbtable,
+                "props": props,
+                "write_path": write_path,
+                "columns": columns,
+            }
+        )
+        return ("bulk", 0, None)
+
+
+def test_writer_jdbc_mixed_case_modes_are_valid_then_route(spark: ReparkSession) -> None:
+    """Spark's mode(String) lowercases before matching; append reaches the engine door.
+
+    C-4 step 2 (2026-10-09): ``Append`` lowers to append and reaches the native
+    door (here the ``user``-required config refusal, before any connection);
+    the other mixed-case valid modes refuse under the pg-write-modes row.
+
+    pins: io-declared-1/C-008; c-4/C-014
     """
-    for mode in ("Append", "OVERWRITE", "ErrorIfExists", "ERROR", "Ignore", "DEFAULT"):
-        with pytest.raises(PySparkNotImplementedError) as raised:
+    with pytest.raises(IllegalArgumentException) as raised:
+        _kv_frame(spark).write.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t", mode="Append")
+    assert "`user` is required" in str(raised.value)
+    for mode in ("OVERWRITE", "ErrorIfExists", "ERROR", "Ignore", "DEFAULT"):
+        with pytest.raises(UnsupportedOperationException) as raised:
             _kv_frame(spark).write.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t", mode=mode)
-        _assert_not_implemented(raised.value, "jdbc")
+        assert str(raised.value) == (
+            f"df.write.jdbc(mode={mode.lower()!r}) refuses: "
+            "a Postgres source takes append writes only (registry row "
+            "CONNECT-DECL-pg-write-modes in docs/spark-sql-iceberg-parity.md)"
+        )
 
 
 def test_writer_jdbc_invalid_modes_keep_the_caller_spelling(spark: ReparkSession) -> None:
@@ -243,19 +282,123 @@ def test_writer_jdbc_invalid_modes_keep_the_caller_spelling(spark: ReparkSession
         assert raised.value.getSqlState() == "42000"
 
 
-def test_writer_jdbc_refuses_after_the_mode_check(spark: ReparkSession) -> None:
-    """DataFrameWriter.jdbc refuses NOT_IMPLEMENTED jdbc once the mode is valid.
+def test_writer_jdbc_bare_uses_the_writer_mode(spark: ReparkSession) -> None:
+    """A bare jdbc() refuses under the writer's error mode; append reaches the door.
 
-    Replaces oracle cell ``jdbc_write_no_driver`` (registry IO-JDBC-1).
+    C-4 step 2 (2026-10-09): the mode argument wins when given, else the writer's
+    mode; only append writes. Replaces the NOT_IMPLEMENTED jdbc refusal (and the
+    oracle cell ``jdbc_write_no_driver``, registry IO-JDBC-1) for Postgres URLs.
+
+    pins: io-declared-1/C-003; c-4/C-014
+    """
+    with pytest.raises(UnsupportedOperationException) as raised:
+        _kv_frame(spark).write.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t")
+    assert "CONNECT-DECL-pg-write-modes" in str(raised.value)
+    with pytest.raises(IllegalArgumentException) as raised:
+        _kv_frame(spark).write.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t", mode="append")
+    assert "`user` is required" in str(raised.value)
+
+
+def test_writer_jdbc_non_postgres_url_with_append_refuses_jdbc(spark: ReparkSession) -> None:
+    """Append to a non-Postgres URL keeps the declared jdbc refusal.
+
+    pins: c-4/C-014
     """
     with pytest.raises(PySparkNotImplementedError) as raised:
-        _kv_frame(spark).write.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t")
+        _kv_frame(spark).write.jdbc("jdbc:mysql://127.0.0.1:1/x", "t", mode="append")
     _assert_not_implemented(raised.value, "jdbc")
-    with pytest.raises(PySparkNotImplementedError) as raised:
-        _kv_frame(spark).write.jdbc(
-            "jdbc:postgresql://127.0.0.1:1/x", "t", mode="append", properties={"user": "u"}
-        )
-    _assert_not_implemented(raised.value, "jdbc")
+
+
+def test_writer_jdbc_bad_write_path_names_both_values(spark: ReparkSession) -> None:
+    """A bad write.path refuses as IllegalArgumentException naming bulk and row.
+
+    pins: c-4/C-014
+    """
+    writer = _kv_frame(spark).write.option("write.path", "sideways")
+    with pytest.raises(IllegalArgumentException) as raised:
+        writer.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t", mode="append")
+    message = str(raised.value)
+    assert "'bulk'" in message
+    assert "'row'" in message
+
+
+def test_writer_jdbc_forwards_merged_options_and_columns(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Properties win over writer options; url/dbtable/write.path stay out of props.
+
+    pins: c-4/C-014
+    """
+    from repark import _native
+
+    capture = _WriteCapture()
+    monkeypatch.setattr(_native, "session_write_postgres", capture)
+    _kv_frame(spark).write.option("user", "writer").option("write.path", "row").jdbc(
+        "postgresql://h/db",
+        "public.t",
+        mode="append",
+        properties={"USER": "props", "dbtable": "other.t"},
+    )
+    assert len(capture.calls) == 1
+    call = capture.calls[0]
+    assert call["url"] == "postgresql://h/db"
+    assert call["dbtable"] == "public.t"
+    assert call["props"] == {"USER": "props"}
+    assert call["write_path"] == "row"
+    assert call["columns"] == ["key", "a", "b"]
+
+
+def test_writer_format_jdbc_save_requires_url_and_dbtable(spark: ReparkSession) -> None:
+    """format('jdbc').save() takes url/dbtable from options and requires both.
+
+    pins: c-4/C-014
+    """
+    with pytest.raises(IllegalArgumentException) as raised:
+        _kv_frame(spark).write.format("jdbc").save()
+    assert "option('url', ...)" in str(raised.value)
+    writer = _kv_frame(spark).write.format("jdbc").option("url", "postgresql://h/db")
+    with pytest.raises(IllegalArgumentException) as raised:
+        writer.save()
+    assert "option('dbtable', ...)" in str(raised.value)
+
+
+def test_writer_format_jdbc_save_uses_the_writer_mode(spark: ReparkSession) -> None:
+    """format('jdbc').save() refuses under a non-append writer mode, writes on append.
+
+    pins: c-4/C-014
+    """
+    writer = (
+        _kv_frame(spark)
+        .write.format("jdbc")
+        .option("url", "jdbc:postgresql://127.0.0.1:1/x")
+        .option("dbtable", "t")
+    )
+    with pytest.raises(UnsupportedOperationException) as raised:
+        writer.save()
+    assert "CONNECT-DECL-pg-write-modes" in str(raised.value)
+    with pytest.raises(IllegalArgumentException) as raised:
+        writer.mode("append").save()
+    assert "`user` is required" in str(raised.value)
+
+
+def test_writer_format_postgres_save_keeps_not_found(spark: ReparkSession) -> None:
+    """format('postgres').save() keeps DATA_SOURCE_NOT_FOUND: Spark has no such format.
+
+    pins: c-4/C-014
+    """
+    with pytest.raises(AnalysisException) as raised:
+        _kv_frame(spark).write.format("postgres").save("/tmp/c4-never-written")
+    assert "DATA_SOURCE_NOT_FOUND" in str(raised.value)
+
+
+def test_take_postgres_write_report_is_none_on_a_fresh_session(spark: ReparkSession) -> None:
+    """The last-write report reads back nothing before any write.
+
+    pins: c-4/C-013
+    """
+    from repark.spark.dataframe.io_declared import take_postgres_write_report
+
+    assert take_postgres_write_report(spark) is None
 
 
 def test_reader_jdbc_non_postgres_urls_refuse_at_the_call(spark: ReparkSession) -> None:

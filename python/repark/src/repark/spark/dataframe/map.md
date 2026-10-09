@@ -1053,6 +1053,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   delegation, not compute. pins: io-declared-1/C-001, C-002, C-003, C-007
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the `DATA_SOURCE_NOT_FOUND` format echo
   and the JDBC `INVALID_SAVE_MODE` echo mask the value through `mask_credentials`.
+  **C-4 step 2 (2026-10-09):** `writer_jdbc` is the real Postgres writer door: the mode
+  argument wins when given, else the writer's mode, and only append writes (other modes
+  refuse `UnsupportedOperationException` under `CONNECT-DECL-pg-write-modes`, the SQL
+  doors' class and text shape); writer options merge under `properties`
+  case-insensitively, `write.path` lifts out, url/dbtable/path strip, and the rest goes
+  to the engine door; `save_jdbc` serves `format("jdbc").save()` off url/dbtable options
+  while `format("postgres").save()` keeps `DATA_SOURCE_NOT_FOUND`;
+  `take_postgres_write_report` reads the session carrier back once for the live cells.
+  pins: c-4/C-014
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** both `option` methods
   register the stored value, and the overwrite re-raise scrubs the cause first.
@@ -1121,6 +1130,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `SQLSTATE: 42P07`, V2 `replace` and `_existing_table_ref` (append-missing) get
   `[TABLE_OR_VIEW_NOT_FOUND]`/`SQLSTATE: 42P01`; in-place appends keep the wording and the
   1091 baseline. pins: ice-error-conditions-1/C-011
+  **C-4 step 2 (2026-10-09):** `save()` lets a `jdbc` format past the path check and
+  routes non-path formats through `save_or_refuse_writer_format` (jdbc writes, the rest
+  refuse as before); two lines changed in place, the file holds 999 of 1000.
+  pins: c-4/C-014
 - `writer_save.py` owns the U7 PR1 (2026-09-24) Iceberg `save(target)` and bucketed
   `saveAsTable` routing. `save_iceberg` asks the native `writer_save_target` kernel for the
   action (explicit `format("iceberg")` only; the default format keeps EX-IO-5's refusal), then

@@ -4744,6 +4744,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `docs/examples/io/io_declared_refusals.py`, the fixture and inventory updates are
   C-005, and the named-suite sweep is C-006.
   pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **C-4 step 2 (2026-10-09):** the `write.jdbc` pins follow the real door: mixed-case
+  append reaches the engine config refusal, other valid modes refuse under the
+  pg-write-modes row, a bad `write.path` names both values, properties win the merge,
+  `format("jdbc").save()` requires url/dbtable and follows the writer mode,
+  `format("postgres").save()` keeps `DATA_SOURCE_NOT_FOUND`, and the take-report hook
+  reads nothing on a fresh session. pins: c-4/C-013, C-014
 - [test_registry_16b_1.py](test_registry_16b_1.py) — **REGISTRY-16B-1 (2026-09-15):** the pins behind three
   BACKLOG rows: `conf.unset` of a builder-seeded SQL conf raises on `get` while SQL `RESET` restores the builder
   value (CONF-UNSET-1), `spark.wap.*` stores through `conf.set`, reports modifiable and fails on the SQL `SET`
