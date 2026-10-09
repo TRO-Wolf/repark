@@ -198,6 +198,10 @@ pins: mb-3/C-031
   pins: mb-3/C-008
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).
 - `run_tests.rs` — the trigger-loop and lifecycle pins (`#[cfg(test)] #[path]` from `run.rs`).
+  ENC-1 fold 1 (2026-10-09) adds `a_keyed_sink_refuses_the_batch_and_stages_no_file`: a
+  sink carrying `encryption.key-id` ends the query with `EncryptedSinkRefused` and no file
+  appears under the warehouse.
+  pins: enc-1/C-007
   pins: mb-3/C-004
 - `fence_tests.rs` — the racing-driver pins (round 3, 2026-10-08), on both doors: two drivers
   of one query in two sessions over twenty rounds (each epoch stamped once, the rows once, no

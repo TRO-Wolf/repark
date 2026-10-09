@@ -36,6 +36,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and warehouse objects unchanged; expiry, orphan sweep, rollback, dry-run planning,
   SELECT, CREATE and the lookalike keys run. The step-1 ported probe is the first pin.
   pins: enc-1/C-001, C-002, C-003, C-004, C-005
+- `enc_1_fold.rs` — **ENC-1 fold 1 (2026-10-09):** the verifier's writing shapes as
+  pins, each on format v2 and v3: explicit branch targets (INSERT, UPDATE, DELETE in
+  copy-on-write and merge-on-read), WAP sessions (`spark.wap.branch`, `spark.wap.id`), the
+  first write through an empty-table branch, `run_maintenance(dry_run => false)`, the
+  non-fast-forward `cherrypick_snapshot`, a stale-handle commit, the public
+  `write::append`, the two stats procedures and `rewrite_table_path`. Every pin asserts the
+  one refusal text and that snapshots, refs, the metadata pointer and the full recursive
+  file listing are unchanged. Controls: ref, expiry and property commits still run on a
+  keyed table; the unkeyed and lookalike-key twins still write.
+  pins: enc-1/C-007, C-008, C-009
 - `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
   pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
   source/target/column named and nothing written; in-range, int-to-int and string stores
