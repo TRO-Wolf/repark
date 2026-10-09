@@ -1021,6 +1021,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the call also passes
   `timestamp_type.is_ntz()`, so the pass reads a `TIMESTAMP` literal by the session's
   default timestamp type. pins: ntz-store-doors-1/C-009
+  **CAST-VIEW-AGG-NULLABILITY-1 (2026-10-08):** `wrap_as_ltz` builds its cast with
+  `Cast::new` (the default target field) instead of `Cast::new_from_field` with a
+  named field sampling analyzer-time nullability. The logical side derives cast
+  nullability from the child while the physical side honors a named target field,
+  so the baked field went stale when `simplify_expressions` folded the modulo
+  zero-guard and the aggregate input check raised; the default field keeps both
+  sides child-derived. pins: cast-view-agg-nullability-1/C-004
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is

@@ -632,11 +632,11 @@ fn rewrite_cast(
             if (targeting_seconds && source_is_int_or_null)
                 || (targeting_ns && (source_is_int_or_null || source_is_seconds))
             {
-                return wrap_as_ltz(expr, schema);
+                return wrap_as_ltz(expr);
             }
         }
     }
-    let rewritten = wrap_ns_literal(expr, schema, zone);
+    let rewritten = wrap_ns_literal(expr, zone);
     peel_naive_cast_of_ltz_producer(rewritten.data, schema)
 }
 
@@ -678,14 +678,12 @@ fn is_ltz_timestamp(data_type: &DataType) -> bool {
     )
 }
 
-fn wrap_as_ltz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    let nullable = expr.nullable(schema).unwrap_or(true);
-    let field = Arc::new(Field::new("ts", ltz_timestamp_type(), nullable));
-    Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(expr), field)))
+fn wrap_as_ltz(expr: Expr) -> Transformed<Expr> {
+    Transformed::yes(Expr::Cast(Cast::new(Box::new(expr), ltz_timestamp_type())))
 }
 
 /// Localize zoneless nanosecond timestamp literals in the session zone.
-fn wrap_ns_literal(expr: Expr, schema: &DFSchema, zone: &str) -> Transformed<Expr> {
+fn wrap_ns_literal(expr: Expr, zone: &str) -> Transformed<Expr> {
     let Expr::Literal(scalar, _) = &expr else {
         return Transformed::no(expr);
     };
@@ -693,17 +691,17 @@ fn wrap_ns_literal(expr: Expr, schema: &DFSchema, zone: &str) -> Transformed<Exp
         return Transformed::no(expr);
     };
     if literal_zone.is_some() {
-        return wrap_as_ltz(expr, schema);
+        return wrap_as_ltz(expr);
     }
     let Some(nanos) = ticks else {
-        return wrap_as_ltz(expr, schema);
+        return wrap_as_ltz(expr);
     };
     let Ok(parsed_zone) = zone.parse::<Tz>() else {
-        return wrap_as_ltz(expr, schema);
+        return wrap_as_ltz(expr);
     };
     let wall_micros = nanos.div_euclid(1_000);
     let Some(localized) = localize_wall_micros_in_zone(wall_micros, parsed_zone) else {
-        return wrap_as_ltz(expr, schema);
+        return wrap_as_ltz(expr);
     };
     Transformed::yes(Expr::Literal(
         ScalarValue::TimestampMicrosecond(Some(localized), Some(Arc::<str>::from("UTC"))),
