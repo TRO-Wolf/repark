@@ -2251,3 +2251,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   is the owner's decision. `risk_tier: standard`. Branch
   `fix/threaded-collect-segv-1`.
   pins: threaded-collect-segv-1/C-001, C-002
+- [empty-projection-count-1-ledger.md](../completed/empty-projection-count-1-ledger.md) —
+  **EMPTY-PROJECTION-COUNT-1 (2026-10-09), in flight:** `COUNT(*)` plans an
+  empty projection and the shared `conform_batch` rebuild refused it, so the
+  changelog, incremental, lineage and micro-batch readers failed
+  engine-internal. The four-caller audit (C-001), the base + Spark measurement
+  (C-008), the changelog (C-002), incremental (C-003), lineage (C-004) and
+  micro-batch (C-005) pins, the shared-site units (C-006), the neighbour guards
+  (C-007) and the gates + card filing (C-009). `risk_tier: standard`. Branch
+  `fix/empty-projection-count-1`.
+  pins: empty-projection-count-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
