@@ -3,6 +3,8 @@
 **Date:** 2026-10-08 · **Branch:** `fix/cast-view-agg-nullability-1` · **Base:** `40fc916f` (`main`)
 **Model:** Muse Spark (muse-spark-1.3-contributor) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
+**Fold 1 (2026-10-09):** S1 diagnosis — HALT (C-006); the S1 class reproduces
+with no RePark code in the loop (Case 3); the upstream draft lives in §Fold 1.
 
 **Retires:** this ledger moves to `../completed/` when the unit's product PR merges.
 
@@ -144,6 +146,7 @@ the same` error, the 7 controls pass. Post-fix run: 10 pass.
 | C-003 | Site is RePark's `wrap_as_ltz`, with the logical/physical functions named | **PROVEN** | §0.2–§0.3; `EXPLAIN VERBOSE` stage trace |
 | C-004 | Fix at the site; full repro answers Spark's value and type; controls pinned; one pin red on the old behaviour for the named reason; gates green | **PROVEN** | §1; `test_cast_view_agg_nullability_1.py`; gate runs below |
 | C-005 | Sweep: neighbours compared, parity-doc row checked, card closed, attestation filed | **PROVEN** | §2; attestation above |
+| C-006 | Fold-1 proposition: the S1 agrees inside `instant_ts.rs` | **REJECTED** | §Fold 1: three-class proof; the boundary is invisible at analyzer time; the pure-DataFusion UNION-plus-BIGINT repro; Case 3 |
 
 ## 2. Sweep
 
@@ -211,6 +214,180 @@ COVERAGE_ATTESTATION:
   follow-up card.
 - R-2 (2026-10-08): `repark-iceberg/src/write/ntz_store.rs` builds a cast with
   `Cast::new_from_field`; a DML store path, outside this shape, not assessed.
+
+## Fold 1 — S1 diagnosis (HALT, 2026-10-09)
+
+Fold brief: `fix/cast-view-agg-nullability-1` fold 1 (guided, Muse). The Opus
+verdict (`/tmp/oc-worker/direct/wo/cast-view-agg-nullability-1/verify/verdict.json`,
+PR #1014) measures 103,668 cells on base `40fc916f` vs head `804ed70f`: 0
+values, types, nullable flags or field metadata moved on any jointly answering
+cell; 5,182 cells that raised on base now answer; 12 cells that answered on
+base now raise (S1).
+
+### The S1
+
+`CAST(<expr the optimizer folds to a bare Iceberg column> AS TIMESTAMP)` under
+a SQL temp view or a UNION, then an aggregate. The 8 folding wrappers
+(verifier `repro_s1.py`): `coalesce(b, 7)`, `nvl`, `ifnull`,
+`CASE WHEN true THEN b END`, `CASE WHEN 1 = 1 THEN b ELSE 0 END`,
+`if(true, b, 0)`, `nvl2(b, b, 0)`, `coalesce(b, b)` over a NOT NULL Iceberg
+column. Head raises the aggregate input check on the metadata axis:
+`(physical) {"PARQUET:field_id": "1"} vs (logical) {}`. Non-folding neighbours
+(`b + 0`, `b * 1`, `abs(b)`, `greatest(b)`, `coalesce(n, 7)` over a nullable
+column, bare `b`) answer on every shape.
+
+### Mechanism (measured on head `804ed70f`, no code change)
+
+Three facts combine:
+
+1. DataFusion's cast propagates the child field on both sides. Logical
+   `cast_output_field` (`datafusion-expr-54.1.0/src/expr_schema.rs`) clones the
+   child field and swaps the type, keeping nullability and metadata. Physical
+   `CastExpr::resolved_target_field`
+   (`datafusion-physical-expr-54.1.0/src/expressions/cast.rs`) does the same
+   whenever the target field is the default (empty name, nullable, empty
+   metadata, which is exactly what `Cast::new` builds); a non-default target
+   is used verbatim. So a default-target cast is fully child-derived on both
+   sides, and both sides agree whenever they read the same plan state.
+2. Two logical boundaries freeze the analyzed (pre-fold) schema while the
+   physical side reads the optimized (post-fold) plan. The SQL temp view is a
+   `ReplanningTempView` (`crates/repark-spark/src/view_ddl/temp_view.rs`):
+   its scan carries the fixed creation schema (coalesce child, no metadata),
+   while `scan` re-plans and executes the optimized inner plan (bare `b`,
+   `PARQUET:field_id`). The UNION node keeps its analyzed schema across
+   optimizer rebuilds when the width is unchanged
+   (`LogicalPlan::with_new_exprs`,
+   `datafusion-expr-54.1.0/src/logical_plan/plan.rs`); branch projections
+   recompute post-fold, the union does not.
+3. The DataFrame temp view expands (`ViewTable` inlines the inner plan;
+   confirmed by `EXPLAIN`: the physical plan shows the inner casts over the
+   Iceberg scan), so both sides read the folded child and agree. The physical
+   planner elides redundant same-type default-target casts
+   (`cast_with_target_field`), so the surviving physical LTZ cast is the
+   innermost one, which is the cast `wrap_as_ltz` builds. `wrap_as_ltz` does
+   control the physical side of S1, and still cannot fix it (§Why no fix).
+
+### Why no fix inside `instant_ts.rs` exists
+
+Three shape classes need three different physical fields from the same
+analyzed child (`coalesce(b, 7)`, non-nullable, no metadata; the fold target
+is bare `b`, non-nullable, `PARQUET:field_id`):
+
+- Direct cast, recomputed boundary (`ice_b_agg`-style, answers on head): the
+  logical side carries the child metadata, so the physical side must carry
+  it: default (child-derived) target. A verbatim empty-metadata target raises
+  the reverse mismatch. This is the surviving M2 mutant.
+- Fold plus frozen boundary (S1: SQL view, UNION): the logical side is frozen
+  pre-fold with no metadata, so the physical side must drop it: verbatim
+  empty-metadata target. The default target raises S1.
+- Fold plus recomputed boundary (the card's original defect): the logical side
+  is recomputed post-fold, so the physical nullability must track the child:
+  default target. A baked nullable target raises the original error.
+
+The physical API couples the two axes: the default target is dynamic on both,
+a verbatim target is static on both. No single construction satisfies the
+frozen family and the recomputed family at once. And `wrap_as_ltz` cannot
+choose per shape: it is an analyzer rule over the view body, analyzed
+standalone at `CREATE` time; the enclosing view reference, union and aggregate
+are separate statements that do not exist yet. The boundary is invisible at
+the site. Any rule keyed on the analyzed child (bare column or not, nullable
+or not) fails one family; the DF-view S1 shape kills every verbatim variant
+and the SQL-view/UNION S1 shape kills the default one. Rebuilding the inner
+cast instead of the outer one moves the static point but keeps the coupling.
+
+### Case 3: the class reproduces with no RePark code in the loop
+
+Plain `CAST(coalesce(b, 7) AS BIGINT)` (a stock DataFusion cast;
+`wrap_as_ltz` only fires for timestamp targets), no views, under a UNION plus
+aggregate, raises the identical error on head:
+
+```sql
+CREATE TABLE ic.ns.src (b BIGINT NOT NULL, n BIGINT) USING iceberg;
+INSERT INTO ic.ns.src VALUES (1, 1), (2, NULL), (3, 3);
+SELECT max(x) AS m, count(x) AS c FROM
+  (SELECT CAST(coalesce(b, 7) AS BIGINT) AS x FROM ic.ns.src
+   UNION ALL
+   SELECT CAST(coalesce(b, 7) AS BIGINT) AS x FROM ic.ns.src) q;
+-- Internal error: Physical input schema should be the same as the one
+-- converted from logical input schema. Differences:
+-- field metadata at index 0 [x]: (physical) {"PARQUET:field_id": "1"} vs (logical) {}
+```
+
+Controls on the same build: the same query without the UNION answers
+(`m = 3, c = 3`); the UNION over direct `CAST(b AS BIGINT)` answers
+(`m = 3, c = 6`); the DF-view shape without the UNION answers. The defect is
+DataFusion-internal: a default-target cast whose child folds onto a
+metadata-carrying column, under any frozen logical boundary, desynchronizes
+the aggregate input check. `wrap_as_ltz`'s `Cast::new` joined stock behavior;
+the old named field masked this axis at the cost of the nullability axis. A
+RePark-side patch at `wrap_as_ltz` would be a shape-specific patch over an
+upstream defect, which the brief's Case 3 forbids.
+
+### Upstream issue draft
+
+```text
+Title: Default-target CAST under UNION + aggregate trips the physical/logical
+input check when the child folds onto a metadata-carrying column
+
+DataFusion 54.1.0. A default-target CAST(f(...)) whose child folds to a bare
+column carrying field metadata (e.g. PARQUET:field_id) raises "Physical input
+schema should be the same as the one converted from logical input schema ...
+field metadata at index 0 ... (physical) {"PARQUET:field_id": "1"} vs
+(logical) {}" when an aggregate sits above a UNION. Repro: a table with a
+NOT NULL BIGINT column carrying field metadata, then
+
+SELECT max(x), count(x) FROM
+  (SELECT CAST(coalesce(b, 7) AS BIGINT) AS x FROM t
+   UNION ALL
+   SELECT CAST(coalesce(b, 7) AS BIGINT) AS x FROM t) q;
+
+Cause: cast_output_field (logical) and CastExpr::resolved_target_field
+(physical) both propagate the child field for a default target, so both sides
+agree when read from the same plan state; but LogicalPlan::with_new_exprs
+preserves the UNION's analyzed (pre-fold, metadata-free) schema while the
+physical plan is built from the folded branches. Proposed principle: a cast's
+output is a new value and carries no field metadata of its child, on either
+side. Recomputing the union schema post-fold would fix the UNION shape only;
+dropping child metadata from the cast output on both sides fixes every frozen
+boundary uniformly. Note the output-visibility hazard that motivates the
+principled fix: today a SELECT CAST(pk AS <type>) result (and a CTAS file)
+carries the source column's PARQUET:field_id, so a new value masquerades under
+the source column's identity.
+```
+
+The draft is unrun against stock DataFusion; the UNION-plus-BIGINT repro above
+ran on RePark head, whose cast path there is stock. DataFusion per
+`Cargo.lock`: `datafusion` / `datafusion-expr` / `datafusion-physical-expr`
+54.1.0.
+
+### Recommendation and carry-over
+
+Recommended: file the issue upstream and hold PR #1014 until the S1 class is
+resolved; the 12 S1 cells answered on base, so head is worse than main on
+those statements. Fallback: upstream union-recompute plus a RePark-side
+replanning-view scan-output conformance (both outside this fold's scope; the
+view half strips metadata outside the cast, against this fold's ruling, and
+each frozen boundary needs its own). Not recommended: ship head accepting the
+12 regressions.
+
+Carry-over for the authorized-fix fold, in order: red pins for every
+`repro_s1.py` form (8 wrappers x SQL-view and UNION shapes) with base's
+answers; the M2-killer pin (direct `CAST` of an Iceberg column plus DF view
+plus aggregate, which reds on any verbatim empty-metadata target); the §1
+"what moves" correction (the physical field's metadata moves too: 1,770
+Iceberg-source cells); the dated residue row for the 132 newly answering
+cells that carry the pre-existing wrong double-cast values (verdict S3:
+`CAST(CAST(id % 3 AS INT) AS TIMESTAMP)` answers epoch 0 per row and
+`CAST(id / 2 AS TIMESTAMP)` answers 0,0,1,1,2,2 s on base and head; Spark
+4.1.2 answers 0,1,2,0,1,2 s and 0,0.5,...,2.5 s); R-1 and R-2 unchanged
+(R-1's NTZ path shares the shape, so the same impossibility covers it).
+
+Out of scope observed: a CTAS over direct `CAST(b AS TIMESTAMP)` writes the
+new `ts` column carrying the source's `PARQUET:field_id: 1` (verifier
+`probe1.py`, `ice_b` CTAS row; same on base and head). That is the output
+face of the propagation this halt describes.
+
+No guard relaxed; no code or test file changed in this fold.
 
 ## Gates
 
