@@ -486,6 +486,38 @@ fn a_value_under_a_null_parent_is_not_read() {
 }
 
 #[test]
+fn a_null_typed_child_passes_under_a_null_parent() {
+    let untyped: ArrayRef = Arc::new(datafusion::arrow::array::NullArray::new(2));
+    let shape = fields(&[("v", instant(), true), ("w", DataType::Null, true)]);
+    let masked = NullBuffer::from(vec![true, false]);
+    let columns = vec![stamps(&[INSTANT_MICROS, FAR_MICROS]), untyped];
+    let value: ArrayRef = Arc::new(StructArray::new(shape, columns, Some(masked)));
+    let both = |required: bool| {
+        DataType::Struct(fields(&[
+            ("v", wall_ns(), true),
+            ("w", wall_ns(), !required),
+        ]))
+    };
+    let run = |target: &DataType| {
+        STORE.conform(
+            &conversion("America/New_York", true),
+            &value,
+            target,
+            Pairing::Cast,
+        )
+    };
+    let out = run(&both(false)).unwrap();
+    assert_eq!(leaf(&out), vec![Some(NEW_YORK_WALL), None]);
+    assert_eq!(out.as_struct().column(1).data_type(), &DataType::Null);
+    let text = run(&both(true)).unwrap_err().to_string();
+    assert!(
+        text.contains("the leaf is required and the value is NULL"),
+        "{text}"
+    );
+    assert!(text.contains("`st`.`w`"), "{text}");
+}
+
+#[test]
 fn a_string_leaf_is_read_as_insert_reads_a_literal() {
     let texts: ArrayRef = Arc::new(StringArray::from(vec![
         "2026-01-02 03:04:05.123456789+00:00",

@@ -501,7 +501,10 @@ impl Site<'_> {
             } else {
                 below.conform(conversion, &visible, target.data_type())?
             };
-            let unmasked = stored.null_count().max(visible.null_count()) > rows.null_count();
+            let nulls = stored
+                .logical_null_count()
+                .max(visible.logical_null_count());
+            let unmasked = nulls > rows.null_count();
             if !target.is_nullable() && below.wants(target.data_type()) && unmasked {
                 return Err(below.refuse(field.data_type(), Unstorable::Required));
             }
@@ -534,7 +537,7 @@ impl Site<'_> {
 }
 
 fn under(parent: Option<&NullBuffer>, child: &ArrayRef) -> Result<ArrayRef> {
-    let Some(parent) = parent else {
+    let Some(parent) = parent.filter(|_| child.data_type() != &DataType::Null) else {
         return Ok(Arc::clone(child));
     };
     let nulls = NullBuffer::union(Some(parent), child.nulls());

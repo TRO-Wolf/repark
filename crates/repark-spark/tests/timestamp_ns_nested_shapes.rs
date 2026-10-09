@@ -483,3 +483,53 @@ async fn what_cannot_feed_the_leaf_is_refused_by_name() {
     assert_eq!(stored(&session, "ice.ns.t").await, vec![None]);
     run(&session, "UPDATE ice.ns.t SET id = id + 1").await;
 }
+
+#[tokio::test]
+async fn a_null_struct_and_a_null_typed_field_store_as_they_are() {
+    let session = session("America/New_York", true);
+    let _warehouse = catalog(&session).await;
+    let value = "CASE WHEN id = 2 THEN NULL ELSE named_struct('v', x, 'w', NULL) END";
+    for (index, write) in [
+        "INSERT INTO {t} SELECT id, {st} FROM ice.ns.two",
+        "INSERT OVERWRITE {t} SELECT id, {st} FROM ice.ns.two",
+        "INSERT INTO {t} BY NAME SELECT {st} AS st, id FROM ice.ns.two",
+        "MERGE INTO {t} t USING (SELECT id, {st} AS v FROM ice.ns.two) s ON t.id = s.id \
+         WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.v)",
+    ]
+    .iter()
+    .enumerate()
+    {
+        if index == 0 {
+            run(
+                &session,
+                "CREATE TABLE ice.ns.two (id INT, x TIMESTAMP) USING iceberg \
+                 TBLPROPERTIES ('format-version'='3')",
+            )
+            .await;
+            run(
+                &session,
+                &format!("INSERT INTO ice.ns.two VALUES (1, {INSTANT}), (2, {INSTANT})"),
+            )
+            .await;
+        }
+        let table = format!("ice.ns.z{index}");
+        run(
+            &session,
+            &format!(
+                "CREATE TABLE {table} (id INT, st STRUCT<v: timestamp_ns, w: timestamp_ns>) \
+                 USING iceberg TBLPROPERTIES ('format-version'='3')"
+            ),
+        )
+        .await;
+        run(
+            &session,
+            &write.replace("{t}", &table).replace("{st}", value),
+        )
+        .await;
+        assert_eq!(
+            stored(&session, &table).await,
+            vec![Some(WALLS[0].1), None],
+            "{write}"
+        );
+    }
+}
