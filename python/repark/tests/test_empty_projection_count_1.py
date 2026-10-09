@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import shutil
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
 import pytest
+from test_v3_lineage_columns import _PART_DV_DEST, _PART_DV_SRC, _materialize
 
 from repark import ReparkSession
 from repark.spark.session import _reset_active_session_for_tests
-
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_PART_DV_SRC = _REPO_ROOT / "crates/repark-spark/src/tests/fixtures/v3-spark-part-dv"
 
 
 @pytest.fixture
@@ -71,18 +69,15 @@ def _count_value(frame: Any) -> int:
     return int(values[0])
 
 
-def _register_partdv(session: Any, tmp_path: Path) -> None:
-    dest = tmp_path / "partdv"
-    shutil.copytree(_PART_DV_SRC, dest)
-    versions = sorted(
-        (dest / "metadata").glob("v*.metadata.json"),
-        key=lambda path: int(path.name[1:].split(".", 1)[0]),
-    )
-    assert versions
-    session.sql(
-        "CALL ice.system.register_table("
-        f"table => 'sales.partdv', metadata_file => '{versions[-1]}')"
-    )
+@pytest.fixture
+def partdv(spark: Any) -> Iterator[None]:
+    """Register the v3 partitioned-DV fixture at the path its metadata names."""
+    with _materialize(_PART_DV_SRC, _PART_DV_DEST) as metadata_file:
+        spark.sql(
+            "CALL ice.system.register_table("
+            f"table => 'sales.partdv', metadata_file => '{metadata_file}')"
+        )
+        yield
 
 
 def test_changelog_count_star_answers_five(spark: Any) -> None:
@@ -276,21 +271,19 @@ def test_incremental_exists_counts_one(spark: Any) -> None:
     )
 
 
-def test_lineage_count_star_alias_over_v3_partdv(spark: Any, tmp_path: Path) -> None:
+def test_lineage_count_star_alias_over_v3_partdv(spark: Any, partdv: None) -> None:
     """``SELECT COUNT(*) AS _row_id`` over the v3 DV fixture answers four.
 
     pins: empty-projection-count-1/C-004
     """
-    _register_partdv(spark, tmp_path)
     assert _count_value(spark.sql("SELECT COUNT(*) AS _row_id FROM ice.sales.partdv")) == 4
 
 
-def test_lineage_df_count_over_row_id(spark: Any, tmp_path: Path) -> None:
+def test_lineage_df_count_over_row_id(spark: Any, partdv: None) -> None:
     """``df.count()`` over a lineage projection answers four.
 
     pins: empty-projection-count-1/C-004
     """
-    _register_partdv(spark, tmp_path)
     assert spark.sql("SELECT _row_id FROM ice.sales.partdv").count() == 4
 
 
@@ -304,7 +297,7 @@ def test_lineage_count_star_alias_over_v2_still_answers(spark: Any) -> None:
     assert _count_value(spark.sql("SELECT COUNT(*) AS _row_id FROM ice.sales.epc1_lin2")) == 1
 
 
-def test_empty_window_counts_stay_zero(spark: Any, tmp_path: Path) -> None:
+def test_empty_window_counts_stay_zero(spark: Any, partdv: None) -> None:
     """A ``COUNT(*)`` matching no rows answers zero on all three readers.
 
     pins: empty-projection-count-1/C-007
@@ -315,13 +308,12 @@ def test_empty_window_counts_stay_zero(spark: Any, tmp_path: Path) -> None:
     frame.createOrReplaceTempView("v_epc1_empty")
     assert _count_value(spark.sql(f"SELECT COUNT(*) FROM {table}.changes WHERE 1 = 0")) == 0
     assert _count_value(spark.sql("SELECT COUNT(*) FROM v_epc1_empty WHERE 1 = 0")) == 0
-    _register_partdv(spark, tmp_path)
     assert (
         _count_value(spark.sql("SELECT COUNT(*) AS _row_id FROM ice.sales.partdv WHERE 1 = 0")) == 0
     )
 
 
-def test_filtered_counts_unchanged(spark: Any, tmp_path: Path) -> None:
+def test_filtered_counts_unchanged(spark: Any, partdv: None) -> None:
     """Filtered ``COUNT(*)`` answers stay as measured on the base tree.
 
     pins: empty-projection-count-1/C-007
@@ -332,7 +324,6 @@ def test_filtered_counts_unchanged(spark: Any, tmp_path: Path) -> None:
     frame.createOrReplaceTempView("v_epc1_filt")
     assert _count_value(spark.sql(f"SELECT COUNT(*) FROM {table}.changes WHERE id > 2")) == 3
     assert _count_value(spark.sql("SELECT COUNT(*) FROM v_epc1_filt WHERE id > 3")) == 2
-    _register_partdv(spark, tmp_path)
     assert (
         _count_value(spark.sql("SELECT COUNT(*) FROM ice.sales.partdv WHERE _row_id IS NOT NULL"))
         == 4
@@ -340,12 +331,11 @@ def test_filtered_counts_unchanged(spark: Any, tmp_path: Path) -> None:
     assert _count_value(spark.sql("SELECT COUNT(*) FROM ice.sales.partdv WHERE id > 2")) == 3
 
 
-def test_lineage_exists_still_refuses_v3_rowid2(spark: Any, tmp_path: Path) -> None:
+def test_lineage_exists_still_refuses_v3_rowid2(spark: Any, partdv: None) -> None:
     """A lineage ``EXISTS`` subquery still refuses with the composed-statement class.
 
     pins: empty-projection-count-1/C-007
     """
-    _register_partdv(spark, tmp_path)
     with pytest.raises(Exception, match="V3-ROWID-2"):
         spark.sql(
             "SELECT COUNT(*) FROM (SELECT 1 AS one) AS t "
