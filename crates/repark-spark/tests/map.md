@@ -61,6 +61,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   NTZ opt-in literals/casts (naive µs, no localization), invalid-value refusal
   naming both tokens, DDL `TIMESTAMP` → Iceberg `timestamp` under NTZ /
   `timestamptz` under LTZ. `to_timestamp` stays LTZ.
+- [timestamp_ns_wall_doors.rs](timestamp_ns_wall_doors.rs) — **ICE-TSNS-MERGE-WALL-1
+  (2026-10-09):** the readiness review's first probe test, ported unchanged in substance. In
+  an America/New_York session `INSERT … VALUES` and `MERGE … INSERT *` of one `TIMESTAMP`
+  literal into a `timestamp_ns` column must store one value. Red on main `40fc916f`
+  (INSERT `1767323045123456000`, MERGE `1767341045123456000`).
+  pins: ice-tsns-merge-wall-1/C-001
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to

@@ -4,6 +4,12 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-tsns-merge-wall-1-ledger.md](ice-tsns-merge-wall-1-ledger.md) —
+  **ICE-TSNS-MERGE-WALL-1 (2026-10-09), readiness finding R-007:** every write door stores
+  the same nanosecond wall. Step 0: the review's test red on main (C-001), Spark 4.1.2 with
+  Iceberg 1.11.0 cannot touch `timestamp_ns` (C-002), main measured over 1926 cells with 38
+  wrong `timestamp_ns` values and 15 refusals that have an answer (C-003).
+  `risk_tier: standard`. Branch `fix/ice-tsns-merge-wall-1`.
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
   under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort

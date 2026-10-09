@@ -3170,6 +3170,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with the read-back each must produce (`hours(tz)` derived from the spec; the fork
   writes it since RP-28, fork #296 — the fixture's `blocked_on_fork` marker still names
   the closed ask until the recorder re-runs).
+- [_ice_tsns_merge_wall_1_doors.py](_ice_tsns_merge_wall_1_doors.py) —
+  **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the write-door matrix: three session zones, six
+  target column types, nineteen doors over five source types and six carries in both row-level
+  modes, eight moments with non-zero digits below the microsecond (before the epoch, inside
+  New York's gap and overlap, on each side of both transitions). `expected_wall` is the rule
+  for a `timestamp_ns` target, computed with `zoneinfo`: Spark 4.1.2 with Iceberg 1.11.0
+  cannot read or write the type, so there is no Spark answer. The one moment a
+  `TIMESTAMP_NTZ '…'` literal refuses (a wall next to the epoch) is spelled
+  `to_timestamp_ntz('…')`.
+  pins: ice-tsns-merge-wall-1/C-002
+- [_record_ice_tsns_merge_wall_1_main.py](_record_ice_tsns_merge_wall_1_main.py) +
+  [ice_tsns_merge_wall_1_main.json](ice_tsns_merge_wall_1_main.json) —
+  **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the recorder and what main `40fc916f` stores in each
+  of the 1926 cells (the Arrow type and int64 ticks read back, or the refusal). Run it against
+  a build of main only; one fresh session and warehouse per door, the three zones in parallel.
+  pins: ice-tsns-merge-wall-1/C-003
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
