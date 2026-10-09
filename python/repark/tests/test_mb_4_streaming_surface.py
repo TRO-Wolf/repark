@@ -53,10 +53,6 @@ def _writer(spark: ReparkSession) -> DataStreamWriter:
     return DataStreamWriter(_batch_frame(spark))
 
 
-def _terminal_type(excinfo: pytest.ExceptionInfo[BaseException]) -> None:
-    assert type(excinfo.value) is NotImplementedError
-
-
 def _ignore_batch(frame: DataFrame, batch_id: int) -> None:
     raise AssertionError("the stub never runs a batch body")
 
@@ -574,8 +570,16 @@ def test_manager_active_is_empty_on_idle_session(spark: ReparkSession) -> None:
     assert StreamingQueryManager(spark).active == []
 
 
-def test_manager_get_returns_none_without_queries(spark: ReparkSession) -> None:
-    assert StreamingQueryManager(spark).get("no-such-query") is None
+def test_manager_get_malformed_id_refuses_mb0c_m1(spark: ReparkSession) -> None:
+    with pytest.raises(IllegalArgumentException) as excinfo:
+        StreamingQueryManager(spark).get("bogus")
+    assert excinfo.value.getCondition() is None
+    assert excinfo.value.getSqlState() is None
+    assert str(excinfo.value) == "Invalid UUID string: bogus"
+
+
+def test_manager_get_unknown_id_returns_none_mb0c_m2(spark: ReparkSession) -> None:
+    assert StreamingQueryManager(spark).get("00000000-0000-4000-8000-000000000000") is None
 
 
 def test_manager_await_any_termination_validates_timeout(spark: ReparkSession) -> None:
@@ -587,12 +591,7 @@ def test_manager_await_any_termination_validates_timeout(spark: ReparkSession) -
             "arg_name": "timeout",
             "arg_value": type(bad).__name__,
         }
-    with pytest.raises(NotImplementedError) as excinfo:
-        StreamingQueryManager(spark).awaitAnyTermination(0)
-    _terminal_type(excinfo)
-    with pytest.raises(NotImplementedError) as excinfo:
-        StreamingQueryManager(spark).awaitAnyTermination()
-    _terminal_type(excinfo)
+    assert StreamingQueryManager(spark).awaitAnyTermination(0) is False
 
 
 def test_manager_methods_refuse_on_stopped_session() -> None:
@@ -605,6 +604,8 @@ def test_manager_methods_refuse_on_stopped_session() -> None:
         manager.get("x")
     with pytest.raises(RuntimeError):
         manager.awaitAnyTermination()
+    with pytest.raises(RuntimeError):
+        manager.resetTerminated()
 
 
 def test_query_constructor_needs_a_handle() -> None:

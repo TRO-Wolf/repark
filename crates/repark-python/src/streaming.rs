@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use pyo3::exceptions::PyNotImplementedError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 use pyo3::wrap_pyfunction;
@@ -19,7 +18,7 @@ use crate::exceptions::{IllegalArgumentException, mask_user_visible, masked_mess
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::streaming_errors::microbatch_py_err;
-use crate::streaming_query::{BatchBodyAdapter, PyStreamingQuery};
+use crate::streaming_query::{BatchBodyAdapter, PyStreamingQuery, note_started};
 use crate::trigger_interval::check_trigger_interval;
 
 const CHECKPOINT_KEY: &str = "checkpointLocation";
@@ -344,6 +343,7 @@ fn start_spec(
     let handle = handle.map_err(|error| microbatch_py_err(py, &error, None))?;
     let started = py.detach(|| runtime.block_on(async { handle.start_below_catalog_check() }));
     started.map_err(|error| microbatch_py_err(py, &error, None))?;
+    note_started(session, &handle);
     Ok(PyStreamingQuery::new(handle, runtime))
 }
 
@@ -360,12 +360,6 @@ pub(crate) fn check_sink_declared<'a>(
             None,
         )),
     }
-}
-
-fn stub_terminal() -> PyErr {
-    PyNotImplementedError::new_err(
-        "MB-4 stub: the query validated and the streaming driver is not wired in this round",
-    )
 }
 
 #[pyfunction]
@@ -526,7 +520,7 @@ pub fn to_table_stream(
 mod tests {
     use std::collections::BTreeMap;
 
-    use pyo3::exceptions::{PyNotImplementedError, PyRuntimeError};
+    use pyo3::exceptions::PyRuntimeError;
     use pyo3::prelude::*;
     use pyo3::types::{PyDict, PyModule};
 

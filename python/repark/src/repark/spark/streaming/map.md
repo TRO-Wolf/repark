@@ -50,6 +50,10 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   `PyStreamingQuery`; every member delegates to it (`status`/`lastProgress`/
   `recentProgress` parse the native JSON). The manager keeps its stub terminal
   until item 8. pins: mb-4/C-024
+  **MB-4 round 3c (2026-10-08):** the manager goes live: `active`/`get`/
+  `awaitAnyTermination` delegate to the native `streams_*` doors,
+  `resetTerminated` joins the surface, and the stub terminal is gone.
+  pins: mb-4/C-028
 - `__init__.py` — **MB-4 surface half (2026-10-08):** re-exports the four public names.
   pins: mb-4/C-004
 

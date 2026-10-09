@@ -59,6 +59,7 @@ rule 2 does not bind.
 | C-025 | Item 6 lands: both Table doors build the `StreamSpec` (output mode first, trigger, frame template, source options, the `spark.sql.streaming.*` conf map, `RecordedLocation`, catalog timeout), refuse a duplicate query name with Spark's text, then register and start below the catalog check; `start` resolves the sink by path argument, else the path option, else the Q5 text. | The doors and the replay pins. | **PROVEN** | MB0-W1/W2/W5/W7/T1/T3 replay through the facade; MBE-6 both arms; MBE-13 at start; the invalid output mode against its MB-0c cell; start-by-path and start-by-path-option; the W3/M3 texts; the dated missing-sink row; the matching sink-option arm; the catalog-timeout grammar; conf effects and the Spark set-time refusals. Mutant (the duplicate-name scan compares against a fixed non-name): the M3 pin red; restored green. pins: mb-4/C-025 |
 | C-026 | Item 7 lands except the `count` leg: the foreach arm checks checkpoint, then the declared sink, then writer unknowns, then starts through the shared spec builder with `SinkSpec::ForeachBatch`; `BatchBodyAdapter` wraps the epoch frame as the facade `DataFrame` and calls the body under `block_in_place` with the stream-poll no-detach hatch; a raising body fails the query with the Python error in the `STREAM_FAILED` cause. | The arm, the adapter, and the pins. | **PROVEN** | First pin: a `writeTo` body commits once, stamped with the `repark.cdc` keys. Replays: MB0-T2 batches, MB0-R1 resume rows, MB0-W4 rows with one body append plus one stamp per epoch. MBE-16: full `STREAM_FAILED` text with Spark's head and `batch 0 failed: RuntimeError: ...`; MBE-10 and the W8-rule refusal through the live door; `collect`/`show` in the body complete. Mutant (sink check replaced by a fixed sink): both MBE-10 pins red; restored green. `count` in the body is C-027 OPEN. pins: mb-4/C-026 |
 | C-027 | A `count()` on the batch frame inside a `foreachBatch` body completes, as `collect` and `show` do under C-026. | The batch-action pin's `count` leg. | **PROVEN** | Round 3c: `test_foreach_door_batch_actions_in_body_complete` pins `counts == [(0, 3)]` beside the `collect`/`show` legs on one 3-row batch. The leg rides the granted provider fix (D-43): `count` pushes an empty projection and the provider now rebuilds zero columns with the row count stated. pins: mb-4/C-027 |
+| C-028 | Item 8 lands: `active` lists running queries and drops stopped ones, `get` parses the id and returns the active query or `None`, `awaitAnyTermination` reports a termination (`None` without a timeout, `True` with one, `False` on a timeout, the query's error when it failed), and `resetTerminated` clears the record; the stub terminal is gone. | The manager pins: the M1/M2 `get` pins in the surface battery, the manager battery, and the two Rust manager tests. | **PROVEN** | `active` lists one running daemon query and drops it after `stop`; `get` returns the query by id; malformed ids refuse MB0c-M1 verbatim and unknown ids answer MB0c-M2 `None`; `awaitAnyTermination` answers `None`/`True` after one of two queries stops, `False` on a timeout, and raises the failed query's `STREAM_FAILED` text; `resetTerminated` clears and the next stop re-reports. Rust pins cover folded/short-form ids, the refusal shapes, and the reset-then-clear wait. Mutant (the reap keeps running queries instead of terminated ones): the Rust await-any pin red; restored green. pins: mb-4/C-028 |
 
 ## Decisions
 
@@ -336,6 +337,23 @@ rule 2 does not bind.
   projection stays empty; the `WHERE _row_id IS NOT NULL` form answers
   because the filter forces a non-empty scan projection). Each becomes a card
   the orchestrator files; all three sit outside the round-3 fence.
+- **D-45 (2026-10-08). The manager state lives in the binding (W-Q3).** The
+  driver drops terminal handles from its registry, so the binding keeps its
+  own per-session `BindingManagerState` as a DataFusion config extension:
+  known handles plus the terminated-since-reset set. `start_spec` records
+  every start at the one site both doors share. `awaitAnyTermination` reaps
+  before it answers and level-reports until `resetTerminated`, which also
+  prunes terminal handles from known — without the prune the next reap
+  re-reports the stopped query (found by the C-028 pins, fixed in the item).
+  A failed termination raises the query's own `STREAM_FAILED`, per the
+  scratch y-sequence and the PySpark contract; no MB-0c cell covers it.
+- **D-46 (2026-10-08). `get` parses Java's UUID grammar, not the canonical
+  shape.** `UUID.fromString` accepts any five dash-separated hex groups, so
+  `get("1-2-3-4-5")` parses and answers `None` instead of refusing; lookup
+  compares parsed values, so folded and short forms find the query. Empty or
+  overlong groups refuse `Invalid UUID string` where Java raises
+  `NumberFormatException`; that corner is unmeasured and kept as the one
+  deviation.
 
 ## W-Q1 records (2026-10-08, brief ruling of 2026-10-08)
 

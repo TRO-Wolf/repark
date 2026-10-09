@@ -7980,6 +7980,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   MBE-16), the W8-rule refusal, `collect`/`count`/`show` in the body, and MBE-10
   through the live door. Round 3c (2026-10-08) lands the `count` leg on the
   batch-action pin. pins: mb-4/C-026, C-027
+- [test_mb_4_streaming_manager.py](test_mb_4_streaming_manager.py) — **MB-4 round 3c
+  (2026-10-08):** the manager battery: `active` lists a running query and drops a
+  stopped one, `get` by id, `awaitAnyTermination` after one of two queries stops,
+  `resetTerminated` clears the record, and a failed query's error raises through
+  `awaitAnyTermination`. The M1/M2 `get` pins stay in the surface battery.
+  pins: mb-4/C-028
 
 ## I want to...
 

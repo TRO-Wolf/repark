@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING
 
+from repark import _native
 from repark.errors import PySparkValueError
 
 if TYPE_CHECKING:
     from repark._native import PyStreamingQuery, StreamingQueryException
     from repark.spark.session.session_core import ReparkSession
-
-
-def _stub_terminal() -> NoReturn:
-    raise NotImplementedError("MB-4 stub: the streaming driver is not wired in this round")
 
 
 class StreamingQuery:
@@ -97,8 +94,8 @@ class StreamingQueryManager:
     @property
     def active(self) -> list[StreamingQuery]:
         """Returns a list of active queries associated with this SQLContext."""
-        self._session._ensure_alive()
-        return []
+        inner = self._session._ensure_alive()
+        return [StreamingQuery(handle) for handle in _native.streams_active(inner)]
 
     def get(self, id: str) -> StreamingQuery | None:
         """Returns an active query from this SparkSession.
@@ -108,8 +105,9 @@ class StreamingQueryManager:
         id : str
             The unique id of specified query.
         """
-        self._session._ensure_alive()
-        return None
+        inner = self._session._ensure_alive()
+        handle = _native.streams_get(inner, id)
+        return None if handle is None else StreamingQuery(handle)
 
     def awaitAnyTermination(self, timeout: int | None = None) -> bool | None:  # noqa: N802
         """Wait until any of the queries on the associated SparkSession has terminated.
@@ -127,5 +125,10 @@ class StreamingQueryManager:
                     "arg_value": type(timeout).__name__,
                 },
             )
-        self._session._ensure_alive()
-        _stub_terminal()
+        inner = self._session._ensure_alive()
+        return _native.streams_await_any_termination(inner, timeout)
+
+    def resetTerminated(self) -> None:  # noqa: N802 — PySpark method name
+        """Clears the terminated-query record so awaitAnyTermination waits for a new one."""
+        inner = self._session._ensure_alive()
+        _native.streams_reset_terminated(inner)

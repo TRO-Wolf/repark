@@ -1,20 +1,25 @@
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::{Arc, Mutex, PoisonError};
+use std::time::{Duration, Instant};
 
 use datafusion::prelude::DataFrame;
 use futures::future::BoxFuture;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
+use pyo3::wrap_pyfunction;
 use repark_core::microbatch::Epoch;
 use repark_core::microbatch::MicroBatchError;
-use repark_core::microbatch::driver::{BatchBody, QueryHandle, ShutdownOutcome};
+use repark_core::microbatch::driver::{
+    BatchBody, QueryHandle, ShutdownOutcome, StreamingQueryManager,
+};
 use tokio::runtime::Runtime;
 
 use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
+use crate::exceptions::IllegalArgumentException;
 use crate::session::PyReparkSession;
 use crate::streaming_errors::{QueryHead, microbatch_py_err};
 
 const MAX_AWAIT_SECS: f64 = 1_000_000_000_000.0;
+const AWAIT_ANY_POLL: Duration = Duration::from_millis(10);
 
 #[derive(Debug)]
 #[pyclass(name = "PyStreamingQuery", module = "repark._native")]
@@ -141,6 +146,210 @@ impl PyStreamingQuery {
     }
 }
 
+#[derive(Debug, Default)]
+struct BindingManagerState {
+    known: Mutex<Vec<QueryHandle>>,
+    terminated: Mutex<Vec<QueryHandle>>,
+}
+
+impl BindingManagerState {
+    fn of(session: &PyReparkSession) -> Arc<Self> {
+        let state = session.session.context().state_ref();
+        let mut state = state.write();
+        if let Some(known) = state.config().get_extension::<Self>() {
+            return known;
+        }
+        let fresh = Arc::new(Self::default());
+        state.config_mut().set_extension(Arc::clone(&fresh));
+        fresh
+    }
+
+    fn reap(&self) {
+        let known = self.known.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut terminated = self
+            .terminated
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        for handle in known.iter() {
+            if !handle.is_active() && !terminated.iter().any(|done| done.id() == handle.id()) {
+                terminated.push(handle.clone());
+            }
+        }
+    }
+
+    fn first_terminated(&self) -> Option<QueryHandle> {
+        self.terminated
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .first()
+            .cloned()
+    }
+}
+
+pub(crate) fn note_started(session: &PyReparkSession, handle: &QueryHandle) {
+    let state = BindingManagerState::of(session);
+    state
+        .known
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .push(handle.clone());
+}
+
+fn parse_query_uuid(text: &str) -> Option<u128> {
+    let mut parts = text.split('-');
+    let mut words = [0u64; 5];
+    for slot in &mut words {
+        let part = parts.next()?;
+        if part.is_empty() || part.len() > 16 || !part.bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return None;
+        }
+        *slot = u64::from_str_radix(part, 16).ok()?;
+    }
+    if parts.next().is_some() {
+        return None;
+    }
+    let high = words[0].wrapping_shl(32) | words[1].wrapping_shl(16) | words[2];
+    let low = words[3].wrapping_shl(48) | words[4];
+    Some((u128::from(high) << 64) | u128::from(low))
+}
+
+fn canonical_uuid_text(value: u128) -> String {
+    format!(
+        "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
+        (value >> 96) & 0xffff_ffff,
+        (value >> 80) & 0xffff,
+        (value >> 64) & 0xffff,
+        (value >> 48) & 0xffff,
+        value & 0xffff_ffff_ffff,
+    )
+}
+
+fn wrap_query(
+    py: Python<'_>,
+    session: &PyReparkSession,
+    handle: QueryHandle,
+) -> PyResult<Py<PyStreamingQuery>> {
+    Py::new(
+        py,
+        PyStreamingQuery::new(handle, Arc::clone(&session.runtime)),
+    )
+}
+
+#[pyfunction]
+fn streams_active(
+    py: Python<'_>,
+    session: &PyReparkSession,
+) -> PyResult<Vec<Py<PyStreamingQuery>>> {
+    let manager = StreamingQueryManager::of(&session.session);
+    manager
+        .active()
+        .into_iter()
+        .map(|handle| wrap_query(py, session, handle))
+        .collect()
+}
+
+#[pyfunction]
+#[allow(clippy::missing_errors_doc)]
+fn streams_get(
+    py: Python<'_>,
+    session: &PyReparkSession,
+    id: &str,
+) -> PyResult<Option<Py<PyStreamingQuery>>> {
+    let Some(parsed) = parse_query_uuid(id) else {
+        return Err(IllegalArgumentException::new_err(format!(
+            "Invalid UUID string: {id}"
+        )));
+    };
+    let want = canonical_uuid_text(parsed);
+    let manager = StreamingQueryManager::of(&session.session);
+    manager
+        .active()
+        .into_iter()
+        .find(|query| query.id().to_string() == want)
+        .map(|handle| wrap_query(py, session, handle))
+        .transpose()
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn report_terminated(py: Python<'_>, handle: &QueryHandle, timed: bool) -> PyResult<Option<bool>> {
+    if let Some(error) = handle.exception() {
+        let query = handle.id().to_string();
+        let run = handle.run_id().to_string();
+        return Err(microbatch_py_err(
+            py,
+            &error,
+            Some(QueryHead {
+                query_id: &query,
+                run_id: &run,
+            }),
+        ));
+    }
+    Ok(timed.then_some(true))
+}
+
+#[pyfunction]
+#[allow(clippy::missing_errors_doc)]
+fn streams_await_any_termination(
+    py: Python<'_>,
+    session: &PyReparkSession,
+    timeout_secs: Option<f64>,
+) -> PyResult<Option<bool>> {
+    let timeout = match timeout_secs {
+        None => None,
+        Some(secs) if (0.0..MAX_AWAIT_SECS).contains(&secs) => Some(Duration::from_secs_f64(secs)),
+        Some(secs) => {
+            return Err(microbatch_py_err(
+                py,
+                &MicroBatchError::Catalog(format!(
+                    "awaitAnyTermination timeout must be a non-negative number of seconds, got {secs}"
+                )),
+                None,
+            ));
+        }
+    };
+    let state = BindingManagerState::of(session);
+    state.reap();
+    if let Some(done) = state.first_terminated() {
+        return report_terminated(py, &done, timeout.is_some());
+    }
+    let runtime = Arc::clone(&session.runtime);
+    let ended: Option<QueryHandle> = py.detach(|| {
+        runtime.block_on(async {
+            let start = Instant::now();
+            loop {
+                state.reap();
+                if let Some(done) = state.first_terminated() {
+                    return Some(done);
+                }
+                if timeout.is_some_and(|limit| start.elapsed() >= limit) {
+                    return None;
+                }
+                tokio::time::sleep(AWAIT_ANY_POLL).await;
+            }
+        })
+    });
+    match ended {
+        None => Ok(Some(false)),
+        Some(done) => report_terminated(py, &done, timeout.is_some()),
+    }
+}
+
+#[pyfunction]
+fn streams_reset_terminated(session: &PyReparkSession) {
+    let state = BindingManagerState::of(session);
+    state
+        .terminated
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clear();
+    state
+        .known
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .retain(QueryHandle::is_active);
+}
+
 pub(crate) struct BatchBodyAdapter {
     body: Py<PyAny>,
     session: Py<PyReparkSession>,
@@ -200,6 +409,10 @@ impl BatchBody for BatchBodyAdapter {
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyStreamingQuery>()?;
+    module.add_function(wrap_pyfunction!(streams_active, module)?)?;
+    module.add_function(wrap_pyfunction!(streams_get, module)?)?;
+    module.add_function(wrap_pyfunction!(streams_await_any_termination, module)?)?;
+    module.add_function(wrap_pyfunction!(streams_reset_terminated, module)?)?;
     Ok(())
 }
 
@@ -214,7 +427,7 @@ mod tests {
     use repark_core::time_travel::microbatch_source::SourceOptions;
 
     use super::*;
-    use crate::exceptions::AnalysisException;
+    use crate::exceptions::{AnalysisException, IllegalArgumentException};
     use crate::session::PyReparkSession;
 
     fn condition(error: &PyErr, py: Python<'_>) -> String {
@@ -224,6 +437,16 @@ mod tests {
             .expect("condition attached")
             .extract::<String>()
             .expect("condition is str")
+    }
+
+    fn message(error: &PyErr, py: Python<'_>) -> String {
+        error
+            .value(py)
+            .str()
+            .expect("a message")
+            .to_str()
+            .expect("utf8")
+            .to_string()
     }
 
     fn session_with_tables(py: Python<'_>, tag: &str) -> (Py<PyReparkSession>, PathBuf) {
@@ -321,6 +544,144 @@ mod tests {
                     .expect("a stopped wait")
                     .is_none()
             );
+            drop(owned);
+            let _ = std::fs::remove_dir_all(&warehouse);
+        });
+    }
+
+    fn started_pair(
+        py: Python<'_>,
+        tag: &str,
+    ) -> (
+        Py<PyReparkSession>,
+        PathBuf,
+        repark_core::microbatch::driver::QueryHandle,
+        repark_core::microbatch::driver::QueryHandle,
+    ) {
+        let (session, warehouse) = session_with_tables(py, tag);
+        let owned = session.borrow(py);
+        let manager = StreamingQueryManager::of(&owned.session);
+        let runtime = Arc::clone(&owned.runtime);
+        let first = runtime
+            .block_on(manager.register(
+                &owned.session,
+                table_spec("sc.mb5.sink_a", Trigger::default()),
+            ))
+            .expect("a first handle");
+        let second = runtime
+            .block_on(manager.register(
+                &owned.session,
+                table_spec("sc.mb5.sink_b", Trigger::default()),
+            ))
+            .expect("a second handle");
+        runtime
+            .block_on(async { first.start_below_catalog_check() })
+            .expect("the first starts");
+        runtime
+            .block_on(async { second.start_below_catalog_check() })
+            .expect("the second starts");
+        note_started(&owned, &first);
+        note_started(&owned, &second);
+        drop(owned);
+        (session, warehouse, first, second)
+    }
+
+    fn active_ids(py: Python<'_>, queries: &[Py<PyStreamingQuery>]) -> Vec<String> {
+        queries
+            .iter()
+            .map(|query| query.bind(py).borrow().id())
+            .collect()
+    }
+
+    #[test]
+    fn manager_lists_active_gets_by_id_and_drops_stopped() {
+        Python::attach(|py| {
+            let (session, warehouse, first, second) = started_pair(py, "manager");
+            let owned = session.borrow(py);
+            let inner: &PyReparkSession = &owned;
+            let runtime = Arc::clone(&owned.runtime);
+            let ids = active_ids(py, &streams_active(py, inner).expect("active"));
+            assert_eq!(ids.len(), 2);
+            assert!(ids.contains(&first.id().to_string()));
+            assert!(ids.contains(&second.id().to_string()));
+            let same = streams_get(py, inner, &first.id().to_string())
+                .expect("a lookup")
+                .expect("found");
+            assert_eq!(same.bind(py).borrow().id(), first.id().to_string());
+            let folded = streams_get(py, inner, &first.id().to_string().to_ascii_uppercase())
+                .expect("a folded lookup")
+                .expect("found");
+            assert_eq!(folded.bind(py).borrow().id(), first.id().to_string());
+            let short = first
+                .id()
+                .to_string()
+                .split('-')
+                .map(|part| part.trim_start_matches('0'))
+                .map(|part| if part.is_empty() { "0" } else { part })
+                .collect::<Vec<_>>()
+                .join("-");
+            let valued = streams_get(py, inner, &short)
+                .expect("a short lookup")
+                .expect("found");
+            assert_eq!(valued.bind(py).borrow().id(), first.id().to_string());
+            assert!(
+                streams_get(py, inner, "1-2-3-4-5")
+                    .expect("a short unknown")
+                    .is_none()
+            );
+            assert!(
+                streams_get(py, inner, "00000000-0000-4000-8000-000000000000")
+                    .expect("an unknown")
+                    .is_none()
+            );
+            for bad in ["bogus", "1-2-3-4", "{00000000-0000-4000-8000-000000000000}"] {
+                let refused = streams_get(py, inner, bad).expect_err("a refusal");
+                assert!(refused.is_instance_of::<IllegalArgumentException>(py));
+                assert_eq!(message(&refused, py), format!("Invalid UUID string: {bad}"));
+            }
+            let _ = runtime.block_on(first.stop());
+            let ids = active_ids(py, &streams_active(py, inner).expect("active"));
+            assert_eq!(ids, vec![second.id().to_string()]);
+            assert!(
+                streams_get(py, inner, &first.id().to_string())
+                    .expect("a stopped lookup")
+                    .is_none()
+            );
+            let _ = runtime.block_on(second.stop());
+            drop(owned);
+            let _ = std::fs::remove_dir_all(&warehouse);
+        });
+    }
+
+    #[test]
+    fn await_any_termination_reports_a_stop_and_reset_clears_it() {
+        Python::attach(|py| {
+            let (session, warehouse, first, second) = started_pair(py, "awaitany");
+            let owned = session.borrow(py);
+            let inner: &PyReparkSession = &owned;
+            let runtime = Arc::clone(&owned.runtime);
+            assert_eq!(
+                streams_await_any_termination(py, inner, Some(0.0)).expect("an idle wait"),
+                Some(false)
+            );
+            let _ = runtime.block_on(first.stop());
+            assert_eq!(
+                streams_await_any_termination(py, inner, None).expect("a stop"),
+                None
+            );
+            assert_eq!(
+                streams_await_any_termination(py, inner, Some(30.0)).expect("a repeat"),
+                Some(true)
+            );
+            streams_reset_terminated(inner);
+            assert_eq!(
+                streams_await_any_termination(py, inner, Some(0.0)).expect("a cleared wait"),
+                Some(false)
+            );
+            let bad =
+                streams_await_any_termination(py, inner, Some(-1.0)).expect_err("a bad timeout");
+            assert!(message(&bad, py).contains("awaitAnyTermination timeout"));
+            let _ = runtime.block_on(second.stop());
             drop(owned);
             let _ = std::fs::remove_dir_all(&warehouse);
         });
