@@ -399,7 +399,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 | Change routing order | `router.rs` (the order is the design's — read the module doc first) |
 | Add a curated table property | `properties.rs` + a row in `properties/tests.rs` + an e2e row in `tests.rs` |
 | Add a partition transform | `partitioning.rs` + `partitioning/tests.rs` |
-| Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface (a guard needing the PARSED statement instead of scrubbed text is called from a named `router.rs` arm; unit AND end-to-end pins still live in `guards/tests.rs` — that is what G3-E8 does) |
+| Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface (a guard needing the PARSED statement instead of scrubbed text is called from a named `router.rs` arm; unit pins live in `guards/tests.rs` and end-to-end pins in `guards/ansi_door.rs` — that is what G3-E8 does) |
 | Add an `ALTER TABLE` operation | `alter.rs` `execute_alter_table` + `alter/tests.rs` + an e2e row in `tests.rs` (a form stock sqlparser cannot model takes the pre-parse route instead: `try_parse_*` + `execute_*` in `alter.rs` wired in `router.rs`, as the column move does) |
 | Add a `SET PROPERTIES` key | `alter.rs` `parse_set_properties` (curated only — dotted keys go through `extra_properties`) |
 | Upgrade a table's Iceberg format version | `alter.rs` `apply_set_properties` → `repark_iceberg::write::format_version` (V3-10; the `format_version` key resolves through `repark_functions::format_version` against the table this door loads ONCE and hands to the transaction, and the upgrade does not invalidate the namespace) |

@@ -13,31 +13,30 @@ refusing everything.
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../guards.rs`. The text/plan guards are
   pinned at unit level (they read scrubbed text or a `LogicalPlan`); **the G3-E8
-  subquery-predicate DML valve** is pinned BOTH at unit level (`parsed()` feeds it the same
-  `Statement` the router passes) and **end to end** through `crate::execute` over a real
-  memory-catalog Iceberg table — the end-to-end row is the one that asserts the table is
-  untouched after a refusal, which is the whole point of a data-loss valve. It lives here rather
-  than in `../tests.rs` because that file is at its `scripts/check_rust_file_size.py` ceiling,
-  and because this IS the guard's home. The pins cover the detector, verb/target message, the
-  parsed-target rendering (quoted / FROM-less / comment-bearing spellings, also covering
-  still-refused scalar / UPDATE IN), the end-to-end refuse, the IN-DELETE execute pin
-  (`dml_subquery_in_delete_executes_and_deletes_exactly_the_match`), the NOT IN + 3VL
-  execute pin (`dml_subquery_not_in_delete_executes_and_honors_three_valued_logic`), the
+  subquery-predicate DML valve** is pinned at unit level too (`parsed()` feeds it the same
+  `Statement` the router passes): the detector, verb/target message, and the parsed-target
+  rendering (quoted / FROM-less / comment-bearing spellings, also covering still-refused scalar /
+  UPDATE IN). `router_parse_dialect_matches_the_session_default` is the attachment-class net:
+  this door's router parse and the parse `delegate` plans must stay the same dialect, because a
+  guard wired to a parse the executor does not use is fail-open (the class that produced the
+  Spark door's bypass). **G15:** unit collation pins — expression `COLLATE`, `ORDER BY COLLATE`,
+  `CREATE TABLE` column `COLLATE`, `CAST AS STRING COLLATE`, SET / parenthesized SET, and a
+  string-literal negative. The MoR-valve wrapper test passes a parsed `Statement`.
+- `ansi_door.rs` — the `#[cfg(test)] mod ansi_door;` declared in `../guards.rs`. The `AnsiDoor`
+  harness (a live door over a memory-catalog Iceberg table) and every end-to-end pin that drives
+  it through `crate::execute`: the G3-E8 end-to-end refuse (the row that asserts the table is
+  untouched after a refusal, which is the whole point of a data-loss valve), the IN-DELETE
+  execute pin (`dml_subquery_in_delete_executes_and_deletes_exactly_the_match`), the NOT IN +
+  3VL execute pin (`dml_subquery_not_in_delete_executes_and_honors_three_valued_logic`), the
   EXISTS ± correlation execute pin
-  (`dml_subquery_exists_delete_executes_uncorrelated_and_correlated`), the
-  correlated-IN + identity-UPDATE execute pin
-  (`dml_subquery_correlated_in_and_update_in_execute`), the
+  (`dml_subquery_exists_delete_executes_uncorrelated_and_correlated`), the correlated-IN +
+  identity-UPDATE execute pin (`dml_subquery_correlated_in_and_update_in_execute`), the
   **valve-ORDER** pin against BUG-001 (`mor_valve_runs_after_the_g3e8_valve`, also covering
-  aggregate IN), and
-  `router_parse_dialect_matches_the_session_default` —
-  the attachment-class net: this door's router parse and the parse `delegate` plans must stay
-  the same dialect, because a guard wired to a parse the executor does not use is fail-open
-  (the class that produced the Spark door's bypass). The `AnsiDoor` harness is shared by the two
-  end-to-end pins.
-  **G15:** collation pins — expression `COLLATE`, `ORDER BY COLLATE`,
-  `CREATE TABLE` column `COLLATE`, `CAST AS STRING COLLATE`, SET / parenthesized SET,
-  a string-literal negative, and an end-to-end refuse + default `SELECT 1` untouched
-  (e2e also covers CAST + SET). The MoR-valve wrapper test passes a parsed `Statement`.
+  aggregate IN), and the G15 end-to-end refuse + default `SELECT 1` untouched (also covering
+  CAST + SET). It lives here rather than in `../tests.rs` because that file is at its
+  `scripts/check_rust_file_size.py` ceiling, and because this IS the guards' home; it lives
+  apart from `tests.rs` because that file hit its own ceiling first (the live-door family moved
+  out verbatim under C-4 step 2).
 
 ## Pointers
 

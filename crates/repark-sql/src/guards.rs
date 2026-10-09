@@ -737,4 +737,6 @@ fn is_ident_byte(byte: u8) -> bool {
 }
 
 #[cfg(test)]
+mod ansi_door;
+#[cfg(test)]
 mod tests;

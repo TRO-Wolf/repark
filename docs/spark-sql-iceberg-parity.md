@@ -8498,7 +8498,7 @@ the pin rather than obeying it.
   `…::g3e8_update_in_subquery_rewrites_only_the_matching_row`;
   `…::g3e8_delete_subquery_family_all_refuse` + `…::g3e8_update_subquery_family_all_refuse`
   (the residual refuse set: `UPDATE NOT IN` / `[NOT] EXISTS`, correlated UPDATE IN, ANY / ALL);
-  ANSI `crates/repark-sql/src/guards/tests.rs::dml_subquery_in_delete_executes_and_deletes_exactly_the_match`,
+  ANSI `crates/repark-sql/src/guards/ansi_door.rs::dml_subquery_in_delete_executes_and_deletes_exactly_the_match`,
   `…::dml_subquery_not_in_delete_executes_and_honors_three_valued_logic`,
   `…::dml_subquery_exists_delete_executes_uncorrelated_and_correlated`;
   ROW 9 `crates/repark-sql/tests/cross_door.rs::cross_door_g3e8_refusals_render_identically`
