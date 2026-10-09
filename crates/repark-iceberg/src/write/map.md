@@ -627,6 +627,23 @@ repark-core's error map.
   the kernel and the cast give the same ticks.
   *The kernel's nullability* is the `repark-functions` change (its directory map).
   pins: ice-tsns-merge-wall-1/C-016, C-018, C-019
+  **Fold 2 (2026-10-09), after the re-verify.** The nested call now carries the pairing rule
+  of the cast that follows it and the column's name:
+  `__repark_cast_timestamp_ns__((expr), arrow_cast(NULL, '<type>'), '<pairing>', '<column>')`.
+  Each site names its own door, measured and read from the code, not guessed:
+  `store_assignment_cast_sql_for` passes `name` (`PAIRS_BY_NAME`), because the `arrow_cast` it
+  wraps the call in is DataFusion's struct cast; `zone_store_frame` passes `cast`
+  (`PAIRS_AS_ARROW_CAST`), because `positional_map_overwrite_batch` then runs Arrow's `cast`;
+  the MERGE INSERT and identity-UPDATE projections pass `exact` (`PAIRS_EXACTLY`), because no
+  cast of theirs follows and the value reaching them has already been rebuilt to the target's
+  names by the nested-assignment fold or passed the store-assignment gate. Fold 1 passed no
+  rule and the kernel paired by name as soon as one name matched, so a struct with one renamed
+  field kept the UTC wall through the overwrite doors. What the rules are and what the kernel
+  refuses: `repark-functions/src/timestamp_ns_cast/map.md`.
+  `holds_nested_ns_wall` also sees through a list view.
+  `store_assignment_cast_sql` keeps its two-argument form for callers that have no column
+  name; the MERGE renderers and the nested-assignment fold use `…_for` and name theirs.
+  pins: ice-tsns-merge-wall-1/C-027
 - `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
   (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI
   matrix stores anywhere. `refuse_negated_null_writes(ctx, table, plan, targets)` follows

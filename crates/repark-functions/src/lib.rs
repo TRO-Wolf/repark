@@ -96,6 +96,9 @@ use datafusion::prelude::SessionContext;
 
 /// Register the full Spark-compatible scalar/aggregate/window function set into `ctx`.
 pub fn register_all(ctx: &SessionContext) {
+    ctx.add_optimizer_rule(std::sync::Arc::new(
+        timestamp_ns_cast::NestedNanosecondGuard,
+    ));
     for udf in datafusion_spark::all_default_scalar_functions() {
         ctx.register_udf(udf.as_ref().clone());
     }

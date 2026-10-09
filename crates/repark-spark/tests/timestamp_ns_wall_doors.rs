@@ -548,7 +548,7 @@ const NESTED_SHAPES: [(&str, &str, &str, &[&str]); 6] = [
         "array",
         "ARRAY<timestamp_ns>",
         "array({x})",
-        &["insert values", "merge insert", "merge update"],
+        &["merge insert", "merge update"],
     ),
     (
         "struct of array",

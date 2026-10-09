@@ -1063,6 +1063,21 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- `timestamp_ns_cast.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09, folds 1 and 2):** the
+  nanosecond wall kernel `__repark_cast_timestamp_ns__` is the one conversion every write door
+  reaches. Its return field is nullable for every source that is not already the target type
+  (an overflow answers NULL when ANSI is off); the zoned kernel keeps its first rule, because a
+  required `timestamptz_ns` column is a control whose refusal text must not move. A
+  four-argument form `(value, shape, pairing, column)` conforms the `timestamp_ns` leaves of a
+  nested value, pairs struct fields as the named door pairs them, and refuses by one named
+  text what it cannot store; the optimizer rule `NestedNanosecondGuard`
+  (`timestamp_ns_cast/lineage.rs`, added by `register_all`) refuses a nested value narrowed
+  from nanoseconds anywhere in its lineage. Mechanics, the pairing words, the layout table and the refusal are in
+  that directory's map (`timestamp_ns_cast/map.md`). The narrowing UDF moved to
+  `timestamp_ns_cast/narrow.rs` with no change, to keep this file under the size ceiling.
+  Fold 1 changed this file without a line here, which is what the map lockstep guard of the
+  pull request reported once main was merged in.
+  pins: ice-tsns-merge-wall-1/C-016, C-018, C-027, C-028, C-029, C-030, C-031, C-033
 - `timestamp_ns_cast.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the embedded Spark-door casts
   `__repark_cast_timestamp_ns__` (→ `Timestamp(ns)`) and `__repark_cast_timestamptz_ns__`
   (→ `Timestamp(ns, "UTC")`), registered through `instant_ts::functions()` and reached only

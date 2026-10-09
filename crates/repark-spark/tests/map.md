@@ -84,8 +84,8 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `a_nested_nanosecond_leaf_stores_the_session_wall_at_any_depth` runs eight doors over six
   shapes (struct in struct, array of struct, array, struct of array, map value, map of
   struct) and names, per shape, the doors that refuse: MERGE refuses every array-bearing
-  column with its store-assignment text, and `INSERT … VALUES` of `array(TIMESTAMP '…')`
-  raises main's raw Arrow error. `a_nested_microsecond_ntz_field_keeps_the_split_main_has`
+  column with its store-assignment text. (Fold 2: `INSERT … VALUES` of
+  `array(TIMESTAMP '…')`, which raised main's raw Arrow error, now stores the session wall.) `a_nested_microsecond_ntz_field_keeps_the_split_main_has`
   holds the control: field assignment stores the session wall, the other four doors the UTC
   wall (parity row ICE-TSNS-SQL-1-R-011, OPEN).
   `an_overflowing_literal_stores_null_without_ansi_as_insert_does` is the 42 cells' shape:
@@ -99,6 +99,19 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   Mutants F1, F2 and F5 of the ledger's §9.6 red the nested pins at the door each breaks, F3
   the literal pin, F4 the wall-source pin.
   pins: ice-tsns-merge-wall-1/C-016, C-017, C-018, C-019, C-023, C-024
+- [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
+  **ICE-TSNS-MERGE-WALL-1 fold 2 (2026-10-09):** the re-verify's repros at the Rust door.
+  `a_struct_source_pairs_as_the_door_that_stores_it_pairs` puts six spellings of a struct
+  (names in order, swapped, one renamed, one differently cased, none shared, one renamed
+  inside an array) through six doors in two zones and names, per cell, the session wall or
+  the refusal: the door-level pairing pin. `the_refusal_names_the_leaf_and_the_reason` holds
+  the whole text. `a_narrowed_nanosecond_value_is_refused_not_truncated` runs four narrowing
+  spellings through five doors, one of them through a subquery, and stores all nine digits
+  for a typed NULL. `a_required_zoned_column_refuses_an_overflow_as_main_does` holds the
+  control's text to its last word. `what_cannot_feed_the_leaf_is_refused_by_name` covers
+  `UPDATE` with no `WHERE`, an integer leaf, a misnested source and too few positional
+  fields, and that an unrelated `UPDATE` with no `WHERE` still runs.
+  pins: ice-tsns-merge-wall-1/C-027, C-028, C-029, C-030, C-032, C-034
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to

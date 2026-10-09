@@ -4,6 +4,7 @@ use datafusion::arrow::array::{StringArray, TimestampMicrosecondArray};
 use datafusion::arrow::datatypes::TimestampNanosecondType;
 use datafusion::logical_expr::{LogicalPlanBuilder, lit};
 
+use super::narrow::narrow;
 use super::*;
 
 fn conversion(zoned: bool, zone: &str, ansi: bool) -> Conversion {

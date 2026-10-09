@@ -6,14 +6,10 @@ use arrow::array::timezone::Tz;
 use arrow::compute::kernels::cast_utils::string_to_datetime;
 use chrono::{DateTime, Utc};
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, TimestampMicrosecondArray, TimestampNanosecondBuilder, new_null_array,
+    Array, ArrayRef, AsArray, TimestampNanosecondBuilder, new_null_array,
 };
 use datafusion::arrow::compute::{CastOptions, cast, cast_with_options};
-use datafusion::arrow::datatypes::{
-    DataType, Date32Type, Field, FieldRef, Int64Type, TimeUnit, TimestampMicrosecondType,
-    TimestampNanosecondType,
-};
-use datafusion::arrow::error::ArrowError;
+use datafusion::arrow::datatypes::{DataType, Date32Type, Field, FieldRef, Int64Type, TimeUnit};
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
@@ -27,6 +23,9 @@ use crate::datetime::localize_wall_micros_in_zone;
 use crate::instant_ts::string_carries_timezone;
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::timestamp_cast::parse_session_zone;
+pub use lineage::NestedNanosecondGuard;
+pub use narrow::narrow_timestamp_ns_expr;
+pub use nested::{Pairing, Unstorable, holds_timestamp_ns, nested_refusal};
 use repark_common::zone_horizon::wall_at_instant;
 use values_evidence::Evidence;
 
@@ -60,11 +59,17 @@ pub fn timestamp_ns_cast_expr(expr: Expr, zoned: bool) -> Expr {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn timestamp_ns_conform_expr(expr: Expr, target: &DataType) -> Result<Expr> {
+pub fn timestamp_ns_conform_expr(
+    expr: Expr,
+    target: &DataType,
+    pairing: Pairing,
+    column: &str,
+) -> Result<Expr> {
+    let text = |value: &str| Expr::Literal(ScalarValue::Utf8(Some(value.to_string())), None);
     let shape = Expr::Literal(ScalarValue::try_from(target)?, None);
     Ok(Expr::ScalarFunction(ScalarFunction::new_udf(
         timestamp_ns_cast_udf(false),
-        vec![expr, shape],
+        vec![expr, shape, text(pairing.word()), text(column)],
     )))
 }
 
@@ -127,9 +132,29 @@ impl SparkTimestampNsCast {
         Self {
             zoned,
             signature: Signature::one_of(
-                vec![TypeSignature::Any(1), TypeSignature::Any(2)],
+                vec![TypeSignature::Any(1), TypeSignature::Any(4)],
                 Volatility::Volatile,
             ),
+        }
+    }
+
+    fn nested_store<'a>(
+        &self,
+        pairing: Option<&str>,
+        column: Option<&'a str>,
+    ) -> Result<(Pairing, nested::Store<'a>)> {
+        match (pairing.and_then(Pairing::parse), column) {
+            (Some(pairing), Some(column)) => Ok((
+                pairing,
+                nested::Store {
+                    zoned: self.zoned,
+                    column,
+                },
+            )),
+            _ => Err(DataFusionError::Plan(format!(
+                "'{}' expects a pairing word and a column name as literals",
+                self.name()
+            ))),
         }
     }
 
@@ -176,8 +201,11 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
     }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        if let [source, shape] = arg_types {
-            return Ok(nested::conformed_type(source, shape, self.zoned));
+        if arg_types.len() > 1 {
+            return Err(DataFusionError::Internal(format!(
+                "'{}' types a nested value from its literal arguments",
+                self.name()
+            )));
         }
         if let Some(source) = arg_types.first() {
             self.checked_source(source)?;
@@ -186,9 +214,11 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        if let [source, shape] = args.arg_fields {
-            let conformed =
-                nested::conformed_type(source.data_type(), shape.data_type(), self.zoned);
+        if let [source, shape, _, _] = args.arg_fields {
+            let words = [args.scalar_arguments.get(2), args.scalar_arguments.get(3)]
+                .map(|word| word.copied().flatten().and_then(ScalarValue::try_as_str));
+            let (pairing, store) = self.nested_store(words[0].flatten(), words[1].flatten())?;
+            let conformed = store.conformed_type(source.data_type(), shape.data_type(), pairing)?;
             return Ok(Arc::new(Field::new(
                 self.name(),
                 conformed,
@@ -198,7 +228,9 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
         let nullable = match args.arg_fields.first() {
             Some(field) => {
                 self.checked_source(field.data_type())?;
-                field.is_nullable() || *field.data_type() != target_type(self.zoned)
+                field.is_nullable()
+                    || is_string_source(field.data_type())
+                    || (!self.zoned && *field.data_type() != target_type(false))
             }
             None => true,
         };
@@ -218,9 +250,23 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
             zone,
             ansi,
         };
-        let shape = (args.args.len() == 2).then(|| args.return_field.data_type());
-        let convert = |array: &ArrayRef| match shape {
-            Some(shape) => nested::conform(&conversion, array, shape),
+        let words: Vec<Option<&str>> = args
+            .args
+            .iter()
+            .skip(2)
+            .map(|word| match word {
+                ColumnarValue::Scalar(scalar) => scalar.try_as_str().flatten(),
+                ColumnarValue::Array(_) => None,
+            })
+            .collect();
+        let nested = match (args.arg_fields.get(1), words.as_slice()) {
+            (Some(shape), [pairing, column]) => {
+                Some((shape.data_type(), self.nested_store(*pairing, *column)?))
+            }
+            _ => None,
+        };
+        let convert = |array: &ArrayRef| match &nested {
+            Some((shape, (pairing, store))) => store.conform(&conversion, array, shape, *pairing),
             None => conversion.convert(array),
         };
         match args.args.first() {
@@ -424,105 +470,6 @@ fn malformed(value: &str, target: &str) -> String {
          its target type. Use `try_cast` to tolerate malformed input and return NULL instead. \
          SQLSTATE: 22018"
     )
-}
-
-static NARROW_TIMESTAMP_NS: LazyLock<Arc<ScalarUDF>> =
-    LazyLock::new(|| Arc::new(ScalarUDF::from(NarrowTimestampNs::new())));
-
-#[must_use]
-pub fn narrow_timestamp_ns_expr(expr: Expr) -> Expr {
-    Expr::ScalarFunction(ScalarFunction::new_udf(
-        Arc::clone(&NARROW_TIMESTAMP_NS),
-        vec![expr],
-    ))
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-struct NarrowTimestampNs {
-    signature: Signature,
-}
-
-impl NarrowTimestampNs {
-    fn new() -> Self {
-        Self {
-            signature: Signature::any(1, Volatility::Stable),
-        }
-    }
-}
-
-impl ScalarUDFImpl for NarrowTimestampNs {
-    fn name(&self) -> &str {
-        NARROW_TIMESTAMP_NS_NAME
-    }
-
-    fn signature(&self) -> &Signature {
-        &self.signature
-    }
-
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(narrowed_type())
-    }
-
-    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        let nullable = args
-            .arg_fields
-            .first()
-            .is_none_or(|field| field.is_nullable());
-        Ok(Arc::new(Field::new(self.name(), narrowed_type(), nullable)))
-    }
-
-    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let zone =
-            parse_session_zone(session_time_zone_from_options(args.config_options.as_ref()))?;
-        match args.args.first() {
-            Some(ColumnarValue::Array(array)) => Ok(ColumnarValue::Array(narrow(array, zone)?)),
-            Some(ColumnarValue::Scalar(scalar)) => {
-                let narrowed = narrow(&scalar.to_array()?, zone)?;
-                Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
-                    &narrowed, 0,
-                )?))
-            }
-            None => Err(DataFusionError::Plan(format!(
-                "'{NARROW_TIMESTAMP_NS_NAME}' expects one argument"
-            ))),
-        }
-    }
-}
-
-fn narrowed_type() -> DataType {
-    DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::<str>::from("UTC")))
-}
-
-fn narrow(array: &ArrayRef, zone: Tz) -> Result<ArrayRef> {
-    let DataType::Timestamp(unit, source_zone) = array.data_type() else {
-        return Err(DataFusionError::Plan(format!(
-            "'{NARROW_TIMESTAMP_NS_NAME}' expects a timestamp, found \"{}\"",
-            array.data_type()
-        )));
-    };
-    let micros: TimestampMicrosecondArray = if *unit == TimeUnit::Nanosecond {
-        array
-            .as_primitive::<TimestampNanosecondType>()
-            .unary(|ticks| ticks.div_euclid(NANOS_PER_MICRO))
-    } else {
-        let target = DataType::Timestamp(TimeUnit::Microsecond, source_zone.clone());
-        cast(array.as_ref(), &target)?
-            .as_primitive::<TimestampMicrosecondType>()
-            .clone()
-    };
-    let micros = if source_zone.is_some() {
-        micros
-    } else {
-        micros.try_unary(|wall| {
-            localize_wall_micros_in_zone(wall, zone).ok_or_else(|| {
-                ArrowError::ComputeError(
-                    "cannot localize zoneless timestamp into session timezone: out of range"
-                        .to_string(),
-                )
-            })
-        })?
-    };
-    Ok(Arc::new(micros.with_timezone("UTC")))
 }
 
 pub(crate) fn conform_values_timestamp_columns(plan: LogicalPlan) -> Result<LogicalPlan> {
@@ -922,6 +869,8 @@ fn values_cell_needs_rewrite(cell: &Expr) -> bool {
         && interesting
 }
 
+mod lineage;
+mod narrow;
 mod nested;
 mod values_evidence;
 

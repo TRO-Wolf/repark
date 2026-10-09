@@ -146,6 +146,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   sites in `repark-iceberg` now emit it for a `timestamp_ns` target, as they emit the NTZ
   kernel for a microsecond one; without the registration the ANSI door answers
   `UNRESOLVED_ROUTINE` where main stored a value. pins: ice-tsns-merge-wall-1/C-009
+  **Fold 2 (2026-10-09):** it also adds the optimizer rule `NestedNanosecondGuard`, because
+  the shared sites now emit the kernel's nested form on this door too and the rule is what
+  refuses a nested value narrowed from nanoseconds. pins: ice-tsns-merge-wall-1/C-030
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
   onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait).
   `on_session_built` installs integer overflow so a bare `ReparkSession` + this

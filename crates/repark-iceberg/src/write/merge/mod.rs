@@ -1294,7 +1294,7 @@ impl MergeSql<'_> {
             .filter_map(|(index, map_opt)| {
                 let expr = map_opt.as_ref()?.get(&key)?;
                 let then_expr = match store_type {
-                    Some(data_type) => store_assignment_then_sql(expr, data_type),
+                    Some(data_type) => store_assignment_then_sql(column, expr, data_type),
                     None => (*expr).to_string(),
                 };
                 Some(format!("WHEN {index} THEN ({then_expr})"))

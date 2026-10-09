@@ -191,7 +191,7 @@ const SPELLINGS: [(&str, &str, &str, [Answer; 6]); 6] = [
             Answer::Wall,
             ARRAY_MERGE,
             ARRAY_MERGE,
-            Answer::Wall,
+            Answer::Refused("the source field names are not the target's, in order"),
         ],
     ),
 ];
@@ -302,19 +302,26 @@ async fn a_narrowed_nanosecond_value_is_refused_not_truncated() {
     for (value_index, value) in NARROWED.iter().enumerate() {
         for (door_index, (door, write)) in NARROWING_DOORS.iter().enumerate() {
             let table = format!("ice.ns.c{value_index}_{door_index}");
+            let carried = if door.starts_with("update") {
+                ", ns timestamp_ns"
+            } else {
+                ""
+            };
             run(
                 &session,
                 &format!(
-                    "CREATE TABLE {table} (id INT, st ARRAY<timestamp_ns>, ns timestamp_ns) \
+                    "CREATE TABLE {table} (id INT, st ARRAY<timestamp_ns>{carried}) \
                      USING iceberg TBLPROPERTIES ('format-version'='3')"
                 ),
             )
             .await;
-            run(
-                &session,
-                &format!("INSERT INTO {table} (id, ns) SELECT id, ns FROM ice.ns.src"),
-            )
-            .await;
+            if door.starts_with("update") {
+                run(
+                    &session,
+                    &format!("INSERT INTO {table} (id, ns) SELECT id, ns FROM ice.ns.src"),
+                )
+                .await;
+            }
             let write = write.replace("{t}", &table).replace("{st}", value);
             let refused = attempt(&session, &write)
                 .await
@@ -341,6 +348,70 @@ async fn a_narrowed_nanosecond_value_is_refused_not_truncated() {
     assert_eq!(
         stored(&session, "ice.ns.whole").await,
         vec![Some(1_767_323_045_123_456_789), None]
+    );
+}
+
+#[tokio::test]
+async fn a_field_beside_the_leaf_may_be_narrowed_and_merge_is_guarded_too() {
+    let session = session("America/New_York", true);
+    let _warehouse = catalog(&session).await;
+    run(
+        &session,
+        &format!(
+            "CREATE TABLE ice.ns.beside (id INT, st {PAIR}, ns timestamp_ns) USING iceberg \
+             TBLPROPERTIES ('format-version'='3')"
+        ),
+    )
+    .await;
+    let beside = "named_struct('a', ns, 'b', CAST(ns AS TIMESTAMP))";
+    run(
+        &session,
+        &format!("INSERT INTO ice.ns.beside SELECT id, {beside}, ns FROM ice.ns.src"),
+    )
+    .await;
+    assert_eq!(
+        stored(&session, "ice.ns.beside").await,
+        vec![Some(1_767_323_045_123_456_789)]
+    );
+    run(
+        &session,
+        &format!("UPDATE ice.ns.beside SET st = {beside} WHERE id >= 0"),
+    )
+    .await;
+    run(
+        &session,
+        "MERGE INTO ice.ns.beside t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN \
+         UPDATE SET st = named_struct('a', s.ns, 'b', CAST(s.ns AS TIMESTAMP))",
+    )
+    .await;
+    assert_eq!(
+        stored(&session, "ice.ns.beside").await,
+        vec![Some(1_767_323_045_123_456_789)]
+    );
+    let cut = "named_struct('a', coalesce(ns, NULL), 'b', x)";
+    for merge in [
+        format!(
+            "MERGE INTO ice.ns.beside t USING (SELECT id + 1 AS id, {cut} AS v FROM ice.ns.src) s \
+             ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.v)"
+        ),
+        format!(
+            "MERGE INTO ice.ns.beside t USING (SELECT id, {cut} AS v FROM ice.ns.src) s \
+             ON t.id = s.id WHEN MATCHED THEN UPDATE SET st = s.v"
+        ),
+        "MERGE INTO ice.ns.beside t USING (SELECT id, coalesce(ns, NULL) AS v FROM ice.ns.src) s \
+         ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = s.v"
+            .to_string(),
+    ] {
+        let refused = attempt(&session, &merge).await.expect_err(&merge);
+        assert!(refused.contains(REFUSAL), "{merge}: {refused}");
+        assert!(
+            refused.contains("narrows a nanosecond value to microseconds"),
+            "{merge}: {refused}"
+        );
+    }
+    assert_eq!(
+        stored(&session, "ice.ns.beside").await,
+        vec![Some(1_767_323_045_123_456_789)]
     );
 }
 

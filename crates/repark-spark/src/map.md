@@ -1046,6 +1046,19 @@ pins: rp-4-fork-repin/C-005, C-006
   of an `UPDATE` with no `WHERE` is left out: that statement raises a raw Arrow error for
   every nested struct on main and stores nothing (parity row ICE-TSNS-SQL-1-R-014).
   pins: ice-tsns-merge-wall-1/C-016
+  **Fold 2 (2026-10-09):** the nested call is always put under a cast to the target column
+  (`conformed_cast`), so the cast that follows is DataFusion's and the pairing word is `name`:
+  the planner's own cast where there is one, a new one for a `VALUES` cell or an expression
+  that had none (a frame whose list layout was not the table's used to reach the sink
+  uncast and raise a raw Arrow type error). A `VALUES` cell whose type is no longer its
+  column's declared type (`array(TIMESTAMP '…')`, retyped by the analyzer) is conformed and
+  cast in place, where main raised a raw Arrow error. A nested
+  `timestamp_ns` column of an `UPDATE` with no `WHERE` (`Store::Carried`) must be carried
+  untouched; assigning it is refused by name, where main raised the raw
+  `arguments need to have the same data type`. The refusal of a narrowed value is not here:
+  it is the optimizer rule of `repark-functions/src/timestamp_ns_cast/lineage.rs`, which sees
+  the nested call this hook emits.
+  pins: ice-tsns-merge-wall-1/C-027, C-029, C-030
 - `insert_timestamp_ns.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door's INSERT conform
   for Iceberg `timestamp_ns` / `timestamptz_ns` target columns, called from `spark_ast`.
   `before_analysis` replaces the planner's `CAST(… AS Timestamp(ns))` over a non-column source

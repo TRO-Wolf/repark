@@ -56,18 +56,32 @@ pub fn holds_nested_ns_wall(data_type: &DataType) -> bool {
         DataType::Map(field, _)
         | DataType::List(field)
         | DataType::LargeList(field)
+        | DataType::ListView(field)
+        | DataType::LargeListView(field)
         | DataType::FixedSizeList(field, _) => holds(field),
         _ => false,
     }
 }
 
+pub const PAIRS_AS_ARROW_CAST: &str = "cast";
+pub const PAIRS_BY_NAME: &str = "name";
+pub const PAIRS_EXACTLY: &str = "exact";
+
 #[must_use]
-pub fn nested_wall_conform_sql(expr_sql: &str, target: &DataType) -> Option<String> {
+pub fn nested_wall_conform_sql(
+    expr_sql: &str,
+    target: &DataType,
+    pairing: &str,
+    column: &str,
+) -> Option<String> {
     holds_nested_ns_wall(target).then(|| {
-        let shape = without_field_metadata(target)
-            .to_string()
-            .replace('\'', "''");
-        format!("{NS_WALL_CAST_UDF_NAME}(({expr_sql}), arrow_cast(NULL, '{shape}'))")
+        let quoted = |text: &str| text.replace('\'', "''");
+        let shape = quoted(&without_field_metadata(target).to_string());
+        let column = quoted(column);
+        format!(
+            "{NS_WALL_CAST_UDF_NAME}(({expr_sql}), arrow_cast(NULL, '{shape}'), '{pairing}', \
+             '{column}')"
+        )
     })
 }
 
@@ -123,6 +137,11 @@ pub fn zone_stores(
     listed: &[String],
     reserved: &[String],
 ) -> Result<DataFrame> {
+    let targets = store_targets(table, listed, reserved);
+    zone_store_frame(ctx, frame, &targets)
+}
+
+fn store_targets(table: &Table, listed: &[String], reserved: &[String]) -> Vec<Option<DataType>> {
     let schema = table.metadata().current_schema();
     let fields = schema.as_struct().fields();
     let names: Vec<String> = if listed.is_empty() {
@@ -138,7 +157,7 @@ pub fn zone_stores(
     } else {
         listed.to_vec()
     };
-    let targets: Vec<Option<DataType>> = names
+    names
         .iter()
         .map(|name| {
             let field = fields
@@ -167,8 +186,7 @@ pub fn zone_stores(
                     .filter(holds_nested_ns_wall),
             }
         })
-        .collect();
-    zone_store_frame(ctx, frame, &targets)
+        .collect()
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -221,10 +239,19 @@ fn zone_store_frame(
                 (_, Some(udf), _) => {
                     Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![column]))
                 }
-                (_, None, Some((shape, udf))) => Expr::ScalarFunction(ScalarFunction::new_udf(
-                    udf,
-                    vec![column, Expr::Literal(shape, None)],
-                )),
+                (_, None, Some((shape, udf))) => {
+                    let text =
+                        |word: &str| Expr::Literal(ScalarValue::Utf8(Some(word.to_string())), None);
+                    Expr::ScalarFunction(ScalarFunction::new_udf(
+                        udf,
+                        vec![
+                            column,
+                            Expr::Literal(shape, None),
+                            text(PAIRS_AS_ARROW_CAST),
+                            text(field.name()),
+                        ],
+                    ))
+                }
                 (Some(target), None, None)
                     if is_ltz_instant_target(target) && needs_ltz_instant_cast(source) =>
                 {
@@ -313,6 +340,24 @@ mod tests {
         assert!(holds_nested_ns_wall(&wrap(nanos.clone())));
         assert!(holds_nested_ns_wall(&list(wrap(nanos.clone()))));
         assert!(holds_nested_ns_wall(&wrap(list(nanos.clone()))));
+        let view = DataType::ListView(Arc::new(Field::new("element", nanos.clone(), true)));
+        let large = DataType::LargeList(Arc::new(Field::new("element", nanos.clone(), true)));
+        let entries = vec![
+            Field::new("key", DataType::Utf8, false),
+            Field::new("value", list(nanos.clone()), true),
+        ];
+        let map = DataType::Map(
+            Arc::new(Field::new(
+                "entries",
+                DataType::Struct(entries.into()),
+                false,
+            )),
+            false,
+        );
+        assert!(holds_nested_ns_wall(&view));
+        assert!(holds_nested_ns_wall(&large));
+        assert!(holds_nested_ns_wall(&map));
+        assert!(holds_nested_ns_wall(&wrap(wrap(nanos.clone()))));
         assert!(!holds_nested_ns_wall(&nanos));
         assert!(!holds_nested_ns_wall(&wrap(DataType::Timestamp(
             TimeUnit::Microsecond,
