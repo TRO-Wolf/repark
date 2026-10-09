@@ -567,6 +567,7 @@ def test_query_stop_raises_recovery_required_after_sink_replace(
 ) -> None:
     sink = "sc.mb4.silver_stop_rm5"
     spark.sql(f"CREATE TABLE {sink} (id BIGINT, k STRING)")
+    spark.sql(f"INSERT INTO {stream_table} VALUES (1, 'k1'), (2, 'k0'), (3, 'k1')")
     query = (
         DataStreamWriter(_reader(spark).format("iceberg").load(stream_table))
         .foreachBatch(partial(_replace_sink_table, spark, sink))
@@ -579,6 +580,8 @@ def test_query_stop_raises_recovery_required_after_sink_replace(
         query.awaitTermination()
     with pytest.raises(RecoveryRequiredException):
         query.stop()
+    with pytest.raises(RecoveryRequiredException):
+        spark.stop()
 
 
 def test_writer_partition_by_is_declared_not_implemented(
