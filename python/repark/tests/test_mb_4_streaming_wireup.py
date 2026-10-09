@@ -39,8 +39,7 @@ def _stream_frame(spark: ReparkSession, table: str) -> DataFrame:
 
 def _schema_shape(frame: DataFrame) -> list[tuple[str, str, bool]]:
     return [
-        (field.name, field.dataType.simpleString(), field.nullable)
-        for field in frame.schema.fields
+        (field.name, field.dataType.simpleString(), field.nullable) for field in frame.schema.fields
     ]
 
 
@@ -60,9 +59,7 @@ def _ignore_batch(frame: DataFrame, batch_id: int) -> None:
     raise AssertionError("the stub never runs a batch body")
 
 
-def test_reader_load_folds_format_case_mb0c_f4_f5(
-    spark: ReparkSession, stream_table: str
-) -> None:
+def test_reader_load_folds_format_case_mb0c_f4_f5(spark: ReparkSession, stream_table: str) -> None:
     for source in ("ICEBERG", "Iceberg"):
         frame = _reader(spark).format(source).load(stream_table)
         assert frame.isStreaming is True
@@ -252,9 +249,7 @@ def test_with_watermark_on_streaming_frame_refuses_mbe7(
 def test_writer_totable_ignores_format_mb0c_f9_f11(spark: ReparkSession) -> None:
     for source in ("parquet", "bogusfmt"):
         with pytest.raises(NotImplementedError) as excinfo:
-            _writer(spark).format(source).toTable(
-                "ice.sales.silver", checkpointLocation="/tmp/x"
-            )
+            _writer(spark).format(source).toTable("ice.sales.silver", checkpointLocation="/tmp/x")
         _terminal_type(excinfo)
 
 

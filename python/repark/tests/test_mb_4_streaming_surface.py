@@ -24,6 +24,7 @@ _W8_TEXT = (
     'or SparkSession.conf.set("spark.sql.streaming.checkpointLocation", ...).'
 )
 
+
 @pytest.fixture
 def spark() -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-mb-4-streaming-surface").getOrCreate()
@@ -171,16 +172,12 @@ def test_reader_unknown_prefixed_option_refuses_mbe17(spark: ReparkSession) -> N
     )
 
 
-def test_reader_plain_unknown_option_returns_frame(
-    spark: ReparkSession, stream_table: str
-) -> None:
+def test_reader_plain_unknown_option_returns_frame(spark: ReparkSession, stream_table: str) -> None:
     frame = _reader(spark).format("iceberg").option("unrelated", "1").load(stream_table)
     assert frame.isStreaming is True
 
 
-def test_reader_option_max_files_returns_frame(
-    spark: ReparkSession, stream_table: str
-) -> None:
+def test_reader_option_max_files_returns_frame(spark: ReparkSession, stream_table: str) -> None:
     frame = (
         _reader(spark)
         .format("iceberg")
@@ -190,9 +187,7 @@ def test_reader_option_max_files_returns_frame(
     assert frame.isStreaming is True
 
 
-def test_reader_option_max_rows_returns_frame(
-    spark: ReparkSession, stream_table: str
-) -> None:
+def test_reader_option_max_rows_returns_frame(spark: ReparkSession, stream_table: str) -> None:
     frame = (
         _reader(spark)
         .format("iceberg")
@@ -205,9 +200,7 @@ def test_reader_option_max_rows_returns_frame(
 def test_reader_option_from_timestamp_returns_frame(
     spark: ReparkSession, stream_table: str
 ) -> None:
-    frame = (
-        _reader(spark).format("iceberg").option("stream-from-timestamp", "0").load(stream_table)
-    )
+    frame = _reader(spark).format("iceberg").option("stream-from-timestamp", "0").load(stream_table)
     assert frame.isStreaming is True
 
 
@@ -227,10 +220,7 @@ def test_reader_none_option_value_drops_before_validation(
     spark: ReparkSession, stream_table: str
 ) -> None:
     frame = (
-        _reader(spark)
-        .format("iceberg")
-        .option("streaming-something-new", None)
-        .load(stream_table)
+        _reader(spark).format("iceberg").option("streaming-something-new", None).load(stream_table)
     )
     assert frame.isStreaming is True
 
@@ -431,11 +421,7 @@ def test_writer_checkpoint_option_or_conf_passes(spark: ReparkSession) -> None:
 
 def test_writer_foreach_without_sink_refuses_mbe10_mb0_w4(spark: ReparkSession) -> None:
     with pytest.raises(IllegalArgumentException) as excinfo:
-        (
-            _writer(spark)
-            .foreachBatch(_ignore_batch)
-            .start(checkpointLocation="/tmp/x")
-        )
+        (_writer(spark).foreachBatch(_ignore_batch).start(checkpointLocation="/tmp/x"))
     assert excinfo.value.getCondition() == "REPARK_MICROBATCH.SINK_UNDECLARED"
     assert excinfo.value.getMessageParameters() == {}
     assert excinfo.value.getSqlState() is None
