@@ -29,7 +29,6 @@ use crate::time_travel::microbatch_source::MicroBatchSource;
 
 const ITERATIONS: usize = 50;
 const FENCE_FLOOR: usize = 10;
-const BODY_FLOOR: usize = 0;
 const SEED: u64 = 0x9E37_79B9_7F4A_7C15;
 const SLOWEST_LOAD_MILLIS: u64 = 12;
 const SLOW_SINK: &str = "slow.sales.silver";
@@ -363,14 +362,9 @@ async fn two_sessions_racing_one_query_land_every_row_exactly_once() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn two_sessions_racing_foreach_bodies_land_every_row_exactly_once() {
-    let mut refused_after_staging = 0usize;
     for iteration in 0..ITERATIONS {
-        refused_after_staging += usize::from(race_once(iteration, Raced::ForeachBatch).await);
+        race_once(iteration, Raced::ForeachBatch).await;
     }
-    assert!(
-        refused_after_staging >= BODY_FLOOR,
-        "{refused_after_staging} of {ITERATIONS} iterations refused a body's staged write, under the floor of {BODY_FLOOR}"
-    );
 }
 
 fn recovering_spec(body: Option<&Arc<Probe>>) -> StreamSpec {

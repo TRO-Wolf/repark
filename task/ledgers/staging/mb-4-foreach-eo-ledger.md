@@ -447,6 +447,43 @@ query's newest stamped epoch is the running epoch's one stamped snapshot, or the
   equals the oracle's `trigger` record. The only later commit to the parser file (fold 1's
   mask, `983f5632`) leaves these texts alone. Recorded on the residue card; no code change.
 
+### Fold-2 proof — 2026-10-09
+
+**Red first.** The re-verify measured the red on `2877da20` and its outputs are the record
+(one-process repros: sink `1, 1, 2, 2, 3, 3, 100`, run 2 returns with no exception; `special`
+`explain_raise`, `explain_kill`, `thread_raise`, `thread_kill`: source 32, sink 36, 4 duplicates
+each; the claimed-state door cases). The pins of this fold were written from those repros and
+not run again on the old build. Mutants N1 to N3 below restore the old behaviour of each check
+and are the pins' own red evidence.
+
+**The re-verify's scripts, re-run.** From a copy with only the path prefix changed.
+
+| script | at `2877da20` (the verdict) | now |
+|---|---|---|
+| one-process repro, `explain` | run 2 silent, sink `1, 1, 2, 2, 3, 3, 100` | both runs end `STREAM_FAILED` MBE-19; nothing lands |
+| one-process repro, `thread` | run 2 silent, sink `1, 1, 2, 2, 3, 3, 100` | both runs end `RecoveryRequiredException` naming the snapshot; this is epoch 0, so run 2 replays and lands the thread's rows again (the epoch-0 limit) |
+| `special explain_raise`, `explain_kill`, `explain_only_raise` | 4 duplicates, silent | 0 duplicates; refused before landing, sink empty |
+| `special thread_raise`, `thread_kill` | 4 duplicates, silent | 0 duplicates; `RecoveryRequired`, and once a stray sits above a stamp every restart refuses |
+| `special swallow_twice`, `alt_raise_30`, `diff_body`, `ckpt` | exact | exact (32, 160, 36, 36 rows, 0 duplicates) |
+| `special two_names` | exact | exact |
+| `special rollback`, `rollback_all`, `expire_plain`, `expire_foreign`, `foreign_between` | refuse or stop as recorded | 0 duplicates in each; `foreign_between` now refuses the restart (one unstamped snapshot above the stamp) |
+| `special conflict_append_0`, `_1`, `conflict_update_0`, `_1` | finished or stalled through restarts, retries refused MBE-13 | 0 duplicates; the hammer thread's rows are unstamped, so each run ends `RecoveryRequired` |
+| `special conflict_mergeupd_0` | 123 duplicate rows of the hammer thread, no epoch ever stamped | 132, the same shape: the body's `MERGE` never wins the validation, no stamp exists, and at epoch 0 each of the 40 restarts runs the hammer thread again. Every run ends `RecoveryRequired`. This is the epoch-0 limit on the verifier's own script |
+| door table, 166 shapes by 3 placements (498 cases), by the verifier's summariser | the `EXPLAIN ANALYZE` and thread shapes landed unstamped with the query running on in placements B and C (the verdict's route table) | per placement: 39 stamped, 118 no commit, 8 unstamped ending `RecoveryRequired` (the five thread routes, drop-and-create twice, the private ref), 1 `DROP TABLE` ending `STREAM_FAILED`; no unstamped case with the query running on |
+| `scope` (120 statements, three arms) | 42 body differences, 3 thread | the same 45 lines |
+| `leak` | no leak | no leak; its cross-writing queries now end `RecoveryRequired` |
+| `droprecreate foreach` / `table` | both write on | `foreach` ends `RecoveryRequired` (replaced table); `table` writes on, unchanged |
+
+**The kill set.** 14 scenarios with the verifier's bodies and kill mix and my seeds: 286 kills
+over nine `foreachBatch` bodies on both triggers and 51 over three `toTable` runs (the kill
+count is what landed: 23, 22 and 6 of 30, 30 and 14 attempts). 13 exact on the script's own
+check with 0 duplicates and 0 lost. The processing-time `MERGE` scenario ended one batch short in the full run (the
+final drain timed out under three concurrent proof runs; 0 duplicates) and exact when run
+alone.
+
+**The first verdict's choreographies.** 12 of 12 exact with the counts of the fold-1 table
+above; its nine multi-query cases answer as before; its one-process repro ends `sink 1, 2, 3`.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |

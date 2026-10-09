@@ -297,7 +297,8 @@ pins: mb-3/C-031
     (the racer's stamp injected at the body's own load and at its commit). The seeded
     `foreachBatch` race keeps its invariants and loses its floor: the audit's load lets the
     waiting driver see the winner's commit before it enters, so the loss now mostly lands on
-    the resume check (measured 2 of 50 at a body's staged write). The replaced-sink pins in
+    the resume check (measured 2 of 50 at a body's staged write), and a floor of zero is no
+    assertion, so the test asserts the per-iteration invariants only. The replaced-sink pins in
     `lifecycle_tests.rs` and `timeout_tests.rs` read `UnstampedSinkChange`, and no stamp
     lands on the new table.
   pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-023, C-025
