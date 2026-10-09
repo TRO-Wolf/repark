@@ -3191,6 +3191,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `overwritePartitions` and `insertInto(overwrite=True)`, ANSI on and off. The sentences below
   describe the module before the cut.
   pins: ice-tsns-merge-wall-1/C-016, C-019, C-023
+  **Fold 2 (2026-10-09):** sixteen more tests, 195 in all, for what only the DataFrame door
+  can be handed: six Arrow layouts (list, large list, list view, fixed-size list, a
+  dictionary-encoded struct child, a map value) through `append` and `overwritePartitions`
+  store the session wall, and a struct with one renamed field stores the session wall through
+  the two writers that store by position and is refused by name through the two that pair by
+  name. pins: ice-tsns-merge-wall-1/C-027, C-028, C-029, C-034
   **(2026-10-09):** every cell of the write-door matrix, one test per zone × target × door.
   A `timestamp_ns` target must store the rule (`expected_wall`) or main's ratified refusal;
   the 38 cells main got wrong and the 9 where it raised a raw Arrow error are named by

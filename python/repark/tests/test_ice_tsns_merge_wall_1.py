@@ -11,7 +11,7 @@ The carries and the other zones' controls are pinned at the Rust door
 (``crates/repark-spark/tests/timestamp_ns_wall_doors.rs``).
 
 pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-016, C-019
-pins: ice-tsns-merge-wall-1/C-023, C-025
+pins: ice-tsns-merge-wall-1/C-023, C-025, C-027, C-028, C-029, C-035, C-036
 """
 
 from __future__ import annotations
@@ -300,5 +300,114 @@ def test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors
         else:
             FRAME_OVERWRITE_DOORS[door](frame)
             assert stored_ticks(spark) == [None, WALL_SOURCE_NORMAL[source]]
+    finally:
+        spark.stop()
+
+
+NEAR_MICROS = 1_767_323_045_123_456
+INSTANT_ARROW = pa.timestamp("us", tz="UTC")
+ARROW_LAYOUTS = {
+    "list": ("ARRAY<timestamp_ns>", lambda: pa.array([[NEAR_MICROS]], pa.list_(INSTANT_ARROW))),
+    "large_list": (
+        "ARRAY<timestamp_ns>",
+        lambda: pa.array([[NEAR_MICROS]], pa.large_list(INSTANT_ARROW)),
+    ),
+    "list_view": (
+        "ARRAY<timestamp_ns>",
+        lambda: pa.array([[NEAR_MICROS]], pa.list_view(INSTANT_ARROW)),
+    ),
+    "fixed_size_list": (
+        "ARRAY<timestamp_ns>",
+        lambda: pa.array([[NEAR_MICROS]], pa.list_(INSTANT_ARROW, 1)),
+    ),
+    "dictionary_child": (
+        "STRUCT<v: timestamp_ns, n: INT>",
+        lambda: pa.StructArray.from_arrays(
+            [pa.array([NEAR_MICROS], INSTANT_ARROW).dictionary_encode(), pa.array([1], pa.int32())],
+            ["v", "n"],
+        ),
+    ),
+    "map_value": (
+        "MAP<STRING, timestamp_ns>",
+        lambda: pa.array([[("k", NEAR_MICROS)]], pa.map_(pa.string(), INSTANT_ARROW)),
+    ),
+}
+LAYOUT_DOORS = {
+    "df_append": lambda frame: frame.writeTo("ice.ns.t").append(),
+    "df_overwrite_partitions": lambda frame: frame.writeTo("ice.ns.t").overwritePartitions(),
+}
+
+
+def nested_leaf(value: Any) -> Any:
+    """Return the first leaf of a nested Python value read back from Arrow."""
+    while isinstance(value, (dict, list, tuple)):
+        value = next(iter(value.values())) if isinstance(value, dict) else value[-1]
+    return value
+
+
+def stored_nested_leaf(spark: Any) -> list[int | None]:
+    """Return the int64 ticks of the nested leaf of ``ice.ns.t.st`` ordered by ``id``."""
+    rows = spark.sql("SELECT st FROM ice.ns.t ORDER BY id").to_arrow().column("st").to_pylist()
+    leaves = [nested_leaf(row) for row in rows]
+    return [None if leaf is None else int(leaf.value) for leaf in leaves]
+
+
+@pytest.mark.parametrize("door", list(LAYOUT_DOORS))
+@pytest.mark.parametrize("layout", list(ARROW_LAYOUTS))
+def test_every_arrow_layout_stores_the_session_wall(tmp_path: Path, layout: str, door: str) -> None:
+    """A list, large list, list view, fixed-size list, dictionary child and map value conform."""
+    spark = open_edge_session(tmp_path, "true")
+    try:
+        column_type, build = ARROW_LAYOUTS[layout]
+        spark.sql("DROP TABLE ice.ns.t")
+        v3 = "USING iceberg TBLPROPERTIES ('format-version' = '3')"
+        spark.sql(f"CREATE TABLE ice.ns.t (id INT, st {column_type}) {v3}")
+        table = pa.table({"id": pa.array([1], pa.int32()), "st": build()})
+        LAYOUT_DOORS[door](doors.frame_of(spark, table))
+        assert stored_nested_leaf(spark) == [NEAR_NEW_YORK_WALL]
+    finally:
+        spark.stop()
+
+
+PAIR_TYPE = "STRUCT<a: timestamp_ns, b: TIMESTAMP>"
+RENAMED = "named_struct('q', c, 'b', c) AS st"
+NAMED_REFUSAL = (
+    r"\[INCOMPATIBLE_DATA_FOR_TABLE\.CANNOT_SAFELY_CAST\].*`st`\.`a`.*"
+    r"cannot be stored into this timestamp_ns leaf"
+)
+PAIRING_DOORS = {
+    "df_append": (lambda frame: frame.writeTo("ice.ns.t").append(), None),
+    "df_save_append": (lambda frame: frame.write.mode("append").saveAsTable("ice.ns.t"), None),
+    "df_overwrite_partitions": (
+        lambda frame: frame.writeTo("ice.ns.t").overwritePartitions(),
+        NEAR_NEW_YORK_WALL,
+    ),
+    "df_insert_into_overwrite": (
+        lambda frame: frame.write.insertInto("ice.ns.t", overwrite=True),
+        NEAR_NEW_YORK_WALL,
+    ),
+}
+
+
+@pytest.mark.parametrize("door", list(PAIRING_DOORS))
+def test_a_renamed_struct_field_stores_one_wall_or_is_refused_by_name(
+    tmp_path: Path, door: str
+) -> None:
+    """The doors that store by position store the session wall; the by-name doors refuse."""
+    spark = open_edge_session(tmp_path, "true")
+    try:
+        write, expected = PAIRING_DOORS[door]
+        spark.sql("DROP TABLE ice.ns.t")
+        v3 = "USING iceberg TBLPROPERTIES ('format-version' = '3')"
+        spark.sql(f"CREATE TABLE ice.ns.t (id INT, st {PAIR_TYPE}) {v3}")
+        frame = spark.table("ice.ns.far").where("id = 2").selectExpr("id", RENAMED)
+        if expected is None:
+            with pytest.raises(Exception, match=NAMED_REFUSAL):
+                write(frame)
+            assert stored_nested_leaf(spark) == []
+        else:
+            write(frame)
+            stored = spark.sql("SELECT st.a AS a FROM ice.ns.t").to_arrow().column("a")
+            assert stored.cast("int64").to_pylist() == [expected]
     finally:
         spark.stop()
