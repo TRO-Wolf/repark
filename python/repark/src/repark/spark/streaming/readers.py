@@ -63,13 +63,6 @@ def _not_implemented(feature: str) -> NoReturn:
     )
 
 
-def _refuse_format(door: str, source: str | None) -> None:
-    if source is None:
-        _not_implemented(f"{door}.format(parquet)")
-    elif source.lower() != "iceberg":
-        _not_implemented(f"{door}.format({source[:64]})")
-
-
 def _option_path(options: dict[str, str | None]) -> str | None:
     for key, value in options.items():
         if key.lower() == "path" and value:
@@ -106,6 +99,14 @@ class DataStreamReader:
         source : str
             name of the data source, e.g. 'iceberg'.
         """
+        if source is not None and not isinstance(source, str):
+            raise PySparkTypeError(
+                errorClass="NOT_STR",
+                messageParameters={
+                    "arg_name": "source",
+                    "arg_type": type(source).__name__,
+                },
+            )
         self._format = source
         return self
 
@@ -133,7 +134,7 @@ class DataStreamReader:
                 errorClass="VALUE_NOT_NON_EMPTY_STR",
                 messageParameters={"arg_name": "path", "arg_value": str(path)},
             )
-        _refuse_format("readStream", self._format)
+        _native.check_stream_format("readStream", self._format)
         effective = path if path is not None else _option_path(self._options)
         if effective is None:
             raise IllegalArgumentException("Cannot open table: path is not set")
@@ -186,6 +187,14 @@ class DataStreamWriter:
 
     def format(self, source: str) -> DataStreamWriter:
         """Specifies the underlying output data source."""
+        if source is not None and not isinstance(source, str):
+            raise PySparkTypeError(
+                errorClass="NOT_STR",
+                messageParameters={
+                    "arg_name": "source",
+                    "arg_type": type(source).__name__,
+                },
+            )
         self._format = source
         return self
 
@@ -401,7 +410,7 @@ class DataStreamWriter:
         """
         self._apply_start_kwargs(outputMode, partitionBy, format, queryName, options)
         if self._foreach is None:
-            _refuse_format("writeStream", self._format)
+            _native.check_stream_format("writeStream", self._format)
         self._start_checks()
         self._frame._ensure_alive()
         session = self._frame.sparkSession

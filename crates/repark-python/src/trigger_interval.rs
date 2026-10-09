@@ -3,7 +3,7 @@
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-use crate::exceptions::{ArithmeticException, IllegalArgumentException};
+use crate::exceptions::{ArithmeticException, IllegalArgumentException, mask_user_visible};
 use crate::streaming::attached;
 
 const MONTHS_CONDITION: &str = "_LEGACY_ERROR_TEMP_3262";
@@ -425,7 +425,7 @@ impl TriggerRefusal {
                 text,
                 params,
             } => {
-                let raised = IllegalArgumentException::new_err(text);
+                let raised = IllegalArgumentException::new_err(mask_user_visible(text));
                 let pairs: Vec<(&str, &str)> = params
                     .iter()
                     .map(|(key, value)| (key.as_str(), value.as_str()))
@@ -433,7 +433,7 @@ impl TriggerRefusal {
                 attached(py, raised, condition, &pairs)
             }
             TriggerRefusal::Months { text, interval } => {
-                let raised = IllegalArgumentException::new_err(text);
+                let raised = IllegalArgumentException::new_err(mask_user_visible(text));
                 attached(
                     py,
                     raised,

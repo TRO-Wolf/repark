@@ -50,6 +50,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
         _streaming_tests_allow_local_catalog,
         module
     )?)?;
+    module.add_function(wrap_pyfunction!(check_stream_format, module)?)?;
     Ok(())
 }
 
@@ -167,6 +168,30 @@ pub(crate) fn check_output_mode_value(py: Python<'_>, mode: &str) -> Result<(), 
 #[allow(clippy::missing_errors_doc)]
 pub fn check_output_mode(py: Python<'_>, mode: &str) -> PyResult<()> {
     check_output_mode_value(py, mode)
+}
+
+fn stream_format_feature(door: &str, format: Option<&str>) -> Option<String> {
+    match format {
+        None => Some(format!("{door}.format(parquet)")),
+        Some(source) if source.to_lowercase() != "iceberg" => {
+            let shown: String = source.chars().take(64).collect();
+            Some(format!("{door}.format({shown})"))
+        }
+        Some(_) => None,
+    }
+}
+
+#[pyfunction]
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+fn check_stream_format(py: Python<'_>, door: &str, format: Option<String>) -> PyResult<()> {
+    if let Some(feature) = stream_format_feature(door, format.as_deref()) {
+        return Err(microbatch_py_err(
+            py,
+            &MicroBatchError::FeatureRefused { feature },
+            None,
+        ));
+    }
+    Ok(())
 }
 
 fn time_conf_micros(text: &str) -> Option<u128> {
@@ -514,9 +539,11 @@ pub fn to_table_stream(
     if let Some(declared) = writer_option(&options, SINK_KEY)
         && declared != table
     {
-        return Err(IllegalArgumentException::new_err(format!(
-            "option \"repark.cdc.sink\" names \"{declared}\" but toTable names \"{table}\"; pass \
+        return Err(IllegalArgumentException::new_err(mask_user_visible(
+            format!(
+                "option \"repark.cdc.sink\" names \"{declared}\" but toTable names \"{table}\"; pass \
              one sink"
+            ),
         )));
     }
     validate_writer_options(py, &options)?;
@@ -585,6 +612,32 @@ mod tests {
                 )
             })
             .collect()
+    }
+
+    #[test]
+    fn stream_format_names_the_refused_feature() {
+        assert_eq!(
+            stream_format_feature("readStream", None),
+            Some(String::from("readStream.format(parquet)"))
+        );
+        assert_eq!(
+            stream_format_feature("writeStream", None),
+            Some(String::from("writeStream.format(parquet)"))
+        );
+        for folded in ["iceberg", "Iceberg", "ICEBERG"] {
+            assert_eq!(stream_format_feature("readStream", Some(folded)), None);
+            assert_eq!(stream_format_feature("writeStream", Some(folded)), None);
+        }
+        assert_eq!(
+            stream_format_feature("readStream", Some("parquet")),
+            Some(String::from("readStream.format(parquet)"))
+        );
+        let long = "x".repeat(80);
+        let shown = "x".repeat(64);
+        assert_eq!(
+            stream_format_feature("writeStream", Some(&long)),
+            Some(format!("writeStream.format({shown})"))
+        );
     }
 
     #[test]

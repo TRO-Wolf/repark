@@ -7971,6 +7971,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   checkpoint and option value appear in none of status, lastProgress, repr, the
   run error, EXPLAIN, the snapshot summaries and the table properties, and the
   value-echo refusal carries the masked form. pins: mb-4/C-032
+  **MB-4 fold 1 (2026-10-09):** the credential pin moves to the fold-1 battery
+  with real echoing-refusal legs; `format(5)` refuses `NOT_STR` at the setter
+  on both builders. pins: mb-4/C-037
 - [test_mb_4_streaming_wireup.py](test_mb_4_streaming_wireup.py) — **MB-4 round 2b
   (2026-10-08):** the reader wire-up battery, split out so the surface battery stays
   under its ceiling: MB0-R1 schema through `load` and `table`, the folded and ignored
@@ -8011,7 +8014,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and on a `type=hadoop` catalog through the public doors; the private
   `_native` test seam runs on a memory catalog and is unreferenced by the
   public package. The four older batteries' `spark` fixtures opt in through
-  that seam. pins: mb-4/C-036
+  that seam. pins: mb-4/C-036 The credential pin lands here with the masked
+  echoing-refusal legs (catalog-timeout interval refusal on both doors, the
+  sink mismatch, both format refusals with parameters). pins: mb-4/C-037
 
 ## I want to...
 
