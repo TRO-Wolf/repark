@@ -496,8 +496,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn provider_serves_an_empty_projection_with_the_planned_row_count() {
+    async fn counted_table() -> (TempDir, Table) {
         let warehouse = TempDir::new().expect("warehouse");
         let catalog = crate::memory_catalog(warehouse.path().to_str().expect("utf8"))
             .await
@@ -545,6 +544,12 @@ mod tests {
             tx.commit(catalog.as_ref()).await.expect("commit append");
         }
         let table = catalog.load_table(&ident).await.expect("load table");
+        (warehouse, table)
+    }
+
+    #[tokio::test]
+    async fn provider_serves_an_empty_projection_with_the_planned_row_count() {
+        let (_warehouse, table) = counted_table().await;
         let planner = WindowPlanner::new(table.clone(), ReadCaps::default());
         let from = planner
             .initial_offset(&StartPosition::Earliest)
@@ -594,7 +599,7 @@ mod tests {
             projected.len()
         );
         assert!(projected.iter().all(|batch| batch.num_columns() == 0));
-        let rows: usize = projected.iter().map(|batch| batch.num_rows()).sum();
+        let rows: usize = projected.iter().map(RecordBatch::num_rows).sum();
         assert_eq!(rows, 3);
         let empty_schema: SchemaRef = Arc::new(datafusion::arrow::datatypes::Schema::empty());
         let one_column = Arc::new(datafusion::arrow::datatypes::Schema::new(vec![
