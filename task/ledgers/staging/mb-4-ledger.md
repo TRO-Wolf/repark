@@ -564,6 +564,27 @@ cause. One record per variant with no §4 row, for item 2's mapper round.
   (first trigger): `STREAM_FAILED` with the variant as the cause.
   Text: the corrupt-offset guidance with table, snapshot, position and file count.
 
+## Fold-1b close (2026-10-09)
+
+- Steps 5–6 landed (C-040, C-041, C-042, C-043, C-044): the refusal logic
+  moves to Rust with the folded-path pins, `toTable`/`get` answer Spark's
+  classes, RM5 and the guard helper have pins with the mapper wildcard
+  held by duty, the five absent members are declared, and
+  STREAM-SURFACE-RESIDUE-1 records the 31 doors, the declarations and
+  the fence test. MBE-16 rides the Opus lane (D-64); C-035 stays OPEN
+  with the driver work.
+- Round 5 is still item 15 only: file the MB-4-SKIP-OPTIONS-1 and
+  MB-4-FORMAT-1 rows, close the ledger to `completed/`, and settle
+  C-009, C-015, C-017 and C-018.
+- Neighbours at close: the round-2 selection reads 69 passed, 9 skipped
+  on the unmodified tree and 69 passed, 9 skipped at head, identical
+  node lists, zero flips. The full gate roster is green (workspace
+  clippy, panic ban, fmt, the 221-test binding lib, the core/iceberg
+  microbatch suites, the 215-test battery set, ruff, the structural and
+  ledger scripts, the CAP-1 mirror and the freeze file). The freeze
+  inventory needs no regen: the streaming surface sits outside the
+  frozen scope and the count pin holds at 893.
+
 ## Round-4 carry-over (2026-10-09)
 
 - Items 9–12 landed (C-030, C-031, C-032, C-033): `stop` releases through the

@@ -59,6 +59,9 @@ check stops at the stub terminal and the wire-up round owns everything past it.
   **MB-4 fold 1b (2026-10-09):** `partitionBy(*cols)` is declared
   (SES-DECL): the frame alive check, then `NOT_IMPLEMENTED` naming the
   member. pins: mb-4/C-043
+  **MB-4 fold 1b (2026-10-09):** the record-only residue (the 31
+  divergent doors, the declared members, the fence record) files under
+  STREAM-SURFACE-RESIDUE-1. pins: mb-4/C-044
 - `query.py` — **MB-4 surface half (2026-10-08):** `StreamingQuery` carries the §3.7
   surface with the driver-owned bodies behind the stub terminal; only the
   `awaitTermination` timeout check (`VALUE_NOT_POSITIVE`, `<= 0`) is real.
