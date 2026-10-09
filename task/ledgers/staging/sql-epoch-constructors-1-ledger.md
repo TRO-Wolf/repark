@@ -98,6 +98,19 @@ multiply and defaults overflow to 0 (the overflow test killed), M4 drops the UTC
 - **O-2.** A `Decimal256` unscaled value past the `i128` range refuses `Overflow`
   without attempting the exact division; Spark has no 256-bit decimal (max precision
   38), so no Spark input reaches it.
+- **O-3.** Wrong arity on the SQL door (`timestamp_seconds()`,
+  `timestamp_micros(1, 2)`) refuses unclassified where Spark 4.1.2 answers
+  `WRONG_NUM_ARGS.WITHOUT_SUGGESTION` 42605. Dated 2026-10-09 (fold 1, verdict S3):
+  main refused too (`UNRESOLVED_ROUTINE`) and the unclassified arity wrapper is the
+  engine's convention for most UDFs, so no product change in this unit.
+- **O-4.** Instants near the bigint micros bound answer value and type equal to Spark
+  but `CAST(... AS STRING)` fails (NULL on columns, a non-nullable error on literals)
+  where Spark renders `+294247-01-09 23:00:54.775807`. Dated 2026-10-09 (fold 1,
+  verdict S3): base fails the same cast, so this is the engine's timestamp-to-string
+  cast, not the constructors.
+- **O-5.** `unix_timestamp` floors a pre-epoch fractional instant
+  (`timestamp_micros(-1)` gives -1) where Spark truncates (0). Dated 2026-10-09
+  (fold 1, verdict S3): base answers -1 too, so this is outside the three functions.
 
 ## Fold 1 (2026-10-09) — the decimal boundary order
 
@@ -118,6 +131,12 @@ the 1e19-drop mutants (C-010). The harness now parses fractional literals as
 decimals like the Spark door (`parse_float_as_decimal`); huge doubles spell
 through string casts there since exponent literals never reach the kernel
 (`spark_literals` rewrites them on the door).
+
+S3 dispositions, no product change: wrong arity stays unclassified (O-3); the
+`DATATYPE_MISMATCH` type-for-expression rendering stays as declared (AT-9 — the
+pins compare class, state, required kind and got-type, so the exact-text claim
+holds only for that subset); the bound-instant string cast (O-4) and the
+`unix_timestamp` pre-epoch floor (O-5) are engine residues the base shares.
 
 ## Coverage attestation
 
