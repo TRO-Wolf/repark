@@ -15,10 +15,12 @@ const ZONES: [&str; 5] = [
     "Asia/Kathmandu",
     "Australia/Lord_Howe",
 ];
-const MOMENTS: [(&str, i64); 3] = [
+const MOMENTS: [(&str, i64); 5] = [
     ("2026-01-02 03:04:05.123456789", 1_767_323_045_123_456_789),
     ("2026-03-08 02:30:00.000000001", 1_772_937_000_000_000_001),
     ("1969-12-31 23:59:59.999999999", -1),
+    ("1969-12-31 23:59:58.999999999", -1_000_000_001),
+    ("1969-12-31 23:59:59.000000001", -999_999_999),
 ];
 const SOURCES: [(&str, &str); 2] = [("ns", "timestamp_ns"), ("tzns", "timestamptz_ns")];
 const TARGETS: [(&str, &str); 2] = [
@@ -39,13 +41,20 @@ const NARROWED: [&str; 12] = [
     "named_struct('f', coalesce({c}, NULL)).f",
     "CASE WHEN {i} = 1 THEN {c} WHEN {i} = 2 THEN TIMESTAMP '2026-01-02 03:04:05' ELSE NULL END",
 ];
-const NARROWED_UNDER_A_WRITTEN_CALL: [&str; 3] = [
-    "date_trunc('second', coalesce({c}, NULL))",
+const NARROWED_UNDER_A_WRITTEN_CALL: [&str; 2] = [
     "CAST(coalesce({c}, NULL) AS {n})",
     "CASE WHEN {i} > 0 THEN coalesce({c}, NULL) ELSE CAST(NULL AS {n}) END",
 ];
-const WRITTEN: [&str; 10] = [
+const NARROWED_BESIDE_A_VALUE: [&str; 7] = [
+    "coalesce({c}, CAST(NULL AS TIMESTAMP))",
+    "coalesce({c}, CAST(NULL AS TIMESTAMP_NTZ))",
     "CASE WHEN {i} = 1 THEN {c} ELSE TIMESTAMP '2026-01-02 03:04:05' END",
+    "coalesce({c}, CAST({c} AS TIMESTAMP))",
+    "greatest({c}, TIMESTAMP '2026-01-02 03:04:05')",
+    "array({c}, TIMESTAMP '2026-01-02 03:04:05')[0]",
+    "if({i} > 1, {c}, TIMESTAMP_NTZ '2026-01-02 03:04:05')",
+];
+const WRITTEN: [&str; 7] = [
     "CAST({c} AS TIMESTAMP)",
     "TRY_CAST({c} AS TIMESTAMP)",
     "CAST({c} AS TIMESTAMP_NTZ)",
@@ -53,8 +62,18 @@ const WRITTEN: [&str; 10] = [
     "CASE WHEN {i} > 0 THEN CAST({c} AS TIMESTAMP) ELSE NULL END",
     "coalesce(CAST({c} AS TIMESTAMP), NULL)",
     "if({i} > 0, date_trunc('second', {c}), NULL)",
-    "coalesce({c}, CAST(NULL AS TIMESTAMP))",
-    "coalesce({c}, CAST(NULL AS TIMESTAMP_NTZ))",
+];
+const UNITS: [&str; 10] = [
+    "microsecond",
+    "millisecond",
+    "second",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "year",
 ];
 const KEPT: [&str; 7] = [
     "named_struct('f', {c}, 'g', NULL).f",
@@ -476,11 +495,17 @@ impl Cell<'_> {
             "Cannot safely cast `v` \"TIMESTAMP\" to \"{}\"",
             self.target.1
         );
-        let advice = format!(
-            "narrowed from nanoseconds to microseconds before the store; give the NULL beside it \
-             the type {}",
-            self.target.0
-        );
+        let advice = if NARROWED_BESIDE_A_VALUE.contains(&self.spelling) {
+            "was narrowed from nanoseconds to microseconds before the store, to match the \
+             microsecond value beside it; write CAST("
+                .to_string()
+        } else {
+            format!(
+                "The value was narrowed from nanoseconds to microseconds before the store; give \
+                 the NULL beside it the type {}",
+                self.target.0
+            )
+        };
         let table = if door.starts_with("merge") {
             "the table ``:".to_string()
         } else if flags.contains('B') {
@@ -565,8 +590,118 @@ async fn every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_lord_howe
 }
 
 #[tokio::test]
-async fn a_written_call_over_a_narrowed_value_does_not_make_it_store() {
+async fn a_call_that_widens_back_over_a_narrowed_value_does_not_make_it_store() {
     every_door_refuses(ZONES[1], &NARROWED_UNDER_A_WRITTEN_CALL).await;
+}
+
+#[tokio::test]
+async fn every_door_refuses_a_value_narrowed_beside_a_typed_null_or_a_microsecond_value() {
+    every_door_refuses(ZONES[1], &NARROWED_BESIDE_A_VALUE[..4]).await;
+}
+
+#[tokio::test]
+async fn every_door_refuses_a_value_narrowed_beside_a_microsecond_literal() {
+    every_door_refuses(ZONES[4], &NARROWED_BESIDE_A_VALUE[4..]).await;
+}
+
+async fn stored_by(
+    session: &ReparkSession,
+    table: &str,
+    target: &str,
+    write: &str,
+) -> Vec<Option<i64>> {
+    run(
+        session,
+        &format!(
+            "CREATE TABLE ice.ns.{table} (id INT, v {target}) USING iceberg TBLPROPERTIES \
+             ('format-version'='3')"
+        ),
+    )
+    .await;
+    run(session, &write.replace("{t}", &format!("ice.ns.{table}"))).await;
+    ticks(
+        session,
+        &format!("SELECT v FROM ice.ns.{table} ORDER BY id"),
+    )
+    .await
+}
+
+async fn written_arms(zone: &str) {
+    let session = session(zone);
+    let warehouse = catalog(&session).await;
+    let mut arms: Vec<(String, &str)> = UNITS
+        .iter()
+        .map(|unit| (format!("date_trunc('{unit}', {{x}})"), "zoned"))
+        .collect();
+    arms.push(("CAST({x} AS TIMESTAMP)".to_string(), "both"));
+    arms.push(("CAST({x} AS DATE)".to_string(), "naive"));
+    arms.push(("CAST({x} AS TIMESTAMP_NTZ)".to_string(), "none"));
+    arms.push(("TRY_CAST({x} AS TIMESTAMP)".to_string(), "none"));
+    arms.push(("CAST({x} AS {n})".to_string(), "none"));
+    let narrowed = [
+        "coalesce({c}, NULL)",
+        "coalesce({c}, CAST(NULL AS TIMESTAMP))",
+        "CASE WHEN id > 0 THEN {c} ELSE TIMESTAMP '2026-01-02 03:04:05' END",
+    ];
+    let mut count = 0;
+    for (target, _) in TARGETS {
+        for (source, kind) in SOURCES {
+            for (arm, stores) in &arms {
+                let over = |value: &str| arm.replace("{x}", value).replace("{n}", kind);
+                let insert = |value: &str| {
+                    format!(
+                        "INSERT INTO {{t}} SELECT id, {} FROM ice.ns.src",
+                        over(value)
+                    )
+                };
+                count += 1;
+                let reference =
+                    stored_by(&session, &format!("a{count}"), target, &insert(source)).await;
+                for inner in narrowed {
+                    count += 1;
+                    let table = format!("a{count}");
+                    let write = insert(&inner.replace("{c}", source));
+                    let equal = matches!(
+                        (*stores, source),
+                        ("both", _) | ("zoned", "tzns") | ("naive", "ns")
+                    );
+                    if equal {
+                        let stored = stored_by(&session, &table, target, &write).await;
+                        assert_eq!(stored, reference, "{zone}: {write}");
+                        continue;
+                    }
+                    run(
+                        &session,
+                        &format!(
+                            "CREATE TABLE ice.ns.{table} (id INT, v {target}) USING iceberg \
+                             TBLPROPERTIES ('format-version'='3')"
+                        ),
+                    )
+                    .await;
+                    let refused =
+                        attempt(&session, &write.replace("{t}", &format!("ice.ns.{table}")))
+                            .await
+                            .expect_err(&write);
+                    assert!(
+                        refused.contains("narrowed from nanoseconds to microseconds"),
+                        "{zone}: {write}: {refused}"
+                    );
+                    assert_eq!(
+                        data_files(&warehouse.path().join("ns").join(&table)),
+                        0,
+                        "{zone}: {write}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_written_call_over_a_narrowed_value_stores_what_it_stores_over_the_nanosecond_value() {
+    for zone in ZONES {
+        written_arms(zone).await;
+    }
 }
 
 #[test]
@@ -574,6 +709,10 @@ fn the_store_reads_the_mark_the_analyzer_places() {
     assert_eq!(
         repark_iceberg::write::narrowed_store::NARROWED_BESIDE_NULL_UDF_NAME,
         repark_functions::null_narrowing::NARROWED_BESIDE_NULL_NAME
+    );
+    assert_eq!(
+        repark_iceberg::write::narrowed_store::NARROWED_BESIDE_VALUE_UDF_NAME,
+        repark_functions::null_narrowing::NARROWED_BESIDE_VALUE_NAME
     );
     assert_eq!(
         repark_iceberg::write::narrowed_store::NARROW_TIMESTAMP_NS_UDF_NAME,
@@ -592,6 +731,8 @@ async fn a_union_with_an_untyped_null_branch_refuses_and_a_typed_one_stores() {
                 for (branch, refuses) in [
                     ("SELECT 9, NULL, 0", true),
                     ("SELECT 9 AS id, NULL AS v, 0 AS k", true),
+                    ("SELECT 9, CAST(NULL AS TIMESTAMP), 0", true),
+                    ("SELECT 9, TIMESTAMP '2026-01-02 03:04:05', 0", true),
                     ("SELECT 9, CAST(NULL AS {n}), 0", false),
                 ] {
                     for order in [0, 1] {
@@ -807,7 +948,7 @@ async fn a_query_that_stores_nothing_answers_as_before() {
                 .iter()
                 .map(datafusion::arrow::array::RecordBatch::num_rows)
                 .sum::<usize>(),
-            3
+            MOMENTS.len()
         );
         run(
             &session,
