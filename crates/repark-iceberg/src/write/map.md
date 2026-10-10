@@ -634,8 +634,9 @@ repark-core's error map.
   given a bare `NULL` literal for the whole column in every row (`Null`), or anything else
   (`Value`). Only `Value` is refused. What the function cannot read (a `SELECT *`, a set
   operation, a `PARTITION` clause, a MERGE star, a frame written by name, a field assignment
-  into the column) counts as `Value`. It never looks at the source's type, so no source
-  layout, encoding, view or cached frame can pass it.
+  into the column) counts as `Value`, and so does a whole statement the caller could not
+  parse (`NestedWrite::Unreadable`, split fold 1). It never looks at the source's type, so no
+  source layout, encoding, view or cached frame can pass it.
   `nested_ns_refusal` builds the one text: ``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]
   Cannot write incompatible data for the table <table>: Cannot safely cast `<column>`.`<leaf>`
   to "TIMESTAMP_NS". A nested timestamp_ns leaf is not writable yet: omit the column

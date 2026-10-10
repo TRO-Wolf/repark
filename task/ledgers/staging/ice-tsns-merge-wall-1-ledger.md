@@ -65,6 +65,9 @@ holds two different walls for one input.
 | C-047 | The split. Hand mutants of the gate, one per container kind and per statement form, and of the two top-level fixes are each killed by a named pin. | §11.5. | **PROVEN** | §11.5. |
 | C-048 | The split's gates are green with real exit codes. | §11.6. | **PROVEN** | §11.6. |
 | C-049 | A nested `timestamp_ns` leaf stores the session wall on every door. | Out of this unit by the owner's amendment 3: card ICE-TSNS-NESTED-1. | **OPEN** | Q12. The refusal of C-040 stands until that unit. Parity row R-015. |
+| C-050 | Split fold 1. The gate's one call runs before the router rewrites a branch or WAP write, on the written target with a branch reference removed; no routed write reaches a store without it. The ten routes the verify found storing, the two `UPDATE`-on-branch forms and MERGE into a branch take the named refusal, with no data file and no snapshot on any ref. | The Rust route pin (fifteen statements); the facade pin (thirteen routes, the DataFrame writers among them); `br.py` re-run in two zones (§12.4). | **PROVEN** | §12.1, §12.4: 0 of 24 routes store. |
+| C-051 | Split fold 1. On a branch and under both WAP settings, a statement that does not supply the column still runs on a table that holds such a leaf, and a table with no such leaf is not gated. | The Rust pins `a_branch_or_wap_statement_that_does_not_supply_the_column_still_runs` and `a_branch_or_wap_write_to_a_table_with_no_such_leaf_is_not_gated`, green before and after the fix. | **PROVEN** | §12.2. |
+| C-052 | Split fold 1. The verify's three surviving mutants (N1, N3, N5) and four of this fold's are each killed by a Rust pin; `nx.py`, `leak.py` and the door matrix are re-run with no nested cell storing and no control moved. | §12.3, §12.4. | **PROVEN** | §12.3, §12.4. |
 
 ## 1. The red test (C-001)
 
@@ -879,8 +882,11 @@ refused. What the function cannot read counts as a value: `SELECT *`, a set oper
 inside the column.
 
 **The decision on an untyped NULL: it stores.** `INSERT … VALUES (1, NULL, 0)`,
-`INSERT … SELECT id, NULL, 0`, `UPDATE … SET st = NULL` and a MERGE clause that assigns or
-inserts `NULL` for the whole column run. Nothing is converted, so no wall can be wrong.
+`INSERT … SELECT id, NULL, 0`, `UPDATE … SET st = NULL WHERE …` and a MERGE clause that
+assigns or inserts `NULL` for the whole column run. Nothing is converted, so no wall can be
+wrong. (Corrected 2026-10-10: the first text listed `UPDATE … SET st = NULL` without the
+`WHERE`. With no `WHERE` the gate lets it through and the statement then raises the raw Arrow
+`arguments need to have the same data type`, as on main: R-014.)
 `CAST(NULL AS …)` and a DataFrame `lit(None)` column are refused: the gate reads the
 statement's text for the literal and does not evaluate types.
 
@@ -1061,6 +1067,133 @@ The pins were seen red first: on `65bb2042`, which holds the pins over the fold'
 the six Rust nested-shape tests and 116 of the 351 facade tests fail (112 nested refusals and
 the four run-end-encoded doors).
 
+## 12. Split fold 1, after the verify of `8451702b` (C-050 to C-052)
+
+The verify (2026-10-10, 76,199 cells, five zones) passed the top level and failed the nested
+gate on one hole: a branch or WAP write went around it. Its other nested S1,
+`CALL system.add_files`, was ruled a record (§12.5).
+
+### 12.1 Where the gate sits (C-050)
+
+**The hole.** `router::execute_calibrated` runs `write_to_branch::apply_write_to_branch`
+before `execute_inner`, where the first split put the gate. For a plain append that names a
+branch (`INSERT INTO t.branch_x`, `branch_main` included, with `SELECT`, `VALUES` or a column
+list, `writeTo('t.branch_x').append()`, `insertInto('t.branch_x')`) or runs under
+`spark.wap.id` or `spark.wap.branch`, that function replaces the target in the statement by
+a temporary provider, `datafusion.public.<name>`. The gate then loaded a name that is not an
+Iceberg table and passed it: ten routes stored the UTC wall, as main does. The statements the
+branch rewrite leaves alone (`OVERWRITE`, `BY NAME`, `REPLACE WHERE`, MERGE) were refused,
+because their target still named the table.
+
+**The fix is the position, not a second list.** The one call is now in
+`execute_calibrated`, on the statement as the caller wrote it, before the metadata-table,
+changes, branch, WAP and time-travel rewrites. Why no routed write can reach a store without
+passing it:
+
+- the four public entries of the router (`execute`, `execute_static_overwrite`,
+  `execute_with_read_only`, `execute_with_statement_options`) and the dialect's two calls all
+  end in `execute_in_session`;
+- `execute_in_session` either answers a temporary-view statement or calls
+  `execute_calibrated`;
+- `execute_inner`, which holds every door, has two callers: the `CREATE VIEW` arm of
+  `execute_calibrated`, and `execute_time_travelled`, which only `execute_calibrated` calls,
+  after the gate;
+- what re-enters with a statement of its own (the maintenance and partitioning `CALL`s)
+  re-enters by the public `execute`, so it passes the gate again; a DataFrame writer emits
+  SQL and enters by the public entry with the real name.
+
+**The real target.** The gate decides on the written name and on the name with a
+`branch_<x>` reference removed, using `split_write_ref_parts`, the function the branch
+rewrite itself uses, so the two cannot disagree about what is a reference. A WAP setting does
+not change the written name, so the gate sees the table. A `tag_<x>` reference is left to
+the door, which refuses it with main's `Cannot write to table with time travel`.
+
+**A statement the gate cannot parse.** At this earlier point the statement has not been
+through the router's later rewrites. The gate applies the two `execute_inner` applies before
+parsing (map casts and system functions, `WITH SCHEMA EVOLUTION`). A time-travel source and
+a metadata-table source parse as written (pinned both ways). If a statement still does not
+parse and its head is `INSERT`, `UPDATE` or `MERGE`, the target is read from its tokens and a
+table with such a leaf refuses. The first split let an unparsed statement through; that was
+a second way around. The cost is Q13.
+
+**`UPDATE` on a branch.** `UPDATE t.branch_b1 SET st = <struct>`, with and without a
+`WHERE`, raised the raw Arrow `arguments need to have the same data type` on both builds. It
+now takes the named refusal, before the planner.
+
+### 12.2 What still runs (C-051)
+
+Pinned on a table that holds such a leaf, each adding one snapshot: on `t.branch_b1` an
+INSERT with a column list that omits the column, an INSERT of a bare NULL, an INSERT into
+`branch_main`, `UPDATE … SET k = … WHERE`, a MERGE that updates `k`, a DELETE; under
+`spark.wap.branch` the same six kinds; under `spark.wap.id` the two INSERT forms. All of
+them ran on `8451702b` too. A table with `struct<v: TIMESTAMP>` takes a struct through a
+branch, a WAP branch and a WAP id as before.
+
+### 12.3 Mutants (C-052)
+
+| Mutant | Killed by |
+|---|---|
+| N1 (the verify's) a branch reference is not stripped before the target is loaded | the route pin; the later-rewrite pin |
+| N3 (the verify's) the ELSE branch of a CASE is not searched by the unfiltered-`UPDATE` refusal | `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`, which now holds `CASE WHEN id < 0 THEN NULL ELSE c END` |
+| N5 (the verify's) a DataFrame by-name write is read positionally | `a_frame_written_by_name_is_refused_by_the_name_of_its_column` |
+| P1 the gate runs where the first split put it | the route pin; the later-rewrite pin |
+| P2 a statement the gate cannot parse passes | `a_statement_the_gate_cannot_read_is_refused_for_such_a_table_only` |
+| P3 `WITH SCHEMA EVOLUTION` is not stripped before the parse | the later-rewrite pin (the allowed MERGE is refused) |
+| P4 an unreadable statement counts as not supplying the column | the unreadable pin |
+
+### 12.4 Re-runs (C-050, C-052)
+
+The verify's scripts unchanged, on head, against its base outputs.
+
+- `br.py`, America/New_York and Asia/Kolkata, 24 routes each: 22 take the named refusal, 2
+  take main's own refusal with main's text (`saveAsTable` into a branch name, a tag
+  reference); **0 store, 0 new data files**. On `8451702b` 10 stored.
+- `nx.py`, America/New_York: 2,660 cells: 2,375 nested cells take the named refusal, 0 store, and
+  the 285 control cells are identical to base in value and in error text.
+- `leak.py`, America/New_York: 42 of 42 placements refuse.
+- the door matrix `mx.py`, America/New_York, all six target types: the 329 `timestamp_ns` cells are
+  identical to the head the verify passed; the 1,645 control cells are identical to base.
+  **Controls moved: 0.**
+
+### 12.5 Records ruled by the orchestrator
+
+- **`CALL system.add_files` is not gated.** It sits beside CTAS and RTAS as a path that takes
+  the source's own values, unchanged from main. A file whose leaf is a microsecond instant is
+  accepted and reads back as the UTC wall; that case is on card ICE-TSNS-NESTED-1.
+- **`UPDATE t SET st = NULL` with no `WHERE` does not store.** It raises the raw Arrow error,
+  as on main; the hand-back of the split said it stored. §11.1 is corrected: only the form
+  with a `WHERE` stores.
+- **Three written casts on the unfiltered `UPDATE` disagree** (`CAST(c AS TIMESTAMP)` keeps
+  nine digits; `CAST(c AS TIMESTAMP_NTZ)` and the `CASE` form with a written cast store the
+  cut value; main raised a raw error for all three): on parity row R-017.
+- **R-017 at head: 480 of 650 cells** store a value cut to microseconds (the verify's count,
+  five zones).
+
+### 12.6 Gates of the fold
+
+Run 2026-10-10 on `2ed704f9` (the code) and on the tree of the records commit (the document
+gates), one cargo command at a time under the build lock on cores 32-47. The pins were red
+first: on `366618d5`, over the code of `8451702b`, the Rust route pin fails (nine routes
+store, the two `UPDATE`-on-branch forms raise the raw error) and twelve of the thirteen
+facade routes fail.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo fmt --all -- --check` | 0 | |
+| `make rust-clippy` | 0 | |
+| `make rust-panic-ban` | 0 | |
+| `cargo test --locked -p repark-functions --lib` | 0 | 903 passed, 1 ignored |
+| `cargo test --locked -p repark-iceberg --lib` | 0 | 973 passed |
+| `cargo test --locked -p repark-spark --lib` | 0 | 2640 passed, 5 ignored |
+| `cargo test --locked -p repark-sql --lib` | 0 | 393 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_wall_doors --test timestamp_ns_nested_shapes` | 0 | 7 + 6 passed |
+| `make develop` | 0 | |
+| `pytest python/repark/tests/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 364 passed |
+| `pytest python/repark/tests -q -n 8 -k "iceberg or v3 or merge or timestamp or nested or struct"` | 0 | 3588 passed, 140 skipped, 11 xfailed |
+| `ruff check .` and `ruff format --check .` (0.15.22) | 0 | |
+| `make check-rust-file-size`, `make check-lib-rs` | 0 | `router.rs` at 1000 of 1000 |
+| the map, ledger, link, spelling and compaction gates | 0 | |
+
 ## Q. Questions for a ruling
 
 - **Q1 (C-013, RULING).** Should the mirror be fixed: a wall written into a `timestamptz_ns`
@@ -1144,6 +1277,13 @@ the four run-end-encoded doors).
   things the unit must settle first (pairing, layouts, the typing beside a NULL, the leak
   routes). *Lean:* its own unit after R-016 and R-017 are ruled on, since both decide what
   the stored value is.
+- **Q13 (C-050, RULING).** Is the nested refusal the right answer to a malformed write?
+  *Premise:* the gate now refuses an `INSERT`, `UPDATE` or `MERGE` it cannot parse when the
+  target holds a nested `timestamp_ns` leaf, so that no spelling the router repairs later can
+  go around it. A statement with a plain syntax error aimed at such a table therefore reports
+  the nested refusal and not the parser's message; on any other table the parser's message is
+  unchanged (pinned). *Lean:* keep it until ICE-TSNS-NESTED-1: nothing is stored either way,
+  and the alternative reopens the hole for every spelling the stock parser does not model.
 - **Also seen, no question:** `TIMESTAMP_NTZ '<wall>'` refuses `expects an Int64 wall` when
   the wall is within about 36 minutes of the epoch, in a plain `SELECT` too (O-4). It is not a
   nanosecond or Iceberg defect.

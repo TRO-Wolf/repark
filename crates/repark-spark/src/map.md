@@ -1050,8 +1050,10 @@ pins: rp-4-fork-repin/C-005, C-006
   type timestamp_ns`. **Why only here:** the other doors store such a value on main (cut, row
   R-017) and a refusal there would also refuse a written `CAST(ns AS TIMESTAMP)`; this door
   did not answer on main, so nothing that stored is refused.
-  `router.rs` makes the one call of `router/nested_ns.rs` at the top of `execute_inner`
-  (that directory's map).
+  `router.rs` makes the one call of `router/nested_ns.rs` in `execute_calibrated`, before the
+  branch and WAP rewrite (that directory's map; split fold 1). `write_to_branch.rs` gained
+  `write_target_parts`, the head and the written target of a write read from its tokens, for
+  a statement the gate cannot parse. pins: ice-tsns-merge-wall-1/C-050
   pins: ice-tsns-merge-wall-1/C-043
 - `insert_timestamp_ns.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door's INSERT conform
   for Iceberg `timestamp_ns` / `timestamptz_ns` target columns, called from `spark_ast`.

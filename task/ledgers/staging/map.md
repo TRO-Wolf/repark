@@ -47,6 +47,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-043) and an encoded instant source stores the session wall (C-044); every door has a
   pin read from the Parquet file (C-045); the verifier's matrices re-run (C-046); mutants
   (C-047); gates (C-048). The nested store is OPEN as card ICE-TSNS-NESTED-1 (C-049, Q12).
+  **Split fold 1 (2026-10-10), after the verify of `8451702b` found the gate bypassed by a
+  branch or WAP write:** the one call moves ahead of the router's rewrites and an unparsed
+  write no longer passes (C-050); the allowed statements still run on a branch and under WAP
+  (C-051); the verify's three surviving mutants die and the scripts are re-run (C-052).
+  `CALL system.add_files` and three more facts are records (§12.5); Q13 asks about the text a
+  malformed write now gets.
 - [cross-join-condition-1-ledger.md](cross-join-condition-1-ledger.md) —
   **CROSS-JOIN-CONDITION-1 (2026-10-08), from the STAMP-2-R5P6-2 hand-back:** a cross join with
   a condition ignored it (12 rows where Spark answers 2); the H1 door now routes cross-with-condition

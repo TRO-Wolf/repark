@@ -3364,7 +3364,11 @@ still open is `isModifiable`.
   "TIMESTAMP_NS". A nested timestamp_ns leaf is not writable yet: omit the column `<column>`
   or supply NULL for it. SQLSTATE: KD000``. The decision reads the target column's type and
   whether the statement names the column, never the source, so every source shape, Arrow
-  layout, view and cached frame is refused alike. **Still allowed:** a statement that does
+  layout, view and cached frame is refused alike. A branch reference (`t.branch_x`,
+  `t.branch_main`) and the session settings `spark.wap.id` and `spark.wap.branch` do not
+  change the answer: the decision is taken on the table before the write is routed (the
+  first split took it after, and ten such routes stored the UTC wall as main does).
+  `CALL system.add_files` is not refused; it takes the file's own values. **Still allowed:** a statement that does
   not supply the column (an INSERT column list or `BY NAME` source without it, UPDATE and
   MERGE of other columns, DELETE), a bare `NULL` literal for the whole column, copy-on-write
   and merge-on-read carries of rows already stored, compaction and the other maintenance
@@ -3439,7 +3443,17 @@ still open is `isModifiable`.
   (`… The value was narrowed from nanoseconds to microseconds before the store; give the NULL
   beside it the type timestamp_ns`) instead of storing the cut value the unit's first fix
   made it store. The same door's `array(ns, NULL)[0]` of a `timestamp_ns` source stored a cut
-  value at the UTC wall on main and is refused too.
+  value at the UTC wall on main and is refused too. The third verify (2026-10-10, five zones) counts
+  480 of 650 cells storing a cut value at head (360 cut only, 120 cut and the wall moved); the
+  40 unfiltered-`UPDATE` cells take the refusal (35 raised a raw or schema error on main, 5
+  stored the cut wrong wall of the array element).
+  **Three written casts on that door disagree.** With no `WHERE`,
+  `SET v = CAST(c AS TIMESTAMP)` keeps all nine digits (the INSERT conform peels the cast),
+  while `SET v = CAST(c AS TIMESTAMP_NTZ)` and
+  `SET v = CASE WHEN id > 0 THEN CAST(c AS TIMESTAMP) ELSE NULL END` store the value cut to
+  microseconds (the second also moves a New York gap wall to 03:30). Main raised a raw Arrow
+  error for all three. None is refused: each narrowing is written, not inserted by type
+  coercion.
 - **Apache Spark** — has no nanosecond type; a `NULL` takes the type of its sibling.
   *(oracle: documented — Spark's null-type coercion.)*
 - **Pin** — `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`

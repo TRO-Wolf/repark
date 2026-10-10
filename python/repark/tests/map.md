@@ -3191,7 +3191,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   sentences below the split's paragraph describe the module before the cut.
   pins: ice-tsns-merge-wall-1/C-019, C-023
   **The split (2026-10-09):** the nested store pins of folds 1 and 2 became refusal pins and
-  three top-level families were added, 351 tests in all.
+  three top-level families were added, 351 tests in all (364 since split fold 1, which added
+  `test_a_branch_or_wap_write_of_a_nested_leaf_is_refused_and_writes_nothing`: thirteen routes
+  through a branch reference or a WAP setting, the DataFrame writers among them, each the
+  named refusal with no new file, one snapshot and two refs; pins:
+  ice-tsns-merge-wall-1/C-050).
   `test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing`: fourteen Arrow
   layouts (struct, a struct with one name different, struct in struct, list, large list, list
   view, large list view, fixed-size list, list of struct, struct of list, a dictionary child,

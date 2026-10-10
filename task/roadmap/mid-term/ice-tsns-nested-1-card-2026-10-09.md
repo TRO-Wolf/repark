@@ -122,8 +122,22 @@ Design the nested store as one unit, then lift the refusal:
   that does not name the column, stores.
 - `CREATE TABLE … AS SELECT`, `REPLACE TABLE … AS SELECT` and a column added by schema
   evolution are not refused: the leaf takes the source's own type and nothing is converted.
+- `CALL system.add_files` is not refused either (ruled 2026-10-10): it registers a Parquet
+  file and the table takes the file's own values, as CTAS takes its source's. Unchanged from
+  main. One case for this unit: a file whose leaf column is a microsecond instant
+  (`timestamp[us, UTC]`) is accepted for a `timestamp_ns` leaf and reads back as the UTC
+  wall (`1767323045123456000` for `2026-01-02 03:04:05.123456Z`) in every session zone, where
+  the rule would be the session wall or a refusal. A file whose leaf is `timestamp[ns]` reads
+  back as written.
+- `UPDATE t SET st = NULL` with no `WHERE` raises the raw Arrow
+  `arguments need to have the same data type`, as on main; with a `WHERE` it stores NULL. The
+  unfiltered `UPDATE` cannot carry or assign any nested column (parity row R-014).
 - The streaming sink and the Rust `repark_iceberg::write::append` API are below the SQL router
   and are not gated. The ANSI door cannot create such a column.
+- A write through a branch reference (`t.branch_x`, `branch_main` included) or under
+  `spark.wap.id` / `spark.wap.branch` is refused like any other: the gate runs before the
+  router rewrites the target. The first split left it after that rewrite and ten routes
+  stored the UTC wall, as main does.
 
 ## Siblings
 

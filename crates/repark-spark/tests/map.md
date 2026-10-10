@@ -111,7 +111,8 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   calls and a time-travel read: all run and the seeded leaf reads back every nanosecond.
   `a_nested_zoned_or_microsecond_leaf_is_not_guarded` is the control.
   `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` is the top-level pin of
-  `refuse_narrowed_update`: three spellings from a `timestamp_ns` and a `timestamptz_ns`
+  `refuse_narrowed_update`: four spellings (the narrowing in the THEN branch, in the ELSE
+  branch, in `if` and in an array element) from a `timestamp_ns` and a `timestamptz_ns`
   source are refused and store nothing; a plain column, a typed NULL, a zoned source, a
   literal, a microsecond literal beside an untyped NULL and a narrowing that sits only in a
   `CASE` condition store; `CAST(c AS TIMESTAMP)` and `date_trunc` with a `WHERE` still store.

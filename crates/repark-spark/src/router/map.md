@@ -73,16 +73,33 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   (first linked from the `comment_on_table.rs` row above).
 
 - `nested_ns.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):**
-  `refuse_nested_supply` is the one call, made at the top of `router::execute_inner` before
-  any door is chosen, that hands an `INSERT` (plain, `OVERWRITE`, `BY NAME`, `REPLACE WHERE`),
-  `UPDATE` or `MERGE` statement and its resolved Iceberg target to
-  `repark_iceberg::write::nested_ns_gate::refuse_nested_ns_supply`. Every SQL door and every
-  DataFrame writer reaches the store through that function (the writers emit SQL), so the
-  refusal is one chokepoint and not a list of routes; it fires before the planner and before
-  any older gate, and it costs one catalog load of the target. A statement it cannot parse,
-  or a target that is not an Iceberg table, passes through to the door, which answers as
-  before. `insert_positional/replace_where.rs` gained the two accessors it reads.
-  pins: ice-tsns-merge-wall-1/C-040
+  `refuse_nested_supply` is the one call that hands an `INSERT` (plain, `OVERWRITE`,
+  `BY NAME`, `REPLACE WHERE`), `UPDATE` or `MERGE` statement and its Iceberg target to
+  `repark_iceberg::write::nested_ns_gate::refuse_nested_ns_supply`. It costs one catalog load
+  of the target. `insert_positional/replace_where.rs` gained the two accessors it reads.
+  **Where the call sits (split fold 1, 2026-10-10):** in `router::execute_calibrated`, on the
+  statement as the caller wrote it, before the metadata-table, changes, write-to-branch, WAP
+  and time-travel rewrites. The first split called it at the top of `execute_inner`, which
+  runs after `write_to_branch::apply_write_to_branch`; that function points a branch or WAP
+  append at a temporary provider (`datafusion.public.<name>`), so the gate saw a target that
+  was not an Iceberg table and ten routes stored the UTC wall. **Why no routed write can go
+  around it:** every public entry of this module ends in `execute_in_session`, which either
+  answers a temporary-view statement or calls `execute_calibrated`; `execute_inner` has two
+  callers, the `CREATE VIEW` arm of `execute_calibrated` and `execute_time_travelled`, which
+  only `execute_calibrated` calls after the gate. What re-enters with a statement of its own
+  (the maintenance and partitioning `CALL`s) re-enters by the public `execute`, so it passes
+  the gate again; a DataFrame writer enters by the public entry with the real name.
+  **The target:** the written name, and also the name with a `branch_<x>` reference removed
+  (`split_write_ref_parts`, the function the branch rewrite uses), so `t.branch_x` and
+  `t.branch_main` decide on `t`; a `tag_<x>` reference is left to the door's own refusal.
+  A session WAP setting does not change the written name. **A statement it cannot parse:**
+  the function applies the two rewrites `execute_inner` applies before parsing (map casts and
+  system functions, `WITH SCHEMA EVOLUTION`); if the statement still does not parse and its
+  head is `INSERT`, `UPDATE` or `MERGE` (`write_to_branch::write_target_parts`), the target
+  is loaded and a table with such a leaf refuses (`NestedWrite::Unreadable`). The cost: a
+  malformed write aimed at such a table reports the nested refusal, not the parser's error.
+  A target that is not an Iceberg table passes through to the door, which answers as before.
+  pins: ice-tsns-merge-wall-1/C-040, C-050
 
 ## Pointers
 
