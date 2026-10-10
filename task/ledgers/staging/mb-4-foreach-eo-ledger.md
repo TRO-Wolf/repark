@@ -794,6 +794,90 @@ copies the whole set.
 - C-030 (the text names "both remedies") is restated by C-033.
 - Fold 2, "Where the invariant stops": the stretch under the newest stamp is now inside it.
 
+### Fold-4 proof — 2026-10-10
+
+**Red first.** The public-door pins were committed before the fix (`af07ebef`) and run on the
+fold-3 build: `test_mb_4_streaming_remedies.py` 10 red of 10;
+`test_mb_4_streaming_session_settings.py` 6 red of 8 (four zone cases, ANSI off,
+`current_timestamp()`), the two case-sensitivity cases green as pins of what was already
+bound; `test_mb_4_streaming_sink_gates.py` 16 red of 16; the kill pin in
+`test_mb_4_streaming_foreach_eo.py` 2 red of 2 (the restart exited 0 with the duplicated rows
+in the sink). The Rust pins need the new types and came with the fix; each is shown red by a
+mutant below instead.
+
+**Found while building.**
+
+- **The first stamp has to carry the starting head** (above). The first version of the walk
+  had no bound under a first stamp and would have refused every sink that held rows before
+  the query started; mutant Q3 is that version, red on four pins.
+- **A rollback under the newest stamp leaves the old name refused** (the offsets property is
+  ahead of the lineage). The recipe therefore names a new query name; a pin holds that the
+  old name answers `summary epoch 0 disagrees with property epoch 1` after the rollback.
+- **A start-after position is exact only on a snapshot boundary.** A batch capped inside a
+  source snapshot records a file position; `repark.cdc.start-after-snapshot-id` would skip
+  the rest of that snapshot. The driver checks the boundary and prints no new name without
+  it (one public-door pin, one source pin, mutant Q6).
+- **`current_timestamp()` was not usable in a streaming plan at all.** Found while measuring
+  which settings were stale; closed by the same one call.
+- **Writer options arrive lower-cased**, so a reserved key written in upper case is refused
+  under its lower-case name.
+- **The walk was made lazy** after the first green run: it had collected the whole lineage on
+  every batch. It now stops at the previous stamp.
+
+**The scenario matrix, on the fold-4 build** (the fold-3 scripts from the same copy, then the
+third verify's scripts copied into the lane's scratch with their paths changed; the copy of
+`foreign.py` follows the remedy the refusal prints instead of a fixed recipe).
+
+| set | scenarios | result |
+|---|---|---|
+| first verdict's choreographies | 12 | exact, the counts of the fold-1 table; run twice (the first pass overlapped a reinstall of the module), identical |
+| first verdict's multi-query cases and repro | 9 + 1 | as before; the repro ends `sink 1, 2, 3`. One line answers `name a is already active` in three runs of four and `SINK_BUSY` in one: the script leaves a `toTable` query running and then drops and re-creates its sink, and which refusal the next start meets depends on whether that query's 100 ms tick hit the gap. Both refusals are fold-1 texts |
+| re-verify's one-process repros | 2 | `explain`: refused before landing. `thread`: `RecoveryRequired`, the text now the empty-start one |
+| re-verify's special scenarios | 20 | 0 duplicates in every one. `conflict_update_1` no longer reaches its ten epochs: its hammer writes land under the first stamp and every restart refuses there |
+| drop-and-recreate | 2 | `foreachBatch` ends `RecoveryRequired`; `toTable` writes on, unchanged (carded) |
+| kill scenarios | 14 | 340 kills landed (286 `foreachBatch`, 54 `toTable`); 14 of 14 exact, 0 duplicates, 0 lost |
+| door table | 498 | 78 stamped, 393 no commit, 24 unstamped ending `RecoveryRequired`, 3 `DROP TABLE` ending `STREAM_FAILED`; every case classified as in fold 3 |
+| third verify's repros and fold-3 scenarios (`special3.py`) | 10 | `q2_once_kill_batchrows` (the S1): the restart ends `RecoveryRequired` naming the snapshot under the stamp; sink 16 rows for 3 stamped epochs, the 4 duplicated rows the named ones, and the query does not run on. `q2_once_kill`: the same with the foreign row. `q2_every`: twelve runs, twelve refusals, one stamped epoch. `remedyB_start_after`: exact. `empty_sink_stray_after_mark`: the text offers no rollback; the new name ends exact with the stray kept. The four door-switch and dead-mark scenarios: exact at each step (52 of 52 rows after four switches); the reader inventory unchanged |
+| mark-window kills | 40 | 104 kills; 40 of 40 first kills landed on the mark; all 40 end exact, the seeded sinks included (the seed is under the recorded head and is not reported) |
+| foreign-commit matrix | 83 | 25 runs refused and 58 accepted, case for case as in the verify. Refused with a rollback printed (21): the printed snapshot is the one the verifier computed, and following it is exact in all 21. Refused and kept under a new name as printed (4): 0 duplicated, 0 lost, the stray's rows kept (fold 3: 16 duplicated in each). The two forged-stamp kinds are now refused at the write, in every placement |
+| session zone | 4 | both doors and the body's frame equal the batch write in every run |
+| nested `timestamp_ns` | 9 + 2 | `toTable` refuses with the batch doors' text, no file; the top-level column is unchanged |
+| keyed sink | 17 | every `foreachBatch` trial on a keyed sink: the ENC-1 text, no file written |
+| in-body changes | 5 | each ends `RecoveryRequired` once and the restart runs on, as the text now says |
+| audit timing | 2 | both placements loud |
+
+730 scenarios, 444 kills in the two kill matrices (the foreign and special sets add their own
+set-up kills), 0 silent duplicates, 0 silent losses, 0 duplicates that are loud once and then
+accepted. The three verifier repros: the stray under a stamp is loud on every start; the
+second remedy is exact as printed; the zone values are equal.
+
+**Hand mutants, fold 4.** Each applied in place, the microbatch and `sink_offsets` pins of
+`repark-iceberg` and the microbatch pins of `repark-core` run, the file restored (`git status`
+after the run lists no source file).
+
+| id | mutant | red pins |
+|---|---|---|
+| Q1 | the walk does not go under the newest stamp | 3 lineage pins, 1 driver pin |
+| Q2 | the first stamp does not record the starting head | 3 (`the_first_stamp_records_the_starting_head_and_bounds_the_walk_under_it` and two more) |
+| Q3 | the walk under a first stamp does not stop at the recorded head | 1 lineage pin, 3 driver pins (rows already in the sink are reported) |
+| Q4 | a stray under a stamp is told to start again under the same name | 1 (`the_remedy_offers_only_what_the_walk_can_prove`) |
+| Q5 | a new name is printed without its start-after position | 1 lineage pin, 1 driver pin |
+| Q6 | an offset inside a snapshot is taken as a start-after position | 1 (`only_an_offset_that_ends_its_snapshot_is_a_start_after_position`) |
+| Q7 | the batch state does not mark its start | 1 (`a_state_snapshot_carries_the_settings_and_the_start_time_of_its_moment`) |
+| Q8 | a reserved summary key is not refused | 3 |
+| Q9 | a keyed sink is not refused before the mark | 1 |
+| Q10 | the start does not walk the sink, only a batch does | 1 (the restart with no batch to run) |
+| Q11 | the audit keeps its own reason and prints no remedy | 4 driver pins |
+| Q12 | another query's stamps in the stretch do not withhold the rollback | 1 |
+| N2 | any pending epoch is a mark (the third verify's survivor) | 1 (`only_epoch_zero_can_be_pending`) |
+| N4 | a stamp alone does not refuse the mark (the third verify's survivor) | 1 (`a_stamp_alone_refuses_the_mark_even_without_the_offsets_property`) |
+
+The nested-gate rule on the `toTable` door has no Rust pin and no mutant: the driver's test
+fixture has no format-version 3 sink. Its evidence is the public-door pin, red before the fix.
+
+**Gates** are in the hand-back. Clippy, the panic ban, the four lib suites and the build ran
+on the final source tree; the batteries, the matrix and the mutants ran on that build.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
@@ -828,12 +912,12 @@ copies the whole set.
 | C-029 | A stray write between the mark and the first stamp refuses the first restart, naming the snapshot, with no body run; a kill before batch 0 commits restarts with no duplicate; two query names on one sink keep their own marks; a markless checkpoint starts from the head found; `toTable` writes no mark. | Driver pins, public-door pins, the scenario matrix. | **PROVEN** | `at_epoch_zero_the_restart_reads_the_mark_and_refuses_before_any_body` (two restarts, the first stray named, no body, the sink unchanged); `a_start_with_no_mark_and_no_stamp_takes_the_head_it_finds_and_marks_it`; `two_query_names_on_one_sink_each_keep_their_own_mark_and_stamps`; `the_table_door_writes_no_mark`. Public door: `test_stray_at_the_first_batch_refuses_the_first_restart_from_the_mark` (two routes, and the rollback to the starting head that recovers it), `test_stray_then_kill_at_the_first_batch_refuses_the_first_restart`, `test_kill_before_the_first_commit_restarts_from_the_mark_without_a_duplicate`, `test_table_door_writes_no_mark`. The scenario matrix above. Mutant P3. pins: mb-4-foreach-eo/C-029 |
 | C-030 | The `RecoveryRequired` text of a stray on the sink's main branch names the stray and what resolves it, and card MB-SINK-MAINTENANCE-PATH-1 is filed. (Fold 3 proved "both remedies" as one sentence; fold 4 replaced the sentence, and what the remedies must be is C-033.) | Text pins; the card and its map row. | **PROVEN** | `error.rs::the_unstamped_reasons_name_the_stray_and_only_a_stray_on_main_prints_remedies` (the stray reason with its remedy, the off-main and the `toTable` texts byte for byte, and the change reason); the public-door pin asserts the text on the first ending and on both refused restarts; card `mb-sink-maintenance-path-1-card-2026-10-10.md` with its map row. pins: mb-4-foreach-eo/C-030 |
 | C-031 | The side-effect contract is documented where the facade's `foreachBatch` contract lives, in markdown and in the docstring. | The docstring and the streaming map. | **PROVEN** | The `Notes:` section of `DataStreamWriter.foreachBatch` (`readers.py`) and the section "The `foreachBatch` contract" of the streaming package's map; registry row `MB-4-FOREACH-SIDE-EFFECTS-1` points at both. pins: mb-4-foreach-eo/C-031 |
-| C-032 | At every start, and before every body, the driver walks the sink's main lineage from this query's newest stamp down to its previous stamp (or to the head the first stamp records), and ends `RecoveryRequired` naming any unstamped snapshot it finds there; a stray under a stamp is loud on every start, not once. | Walk pins in the iceberg and core crates; the public-door kill pin. | **OPEN** | Fold 4, item 1. Red pins committed first: `test_mb_4_streaming_foreach_eo.py::test_kill_between_a_twice_written_batch_and_the_audit_refuses_every_restart` (two epochs) restarts silently on the fold-3 build. pins: mb-4-foreach-eo/C-032 |
-| C-033 | Every remedy a stray refusal prints is exact when followed as printed: the snapshot to roll back to is named, a new query name comes with its `repark.cdc.start-after-snapshot-id` position or is not offered, and a stray under a stamp is never said to leave with a rollback to the newest stamp. | Text pins in `error.rs`; ten public-door pins that follow the printed text. | **OPEN** | Fold 4, items 1 and 2. Red pins: `test_mb_4_streaming_remedies.py`, ten of ten red on the fold-3 build. pins: mb-4-foreach-eo/C-033 |
-| C-034 | A streaming plan runs under the session settings of the moment its batch starts: the session time zone, ANSI mode and the batch's own start time reach both doors and the frame handed to a body, and the values stored equal the same statement run as a batch write. | Core pin on the snapshot helper; public-door pins reading the Parquet files in two zones. | **OPEN** | Fold 4, item 3. Red pins: `test_mb_4_streaming_session_settings.py`, six red (four zone cases, ANSI off, `current_timestamp()`), the two case-sensitivity cases green on the fold-3 build (already bound). pins: mb-4-foreach-eo/C-034 |
-| C-035 | The `toTable` door asks R-007's nested gate about the sink's type and refuses a nested naive `timestamp_ns` leaf with the batch doors' text before any file is written. | Core pin; public-door pin comparing the two texts and the sink's files. | **OPEN** | Fold 4, item 4. Red pin: `test_mb_4_streaming_sink_gates.py::test_table_door_refuses_a_nested_timestamp_ns_leaf_as_the_batch_write_does`. pins: mb-4-foreach-eo/C-035 |
-| C-036 | A write that brings a `repark.cdc.*` snapshot summary key from user options or the session conf is refused by name where every summary is assembled, so no batch write can forge a stamp. | Iceberg pin on the choke point; public-door pins over seven statements and five writer shapes. | **OPEN** | Fold 4, item 4. Red pins: thirteen cases in `test_mb_4_streaming_sink_gates.py`. pins: mb-4-foreach-eo/C-036 |
-| C-037 | The `foreachBatch` door refuses a keyed sink (ENC-1) before it writes its starting mark, with the text the `toTable` door prints. | Core pin; public-door pin on the sink's files. | **OPEN** | Fold 4, the re-verify's S3. Red pin: `test_mb_4_streaming_sink_gates.py::test_foreach_door_refuses_a_keyed_sink_before_it_writes_its_mark`. pins: mb-4-foreach-eo/C-037 |
-| C-038 | The session example follows the surface: `SparkSession.readStream` and `SparkSession.streams` answer, and the example-coverage job that executes every example is green. | The example; the gate with `--require-execute`. | **OPEN** | Fold 4, item 5. pins: mb-4-foreach-eo/C-038 |
-| C-039 | The two mark rules the third verify's mutants N2 and N4 found unpinned are pinned: only epoch 0 can be pending in a mark, and a stamp alone refuses a late mark. | One pin each; both mutants red. | **OPEN** | Fold 4, item 6. pins: mb-4-foreach-eo/C-039 |
+| C-032 | At every start, and before every body, the driver walks the sink's main lineage from this query's newest stamp down to its previous stamp (or to the head the first stamp records), and ends `RecoveryRequired` naming any unstamped snapshot it finds there; a stray under a stamp is loud on every start, not once. | Walk pins in the iceberg and core crates; the public-door kill pin. | **PROVEN** | `sink_offsets_lineage_tests.rs::a_stray_under_the_newest_stamp_is_found_down_to_the_previous_stamp`, `::the_first_stamp_records_the_starting_head_and_bounds_the_walk_under_it`, `::an_empty_start_a_markless_first_stamp_and_a_shared_stretch_are_told_apart`; `exactly_once_tests.rs::a_stray_sink_write_beside_the_stamped_commit_refuses_every_restart_above_or_under_the_stamp` (two restarts, the first with no batch to run); the public-door kill pin `test_kill_between_a_twice_written_batch_and_the_audit_refuses_every_restart` at epochs 0 and 2, red on the fold-3 build (the restart exited 0); the five thread routes in `test_mb_4_streaming_foreach_lineage.py`. The third verify's repro `q2_once_kill_batchrows` now refuses both restarts. Mutants Q1, Q2, Q3, Q10. pins: mb-4-foreach-eo/C-032 |
+| C-033 | Every remedy a stray refusal prints is exact when followed as printed: the snapshot to roll back to is named, a new query name comes with its `repark.cdc.start-after-snapshot-id` position or is not offered, and a stray under a stamp is never said to leave with a rollback to the newest stamp. | Text pins in `error.rs`; ten public-door pins that follow the printed text. | **PROVEN** | `stray_remedy.rs` (three text pins); `error.rs::the_unstamped_reasons_name_the_stray_and_only_a_stray_on_main_prints_remedies`; `sink_offsets_lineage_tests.rs::the_remedy_offers_only_what_the_walk_can_prove`; `microbatch_source_fold2_tests.rs::only_an_offset_that_ends_its_snapshot_is_a_start_after_position`; `test_mb_4_streaming_remedies.py`, ten pins that parse the refusal and follow it with exact row counts, ten of ten red on the fold-3 build. In the matrix, 21 printed rollbacks and 4 printed new names followed: 0 duplicated, 0 lost. Mutants Q4, Q5, Q6, Q11, Q12. pins: mb-4-foreach-eo/C-033 |
+| C-034 | A streaming plan runs under the session settings of the moment its batch starts: the session time zone, ANSI mode and the batch's own start time reach both doors and the frame handed to a body, and the values stored equal the same statement run as a batch write. | Core pin on the snapshot helper; public-door pins reading the Parquet files in two zones. | **PROVEN** | `microbatch_source_fold2_tests.rs::a_state_snapshot_carries_the_settings_and_the_start_time_of_its_moment`; `test_mb_4_streaming_session_settings.py`: two zones by two ways of setting them, values read from the Parquet files of both doors equal to the batch write, the body's collected frame equal to the batch read; ANSI off; `current_timestamp()`; case sensitivity (green before the fix). Six red on the fold-3 build. Mutant Q7. pins: mb-4-foreach-eo/C-034 |
+| C-035 | The `toTable` door asks R-007's nested gate about the sink's type and refuses a nested naive `timestamp_ns` leaf with the batch doors' text before any file is written. | Core pin; public-door pin comparing the two texts and the sink's files. | **PROVEN** | `test_mb_4_streaming_sink_gates.py::test_table_door_refuses_a_nested_timestamp_ns_leaf_as_the_batch_write_does` (the batch write's sentence in the query's error, the sink's files unchanged, no snapshot), red on the fold-3 build. No Rust pin: the driver fixture has no format-version 3 sink. pins: mb-4-foreach-eo/C-035 |
+| C-036 | A write that brings a `repark.cdc.*` snapshot summary key from user options or the session conf is refused by name where every summary is assembled, so no batch write can forge a stamp. | Iceberg pin on the choke point; public-door pins over seven statements and five writer shapes. | **PROVEN** | `sink_offsets_tests.rs::a_site_without_a_claim_keeps_the_caller_extras_and_refuses_a_reserved_key_by_name`, `sink_offsets_scope_tests.rs::a_claimed_site_adds_the_stamp_and_the_starting_head_and_drops_the_token`, `::caller_extras_cannot_displace_the_stamp`; thirteen public-door cases in `test_mb_4_streaming_sink_gates.py` (seven statements, five writer shapes, the restart after a refused forgery), all red on the fold-3 build. Mutant Q8. pins: mb-4-foreach-eo/C-036 |
+| C-037 | The `foreachBatch` door refuses a keyed sink (ENC-1) before it writes its starting mark, with the text the `toTable` door prints. | Core pin; public-door pin on the sink's files. | **PROVEN** | `exactly_once_tests.rs::a_keyed_sink_refuses_the_foreach_door_before_the_mark_and_any_body`; `test_mb_4_streaming_sink_gates.py::test_foreach_door_refuses_a_keyed_sink_before_it_writes_its_mark` (two bodies; no file, no mark, no call). In the matrix all six `foreachBatch` trials on a sink keyed before the start write nothing. Mutant Q9. pins: mb-4-foreach-eo/C-037 |
+| C-038 | The session example follows the surface: `SparkSession.readStream` and `SparkSession.streams` answer, and the example-coverage job that executes every example is green. | The example; the gate with `--require-execute`. | **PROVEN** | `docs/examples/session/streaming_entry_points.py` and the edited `connect_only_and_declared.py`; `scripts/check_example_coverage.py --require-execute` exit 0 on the built module (252 examples); `python/repark-parity/tests/test_ex_0_example_coverage.py` green. pins: mb-4-foreach-eo/C-038 |
+| C-039 | The two mark rules the third verify's mutants N2 and N4 found unpinned are pinned: only epoch 0 can be pending in a mark, and a stamp alone refuses a late mark. | One pin each; both mutants red. | **PROVEN** | `starting_mark.rs::only_epoch_zero_can_be_pending` (mutant N2 red) and `sink_offsets_lineage_tests.rs::a_stamp_alone_refuses_the_mark_even_without_the_offsets_property` (mutant N4 red). pins: mb-4-foreach-eo/C-039 |
 | C-015 | The questions of the fold-2 hand-back are ruled (owner rulings D2 to D5, 2026-10-10: the mark, the exclusive sink kept with a maintenance card, the side-effect contract, the re-verify and timing gate). What stays open is D5 itself: one Opus re-verify of the whole PR, then the quiet-box 200-epoch measurement with `task/wo/microbatch/mb4_lineage_timing.py`, median of 3, at most 1.05 times the no-audit driver. | The re-verify's verdict and the measurement. | **OPEN** | Closes on D5. The coverage attestation is the Critic's and is filed then. |

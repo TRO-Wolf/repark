@@ -166,6 +166,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   invariant (C-016..C-027). **Fold 3 (2026-10-10, owner rulings D2 to D5):** the starting mark
   in the offsets property, the remedy text and the maintenance card, the side-effect contract
   (C-028..C-031); C-015 stays open for D5, the re-verify and the quiet-box timing.
+  **Fold 4 (2026-10-10, rulings on the third verify's three S1 and two S2):** the restart
+  walk under the newest stamp, the remedies as data and followed as printed, the session
+  settings a streaming plan runs under, the nested `timestamp_ns` gate on the `toTable` door,
+  the reserved `repark.cdc.*` summary keys, the keyed sink refused before its mark, the
+  session example, the seven S3 dispositions and the pins for two surviving mutants
+  (C-032..C-039).
   `risk_tier: high`.
   Branch `feat/mb-4-foreach-exactly-once`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —

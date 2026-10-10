@@ -45,6 +45,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **WO RP50-A (2026-09-26):** the three `maybe_to_branch` calls drop the table argument and
   the `?` with the removed v1 kernel, so a MERGE into a branch of a format v1 table commits.
   pins: ice-nested-evo-1/C-053, C-057, C-060
+- `snapshot_commit.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10):** the two stamped arms
+  (copy-on-write and merge-on-read) build their summary through `SiteStamp::summary`, which
+  takes the caller's extras through `summary_with_extras` (a `repark.cdc.*` key is refused by
+  name there) and then adds the claimed stamp. The stamp no longer travels as extras. The
+  rule and its pins are in the parent map under `write_options.rs`, fold 4.
+  pins: mb-4-foreach-eo/C-036
 - `snapshot_commit.rs` — **ENC-1 round 2 (2026-10-09):** `commit_overwrite_on_ref` and
   `commit_row_delta_kind_on_ref` refuse a target carrying `encryption.key-id` as commit
   backstops; the MERGE doors also check at entry, so these only fire on direct calls.

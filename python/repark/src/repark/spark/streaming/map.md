@@ -146,8 +146,10 @@ pins: mb-4-foreach-eo/C-031, C-033
 
 ## Known limitations
 
-The builder surface is reachable module-direct only; `spark.readStream` and
-`spark.streams` keep refusing exactly as on main until the wire-up round flips them.
+`spark.readStream` and `spark.streams` answer since the wire-up round (on main both
+refuse); the session example `docs/examples/session/streaming_entry_points.py` covers the
+two names, and the example that listed them among the refusals no longer does (fold 4,
+2026-10-10: the example-coverage CI job was red on the branch). pins: mb-4-foreach-eo/C-038
 The valid-spec terminal, writer unknown options, the missing-format default, the
 trigger interval grammar, and a sourceless `load()` are halt-pending; see the MB-4
 ledger's OPEN clauses. The IPI-47 cells answer through this surface per the ledger's
