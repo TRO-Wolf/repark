@@ -878,6 +878,174 @@ fixture has no format-version 3 sink. Its evidence is the public-door pin, red b
 **Gates** are in the hand-back. Clippy, the panic ban, the four lib suites and the build ran
 on the final source tree; the batteries, the matrix and the mutants ran on that build.
 
+## Fold 5 — the fourth verify's S1 — 2026-10-10
+
+The fourth verify (release build of `58a76557`) closed all five findings of the third and
+returned FAIL on one S1 and six S3. Owner ruling of the same day: the summary key
+`repark.cdc.starting-head` is accepted on one condition, that the walk's arm where the first
+stamp has been expired is measured and is never silent. The leans of fold 4's Q1, Q3 and Q4
+stand.
+
+### The S1
+
+A stray under a stamp, hidden by a process death before the driver's check, was accepted
+silently by the next `foreachBatch` start in two cases: (a) an expiry had removed the
+previous stamp (source 32, sink 36); (b) one `toTable` run under the same name had stamped
+over it (source 40, sink 44).
+
+### Item A: the walk with no lower bound
+
+**What failed.** `stray_on_main` ended "nothing found" when the stretch under the newest
+stamp had neither a previous stamp nor a recorded head, without looking at what it had
+collected. Fold 4 wrote that arm for a first stamp with no recorded head; an expiry produces
+the same shape for any stamp.
+
+**As built.** The walk stops at the first stamped snapshot of this query, the recorded head,
+or the end of the retained lineage, whichever comes first, and reports an unstamped snapshot
+it met on the way. What makes this sound without a bound: everything between a stamp of
+epoch 1 or later and its predecessor was committed after the query started, so an unstamped
+snapshot there is a stray whether or not the predecessor is still in the table.
+
+| what the stretch under the newest stamp ends on | reported | rollback printed |
+|---|---|---|
+| the previous stamp | yes | to that stamp (fold 4) |
+| the recorded head, still on the lineage | yes | to that head (fold 4) |
+| the end of the lineage; the newest stamp is of epoch 1 or later | yes | no: "the stamped batch before it is no longer in the table" |
+| the end of the lineage; a recorded head that is not on it | yes | no: "the snapshot the query started on is no longer in the table" |
+| the end of the lineage; a `foreachBatch` first stamp that records no head (a build before fold 4) | yes | no: "the query's first stamp does not record the head it started on" |
+| the end of the lineage; a `toTable` first stamp that records no head | no | (rows under it were in the sink before the query; that door takes other writers) |
+
+The same check on the head applies above the newest stamp while nothing is stamped: a mark
+whose head is not on the lineage prints no rollback. The new name with its start-after
+position is still printed in every row, where the stamp ends on a source snapshot boundary.
+
+**A healthy sink is not refused.** With nothing unstamped under the newest stamp the walk
+answers "clean" with or without a bound. Pinned through the public doors with one, two and
+three snapshots retained, on both doors, green before and after the change.
+
+**Halt condition, checked.** No catalog call and no file read was added. The walk is one
+pass over snapshots in the metadata the start has loaded. On a healthy sink it takes one
+step past the newest stamp. It reads to the end of the retained lineage only when no bound
+is retained, which after an expiry is a short lineage.
+
+### Item B: `toTable` under a name that has run through `foreachBatch`
+
+`Run::refuse_moved_sink` now runs on both doors. The `toTable` door asks
+`stray_at_a_table_start`: the same walk, entered only when the name holds a starting mark or
+its newest stamp on the main branch is a `foreachBatch` stamp. A `foreachBatch` stamp is told
+from a `toTable` one by the two Spark keys the `toTable` door adds to its summary; no key
+was added. A name whose newest stamp is a `toTable` stamp, or which has no stamp and no mark,
+is answered "clean" as before: a foreign commit above or between `toTable` stamps passes on
+that door (pinned). Once a `toTable` batch has landed over a clean stretch, the name's newest
+stamp is a `toTable` one and that door's rules apply again.
+
+One consequence, stated: a foreign commit that lands after a `foreachBatch` run now refuses a
+`toTable` start under the same name as well (above the newest stamp), where fold 4 let that
+door run on.
+
+### Item D: the S3
+
+| the verify's S3 | disposition |
+|---|---|
+| The printed discard names an expired starting head | **Fixed here** (item A): a head is printed only when the walk reached it. |
+| `current_timestamp()` is not fixed for a micro-batch on the `foreachBatch` door | **Fixed here** (C-043). Spark 4.1.2 measured: two `collect()` calls 1.3 s apart and the write inside one batch give one value. Here each action on the frame folded its own time. The frame is now optimized once before it goes to the body, with the state the batch was planned under (`fixed_at_the_batch_start`, one call), so the time is a constant in the plan. |
+| The offsets property is writable by `ALTER TABLE` | **Carded** on STREAM-SURFACE-RESIDUE-1 with the repro. |
+| A pre-fold first stamp has no recorded head | **Closed by item A** and pinned (`a_stray_under_the_newest_stamp_is_reported_when_no_lower_bound_is_left`, the `HEAD_UNRECORDED` case). A healthy checkpoint of such a build whose only stamp is its first, over a sink that held rows before, is refused too: the driver cannot tell the two apart. No such build is released. |
+| The red CI job `Rust test (cluster feature)` | Not this lane's (a timing flake in `cluster_two_executors.rs`, fixed on main in its own PR). |
+| Earlier residue | Carded, unchanged. |
+
+### Item C and owner ruling D3: the expected-parent sketch (written before any code for it)
+
+**The residue.** A stray under the newest stamp, a process death before the driver's check,
+then an expiry that keeps only the newest snapshot. Measured on the fold-5 build: the restart
+runs on, source 32 rows, sink 36 batch rows, no signal. It is silent. After the expiry the
+table holds one snapshot, the stamp. One trace survives, measured: the stamp's
+`parent-snapshot-id` still names the stray's snapshot id, which is no longer in the table.
+Nothing in the table says what the parent should have been.
+
+**The candidate (D3).** Every stamped commit records the snapshot id the batch expected as
+its parent. On a first stamp that is the starting head (`none` for an empty sink).
+
+**Condition 1: is the expected parent known on every commit arm? Yes, after one signature
+change.** Today it is not: `BatchScope::enter` takes the sink's uuid and the stamp, and the
+claim records `base`, the head when the body's write begins. The driver holds the right
+value: `Run::enter_scope` loads the sink when the batch begins. Passed into the scope, it
+reaches every arm through the claim.
+
+| arm | where the value comes from |
+|---|---|
+| first stamp | the scope; equal to the starting head, because the check before the body has just held the head to it |
+| retry after a refresh (the transaction's own retry) | unchanged: the summary is built once from the claim, before the first attempt |
+| retry by the body after a failed stamped write | the same scope entry; the released claim is taken again with the same value |
+| unknown-outcome recovery | writes nothing; it looks for the stamp that already carries the key |
+| `toTable` | the same scope, entered by the same `Run::enter_scope` |
+| stamp-only | claimed with the batch's token, so the same scope entry |
+
+**Condition 2: is there a legal interleaving that mismatches without a stray? Yes, one. The
+condition fails.** Another streaming query's stamped batch that lands on the same sink
+between this batch's start and its stamped commit. The lineage rule has taken another
+query's stamps as legal since fold 2 ("a snapshot stamped by a different streaming query is
+not a finding"), and the check after a body passes them. Inside one process the scope is
+exclusive per sink (`SINK_BUSY`), so it takes a second process on the same sink; nothing
+refuses that today, and the commit is retried on the refreshed table as any optimistic
+commit is. Measured with two queries taking turns on one sink: a stamp's parent is the other
+query's stamp, not this query's previous stamp, so the expectation can only be "the head the
+driver read when the batch began", and the other query's commit inside the batch then makes
+actual differ from expected with no stray anywhere. The two-process race itself is not
+measured: a memory catalog is per process.
+Telling that case from a stray needs the snapshots between the two ids, which is the walk,
+and after an expiry they are gone: the driver would have to refuse a legal state or accept
+an illegal one. What does not mismatch, measured: a property-only commit, a schema change, a
+branch and a tag add no snapshot to the main branch and leave the parent alone.
+
+The condition would hold under one more rule that is the owner's to make, not this lane's:
+that a second process's stamped batch inside this batch's window is not legal (the in-process
+rule already says one at a time per sink), enforced by refusing a stamped commit whose
+parent is not the snapshot its claim verified. That turns today's transparent retry into a
+failed write for two processes sharing a sink.
+
+**Outcome under D3.** Condition 2 fails, so expected-parent is not built. Fold 5 ships D1 and
+D2, the registry row and the streaming map state the expire-to-one residue as a limit, and
+card MB-SINK-MAINTENANCE-PATH-1 gains the MUST: expiry on a sink with a live `foreachBatch`
+query retains the newest two stamps and everything between.
+
+**For the record, what the key would and would not do.** It would replace
+`repark.cdc.starting-head` (the first stamp's expected parent is that head) and make the
+healthy check a comparison of two ids inside the newest stamp. It would not replace the
+walk where the ids differ, cannot name or roll back a stray whose snapshot is expired, and
+covers no stamp written before it exists. Two durable items either way; one more key on
+every stamp.
+
+### Prevention: the arm that let a stray land under a batch's own stamp
+
+**It is not a re-base that skips the fence.** Every attempt of a stamped commit, the first
+and each retry on a refreshed table, goes through `AppendFence::update_table`, which runs
+`refuse_stamp` against the table the commit is about to be applied to. The fence runs every
+time. Two things in it and in the claim let the stray through:
+
+1. **The claim takes the head it finds as its base.** `BatchScope::claim_checked` sets
+   `base` to the current snapshot of the table the body's write has just loaded. In the third
+   verify's repro the helper thread's append has landed by then, so the base is already the
+   stray (measured: the stamp of epoch 2 has the stray as its parent, and the stray has the
+   stamp of epoch 1 as its parent). The claim never compares that head with the head the
+   driver read when the batch began.
+2. **The fence looks only for this query's own stamps.** `breach` walks from the refreshed
+   head down to the claim's base and refuses a snapshot stamped by the same query or a base
+   that left the main branch. An unstamped snapshot in that stretch passes. So a stray that
+   lands between the claim and the commit also ends under the stamp, through an ordinary
+   retry, with the fence run and satisfied.
+
+**The fix, built in this fold with a red pin first.** The scope records the head the driver
+read when the batch began. On the `foreachBatch` door the claim refuses when an unstamped
+snapshot sits between the head it finds and that head, and the fence refuses when one sits
+between the refreshed head and the claim's base. Another query's stamp in either stretch
+still passes. The body's sink write then fails before it lands, the batch's check finds the
+stray above the newest stamp, and every start refuses there, where no expiry can remove it:
+an expiry keeps the head. A stamp is no longer committed over a stray that landed after the
+batch began, so the state the residue needs cannot be produced by this build on a catalog
+that checks a commit's requirements. The walk under the newest stamp stays for stamps
+already on disk. The `toTable` door is not changed: it takes other writers.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |

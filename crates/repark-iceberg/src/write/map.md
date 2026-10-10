@@ -124,6 +124,12 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10,
+  ruling on the fourth verify's S1):** the module re-exports `stray_at_a_table_start`, the
+  `toTable` door's entry to the lineage walk, beside `stray_on_main`. The rule (the walk
+  reports without a lower bound; which names the `toTable` door walks) and the pins are in
+  the child directory's map under `lineage.rs`, fold 5.
+  pins: mb-4-foreach-eo/C-040, C-041
 - `write_options.rs`, `sink_offsets.rs`, `merge/snapshot_commit.rs`,
   `sink_offsets_scope_tests.rs`, `sink_offsets_tests.rs` — **MB-4-FOREACH-EO fold 4
   (2026-10-10, ruling on the third verify's first S2): a batch write cannot forge a stamp.**
