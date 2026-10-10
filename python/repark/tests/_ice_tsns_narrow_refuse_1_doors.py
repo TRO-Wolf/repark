@@ -50,7 +50,6 @@ FAMILY_MORE = {
     "ifnull": "ifnull({c}, NULL)",
     "nvl2": "nvl2({i}, {c}, NULL)",
     "element_at": "element_at(array(NULL, {c}), 2)",
-    "trunc_of_coalesce": "date_trunc('second', coalesce({c}, NULL))",
     "recast_of_coalesce": "CAST(coalesce({c}, NULL) AS {n})",
     "nested_case": "CASE WHEN {i} > 0 THEN coalesce({c}, NULL) ELSE CAST(NULL AS {n}) END",
     "lambda": "transform(array({c}), x -> coalesce(x, NULL))[0]",
@@ -69,9 +68,30 @@ WRITTEN = {
     "case_of_cast": "CASE WHEN {i} > 0 THEN CAST({c} AS TIMESTAMP) ELSE NULL END",
     "coalesce_of_cast": "coalesce(CAST({c} AS TIMESTAMP), NULL)",
     "if_of_trunc": "if({i} > 0, date_trunc('second', {c}), NULL)",
+    "cast_date": "CAST({c} AS DATE)",
+}
+BESIDE_VALUE = {
     "typed_ts_null": "coalesce({c}, CAST(NULL AS TIMESTAMP))",
     "typed_ntz_null": "coalesce({c}, CAST(NULL AS TIMESTAMP_NTZ))",
     "beside_literal": "CASE WHEN {i} = 1 THEN {c} ELSE TIMESTAMP '2026-01-02 03:04:05' END",
+    "beside_value": "coalesce({c}, CAST({c} AS TIMESTAMP))",
+    "greatest_literal": "greatest({c}, TIMESTAMP '2026-01-02 03:04:05')",
+    "array_literal": "array({c}, TIMESTAMP '2026-01-02 03:04:05')[0]",
+}
+WRITTEN_OVER = {
+    "trunc_of_coalesce": "date_trunc('second', coalesce({c}, NULL))",
+    "cast_ts_of_coalesce": "CAST(coalesce({c}, NULL) AS TIMESTAMP)",
+    "cast_date_of_coalesce": "CAST(coalesce({c}, NULL) AS DATE)",
+}
+WRITTEN_TWIN = {
+    "trunc_of_coalesce": "date_trunc",
+    "cast_ts_of_coalesce": "cast_ts",
+    "cast_date_of_coalesce": "cast_date",
+}
+EQUAL_OVER = {
+    "trunc_of_coalesce": ("tzns",),
+    "cast_ts_of_coalesce": ("ns", "tzns"),
+    "cast_date_of_coalesce": ("ns",),
 }
 KEPT = {
     "plain": "{c}",
@@ -84,7 +104,14 @@ KEPT = {
     "struct_null_sibling": "named_struct('f', {c}, 'g', NULL).f",
     "lambda_plain": "transform(array({c}), x -> x)[0]",
 }
-SPELLINGS = {**FAMILY, **FAMILY_MORE, **WRITTEN, **KEPT}
+SPELLINGS = {**FAMILY, **FAMILY_MORE, **BESIDE_VALUE, **WRITTEN_OVER, **WRITTEN, **KEPT}
+GROUPS = {
+    "family": {**FAMILY, **FAMILY_MORE},
+    "beside value": BESIDE_VALUE,
+    "written over": WRITTEN_OVER,
+    "written": WRITTEN,
+    "kept": KEPT,
+}
 MOR = (
     ", 'write.delete.mode' = 'merge-on-read', 'write.update.mode' = 'merge-on-read', "
     "'write.merge.mode' = 'merge-on-read'"

@@ -130,12 +130,7 @@ def summarize(cells: dict[str, Any]) -> dict[str, Counter]:
         kind = classify(cells, key)
         if spelling in doors.FAMILY and target == "ts_ns" and door in doors.CORE_DOORS:
             counts.setdefault("core 650", Counter())[kind] += 1
-        if spelling in doors.FAMILY or spelling in doors.FAMILY_MORE:
-            group = "family"
-        elif spelling in doors.WRITTEN:
-            group = "written"
-        else:
-            group = "kept"
+        group = next(name for name, spellings in doors.GROUPS.items() if spelling in spellings)
         counts.setdefault(f"{group} {target}", Counter())[kind] += 1
     return counts
 

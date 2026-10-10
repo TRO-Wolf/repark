@@ -2,10 +2,13 @@
 
 ``coalesce(ns, NULL)``, ``CASE … ELSE NULL END``, ``if(…, ns, NULL)`` and ``array(ns, NULL)[0]``
 over a nanosecond value are typed microseconds, because type coercion reads the untyped NULL as
-the SQL ``TIMESTAMP`` and narrows the value to match. Every write door now refuses such a value
-into a ``timestamp_ns`` or ``timestamptz_ns`` column by name and stores nothing. A ``CAST``, a
-``TRY_CAST`` or a ``date_trunc`` the statement writes, a NULL the statement types, a microsecond
-target and every other cell answer what the base answers, cell for cell.
+the SQL ``TIMESTAMP`` and narrows the value to match. Every write door refuses such a value
+into a ``timestamp_ns`` or ``timestamptz_ns`` column by name and stores nothing, and so does a
+value narrowed beside a NULL typed ``TIMESTAMP`` or beside a microsecond value. A ``CAST``, a
+``TRY_CAST`` or a ``date_trunc`` the statement writes stores what the base stores, also over a
+narrowed value where the call stores what it stores over the nanosecond value; a nanosecond
+type the statement keeps, a microsecond target and every other cell answer what the base
+answers, cell for cell.
 
 Each test runs one row of the matrix (a zone, a target, a source, a spelling) through all 64
 doors and holds each cell against ``ice_tsns_narrow_refuse_1_base.json``, the base measured
@@ -31,7 +34,6 @@ REFUSED_MORE = (
     "case_null_first",
     "coalesce_null_first",
     "element_at",
-    "trunc_of_coalesce",
     "recast_of_coalesce",
     "nested_case",
     "lambda",
@@ -42,15 +44,35 @@ REFUSED_MORE = (
 )
 TYPED_A_STRING = ("nvl", "ifnull", "nvl2")
 NANOSECOND_TYPED = (*doors.KEPT, "try_cast_ts")
+NARROWED = (*REFUSED_EVERYWHERE, *REFUSED_MORE, *doors.BESIDE_VALUE)
 MATERIALIZED = "cached_frame_append"
+BESIDE_A_PLAIN_BRANCH = "union_insert"
+NARROWS_A_PLAIN_BRANCH = {
+    "cast_ts": doors.SOURCES,
+    "cast_ntz": doors.SOURCES,
+    "date_trunc": doors.SOURCES,
+    "case_of_cast": doors.SOURCES,
+    "coalesce_of_cast": doors.SOURCES,
+    "if_of_trunc": doors.SOURCES,
+    "cast_date": ("ns",),
+    "nvl": doors.SOURCES,
+    "ifnull": doors.SOURCES,
+    **dict.fromkeys(doors.WRITTEN_OVER, doors.SOURCES),
+}
 REFUSAL_ROWS = [
     (zone, target, source, spelling)
     for zone in doors.ZONES
     for target in doors.NANOSECOND_TARGETS
     for source in doors.SOURCES
-    for spelling in (
-        (*REFUSED_EVERYWHERE, *REFUSED_MORE) if zone == CONTROL_ZONE else ("coalesce",)
-    )
+    for spelling in (NARROWED if zone == CONTROL_ZONE else ("coalesce", "typed_ts_null"))
+]
+WRITTEN_OVER_ROWS = [
+    (zone, target, source, spelling)
+    for zone in doors.ZONES
+    for target in doors.NANOSECOND_TARGETS
+    for source in doors.SOURCES
+    for spelling in doors.WRITTEN_OVER
+    if zone == CONTROL_ZONE or spelling == "trunc_of_coalesce"
 ]
 STORING_ROWS = [
     (CONTROL_ZONE, target, source, spelling)
@@ -89,11 +111,17 @@ def hold(row: tuple[str, str, str, str], door: str, cells: tuple[Any, Any, str])
     A cell the base stored in part (one branch of a ``UNION`` whole, the other cut) refuses
     like a cut one; a door that creates the table keeps the microsecond column it made.
     """
-    _, target, _, spelling = row
+    _, target, source, spelling = row
     cell, base, kind = cells
-    narrowed = spelling in REFUSED_EVERYWHERE or spelling in REFUSED_MORE
+    differs = spelling in doors.WRITTEN_OVER and source not in doors.EQUAL_OVER[spelling]
+    plain_branch = door == BESIDE_A_PLAIN_BRANCH and source in NARROWS_A_PLAIN_BRANCH.get(
+        spelling, ()
+    )
     refuses = door != MATERIALIZED and (
-        narrowed or (door in doors.UNION_NULL and spelling in NANOSECOND_TYPED)
+        spelling in NARROWED
+        or differs
+        or plain_branch
+        or (door in doors.UNION_NULL and spelling in NANOSECOND_TYPED)
     )
     partial = kind == "other" and door not in doors.CREATES
     if refuses and (kind in ("cut", "cut+wall") or partial):
@@ -123,14 +151,42 @@ def test_every_door_refuses_a_value_narrowed_beside_an_untyped_null(
     assert refused >= 45, refused
 
 
+@pytest.mark.parametrize("row", WRITTEN_OVER_ROWS, ids="|".join)
+def test_a_written_call_over_a_narrowed_value_stores_where_it_is_equal(
+    tmp_path: Path, row: tuple[str, str, str, str]
+) -> None:
+    """An equal arm stores the base's cell; a differing arm refuses on every door.
+
+    The base's cell of an equal arm is the value the same call stores over the nanosecond
+    value (the twin spelling of ``doors.WRITTEN_TWIN``), which the stored rows are held to.
+    """
+    zone, target, source, spelling = row
+    measured = measure_row(tmp_path, *row)
+    refused = sum(hold(row, door, cells) for door, cells in measured.items())
+    if source not in doors.EQUAL_OVER[spelling]:
+        assert refused >= 45, refused
+        return
+    assert refused == 1, refused
+    twin = f"{zone}|{target}|{source}|{doors.WRITTEN_TWIN[spelling]}|insert_select"
+    assert measured["insert_select"][0]["stored"] == BASE[twin]["stored"]
+
+
 @pytest.mark.parametrize("row", STORING_ROWS, ids="|".join)
 def test_a_written_narrowing_and_a_kept_type_answer_what_the_base_answers(
     tmp_path: Path, row: tuple[str, str, str, str]
 ) -> None:
-    """No cell moves but a nanosecond value in a UNION with an untyped NULL branch."""
+    """No cell moves but a nanosecond branch of a UNION narrowed beside another branch.
+
+    A nanosecond type the statement keeps refuses beside an untyped NULL branch; a
+    microsecond value the statement wrote makes the plain nanosecond branch beside it refuse.
+    """
     measured = measure_row(tmp_path, *row)
     refused = sum(hold(row, door, cells) for door, cells in measured.items())
-    assert refused == (len(doors.UNION_NULL) if row[3] in NANOSECOND_TYPED else 0), refused
+    if row[3] in NANOSECOND_TYPED:
+        expected = len(doors.UNION_NULL)
+    else:
+        expected = int(row[2] in NARROWS_A_PLAIN_BRANCH.get(row[3], ()))
+    assert refused == expected, refused
 
 
 @pytest.mark.parametrize("row", MICROSECOND_ROWS, ids="|".join)
@@ -153,4 +209,4 @@ def test_the_base_fixture_holds_the_counts_the_parity_row_records() -> None:
     """The 650-cell core of the base: 360 cut, 120 cut and moved, 40 refused, 130 errors."""
     counts = recorder.summarize(BASE)["core 650"]
     assert dict(counts) == {"cut": 360, "cut+wall": 120, "refused": 40, "error": 130}
-    assert len(BASE) == 89_600
+    assert len(BASE) == 104_960
