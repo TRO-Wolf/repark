@@ -92,6 +92,9 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   [../tests/pg_insert.rs](../tests/pg_insert.rs).
   **C-4 merge (2026-10-10):** the route runs before the ENC-1 guard in
   `execute_insert_routed`; the guard still sees every Iceberg target.
+  **C-4 fold 2 item 5 (2026-10-10):** the source passes through the Iceberg route's
+  `deduplicate_source_names` before planning, so a positional INSERT never depends on
+  the SELECT's output names.
   pins: c-4/C-013, C-014
 - `nested_ns.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):**
   `refuse_nested_supply` is the one call that hands an `INSERT` (plain, `OVERWRITE`,

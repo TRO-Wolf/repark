@@ -2511,6 +2511,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   read-only set lets a spec-backed INSERT through while UPDATE keeps the P11 read-only text,
   and `write.path=row` routes while a bad value refuses as `Configuration` naming `bulk` and
   `row`.
+  **C-4 fold 2 item 5 (2026-10-10):**
+  `pg_insert_with_repeated_expressions_plans_positionally` pins the three repeated-name
+  sources reaching the driver.
   pins: c-4/C-013, C-014
 
 ## Mapping rule

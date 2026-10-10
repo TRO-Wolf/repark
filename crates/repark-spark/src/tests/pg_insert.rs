@@ -263,3 +263,34 @@ async fn write_path_bad_value_refuses_naming_both_values() {
     assert!(message.contains("'bulk'"), "{message}");
     assert!(message.contains("'row'"), "{message}");
 }
+
+#[tokio::test]
+async fn pg_insert_with_repeated_expressions_plans_positionally() {
+    let (_directory, session) = mounted_session(MOUNT);
+    let catalogs = session.catalogs_snapshot();
+    let ctx = spark_context();
+    for source in [
+        "SELECT 1, 1",
+        "SELECT 1 AS a, 1 AS a",
+        "SELECT x, x FROM (VALUES (5)) AS one(x)",
+    ] {
+        let error = run(
+            &ctx,
+            &catalogs,
+            &HashSet::new(),
+            &StatementWriteOptions::empty(),
+            &format!("INSERT INTO pg.public.dup {source}"),
+        )
+        .await
+        .expect_err("an unreachable source refuses in the driver");
+        let message = error.to_string();
+        assert!(
+            message.contains("database source `pg`"),
+            "{source}: {message}"
+        );
+        assert!(
+            !message.contains("unique expression names"),
+            "{source}: {message}"
+        );
+    }
+}

@@ -1,6 +1,10 @@
+use std::collections::HashSet;
+
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::DataFrame;
-use datafusion::sql::sqlparser::ast::{Insert, ObjectName, Statement, TableObject};
+use datafusion::sql::sqlparser::ast::{
+    CastKind, Expr, Ident, Insert, ObjectName, Select, SelectItem, SetExpr, Statement, TableObject,
+};
 use repark_common::SourceKind;
 use repark_core::write_postgres::{
     PostgresWrite, PostgresWritePath, PostgresWriteTarget, execute_postgres_write,
@@ -62,7 +66,9 @@ pub(crate) async fn execute_postgres_insert(
             postgres_write_upsert_refusal("REPLACE INTO"),
         ));
     }
-    let Some(origin) = insert.source.as_ref() else {
+    let deduplicated = deduplicate_source_names(insert);
+    let current = deduplicated.as_ref().unwrap_or(insert);
+    let Some(origin) = current.source.as_ref() else {
         return Err(DataFusionError::Plan(
             "Inserts without a source not supported".to_string(),
         ));
@@ -93,6 +99,112 @@ pub(crate) async fn execute_postgres_insert(
     let report = execute_postgres_write(cx.catalogs, frame, write, zone).await?;
     record_postgres_write_report(cx.ctx, report);
     cx.ctx.read_empty()
+}
+
+fn deduplicate_source_names(insert: &Insert) -> Option<Insert> {
+    let mut source = insert.source.as_ref()?.as_ref().clone();
+    if !deduplicate_body(&mut source.body) {
+        return None;
+    }
+    let mut rewritten = insert.clone();
+    rewritten.source = Some(Box::new(source));
+    Some(rewritten)
+}
+
+fn deduplicate_body(body: &mut SetExpr) -> bool {
+    match body {
+        SetExpr::Select(select) => deduplicate_select(select),
+        SetExpr::Query(query) => deduplicate_body(&mut query.body),
+        SetExpr::SetOperation { left, right, .. } => {
+            let left_changed = deduplicate_body(left);
+            let right_changed = deduplicate_body(right);
+            left_changed || right_changed
+        }
+        _ => false,
+    }
+}
+
+fn deduplicate_select(select: &mut Select) -> bool {
+    let starred = select.projection.iter().any(|item| {
+        matches!(
+            item,
+            SelectItem::Wildcard(_) | SelectItem::QualifiedWildcard(..)
+        )
+    });
+    let mut seen = HashSet::new();
+    let mut changed = false;
+    for (index, item) in select.projection.iter_mut().enumerate() {
+        let Some(key) = output_key(item) else {
+            continue;
+        };
+        if seen.insert(key) && !(starred && column_named(item)) {
+            continue;
+        }
+        let alias = Ident::new(format!("__repark_col_{}", index + 1));
+        match item {
+            SelectItem::UnnamedExpr(expr) => {
+                *item = SelectItem::ExprWithAlias {
+                    expr: expr.clone(),
+                    alias,
+                };
+            }
+            SelectItem::ExprWithAlias { alias: current, .. } => *current = alias,
+            _ => continue,
+        }
+        changed = true;
+    }
+    changed
+}
+
+fn output_key(item: &SelectItem) -> Option<String> {
+    match item {
+        SelectItem::UnnamedExpr(expr) => Some(expression_key(expr)),
+        SelectItem::ExprWithAlias { alias, .. } => Some(folded(alias)),
+        _ => None,
+    }
+}
+
+fn column_named(item: &SelectItem) -> bool {
+    match item {
+        SelectItem::ExprWithAlias { .. } => true,
+        SelectItem::UnnamedExpr(expr) => column_expression(expr),
+        _ => false,
+    }
+}
+
+fn column_expression(expr: &Expr) -> bool {
+    match expr {
+        Expr::Cast {
+            kind: CastKind::Cast | CastKind::DoubleColon,
+            expr: inner,
+            ..
+        }
+        | Expr::Nested(inner) => column_expression(inner),
+        Expr::Identifier(_) | Expr::CompoundIdentifier(_) => true,
+        _ => false,
+    }
+}
+
+fn expression_key(expr: &Expr) -> String {
+    match expr {
+        Expr::Cast {
+            kind: CastKind::Cast | CastKind::DoubleColon,
+            expr: inner,
+            ..
+        }
+        | Expr::Nested(inner) => expression_key(inner),
+        Expr::Identifier(ident) => folded(ident),
+        Expr::CompoundIdentifier(parts) => parts.last().map(folded).unwrap_or_default(),
+        other => other.to_string(),
+    }
+}
+
+fn folded(ident: &Ident) -> String {
+    if ident.quote_style.is_some() {
+        ident.value.clone()
+    } else {
+        ident.value.to_ascii_lowercase()
+    }
 }
 
 fn column_name(name: &ObjectName) -> String {
@@ -509,6 +621,70 @@ mod tests {
             )
             .await,
             0
+        );
+    }
+
+    #[tokio::test]
+    async fn pg_insert_with_repeated_expressions_plans_positionally() {
+        let (_directory, session) = mounted_session(MOUNT);
+        let catalogs = session.catalogs_snapshot();
+        for source in [
+            "SELECT 1, 1",
+            "SELECT 1 AS a, 1 AS a",
+            "SELECT x, x FROM (VALUES (5)) AS one(x)",
+        ] {
+            let error = run(
+                &session,
+                &catalogs,
+                &HashSet::new(),
+                &format!("INSERT INTO pg.public.dup {source}"),
+            )
+            .await
+            .expect_err("an unreachable source refuses in the driver");
+            let message = error.to_string();
+            assert!(
+                message.contains("database source `pg`"),
+                "{source}: {message}"
+            );
+            assert!(
+                !message.contains("unique expression names"),
+                "{source}: {message}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs REPARK_PG_URL"]
+    async fn live_repeated_expressions_store_positionally() {
+        let url = live_url();
+        let (_directory, session) = live_session(&url);
+        let catalogs = session.catalogs_snapshot();
+        let name = live_schema_name();
+        let setup = format!(
+            "CREATE TABLE \"{name}\".dup (a bigint, b bigint); \
+             CREATE TABLE \"{name}\".one (x bigint); \
+             INSERT INTO \"{name}\".one VALUES (5)"
+        );
+        let schema = LiveSchema::create(&url, name, &setup);
+        let from_one = format!("SELECT x, x FROM pg.\"{}\".one", schema.name);
+        for source in ["SELECT 1, 1", "SELECT 1 AS a, 1 AS a", from_one.as_str()] {
+            run(
+                &session,
+                &catalogs,
+                &HashSet::new(),
+                &format!("INSERT INTO pg.\"{}\".dup {source}", schema.name),
+            )
+            .await
+            .expect("a repeated expression stores positionally");
+        }
+        assert_eq!(
+            stored_rows(
+                &session,
+                &catalogs,
+                &format!("SELECT a FROM pg.\"{}\".dup", schema.name)
+            )
+            .await,
+            3
         );
     }
 }

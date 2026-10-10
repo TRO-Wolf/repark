@@ -657,6 +657,32 @@ def test_timestamp_columns_keep_their_zone_placement(
         facade_session._reset_active_session_for_tests()
 
 
+def test_repeated_select_expressions_store_positionally(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """Positional INSERT does not depend on the SELECT's output names.
+
+    C-4 fold 2 item 5: the projection is aliased positionally before planning,
+    as the Iceberg INSERT route does, so repeated expressions store by position.
+    """
+    conn, names = pg_live
+    schema = names["schema"]
+    conn.execute(f'CREATE TABLE "{schema}".dup (a int4, b int4)')
+    conn.execute(f'CREATE TABLE "{schema}".one (x int4)')
+    conn.execute(f'INSERT INTO "{schema}".one VALUES (5)')
+    spark.sql(f'INSERT INTO pg."{schema}".dup SELECT 1, 1').collect()
+    assert _take(spark) == ("bulk", 1, None)
+    spark.sql(f'INSERT INTO pg."{schema}".dup SELECT 1 AS a, 1 AS a').collect()
+    assert _take(spark) == ("bulk", 1, None)
+    spark.sql(f'INSERT INTO pg."{schema}".dup SELECT x, x FROM pg."{schema}".one').collect()
+    assert _take(spark) == ("bulk", 1, None)
+    assert conn.execute(f'SELECT a, b FROM "{schema}".dup ORDER BY a, b').fetchall() == [
+        (1, 1),
+        (1, 1),
+        (5, 5),
+    ]
+
+
 def test_row_changing_statements_refuse_on_both_doors(
     spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
 ) -> None:

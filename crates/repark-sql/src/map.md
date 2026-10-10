@@ -108,6 +108,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   cells here (`psql` setup, no new dev-deps): a view and an INSERT-rule target take the row
   path and say why, a named GENERATED ALWAYS identity column refuses with the core text.
   `REPLACE INTO` parses on this door's Generic dialect and names the upsert row.
+  **C-4 fold 2 item 5 (2026-10-10):** the source is aliased positionally before planning
+  (a local mirror of the Spark door's `deduplicate_source_names`; the doors share no
+  production edge), so repeated SELECT expressions store by position. Pins: the
+  driver-reaching unit test here plus the `#[ignore]`d live three-statement cell.
   **C-4 merge (2026-10-10):** the route runs before the ENC-1 guard in
   `execute_insert_routed`; a Postgres source is not an Iceberg table, so the guard still
   sees every Iceberg target.

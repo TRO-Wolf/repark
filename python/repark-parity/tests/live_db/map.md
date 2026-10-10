@@ -140,6 +140,9 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   UTC, New York and Kolkata on all three paths, with fraction trimming and NTZ arms) and
   `test_timestamp_columns_keep_their_zone_placement` (timestamp/timestamptz columns
   unmoved in New York).
+  **C-4 fold 2 item 5 (2026-10-10):**
+  `test_repeated_select_expressions_store_positionally` (the three repeated-name
+  sources store by position through the facade door).
   pins: c-4/C-013, C-014
 - `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
   drops its INSERT case (append INSERT writes now; the write pins live in
