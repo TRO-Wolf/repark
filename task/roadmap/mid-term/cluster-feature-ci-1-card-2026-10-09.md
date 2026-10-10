@@ -30,3 +30,25 @@ RP-27 ([ledger](../../ledgers/staging/cluster-codec-test-1-ledger.md) carries th
 before/after surface). `cargo test --locked --no-fail-fast -p repark-distributed
 --features cluster --test codec --test iceberg_scan` answers 20 of 20. The card stays
 open: it retires when the CI job exists.
+
+## CLUSTER-TESTS-2 (2026-10-10)
+
+The two remaining reds are fixed on branch `fix/cluster-tests-2`, in the second small PR
+the 2026-10-10 owner ruling asked for: the seed was stale, not the product. Both cancel
+tests built their long job from `range(100000000)`, which has planned the uncarried
+`StreamingTableExec` since RANGE-TVF-ID-1; the seed is now `generate_series(0,
+99999999)`, whose `LazyMemoryExec` the codec carries
+([ledger](../../ledgers/staging/cluster-tests-2-ledger.md) carries the cause and the
+test-side decision). `cargo test --locked --no-fail-fast -p repark-distributed --features
+cluster` answers 39 of 39, five consecutive runs. The card stays open: it retires when
+the CI job exists.
+
+## The CI job (2026-10-10)
+
+Job `rust-test-cluster` in `ci.yml` runs `make rust-test-cluster`: `cargo test --locked
+--no-fail-fast -p repark-distributed --features cluster`, 39 tests, green five times in a row
+locally after CLUSTER-CODEC-TEST-1 and CLUSTER-TESTS-2. It runs tests only: a package-scoped
+clippy with the cluster feature fails on two lints in `repark-core` when its `postgres`
+feature is off (`unused_self`, `unused_async` in `named_sources.rs`), recorded here and not
+fixed. The job is not a required check until it has been green for a week; the owner
+adds it to branch protection then. The card retires at that point.
