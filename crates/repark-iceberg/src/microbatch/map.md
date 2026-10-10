@@ -69,7 +69,9 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   pins: mb-2a/C-016
 - `stray_remedy.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10):** three more reasons a rollback
   is not printed, one per lost bound of the walk: `PREVIOUS_GONE`, `HEAD_GONE`,
-  `HEAD_UNRECORDED`. The text pin runs over all five reasons.
+  `HEAD_UNRECORDED`. The text pin runs over all five reasons. `HEAD_GONE` says "no longer
+  on the sink's main branch", not "in the table": after a rollback under a pending mark the
+  head is still in the table (measured).
   pins: mb-4-foreach-eo/C-040
 - `stray_remedy.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10, owner ruling on the third
   verify's first two S1):** what a stray refusal tells the operator, as data. `StrayRemedy`

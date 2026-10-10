@@ -911,13 +911,33 @@ snapshot there is a stray whether or not the predecessor is still in the table.
 | the previous stamp | yes | to that stamp (fold 4) |
 | the recorded head, still on the lineage | yes | to that head (fold 4) |
 | the end of the lineage; the newest stamp is of epoch 1 or later | yes | no: "the stamped batch before it is no longer in the table" |
-| the end of the lineage; a recorded head that is not on it | yes | no: "the snapshot the query started on is no longer in the table" |
+| the end of the lineage; a recorded head that is not on it | yes | no: "the snapshot the query started on is no longer on the sink's main branch" (an expiry removed it, or a rollback took the branch under it; in the second case the snapshot is still in the table) |
 | the end of the lineage; a `foreachBatch` first stamp that records no head (a build before fold 4) | yes | no: "the query's first stamp does not record the head it started on" |
 | the end of the lineage; a `toTable` first stamp that records no head | no | (rows under it were in the sink before the query; that door takes other writers) |
 
 The same check on the head applies above the newest stamp while nothing is stamped: a mark
 whose head is not on the lineage prints no rollback. The new name with its start-after
 position is still printed in every row, where the stamp ends on a source snapshot boundary.
+
+**Why reporting with no floor is not a false positive (owner ruling D1, measured).** The
+sentence to prove or refute: an expiry removes an older-first suffix of the main branch, so
+when the starting head is gone everything older than it is gone too, and every surviving
+unstamped snapshot under the newest stamp is post-start. It holds for what the walk reads.
+The walk follows parent pointers from the newest stamp, so "surviving" has to be read as
+"still reachable from the stamp". Measured on the release build (`tmp` scratch, 26 cells):
+
+| expiry shape | healthy sink | a stray hidden under a stamp first |
+|---|---|---|
+| `retain_last` 1 and 2, `older_than`, with a TAG on a snapshot older than the starting head | 5 cells: the tagged snapshot stays in the table (2 or 3 snapshots, 1 or 2 on the chain) and is not reported; both doors run on exactly | 4 cells: refused; the rollback is printed only where the head is still on the chain, and followed it is exact |
+| the same with a BRANCH on that old snapshot | 4 cells: the same | 3 cells: the same |
+| `older_than` alone (keeps one snapshot) over a hidden stray | | 2 cells: silent, 4 rows duplicated. This is the expire-to-one residue, not a false positive |
+| a rollback under the stamps, then an expiry | 4 cells: refused by MB-2's resume check (the summary's epoch disagrees with the property's) before the walk runs | |
+| a rollback under a pending mark (no stamp yet), with and without an expiry | 2 cells with one seed (the rollback is a no-op): run on exactly | 2 cells with an older seed: refused, "the snapshot the query started on is no longer on the sink's main branch", no rollback printed; the new name the text offers ends exact |
+
+No case refutes it. One neighbour is recorded: with no stamp yet, a rollback of the sink
+under the mark's head makes the first start refuse and name a snapshot that predates the
+query. That is the rule of the check above the stamp (the head must be the recorded
+starting head), not the no-floor report, and it is loud.
 
 **A healthy sink is not refused.** With nothing unstamped under the newest stamp the walk
 answers "clean" with or without a bound. Pinned through the public doors with one, two and
@@ -930,18 +950,18 @@ is retained, which after an expiry is a short lineage.
 
 ### Item B: `toTable` under a name that has run through `foreachBatch`
 
-`Run::refuse_moved_sink` now runs on both doors. The `toTable` door asks
-`stray_at_a_table_start`: the same walk, entered only when the name holds a starting mark or
-its newest stamp on the main branch is a `foreachBatch` stamp. A `foreachBatch` stamp is told
-from a `toTable` one by the two Spark keys the `toTable` door adds to its summary; no key
-was added. A name whose newest stamp is a `toTable` stamp, or which has no stamp and no mark,
-is answered "clean" as before: a foreign commit above or between `toTable` stamps passes on
-that door (pinned). Once a `toTable` batch has landed over a clean stretch, the name's newest
-stamp is a `toTable` one and that door's rules apply again.
+`Run::refuse_moved_sink` now runs on both doors. At a `toTable` start the driver asks
+`carried_by_foreach` once: the name holds a starting mark, or any stamp of the name on the
+main branch is a `foreachBatch` stamp. Such a name is walked at the start and before every
+batch with the `foreachBatch` rules, for as long as that stamp is retained, also after later
+clean `toTable` batches (owner ruling D2: a name that ever carried a `foreachBatch` stamp or
+mark). A `foreachBatch` stamp is told from a `toTable` one by the two Spark keys the
+`toTable` door adds to its summary; no key was added. A name with only `toTable` stamps, or
+with neither stamp nor mark, is not walked: a foreign commit above or between its stamps
+passes on that door as before (pinned).
 
-One consequence, stated: a foreign commit that lands after a `foreachBatch` run now refuses a
-`toTable` start under the same name as well (above the newest stamp), where fold 4 let that
-door run on.
+"Ever" is as far as the table records it: once every `foreachBatch` stamp of the name is
+expired and no mark is left, nothing on the sink says the name ran through that door.
 
 ### Item D: the S3
 
@@ -957,8 +977,9 @@ door run on.
 ### Item C and owner ruling D3: the expected-parent sketch (written before any code for it)
 
 **The residue.** A stray under the newest stamp, a process death before the driver's check,
-then an expiry that keeps only the newest snapshot. Measured on the fold-5 build: the restart
-runs on, source 32 rows, sink 36 batch rows, no signal. It is silent. After the expiry the
+then an expiry that keeps only the newest snapshot. Measured on the build before the
+prevention rule below (`0ab8266f`): the restart runs on, source 32 rows, sink 36 batch rows,
+no signal. It is silent. After the expiry the
 table holds one snapshot, the stamp. One trace survives, measured: the stamp's
 `parent-snapshot-id` still names the stray's snapshot id, which is no longer in the table.
 Nothing in the table says what the parent should have been.
@@ -1035,8 +1056,8 @@ time. Two things in it and in the claim let the stray through:
    lands between the claim and the commit also ends under the stamp, through an ordinary
    retry, with the fence run and satisfied.
 
-**The fix, built in this fold with a red pin first.** The scope records the head the driver
-read when the batch began. On the `foreachBatch` door the claim refuses when an unstamped
+**The fix, built in this fold with a red pin first.** The driver enters the scope with
+`BatchScope::enter_on`, which records the head it read when the batch began. On the `foreachBatch` door the claim refuses when an unstamped
 snapshot sits between the head it finds and that head, and the fence refuses when one sits
 between the refreshed head and the claim's base. Another query's stamp in either stretch
 still passes. The body's sink write then fails before it lands, the batch's check finds the
@@ -1045,6 +1066,83 @@ an expiry keeps the head. A stamp is no longer committed over a stray that lande
 batch began, so the state the residue needs cannot be produced by this build on a catalog
 that checks a commit's requirements. The walk under the newest stamp stays for stamps
 already on disk. The `toTable` door is not changed: it takes other writers.
+
+### Fold-5 proof — 2026-10-10
+
+**Red first.** Three sets of public-door pins were committed before their fixes and run on
+the build they were written against. `9becf2d1`, on the fold-4 release build: the expiry
+route, the two `toTable` routes, the stray above a `foreachBatch` stamp on the `toTable`
+door and the expired-head text red (5), the healthy-expiry controls green (8). The
+`current_timestamp()` pin, written with its fix, was run red on that build first (the stored
+row 0.8 s later than the collected one). `01e9e07b`, on the build of `0ab8266f`: the
+prevention pin red on both routes (the stamped write landed over the stray). The Rust pins
+came with the fixes; each is shown red by a mutant below.
+
+**Found while building.**
+
+- **The first fix of this fold (`0ab8266f`) made the walk report without a lower bound and
+  gave the `toTable` door an entry keyed on the name's newest stamp.** The owner's rulings of
+  the same day then widened the entry to a name that ever carried a `foreachBatch` stamp or
+  mark, and asked for the arm to be named and closed. The prevention rule followed.
+- **The prevention rule makes the state under a stamp unreachable through the doors.** Every
+  public-door pin that set up a stray under a stamp (fold 4's kill pin, its five thread
+  routes, four of the ten remedy pins, the first fold-5 pins) now sets up a refused stamped
+  write and a stray above the stamp, and asserts that. The texts for a stray under a stamp
+  remain for stamps already on disk and are pinned at the walk and the remedy.
+- **An MB-2 pin said a foreign writer inside a scope is re-based over and the batch commit
+  lands.** That is the arm. The pin is kept for the `toTable` door and reversed for the
+  `foreachBatch` door (`a_foreign_writer_inside_a_foreach_scope_fails_the_batch_commit_at_the_fence`).
+- **A base that left the main branch is still reported as that**, before the stray check: on
+  such a table the stretch to walk has no floor.
+- **"No longer in the table" was false after a rollback under a mark**; the text says "no
+  longer on the sink's main branch".
+- **One clippy finding** (`Option<Option<_>>` on the first walk entry); the entry became an
+  enum and then went with the ever-carried rule.
+
+**The scenario matrix, on a RELEASE build of the final source** (`maturin develop --release`;
+the fold-3, fold-4 and fourth-verify scripts from the lane's scratch copies).
+
+| set | scenarios | result |
+|---|---|---|
+| the fold-4 matrix, every set | 730 | as in fold 4, case for case where the state is still reachable: 12 choreographies exact; 14 kill scenarios with 339 kills landed (286 `foreachBatch`, 53 `toTable`), 14 of 14 exact; 40 mark-window scenarios with 104 kills, 40 of 40 exact; the foreign-commit matrix 25 refused and 58 accepted as before, 21 printed rollbacks exact, 4 printed new names 0 duplicated 0 lost, no body run in a refused restart; the door table 498 cases classified exactly as in fold 3. Changed by the prevention rule: the third verify's repro `q2_once_kill_batchrows` now leaves the batch's rows in the sink once (12 rows for 2 stamped epochs and the stray, 0 duplicated) and both restarts refuse |
+| fourth verify's walk scenarios | 14 | every one loud or exact, 0 duplicated rows in all 14. `expire_retain2` and `expire_retain3`: refused, the rollback printed. `expire_retain1` and `first_expire1`, the two that were the silent residue: refused (`stamped snapshot expired`; "the snapshot the query started on is no longer on the sink's main branch"). `door_switch`, `door_switch_first`: the `toTable` start refuses and so does the `foreachBatch` start after it. `totable_foreign_between`: refused on the `foreachBatch` door under the newest `toTable` stamp, the printed discard followed, exact |
+| fourth verify's remedy jobs | 64 | 50 print a remedy and following it literally is exact by the script's own verdict (28 rollback under the same name, 14 new name with the position, 8 new name); 14 print none and say why (10 batches that end inside a source snapshot, 4 empty starts) |
+| the owner's condition on the first stamp (`reverify4b`), measured by the lane | 77 | the first stamp removed by `retain_last` (with one, two and many later stamps), by `older_than`, after a tag held it and was dropped; the starting head expired with the first stamp kept; the head `none`; a rollback and a `set_current_snapshot` across the first stamp; a compaction; each with no stray, a stray written above the newest stamp, and the helper-thread body (whose stamped write is now refused), followed by an expiry in some cells, on both doors. 18 healthy cells run on exactly through the restart and the next batch. 44 refused with a rollback printed, followed, exact. 9 refused with `stamped snapshot expired` (a stray above, then an expiry to one). 6 refused by MB-2 (`stamp not in lineage`, the rollbacks across the stamp). 0 silent |
+| owner ruling D1, on the final build | 26 | 0 silent; 11 healthy cells exact with a tag or a branch on a snapshot older than the starting head. The 26 cells of the table under item A were run on the build of `0ab8266f`, where a stray can still be hidden under a stamp |
+| session settings (`sess.py`) | 4 | zone, ANSI and case sensitivity equal on both doors, changed between epochs and between runs; `current_timestamp()` on the `foreachBatch` door: the stored row equals the collected one |
+| parent pointers (`c_measure.py`) | 3 | the measurements quoted in the sketch |
+
+918 scenarios, 443 kills in the two kill matrices, 0 silent duplicates, 0 silent losses, 0
+duplicates that are loud once and then accepted. The two routes of the S1: (a) an expiry
+after the kill refuses every start, with one, two or three snapshots retained; (b) a
+`toTable` start under the same name refuses.
+
+**Hand mutants, fold 5.** Each applied in place, the `sink_offsets` pins of `repark-iceberg`
+and the microbatch pins of `repark-core` run, the file restored.
+
+| id | mutant | red pins |
+|---|---|---|
+| R1 | a stray under the newest stamp is not reported once the previous stamp is gone | 1 |
+| R2 | a starting head that left the lineage is still printed as the rollback target | 1 |
+| R3 | a `foreachBatch` first stamp with no recorded head is not walked under | 2 |
+| R4 | a `toTable`-begun first stamp is walked under like a `foreachBatch` one | 1 |
+| R5 | the `toTable` door never walks | 2 driver pins |
+| R6 | a `foreachBatch` stamp does not make a name walked on the `toTable` door | 1 lineage pin, 3 driver pins |
+| R7 | a mark does not make a name walked on the `toTable` door | 1 |
+| R8 | a `toTable` stamp makes a name walked on the `toTable` door | 2 lineage pins, 1 driver pin |
+| R9 | the walk under the newest stamp stops at the first snapshot it meets | 3 |
+| P1 | the claim does not look for a stray since the batch began | 1 scope pin, 1 driver pin |
+| P2 | the fence does not look for a stray since the claim | 2 |
+| P3 | the `toTable` door's stamped commit is refused over a foreign commit too | 6 (the MB-2 re-base pins) |
+| P4 | another query's stamp since the batch began counts as a stray | 1 |
+| P5 | the driver enters the scope without the head it read | 1 driver pin |
+
+`fixed_at_the_batch_start` has no Rust pin and no mutant: the difference shows only when an
+action re-homes the frame onto the live session, which the Python door does. Its evidence is
+the public-door pin, red before the fix.
+
+**Gates** are in the hand-back; all ran on the final source, the batteries and the matrix on
+its release build.
 
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
@@ -1088,9 +1186,9 @@ already on disk. The `toTable` door is not changed: it takes other writers.
 | C-037 | The `foreachBatch` door refuses a keyed sink (ENC-1) before it writes its starting mark, with the text the `toTable` door prints. | Core pin; public-door pin on the sink's files. | **PROVEN** | `exactly_once_tests.rs::a_keyed_sink_refuses_the_foreach_door_before_the_mark_and_any_body`; `test_mb_4_streaming_sink_gates.py::test_foreach_door_refuses_a_keyed_sink_before_it_writes_its_mark` (two bodies; no file, no mark, no call). In the matrix all six `foreachBatch` trials on a sink keyed before the start write nothing. Mutant Q9. pins: mb-4-foreach-eo/C-037 |
 | C-038 | The session example follows the surface: `SparkSession.readStream` and `SparkSession.streams` answer, and the example-coverage job that executes every example is green. | The example; the gate with `--require-execute`. | **PROVEN** | `docs/examples/session/streaming_entry_points.py` and the edited `connect_only_and_declared.py`; `scripts/check_example_coverage.py --require-execute` exit 0 on the built module (252 examples); `python/repark-parity/tests/test_ex_0_example_coverage.py` green. pins: mb-4-foreach-eo/C-038 |
 | C-039 | The two mark rules the third verify's mutants N2 and N4 found unpinned are pinned: only epoch 0 can be pending in a mark, and a stamp alone refuses a late mark. | One pin each; both mutants red. | **PROVEN** | `starting_mark.rs::only_epoch_zero_can_be_pending` (mutant N2 red) and `sink_offsets_lineage_tests.rs::a_stamp_alone_refuses_the_mark_even_without_the_offsets_property` (mutant N4 red). pins: mb-4-foreach-eo/C-039 |
-| C-040 | An unstamped snapshot under the query's newest stamp is reported at every start even when the walk finds no lower bound (the previous stamp expired, the first stamp expired, the recorded starting head expired, a first stamp that records no head), and no rollback is printed that cannot be followed. | Walk pins; public-door kill-then-expire pins. | **OPEN** | Fold 5, item A. Red pins committed first: `test_mb_4_streaming_foreach_eo.py::test_expiry_of_the_previous_stamp_does_not_hide_a_stray_under_the_newest` (the restart exited 0 on the fold-4 build) and `::test_a_stray_under_the_first_stamp_prints_no_rollback_once_the_starting_head_is_expired`. pins: mb-4-foreach-eo/C-040 |
-| C-041 | A `toTable` start under a name whose newest stamp is a `foreachBatch` stamp, or which holds a starting mark, runs the same walk and refuses the same way; a name that only ran through `toTable` is unchanged. | Driver pins; public-door pins on both placements of the stray. | **OPEN** | Fold 5, item B. Red pins: `::test_a_table_door_start_under_the_same_name_does_not_hide_a_stray_under_a_stamp` (epochs 0 and 2) and `::test_a_stray_above_the_newest_foreach_stamp_refuses_a_table_door_start`. pins: mb-4-foreach-eo/C-041 |
-| C-042 | A healthy sink is not refused after an ordinary expiry: with one, two or three snapshots retained, both doors run on exactly, and a query begun through `toTable` runs through `foreachBatch` after an expiry. | Public-door pins, green before and after. | **OPEN** | Fold 5, item A. Eight pins of kept behaviour, green on the fold-4 build: `::test_a_healthy_sink_runs_on_after_an_ordinary_expiry` (three retentions by two doors) and `::test_a_table_begun_query_runs_through_the_foreach_door_after_an_expiry`. pins: mb-4-foreach-eo/C-042 |
-| C-043 | On the `foreachBatch` door `current_timestamp()` is one value for the whole micro-batch, as on Spark 4.1.2: every action on the frame and the sink write see the same value. | Spark measurement; public-door pin. | **OPEN** | Fold 5, item D. pins: mb-4-foreach-eo/C-043 |
-| C-044 | On the `foreachBatch` door a stamped commit is refused before it lands when an unstamped snapshot sits between its parent and the head the driver read when the batch began: at the claim, and again at the fence on every attempt. Another query's stamp there passes. A stamp is never committed over a stray that landed after the batch began. | Scope and fence pins; public-door pin. | **OPEN** | Fold 5, prevention (owner ruling of 2026-10-10). Red pin committed first: `test_mb_4_streaming_foreach_lineage.py::test_a_stamped_write_over_a_stray_that_landed_in_the_batch_is_refused_before_it_lands` (two routes; the stamped write landed on the fold-5 build). pins: mb-4-foreach-eo/C-044 |
+| C-040 | An unstamped snapshot under the query's newest stamp is reported at every start even when the walk finds no lower bound (the previous stamp expired, the first stamp expired, the recorded starting head expired, a first stamp that records no head), and no rollback is printed that cannot be followed. | Walk pins; public-door kill-then-expire pins. | **PROVEN** | `sink_offsets_lineage_tests.rs::a_stray_under_the_newest_stamp_is_reported_when_no_lower_bound_is_left` (the three lost bounds, above and under a stamp, each with no rollback), `::a_sink_with_nothing_unstamped_under_its_newest_stamp_is_healthy_without_a_bound`; `stray_remedy.rs` (the text over all five reasons); `test_mb_4_streaming_foreach_eo.py::test_a_stray_before_any_stamp_prints_no_rollback_once_the_starting_head_is_expired`. Owner ruling D1 measured in 26 cells, no case against it. In the matrix `expire_retain2`, `expire_retain3`, `first_expire1` and `first_expire2` refuse. Mutants R1, R2, R3, R9. pins: mb-4-foreach-eo/C-040 |
+| C-041 | A `toTable` start under a name that ever carried a `foreachBatch` stamp or mark still on the sink runs the same walk and refuses the same way; a name that only ran through `toTable` is unchanged. | Driver pins; public-door pins on both placements of the stray. | **PROVEN** | `sink_offsets_lineage_tests.rs::a_name_is_walked_on_the_table_door_once_it_ever_carried_a_foreach_stamp_or_mark`; `exactly_once_tests.rs::a_table_door_start_under_a_foreach_name_runs_the_walk_and_refuses_the_same_way`, `::a_name_that_ever_ran_through_foreach_stays_walked_on_the_table_door`, `::a_name_that_only_ran_through_the_table_door_takes_a_foreign_commit_as_before`; `test_mb_4_streaming_foreach_eo.py::test_a_table_door_start_under_the_same_name_does_not_run_past_a_stray` (epochs 0 and 2), `::test_a_stray_above_the_newest_foreach_stamp_refuses_a_table_door_start`, `::test_a_foreign_commit_refuses_a_table_door_start_once_the_name_ran_through_foreach`. In the matrix `door_switch` and `door_switch_first` refuse on both doors. Mutants R4, R5, R6, R7, R8. pins: mb-4-foreach-eo/C-041 |
+| C-042 | A healthy sink is not refused after an ordinary expiry: with one, two or three snapshots retained, both doors run on exactly, and a query begun through `toTable` runs through `foreachBatch` after an expiry. | Public-door pins, green before and after. | **PROVEN** | `test_mb_4_streaming_foreach_eo.py::test_a_healthy_sink_runs_on_after_an_ordinary_expiry` (three retentions by two doors) and `::test_a_table_begun_query_runs_through_the_foreach_door_after_an_expiry`, green before and after; in the matrix 18 healthy cells of the owner's condition and 11 of ruling D1 run on exactly. pins: mb-4-foreach-eo/C-042 |
+| C-043 | On the `foreachBatch` door `current_timestamp()` is one value for the whole micro-batch, as on Spark 4.1.2: every action on the frame and the sink write see the same value. | Spark measurement; public-door pin. | **PROVEN** | Spark 4.1.2 measured (`foreachBatch`, two `collect()` calls 1.3 s apart and a write: one value). `test_mb_4_streaming_session_settings.py::test_current_timestamp_is_one_value_for_the_whole_micro_batch_on_the_foreach_door`, red on the fold-4 build. No Rust pin. pins: mb-4-foreach-eo/C-043 |
+| C-044 | On the `foreachBatch` door a stamped commit is refused before it lands when an unstamped snapshot sits between its parent and the head the driver read when the batch began: at the claim, and again at the fence on every attempt. Another query's stamp there passes. A stamp is never committed over a stray that landed after the batch began. | Scope and fence pins; public-door pin. | **PROVEN** | `sink_offsets_lineage_tests.rs::a_stamped_commit_is_refused_over_a_stray_that_landed_after_the_batch_began`, `::the_fence_refuses_a_stray_that_landed_between_the_claim_and_the_commit`, `::another_query_s_stamp_since_the_batch_began_does_not_refuse_the_stamped_commit`; `sink_offsets_scope_tests.rs::a_foreign_writer_inside_a_foreach_scope_fails_the_batch_commit_at_the_fence`; `exactly_once_tests.rs::a_stray_sink_write_beside_the_stamped_commit_never_ends_under_the_stamp`; `test_mb_4_streaming_foreach_lineage.py::test_a_stamped_write_over_a_stray_that_landed_in_the_batch_is_refused_before_it_lands` (five routes), red before the fix; `test_mb_4_streaming_foreach_eo.py::test_a_twice_written_batch_is_refused_at_its_stamped_write_and_a_kill_hides_nothing`, `::test_no_expiry_hides_a_stray_that_landed_in_a_killed_batch`. Mutants P1 to P5. pins: mb-4-foreach-eo/C-044 |
 | C-015 | The questions of the fold-2 hand-back are ruled (owner rulings D2 to D5, 2026-10-10: the mark, the exclusive sink kept with a maintenance card, the side-effect contract, the re-verify and timing gate). What stays open is D5 itself: one Opus re-verify of the whole PR, then the quiet-box 200-epoch measurement with `task/wo/microbatch/mb4_lineage_timing.py`, median of 3, at most 1.05 times the no-audit driver. | The re-verify's verdict and the measurement. | **OPEN** | Closes on D5. The coverage attestation is the Critic's and is filed then. |

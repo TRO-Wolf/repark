@@ -171,7 +171,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   settings a streaming plan runs under, the nested `timestamp_ns` gate on the `toTable` door,
   the reserved `repark.cdc.*` summary keys, the keyed sink refused before its mark, the
   session example, the seven S3 dispositions and the pins for two surviving mutants
-  (C-032..C-039).
+  (C-032..C-039). **Fold 5 (2026-10-10, the fourth verify's S1 and the owner's rulings of the
+  same day):** the walk reports without a lower bound (D1, measured), the `toTable` door
+  walks a name that ever ran through `foreachBatch` (D2), the expected-parent sketch with
+  both conditions answered and not built (D3), the arm named and closed (a stamp is not
+  committed over a stray), one batch time on the `foreachBatch` door (C-040..C-044).
   `risk_tier: high`.
   Branch `feat/mb-4-foreach-exactly-once`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
