@@ -40,6 +40,7 @@ pub enum PostgresWritePath {
     Row,
 }
 
+#[allow(clippy::missing_errors_doc)]
 pub fn parse_write_path_option(raw: Option<&str>) -> Result<PostgresWritePath> {
     match raw {
         None => Ok(PostgresWritePath::Bulk),
@@ -158,6 +159,7 @@ pub struct PostgresWrite {
 }
 
 impl ReparkSession {
+    #[allow(clippy::missing_errors_doc)]
     pub async fn write_postgres(
         &self,
         frame: DataFrame,
@@ -169,6 +171,7 @@ impl ReparkSession {
 }
 
 #[cfg(feature = "postgres")]
+#[allow(clippy::missing_errors_doc)]
 pub async fn execute_postgres_write(
     catalogs: &CatalogRegistry,
     frame: DataFrame,
@@ -266,6 +269,7 @@ pub fn postgres_write_upsert_refusal(what: &str) -> String {
 }
 
 #[cfg(not(feature = "postgres"))]
+#[allow(clippy::missing_errors_doc)]
 pub async fn execute_postgres_write(
     catalogs: &CatalogRegistry,
     frame: DataFrame,
