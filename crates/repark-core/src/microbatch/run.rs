@@ -16,7 +16,8 @@ use repark_iceberg::microbatch::offset::{
 use repark_iceberg::microbatch::window::WindowLimit;
 use repark_iceberg::write::sink_offsets::{
     BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, SinkMark,
-    commit_stamp_only, read_resume_point, resolve_unknown_outcome, unstamped_since_stamp,
+    commit_stamp_only, commit_starting_mark, read_resume_point, read_starting_mark,
+    resolve_unknown_outcome, unstamped_since_stamp,
 };
 use repark_iceberg::write::{
     CommitStateUnknownError, SESSION_SNAPSHOT_PREFIX, apply_session_write_key,
@@ -31,6 +32,8 @@ use crate::microbatch::driver::{
 use crate::microbatch::progress::TriggerReport;
 use crate::microbatch::relation::PlanTemplate;
 use crate::time_travel::microbatch_source::{MicroBatchSource, SourceBatch, WeakSessionState};
+
+const MARK_THE_START: &str = "write the starting mark";
 
 #[derive(Clone)]
 pub(crate) enum Door {
@@ -115,9 +118,9 @@ impl Run {
         let resumed = read_resume_point(&sink, self.shared.id)?;
         self.shared.resumed(resumed.clone());
         let mut cursor = self.resume(resumed.as_ref())?;
-        if resumed.is_none() {
-            cursor.baseline = sink.metadata().current_snapshot_id();
-        }
+        let sink = self
+            .mark_the_start(sink, &mut cursor, resumed.is_none())
+            .await?;
         self.refuse_moved_sink(&sink, &cursor)?;
         let target = match self.shared.trigger {
             Trigger::AvailableNow => self.available_now_target(&mut cursor).await?,
@@ -286,22 +289,57 @@ impl Run {
         }
     }
 
+    async fn mark_the_start(
+        &self,
+        sink: Table,
+        cursor: &mut Cursor,
+        unstamped: bool,
+    ) -> Result<Table, MicroBatchError> {
+        if !unstamped || !matches!(self.door, Door::ForeachBatch(_)) {
+            return Ok(sink);
+        }
+        self.refuse_replaced_sink(&sink, cursor.epoch)?;
+        if let Some(mark) = read_starting_mark(&sink, self.shared.id)? {
+            cursor.baseline = mark.head.map(SnapshotId::get);
+            return Ok(sink);
+        }
+        cursor.baseline = sink.metadata().current_snapshot_id();
+        let marking = commit_starting_mark(&self.shared.sink.catalog, &sink, self.shared.id);
+        let marked = bounded(self.shared.catalog_timeout, MARK_THE_START, marking).await?;
+        match read_starting_mark(&marked, self.shared.id)? {
+            Some(mark) => cursor.baseline = mark.head.map(SnapshotId::get),
+            None if read_resume_point(&marked, self.shared.id)?.is_none() => {
+                return Err(MicroBatchError::Catalog(format!(
+                    "the starting mark of query {query} did not land on the sink; start the query again",
+                    query = self.shared.id
+                )));
+            }
+            None => {}
+        }
+        Ok(marked)
+    }
+
+    fn refuse_replaced_sink(&self, sink: &Table, epoch: Epoch) -> Result<(), MicroBatchError> {
+        let found = TableUuid::of(sink);
+        if found == self.shared.sink_uuid {
+            return Ok(());
+        }
+        Err(self.recovery(
+            epoch,
+            RecoveryReason::UnstampedSinkChange {
+                what: format!(
+                    "the table under the sink's name was replaced (uuid {was}, now {found})",
+                    was = self.shared.sink_uuid
+                ),
+            },
+        ))
+    }
+
     fn refuse_moved_sink(&self, sink: &Table, cursor: &Cursor) -> Result<(), MicroBatchError> {
         if !matches!(self.door, Door::ForeachBatch(_)) {
             return Ok(());
         }
-        let found = TableUuid::of(sink);
-        if found != self.shared.sink_uuid {
-            return Err(self.recovery(
-                cursor.epoch,
-                RecoveryReason::UnstampedSinkChange {
-                    what: format!(
-                        "the table under the sink's name was replaced (uuid {was}, now {found})",
-                        was = self.shared.sink_uuid
-                    ),
-                },
-            ));
-        }
+        self.refuse_replaced_sink(sink, cursor.epoch)?;
         match unstamped_since_stamp(sink, self.shared.id, cursor.baseline) {
             Some(reason) => Err(self.recovery(cursor.epoch, reason)),
             None => Ok(()),

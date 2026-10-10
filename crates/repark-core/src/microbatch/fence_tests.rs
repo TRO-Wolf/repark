@@ -284,7 +284,7 @@ async fn raced(foreach: bool, same_run: bool, racer: Racer) -> Raced {
         RunId::fresh()
     };
     let stamp = first_epoch_of(&fixture, handle.id(), run).await;
-    let refresh_inside_the_commit = if foreach { 3 } else { 2 };
+    let refresh_inside_the_commit = if foreach { 4 } else { 2 };
     catalog.on_load(Some(racing(
         &inner,
         &stamp,
@@ -365,7 +365,7 @@ async fn a_racing_commit_at_the_fence_ends_the_driver_fenced() {
 
 #[tokio::test]
 async fn a_writing_body_that_loses_its_epoch_ends_fenced_and_lands_no_row() {
-    for the_bodys_load_or_its_commit in [2, 3] {
+    for the_bodys_load_or_its_commit in [3, 4] {
         let fixture = Fixture::new().await;
         fixture.insert(SOURCE, "(1)").await;
         fixture.insert(SOURCE, "(2)").await;

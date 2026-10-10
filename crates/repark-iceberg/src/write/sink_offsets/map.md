@@ -9,6 +9,23 @@ directory holds the piece split out of it. The test files of the module stay bes
 
 ## Contents
 
+- `lineage.rs`, `append_fence.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling D2):
+  the starting mark.** `read_starting_mark(table, query)` reads the mark from the offsets
+  property; `commit_starting_mark(catalog, table, query)` writes it in a property-only commit
+  that records the table's current head. The parent's `property_record` reads a pending mark
+  as no record, so `read_resume_point` answers "nothing durable" for it on every door.
+  - **Write-once.** No table requirement can assert a property, and the fork retries a
+    property commit on a refreshed base, so a mark written by a driver that loaded the sink
+    before a racing driver's first stamp would overwrite that stamp's offsets record. The
+    commit therefore goes through `AppendFence` with a second rule, `StartingMark(query)`:
+    at `update_table` it refuses when the refreshed table already holds this query's offsets
+    property or one of its stamps. `commit_starting_mark` then reloads and returns the table
+    as it is; an unknown outcome is settled the same way, by the reload. `AppendFence` keeps
+    its stamp rule unchanged; the forwarding is shared so no second wrapper exists.
+  - **Pins.** `sink_offsets_lineage_tests.rs`: a pending mark reads as no durable record and
+    the first stamp replaces it; the mark round-trips its head, is per query, and is written
+    once; a corrupt offsets value is neither a mark nor a record.
+  pins: mb-4-foreach-eo/C-028
 - `lineage.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09, orchestrator ruling after the
   re-verify: an invariant on the sink's lineage, checked by the driver, not a list of
   routes).** The two checks the `foreachBatch` driver runs.

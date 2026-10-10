@@ -92,6 +92,34 @@ Python builds options and hands the `foreachBatch` callable; Python never touche
 and never decides commits. Refusals use the sketch's §4 classes only; anything without
 a §4 row passes to the stub terminal and the wire-up round classifies it.
 
+## The `foreachBatch` contract (owner ruling D4, 2026-10-10)
+
+The contract a user reads is the `Notes:` section of `DataStreamWriter.foreachBatch` in
+`readers.py`; the registry rows `MB-4-FOREACH-EO-1`, `MB-4-FOREACH-SIDE-EFFECTS-1` and
+`MB-4-FOREACH-SINK-SHAPES-1` hold the measurements behind it.
+
+- **The declared sink** is the table named by `.option("repark.cdc.sink", ...)`. The
+  callable's one write to it commits the batch, and its rows land exactly once.
+- **Effects before the sink commit are at-least-once.** A batch that fails before the commit
+  runs again under the same batch id, and so does everything the callable did before it.
+- **Effects after the sink commit are at-most-once on a failure.** The batch is durable once
+  the sink commit lands. If the callable raises or the process dies after it, the callable
+  does not run again for that batch, and what it had not yet done is not done.
+- **The recipe:** write the sink last, or key the side effect on the batch id. Keying on the
+  batch id is the recipe Spark documents for `foreachBatch`. Where the two engines differ is
+  the second half: Spark replays the whole callable after a failure (cell MB0-W6), so a body
+  ported from Spark that relied on that must put its sink write last.
+- **The sink is exclusive.** While a query name lives, a commit to the sink that does not
+  carry the batch's stamp ends the query `RecoveryRequiredException`, naming the snapshot and
+  the two remedies: roll the sink back to its newest stamped snapshot, or start the query
+  under a new name. A maintenance path against a live sink is card
+  `task/roadmap/mid-term/mb-sink-maintenance-path-1-card-2026-10-10.md`.
+- **`checkpointLocation` holds no state.** It is required and recorded. The state is the sink
+  plus the query name; clearing the checkpoint resets nothing.
+
+Python holds none of this: the callable is handed to the driver, which owns every rule.
+pins: mb-4-foreach-eo/C-031
+
 ## Known limitations
 
 The builder surface is reachable module-direct only; `spark.readStream` and

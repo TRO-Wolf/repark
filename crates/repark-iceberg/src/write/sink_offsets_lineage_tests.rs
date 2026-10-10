@@ -211,3 +211,62 @@ async fn a_pending_starting_mark_reads_as_no_durable_record_and_the_first_stamp_
     let value = &committed.metadata().properties()[&offsets_key()];
     assert!(!value.contains("pending-epoch"), "{value}");
 }
+#[tokio::test]
+async fn the_starting_mark_round_trips_its_head_through_the_offsets_property() {
+    let (_warehouse, catalog, ident) = fixture("mark_round_trip").await;
+    let empty = catalog.load_table(&ident).await.expect("load");
+    assert_eq!(read_starting_mark(&empty, query()).expect("no mark"), None);
+    let marked = commit_starting_mark(&catalog, &empty, query())
+        .await
+        .expect("the mark commits");
+    assert_eq!(
+        read_starting_mark(&marked, query()).expect("the mark"),
+        Some(StartingMark { head: None })
+    );
+    assert_eq!(marked.metadata().snapshots().count(), 0);
+    assert_eq!(
+        marked.metadata().properties()[&offsets_key()],
+        "{\"format-version\":1,\"pending-epoch\":0,\"starting-head\":null}"
+    );
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    assert_eq!(
+        read_starting_mark(&seeded, other_query()).expect("another query"),
+        None
+    );
+    let other = commit_starting_mark(&catalog, &seeded, other_query())
+        .await
+        .expect("the second query's mark");
+    assert_eq!(
+        read_starting_mark(&other, other_query()).expect("the mark"),
+        Some(StartingMark {
+            head: Some(SnapshotId::new(head(&seeded)))
+        })
+    );
+    assert_eq!(
+        read_starting_mark(&other, query()).expect("the first mark"),
+        Some(StartingMark { head: None })
+    );
+    let committed = stamped(&catalog, &other, 0, &[2]).await;
+    assert_eq!(
+        read_starting_mark(&committed, query()).expect("replaced"),
+        None
+    );
+}
+
+#[tokio::test]
+async fn a_corrupt_offsets_property_is_neither_a_mark_nor_a_record() {
+    let (_warehouse, catalog, ident) = fixture("mark_corrupt").await;
+    let table = catalog.load_table(&ident).await.expect("load");
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .update_table_properties()
+        .set(
+            offsets_key(),
+            "{\"format-version\":1,\"pending-epoch\":3}".to_string(),
+        )
+        .apply(tx)
+        .expect("apply");
+    let corrupt = tx.commit(catalog.as_ref()).await.expect("commit");
+    assert!(read_starting_mark(&corrupt, query()).is_err());
+    assert!(read_resume_point(&corrupt, query()).is_err());
+}

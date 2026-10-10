@@ -12,12 +12,19 @@ use iceberg::{
 
 use super::{ClaimedStamp, epoch_check, latch_refusal, main_lineage, stamped_by};
 use crate::microbatch::error::MicroBatchError;
-use crate::microbatch::offset::{QUERY_ID_KEY, QueryId, SinkRecord, SnapshotId};
+use crate::microbatch::offset::{Epoch, QUERY_ID_KEY, QueryId, SinkRecord, SnapshotId};
+use crate::microbatch::starting_mark::StartingMark;
 
 #[derive(Debug)]
 pub(super) struct AppendFence {
     inner: Arc<dyn Catalog>,
-    claimed: ClaimedStamp,
+    rule: Rule,
+}
+
+#[derive(Debug)]
+enum Rule {
+    Stamp(ClaimedStamp),
+    StartingMark(QueryId),
 }
 
 enum Breach<'metadata> {
@@ -29,23 +36,37 @@ impl AppendFence {
     pub(super) fn install(inner: &Arc<dyn Catalog>, claimed: &ClaimedStamp) -> Arc<dyn Catalog> {
         Arc::new(AppendFence {
             inner: Arc::clone(inner),
-            claimed: claimed.clone(),
+            rule: Rule::Stamp(claimed.clone()),
+        })
+    }
+
+    pub(super) fn for_starting_mark(inner: &Arc<dyn Catalog>, query: QueryId) -> Arc<dyn Catalog> {
+        Arc::new(AppendFence {
+            inner: Arc::clone(inner),
+            rule: Rule::StartingMark(query),
         })
     }
 
     fn refuse(&self, refreshed: &Table) -> Option<Error> {
+        match &self.rule {
+            Rule::Stamp(claimed) => Self::refuse_stamp(claimed, refreshed),
+            Rule::StartingMark(query) => already_started(refreshed, *query),
+        }
+    }
+
+    fn refuse_stamp(claimed: &ClaimedStamp, refreshed: &Table) -> Option<Error> {
         let metadata = refreshed.metadata();
-        let record = &self.claimed.stamp.record;
-        let (message, refusal) =
-            if let Some(breach) = breach(metadata, self.claimed.base, record.query) {
-                let message = self.message(metadata, &breach);
-                let refusal = self.typed(refreshed, &breach, &message);
-                (message, refusal)
-            } else {
-                let refusal = epoch_check(refreshed, &self.claimed.stamp).err()?;
-                (refusal.to_string(), refusal)
-            };
-        latch_refusal(refreshed, &self.claimed.stamp, &refusal);
+        let record = &claimed.stamp.record;
+        let (message, refusal) = if let Some(breach) = breach(metadata, claimed.base, record.query)
+        {
+            let message = Self::message(claimed, metadata, &breach);
+            let refusal = Self::typed(claimed, refreshed, &breach, &message);
+            (message, refusal)
+        } else {
+            let refusal = epoch_check(refreshed, &claimed.stamp).err()?;
+            (refusal.to_string(), refusal)
+        };
+        latch_refusal(refreshed, &claimed.stamp, &refusal);
         Some(
             Error::new(ErrorKind::DataInvalid, message)
                 .with_retryable(false)
@@ -53,9 +74,9 @@ impl AppendFence {
         )
     }
 
-    fn message(&self, metadata: &TableMetadata, breach: &Breach<'_>) -> String {
-        let record = &self.claimed.stamp.record;
-        let base = display_snapshot(self.claimed.base);
+    fn message(claimed: &ClaimedStamp, metadata: &TableMetadata, breach: &Breach<'_>) -> String {
+        let record = &claimed.stamp.record;
+        let base = display_snapshot(claimed.base);
         let prefix = format!(
             "append fence: query {query} epoch {epoch} pinned base snapshot {base}",
             query = record.query,
@@ -75,8 +96,13 @@ impl AppendFence {
         }
     }
 
-    fn typed(&self, refreshed: &Table, breach: &Breach<'_>, message: &str) -> MicroBatchError {
-        let stamp = &self.claimed.stamp;
+    fn typed(
+        claimed: &ClaimedStamp,
+        refreshed: &Table,
+        breach: &Breach<'_>,
+        message: &str,
+    ) -> MicroBatchError {
+        let stamp = &claimed.stamp;
         if let Err(durable) = epoch_check(refreshed, stamp) {
             return durable;
         }
@@ -100,6 +126,24 @@ impl AppendFence {
             None => MicroBatchError::Catalog(message.to_string()),
         }
     }
+}
+
+fn already_started(refreshed: &Table, query: QueryId) -> Option<Error> {
+    let metadata = refreshed.metadata();
+    let marked = metadata
+        .properties()
+        .contains_key(&StartingMark::property_key(query));
+    let stamped = main_lineage(metadata)
+        .any(|snapshot| stamped_by(&snapshot.summary().additional_properties, query));
+    (marked || stamped).then(|| {
+        let refusal = MicroBatchError::AlreadyCommitted {
+            query,
+            epoch: Epoch::FIRST,
+        };
+        Error::new(ErrorKind::DataInvalid, refusal.to_string())
+            .with_retryable(false)
+            .with_source(refusal)
+    })
 }
 
 fn display_snapshot(snapshot: Option<SnapshotId>) -> String {

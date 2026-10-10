@@ -124,6 +124,11 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10,
+  owner ruling D2):** `property_record` reads a pending starting mark as no record, and the
+  module re-exports `read_starting_mark` and `commit_starting_mark`. The rule, the write-once
+  fence and the pins are in the child directory's map under `lineage.rs`, fold 3.
+  pins: mb-4-foreach-eo/C-028
 - `sink_offsets/lineage.rs`, `sink_offsets_lineage_tests.rs`, `sink_offsets.rs`,
   `merge/snapshot_commit.rs`, `insert_defaults.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09,
   orchestrator ruling after the re-verify):** the lineage invariant and the claimed state.

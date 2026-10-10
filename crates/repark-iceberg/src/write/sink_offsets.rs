@@ -16,6 +16,7 @@ use crate::microbatch::error::{MicroBatchError, RecoveryReason};
 use crate::microbatch::offset::{
     OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SinkDoor, SinkRecord, SnapshotId, TableUuid,
 };
+use crate::microbatch::starting_mark::StartingMark;
 use crate::write::merge::{CommitScope, IsolationLevel, OPERATION_ID_PROP};
 use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
@@ -26,7 +27,7 @@ mod lineage;
 
 use append_fence::AppendFence;
 pub use body_scope::{guard_body_catalog, in_body_scope, refuse_planned_sink_write};
-pub use lineage::{SinkMark, unstamped_since_stamp};
+pub use lineage::{SinkMark, commit_starting_mark, read_starting_mark, unstamped_since_stamp};
 
 pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";
 
@@ -457,12 +458,13 @@ fn stamped_by(summary: &HashMap<String, String>, query: QueryId) -> bool {
 
 fn property_record(table: &Table, query: QueryId) -> Result<Option<SinkRecord>, MicroBatchError> {
     let key = format!("{OFFSETS_PROPERTY_PREFIX}{query}");
-    table
-        .metadata()
-        .properties()
-        .get(&key)
-        .map(|value| SinkRecord::from_property(query, value))
-        .transpose()
+    let Some(value) = table.metadata().properties().get(&key) else {
+        return Ok(None);
+    };
+    if StartingMark::from_property(value)?.is_some() {
+        return Ok(None);
+    }
+    SinkRecord::from_property(query, value).map(Some)
 }
 
 #[allow(clippy::missing_errors_doc)]

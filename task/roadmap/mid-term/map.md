@@ -680,6 +680,13 @@ declines it (a dated ruling in the intake, then the archive).
   raises `DIVIDE_BY_ZERO` on `%`, answers `NULL` on `mod`/`pmod`, `NaN` on a `-0.0` divisor,
   and cannot parse infix `div`; the guard learns its operator, with the error text per operator;
   grade lean B, small.
+- [mb-sink-maintenance-path-1-card-2026-10-10.md](mb-sink-maintenance-path-1-card-2026-10-10.md) — **card
+  MB-SINK-MAINTENANCE-PATH-1 (2026-10-10, open, a MUST before MB-5 closes; owner ruling D3):** a
+  sanctioned maintenance path against a live `foreachBatch` sink. The lineage invariant makes
+  the declared sink exclusive while a query name lives, so compaction and every foreign write
+  end the query `RecoveryRequiredException`; the card lists what refuses, why that cannot be
+  the end state, and three shapes to weigh (a stamped maintenance commit, an acknowledged
+  snapshot, data-neutral operations passing).
 - [mb-pending-window-1-card-2026-10-07.md](mb-pending-window-1-card-2026-10-07.md) — **card
   MB-PENDING-WINDOW-1 (2026-10-07, filed by claude-opus-5-5 for the orchestrator, from MB-3
   fold 1, PR #994):** a restart after a failed batch replans that batch's window, so the same

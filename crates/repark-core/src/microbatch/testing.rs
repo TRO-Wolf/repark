@@ -294,3 +294,16 @@ impl BatchBody for SinkWriter {
         })
     }
 }
+
+pub(crate) async fn mark_the_start(fixture: &Fixture, handle: &QueryHandle) {
+    let catalog = fixture
+        .session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("the catalog is visible");
+    let sink = fixture.table("silver").await;
+    repark_iceberg::write::sink_offsets::commit_starting_mark(&catalog, &sink, handle.id())
+        .await
+        .expect("the starting mark commits");
+}

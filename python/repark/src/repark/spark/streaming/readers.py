@@ -351,6 +351,18 @@ class DataStreamWriter:
 
         In every micro-batch, the provided function will be called with (i) the output rows
         as a DataFrame and (ii) the batch identifier.
+
+        Notes:
+            The table named by the ``repark.cdc.sink`` option is the declared sink. The
+            function's one write to it commits the batch: its rows land exactly once.
+            Every other effect of the function is outside that guarantee. An effect that
+            runs before the sink write is at-least-once: a batch that fails before the
+            commit runs again. An effect that runs after the sink write is at-most-once on
+            a failure: the batch is already committed and the function does not run again
+            for it. Write the sink last, or key the side effect on the batch id.
+            The sink takes no other writer while the query name lives. A commit to it that
+            does not carry the batch's stamp ends the query with
+            ``RecoveryRequiredException``.
         """
         self._foreach = func
         return self

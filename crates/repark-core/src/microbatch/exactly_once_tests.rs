@@ -11,12 +11,13 @@ use tokio::runtime::Handle;
 
 use crate::Session;
 use crate::microbatch::driver::{
-    BatchBody, QueryState, ShutdownOutcome, SinkSpec, StreamSpec, Trigger,
+    BatchBody, QueryState, ShutdownOutcome, SinkSpec, StreamSpec, StreamingQueryManager, Trigger,
 };
 use crate::microbatch::lifecycle_tests::{ONE, named};
 use crate::microbatch::table_door_tests::{ARMED_LANDED, ARMED_LOST, FLAKY_SINK, flaky};
 use crate::microbatch::testing::{
-    Fixture, SINK, SOURCE, SinkWriter, append_frame, options, stamped_epochs, started, table_spec,
+    Fixture, SINK, SOURCE, SinkWriter, append_frame, mark_the_start, options, stamped_epochs,
+    started, table_spec,
 };
 
 async fn bronze(fixture: &Fixture) {
@@ -46,6 +47,7 @@ enum Stray {
     ExplainAnalyzeInsert,
     ExplainInsert,
     GuardedProperty,
+    Nothing,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -124,6 +126,7 @@ impl Shaped {
     async fn stray(&self, frame: DataFrame, epoch: Epoch) -> Result<(), MicroBatchError> {
         let id = 70 + epoch.get();
         match self.stray {
+            Stray::Nothing => Ok(()),
             Stray::SpawnedAppend => self.spawned(frame).await,
             Stray::SpawnedProperty => self.spawned_property().await,
             Stray::GuardedProperty => touch_the_sink(&self.session).await,
@@ -394,7 +397,7 @@ async fn the_first_start_writes_the_mark_and_the_first_stamp_replaces_it() {
             .metadata()
             .current_snapshot_id();
         bronze(&fixture).await;
-        let failing = Shaped::new(&fixture.session, Stray::ExplainInsert, 0, Own::RaiseAfter);
+        let failing = Shaped::new(&fixture.session, Stray::Nothing, 0, Own::RaiseAfter);
         let error = ended_with(&fixture, &failing).await;
         assert!(
             matches!(error.as_ref(), MicroBatchError::BatchFailed { .. }),
@@ -411,7 +414,7 @@ async fn the_first_start_writes_the_mark_and_the_first_stamp_replaces_it() {
         );
         assert_eq!(sink.metadata().current_snapshot_id(), head);
         let location = sink.metadata_location().map(str::to_string);
-        let again = Shaped::new(&fixture.session, Stray::ExplainInsert, 0, Own::RaiseAfter);
+        let again = Shaped::new(&fixture.session, Stray::Nothing, 0, Own::RaiseAfter);
         ended_with(&fixture, &again).await;
         assert_eq!(
             fixture
@@ -466,7 +469,7 @@ async fn a_start_with_no_mark_and_no_stamp_takes_the_head_it_finds_and_marks_it(
         .current_snapshot_id()
         .expect("a head");
     assert_ne!(head, head_before);
-    let failing = Shaped::new(&fixture.session, Stray::ExplainInsert, 0, Own::RaiseAfter);
+    let failing = Shaped::new(&fixture.session, Stray::Nothing, 0, Own::RaiseAfter);
     ended_with(&fixture, &failing).await;
     assert_eq!(
         offsets_property(&fixture.table("silver").await),
@@ -483,7 +486,7 @@ async fn two_query_names_on_one_sink_each_keep_their_own_mark_and_stamps() {
     let first = SinkWriter::new(&fixture.session, SINK, 1);
     let a = started(&fixture, named(first.spec(&options(ONE)), "a")).await;
     assert_eq!(a.await_termination(None).await, Ok(true));
-    let failing = Shaped::new(&fixture.session, Stray::ExplainInsert, 0, Own::RaiseAfter);
+    let failing = Shaped::new(&fixture.session, Stray::Nothing, 0, Own::RaiseAfter);
     let b = started(&fixture, named(failing.spec(), "b")).await;
     assert!(b.await_termination(None).await.is_err());
     assert_ne!(a.id(), b.id());
@@ -667,8 +670,13 @@ async fn an_unknown_outcome_of_the_body_s_commit_that_landed_reconciles_and_the_
     bronze(&fixture).await;
     let catalog = flaky(&fixture).await;
     let body = SinkWriter::new(&fixture.session, FLAKY_SINK, 1);
+    let handle = StreamingQueryManager::of(&fixture.session)
+        .register(&fixture.session, body.spec(&options(ONE)))
+        .await
+        .expect("register");
+    mark_the_start(&fixture, &handle).await;
     catalog.arm(ARMED_LANDED);
-    let handle = started(&fixture, body.spec(&options(ONE))).await;
+    handle.start_below_catalog_check().expect("start");
     assert_eq!(handle.await_termination(None).await, Ok(true));
     assert_eq!(body.calls(), 2);
     let sink = fixture.table("silver").await;
@@ -683,8 +691,13 @@ async fn an_unknown_outcome_of_the_body_s_commit_that_never_landed_ends_recovery
     bronze(&fixture).await;
     let catalog = flaky(&fixture).await;
     let body = SinkWriter::new(&fixture.session, FLAKY_SINK, 1);
+    let handle = StreamingQueryManager::of(&fixture.session)
+        .register(&fixture.session, body.spec(&options(ONE)))
+        .await
+        .expect("register");
+    mark_the_start(&fixture, &handle).await;
     catalog.arm(ARMED_LOST);
-    let handle = started(&fixture, body.spec(&options(ONE))).await;
+    handle.start_below_catalog_check().expect("start");
     let error = handle
         .await_termination(None)
         .await

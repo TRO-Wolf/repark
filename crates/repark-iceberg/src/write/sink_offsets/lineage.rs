@@ -1,14 +1,20 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use std::sync::Arc;
+
 use iceberg::spec::{MAIN_BRANCH, SnapshotRef, TableMetadata};
 use iceberg::table::Table;
+use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::{Catalog, ErrorKind};
 use serde_json::Value;
 
-use super::{main_lineage, stamped_by};
-use crate::microbatch::error::RecoveryReason;
+use super::append_fence::{AppendFence, refusal_of};
+use super::{main_lineage, masked, stamped_by};
+use crate::microbatch::error::{MicroBatchError, RecoveryReason};
 use crate::microbatch::offset::{
     OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SnapshotId, TableUuid,
 };
+use crate::microbatch::starting_mark::StartingMark;
 
 #[derive(Debug, Clone)]
 pub struct SinkMark {
@@ -158,4 +164,46 @@ pub fn unstamped_since_stamp(
         })
         .find(|snapshot| unstamped(snapshot))
         .map(commit_of)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn read_starting_mark(
+    table: &Table,
+    query: QueryId,
+) -> Result<Option<StartingMark>, MicroBatchError> {
+    table
+        .metadata()
+        .properties()
+        .get(&StartingMark::property_key(query))
+        .map_or(Ok(None), |value| StartingMark::from_property(value))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn commit_starting_mark(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    query: QueryId,
+) -> Result<Table, MicroBatchError> {
+    let mark = StartingMark {
+        head: table.metadata().current_snapshot_id().map(SnapshotId::new),
+    };
+    let tx = Transaction::new(table);
+    let tx = tx
+        .update_table_properties()
+        .set(StartingMark::property_key(query), mark.property_value())
+        .apply(tx)
+        .map_err(|error| masked(&error))?;
+    let fenced = AppendFence::for_starting_mark(catalog, query);
+    match tx.commit(fenced.as_ref()).await {
+        Ok(marked) => Ok(marked),
+        Err(error) if settled_elsewhere(&error) => catalog
+            .load_table(table.identifier())
+            .await
+            .map_err(|error| masked(&error)),
+        Err(error) => Err(masked(&error)),
+    }
+}
+
+fn settled_elsewhere(error: &iceberg::Error) -> bool {
+    error.kind() == ErrorKind::CommitStateUnknown || refusal_of(error).is_some()
 }

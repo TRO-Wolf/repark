@@ -466,7 +466,7 @@ async fn a_restart_after_the_fences_recovery_required_ending_refuses_by_name() {
         let body = Probe::new(Mode::Record);
         let first = registered(&fixture.session, recovering_spec(foreach.then_some(&body))).await;
         let racer = first_epoch_of(&fixture, first.id(), RunId::fresh()).await;
-        let refresh_inside_the_commit = if foreach { 3 } else { 2 };
+        let refresh_inside_the_commit = if foreach { 4 } else { 2 };
         catalog.on_load(Some(property_race(
             &inner,
             &racer,

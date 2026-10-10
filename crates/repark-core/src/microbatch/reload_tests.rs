@@ -41,14 +41,14 @@ async fn the_driver_loads_the_sink_fresh_for_every_batch() {
             .map(<[String]>::len)
             .collect();
         let driver_loads = if foreach { 2 } else { 1 };
+        let each_batch = driver_loads + FORK_REFRESH;
+        let expected = if foreach {
+            vec![1 + FORK_REFRESH, each_batch, each_batch, each_batch, 0]
+        } else {
+            vec![1 + each_batch, each_batch, each_batch, 0]
+        };
         assert_eq!(
-            loads_before_each_commit,
-            [
-                1 + driver_loads + FORK_REFRESH,
-                driver_loads + FORK_REFRESH,
-                driver_loads + FORK_REFRESH,
-                0
-            ],
+            loads_before_each_commit, expected,
             "foreachBatch: {foreach}: {events:?}"
         );
         assert!(events.iter().all(|event| event.ends_with(" silver")));

@@ -67,6 +67,21 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `Catalog` as a corrupt stamp, not `UnsupportedOffsetFormat`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-024
   pins: mb-2a/C-016
+- `starting_mark.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling D2):** the starting
+  mark of a `foreachBatch` query, as the first value of its offsets property:
+  `{"format-version":1,"pending-epoch":0,"starting-head":<snapshot id or null>}`. It is not a
+  third durable item (NS-2): it lives under the offsets key and the first stamped commit
+  replaces it. `StartingMark::from_property` answers none for a value that is not a mark (the
+  offsets record), refuses a pending epoch other than 0 and a missing head as corrupt, and
+  refuses another format version as `UnsupportedOffsetFormat`. A build older than this fold
+  reads a mark as a corrupt offsets record and refuses the query; it does not misread it.
+  pins: mb-4-foreach-eo/C-028
+- `error.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling D3):** the two unstamped
+  reasons name both remedies: roll the sink back to its newest stamped snapshot (to the head
+  the query first started on, if no batch is stamped yet), or start the query under a new
+  name. `UnstampedSinkCommit` without an operation (the `toTable` door's own check) keeps its
+  text byte for byte.
+  pins: mb-4-foreach-eo/C-030
 - `error.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09):** `RecoveryReason::UnstampedSinkCommit`
   gains `operation: Option<String>` (rendered ` (append)` after the snapshot id when known;
   the text without it is unchanged) and `UnstampedSinkChange { what }` joins it for a change

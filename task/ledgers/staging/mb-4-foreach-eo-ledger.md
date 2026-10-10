@@ -517,6 +517,72 @@ change no behaviour (two clippy findings and the lazy snapshot set in the mark).
 test gates, clippy, the panic ban, the seven MB-4 batteries and the export pin (209 passed) ran
 on the final build.
 
+## Fold 3 — the starting mark, the remedy text, the side-effect contract — 2026-10-10
+
+Owner rulings of 2026-10-10 (Frontier D2 to D5) on fold 2's four questions. Main was merged
+first (`ca5a062a..9b230aed`, the R-007 nested gate and the ENC-1 guard): one card conflicted
+(main's closed copy kept, its duplicate map row dropped), and both sides had added the same
+test helper to `microbatch/provider.rs`, which stopped the iceberg test crate compiling; one
+copy was removed inside the merge commit.
+
+### D2, the starting mark: can the offsets property carry it? Yes.
+
+The halt check the ruling asked for, made before any code.
+
+- **Readers of the offsets property.** One: `sink_offsets.rs::property_record`, called only by
+  `read_resume_point`. Every consumer goes through that function: the driver's resume on both
+  doors, the epoch check at each stamped arm, the append fence, the unknown-outcome walk and
+  `stop`'s re-read of the durable record. No Python code and no other crate parses the value.
+- **What a pending value would do unhandled.** `read_resume_point` would see a property with no
+  stamped snapshot and answer `RecoveryRequired(StampedSnapshotExpired)`: a misread. So the
+  reader is taught the mark: a value whose JSON carries `pending-epoch` is a mark, and
+  `property_record` answers "no record" for it. `read_resume_point` then answers "nothing
+  durable", which is the truth, on every door.
+- **The value.** `{"format-version":1,"pending-epoch":0,"starting-head":<snapshot id or null>}`
+  under the existing key `repark.cdc.offsets.<query-id>`. It is the offsets property's first
+  value and nothing else is added: the sink still holds the summary stamp and the offsets
+  property per query (NS-2). The first stamped commit sets the same key to the offsets record
+  in the transaction that lands its rows, so the mark and the record never coexist.
+- **A build older than this fold** that meets a mark reads it as a corrupt offsets record and
+  refuses the query by name; it does not resume from it. That matters only for a downgrade
+  between a query's first start and its first stamp.
+- **`toTable`.** Writes no mark. A `toTable` query with the same name on a sink that holds a
+  `foreachBatch` mark starts at epoch 0, and its stamped append replaces the mark.
+
+No halt: the mark fits inside the offsets property.
+
+### What was built
+
+- **`Run::mark_the_start`** (`foreachBatch` door, only while the query has no stamp): read
+  the mark and use its head as check (a)'s baseline; if there is none, take the head found now
+  and write the mark.
+- **Write-once.** The fork retries a property commit on a refreshed base and no table
+  requirement can assert a property, so a driver that loaded the sink before a racing driver's
+  first stamp would overwrite that stamp's offsets record with its mark. The first run of the
+  fix turned both race pins red on exactly that. The mark commit goes through the per-commit
+  fence with a rule of its own: refuse when the refreshed table already holds this query's
+  offsets property or stamp; the driver then reloads and reads what is there.
+- **A markless checkpoint** (a query that died at batch 0 before this fold: no stamp, no
+  mark) is treated as fold 2 treated it, from the head found at this start, and gets its mark
+  then. This is the brief's lean; it means rows a pre-fold run left behind are not findings.
+- **D3.** The two unstamped reasons carry both remedies; `UnstampedSinkCommit` without an
+  operation, which only the `toTable` door's own check raises, keeps its text byte for byte.
+  Card MB-SINK-MAINTENANCE-PATH-1 is filed (a must before MB-5 closes).
+- **D4.** The contract is in the `Notes:` of `DataStreamWriter.foreachBatch` and in the
+  streaming package's map. The ruling's sentence "it matches Spark's `foreachBatch`" holds for
+  the recipe (keying on the batch id is what Spark documents) and for the at-least-once half.
+  It does not hold for the other half: Spark replays the whole callable after a failure (cell
+  MB0-W6), so an effect after the sink write is at-least-once there and at-most-once here. The
+  documents say which half differs; the hand-back raises it.
+- **D5.** `task/wo/microbatch/mb4_lineage_timing.py` is the quiet-box measurement; it was not
+  run here.
+
+### What fold 3 overturns in fold 2
+
+"Where the invariant stops", first bullet (epoch 0), and the pin
+`at_epoch_zero_a_restart_replays_and_is_stopped_again`: a restart now refuses from the mark.
+C-015's four questions are ruled.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
@@ -547,4 +613,8 @@ on the final build.
 | C-025 | The `toTable` door is unchanged by fold 2. | Its pins, its kill scenarios, the race pins 5 times. | **PROVEN** | `table_door_tests.rs` and the `toTable` halves of `fence_tests.rs` and `race_tests.rs` unedited and green; `race_tests` 5 of 5; the three `toTable` kill scenarios and the first verdict's four `t_*` choreographies exact; the re-verify's `droprecreate table` and its `leak` probes (a `toTable` query on a sink with a foreign snapshot resumes) answer as before. Two shared pieces on its path changed with no effect on the door: the append arm's `SiteStamp` releases a failed claim (the door ends its query on a failed commit), and `UnstampedSinkCommit` gained an optional operation the door leaves empty, so its text is unchanged. pins: mb-4-foreach-eo/C-025 |
 | C-026 | The audit's cost on a 200-epoch `availableNow` run is measured before and after. | The timing table. | **PROVEN** | 200 epochs, `availableNow`, one file per batch, memory catalog, medians of three runs, `2877da20` then this fold, one after the other under one build-lock hold on a shared box. Body appends to the sink: 60.619 s to 61.266 s, +1.1 %. `toTable` (code unchanged): 55.842 s to 57.318 s, +2.6 %, which is the noise of the pair. Body writes nothing: 7.813 s to 8.659 s, **+10.8 %**, about 4 ms an epoch: over the 5 % line, reported as a finding. The mark's snapshot set was then made lazy and the final build measured alone twenty minutes later: 63.354 s (one run 71.2), 57.228 s and 6.541 s. The no-write reading did not reproduce (16 % under the "before" figure), and the writing body read 4.5 % over it while the unchanged `toTable` read 2.5 % over. The box does not resolve a difference under about 5 %; no reading puts the audit above 5 % twice. A quiet-box measurement is owed. pins: mb-4-foreach-eo/C-026 |
 | C-027 | None of the seven lines the re-verify listed under "the contract as documented could mislead" is true any more. | The registry rows, the MBE-13 and MBE-19 texts. | **PROVEN** | Registry rows `MB-4-FOREACH-EO-1`, `MB-4-FOREACH-SIDE-EFFECTS-1` and `MB-4-FOREACH-SINK-SHAPES-1` rewritten; MBE-19's text names the `DELETE` that refuses; MBE-13 is not shown for a write that did not land. The seven lines, in the re-verify's order: the data-dependent `DELETE` is stated; MBE-13 after a failed write is gone; the at-most-once half and its recipe are in the row a user reads; a helper thread's write beside the body's own now ends the query, and a restart refuses above a stamp; the token order has a pin (mutant E); drop-and-recreate ends `RecoveryRequired` in every batch; the checkpoint paragraph says it holds no state and that clearing it resets nothing. pins: mb-4-foreach-eo/C-027 |
+| C-028 | At a `foreachBatch` query's first start the offsets property's first value is the starting mark (the sink's head, epoch 0 pending); it is written once, read as no durable record by every reader, and replaced by the first stamped commit. No third durable item exists. | Unit pins, driver pins, public-door pins. | **OPEN** | Closes with the fold-3 proof. |
+| C-029 | A stray write between the mark and the first stamp refuses the first restart, naming the snapshot, with no body run; a kill before batch 0 commits restarts with no duplicate; two query names on one sink keep their own marks; a markless checkpoint starts from the head found; `toTable` writes no mark. | Driver pins, public-door pins, the scenario matrix. | **OPEN** | As C-028. |
+| C-030 | The `RecoveryRequired` text of both unstamped reasons names the stray and both remedies, and card MB-SINK-MAINTENANCE-PATH-1 is filed. | Text pins; the card and its map row. | **OPEN** | As C-028. |
+| C-031 | The side-effect contract is documented where the facade's `foreachBatch` contract lives, in markdown and in the docstring. | The docstring and the streaming map. | **OPEN** | As C-028. |
 | C-015 | The open questions of the hand-back are ruled: the epoch-0 baseline (a durable mark of the starting head, or the limit as built), the single-writer consequence for maintenance, the reading that another query's stamped snapshot is not a violation, and the side-effect contract (owner Q1). | A ruling on the hand-back's questions. | **OPEN** | Closes on the ruling. The coverage attestation is the Critic's and is filed when this clause closes. |

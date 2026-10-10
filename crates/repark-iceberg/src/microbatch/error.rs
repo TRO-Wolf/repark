@@ -173,15 +173,26 @@ pub enum RecoveryReason {
     )]
     StampNotInLineage { snapshot: SnapshotId },
     #[error(
-        "sink advanced to snapshot {snapshot}{} without a stamp; a commit bypassed the batch scope",
-        operation_suffix(.operation.as_deref())
+        "sink advanced to snapshot {snapshot}{} without a stamp; a commit bypassed the batch scope{}",
+        operation_suffix(.operation.as_deref()),
+        stray_remedies(.operation.as_deref())
     )]
     UnstampedSinkCommit {
         snapshot: SnapshotId,
         operation: Option<String>,
     },
-    #[error("the sink changed without a stamp during the batch: {what}")]
+    #[error(
+        "the sink changed without a stamp during the batch: {what}. The query will not run past the change. {REMEDIES}"
+    )]
     UnstampedSinkChange { what: String },
+}
+
+const REMEDIES: &str = "Either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name";
+
+fn stray_remedies(operation: Option<&str>) -> String {
+    operation.map_or_else(String::new, |_| {
+        format!(". Its rows are in the sink and the query will not run past them. {REMEDIES}")
+    })
 }
 
 fn operation_suffix(operation: Option<&str>) -> String {

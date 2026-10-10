@@ -269,6 +269,31 @@ pins: mb-3/C-031
   The helpers that build the ending repeat `fence_tests.rs`'s private ones, because that file
   is outside this slice's footprint.
   pins: mb-4/C-114, C-029
+- `run.rs`, `testing.rs`, `exactly_once_tests.rs`, `fence_tests.rs`, `race_tests.rs`,
+  `reload_tests.rs`, `timeout_tests.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling
+  D2): the starting mark.**
+  - **`Run::mark_the_start`**, at the start of the trigger loop, on the `foreachBatch` door
+    and only while the query has no stamp. If the sink holds the query's mark, check (a)'s
+    baseline is the head the mark recorded. If it holds none, this is the query's first start
+    (or a query that died before this fold): the baseline is the head found now and the mark
+    is written, one property-only commit bounded by the catalog timeout. Fold 2's epoch-0
+    limit is closed: a stray write between the mark and the first stamp refuses the first
+    restart, naming the snapshot, and no body runs.
+  - **A markless checkpoint** (no stamp, no mark) is treated as fold 2 treated it, from the
+    head found, and gets its mark at that start. Rows a pre-fold run left in the sink are
+    therefore not findings.
+  - **The `toTable` door writes no mark** and reads a `foreachBatch` query's pending mark as
+    nothing durable.
+  - **Pins.** `exactly_once_tests.rs`: the restart at epoch 0 refuses from the mark, twice,
+    with no body run; the mark's exact value on an empty and on a seeded sink, a restart that
+    finds it writing nothing, and the first stamp replacing it; a markless start; two query
+    names on one sink, each with its own mark and stamps; the `toTable` door. The mark is one
+    more commit and one more sink load at a `foreachBatch` query's first start, so the tests
+    that count loads moved: the racer's injection index in `fence_tests.rs` and
+    `race_tests.rs` (3 to 4), the stalls in `timeout_tests.rs` (2 to 3), and the first group in
+    `reload_tests.rs`. Tests that arm a commit fault before start write the mark first
+    (`testing.rs::mark_the_start`), so the fault still meets the body's commit.
+  pins: mb-4-foreach-eo/C-028, C-029
 - `run.rs`, `body_statements.rs`, `exactly_once_tests.rs`, `fence_tests.rs`,
   `lifecycle_tests.rs`, `timeout_tests.rs`, `race_tests.rs` — **MB-4-FOREACH-EO fold 2
   (2026-10-09, orchestrator ruling after the re-verify: an invariant on the sink's lineage,

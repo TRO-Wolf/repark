@@ -4094,7 +4094,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   main branch above the query's newest stamped batch must be the running batch's one stamped
   snapshot. The driver checks it twice. (a) Before any body runs, at every start and before
   every batch: the head must be the newest stamped snapshot (for a query with no stamp yet,
-  the head it found at start). (b) After every body, whether it returned or raised and before
+  the head its starting mark recorded). (b) After every body, whether it returned or raised and before
   the batch is recorded durable: nothing may have changed on the sink except the batch's one
   stamped commit. A new unstamped snapshot, a removed snapshot, `main` moved to an older
   snapshot, a branch or tag change, a table-property change, a schema, partition-spec or
@@ -4105,16 +4105,25 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   did not route to a stamped write.
   **This is detection after the write landed.** The rows are in the sink. The query stops
   loudly, never continues past them and never replays over them: a restart finds the unstamped
-  snapshot above the newest stamp and refuses again before any body runs. To recover, roll the
-  sink back to its newest stamped snapshot (`CALL <catalog>.system.rollback_to_snapshot`) and
-  start again, or start a new query (a new `queryName`) with
-  `repark.cdc.start-after-snapshot-id`.
+  snapshot above the newest stamp and refuses again before any body runs. The error names the
+  stray snapshot and both remedies: roll the sink back to its newest stamped snapshot (to the
+  head the query first started on, when no batch is stamped yet; `CALL
+  <catalog>.system.rollback_to_snapshot`) and start again, or start the query under a new name
+  (a new `queryName`, with `repark.cdc.start-after-snapshot-id` to skip what the old one
+  delivered).
   **Three consequences.** The sink takes no other writer while the query lives, between runs
   included: a batch `INSERT`, a compaction or any other maintenance run on it ends the next
-  start `RecoveryRequiredException`. A snapshot stamped by a different streaming query is not a
-  finding. And a query that has not yet committed its first batch has no stamp to compare with:
-  a restart after a refused batch 0 replays that batch, and is stopped again if the stray write
-  happens again.
+  start `RecoveryRequiredException` (the exclusive sink is kept for this slice by owner ruling
+  D3 of 2026-10-10; a sanctioned maintenance path is card MB-SINK-MAINTENANCE-PATH-1, a must
+  before MB-5 closes). A snapshot stamped by a different streaming query is not a
+  finding. And the rule holds from the first batch: at a query's first start the driver writes
+  a starting mark, the first value of the offsets property, which records the sink's head and
+  that batch 0 is pending (`{"format-version":1,"pending-epoch":0,"starting-head":<id>}`). A
+  stray write between the mark and the first stamp refuses the first restart; it does not land
+  once per restart. The first stamped batch replaces the mark with the offsets record, so the
+  sink still holds two durable items for a query and no third. A query that died before this
+  rule existed has no mark and no stamp: its next start takes the head it finds, as before,
+  and writes the mark then.
   `checkpointLocation` is required and recorded and holds no state (MBE-5): nothing is written
   there. The state is the sink plus the query name. Clearing or swapping the checkpoint
   directory resets nothing; a new `queryName` starts a new query.
@@ -4131,8 +4140,12 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_main_thread_statement_while_a_body_runs_ends_recovery_required`,
   `::test_foreign_insert_between_runs_refuses_the_restart`,
   `::test_sink_dropped_and_recreated_after_the_stamped_write_ends_recovery_required`;
+  `::test_stray_at_the_first_batch_refuses_the_first_restart_from_the_mark`,
+  `::test_first_start_writes_the_mark_into_the_offsets_property`;
+  `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_stray_then_kill_at_the_first_batch_refuses_the_first_restart`,
+  `::test_kill_before_the_first_commit_restarts_from_the_mark_without_a_duplicate`;
   `crates/repark-core/src/microbatch/exactly_once_tests.rs::a_failed_body_is_audited_and_the_restart_refuses_before_any_body`,
-  `::at_epoch_zero_a_restart_replays_and_is_stopped_again`
+  `::at_epoch_zero_the_restart_reads_the_mark_and_refuses_before_any_body`
 - **Rationale** — DECLARED 2026-10-09 (owner ruling "FIX IT" on the MB-4 verify's S1;
   orchestrator ruling of the same day after the re-verify: an invariant on the sink's lineage,
   checked by the driver, not a list of routes; MB-4-FOREACH-EO ledger, fold 2). It replaces the
@@ -4154,8 +4167,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::a_failed_body_fails_the_query_and_the_restart_replays_its_epoch`
 - **Rationale** — DECLARED 2026-10-09 (MB-4-FOREACH-EO ledger R-1, R-5, "Side effects"). It
   follows from skipping a committed batch. Flink's two-phase-commit sink has the same shape.
-  Whether this is the contract the owner wants is the ledger's open question Q1; the row
-  describes what is built.
+  Adopted by the owner (ruling D4, 2026-10-10); the facade states it in the `Notes:` of
+  `DataStreamWriter.foreachBatch` and in the streaming package's map.
 ### MB-4-FOREACH-SINK-SHAPES-1 — inside a `foreachBatch` body the declared sink takes one stamped commit; other commits refuse where the engine can see them
 - **repark** — the sink takes one commit per batch from the body, and that commit must add or
   rewrite rows through a stamped write: an append (`writeTo(sink).append()`, `INSERT INTO`,
