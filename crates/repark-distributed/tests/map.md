@@ -40,7 +40,11 @@ CLUSTER-CODEC-TEST-1. pins: cluster-tests-2/C-001, C-002, C-003
   pins: ballista-m1-a/C-001, C-002, C-003
 - `cluster_two_executors.rs` (`feature = "cluster"`) — one scheduler plus two in-process
   executors: `SELECT sum(x) FROM t` equals the local executor; both executors ran at least
-  one task; `status` walks Queued → Running → Completed. Table `t` is an in-memory table
+  one task; the polled `status` walk is monotone Queued → Running → Completed, with
+  Running seen unless the first poll already reads Completed, and Completed reached
+  after drain. Queued is allowed, never required: a fast scheduler is already Running
+  at the first 10 ms poll, and a poll cannot pin a transient it may have missed
+  (CLUSTER-STATUS-FLAKE-1, 2026-10-10). Table `t` is an in-memory table
   registered through `ReparkSessionProvider`. Step 2 adds: `repark_times_ten` registered on
   the RePark session resolves on the executors and equals the local answer; a cluster whose
   provider is a vanilla `SessionContext` fails to resolve the same UDF (stream error names
