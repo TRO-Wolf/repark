@@ -3271,6 +3271,32 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   it gives the 47 moved cells of the first fix and no other, the first line of the restated
   count (the ledger's §9.4).
   pins: ice-tsns-merge-wall-1/C-021, C-023
+- [_ice_tsns_narrow_refuse_1_doors.py](_ice_tsns_narrow_refuse_1_doors.py) —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10):** the write-door matrix of parity row R-017: five
+  session zones, four target column types (`timestamp_ns`, `timestamptz_ns` and the two
+  microsecond controls), two nanosecond source types, 27 spellings of the value and 55 doors.
+  The spellings are the five of the row (`FAMILY`), eight more of the same family
+  (`FAMILY_MORE`), nine narrowings the statement writes (`WRITTEN`) and five that keep the
+  type (`KEPT`). The doors are fifteen SQL statements, six of them again in merge-on-read,
+  eleven DataFrame writers and 23 statements that carry or defer a write (a branch, a staged
+  snapshot, `EXPLAIN ANALYZE`, `PREPARE` with `EXECUTE`, `CREATE TABLE AS`, a view, a
+  subquery, a join, an aggregate, a window, a cached frame). Four moments carry non-zero digits
+  below the microsecond: one plain, one before the epoch, one inside New York's gap and one
+  inside Lord Howe's. `stored` reads every Parquet file under the table directory, so a branch,
+  a staged snapshot and a replaced file are seen; a seed row never holds a value, so any
+  value on disk is the door's. `CORE_DOORS` are the thirteen doors of the 650-cell count the
+  row records.
+- [_record_ice_tsns_narrow_refuse_1.py](_record_ice_tsns_narrow_refuse_1.py) +
+  [ice_tsns_narrow_refuse_1_base.json](ice_tsns_narrow_refuse_1_base.json) —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10):** the recorder and what the base `8d1c4f49` (the
+  head of ICE-TSTZNS-WALL-1) stores in each of the 59,400 cells, measured before any product
+  change. The fixture lists each distinct result once (`outcomes`) and maps
+  `zone|target|source|spelling` to one outcome index per door. Twenty shards (a zone and a
+  target each) run in parallel, about nineteen minutes on fourteen workers. `--output <path>`
+  measures another build without touching the fixture and `--compare <path>` counts how its
+  cells moved, by class: `full` is what the plain column stores through the same door, `cut`
+  is that value floored to microseconds, `cut+wall` is a value with no digit below the
+  microsecond at another wall, `refused` is the named refusal, `error` any other error.
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
