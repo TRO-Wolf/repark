@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
-use datafusion::arrow::array::AsArray;
+use datafusion::arrow::array::{
+    ArrayRef, AsArray, DictionaryArray, Int32Array, TimestampNanosecondArray,
+};
 use datafusion::arrow::compute::cast;
-use datafusion::arrow::datatypes::{DataType, Int64Type, TimeUnit};
+use datafusion::arrow::datatypes::{DataType, Field, Int64Type, Schema, TimeUnit};
+use datafusion::arrow::record_batch::RecordBatch;
 use repark_core::ReparkSession;
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
@@ -398,4 +401,87 @@ async fn a_nested_zoned_leaf_keeps_the_one_reading_main_has_on_every_door() {
         ];
         assert_eq!(leaves, read_as_utc, "{door}");
     }
+}
+
+const WALL_TICKS: [i64; 4] = [
+    1_767_323_045_123_456_789,
+    -1,
+    1_772_937_000_000_000_001,
+    1_793_496_600_000_000_001,
+];
+
+const ENCODED_DOORS: [(&str, bool, &str); 4] = [
+    (
+        "insert overwrite",
+        false,
+        "INSERT OVERWRITE ice.ns.t SELECT id, v FROM runs",
+    ),
+    (
+        "insert by name",
+        false,
+        "INSERT INTO ice.ns.t BY NAME SELECT v, id FROM runs",
+    ),
+    (
+        "insert overwrite by name",
+        false,
+        "INSERT OVERWRITE ice.ns.t BY NAME SELECT v, id FROM runs",
+    ),
+    (
+        "replace where",
+        true,
+        "INSERT INTO ice.ns.t REPLACE WHERE id >= 0 SELECT id, v FROM runs",
+    ),
+];
+
+fn dictionary_walls() -> RecordBatch {
+    let values = TimestampNanosecondArray::from(WALL_TICKS.to_vec());
+    let keys = Int32Array::from(vec![0, 1, 2, 3]);
+    let encoded: ArrayRef = Arc::new(DictionaryArray::new(keys, Arc::new(values)));
+    let ids: ArrayRef = Arc::new(Int32Array::from(vec![0, 1, 2, 3]));
+    let schema = Schema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new("v", encoded.data_type().clone(), false),
+    ]);
+    RecordBatch::try_new(Arc::new(schema), vec![ids, encoded]).expect("batch")
+}
+
+#[tokio::test]
+async fn a_dictionary_encoded_wall_stores_inserts_instant_on_the_overwrite_doors() {
+    let session = session("America/New_York", true);
+    let _warehouse = catalog(&session).await;
+    session
+        .create_or_replace_temp_view("runs", vec![dictionary_walls()])
+        .expect("view");
+    run(
+        &session,
+        "CREATE TABLE ice.ns.t (id INT, v timestamptz_ns) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    run(&session, "INSERT INTO ice.ns.t SELECT id, v FROM runs").await;
+    let reference = stored(&session).await;
+    assert_eq!(reference, NEW_YORK_INSTANTS.map(Some).to_vec(), "INSERT");
+    let mut wrong = Vec::new();
+    for (door, seeded, write) in ENCODED_DOORS {
+        run(&session, "DROP TABLE ice.ns.t").await;
+        run(
+            &session,
+            "CREATE TABLE ice.ns.t (id INT, v timestamptz_ns) USING iceberg \
+             TBLPROPERTIES ('format-version'='3')",
+        )
+        .await;
+        if seeded {
+            run(&session, "INSERT INTO ice.ns.t SELECT id, v FROM runs").await;
+        }
+        match attempt(&session, write).await {
+            Ok(()) => {
+                let found = stored(&session).await;
+                if found != reference {
+                    wrong.push(format!("{door}: {found:?} for {reference:?}"));
+                }
+            }
+            Err(error) => wrong.push(format!("{door}: {error}")),
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
 }

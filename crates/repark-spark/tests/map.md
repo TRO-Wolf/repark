@@ -74,6 +74,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   and a `TIMESTAMP` past 2262 through the same doors, ANSI on (`[CAST_OVERFLOW]` naming
   `"TIMESTAMPTZ_NS"`) and off (NULL in a nullable column, the non-nullable refusal in a
   required one). On main both tests fail, the second by a panic in Arrow's cast.
+  `a_dictionary_encoded_wall_stores_inserts_instant_on_the_overwrite_doors` (R-008 fold 1,
+  2026-10-10): the same four walls Dictionary-encoded in a temp view go through `OVERWRITE`,
+  `BY NAME`, `OVERWRITE … BY NAME` and `REPLACE WHERE` in America/New_York; each must store
+  what `INSERT … SELECT` of the encoded source stores, and INSERT itself is held to the fixed
+  New York instants. Kills the mutant that stops seeing through `Dictionary` for the zoned
+  target at the store.
   pins: ice-tstzns-wall-1/C-003, C-004, C-005, C-010
 - [timestamp_ns_wall_doors.rs](timestamp_ns_wall_doors.rs) — **ICE-TSNS-MERGE-WALL-1
   (2026-10-09):** the readiness review's first probe test, ported unchanged in substance. In
