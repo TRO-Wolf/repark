@@ -114,7 +114,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `a_microsecond_target_takes_a_narrowed_value_as_before`,
   `a_query_that_stores_nothing_answers_as_before`, and
   `the_store_reads_the_mark_the_analyzer_places` (the three shared function names).
-  pins: ice-tsns-narrow-refuse-1/C-004, C-005, C-006, C-007, C-008, C-019, C-020, C-021
+  pins: ice-tsns-narrow-refuse-1/C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012, C-013, C-014, C-017, C-019, C-020, C-021, C-023, C-025
 - [timestamptz_ns_wall_doors.rs](timestamptz_ns_wall_doors.rs) — **ICE-TSTZNS-WALL-1
   (2026-10-10):** the zoned mirror of the file below.
   `every_door_stores_the_instant_insert_stores_in_a_zoned_column`: four walls (one before the

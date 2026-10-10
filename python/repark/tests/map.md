@@ -3293,7 +3293,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `TIMESTAMP_NTZ` targets (16 rows). `test_the_base_fixture_holds_the_counts_the_parity_row_records`:
   the 650-cell core of the fixture. The frame cached with `cache()` is held to the base: it
   is data by then, and stores the cut value (card ICE-TSNS-CACHE-1).
-  pins: ice-tsns-narrow-refuse-1/C-001, C-004, C-005, C-006, C-009, C-019, C-020, C-021
+  pins: ice-tsns-narrow-refuse-1/C-001, C-004, C-005, C-006, C-009, C-014, C-017, C-019, C-020, C-021, C-022
 - [_ice_tsns_narrow_refuse_1_doors.py](_ice_tsns_narrow_refuse_1_doors.py) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10):** the write-door matrix of parity row R-017: five
   session zones, four target column types (`timestamp_ns`, `timestamptz_ns` and the two
@@ -3333,13 +3333,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `cut+wall` is a nanosecond value with no digit below the microsecond at another wall,
   `refused` is the named refusal, `error` any other error, `other` anything else (a
   microsecond column `CREATE TABLE AS` made, a partial store).
-  pins: ice-tsns-narrow-refuse-1/C-001, C-005, C-006
+  pins: ice-tsns-narrow-refuse-1/C-001, C-005, C-006, C-022
 - [_time_ice_tsns_narrow_refuse_1.py](_time_ice_tsns_narrow_refuse_1.py) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10):** the cost probe: the median wall time of an
   INSERT, a MERGE in both row-level modes and an `EXPLAIN` of a fifty-branch union over a
   table with no nanosecond column, whose expressions hold untyped NULLs beside microsecond
   timestamps. Run against the base and the head in turn (the ledger's cost section).
-  pins: ice-tsns-narrow-refuse-1/C-011
+  pins: ice-tsns-narrow-refuse-1/C-011, C-024
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
