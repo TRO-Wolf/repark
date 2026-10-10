@@ -1,6 +1,12 @@
+use std::ops::ControlFlow;
+
 use datafusion::error::Result;
 use datafusion::prelude::SessionContext;
-use datafusion::sql::sqlparser::ast::{Insert, SetExpr, Statement, TableFactor, TableObject};
+use datafusion::sql::sqlparser::ast::{
+    Insert, Statement, TableFactor, TableObject, visit_statements,
+};
+use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::nested_ns_gate::{InsertSupply, NestedWrite, refuse_nested_ns_supply};
@@ -10,7 +16,7 @@ use crate::catalog_ops::{iceberg_err, name_parts};
 use crate::insert_overwrite::object_name_last;
 use crate::normalize::{object_name_from_table_with_joins, parse_single_normalized};
 use crate::write_to_branch::{
-    RefSelectorKind, qualify_table_parts, split_write_ref_parts, write_target_parts,
+    RefSelectorKind, qualify_table_parts, split_write_ref_parts, written_targets,
 };
 
 pub(super) async fn refuse_nested_supply(
@@ -39,46 +45,96 @@ pub(super) async fn refuse_nested_supply(
     let by_name = stripped.is_some();
     let parsed = parse_single_normalized(stripped.as_deref().unwrap_or(sql));
     let Ok(Some((statement, _, _))) = parsed else {
-        return match write_target_parts(sql) {
-            Some((head, parts)) if matches!(head.as_str(), "INSERT" | "UPDATE" | "MERGE") => {
-                refuse(ctx, catalogs, &parts, &NestedWrite::Unreadable).await
+        if let Some((analyze, explained)) = explained_statement(sql) {
+            if !analyze {
+                return Ok(());
             }
-            _ => Ok(()),
-        };
-    };
-    match &statement {
-        Statement::Insert(insert) => {
-            refuse_insert(ctx, catalogs, insert, by_name, source_by_name).await
+            let inner = Box::pin(refuse_nested_supply(
+                ctx,
+                catalogs,
+                &explained,
+                write_options,
+            ));
+            return inner.await;
         }
-        Statement::Query(query) => match query.body.as_ref() {
-            SetExpr::Insert(Statement::Insert(insert)) => {
-                refuse_insert(ctx, catalogs, insert, by_name, source_by_name).await
+        for parts in written_targets(sql) {
+            refuse(ctx, catalogs, &parts, &NestedWrite::Unreadable).await?;
+        }
+        return Ok(());
+    };
+    for (index, write) in executed_writes(&statement).iter().enumerate() {
+        let by_name = by_name && index == 0;
+        match write {
+            Statement::Insert(insert) => {
+                refuse_insert(ctx, catalogs, insert, by_name, source_by_name).await?;
             }
-            SetExpr::Insert(_) | SetExpr::Update(_) | SetExpr::Merge(_) => {
-                match write_target_parts(&query.body.to_string()) {
-                    Some((_, parts)) => {
-                        refuse(ctx, catalogs, &parts, &NestedWrite::Unreadable).await
-                    }
-                    None => Ok(()),
+            Statement::Update(update) => {
+                if let Some(name) = object_name_from_table_with_joins(&update.table) {
+                    let write = NestedWrite::Update(&update.assignments);
+                    refuse(ctx, catalogs, &name_parts(name), &write).await?;
                 }
             }
-            _ => Ok(()),
-        },
-        Statement::Update(update) => match object_name_from_table_with_joins(&update.table) {
-            Some(name) => {
-                let write = NestedWrite::Update(&update.assignments);
-                refuse(ctx, catalogs, &name_parts(name), &write).await
+            Statement::Merge(merge) => {
+                if let TableFactor::Table { name, .. } = &merge.table {
+                    let write = NestedWrite::Merge(&merge.clauses);
+                    refuse(ctx, catalogs, &name_parts(name), &write).await?;
+                }
             }
-            None => Ok(()),
-        },
-        Statement::Merge(merge) => match &merge.table {
-            TableFactor::Table { name, .. } => {
-                let write = NestedWrite::Merge(&merge.clauses);
-                refuse(ctx, catalogs, &name_parts(name), &write).await
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn explained_statement(sql: &str) -> Option<(bool, String)> {
+    let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
+    let mut words = tokens
+        .iter()
+        .enumerate()
+        .filter(|(_, token)| !matches!(token, Token::Whitespace(_)));
+    match words.next()? {
+        (_, Token::Word(head)) if head.value.eq_ignore_ascii_case("EXPLAIN") => {}
+        _ => return None,
+    }
+    let mut analyze = false;
+    for (index, token) in words {
+        match token {
+            Token::Word(word) if word.value.eq_ignore_ascii_case("ANALYZE") => analyze = true,
+            Token::Word(word) if word.value.eq_ignore_ascii_case("VERBOSE") => {}
+            _ => {
+                let rest: String = tokens[index..].iter().map(ToString::to_string).collect();
+                return Some((analyze, rest));
             }
-            _ => Ok(()),
-        },
-        _ => Ok(()),
+        }
+    }
+    None
+}
+
+fn executed_writes(statement: &Statement) -> Vec<Statement> {
+    match statement {
+        Statement::Explain {
+            analyze, statement, ..
+        } => {
+            if *analyze {
+                executed_writes(statement)
+            } else {
+                Vec::new()
+            }
+        }
+        Statement::Prepare { statement, .. } => executed_writes(statement),
+        carrier => {
+            let mut writes = Vec::new();
+            let _ = visit_statements(carrier, |nested| {
+                if matches!(
+                    nested,
+                    Statement::Insert(_) | Statement::Update(_) | Statement::Merge(_)
+                ) {
+                    writes.push(nested.clone());
+                }
+                ControlFlow::<()>::Continue(())
+            });
+            writes
+        }
     }
 }
 

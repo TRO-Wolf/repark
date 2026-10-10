@@ -410,11 +410,20 @@ async fn a_statement_that_wraps_a_write_is_decided_as_the_write_it_runs() {
     let planned = [
         format!("EXPLAIN INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0"),
         format!("EXPLAIN VERBOSE INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0"),
-        format!("EXPLAIN ANALYZE EXPLAIN INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0"),
+        format!("EXPLAIN UPDATE ice.sales.t SET st = {VALUE} WHERE id = 1"),
+        format!("EXPLAIN EXPLAIN ANALYZE INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0"),
     ];
     for explain in &planned {
         assert_eq!(attempt(&ctx, &catalogs, explain).await, Ok(()), "{explain}");
     }
+    let nested = format!("EXPLAIN ANALYZE EXPLAIN INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0");
+    let outcome = attempt(&ctx, &catalogs, &nested)
+        .await
+        .expect_err("main's refusal");
+    assert!(
+        outcome.contains("Nested EXPLAINs are not supported"),
+        "{outcome}"
+    );
     assert_eq!(count_parquet_files(wh.path()), files);
     assert_eq!(snapshots(&catalogs, "t").await, 1);
 }

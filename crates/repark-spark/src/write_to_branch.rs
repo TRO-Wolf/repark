@@ -153,19 +153,30 @@ struct TargetSpan {
     end: usize,
 }
 
-pub(crate) fn write_target_parts(sql: &str) -> Option<(String, Vec<String>)> {
-    let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
+pub(crate) fn written_targets(sql: &str) -> Vec<Vec<String>> {
+    let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
+        return Vec::new();
+    };
     let significant: Vec<(usize, &Token)> = tokens
         .iter()
         .enumerate()
         .filter(|(_, token)| !matches!(token, Token::Whitespace(_) | Token::EOF | Token::SemiColon))
         .collect();
-    let Token::Word(head) = significant.first()?.1 else {
-        return None;
-    };
-    let start = write_target_start(&significant)?;
-    let (parts, _) = collect_parts(&significant, start)?;
-    Some((head.value.to_ascii_uppercase(), parts))
+    (0..significant.len())
+        .filter(|index| {
+            matches!(
+                significant[*index].1,
+                Token::Word(word) if ["INSERT", "UPDATE", "MERGE"]
+                    .iter()
+                    .any(|head| word.value.eq_ignore_ascii_case(head))
+            )
+        })
+        .filter_map(|index| {
+            let rest = &significant[index..];
+            let start = write_target_start(rest)?;
+            collect_parts(rest, start).map(|(parts, _)| parts)
+        })
+        .collect()
 }
 
 pub(crate) fn find_write_target_range(tokens: &[Token]) -> Option<(usize, usize)> {
