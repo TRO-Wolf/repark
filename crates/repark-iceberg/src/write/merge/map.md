@@ -45,6 +45,15 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **WO RP50-A (2026-09-26):** the three `maybe_to_branch` calls drop the table argument and
   the `?` with the removed v1 kernel, so a MERGE into a branch of a format v1 table commits.
   pins: ice-nested-evo-1/C-053, C-057, C-060
+- `snapshot_commit.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10, the fifth verify's S1):** the
+  copy-on-write and merge-on-read arms commit through `SiteStamp::commit`. Until this fold
+  they took the stamp and called `tx.commit` on the bare catalog: the claim saw the head as
+  it was when the write began, and the transaction's own retry then re-based the commit over
+  a concurrent foreign commit that did not touch the statement's filter, with no stamp fence
+  on any attempt. An `UPDATE` or `DELETE` body could so end with a stray under its stamp
+  (5 of 20 and 3 of 20 runs in the verify). On a failure that did not land the arms still
+  delete the files they staged.
+  pins: mb-4-foreach-eo/C-045
 - `snapshot_commit.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10):** the two stamped arms
   (copy-on-write and merge-on-read) build their summary through `SiteStamp::summary`, which
   takes the caller's extras through `summary_with_extras` (a `repark.cdc.*` key is refused by

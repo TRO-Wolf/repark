@@ -12,7 +12,6 @@ use super::KnownPartitions;
 use super::abort;
 use super::dv_close;
 use super::iceberg_err;
-use crate::write::commit_error::commit_err;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::sink_offsets::SiteStamp;
 
@@ -223,14 +222,13 @@ pub(crate) async fn commit_overwrite_on_ref(
             });
         action.apply(tx).map_err(iceberg_err)?
     };
-    let tx = stamp.transaction(tx)?;
-    stamp.attempt();
-    match tx.commit(catalog.as_ref()).await {
-        Ok(committed) => stamp.record(&committed),
-        Err(error) => {
-            stamp.failed(&error);
-            abort::delete_written_files_best_effort(table, &new_file_paths, &error).await;
-            Err(commit_err(error, &operation_id))
+    match stamp.commit(tx, catalog).await {
+        Ok(_) => Ok(()),
+        Err(failure) => {
+            if let Some(error) = failure.not_landed() {
+                abort::delete_written_files_best_effort(table, &new_file_paths, error).await;
+            }
+            Err(failure.into_error(&operation_id))
         }
     }
 }
@@ -445,10 +443,9 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let action = crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
         action.to_branch(name)
     });
-    let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
-    stamp.attempt();
-    match tx
-        .commit(catalog.as_ref())
+    let tx = action.apply(tx).map_err(iceberg_err)?;
+    match stamp
+        .commit(tx, catalog)
         .instrument(tracing::info_span!(
             "merge.commit",
             data_files = data_file_count,
@@ -456,13 +453,14 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         ))
         .await
     {
-        Ok(committed) => stamp.record(&committed),
-        Err(error) => {
-            stamp.failed(&error);
-            let mut abort_paths = data_file_paths;
-            abort_paths.extend(delete_file_paths);
-            abort::delete_written_files_best_effort(table, &abort_paths, &error).await;
-            Err(commit_err(error, &operation_id))
+        Ok(_) => Ok(()),
+        Err(failure) => {
+            if let Some(error) = failure.not_landed() {
+                let mut abort_paths = data_file_paths;
+                abort_paths.extend(delete_file_paths);
+                abort::delete_written_files_best_effort(table, &abort_paths, error).await;
+            }
+            Err(failure.into_error(&operation_id))
         }
     }
 }

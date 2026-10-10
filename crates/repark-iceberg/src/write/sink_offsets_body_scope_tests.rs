@@ -363,3 +363,41 @@ async fn an_unknown_outcome_seen_by_the_guard_is_latched_on_the_scope() {
     assert!(guard.outcome_unknown());
     assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
 }
+
+#[tokio::test]
+async fn the_guard_checks_a_claimed_sink_commit_for_a_stray_whatever_built_it() {
+    for strayed in [true, false] {
+        let name = format!("body_backstop_{strayed}");
+        let (_warehouse, catalog, ident) = fixture(&name).await;
+        let began = append_plain(&catalog, &ident, &[1]).await;
+        let guard = BatchScope::enter_on(&began, body_stamp(3)).expect("enter");
+        let current = if strayed {
+            append_plain(&catalog, &ident, &[2]).await
+        } else {
+            began.clone()
+        };
+        let outcome = guard
+            .scope_body(async {
+                let guarded = guard_body_catalog(&catalog);
+                let claimed = BatchScope::claim(&current, guard.token()).expect("claim");
+                assert!(claimed.is_some());
+                set_property(&guarded, &current).await
+            })
+            .await;
+        if strayed {
+            let refused = refusal_in(&outcome.expect_err("a claimed commit over a stray"));
+            let stray = current.metadata().current_snapshot_id().expect("head");
+            assert_eq!(
+                refused.to_string(),
+                format!(
+                    "epoch 3: snapshot {stray} (append) landed on the sink without a stamp after this batch began, so the batch's stamped commit is refused before it lands over it"
+                )
+            );
+        } else {
+            assert!(
+                outcome.is_ok(),
+                "a claimed commit on a clean sink is admitted"
+            );
+        }
+    }
+}

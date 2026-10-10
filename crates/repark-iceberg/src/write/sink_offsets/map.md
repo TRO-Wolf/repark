@@ -9,6 +9,26 @@ directory holds the piece split out of it. The test files of the module stay bes
 
 ## Contents
 
+- `append_fence.rs`, `body_scope.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10, ruling on the
+  fifth verify's S1): the stray rule lives in the one function every stamped commit passes.**
+  Fold 5 put the rule at the claim and in the append arm's fence. The two row-level arms
+  claimed and then committed on the bare catalog, so the transaction's retry re-based them
+  over a concurrent foreign commit with no fence in the way. Now `AppendFence::update_table`
+  is the place, on every attempt:
+  - `Rule::Stamp` (`refuse_stamp`, through `breach`) walks from the refreshed head down to
+    the claim's base, which is the head the driver read when the batch began. One walk
+    covers the stretch before the claim, from the claim to the commit, and every retry. A
+    base that left the main branch is still reported as that, before the stray check.
+  - `Rule::BodySink` (`admit_sink_commit` in `body_scope.rs`) gives an admitted commit, the
+    one made while the batch's stamp is claimed, the same `stray_since` check against the
+    batch-start head. A commit to the sink from inside a body is checked whatever built it.
+  - The claim no longer checks.
+  Cost: one pass over snapshots in the metadata of the table the commit is applied to, zero
+  or one step on a healthy sink; no catalog call, no file read. Pins:
+  `sink_offsets_stray_fence_tests.rs` (every arm by three windows by three kinds of foreign
+  commit; a stray buried under another query's stamp) and
+  `sink_offsets_body_scope_tests.rs::the_guard_checks_a_claimed_sink_commit_for_a_stray_whatever_built_it`.
+  pins: mb-4-foreach-eo/C-045
 - `lineage.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10, ruling on the fourth verify's S1): the
   walk reports without a lower bound, and the `toTable` door has an entry.**
   - **No lower bound.** Fold 4's walk returned "nothing found" when the stretch under the

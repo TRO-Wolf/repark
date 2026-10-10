@@ -16,6 +16,7 @@ use crate::microbatch::offset::{
     OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SinkDoor, SinkRecord, SnapshotId, TableUuid,
 };
 use crate::microbatch::starting_mark::StartingMark;
+use crate::write::commit_error::commit_err;
 use crate::write::merge::{CommitScope, IsolationLevel, OPERATION_ID_PROP};
 use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
@@ -212,13 +213,12 @@ impl BatchScope {
             }
             return Err(error);
         }
-        if let Began::At(head) = entry.began
-            && let Some(stray) = stray_since(table.metadata(), head, &entry.stamp)
-        {
-            return Err(over_a_stray(stray, &entry.stamp));
-        }
         entry.claimed = true;
-        Ok(Some(ClaimedStamp::on(table, entry.stamp.clone())))
+        let mut claimed = ClaimedStamp::on(table, entry.stamp.clone());
+        if let Began::At(head) = entry.began {
+            claimed.base = head.map(SnapshotId::new);
+        }
+        Ok(Some(claimed))
     }
 }
 
@@ -268,14 +268,17 @@ impl ClaimedStamp {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn summary_entries(&self) -> Result<Vec<(String, String)>, MicroBatchError> {
+    pub(crate) fn summary_entries(&self) -> Result<Vec<(String, String)>, MicroBatchError> {
         let mut entries = self.stamp.record.summary_entries(self.stamp.door)?;
         entries.extend(self.started.map(|mark| mark.summary_entry()));
         Ok(entries)
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn stamp_transaction(&self, tx: Transaction) -> Result<Transaction, MicroBatchError> {
+    pub(crate) fn stamp_transaction(
+        &self,
+        tx: Transaction,
+    ) -> Result<Transaction, MicroBatchError> {
         let (key, value) = self.stamp.record.property()?;
         tx.update_table_properties()
             .set(key, value)
@@ -284,7 +287,7 @@ impl ClaimedStamp {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn record_commit(self, committed: &Table) -> Result<(), MicroBatchError> {
+    pub(crate) fn record_commit(self, committed: &Table) -> Result<(), MicroBatchError> {
         let record = &self.stamp.record;
         let Some(head) = committed.metadata().current_snapshot() else {
             return Err(MicroBatchError::Catalog(format!(
@@ -731,11 +734,11 @@ impl SiteStamp {
         }
     }
 
-    pub(crate) fn attempt(&self) {
+    fn attempt(&self) {
         self.attempted.store(true, Ordering::SeqCst);
     }
 
-    pub(crate) fn failed(&self, error: &iceberg::Error) {
+    fn failed(&self, error: &iceberg::Error) {
         if error.kind() != ErrorKind::CommitStateUnknown {
             self.release();
         }
@@ -753,44 +756,67 @@ impl SiteStamp {
         Ok((operation_id, summary))
     }
 
-    pub(crate) fn transaction(&self, tx: Transaction) -> datafusion::error::Result<Transaction> {
+    fn transaction(&self, tx: Transaction) -> datafusion::error::Result<Transaction> {
         match &self.claimed {
             Some(claimed) => claimed.stamp_transaction(tx).map_err(microbatch_error),
             None => Ok(tx),
         }
     }
 
-    pub(crate) fn fenced(&self, catalog: &Arc<dyn Catalog>) -> Arc<dyn Catalog> {
+    fn fenced(&self, catalog: &Arc<dyn Catalog>) -> Arc<dyn Catalog> {
         match &self.claimed {
             Some(claimed) => AppendFence::install(catalog, claimed),
             None => Arc::clone(catalog),
         }
     }
 
-    pub(crate) async fn commit_append(
-        &self,
+    pub(crate) async fn commit(
+        mut self,
         tx: Transaction,
         catalog: &Arc<dyn Catalog>,
-    ) -> datafusion::error::Result<iceberg::Result<Table>> {
+    ) -> Result<Table, StampedFailure> {
+        let tx = self.transaction(tx).map_err(StampedFailure::Other)?;
         self.attempt();
-        let result = tx.commit(self.fenced(catalog).as_ref()).await;
-        match (&self.claimed, result) {
-            (Some(_), Err(error)) => {
-                self.failed(&error);
-                match append_fence::refusal_of(&error) {
-                    Some(refusal) => Err(microbatch_error(refusal)),
-                    None => Ok(Err(error)),
+        let committed = match tx.commit(self.fenced(catalog).as_ref()).await {
+            Ok(committed) => committed,
+            Err(error) => {
+                if self.claimed.is_some() {
+                    self.failed(&error);
                 }
+                return Err(StampedFailure::NotLanded(error));
             }
-            (_, result) => Ok(result),
+        };
+        match self.claimed.take() {
+            Some(claimed) => match claimed.record_commit(&committed) {
+                Ok(()) => Ok(committed),
+                Err(error) => Err(StampedFailure::Other(microbatch_error(error))),
+            },
+            None => Ok(committed),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum StampedFailure {
+    NotLanded(iceberg::Error),
+    Other(DataFusionError),
+}
+
+impl StampedFailure {
+    pub(crate) fn not_landed(&self) -> Option<&iceberg::Error> {
+        match self {
+            StampedFailure::NotLanded(error) => Some(error),
+            StampedFailure::Other(_) => None,
         }
     }
 
-    pub(crate) fn record(mut self, committed: &Table) -> datafusion::error::Result<()> {
-        self.attempt();
-        match self.claimed.take() {
-            Some(claimed) => claimed.record_commit(committed).map_err(microbatch_error),
-            None => Ok(()),
+    pub(crate) fn into_error(self, operation_id: &str) -> DataFusionError {
+        match self {
+            StampedFailure::NotLanded(error) => match append_fence::refusal_of(&error) {
+                Some(refusal) => microbatch_error(refusal),
+                None => commit_err(error, operation_id),
+            },
+            StampedFailure::Other(error) => error,
         }
     }
 }

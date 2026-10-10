@@ -1144,6 +1144,105 @@ the public-door pin, red before the fix.
 **Gates** are in the hand-back; all ran on the final source, the batteries and the matrix on
 its release build.
 
+## Fold 6 — the fifth verify's S1: every stamped arm through one fence — 2026-10-10
+
+The fifth verify (release build of `740ccd18`) held everything else fold 5 claimed and returned
+FAIL on one S1 and four S3.
+
+### Dated correction to the fold-5 record (2026-10-10, fold 6)
+
+Fold 5's proof and its hand-back say that the prevention rule "makes a stray under a stamp
+unreachable through the doors" and that the expire-to-one residue "is no longer silent for
+anything this build writes". **Both sentences were false on the fold-5 build.** They held for
+the append arm only. An `UPDATE` or `DELETE` body committed through
+`merge/snapshot_commit.rs`, which claimed the stamp and then committed on the bare catalog:
+no fence on any attempt. The claim's check saw the head as it was when the write began; the
+transaction's own retry then re-based the commit on a refreshed table, and the fork's
+conflict validation passes a foreign commit that does not touch the statement's filter. One
+foreign statement from a second thread while the body ran put a stray under the stamp in 5 of
+20 `UPDATE` runs and 3 of 20 `DELETE` runs on the verifier's build (22 of 30 and 16 of 30 on
+this lane's). After a process death and an expiry to one snapshot both doors restarted with
+no signal, 14 of 14 cells, with 8 delivered rows lost in one of them. No fold-5 pin drove a
+row-level body against a concurrent foreign commit: every prevention pin used an append.
+The fold-5 text is left as written; this paragraph is the correction. What drives a
+row-level body against a concurrent foreign commit now is listed under "Fold-6 proof".
+
+### Every path by which a commit can reach the catalog carrying this query's stamp
+
+A commit carries the stamp only if it was given the six summary keys and the offsets
+property, and both come from one type, `ClaimedStamp`, whose methods are crate-private and
+used in `sink_offsets.rs` alone. A claim is taken in exactly four places.
+
+| arm | function | reached from | where it claims | where it is fenced |
+|---|---|---|---|---|
+| append | `write/write_options.rs::commit_append_with_summary` | a body's `writeTo().append()`, `INSERT INTO`, `insertInto`, `saveAsTable` in append mode, an insert-only `MERGE`; the `toTable` door's own batch | `SiteStamp::claim` | `SiteStamp::commit` |
+| row-level, copy-on-write | `write/merge/snapshot_commit.rs::commit_overwrite_on_ref` | a body's `UPDATE`, `DELETE`, and `MERGE` with a matched or not-matched-by-source clause, under copy-on-write; also with no rewritten file | `SiteStamp::claim_isolated` | `SiteStamp::commit` (fold 6; before, the bare catalog) |
+| row-level, merge-on-read | `write/merge/snapshot_commit.rs::commit_row_delta_kind_on_ref` | the same statements under merge-on-read | `SiteStamp::claim_isolated` | `SiteStamp::commit` (fold 6; before, the bare catalog) |
+| stamp-only | `write/sink_offsets.rs::commit_stamp_only` | the driver, after a body that made no sink commit | `BatchScope::claim_checked` with the batch's token | `AppendFence::install`, in the same function |
+| the first stamp over the mark | whichever of the four commits epoch 0 | | the claim copies the mark's head into the summary | the same fence |
+
+`SiteStamp::commit` is the only way a claimed site can commit: it adds the offsets property,
+commits through `AppendFence::install` and records the outcome. The methods it is built from
+(`transaction`, `fenced`, `attempt`, `failed`, `record`) are private since fold 6.
+
+Every other commit a body can aim at its sink carries no stamp and is refused before it
+lands, as MBE-19, by the same catalog wrapper under its other rule (`Rule::BodySink`, which
+every catalog handed to a statement inside a body is wrapped in): it admits a commit to the
+sink only while the batch's stamp is claimed and not yet committed.
+
+| what the body runs | function that would commit | outcome inside a body |
+|---|---|---|
+| a fast append with no session options; an append to a branch; a WAP-staged or WAP-branch write | `append.rs::commit_append`, `commit_target.rs::commit_append_to`, `write_options.rs::append_staged_with_options` | inside a body an `INSERT` is routed to the append arm above; a branch or WAP write claims nothing and is refused |
+| `INSERT OVERWRITE`, `overwrite()`, `createOrReplace` data | `overwrite_commit.rs`, `write_options.rs::commit_overwrite_replace_all_with_summary`, `::commit_replace_write_with_summary` | refused |
+| dynamic and static partition overwrite | `partition_overwrite.rs::commit_replace_partitions_to`, `::commit_overwrite_by_row_filter_to`, and their `_with_summary` forms | refused |
+| `replaceWhere` | `overwrite_filter.rs::commit_overwrite_by_filter_with_summary` | refused |
+| a `DELETE` that drops whole files, `TRUNCATE` | `meta_delete.rs::commit_metadata_delete` | refused |
+| `CREATE OR REPLACE TABLE ... AS SELECT`, `CREATE TABLE AS` over the sink | `ctas.rs::finish_ctas_staged_commit`, `create_table.rs::publish_staged_with_summary` (`publish_replace_table`) | refused at `publish_replace_table` |
+| DDL: columns, schema evolution, partition spec, sort order, properties, location, format version, identifier fields | `alter.rs`, `schema_evolution.rs`, `nested_column.rs`, `column_move.rs`, `partition_spec.rs`, `sort_order.rs`, `table_admin.rs`, `set_location.rs`, `format_version.rs`, `table_props_ddl.rs` | refused |
+| branches and tags | `snapshot_refs.rs` | refused |
+| procedures: `rollback_to_snapshot`, `rollback_to_timestamp`, `set_current_snapshot`, `fast_forward`, `cherrypick_snapshot`, `publish_changes`, `rewrite_data_files`, `rewrite_manifests`, `expire_snapshots`, `add_files` | `call.rs`, `call/branch_ops.rs`, `call/rewrite_manifests.rs`, `call/add_files.rs`, the maintenance writers | refused |
+| the same statements from a helper thread, a pool or another session | any of the above | not in the body's scope: a foreign commit. It lands unstamped and is what the rule below refuses to stamp over |
+
+The third verify's door table (166 shapes by 3 placements) is the measurement of the second
+table: every shape issued from the body's thread is stamped or makes no commit.
+
+### The rule, in one place
+
+**`AppendFence::update_table` is the one function every commit above passes, on every
+attempt.** The transaction's retry calls `update_table` again with the refreshed table, so the
+fence sees each base the commit could land on.
+
+- Under `Rule::Stamp` (installed by `SiteStamp::commit` and `commit_stamp_only`) it runs
+  `refuse_stamp`: from the refreshed head down to the claim's base, a snapshot stamped by the
+  same query is a concurrent stamp, a base that left the main branch is refused, and on a
+  `foreachBatch` stamp an unstamped snapshot is a stray. The claim's base is now the head the
+  driver read when the batch began (`BatchScope::enter_on`), so one walk covers the whole
+  window: before the claim, claim to commit, and every retry.
+- Under `Rule::BodySink` an admitted commit gets the same `stray_since` check against the
+  batch-start head. This is the backstop: a commit to the sink from inside a body is checked
+  for a stray whatever built it, also if a future arm took a claim and forgot the stamp's
+  fence.
+- The claim itself no longer checks (fold 5's second copy of the rule is gone).
+
+The fence needs the batch-start head and the scope. Both were already in the iceberg write
+module (`BatchScope`), entered by the driver. No seam outside the driver and that module was
+added; no halt.
+
+**What it costs per commit.** One pass over snapshots in the metadata of the table the commit
+is about to be applied to, from its head down to the batch-start head. On a healthy sink that
+is zero or one step. No catalog call and no file read is added: the wrapper uses the base
+table the transaction hands it, as it has since fold 3.
+
+**The structural test** (`tests/stamp_fence_gate.rs`, beside ENC-1's gate). It scans the
+product sources of every crate and fails when: a file other than the two listed arms names
+`SiteStamp::claim`; a listed arm's claims, stamped summaries and `.commit(tx, catalog)` calls
+are not equal in number; a file outside the stamp's own module uses `summary_entries`,
+`stamp_transaction`, `AppendFence::install` or builds a `ClaimedStamp`; or the stamp's own
+module commits a transaction on anything not named `fenced`. A second test feeds the scanner
+an arm that stamps its summary and commits on the bare catalog, a claim in a new file, a
+borrowed `summary_entries` and an unfenced commit in the owner, and requires one violation
+each.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
@@ -1193,4 +1292,5 @@ its release build.
 | C-044 | On the `foreachBatch` door a stamped commit is refused before it lands when an unstamped snapshot sits between its parent and the head the driver read when the batch began: at the claim, and again at the fence on every attempt. Another query's stamp there passes. A stamp is never committed over a stray that landed after the batch began. | Scope and fence pins; public-door pin. | **PROVEN** | `sink_offsets_lineage_tests.rs::a_stamped_commit_is_refused_over_a_stray_that_landed_after_the_batch_began`, `::the_fence_refuses_a_stray_that_landed_between_the_claim_and_the_commit`, `::another_query_s_stamp_since_the_batch_began_does_not_refuse_the_stamped_commit`; `sink_offsets_scope_tests.rs::a_foreign_writer_inside_a_foreach_scope_fails_the_batch_commit_at_the_fence`; `exactly_once_tests.rs::a_stray_sink_write_beside_the_stamped_commit_never_ends_under_the_stamp`; `test_mb_4_streaming_foreach_lineage.py::test_a_stamped_write_over_a_stray_that_landed_in_the_batch_is_refused_before_it_lands` (five routes), red before the fix; `test_mb_4_streaming_foreach_eo.py::test_a_twice_written_batch_is_refused_at_its_stamped_write_and_a_kill_hides_nothing`, `::test_no_expiry_hides_a_stray_that_landed_in_a_killed_batch`. Mutants P1 to P5. pins: mb-4-foreach-eo/C-044 |
 | C-045 | Every commit that can carry a `foreachBatch` stamp reaches the catalog through one fence, on every attempt, retries on a refreshed table included, and is refused there when an unstamped snapshot sits between its parent and the head the driver read when the batch began; this holds for the append arm, both row-level arms and the stamp-only commit. | A deterministic pin per arm with a racer at the commit point; a public-door racer for row-level bodies. | **OPEN** | Fold 6 (the fifth verify's S1: the row-level arms committed outside the fence). Red pins committed first: `sink_offsets_stray_fence_tests.rs::no_arm_commits_a_foreach_stamp_over_a_stray_that_landed_at_its_commit` (red at the copy-on-write arm on the fold-5 build) and `test_mb_4_streaming_row_level_race.py` (red for `UPDATE`). pins: mb-4-foreach-eo/C-045 |
 | C-046 | A structural test fails when a commit arm takes a stamp and does not commit through the fence. | A source gate in the manner of ENC-1's, with a mutant. | **OPEN** | Fold 6. pins: mb-4-foreach-eo/C-046 |
+| C-047 | MBE-8's refusal names only catalogs a streaming sink can live in (Glue, S3 Tables). | Text pins in three places. | **PROVEN** | `error.rs` (the variant's text and its pin), `run_tests.rs`, `test_mb_4_streaming_fold1.py`; the sketch's MBE-8 row amended. pins: mb-4-foreach-eo/C-047 |
 | C-015 | The questions of the fold-2 hand-back are ruled (owner rulings D2 to D5, 2026-10-10: the mark, the exclusive sink kept with a maintenance card, the side-effect contract, the re-verify and timing gate). What stays open is D5 itself: one Opus re-verify of the whole PR, then the quiet-box 200-epoch measurement with `task/wo/microbatch/mb4_lineage_timing.py`, median of 3, at most 1.05 times the no-audit driver. | The re-verify's verdict and the measurement. | **OPEN** | Closes on D5. The coverage attestation is the Critic's and is filed then. |

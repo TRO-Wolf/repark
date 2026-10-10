@@ -103,6 +103,19 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   **C-005 (2026-09-01):** `write_default` fills an omitted column on append
   (red-first vs the old refuse pin), a supplied column is kept, and `initial_default`
   reads into files missing the column. pins: v3-6-v3-types/C-001, C-002, C-005
+- `stamp_fence_gate.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10, ruling on the fifth verify):**
+  the source-scan gate that keeps every stamped commit behind the fence. It reads the product
+  sources of every crate (test files, `tests/` directories and gates excluded) and fails
+  when a file other than the two listed arms (`write/write_options.rs`,
+  `write/merge/snapshot_commit.rs`) names `SiteStamp::claim`; when a listed arm's claims,
+  `stamp.summary(` calls and `.commit(tx, catalog)` calls differ in number; when a file
+  outside the stamp's module uses `summary_entries`, `stamp_transaction`,
+  `AppendFence::install`, `AppendFence::for_starting_mark` or builds a `ClaimedStamp`; and
+  when the stamp's own module (`sink_offsets.rs`, `sink_offsets/append_fence.rs`,
+  `sink_offsets/lineage.rs`) commits a transaction on anything not named `fenced`. A second
+  test feeds the scanner four made-up sources and requires one violation each. A new arm is
+  added by listing its file, which makes the pairing rule apply to it.
+  pins: mb-4-foreach-eo/C-046
 - `enc_1_gate.rs` — **ENC-1 fold 1 (2026-10-09):** the source-scan gate that keeps the two
   chokepoints closed. It reads every Rust source under `crates/`, drops test code
   (`tests/`, `benches/`, `#[cfg(test)]` items and modules, and every module a test module

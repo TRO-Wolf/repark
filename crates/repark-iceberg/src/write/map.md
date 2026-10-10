@@ -124,6 +124,19 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `write_options.rs`, `sink_offsets_probe_tests.rs`,
+  `sink_offsets_body_scope_tests.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10): a claimed site
+  has one way to commit.** `SiteStamp::commit(tx, catalog)` adds the offsets property,
+  commits through `AppendFence::install` and records the outcome; it returns the committed
+  table or a `StampedFailure` (`NotLanded` with the catalog's error, so the caller can delete
+  what it staged, or `Other`). `transaction`, `fenced`, `attempt`, `failed` and `record` are
+  private; `commit_append` is gone. `ClaimedStamp`'s `summary_entries`, `stamp_transaction`
+  and `record_commit` are crate-private. A claim's `base` is the batch-start head when the
+  scope holds one (`Began::At`), and `claim_checked` no longer checks for a stray: the rule
+  is in the fence (child map, `append_fence.rs`, fold 6). The append arm in
+  `write_options.rs` commits through `SiteStamp::commit`. The probe catalog of the tests can
+  skip a commit before racing (an empty racer) and can land a property-only commit.
+  pins: mb-4-foreach-eo/C-045, C-046
 - `sink_offsets_stray_fence_tests.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10, the fifth
   verify's S1):** one deterministic pin over every arm that can carry a stamp (`ARMS`: append,
   copy-on-write with and without rewritten files, merge-on-read, stamp-only). A test catalog

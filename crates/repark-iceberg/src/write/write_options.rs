@@ -445,10 +445,11 @@ pub async fn commit_append_with_summary(
         .add_data_files(new_files)
         .set_snapshot_properties(summary);
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
-    let committed = commit_result(stamp.commit_append(tx, catalog).await?, &operation_id)?;
-    stamp.record(&committed)?;
-    Ok(committed)
+    let tx = action.apply(tx).map_err(iceberg_err)?;
+    stamp
+        .commit(tx, catalog)
+        .await
+        .map_err(|failure| failure.into_error(&operation_id))
 }
 
 #[allow(clippy::missing_errors_doc)]

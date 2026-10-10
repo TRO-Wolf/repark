@@ -45,6 +45,15 @@ whatever `retain_last` and `older_than` say, or refuses. Recording the expected 
 every stamp was weighed as the durable alternative and not adopted: another query's stamp
 that lands inside a batch from a second process mismatches without a stray (ledger, fold 5).
 
+**"Ever ran through `foreachBatch`" ends at retention (MB-4 fold 6, 2026-10-10; the fifth
+verify's `healthy.py d2_ever_expired`).** The `toTable` door walks a name for as long as one
+of the name's `foreachBatch` stamps or its mark is on the sink. After an expiry that leaves
+only `toTable` stamps, a foreign `INSERT` between `toTable` runs is accepted, and a later
+`foreachBatch` start under the same name runs on with the foreign row kept. The maintenance
+path owns expiry for such a sink and so can close it: either keep one `foreachBatch` stamp
+of the name, or leave a durable marker in the offsets property that the name ran through
+`foreachBatch`.
+
 **What the check does not look at**, measured in the third verify and kept: between batches, a
 property-only commit, a schema change, a branch or tag, a staged or branch write,
 `compute_table_stats`, and `expire_snapshots` that keeps the newest stamp. A shape for this

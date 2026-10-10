@@ -25,7 +25,7 @@ from repark.spark.streaming.query import StreamingQuery, StreamingQueryManager
 
 _MBE8_TEXT = (
     "[REPARK_MICROBATCH.LOCAL_CATALOG_REFUSED] streaming needs a shared catalog; "
-    "sc is a local filesystem catalog. Use Glue, S3 Tables, the Postgres catalog or REST"
+    "sc is a local filesystem catalog. Use Glue or S3 Tables"
 )
 
 

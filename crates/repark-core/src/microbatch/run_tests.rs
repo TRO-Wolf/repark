@@ -242,7 +242,7 @@ async fn start_refuses_a_local_catalog_and_a_second_start() {
     );
     assert_eq!(
         error.to_string(),
-        "streaming needs a shared catalog; ice is a local filesystem catalog. Use Glue, S3 Tables, the Postgres catalog or REST"
+        "streaming needs a shared catalog; ice is a local filesystem catalog. Use Glue or S3 Tables"
     );
     assert_eq!(handle.state(), QueryState::Registered);
     handle

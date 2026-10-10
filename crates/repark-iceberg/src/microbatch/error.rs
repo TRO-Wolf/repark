@@ -37,7 +37,7 @@ pub enum MicroBatchError {
     #[error("{feature} is not implemented")]
     FeatureRefused { feature: String },
     #[error(
-        "streaming needs a shared catalog; {catalog} is a local filesystem catalog. Use Glue, S3 Tables, the Postgres catalog or REST"
+        "streaming needs a shared catalog; {catalog} is a local filesystem catalog. Use Glue or S3 Tables"
     )]
     LocalCatalogRefused { catalog: String },
     #[error("source table {table} has no primary key; a streaming source must be keyed (O-6)")]
@@ -499,7 +499,7 @@ mod tests {
         };
         assert_eq!(
             error.to_string(),
-            "streaming needs a shared catalog; hadoop is a local filesystem catalog. Use Glue, S3 Tables, the Postgres catalog or REST"
+            "streaming needs a shared catalog; hadoop is a local filesystem catalog. Use Glue or S3 Tables"
         );
     }
 

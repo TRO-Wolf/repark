@@ -120,10 +120,20 @@ The contract a user reads is the `Notes:` section of `DataStreamWriter.foreachBa
   table (an expiry may have removed it), and a `toTable` start under a name that has run
   through `foreachBatch` (its mark, or any of its `foreachBatch` stamps, is still on the
   sink) is refused the same way. A healthy sink is not refused after an expiry.
-- **A stamp is not committed over a stray (fold 5).** If an unstamped snapshot lands on the
-  sink after a batch began, the callable's own sink write is refused before it lands; the
-  batch ends `RecoveryRequiredException` with the stray above the newest stamp, where every
-  start finds it and no expiry can remove it.
+- **A limit: "ever ran through `foreachBatch`" ends at retention.** The table is the only
+  memory. Once every `foreachBatch` stamp of a name is expired and no mark is left, a
+  `toTable` run under that name takes a foreign commit as any `toTable` name does, and a
+  later `foreachBatch` start under the name runs on over it (measured in the fifth verify:
+  one foreign row kept, no duplicate, no delivered row lost). Card
+  MB-SINK-MAINTENANCE-PATH-1 carries it.
+- **A stamp is not committed over a stray (fold 5; every arm since fold 6).** If an
+  unstamped snapshot lands on the sink after a batch began, the callable's own sink write is
+  refused before it lands, whichever statement makes it: an append, an `INSERT`, a `MERGE` of
+  any clause mix, an `UPDATE` or a `DELETE`, under copy-on-write or merge-on-read. The batch
+  ends `RecoveryRequiredException` with the stray above the newest stamp, where every start
+  finds it and no expiry can remove it. Fold 5 fenced the append arm only; an `UPDATE` or
+  `DELETE` body was re-based over a concurrent foreign commit (the fifth verify: 5 of 20 and
+  3 of 20 runs). Every stamped commit now goes through one fence on every attempt.
 - **A limit.** A stray that an earlier build of this branch left under a stamp, followed by
   an expiry that keeps only the newest snapshot, cannot be seen: the stray's snapshot is
   gone with every bound, and the next start runs on. This build no longer produces that

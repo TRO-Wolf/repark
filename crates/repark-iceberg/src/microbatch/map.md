@@ -67,6 +67,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `Catalog` as a corrupt stamp, not `UnsupportedOffsetFormat`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-024
   pins: mb-2a/C-016
+- `error.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10):** MBE-8's text names the catalogs a
+  streaming sink can live in today, "Use Glue or S3 Tables". It also named "the Postgres
+  catalog or REST"; neither is a sink catalog in this build.
+  pins: mb-4-foreach-eo/C-047
 - `stray_remedy.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10):** three more reasons a rollback
   is not printed, one per lost bound of the walk: `PREVIOUS_GONE`, `HEAD_GONE`,
   `HEAD_UNRECORDED`. The text pin runs over all five reasons. `HEAD_GONE` says "no longer

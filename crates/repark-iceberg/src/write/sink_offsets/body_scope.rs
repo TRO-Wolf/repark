@@ -5,10 +5,10 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use iceberg::table::Table;
-use iceberg::{Catalog, Error, ErrorKind, TableIdent};
+use iceberg::{Catalog, Error, ErrorKind};
 
 use super::append_fence::AppendFence;
-use super::{BatchScopeGuard, ScopeToken, scopes};
+use super::{BatchScopeGuard, Began, ScopeToken, over_a_stray, scopes, stray_since};
 use crate::microbatch::error::MicroBatchError;
 use crate::microbatch::offset::TableUuid;
 
@@ -103,19 +103,23 @@ pub(super) fn refuse_sink_commit(scope: &BodyScope, table: &Table) -> Option<Err
     if !watches(scope, table) {
         return None;
     }
-    admit_sink_commit(scope, table.identifier()).map(refused)
+    admit_sink_commit(scope, table).map(refused)
 }
 
-fn admit_sink_commit(scope: &BodyScope, sink: &TableIdent) -> Option<MicroBatchError> {
+fn admit_sink_commit(scope: &BodyScope, table: &Table) -> Option<MicroBatchError> {
     let mut entries = scopes();
     let entry = entries
         .get_mut(&scope.sink)
         .filter(|entry| entry.token == scope.token)?;
     if entry.claimed && entry.committed.is_none() {
-        return None;
+        let Began::At(head) = entry.began else {
+            return None;
+        };
+        let stray = stray_since(table.metadata(), head, &entry.stamp)?;
+        return Some(over_a_stray(stray, &entry.stamp));
     }
     let refusal = MicroBatchError::UnstampedSinkWrite {
-        sink: sink.to_string(),
+        sink: table.identifier().to_string(),
         epoch: entry.stamp.record.epoch,
     };
     entry.violation = Some(refusal.clone());

@@ -4153,10 +4153,21 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   name that ever carried a `foreachBatch` stamp or mark still on the sink runs the same check
   and refuses the same way (fold 4: one `toTable` run hid the stray for good, source 40,
   sink 44); a name that only ran through `toTable` is unchanged. A healthy sink runs on
-  after an expiry that keeps one, two or three snapshots.
-  **Prevention (fold 5).** A stamped commit of a `foreachBatch` batch is refused before it
-  lands when an unstamped snapshot sits between its parent and the head the driver read when
-  the batch began (`... landed on the sink without a stamp after this batch began, so the
+  after an expiry that keeps one, two or three snapshots. **A limit:** "ever" is as far as
+  the table records it. Once every `foreachBatch` stamp of the name is expired and no mark
+  is left, a `toTable` run under the name takes a foreign commit as any `toTable` name does,
+  and a later `foreachBatch` start under it runs on (measured: one foreign row kept, no
+  duplicate, no delivered row lost).
+  **Prevention (fold 5; every commit arm since fold 6).** A stamped commit of a
+  `foreachBatch` batch is refused before it lands when an unstamped snapshot sits between
+  its parent and the head the driver read when the batch began, on every attempt of every
+  arm that can carry a stamp: the append arm (`writeTo().append()`, `INSERT INTO`,
+  insert-only `MERGE`), the copy-on-write and merge-on-read row-level arms (`UPDATE`,
+  `DELETE`, `MERGE` with a matched clause) and the driver's stamp-only commit. Fold 5 fenced
+  the append arm alone, and an `UPDATE` or `DELETE` body was re-based over a concurrent
+  foreign commit by the transaction's own retry (measured in the fifth verify; after a
+  process death and an expiry to one snapshot both doors then restarted silently with 8
+  delivered rows lost). The refusal reads (`... landed on the sink without a stamp after this batch began, so the
   batch's stamped commit is refused before it lands over it`). The stray is then above the
   newest stamp, where check (a) finds it at every start and where no expiry removes it (an
   expiry keeps the head; if it removes the stamp under it, the resume check refuses with

@@ -722,13 +722,13 @@ async fn a_stamped_commit_is_refused_over_a_stray_that_landed_after_the_batch_be
             ))
             .await
             .expect_err("a stamped commit over a stray");
-        assert_eq!(
-            refusal_text(&refused),
-            format!(
+        let text = refusal_text(&refused);
+        assert!(
+            text.ends_with(&format!(
                 "epoch 0: snapshot {id} (append) landed on the sink without a stamp after this batch began, so the batch's stamped commit is refused before it lands over it",
                 id = head(&stray)
-            ),
-            "attempt {attempt}"
+            )),
+            "attempt {attempt}: {text}"
         );
         assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
     }
