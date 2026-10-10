@@ -1,5 +1,3 @@
-//! Postgres-target INSERT routing for the Spark door: appends drive the sink.
-
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{Insert, ObjectName, TableObject, TableWithJoins};
@@ -13,13 +11,11 @@ use repark_core::write_postgres::{
 
 use crate::write_options::StatementWriteOptions;
 
-/// Whether `name` is a mounted Postgres source.
 #[must_use]
 pub(crate) fn is_postgres_source(catalogs: &CatalogRegistry, name: &str) -> bool {
     catalogs.database_source_kind(name) == Some(SourceKind::Postgres)
 }
 
-/// The `(source, schema, table)` of a three-part Postgres target, if it is one.
 #[must_use]
 pub(crate) fn postgres_target_parts(
     catalogs: &CatalogRegistry,
@@ -38,7 +34,6 @@ pub(crate) fn postgres_target_parts(
     Some((source.to_string(), schema.to_string(), table.to_string()))
 }
 
-/// The requested sink path from the `write.path` writer option; absent means bulk.
 pub(crate) fn postgres_write_path(
     write_options: &StatementWriteOptions,
 ) -> Result<PostgresWritePath> {
@@ -49,7 +44,6 @@ pub(crate) fn postgres_write_path(
     parse_write_path_option(raw)
 }
 
-/// The upsert refusal when an `UPDATE` targets a Postgres source.
 #[must_use]
 pub(crate) fn refuse_postgres_update(
     catalogs: &CatalogRegistry,
@@ -62,7 +56,6 @@ pub(crate) fn refuse_postgres_update(
     ))
 }
 
-/// Run a Postgres-target INSERT: appends drive the sink, the rest refuse.
 async fn execute_postgres_insert(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -120,7 +113,6 @@ fn column_name(name: &ObjectName) -> String {
     }
 }
 
-/// Route one INSERT through the sink when its target is a Postgres source.
 pub(crate) async fn route_postgres_insert(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,

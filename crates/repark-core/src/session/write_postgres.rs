@@ -1,11 +1,3 @@
-//! One Postgres sink write shared by the SQL doors and the Spark writer.
-//!
-//! The driver resolves the target with C-2 discovery, checks the frame width
-//! against the written columns, casts each batch to the encoder's Arrow types,
-//! turns session-zone instants back into wall clocks for `timestamp` columns,
-//! and commits. Both SQL doors and the `df.write.jdbc` binding call it; step
-//! 1's selector answers the taken path from the returned report.
-
 use std::collections::BTreeMap;
 #[cfg(feature = "postgres")]
 use std::sync::Arc;
@@ -28,43 +20,26 @@ use repark_connect::postgres::PostgresMapping;
 #[cfg(feature = "postgres")]
 use repark_connect::{PostgresSettings, ResolvedSource};
 
-/// A Postgres write target: a mounted source relation or a JDBC-style URL.
 #[derive(Debug, Clone)]
 pub enum PostgresWriteTarget {
-    /// A `[database.postgres.<source>]` relation by source, schema and table.
     Mounted {
-        /// The mounted source name.
         source: String,
-        /// The schema holding the table.
         schema: String,
-        /// The table receiving the rows.
         table: String,
     },
-    /// A URL write: the URL, the `dbtable` value and the remaining properties.
     Url {
-        /// The JDBC-style URL.
         url: String,
-        /// The `dbtable` value; a parenthesised subquery refuses.
         dbtable: String,
-        /// The connection properties, `url` and `dbtable` aside.
         properties: BTreeMap<String, String>,
     },
 }
 
-/// The requested sink path: step 1's selector answers the taken one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PostgresWritePath {
-    /// COPY FROM STDIN BINARY, with the row fallback for uncarriable columns.
     Bulk,
-    /// Multi-row INSERT for every column.
     Row,
 }
 
-/// Parse the `write.path` writer option onto the requested path; absent means bulk.
-///
-/// # Errors
-/// A bad value refuses as `Configuration` (the binding raises `IllegalArgumentException`),
-/// naming both values.
 pub fn parse_write_path_option(raw: Option<&str>) -> Result<PostgresWritePath> {
     match raw {
         None => Ok(PostgresWritePath::Bulk),
@@ -76,10 +51,6 @@ pub fn parse_write_path_option(raw: Option<&str>) -> Result<PostgresWritePath> {
     }
 }
 
-/// The session carrier for the last Postgres write report: a test hook, not a knob.
-///
-/// Both SQL doors record here after a sink write; the binding reads it back. Sessions built
-/// outside the builder carry nothing and record nowhere.
 #[derive(Debug, Clone, Default)]
 pub struct LastPostgresWriteReport {
     report: std::sync::Arc<std::sync::Mutex<Option<PostgresWriteReport>>>,
@@ -116,7 +87,6 @@ impl ExtensionOptions for LastPostgresWriteReport {
 }
 
 impl LastPostgresWriteReport {
-    /// Remember one write, replacing whatever the previous write left.
     pub fn record(&self, report: PostgresWriteReport) {
         *self
             .report
@@ -124,7 +94,6 @@ impl LastPostgresWriteReport {
             .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(report);
     }
 
-    /// Take the remembered write, leaving nothing behind.
     pub fn take(&self) -> Option<PostgresWriteReport> {
         self.report
             .lock()
@@ -133,7 +102,6 @@ impl LastPostgresWriteReport {
     }
 }
 
-/// Install the report carrier on a session config under construction.
 #[must_use]
 pub fn with_last_postgres_write_report(
     config: datafusion::prelude::SessionConfig,
@@ -146,7 +114,6 @@ pub fn with_last_postgres_write_report(
     config
 }
 
-/// Record one sink write on the session carrier, if the session carries one.
 pub fn record_postgres_write_report(
     ctx: &datafusion::prelude::SessionContext,
     report: PostgresWriteReport,
@@ -162,7 +129,6 @@ pub fn record_postgres_write_report(
     }
 }
 
-/// Take the session carrier's remembered write, if the session carries one.
 #[must_use]
 pub fn take_postgres_write_report(
     ctx: &datafusion::prelude::SessionContext,
@@ -176,37 +142,22 @@ pub fn take_postgres_write_report(
         .take()
 }
 
-/// What one write did: the taken path, the committed row count and the fallback reason.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PostgresWriteReport {
-    /// The path the open write took.
     pub path: PostgresWritePath,
-    /// The rows committed.
     pub rows: u64,
-    /// Why a bulk request took rows, when it did.
     pub fallback: Option<String>,
 }
 
-/// One Postgres write: its target, its columns and its requested path.
 #[derive(Debug, Clone)]
 pub struct PostgresWrite {
-    /// Where the rows go.
     pub target: PostgresWriteTarget,
-    /// The written columns in batch order, or `None` for all in table order.
     pub columns: Option<Vec<String>>,
-    /// Whether the door matches column names case-insensitively.
     pub case_insensitive: bool,
-    /// The requested sink path.
     pub path: PostgresWritePath,
 }
 
 impl ReparkSession {
-    /// Write one planned frame to Postgres through step 1's selector.
-    ///
-    /// # Errors
-    ///
-    /// Connection, discovery, arity, column-resolution, cast, encode and
-    /// commit failures, each in the engine's DataFusion taxonomy.
     pub async fn write_postgres(
         &self,
         frame: DataFrame,
@@ -217,12 +168,6 @@ impl ReparkSession {
     }
 }
 
-/// Write one planned frame to Postgres through step 1's selector.
-///
-/// # Errors
-///
-/// Connection, discovery, arity, column-resolution, cast, encode and commit
-/// failures, each in the engine's DataFusion taxonomy.
 #[cfg(feature = "postgres")]
 pub async fn execute_postgres_write(
     catalogs: &CatalogRegistry,
@@ -303,7 +248,6 @@ pub async fn execute_postgres_write(
     })
 }
 
-/// The shared refusal for a non-append write: only append lands on Postgres.
 #[must_use]
 pub fn postgres_write_modes_refusal(what: &str) -> String {
     format!(
@@ -312,7 +256,6 @@ pub fn postgres_write_modes_refusal(what: &str) -> String {
     )
 }
 
-/// The shared refusal for a row-changing write that is not an append.
 #[must_use]
 pub fn postgres_write_upsert_refusal(what: &str) -> String {
     format!(
@@ -322,11 +265,6 @@ pub fn postgres_write_upsert_refusal(what: &str) -> String {
     )
 }
 
-/// Write one planned frame to Postgres through step 1's selector.
-///
-/// # Errors
-///
-/// Always refuses: the Postgres connector is not compiled into this build.
 #[cfg(not(feature = "postgres"))]
 pub async fn execute_postgres_write(
     catalogs: &CatalogRegistry,

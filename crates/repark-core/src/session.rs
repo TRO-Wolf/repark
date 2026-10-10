@@ -233,7 +233,7 @@ impl ReparkSessionBuilder {
     /// Build the session synchronously.
     /// # Errors
     /// Returns `Error::DataFusion` if the DataFusion runtime fails to build.
-    #[allow(clippy::too_many_lines)] // one config line per wired product.
+    #[allow(clippy::too_many_lines)]
     pub fn build(mut self) -> Result<ReparkSession> {
         let conf_dump = self.prepare_build_state()?;
         repark_common::redaction::register_config_map(&self.config);

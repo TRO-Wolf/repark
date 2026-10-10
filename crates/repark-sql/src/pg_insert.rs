@@ -1,5 +1,3 @@
-//! Postgres-target INSERT routing for the ANSI door: appends drive the sink.
-
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::DataFrame;
 use datafusion::sql::sqlparser::ast::{Insert, ObjectName, Statement, TableObject};
@@ -10,13 +8,11 @@ use repark_core::write_postgres::{
 };
 use repark_core::{CatalogRegistry, EngineContext};
 
-/// Whether `name` is a mounted Postgres source.
 #[must_use]
 pub(crate) fn is_postgres_source(catalogs: &CatalogRegistry, name: &str) -> bool {
     catalogs.database_source_kind(name) == Some(SourceKind::Postgres)
 }
 
-/// The `(source, schema, table)` of a three-part Postgres target, if it is one.
 #[must_use]
 pub(crate) fn postgres_target_parts(
     catalogs: &CatalogRegistry,
@@ -35,7 +31,6 @@ pub(crate) fn postgres_target_parts(
     Some((source.to_string(), schema.to_string(), table.to_string()))
 }
 
-/// The upsert refusal when an `UPDATE` targets a Postgres source.
 #[must_use]
 pub(crate) fn postgres_update_refusal(
     cx: &EngineContext<'_>,
@@ -50,7 +45,6 @@ pub(crate) fn postgres_update_refusal(
     ))
 }
 
-/// Run a Postgres-target INSERT: appends drive the sink, the rest refuse.
 pub(crate) async fn execute_postgres_insert(
     cx: &EngineContext<'_>,
     insert: &Insert,
@@ -110,7 +104,6 @@ fn column_name(name: &ObjectName) -> String {
     }
 }
 
-/// Route one INSERT through the sink when its target is a Postgres source.
 pub(crate) async fn route_postgres_insert(
     cx: &EngineContext<'_>,
     insert: &Insert,

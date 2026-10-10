@@ -1,5 +1,3 @@
-//! Live-door end-to-end pins: the `AnsiDoor` harness and every guard test that drives it.
-
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -10,7 +8,6 @@ use tempfile::TempDir;
 
 use super::*;
 
-/// A live ANSI door over a memory Iceberg catalog supports the end-to-end G3-E8 pins.
 struct AnsiDoor {
     ctx: SessionContext,
     catalogs: CatalogRegistry,
@@ -21,7 +18,6 @@ struct AnsiDoor {
 }
 
 impl AnsiDoor {
-    /// A door with catalog `ice` registered over its own temp warehouse and `ice.sales` created.
     async fn new() -> Self {
         let warehouse = TempDir::new().unwrap();
         let root = warehouse.path().to_str().unwrap().to_string();
@@ -56,7 +52,6 @@ impl AnsiDoor {
         door
     }
 
-    /// Run through the door, returning the first Int64 column (the pins all read `id`).
     async fn ids(&self, sql: &str) -> datafusion::error::Result<Vec<i64>> {
         let frame = crate::execute(
             EngineContext::new(&self.ctx, &self.catalogs, &self.read_only),
@@ -95,7 +90,6 @@ impl AnsiDoor {
         }
     }
 
-    /// The seeded target read back, sorted.
     async fn target_ids(&self) -> Vec<i64> {
         let mut ids = self.ok("SELECT id FROM ice.sales.sqtgt ORDER BY id").await;
         ids.sort_unstable();
@@ -103,7 +97,6 @@ impl AnsiDoor {
     }
 }
 
-/// End to end through THIS door: the statement refuses and the table is left EXACTLY as seeded.
 #[tokio::test]
 async fn dml_subquery_valve_refuses_end_to_end_and_writes_nothing() {
     let door = AnsiDoor::new().await;
@@ -114,9 +107,7 @@ async fn dml_subquery_valve_refuses_end_to_end_and_writes_nothing() {
 
     for sql in [
         "UPDATE ice.sales.sqtgt SET id = 9 WHERE id NOT IN (SELECT id FROM ice.sales.sqkeys)",
-        // The FROM-less residual spelling (IN / NOT IN / [NOT] EXISTS / correlated IN execute).
         "DELETE ice.sales.sqtgt WHERE id = (SELECT max(id) FROM ice.sales.sqkeys)",
-        // Nested + mixed AND/OR + ANY/ALL stay refused (permanent v1 valve).
         "DELETE FROM ice.sales.sqtgt WHERE id IN (SELECT id FROM (SELECT id FROM ice.sales.sqkeys) x)",
         "DELETE FROM ice.sales.sqtgt WHERE id IN (SELECT max(id) FROM ice.sales.sqkeys)",
         "DELETE FROM ice.sales.sqtgt WHERE id = ANY (SELECT id FROM ice.sales.sqkeys)",
@@ -133,12 +124,10 @@ async fn dml_subquery_valve_refuses_end_to_end_and_writes_nothing() {
         );
     }
 
-    // Adjacent negative: the subquery-free spelling still delegates and deletes exactly one row.
     door.ok("DELETE FROM ice.sales.sqtgt WHERE id = 2").await;
     assert_eq!(door.target_ids().await, vec![1, 3]);
 }
 
-/// Uncorrelated `DELETE … IN (SELECT …)` executes on both FROM and FROM-less forms.
 #[tokio::test]
 async fn dml_subquery_in_delete_executes_and_deletes_exactly_the_match() {
     let door = AnsiDoor::new().await;
@@ -164,7 +153,6 @@ async fn dml_subquery_in_delete_executes_and_deletes_exactly_the_match() {
     assert_eq!(fromless.target_ids().await, vec![1, 3]);
 }
 
-/// Uncorrelated `DELETE … NOT IN (SELECT …)` honors the NULL three-valued-logic trap.
 #[tokio::test]
 async fn dml_subquery_not_in_delete_executes_and_honors_three_valued_logic() {
     let door = AnsiDoor::new().await;
@@ -216,7 +204,6 @@ async fn dml_subquery_not_in_delete_executes_and_honors_three_valued_logic() {
     assert_eq!(fromless.target_ids().await, vec![2]);
 }
 
-/// `DELETE … [NOT] EXISTS` handles uncorrelated and correlated predicates.
 #[tokio::test]
 async fn dml_subquery_exists_delete_executes_uncorrelated_and_correlated() {
     boxed_dml_subquery_exists_delete().await;
@@ -330,7 +317,6 @@ async fn dml_subquery_exists_delete_body() {
     assert_eq!(fromless.target_ids().await, Vec::<i64>::new());
 }
 
-/// Correlated `DELETE … IN` and identity `UPDATE … IN` execute correctly.
 #[tokio::test]
 async fn dml_subquery_correlated_in_and_update_in_execute() {
     let correlated = AnsiDoor::new().await;
@@ -359,7 +345,6 @@ async fn dml_subquery_correlated_in_and_update_in_execute() {
     assert_eq!(update.target_ids().await, vec![1, 3, 9]);
 }
 
-/// Guard order is observable: a statement hitting both data-loss valves reports **G3-E8** first.
 #[tokio::test]
 async fn mor_valve_runs_after_the_g3e8_valve() {
     use iceberg::spec::Transform;
@@ -375,7 +360,6 @@ async fn mor_valve_runs_after_the_g3e8_valve() {
     door.ok("CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id")
         .await;
 
-    // Evolve the spec away: the current spec becomes unpartitioned, while history keeps the bucket spec.
     apply_partition_spec_changes(
         door.catalog.as_ref(),
         &iceberg::TableIdent::new(
@@ -394,14 +378,12 @@ async fn mor_valve_runs_after_the_g3e8_valve() {
         "fixture: the warehouse is a real path"
     );
 
-    // Control: the non-subquery spelling on this very table still hits the BUG-001 valve.
     let mor = door.err("DELETE FROM ice.sales.sqtgt WHERE id = 1").await;
     assert!(
         mor.contains("merge-on-read") && mor.contains("partition specs in history"),
         "control must be the BUG-001 message, got {mor}"
     );
 
-    // The doubly-hazardous statement: G3-E8 wins, and the BUG-001 message is nowhere in it.
     let both = door
         .err(
             "DELETE FROM ice.sales.sqtgt WHERE id IN \
@@ -423,7 +405,6 @@ async fn mor_valve_runs_after_the_g3e8_valve() {
     );
 }
 
-/// End to end: the door refuses `COLLATE` and a non-COLLATE SELECT still runs.
 #[tokio::test]
 async fn collation_valve_refuses_end_to_end_and_default_select_is_untouched() {
     let door = AnsiDoor::new().await;
