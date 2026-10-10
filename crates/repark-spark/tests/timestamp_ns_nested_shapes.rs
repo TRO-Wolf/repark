@@ -476,8 +476,9 @@ async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
     }
 }
 
-const NARROWED_UPDATES: [&str; 3] = [
+const NARROWED_UPDATES: [&str; 4] = [
     "CASE WHEN id > 0 THEN {c} ELSE NULL END",
+    "CASE WHEN id < 0 THEN NULL ELSE {c} END",
     "if(id > 0, {c}, NULL)",
     "array({c}, NULL)[0]",
 ];

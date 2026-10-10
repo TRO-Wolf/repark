@@ -419,6 +419,85 @@ def test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing(
         spark.stop()
 
 
+BRANCH = "ice.ns.t.branch_b1"
+STRUCT_FRAME = "SELECT 5 AS id, named_struct('v', c, 'n', 1) AS st FROM ice.ns.far WHERE id = 2"
+
+
+def under(key: str, value: str, write: Any) -> Any:
+    """Return a route that runs ``write`` with one WAP session setting, then clears it."""
+
+    def route(spark: Any) -> None:
+        spark.conf.set(key, value)
+        try:
+            write(spark)
+        finally:
+            spark.conf.unset(key)
+
+    return route
+
+
+def plain_insert(spark: Any) -> None:
+    """INSERT … SELECT of the struct into the table's own name."""
+    spark.sql(f"INSERT INTO ice.ns.t {STRUCT_FRAME}")
+
+
+def plain_append(spark: Any) -> None:
+    """DataFrameWriterV2 append of the struct into the table's own name."""
+    spark.sql(STRUCT_FRAME).writeTo("ice.ns.t").append()
+
+
+BRANCH_AND_WAP_ROUTES = {
+    "insert_branch": lambda spark: spark.sql(f"INSERT INTO {BRANCH} {STRUCT_FRAME}"),
+    "insert_branch_values": lambda spark: spark.sql(
+        f"INSERT INTO {BRANCH} VALUES (5, named_struct('v', {NEAR}, 'n', 1))"
+    ),
+    "insert_branch_main": lambda spark: spark.sql(
+        f"INSERT INTO ice.ns.t.branch_main {STRUCT_FRAME}"
+    ),
+    "insert_branch_cols": lambda spark: spark.sql(f"INSERT INTO {BRANCH} (id, st) {STRUCT_FRAME}"),
+    "df_append_branch": lambda spark: spark.sql(STRUCT_FRAME).writeTo(BRANCH).append(),
+    "df_insert_into_branch": lambda spark: spark.sql(STRUCT_FRAME).write.insertInto(BRANCH),
+    "wap_id_insert": under("spark.wap.id", "a1", plain_insert),
+    "wap_id_df": under("spark.wap.id", "a2", plain_append),
+    "wap_branch_insert": under("spark.wap.branch", "b1", plain_insert),
+    "wap_branch_df": under("spark.wap.branch", "b1", plain_append),
+    "update_branch": lambda spark: spark.sql(
+        f"UPDATE {BRANCH} SET st = named_struct('v', {NEAR}, 'n', 1) WHERE id = 1"
+    ),
+    "update_branch_no_where": lambda spark: spark.sql(
+        f"UPDATE {BRANCH} SET st = named_struct('v', {NEAR}, 'n', 1)"
+    ),
+    "merge_branch": lambda spark: spark.sql(
+        f"MERGE INTO {BRANCH} t USING ({STRUCT_FRAME}) s ON t.id = s.id + 1 "
+        "WHEN MATCHED THEN UPDATE SET st = s.st"
+    ),
+}
+
+
+@pytest.mark.parametrize("route", list(BRANCH_AND_WAP_ROUTES))
+def test_a_branch_or_wap_write_of_a_nested_leaf_is_refused_and_writes_nothing(
+    tmp_path: Path, route: str
+) -> None:
+    """A branch reference or a WAP setting does not take a write around the refusal."""
+    spark = open_edge_session(tmp_path, "true")
+    try:
+        spark.sql("DROP TABLE ice.ns.t")
+        spark.sql(
+            f"CREATE TABLE ice.ns.t (id INT, st {NESTED_LAYOUTS['struct'][0]}) USING iceberg "
+            "TBLPROPERTIES ('format-version' = '3', 'write.wap.enabled' = 'true')"
+        )
+        spark.sql("INSERT INTO ice.ns.t (id) VALUES (1), (6)")
+        spark.sql("ALTER TABLE ice.ns.t CREATE BRANCH b1")
+        before = files_under(tmp_path)
+        with pytest.raises(Exception, match=NOT_WRITABLE_YET.format(path=r"`st`\.`v`")):
+            BRANCH_AND_WAP_ROUTES[route](spark)
+        assert files_under(tmp_path) == before
+        assert spark.sql("SELECT * FROM ice.ns.t.snapshots").to_arrow().num_rows == 1
+        assert spark.sql("SELECT * FROM ice.ns.t.refs").to_arrow().num_rows == 2
+    finally:
+        spark.stop()
+
+
 def data_file_ticks(spark: Any, table: str) -> list[int | None]:
     """Return the int64 ticks of ``v`` read from the live Parquet data files of ``table``."""
     files = spark.sql(f"SELECT content, file_path FROM {table}.files").to_arrow().to_pylist()
