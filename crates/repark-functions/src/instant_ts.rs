@@ -57,7 +57,8 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         crate::time_family::type_of_udf(),
         crate::timestamp_ns_cast::timestamp_ns_cast_udf(false),
         crate::timestamp_ns_cast::timestamp_ns_cast_udf(true),
-        crate::null_narrowing::narrowed_beside_null_udf(),
+        crate::null_narrowing::narrowed_beside_udf(true),
+        crate::null_narrowing::narrowed_beside_udf(false),
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(false),
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(true),
         crate::timestamp_ntz_cast::timestamp_ntz_literal_udf(),
@@ -561,18 +562,22 @@ fn rewrite_plan(
         schema.merge(input.schema());
     }
     let name_preserver = NamePreserver::new(&plan);
+    let scoped = crate::null_narrowing::holds_nanoseconds(&schema);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
         let rewritten = expr.transform_up(|node| {
-            rewrite_cast(node, &schema, zone, timestamp_type)
-                .transform_data(|node| crate::null_narrowing::settle_tagged_nulls(node, &schema))
+            crate::null_narrowing::mark_coerced_narrowing(node, &schema)
+                .transform_data(|node| Ok(rewrite_cast(node, &schema, zone, timestamp_type)))?
+                .transform_data(|node| {
+                    crate::null_narrowing::settle_branches(node, &schema, scoped)
+                })
         })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed
         .map_data(LogicalPlan::recompute_schema)?
         .map_data(crate::timestamp_ns_cast::conform_values_timestamp_columns)?
-        .transform_data(crate::null_narrowing::settle_union_nulls)
+        .transform_data(crate::null_narrowing::settle_union_branches)
 }
 
 fn rewrite_cast(

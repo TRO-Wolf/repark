@@ -2,51 +2,100 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, LazyLock};
 
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
+use datafusion::common::config::ConfigOptions;
 use datafusion::common::metadata::FieldMetadata;
-use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, DataFusionError, ExprSchema, Result, ScalarValue};
-use datafusion::logical_expr::expr::{Alias, ScalarFunction};
+use datafusion::logical_expr::expr::{Cast, ScalarFunction};
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
     ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Union, Volatility,
 };
+use datafusion::optimizer::AnalyzerRule;
 
 pub const NARROWED_BESIDE_NULL_NAME: &str = "__repark_narrowed_beside_null__";
+pub const NARROWED_BESIDE_VALUE_NAME: &str = "__repark_narrowed_beside_value__";
 const UNTYPED_NULL_TAG: &str = "repark.untyped_null";
 
-static NARROWED_BESIDE_NULL: LazyLock<Arc<ScalarUDF>> =
-    LazyLock::new(|| Arc::new(ScalarUDF::from(NarrowedBesideNull::new())));
+static NARROWED_BESIDE_NULL: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
+    Arc::new(ScalarUDF::from(NarrowedBeside::new(
+        NARROWED_BESIDE_NULL_NAME,
+    )))
+});
+static NARROWED_BESIDE_VALUE: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
+    Arc::new(ScalarUDF::from(NarrowedBeside::new(
+        NARROWED_BESIDE_VALUE_NAME,
+    )))
+});
 
 #[must_use]
-pub fn narrowed_beside_null_udf() -> Arc<ScalarUDF> {
-    Arc::clone(&NARROWED_BESIDE_NULL)
+pub fn narrowed_beside_udf(untyped_null: bool) -> Arc<ScalarUDF> {
+    if untyped_null {
+        Arc::clone(&NARROWED_BESIDE_NULL)
+    } else {
+        Arc::clone(&NARROWED_BESIDE_VALUE)
+    }
 }
 
 #[must_use]
-pub fn is_narrowed_beside_null(expr: &Expr) -> bool {
+pub fn holds_nanoseconds(schema: &DFSchema) -> bool {
+    schema
+        .fields()
+        .iter()
+        .any(|field| nested_nanoseconds(field.data_type()))
+}
+
+fn nested_nanoseconds(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Timestamp(unit, _) => *unit == TimeUnit::Nanosecond,
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| nested_nanoseconds(field.data_type())),
+        DataType::Map(field, _)
+        | DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::FixedSizeList(field, _) => nested_nanoseconds(field.data_type()),
+        _ => false,
+    }
+}
+
+#[must_use]
+pub fn is_narrowing_mark(expr: &Expr) -> bool {
     matches!(
         expr,
-        Expr::ScalarFunction(function) if function.func.name() == NARROWED_BESIDE_NULL_NAME
+        Expr::ScalarFunction(function) if matches!(
+            function.func.name(),
+            NARROWED_BESIDE_NULL_NAME | NARROWED_BESIDE_VALUE_NAME
+        )
     )
 }
 
+fn marked(value: Expr, beside_untyped_null: bool) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        narrowed_beside_udf(beside_untyped_null),
+        vec![value],
+    ))
+}
+
 #[derive(Debug, PartialEq, Eq, Hash)]
-struct NarrowedBesideNull {
+struct NarrowedBeside {
+    name: &'static str,
     signature: Signature,
 }
 
-impl NarrowedBesideNull {
-    fn new() -> Self {
+impl NarrowedBeside {
+    fn new(name: &'static str) -> Self {
         Self {
+            name,
             signature: Signature::any(1, Volatility::Immutable),
         }
     }
 }
 
-impl ScalarUDFImpl for NarrowedBesideNull {
+impl ScalarUDFImpl for NarrowedBeside {
     fn name(&self) -> &str {
-        NARROWED_BESIDE_NULL_NAME
+        self.name
     }
 
     fn signature(&self) -> &Signature {
@@ -84,7 +133,71 @@ fn one_argument() -> DataFusionError {
     ))
 }
 
-pub(crate) fn tag_untyped_nulls(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+#[derive(Debug, Default)]
+pub struct FloatStringifyBeforeCoercion;
+
+impl AnalyzerRule for FloatStringifyBeforeCoercion {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let ansi = crate::ansi::spark_ansi_enabled_from_options(config);
+        plan.transform_up_with_subqueries(|node| {
+            let tagged = tag_union_nulls(node)?;
+            if tagged.transformed {
+                return Ok(tagged);
+            }
+            crate::java_double::rewrite_float_plan(tagged.data, ansi, true)
+        })
+        .data()
+    }
+
+    fn name(&self) -> &'static str {
+        "spark_float_stringify"
+    }
+}
+
+pub(crate) fn before_coercion(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+    if let Expr::Cast(cast) = &expr
+        && instant(cast.field.data_type())
+        && !is_narrowing_mark(&cast.expr)
+        && holds(&cast.expr, schema, true)
+    {
+        return Ok(Transformed::yes(
+            crate::timestamp_ns_cast::narrow_timestamp_ns_expr((*cast.expr).clone()),
+        ));
+    }
+    tag_untyped_nulls(expr, schema)
+}
+
+pub(crate) fn mark_coerced_narrowing(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    let narrows = |target: &DataType, source: &Expr| {
+        coarser(target)
+            && !is_narrowing_mark(source)
+            && !null_literal(source)
+            && holds(source, schema, true)
+    };
+    let written_over_a_mark = |target: &DataType, source: &Expr| {
+        matches!(target, DataType::Timestamp(TimeUnit::Nanosecond, None))
+            && matches!(source.get_type(schema), Ok(DataType::Timestamp(_, _)))
+            && source
+                .exists(|node| Ok(is_narrowing_mark(node)))
+                .unwrap_or(false)
+    };
+    match expr {
+        Expr::Cast(cast) if written_over_a_mark(cast.field.data_type(), &cast.expr) => {
+            Transformed::yes(crate::timestamp_ns_cast::narrow_timestamp_ns_expr(
+                *cast.expr,
+            ))
+        }
+        Expr::Cast(cast) if narrows(cast.field.data_type(), &cast.expr) => {
+            Transformed::yes(Expr::Cast(Cast::new_from_field(
+                Box::new(marked(*cast.expr, false)),
+                cast.field,
+            )))
+        }
+        other => Transformed::no(other),
+    }
+}
+
+fn tag_untyped_nulls(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     if !unifies_branches(&expr)
         || !any_branch(&expr, is_untyped_null)
         || !any_branch(&expr, |branch| holds(branch, schema, true))
@@ -100,32 +213,37 @@ pub(crate) fn tag_untyped_nulls(expr: Expr, schema: &DFSchema) -> Result<Transfo
     })
 }
 
-pub(crate) fn settle_tagged_nulls(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
-    if !unifies_branches(&expr) || !any_branch(&expr, is_tagged_null) {
+pub(crate) fn settle_branches(
+    expr: Expr,
+    schema: &DFSchema,
+    nanoseconds_in_scope: bool,
+) -> Result<Transformed<Expr>> {
+    if !unifies_branches(&expr) {
         return Ok(Transformed::no(expr));
     }
-    let narrows = any_branch(&expr, |branch| {
-        is_tagged_null(branch) && holds(branch, schema, false)
-    }) && any_branch(&expr, |branch| {
-        !is_tagged_null(branch) && holds(branch, schema, true)
-    });
-    let settled = expr
-        .map_children(|branch| {
-            if is_tagged_null(&branch) {
-                branch.transform_up(|node| Ok(untagged(node)))
-            } else {
-                Ok(Transformed::no(branch))
-            }
-        })?
-        .data;
-    Ok(Transformed::yes(if narrows {
-        Expr::ScalarFunction(ScalarFunction::new_udf(
-            narrowed_beside_null_udf(),
-            vec![settled],
-        ))
-    } else {
-        settled
-    }))
+    let tagged = any_branch(&expr, is_tagged_null);
+    let asks = tagged || nanoseconds_in_scope || any_branch(&expr, is_nanosecond_cast);
+    let narrows = asks
+        && any_branch(&expr, |branch| holds(branch, schema, false))
+        && any_branch(&expr, |branch| {
+            !is_narrowing_mark(branch) && holds(branch, schema, true)
+        });
+    if !tagged && !narrows {
+        return Ok(Transformed::no(expr));
+    }
+    expr.map_children(|branch| {
+        if is_tagged_null(&branch) {
+            branch.transform_up(|node| Ok(untagged(node)))
+        } else if narrows && !is_narrowing_mark(&branch) && holds(&branch, schema, true) {
+            Ok(Transformed::yes(marked(branch, tagged)))
+        } else {
+            Ok(Transformed::no(branch))
+        }
+    })
+}
+
+fn is_nanosecond_cast(expr: &Expr) -> bool {
+    crate::timestamp_ns_cast::is_timestamp_ns_cast(expr)
 }
 
 pub(crate) fn tag_union_nulls(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
@@ -173,40 +291,82 @@ pub(crate) fn tag_union_nulls(plan: LogicalPlan) -> Result<Transformed<LogicalPl
     })))
 }
 
-pub(crate) fn settle_union_nulls(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+pub(crate) fn settle_union_branches(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let LogicalPlan::Union(union) = &plan else {
         return Ok(Transformed::no(plan));
     };
-    let mut changed = false;
+    let width = union.schema.fields().len();
+    let tagged = |index: usize| {
+        union.inputs.iter().any(|input| {
+            matches!(input.as_ref(), LogicalPlan::Projection(projection)
+                if projection.expr.get(index).is_some_and(|expr| is_tagged_null(peeled(expr))))
+        })
+    };
+    let narrows = |index: usize| {
+        let kinds = |nanoseconds: bool| {
+            union.inputs.iter().any(|input| {
+                matches!(quick_type(input, index), Some(DataType::Timestamp(unit, _))
+                    if (unit == TimeUnit::Nanosecond) == nanoseconds)
+            })
+        };
+        kinds(true) && kinds(false)
+    };
+    let columns: Vec<(bool, bool)> = (0..width)
+        .map(|index| (tagged(index), narrows(index)))
+        .collect();
+    if !columns.iter().any(|(tagged, narrows)| *tagged || *narrows) {
+        return Ok(Transformed::no(plan));
+    }
+    let mut settled = false;
     let mut inputs = Vec::with_capacity(union.inputs.len());
     for input in &union.inputs {
-        let projection = match input.as_ref() {
-            LogicalPlan::Projection(projection)
-                if projection
-                    .expr
-                    .iter()
-                    .any(|expr| is_tagged_null(peeled(expr))) =>
-            {
-                projection
+        let schema = Arc::clone(input.schema());
+        let (mut exprs, source) = match input.as_ref() {
+            LogicalPlan::Projection(projection) => {
+                (projection.expr.clone(), Arc::clone(&projection.input))
             }
-            _ => {
-                inputs.push(Arc::clone(input));
+            _ => (
+                schema
+                    .iter()
+                    .map(|column| Expr::Column(column.into()))
+                    .collect(),
+                Arc::clone(input),
+            ),
+        };
+        let mut changed = false;
+        for (index, (tagged, narrows)) in columns.iter().enumerate() {
+            let Some(branch) = exprs.get(index).cloned() else {
+                continue;
+            };
+            let nanoseconds = *narrows
+                && !is_narrowing_mark(peeled(&branch))
+                && holds(peeled(&branch), source.schema().as_ref(), true);
+            if !nanoseconds && !is_tagged_null(peeled(&branch)) {
                 continue;
             }
-        };
-        let mut exprs = Vec::with_capacity(projection.expr.len());
-        for (index, expr) in projection.expr.iter().enumerate() {
-            exprs.push(if is_tagged_null(peeled(expr)) {
-                settle_union_branch(expr.clone(), beside_nanoseconds(union, index))?
+            let (qualifier, field) = schema.qualified_field(index);
+            let value = branch.transform_up(|node| Ok(untagged(node)))?.data;
+            let value = match value {
+                Expr::Alias(alias) => *alias.expr,
+                value => value,
+            };
+            let value = if nanoseconds {
+                marked(value, *tagged)
             } else {
-                expr.clone()
-            });
+                value
+            };
+            exprs[index] = value.alias_qualified(qualifier.cloned(), field.name());
+            changed = true;
         }
-        let rebuilt = Projection::try_new(exprs, Arc::clone(&projection.input))?;
-        inputs.push(Arc::new(LogicalPlan::Projection(rebuilt)));
-        changed = true;
+        if changed {
+            settled = true;
+            let rebuilt = Projection::try_new(exprs, source)?;
+            inputs.push(Arc::new(LogicalPlan::Projection(rebuilt)));
+        } else {
+            inputs.push(Arc::clone(input));
+        }
     }
-    if !changed {
+    if !settled {
         return Ok(Transformed::no(plan));
     }
     Ok(Transformed::yes(LogicalPlan::Union(Union {
@@ -215,25 +375,18 @@ pub(crate) fn settle_union_nulls(plan: LogicalPlan) -> Result<Transformed<Logica
     })))
 }
 
-fn settle_union_branch(branch: Expr, beside_nanoseconds: bool) -> Result<Expr> {
-    let name = branch.schema_name().to_string();
-    let settled = branch.transform_up(|node| Ok(untagged(node)))?.data;
-    let marked = |value: Expr| {
-        if beside_nanoseconds && holds(&value, &DFSchema::empty(), false) {
-            Expr::ScalarFunction(ScalarFunction::new_udf(
-                narrowed_beside_null_udf(),
-                vec![value],
-            ))
-        } else {
-            value
-        }
+fn quick_type(input: &LogicalPlan, index: usize) -> Option<DataType> {
+    let declared = || (input.schema().fields().get(index)).map(|field| field.data_type().clone());
+    let LogicalPlan::Projection(projection) = input else {
+        return declared();
     };
-    match settled {
-        Expr::Alias(alias) => Ok(Expr::Alias(Alias {
-            expr: Box::new(marked(*alias.expr)),
-            ..alias
-        })),
-        value => marked(value).alias_if_changed(name),
+    match projection.expr.get(index).map(peeled) {
+        Some(Expr::Column(column)) => (projection.input.schema().field_from_column(column))
+            .ok()
+            .map(|field| field.data_type().clone()),
+        Some(Expr::Cast(cast)) => Some(cast.field.data_type().clone()),
+        Some(Expr::Literal(value, _)) => Some(value.data_type()),
+        _ => declared(),
     }
 }
 
@@ -336,6 +489,26 @@ fn holds(expr: &Expr, schema: &DFSchema, nanoseconds: bool) -> bool {
         expr.get_type(schema),
         Ok(DataType::Timestamp(unit, _)) if (unit == TimeUnit::Nanosecond) == nanoseconds
     )
+}
+
+fn coarser(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(unit, _) if *unit != TimeUnit::Nanosecond)
+}
+
+fn instant(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Timestamp(TimeUnit::Microsecond, Some(_))
+    )
+}
+
+fn null_literal(expr: &Expr) -> bool {
+    match expr {
+        Expr::Literal(value, _) => value.is_null(),
+        Expr::Cast(cast) => null_literal(&cast.expr),
+        Expr::TryCast(cast) => null_literal(&cast.expr),
+        _ => false,
+    }
 }
 
 #[cfg(test)]

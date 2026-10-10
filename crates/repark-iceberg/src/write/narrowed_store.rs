@@ -9,7 +9,10 @@ use datafusion::prelude::SessionContext;
 use super::negated_null_store::ViewDefinitionPlans;
 
 pub const NARROWED_BESIDE_NULL_UDF_NAME: &str = "__repark_narrowed_beside_null__";
+pub const NARROWED_BESIDE_VALUE_UDF_NAME: &str = "__repark_narrowed_beside_value__";
 pub const NARROW_TIMESTAMP_NS_UDF_NAME: &str = "__repark_narrow_timestamp_ns__";
+const DATE_TRUNC_UDF_NAME: &str = "date_trunc";
+const TIMESTAMP_TO_DATE_UDF_NAME: &str = "__repark_timestamp_to_date__";
 
 #[allow(clippy::missing_errors_doc)]
 pub fn refuse_narrowed_ns_writes<'a>(
@@ -52,25 +55,54 @@ pub fn refuse_narrowed_ns_columns<'a>(
         let Some(zoned) = nanosecond_target(target) else {
             continue;
         };
-        if column_narrowed(analyzed, index, views) {
-            return Err(narrowed_refusal(table, column, zoned));
+        if let Some(narrowing) = column_narrowed(analyzed, index, views) {
+            return Err(narrowed_refusal(table, column, zoned, &narrowing));
         }
     }
     Ok(())
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Narrowing {
+    pub value: String,
+    pub beside_untyped_null: bool,
+    pub zoned: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Written {
+    over_zoned: bool,
+    over_naive: bool,
+}
+
 #[must_use]
-pub fn narrowed_refusal(table: &str, column: &str, zoned: bool) -> DataFusionError {
+pub fn narrowed_refusal(
+    table: &str,
+    column: &str,
+    zoned: bool,
+    narrowing: &Narrowing,
+) -> DataFusionError {
     let (upper, lower) = if zoned {
         ("TIMESTAMPTZ_NS", "timestamptz_ns")
     } else {
         ("TIMESTAMP_NS", "timestamp_ns")
     };
-    DataFusionError::Plan(format!(
+    let head = format!(
         "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
-         the table {table}: Cannot safely cast `{column}` \"TIMESTAMP\" to \"{upper}\". The \
-         value was narrowed from nanoseconds to microseconds before the store; give the NULL \
-         beside it the type {lower}. SQLSTATE: KD000"
+         the table {table}: Cannot safely cast `{column}` \"TIMESTAMP\" to \"{upper}\"."
+    );
+    if narrowing.beside_untyped_null {
+        return DataFusionError::Plan(format!(
+            "{head} The value was narrowed from nanoseconds to microseconds before the store; \
+             give the NULL beside it the type {lower}. SQLSTATE: KD000"
+        ));
+    }
+    let value = &narrowing.value;
+    DataFusionError::Plan(format!(
+        "{head} The value {value} was narrowed from nanoseconds to microseconds before the \
+         store, to match the microsecond value beside it; write CAST({value} AS TIMESTAMP) if \
+         microseconds are intended, or give the value beside it a nanosecond type. SQLSTATE: \
+         KD000"
     ))
 }
 
@@ -86,52 +118,44 @@ pub fn column_narrowed(
     plan: &LogicalPlan,
     index: usize,
     views: Option<&ViewDefinitionPlans>,
-) -> bool {
+) -> Option<Narrowing> {
+    column_lineage(plan, index, views, Written::default())
+}
+
+fn column_lineage(
+    plan: &LogicalPlan,
+    index: usize,
+    views: Option<&ViewDefinitionPlans>,
+    written: Written,
+) -> Option<Narrowing> {
+    let below = |input: &LogicalPlan, index: usize| column_lineage(input, index, views, written);
+    let of = |expr: &Expr, input: &LogicalPlan| expr_lineage(expr, Some(input), views, written);
     match plan {
-        LogicalPlan::Projection(projection) => projection
-            .expr
-            .get(index)
-            .is_some_and(|expr| expr_narrowed(expr, Some(&projection.input), views)),
-        LogicalPlan::SubqueryAlias(alias) => column_narrowed(&alias.input, index, views),
-        LogicalPlan::Filter(filter) => column_narrowed(&filter.input, index, views),
-        LogicalPlan::Sort(sort) => column_narrowed(&sort.input, index, views),
-        LogicalPlan::Limit(limit) => column_narrowed(&limit.input, index, views),
-        LogicalPlan::Repartition(repartition) => column_narrowed(&repartition.input, index, views),
-        LogicalPlan::Distinct(Distinct::All(input)) => column_narrowed(input, index, views),
-        LogicalPlan::Distinct(Distinct::On(on)) => on
-            .select_expr
-            .get(index)
-            .is_some_and(|expr| expr_narrowed(expr, Some(&on.input), views)),
-        LogicalPlan::Values(values) => values.values.iter().any(|row| {
+        LogicalPlan::Projection(projection) => of(projection.expr.get(index)?, &projection.input),
+        LogicalPlan::SubqueryAlias(alias) => below(&alias.input, index),
+        LogicalPlan::Filter(filter) => below(&filter.input, index),
+        LogicalPlan::Sort(sort) => below(&sort.input, index),
+        LogicalPlan::Limit(limit) => below(&limit.input, index),
+        LogicalPlan::Repartition(repartition) => below(&repartition.input, index),
+        LogicalPlan::Distinct(Distinct::All(input)) => below(input, index),
+        LogicalPlan::Distinct(Distinct::On(on)) => of(on.select_expr.get(index)?, &on.input),
+        LogicalPlan::Values(values) => values.values.iter().find_map(|row| {
             row.get(index)
-                .is_some_and(|expr| expr_narrowed(expr, None, views))
+                .and_then(|expr| expr_lineage(expr, None, views, written))
         }),
-        LogicalPlan::Union(union) => union.inputs.iter().any(|input| {
-            if marked_null_branch(input, index) {
-                union
-                    .inputs
-                    .iter()
-                    .any(|other| narrowed_branch(other, index))
-            } else {
-                column_narrowed(input, index, views)
-            }
-        }),
+        LogicalPlan::Union(union) => union.inputs.iter().find_map(|input| below(input, index)),
         LogicalPlan::Join(join) => {
             let left_width = join.left.schema().fields().len();
             match join.join_type {
                 JoinType::Inner | JoinType::Left | JoinType::Right | JoinType::Full => {
                     if index < left_width {
-                        column_narrowed(&join.left, index, views)
+                        below(&join.left, index)
                     } else {
-                        column_narrowed(&join.right, index - left_width, views)
+                        below(&join.right, index - left_width)
                     }
                 }
-                JoinType::LeftSemi | JoinType::LeftAnti => {
-                    column_narrowed(&join.left, index, views)
-                }
-                JoinType::RightSemi | JoinType::RightAnti => {
-                    column_narrowed(&join.right, index, views)
-                }
+                JoinType::LeftSemi | JoinType::LeftAnti => below(&join.left, index),
+                JoinType::RightSemi | JoinType::RightAnti => below(&join.right, index),
                 JoinType::LeftMark | JoinType::RightMark => subtree_narrowed(plan),
             }
         }
@@ -141,170 +165,156 @@ pub fn column_narrowed(
             if aggregate.schema.fields().len() != produced {
                 return subtree_narrowed(plan);
             }
-            aggregate
-                .group_expr
-                .iter()
+            let expr = (aggregate.group_expr.iter())
                 .chain(&aggregate.aggr_expr)
-                .nth(index)
-                .is_some_and(|expr| expr_narrowed(expr, Some(&aggregate.input), views))
+                .nth(index)?;
+            of(expr, &aggregate.input)
         }
         LogicalPlan::Window(window) => {
             let carried = window.input.schema().fields().len();
             if index < carried {
-                column_narrowed(&window.input, index, views)
+                below(&window.input, index)
             } else {
-                window
-                    .window_expr
-                    .get(index - carried)
-                    .is_some_and(|expr| expr_narrowed(expr, Some(&window.input), views))
+                of(window.window_expr.get(index - carried)?, &window.input)
             }
         }
         LogicalPlan::TableScan(scan) => {
             let source_index = match &scan.projection {
-                Some(projection) => projection.get(index).copied(),
-                None => Some(index),
-            };
-            let Some(source_index) = source_index else {
-                return false;
+                Some(projection) => projection.get(index).copied()?,
+                None => index,
             };
             if let Some(source) = scan.source.get_logical_plan() {
-                return column_narrowed(&source, source_index, views);
+                return below(&source, source_index);
             }
-            views
+            let source = views
                 .zip(source_as_provider(&scan.source).ok())
-                .and_then(|(views, provider)| views.definition_plan(provider.as_ref()))
-                .is_some_and(|source| column_narrowed(&source, source_index, views))
+                .and_then(|(views, provider)| views.definition_plan(provider.as_ref()))?;
+            below(&source, source_index)
         }
-        LogicalPlan::EmptyRelation(_) => false,
+        LogicalPlan::EmptyRelation(_) => None,
         _ => subtree_narrowed(plan),
     }
 }
 
-fn expr_narrowed(
+fn expr_lineage(
     expr: &Expr,
     input: Option<&LogicalPlan>,
     views: Option<&ViewDefinitionPlans>,
-) -> bool {
-    let carried =
-        |branch: &Expr| carries_timestamp(branch, input) && expr_narrowed(branch, input, views);
+    written: Written,
+) -> Option<Narrowing> {
+    let walk = |branch: &Expr, written: Written| {
+        if carries_timestamp(branch, input) {
+            expr_lineage(branch, input, views, written)
+        } else {
+            None
+        }
+    };
+    let carried = |branch: &Expr| walk(branch, written);
     match expr {
-        Expr::ScalarFunction(function) if function.func.name() == NARROWED_BESIDE_NULL_UDF_NAME => {
-            function.args.first().is_some_and(|marked| {
-                beside_a_narrowing(marked, input) || expr_narrowed(marked, input, views)
+        Expr::Cast(cast) if coarser(cast.field.data_type()) => {
+            narrowing_of(&cast.expr, input, written).or_else(|| {
+                if instant(cast.field.data_type()) {
+                    None
+                } else {
+                    carried(&cast.expr)
+                }
             })
         }
-        Expr::Column(column) => input.is_some_and(|input| {
-            input
-                .schema()
-                .index_of_column(column)
-                .is_ok_and(|position| column_narrowed(input, position, views))
-        }),
-        Expr::ScalarSubquery(subquery) => column_narrowed(&subquery.subquery, 0, views),
-        Expr::Case(case) => {
-            case.when_then_expr.iter().any(|(_, then)| carried(then))
-                || case.else_expr.as_deref().is_some_and(carried)
+        Expr::Cast(cast) if matches!(cast.field.data_type(), DataType::Date32) => walk(
+            &cast.expr,
+            Written {
+                over_naive: true,
+                ..written
+            },
+        ),
+        Expr::ScalarFunction(function) if function.func.name() == NARROW_TIMESTAMP_NS_UDF_NAME => {
+            narrowing_of(function.args.first()?, input, written)
         }
+        Expr::ScalarFunction(function) if function.func.name() == TIMESTAMP_TO_DATE_UDF_NAME => {
+            (function.args.iter()).find_map(|argument| {
+                walk(
+                    argument,
+                    Written {
+                        over_naive: true,
+                        ..written
+                    },
+                )
+            })
+        }
+        Expr::ScalarFunction(function) if function.func.name() == DATE_TRUNC_UDF_NAME => {
+            (function.args.iter()).find_map(|argument| {
+                walk(
+                    argument,
+                    Written {
+                        over_zoned: true,
+                        ..written
+                    },
+                )
+            })
+        }
+        Expr::Column(column) => {
+            let input = input?;
+            let position = input.schema().index_of_column(column).ok()?;
+            column_lineage(input, position, views, written)
+        }
+        Expr::ScalarSubquery(subquery) => column_lineage(&subquery.subquery, 0, views, written),
+        Expr::Case(case) => (case.when_then_expr.iter())
+            .find_map(|(_, then)| carried(then))
+            .or_else(|| case.else_expr.as_deref().and_then(carried)),
         Expr::HigherOrderFunction(function) => {
-            function.args.iter().any(|argument| match argument {
-                Expr::Lambda(lambda) => expr_narrowed(&lambda.body, input, views),
+            function.args.iter().find_map(|argument| match argument {
+                Expr::Lambda(lambda) => expr_lineage(&lambda.body, input, views, written),
                 value => carried(value),
             })
         }
-        Expr::AggregateFunction(aggregate) => aggregate.params.args.iter().any(carried),
-        Expr::WindowFunction(window) => window.params.args.iter().any(carried),
+        Expr::AggregateFunction(aggregate) => aggregate.params.args.iter().find_map(carried),
+        Expr::WindowFunction(window) => window.params.args.iter().find_map(carried),
         other => {
-            let mut found = false;
+            let mut found = None;
             let walked = other.apply_children(|branch| {
                 found = carried(branch);
-                Ok(if found {
+                Ok(if found.is_some() {
                     TreeNodeRecursion::Stop
                 } else {
                     TreeNodeRecursion::Continue
                 })
             });
-            walked.is_ok() && found
+            walked.ok().and(found)
         }
     }
 }
 
-fn beside_a_narrowing(marked: &Expr, input: Option<&LogicalPlan>) -> bool {
-    let narrowed = |branch: &Expr| narrows_nanoseconds(branch, input);
-    match marked {
-        Expr::Case(case) => {
-            case.when_then_expr.iter().any(|(_, then)| narrowed(then))
-                || case.else_expr.as_deref().is_some_and(narrowed)
-        }
-        other => {
-            let mut found = false;
-            let walked = other.apply_children(|branch| {
-                found = narrowed(branch);
-                Ok(if found {
-                    TreeNodeRecursion::Stop
-                } else {
-                    TreeNodeRecursion::Continue
-                })
-            });
-            walked.is_ok() && found
-        }
-    }
-}
-
-fn narrows_nanoseconds(expr: &Expr, input: Option<&LogicalPlan>) -> bool {
-    let nanoseconds = |source: &Expr| {
-        matches!(
-            expr_type(source, input),
-            Ok(DataType::Timestamp(TimeUnit::Nanosecond, _))
-        )
+fn narrowing_of(
+    narrowed: &Expr,
+    input: Option<&LogicalPlan>,
+    written: Written,
+) -> Option<Narrowing> {
+    let Expr::ScalarFunction(mark) = narrowed else {
+        return None;
     };
-    let coarser = |target: &DataType| matches!(target, DataType::Timestamp(unit, _) if *unit != TimeUnit::Nanosecond);
-    match expr {
-        Expr::Alias(alias) => narrows_nanoseconds(&alias.expr, input),
-        Expr::Cast(cast) => {
-            coarser(cast.field.data_type()) && nanoseconds(&cast.expr) && !null_literal(&cast.expr)
-        }
-        Expr::TryCast(cast) => {
-            coarser(cast.field.data_type()) && nanoseconds(&cast.expr) && !null_literal(&cast.expr)
-        }
-        Expr::ScalarFunction(function) => {
-            function.func.name() == NARROW_TIMESTAMP_NS_UDF_NAME
-                && function.args.first().is_some_and(nanoseconds)
-        }
-        _ => false,
+    let beside_untyped_null = match mark.func.name() {
+        NARROWED_BESIDE_NULL_UDF_NAME => true,
+        NARROWED_BESIDE_VALUE_UDF_NAME => false,
+        _ => return None,
+    };
+    let value = mark.args.first()?;
+    let zoned = matches!(expr_type(value, input), Ok(DataType::Timestamp(_, Some(_))));
+    if (zoned && written.over_zoned) || (!zoned && written.over_naive) {
+        return None;
     }
+    Some(Narrowing {
+        value: value.human_display().to_string(),
+        beside_untyped_null,
+        zoned,
+    })
 }
 
-fn marked_null_branch(input: &LogicalPlan, index: usize) -> bool {
-    let LogicalPlan::Projection(projection) = input else {
-        return false;
-    };
-    let mut branch = projection.expr.get(index);
-    while let Some(Expr::Alias(alias)) = branch {
-        branch = Some(alias.expr.as_ref());
-    }
-    let Some(Expr::ScalarFunction(function)) = branch else {
-        return false;
-    };
-    function.func.name() == NARROWED_BESIDE_NULL_UDF_NAME
-        && function.args.first().is_some_and(null_literal)
+fn coarser(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(unit, _) if *unit != TimeUnit::Nanosecond)
 }
 
-fn null_literal(expr: &Expr) -> bool {
-    match expr {
-        Expr::Literal(value, _) => value.is_null(),
-        Expr::Cast(cast) => null_literal(&cast.expr),
-        Expr::TryCast(cast) => null_literal(&cast.expr),
-        _ => false,
-    }
-}
-
-fn narrowed_branch(input: &LogicalPlan, index: usize) -> bool {
-    let LogicalPlan::Projection(projection) = input else {
-        return false;
-    };
-    projection
-        .expr
-        .get(index)
-        .is_some_and(|branch| narrows_nanoseconds(branch, Some(&projection.input)))
+fn instant(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(_, Some(_)))
 }
 
 fn expr_type(expr: &Expr, input: Option<&LogicalPlan>) -> Result<DataType> {
@@ -320,7 +330,7 @@ fn carries_timestamp(expr: &Expr, input: Option<&LogicalPlan>) -> bool {
 
 fn holds_timestamp(data_type: &DataType) -> bool {
     match data_type {
-        DataType::Timestamp(_, _) => true,
+        DataType::Timestamp(_, _) | DataType::Date32 => true,
         DataType::Struct(fields) => fields
             .iter()
             .any(|field| holds_timestamp(field.data_type())),
@@ -336,32 +346,31 @@ fn holds_timestamp(data_type: &DataType) -> bool {
     }
 }
 
-fn subtree_narrowed(plan: &LogicalPlan) -> bool {
-    let mut found = false;
+fn subtree_narrowed(plan: &LogicalPlan) -> Option<Narrowing> {
+    let mut found = None;
     let walked = plan.apply_with_subqueries(|node| {
         node.apply_expressions(|expr| {
-            found = expr
-                .exists(|inner| {
-                    Ok(matches!(
-                        inner,
-                        Expr::ScalarFunction(function)
-                            if function.func.name() == NARROWED_BESIDE_NULL_UDF_NAME
-                    ))
+            expr.apply(|inner| {
+                if let Expr::Cast(cast) = inner
+                    && coarser(cast.field.data_type())
+                {
+                    found = narrowing_of(&cast.expr, None, Written::default());
+                }
+                if let Expr::ScalarFunction(function) = inner
+                    && function.func.name() == NARROW_TIMESTAMP_NS_UDF_NAME
+                {
+                    found = (function.args.first())
+                        .and_then(|value| narrowing_of(value, None, Written::default()));
+                }
+                Ok(if found.is_some() {
+                    TreeNodeRecursion::Stop
+                } else {
+                    TreeNodeRecursion::Continue
                 })
-                .unwrap_or(false);
-            Ok(if found {
-                TreeNodeRecursion::Stop
-            } else {
-                TreeNodeRecursion::Continue
             })
-        })?;
-        Ok(if found {
-            TreeNodeRecursion::Stop
-        } else {
-            TreeNodeRecursion::Continue
         })
     });
-    walked.is_ok() && found
+    walked.ok().and(found)
 }
 
 #[cfg(test)]
