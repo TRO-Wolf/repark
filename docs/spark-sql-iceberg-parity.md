@@ -3652,8 +3652,10 @@ still open is `isModifiable`.
   Spark reads elapsed seconds, and `unix_timestamp` of a wall clock inside a gap refuses
   where Spark shifts forward; both are true at 2099 too, and after 2099 they now show on the
   real transition days, which moved 16 cells that agreed by accident (ledger R-5).
-  `timestamp_micros` / `timestamp_seconds` do not exist. The styled `show()` prints instants
-  in UTC, not in the session zone.
+  `timestamp_micros` / `timestamp_seconds` / `timestamp_millis` are FIXED 2026-10-08
+  (SQL-EPOCH-CONSTRUCTORS-1): all three resolve on the Spark SQL door and the DataFrame door
+  with Spark's values, refusal classes and `timestamp` schema. The styled `show()` prints
+  instants in UTC, not in the session zone.
 - **Apache Spark** — the 6972 cells in
   `python/repark/tests/zone_horizon_render_1_spark_oracle.json`: six session zones x 2099,
   2100, 2104, 2500, 9999 x a January and a July instant plus both sides of each transition x
@@ -13140,7 +13142,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 - **B-TZ-1** — `unix_timestamp` is not a Spark-door SQL function (the facade `F.unix_timestamp`
   exists; the SQL spelling does not plan).
-- **B-TZ-2** — `timestamp_seconds` is not a Spark-door SQL function (same shape as B-TZ-1).
+- **B-TZ-2** — **FIXED (SQL-EPOCH-CONSTRUCTORS-1, 2026-10-08).** `timestamp_seconds`
+  is a Spark-door SQL function, with `timestamp_millis` and `timestamp_micros` beside it;
+  all three answer Spark's values, error classes and `timestamp` schema on the SQL and
+  DataFrame doors (pins `test_sql_epoch_constructors_1.py`).
 - **B-TZ-3** — `date_add(DATE, <integer literal>)` fails to coerce in the SQL door
   (`date_add(Date32, Int64)` refuses; the DataFrame spelling works).
 - **V3-DANGLE-1** — **FIXED (V3-5, 2026-08-31).** See the row above. RP-2 took the v2
@@ -13233,11 +13238,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   is applied), while this engine renders `1970-01-01 00:00:00` — the session zone is not
   applied on this facade read path, whose output is identical to its UTC output under either
   driver TZ (the conf itself is read: `current_timezone()` answers `America/New_York` there).
-  Under `TZ=UTC` the `collect()` values still agree, so the divergence is the `show()` render
-  and the schema half: this engine's facade schema for `timestamp_seconds` is `string` (an
-  Arrow `timestamp[s]` with no zone) where Spark's is `timestamp`. Same family as
-  B-TZ-1/B-TZ-2 — the SQL door does not spell `timestamp_seconds` at all — and B-TZ-3; the
-  facade half wants the session zone applied on the timestamp read path, or its own decision.
+  Under `TZ=UTC` the `collect()` values still agree, so the divergence is the `show()` render.
+  The schema half is FIXED 2026-10-08 (SQL-EPOCH-CONSTRUCTORS-1): the facade schema for
+  `timestamp_seconds` is `timestamp` (Arrow `timestamp[us, tz=UTC]`), and the SQL door spells
+  all three names (B-TZ-2 FIXED the same day); the `string` reading was stale — base main
+  already read `timestamp_ntz` over `timestamp[s]`. The facade half wants the session zone
+  applied on the timestamp read path, or its own decision.
   Full record: `task/ledgers/staging/ex-7-functions-datetime-b-ledger.md`.
 
 - **EX7-HOURS-1** — measured 2026-09-03 (EX-7 batch b remediation). The Spark-facade write path

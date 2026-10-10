@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
+  **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
+  `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
+  `repark_functions::spark_epoch_ctor` kernel per spelling, with Spark's values, refusal
+  classes and `timestamp` schema (C-002..C-005, C-008); the 304-cell live Spark 4.1.2
+  oracle (C-001, C-009) and its live drift check (C-007) sit under `python/repark/tests`;
+  the native door stays a declared refusal (C-006); fold 1 (2026-10-09) pins the
+  decimal-boundary order (C-010) and files the verdict S3s as O-3..O-5.
+  `risk_tier: standard`. Branch `fix/sql-epoch-constructors-1`.
 - [ice-tsns-merge-wall-1-ledger.md](ice-tsns-merge-wall-1-ledger.md) —
   **ICE-TSNS-MERGE-WALL-1 (2026-10-09), readiness finding R-007:** every write door stores
   the same nanosecond wall. Step 0: the review's test red on main (C-001), Spark 4.1.2 with
@@ -2337,3 +2346,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-007) and the gates + card filing (C-009). `risk_tier: standard`. Branch
   `fix/empty-projection-count-1`.
   pins: empty-projection-count-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [cluster-codec-test-1-ledger.md](cluster-codec-test-1-ledger.md) —
+  **CLUSTER-CODEC-TEST-1 (2026-10-10), in flight:** the one `cluster`-feature test that
+  fails on main, fixed ahead of the CI job. The TIMESTAMP refusal became a sound drop
+  (C-001) and the DATE drop became a correct push (C-002), both in RP-27; the test
+  re-measures both halves. `risk_tier: standard`. Branch
+  `fix/cluster-codec-pushdown-test-1`.
+  pins: cluster-codec-test-1/C-001, C-002
+- [cluster-tests-2-ledger.md](cluster-tests-2-ledger.md) —
+  **CLUSTER-TESTS-2 (2026-10-10), in flight:** the two other `cluster`-feature tests
+  that fail on main, fixed ahead of the CI job. The `range()` seed plans
+  `StreamingTableExec` since RANGE-TVF-ID-1, which the codec cannot carry (C-001);
+  the honest fix is test-side (C-002); the `generate_series` seed restores both
+  cancel pins (C-003). `risk_tier: standard`. Branch `fix/cluster-tests-2`.
+  pins: cluster-tests-2/C-001, C-002, C-003
