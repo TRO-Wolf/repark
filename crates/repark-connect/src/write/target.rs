@@ -15,7 +15,6 @@ pub enum RowFallback {
     ForeignTable,
     InsertRule,
     RowSecurity,
-    StatementTrigger,
     ColumnType,
 }
 
@@ -28,9 +27,6 @@ impl fmt::Display for RowFallback {
             RowFallback::RowSecurity => {
                 "row-level security applies to the role, and COPY FROM refuses under it"
             }
-            RowFallback::StatementTrigger => {
-                "the target has a statement-level INSERT trigger, which COPY fires once"
-            }
             RowFallback::ColumnType => "a written column's type has no COPY BINARY form here",
         })
     }
@@ -41,9 +37,10 @@ SELECT c.relkind::pg_catalog.text,
        pg_catalog.row_security_active(c.oid),
        EXISTS (SELECT 1 FROM pg_catalog.pg_rewrite r
                WHERE r.ev_class = c.oid AND r.ev_type = '3' AND r.ev_enabled <> 'D'),
-       EXISTS (SELECT 1 FROM pg_catalog.pg_trigger t
-               WHERE t.tgrelid = c.oid AND NOT t.tgisinternal AND t.tgenabled <> 'D'
-                 AND (t.tgtype & 5) = 4),
+       (SELECT fdw.fdwname::pg_catalog.text FROM pg_catalog.pg_foreign_table ft
+        JOIN pg_catalog.pg_foreign_server fs ON fs.oid = ft.ftserver
+        JOIN pg_catalog.pg_foreign_data_wrapper fdw ON fdw.oid = fs.srvfdw
+        WHERE ft.ftrelid = c.oid),
        c.relkind = 'p' AND EXISTS (SELECT 1 FROM pg_catalog.pg_partition_tree(c.oid) p
                JOIN pg_catalog.pg_class leaf ON leaf.oid = p.relid WHERE leaf.relkind = 'f'),
        COALESCE((SELECT pg_catalog.bool_and(
@@ -69,12 +66,16 @@ fn cell<'a, T: FromSql<'a>>(row: &'a Row, index: usize) -> Result<T> {
 
 fn relation_fallback(facts: &Row) -> Result<Option<RowFallback>> {
     let kind: String = cell(facts, 0)?;
+    let wrapper: Option<String> = cell(facts, 3)?;
+    let measured = wrapper.as_deref() == Some("postgres_fdw");
     let reasons = [
         (matches!(kind.as_str(), "v" | "m"), RowFallback::View),
-        (kind == "f" || cell(facts, 4)?, RowFallback::ForeignTable),
+        (
+            (kind == "f" && !measured) || cell(facts, 4)?,
+            RowFallback::ForeignTable,
+        ),
         (cell(facts, 2)?, RowFallback::InsertRule),
         (cell(facts, 1)?, RowFallback::RowSecurity),
-        (cell(facts, 3)?, RowFallback::StatementTrigger),
     ];
     Ok(reasons
         .into_iter()
