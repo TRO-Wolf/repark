@@ -1081,6 +1081,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- `timestamp_ns_cast.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel
+  `__repark_cast_timestamptz_ns__` is now the one conversion every write door reaches for a
+  top-level `timestamptz_ns` column, as the naive kernel is for `timestamp_ns`. Its return
+  field takes the naive kernel's rule: nullable unless the source is already a nanosecond
+  timestamp of the same kind (`already_stored`). Why: an out-of-range value answers NULL when
+  ANSI is off, and the doors that newly reach this kernel raised Arrow's `declared as
+  non-nullable but contains null values` where INSERT stores NULL. R-007 had kept the zoned
+  rule narrow to hold a required `timestamptz_ns` column's refusal text as a control; that
+  type is this unit's subject. The conversion itself did not change.
+  pins: ice-tstzns-wall-1/C-005, C-008
 - `timestamp_ns_cast.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09, fold 1 and the split):** the
   nanosecond wall kernel `__repark_cast_timestamp_ns__` is the one conversion every write door
   reaches for a top-level `timestamp_ns` column. Its return field is nullable for every source

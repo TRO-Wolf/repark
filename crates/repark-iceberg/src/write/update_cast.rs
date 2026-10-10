@@ -10,6 +10,14 @@ use super::store_assign::{
 
 #[must_use]
 pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
+    match super::ntz_store::store_kernel_sql(expr, target) {
+        Some(stored) => stored,
+        None => nested_leaf_cast_sql(expr, target),
+    }
+}
+
+#[must_use]
+pub fn nested_leaf_cast_sql(expr: &str, target: &DataType) -> String {
     if let Some(wall) = super::ntz_store::wall_cast_sql(expr, target) {
         return wall;
     }
@@ -305,7 +313,15 @@ mod tests {
         );
         assert_eq!(
             store_assignment_cast_sql("s.v", &zoned_nanos),
+            "__repark_cast_timestamptz_ns__((s.v))"
+        );
+        assert_eq!(
+            super::nested_leaf_cast_sql("s.v", &zoned_nanos),
             "arrow_cast((s.v), 'Timestamp(ns, \"UTC\")')"
+        );
+        assert_eq!(
+            super::nested_leaf_cast_sql("s.v", &micros),
+            "__repark_cast_timestamp_ntz__((s.v))"
         );
     }
 

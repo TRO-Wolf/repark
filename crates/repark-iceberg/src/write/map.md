@@ -675,6 +675,22 @@ repark-core's error map.
   renderers. Callers: repark-spark `insert_by_name.rs` and `insert_overwrite.rs`.
   pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
 - `ntz_store.rs`, `update_cast.rs`, `merge/insert.rs`, `predicate_dml/lineage.rs` —
+  **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned nanosecond target is named too.
+  `store_kernel_udf_name(target)` answers the registered kernel of the three types a plain
+  Arrow cast must not store: the two wall kernels of `wall_cast_udf_name`, and
+  `__repark_cast_timestamptz_ns__` (`NS_INSTANT_CAST_UDF_NAME`) for `Timestamp(ns, Some(_))`;
+  `store_kernel_sql` renders the call. The top-level sites ask it: `store_assignment_cast_sql`
+  (MERGE UPDATE SET), the MERGE INSERT projection, the identity-UPDATE projection and
+  `zone_store_frame`. `zone_stores` maps an Iceberg `timestamptz_ns` column to a target (it
+  mapped none, so the overwrite doors never reached a matcher) and `wall_kernel_reads` hands
+  such a target every temporal source that is not already it. Before, each of these doors
+  cast a naive wall to the zoned type as if it were UTC, where INSERT localises it in the
+  session zone; a `DATE` past the range panicked in Arrow's cast.
+  **`wall_cast_udf_name` is kept, and why:** `update_cast::nested_leaf_cast_sql` uses it for
+  a leaf below the top level (`SET t.st.v = …`), where a nested `timestamptz_ns` leaf must
+  keep what main stores; converting it through that one door would give nested leaves two
+  readings. Nested leaves are not this unit's (ledger §7).
+  pins: ice-tstzns-wall-1/C-007, C-008
   **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** a wall-clock target has two units, and each has one
   kernel. `wall_cast_udf_name(target)` answers the kernel's registered name:
   `Timestamp(µs, None)` → `__repark_cast_timestamp_ntz__` (`NTZ_WALL_CAST_UDF_NAME`),

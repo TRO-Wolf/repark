@@ -12,6 +12,14 @@ into a nanosecond wall for every write door, not INSERT's only. `repark-iceberg`
 MERGE, UPDATE and overwrite sites; the ANSI door registers it beside the NTZ kernel. The
 kernel itself did not change. pins: ice-tsns-merge-wall-1/C-008
 
+**ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel's return field is nullable whenever the
+source is not already a zoned nanosecond timestamp, the rule the naive kernel got in R-007's
+fold 1 (`already_stored` decides for both). The shared MERGE, UPDATE and overwrite sites now
+emit this kernel for a `timestamptz_ns` target, so a non-null literal past the range must be
+allowed to answer NULL with ANSI off, as INSERT stores it. `tests.rs`
+`the_return_field_is_nullable_where_an_overflow_answers_null` holds both kernels.
+pins: ice-tstzns-wall-1/C-005, C-008
+
 **ICE-TSNS-MERGE-WALL-1 fold 1 and the split (2026-10-09), what changed in that kernel.**
 
 - **Nullability.** The wall kernel's return field is nullable whenever the source is not

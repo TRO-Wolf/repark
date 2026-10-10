@@ -61,6 +61,27 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   NTZ opt-in literals/casts (naive µs, no localization), invalid-value refusal
   naming both tokens, DDL `TIMESTAMP` → Iceberg `timestamp` under NTZ /
   `timestamptz` under LTZ. `to_timestamp` stays LTZ.
+- [timestamptz_ns_wall_doors.rs](timestamptz_ns_wall_doors.rs) — **ICE-TSTZNS-WALL-1
+  (2026-10-10):** the zoned mirror of the file below.
+  `every_door_stores_the_instant_insert_stores_in_a_zoned_column`: four walls (one before the
+  epoch, New York's gap and overlap) from a `timestamp_ns`, a `TIMESTAMP_NTZ`, a `DATE` and a
+  `TIMESTAMP` column go through ten doors (`BY NAME`, `OVERWRITE`, `REPLACE WHERE`, MERGE
+  insert and `INSERT *`, MERGE update and `SET *`, `UPDATE` with and without a `WHERE`, a
+  `CASE`), copy-on-write and merge-on-read, in UTC, America/New_York, Asia/Kolkata,
+  Asia/Kathmandu and Australia/Lord_Howe. Each must store what `INSERT … SELECT` stores in
+  the same session; INSERT itself is held to fixed instants in three zones.
+  `a_value_past_the_range_answers_as_insert_does_on_every_door`: a `DATE`, a `TIMESTAMP_NTZ`
+  and a `TIMESTAMP` past 2262 through the same doors, ANSI on (`[CAST_OVERFLOW]` naming
+  `"TIMESTAMPTZ_NS"`) and off (NULL in a nullable column, the non-nullable refusal in a
+  required one). On main both tests fail, the second by a panic in Arrow's cast.
+  `a_dictionary_encoded_wall_stores_inserts_instant_on_the_overwrite_doors` (R-008 fold 1,
+  2026-10-10): the same four walls Dictionary-encoded in a temp view go through `OVERWRITE`,
+  `BY NAME`, `OVERWRITE … BY NAME` and dynamic partition `OVERWRITE` in America/New_York into
+  a partitioned table; each must store what `INSERT … SELECT` of the same walls plain stores,
+  and INSERT itself is held to the fixed New York instants (INSERT of the encoded source
+  refuses, as the kernel refuses an encoded argument). Kills the mutant that stops seeing
+  through `Dictionary` for the zoned target at the store.
+  pins: ice-tstzns-wall-1/C-003, C-004, C-005, C-010
 - [timestamp_ns_wall_doors.rs](timestamp_ns_wall_doors.rs) — **ICE-TSNS-MERGE-WALL-1
   (2026-10-09):** the readiness review's first probe test, ported unchanged in substance. In
   an America/New_York session `INSERT … VALUES` and `MERGE … INSERT *` of one `TIMESTAMP`

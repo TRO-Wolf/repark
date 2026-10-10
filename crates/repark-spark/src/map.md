@@ -1050,6 +1050,13 @@ pins: rp-4-fork-repin/C-005, C-006
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.
   pins: unresolved-routine-1/C-006
+- `insert_timestamp_ns.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the `UPDATE` conform runs
+  for a `timestamptz_ns` target too. R-007 had filtered zoned targets out of it to hold the
+  type as a control, which is what left `UPDATE t SET v = <column>` with no `WHERE` on the
+  raw Arrow `arguments need to have the same data type` from a `TIMESTAMP`, `TIMESTAMP_NTZ`
+  or `DATE` column. The narrowing refusal of that door (`Narrowed::refuse`) names the target
+  it refuses for: `"TIMESTAMPTZ_NS"` and `timestamptz_ns` for a zoned column.
+  pins: ice-tstzns-wall-1/C-004
 - `insert_timestamp_ns.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the conform also runs
   for an `UPDATE` plan (`ns_store_targets`), on its naive `timestamp_ns` targets only. An
   `UPDATE` with no `WHERE` is not an identity DML: DataFusion plans it as a `Dml(Update)` over
