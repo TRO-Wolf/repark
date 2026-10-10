@@ -740,7 +740,8 @@ declines it (a dated ruling in the intake, then the archive).
   ENC-1 commit guard matches on values and stops reading `Debug` text.
 - [cluster-feature-ci-1-card-2026-10-09.md](cluster-feature-ci-1-card-2026-10-09.md) **card CLUSTER-FEATURE-CI-1
   (2026-10-09, open):** no CI job builds or tests `repark-distributed --features cluster`; a regression there went
-  unseen until a verifier ran it by hand.
+  unseen until a verifier ran it by hand. CLUSTER-CODEC-TEST-1 (2026-10-10) fixed the
+  failing test ahead of the job; the card retires with the job.
 - [enc-1-first-write-refusal-card-2026-10-09.md](enc-1-first-write-refusal-card-2026-10-09.md) **card
   ENC-1-FIRST-WRITE-REFUSAL-1 (2026-10-09, open, clerk guided by Muse, Opus verifier):** the owner's 2026-10-01 ruling
   (ES-3) that the first write to a table carrying `encryption.key-id` refuses, as Spark does without a KMS. The card's

@@ -2316,3 +2316,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-007) and the gates + card filing (C-009). `risk_tier: standard`. Branch
   `fix/empty-projection-count-1`.
   pins: empty-projection-count-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [cluster-codec-test-1-ledger.md](cluster-codec-test-1-ledger.md) —
+  **CLUSTER-CODEC-TEST-1 (2026-10-10), in flight:** the one `cluster`-feature test that
+  fails on main, fixed ahead of the CI job. The TIMESTAMP refusal became a sound drop
+  (C-001) and the DATE drop became a correct push (C-002), both in RP-27; the test
+  re-measures both halves. `risk_tier: standard`. Branch
+  `fix/cluster-codec-pushdown-test-1`.
+  pins: cluster-codec-test-1/C-001, C-002
