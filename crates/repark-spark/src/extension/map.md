@@ -58,6 +58,10 @@ function-registry + analyzer-rule installation + the composed
   `spark_fractional_division` immediately before `higher_order_preparation` (the four
   existing offsets are unchanged), and the filter passes it through.
   pins: intdiv-1/C-002
+  **CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08):** the same contract test pins a sixth
+  pre-coercion seat, `join_condition_refusals` between `spark_integral_literal` and
+  `type_coercion`, and the filter passes it through.
+  pins: cross-join-condition-1/C-008
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `apply_default_catalog(session, name)`
   (registry and carrier, a no-op once `USE` pinned the current catalog),
   `with_configured_defaults` (the build carrier from `spark.sql.defaultCatalog`),

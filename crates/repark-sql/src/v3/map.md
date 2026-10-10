@@ -7,6 +7,12 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
 ## Contents
 
 - `mod.rs` — thin index.
+- `create.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):**
+  `update_and_merge_into_timestamp_ns_store_the_wall` runs `AnsiDialect::on_session_built` on
+  the door, then an `UPDATE`, a MERGE update and a MERGE insert of a naive `TIMESTAMP`
+  literal into a `timestamp_ns` column: three rows of `1767323045123456000`, the column still
+  `Timestamp(ns)`. Red without the kernel's registration in `dialect.rs`.
+  pins: ice-tsns-merge-wall-1/C-009
 - `create.rs` — **V3-2:** ANSI CREATE/CTAS `format_version = 3` opt-in pins
   (`Model: Grok 4.6 xHigh` on the module's functions). **V3-6 C-003:** opt-in CREATE
   `timestamp_ns` / `timestamptz_ns` stores the Iceberg primitives; `timestamp_ns`
