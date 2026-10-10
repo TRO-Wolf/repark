@@ -21,3 +21,15 @@ RP-27 ([ledger](../../ledgers/staging/cluster-codec-test-1-ledger.md) carries th
 before/after surface). `cargo test --locked --no-fail-fast -p repark-distributed
 --features cluster --test codec --test iceberg_scan` answers 20 of 20. The card stays
 open: it retires when the CI job exists.
+
+## CLUSTER-TESTS-2 (2026-10-10)
+
+The two remaining reds are fixed on branch `fix/cluster-tests-2`, in the second small PR
+the 2026-10-10 owner ruling asked for: the seed was stale, not the product. Both cancel
+tests built their long job from `range(100000000)`, which has planned the uncarried
+`StreamingTableExec` since RANGE-TVF-ID-1; the seed is now `generate_series(0,
+99999999)`, whose `LazyMemoryExec` the codec carries
+([ledger](../../ledgers/staging/cluster-tests-2-ledger.md) carries the cause and the
+test-side decision). `cargo test --locked --no-fail-fast -p repark-distributed --features
+cluster` answers 39 of 39, five consecutive runs. The card stays open: it retires when
+the CI job exists.
