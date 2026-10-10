@@ -1072,6 +1072,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   to the engine door; `save_jdbc` serves `format("jdbc").save()` off url/dbtable options
   while `format("postgres").save()` keeps `DATA_SOURCE_NOT_FOUND`;
   `take_postgres_write_report` reads the session carrier back once for the live cells.
+  **C-4 fold 2 item 4 (2026-10-10):** the `writer_jdbc` docstring states the
+  `write.path` carriage contract: one `COPY` statement on bulk, one multi-row `INSERT`
+  per batch on row, so statement triggers fire once per batch on the row path and a
+  per-statement row cap can refuse bulk while admitting row.
   pins: c-4/C-014
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** both `option` methods

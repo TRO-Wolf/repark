@@ -256,6 +256,15 @@ def writer_jdbc(
 ) -> None:
     """Write PostgreSQL via the native connector; other drivers and modes refuse.
 
+    The ``write.path`` option picks the carriage: ``bulk`` (the default) streams
+    the rows in one ``COPY ... FROM STDIN`` statement, ``row`` sends multi-row
+    ``INSERT`` statements of up to 256 rows each plus one remainder statement, as
+    Spark's JDBC writer sends batches. Statement-level triggers and transition
+    tables therefore see one statement on the bulk path and one per batch on the
+    row path; a trigger that limits rows per statement can refuse a bulk write
+    and admit the same rows on the row path. Types the bulk carriage cannot
+    carry fall back to the row path with a report note.
+
     pins: io-declared-1/C-003, C-008; c-4/C-014
     """
     from repark import _native

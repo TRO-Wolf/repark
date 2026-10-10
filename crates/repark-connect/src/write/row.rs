@@ -59,6 +59,7 @@ impl Pending {
 pub(crate) struct RowLane {
     columns: Vec<PlannedColumn>,
     relation: QualifiedRelation,
+    request: WriteRequest,
     read_timeout: Duration,
     single: Statement,
     many: Option<Statement>,
@@ -86,6 +87,7 @@ impl RowLane {
         Ok(RowLane {
             columns,
             relation,
+            request: request.clone(),
             read_timeout: options.read_timeout,
             single,
             many: None,
@@ -130,11 +132,16 @@ impl RowLane {
         Ok(())
     }
 
-    async fn flush_single(&mut self, client: &Client) -> Result<()> {
-        let single = self.single.clone();
-        for row in 0..self.pending_rows() {
-            self.run(client, &single, row..row + 1).await?;
+    async fn flush_remainder(&mut self, client: &Client) -> Result<()> {
+        let rows = self.pending_rows();
+        if rows == 0 {
+            self.pending.clear();
+            return Ok(());
         }
+        let sql = self.request.insert_statement(rows);
+        let preparing = client.prepare(sql.as_str());
+        let statement = asked(self.read_timeout, &self.relation, preparing).await?;
+        self.run(client, &statement, 0..rows).await?;
         self.pending.clear();
         Ok(())
     }
@@ -159,14 +166,14 @@ impl RowLane {
             if self.pending_rows() == self.rows_per_insert {
                 self.flush_many(client).await?;
             } else if self.pending.wire.len() >= self.buffer_bytes {
-                self.flush_single(client).await?;
+                self.flush_remainder(client).await?;
             }
         }
         Ok(())
     }
 
     pub(crate) async fn finish(mut self, client: &Client) -> Result<u64> {
-        self.flush_single(client).await?;
+        self.flush_remainder(client).await?;
         Ok(self.stored)
     }
 }

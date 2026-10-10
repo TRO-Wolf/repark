@@ -657,17 +657,88 @@ async fn bulk_and_row_leave_the_same_target_rows_under_a_statement_trigger() {
                 assert_eq!(counts.as_deref(), Some("4:1,2,3,4"), "bulk");
             }
             WritePath::Row => {
-                assert_eq!(
-                    firings.as_deref(),
-                    Some("before,after,before,after,before,after,before,after"),
-                    "row"
-                );
-                assert_eq!(counts.as_deref(), Some("1:1,1:2,1:3,1:4"), "row");
+                assert_eq!(firings.as_deref(), Some("before,after"), "row");
+                assert_eq!(counts.as_deref(), Some("4:1,2,3,4"), "row");
             }
         }
     }
     assert_eq!(targets[0], targets[1], "the twins store the same rows");
     assert_eq!(targets[0], FOUR, "the stored rows");
+    drop(store);
+    no_backend_remains(&cell).await;
+    cell.close().await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn row_path_sends_full_groups_plus_one_remainder_statement() {
+    let cell = Cell::open().await;
+    let schema = &cell.schema;
+    let store = Store::new(&cell.settings(&[]));
+    cell.sql(&format!(
+        "CREATE TABLE {schema}.trig (id int4, v text);
+         CREATE TABLE {schema}.audit (seq bigserial, fired text);
+         CREATE TABLE {schema}.seen (seq bigserial, n bigint);
+         CREATE FUNCTION {schema}.before() RETURNS trigger LANGUAGE plpgsql AS
+         $$ BEGIN INSERT INTO {schema}.audit (fired) VALUES ('before');
+         RETURN NULL; END $$;
+         CREATE FUNCTION {schema}.after() RETURNS trigger LANGUAGE plpgsql AS
+         $$ BEGIN INSERT INTO {schema}.audit (fired) VALUES ('after');
+         RETURN NULL; END $$;
+         CREATE FUNCTION {schema}.trans() RETURNS trigger LANGUAGE plpgsql AS
+         $$ BEGIN INSERT INTO {schema}.seen (n) SELECT count(*) FROM n;
+         RETURN NULL; END $$;
+         CREATE TRIGGER b BEFORE INSERT ON {schema}.trig
+         FOR EACH STATEMENT EXECUTE FUNCTION {schema}.before();
+         CREATE TRIGGER a AFTER INSERT ON {schema}.trig
+         FOR EACH STATEMENT EXECUTE FUNCTION {schema}.after();
+         CREATE TRIGGER t AFTER INSERT ON {schema}.trig
+         REFERENCING NEW TABLE AS n FOR EACH STATEMENT
+         EXECUTE FUNCTION {schema}.trans()"
+    ))
+    .await;
+    let resolved = store.target(&cell, "trig").await;
+    let request = WriteRequest::new(&resolved).expect("a relation takes rows");
+    let batch = batch_of(&[
+        ("id", ids(1..601)),
+        (
+            "v",
+            Arc::new(StringArray::from(
+                (1..601).map(|id| format!("r{id}")).collect::<Vec<_>>(),
+            )),
+        ),
+    ]);
+    let (opened, fallback, outcome) = put(&store, request, WritePath::Row, &batch).await;
+    assert!(opened);
+    assert_eq!(fallback, None);
+    assert_eq!(
+        outcome,
+        Ok(WriteReport {
+            path: WritePath::Row,
+            rows: 600
+        })
+    );
+    let audit =
+        format!("SELECT pg_catalog.string_agg(fired, ',' ORDER BY seq) FROM {schema}.audit");
+    let row = cell
+        .admin
+        .query_one(audit.as_str(), &[])
+        .await
+        .expect(&audit);
+    let firings: Option<String> = row.get(0);
+    assert_eq!(
+        firings.as_deref(),
+        Some("before,after,before,after,before,after")
+    );
+    let transitions =
+        format!("SELECT pg_catalog.string_agg(n::text, ',' ORDER BY seq) FROM {schema}.seen");
+    let row = cell
+        .admin
+        .query_one(transitions.as_str(), &[])
+        .await
+        .expect(&transitions);
+    let counts: Option<String> = row.get(0);
+    assert_eq!(counts.as_deref(), Some("256,256,88"));
     drop(store);
     no_backend_remains(&cell).await;
     cell.close().await;

@@ -59,10 +59,11 @@ carriages a write can take and nothing a door needs to parse. The module root
     use, where `n` is `rows_per_insert` capped so `n × columns` stays at or under
     `MAX_INSERT_PARAMS` (65 535, the protocol's 16-bit parameter count). `write` encodes each
     row into one buffer (`Pending`: the bytes and one range per field). A full group of `n`
-    rows runs the multi-row statement. A buffer that reaches `copy_chunk_bytes` first, and
-    the remainder at `finish`, run row by row through the single-row statement, so no `Bind`
-    message grows with wide rows and no third statement shape is prepared. Statements run
-    one after another, never pipelined: the rows reach the table in input order.
+    rows runs the multi-row statement. **C-4 fold 2 item 4 (2026-10-10):** a buffer that
+    reaches `copy_chunk_bytes` first, and the remainder at `finish`, run as ONE statement
+    shaped for the exact pending count (600 rows run 256 + 256 + 88), so statement triggers
+    fire once per batch on the row path. Statements run one after another, never pipelined:
+    the rows reach the table in input order.
   pins: c-4/C-009, C-010
 
 ## Pointers

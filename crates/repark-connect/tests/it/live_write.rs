@@ -882,7 +882,7 @@ async fn a_statement_trigger_fires_once_by_bulk_and_per_statement_by_row() {
     let (batches, total) = stream_batches(&[10, 20, 300]);
     let rows = u64::try_from(total).expect("a row count");
     let cases = [
-        (defaults, 1 + 74),
+        (defaults, 1 + 1),
         (
             WriteOptions {
                 rows_per_insert: 7,
@@ -903,7 +903,7 @@ async fn a_statement_trigger_fires_once_by_bulk_and_per_statement_by_row() {
                 rows_per_insert: 100_000,
                 ..defaults
             },
-            330,
+            1,
         ),
     ];
     for (options, inserts) in cases {
@@ -947,8 +947,8 @@ async fn a_statement_trigger_fires_once_by_bulk_and_per_statement_by_row() {
         .await;
     assert_eq!(
         fired,
-        1 + 5,
-        "one statement of 65 535 parameters, then five rows"
+        1 + 1,
+        "one statement of 65 535 parameters, then one remainder statement"
     );
     drop(store);
     cell.close().await;

@@ -36,7 +36,10 @@ See [../map.md](../map.md).
   `row_triggers_and_disabled_statement_triggers_stay_on_the_bulk_path`,
   `bulk_and_row_leave_the_same_target_rows_under_a_statement_trigger` (a BEFORE, an AFTER
   and a transition-table trigger: bulk fires each once, row fires each per statement, the
-  target rows agree),
+  target rows agree; **C-4 fold 2 item 4 (2026-10-10):** the row remainder runs as one
+  statement, so four rows fire each trigger once on both paths),
+  `row_path_sends_full_groups_plus_one_remainder_statement` (600 rows fire BEFORE/AFTER
+  three times with transition sizes 256, 256, 88),
   `partitions_inheritance_persistence_and_constraints_agree_on_both_paths`,
   `row_security_and_grants_are_judged_the_same_on_both_paths` (a second role),
   `a_postgres_fdw_table_takes_the_bulk_path_and_other_wrappers_do_not` (a loopback
@@ -54,7 +57,10 @@ See [../map.md](../map.md).
   round, 2026-10-10, narrowed the fold-1 same-count rule). The pure pins gain
   `a_named_identity_or_generated_column_refuses_in_one_class_and_names_the_fix` and
   `every_fallback_reason_says_why_copy_was_not_used` (no `StatementTrigger` reason; it
-  pins the `fdwname` fact instead). pins: c-4/C-017, C-018, C-023, C-024
+  pins the `fdwname` fact instead). **C-4 fold 2 item 4 (2026-10-10):** the counting cell
+  holds the row path to full groups plus one remainder statement (330 rows run 2, 48, 330
+  and 1 statements across the four option cases; the widest case runs 2).
+  pins: c-4/C-017, C-018, C-023, C-024
 - `live_write_faults.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. It shares
   `live_write.rs`'s helpers (now `pub(crate)`); new fault cells live here because
   `live_write.rs` is at the file-size ceiling.
