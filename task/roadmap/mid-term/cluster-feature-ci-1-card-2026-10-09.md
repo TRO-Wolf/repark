@@ -20,3 +20,13 @@ One test fails on main as well: `date_and_timestamp_predicates_measure_the_pushd
   (`crates/repark-distributed/tests/codec.rs`) on main, in its own small pull request, so the
   job is green on the day it lands.
 - The job is not a required check until it has been green for a week.
+
+## CLUSTER-CODEC-TEST-1 (2026-10-10)
+
+The failing test is fixed on branch `fix/cluster-codec-pushdown-test-1`, in the small PR
+the 2026-10-10 owner ruling asked for: the expectation was stale, not the product. The
+TIMESTAMP refusal became a sound drop and the DATE drop became a correct push, both in
+RP-27 ([ledger](../../ledgers/staging/cluster-codec-test-1-ledger.md) carries the
+before/after surface). `cargo test --locked --no-fail-fast -p repark-distributed
+--features cluster --test codec --test iceberg_scan` answers 20 of 20. The card stays
+open: it retires when the CI job exists.
