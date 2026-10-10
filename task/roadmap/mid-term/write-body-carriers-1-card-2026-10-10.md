@@ -41,6 +41,17 @@ card documents both behaviours; it does not change them.
 - Whether `EXPLAIN ANALYZE` should execute a write at all is the ledger's question Q14, wider than
   this card. The owner's ruling above keeps the execution; Q14 is not closed by this card.
 
+## Measured 2026-10-10 (R-008 verify)
+
+Twenty cells, identical on main and at the R-008 head: `EXPLAIN ANALYZE INSERT`,
+`EXPLAIN ANALYZE VERBOSE`, `EXPLAIN ANALYZE INSERT OVERWRITE` and `PREPARE` +
+`EXECUTE` (insert and overwrite) store a naive `timestamp_ns` wall into a top-level
+`timestamptz_ns` column as if it were UTC, in the four non-UTC zones; INSERT localises
+it. From `TIMESTAMP`, `TIMESTAMP_NTZ` and `DATE` sources those routes raise DataFusion's
+internal error on both builds. These verbs do not merely run the body, they store a
+different instant than INSERT for this shape, so this card's fix must cover them (refuse
+by name or route through the same doors) rather than only document them.
+
 ## Gates
 
 - The CTAS shape with `CREATE TABLE` and `CREATE OR REPLACE TABLE`, on a new table and on an

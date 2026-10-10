@@ -20,6 +20,12 @@ and the star-sentinel rewrite live here instead of in it.
   form stock sqlparser parses, and only there.
   pins: ipi-19-56-37-schema-evolution-write/C-005
 
+- `nested_assign.rs` (store cast) — **ICE-TSTZNS-WALL-1 (2026-10-10):** `assignment_cast_sql`
+  picks the cast by depth: a top-level assignment takes `store_assignment_cast_sql`, which
+  now names the zoned nanosecond kernel; a leaf below the top level takes
+  `nested_leaf_cast_sql`, which is what main did. A nested `timestamptz_ns` leaf therefore
+  stores through field assignment what it stores through every other door.
+  pins: ice-tstzns-wall-1/C-007
 - `nested_assign.rs` + [nested_assign/](nested_assign/map.md) — **U8 WRITE-SQL PR2
   (2026-09-25):** nested struct-field assignment for the Spark door's UPDATE and MERGE. It
   lives here because `lib.rs` is at its manifest ceiling and `merge.rs` is near the file-size
