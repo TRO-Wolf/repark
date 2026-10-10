@@ -84,18 +84,26 @@ def measure_row(
 
 
 def hold(row: tuple[str, str, str, str], door: str, cells: tuple[Any, Any, str]) -> bool:
-    """Hold one cell to the rule; return whether it is a cut value that now refuses."""
+    """Hold one cell to the rule; return whether it is a cut value that now refuses.
+
+    A cell the base stored in part (one branch of a ``UNION`` whole, the other cut) refuses
+    like a cut one; a door that creates the table keeps the microsecond column it made.
+    """
     _, target, _, spelling = row
     cell, base, kind = cells
     narrowed = spelling in REFUSED_EVERYWHERE or spelling in REFUSED_MORE
     refuses = door != MATERIALIZED and (
         narrowed or (door in doors.UNION_NULL and spelling in NANOSECOND_TYPED)
     )
-    if refuses and kind in ("cut", "cut+wall"):
+    partial = kind == "other" and door not in doors.CREATES
+    if refuses and (kind in ("cut", "cut+wall") or partial):
         assert cell.get("refused"), (door, cell)
         assert cell["stored"] == [], (door, cell)
         named = f'Cannot safely cast `v` "TIMESTAMP" to "{doors.TARGETS[target].upper()}"'
-        assert named in cell["error"], (door, cell)
+        if door in doors.CREATES:
+            assert doors.REFUSAL_HEAD.search(cell["error"]), (door, cell)
+        else:
+            assert named in cell["error"], (door, cell)
         return True
     if refuses and kind in ("error", "refused"):
         assert "error" in cell, (door, cell)
