@@ -1,7 +1,8 @@
 use datafusion::arrow::datatypes::Schema;
 use datafusion::common::tree_node::TreeNode;
 use datafusion::functions::core::expr_fn::coalesce;
-use datafusion::logical_expr::{col, table_scan, when};
+use datafusion::functions::datetime::expr_fn::date_trunc;
+use datafusion::logical_expr::{col, lit, table_scan, when};
 
 use super::*;
 
@@ -170,6 +171,36 @@ fn a_cast_coercion_left_over_a_nanosecond_value_is_marked() {
         );
         let again = mark_coerced_narrowing(out.data.clone(), &schema());
         assert!(!again.transformed, "{target}");
+        let narrowed = cast(col("c"), target.clone());
+        let named = mark_coerced_narrowing(narrowed.clone().alias("v"), &schema());
+        assert_eq!(named.data, out.data.clone().alias("v"));
+        let unified = [
+            coalesce(vec![narrowed.clone(), col("m")]),
+            coalesce(vec![
+                narrowed.clone(),
+                cast(cast(untyped(), nanos()), micros()),
+            ]),
+            when(col("id").gt(col("id")), narrowed.clone())
+                .otherwise(col("m"))
+                .unwrap(),
+        ];
+        for expr in unified {
+            let out = mark_coerced_branches(expr.clone(), &schema()).unwrap();
+            assert_eq!(
+                marks(&out.data),
+                vec![format!("{NARROWED_BESIDE_VALUE_NAME}(c)")],
+                "{expr}"
+            );
+        }
+        let fitted = [
+            date_trunc(lit("second"), narrowed.clone()),
+            coalesce(vec![narrowed.clone(), narrowed.clone()]),
+            narrowed.clone().is_null(),
+        ];
+        for expr in fitted {
+            let out = mark_coerced_branches(expr.clone(), &schema()).unwrap();
+            assert!(!out.transformed, "{expr}");
+        }
     }
     for kept in [
         cast(col("c"), nanos()),

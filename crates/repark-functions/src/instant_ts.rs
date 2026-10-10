@@ -565,13 +565,16 @@ fn rewrite_plan(
     let scoped = crate::null_narrowing::holds_nanoseconds(&schema);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| {
-            crate::null_narrowing::mark_coerced_narrowing(node, &schema)
+        let marking = |node| crate::null_narrowing::mark_coerced_branches(node, &schema);
+        let settling = |node| {
+            crate::null_narrowing::keep_written_cast(node, &schema)
                 .transform_data(|node| Ok(rewrite_cast(node, &schema, zone, timestamp_type)))?
                 .transform_data(|node| {
                     crate::null_narrowing::settle_branches(node, &schema, scoped)
                 })
-        })?;
+        };
+        let rewritten = crate::null_narrowing::mark_coerced_narrowing(expr, &schema)
+            .transform_data(|root| root.transform_down_up(marking, settling))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed

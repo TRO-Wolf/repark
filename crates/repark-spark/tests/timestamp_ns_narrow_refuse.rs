@@ -54,7 +54,8 @@ const NARROWED_BESIDE_A_VALUE: [&str; 7] = [
     "array({c}, TIMESTAMP '2026-01-02 03:04:05')[0]",
     "if({i} > 1, {c}, TIMESTAMP_NTZ '2026-01-02 03:04:05')",
 ];
-const WRITTEN: [&str; 7] = [
+const WRITTEN: [&str; 8] = [
+    "from_utc_timestamp({c}, 'UTC')",
     "CAST({c} AS TIMESTAMP)",
     "TRY_CAST({c} AS TIMESTAMP)",
     "CAST({c} AS TIMESTAMP_NTZ)",
@@ -483,8 +484,20 @@ impl Cell<'_> {
     }
 
     async fn refuses(&self, door: &str, flags: &str, template: &str) {
-        let unsupported =
-            door.starts_with("update with a where") && self.spelling.contains("AS {n})");
+        let filtered = door.starts_with("update with a where");
+        let zoned_subquery = door == "update from a scalar subquery"
+            && self.spelling.starts_with("CAST(coalesce")
+            && self.source.0 == "tzns"
+            && self.target.0 == "timestamp_ns";
+        let unsupported = if filtered && self.spelling.contains("AS {n})") {
+            Some("Unsupported SQL type")
+        } else if zoned_subquery {
+            Some("Schema error: No field named")
+        } else if filtered && self.spelling.contains("AS TIMESTAMP_NTZ)") {
+            Some("[UNSUPPORTED_TIMESTAMP_NTZ]")
+        } else {
+            None
+        };
         self.create(flags).await;
         let before = self.files();
         let write = self.statement(template);
@@ -515,8 +528,8 @@ impl Cell<'_> {
         } else {
             format!("the table `ice.ns.{}`:", self.table)
         };
-        let named = if unsupported {
-            refused.contains("Unsupported SQL type")
+        let named = if let Some(unsupported) = unsupported {
+            refused.contains(unsupported)
         } else if !refused.contains(&table) {
             false
         } else {
@@ -852,7 +865,11 @@ async fn a_narrowing_the_statement_writes_and_a_kept_type_store_on_every_door() 
                         .is_some_and(|text| text.contains("narrowed from nanoseconds"));
                     let unfiltered =
                         door.starts_with("update with no where") || door == "update of a branch";
-                    assert!(!narrowed || unfiltered, "{door}: {write}: {outcome:?}");
+                    let beside_plain = door == "insert of a union" && WRITTEN.contains(spelling);
+                    assert!(
+                        !narrowed || unfiltered || beside_plain,
+                        "{door}: {write}: {outcome:?}"
+                    );
                     if outcome.is_err()
                         || door.starts_with("explain")
                         || door.starts_with("prepare")

@@ -1,6 +1,6 @@
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
-use datafusion::common::DFSchema;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::{Column, DFSchema};
 use datafusion::datasource::source_as_provider;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{Distinct, Expr, ExprSchemable, JoinType, LogicalPlan};
@@ -60,6 +60,51 @@ pub fn refuse_narrowed_ns_columns<'a>(
         }
     }
     Ok(())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_narrowed_ns_inserts<'a>(
+    table: &str,
+    analyzed: &LogicalPlan,
+    targets: impl IntoIterator<Item = (&'a str, &'a DataType)>,
+    views: Option<&ViewDefinitionPlans>,
+) -> Result<()> {
+    let LogicalPlan::Projection(conforming) = analyzed else {
+        return refuse_narrowed_ns_columns(table, analyzed, targets, views);
+    };
+    let targets: Vec<(&str, &DataType)> = targets.into_iter().collect();
+    if conforming.expr.len() != targets.len() {
+        return Ok(());
+    }
+    for (index, (column, target)) in targets.into_iter().enumerate() {
+        let Some(zoned) = nanosecond_target(target) else {
+            continue;
+        };
+        let narrowing = match conformed(&conforming.expr[index]) {
+            Some(source) => (conforming.input.schema().index_of_column(source).ok())
+                .and_then(|position| column_narrowed(&conforming.input, position, views)),
+            None => column_narrowed(analyzed, index, views),
+        };
+        if let Some(narrowing) = narrowing {
+            return Err(narrowed_refusal(table, column, zoned, &narrowing));
+        }
+    }
+    Ok(())
+}
+
+fn conformed(expr: &Expr) -> Option<&Column> {
+    let source = match expr {
+        Expr::Alias(alias) => return conformed(&alias.expr),
+        Expr::Cast(cast) => cast.expr.as_ref(),
+        Expr::ScalarFunction(function) if function.func.name() == NARROW_TIMESTAMP_NS_UDF_NAME => {
+            function.args.first()?
+        }
+        _ => return None,
+    };
+    match source {
+        Expr::Column(column) => Some(column),
+        _ => None,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -143,7 +188,16 @@ fn column_lineage(
             row.get(index)
                 .and_then(|expr| expr_lineage(expr, None, views, written))
         }),
-        LogicalPlan::Union(union) => union.inputs.iter().find_map(|input| below(input, index)),
+        LogicalPlan::Union(union) => {
+            let mut narrowed = union.inputs.iter().filter_map(|input| below(input, index));
+            let first = narrowed.next()?;
+            if first.beside_untyped_null {
+                return Some(first);
+            }
+            narrowed
+                .find(|narrowing| narrowing.beside_untyped_null)
+                .or(Some(first))
+        }
         LogicalPlan::Join(join) => {
             let left_width = join.left.schema().fields().len();
             match join.join_type {
@@ -230,27 +284,19 @@ fn expr_lineage(
         Expr::ScalarFunction(function) if function.func.name() == NARROW_TIMESTAMP_NS_UDF_NAME => {
             narrowing_of(function.args.first()?, input, written)
         }
-        Expr::ScalarFunction(function) if function.func.name() == TIMESTAMP_TO_DATE_UDF_NAME => {
-            (function.args.iter()).find_map(|argument| {
-                walk(
-                    argument,
-                    Written {
-                        over_naive: true,
-                        ..written
-                    },
-                )
-            })
-        }
-        Expr::ScalarFunction(function) if function.func.name() == DATE_TRUNC_UDF_NAME => {
-            (function.args.iter()).find_map(|argument| {
-                walk(
-                    argument,
-                    Written {
-                        over_zoned: true,
-                        ..written
-                    },
-                )
-            })
+        Expr::ScalarFunction(function) => {
+            let written = match function.func.name() {
+                TIMESTAMP_TO_DATE_UDF_NAME => Written {
+                    over_naive: true,
+                    ..written
+                },
+                DATE_TRUNC_UDF_NAME => Written {
+                    over_zoned: true,
+                    ..written
+                },
+                _ => written,
+            };
+            (function.args.iter()).find_map(|argument| walk(argument, written))
         }
         Expr::Column(column) => {
             let input = input?;

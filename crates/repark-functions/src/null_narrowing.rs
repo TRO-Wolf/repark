@@ -167,14 +167,51 @@ pub(crate) fn before_coercion(expr: Expr, schema: &DFSchema) -> Result<Transform
     tag_untyped_nulls(expr, schema)
 }
 
+fn coerced(expr: &Expr, schema: &DFSchema) -> bool {
+    matches!(expr, Expr::Cast(cast)
+        if coarser(cast.field.data_type())
+            && !is_narrowing_mark(&cast.expr)
+            && !null_literal(&cast.expr)
+            && holds(&cast.expr, schema, true))
+}
+
 pub(crate) fn mark_coerced_narrowing(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    let narrows = |target: &DataType, source: &Expr| {
-        coarser(target)
-            && !is_narrowing_mark(source)
-            && !null_literal(source)
-            && holds(source, schema, true)
+    match expr {
+        Expr::Alias(mut alias) => {
+            let value = mark_coerced_narrowing(*alias.expr, schema);
+            alias.expr = Box::new(value.data);
+            Transformed::new_transformed(Expr::Alias(alias), value.transformed)
+        }
+        Expr::Cast(cast) if coerced(&Expr::Cast(cast.clone()), schema) => {
+            Transformed::yes(Expr::Cast(Cast::new_from_field(
+                Box::new(marked(*cast.expr, false)),
+                cast.field,
+            )))
+        }
+        other => Transformed::no(other),
+    }
+}
+
+pub(crate) fn mark_coerced_branches(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+    let narrowed = |branch: &Expr| coerced(branch, schema);
+    let unified = match &expr {
+        Expr::Case(_) => any_branch(&expr, narrowed),
+        Expr::ScalarFunction(_) => {
+            any_branch(&expr, narrowed)
+                && any_branch(&expr, |branch| {
+                    !narrowed(branch) && holds(branch, schema, false)
+                })
+        }
+        _ => false,
     };
-    let written_over_a_mark = |target: &DataType, source: &Expr| {
+    if !unified {
+        return Ok(Transformed::no(expr));
+    }
+    expr.map_children(|branch| Ok(mark_coerced_narrowing(branch, schema)))
+}
+
+pub(crate) fn keep_written_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    let over_a_mark = |target: &DataType, source: &Expr| {
         matches!(target, DataType::Timestamp(TimeUnit::Nanosecond, None))
             && matches!(source.get_type(schema), Ok(DataType::Timestamp(_, _)))
             && source
@@ -182,17 +219,9 @@ pub(crate) fn mark_coerced_narrowing(expr: Expr, schema: &DFSchema) -> Transform
                 .unwrap_or(false)
     };
     match expr {
-        Expr::Cast(cast) if written_over_a_mark(cast.field.data_type(), &cast.expr) => {
-            Transformed::yes(crate::timestamp_ns_cast::narrow_timestamp_ns_expr(
-                *cast.expr,
-            ))
-        }
-        Expr::Cast(cast) if narrows(cast.field.data_type(), &cast.expr) => {
-            Transformed::yes(Expr::Cast(Cast::new_from_field(
-                Box::new(marked(*cast.expr, false)),
-                cast.field,
-            )))
-        }
+        Expr::Cast(cast) if over_a_mark(cast.field.data_type(), &cast.expr) => Transformed::yes(
+            crate::timestamp_ns_cast::narrow_timestamp_ns_expr(*cast.expr),
+        ),
         other => Transformed::no(other),
     }
 }

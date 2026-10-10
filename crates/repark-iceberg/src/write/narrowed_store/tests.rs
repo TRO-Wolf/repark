@@ -15,7 +15,7 @@ use datafusion::prelude::SessionContext;
 use super::{
     NARROW_TIMESTAMP_NS_UDF_NAME, NARROWED_BESIDE_NULL_UDF_NAME, NARROWED_BESIDE_VALUE_UDF_NAME,
     TIMESTAMP_TO_DATE_UDF_NAME, column_narrowed, refuse_narrowed_ns_columns,
-    refuse_narrowed_ns_writes,
+    refuse_narrowed_ns_inserts, refuse_narrowed_ns_writes,
 };
 
 fn instant() -> DataType {
@@ -153,6 +153,7 @@ async fn a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond
         (date_trunc(lit("second"), narrowed("z")), false),
         (date_trunc(lit("second"), narrowed("m")), true),
         (to_date(narrowed("m")), false),
+        (date_trunc(lit("second"), cast(col("m"), instant())), false),
         (to_date(narrowed("z")), true),
         (
             date_trunc(lit("day"), coalesce(vec![narrowed("z"), narrowed("m")])),
@@ -252,6 +253,13 @@ async fn a_narrowed_value_is_followed_into_a_view_the_scan_holds_and_a_union_bra
     let found = column_narrowed(&union, 1, None).unwrap();
     assert!(found.zoned && !found.beside_untyped_null);
     assert_eq!(column_narrowed(&union, 0, None), None);
+    let beside_null = plan_of(&ctx, narrowed("m")).await;
+    let LogicalPlan::Union(mut both) = union else {
+        panic!("a union");
+    };
+    both.inputs.push(Arc::new(beside_null));
+    let found = column_narrowed(&LogicalPlan::Union(both), 1, None).unwrap();
+    assert!(found.beside_untyped_null && !found.zoned);
 }
 
 #[tokio::test]
@@ -293,5 +301,21 @@ async fn only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_
         refuse_narrowed_ns_writes(&ctx, "`t`", &beside_null, [("id", &id), ("v", &kept)]).unwrap();
     }
     refuse_narrowed_ns_writes(&ctx, "`t`", &beside_null, [("v", &nanos())]).unwrap();
+    let written = |value: Expr| identity(NARROW_TIMESTAMP_NS_UDF_NAME, instant(), instant(), value);
+    for conform in [written(col("v")), cast(col("v"), nanos())] {
+        let conforming = datafusion::logical_expr::LogicalPlanBuilder::from(beside_null.clone())
+            .project(vec![col("id"), conform.alias("v")])
+            .unwrap()
+            .build()
+            .unwrap();
+        let pairs = [("id", &id), ("v", &nanos())];
+        assert!(refuse_narrowed_ns_inserts("`t`", &conforming, pairs, None).is_err());
+    }
+    let conforming = datafusion::logical_expr::LogicalPlanBuilder::from(beside_null.clone())
+        .project(vec![col("id"), written(col("v")).alias("v")])
+        .unwrap()
+        .build()
+        .unwrap();
+    refuse_narrowed_ns_columns("`t`", &conforming, [("id", &id), ("v", &nanos())], None).unwrap();
     refuse_narrowed_ns_writes(&ctx, "`t`", &beside_null, [("id", &nanos()), ("v", &id)]).unwrap();
 }
