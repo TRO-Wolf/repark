@@ -1,7 +1,7 @@
-# v1.5.4 release notes — DRAFT (2026-10-10)
+# v1.5.4 release notes (2026-10-10)
 
-**Draft.** Not released. The tag and the PyPI upload are the owner's; this file prepares them.
-Nothing here is a go decision.
+Not tagged yet. The tag and the PyPI upload are the owner's; this file prepares them. Nothing
+here is a go decision.
 
 v1.5.4 is the fourth patch on 1.5.0. It follows v1.5.3 (`7a8fcf1a`, notes
 [v1-5-3-release-notes-2026-10-07.md](v1-5-3-release-notes-2026-10-07.md)). It carries a
@@ -9,8 +9,9 @@ cross-join condition fix, two write-path fixes for nanosecond timestamps, the en
 refusal for keyed tables, `COUNT(*)` on the changelog, incremental and lineage readers, the
 pyarrow dependency floor, and the SQL door's `timestamp_seconds` family.
 
-Tag target: `main` after pull request #1012 merges. Target commit: `TODO(orchestrator)`.
-Tag and PyPI publication: `TODO(owner)`.
+Tag target: the merge commit of this release pull request on `main` (the workspace version
+moves to 1.5.4 in it). The last product commit is `e845b73b` (#1012). The tag and the PyPI
+publication are the owner's.
 
 ## Cross-join condition (#1010, `153b6cb5`)
 
@@ -92,11 +93,13 @@ Ledger: [ice-tsns-merge-wall-1-ledger.md](../../ledgers/staging/ice-tsns-merge-w
   the key was added can stage one orphan file before its commit refuses.
 - Ledger: [enc-1-ledger.md](../../ledgers/completed/enc-1-ledger.md).
 
-## `timestamp_seconds`, `timestamp_millis`, `timestamp_micros` on the SQL door (#1012)
+## `timestamp_seconds`, `timestamp_millis`, `timestamp_micros` on the SQL door (#1012, `e845b73b`)
 
 - The SQL door answers `timestamp_seconds`, `timestamp_millis` and `timestamp_micros` as Spark
   does.
-- Status: merging. `TODO(orchestrator)`: confirm the merge and the final wording before the tag.
+- A decimal argument is exact at every boundary Spark answers, and the argument types Spark
+  rejects refuse with `DATATYPE_MISMATCH`; overflow refuses as Spark does.
+- Ledger: [sql-epoch-constructors-1-ledger.md](../../ledgers/staging/sql-epoch-constructors-1-ledger.md).
 
 ## Known issues carried to v1.5.5
 
@@ -110,4 +113,7 @@ Ledger: [ice-tsns-merge-wall-1-ledger.md](../../ledgers/staging/ice-tsns-merge-w
 
 ## Matrix
 
-`TODO(owner)`: the matrix rerun on the release candidate has not been run for this draft.
+The 842-cell matrix on a fresh release build of `e845b73b` (scoreboard 2026-10-10, the v1.5.2
+harness and compare rules; the version bump follows it and changes no behaviour) reads
+**705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT**, with no per-family
+count moved against v1.5.3.
