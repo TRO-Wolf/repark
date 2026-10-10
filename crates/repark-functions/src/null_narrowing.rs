@@ -4,7 +4,7 @@ use std::sync::{Arc, LazyLock};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
 use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
-use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
+use datafusion::common::{DFSchema, DataFusionError, ExprSchema, Result, ScalarValue};
 use datafusion::logical_expr::expr::{Alias, ScalarFunction};
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
@@ -136,9 +136,8 @@ pub(crate) fn tag_union_nulls(plan: LogicalPlan) -> Result<Transformed<LogicalPl
     let mut inputs = Vec::with_capacity(union.inputs.len());
     for input in &union.inputs {
         let schema = Arc::clone(input.schema());
-        let untyped = |index: usize| {
-            branch_type(input, index) == Some(DataType::Null) && beside_nanoseconds(union, index)
-        };
+        let untyped =
+            |index: usize| untyped_column(input, index) && beside_nanoseconds(union, index);
         if !(0..schema.fields().len()).any(untyped) {
             inputs.push(Arc::clone(input));
             continue;
@@ -245,6 +244,21 @@ fn beside_nanoseconds(union: &Union, index: usize) -> bool {
             Some(DataType::Timestamp(TimeUnit::Nanosecond, _))
         )
     })
+}
+
+fn untyped_column(input: &LogicalPlan, index: usize) -> bool {
+    let untyped = |data_type: &DataType| data_type == &DataType::Null;
+    let LogicalPlan::Projection(projection) = input else {
+        return (input.schema().fields().get(index))
+            .is_some_and(|field| untyped(field.data_type()));
+    };
+    match projection.expr.get(index).map(peeled) {
+        Some(Expr::Literal(ScalarValue::Null, _)) => true,
+        Some(Expr::Column(column)) => (projection.input.schema().field_from_column(column))
+            .is_ok_and(|field| untyped(field.data_type())),
+        Some(Expr::Cast(cast)) => untyped(cast.field.data_type()),
+        _ => false,
+    }
 }
 
 fn branch_type(input: &LogicalPlan, index: usize) -> Option<DataType> {

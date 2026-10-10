@@ -615,16 +615,16 @@ async fn a_union_with_an_untyped_null_branch_refuses_and_a_typed_one_stores() {
                         };
                         let write =
                             cell.statement(&format!("INSERT INTO {{t}} (id, v, k) {query}"));
-                        let wrote = attempt(&session, &write).await;
+                        let outcome = attempt(&session, &write).await;
                         if refuses {
-                            let refused = wrote.expect_err(&write);
+                            let refused = outcome.expect_err(&write);
                             assert!(
                                 refused.contains("narrowed from nanoseconds to microseconds"),
                                 "{write}: {refused}"
                             );
                             assert_eq!(cell.files(), before, "{write}");
                         } else {
-                            assert_eq!(wrote, Ok(()), "{write}");
+                            assert_eq!(outcome, Ok(()), "{write}");
                             let stored: Vec<i64> =
                                 cell.values("").await.into_iter().flatten().collect();
                             assert_eq!(stored.len(), MOMENTS.len(), "{write}");
@@ -704,15 +704,17 @@ async fn a_narrowing_the_statement_writes_and_a_kept_type_store_on_every_door() 
                     };
                     cell.create(flags).await;
                     let write = cell.statement(template);
-                    let wrote = attempt(&session, &write).await;
-                    let narrowed = wrote
+                    let outcome = attempt(&session, &write).await;
+                    let narrowed = outcome
                         .as_ref()
                         .err()
                         .is_some_and(|text| text.contains("narrowed from nanoseconds"));
                     let unfiltered =
                         door.starts_with("update with no where") || door == "update of a branch";
-                    assert!(!narrowed || unfiltered, "{door}: {write}: {wrote:?}");
-                    if wrote.is_err() || door.starts_with("explain") || door.starts_with("prepare")
+                    assert!(!narrowed || unfiltered, "{door}: {write}: {outcome:?}");
+                    if outcome.is_err()
+                        || door.starts_with("explain")
+                        || door.starts_with("prepare")
                     {
                         continue;
                     }
@@ -801,7 +803,10 @@ async fn a_query_that_stores_nothing_answers_as_before() {
         assert_eq!(field.name(), "x", "{read}");
         assert!(field.metadata().is_empty(), "{read}: {field:?}");
         assert_eq!(
-            batches.iter().map(|batch| batch.num_rows()).sum::<usize>(),
+            batches
+                .iter()
+                .map(datafusion::arrow::array::RecordBatch::num_rows)
+                .sum::<usize>(),
             3
         );
         run(
