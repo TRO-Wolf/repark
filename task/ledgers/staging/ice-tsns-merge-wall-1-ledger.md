@@ -961,7 +961,7 @@ changed (it seeded its nested table by an INSERT that is now refused; the seed i
 SELECT as a CTAS). Head, America/New_York and Asia/Kolkata, against the verifier's own base
 outputs for `ca5a062a`.
 
-**Nested `timestamp_ns` cells, 16,070 in the two zones:**
+**Nested `timestamp_ns` cells, 15,900 in the two zones:**
 
 | Script | Cells | Named refusal | Stored | Other |
 |---|---|---|---|---|
