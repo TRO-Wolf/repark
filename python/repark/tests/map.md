@@ -8167,6 +8167,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the batch, the body makes its stamped append, the process exits before the driver's
   audit), and a pin at epochs 0 and 2 holds that both restarts end `RecoveryRequired` naming
   the snapshot under the stamp, with the sink as the kill left it. pins: mb-4-foreach-eo/C-032
+  **Fold 5 (2026-10-10, the fourth verify's S1):** the harness gains `seed`, `expire`,
+  `append` and `table` (the same writer through `toTable`). After the same kill: an expiry
+  that removes the previous stamp still refuses both restarts and prints no rollback; a
+  `toTable` start under the same name refuses, at epochs 0 and 2, and so does the
+  `foreachBatch` start after it; a foreign row above the newest `foreachBatch` stamp refuses
+  a `toTable` start; a stray under the first stamp prints no rollback once the head the
+  query started on is expired. Kept behaviour, green before the fix: a healthy sink runs on
+  through both doors after an expiry that retains one, two or three snapshots, and a query
+  begun through `toTable` runs through `foreachBatch` after an expiry.
+  pins: mb-4-foreach-eo/C-040, C-041, C-042
   pins: mb-4-foreach-eo/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012, C-014
 - [test_mb_4_streaming_foreach.py](test_mb_4_streaming_foreach.py) — **MB-4 round 3b
   (2026-10-08):** the foreach-door battery, split out so the wireup battery stays

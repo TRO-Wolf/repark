@@ -85,6 +85,28 @@ _KILL_HARNESS = textwrap.dedent(
         spark.stop()
         sys.exit(0)
 
+    if mode == "seed":
+        spark.sql(f"INSERT INTO sc.eo.snk VALUES ({arg}, 'seed')")
+        spark.stop()
+        os._exit(0)
+
+    if mode == "expire":
+        spark.sql(
+            "CALL sc.system.expire_snapshots(table => 'eo.snk', "
+            f"older_than => TIMESTAMP '2999-01-01 00:00:00', retain_last => {arg})"
+        )
+        spark.stop()
+        os._exit(0)
+
+    if mode == "append":
+        low = spark.sql("SELECT max(id) + 1 FROM sc.eo.src").collect()[0][0]
+        for commit in range(arg):
+            first = low + commit * 4
+            values = ",".join(f"({i},'k{i % 3}')" for i in range(first, first + 4))
+            spark.sql("INSERT INTO sc.eo.src VALUES " + values)
+        spark.stop()
+        os._exit(0)
+
     def stray():
         spark.sql("INSERT INTO sc.eo.snk VALUES (7000, 'stray')")
 
@@ -115,17 +137,18 @@ _KILL_HARNESS = textwrap.dedent(
         threading.Thread(target=watch, args=(metadata_files(),), daemon=True).start()
     if mode == "kill_after_ms":
         threading.Timer(arg / 1000.0, lambda: os._exit(44)).start()
-    query = (
+    writer = (
         spark.readStream.option("streaming-max-files-per-micro-batch", "1")
         .table("sc.eo.src")
-        .writeStream.foreachBatch(body)
-        .option("repark.cdc.sink", "sc.eo.snk")
-        .option("checkpointLocation", root + "/ck")
+        .writeStream.option("checkpointLocation", root + "/ck")
         .queryName("eo")
         .trigger(availableNow=True)
-        .start()
     )
     try:
+        if mode == "table":
+            query = writer.toTable("sc.eo.snk")
+        else:
+            query = writer.foreachBatch(body).option("repark.cdc.sink", "sc.eo.snk").start()
         query.awaitTermination(120)
     except Exception as error:
         print("END " + type(error).__name__ + " " + str(error), flush=True)
@@ -459,10 +482,10 @@ def test_sink_write_from_another_thread_ends_recovery_required(
         spark.stop()
 
 
-def _harness_end(tmp_path: Path) -> tuple[int, str, dict[str, list[int]]]:
+def _harness_end(tmp_path: Path, mode: str = "run") -> tuple[int, str, dict[str, list[int]]]:
     script = tmp_path / "eo_kill_harness.py"
     done = subprocess.run(
-        [sys.executable, str(script), str(tmp_path), "run", "0"],
+        [sys.executable, str(script), str(tmp_path), mode, "0"],
         capture_output=True,
         text=True,
         timeout=300,
@@ -563,3 +586,118 @@ def test_kill_between_a_twice_written_batch_and_the_audit_refuses_every_restart(
         assert "It sits under the stamped batch at snapshot" in end
         assert report["sink"] == twice
         assert report["epochs"] == list(range(epoch + 1))
+
+
+_UNDER = "It sits under the stamped batch at snapshot"
+_PREVIOUS_GONE = (
+    "No rollback is offered, because the stamped batch before it is no longer in the table"
+)
+_HEAD_GONE = (
+    "No rollback is offered, because the snapshot the query started on is no longer in the table"
+)
+
+
+def _contiguous_up_to(epochs: list[int], newest: int) -> bool:
+    return bool(epochs) and epochs == list(range(epochs[0], newest + 1))
+
+
+def _refused_under_the_stamp(tmp_path: Path, mode: str, sink: list[int], newest: int) -> str:
+    code, end, report = _harness_end(tmp_path, mode)
+    assert code == 7
+    assert end.startswith("RecoveryRequiredException")
+    assert "(append) without a stamp" in end
+    assert _UNDER in end
+    assert report["sink"] == sink
+    assert _contiguous_up_to(report["epochs"], newest)
+    return end
+
+
+def test_expiry_of_the_previous_stamp_does_not_hide_a_stray_under_the_newest(
+    tmp_path: Path,
+) -> None:
+    assert _harness(tmp_path, "init", 8)[0] == 0
+    assert _harness(tmp_path, "write_twice_then_exit", 2)[0] == 46
+    assert _harness(tmp_path, "expire", 2)[0] == 0
+    twice = sorted([*range(12), *range(8, 12)])
+    for _ in range(2):
+        end = _refused_under_the_stamp(tmp_path, "run", twice, 2)
+        assert _PREVIOUS_GONE in end
+        assert "roll the sink back to snapshot" not in end
+        assert "To keep its rows, start the query under a new name with the reader option" in end
+
+
+@pytest.mark.parametrize("epoch", [0, 2])
+def test_a_table_door_start_under_the_same_name_does_not_hide_a_stray_under_a_stamp(
+    tmp_path: Path, epoch: int
+) -> None:
+    assert _harness(tmp_path, "init", 8)[0] == 0
+    assert _harness(tmp_path, "write_twice_then_exit", epoch)[0] == 46
+    twice = sorted([*range(4 * (epoch + 1)), *range(4 * epoch, 4 * (epoch + 1))])
+    _refused_under_the_stamp(tmp_path, "table", twice, epoch)
+    assert _harness(tmp_path, "append", 2)[0] == 0
+    _refused_under_the_stamp(tmp_path, "table", twice, epoch)
+    _refused_under_the_stamp(tmp_path, "run", twice, epoch)
+
+
+def test_a_stray_above_the_newest_foreach_stamp_refuses_a_table_door_start(
+    tmp_path: Path,
+) -> None:
+    assert _harness(tmp_path, "init", 4)[0] == 0
+    assert _harness(tmp_path, "exit_after_write", 1)[0] == 42
+    assert _harness(tmp_path, "seed", 7000)[0] == 0
+    for _ in range(2):
+        code, end, report = _harness_end(tmp_path, "table")
+        assert code == 7
+        assert end.startswith("RecoveryRequiredException")
+        assert "Every start refuses while that snapshot sits above the newest stamped batch" in end
+        assert report["sink"] == [*range(8), 7000]
+        assert report["epochs"] == [0, 1]
+
+
+def test_a_stray_under_the_first_stamp_prints_no_rollback_once_the_starting_head_is_expired(
+    tmp_path: Path,
+) -> None:
+    assert _harness(tmp_path, "init", 8)[0] == 0
+    assert _harness(tmp_path, "seed", 9000)[0] == 0
+    assert _harness(tmp_path, "write_twice_then_exit", 0)[0] == 46
+    assert _harness(tmp_path, "expire", 2)[0] == 0
+    twice = [0, 0, 1, 1, 2, 2, 3, 3, 9000]
+    for _ in range(2):
+        end = _refused_under_the_stamp(tmp_path, "run", twice, 0)
+        assert _HEAD_GONE in end
+        assert "roll the sink back to snapshot" not in end
+
+
+@pytest.mark.parametrize("retain", [1, 2, 3])
+@pytest.mark.parametrize("door", ["run", "table"])
+def test_a_healthy_sink_runs_on_after_an_ordinary_expiry(
+    tmp_path: Path, retain: int, door: str
+) -> None:
+    assert _harness(tmp_path, "init", 8)[0] == 0
+    assert _harness(tmp_path, "seed", 9000)[0] == 0
+    assert _harness(tmp_path, "exit_after_write", 3)[0] == 42
+    assert _harness(tmp_path, "expire", retain)[0] == 0
+    code, end, report = _harness_end(tmp_path, door)
+    assert (code, end) == (0, "")
+    assert report["sink"] == [*range(32), 9000]
+    assert _contiguous_up_to(report["epochs"], 7)
+    assert _harness(tmp_path, "append", 1)[0] == 0
+    code, end, report = _harness_end(tmp_path, "run")
+    assert (code, end) == (0, "")
+    assert report["sink"] == [*range(36), 9000]
+    assert _contiguous_up_to(report["epochs"], 8)
+
+
+@pytest.mark.parametrize("retain", [1, 2])
+def test_a_table_begun_query_runs_through_the_foreach_door_after_an_expiry(
+    tmp_path: Path, retain: int
+) -> None:
+    assert _harness(tmp_path, "init", 4)[0] == 0
+    assert _harness(tmp_path, "seed", 9000)[0] == 0
+    assert _harness_end(tmp_path, "table")[0] == 0
+    assert _harness(tmp_path, "expire", retain)[0] == 0
+    assert _harness(tmp_path, "append", 2)[0] == 0
+    code, end, report = _harness_end(tmp_path, "run")
+    assert (code, end) == (0, "")
+    assert report["sink"] == [*range(24), 9000]
+    assert _contiguous_up_to(report["epochs"], 5)
