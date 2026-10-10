@@ -153,6 +153,32 @@ struct TargetSpan {
     end: usize,
 }
 
+pub(crate) fn written_targets(sql: &str) -> Vec<Vec<String>> {
+    let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
+        return Vec::new();
+    };
+    let significant: Vec<(usize, &Token)> = tokens
+        .iter()
+        .enumerate()
+        .filter(|(_, token)| !matches!(token, Token::Whitespace(_) | Token::EOF | Token::SemiColon))
+        .collect();
+    (0..significant.len())
+        .filter(|index| {
+            matches!(
+                significant[*index].1,
+                Token::Word(word) if ["INSERT", "UPDATE", "MERGE"]
+                    .iter()
+                    .any(|head| word.value.eq_ignore_ascii_case(head))
+            )
+        })
+        .filter_map(|index| {
+            let rest = &significant[index..];
+            let start = write_target_start(rest)?;
+            collect_parts(rest, start).map(|(parts, _)| parts)
+        })
+        .collect()
+}
+
 pub(crate) fn find_write_target_range(tokens: &[Token]) -> Option<(usize, usize)> {
     find_target_span(tokens, 1).map(|span| (span.start, span.end))
 }

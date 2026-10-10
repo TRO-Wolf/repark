@@ -91,6 +91,7 @@ mod nan_pushdown;
 mod nested_assign;
 mod nested_assign_oracle;
 mod nested_column_ddl;
+mod nested_ns_routes;
 mod normalize;
 mod ntz_door;
 mod ntz_store;
