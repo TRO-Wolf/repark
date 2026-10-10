@@ -97,6 +97,25 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   before `try_execute_session_insert` and `delegate`; every other shape falls through.
   Pins: [../tests/ansi_write_defaults.rs](../tests/ansi_write_defaults.rs).
   pins: ice-error-conditions-1/C-011
+- `pg_insert.rs` — **C-4 step 2 (2026-10-09):** Postgres-target INSERT routing on this door.
+  Appends drive the shared `repark_core::write_postgres` sink (bulk with automatic row fallback,
+  no flag); overwrite refuses with the `CONNECT-DECL-pg-write-modes` row, REPLACE and UPDATE
+  with the `CONNECT-DECL-pg-write-upsert` row. The route is checked inside
+  `execute_insert_overwrite` and `execute_insert_routed` rather than in the router match, so a
+  non-Postgres statement crosses no new code in the dispatch arms. The write future is heap-boxed
+  at the module boundary: at ~17KB it trips clippy's large-futures ceiling in every ancestor await.
+  Each write records its report on the session carrier. The fold pins are `#[ignore]`d live
+  cells here (`psql` setup, no new dev-deps): a view and an INSERT-rule target take the row
+  path and say why, a named GENERATED ALWAYS identity column refuses with the core text.
+  `REPLACE INTO` parses on this door's Generic dialect and names the upsert row.
+  **C-4 fold 2 item 5 (2026-10-10):** the source is aliased positionally before planning
+  (a local mirror of the Spark door's `deduplicate_source_names`; the doors share no
+  production edge), so repeated SELECT expressions store by position. Pins: the
+  driver-reaching unit test here plus the `#[ignore]`d live three-statement cell.
+  **C-4 merge (2026-10-10):** the route runs before the ENC-1 guard in
+  `execute_insert_routed`; a Postgres source is not an Iceberg table, so the guard still
+  sees every Iceberg target.
+  pins: c-4/C-013
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic
   `replace-partitions=true`, empty-dynamic refuse) and the remaining Q9 whole-table refuse.
@@ -141,6 +160,15 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `dialect.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `on_session_built` also registers
+  the nanosecond wall kernel (`__repark_cast_timestamp_ns__`). The shared MERGE and UPDATE
+  sites in `repark-iceberg` now emit it for a `timestamp_ns` target, as they emit the NTZ
+  kernel for a microsecond one; without the registration the ANSI door answers
+  `UNRESOLVED_ROUTINE` where main stored a value. pins: ice-tsns-merge-wall-1/C-009
+  **The split (2026-10-09):** the nested guard rule fold 2 added here is removed with the
+  nested form. This door cannot create a column with a nested `timestamp_ns` leaf (the
+  `ROW`, `STRUCT` and `ARRAY` spellings are refused), and it is not behind the Spark router,
+  so the refusal of `repark-iceberg/src/write/nested_ns_gate.rs` is not called from it.
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
   onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait).
   `on_session_built` installs integer overflow so a bare `ReparkSession` + this
@@ -175,6 +203,19 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   V3-COW-1 valve; MERGE and subquery-WHERE DML still refuse. `dml_target_ident` reads
   the AST and completes short names.
   pins: rp-6-fork-repin/C-002
+- `guards.rs`, `router.rs`, `merge.rs`, `insert_overwrite.rs`, `truncate.rs`, `create_table.rs` —
+  **ENC-1 round 2 (2026-10-09):** the ANSI seats of the keyed-table refusal. `guards.rs` gains
+  `refuse_encrypted_write_target` / `refuse_encrypted_dml_target` (short names completed
+  against the session catalog); the INSERT, identity-or-delegate, MERGE, partition-overwrite,
+  TRUNCATE and CTAS/replace arms call them before planning, staging or delegation, and
+  `delegate_plan` sees through `EXPLAIN ANALYZE` (this door spells no `EXPLAIN`, so that
+  arm is defensive parity with the Spark pin). Pinned in `../tests/enc_1.rs`.
+  pins: enc-1/C-005
+  **Fold 1 (2026-10-09):** every seat passes the table identifier, so the ANSI door shows
+  the same one text as the Spark door (MERGE rendered the catalog name before);
+  `create_table.rs` opens a staged create through
+  `repark_iceberg::catalog::begin_staged_create`.
+  pins: enc-1/C-008
 - `sniff.rs` — the error-path wrong-door sniff (Q10/G3): on parse/plan FAILURE, name the token,
   the native equivalent, and the Spark door. Tests: [sniff/map.md](sniff/map.md).
   **ICE-RTAS-BYNAME-1 (2026-09-17):** the composite arm steers `INSERT … BY NAME`
@@ -399,7 +440,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 | Change routing order | `router.rs` (the order is the design's — read the module doc first) |
 | Add a curated table property | `properties.rs` + a row in `properties/tests.rs` + an e2e row in `tests.rs` |
 | Add a partition transform | `partitioning.rs` + `partitioning/tests.rs` |
-| Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface (a guard needing the PARSED statement instead of scrubbed text is called from a named `router.rs` arm; unit AND end-to-end pins still live in `guards/tests.rs` — that is what G3-E8 does) |
+| Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface (a guard needing the PARSED statement instead of scrubbed text is called from a named `router.rs` arm; unit pins live in `guards/tests.rs` and end-to-end pins in `guards/ansi_door.rs` — that is what G3-E8 does) |
 | Add an `ALTER TABLE` operation | `alter.rs` `execute_alter_table` + `alter/tests.rs` + an e2e row in `tests.rs` (a form stock sqlparser cannot model takes the pre-parse route instead: `try_parse_*` + `execute_*` in `alter.rs` wired in `router.rs`, as the column move does) |
 | Add a `SET PROPERTIES` key | `alter.rs` `parse_set_properties` (curated only — dotted keys go through `extra_properties`) |
 | Upgrade a table's Iceberg format version | `alter.rs` `apply_set_properties` → `repark_iceberg::write::format_version` (V3-10; the `format_version` key resolves through `repark_functions::format_version` against the table this door loads ONCE and hands to the transaction, and the upgrade does not invalidate the namespace) |

@@ -34,6 +34,18 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `seal_reports_its_limit_and_neither_runs_nor_takes_a_child`
   pin the seal node. The fixture is regenerated from a live Spark recording, never edited by hand.
   pins: offset-nested-sort-1/C-001, C-003, C-004, C-005, C-006, C-008, C-009, C-011
+- `write_postgres.rs` — **C-4 step 2 (2026-10-09):** the pre-connection pins: an unknown
+  mounted source and a non-Postgres mount refuse before any connection; an unknown property
+  refuses as `Config` naming `jdbc` without the password; a refused port refuses as
+  operational (`DataFusion` fold); partition keys and `predicates` on a write are ignored,
+  never refused; the `write.path` option defaults to bulk, takes `row` case-insensitively, and
+  refuses anything else as `Configuration` naming both values; the last-report carrier
+  records on builder sessions and nowhere else (bare contexts record nowhere).
+  **C-4 fold 2 items 2–3 (2026-10-10):** the `shape_batch` pins: integer, decimal and
+  byte overflows refuse with the overflow class, malformed text with the invalid-input
+  class, each naming the column and capping the value; fitting values and NULLs cast as
+  before; a timestamp into a date or text column takes the session-zone wall while
+  timestamp and timestamptz columns keep their placement. pins: c-4/C-013, C-014
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
   argument refuses as `NumberFormat` before any connection. pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned

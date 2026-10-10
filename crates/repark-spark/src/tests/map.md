@@ -1,5 +1,9 @@
 # map — repark-spark/src/tests
 
+CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09): `join_condition_refusals.rs` gains the `IN`-subquery cell (a refused join nested in a subquery expression, killing the m5 plan-descent mutant). pins: cross-join-condition-1/C-008
+
+CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `join_condition_refusals.rs` pins the join-condition rule through production-built sessions (two Iceberg tables, the oracle frames): nondeterministic conditions refuse with Spark's `INVALID_NON_DETERMINISTIC_EXPRESSIONS` head on inner/left/left-semi (plus uuid, shuffle and an EXISTS-subquery recursion cell), non-boolean conditions with `JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE` (NULL/VOID, 1/INT, 'true'/STRING, bare `rand(1)`/DOUBLE for the type-first order), and the equality/TRUE/typed-NULL/current_timestamp controls answer their rows. pins: cross-join-condition-1/C-008
+
 **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `property_display_redaction.rs` adds one SQL pin per property display for the key rule (`*_redacts_secret_keys_like_spark`, the keyed `SHOW TBLPROPERTIES` forms) and `a_credential_free_storage_location_is_shown_as_spark_shows_it`; `describe_show.rs`'s truth table carries Spark's rows plus the key rule. pins: source-url-redact-1/C-041, C-042
 
 **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `describe_show.rs` gains `describe_namespace_masks_comment_location_and_owner_credentials` (SQL). pins: source-url-redact-1/C-029
@@ -26,6 +30,26 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `enc_1.rs` — **ENC-1 round 2 (2026-10-09):** 35 pins over tables carrying
+  `encryption.key-id`: every write path refuses with `UnsupportedOperationException` and
+  RePark's one-sentence text (never echoing the key value) with snapshots, live files
+  and warehouse objects unchanged; expiry, orphan sweep, rollback, dry-run planning,
+  SELECT, CREATE and the lookalike keys run. The step-1 ported probe is the first pin.
+  pins: enc-1/C-001, C-002, C-003, C-004, C-005
+- `enc_1_fold.rs` — **ENC-1 fold 1 (2026-10-09):** the verifier's writing shapes as
+  pins, each on format v2 and v3: explicit branch targets (INSERT, UPDATE, DELETE in
+  copy-on-write and merge-on-read), WAP sessions (`spark.wap.branch`, `spark.wap.id`), the
+  first write through an empty-table branch, `run_maintenance(dry_run => false)`, the
+  non-fast-forward `cherrypick_snapshot`, a stale-handle commit, the public
+  `write::append`, the two stats procedures and `rewrite_table_path`. Every pin asserts the
+  one refusal text and that snapshots, refs, the metadata pointer and the full recursive
+  file listing are unchanged. Controls: ref, expiry and property commits still run on a
+  keyed table; the unkeyed and lookalike-key twins still write.
+  pins: enc-1/C-007, C-008, C-009
+  Fold 2 (2026-10-09) adds `keyed_table_with_hostile_metadata_text_still_alters_expires_and_unsets`:
+  a property value or column comment that spells `AddSnapshot {`, `SetStatistics {` or
+  `SetPartitionStatistics {` leaves ALTER, expiry and UNSET working on a keyed table.
+  pins: enc-1/C-010
 - `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
   pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
   source/target/column named and nothing written; in-range, int-to-int and string stores
@@ -688,6 +712,42 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and the sweep pins the temporary spellings, the lowercase keyword, an
   `options` alias in the CTAS select list, further non-iceberg providers,
   and the missing-USING shape at their exact end states.
+- `nested_ns_routes.rs` — **ICE-TSNS-MERGE-WALL-1, split fold 1 (2026-10-10):** the nested
+  `timestamp_ns` refusal on the routes the router rewrites.
+  `a_branch_or_wap_write_of_a_nested_nanosecond_leaf_is_refused_and_writes_nothing`: fifteen
+  statements (INSERT into `t.branch_b1` and `t.branch_main` with SELECT, VALUES and a column
+  list, the SQL a frame append emits, INSERT under `spark.wap.id` and `spark.wap.branch`,
+  UPDATE on a branch with and without a `WHERE`, MERGE and INSERT OVERWRITE on a branch,
+  MERGE under a WAP branch) take the named refusal, add no Parquet file and no snapshot on
+  any ref. `a_frame_written_by_name_is_refused_by_the_name_of_its_column`: a by-name frame
+  whose position of the column holds a NULL.
+  `a_branch_or_wap_statement_that_does_not_supply_the_column_still_runs`: thirteen statements
+  that omit the column or give it a bare NULL, on a branch and under both WAP settings, each
+  adding one snapshot. `a_branch_or_wap_write_to_a_table_with_no_such_leaf_is_not_gated`: a
+  `struct<v: TIMESTAMP>` table through a branch, a WAP branch and a WAP id.
+  `a_statement_the_router_rewrites_later_is_still_decided_on_its_target`: a time-travel
+  source, `MERGE WITH SCHEMA EVOLUTION` and a metadata-table source, refused when they supply
+  the column and run when they do not.
+  `a_statement_the_gate_cannot_read_is_refused_for_such_a_table_only`: the fail-closed arm.
+  pins: ice-tsns-merge-wall-1/C-050, C-051, C-052
+  **Split fold 2 (2026-10-10), a statement that wraps a write.**
+  `a_statement_that_wraps_a_write_is_decided_as_the_write_it_runs`: sixteen statements take
+  the named refusal with no file and no snapshot: six `EXPLAIN ANALYZE INSERT` spellings, the
+  two `EXPLAIN ANALYZE UPDATE` forms, a doubled `EXPLAIN ANALYZE`, a branch target and
+  `BY NAME` under it, `PREPARE … AS INSERT`, `CREATE TABLE … AS INSERT` and its
+  `OR REPLACE` form, an INSERT after a `WITH` clause, an unparsed UPDATE. Plain `EXPLAIN`,
+  `EXPLAIN VERBOSE` and `EXPLAIN EXPLAIN ANALYZE` of the same write answer and write nothing;
+  `EXPLAIN ANALYZE EXPLAIN INSERT` keeps main's `Nested EXPLAINs are not supported`.
+  `a_wrapped_statement_that_does_not_supply_the_column_still_runs`: `EXPLAIN ANALYZE` of an
+  omitted column, a bare NULL and a sibling UPDATE each add a snapshot; a prepared INSERT
+  that omits the column runs by `EXECUTE`.
+  `a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated`: the same wrappers on a
+  `struct<v: TIMESTAMP>` table, and main's parser text for a malformed UPDATE there.
+  pins: ice-tsns-merge-wall-1/C-053, C-054
+- `v3_timestamp_ns_door.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):**
+  `ns_wall_udf_name_matches_the_registered_udf` pins `ntz_store::NS_WALL_CAST_UDF_NAME` equal
+  to `timestamp_ns_cast::TIMESTAMP_NS_CAST_NAME`: the write path renders the name as SQL text
+  and cannot import it. pins: ice-tsns-merge-wall-1/C-008
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door on
   `timestamp_ns` / `timestamptz_ns` — string casts keep nine digits (offset honoured),
   INSERT VALUES widens `TIMESTAMP` literals and strings, INSERT SELECT widens microsecond
@@ -2443,6 +2503,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   The setup installs production's
   integer planner so `id + 1` is `Int32` as on the facade.
   pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-012
+- `pg_insert.rs` — **C-4 step 2 (2026-10-09):** the Spark-door Postgres routing pins over a
+  user-less `pg` mount (the driver refuses before connecting, so every pin asserts the refusal
+  text): append routes to the sink driver instead of the default hook, overwrite names the
+  `CONNECT-DECL-pg-write-modes` row, UPDATE the `-upsert` row, a source-less INSERT keeps
+  DataFusion's text, unknown and two-part names keep today's `not found` texts, a populated
+  read-only set lets a spec-backed INSERT through while UPDATE keeps the P11 read-only text,
+  and `write.path=row` routes while a bad value refuses as `Configuration` naming `bulk` and
+  `row`.
+  **C-4 fold 2 item 5 (2026-10-10):**
+  `pg_insert_with_repeated_expressions_plans_positionally` pins the three repeated-name
+  sources reaching the driver.
+  pins: c-4/C-013, C-014
 
 ## Mapping rule
 

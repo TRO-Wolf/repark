@@ -174,11 +174,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Window RANGE validation and rewrite behavior share one module.",
         "Split frame validation from expression lowering.",
     ),
-    "crates/repark-sql/src/guards/tests.rs": (
-        1207,
-        "ANSI guard refusal cases share one file-backed module.",
-        "Split guards by statement or expression family.",
-    ),
     "crates/repark-sql/src/tests.rs": (
         1513,
         "Native ANSI-door end-to-end cases remain consolidated.",

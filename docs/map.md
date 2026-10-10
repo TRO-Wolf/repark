@@ -58,6 +58,9 @@ repo.
   **U10-MC-DELETED-1 (2026-09-23):** the row now states all five metadata columns served
   (`_deleted` last) and records residue `R-MC-RESERVED-NAME-SCAN`; a query naming a served
   metadata column that the table schema also carries refuses with Spark's reserved-name text.
+  **C-4 step 2 (2026-10-09):** new rows `CONNECT-DECL-pg-write-modes` and
+  `CONNECT-DECL-pg-write-upsert`; the `CONNECT-DECL-pg-ddl` DML sentence is amended
+  (append INSERT writes, the rest as the new rows say). pins: c-4/C-013, C-014
   mcdel-r5 narrowed that residue to the measured divergent shapes (`SELECT *`, the
   copy-on-write `DELETE`, the `WHERE` error text) and added residue candidate
   `R-MC-RESERVED-NAME-JOIN`; mcdel-r6 closed that candidate (the refusal keys on the

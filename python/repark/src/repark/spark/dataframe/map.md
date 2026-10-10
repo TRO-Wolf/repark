@@ -273,6 +273,17 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   lazily-built property `frame_nodes.py` binds; births assign `None` (root)
   or `(parent, others)` (derived), joins assign the built node, and the
   birth registry moves into the first build (3485 → 3475, CAP-1 mirror).
+  **CROSS-JOIN-CONDITION-1 (2026-10-08):** `_join_on_condition_h1` routes a cross join with a
+  condition onto the inner path: `engine_how` becomes `"inner"` when it is `"cross"` and the
+  condition is present, so the SQL text, the exact-condition record and the native call are the
+  inner join's, with no second implementation. Spark answers a cross join with a condition as
+  the inner join's rows and columns. The `"cross"` key of the `how_sql` map is gone with it: a
+  cross now reaches the map only with a `None` condition, where the map is unused. A `None`
+  condition still emits `CROSS JOIN` with no `ON`, so `crossJoin` and
+  `join(other, None, "cross")` keep main's plan and rows. Net zero lines (3461, ceiling
+  unchanged). A list of Columns and shared names under `"cross"` keep main's refusals, pinned
+  beside the fix. Pins: `python/repark/tests/test_cross_join_condition_1.py`.
+  pins: cross-join-condition-1/C-001, C-002, C-003, C-004
 - `frame_nodes.py` — **ATTR-ID-1 PERF-1 (2026-10-03):** the lazy lineage-node
   home. `_bind_frame_node` attaches `_frame_node` as a property at package
   import; reads build root/derived nodes on first touch into a weak table
@@ -1053,6 +1064,19 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   delegation, not compute. pins: io-declared-1/C-001, C-002, C-003, C-007
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the `DATA_SOURCE_NOT_FOUND` format echo
   and the JDBC `INVALID_SAVE_MODE` echo mask the value through `mask_credentials`.
+  **C-4 step 2 (2026-10-09):** `writer_jdbc` is the real Postgres writer door: the mode
+  argument wins when given, else the writer's mode, and only append writes (other modes
+  refuse `UnsupportedOperationException` under `CONNECT-DECL-pg-write-modes`, the SQL
+  doors' class and text shape); writer options merge under `properties`
+  case-insensitively, `write.path` lifts out, url/dbtable/path strip, and the rest goes
+  to the engine door; `save_jdbc` serves `format("jdbc").save()` off url/dbtable options
+  while `format("postgres").save()` keeps `DATA_SOURCE_NOT_FOUND`;
+  `take_postgres_write_report` reads the session carrier back once for the live cells.
+  **C-4 fold 2 item 4 (2026-10-10):** the `writer_jdbc` docstring states the
+  `write.path` carriage contract: one `COPY` statement on bulk, one multi-row `INSERT`
+  per batch on row, so statement triggers fire once per batch on the row path and a
+  per-statement row cap can refuse bulk while admitting row.
+  pins: c-4/C-014
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** both `option` methods
   register the stored value, and the overwrite re-raise scrubs the cause first.
@@ -1121,6 +1145,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `SQLSTATE: 42P07`, V2 `replace` and `_existing_table_ref` (append-missing) get
   `[TABLE_OR_VIEW_NOT_FOUND]`/`SQLSTATE: 42P01`; in-place appends keep the wording and the
   1091 baseline. pins: ice-error-conditions-1/C-011
+  **C-4 step 2 (2026-10-09):** `save()` lets a `jdbc` format past the path check and
+  routes non-path formats through `save_or_refuse_writer_format` (jdbc writes, the rest
+  refuse as before); two lines changed in place, the file holds 999 of 1000.
+  pins: c-4/C-014
 - `writer_save.py` owns the U7 PR1 (2026-09-24) Iceberg `save(target)` and bucketed
   `saveAsTable` routing. `save_iceberg` asks the native `writer_save_target` kernel for the
   action (explicit `format("iceberg")` only; the default format keeps EX-IO-5's refusal), then

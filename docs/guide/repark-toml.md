@@ -212,14 +212,29 @@ is accepted and reads unpartitioned. At most 10 000 ranges run in one read; a la
 `dbtable = "(select …) as q"`. `EXPLAIN` shows `partition_column=`, `strides=` and
 `max_connections=` on the scan. Mounted `repark.toml` sources take no partition options.
 
+**Postgres writes.** `df.write.jdbc(url, table, mode="append")` and
+`INSERT INTO pg.<schema>.<table>` append rows to a Postgres table; every other
+save mode refuses (`CONNECT-DECL-pg-write-modes`), and `UPDATE`, `DELETE` and
+`MERGE` refuse as not implemented. The `write.path` option picks the carriage:
+`bulk` (the default) streams the rows in one `COPY ... FROM STDIN` statement,
+`row` sends multi-row `INSERT` statements of up to 256 rows each plus one
+remainder statement, as Spark's JDBC writer sends batches. Statement-level
+triggers and transition tables therefore see one statement on the bulk path and
+one per batch on the row path; a trigger that limits rows per statement can
+refuse a bulk write and admit the same rows on the row path. A value the column
+cannot take refuses the whole statement and stores nothing on either path.
+Types the bulk carriage cannot carry fall back to the row path. There is no
+`write.path` flag on the SQL door, which always writes bulk-or-fallback.
+
 **`sslmode`.** The default, `verify-full`, encrypts and checks the server certificate against
 `sslrootcert` (or the system roots) and the host name. `disable` is the one explicit plaintext
 mode, for a server on a trusted network or a local container. `prefer`, `allow`, `require` and
 `verify-ca` refuse, because each can connect without checking whom it talks to
 (`CONNECT-DECL-sslmode-unverified`, `CONNECT-DIV-pg-sslmode`).
 
-**The grants a source needs.** Every connection is read-only (`default_transaction_read_only`),
-so the role needs read grants alone, three of them:
+**The grants a source needs.** Every connection holds `default_transaction_read_only`
+(a write lifts it for its own transaction with `BEGIN READ WRITE`), so a reader
+needs read grants alone, three of them:
 
 ```sql
 GRANT CONNECT ON DATABASE analytics TO reader;
@@ -227,9 +242,12 @@ GRANT USAGE ON SCHEMA sales TO reader;
 GRANT SELECT ON ALL TABLES IN SCHEMA sales TO reader;
 ```
 
+A writer needs `INSERT` on the tables it appends to as well.
+
 A missing `USAGE` or `SELECT` refuses when the table resolves, naming the relation and the
-privilege. DDL under a source refuses as read-only (`CONNECT-DECL-pg-ddl`), and `INSERT`,
-`UPDATE` and `DELETE` refuse as not implemented; nothing is written.
+privilege. DDL under a source refuses as read-only (`CONNECT-DECL-pg-ddl`); append `INSERT`
+writes rows (see "Postgres writes" above) while `UPDATE` and `DELETE` refuse as not
+implemented.
 
 **`pushdown_limit` and `pushdown_predicate`.** They are separate switches, as Spark's
 `pushDownLimit` and `pushDownPredicate` are. With both on, `EXPLAIN` lists each scan's

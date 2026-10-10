@@ -38,3 +38,5 @@ mod text_write_format_cache;
 mod text_write_sink;
 mod text_write_sink_spike;
 mod window_rescan;
+#[cfg(feature = "postgres")]
+mod write_postgres;

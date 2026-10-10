@@ -274,6 +274,20 @@ scalars live under [`try_invert/`](try_invert/map.md).
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
   even for non-null input — live-measured on 4.1.2). pins: types-1/C-006
+- `spark_epoch_ctor.rs` — **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** Spark
+  `timestamp_seconds` / `timestamp_millis` / `timestamp_micros` over one parameterized
+  UDF, registered from `lib.rs::register_all` and embedded by the facade through
+  `dispatch_spark.rs` — one kernel per name on both doors. Answers LTZ micros; seconds
+  takes NUMERIC (fractional kept, double NaN/Inf answer NULL, huge doubles saturate,
+  decimal exact-or-error), millis/micros take INTEGRAL; rejected types refuse
+  `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]` 42K09 and overflows refuse with Spark's
+  unclassified `long overflow` / `Overflow` / `Rounding necessary` texts.
+  Fold 1 (2026-10-09): decimal seconds answer Spark's order — inexact micros with at
+  most 19 integer digits refuse `Rounding necessary` even past the bigint bound,
+  `Overflow` only past 19 digits or for exact out-of-range micros; the Rust battery
+  pins 17 refusals + 5 values and the harness parses fractional literals as decimals
+  like the Spark door.
+  pins: sql-epoch-constructors-1/C-002, C-003, C-004, C-005, C-008, C-010
 - `spark_year_pad.rs` — **TYPES-1 round 5 (2026-09-05):** the Java-pattern year arm
   extracted from `datetime.rs` (`datetime.rs` 1709→1700): negative years pad the digits
   and re-attach the sign (`-0499`), `yy` is `abs(year) % 100` (`-499` → `99`), 5+-digit
@@ -400,6 +414,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `registration.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the `analyzer_rules()`
   home moved out of `lib.rs` so the crate root stays under its `check_lib_rs`
   ceiling; `SparkSessionWindow` registers beside the window rules.
+  **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `analyze_eagerly` moves out of `lib.rs`
+  the same way (re-exported at the root, all call paths unchanged) to hold room for
+  the epoch-constructor registration.
   **FNP-GEN-1 step 2 (2026-09-16):** `generator::GeneratorRewrite` joins the tail
   of the list, after the closing `TypeCoercion`, so the rule sees post-coercion
   projections on both doors.
@@ -419,9 +436,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   lives in `csv/map.md`.
   pins: fnp-win-1/C-004, C-008, fnp-gen-1/C-002, C-003, C-004, C-006, L-002, L-003,
   L-004, L-005, R-18a-14, PERF-001, PERF-002, PERF-004, PERF-005, PERF-006
-- `lib.rs` — crate-root stays at **182** under `check_lib_rs` (D-8 one-time
-  FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
-  `registration.rs`).
+- `lib.rs` — crate-root stays under `check_lib_rs` (D-8 one-time FNP-WIN-1 grant;
+  step 4 moved the `analyzer_rules()` home to `registration.rs`;
+  SQL-EPOCH-CONSTRUCTORS-1 moves `analyze_eagerly` there the same way and registers
+  the epoch constructors beside the other families).
 - `higher_order/` — FNP-4c Spark higher-order kernels (`transform`, `filter`, `forall`,
   `aggregate`/`reduce`, `zip_with`, `transform_keys`, `transform_values`, `map_filter`,
   `map_zip_with`) plus native `exists`. Registry both doors
@@ -1063,6 +1081,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- `timestamp_ns_cast.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09, fold 1 and the split):** the
+  nanosecond wall kernel `__repark_cast_timestamp_ns__` is the one conversion every write door
+  reaches for a top-level `timestamp_ns` column. Its return field is nullable for every source
+  that is not already the target type (an overflow answers NULL when ANSI is off); the zoned
+  kernel keeps its first rule, because a required `timestamptz_ns` column is a control whose
+  refusal text must not move. The kernel has one argument again: the nested form of folds 1 and 2
+  (`timestamp_ns_cast/nested.rs`, `lineage.rs`, and `narrow.rs`, which only held a move) was
+  removed by the split, and a nested `timestamp_ns` leaf is refused before any store by
+  `repark-iceberg/src/write/nested_ns_gate.rs`. Fold 1 changed this file without a line here,
+  which is what the map lockstep guard of the pull request reported once main was merged in.
+  pins: ice-tsns-merge-wall-1/C-018, C-031, C-033
 - `timestamp_ns_cast.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the embedded Spark-door casts
   `__repark_cast_timestamp_ns__` (→ `Timestamp(ns)`) and `__repark_cast_timestamptz_ns__`
   (→ `Timestamp(ns, "UTC")`), registered through `instant_ts::functions()` and reached only

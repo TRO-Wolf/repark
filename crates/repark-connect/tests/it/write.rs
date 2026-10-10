@@ -911,10 +911,6 @@ fn every_fallback_reason_says_why_copy_was_not_used() {
             "row-level security applies to the role, and COPY FROM refuses under it",
         ),
         (
-            RowFallback::StatementTrigger,
-            "the target has a statement-level INSERT trigger, which COPY fires once",
-        ),
-        (
             RowFallback::ColumnType,
             "a written column's type has no COPY BINARY form here",
         ),
@@ -926,8 +922,14 @@ fn every_fallback_reason_says_why_copy_was_not_used() {
     for qualified in [
         "pg_catalog.pg_class",
         "pg_catalog.pg_rewrite",
-        "pg_catalog.pg_trigger",
+        "pg_catalog.pg_foreign_table",
+        "pg_catalog.pg_foreign_server",
+        "pg_catalog.pg_foreign_data_wrapper",
     ] {
         assert!(TARGET_FACTS.contains(qualified), "{qualified}");
     }
+    assert!(
+        TARGET_FACTS.contains("fdwname"),
+        "the wrapper name decides the foreign fallback"
+    );
 }

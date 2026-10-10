@@ -61,6 +61,62 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   NTZ opt-in literals/casts (naive µs, no localization), invalid-value refusal
   naming both tokens, DDL `TIMESTAMP` → Iceberg `timestamp` under NTZ /
   `timestamptz` under LTZ. `to_timestamp` stays LTZ.
+- [timestamp_ns_wall_doors.rs](timestamp_ns_wall_doors.rs) — **ICE-TSNS-MERGE-WALL-1
+  (2026-10-09):** the readiness review's first probe test, ported unchanged in substance. In
+  an America/New_York session `INSERT … VALUES` and `MERGE … INSERT *` of one `TIMESTAMP`
+  literal into a `timestamp_ns` column must store one value. Red on main `40fc916f`
+  (INSERT `1767323045123456000`, MERGE `1767341045123456000`).
+  pins: ice-tsns-merge-wall-1/C-001
+  **The Rust-door matrix (same unit):** six `timestamptz_ns` instants with non-zero digits
+  below the microsecond (before the epoch, on each side of New York's gap, the two instants
+  of one overlap wall) go through eight doors — `INSERT … SELECT`, `INSERT OVERWRITE`,
+  `REPLACE WHERE`, MERGE insert, MERGE `INSERT *`, MERGE update, `UPDATE` with and without a
+  `WHERE` — in UTC, America/New_York and Asia/Kolkata.
+  `every_door_stores_a_nanosecond_instant_as_its_session_wall` asserts the Arrow type and the
+  int64 walls of a `timestamp_ns` target;
+  `every_door_keeps_a_nanosecond_instant_in_a_zoned_column` is the `timestamptz_ns` control.
+  The expected walls are the facade matrix's `zoneinfo` values. Mutants M1, M2 and M3 of
+  the ledger each red the wall test at the door they break.
+  pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-011
+  **Fold 1 (2026-10-09), pins from the verify.**
+  `a_nested_microsecond_ntz_field_keeps_the_split_main_has` holds the control: field
+  assignment stores the session wall, the other four doors the UTC wall (parity row
+  ICE-TSNS-SQL-1-R-011, OPEN).
+  `an_overflowing_literal_stores_null_without_ansi_as_insert_does` is the 42 cells' shape:
+  four far literals and each zone's edge instant through `UPDATE … WHERE` (both row-level
+  modes) and `MERGE … INSERT VALUES`.
+  `an_overflowing_wall_source_answers_as_insert_select_on_the_overwrite_doors` puts a
+  `TIMESTAMP_NTZ` and a `DATE` past each end of the range through `INSERT OVERWRITE` and
+  `INSERT … BY NAME`, ANSI on and off. `untouched_rows_carry_their_nanosecond_ticks` is the
+  carry pin the facade module gave up: DELETE, sibling UPDATE and MERGE and the three
+  maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
+  The two nested store pins of fold 1 left with the split; the nested pins are the next row.
+  pins: ice-tsns-merge-wall-1/C-017, C-018, C-019, C-023, C-024
+- [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
+  **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
+  `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,
+  struct in struct, array of struct, array, struct of array, map value, map key, map of
+  struct, a struct with one field renamed) through seventeen doors in two zones: `INSERT`
+  with `VALUES`, `SELECT`, a column list, `BY NAME` (named and star), `OVERWRITE` (both),
+  `REPLACE WHERE`, the four MERGE arms, `UPDATE` with and without a `WHERE`, and the three
+  routes the last verify leaked through that SQL can spell (an array element, a temporary
+  view, a subquery). Each must take the named refusal with the target's leaf path, and per
+  shape no file may appear under the warehouse and no snapshot be added.
+  `a_field_assignment_into_the_leaf_is_refused_too` covers `SET st.v = …` through UPDATE and
+  MERGE. `the_refusal_names_the_table_the_column_and_the_leaf` holds the whole text, on the
+  door that used to name the source expression.
+  `a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows` seeds a table by
+  CTAS (not gated) in both row-level modes and runs twelve statements that omit the column or
+  give it a bare `NULL` (INSERT forms, sibling UPDATE and MERGE, DELETE), two maintenance
+  calls and a time-travel read: all run and the seeded leaf reads back every nanosecond.
+  `a_nested_zoned_or_microsecond_leaf_is_not_guarded` is the control.
+  `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` is the top-level pin of
+  `refuse_narrowed_update`: four spellings (the narrowing in the THEN branch, in the ELSE
+  branch, in `if` and in an array element) from a `timestamp_ns` and a `timestamptz_ns`
+  source are refused and store nothing; a plain column, a typed NULL, a zoned source, a
+  literal, a microsecond literal beside an untyped NULL and a narrowing that sits only in a
+  `CASE` condition store; `CAST(c AS TIMESTAMP)` and `date_trunc` with a `WHERE` still store.
+  pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-043, C-047
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to

@@ -57,6 +57,7 @@ mod update_fields;
 // --- The Session surface (v1 names, courtesy `Session` alias).
 pub use repark_common::java_case::{fold_b_equal, string_lower_equal};
 pub use session::read_postgres::{PostgresRead, PostgresTarget, READ_POSTGRES_SOURCE};
+pub use session::write_postgres;
 pub use session::{
     DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSession as Session, ReparkSessionBuilder,
     frame_names, resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan, writer_layout,
@@ -68,7 +69,6 @@ pub use session_time_zone::{
     canonical_session_zone_id, parse_runtime_session_zone_value, resolve_session_time_zone,
 };
 
-// --- Seams.
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect, TempViewSession};
 

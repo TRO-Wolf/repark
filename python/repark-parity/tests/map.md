@@ -206,6 +206,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **C-4 fold 2 (2026-10-10):** the mirror
+  retires the `crates/repark-sql/src/guards/tests.rs` row with the script
+  exception (the file sits at 770 lines under the default ceiling), so the
+  Rust exception count drops 34 → 33.
 - `test_cap_1_source_file_line_cap.py` — **ZONE-HORIZON-RENDER-1 (2026-10-08):** the mirror
   table reads `crates/repark-functions/src/datetime.rs` at 1655, the ceiling the unit ratcheted
   down from 1699 in `scripts/check_rust_file_size.py`.
@@ -848,6 +852,9 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   `FIXED 2026-09-04 (RP-11)`.
   pins: v1-gate-audit/C-001, C-002, C-003, C-004, C-005, C-006
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
+  **ENC-1 (2026-10-09):** the encryption row of the north-star matrix reads FIXED 2026-10-09
+  (the first write to a keyed table refuses), so the softened-glyph pin asserts that wording and
+  the 2026-10-01 ruling date for that row. pins: enc-1/C-001
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

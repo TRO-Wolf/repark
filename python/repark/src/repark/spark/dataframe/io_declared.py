@@ -1,11 +1,15 @@
-"""Declared IO refusals for the orc writer, the xml names, and the jdbc names."""
+"""Declared IO refusals for orc and xml, and the jdbc read and write doors."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from repark.errors import AnalysisException, PySparkNotImplementedError
+from repark.errors import (
+    AnalysisException,
+    PySparkNotImplementedError,
+    UnsupportedOperationException,
+)
 from repark.spark._secrets import mask_credentials
 from repark.spark.dataframe.streaming_batch import _raise_analysis
 
@@ -13,8 +17,16 @@ if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
     from repark.spark.dataframe.writer_readwriter import DataFrameWriter
     from repark.spark.session.reader import DataFrameReader
+    from repark.spark.session.session_core import ReparkSession
 
 _JDBC_SAVE_MODES = ("append", "overwrite", "error", "errorifexists", "ignore", "default")
+
+_JDBC_WRITE_STRIPPED_OPTIONS = frozenset({"url", "dbtable", "path", "write.path"})
+
+_PG_WRITE_MODES_TEXT = (
+    "{what} refuses: a Postgres source takes append writes only (registry row "
+    "CONNECT-DECL-pg-write-modes in docs/spark-sql-iceberg-parity.md)"
+)
 
 _XML_ROW_TAG_MESSAGE = (
     "[XML_ROW_TAG_MISSING] `rowTag` option is required for reading/writing files "
@@ -209,6 +221,32 @@ def writer_xml(
     _refuse("xml")
 
 
+def _refuse_pg_write_mode(what: str) -> NoReturn:
+    """Raise the shared non-append refusal naming the registry row."""
+    raise UnsupportedOperationException(_PG_WRITE_MODES_TEXT.format(what=what))
+
+
+def _merged_jdbc_write_properties(
+    writer_options: Mapping[str, str], properties: dict[str, str] | None
+) -> dict[str, str]:
+    """Merge writer options under properties, case-insensitively, properties win."""
+    merged = dict(writer_options)
+    for key, value in (properties or {}).items():
+        for existing in list(merged):
+            if existing.lower() == str(key).lower():
+                del merged[existing]
+        merged[str(key)] = str(value)
+    return merged
+
+
+def _lift_write_path(merged: dict[str, str]) -> str | None:
+    """Pop the write.path option out of merged properties, case-insensitively."""
+    for key in list(merged):
+        if key.lower() == "write.path":
+            return merged.pop(key)
+    return None
+
+
 def writer_jdbc(
     writer: DataFrameWriter,
     url: str,
@@ -216,12 +254,79 @@ def writer_jdbc(
     mode: str | None = None,
     properties: dict[str, str] | None = None,
 ) -> None:
-    """Refuse JDBC writes after Spark's save-mode check. pins: io-declared-1/C-003, C-008"""
-    _ = writer, url, table, properties
+    """Write PostgreSQL via the native connector; other drivers and modes refuse.
+
+    The ``write.path`` option picks the carriage: ``bulk`` (the default) streams
+    the rows in one ``COPY ... FROM STDIN`` statement, ``row`` sends multi-row
+    ``INSERT`` statements of up to 256 rows each plus one remainder statement, as
+    Spark's JDBC writer sends batches. Statement-level triggers and transition
+    tables therefore see one statement on the bulk path and one per batch on the
+    row path; a trigger that limits rows per statement can refuse a bulk write
+    and admit the same rows on the row path. Types the bulk carriage cannot
+    carry fall back to the row path with a report note.
+
+    pins: io-declared-1/C-003, C-008; c-4/C-014
+    """
+    from repark import _native
+    from repark.spark.dataframe.writer_layout import _registration_frame
+
     lowered_mode = mode.lower() if isinstance(mode, str) else mode
     if mode is not None and lowered_mode not in _JDBC_SAVE_MODES:
         _refuse_invalid_jdbc_mode(mode)
-    _refuse("jdbc")
+    effective = lowered_mode if mode is not None else writer._mode
+    if effective != "append":
+        _refuse_pg_write_mode(f"df.write.jdbc(mode={effective!r})")
+    if not _is_postgres_url(url):
+        _refuse("jdbc")
+    merged = _merged_jdbc_write_properties(writer._options, properties)
+    write_path = _lift_write_path(merged)
+    props = {
+        key: value
+        for key, value in merged.items()
+        if key.lower() not in _JDBC_WRITE_STRIPPED_OPTIONS
+    }
+    dataframe = writer._dataframe
+    dataframe._ensure_alive()
+    _native.session_write_postgres(
+        dataframe._session,
+        _registration_frame(dataframe),
+        url,
+        table,
+        props,
+        write_path,
+        [str(column) for column in dataframe.columns],
+    )
+
+
+def save_jdbc(writer: DataFrameWriter) -> None:
+    """Run format('jdbc').save() through the jdbc door with url/dbtable from options."""
+    from repark.errors import IllegalArgumentException
+
+    lowered = {key.lower(): value for key, value in writer._options.items()}
+    url = lowered.get("url")
+    if not url:
+        raise IllegalArgumentException("format('jdbc') requires option('url', ...)")
+    dbtable = lowered.get("dbtable")
+    if not dbtable:
+        raise IllegalArgumentException("format('jdbc') requires option('dbtable', ...)")
+    writer_jdbc(writer, str(url), str(dbtable))
+
+
+def save_or_refuse_writer_format(writer: DataFrameWriter) -> None:
+    """Route a non-path write format at save: jdbc writes, the rest refuse."""
+    if (writer._format or "").strip().lower() == "jdbc":
+        save_jdbc(writer)
+        return
+    refuse_writer_save_format(writer)
+
+
+def take_postgres_write_report(
+    session: ReparkSession,
+) -> tuple[str, int, str | None] | None:
+    """Read back the last Postgres write report once (the C-4 test hook)."""
+    from repark import _native
+
+    return _native.session_take_postgres_write_report(session._ensure_alive())
 
 
 def refuse_writer_save_format(writer: DataFrameWriter) -> NoReturn:

@@ -45,6 +45,7 @@ pub(crate) mod spill;
 mod temp_views;
 mod text_write_format;
 mod write_options;
+pub mod write_postgres;
 pub mod writer_layout;
 pub(crate) mod zone_localiser;
 
@@ -232,6 +233,7 @@ impl ReparkSessionBuilder {
     /// Build the session synchronously.
     /// # Errors
     /// Returns `Error::DataFusion` if the DataFusion runtime fails to build.
+    #[allow(clippy::too_many_lines)]
     pub fn build(mut self) -> Result<ReparkSession> {
         let conf_dump = self.prepare_build_state()?;
         repark_common::redaction::register_config_map(&self.config);
@@ -241,7 +243,6 @@ impl ReparkSessionBuilder {
         let catalog_specs = catalog_config::parse_catalog_specs(&self.config)?;
         // The session timezone, resolved and VALIDATED here.
         let session_time_zone = resolve_session_time_zone(&self.config)?;
-        // The optional `s3://`/`s3a://` read region override.
         let s3_region_override = resolve_s3_region_override(&self.config)?;
         // E-2: AWS use is an AWS catalog spec, the S3-region conf, or the explicit opt-in.
         let aws_signaled = catalog_specs
@@ -291,9 +292,9 @@ impl ReparkSessionBuilder {
         config = repark_iceberg::write::with_write_concurrency(config, write_concurrency);
         config = with_parallel_single_partition(config, self.parallel_single_partition);
         config = crate::series_order::with_series_order_notice(config);
+        config = write_postgres::with_last_postgres_write_report(config);
         // Explicit DataFusion keys override typed setters and defaults before extension configure.
         apply_datafusion_config_keys(&mut config, &self.config)?;
-        // Configure runs after engine options and before runtime assembly.
         config = ext
             .configure(
                 SessionBuildConf {

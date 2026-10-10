@@ -327,6 +327,13 @@ impl CatalogRegistry {
     }
 
     #[must_use]
+    pub fn database_source_kind(&self, name: &str) -> Option<SourceKind> {
+        self.database_sources
+            .get(name)
+            .map(|spec| spec.identity.kind)
+    }
+
+    #[must_use]
     pub fn source_read_only_message(&self, name: &str) -> Option<String> {
         let spec = self.database_sources.get(name)?;
         (spec.identity.kind == SourceKind::Postgres)

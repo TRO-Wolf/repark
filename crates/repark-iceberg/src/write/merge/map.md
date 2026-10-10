@@ -45,6 +45,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **WO RP50-A (2026-09-26):** the three `maybe_to_branch` calls drop the table argument and
   the `?` with the removed v1 kernel, so a MERGE into a branch of a format v1 table commits.
   pins: ice-nested-evo-1/C-053, C-057, C-060
+- `snapshot_commit.rs` — **ENC-1 round 2 (2026-10-09):** `commit_overwrite_on_ref` and
+  `commit_row_delta_kind_on_ref` refuse a target carrying `encryption.key-id` as commit
+  backstops; the MERGE doors also check at entry, so these only fire on direct calls.
+  pins: enc-1/C-005
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
   **ICE-OCC-SCOPED-1 (2026-09-17):** `MergeTarget` carries the MERGE's `conflict_filter`,
   computed once in `execute_merge` by `merge_conflict_filter`: the target-only conjuncts of the
@@ -284,6 +288,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
   gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
   value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
+- `insert.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `zone_wrapping_stream_sql` wraps
+  every wall-clock target through `ntz_store::wall_cast_sql`, so a `timestamp_ns` column of a
+  MERGE INSERT takes the nanosecond wall kernel; MERGE UPDATE SET reaches the same kernel
+  through `store_assignment_cast_sql`. Before, both arms stored an instant's UTC wall in a
+  `timestamp_ns` column. Reason and scope: the `ntz_store.rs` row of the parent directory map.
+  pins: ice-tsns-merge-wall-1/C-004
 - `insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the MERGE INSERT and UPDATE SET
   stream builders plan through `analyzed_store_source` and `wrap_store_outputs`, so a
   fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column named; the

@@ -118,6 +118,35 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   host, a missing relation, a refused `NaN`, a lock timeout, a pool timeout and a `read.jdbc`
   URL with a password; neither password nor any URL form appears on stdout or stderr.
   pins: c-2/C-107
+- `test_c4_write.py` — **C-4 step 2 (2026-10-09):** Postgres INSERT routing on the Spark
+  door and the writer, fourteen cells: rows land through VALUES and SELECT with an empty-frame
+  return; every declared type round-trips byte-identical through the read path (`nu` by
+  value: the door writes the Arrow scale, the seed carries dscale 1); reordered lists write
+  by name and unlisted columns default; a duplicate key stores nothing and records nothing;
+  a DST-zone session writes read timestamps back as their wall clocks; a view and an
+  INSERT-rule target take the row path and say why on both doors; a named GENERATED ALWAYS
+  identity column refuses with the core text on both doors; default and `write.path=row`
+  writer writes agree byte for byte; a write-only role names the missing SELECT privilege
+  and an unmapped column names its row even when unnamed (the two owner questions);
+  non-append modes name the modes row and UPDATE names the upsert row while REPLACE parses
+  nowhere here and MERGE/CTAS keep the pg-ddl text.
+  **C-4 fold 2 item 2 (2026-10-10):** `test_unstorable_values_refuse_on_all_three_paths`
+  (fifteen unstorable cells refuse named with the column on the SQL door, the writer
+  default and `write.path=row`, store nothing, record nothing) and
+  `test_fitting_values_store_on_all_three_paths` (eight fitting cells store identically
+  on all three paths).
+  **C-4 fold 2 item 3 (2026-10-10):**
+  `test_timestamps_into_date_and_text_columns_follow_the_session_zone` (the zone wall in
+  UTC, New York and Kolkata on all three paths, with fraction trimming and NTZ arms) and
+  `test_timestamp_columns_keep_their_zone_placement` (timestamp/timestamptz columns
+  unmoved in New York).
+  **C-4 fold 2 item 5 (2026-10-10):**
+  `test_repeated_select_expressions_store_positionally` (the three repeated-name
+  sources store by position through the facade door).
+  pins: c-4/C-013, C-014
+- `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
+  drops its INSERT case (append INSERT writes now; the write pins live in
+  `test_c4_write.py`); UPDATE and DELETE keep refusing. pins: c-4/C-013
 
 ## Pointers
 

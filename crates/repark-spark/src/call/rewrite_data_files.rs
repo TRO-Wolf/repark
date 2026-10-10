@@ -45,6 +45,7 @@ pub(super) async fn execute_rewrite_data_files(
     let table_arg = bound.require_string("table")?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    repark_iceberg::write::refuse_encrypted_table(&table)?;
     let strategy = resolve_strategy(strategy_arg.as_deref(), sort_order_arg.as_deref(), &table)?;
     let pairs = extract_option_pairs(&bound, "rewrite_data_files")?;
     let mut options = parse_rdf_options(&pairs, &table, strategy)?;

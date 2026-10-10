@@ -59,6 +59,36 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   H-TZ did not fire. `session.rs` holds 1000 lines: its two new `mod` lines are paid for by two
   shed comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
   pins: c-2/C-098, C-108, C-109, C-110, C-111
+- `write_postgres.rs` — **C-4 step 2 (2026-10-09):** `execute_postgres_write` is the one
+  Postgres sink driver both SQL doors and the `df.write.jdbc` binding call. It builds a
+  fresh pool from mounted specs (`ReparkToml` door) or URL properties (`ReadPostgres` door,
+  partition keys lifted and ignored), discovers, resolves the listed columns, checks the
+  frame width (short: Spark `INSERT_COLUMN_ARITY_MISMATCH`; wide: DataFusion's count text),
+  casts each batch to the encoder's Arrow types with the timestamp clock rules of
+  `zone_localiser.rs` (unplace at the session zone, forward-place for `timestamptz`), and
+  commits. Connect failures travel as
+  `External` with the `database source` context, so the Python classes match the read door.
+  `parse_write_path_option` parses the `write.path` writer option for both doors and the
+  binding: absent means bulk, `row` forces the INSERT path, anything else refuses as
+  `Configuration` (the binding raises `IllegalArgumentException`) naming both values.
+  `LastPostgresWriteReport` is the session carrier for the last write report, installed by
+  the builder: both doors record through `record_postgres_write_report` and the binding
+  reads it back with `take_postgres_write_report`. Fold 1 (2026-10-09): the report carries
+  the open write's taken path and the fallback sentence (`RowFallback`'s Display) read off
+  the writer after `open`, and batches pass encoder-accepted encodings (view, large,
+  dictionary forms) through uncast while real type changes still cast.
+  **C-4 fold 2 item 2 (2026-10-10):** the batch casts run strict (`safe: false`), so a
+  value the column cannot take refuses the statement instead of storing NULL. A failed
+  cast names the registry class (`CAST_OVERFLOW_IN_TABLE_INSERT` for overflow, with the
+  backquoted column; `CAST_INVALID_INPUT` for malformed text or bytes, with the offending
+  value found by bisection, capped, and the column up front) and never a raw Arrow string.
+  `shape_batch` takes `prefer_timestamp_ntz` instead of the whole settings.
+  **C-4 fold 2 item 3 (2026-10-10):** a timestamp into a date or text (`Utf8`) column
+  renders in the session zone: zoned instants unplace to the zone wall first, naive walls
+  render as they stand, and the text is Spark's `YYYY-MM-DD HH:MM:SS[.ffffff]` with the
+  fraction trimmed and the year padded to four digits, the Iceberg target's answer.
+  Timestamp and timestamptz columns keep their placement.
+  pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
   pins: ice-views-1/C-018

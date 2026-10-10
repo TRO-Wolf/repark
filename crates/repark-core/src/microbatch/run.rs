@@ -532,6 +532,9 @@ pub(crate) fn engine_error(error: &DataFusionError) -> MicroBatchError {
     {
         return found.clone();
     }
+    if let Some(refusal) = repark_iceberg::write::EncryptedTableRefusal::find(error) {
+        return refusal.into();
+    }
     MicroBatchError::Catalog(mask_value_credentials(&error.to_string()))
 }
 

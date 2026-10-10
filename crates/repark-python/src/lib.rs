@@ -17,6 +17,7 @@ mod deep_stack;
 mod fence;
 pub mod frame_lineage;
 mod is_duplicated;
+mod join_refusal;
 mod logical_names;
 mod ml;
 mod orc_io;
@@ -27,6 +28,7 @@ mod session_sources;
 #[cfg(test)]
 mod session_tests;
 mod session_write_options;
+mod session_write_postgres;
 mod subquery;
 mod temp_view_names;
 mod text_io;
@@ -61,7 +63,7 @@ pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
     }
     match err.exception_class() {
         ErrorClass::Parse => ParseException::new_err(message),
-        ErrorClass::Analysis => AnalysisException::new_err(message),
+        ErrorClass::Analysis => join_refusal::analysis_py_err(message),
         ErrorClass::Arithmetic => ArithmeticException::new_err(message),
         ErrorClass::Unsupported => UnsupportedOperationException::new_err(message),
         ErrorClass::IllegalArgument => IllegalArgumentException::new_err(message),
@@ -172,6 +174,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     session_runtime::register(module)?;
     session_sources::register(module)?;
     session_write_options::register(module)?;
+    session_write_postgres::register(module)?;
     subquery::register(module)?;
     temp_view_names::register(module)?;
     text_io::register(module)?;
