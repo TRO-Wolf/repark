@@ -498,6 +498,48 @@ def test_a_branch_or_wap_write_of_a_nested_leaf_is_refused_and_writes_nothing(
         spark.stop()
 
 
+STRUCT_INSERT = f"INSERT INTO ice.ns.t {STRUCT_FRAME}"
+STRUCT_UPDATE = f"UPDATE ice.ns.t SET st = named_struct('v', {NEAR}, 'n', 1)"
+WRAPPED_WRITES = {
+    "explain_analyze": f"EXPLAIN ANALYZE {STRUCT_INSERT}",
+    "explain_analyze_cols": f"EXPLAIN ANALYZE INSERT INTO ice.ns.t (id, st) {STRUCT_FRAME}",
+    "explain_analyze_values": (
+        f"EXPLAIN ANALYZE INSERT INTO ice.ns.t VALUES (5, named_struct('v', {NEAR}, 'n', 1))"
+    ),
+    "explain_analyze_verbose": f"EXPLAIN ANALYZE VERBOSE {STRUCT_INSERT}",
+    "explain_analyze_overwrite": f"EXPLAIN ANALYZE INSERT OVERWRITE ice.ns.t {STRUCT_FRAME}",
+    "explain_analyze_lower": f"explain analyze insert into ice.ns.t {STRUCT_FRAME}",
+    "explain_analyze_update_where": f"EXPLAIN ANALYZE {STRUCT_UPDATE} WHERE id = 1",
+    "explain_analyze_update": f"EXPLAIN ANALYZE {STRUCT_UPDATE}",
+    "prepare": f"PREPARE supplied AS {STRUCT_INSERT}",
+    "create_table_as_insert": f"CREATE TABLE ice.ns.made USING iceberg AS {STRUCT_INSERT}",
+}
+
+
+@pytest.mark.parametrize("wrapper", list(WRAPPED_WRITES))
+def test_a_statement_that_wraps_a_nested_write_is_refused_and_writes_nothing(
+    tmp_path: Path, wrapper: str
+) -> None:
+    """EXPLAIN ANALYZE, PREPARE and CREATE TABLE AS around a write are decided as that write."""
+    spark = open_edge_session(tmp_path, "true")
+    try:
+        spark.sql("DROP TABLE ice.ns.t")
+        spark.sql(
+            f"CREATE TABLE ice.ns.t (id INT, st {NESTED_LAYOUTS['struct'][0]}) USING iceberg "
+            "TBLPROPERTIES ('format-version' = '3')"
+        )
+        spark.sql("INSERT INTO ice.ns.t (id) VALUES (1), (6)")
+        before = files_under(tmp_path)
+        with pytest.raises(Exception, match=NOT_WRITABLE_YET.format(path=r"`st`\.`v`")):
+            spark.sql(WRAPPED_WRITES[wrapper]).collect()
+        assert files_under(tmp_path) == before
+        assert spark.sql("SELECT * FROM ice.ns.t.snapshots").to_arrow().num_rows == 1
+        spark.sql(f"EXPLAIN {STRUCT_INSERT}").collect()
+        assert spark.sql("SELECT * FROM ice.ns.t.snapshots").to_arrow().num_rows == 1
+    finally:
+        spark.stop()
+
+
 def data_file_ticks(spark: Any, table: str) -> list[int | None]:
     """Return the int64 ticks of ``v`` read from the live Parquet data files of ``table``."""
     files = spark.sql(f"SELECT content, file_path FROM {table}.files").to_arrow().to_pylist()

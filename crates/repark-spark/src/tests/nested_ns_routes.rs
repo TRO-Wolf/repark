@@ -367,3 +367,99 @@ async fn a_statement_the_gate_cannot_read_is_refused_for_such_a_table_only() {
     .await;
     assert!(!elsewhere.expect_err("a parser error").contains(NOT_YET));
 }
+
+fn wrapped_writes() -> Vec<String> {
+    let table = "ice.sales.t";
+    let insert = format!("INSERT INTO {table} SELECT 5, {VALUE}, 0");
+    vec![
+        format!("EXPLAIN ANALYZE {insert}"),
+        format!("EXPLAIN ANALYZE INSERT INTO {table} (id, st) SELECT 5, {VALUE}"),
+        format!("EXPLAIN ANALYZE INSERT INTO {table} VALUES (5, {VALUE}, 0)"),
+        format!("EXPLAIN ANALYZE VERBOSE {insert}"),
+        format!("EXPLAIN ANALYZE INSERT OVERWRITE {table} SELECT 5, {VALUE}, 0"),
+        format!("explain analyze insert into {table} select 5, {VALUE}, 0"),
+        format!("EXPLAIN ANALYZE UPDATE {table} SET st = {VALUE} WHERE id = 1"),
+        format!("EXPLAIN ANALYZE UPDATE {table} SET st = {VALUE}"),
+        format!("EXPLAIN ANALYZE EXPLAIN ANALYZE {insert}"),
+        format!("EXPLAIN ANALYZE INSERT INTO {table}.branch_b1 SELECT 5, {VALUE}, 0"),
+        format!("EXPLAIN ANALYZE INSERT INTO {table} BY NAME SELECT {VALUE} AS st, 5 AS id"),
+        format!("PREPARE supplied AS {insert}"),
+        format!("CREATE TABLE ice.sales.made USING iceberg AS {insert}"),
+        format!("CREATE OR REPLACE TABLE ice.sales.made USING iceberg AS {insert}"),
+        format!("WITH c AS (SELECT 5 AS id) INSERT INTO {table} SELECT id, {VALUE}, 0 FROM c"),
+        format!("UPDATE {table} SET st = {VALUE} WHERE ("),
+    ]
+}
+
+#[tokio::test]
+async fn a_statement_that_wraps_a_write_is_decided_as_the_write_it_runs() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = seeded(&wh, NESTED, "t").await;
+    let files = count_parquet_files(wh.path());
+    let mut wrong = Vec::new();
+    for write in wrapped_writes() {
+        match attempt(&ctx, &catalogs, &write).await {
+            Ok(()) => wrong.push(format!("{write}: ran")),
+            Err(error) if !error.contains(NOT_YET) => wrong.push(format!("{write}: {error}")),
+            Err(_) => {}
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+    assert_eq!(count_parquet_files(wh.path()), files);
+    assert_eq!(snapshots(&catalogs, "t").await, 1);
+    let planned = [
+        format!("EXPLAIN INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0"),
+        format!("EXPLAIN VERBOSE INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0"),
+        format!("EXPLAIN ANALYZE EXPLAIN INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0"),
+    ];
+    for explain in &planned {
+        assert_eq!(attempt(&ctx, &catalogs, explain).await, Ok(()), "{explain}");
+    }
+    assert_eq!(count_parquet_files(wh.path()), files);
+    assert_eq!(snapshots(&catalogs, "t").await, 1);
+}
+
+#[tokio::test]
+async fn a_wrapped_statement_that_does_not_supply_the_column_still_runs() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = seeded(&wh, NESTED, "t").await;
+    let allowed = [
+        "EXPLAIN ANALYZE INSERT INTO ice.sales.t (id, k) VALUES (7, 0)",
+        "EXPLAIN ANALYZE INSERT INTO ice.sales.t VALUES (8, NULL, 0)",
+        "EXPLAIN ANALYZE UPDATE ice.sales.t SET k = 3 WHERE id = 1",
+        "EXPLAIN ANALYZE VERBOSE INSERT INTO ice.sales.t (id, k) SELECT 9, 0",
+    ];
+    for (index, write) in allowed.into_iter().enumerate() {
+        assert_eq!(attempt(&ctx, &catalogs, write).await, Ok(()), "{write}");
+        assert_eq!(snapshots(&catalogs, "t").await, index + 2, "{write}");
+    }
+    let prepared = "PREPARE omitted AS INSERT INTO ice.sales.t (id, k) VALUES (10, 0)";
+    assert_eq!(attempt(&ctx, &catalogs, prepared).await, Ok(()));
+    assert_eq!(attempt(&ctx, &catalogs, "EXECUTE omitted").await, Ok(()));
+    assert_eq!(snapshots(&catalogs, "t").await, 6);
+}
+
+#[tokio::test]
+async fn a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = seeded(&wh, PLAIN, "p").await;
+    let writes = [
+        format!("EXPLAIN ANALYZE INSERT INTO ice.sales.p SELECT 5, {VALUE}, 0"),
+        format!("EXPLAIN ANALYZE INSERT INTO ice.sales.p (id, st) VALUES (6, {VALUE})"),
+        "EXPLAIN ANALYZE UPDATE ice.sales.p SET k = 3 WHERE id = 1".to_string(),
+    ];
+    for (index, write) in writes.iter().enumerate() {
+        assert_eq!(attempt(&ctx, &catalogs, write).await, Ok(()), "{write}");
+        assert_eq!(snapshots(&catalogs, "p").await, index + 2, "{write}");
+    }
+    let prepared = format!("PREPARE plain AS INSERT INTO ice.sales.p SELECT 7, {VALUE}, 0");
+    assert_eq!(attempt(&ctx, &catalogs, &prepared).await, Ok(()));
+    assert_eq!(attempt(&ctx, &catalogs, "EXECUTE plain").await, Ok(()));
+    assert_eq!(snapshots(&catalogs, "p").await, 5);
+    let malformed = attempt(&ctx, &catalogs, "UPDATE ice.sales.p SET k = 1 WHERE (").await;
+    assert!(
+        !malformed
+            .expect_err("a parser error")
+            .contains("not writable yet")
+    );
+}
