@@ -1113,7 +1113,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
     does the same across the branches of a `UNION`.
   The tag never reaches an analyzed plan: `Cast` copies its source field's metadata, so a
   tag left behind would show in a result schema. No rule is added to the analyzer. The store
-  reads the marks in `repark-iceberg` `write/narrowed_store.rs`. Ten unit pins in
+  reads the marks in `repark-iceberg` `write/narrowed_store.rs`. Eleven unit pins in
   `null_narrowing/tests.rs`.
   pins: ice-tsns-narrow-refuse-1/C-002, C-003, C-019, C-020
 - `timestamp_ns_cast.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel

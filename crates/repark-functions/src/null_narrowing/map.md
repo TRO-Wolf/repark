@@ -9,7 +9,7 @@ holds the reasons.
 
 ## Contents
 
-- [tests.rs](tests.rs) — ten pins over hand-built expressions and plans, no session:
+- [tests.rs](tests.rs) — eleven pins over hand-built expressions and plans, no session:
   - `an_untyped_null_beside_a_nanosecond_branch_is_tagged_and_no_other_null`: `coalesce` in
     either order and a `CASE` are tagged; a NULL beside a microsecond or an integer branch,
     a NULL the statement typed and a node with no NULL are not.
@@ -26,6 +26,9 @@ holds the reasons.
     alias) and as a branch of `coalesce` or a `CASE` beside a microsecond sibling; a cast
     that only fits a function's signature (`date_trunc`), a node whose branches are all such
     casts, and a predicate are not marked.
+  - `the_session_rule_marks_a_cast_coercion_left_at_the_root_of_a_projection`: the
+    session's timestamp rule, run over a projection whose root is such a cast, leaves the
+    beside-a-value mark on it and none on the column beside it.
   - `the_marker_is_its_argument_and_the_optimizer_drops_it`: both marks return their
     argument's type and nullability, and `simplify` answers the argument.
   - `the_nanosecond_branch_of_a_union_beside_an_untyped_null_branch_is_marked`,

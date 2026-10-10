@@ -50,7 +50,7 @@ differs, section 11 holds.
 | C-021 | The guard reads an `INSERT` plan through the planner's own cast of a selected column and an `UPDATE` plan as written; in a `UNION` it names the branch narrowed beside an untyped NULL first. | The unit pins of `narrowed_store/tests.rs`; the `EXPLAIN ANALYZE` and `PREPARE` doors of the Rust door file. | **PROVEN** | §11.2; mutants W6, W9, W10. |
 | C-022 | Never worse after the rulings: every cell that moved moved into the refusal; no cell that stores nine digits on the base moved; no cell of a microsecond target moved; no refused cell left a value on disk. | The matrix on the final product source, 104,960 cells, head against base (§11.5); the 228 facade rows. | **PROVEN** | §11.5: 23,525 moved into the refusal, 81,215 byte-identical, 220 refused on both. |
 | C-023 | Each new rule has a hand mutant that a named pin kills. | §11.8. | **PROVEN** | §11.8. |
-| C-024 | The fold adds no plan pass, and INSERT and MERGE over a table with no nanosecond column take the time they took on the base. | §11.9. | **PROVEN** | §11.9. |
+| C-024 | The fold adds no analyzer rule; planning a statement that touches no nanosecond column takes the time it took on the base; INSERT and MERGE are timed against the base, release builds, interleaved, five runs, and the figures recorded as measured. | §11.9. | **PROVEN** | §11.9: the plan's median moves by 0.3%; the writes' medians are 3% to 7% higher on the head, inside one build's own spread of 9% to 14%, which this sample does not separate from the machine. |
 | C-025 | The gates are green on the fold's final source with real exit codes. | §11.10. | **PROVEN** | §11.10. |
 | C-026 | The `UNION` cell of `nvl` and `ifnull` (registry row R-019) keeps storing its cut value, as the ruling on Q3 reads. | Not built: measured, the cell is a nanosecond branch narrowed beside a microsecond one and the ruling on Q5 refuses it (§11.4). | **OPEN** | Q7. |
 | C-027 | The 80 cells that refused by name before the rulings and raise the base's own error after them refuse by name again. | Not built: the guard cannot tell the planner's cast of an `UPDATE`'s `SET` value from a written `CAST(… AS TIMESTAMP)`, which Q1 says stores (§11.5). | **OPEN** | Q8. |
@@ -787,15 +787,100 @@ for each source type, 60 in all, on the base and on the head. Card ICE-TSNS-UPDA
 Each mutant is one edit of the source at `60687f7e`, run against the named pins; the
 source is restored after each.
 
-Recorded by the commit that closes the fold.
+| Mutant | File | Killed by |
+|---|---|---|
+| F1 a cast coercion left over a nanosecond value is not marked | `null_narrowing.rs` | `null_narrowing/tests.rs`: `a_cast_coercion_left_over_a_nanosecond_value_is_marked` |
+| F2 a coerced branch is marked as beside an untyped NULL | `null_narrowing.rs` | `null_narrowing/tests.rs`: `a_cast_coercion_left_over_a_nanosecond_value_is_marked` |
+| F3 a cast a function's signature asked for is marked too | `null_narrowing.rs` | `null_narrowing/tests.rs`: `a_cast_coercion_left_over_a_nanosecond_value_is_marked` |
+| F4 a CASE branch coercion narrowed is not marked | `null_narrowing.rs` | `null_narrowing/tests.rs`: `a_cast_coercion_left_over_a_nanosecond_value_is_marked` |
+| F5 a function argument coercion narrowed beside a microsecond value is not marked | `null_narrowing.rs` | `null_narrowing/tests.rs`: `a_cast_coercion_left_over_a_nanosecond_value_is_marked` |
+| F6 a written CAST AS TIMESTAMP over a narrowed value is not kept | `null_narrowing.rs` | the Rust door file: `a_written_call_over_a_narrowed_value_stores_what_it_stores_over_the_nanosecond_value` |
+| F7 a cast written through the DataFrame is not read as the statement's | `null_narrowing.rs` | `null_narrowing/tests.rs`: `a_cast_from_nanoseconds_to_an_instant_before_coercion_is_the_statements` |
+| F8 the pass after coercion reads a coerced cast as written | `java_double.rs` | the Rust door file: `every_door_refuses_a_value_narrowed_beside_a_typed_null_or_a_microsecond_value` |
+| F9 the root of a branch of a UNION is not marked | `instant_ts.rs` | `null_narrowing/tests.rs`: `the_session_rule_marks_a_cast_coercion_left_at_the_root_of_a_projection` |
+| F10 a nanosecond branch beside an untyped NULL takes the other mark | `null_narrowing.rs` | `null_narrowing/tests.rs`: `the_nanosecond_branch_beside_a_widened_untyped_null_is_marked_as_beside_a_null` |
+| F11 a UNION branch beside a microsecond branch is not marked | `null_narrowing.rs` | `null_narrowing/tests.rs`: `the_nanosecond_branch_of_a_union_beside_a_microsecond_branch_is_marked`, `the_nanosecond_branch_of_a_union_beside_an_untyped_null_branch_is_marked` |
+| W1 date_trunc forgives a naive value too | `narrowed_store.rs` | `narrowed_store/tests.rs`: `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| W2 a DATE cast forgives a zoned value too | `narrowed_store.rs` | `narrowed_store/tests.rs`: `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| W3 no written call forgives | `narrowed_store.rs` | `narrowed_store/tests.rs`: `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| W4 a written cast to an instant is walked through | `narrowed_store.rs` | `narrowed_store/tests.rs`: `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| W5 a written CAST AS TIMESTAMP is walked through | `narrowed_store.rs` | `narrowed_store/tests.rs`: `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value`, `only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_value` |
+| W6 a UNION names the first narrowed branch | `narrowed_store.rs` | `narrowed_store/tests.rs`: `a_narrowed_value_is_followed_into_a_view_the_scan_holds_and_a_union_branch` |
+| W7 the mark beside a value is read as beside an untyped NULL | `narrowed_store.rs` | `narrowed_store/tests.rs`: `a_narrowed_value_is_followed_into_a_view_the_scan_holds_and_a_union_branch`, `only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_value` |
+| W8 the text does not name the narrowed value | `narrowed_store.rs` | `narrowed_store/tests.rs`: `a_cast_over_a_marked_value_is_followed_through_every_carrying_position_and_no_other`, `only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_value` |
+| W9 an INSERT plan is read without looking through the conforming cast | `insert_timestamp_ns.rs` | the Rust door file: `every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_utc` |
+| W10 the conforming cast is never looked through | `narrowed_store.rs` | `narrowed_store/tests.rs`: `only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_value` |
+
+21 mutants, 21 killed. Two needed a second run. F9 survived the whole Rust door file: no door
+statement reaches the root mark alone, because `settle_union_branches` marks the branches of
+a `UNION` as well. The rule is pinned where it lives, by a unit pin of the session rule
+added for it (commit `6a4f6f5a`), which kills the mutant. W10 was first written as an edit that did
+not compile and was rewritten.
 
 ### 11.9 Cost
 
-Recorded by the commit that closes the fold.
+**The code.** No rule is added to the analyzer. The rule before coercion replaces the
+first float-stringify instance and runs the same walk. In the session rule the walk of each
+expression goes down and up once where it went up once: on the way down a node that is a
+`CASE` or a function call is tested for a cast to a coarser timestamp among its branches,
+and types a branch only when it finds one. `holds_nanoseconds` reads the field types of the
+input schema once per plan node. The store walk is still behind `nanosecond_target`. One
+avoidable cost is left in: `mark_coerced_narrowing` clones a root `Cast` to test it.
+
+**The timing.** Release builds of the base `8d1c4f49` and of the head `60687f7e`, the script
+and the method of §9 (a 2,000-row table with no nanosecond column; medians of fifteen
+statements in milliseconds; five runs, the builds interleaved, four cores outside the build
+set), on a shared machine with a build of another lane and one of this unit running.
+
+| Run | INSERT base | INSERT head | MERGE base | MERGE head | MERGE merge-on-read base | head | `EXPLAIN`, fifty-branch union, base | head |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 23.11 | 23.41 | 65.81 | 65.60 | 84.90 | 84.75 | 343.15 | 338.79 |
+| 2 | 23.68 | 24.55 | 65.24 | 68.29 | 84.57 | 92.22 | 342.96 | 344.93 |
+| 3 | 23.76 | 24.07 | 66.97 | 71.56 | 89.47 | 95.20 | 343.86 | 347.37 |
+| 4 | 26.28 | 24.54 | 70.97 | 71.89 | 91.59 | 96.03 | 346.39 | 345.45 |
+| 5 | 25.78 | 25.86 | 73.40 | 72.98 | 92.46 | 92.22 | 345.93 | 342.43 |
+| median | 23.76 | 24.54 | 66.97 | 71.56 | 89.47 | 92.22 | 343.86 | 344.93 |
+
+The head's medians are higher by 3.3%, 6.9%, 3.1% and 0.3%. One build's own runs differ by
+14%, 13% and 9% on the three writes and by 1% to 2.5% on the plan. The plan, which is the
+analyzer alone and the steadiest figure, does not move. The writes do not show a difference
+this sample can separate from the machine: runs 1 and 5 are equal, runs 2 and 3 have the
+head slower on MERGE by 5% to 9%. It is not shown that the writes cost the same; it is
+shown that planning does.
 
 ### 11.10 Gates on the fold
 
-Recorded by the commit that closes the fold.
+Run 2026-10-10 on the fold's final source (product code of `60687f7e`, the test of
+`6a4f6f5a`), one cargo command at a time under the build lock on cores 32-47; the document
+gates on the tree of the commit that records this section.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo fmt --all -- --check` | 0 | |
+| `make rust-clippy` | 0 | |
+| `make rust-panic-ban` | 0 | |
+| `cargo test --locked -p repark-functions --lib` | 0 | 922 passed, 1 ignored |
+| `cargo test --locked -p repark-iceberg --lib` | 0 | 1005 passed |
+| `cargo test --locked -p repark-spark --lib` | 0 | 2692 passed, 5 ignored |
+| `cargo test --locked -p repark-sql --lib` | 0 | 394 passed |
+| `cargo test --locked -p repark-core --lib` | 0 | 1420 passed, 1 ignored |
+| `cargo test --locked -p repark-spark --test timestamp_ns_narrow_refuse` | 0 | 16 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_nested_shapes --test timestamp_ns_wall_doors --test timestamptz_ns_wall_doors` | 0 | 6 + 7 + 4 passed |
+| `make develop` | 0 | |
+| `pytest tests/test_ice_tsns_narrow_refuse_1.py tests/test_ice_tstzns_wall_1.py tests/test_ice_tsns_merge_wall_1.py tests/test_ice_tsns_sql_1.py -q -n 8` | 0 | 759 passed |
+| `pytest tests -q -n 12 -k "iceberg or v3 or merge or timestamp or nested or struct or union or lambda or transform or coalesce or null or higher or float or double"` | 0 | 5379 passed, 214 skipped, 16 xfailed |
+| the recorder on the head, 104,960 cells, counted against the base fixture | 0 | §11.5; run once on the final product source |
+| `python3 comment_ban.py <clone> origin/main HEAD` | 0 | hits=0 |
+| `ruff check .` and `ruff format --check .` | 0 | |
+| `make check-rust-file-size`, `make check-lib-rs`, `make check-crate-dag`, `make check-manifest` | 0 | `instant_ts.rs` 998 lines, `java_double.rs` 989, ceiling 1000 |
+| `make check-map-md BASE=origin/main`, `make check-map-sync`, `make check-ledger-grammar`, `make check-ledgers`, `make check-docs-links`, `make check-docs-compaction`, `typos` | 0 | |
+
+The first run of the two `pytest` rows wrote no log (the gate script changed directory before
+it opened the log file) and was repeated; the figures are the repeat's. The nested pins are
+untouched and green: `timestamp_ns_nested_shapes` (6 tests) and the R-007 facade file.
+
+Not re-run for the fold: the 31 mutants of §8 (several of their anchors are gone with the
+code the fold replaced) and the Spark measurement of §6.
 
 ## Q0. The questions put before the rulings (answered 2026-10-10, section 11.1)
 
