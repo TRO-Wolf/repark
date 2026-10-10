@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
+  **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
+  `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
+  `repark_functions::spark_epoch_ctor` kernel per spelling, with Spark's values, refusal
+  classes and `timestamp` schema (C-002..C-005, C-008); the 304-cell live Spark 4.1.2
+  oracle (C-001, C-009) and its live drift check (C-007) sit under `python/repark/tests`;
+  the native door stays a declared refusal (C-006); fold 1 (2026-10-09) pins the
+  decimal-boundary order (C-010) and files the verdict S3s as O-3..O-5.
+  `risk_tier: standard`. Branch `fix/sql-epoch-constructors-1`.
 - [ice-tsns-merge-wall-1-ledger.md](ice-tsns-merge-wall-1-ledger.md) —
   **ICE-TSNS-MERGE-WALL-1 (2026-10-09), readiness finding R-007:** every write door stores
   the same nanosecond wall. Step 0: the review's test red on main (C-001), Spark 4.1.2 with

@@ -717,10 +717,10 @@ declines it (a dated ruling in the intake, then the archive).
   `int2`/`int4`/`int8` partition columns and refuses the rest under `CONNECT-DECL-pg-partitioned-read`;
   the ruled order is `date` first, then timestamp once the zone rule is ruled, each with its own Spark grid.
 - [sql-epoch-constructors-1-card-2026-10-08.md](sql-epoch-constructors-1-card-2026-10-08.md) — **card
-  SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08, open, not scheduled, from the orchestrator's measurements on main `156be81c`):**
-  `timestamp_micros`, `timestamp_seconds` and `timestamp_millis` are `UNRESOLVED_ROUTINE` on the Spark SQL door
-  where Spark has all three as built-ins; the DataFrame door answers `timestamp_micros`. Step 0 records Spark's
-  answers and types; the native-door spelling is an open question for the owner.
+  SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08, closed the same day, from the orchestrator's measurements on main `156be81c`):**
+  `timestamp_micros`, `timestamp_seconds` and `timestamp_millis` resolve on the Spark SQL door and the DataFrame
+  door with Spark's values, refusal classes and `timestamp` schema; the native door stays a declared refusal.
+  Step 0 recorded 216 live Spark cells; the parity rows carry dated FIXED notes.
 - [cast-view-agg-nullability-1-card-2026-10-08.md](cast-view-agg-nullability-1-card-2026-10-08.md) — **card
   CAST-VIEW-AGG-NULLABILITY-1 (2026-10-08, open, not scheduled, not attributed to a unit):** `max` over a view of
   `CAST(… AS TIMESTAMP)` of arithmetic over `range` raises a DataFusion internal schema error (a field nullability
