@@ -296,10 +296,17 @@ fn the_return_field_is_nullable_where_an_overflow_answers_null() {
         DataType::Timestamp(TimeUnit::Microsecond, None)
     ));
     assert!(!nullable(false, target_type(false)));
-    assert!(!nullable(true, instant));
-    assert!(!nullable(
+    assert!(nullable(true, instant));
+    assert!(nullable(true, DataType::Date32));
+    assert!(nullable(
         true,
         DataType::Timestamp(TimeUnit::Microsecond, None)
+    ));
+    assert!(nullable(true, target_type(false)));
+    assert!(!nullable(true, target_type(true)));
+    assert!(!nullable(
+        true,
+        DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC")))
     ));
     assert!(nullable(true, DataType::Utf8));
 }
