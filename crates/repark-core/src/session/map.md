@@ -77,6 +77,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   the open write's taken path and the fallback sentence (`RowFallback`'s Display) read off
   the writer after `open`, and batches pass encoder-accepted encodings (view, large,
   dictionary forms) through uncast while real type changes still cast.
+  **C-4 fold 2 item 2 (2026-10-10):** the batch casts run strict (`safe: false`), so a
+  value the column cannot take refuses the statement instead of storing NULL. A failed
+  cast names the registry class (`CAST_OVERFLOW_IN_TABLE_INSERT` for overflow, with the
+  backquoted column; `CAST_INVALID_INPUT` for malformed text or bytes, with the offending
+  value found by bisection, capped, and the column up front) and never a raw Arrow string.
+  `shape_batch` takes `prefer_timestamp_ntz` instead of the whole settings.
   pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.

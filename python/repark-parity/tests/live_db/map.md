@@ -130,6 +130,11 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   and an unmapped column names its row even when unnamed (the two owner questions);
   non-append modes name the modes row and UPDATE names the upsert row while REPLACE parses
   nowhere here and MERGE/CTAS keep the pg-ddl text.
+  **C-4 fold 2 item 2 (2026-10-10):** `test_unstorable_values_refuse_on_all_three_paths`
+  (fifteen unstorable cells refuse named with the column on the SQL door, the writer
+  default and `write.path=row`, store nothing, record nothing) and
+  `test_fitting_values_store_on_all_three_paths` (eight fitting cells store identically
+  on all three paths).
   pins: c-4/C-013, C-014
 - `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
   drops its INSERT case (append INSERT writes now; the write pins live in

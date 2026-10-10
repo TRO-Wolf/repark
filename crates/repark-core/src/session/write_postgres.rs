@@ -10,7 +10,12 @@ use super::ReparkSession;
 use crate::catalog_state::CatalogRegistry;
 
 #[cfg(feature = "postgres")]
-use arrow::array::{Array, ArrayRef, AsArray, RecordBatch, TimestampMicrosecondArray};
+use arrow::array::{
+    Array, ArrayRef, AsArray, BinaryArray, BinaryViewArray, LargeBinaryArray, LargeStringArray,
+    RecordBatch, StringArray, StringViewArray, TimestampMicrosecondArray,
+};
+#[cfg(feature = "postgres")]
+use arrow::compute::{CastOptions, cast_with_options};
 #[cfg(feature = "postgres")]
 use arrow::datatypes::{DataType, Field, Schema, TimeUnit, TimestampMicrosecondType};
 #[cfg(feature = "postgres")]
@@ -232,7 +237,13 @@ pub async fn execute_postgres_write(
     let mut stream = frame.execute_stream().await?;
     while let Some(batch) = stream.next().await {
         let batch = batch?;
-        let output = shape_batch(&batch, &shaped, &settings, session_zone, &display)?;
+        let output = shape_batch(
+            &batch,
+            &shaped,
+            settings.prefer_timestamp_ntz,
+            session_zone,
+            &display,
+        )?;
         writer.write(&output).await.map_err(|error| {
             DataFusionError::External(Box::new(error))
                 .context(format!("database source `{display}`"))
@@ -444,10 +455,21 @@ fn place_wall(name: &str, array: &ArrayRef, session_zone: &str, display: &str) -
 }
 
 #[cfg(feature = "postgres")]
-struct ShapedColumn {
+pub(crate) struct ShapedColumn {
     name: String,
     mapping: PostgresMapping,
     expected: DataType,
+}
+
+#[cfg(all(test, feature = "postgres"))]
+impl ShapedColumn {
+    pub(crate) fn for_test(name: &str, mapping: PostgresMapping, expected: DataType) -> Self {
+        Self {
+            name: name.to_string(),
+            mapping,
+            expected,
+        }
+    }
 }
 
 #[cfg(feature = "postgres")]
@@ -478,15 +500,13 @@ fn plain_values_type(given: &DataType) -> DataType {
 }
 
 #[cfg(feature = "postgres")]
-fn shape_batch(
+pub(crate) fn shape_batch(
     batch: &RecordBatch,
     shaped: &[ShapedColumn],
-    settings: &PostgresSettings,
+    prefer_timestamp_ntz: bool,
     session_zone: &str,
     display: &str,
 ) -> Result<RecordBatch> {
-    use arrow::compute::cast;
-
     use crate::session::zone_localiser::unlocalise;
 
     let naive = DataType::Timestamp(TimeUnit::Microsecond, None);
@@ -497,26 +517,20 @@ fn shape_batch(
             DataFusionError::Plan("Column count doesn't match insert query!".to_string())
         })?;
         let cast_to = |target: &DataType| {
-            cast(array, target).map_err(|error| {
-                DataFusionError::Execution(format!(
-                    "cannot cast column `{name}` from {} to {target}: {error}",
-                    array.data_type()
-                ))
-            })
+            cast_with_options(array, target, &strict_cast_options())
+                .map_err(|_| cast_refusal(name, array, target))
         };
         let placed = match column.mapping {
-            PostgresMapping::Timestamp if !settings.prefer_timestamp_ntz => {
-                match array.data_type() {
-                    DataType::Timestamp(TimeUnit::Microsecond, Some(_)) => {
-                        let zoned = primitive_of(name, array)?;
-                        let walls = unlocalise(session_zone, zoned)
-                            .map_err(|error| external(display, error))?;
-                        Arc::new(walls) as ArrayRef
-                    }
-                    DataType::Timestamp(TimeUnit::Microsecond, None) => Arc::clone(array),
-                    _ => cast_to(&naive)?,
+            PostgresMapping::Timestamp if !prefer_timestamp_ntz => match array.data_type() {
+                DataType::Timestamp(TimeUnit::Microsecond, Some(_)) => {
+                    let zoned = primitive_of(name, array)?;
+                    let walls = unlocalise(session_zone, zoned)
+                        .map_err(|error| external(display, error))?;
+                    Arc::new(walls) as ArrayRef
                 }
-            }
+                DataType::Timestamp(TimeUnit::Microsecond, None) => Arc::clone(array),
+                _ => cast_to(&naive)?,
+            },
             PostgresMapping::Timestamptz => match array.data_type() {
                 DataType::Timestamp(TimeUnit::Microsecond, Some(_)) => Arc::clone(array),
                 DataType::Timestamp(TimeUnit::Microsecond, None) => {
@@ -544,4 +558,212 @@ fn shape_batch(
         .collect::<Vec<_>>();
     RecordBatch::try_new(Schema::new(fields).into(), arrays)
         .map_err(|error| DataFusionError::Execution(error.to_string()))
+}
+
+#[cfg(feature = "postgres")]
+fn strict_cast_options() -> CastOptions<'static> {
+    CastOptions {
+        safe: false,
+        ..CastOptions::default()
+    }
+}
+
+#[cfg(feature = "postgres")]
+fn spark_cast_type_name(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => "STRING".to_string(),
+        DataType::Int8 => "TINYINT".to_string(),
+        DataType::Int16 => "SMALLINT".to_string(),
+        DataType::Int32 => "INT".to_string(),
+        DataType::Int64 => "BIGINT".to_string(),
+        DataType::Float32 => "FLOAT".to_string(),
+        DataType::Float64 => "DOUBLE".to_string(),
+        DataType::Decimal128(precision, scale) | DataType::Decimal256(precision, scale) => {
+            format!("DECIMAL({precision},{scale})")
+        }
+        DataType::Boolean => "BOOLEAN".to_string(),
+        DataType::Date32 | DataType::Date64 => "DATE".to_string(),
+        DataType::Timestamp(_, None) => "TIMESTAMP_NTZ".to_string(),
+        DataType::Timestamp(_, Some(_)) => "TIMESTAMP".to_string(),
+        DataType::Binary | DataType::LargeBinary | DataType::BinaryView => "BINARY".to_string(),
+        DataType::Null => "VOID".to_string(),
+        DataType::Dictionary(_, values) => spark_cast_type_name(values),
+        other => format!("{other:?}"),
+    }
+}
+
+#[cfg(feature = "postgres")]
+fn is_text_source(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => true,
+        DataType::Dictionary(_, values) => is_text_source(values),
+        _ => false,
+    }
+}
+
+#[cfg(feature = "postgres")]
+fn is_bytes_source(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Binary | DataType::LargeBinary | DataType::BinaryView => true,
+        DataType::Dictionary(_, values) => is_bytes_source(values),
+        _ => false,
+    }
+}
+
+#[cfg(feature = "postgres")]
+fn decoded_values(array: &ArrayRef) -> ArrayRef {
+    match array.data_type() {
+        DataType::Dictionary(_, values) => cast_with_options(array, values, &strict_cast_options())
+            .unwrap_or_else(|_| Arc::clone(array)),
+        _ => Arc::clone(array),
+    }
+}
+
+#[cfg(feature = "postgres")]
+fn failing_row(array: &ArrayRef, target: &DataType) -> Option<usize> {
+    if array.is_empty() {
+        return None;
+    }
+    let options = strict_cast_options();
+    let mut offset = 0;
+    let mut len = array.len();
+    while len > 1 {
+        let half = len / 2;
+        if cast_with_options(&array.slice(offset, half), target, &options).is_err() {
+            len = half;
+        } else {
+            offset += half;
+            len -= half;
+        }
+    }
+    Some(offset)
+}
+
+#[cfg(feature = "postgres")]
+fn text_at(array: &ArrayRef, index: usize) -> Option<String> {
+    if array.is_null(index) {
+        return None;
+    }
+    if let Some(values) = array.as_any().downcast_ref::<StringArray>() {
+        return Some(values.value(index).to_string());
+    }
+    if let Some(values) = array.as_any().downcast_ref::<LargeStringArray>() {
+        return Some(values.value(index).to_string());
+    }
+    array
+        .as_any()
+        .downcast_ref::<StringViewArray>()
+        .map(|values| values.value(index).to_string())
+}
+
+#[cfg(feature = "postgres")]
+fn bytes_at(array: &ArrayRef, index: usize) -> Option<Vec<u8>> {
+    if array.is_null(index) {
+        return None;
+    }
+    if let Some(values) = array.as_any().downcast_ref::<BinaryArray>() {
+        return Some(values.value(index).to_vec());
+    }
+    if let Some(values) = array.as_any().downcast_ref::<LargeBinaryArray>() {
+        return Some(values.value(index).to_vec());
+    }
+    array
+        .as_any()
+        .downcast_ref::<BinaryViewArray>()
+        .map(|values| values.value(index).to_vec())
+}
+
+#[cfg(feature = "postgres")]
+fn cast_overflow(column: &str, from: &str, to: &str) -> DataFusionError {
+    DataFusionError::Execution(spark_error::message(
+        spark_error::CAST_OVERFLOW_IN_TABLE_INSERT,
+        &[
+            ("fromType", from),
+            ("toType", to),
+            ("columnName", &format!("`{}`", column.replace('`', "``"))),
+        ],
+    ))
+}
+
+#[cfg(feature = "postgres")]
+const INVALID_INPUT_VALUE_CHARS: usize = 200;
+
+#[cfg(feature = "postgres")]
+fn capped_text(value: &str) -> String {
+    let mut shown: String = value.chars().take(INVALID_INPUT_VALUE_CHARS).collect();
+    if value.chars().count() > INVALID_INPUT_VALUE_CHARS {
+        shown.push('…');
+    }
+    shown
+}
+
+#[cfg(feature = "postgres")]
+fn cast_invalid_input(column: &str, shown: &str, from: &str, to: &str) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "column `{column}`: {}",
+        spark_error::message(
+            spark_error::CAST_INVALID_INPUT,
+            &[("value", shown), ("fromType", from), ("toType", to)],
+        )
+    ))
+}
+
+#[cfg(feature = "postgres")]
+fn invalid_string_input(
+    column: &str,
+    value: &str,
+    from: &str,
+    to: &str,
+    target: &DataType,
+) -> DataFusionError {
+    if matches!(target, DataType::Decimal128(..) | DataType::Decimal256(..))
+        && value.parse::<f64>().is_ok()
+    {
+        return cast_overflow(column, from, to);
+    }
+    let escaped = capped_text(value).replace('\'', "''");
+    cast_invalid_input(column, &format!("'{escaped}'"), from, to)
+}
+
+#[cfg(feature = "postgres")]
+fn invalid_bytes_input(column: &str, bytes: &[u8], from: &str, to: &str) -> DataFusionError {
+    use std::fmt::Write as _;
+
+    let mut hex = String::new();
+    for byte in bytes.iter().take(100) {
+        let _ = write!(hex, "{byte:02X}");
+    }
+    if bytes.len() > 100 {
+        hex.push('…');
+    }
+    cast_invalid_input(column, &format!("X'{hex}'"), from, to)
+}
+
+#[cfg(feature = "postgres")]
+fn cast_refusal(name: &str, array: &ArrayRef, target: &DataType) -> DataFusionError {
+    let source = array.data_type();
+    let from = spark_cast_type_name(source);
+    let to = spark_cast_type_name(target);
+    if is_text_source(source) {
+        let decoded = decoded_values(array);
+        if let Some(row) = failing_row(&decoded, target)
+            && let Some(value) = text_at(&decoded, row)
+        {
+            return invalid_string_input(name, &value, &from, &to, target);
+        }
+    }
+    if is_bytes_source(source)
+        && matches!(
+            target,
+            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+        )
+    {
+        let decoded = decoded_values(array);
+        if let Some(row) = failing_row(&decoded, target)
+            && let Some(bytes) = bytes_at(&decoded, row)
+        {
+            return invalid_bytes_input(name, &bytes, &from, &to);
+        }
+    }
+    cast_overflow(name, &from, &to)
 }

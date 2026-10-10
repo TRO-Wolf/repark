@@ -417,6 +417,125 @@ def test_unmapped_column_refuses_even_when_unnamed(
     assert _take(spark) is None
 
 
+UNSTORABLE_CASES: tuple[tuple[str, str, str, str], ...] = (
+    ("int4", "3000000000", "CAST_OVERFLOW_IN_TABLE_INSERT", "ArithmeticException"),
+    ("int2", "40000", "CAST_OVERFLOW_IN_TABLE_INSERT", "ArithmeticException"),
+    ("int8", "CAST(1e19 AS DOUBLE)", "CAST_OVERFLOW_IN_TABLE_INSERT", "ArithmeticException"),
+    ("int4", "CAST('NaN' AS DOUBLE)", "CAST_OVERFLOW_IN_TABLE_INSERT", "ArithmeticException"),
+    ("int4", "'abc'", "CAST_INVALID_INPUT", "PySparkException"),
+    ("int4", "' 12 '", "CAST_INVALID_INPUT", "PySparkException"),
+    ("date", "'garbage'", "CAST_INVALID_INPUT", "PySparkException"),
+    ("date", "'2024-02-30'", "CAST_INVALID_INPUT", "PySparkException"),
+    ("boolean", "'maybe'", "CAST_INVALID_INPUT", "PySparkException"),
+    (
+        "numeric(10,2)",
+        "123456789012.345BD",
+        "CAST_OVERFLOW_IN_TABLE_INSERT",
+        "ArithmeticException",
+    ),
+    ("numeric(5,0)", "99999.5BD", "CAST_OVERFLOW_IN_TABLE_INSERT", "ArithmeticException"),
+    (
+        "numeric",
+        "12345678901234567890123456789012345678BD",
+        "CAST_OVERFLOW_IN_TABLE_INSERT",
+        "ArithmeticException",
+    ),
+    (
+        "numeric(10,2)",
+        "CAST('NaN' AS DOUBLE)",
+        "CAST_OVERFLOW_IN_TABLE_INSERT",
+        "ArithmeticException",
+    ),
+    (
+        "numeric(10,2)",
+        "CAST('Infinity' AS DOUBLE)",
+        "CAST_OVERFLOW_IN_TABLE_INSERT",
+        "ArithmeticException",
+    ),
+    ("text", "X'FFFE'", "CAST_INVALID_INPUT", "PySparkException"),
+)
+
+FITTING_CASES: tuple[tuple[str, str, str], ...] = (
+    ("int4", "'12'", "12"),
+    ("int4", "CAST(2.7 AS DOUBLE)", "2"),
+    ("boolean", "'yes'", "true"),
+    ("boolean", "1", "true"),
+    ("float4", "CAST(1e40 AS DOUBLE)", "Infinity"),
+    ("numeric(10,2)", "1.005BD", "1.01"),
+    ("numeric(5,0)", "0.5BD", "1"),
+    ("text", "1.50BD", "1.50"),
+)
+
+
+def _write_frame(
+    spark: ReparkSession, schema: str, table: str, frame: Any, path: str | None
+) -> None:
+    """Append one frame through the jdbc writer, optionally forcing the row path."""
+    writer = frame.write.option("write.path", path) if path else frame.write
+    writer.jdbc(_url(), f"{schema}.{table}", mode="append", properties={"sslmode": "disable"})
+
+
+def test_unstorable_values_refuse_on_all_three_paths(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """Every value the column cannot take refuses named, stores nothing, leaves no report.
+
+    C-4 fold 2 item 2: the door's cast used to store NULL with the statement Ok.
+    Overflow names CAST_OVERFLOW_IN_TABLE_INSERT, malformed input names
+    CAST_INVALID_INPUT; both carry the column, never a raw Arrow string.
+    """
+    conn, names = pg_live
+    schema = names["schema"]
+    for index, (pg_type, expr, needle, exc) in enumerate(UNSTORABLE_CASES):
+        expected = getattr(errors, exc)
+        sql_table = f"c{index}_sql"
+        conn.execute(f'CREATE TABLE "{schema}".{sql_table} (id int4, v {pg_type})')
+        with pytest.raises(expected) as excinfo:
+            spark.sql(f'INSERT INTO pg."{schema}".{sql_table} SELECT 1, {expr}').collect()
+        message = str(excinfo.value)
+        assert needle in message, (pg_type, expr, message)
+        assert "`v`" in message, (pg_type, expr, message)
+        assert "Arrow error" not in message and "Cast error" not in message
+        assert _take(spark) is None
+        assert conn.execute(f'SELECT count(*) FROM "{schema}".{sql_table}').fetchone() == (0,)
+        frame = spark.sql(f"SELECT 1 AS id, {expr} AS v")
+        for path, suffix in ((None, "wb"), ("row", "wr")):
+            table = f"c{index}_{suffix}"
+            conn.execute(f'CREATE TABLE "{schema}".{table} (id int4, v {pg_type})')
+            with pytest.raises(expected) as excinfo:
+                _write_frame(spark, schema, table, frame, path)
+            message = str(excinfo.value)
+            assert needle in message, (pg_type, expr, path, message)
+            assert "`v`" in message, (pg_type, expr, path, message)
+            assert "Arrow error" not in message and "Cast error" not in message
+            assert _take(spark) is None
+            assert conn.execute(f'SELECT count(*) FROM "{schema}".{table}').fetchone() == (0,)
+
+
+def test_fitting_values_store_on_all_three_paths(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """Values the column takes store identically through the SQL door and the writer."""
+    conn, names = pg_live
+    schema = names["schema"]
+    for index, (pg_type, expr, want) in enumerate(FITTING_CASES):
+        tables = {}
+        for door in ("sql", "wb", "wr"):
+            table = f"f{index}_{door}"
+            conn.execute(f'CREATE TABLE "{schema}".{table} (id int4, v {pg_type})')
+            tables[door] = table
+        spark.sql(f'INSERT INTO pg."{schema}".{tables["sql"]} SELECT 2, {expr}').collect()
+        assert _take(spark) is not None
+        frame = spark.sql(f"SELECT 2 AS id, {expr} AS v")
+        _write_frame(spark, schema, tables["wb"], frame, None)
+        assert _take(spark) is not None
+        _write_frame(spark, schema, tables["wr"], frame, "row")
+        assert _take(spark) is not None
+        for door, table in tables.items():
+            got = conn.execute(f'SELECT v::text FROM "{schema}".{table}').fetchall()
+            assert got == [(want,)], (pg_type, expr, door, got)
+
+
 def test_row_changing_statements_refuse_on_both_doors(
     spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
 ) -> None:
