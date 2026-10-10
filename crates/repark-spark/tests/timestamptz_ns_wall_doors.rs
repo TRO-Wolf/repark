@@ -410,39 +410,47 @@ const WALL_TICKS: [i64; 4] = [
     1_793_496_600_000_000_001,
 ];
 
-const ENCODED_DOORS: [(&str, bool, &str); 4] = [
+const ENCODED_DOORS: [(&str, &str); 4] = [
     (
         "insert overwrite",
-        false,
         "INSERT OVERWRITE ice.ns.t SELECT id, v FROM runs",
     ),
     (
         "insert by name",
-        false,
         "INSERT INTO ice.ns.t BY NAME SELECT v, id FROM runs",
     ),
     (
         "insert overwrite by name",
-        false,
         "INSERT OVERWRITE ice.ns.t BY NAME SELECT v, id FROM runs",
     ),
     (
-        "replace where",
-        true,
-        "INSERT INTO ice.ns.t REPLACE WHERE id >= 0 SELECT id, v FROM runs",
+        "partition overwrite",
+        "INSERT OVERWRITE ice.ns.t PARTITION (id) SELECT id, v FROM runs",
     ),
 ];
+
+const ENCODED_TARGET: &str = "CREATE TABLE ice.ns.t (id INT, v timestamptz_ns) USING iceberg \
+                              PARTITIONED BY (id) TBLPROPERTIES ('format-version'='3')";
 
 fn dictionary_walls() -> RecordBatch {
     let values = TimestampNanosecondArray::from(WALL_TICKS.to_vec());
     let keys = Int32Array::from(vec![0, 1, 2, 3]);
     let encoded: ArrayRef = Arc::new(DictionaryArray::new(keys, Arc::new(values)));
+    walls_batch(encoded)
+}
+
+fn plain_walls() -> RecordBatch {
+    let plain: ArrayRef = Arc::new(TimestampNanosecondArray::from(WALL_TICKS.to_vec()));
+    walls_batch(plain)
+}
+
+fn walls_batch(values: ArrayRef) -> RecordBatch {
     let ids: ArrayRef = Arc::new(Int32Array::from(vec![0, 1, 2, 3]));
     let schema = Schema::new(vec![
         Field::new("id", DataType::Int32, false),
-        Field::new("v", encoded.data_type().clone(), false),
+        Field::new("v", values.data_type().clone(), false),
     ]);
-    RecordBatch::try_new(Arc::new(schema), vec![ids, encoded]).expect("batch")
+    RecordBatch::try_new(Arc::new(schema), vec![ids, values]).expect("batch")
 }
 
 #[tokio::test]
@@ -452,27 +460,17 @@ async fn a_dictionary_encoded_wall_stores_inserts_instant_on_the_overwrite_doors
     session
         .create_or_replace_temp_view("runs", vec![dictionary_walls()])
         .expect("view");
-    run(
-        &session,
-        "CREATE TABLE ice.ns.t (id INT, v timestamptz_ns) USING iceberg \
-         TBLPROPERTIES ('format-version'='3')",
-    )
-    .await;
-    run(&session, "INSERT INTO ice.ns.t SELECT id, v FROM runs").await;
+    session
+        .create_or_replace_temp_view("plains", vec![plain_walls()])
+        .expect("plain view");
+    run(&session, ENCODED_TARGET).await;
+    run(&session, "INSERT INTO ice.ns.t SELECT id, v FROM plains").await;
     let reference = stored(&session).await;
     assert_eq!(reference, NEW_YORK_INSTANTS.map(Some).to_vec(), "INSERT");
     let mut wrong = Vec::new();
-    for (door, seeded, write) in ENCODED_DOORS {
+    for (door, write) in ENCODED_DOORS {
         run(&session, "DROP TABLE ice.ns.t").await;
-        run(
-            &session,
-            "CREATE TABLE ice.ns.t (id INT, v timestamptz_ns) USING iceberg \
-             TBLPROPERTIES ('format-version'='3')",
-        )
-        .await;
-        if seeded {
-            run(&session, "INSERT INTO ice.ns.t SELECT id, v FROM runs").await;
-        }
+        run(&session, ENCODED_TARGET).await;
         match attempt(&session, write).await {
             Ok(()) => {
                 let found = stored(&session).await;
