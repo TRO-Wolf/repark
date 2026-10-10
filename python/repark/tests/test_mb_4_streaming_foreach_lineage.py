@@ -374,9 +374,10 @@ def _stamped_head(spark: ReparkSession) -> int:
 
 
 _REMEDIES = (
-    "Its rows are in the sink and the query will not run past them. Either roll the sink back "
-    "to its newest stamped snapshot (to the head the query first started on, if no batch is "
-    "stamped yet), or start the query under a new name"
+    "Its rows are in the sink. A restart refuses while an unstamped snapshot sits above the "
+    "newest stamped batch; to clear it, either roll the sink back to its newest stamped "
+    "snapshot (to the head the query first started on, if no batch is stamped yet), or start "
+    "the query under a new name"
 )
 
 

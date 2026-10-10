@@ -79,8 +79,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
 - `error.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling D3):** the two unstamped
   reasons name both remedies: roll the sink back to its newest stamped snapshot (to the head
   the query first started on, if no batch is stamped yet), or start the query under a new
-  name. `UnstampedSinkCommit` without an operation (the `toTable` door's own check) keeps its
-  text byte for byte.
+  name. The text says a restart refuses while an unstamped snapshot sits above the newest
+  stamped batch: a stray below the batch's own stamped commit leaves that batch durable, and
+  the restart resumes after it. `UnstampedSinkCommit` without an operation (the `toTable`
+  door's own check) keeps its text byte for byte.
   pins: mb-4-foreach-eo/C-030
 - `error.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09):** `RecoveryReason::UnstampedSinkCommit`
   gains `operation: Option<String>` (rendered ` (append)` after the snapshot id when known;

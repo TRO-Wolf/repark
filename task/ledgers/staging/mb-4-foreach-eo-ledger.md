@@ -583,6 +583,66 @@ No halt: the mark fits inside the offsets property.
 `at_epoch_zero_a_restart_replays_and_is_stopped_again`: a restart now refuses from the mark.
 C-015's four questions are ruled.
 
+### Fold-3 proof — 2026-10-10
+
+**Red first.** The pins were committed before the fix (`ce2591d1`) and run on that tree: five
+driver pins red of 136 and four public-door pins red of 57, each on the missing mark or the
+missing remedies; the public-door kill-before-first-commit pin and the `toTable` pin were green
+there, as pins of kept behaviour. The two iceberg unit pins of that commit were not run red:
+the merge had left the iceberg test crate uncompilable (the duplicated helper) and the fix
+followed before a second lock hold. Three unit pins that need the new functions came with the
+fix.
+
+**Found while building.**
+
+- **The mark must be write-once.** The first run of the fix turned both race pins red: a
+  racing driver's late mark overwrote the winner's offsets record. The fence rule closes it;
+  mutant P4 then survived the race pins, so a deterministic pin was added
+  (`the_mark_is_written_once_and_never_over_a_record`).
+- **Main's ENC-1 gate** allows `impl Catalog for` in three files. Fold 1's body guard was a
+  fourth. It became a rule of the one allowed per-commit wrapper; the gate's list is not
+  edited.
+- **The remedy text was first inaccurate.** It said the query "will not run past" the stray.
+  The re-run of the verifier's update-conflict scenario showed the other case: a stray that
+  lands below the batch's own stamped commit leaves that batch durable, the query ends
+  `RecoveryRequired` at the end of the batch, and the restart resumes after it. The text now
+  says a restart refuses while an unstamped snapshot sits above the newest stamped batch.
+- **Load-counting tests moved** for the one extra commit at a `foreachBatch` query's first
+  start (the list is in the core microbatch map).
+
+**The scenario matrix, on the fold-3 build** (the same scripts as fold 2, from the same copy).
+
+| set | scenarios | result |
+|---|---|---|
+| first verdict's choreographies | 12 | exact, the counts of the fold-1 table |
+| first verdict's multi-query cases and repro | 9 + 1 | as before; the repro ends `sink 1, 2, 3` |
+| re-verify's one-process repros | 2 | `explain`: refused before landing. `thread` (epoch 0): run 1 ends `RecoveryRequired`, run 2 now refuses from the mark |
+| re-verify's special scenarios | 20 | 0 duplicates in every one. `conflict_mergeupd_0`, which fold 2 left at 132 duplicated hammer rows over 40 restarts, now lands one burst (8 unstamped snapshots) and every restart refuses. `conflict_update_1` now reaches all 10 epochs through the in-body retry after a live `CatalogCommitConflicts` (the retry is the stamped commit); each run still ends `RecoveryRequired` for the hammer thread's rows below the stamp |
+| drop-and-recreate | 2 | `foreachBatch` ends `RecoveryRequired`; `toTable` writes on, unchanged |
+| kill scenarios | 14 | 340 kills landed (286 `foreachBatch`, 54 `toTable`); 14 of 14 exact on the script's own check, 0 duplicates, 0 lost |
+| door table | 498 | per placement 39 stamped, 118 no commit (157 after the body's append), 8 unstamped ending `RecoveryRequired`, 1 `DROP TABLE` ending `STREAM_FAILED`; none with the query running on |
+
+558 scenarios, 340 kills, 0 silent duplicates. The loud duplicates fold 2 recorded at epoch 0
+are gone.
+
+**Hand mutants, fold 3.** Each applied in place, the microbatch and `sink_offsets` pins of
+`repark-iceberg` and the microbatch pins of `repark-core` run, the file restored.
+
+| id | mutant | red pins |
+|---|---|---|
+| P1 | `property_record` treats a record as a mark and a mark as a record | 5 + 51 in `repark-iceberg`, 63 in `repark-core` |
+| P2 | the first start writes no mark | 12 driver pins |
+| P3 | a mark that is found is ignored; the baseline is the head found now | 1 driver pin (`at_epoch_zero_the_restart_reads_the_mark_and_refuses_before_any_body`) |
+| P4 | the write-once fence refuses only when the query is both marked and stamped | 1 (`the_mark_is_written_once_and_never_over_a_record`), after it first survived |
+| P5 | the remedies are dropped from the text | 1 text pin |
+| P6 | the mark records no head | 1 unit pin, 4 driver pins |
+
+**Gates** are in the hand-back. The full `repark-core`, `repark-sql` and `repark-spark` lib
+suites and the API freeze ran after the mark and before the two later iceberg-only edits (the
+wrapper fold and the text); the full `repark-iceberg` suite, the core microbatch pins, the
+binding's suite, clippy, the panic ban, the build and the batteries ran on the final tree.
+The race pins ran 5 of 5 twice, the second time after the wrapper fold.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
@@ -613,8 +673,8 @@ C-015's four questions are ruled.
 | C-025 | The `toTable` door is unchanged by fold 2. | Its pins, its kill scenarios, the race pins 5 times. | **PROVEN** | `table_door_tests.rs` and the `toTable` halves of `fence_tests.rs` and `race_tests.rs` unedited and green; `race_tests` 5 of 5; the three `toTable` kill scenarios and the first verdict's four `t_*` choreographies exact; the re-verify's `droprecreate table` and its `leak` probes (a `toTable` query on a sink with a foreign snapshot resumes) answer as before. Two shared pieces on its path changed with no effect on the door: the append arm's `SiteStamp` releases a failed claim (the door ends its query on a failed commit), and `UnstampedSinkCommit` gained an optional operation the door leaves empty, so its text is unchanged. pins: mb-4-foreach-eo/C-025 |
 | C-026 | The audit's cost on a 200-epoch `availableNow` run is measured before and after. | The timing table. | **PROVEN** | 200 epochs, `availableNow`, one file per batch, memory catalog, medians of three runs, `2877da20` then this fold, one after the other under one build-lock hold on a shared box. Body appends to the sink: 60.619 s to 61.266 s, +1.1 %. `toTable` (code unchanged): 55.842 s to 57.318 s, +2.6 %, which is the noise of the pair. Body writes nothing: 7.813 s to 8.659 s, **+10.8 %**, about 4 ms an epoch: over the 5 % line, reported as a finding. The mark's snapshot set was then made lazy and the final build measured alone twenty minutes later: 63.354 s (one run 71.2), 57.228 s and 6.541 s. The no-write reading did not reproduce (16 % under the "before" figure), and the writing body read 4.5 % over it while the unchanged `toTable` read 2.5 % over. The box does not resolve a difference under about 5 %; no reading puts the audit above 5 % twice. A quiet-box measurement is owed. pins: mb-4-foreach-eo/C-026 |
 | C-027 | None of the seven lines the re-verify listed under "the contract as documented could mislead" is true any more. | The registry rows, the MBE-13 and MBE-19 texts. | **PROVEN** | Registry rows `MB-4-FOREACH-EO-1`, `MB-4-FOREACH-SIDE-EFFECTS-1` and `MB-4-FOREACH-SINK-SHAPES-1` rewritten; MBE-19's text names the `DELETE` that refuses; MBE-13 is not shown for a write that did not land. The seven lines, in the re-verify's order: the data-dependent `DELETE` is stated; MBE-13 after a failed write is gone; the at-most-once half and its recipe are in the row a user reads; a helper thread's write beside the body's own now ends the query, and a restart refuses above a stamp; the token order has a pin (mutant E); drop-and-recreate ends `RecoveryRequired` in every batch; the checkpoint paragraph says it holds no state and that clearing it resets nothing. pins: mb-4-foreach-eo/C-027 |
-| C-028 | At a `foreachBatch` query's first start the offsets property's first value is the starting mark (the sink's head, epoch 0 pending); it is written once, read as no durable record by every reader, and replaced by the first stamped commit. No third durable item exists. | Unit pins, driver pins, public-door pins. | **OPEN** | Closes with the fold-3 proof. |
-| C-029 | A stray write between the mark and the first stamp refuses the first restart, naming the snapshot, with no body run; a kill before batch 0 commits restarts with no duplicate; two query names on one sink keep their own marks; a markless checkpoint starts from the head found; `toTable` writes no mark. | Driver pins, public-door pins, the scenario matrix. | **OPEN** | As C-028. |
-| C-030 | The `RecoveryRequired` text of both unstamped reasons names the stray and both remedies, and card MB-SINK-MAINTENANCE-PATH-1 is filed. | Text pins; the card and its map row. | **OPEN** | As C-028. |
-| C-031 | The side-effect contract is documented where the facade's `foreachBatch` contract lives, in markdown and in the docstring. | The docstring and the streaming map. | **OPEN** | As C-028. |
-| C-015 | The open questions of the hand-back are ruled: the epoch-0 baseline (a durable mark of the starting head, or the limit as built), the single-writer consequence for maintenance, the reading that another query's stamped snapshot is not a violation, and the side-effect contract (owner Q1). | A ruling on the hand-back's questions. | **OPEN** | Closes on the ruling. The coverage attestation is the Critic's and is filed when this clause closes. |
+| C-028 | At a `foreachBatch` query's first start the offsets property's first value is the starting mark (the sink's head, epoch 0 pending); it is written once, read as no durable record by every reader, and replaced by the first stamped commit. No third durable item exists. | Unit pins, driver pins, public-door pins. | **PROVEN** | `sink_offsets_lineage_tests.rs`: a pending mark reads as no durable record and the first stamp replaces it; the mark round-trips its head per query; it is written once and never over a record; a corrupt value is neither. Driver: `the_first_start_writes_the_mark_and_the_first_stamp_replaces_it` (the exact value on an empty and a seeded sink, a restart that finds it writing nothing, one offsets value per query afterwards). Public door: `test_first_start_writes_the_mark_into_the_offsets_property`. Mutants P1, P2, P4, P6. pins: mb-4-foreach-eo/C-028 |
+| C-029 | A stray write between the mark and the first stamp refuses the first restart, naming the snapshot, with no body run; a kill before batch 0 commits restarts with no duplicate; two query names on one sink keep their own marks; a markless checkpoint starts from the head found; `toTable` writes no mark. | Driver pins, public-door pins, the scenario matrix. | **PROVEN** | `at_epoch_zero_the_restart_reads_the_mark_and_refuses_before_any_body` (two restarts, the first stray named, no body, the sink unchanged); `a_start_with_no_mark_and_no_stamp_takes_the_head_it_finds_and_marks_it`; `two_query_names_on_one_sink_each_keep_their_own_mark_and_stamps`; `the_table_door_writes_no_mark`. Public door: `test_stray_at_the_first_batch_refuses_the_first_restart_from_the_mark` (two routes, and the rollback to the starting head that recovers it), `test_stray_then_kill_at_the_first_batch_refuses_the_first_restart`, `test_kill_before_the_first_commit_restarts_from_the_mark_without_a_duplicate`, `test_table_door_writes_no_mark`. The scenario matrix above. Mutant P3. pins: mb-4-foreach-eo/C-029 |
+| C-030 | The `RecoveryRequired` text of both unstamped reasons names the stray and both remedies, and card MB-SINK-MAINTENANCE-PATH-1 is filed. | Text pins; the card and its map row. | **PROVEN** | `error.rs::the_unstamped_reasons_name_the_stray_and_both_remedies` (both reasons, and the `toTable` text byte for byte); the public-door pin asserts the remedy sentence on the first ending and on both refused restarts; card `mb-sink-maintenance-path-1-card-2026-10-10.md` with its map row. Mutant P5. pins: mb-4-foreach-eo/C-030 |
+| C-031 | The side-effect contract is documented where the facade's `foreachBatch` contract lives, in markdown and in the docstring. | The docstring and the streaming map. | **PROVEN** | The `Notes:` section of `DataStreamWriter.foreachBatch` (`readers.py`) and the section "The `foreachBatch` contract" of the streaming package's map; registry row `MB-4-FOREACH-SIDE-EFFECTS-1` points at both. pins: mb-4-foreach-eo/C-031 |
+| C-015 | The questions of the fold-2 hand-back are ruled (owner rulings D2 to D5, 2026-10-10: the mark, the exclusive sink kept with a maintenance card, the side-effect contract, the re-verify and timing gate). What stays open is D5 itself: one Opus re-verify of the whole PR, then the quiet-box 200-epoch measurement with `task/wo/microbatch/mb4_lineage_timing.py`, median of 3, at most 1.05 times the no-audit driver. | The re-verify's verdict and the measurement. | **OPEN** | Closes on D5. The coverage attestation is the Critic's and is filed then. |

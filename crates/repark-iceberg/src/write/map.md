@@ -127,7 +127,9 @@ repark-core's error map.
 - `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10,
   owner ruling D2):** `property_record` reads a pending starting mark as no record, and the
   module re-exports `read_starting_mark` and `commit_starting_mark`. The rule, the write-once
-  fence and the pins are in the child directory's map under `lineage.rs`, fold 3.
+  fence and the pins are in the child directory's map under `lineage.rs`, fold 3. The
+  write-once pin (`the_mark_is_written_once_and_never_over_a_record`) joined
+  `sink_offsets_lineage_tests.rs` with the wrapper fold.
   pins: mb-4-foreach-eo/C-028
 - `sink_offsets/lineage.rs`, `sink_offsets_lineage_tests.rs`, `sink_offsets.rs`,
   `merge/snapshot_commit.rs`, `insert_defaults.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09,

@@ -8096,7 +8096,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   offsets property and the first stamp replaces it; the `toTable` door writes none. In the
   exactly-once battery two subprocess pins join: a kill before the first commit restarts
   from the mark with no duplicate, and a stray then a kill at the first batch refuses the
-  first restart.
+  first restart. The remedy sentence the pins assert is the one in `error.rs`.
   pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022, C-024, C-028, C-029, C-030
 - [test_dfcore_1_exports.py](test_dfcore_1_exports.py),
   [_dfcore_1_expected.py](_dfcore_1_expected.py) — **MB-4 fold 2 (2026-10-09):** the export

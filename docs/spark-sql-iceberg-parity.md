@@ -4105,8 +4105,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   did not route to a stamped write.
   **This is detection after the write landed.** The rows are in the sink. The query stops
   loudly, never continues past them and never replays over them: a restart finds the unstamped
-  snapshot above the newest stamp and refuses again before any body runs. The error names the
-  stray snapshot and both remedies: roll the sink back to its newest stamped snapshot (to the
+  snapshot above the newest stamp and refuses again before any body runs. (When the stray
+  landed below the batch's own stamped commit, that batch is durable: the query ends the same
+  way at the end of that batch, and the restart resumes after it.) The error names the stray
+  snapshot and both remedies: roll the sink back to its newest stamped snapshot (to the
   head the query first started on, when no batch is stamped yet; `CALL
   <catalog>.system.rollback_to_snapshot`) and start again, or start the query under a new name
   (a new `queryName`, with `repark.cdc.start-after-snapshot-id` to skip what the old one

@@ -153,7 +153,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   write-shape table, the body's outcomes, the restart cases, the side-effect contract), the
   six four-line records, the amendments found while building, the measured write shapes, the
   eight mutants, the verify's scenarios re-run, and the clauses C-001..C-014 proven; C-015
-  stays open for the owner's ruling on the two limits.
+  stays open for the owner's ruling on the two limits. **Fold 2 (2026-10-09):** the lineage
+  invariant (C-016..C-027). **Fold 3 (2026-10-10, owner rulings D2 to D5):** the starting mark
+  in the offsets property, the remedy text and the maintenance card, the side-effect contract
+  (C-028..C-031); C-015 stays open for D5, the re-verify and the quiet-box timing.
   `risk_tier: high`.
   Branch `feat/mb-4-foreach-exactly-once`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —

@@ -181,17 +181,15 @@ pub enum RecoveryReason {
         snapshot: SnapshotId,
         operation: Option<String>,
     },
-    #[error(
-        "the sink changed without a stamp during the batch: {what}. The query will not run past the change. {REMEDIES}"
-    )]
+    #[error("the sink changed without a stamp during the batch: {what}. {REMEDIES}")]
     UnstampedSinkChange { what: String },
 }
 
-const REMEDIES: &str = "Either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name";
+const REMEDIES: &str = "A restart refuses while an unstamped snapshot sits above the newest stamped batch; to clear it, either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name";
 
 fn stray_remedies(operation: Option<&str>) -> String {
     operation.map_or_else(String::new, |_| {
-        format!(". Its rows are in the sink and the query will not run past them. {REMEDIES}")
+        format!(". Its rows are in the sink. {REMEDIES}")
     })
 }
 
@@ -595,7 +593,7 @@ mod tests {
         };
         assert_eq!(
             commit.to_string(),
-            "sink advanced to snapshot 11 (append) without a stamp; a commit bypassed the batch scope. Its rows are in the sink and the query will not run past them. Either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name"
+            "sink advanced to snapshot 11 (append) without a stamp; a commit bypassed the batch scope. Its rows are in the sink. A restart refuses while an unstamped snapshot sits above the newest stamped batch; to clear it, either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name"
         );
         let unnamed = RecoveryReason::UnstampedSinkCommit {
             snapshot: SnapshotId::new(11),
@@ -610,7 +608,7 @@ mod tests {
         };
         assert_eq!(
             change.to_string(),
-            "the sink changed without a stamp during the batch: table property owner changed. The query will not run past the change. Either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name"
+            "the sink changed without a stamp during the batch: table property owner changed. A restart refuses while an unstamped snapshot sits above the newest stamped batch; to clear it, either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name"
         );
     }
 
