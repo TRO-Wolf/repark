@@ -12,6 +12,15 @@
 
 One test fails on main as well: `date_and_timestamp_predicates_measure_the_pushdown_surface` in `tests/codec.rs`. Because `tests/codec.rs` fails, cargo stops before `tests/iceberg_scan.rs` unless `--no-fail-fast` is passed.
 
+## Owner ruling 2026-10-10
+
+- Add the cluster-feature CI job: `cargo test --locked -p repark-distributed --features cluster`
+  runs in CI.
+- First fix the failing test `date_and_timestamp_predicates_measure_the_pushdown_surface`
+  (`crates/repark-distributed/tests/codec.rs`) on main, in its own small pull request, so the
+  job is green on the day it lands.
+- The job is not a required check until it has been green for a week.
+
 ## CLUSTER-CODEC-TEST-1 (2026-10-10)
 
 The failing test is fixed on branch `fix/cluster-codec-pushdown-test-1`, in the small PR
