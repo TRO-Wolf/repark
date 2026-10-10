@@ -50,9 +50,12 @@ through both doors with the builder fix in the message; a `false` session and a 
   untouched. String-literal predicates (`name = 'alpha'`, `name = 'x] snapshot_id=1'`) and
   `]`-carrying projection / table identifier travel exactly — decoded `predicates()` equals
   the original's, and the two-executor cluster answer equals `LocalDataFusionExecutor`. A
-  DATE predicate still drops out of the scan node at pushdown (measured — the fork cannot
-  bind date/timestamp datums) so the predicate-less node round-trips. An `IN` list travels
-  exactly or refuses. pins: ballista-m2-b/C-001, C-002, C-003, ballista-m2-a/C-001, C-003
+  DATE predicate pushes into the scan node (`predicate:[d = 2024-01-01]`, measured
+  2026-10-10) and the pushed node round-trips with the cluster answer equal to
+  `LocalDataFusionExecutor`; the string-typed TIMESTAMP literal cannot bind, so the fork
+  drops it and the predicate-less node round-trips. An `IN` list travels exactly or
+  refuses. pins: ballista-m2-b/C-001, C-002, C-003, ballista-m2-a/C-001, C-003.
+  pins: cluster-codec-test-1/C-001, C-002.
 - `multi_stage.rs` (`feature = "cluster"`) — D-1: three physical-plan shapes, each built
   once, run through `LocalDataFusionExecutor`, then through a two-executor
   `ReparkClusterExecutor`, compared after sorting rows (cluster partition order is not
