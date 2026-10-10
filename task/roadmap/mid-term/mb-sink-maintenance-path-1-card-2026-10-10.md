@@ -18,9 +18,23 @@ with `RecoveryRequiredException` (`UnstampedSinkCommit` or `UnstampedSinkChange`
 - a batch `INSERT`, `MERGE`, `UPDATE` or `DELETE` from any other writer;
 - `rollback_to_snapshot`, a branch or tag change, a table-property change during a batch.
 
-The two remedies the error names are a rollback of the sink to its newest stamped snapshot and
-a new query name. Neither keeps a compaction: the rollback undoes it and the new name starts a
-new query.
+The remedies the error names (fold 4, 2026-10-10) are a rollback of the sink to the snapshot
+the text names, and a new query name started from the printed
+`repark.cdc.start-after-snapshot-id` position. The rollback undoes a compaction. The new name
+keeps it, at the price of a new query identity; it is the only way today to keep a foreign
+commit, and it is not a maintenance path.
+
+**No back door (fold 4).** Until fold 4 a batch write that set the summary key
+`repark.cdc.query-id` passed the check, because "stamped" is read as "carries a query id"; the
+third verify measured it and noted it was the only way to run maintenance against a live sink.
+That write is now refused by name (registry row `MB-4-RESERVED-SUMMARY-KEYS-1`), so no
+maintenance path exists against a live `foreachBatch` sink, sanctioned or not. Another
+streaming query's stamped batches still pass, by design.
+
+**What the check does not look at**, measured in the third verify and kept: between batches, a
+property-only commit, a schema change, a branch or tag, a staged or branch write,
+`compute_table_stats`, and `expire_snapshots` that keeps the newest stamp. A shape for this
+card must say whether those stay outside the rule.
 
 The `toTable` door does not hold this invariant and is not affected.
 

@@ -145,6 +145,14 @@ impl WindowPlanner {
     }
 
     #[allow(clippy::missing_errors_doc)]
+    pub async fn ends_snapshot(&self, offset: &InputOffset) -> Result<bool, MicroBatchError> {
+        let Some(snapshot) = self.table.metadata().snapshot_by_id(offset.snapshot.get()) else {
+            return Ok(false);
+        };
+        Ok(self.added_file_count(snapshot).await? == offset.position.get())
+    }
+
+    #[allow(clippy::missing_errors_doc)]
     pub async fn next_window(
         &self,
         from: &InputOffset,

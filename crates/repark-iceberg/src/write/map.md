@@ -124,6 +124,20 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `write_options.rs`, `sink_offsets.rs`, `merge/snapshot_commit.rs`,
+  `sink_offsets_scope_tests.rs`, `sink_offsets_tests.rs` — **MB-4-FOREACH-EO fold 4
+  (2026-10-10, ruling on the third verify's first S2): a batch write cannot forge a stamp.**
+  `summary_with_extras` is where every snapshot summary takes its caller extras, and it now
+  refuses a key under `repark.cdc.` by name (`IllegalArgumentException`: "snapshot property
+  <key> is reserved for a streaming query's commit stamp; remove it from this write"). The
+  scope token stays the one reserved key a caller may pass, and it is dropped as before. The
+  stamp itself no longer travels as extras: `SiteStamp::summary` builds the caller's summary
+  through the same function and then adds the claimed stamp, so the three stamped arms and
+  `commit_stamp_only` are the only writers of those keys (`SiteStamp::extras` is gone).
+  `ClaimedStamp` gains `started`: a claim made while the offsets property still holds the
+  starting mark carries the mark's head into the summary (`starting_mark.rs`, fold 4). The
+  earlier pin that an unscoped commit keeps a caller's `repark.cdc.note` is reversed.
+  pins: mb-4-foreach-eo/C-032, C-036
 - `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10,
   owner ruling D2):** `property_record` reads a pending starting mark as no record, and the
   module re-exports `read_starting_mark` and `commit_starting_mark`. The rule, the write-once

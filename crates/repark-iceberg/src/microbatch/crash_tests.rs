@@ -98,7 +98,11 @@ impl FaultCatalog {
             return Ok(());
         };
         let current = self.inner.load_table(ident).await?;
-        let claimed = ClaimedStamp { stamp, base: None };
+        let claimed = ClaimedStamp {
+            stamp,
+            base: None,
+            started: None,
+        };
         let summary: HashMap<String, String> = claimed
             .summary_entries()
             .expect("racer entries")

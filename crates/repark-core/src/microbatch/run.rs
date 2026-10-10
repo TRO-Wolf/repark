@@ -14,15 +14,17 @@ use repark_iceberg::microbatch::offset::{
     TableUuid,
 };
 use repark_iceberg::microbatch::window::WindowLimit;
+use repark_iceberg::write::nested_ns_gate::{NestedWrite, refuse_nested_ns_supply};
 use repark_iceberg::write::sink_offsets::{
-    BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, SinkMark,
+    BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, SinkMark, Stray,
     commit_stamp_only, commit_starting_mark, read_resume_point, read_starting_mark,
-    resolve_unknown_outcome, unstamped_since_stamp,
+    resolve_unknown_outcome, stray_on_main,
 };
 use repark_iceberg::write::{
-    CommitStateUnknownError, SESSION_SNAPSHOT_PREFIX, apply_session_write_key,
-    commit_append_with_summary, concurrency_from_ctx, is_commit_state_unknown,
-    resolve_empty_session_write, stage_overwrite_files_with,
+    CommitStateUnknownError, EncryptedTableRefusal, SESSION_SNAPSHOT_PREFIX,
+    apply_session_write_key, carries_encryption_key, commit_append_with_summary,
+    concurrency_from_ctx, is_commit_state_unknown, resolve_empty_session_write,
+    stage_overwrite_files_with,
 };
 use tokio::time::Instant;
 
@@ -65,6 +67,13 @@ struct Cursor {
 enum Wake {
     Tick,
     Stop,
+}
+
+struct BodyRun<'batch> {
+    guard: &'batch BatchScopeGuard,
+    stamp: &'batch CommitStamp,
+    base: &'batch Table,
+    baseline: Option<i64>,
 }
 
 pub(crate) struct Run {
@@ -118,10 +127,11 @@ impl Run {
         let resumed = read_resume_point(&sink, self.shared.id)?;
         self.shared.resumed(resumed.clone());
         let mut cursor = self.resume(resumed.as_ref())?;
+        self.refuse_unwritable_sink(&sink)?;
         let sink = self
             .mark_the_start(sink, &mut cursor, resumed.is_none())
             .await?;
-        self.refuse_moved_sink(&sink, &cursor)?;
+        self.refuse_moved_sink(&sink, &cursor).await?;
         let target = match self.shared.trigger {
             Trigger::AvailableNow => self.available_now_target(&mut cursor).await?,
             Trigger::Once | Trigger::ProcessingTime(_) => None,
@@ -335,15 +345,48 @@ impl Run {
         ))
     }
 
-    fn refuse_moved_sink(&self, sink: &Table, cursor: &Cursor) -> Result<(), MicroBatchError> {
+    fn refuse_unwritable_sink(&self, sink: &Table) -> Result<(), MicroBatchError> {
+        match &self.door {
+            Door::Table => {
+                let label = self.shared.sink.quoted();
+                refuse_nested_ns_supply(sink, &label, &NestedWrite::Unreadable)
+                    .map_err(|error| engine_error(&error))
+            }
+            Door::ForeachBatch(_) if carries_encryption_key(sink.metadata().properties()) => {
+                Err(EncryptedTableRefusal::of(sink.identifier()).into())
+            }
+            Door::ForeachBatch(_) => Ok(()),
+        }
+    }
+
+    async fn refuse_moved_sink(
+        &self,
+        sink: &Table,
+        cursor: &Cursor,
+    ) -> Result<(), MicroBatchError> {
         if !matches!(self.door, Door::ForeachBatch(_)) {
             return Ok(());
         }
         self.refuse_replaced_sink(sink, cursor.epoch)?;
-        match unstamped_since_stamp(sink, self.shared.id, cursor.baseline) {
-            Some(reason) => Err(self.recovery(cursor.epoch, reason)),
+        match stray_on_main(sink, self.shared.id, cursor.baseline)? {
+            Some(stray) => Err(self.recovery(cursor.epoch, self.stray_reason(&stray).await)),
             None => Ok(()),
         }
+    }
+
+    async fn stray_reason(&self, stray: &Stray) -> RecoveryReason {
+        let mut whole = Vec::new();
+        for record in stray.records() {
+            if let Some(position) = self.source.whole_snapshot_end(record).await {
+                whole.push((record.epoch, position));
+            }
+        }
+        stray.reason(&|record| {
+            whole
+                .iter()
+                .find(|(epoch, _)| *epoch == record.epoch)
+                .map(|(_, position)| *position)
+        })
     }
 
     async fn start_offset(
@@ -407,7 +450,8 @@ impl Run {
                 num_output_rows: None,
             }));
         }
-        self.refuse_moved_sink(&sink, cursor)?;
+        self.refuse_unwritable_sink(&sink)?;
+        self.refuse_moved_sink(&sink, cursor).await?;
         let frame = match &self.plan {
             Some(template) => template.bind(&batch)?,
             None => batch.frame,
@@ -421,10 +465,16 @@ impl Run {
                 let appended = self.append(&batch, &stamp, &sink, frame).await;
                 appended.map(|(rows, snapshot)| (Some(rows), snapshot))
             }
-            Door::ForeachBatch(body) => self
-                .foreach_batch(&guard, &stamp, &sink, body.as_ref(), frame)
-                .await
-                .map(|snapshot| (None, snapshot)),
+            Door::ForeachBatch(body) => {
+                let scope = BodyRun {
+                    guard: &guard,
+                    stamp: &stamp,
+                    base: &sink,
+                    baseline: cursor.baseline,
+                };
+                let ran = self.foreach_batch(&scope, body.as_ref(), frame).await;
+                ran.map(|snapshot| (None, snapshot))
+            }
         };
         let add_batch = door_started.elapsed();
         let outcome = guard.outcome();
@@ -514,12 +564,11 @@ impl Run {
 
     async fn foreach_batch(
         &self,
-        guard: &BatchScopeGuard,
-        stamp: &CommitStamp,
-        base: &Table,
+        scope: &BodyRun<'_>,
         body: &dyn BatchBody,
         frame: DataFrame,
     ) -> Result<SnapshotId, MicroBatchError> {
+        let (guard, stamp, base) = (scope.guard, scope.stamp, scope.base);
         let epoch = stamp.record.epoch;
         let mark = SinkMark::of(base);
         let ran = guard.scope_body(body.run(frame, epoch)).await;
@@ -531,7 +580,11 @@ impl Run {
             ScopeOutcome::NotCommitted => None,
         };
         let sink = self.load_sink().await?;
-        if let Some(reason) = mark.violation(&sink) {
+        if let Some(violation) = mark.violation(&sink) {
+            let reason = match stray_on_main(&sink, self.shared.id, scope.baseline) {
+                Ok(Some(stray)) => self.stray_reason(&stray).await,
+                Ok(None) | Err(_) => violation,
+            };
             return Err(self.recovery(epoch, reason));
         }
         if let Err(error) = ran {

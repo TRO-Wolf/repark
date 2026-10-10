@@ -109,16 +109,40 @@ The contract a user reads is the `Notes:` section of `DataStreamWriter.foreachBa
   batch id is the recipe Spark documents for `foreachBatch`. Where the two engines differ is
   the second half: Spark replays the whole callable after a failure (cell MB0-W6), so a body
   ported from Spark that relied on that must put its sink write last.
-- **The sink is exclusive.** While a query name lives, a commit to the sink that does not
-  carry the batch's stamp ends the query `RecoveryRequiredException`, naming the snapshot and
-  the two remedies: roll the sink back to its newest stamped snapshot, or start the query
-  under a new name. A maintenance path against a live sink is card
+- **The sink is exclusive for rows.** While a query name lives, a snapshot on the sink's
+  main branch that carries no batch stamp ends the query `RecoveryRequiredException`, and
+  every later start refuses with no callable run until it is resolved (fold 4, 2026-10-10:
+  loud on every start, where fold 3 was loud once for a snapshot under the batch's own
+  stamp). The driver looks above the query's newest stamp and between its two newest stamps
+  (down to the head the query started on, which the first stamp records as
+  `repark.cdc.starting-head`), at every start and before every callable.
+- **The error says what resolves it, and each recipe is exact when followed.** Above the
+  newest stamp: roll the sink back to the named snapshot and start again, or keep the rows
+  and start under a new name with the printed `repark.cdc.start-after-snapshot-id`. Under a
+  stamp: a rollback to the newest stamp does not remove it, so the text names the snapshot
+  below it and the new name's start position; the old name stays refused. Where the driver
+  cannot prove a recipe it does not print it: no rollback on a sink that started empty or
+  where another query's batches share the stretch, no new name when the batch ends inside a
+  source snapshot. A new name without the printed position delivers every stamped batch
+  again; the text says so.
+- **What the check does not look at.** Between batches, a commit that adds no snapshot to
+  the main branch (a table property, a schema change, a branch, a tag, a staged or branch
+  write, statistics) passes; inside a batch such a change ends that batch
+  `RecoveryRequiredException` once and the next start runs on. Another streaming query's
+  stamped batches pass. A batch write cannot pass by forging a stamp: a `repark.cdc.*`
+  snapshot property from writer options or the session conf is refused by name. There is
+  no maintenance path against a live sink yet: card
   `task/roadmap/mid-term/mb-sink-maintenance-path-1-card-2026-10-10.md`.
+- **Session settings.** A streaming plan runs under the session settings of the moment its
+  batch starts (time zone, ANSI mode, the batch's own `current_timestamp()`), so both doors
+  store what the same statement stores as a batch write. The `toTable` door refuses a sink
+  with a nested `timestamp_ns` leaf with the batch doors' text, and the `foreachBatch` door
+  refuses a keyed sink (ENC-1) before it writes anything.
 - **`checkpointLocation` holds no state.** It is required and recorded. The state is the sink
   plus the query name; clearing the checkpoint resets nothing.
 
 Python holds none of this: the callable is handed to the driver, which owns every rule.
-pins: mb-4-foreach-eo/C-031
+pins: mb-4-foreach-eo/C-031, C-033
 
 ## Known limitations
 

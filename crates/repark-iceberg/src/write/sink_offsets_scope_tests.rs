@@ -187,26 +187,32 @@ async fn caller_extras_cannot_displace_the_stamp() {
     drop(guard);
     let note = [(String::from("repark.cdc.note"), String::from("caller"))];
     let files = stage(&committed, &[3]).await;
-    let unscoped = commit_append_with_summary(&catalog, &committed, files, &note, None)
+    let refused = commit_append_with_summary(&catalog, &committed, files, &note, None)
         .await
-        .expect("an unscoped commit keeps the caller's key as on main");
-    let head = unscoped.metadata().current_snapshot().expect("head");
+        .expect_err("an unscoped commit cannot bring a reserved key either");
+    assert!(
+        refused.to_string().contains(
+            "snapshot property repark.cdc.note is reserved for a streaming query's commit stamp"
+        ),
+        "{refused}"
+    );
+    let reloaded = catalog.load_table(&ident).await.expect("reload");
     assert_eq!(
-        head.summary()
-            .additional_properties
-            .get("repark.cdc.note")
-            .map(String::as_str),
-        Some("caller")
+        reloaded.metadata().current_snapshot_id(),
+        committed.metadata().current_snapshot_id()
     );
 }
 
 #[test]
-fn site_stamp_extras_put_the_stamp_last_and_drop_the_token() {
+fn a_claimed_site_adds_the_stamp_and_the_starting_head_and_drops_the_token() {
     let stamp = stamp_for(7, SinkDoor::Table);
     let site = SiteStamp {
         claimed: Some(ClaimedStamp {
             stamp: stamp.clone(),
             base: None,
+            started: Some(StartingMark {
+                head: Some(SnapshotId::new(41)),
+            }),
         }),
         sink: None,
         attempted: AtomicBool::new(false),
@@ -214,19 +220,10 @@ fn site_stamp_extras_put_the_stamp_last_and_drop_the_token() {
     let token = ScopeToken::parse("eeeeeeee-0000-4000-8000-0000000000e5").expect("token");
     let extra = [
         token.summary_entry(),
-        (String::from("repark.cdc.epoch"), String::from("99")),
-        (
-            String::from("spark.sql.streaming.epochId"),
-            String::from("99"),
-        ),
         (String::from("run_id"), String::from("caller")),
     ];
-    let folded: HashMap<String, String> = site
-        .extras(&extra)
-        .expect("extras")
-        .iter()
-        .cloned()
-        .collect();
+    let engine = EngineSummary::default();
+    let (_, folded) = site.summary(&extra, &engine).expect("summary");
     assert!(!folded.contains_key(SCOPE_TOKEN_KEY));
     assert_eq!(folded.get("run_id").map(String::as_str), Some("caller"));
     assert_eq!(
@@ -237,6 +234,14 @@ fn site_stamp_extras_put_the_stamp_last_and_drop_the_token() {
         folded.get(SPARK_EPOCH_ID_KEY).map(String::as_str),
         Some("7")
     );
+    assert_eq!(
+        StartingMark::from_summary(&folded),
+        Some(StartingMark {
+            head: Some(SnapshotId::new(41))
+        })
+    );
+    let forged = [(String::from("repark.cdc.epoch"), String::from("99"))];
+    assert!(site.summary(&forged, &engine).is_err());
 }
 
 fn recovery_parts(error: MicroBatchError) -> (Epoch, Option<SinkRecord>, RecoveryReason, String) {

@@ -6,4 +6,5 @@ pub mod error;
 pub mod offset;
 pub mod provider;
 pub mod starting_mark;
+pub mod stray_remedy;
 pub mod window;

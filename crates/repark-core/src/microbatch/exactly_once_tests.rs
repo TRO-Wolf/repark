@@ -6,7 +6,8 @@ use futures::future::BoxFuture;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_iceberg::microbatch::error::{MicroBatchError, RecoveryReason};
-use repark_iceberg::microbatch::offset::{Epoch, QUERY_ID_KEY, TableUuid};
+use repark_iceberg::microbatch::offset::{Epoch, QUERY_ID_KEY, SinkRecord, SnapshotId, TableUuid};
+use repark_iceberg::microbatch::stray_remedy::{Discard, Restart, StrayRemedy};
 use tokio::runtime::Handle;
 
 use crate::Session;
@@ -50,7 +51,7 @@ enum Stray {
     Nothing,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Own {
     Nothing,
     AppendAfter,
@@ -197,9 +198,10 @@ fn unstamped_commit(error: &MicroBatchError) -> (u64, Option<u64>, i64, String) 
             epoch,
             durable,
             reason:
-                RecoveryReason::UnstampedSinkCommit {
+                RecoveryReason::StraySinkCommit {
                     snapshot,
-                    operation: Some(operation),
+                    operation,
+                    ..
                 },
             ..
         } => (
@@ -210,6 +212,33 @@ fn unstamped_commit(error: &MicroBatchError) -> (u64, Option<u64>, i64, String) 
         ),
         other => panic!("expected an unstamped commit, got {other:?}"),
     }
+}
+
+fn remedy(error: &MicroBatchError) -> StrayRemedy {
+    match error {
+        MicroBatchError::RecoveryRequired {
+            reason: RecoveryReason::StraySinkCommit { remedy, .. },
+            ..
+        } => *remedy,
+        other => panic!("expected a stray commit, got {other:?}"),
+    }
+}
+
+fn stamp_at(sink: &iceberg::table::Table, epoch: u64) -> (SnapshotId, SnapshotId) {
+    sink.metadata()
+        .snapshots()
+        .find_map(|snapshot| {
+            let record = SinkRecord::from_summary(&snapshot.summary().additional_properties)
+                .ok()
+                .flatten()?;
+            (record.epoch.get() == epoch).then(|| {
+                (
+                    SnapshotId::new(snapshot.snapshot_id()),
+                    record.offsets.inputs()[0].snapshot,
+                )
+            })
+        })
+        .expect("the stamped snapshot")
 }
 
 async fn ended_with(fixture: &Fixture, body: &Arc<Shaped>) -> Arc<MicroBatchError> {
@@ -283,7 +312,8 @@ async fn a_stray_sink_write_with_no_stamped_commit_ends_recovery_required() {
 }
 
 #[tokio::test]
-async fn a_stray_sink_write_beside_the_stamped_commit_ends_recovery_required() {
+async fn a_stray_sink_write_beside_the_stamped_commit_refuses_every_restart_above_or_under_the_stamp()
+ {
     for own in [Own::AppendAfter, Own::AppendBefore] {
         let fixture = Fixture::new().await;
         bronze(&fixture).await;
@@ -299,24 +329,40 @@ async fn a_stray_sink_write_beside_the_stamped_commit_ends_recovery_required() {
         );
         assert_eq!(stamped_epochs(&sink), [0, 1]);
         assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5]);
-        fixture.insert(SOURCE, "(6)").await;
-        let resumed = Shaped::new(&fixture.session, Stray::SpawnedAppend, 9, Own::AppendAfter);
-        let restart = started(&fixture, resumed.spec()).await;
-        let ending = restart.await_termination(None).await;
-        if own == Own::AppendAfter {
-            assert_eq!(
-                ending,
-                Ok(true),
-                "the stamp is the head: epoch 1 is durable"
-            );
-            assert_eq!(resumed.calls(), 1);
-            assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5, 6]);
+        let (newest, newest_position) = stamp_at(&sink, 1);
+        let (previous, previous_position) = stamp_at(&sink, 0);
+        let expected = if own == Own::AppendAfter {
+            StrayRemedy {
+                under: Some(newest),
+                discard: Discard::RollBack {
+                    to: previous,
+                    then: Restart::NewName(Some(previous_position)),
+                },
+                keep: Restart::NewName(Some(newest_position)),
+            }
         } else {
-            let refused = ending.expect_err("the stray is above the newest stamp");
+            StrayRemedy {
+                under: None,
+                discard: Discard::RollBack {
+                    to: newest,
+                    then: Restart::SameName,
+                },
+                keep: Restart::NewName(Some(newest_position)),
+            }
+        };
+        assert_eq!(remedy(&error), expected, "{own:?}: the batch's own ending");
+        for attempt in 0..2 {
+            if attempt == 1 {
+                fixture.insert(SOURCE, "(6)").await;
+            }
+            let resumed = Shaped::new(&fixture.session, Stray::SpawnedAppend, 9, Own::AppendAfter);
+            let refused = ended_with(&fixture, &resumed).await;
             assert_eq!(
                 unstamped_commit(&refused),
-                (2, Some(1), unstamped[0], String::from("append"))
+                (2, Some(1), unstamped[0], String::from("append")),
+                "{own:?}: restart {attempt}, which has no batch to run when it is 0"
             );
+            assert_eq!(remedy(&refused), expected, "{own:?}: restart {attempt}");
             assert_eq!(resumed.calls(), 0, "a refused restart runs no body");
             assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5]);
         }
@@ -578,6 +624,38 @@ async fn a_foreign_snapshot_between_runs_refuses_the_restart() {
     );
     assert_eq!(resumed.calls(), 0);
     assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5, 99]);
+}
+
+#[tokio::test]
+async fn a_keyed_sink_refuses_the_foreach_door_before_the_mark_and_any_body() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let sink = fixture.table("silver").await;
+    let catalog = fixture
+        .session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("catalog");
+    let tx = Transaction::new(&sink);
+    let tx = tx
+        .update_table_properties()
+        .set("encryption.key-id".to_string(), "k1".to_string())
+        .apply(tx)
+        .expect("apply");
+    tx.commit(catalog.as_ref()).await.expect("key set");
+    let body = Shaped::new(&fixture.session, Stray::SpawnedAppend, 9, Own::AppendAfter);
+    let error = ended_with(&fixture, &body).await;
+    assert_eq!(
+        error.as_ref(),
+        &MicroBatchError::EncryptedSinkRefused {
+            sink: String::from("sales.silver"),
+        }
+    );
+    assert_eq!(body.calls(), 0);
+    let after = fixture.table("silver").await;
+    assert!(offsets_property(&after).is_empty());
+    assert_eq!(after.metadata().snapshots().count(), 0);
 }
 
 #[tokio::test]

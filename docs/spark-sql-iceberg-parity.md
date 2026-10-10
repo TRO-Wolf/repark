@@ -4106,21 +4106,41 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   write came from: another thread, another session, another process, a statement the engine
   did not route to a stamped write.
   **This is detection after the write landed.** The rows are in the sink. The query stops
-  loudly, never continues past them and never replays over them: a restart finds the unstamped
-  snapshot above the newest stamp and refuses again before any body runs. (When the stray
-  landed below the batch's own stamped commit, that batch is durable: the query ends the same
-  way at the end of that batch, and the restart resumes after it.) The error names the stray
-  snapshot and both remedies: roll the sink back to its newest stamped snapshot (to the
-  head the query first started on, when no batch is stamped yet; `CALL
-  <catalog>.system.rollback_to_snapshot`) and start again, or start the query under a new name
-  (a new `queryName`, with `repark.cdc.start-after-snapshot-id` to skip what the old one
-  delivered).
+  loudly, never continues past them and never replays over them, and every later start refuses
+  before any body runs until the sink is resolved. Since fold 4 (2026-10-10) check (a) also
+  walks the stretch under the query's newest stamp, down to its previous stamp or to the head
+  the query started on (the first stamp records it as `repark.cdc.starting-head`): a stray
+  that landed under the batch's own stamped commit is refused at every start too, where fold 3
+  ended that batch `RecoveryRequiredException` once and then resumed, and where a process
+  that died between the body's commit and check (b) left it unreported (measured in the third
+  verify: a body that also wrote its batch from a helper thread, killed before the check:
+  source 32 rows, sink 36, no signal on either run; now both restarts refuse).
+  **The error says what resolves it, and each recipe is exact when followed** (ten public-door
+  pins follow the printed text and count the rows). A stray above the newest stamp: roll the
+  sink back to the snapshot the text names (`CALL <catalog>.system.rollback_to_snapshot`) and
+  start the query again, which discards the stray's rows; or keep them and start the query
+  under a new name with the reader option `repark.cdc.start-after-snapshot-id` set to the id
+  the text prints (the source position of the newest stamped batch). A stray under a stamp:
+  the text says that a rollback to the newest stamped snapshot does not remove it, and names
+  the snapshot under it to roll back to together with the new name's start position; the
+  batch is then delivered again once, under the new name. The driver prints only what it can
+  prove: no rollback on a sink that started empty, or where another streaming query's
+  batches share the stretch; no new name where the batch ends inside a source snapshot (a
+  start-after position would skip the rest of it). A new name without the printed position
+  delivers every stamped batch again, and the text says so (fold 3 printed "start the query
+  under a new name" alone; followed, it duplicated 16 of 32 rows).
   **Three consequences.** The sink takes no other writer while the query lives, between runs
   included: a batch `INSERT`, a compaction or any other maintenance run on it ends the next
   start `RecoveryRequiredException` (the exclusive sink is kept for this slice by owner ruling
   D3 of 2026-10-10; a sanctioned maintenance path is card MB-SINK-MAINTENANCE-PATH-1, a must
   before MB-5 closes). A snapshot stamped by a different streaming query is not a
-  finding. And the rule holds from the first batch: at a query's first start the driver writes
+  finding, and a batch write cannot pass as one: a snapshot property under `repark.cdc.` from
+  writer options or the session conf is refused by name (row `MB-4-RESERVED-SUMMARY-KEYS-1`).
+  What the rule does not look at: between batches, a commit that adds no snapshot to the main
+  branch (a table property, a schema change, a branch, a tag, a staged or branch write,
+  statistics) passes; inside a batch such a change ends that batch
+  `RecoveryRequiredException` once, and the next start runs on. And the rule holds from the
+  first batch: at a query's first start the driver writes
   a starting mark, the first value of the offsets property, which records the sink's head and
   that batch 0 is pending (`{"format-version":1,"pending-epoch":0,"starting-head":<id>}`). A
   stray write between the mark and the first stamp refuses the first restart; it does not land
@@ -4140,7 +4160,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_kills_at_sink_commits_restart_without_a_duplicate`,
   `::test_random_kills_restart_without_a_duplicate`;
   `python/repark/tests/test_mb_4_streaming_foreach_lineage.py::test_thread_route_then_raise_ends_recovery_required_and_the_restart_refuses`,
-  `::test_thread_route_beside_the_stamped_write_ends_recovery_required`,
+  `::test_thread_route_beside_the_stamped_write_refuses_every_restart`,
   `::test_main_thread_statement_while_a_body_runs_ends_recovery_required`,
   `::test_foreign_insert_between_runs_refuses_the_restart`,
   `::test_sink_dropped_and_recreated_after_the_stamped_write_ends_recovery_required`;
@@ -4148,13 +4168,38 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_first_start_writes_the_mark_into_the_offsets_property`;
   `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_stray_then_kill_at_the_first_batch_refuses_the_first_restart`,
   `::test_kill_before_the_first_commit_restarts_from_the_mark_without_a_duplicate`;
+  `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_kill_between_a_twice_written_batch_and_the_audit_refuses_every_restart`;
+  `python/repark/tests/test_mb_4_streaming_remedies.py` (ten pins, each following a printed remedy);
   `crates/repark-core/src/microbatch/exactly_once_tests.rs::a_failed_body_is_audited_and_the_restart_refuses_before_any_body`,
-  `::at_epoch_zero_the_restart_reads_the_mark_and_refuses_before_any_body`
+  `::at_epoch_zero_the_restart_reads_the_mark_and_refuses_before_any_body`,
+  `::a_stray_sink_write_beside_the_stamped_commit_refuses_every_restart_above_or_under_the_stamp`;
+  `crates/repark-iceberg/src/write/sink_offsets_lineage_tests.rs::a_stray_under_the_newest_stamp_is_found_down_to_the_previous_stamp`
 - **Rationale** — DECLARED 2026-10-09 (owner ruling "FIX IT" on the MB-4 verify's S1;
   orchestrator ruling of the same day after the re-verify: an invariant on the sink's lineage,
   checked by the driver, not a list of routes; MB-4-FOREACH-EO ledger, fold 2). It replaces the
   at-least-once default MB-3 acted on (MB-3 ledger D-2, C-005 b, c and e) with the design
   sketch's Q9 answer.
+### MB-4-RESERVED-SUMMARY-KEYS-1 — a write cannot set a `repark.cdc.*` snapshot summary key
+- **repark** — the snapshot summary keys under `repark.cdc.` are the streaming driver's commit
+  stamp. A write that brings one as a `snapshot-property.<key>` writer option or as the
+  session conf `spark.sql.iceberg.snapshot-property.<key>` is refused before it commits:
+  `IllegalArgumentException: snapshot property repark.cdc.query-id is reserved for a streaming
+  query's commit stamp; remove it from this write`. Measured on `INSERT INTO` (`VALUES` and
+  `SELECT`), `INSERT OVERWRITE`, `UPDATE`, `DELETE`, `MERGE`, `CREATE OR REPLACE TABLE ... AS
+  SELECT`, `writeTo(...).append()`, `overwritePartitions()`, `createOrReplace()` and
+  `write.saveAsTable`: each refused, the table's snapshots unchanged. Before fold 4 such a
+  write landed, and a `foreachBatch` query's exclusive-sink check, which reads "stamped" as
+  "carries `repark.cdc.query-id`", let it pass.
+- **Apache Spark** — writes any `snapshot-property.*` key into the summary; it has no
+  `repark.cdc.*` keys of its own. *(not an oracle cell: the keys are RePark's.)*
+- **Pin** — `python/repark/tests/test_mb_4_streaming_sink_gates.py::test_statement_under_a_reserved_summary_key_in_the_session_conf_is_refused_by_name`,
+  `::test_writer_option_carrying_a_reserved_summary_key_is_refused_by_name`,
+  `::test_a_forged_stamp_cannot_hide_a_foreign_write_from_the_restart`;
+  `crates/repark-iceberg/src/write/sink_offsets_tests.rs::a_site_without_a_claim_keeps_the_caller_extras_and_refuses_a_reserved_key_by_name`
+- **Rationale** — DECLARED 2026-10-10 (orchestrator ruling on the third MB-4 verify, fold 4):
+  one refusal at the place every summary takes its caller extras. A consequence the
+  maintenance card records: there is no way to run maintenance against a live `foreachBatch`
+  sink until card MB-SINK-MAINTENANCE-PATH-1 lands.
 ### MB-4-FOREACH-SIDE-EFFECTS-1 — what a `foreachBatch` body does outside its declared sink is not exactly-once
 - **repark** — a write to any other table and a call to an external system are not stamped and
   not fenced. The sink commit is the batch's commit point. A side effect the body runs

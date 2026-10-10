@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -27,11 +26,15 @@ mod lineage;
 
 use append_fence::AppendFence;
 pub use body_scope::{guard_body_catalog, in_body_scope, refuse_planned_sink_write};
-pub use lineage::{SinkMark, commit_starting_mark, read_starting_mark, unstamped_since_stamp};
+pub use lineage::{
+    Floor, SinkMark, Stamped, Stray, commit_starting_mark, read_starting_mark, stray_on_main,
+};
 
 pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";
 
-const STAMP_KEY_PREFIXES: [&str; 2] = ["repark.cdc.", "spark.sql.streaming."];
+pub(crate) const RESERVED_STAMP_PREFIX: &str = "repark.cdc.";
+
+const STAMP_KEY_PREFIXES: [&str; 2] = [RESERVED_STAMP_PREFIX, "spark.sql.streaming."];
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ScopeToken(Uuid);
@@ -46,6 +49,7 @@ pub struct CommitStamp {
 pub struct ClaimedStamp {
     pub stamp: CommitStamp,
     pub base: Option<SnapshotId>,
+    pub started: Option<StartingMark>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -186,10 +190,7 @@ impl BatchScope {
             return Err(error);
         }
         entry.claimed = true;
-        Ok(Some(ClaimedStamp {
-            stamp: entry.stamp.clone(),
-            base: table.metadata().current_snapshot_id().map(SnapshotId::new),
-        }))
+        Ok(Some(ClaimedStamp::on(table, entry.stamp.clone())))
     }
 }
 
@@ -229,9 +230,20 @@ impl Drop for BatchScopeGuard {
 }
 
 impl ClaimedStamp {
+    fn on(table: &Table, stamp: CommitStamp) -> ClaimedStamp {
+        let started = read_starting_mark(table, stamp.record.query).ok().flatten();
+        ClaimedStamp {
+            stamp,
+            base: table.metadata().current_snapshot_id().map(SnapshotId::new),
+            started,
+        }
+    }
+
     #[allow(clippy::missing_errors_doc)]
     pub fn summary_entries(&self) -> Result<Vec<(String, String)>, MicroBatchError> {
-        self.stamp.record.summary_entries(self.stamp.door)
+        let mut entries = self.stamp.record.summary_entries(self.stamp.door)?;
+        entries.extend(self.started.map(|mark| mark.summary_entry()));
+        Ok(entries)
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -493,13 +505,11 @@ pub async fn commit_stamp_only(
     if active.is_none() {
         epoch_check(table, stamp)?;
     }
-    let claimed = active.unwrap_or_else(|| ClaimedStamp {
-        stamp: stamp.clone(),
-        base: table.metadata().current_snapshot_id().map(SnapshotId::new),
-    });
+    let claimed = active.unwrap_or_else(|| ClaimedStamp::on(table, stamp.clone()));
     let engine = EngineSummary::for_append(table, &[], None);
-    let (operation_id, summary) = summary_with_extras(&claimed.summary_entries()?, &engine)
-        .map_err(|error| masked(&error))?;
+    let (operation_id, mut summary) =
+        summary_with_extras(&[], &engine).map_err(|error| masked(&error))?;
+    summary.extend(claimed.summary_entries()?);
     let tx = Transaction::new(table);
     let tx = tx
         .merge_append()
@@ -681,23 +691,16 @@ impl SiteStamp {
         }
     }
 
-    pub(crate) fn extras<'extra>(
+    pub(crate) fn summary(
         &self,
-        extra: &'extra [(String, String)],
-    ) -> datafusion::error::Result<Cow<'extra, [(String, String)]>> {
-        let carries_token = extra.iter().any(|(key, _)| key == SCOPE_TOKEN_KEY);
-        if self.claimed.is_none() && !carries_token {
-            return Ok(Cow::Borrowed(extra));
-        }
-        let mut stamped: Vec<(String, String)> = extra
-            .iter()
-            .filter(|(key, _)| key != SCOPE_TOKEN_KEY)
-            .cloned()
-            .collect();
+        extra: &[(String, String)],
+        engine: &EngineSummary,
+    ) -> datafusion::error::Result<(String, HashMap<String, String>)> {
+        let (operation_id, mut summary) = summary_with_extras(extra, engine)?;
         if let Some(claimed) = &self.claimed {
-            stamped.extend(claimed.summary_entries().map_err(microbatch_error)?);
+            summary.extend(claimed.summary_entries().map_err(microbatch_error)?);
         }
-        Ok(Cow::Owned(stamped))
+        Ok((operation_id, summary))
     }
 
     pub(crate) fn transaction(&self, tx: Transaction) -> datafusion::error::Result<Transaction> {

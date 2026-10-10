@@ -113,3 +113,22 @@ ruling is revisited.
   it. The re-verify counted the three against `parsed` through the private door; the
   only later change to the parser file is fold 1's credential mask, which leaves these
   texts alone.
+- **Statements inside a `foreachBatch` body answer differently from the same statement
+  outside one (recorded 2026-10-10, MB-4 fold 4; measured by the third MB-4 verify,
+  `p/scope.py`).** Of 120 statements against tables that are not the declared sink, 39
+  answer differently when issued from the body's thread: an `INSERT` returns one empty row
+  where the batch door returns none, and the like. From another thread 120 of 120 are equal.
+  The cause is fold 1's routing: inside a body, `session_write_conf_is_set` answers true so
+  that `INSERT`, `UPDATE` and `DELETE` on the sink reach the arms that can carry the stamp,
+  and the same routing applies to every table. The rows written are the same; only the
+  statement's own result differs. Not changed in fold 4.
+- **`readStream.parquet`, `.csv`, `.json`, `.text`, `.orc` and `.schema` are a bare
+  `AttributeError` (recorded 2026-10-10, MB-4 fold 4; third verify, `p/surface3.py`).**
+  `readStream.format(<file source>)` refuses `NOT_IMPLEMENTED` by name; the six shorthand
+  methods do not exist on `DataStreamReader`. Spark has them. A refusal by name on each is
+  the fix; it is a surface change and belongs with this card.
+- **A build older than MB-4 fold 3 that meets a pending starting mark refuses with
+  `repark.cdc stamp misses run-id` (recorded 2026-10-10, MB-4 fold 4; third verify,
+  `p/updown.py`).** It fails closed and does not misread the mark, and the build that wrote
+  the mark runs on exactly afterwards. No such build is released (the mark and every reader
+  of it are in PR #1011), so the text is left as it is.

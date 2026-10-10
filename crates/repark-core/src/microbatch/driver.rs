@@ -275,6 +275,15 @@ impl TableTarget {
         })
     }
 
+    pub(crate) fn quoted(&self) -> String {
+        parse_table_identifier_segments(&self.name)
+            .unwrap_or_else(|_| vec![self.name.clone()])
+            .iter()
+            .map(|part| format!("`{}`", part.replace('`', "``")))
+            .collect::<Vec<_>>()
+            .join(".")
+    }
+
     pub(crate) async fn load(&self) -> Result<Table, MicroBatchError> {
         self.catalog.load_table(&self.ident).await.map_err(|error| {
             MicroBatchError::Catalog(repark_common::redaction::mask_value_credentials(&format!(

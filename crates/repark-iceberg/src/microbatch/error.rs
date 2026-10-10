@@ -7,6 +7,7 @@ use thiserror::Error;
 use crate::microbatch::offset::{
     Epoch, FilePosition, QueryId, RunId, SinkRecord, SnapshotId, TableUuid,
 };
+use crate::microbatch::stray_remedy::StrayRemedy;
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[non_exhaustive]
@@ -173,24 +174,25 @@ pub enum RecoveryReason {
     )]
     StampNotInLineage { snapshot: SnapshotId },
     #[error(
-        "sink advanced to snapshot {snapshot}{} without a stamp; a commit bypassed the batch scope{}",
-        operation_suffix(.operation.as_deref()),
-        stray_remedies(.operation.as_deref())
+        "sink advanced to snapshot {snapshot}{} without a stamp; a commit bypassed the batch scope",
+        operation_suffix(.operation.as_deref())
     )]
     UnstampedSinkCommit {
         snapshot: SnapshotId,
         operation: Option<String>,
     },
-    #[error("the sink changed without a stamp during the batch: {what}. {REMEDIES}")]
+    #[error(
+        "sink advanced to snapshot {snapshot} ({operation}) without a stamp; a commit bypassed the batch scope. Its rows are in the sink. {remedy}"
+    )]
+    StraySinkCommit {
+        snapshot: SnapshotId,
+        operation: String,
+        remedy: StrayRemedy,
+    },
+    #[error(
+        "the sink changed without a stamp during the batch: {what}. The change is still in place: a restart does not undo it, and it checks only the snapshots on the sink's main branch"
+    )]
     UnstampedSinkChange { what: String },
-}
-
-const REMEDIES: &str = "A restart refuses while an unstamped snapshot sits above the newest stamped batch; to clear it, either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name";
-
-fn stray_remedies(operation: Option<&str>) -> String {
-    operation.map_or_else(String::new, |_| {
-        format!(". Its rows are in the sink. {REMEDIES}")
-    })
 }
 
 fn operation_suffix(operation: Option<&str>) -> String {
@@ -210,6 +212,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::*;
+    use crate::microbatch::stray_remedy::{Discard, Restart};
 
     fn query_id() -> QueryId {
         QueryId::new(Uuid::nil())
@@ -586,14 +589,30 @@ mod tests {
     }
 
     #[test]
-    fn the_unstamped_reasons_name_the_stray_and_both_remedies() {
-        let commit = RecoveryReason::UnstampedSinkCommit {
+    fn the_unstamped_reasons_name_the_stray_and_only_a_stray_on_main_prints_remedies() {
+        let stray = RecoveryReason::StraySinkCommit {
+            snapshot: SnapshotId::new(11),
+            operation: String::from("append"),
+            remedy: StrayRemedy {
+                under: None,
+                discard: Discard::RollBack {
+                    to: SnapshotId::new(7),
+                    then: Restart::SameName,
+                },
+                keep: Restart::NewName(None),
+            },
+        };
+        assert_eq!(
+            stray.to_string(),
+            "sink advanced to snapshot 11 (append) without a stamp; a commit bypassed the batch scope. Its rows are in the sink. Every start refuses while that snapshot sits above the newest stamped batch. To discard its rows, roll the sink back to snapshot 7 (CALL system.rollback_to_snapshot) and start the query again. To keep its rows, start the query under a new name."
+        );
+        let off_main = RecoveryReason::UnstampedSinkCommit {
             snapshot: SnapshotId::new(11),
             operation: Some(String::from("append")),
         };
         assert_eq!(
-            commit.to_string(),
-            "sink advanced to snapshot 11 (append) without a stamp; a commit bypassed the batch scope. Its rows are in the sink. A restart refuses while an unstamped snapshot sits above the newest stamped batch; to clear it, either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name"
+            off_main.to_string(),
+            "sink advanced to snapshot 11 (append) without a stamp; a commit bypassed the batch scope"
         );
         let unnamed = RecoveryReason::UnstampedSinkCommit {
             snapshot: SnapshotId::new(11),
@@ -608,7 +627,7 @@ mod tests {
         };
         assert_eq!(
             change.to_string(),
-            "the sink changed without a stamp during the batch: table property owner changed. A restart refuses while an unstamped snapshot sits above the newest stamped batch; to clear it, either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name"
+            "the sink changed without a stamp during the batch: table property owner changed. The change is still in place: a restart does not undo it, and it checks only the snapshots on the sink's main branch"
         );
     }
 

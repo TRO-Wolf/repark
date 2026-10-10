@@ -9,6 +9,28 @@ directory holds the piece split out of it. The test files of the module stay bes
 
 ## Contents
 
+- `lineage.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10, owner ruling on the third verify's
+  first S1): the walk goes under the newest stamp.** `stray_on_main(table, query, baseline)`
+  replaces `unstamped_since_stamp`. It reads the main lineage once, in memory, and looks at
+  two stretches: above this query's newest stamp (down to the starting head while nothing is
+  stamped), and between the newest stamp and the previous one, or down to the head the first
+  stamp records. The first unstamped snapshot it meets comes back as a `Stray`: the
+  snapshot, its operation, this query's newest stamp, whether the stray sits below it, and
+  the `Floor` a rollback would land on (`Newest`, `Previous(stamp)`, `Head(id or none)`, or
+  `Shared` when another query's stamps sit in the stretch). Fold 2's walk stopped at the
+  newest stamp; a stray under it was seen only by the in-process audit, and a process that
+  died between the body's commit and that audit left it unseen for good (source 32 rows,
+  sink 36, no signal). The cost is one pass over snapshots already in the loaded metadata:
+  no catalog call, no file read. A first stamp with no recorded head (a query begun through
+  the `toTable` door, or by a build before this fold) has no lower bound, and the walk does
+  not go under it. `Stray::reason` turns the facts into `RecoveryReason::StraySinkCommit`,
+  given the source positions the driver could verify; `Stray::records` lists the stamps
+  whose positions it needs. Pins in `sink_offsets_lineage_tests.rs`: the stretch under the
+  newest stamp and its floor; the first stamp recording the head and bounding the walk; an
+  empty start, a markless first stamp and a shared stretch told apart; the remedy offering
+  only what the walk can prove; a stamp alone refusing the mark (the third verify's
+  surviving mutant N4).
+  pins: mb-4-foreach-eo/C-032, C-033, C-039
 - `append_fence.rs`, `body_scope.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10): one catalog
   wrapper, three rules.** Main's ENC-1 gate (`tests/enc_1_gate.rs`) allows `impl Catalog for`
   in three files only, so that every catalog handle stays inside the encryption guard's

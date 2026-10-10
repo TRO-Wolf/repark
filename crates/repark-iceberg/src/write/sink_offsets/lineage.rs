@@ -12,9 +12,12 @@ use super::append_fence::{AppendFence, refusal_of};
 use super::{main_lineage, masked, stamped_by};
 use crate::microbatch::error::{MicroBatchError, RecoveryReason};
 use crate::microbatch::offset::{
-    OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SnapshotId, TableUuid,
+    OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SinkRecord, SnapshotId, TableUuid,
 };
 use crate::microbatch::starting_mark::StartingMark;
+use crate::microbatch::stray_remedy::{
+    Discard, INSIDE_A_SNAPSHOT, Restart, SHARED_STRETCH, StrayRemedy,
+};
 
 #[derive(Debug, Clone)]
 pub struct SinkMark {
@@ -151,19 +154,164 @@ impl SinkMark {
     }
 }
 
-#[must_use]
-pub fn unstamped_since_stamp(
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Stamped {
+    pub snapshot: SnapshotId,
+    pub record: SinkRecord,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Floor {
+    Newest,
+    Previous(Stamped),
+    Head(Option<SnapshotId>),
+    Shared,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Stray {
+    pub snapshot: SnapshotId,
+    pub operation: String,
+    pub newest: Option<Stamped>,
+    pub below: bool,
+    pub floor: Floor,
+}
+
+fn stamped_at(snapshot: &SnapshotRef) -> Result<Stamped, MicroBatchError> {
+    let id = SnapshotId::new(snapshot.snapshot_id());
+    match SinkRecord::from_summary(&snapshot.summary().additional_properties)? {
+        Some(record) => Ok(Stamped {
+            snapshot: id,
+            record,
+        }),
+        None => Err(MicroBatchError::Catalog(format!(
+            "repark.cdc stamp on snapshot {id} misses its format version"
+        ))),
+    }
+}
+
+fn found(
+    stretch: &[&SnapshotRef],
+    newest: Option<Stamped>,
+    below: bool,
+    floor: Floor,
+) -> Option<Stray> {
+    let stray = stretch.iter().find(|snapshot| unstamped(snapshot))?;
+    let shared = stretch.iter().any(|snapshot| !unstamped(snapshot));
+    Some(Stray {
+        snapshot: SnapshotId::new(stray.snapshot_id()),
+        operation: stray.summary().operation.as_str().to_string(),
+        newest,
+        below,
+        floor: if shared { Floor::Shared } else { floor },
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn stray_on_main(
     table: &Table,
     query: QueryId,
     baseline: Option<i64>,
-) -> Option<RecoveryReason> {
-    main_lineage(table.metadata())
-        .take_while(|snapshot| {
-            Some(snapshot.snapshot_id()) != baseline
-                && !stamped_by(&snapshot.summary().additional_properties, query)
-        })
-        .find(|snapshot| unstamped(snapshot))
-        .map(commit_of)
+) -> Result<Option<Stray>, MicroBatchError> {
+    let mine =
+        |snapshot: &SnapshotRef| stamped_by(&snapshot.summary().additional_properties, query);
+    let mut walk = main_lineage(table.metadata());
+    let mut above = Vec::new();
+    let mut stamp = None;
+    for snapshot in walk.by_ref() {
+        if mine(snapshot) {
+            stamp = Some(snapshot);
+            break;
+        }
+        if Some(snapshot.snapshot_id()) == baseline {
+            break;
+        }
+        above.push(snapshot);
+    }
+    let Some(stamp) = stamp else {
+        let floor = Floor::Head(baseline.map(SnapshotId::new));
+        return Ok(found(&above, None, false, floor));
+    };
+    let newest = stamped_at(stamp)?;
+    if let Some(stray) = found(&above, Some(newest.clone()), false, Floor::Newest) {
+        return Ok(Some(stray));
+    }
+    let started = StartingMark::from_summary(&stamp.summary().additional_properties);
+    let head = started.and_then(|mark| mark.head).map(SnapshotId::get);
+    let mut under = Vec::new();
+    let mut previous = None;
+    for snapshot in walk {
+        if mine(snapshot) {
+            previous = Some(stamped_at(snapshot)?);
+            break;
+        }
+        if Some(snapshot.snapshot_id()) == head {
+            break;
+        }
+        under.push(snapshot);
+    }
+    let floor = match (previous, started) {
+        (Some(previous), _) => Floor::Previous(previous),
+        (None, Some(mark)) => Floor::Head(mark.head),
+        (None, None) => return Ok(None),
+    };
+    Ok(found(&under, Some(newest), true, floor))
+}
+
+impl Stray {
+    pub fn records(&self) -> impl Iterator<Item = &SinkRecord> {
+        let previous = match &self.floor {
+            Floor::Previous(stamped) => Some(&stamped.record),
+            _ => None,
+        };
+        self.newest
+            .iter()
+            .map(|stamped| &stamped.record)
+            .chain(previous)
+    }
+
+    #[must_use]
+    pub fn reason(&self, position: &dyn Fn(&SinkRecord) -> Option<SnapshotId>) -> RecoveryReason {
+        let after = |stamped: &Stamped| match position(&stamped.record) {
+            Some(at) => Restart::NewName(Some(at)),
+            None => Restart::Unnamed,
+        };
+        let keep = self.newest.as_ref().map_or(Restart::NewName(None), after);
+        let then = if self.below {
+            Restart::NewName(None)
+        } else {
+            Restart::SameName
+        };
+        let discard = match (&self.floor, &self.newest) {
+            (Floor::Shared, _) => Discard::Unproven(SHARED_STRETCH),
+            (Floor::Newest, Some(newest)) => Discard::RollBack {
+                to: newest.snapshot,
+                then,
+            },
+            (Floor::Previous(previous), _) => match after(previous) {
+                Restart::NewName(at) => Discard::RollBack {
+                    to: previous.snapshot,
+                    then: Restart::NewName(at),
+                },
+                Restart::SameName | Restart::Unnamed => Discard::Unproven(INSIDE_A_SNAPSHOT),
+            },
+            (Floor::Head(Some(head)), _) => Discard::RollBack { to: *head, then },
+            (Floor::Head(None) | Floor::Newest, _) => Discard::EmptyStart,
+        };
+        let under = match &self.newest {
+            Some(newest) if self.below => Some(newest.snapshot),
+            _ => None,
+        };
+        RecoveryReason::StraySinkCommit {
+            snapshot: self.snapshot,
+            operation: self.operation.clone(),
+            remedy: StrayRemedy {
+                under,
+                discard,
+                keep,
+            },
+        }
+    }
 }
 
 #[allow(clippy::missing_errors_doc)]

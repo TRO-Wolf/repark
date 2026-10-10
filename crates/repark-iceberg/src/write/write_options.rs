@@ -25,11 +25,12 @@ use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::write_default_column_names;
 use crate::write::data_format::resolve_data_format;
+use crate::write::illegal_argument::illegal_argument_error;
 use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::output_spec::staging_table;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::partition_overwrite::{PartitionEquality, StaticPartitionOverwrite};
-use crate::write::sink_offsets::{SCOPE_TOKEN_KEY, SiteStamp};
+use crate::write::sink_offsets::{RESERVED_STAMP_PREFIX, SCOPE_TOKEN_KEY, SiteStamp};
 use crate::write::summary_collision::EngineSummary;
 use crate::write::writer_props::{target_file_size_with, writer_properties_with};
 
@@ -76,6 +77,11 @@ pub fn summary_with_extras(
         let folded = key.to_ascii_lowercase();
         if folded == "operation" || folded == OPERATION_ID_PROP || folded == SCOPE_TOKEN_KEY {
             continue;
+        }
+        if folded.starts_with(RESERVED_STAMP_PREFIX) {
+            return Err(illegal_argument_error(format!(
+                "snapshot property {key} is reserved for a streaming query's commit stamp; remove it from this write"
+            )));
         }
         engine.refuse_collision(key, value)?;
         summary.insert(key.clone(), value.clone());
@@ -431,9 +437,8 @@ pub async fn commit_append_with_summary(
 ) -> Result<Table> {
     crate::write::refuse_encrypted_table(table)?;
     let stamp = SiteStamp::claim(table, branch, summary_extra)?;
-    let summary_extra = stamp.extras(summary_extra)?;
     let engine = EngineSummary::for_append(table, &new_files, branch);
-    let (operation_id, summary) = summary_with_extras(&summary_extra, &engine)?;
+    let (operation_id, summary) = stamp.summary(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let action = tx
         .merge_append()

@@ -171,6 +171,10 @@ def test_stray_under_the_stamp_refuses_every_start_and_the_discard_remedy_is_exa
     discard = _DISCARD_NEW_NAME.search(text)
     assert discard.group(1) == str(_snapshots(spark, _SOURCE)[0][0])
     assert _roll_back(spark, text) == _stamped(spark, 0)
+    old_name = _Body(spark)
+    with pytest.raises(RecoveryRequiredException, match="disagrees with property epoch 1"):
+        _start(spark, old_name, tables).awaitTermination()
+    assert old_name.calls == 0
     replayed = _Body(spark)
     restart = _start(spark, replayed, tables, name="rm2", start_after=discard.group(1))
     assert restart.awaitTermination() is None

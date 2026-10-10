@@ -172,7 +172,7 @@ def test_thread_route_then_raise_ends_recovery_required_and_the_restart_refuses(
 
 
 @pytest.mark.parametrize(("route", "operation"), _THREAD_ROUTES)
-def test_thread_route_beside_the_stamped_write_ends_recovery_required(
+def test_thread_route_beside_the_stamped_write_refuses_every_restart(
     spark: ReparkSession, tables: Path, route: str, operation: str
 ) -> None:
     body = _Stray(spark, route, "append")
@@ -182,12 +182,17 @@ def test_thread_route_beside_the_stamped_write_ends_recovery_required(
     assert failure.epoch == 1
     assert failure.__cause__ is None
     assert _log(spark)[-2:] == [(operation, None), ("append", "1")]
-    rows = _ids(spark)
-    resumed = _Stray(spark, route, "append", at=9)
-    restart = _start(spark, resumed, tables)
-    assert restart.awaitTermination() is None
-    assert resumed.calls == 0
-    assert _ids(spark) == rows
+    under = f"It sits under the stamped batch at snapshot {_stamped_head(spark)}"
+    assert under in str(failure)
+    rows, log = _ids(spark), _log(spark)
+    for _ in range(2):
+        resumed = _Stray(spark, route, "append", at=9)
+        refused = _recovery(_start(spark, resumed, tables))
+        assert f"sink advanced to snapshot {stray} ({operation}) without a stamp" in str(refused)
+        assert under in str(refused)
+        assert resumed.calls == 0
+        assert _ids(spark) == rows
+        assert _log(spark) == log
 
 
 def test_main_thread_statement_while_a_body_runs_ends_recovery_required(
@@ -373,37 +378,34 @@ def _stamped_head(spark: ReparkSession) -> int:
     return [row.snapshot_id for row in rows if "repark.cdc.epoch" in dict(row.summary)][-1]
 
 
-_REMEDIES = (
-    "Its rows are in the sink. A restart refuses while an unstamped snapshot sits above the "
-    "newest stamped batch; to clear it, either roll the sink back to its newest stamped "
-    "snapshot (to the head the query first started on, if no batch is stamped yet), or start "
-    "the query under a new name"
-)
+_ABOVE = "Its rows are in the sink. Every start refuses while that snapshot sits above the "
+_ABOVE += "newest stamped batch. To discard its rows, roll the sink back to snapshot {head} (CALL "
+_ABOVE += "system.rollback_to_snapshot) and start the query again. To keep its rows, start the "
+_ABOVE += "query under a new name."
 
 
 @pytest.mark.parametrize("route", ["thread_insert", "thread_append"])
 def test_stray_at_the_first_batch_refuses_the_first_restart_from_the_mark(
     spark: ReparkSession, tables: Path, route: str
 ) -> None:
+    seed = spark.sql(f"SELECT snapshot_id FROM {_SINK}.snapshots").collect()[0][0]
+    remedies = _ABOVE.format(head=seed)
     body = _Stray(spark, route, "raise", at=0)
     failure = _recovery(_start(spark, body, tables))
     stray = _unstamped_ids(spark)[-1]
     text = f"sink advanced to snapshot {stray} (append) without a stamp"
     assert text in str(failure)
-    assert _REMEDIES in str(failure)
+    assert remedies in str(failure)
     assert failure.epoch == 0
     rows, log = _ids(spark), _log(spark)
     for _ in range(2):
         resumed = _Stray(spark, route, "append", at=9)
         refused = _recovery(_start(spark, resumed, tables))
         assert text in str(refused)
-        assert _REMEDIES in str(refused)
+        assert remedies in str(refused)
         assert resumed.calls == 0
         assert _ids(spark) == rows
         assert _log(spark) == log
-    seed = spark.sql(f"SELECT snapshot_id FROM {_SINK}.snapshots ORDER BY committed_at").collect()[
-        0
-    ][0]
     spark.sql(f"CALL sc.system.rollback_to_snapshot('ln.snk', {seed})")
     recovered = _Stray(spark, route, "append", at=9)
     assert _start(spark, recovered, tables).awaitTermination() is None

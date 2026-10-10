@@ -269,6 +269,25 @@ pins: mb-3/C-031
   The helpers that build the ending repeat `fence_tests.rs`'s private ones, because that file
   is outside this slice's footprint.
   pins: mb-4/C-114, C-029
+- `run.rs`, `driver.rs`, `exactly_once_tests.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10,
+  rulings on the third verify).**
+  - **`Run::refuse_moved_sink`** asks `stray_on_main` (the walk above and under the newest
+    stamp) at every start and before every body, and `Run::stray_reason` asks the source,
+    for each stamp the remedy would name, whether its offset ends on a snapshot boundary
+    (`MicroBatchSource::whole_snapshot_end`); only then is a new query name printed with a
+    start-after position. The audit after a body, on a violation, prefers the walk's reason
+    over the audit's own, so the batch's ending and every later start print the same text.
+    Loud on every start: a stray under the batch's own stamp no longer lets the restart
+    resume.
+  - **`Run::refuse_unwritable_sink`**, at the start and before every batch: the `toTable`
+    door asks R-007's `refuse_nested_ns_supply` about the sink (`NestedWrite::Unreadable`,
+    the question a DataFrame write asks) and ends with the batch doors' text before a file
+    is staged; the `foreachBatch` door refuses a keyed sink (ENC-1) before the starting mark,
+    with the `toTable` door's text. `TableTarget::quoted` is the label.
+  - Pins: the stray beside the stamped commit refuses two restarts with the remedy as data,
+    above the stamp and under it; a keyed sink refuses the `foreachBatch` door with no mark,
+    no snapshot and no body.
+  pins: mb-4-foreach-eo/C-032, C-033, C-035, C-037
 - `run.rs`, `testing.rs`, `exactly_once_tests.rs`, `fence_tests.rs`, `race_tests.rs`,
   `reload_tests.rs`, `timeout_tests.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling
   D2): the starting mark.**

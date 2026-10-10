@@ -144,7 +144,7 @@ def _epoch_key(frame: DataFrame) -> None:
         (_overwrite_partitions, _QUERY_ID_KEY),
         (_create_or_replace, _QUERY_ID_KEY),
         (_save_as_table, _QUERY_ID_KEY),
-        (_epoch_key, "REPARK.CDC.epoch"),
+        (_epoch_key, "repark.cdc.epoch"),
     ],
 )
 def test_writer_option_carrying_a_reserved_summary_key_is_refused_by_name(

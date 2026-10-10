@@ -8098,6 +8098,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   exactly-once battery two subprocess pins join: a kill before the first commit restarts
   from the mark with no duplicate, and a stray then a kill at the first batch refuses the
   first restart. The remedy sentence the pins assert is the one in `error.rs`.
+  **Fold 4 (2026-10-10):** the five thread routes beside the stamped append now refuse two
+  restarts as well (the stray is under the batch's stamp, and the text says so) where fold 3
+  let the restart resume; the first-batch pin asserts the new text, which names the head to
+  roll back to. The remedies themselves are followed in `test_mb_4_streaming_remedies.py`.
+  pins: mb-4-foreach-eo/C-032
   pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022, C-024, C-028, C-029, C-030
 - [test_mb_4_streaming_remedies.py](test_mb_4_streaming_remedies.py) — **MB-4-FOREACH-EO
   fold 4 (2026-10-10, the third verify's first two S1):** every remedy a stray refusal prints,

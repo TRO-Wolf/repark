@@ -360,9 +360,12 @@ class DataStreamWriter:
             commit runs again. An effect that runs after the sink write is at-most-once on
             a failure: the batch is already committed and the function does not run again
             for it. Write the sink last, or key the side effect on the batch id.
-            The sink takes no other writer while the query name lives. A commit to it that
-            does not carry the batch's stamp ends the query with
-            ``RecoveryRequiredException``.
+            The sink takes no other writer of rows while the query name lives. A snapshot
+            on its main branch that carries no batch stamp ends the query with
+            ``RecoveryRequiredException`` and refuses every later start until it is
+            resolved; the error names the snapshot and what resolves it. Between batches a
+            commit that adds no snapshot to the main branch (a table property, a schema
+            change, a branch or a tag) is not checked.
         """
         self._foreach = func
         return self
