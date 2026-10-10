@@ -62,48 +62,59 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   naming both tokens, DDL `TIMESTAMP` → Iceberg `timestamp` under NTZ /
   `timestamptz` under LTZ. `to_timestamp` stays LTZ.
 - [timestamp_ns_narrow_refuse.rs](timestamp_ns_narrow_refuse.rs) —
-  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017):** the Rust door's pins of the
-  narrowed-value refusal. Each cell is its own table, seeded with three rows whose value is
-  NULL (one before the epoch, one inside New York's gap), and its own statement.
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
+  2026-10-10 built as fold 1):** the Rust door's pins of the narrowed-value refusal. Each
+  cell is its own table, seeded with five rows whose value is NULL, and its own statement.
+  The five moments hold one before the epoch, one inside New York's gap, and two around a
+  pre-epoch second boundary (`1969-12-31 23:59:58.999999999` and `…59.000000001`).
   `every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_*` (one test per zone: UTC,
   America/New_York, Asia/Kolkata, Asia/Kathmandu, Australia/Lord_Howe) and
-  `every_door_refuses_the_other_spellings_of_the_family` run `coalesce(c, NULL)`,
-  `CASE … ELSE NULL END`, `if(…, c, NULL)` and `array(c, NULL)[0]` (in New York eight more:
-  the NULL first, `element_at`, a lambda body, `greatest`, `nullif`, a struct field, a
-  three-branch `CASE`) from a `timestamp_ns` and a `timestamptz_ns` source into both
-  nanosecond targets through 40 doors: `INSERT … VALUES`, `SELECT`, by position, `BY NAME`,
-  with the columns reordered and after a higher-order function in the same projection, `INSERT OVERWRITE` (whole table, dynamic and static
-  partition), `REPLACE WHERE`, the three MERGE arms with an expression, a subquery column
-  and `*`, `UPDATE` with and without a `WHERE` and from a scalar subquery, the row-level
-  doors again in merge-on-read, a branch (INSERT, MERGE, UPDATE), `EXPLAIN ANALYZE`,
-  `PREPARE`, a common table expression, a subquery, a union, a join, an aggregate, a window,
-  `DISTINCT`, a scalar subquery, a sort with a limit and a temporary view. Each statement
-  must raise the class, the cast of `v` to the target's type, the advice naming the type and
-  the SQLSTATE, name the table as that door names it, leave the count of Parquet files under
-  the table unchanged and leave every `v` NULL (on the branch too).
-  `a_written_call_over_a_narrowed_value_does_not_make_it_store`: `date_trunc` of, a cast
-  back to nanoseconds of, and a `CASE` around a narrowed value still refuse (`UPDATE … WHERE`
-  keeps main's `Unsupported SQL type` for the two spellings that cast to a nanosecond type,
-  row R-010). `a_union_with_an_untyped_null_branch_refuses_and_a_typed_one_stores`: a
-  `UNION ALL` branch that is `NULL` beside the nanosecond column refuses in five zones, in
-  either order, and `CAST(NULL AS timestamp_ns)` stores nine digits.
+  `every_door_refuses_the_other_spellings_of_the_family` run twelve spellings beside an
+  untyped NULL from a `timestamp_ns` and a `timestamptz_ns` source into both nanosecond
+  targets through 40 doors: `INSERT … VALUES`, `SELECT`, by position, `BY NAME`, with the
+  columns reordered and after a higher-order function in the same projection, `INSERT
+  OVERWRITE` (whole table, dynamic and static partition), `REPLACE WHERE`, the three MERGE
+  arms with an expression, a subquery column and `*`, `UPDATE` with and without a `WHERE`
+  and from a scalar subquery, the row-level doors again in merge-on-read, a branch (INSERT,
+  MERGE, UPDATE), `EXPLAIN ANALYZE`, `PREPARE`, a common table expression, a subquery, a
+  union, a join, an aggregate, a window, `DISTINCT`, a scalar subquery, a sort with a limit
+  and a temporary view. Each statement must raise the class, the cast of `v` to the target's
+  type, the advice of its arm and the SQLSTATE, name the table as that door names it, leave
+  the count of Parquet files under the table unchanged and leave every `v` NULL (on the
+  branch too).
+  `every_door_refuses_a_value_narrowed_beside_a_typed_null_or_a_microsecond_value` and
+  `every_door_refuses_a_value_narrowed_beside_a_microsecond_literal` (the rulings on Q2 and
+  Q5): a NULL typed `TIMESTAMP` or `TIMESTAMP_NTZ`, a `TIMESTAMP` literal in a `CASE`, in
+  `greatest` and in an array, a written cast of the same column, and a `TIMESTAMP_NTZ`
+  literal in `if`, through the same 40 doors; the advice names the narrowed value.
+  `a_written_call_over_a_narrowed_value_stores_what_it_stores_over_the_nanosecond_value`
+  (the ruling on Q1): fifteen written calls (`date_trunc` in ten units, `CAST` to
+  `TIMESTAMP`, `DATE`, `TIMESTAMP_NTZ` and back to the nanosecond type, `TRY_CAST`) over
+  three narrowed spellings, five zones, both sources and targets: an arm measured equal
+  must store the column the same call stores over the nanosecond value; every other arm
+  must refuse and leave no data file.
+  `a_call_that_widens_back_over_a_narrowed_value_does_not_make_it_store`: a cast back to
+  nanoseconds and a `CASE` around a narrowed value refuse on the 40 doors (`UPDATE … WHERE`
+  keeps main's `Unsupported SQL type` for a cast to a nanosecond type, row R-010; an
+  `UPDATE` from a scalar subquery over a zoned cast into a naive column keeps the base's
+  schema error).
+  `a_union_with_an_untyped_null_branch_refuses_and_a_typed_one_stores`: a `UNION ALL` branch
+  that is `NULL`, a NULL typed `TIMESTAMP` or a `TIMESTAMP` literal beside the nanosecond
+  column refuses in five zones, in either order, and `CAST(NULL AS timestamp_ns)` stores
+  nine digits.
   `create_table_as_refuses_a_narrowed_value_it_would_type_as_nanoseconds`: `CREATE TABLE AS`
   and `CREATE OR REPLACE TABLE AS` of `array(ns, NULL)[0]` create no table and no file.
-  `a_narrowing_the_statement_writes_and_a_kept_type_store_on_every_door`: ten written
-  narrowings (`CAST`, `TRY_CAST`, `CAST … AS TIMESTAMP_NTZ`, `date_trunc`, a `CASE` whose
-  branch is a written cast, a NULL typed `TIMESTAMP` or `TIMESTAMP_NTZ`, a narrowing beside
-  a `TIMESTAMP` literal) and seven spellings that keep the type (a typed NULL, no `ELSE`, a
-  narrowed value in the condition only, a NULL beside the value in a struct, a lambda) are
-  not refused by this text on any door but the unfiltered `UPDATE`, which keeps its older
-  test, and the kept types keep a digit below the microsecond.
+  `a_narrowing_the_statement_writes_and_a_kept_type_store_on_every_door`: eight written
+  narrowings (`from_utc_timestamp`, `CAST`, `TRY_CAST`, `CAST … AS TIMESTAMP_NTZ`,
+  `date_trunc`, and a `CASE`, a `coalesce` and an `if` whose branch is a written narrowing)
+  and seven spellings that keep the type are not refused by this text on any door but the
+  unfiltered `UPDATE`, which keeps its older test, and the union, whose plain nanosecond
+  branch is narrowed beside the written value; the kept types keep a digit below the
+  microsecond.
   `a_microsecond_target_takes_a_narrowed_value_as_before`,
-  `a_query_that_stores_nothing_answers_as_before` (no field metadata, the column name, and
-  a plain `EXPLAIN` of a refused INSERT) and `the_store_reads_the_mark_the_analyzer_places`
-  (the two function names the crates share). Thirty-one hand mutants are each killed by a
-  pin of this file or of the two unit files (the ledger's section 8); the file is one of the
-  unit's gates with the three nanosecond files below it, whose nested and wall pins are
-  unchanged.
-  pins: ice-tsns-narrow-refuse-1/C-003, C-004, C-005, C-006, C-008, C-009, C-010, C-012, C-013
+  `a_query_that_stores_nothing_answers_as_before`, and
+  `the_store_reads_the_mark_the_analyzer_places` (the three shared function names).
+  pins: ice-tsns-narrow-refuse-1/C-004, C-005, C-006, C-007, C-008, C-019, C-020, C-021
 - [timestamptz_ns_wall_doors.rs](timestamptz_ns_wall_doors.rs) — **ICE-TSTZNS-WALL-1
   (2026-10-10):** the zoned mirror of the file below.
   `every_door_stores_the_instant_insert_stores_in_a_zoned_column`: four walls (one before the

@@ -611,39 +611,52 @@ repark-core's error map.
   renderers. Callers: repark-spark `insert_by_name.rs` and `insert_overwrite.rs`.
   pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
 - [narrowed_store.rs](narrowed_store.rs), `ntz_store.rs` — **ICE-TSNS-NARROW-REFUSE-1
-  (2026-10-10, parity row R-017):** the store guard for a nanosecond value that type coercion
-  narrowed beside an untyped `NULL`. `refuse_narrowed_ns_writes(ctx, table, plan, targets)`
-  analyzes the supply and, for each target that is a top-level nanosecond timestamp, walks
-  the lineage of the paired output column; `__repark_narrowed_beside_null__` (the mark
-  `repark-functions` `null_narrowing.rs` places, the name pinned equal in repark-spark) on a
-  value-carrying path refuses with the text the unfiltered `UPDATE` already carried:
+  (2026-10-10, parity row R-017; the owner's rulings of 2026-10-10 built as fold 1):** the
+  store guard for a nanosecond value that type coercion narrowed.
+  `refuse_narrowed_ns_writes(ctx, table, plan, targets)` analyzes the supply and, for each
+  target that is a top-level nanosecond timestamp, walks the lineage of the paired output
+  column. It refuses when a cast to a coarser timestamp, or the written-narrowing function,
+  sits directly on a value wrapped in one of the two marks `repark-functions`
+  `null_narrowing.rs` places (the names pinned equal in repark-spark). `column_narrowed`
+  returns what it found (`Narrowing`: the value's text, which mark, zoned or naive) and the
+  mark chooses the text. Beside an untyped NULL, the text the unfiltered `UPDATE` carried:
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `v` "TIMESTAMP" to
   "TIMESTAMP_NS". The value was narrowed from nanoseconds to microseconds before the store;
-  give the NULL beside it the type timestamp_ns. SQLSTATE: KD000` (Spark 4.1.2 raises that
-  class and state for an unsafe store cast, measured 2026-10-10).
-  `refuse_narrowed_ns_columns` is the same over a plan that is already analyzed.
-  `column_narrowed` follows a column through projections, aliases, filters, sorts, limits,
-  repartitions, `DISTINCT`, `VALUES`, every `UNION` branch, the side of a join, the group and
-  aggregate expressions, the window expressions, and a table scan that is an inlined or a
-  catalog view (`negated_null_store::ViewDefinitionPlans`); any other node refuses if the
-  mark is anywhere below it. `expr_narrowed` follows a branch only when its type holds a
-  timestamp, a `CASE` through its results and not its conditions, an aggregate or a window
-  through its arguments, a higher-order function into its lambda bodies, and a scalar
-  subquery into its plan. A narrowed value that only feeds a condition, an ordering or a
-  cast through a string does not refuse.
+  give the NULL beside it the type timestamp_ns. SQLSTATE: KD000`. Beside a typed NULL or a
+  microsecond value: `… The value <c> was narrowed from nanoseconds to microseconds before
+  the store, to match the microsecond value beside it; write CAST(<c> AS TIMESTAMP) if
+  microseconds are intended, or give the value beside it a nanosecond type. SQLSTATE: KD000`
+  (Spark 4.1.2 raises that class and state for an unsafe store cast, measured 2026-10-10).
+  **A written call over a narrowed value** (the ruling on Q1) stores where it stores what
+  the call stores over the nanosecond value, and the walk carries which calls it has passed
+  (`Written`): the written-narrowing function or a cast to an instant type over a value that
+  is not a mark stops the walk (`CAST(… AS TIMESTAMP)`); `date_trunc` forgives a zoned mark
+  below it; `__repark_timestamp_to_date__` and a cast to `Date32` forgive a naive one. Every
+  other call is walked through, so `date_trunc` over a naive value, a `DATE` cast over a
+  zoned one, `CAST(… AS TIMESTAMP_NTZ)`, `TRY_CAST` and a cast back to nanoseconds refuse
+  (measured arm by arm, the ledger's section 11.3).
+  The walk follows a column through projections, aliases, filters, sorts, limits,
+  repartitions, `DISTINCT`, `VALUES`, every `UNION` branch (it names a branch narrowed
+  beside an untyped NULL before one narrowed beside a value), the side of a join, the group
+  and aggregate expressions, the window expressions, and a table scan that is an inlined or
+  a catalog view (`negated_null_store::ViewDefinitionPlans`); any other node refuses if a
+  narrowing is anywhere below it. A branch is followed only when its type holds a timestamp,
+  a `CASE` through its results and not its conditions, a higher-order function into its
+  lambda bodies, a scalar subquery into its plan.
+  `refuse_narrowed_ns_columns` is the same over a plan that is already analyzed;
+  `refuse_narrowed_ns_inserts` is that for the `Dml` of an `INSERT`, and looks through the
+  planner's own cast of a selected column to the target type, which the session rule reads
+  as a written `CAST(… AS TIMESTAMP)` (`EXPLAIN ANALYZE` and `PREPARE` reach the store with
+  that cast in the plan). An `UPDATE` is not looked through: its top expression is the
+  statement's `SET` value.
   The guard is called where a door already pairs a supply with its target columns:
   `ntz_store::zone_stores` (`INSERT OVERWRITE`, static and dynamic partition overwrite,
   `INSERT … BY NAME`, and the DataFrame writers that ride them), `ntz_store::refuse_ntz_writes`
   (the MERGE insert and update supplies, the `UPDATE` assignment probe), and from repark-spark
   the DataFusion `Dml` plan of `INSERT` and of `UPDATE` with no `WHERE`, the `UPDATE`
   assignment probe by table name, and `CREATE TABLE AS`. A microsecond target is never
-  walked. The walk refuses only when the cast that narrowed the value sits beside the marked
-  NULL (a direct sibling that is a cast from a nanosecond timestamp to a coarser one, or
-  `__repark_narrow_timestamp_ns__` of one; for a `UNION`, the other branch's column): the
-  mark is placed before the second coercion from the siblings' types, and a sibling whose
-  own coercion was still pending (`CASE … ELSE TIMESTAMP '…' END`) is narrowed inside itself,
-  not beside the NULL. Five unit pins in `narrowed_store/tests.rs`.
-  pins: ice-tsns-narrow-refuse-1/C-004, C-007, C-008
+  walked. Five unit pins in `narrowed_store/tests.rs`.
+  pins: ice-tsns-narrow-refuse-1/C-004, C-007, C-008, C-019, C-020, C-021
 - `ntz_store.rs`, `update_cast.rs`, `merge/insert.rs`, `predicate_dml/lineage.rs` —
   **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned nanosecond target is named too.
   `store_kernel_udf_name(target)` answers the registered kernel of the three types a plain

@@ -786,13 +786,23 @@ declines it (a dated ruling in the intake, then the archive).
   wrote stores and a narrowing the analyzer inserted refuses by name (parity row R-017). 480 of 650 top-level cells
   store a value cut to microseconds at main `58bf67e3`; a lineage test that refuses them also refuses written casts that
   store today. Carries the recorded disagreement over three written casts with no `WHERE`. Sibling: ICE-TSNS-COERCION-1.
-  Built 2026-10-10 on `fix/ice-tsns-narrow-refuse-1`, awaiting its verifier; the card's last section names the ledger and
-  its six open questions.
+  Built 2026-10-10 on `fix/ice-tsns-narrow-refuse-1`, awaiting its verifier; the owner's rulings of 2026-10-10 on its
+  six questions are built as fold 1 (the card's last two sections; ledger section 11), with two questions open after it.
+- [ice-tsns-cache-1-card-2026-10-10.md](ice-tsns-cache-1-card-2026-10-10.md) — **card
+  ICE-TSNS-CACHE-1 (2026-10-10, open, target v1.5.5, own unit):** a frame cached or persisted with a nanosecond value
+  narrowed by coercion stores the cut value where the uncached write refuses (parity row R-017, owner ruling on Q4 of
+  ICE-TSNS-NARROW-REFUSE-1). Names the site (`register_collected_memtable`) and the count: 290 of the 300 cells are the
+  cache alone, 420 over the whole matrix. Siblings: ICE-TSNS-NARROW-REFUSE-1, ICE-TSNS-COERCION-1.
+- [ice-tsns-update-cast-1-card-2026-10-10.md](ice-tsns-update-cast-1-card-2026-10-10.md) — **card
+  ICE-TSNS-UPDATE-CAST-1 (2026-10-10, open, target v1.5.5, own unit after the verify of ICE-TSNS-NARROW-REFUSE-1):** an
+  `UPDATE` with no `WHERE` keeps nine digits under a written `CAST(c AS TIMESTAMP)` where every other door stores the
+  microsecond value (parity row R-017, owner ruling on Q6). 15 cells per target for each source type, 60 in all.
 - [ice-tsns-coercion-1-card-2026-10-10.md](ice-tsns-coercion-1-card-2026-10-10.md) — **card
   ICE-TSNS-COERCION-1 (2026-10-10, open, no release assigned):** nanosecond-aware type coercion so `coalesce`, `nvl`,
   `array`, `CASE ... ELSE NULL` and `if` keep nanoseconds beside a `timestamp_ns` operand (parity row R-017). Turns the
   refusals of ICE-TSNS-NARROW-REFUSE-1 back into stores. Sibling: ICE-TSNS-NARROW-REFUSE-1. The card lists what that
-  unit leaves for it: the mark and the guard to remove, four typings to decide, the 89,600-cell base matrix.
+  unit leaves for it: the mark and the guard to remove, the typings to decide (registry row R-019 for `nvl` and `ifnull`
+  in a `UNION`, the doors that create a microsecond column), the 104,960-cell base matrix.
 - [ice-ntz-nested-wall-1-card-2026-10-10.md](ice-ntz-nested-wall-1-card-2026-10-10.md) — **card
   ICE-NTZ-NESTED-WALL-1 (2026-10-10, open, target v1.5.5, own unit):** a nested microsecond `TIMESTAMP_NTZ` field stores
   the session wall through field assignment (28 cells) and the UTC wall through every other door (106 cells) (parity row

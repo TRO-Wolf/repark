@@ -84,6 +84,19 @@ the written cast beside the NULL (Q1), a NULL typed as a microsecond type (Q2), 
 microsecond value that is not NULL (Q5), and the one door that keeps nine digits for a
 written `CAST(c AS TIMESTAMP)` (Q6).
 
+## The owner's rulings on the six questions (2026-10-10), built as fold 1
+
+The ledger's section 11 records each ruling and its measurement. In short: a written cast
+inside a NULL branch stores, and a written cast or `date_trunc` over a narrowed value stores
+where it stores what the call stores over the nanosecond value (Q1); a NULL typed
+`TIMESTAMP` or `TIMESTAMP_NTZ` beside a nanosecond value refuses (Q2); `nvl` and `ifnull`
+belong to ICE-TSNS-COERCION-1, with registry row R-019 for the `UNION` cell (Q3); a cached
+frame is card [ICE-TSNS-CACHE-1](ice-tsns-cache-1-card-2026-10-10.md) (Q4); a nanosecond
+value narrowed beside a microsecond value that is not NULL refuses (Q5); the unfiltered
+`UPDATE` under a written `CAST` is card
+[ICE-TSNS-UPDATE-CAST-1](ice-tsns-update-cast-1-card-2026-10-10.md) (Q6). Two questions are
+open after the fold (Q7, Q8 of the ledger).
+
 ## Out of scope
 
 - The nanosecond-aware typing that would turn these refusals back into stores: card

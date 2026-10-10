@@ -3272,29 +3272,37 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   count (the ledger's §9.4).
   pins: ice-tsns-merge-wall-1/C-021, C-023
 - [test_ice_tsns_narrow_refuse_1.py](test_ice_tsns_narrow_refuse_1.py) —
-  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017):** the facade pins. A test runs
-  one row of the matrix (a zone, a target, a source, a spelling) through all 64 doors and
-  holds each cell against the base fixture with one rule (`hold`): a cell that stored a cut
-  value on the base and whose spelling narrows beside an untyped NULL must raise the named
-  refusal and leave no value in any Parquet file under the table; a cell that raised an
-  error there must still store nothing; every other cell must be the base's cell, stored
-  values and error text. `test_every_door_refuses_…`: `coalesce(ns, NULL)` in five zones and
-  fourteen more spellings in America/New_York, both sources, both nanosecond targets (76
-  rows). `test_a_written_narrowing_and_a_kept_type_…`: ten written narrowings, seven kept
-  types and the three string-typed spellings (`nvl`, `ifnull`, `nvl2`) in America/New_York
-  (80 rows); the only cells that move are a kept type in a `UNION` with an untyped NULL
-  branch. `test_a_microsecond_target_does_not_move`: `TIMESTAMP` and `TIMESTAMP_NTZ` targets
-  (16 rows). `test_the_base_fixture_holds_the_counts_the_parity_row_records`: the 650-cell
-  core of the fixture. The frame cached with `cache()` is held to the base: it is data by
-  then, and stores the cut value (the ledger's Q4).
-  pins: ice-tsns-narrow-refuse-1/C-001, C-004, C-005, C-006, C-009
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
+  2026-10-10 built as fold 1):** the facade pins. A test runs one row of the matrix (a zone,
+  a target, a source, a spelling) through all 64 doors and holds each cell against the base
+  fixture with one rule (`hold`): a cell that stored a cut value on the base and whose
+  spelling the rule refuses must raise the named refusal and leave no value in any Parquet
+  file under the table; a cell that raised an error there must still store nothing; every
+  other cell must be the base's cell, stored values and error text.
+  `test_every_door_refuses_…`: `coalesce(ns, NULL)` and `coalesce(ns, CAST(NULL AS
+  TIMESTAMP))` in five zones, and in America/New_York every spelling narrowed beside an
+  untyped NULL, a typed NULL or a microsecond value, both sources, both nanosecond targets
+  (112 rows). `test_a_written_call_over_a_narrowed_value_stores_where_it_is_equal`: the three
+  `WRITTEN_OVER` spellings (28 rows); an equal arm stores the base's cell on every door but
+  the union, and its `INSERT … SELECT` stores what the twin written call stores over the
+  nanosecond value; a differing arm refuses. `test_a_written_narrowing_and_a_kept_type_…`:
+  eight written narrowings, seven kept types and the three string-typed spellings (`nvl`,
+  `ifnull`, `nvl2`) in America/New_York (72 rows); the only cells that move are a kept type
+  in a `UNION` with an untyped NULL branch and the plain nanosecond branch of a `UNION`
+  beside a microsecond one. `test_a_microsecond_target_does_not_move`: `TIMESTAMP` and
+  `TIMESTAMP_NTZ` targets (16 rows). `test_the_base_fixture_holds_the_counts_the_parity_row_records`:
+  the 650-cell core of the fixture. The frame cached with `cache()` is held to the base: it
+  is data by then, and stores the cut value (card ICE-TSNS-CACHE-1).
+  pins: ice-tsns-narrow-refuse-1/C-001, C-004, C-005, C-006, C-009, C-019, C-020, C-021
 - [_ice_tsns_narrow_refuse_1_doors.py](_ice_tsns_narrow_refuse_1_doors.py) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10):** the write-door matrix of parity row R-017: five
   session zones, four target column types (`timestamp_ns`, `timestamptz_ns` and the two
-  microsecond controls), two nanosecond source types, 35 spellings of the value and 64 doors.
-  The spellings are the five of the row (`FAMILY`), thirteen more of the same family
-  (`FAMILY_MORE`), ten narrowings the statement writes (`WRITTEN`) and seven that keep the
-  type (`KEPT`). The doors are fifteen SQL statements, six of them again in merge-on-read,
+  microsecond controls), two nanosecond source types, 41 spellings of the value and 64 doors.
+  The spellings are the five of the row (`FAMILY`), twelve more of the same family
+  (`FAMILY_MORE`), six narrowed beside a typed NULL or a microsecond value (`BESIDE_VALUE`),
+  three written calls over a narrowed value (`WRITTEN_OVER`, with the written twin of each
+  and the sources it was measured equal over), eight narrowings the statement writes
+  (`WRITTEN`) and seven that keep the type (`KEPT`). The doors are fifteen SQL statements, six of them again in merge-on-read,
   eleven DataFrame writers, 23 statements that carry or defer a write (a branch, a staged
   snapshot, `EXPLAIN ANALYZE`, `PREPARE` with `EXECUTE`, `CREATE TABLE AS`, a view, a
   subquery, a join, an aggregate, a window, a cached frame) and nine found while hunting
@@ -3312,9 +3320,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [_record_ice_tsns_narrow_refuse_1.py](_record_ice_tsns_narrow_refuse_1.py) +
   [ice_tsns_narrow_refuse_1_base.json](ice_tsns_narrow_refuse_1_base.json) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10):** the recorder and what the base `8d1c4f49` (the
-  head of ICE-TSTZNS-WALL-1) stores in each of the 89,600 cells. 59,400 were measured and
-  committed before any product change; the 30,200 cells of the eight spellings and nine
-  doors found while hunting were measured afterwards on the same build of the base
+  head of ICE-TSTZNS-WALL-1) stores in each of the 104,960 cells. 59,400 were measured and
+  committed before any product change; the 45,560 cells of the spellings and doors found
+  while hunting and of the six spellings the owner's rulings added were measured afterwards
+  on the same build of the base
   (`--extend`, which measures only the cells a file does not hold). The fixture lists each
   distinct result once (`outcomes`) and maps `zone|target|source|spelling` to one outcome
   index per door. Twenty shards (a zone and a target each) run in parallel, about half an

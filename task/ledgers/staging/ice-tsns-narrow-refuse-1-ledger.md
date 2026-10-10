@@ -1,4 +1,4 @@
-# Unit ledger — ICE-TSNS-NARROW-REFUSE-1 · a narrowing the analyzer inserted beside an untyped NULL refuses by name
+# Unit ledger — ICE-TSNS-NARROW-REFUSE-1 · a narrowing the analyzer inserted refuses by name
 
 **Date:** 2026-10-10 · **Branch:** `fix/ice-tsns-narrow-refuse-1` · **Base:** `8d1c4f49`
 (the head of ICE-TSTZNS-WALL-1, itself on main `9b230aed`) ·
@@ -17,6 +17,12 @@
 > because type coercion widened a NULL branch (coalesce, nvl, array, CASE ELSE NULL, if) is
 > accidental and refuses by name.
 
+**Fold 1 (2026-10-10).** The owner ruled on the six questions of this ledger on 2026-10-10.
+Section 11 records each ruling with its date, what it changed and the measurements of the
+changed source; clauses C-014 to C-018 carry the rulings and C-019 to C-027 are the fold's.
+Sections 2 to 10 describe the unit before the rulings (head `91f4e2f4`); where section 11
+differs, section 11 holds.
+
 ## PROPOSITION LEDGER — ICE-TSNS-NARROW-REFUSE-1 — 2026-10-10
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -34,11 +40,20 @@
 | C-011 | The check adds no plan pass to a statement that touches no nanosecond column, and INSERT and MERGE over such a table take the time they took on the base. | The code (§3.1: two hooks in passes that already run, one store walk gated on a nanosecond target); the release-build timing, interleaved, five runs (§9). | **PROVEN** | §9: medians within the spread of one build's own runs: INSERT 27.62 ms on the base and 28.06 on the head, MERGE 83.37 and 77.79, planning of a fifty-branch union 353.60 and 351.71. |
 | C-012 | The unit's gates are green with real exit codes. | §10. | **PROVEN** | §10. |
 | C-013 | A nested `timestamp_ns` leaf answers as before: the R-015 refusal precedes this guard, and the nested pins are unchanged and green. | `timestamp_ns_nested_shapes` (6 tests) and the R-007 facade file on the head. | **PROVEN** | §10. |
-| C-014 | A nanosecond value beside a NULL the statement typed as a microsecond type (`CAST(NULL AS TIMESTAMP)`, `CAST(NULL AS TIMESTAMP_NTZ)`) is refused. | Not built: the statement wrote the type; the cells store what they stored on the base (§5). | **OPEN** | Q2. |
-| C-015 | `nvl(ns, NULL)` and `ifnull(ns, NULL)` are refused by this text. | Not built: they are typed `STRING`, a different defect (§5.3). | **OPEN** | Q3. |
-| C-016 | A frame materialised by `cache()` or `persist()` from a narrowed value is refused when it is written. | Not built: the write sees microsecond data, not an expression (§5.3). | **OPEN** | Q4. |
-| C-017 | A nanosecond value narrowed beside a microsecond column or literal that is not NULL is refused. | Not built: outside the owner rule's NULL branch (§5.3). | **OPEN** | Q5. |
-| C-018 | The unfiltered `UPDATE` stores the microsecond value for a written `CAST(c AS TIMESTAMP)`, as every other door does. | Not built: the unit moves no written narrowing (§7). | **OPEN** | Q6. |
+| C-014 | A nanosecond value beside a NULL the statement typed as a microsecond type (`CAST(NULL AS TIMESTAMP)`, `CAST(NULL AS TIMESTAMP_NTZ)`) is refused on every door, and the text names the value and the written cast that would make it deliberate. | Owner ruling on Q2, 2026-10-10 (§11.1). The Rust door pins of the typed NULL (40 doors); the facade rows; the matrix (§11.5). | **PROVEN** | §11.4, §11.5: 2,225 cells refuse beside a typed NULL, 2,135 of them not refused on the base. |
+| C-015 | `nvl(ns, NULL)` and `ifnull(ns, NULL)` are refused by this text. | Owner ruling on Q3, 2026-10-10: not a refusal in this unit; card ICE-TSNS-COERCION-1 owns the typing and registry row R-019 names the `UNION` cell. | **REJECTED** (owner ruling, 2026-10-10) | §11.1; the `UNION` cell is C-026. |
+| C-016 | A frame materialised by `cache()` or `persist()` from a narrowed value is refused when it is written. | Owner ruling on Q4, 2026-10-10: not a refusal; card ICE-TSNS-CACHE-1 keeps the nanoseconds through the cache. The site is named and the cells counted. | **REJECTED** (owner ruling, 2026-10-10) | §11.6: 290 of the 300 cells are the cache alone. |
+| C-017 | A nanosecond value narrowed beside a microsecond column or literal that is not NULL is refused on every door, by a text that names the value and two ways out. | Owner ruling on Q5, 2026-10-10 (§11.1). The Rust door pins of the microsecond value (40 doors); the facade rows; the matrix (§11.5). | **PROVEN** | §11.4, §11.5: 4,830 cells refuse, 4,590 of them not refused on the base. |
+| C-018 | The unfiltered `UPDATE` stores the microsecond value for a written `CAST(c AS TIMESTAMP)`, as every other door does. | Owner ruling on Q6, 2026-10-10: a separate unit after the verify; card ICE-TSNS-UPDATE-CAST-1 holds the cells. | **REJECTED** (owner ruling, 2026-10-10) | §11.7: 15 cells per target for each source type. |
+| C-019 | The mark is on the narrowed value: a cast coercion left from a nanosecond timestamp to a coarser one is marked as a branch of a `CASE`, as an argument beside a microsecond sibling and at the root of a plan expression; a cast the statement wrote, through SQL or the DataFrame, and a cast a function's own signature asked for are not. | The unit pins of `null_narrowing/tests.rs`; the written and kept spellings on every door. | **PROVEN** | §11.2; mutants F1 to F11. |
+| C-020 | A written call over a narrowed value stores where it stores what the same call stores over the nanosecond value, with a pre-epoch value one nanosecond below a second boundary among the moments, and refuses where it differs; each refusing arm has its reason recorded. | The base measurement, arm by arm (§11.3); `a_written_call_over_a_narrowed_value_stores_what_it_stores_over_the_nanosecond_value`; the `WRITTEN_OVER` facade rows. | **PROVEN** | §11.3; mutants F6, W1 to W5. |
+| C-021 | The guard reads an `INSERT` plan through the planner's own cast of a selected column and an `UPDATE` plan as written; in a `UNION` it names the branch narrowed beside an untyped NULL first. | The unit pins of `narrowed_store/tests.rs`; the `EXPLAIN ANALYZE` and `PREPARE` doors of the Rust door file. | **PROVEN** | §11.2; mutants W6, W9, W10. |
+| C-022 | Never worse after the rulings: every cell that moved moved into the refusal; no cell that stores nine digits on the base moved; no cell of a microsecond target moved; no refused cell left a value on disk. | The matrix on the final product source, 104,960 cells, head against base (§11.5); the 228 facade rows. | **PROVEN** | §11.5: 23,525 moved into the refusal, 81,215 byte-identical, 220 refused on both. |
+| C-023 | Each new rule has a hand mutant that a named pin kills. | §11.8. | **PROVEN** | §11.8. |
+| C-024 | The fold adds no plan pass, and INSERT and MERGE over a table with no nanosecond column take the time they took on the base. | §11.9. | **PROVEN** | §11.9. |
+| C-025 | The gates are green on the fold's final source with real exit codes. | §11.10. | **PROVEN** | §11.10. |
+| C-026 | The `UNION` cell of `nvl` and `ifnull` (registry row R-019) keeps storing its cut value, as the ruling on Q3 reads. | Not built: measured, the cell is a nanosecond branch narrowed beside a microsecond one and the ruling on Q5 refuses it (§11.4). | **OPEN** | Q7. |
+| C-027 | The 80 cells that refused by name before the rulings and raise the base's own error after them refuse by name again. | Not built: the guard cannot tell the planner's cast of an `UPDATE`'s `SET` value from a written `CAST(… AS TIMESTAMP)`, which Q1 says stores (§11.5). | **OPEN** | Q8. |
 
 ## 1. The base, measured before any change (C-001)
 
@@ -538,7 +553,251 @@ workspace's feature unification) fails in `repark-core/src/named_sources.rs` (`u
 `unused_async` when the `postgres` feature is off), on the base as well; `make rust-clippy`
 builds the workspace and is green.
 
-## Q. Questions for a ruling
+## 11. Fold 1: the owner's rulings of 2026-10-10 on Q1 to Q6
+
+Sections 2 to 9 describe the unit as it stood before these rulings (head `91f4e2f4`). This
+section records each ruling, what it changed, and the measurements of the changed source.
+Where the two differ, this section holds.
+
+### 11.1 The rulings
+
+| Question | Owner ruling, 2026-10-10 | Effect in this unit |
+|---|---|---|
+| Q1 | A written cast inside a NULL branch stores: ratified. The `date_trunc` case is overturned to store: a written cast or `date_trunc` over a narrowed value is the outermost narrowing and the user wrote it. The pin must show the stored value equals the same expression over the nanosecond value, including a pre-epoch value one nanosecond below a second boundary. An arm whose value differs refuses, and the ledger says why. | Built, arm by arm (§11.3). |
+| Q2 | `coalesce(c, CAST(NULL AS TIMESTAMP))` refuses; the remedy names `c` and the written cast that would make it deliberate. A NULL typed `TIMESTAMP` or `TIMESTAMP_NTZ` beside a nanosecond value refuses on every door. | Built (§11.2, §11.4). |
+| Q3 | `nvl` and `ifnull`: the coercion card owns them. The one `UNION` shape that stores a cut value gets a dated registry row naming the cell, linked from the card. Not a refusal in this unit. | Registry row R-018 in the parity document; the coercion card links it. Nothing built. |
+| Q4 | A cached or persisted frame is not a refusal. Its own card, v1.5.5; the fix is to keep nanoseconds through cache and persist. Measure the site and count the cells that are the cache alone. | Not fixed. Site and count in §11.6; card ICE-TSNS-CACHE-1 filed. |
+| Q5 | `coalesce(ns, ts)` refuses, the same family; build it here if the existing site carries it. | Built: the site carries it (§11.2, §11.4). |
+| Q6 | The unfiltered `UPDATE` keeping nine digits under a written `CAST` is a separate unit, v1.5.5, after the verify. | Not built. Card ICE-TSNS-UPDATE-CAST-1 filed with the cells (§11.7). |
+
+### 11.2 What changed in the source
+
+The mark moved from the NULL to the value. Before the rulings the analyzer marked the untyped
+NULL and the store looked for a narrowing cast beside it. Now two identity functions,
+`__repark_narrowed_beside_null__` and `__repark_narrowed_beside_value__`, wrap the nanosecond
+value that coercion is about to narrow, and the store refuses when a cast to a coarser
+timestamp sits directly on a marked value. The name of the function chooses the text.
+
+- **Which casts are marked** (`repark-functions`, `null_narrowing.rs`). After the first type
+  coercion, a `Cast` from a nanosecond timestamp to a coarser one is the analyzer's: a cast
+  the statement wrote is a different node by then (SQL `CAST(c AS TIMESTAMP)` is a cast to
+  the nanosecond wire type that the session rule rewrites; a DataFrame `.cast("timestamp")`
+  is turned into the written-narrowing function by the pass that runs before coercion,
+  `before_coercion`). `mark_coerced_branches` marks such a cast when it is a branch of a
+  `CASE`, or an argument of a function that also holds a microsecond timestamp argument
+  which is not itself such a cast. `mark_coerced_narrowing` marks it at the root of a plan
+  expression, which is where a `UNION` puts it. A cast that only fits a function's
+  signature (`date_trunc('second', ns)`, `from_utc_timestamp(ns, 'UTC')`) has no microsecond
+  sibling and is not marked: the statement wrote that call.
+- **The untyped NULL** keeps its tag before coercion; `settle_branches` marks the nanosecond
+  sibling with the beside-a-NULL function and removes the tag. The tag now only chooses the
+  text.
+- **The pass before coercion** is its own rule, `FloatStringifyBeforeCoercion`, registered
+  where the first float-stringify pass was. The second float-stringify pass runs after
+  coercion and must not read a coerced cast as a written one.
+- **A written `CAST(… AS TIMESTAMP)` over a marked subtree** is kept as the written-narrowing
+  function by `keep_written_cast`; the session rule would otherwise drop it as a cast between
+  equal types, and the store could not see that the statement wrote it.
+- **The store guard** (`repark-iceberg`, `write/narrowed_store.rs`) returns the narrowing it
+  found (`Narrowing`: the value's text, which mark, zoned or not) and carries what written
+  call it has passed on the way down (`Written`). §11.3 lists what each written call
+  forgives. In a `UNION` it prefers the branch narrowed beside an untyped NULL, so the text
+  names the NULL when one is there.
+- **`INSERT` under `EXPLAIN ANALYZE` and `PREPARE`** (`refuse_narrowed_ns_inserts`). The
+  planner's own cast of each selected column to the target type is the same node as a
+  written `CAST(v AS TIMESTAMP)` once the session rule has read it. On an `INSERT` the guard
+  looks through that cast when it sits directly on a column of the query below. An `UPDATE`
+  is not looked through: its top expression is the statement's `SET` value.
+
+The two texts, after the shared head
+`[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table <t>: Cannot safely cast `<column>` "TIMESTAMP" to "<TYPE>".`:
+
+- beside an untyped NULL, unchanged: `The value was narrowed from nanoseconds to microseconds
+  before the store; give the NULL beside it the type <type>. SQLSTATE: KD000`
+- beside a typed NULL or a microsecond value (Q2, Q5): `The value <c> was narrowed from
+  nanoseconds to microseconds before the store, to match the microsecond value beside it;
+  write CAST(<c> AS TIMESTAMP) if microseconds are intended, or give the value beside it a
+  nanosecond type. SQLSTATE: KD000`
+
+`<c>` is the narrowed expression as the plan names it (`ice.ns.src.ns`, `c`, `i.ns`).
+
+### 11.3 Q1, arm by arm
+
+Measured on the base through `INSERT … SELECT`, five zones, both targets, with the five
+moments of the door file, which include `1969-12-31 23:59:58.999999999` (one nanosecond
+below a second boundary, before the epoch) and `1969-12-31 23:59:59.000000001`. Each arm was
+written over `coalesce(c, NULL)` and over `c`, and the two stored columns compared.
+
+| Written call over the narrowed value | Zoned source (`timestamptz_ns`) | Naive source (`timestamp_ns`) |
+|---|---|---|
+| `CAST(… AS TIMESTAMP)` | equal: stores | equal: stores |
+| `date_trunc(unit, …)`, ten units from `microsecond` to `year` | equal: stores | differs: refuses |
+| `CAST(… AS DATE)` | differs: refuses | equal: stores |
+| `CAST(… AS TIMESTAMP_NTZ)`, `TRY_CAST(… AS TIMESTAMP_NTZ)` | differs: refuses | differs: refuses |
+| `CAST(… AS timestamp_ns)`, `CAST(… AS timestamptz_ns)` | differs: refuses | differs: refuses |
+| `TRY_CAST(… AS TIMESTAMP)` | differs: refuses | differs: refuses |
+
+Why each refusing arm differs:
+
+- **`date_trunc` over a naive value.** The analyzer's cut reads the naive value as a wall in
+  the session zone and makes an instant of it; `date_trunc` then floors that instant in the
+  session zone. `date_trunc` over the nanosecond value itself truncates the naive value
+  toward zero, so before the epoch it lands one unit later, and a wall inside a
+  daylight-saving gap is moved by the cut and not by the call. `week` was equal on the
+  measured moments and refuses with the other nine units: one rule per function, and no
+  measurement shows it equal on every moment.
+- **`CAST(… AS DATE)` over a zoned value.** The cut makes a microsecond instant by dividing
+  toward zero; the date of a pre-epoch instant one nanosecond below midnight UTC differs from
+  the date of the nanosecond value.
+- **`CAST(… AS TIMESTAMP_NTZ)`.** The call over the nanosecond value keeps nine digits; over
+  the narrowed value it stores six.
+- **`CAST(… AS timestamp_ns)` and `CAST(… AS timestamptz_ns)`.** The call widens back and
+  stores the cut value with three zeros; over the nanosecond value it stores nine digits.
+- **`TRY_CAST(… AS TIMESTAMP)`.** Over a nanosecond value it keeps the nanosecond type and
+  nine digits; over the narrowed value it stores six.
+
+The guard encodes the table: a cast to an instant type over a value that is not itself a mark
+stops the walk (`CAST(… AS TIMESTAMP)`); `date_trunc` forgives a zoned mark below it;
+`__repark_timestamp_to_date__` and a cast to `Date32` forgive a naive mark. Every other call
+is walked through.
+
+Pin: `a_written_call_over_a_narrowed_value_stores_what_it_stores_over_the_nanosecond_value`
+(`crates/repark-spark/tests/timestamp_ns_narrow_refuse.rs`), five zones, both sources, both
+targets, fifteen arms over three narrowed spellings (an untyped NULL, a typed NULL, a
+microsecond literal): an equal arm must store the column the same call stores over the
+nanosecond value; a differing arm must refuse by name and leave no data file.
+
+### 11.4 Q2 and Q5: what refuses now
+
+Both are the same site: coercion left a `Cast` from the nanosecond value to the microsecond
+type of its sibling, and that cast is marked (§11.2). A NULL typed `TIMESTAMP` or
+`TIMESTAMP_NTZ` is a microsecond sibling like any other. Measured spellings, each on the 64
+doors, five zones, both sources, both nanosecond targets:
+
+| Spelling | Arm |
+|---|---|
+| `coalesce(c, CAST(NULL AS TIMESTAMP))`, `coalesce(c, CAST(NULL AS TIMESTAMP_NTZ))` | Q2 |
+| `CASE WHEN id = 1 THEN c ELSE TIMESTAMP '…' END`, `coalesce(c, CAST(c AS TIMESTAMP))`, `greatest(c, TIMESTAMP '…')`, `array(c, TIMESTAMP '…')[0]` | Q5 |
+| `SELECT c … UNION ALL SELECT <a microsecond value> …` (the door `union_insert` under every spelling the statement types as microseconds) | Q5, the plain nanosecond branch is the narrowed one |
+
+Pins: `every_door_refuses_a_value_narrowed_beside_a_typed_null_or_a_microsecond_value` and
+`every_door_refuses_a_value_narrowed_beside_a_microsecond_literal` (40 doors, both sources,
+both targets, the files counted and the table read back after each refusal);
+`a_union_with_an_untyped_null_branch_refuses_and_a_typed_one_stores`; the facade rows of the
+six `BESIDE_VALUE` spellings.
+
+**One consequence that touches the Q3 ruling, for a ruling (question Q7).** The `UNION`
+cell the Q3 ruling names (`SELECT c … UNION ALL SELECT nvl(c, NULL) …`, and `ifnull`)
+refuses on this head: 40 cells (two spellings, two sources, two targets, five zones). The
+measurement corrected the premise of Q3: the cut there is not the string's six digits. The
+`UNION` is typed as a microsecond timestamp, and coercion narrows the plain nanosecond
+branch to match, which is the Q5 shape. The union rule refuses it without a line that names
+`nvl`. The registry row the ruling asks for is filed (R-019) and says so. Keeping the cell
+storing its cut value, as the letter of the ruling reads, needs an exception for a `UNION`
+branch whose sibling was a string; it is not built.
+
+### 11.5 The matrix, head against base
+
+Base `8d1c4f49`, head `60687f7e`. 64 doors, five zones, two sources, four targets, 41
+spellings: 104,960 cells (the 89,600 of §4 and six spellings added for the rulings, recorded
+on the same build of the base: `python/repark/tests/ice_tsns_narrow_refuse_1_base.json`).
+"The 59,400" is the Step 0 matrix of §1.1; "added" is every cell recorded since. Every value
+is read from the Parquet files.
+
+| | The 59,400 | Added | All |
+|---|---|---|---|
+| Cells | 59,400 | 45,560 | 104,960 |
+| Byte-identical to the base | 48,615 | 32,600 | 81,215 |
+| Moved into the refusal | 10,725 | 12,800 | 23,525 |
+| Refused on the base and on the head, text changed | 60 | 160 | 220 |
+| Moved any other way | 0 | 0 | 0 |
+| Right-value cells (nine digits on the base) that moved | 0 | 0 | 0 |
+| Cells of a microsecond target that moved (60 doors that write the target) | 0 | 0 | 0 |
+| Refused cells that left a value on disk | 0 | 0 | 0 |
+| Cells that store the nanosecond value and did not on the base | 0 | 0 | 0 |
+
+Refused on the head, by arm (in brackets: of those, not refused on the base):
+
+| Arm | The 59,400 | Added | All |
+|---|---|---|---|
+| Beside an untyped NULL | 6,945 (6,465) | 7,295 (6,995) | 14,240 (13,460) |
+| Beside a typed NULL (Q2) | 1,865 (1,775) | 360 (360) | 2,225 (2,135) |
+| Beside a microsecond value that is not NULL (Q5) | 160 (160) | 4,670 (4,430) | 4,830 (4,590) |
+| A written call over a narrowed value whose result differs (Q1) | 2,505 (2,325) | 1,135 (1,015) | 3,640 (3,340) |
+| Total | 11,475 (10,725) | 13,460 (12,800) | 24,935 (23,525) |
+
+The Q5 row holds 170 cells of the door `union_insert`: 130 where the plain nanosecond branch
+sits beside a microsecond value the statement wrote, and the 40 `nvl` and `ifnull` cells of
+§11.4. The 220 cells refused on both sides are the unfiltered `UPDATE`, whose text now names
+the narrowed value where the mark is the beside-a-value one.
+
+Still cut on the head (a value floored to microseconds in a column of a nanosecond row):
+
+| Owner | The 59,400 | Added | All |
+|---|---|---|---|
+| A narrowing the statement wrote (`CAST`, `date_trunc`; stores by the owner rule) | 5,060 | 1,990 | 7,050 |
+| The same, through a cached frame | 130 | 50 | 180 |
+| A written call over a narrowed value, equal arm (stores by Q1) | 410 | 1,550 | 1,960 |
+| Q4: a cached frame whose uncached write refuses | 230 | 190 | 420 |
+| Q3 | 0 | 0 | 0 |
+| Q5 | 0 | 0 | 0 |
+| Q6 (keeps nine digits, not cut: listed in §11.7) | 60 | 0 | 60 |
+| Not owned by Q3 to Q6: the four doors that create the table (`ctas`, `rtas`, `df_create_or_replace`, `df_save_overwrite`) type the new column as microseconds, so no nanosecond column is written | 1,632 | 944 | 2,576 |
+
+The last row is the typing of ICE-TSNS-COERCION-1: the created table has a `TIMESTAMP`
+column. Where the created column would be a nanosecond one (`array(c, NULL)[0]` and the like)
+the door refuses (`create_table_as_refuses_a_narrowed_value_it_would_type_as_nanoseconds`).
+
+**Against the head before the rulings.** 80 cells that refused by name at `91f4e2f4` raise
+the base's own error again, and store nothing on either: `EXPLAIN ANALYZE UPDATE` of a
+zoned value into a `timestamp_ns` column (70 cells, fourteen spellings), `EXPLAIN ANALYZE
+UPDATE` of `date_trunc('second', coalesce(ns, NULL))` (5 cells) and an `UPDATE` from a
+scalar subquery over `CAST(coalesce(tzns, NULL) AS timestamptz_ns)` (5 cells). The
+planner's cast of the `SET` value to the target is the node a written `CAST(… AS TIMESTAMP)`
+is, and on an `UPDATE` the guard does not look through it (§11.2). The base raises an
+internal error for the first (`cannot convert text Timestamp(µs, "UTC") into byte
+Timestamp(ns)`, from the table provider) and a schema error for the other two. The 280
+cells of `date_trunc('second', coalesce(tzns, NULL))` that refused there follow Q1: 245
+store again and 35 raise the error the base raises.
+
+### 11.6 Q4: the cache site and the count
+
+`cache()` and `persist()` reach `materialize_dataframe_as_cache_view`, which calls
+`register_collected_memtable` (`crates/repark-core/src/session/temp_views.rs`): the frame is
+collected and the batches registered as a `MemTable`. The cast coercion inserted is part of
+the frame's plan and is evaluated by that collect, so the cached column is a microsecond
+instant with no expression behind it. A plain `timestamp_ns` column survives the cache with
+nine digits; the cache itself cuts nothing.
+
+Of the 300 cells of §5.3 (`cached_frame_append`, fifteen spellings, both targets, both
+sources, five zones), **290 are the cache alone**: the same frame appended without the cache
+refuses on this head. The other 10 are `date_trunc('second', coalesce(tzns, NULL))`, which
+stores uncached too since Q1. Over the whole matrix the cache alone accounts for 420 cells:
+those 290, 120 of the six Q2 and Q5 spellings, and 10 of
+`CAST(coalesce(tzns, NULL) AS DATE)`. Nothing is fixed here; card ICE-TSNS-CACHE-1.
+
+### 11.7 Q6: the cells
+
+`UPDATE … SET v = CAST(c AS TIMESTAMP)` with no `WHERE` keeps nine digits on three doors
+(`update_nowhere`, `update_nowhere_mor`, `branch_update`) in five zones: 15 cells per target
+for each source type, 60 in all, on the base and on the head. Card ICE-TSNS-UPDATE-CAST-1.
+
+### 11.8 Mutants of the new rules
+
+Each mutant is one edit of the source at `60687f7e`, run against the named pins; the
+source is restored after each.
+
+Recorded by the commit that closes the fold.
+
+### 11.9 Cost
+
+Recorded by the commit that closes the fold.
+
+### 11.10 Gates on the fold
+
+Recorded by the commit that closes the fold.
+
+## Q0. The questions put before the rulings (answered 2026-10-10, section 11.1)
 
 - **Q1 (C-009, RULING).** Should `CASE WHEN … THEN CAST(c AS TIMESTAMP) ELSE NULL END` (and
   `coalesce(CAST(c AS TIMESTAMP), NULL)`, `if(…, date_trunc('second', c), NULL)`) refuse?
@@ -589,3 +848,18 @@ builds the workspace and is green.
   `UPDATE` with no `WHERE` in both modes and on a branch, five zones) where every other
   door stores the value the cast was written to produce (§7). *Lean:* yes, in a unit of its
   own; it changes a stored value, which this unit does not do.
+
+## Q. Questions after fold 1
+
+- **Q7 (RULING).** Should the `UNION` cell of Q3 keep storing its cut value?
+  *Premise:* §11.4. The ruling on Q3 reads "not a refusal in this unit"; the ruling on Q5
+  refuses a nanosecond value narrowed beside a microsecond one, and measured, that is what
+  the cell is. *Lean, taken:* it refuses, with the Q5 text; never worse holds (a cut value
+  became a refusal). Storing it again is an exception in `settle_union_branches` and the
+  root mark for a branch whose sibling was typed `STRING`.
+- **Q8 (RULING).** Should the 80 base-error cells of §11.5 refuse by name again?
+  *Premise:* they refused at `91f4e2f4` and raise the base's error at this head; nothing is
+  stored either way. Refusing them needs the guard to tell the planner's cast of an
+  `UPDATE`'s `SET` value from a written `CAST(… AS TIMESTAMP)`, which Q1 says stores.
+  *Lean:* leave them; the base's errors under `EXPLAIN ANALYZE` are a defect of their own
+  (out of scope, observed).

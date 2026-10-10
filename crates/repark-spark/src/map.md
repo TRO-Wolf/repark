@@ -1050,7 +1050,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `insert_timestamp_ns::refuse_narrowed_stores` runs in `spark_ast` on the analyzed plan
   before the INSERT conform: it finds the `Dml` of an `INSERT` or an `UPDATE` at the top,
   under `EXPLAIN ANALYZE` or inside `PREPARE`, pairs its input columns with the target's by
-  position and refuses a marked value into a nanosecond column. That is the door of
+  position and refuses a narrowed value into a nanosecond column; for an `INSERT` it calls
+  `refuse_narrowed_ns_inserts`, which looks through the planner's cast of a selected column
+  to the target type (fold 1: under `EXPLAIN ANALYZE` and `PREPARE` that cast is in the plan
+  and reads as a written `CAST(… AS TIMESTAMP)`). That is the door of
   `INSERT … VALUES`, `INSERT … SELECT` in every spelling, `REPLACE WHERE`, the DataFrame
   `append`, `insertInto` and `saveAsTable` in append mode (they run an `INSERT` over a temp
   view), `EXPLAIN ANALYZE INSERT` and `PREPARE`; a prepared statement is refused when it is
