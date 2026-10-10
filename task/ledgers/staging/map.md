@@ -185,6 +185,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   INSERT-versus-COPY cells for statement triggers and foreign tables; no cell
   diverges. Evidence in [c-4-measure/](c-4-measure/map.md); the cell table is
   the ledger's §11.
+  **Fold 2 (2026-10-10, branch `feat/c-4-routing`):** §13 records the five
+  items, the owner ruling accepting the row path's statement granularity with
+  the seven re-measured properties, and the nine S3 open rows.
   `risk_tier: standard`. Branch `feat/c-4-writes`.
 - [c-3-ledger.md](c-3-ledger.md) —
   **C-3, card 1.6 (2026-10-07), in flight:** partitioned parallel Postgres reads and the

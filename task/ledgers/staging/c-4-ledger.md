@@ -987,3 +987,59 @@ direct non-`postgres_fdw` table is therefore held by the fail-closed NULL branch
 and review, not by a mutation. And C-018's "same side tables" now holds for every
 property except a statement trigger's firing count, which differs by construction
 (one COPY statement against bounded INSERT statements).
+
+## 13. Fold 2 (2026-10-10): the verifier's three S1 and three S2, branch `feat/c-4-routing`
+
+The joint verify (2026-10-10) is FAIL: 3 S1, 3 S2, 9 S3, over 32,007,893 value
+cells with bulk = row = plain INSERT byte for byte. What held does not move.
+Five items land here, one commit each: (1) the file-size mirror table and the
+`io_declared_refusals` example follow the writer; (2) a value the column cannot
+take refuses the statement and stores nothing on all three paths, at the one
+`shape_batch` chokepoint, with the engine's store-assignment classes naming the
+column (`CAST_OVERFLOW_IN_TABLE_INSERT`, `CAST_INVALID_INPUT`); (3) a timestamp
+into a date or text column renders the session-zone wall, the Iceberg target's
+answer, on all three paths, pinned in UTC, America/New_York and Asia/Kolkata
+while timestamp and timestamptz columns keep their placement; (4) below; (5) the
+Postgres INSERT source is aliased positionally before planning, so repeated
+SELECT expressions store by position on both SQL doors.
+
+### 13.1 The row path's statement granularity is accepted (owner ruling, 2026-10-10)
+
+Owner ruling 2026-10-10 ("keep the ruling"): `write.path=row` sends batches, as
+Spark's JDBC writer does, so statement-level triggers and transition tables see
+several statements where bulk and one INSERT show one. The granularity is
+ACCEPTED and recorded, not fixed. The remainder now runs as ONE statement shaped
+for the exact pending count instead of row by row: 600 rows run 256 + 256 + 88,
+three statements, pinned by `row_path_sends_full_groups_plus_one_remainder_statement`
+and the narrowed counting cell. Consequences, both pinned live: statement
+triggers fire once per batch on the row path, and a trigger that caps rows per
+statement refuses a bulk write while admitting the same rows on the row path
+(the cap-500 cell: bulk `P0001`, 0 stored; row 600 stored).
+
+The seven measured properties (600 rows; bulk still equals one plain INSERT on
+all seven; Postgres 16.15, the C-0 container; row-path counts re-measured
+2026-10-10 after the remainder change):
+
+| # | property | bulk / one INSERT | row path |
+|---|---|---|---|
+| 1 | BEFORE + AFTER statement triggers | 2 audit rows (1 + 1) | 6 audit rows (3 + 3) |
+| 2 | transition table (`NEW TABLE`) | one firing of 600 | firings of 256, 256, 88 |
+| 3 | statement trigger capping a statement at 500 rows | refuses `P0001`, 0 stored | stores 600 |
+| 4 | replica-session ALWAYS and REPLICA statement triggers | 1 + 1 | 3 + 3 (ALWAYS ×3 measured; REPLICA fires on the same send) |
+| 5 | a partitioned parent's statement trigger | one firing of 600 | firings of 256, 256, 88 |
+| 6 | a remote statement trigger behind `postgres_fdw` (`batch_size` 100) | 6 firings of 100 | 7 firings: 100 ×4, 56 ×2, 88 ×1 |
+| 7 | a local statement trigger on a `postgres_fdw` table | STATEMENT ×1 | STATEMENT ×3 |
+
+### 13.2 S3: recorded, not changed
+
+| id | date | what | the record |
+|---|---|---|---|
+| S3-upsert-dropped | 2026-10-10 | `ON CONFLICT` and `RETURNING` are accepted and dropped on both SQL doors: with no conflict the row appends and the clause is silently ignored; with a conflict the server's `23505` comes back for `DO NOTHING` and `DO UPDATE`; `RETURNING` returns the empty frame. Nothing wrong is stored. | Open: refuse by name under `CONNECT-DECL-pg-write-upsert`, as `UPDATE` and `REPLACE INTO` do. |
+| S3-refusal-names | 2026-10-10 | `DELETE` (`DELETE not supported for Base table`), `TRUNCATE` (`TABLE_OR_VIEW_NOT_FOUND`), `WITH ... INSERT` (`not implemented yet`) and `INSERT ... BY NAME` (needs a three-part Iceberg name) refuse, but not by a registry name. None changes a row. | Open: `DELETE` and `TRUNCATE` name the upsert or modes row like their siblings. |
+| S3-path-visibility | 2026-10-10 | The path taken and the fallback reason reach the user only through the `take_postgres_write_report` test hook; `EXPLAIN INSERT` shows a physical-plan error although the statement writes. `SET write.path` and an `OPTIONS` hint stay ignored without a word on the SQL door (ruled: no flag there). | Open: show the path and the fallback sentence at least in `EXPLAIN`. |
+| S3-writer-case | 2026-10-10 | The DataFrame writer matches columns case-sensitively (`column \`ID\` not found`); the SQL doors match `INSERT INTO pg.s.t (ID, NAME)`. Spark's default is case-insensitive. | Open: follow `spark.sql.caseSensitive` on the writer. |
+| S3-native-sql-write | 2026-10-10 | Python's module-level `repark.sql()` reads a mounted Postgres source and cannot write it (`Insert into not implemented for this table`): by design Python has no ANSI door, so the ANSI route is reachable only from Rust. The refusal names nothing. | Open: a named refusal, or the route. |
+| S3-numeric-scale | 2026-10-10 | An unconstrained numeric column takes the display scale 18 on every write (`0.5` stores `0.500000000000000000`, equal but not byte-identical); past 18 fraction digits rounds silently; a 38-digit integer refuses under item 2's overflow class. | Open: record as a declared limit of the `Decimal128(38,18)` mapping. |
+| S3-query-timeout | 2026-10-09 | Already a dated row in §8.5: `query_timeout_ms` ends a bulk write as a whole and never a row write. | Recorded; no new row. |
+| S3-cancel-class | 2026-10-10 | A statement cancelled from outside during a bulk write is reported as the query timeout (`Timeout`, no timeout set; 0 stored; the pool serves the next write). On the row path the cancel finds no running statement and the write commits. | Open: name the outside cancel for what it is. §8.1's dropped-future poison is a different cause. |
+| S3-ansi-missing | 2026-10-10 | On the ANSI door `MERGE`, `DROP` and CTAS into a Postgres source answer as if the source did not exist (`unknown catalog \`pg\``); `PG.schema.t` answers `Insert into not implemented for this table`. `UPDATE` and `INSERT OVERWRITE` name their registry rows. Nothing changes in Postgres. | Open: route or refuse by name on the ANSI door. |

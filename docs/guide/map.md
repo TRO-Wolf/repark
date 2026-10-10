@@ -44,6 +44,11 @@ illustrative. A claim with no verified basis does not go in.
   **WO CATALOG-1 C-010 (2026-09-26):** the session table gains `default_catalog`, and
   the tables section states the `type = "memory"` rewrite and the
   `repark.sql.catalogExtensions` opt-in. pins: catalog-1/C-010
+  **C-4 fold 2 (2026-10-10):** the "Postgres writes" subsection documents
+  `df.write.jdbc` appends, the `write.path` bulk/row carriages with the
+  once-per-batch trigger rule, and the whole-statement refusal; the grants
+  paragraph gains the writer's `INSERT` grant and the `BEGIN READ WRITE` lift.
+  pins: c-4/C-013, C-014
 - [maintenance-policy.md](maintenance-policy.md) — `[<profile>.maintenance]` and
   `CALL run_maintenance()` (MAINT-POLICY-1, 2026-09-10): the D-1 policy shape with
   per-table overrides, duration strings, the D-4 step order with the delete-ratio gate,
