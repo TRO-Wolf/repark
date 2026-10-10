@@ -47,7 +47,7 @@ INSTANT_WRONG_DOORS = (
     "df_insert_into_overwrite",
 )
 UNFILTERED_UPDATE_SOURCES = ("l", "n", "tzns")
-CONTROL_TARGETS = tuple(target for target in doors.TARGETS if target != "ts_ns")
+CONTROL_TARGETS = tuple(target for target in doors.TARGETS if target not in ("ts_ns", "tz_ns"))
 CONTROL_ZONE = doors.CONTROL_ZONE
 
 
@@ -127,7 +127,7 @@ def test_every_door_stores_the_session_wall_in_timestamp_ns(
 @pytest.mark.parametrize("door", list(doors.DOORS))
 @pytest.mark.parametrize("target", CONTROL_TARGETS)
 def test_control_targets_answer_what_main_answered(tmp_path: Path, target: str, door: str) -> None:
-    """A ``timestamptz_ns`` target and the microsecond targets, v3 and v2, do not move."""
+    """The microsecond targets, v3 and v2, do not move (``timestamptz_ns``: ICE-TSTZNS-WALL-1)."""
     cells = measured(tmp_path, CONTROL_ZONE, target, door)
     for source in doors.SOURCES:
         recorded = main_cell(CONTROL_ZONE, target, door, source)

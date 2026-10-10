@@ -4,6 +4,19 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
+  (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
+  INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6
+  are raw errors in the R-007 unit's matrix, 348 and 60 in the verifier's over five zones,
+  50 panic on an out-of-range `DATE` (C-001); the rule is INSERT's, reproduced with
+  `zoneinfo` (C-002). The fix: every door equal to INSERT in five zones from the Parquet
+  files (C-003), the unfiltered `UPDATE` (C-004), out-of-range values and no panic (C-005),
+  controls identical to main (C-006), nested leaves untouched (C-007), one function naming
+  the store kernel (C-008), the ANSI door (C-009), mutants (C-010), gates (C-011). Three
+  clauses are OPEN, each a question: the nested zoned leaf reads a wall as UTC on every door
+  (C-013, Q1), a NULL into a required column is Arrow's text (C-014, Q2), the unfiltered
+  `UPDATE`'s overflow class (C-015, Q3). `risk_tier: standard`. Branch
+  `fix/ice-tstzns-wall-1`.
 - [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
   `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one

@@ -108,7 +108,10 @@ fn zone_wrapping_stream_sql(
     plan: &datafusion::logical_expr::LogicalPlan,
     write_schema: &ArrowSchema,
 ) -> Option<String> {
-    use crate::write::ntz_store::{is_ltz_instant_target, wall_cast_sql, wall_cast_udf_name};
+    use crate::write::ntz_store::{
+        is_ltz_instant_target, store_kernel_sql as wall_cast_sql,
+        store_kernel_udf_name as wall_cast_udf_name,
+    };
     let fields = write_schema.fields();
     let planned = if fields
         .iter()

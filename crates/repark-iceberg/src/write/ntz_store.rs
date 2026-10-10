@@ -14,6 +14,7 @@ use super::update_cast::incompatible_update_message;
 
 pub const NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ntz__";
 pub const NS_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ns__";
+pub const NS_INSTANT_CAST_UDF_NAME: &str = "__repark_cast_timestamptz_ns__";
 
 #[must_use]
 pub fn is_ntz_wall_target(data_type: &DataType) -> bool {
@@ -43,15 +44,28 @@ pub fn wall_cast_sql(expr_sql: &str, target: &DataType) -> Option<String> {
 }
 
 #[must_use]
+pub fn store_kernel_udf_name(data_type: &DataType) -> Option<&'static str> {
+    match data_type {
+        DataType::Timestamp(TimeUnit::Nanosecond, Some(_)) => Some(NS_INSTANT_CAST_UDF_NAME),
+        wall => wall_cast_udf_name(wall),
+    }
+}
+
+#[must_use]
+pub fn store_kernel_sql(expr_sql: &str, target: &DataType) -> Option<String> {
+    store_kernel_udf_name(target).map(|name| format!("{name}(({expr_sql}))"))
+}
+
+#[must_use]
 pub fn wall_kernel_reads(source: &DataType, target: &DataType) -> bool {
     match (target, source) {
-        (DataType::Timestamp(TimeUnit::Nanosecond, None), DataType::Dictionary(_, values)) => {
+        (DataType::Timestamp(TimeUnit::Nanosecond, _), DataType::Dictionary(_, values)) => {
             wall_kernel_reads(values, target)
         }
-        (DataType::Timestamp(TimeUnit::Nanosecond, None), DataType::RunEndEncoded(_, values)) => {
+        (DataType::Timestamp(TimeUnit::Nanosecond, _), DataType::RunEndEncoded(_, values)) => {
             wall_kernel_reads(values.data_type(), target)
         }
-        (DataType::Timestamp(TimeUnit::Nanosecond, None), _) => {
+        (DataType::Timestamp(TimeUnit::Nanosecond, _), _) => {
             source != target
                 && matches!(
                     source,
@@ -146,6 +160,10 @@ pub fn zone_stores(
                     TimeUnit::Microsecond,
                     Some(Arc::from("+00:00")),
                 )),
+                Type::Primitive(PrimitiveType::TimestamptzNs) => Some(DataType::Timestamp(
+                    TimeUnit::Nanosecond,
+                    Some(Arc::from("+00:00")),
+                )),
                 _ => None,
             }
         })
@@ -192,7 +210,7 @@ fn zone_store_frame(
             let wall = target
                 .as_ref()
                 .filter(|target| wall_kernel_reads(source, target))
-                .and_then(wall_cast_udf_name)
+                .and_then(store_kernel_udf_name)
                 .and_then(|name| ctx.udf(name).ok());
             let store = match (target, wall) {
                 (_, Some(udf)) => {
@@ -266,7 +284,55 @@ mod tests {
 
     use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 
-    use super::{wall_kernel_input, wall_kernel_reads};
+    use super::{
+        NS_INSTANT_CAST_UDF_NAME, NS_WALL_CAST_UDF_NAME, NTZ_WALL_CAST_UDF_NAME, store_kernel_sql,
+        store_kernel_udf_name, wall_cast_udf_name, wall_kernel_input, wall_kernel_reads,
+    };
+
+    #[test]
+    fn each_nanosecond_or_wall_target_names_one_store_kernel() {
+        let zoned_nanos = DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("+00:00")));
+        let nanos = DataType::Timestamp(TimeUnit::Nanosecond, None);
+        let micros = DataType::Timestamp(TimeUnit::Microsecond, None);
+        let zoned_micros = DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC")));
+        assert_eq!(
+            store_kernel_udf_name(&zoned_nanos),
+            Some(NS_INSTANT_CAST_UDF_NAME)
+        );
+        assert_eq!(store_kernel_udf_name(&nanos), Some(NS_WALL_CAST_UDF_NAME));
+        assert_eq!(store_kernel_udf_name(&micros), Some(NTZ_WALL_CAST_UDF_NAME));
+        assert_eq!(store_kernel_udf_name(&zoned_micros), None);
+        assert_eq!(store_kernel_udf_name(&DataType::Int64), None);
+        assert_eq!(wall_cast_udf_name(&zoned_nanos), None);
+        assert_eq!(
+            store_kernel_sql("s.v", &zoned_nanos).as_deref(),
+            Some("__repark_cast_timestamptz_ns__((s.v))")
+        );
+    }
+
+    #[test]
+    fn a_zoned_nanosecond_target_hands_every_other_temporal_source_to_its_kernel() {
+        let target = DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("+00:00")));
+        let runs = DataType::RunEndEncoded(
+            Arc::new(Field::new("run_ends", DataType::Int32, false)),
+            Arc::new(Field::new("values", DataType::Date32, true)),
+        );
+        for (source, read) in [
+            (DataType::Timestamp(TimeUnit::Nanosecond, None), true),
+            (DataType::Timestamp(TimeUnit::Microsecond, None), true),
+            (DataType::Date32, true),
+            (
+                DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC"))),
+                true,
+            ),
+            (runs, true),
+            (target.clone(), false),
+            (DataType::Utf8, false),
+            (DataType::Int64, false),
+        ] {
+            assert_eq!(wall_kernel_reads(&source, &target), read, "{source}");
+        }
+    }
 
     #[test]
     fn the_kernel_reads_what_its_target_cannot_take_by_a_plain_cast() {

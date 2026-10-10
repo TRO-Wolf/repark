@@ -141,6 +141,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `dialect.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `on_session_built` registers the zoned
+  nanosecond kernel (`__repark_cast_timestamptz_ns__`) beside the naive one. The shared MERGE
+  and UPDATE sites now emit it for a `timestamptz_ns` target; without the registration this
+  door would answer `UNRESOLVED_ROUTINE` where main stored a value.
+  pins: ice-tstzns-wall-1/C-009
 - `dialect.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `on_session_built` also registers
   the nanosecond wall kernel (`__repark_cast_timestamp_ns__`). The shared MERGE and UPDATE
   sites in `repark-iceberg` now emit it for a `timestamp_ns` target, as they emit the NTZ
