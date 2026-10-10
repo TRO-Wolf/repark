@@ -1,5 +1,3 @@
-//! Trigger interval strings in Spark's measured grammar.
-
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
@@ -15,7 +13,6 @@ const MICROS_PER_MINUTE: i128 = 60_000_000;
 const MICROS_PER_HOUR: i128 = 3_600_000_000;
 const MICROS_PER_DAY: i128 = 86_400_000_000;
 
-/// A trigger interval refusal with its Spark class, condition, text and params.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TriggerRefusal {
     InvalidFormat {
@@ -367,7 +364,6 @@ fn convert_group(
     }
 }
 
-/// Parse a trigger interval string to whole milliseconds.
 pub(crate) fn parse_trigger_millis(input: &str) -> Result<u64, TriggerRefusal> {
     let trimmed = input.trim();
     if trimmed.is_empty() {
@@ -447,14 +443,13 @@ impl TriggerRefusal {
     }
 }
 
-/// Validate a trigger interval string and return whole milliseconds.
 #[pyfunction]
 #[allow(clippy::missing_errors_doc)]
 pub(crate) fn check_trigger_interval(text: &str) -> PyResult<u64> {
     parse_trigger_millis(text).map_err(|refusal| Python::attach(|py| refusal.into_pyerr(py)))
 }
 
-/// Register the trigger interval door.
+#[allow(clippy::missing_errors_doc)]
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(check_trigger_interval, module)?)?;
     Ok(())
