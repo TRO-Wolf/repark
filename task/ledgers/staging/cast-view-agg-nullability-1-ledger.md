@@ -360,6 +360,10 @@ ran on RePark head, whose cast path there is stock. DataFusion per
 `Cargo.lock`: `datafusion` / `datafusion-expr` / `datafusion-physical-expr`
 54.1.0.
 
+Filed 2026-10-10 as [apache/datafusion#26178](https://github.com/apache/datafusion/issues/26178),
+after the repro was run on stock DataFusion 54.1.0 with no RePark code in the
+loop and answered the wrong value there. PR #1014 stays parked on that issue.
+
 ### Recommendation and carry-over
 
 Recommended: file the issue upstream and hold PR #1014 until the S1 class is

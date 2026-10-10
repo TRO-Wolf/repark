@@ -60,6 +60,10 @@ change any answer that already matches Spark. The Step 0 controls stay as pins.
 
 Scope is the one shape above. Other nullability paths are not in the ask.
 
+**Upstream reference (2026-10-10):**
+[apache/datafusion#26178](https://github.com/apache/datafusion/issues/26178), reproduced on stock
+DataFusion 54.1.0. PR #1014 is parked until that issue is resolved.
+
 ## Gates
 
 - The full repro answers the Spark value and type recorded in Step 0.
