@@ -8127,6 +8127,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   stamp.
   pins: mb-4-foreach-eo/C-044
   pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022, C-024, C-028, C-029, C-030
+- [test_mb_4_streaming_row_level_race.py](test_mb_4_streaming_row_level_race.py) —
+  **MB-4-FOREACH-EO fold 6 (2026-10-10, the fifth verify's S1):** a row-level body against a
+  concurrent foreign commit, through the public door. The body issues one `UPDATE`, `DELETE`,
+  matched-update `MERGE` or matched-delete `MERGE` on its sink while a helper thread issues a
+  foreign `INSERT` after a delay; twelve fresh sinks per statement, the delays spread over
+  0 to 44 ms from a fixed seed. No stamped snapshot may have an unstamped parent born after
+  the seed, and every run must end `RecoveryRequiredException`. Red for `UPDATE` on the
+  fold-5 build (two or three of twelve runs put the stray under the stamp). The race is
+  statistical here; the deterministic pin per arm is in the iceberg crate
+  (`sink_offsets_stray_fence_tests.rs`).
+  pins: mb-4-foreach-eo/C-045
 - [test_mb_4_streaming_remedies.py](test_mb_4_streaming_remedies.py) — **MB-4-FOREACH-EO
   fold 4 (2026-10-10, the third verify's first two S1):** every remedy a stray refusal prints,
   followed as printed, with the sink's rows counted exactly. A stray under a stamp (the body

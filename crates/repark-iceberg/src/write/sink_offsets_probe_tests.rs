@@ -851,3 +851,6 @@ mod body_scope;
 
 #[path = "sink_offsets_lineage_tests.rs"]
 mod lineage_pins;
+
+#[path = "sink_offsets_stray_fence_tests.rs"]
+mod stray_fence;

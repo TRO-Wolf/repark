@@ -124,6 +124,14 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets_stray_fence_tests.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10, the fifth
+  verify's S1):** one deterministic pin over every arm that can carry a stamp (`ARMS`: append,
+  copy-on-write with and without rewritten files, merge-on-read, stamp-only). A test catalog
+  lands a foreign append at the arm's first `update_table`, so the arm's commit conflicts and
+  is retried on the refreshed table. On a `foreachBatch` stamp every arm must be refused,
+  naming the stray, with no stamp and no half of one on the table; on a `toTable` stamp every
+  arm still lands over the foreign commit. A child of the probe module.
+  pins: mb-4-foreach-eo/C-045
 - `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10,
   rulings on the fourth verify's S1):** the module re-exports `carried_by_foreach`, which
   tells the `toTable` door whether a name is walked. The scope learns the head the driver
