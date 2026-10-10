@@ -453,3 +453,42 @@ def test_table_door_writes_no_mark(spark: ReparkSession, tables: Path) -> None:
     assert len(values) == 1
     assert "pending-epoch" not in values[0]
     assert _log(spark) == [("append", None), ("append", "0")]
+
+
+_OVER_A_STRAY = "landed on the sink without a stamp after this batch began"
+
+
+@pytest.mark.parametrize("route", ["thread_insert", "thread_append"])
+def test_a_stamped_write_over_a_stray_that_landed_in_the_batch_is_refused_before_it_lands(
+    spark: ReparkSession, tables: Path, route: str
+) -> None:
+    refused: list[str] = []
+
+    class _Guarded(_Stray):
+        def __call__(self, frame: DataFrame, batch_id: int) -> None:
+            try:
+                super().__call__(frame, batch_id)
+            except PySparkException as error:
+                refused.append(str(error))
+                raise
+
+    body = _Guarded(spark, route, "append")
+    failure = _recovery(_start(spark, body, tables))
+    stray = _unstamped_ids(spark)[-1]
+    assert len(refused) == 1
+    assert _OVER_A_STRAY in refused[0]
+    assert f"snapshot {stray}" in refused[0]
+    assert _log(spark)[-2:] == [("append", "0"), ("append", None)]
+    assert f"sink advanced to snapshot {stray} (append) without a stamp" in str(failure)
+    assert "Every start refuses while that snapshot sits above the newest stamped batch" in str(
+        failure
+    )
+    assert isinstance(failure.__cause__, PySparkException)
+    rows = _ids(spark)
+    assert rows == ([1, 2, 3, 90] if route == "thread_append" else [1, 2, 70, 90])
+    for _ in range(2):
+        resumed = _Stray(spark, route, "append", at=9)
+        again = _recovery(_start(spark, resumed, tables))
+        assert f"sink advanced to snapshot {stray} (append) without a stamp" in str(again)
+        assert resumed.calls == 0
+        assert _ids(spark) == rows

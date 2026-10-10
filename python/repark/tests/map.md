@@ -8103,6 +8103,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   let the restart resume; the first-batch pin asserts the new text, which names the head to
   roll back to. The remedies themselves are followed in `test_mb_4_streaming_remedies.py`.
   pins: mb-4-foreach-eo/C-032
+  **Fold 5 (2026-10-10, prevention):** a body whose helper thread writes the sink and which
+  then makes its own stamped append gets that append refused before it lands, naming the
+  stray; the query ends `RecoveryRequiredException` with the stray above the newest stamp,
+  the refusal as `__cause__`, no row of the batch twice, and two restarts refuse.
+  pins: mb-4-foreach-eo/C-044
   pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022, C-024, C-028, C-029, C-030
 - [test_mb_4_streaming_remedies.py](test_mb_4_streaming_remedies.py) — **MB-4-FOREACH-EO
   fold 4 (2026-10-10, the third verify's first two S1):** every remedy a stray refusal prints,
