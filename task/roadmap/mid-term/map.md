@@ -734,3 +734,12 @@ declines it (a dated ruling in the intake, then the archive).
   or unread in one more pass (aggregate and window, the retry binding the left key, the WINDOW clause: 18 third
   answers of 575 statements). Asks how a qualified side key resolves structurally; governing rule: never worse than
   main, a third answer is an S1.
+- [c-4-write-only-role-1-card-2026-10-10.md](c-4-write-only-role-1-card-2026-10-10.md) — **card
+  C-4-WRITE-ONLY-ROLE-1 (2026-10-10, filed, not scheduled, from the C-4 measure round, Frontier D13):** a role
+  with INSERT but not SELECT cannot reach the write core because C-2's `discover` reads metadata first; Spark's
+  JDBC writer also reads metadata before writing, so the card records the parity limitation and asks for no fix.
+- [c-4-unmapped-column-write-1-card-2026-10-10.md](c-4-unmapped-column-write-1-card-2026-10-10.md) — **card
+  C-4-UNMAPPED-COLUMN-WRITE-1 (2026-10-10, filed, not scheduled, from the C-4 measure round, Frontier D13):** a
+  relation with an unmapped column does not resolve even when the write omits it; the follow-up resolves the
+  relation with unmapped columns marked unavailable and refuses only when one is named, with live pins on both
+  doors.
