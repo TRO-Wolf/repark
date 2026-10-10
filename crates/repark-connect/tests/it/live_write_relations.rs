@@ -234,7 +234,7 @@ const RULES_AND_VIEWS: [Property; 8] = [
     },
 ];
 
-const TRIGGERS: [Property; 3] = [
+const TRIGGERS: [Property; 2] = [
     Property {
         name: "row_triggers",
         ddl: "CREATE TABLE {s}.{t} (id int4, v text); CREATE TABLE {s}.{t}_audit (id int4);
@@ -252,19 +252,6 @@ const TRIGGERS: [Property; 3] = [
                     FROM {s}.{t}) || '/' ||
                     (SELECT pg_catalog.string_agg(id::text, ',' ORDER BY id) FROM {s}.{t}_audit)",
         expect: "1:a!,3:c!,4:d!/1,3,4",
-        ..PLAIN
-    },
-    Property {
-        name: "statement_trigger",
-        ddl: "CREATE TABLE {s}.{t} (id int4, v text); CREATE TABLE {s}.{t}_audit (id int4);
-              CREATE FUNCTION {s}.{t}_a() RETURNS trigger LANGUAGE plpgsql AS
-              $$ BEGIN INSERT INTO {s}.{t}_audit VALUES (0); RETURN NULL; END $$;
-              CREATE TRIGGER a AFTER INSERT ON {s}.{t}
-              FOR EACH STATEMENT EXECUTE FUNCTION {s}.{t}_a()",
-        fallback: Some(RowFallback::StatementTrigger),
-        signature: "SELECT (SELECT pg_catalog.count(*) FROM {s}.{t}) || '/' ||
-                    (SELECT pg_catalog.count(*) FROM {s}.{t}_audit)",
-        expect: "4/4",
         ..PLAIN
     },
     Property {
@@ -411,10 +398,24 @@ const FOREIGN: [Property; 2] = [
     Property {
         name: "foreign_table",
         ddl: "CREATE TABLE {s}.{t}_far (id int4, v text);
+              CREATE TABLE {s}.{t}_audit (id int4);
+              CREATE TABLE {s}.{t}_stmt (fired text);
+              CREATE FUNCTION {s}.{t}_r() RETURNS trigger LANGUAGE plpgsql AS
+              $$ BEGIN INSERT INTO {s}.{t}_audit VALUES (NEW.id); RETURN NEW; END $$;
+              CREATE FUNCTION {s}.{t}_s() RETURNS trigger LANGUAGE plpgsql AS
+              $$ BEGIN INSERT INTO {s}.{t}_stmt VALUES ('s'); RETURN NULL; END $$;
+              CREATE TRIGGER r AFTER INSERT ON {s}.{t}_far
+              FOR EACH ROW EXECUTE FUNCTION {s}.{t}_r();
+              CREATE TRIGGER s AFTER INSERT ON {s}.{t}_far
+              FOR EACH STATEMENT EXECUTE FUNCTION {s}.{t}_s();
               CREATE FOREIGN TABLE {s}.{t} (id int4, v text) SERVER {x}
               OPTIONS (schema_name '{s}', table_name '{t}_far')",
-        fallback: Some(RowFallback::ForeignTable),
-        signature: "SELECT pg_catalog.string_agg(id || ':' || v, ',' ORDER BY id) FROM {s}.{t}_far",
+        signature: "SELECT (SELECT pg_catalog.string_agg(id || ':' || v, ',' ORDER BY id)
+                    FROM {s}.{t}_far) || '/' ||
+                    (SELECT pg_catalog.string_agg(id::text, ',' ORDER BY id)
+                    FROM {s}.{t}_audit) || '/' ||
+                    (SELECT pg_catalog.count(*) FROM {s}.{t}_stmt)",
+        expect: "1:a,2:b,3:c,4:d/1,2,3,4/4",
         ..PLAIN
     },
     Property {
@@ -429,6 +430,17 @@ const FOREIGN: [Property; 2] = [
         ..PLAIN
     },
 ];
+
+const FILE_WRAPPER: [Property; 1] = [Property {
+    name: "file_table",
+    ddl: "CREATE FOREIGN TABLE {s}.{t} (id int4, v text) SERVER {x}
+          OPTIONS (filename '/tmp/{s}_file.csv', format 'csv')",
+    fallback: Some(RowFallback::ForeignTable),
+    outcome: Outcome::Sqlstate("0A000"),
+    signature: "SELECT 'refused'",
+    expect: "refused",
+    ..PLAIN
+}];
 
 type Written = (bool, Option<RowFallback>, Result<WriteReport, ConnectError>);
 
@@ -566,8 +578,99 @@ async fn rules_and_views_take_the_row_path_and_leave_the_same_tables() {
 
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
-async fn row_triggers_stay_bulk_and_statement_triggers_take_the_row_path() {
+async fn row_triggers_and_disabled_statement_triggers_stay_on_the_bulk_path() {
     measure_all(&TRIGGERS).await;
+}
+
+#[tokio::test]
+#[ignore = "live: make pg-up, REPARK_PG_URL"]
+async fn bulk_and_row_leave_the_same_target_rows_under_a_statement_trigger() {
+    let cell = Cell::open().await;
+    let schema = &cell.schema;
+    let store = Store::new(&cell.settings(&[]));
+    let mut targets = Vec::new();
+    for (requested, twin) in [(WritePath::Bulk, "b"), (WritePath::Row, "r")] {
+        cell.sql(&format!(
+            "CREATE TABLE {schema}.trig_{twin} (id int4, v text);
+             CREATE TABLE {schema}.audit_{twin} (seq bigserial, fired text);
+             CREATE TABLE {schema}.seen_{twin} (seq bigserial, n bigint, ids text);
+             CREATE FUNCTION {schema}.before_{twin}() RETURNS trigger LANGUAGE plpgsql AS
+             $$ BEGIN INSERT INTO {schema}.audit_{twin} (fired) VALUES ('before');
+             RETURN NULL; END $$;
+             CREATE FUNCTION {schema}.after_{twin}() RETURNS trigger LANGUAGE plpgsql AS
+             $$ BEGIN INSERT INTO {schema}.audit_{twin} (fired) VALUES ('after');
+             RETURN NULL; END $$;
+             CREATE FUNCTION {schema}.trans_{twin}() RETURNS trigger LANGUAGE plpgsql AS
+             $$ BEGIN INSERT INTO {schema}.seen_{twin} (n, ids) SELECT count(*),
+             pg_catalog.string_agg(n.id::text, ',' ORDER BY n.id) FROM n;
+             RETURN NULL; END $$;
+             CREATE TRIGGER b BEFORE INSERT ON {schema}.trig_{twin}
+             FOR EACH STATEMENT EXECUTE FUNCTION {schema}.before_{twin}();
+             CREATE TRIGGER a AFTER INSERT ON {schema}.trig_{twin}
+             FOR EACH STATEMENT EXECUTE FUNCTION {schema}.after_{twin}();
+             CREATE TRIGGER t AFTER INSERT ON {schema}.trig_{twin}
+             REFERENCING NEW TABLE AS n FOR EACH STATEMENT
+             EXECUTE FUNCTION {schema}.trans_{twin}()"
+        ))
+        .await;
+        let table = format!("trig_{twin}");
+        let resolved = store.target(&cell, &table).await;
+        let request = WriteRequest::new(&resolved).expect("a relation takes rows");
+        let (opened, fallback, outcome) = put(&store, request, requested, &four()).await;
+        assert!(opened, "{requested:?}");
+        assert_eq!(fallback, None, "{requested:?}");
+        let path = requested;
+        assert_eq!(outcome, Ok(WriteReport { path, rows: 4 }), "{requested:?}");
+        let target = format!(
+            "SELECT pg_catalog.string_agg(id || ':' || v, ',' ORDER BY id) \
+             FROM {schema}.trig_{twin}"
+        );
+        let row = cell
+            .admin
+            .query_one(target.as_str(), &[])
+            .await
+            .expect(&target);
+        let seen: Option<String> = row.get(0);
+        targets.push(seen.unwrap_or_default());
+        let audit = format!(
+            "SELECT pg_catalog.string_agg(fired, ',' ORDER BY seq) FROM {schema}.audit_{twin}"
+        );
+        let row = cell
+            .admin
+            .query_one(audit.as_str(), &[])
+            .await
+            .expect(&audit);
+        let firings: Option<String> = row.get(0);
+        let transitions = format!(
+            "SELECT pg_catalog.string_agg(n::text || ':' || ids, ',' ORDER BY seq) \
+             FROM {schema}.seen_{twin}"
+        );
+        let row = cell
+            .admin
+            .query_one(transitions.as_str(), &[])
+            .await
+            .expect(&transitions);
+        let counts: Option<String> = row.get(0);
+        match requested {
+            WritePath::Bulk => {
+                assert_eq!(firings.as_deref(), Some("before,after"), "bulk");
+                assert_eq!(counts.as_deref(), Some("4:1,2,3,4"), "bulk");
+            }
+            WritePath::Row => {
+                assert_eq!(
+                    firings.as_deref(),
+                    Some("before,after,before,after,before,after,before,after"),
+                    "row"
+                );
+                assert_eq!(counts.as_deref(), Some("1:1,1:2,1:3,1:4"), "row");
+            }
+        }
+    }
+    assert_eq!(targets[0], targets[1], "the twins store the same rows");
+    assert_eq!(targets[0], FOUR, "the stored rows");
+    drop(store);
+    no_backend_remains(&cell).await;
+    cell.close().await;
 }
 
 #[tokio::test]
@@ -630,9 +733,10 @@ async fn row_security_and_grants_are_judged_the_same_on_both_paths() {
 
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
-async fn a_foreign_table_or_partition_takes_the_row_path() {
+async fn a_postgres_fdw_table_takes_the_bulk_path_and_other_wrappers_do_not() {
     let cell = Cell::open().await;
     let server = format!("far_{}", &cell.schema[3..]);
+    let files = format!("fil_{}", &cell.schema[3..]);
     let base = url();
     let (userinfo, endpoint) = base.split_once('@').expect("a URL with userinfo");
     let (user, password) = userinfo
@@ -642,21 +746,26 @@ async fn a_foreign_table_or_partition_takes_the_row_path() {
     let database = endpoint.rsplit_once('/').expect("a database").1;
     cell.sql(&format!(
         "CREATE EXTENSION IF NOT EXISTS postgres_fdw;
+         CREATE EXTENSION IF NOT EXISTS file_fdw;
          CREATE SERVER {server} FOREIGN DATA WRAPPER postgres_fdw
          OPTIONS (host '127.0.0.1', port '5432', dbname '{database}');
          CREATE USER MAPPING FOR PUBLIC SERVER {server}
-         OPTIONS (user '{user}', password '{password}')"
+         OPTIONS (user '{user}', password '{password}');
+         CREATE SERVER {files} FOREIGN DATA WRAPPER file_fdw"
     ))
     .await;
     let store = Store::new(&cell.settings(&[]));
     for property in &FOREIGN {
         measure(&cell, &store, &store, &server, property).await;
     }
+    for property in &FILE_WRAPPER {
+        measure(&cell, &store, &store, &files, property).await;
+    }
     drop(store);
     no_backend_remains(&cell).await;
     let schema = &cell.schema;
     cell.sql(&format!(
-        "DROP SCHEMA {schema} CASCADE; DROP SERVER {server} CASCADE"
+        "DROP SCHEMA {schema} CASCADE; DROP SERVER {server} CASCADE; DROP SERVER {files} CASCADE"
     ))
     .await;
 }

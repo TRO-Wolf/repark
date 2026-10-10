@@ -859,7 +859,7 @@ async fn a_write_returns_its_connection_clean_and_names_only_its_columns() {
 
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
-async fn a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked() {
+async fn a_statement_trigger_fires_once_by_bulk_and_per_statement_by_row() {
     let cell = Cell::open().await;
     let schema = &cell.schema;
     cell.sql(&format!(
@@ -909,17 +909,20 @@ async fn a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked() 
     for (options, inserts) in cases {
         cell.sql(&format!("UPDATE {schema}.fired SET statements = 0"))
             .await;
-        for (path, table) in PATHS {
+        for (requested, table) in PATHS {
             let resolved = store.target(&cell, table).await;
-            let report = store_with(store.pool(), &resolved, path, options, &batches).await;
-            let path = WritePath::Row;
+            let report = store_with(store.pool(), &resolved, requested, options, &batches).await;
+            let (path, statements) = match requested {
+                WritePath::Bulk => (WritePath::Bulk, 1),
+                WritePath::Row => (WritePath::Row, inserts),
+            };
             assert_eq!(report, Ok(WriteReport { path, rows }), "{table}");
             let fired = cell
                 .count(&format!(
                     "SELECT statements FROM {schema}.fired WHERE name = '{table}'"
                 ))
                 .await;
-            assert_eq!(fired, inserts, "{table} {options:?}");
+            assert_eq!(fired, statements, "{table} {options:?}");
         }
     }
     let widest = i32::try_from(MAX_INSERT_PARAMS / 3).expect("a row count");

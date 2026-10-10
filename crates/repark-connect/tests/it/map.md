@@ -33,20 +33,28 @@ See [../map.md](../map.md).
   table of a foreign table), so "the same table" covers what a rule or a trigger wrote.
   The cells: `identity_generated_and_default_columns_agree_or_refuse_on_both_paths`,
   `rules_and_views_take_the_row_path_and_leave_the_same_tables`,
-  `row_triggers_stay_bulk_and_statement_triggers_take_the_row_path`,
+  `row_triggers_and_disabled_statement_triggers_stay_on_the_bulk_path`,
+  `bulk_and_row_leave_the_same_target_rows_under_a_statement_trigger` (a BEFORE, an AFTER
+  and a transition-table trigger: bulk fires each once, row fires each per statement, the
+  target rows agree),
   `partitions_inheritance_persistence_and_constraints_agree_on_both_paths`,
   `row_security_and_grants_are_judged_the_same_on_both_paths` (a second role),
-  `a_foreign_table_or_partition_takes_the_row_path` (a loopback `postgres_fdw` server, dropped
-  at the end; `CREATE EXTENSION IF NOT EXISTS` leaves the extension in the disposable
-  database) and `another_sessions_temporary_table_is_refused_the_same_on_both_paths`.
-  pins: c-4/C-017, C-018, C-019
+  `a_postgres_fdw_table_takes_the_bulk_path_and_other_wrappers_do_not` (a loopback
+  `postgres_fdw` server plus a `file_fdw` server, both dropped at the end;
+  `CREATE EXTENSION IF NOT EXISTS` leaves the extensions in the disposable database; the
+  `postgres_fdw` twin asserts the same remote rows and remote trigger audits on both paths,
+  the `file_fdw` twin asserts the same `0A000` refusal) and
+  `another_sessions_temporary_table_is_refused_the_same_on_both_paths`.
+  pins: c-4/C-017, C-018, C-019, C-023, C-024
 - `live_write.rs`, `write.rs` — **C-4 fold 1 (2026-10-09):**
   `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` is now
-  `a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked`: its counting
-  trigger is a statement trigger, so a `Bulk` request on that table now takes rows, and the
-  cell holds both requests to the same statement counts. The pure pins gain
+  `a_statement_trigger_fires_once_by_bulk_and_per_statement_by_row`: its counting trigger
+  is a statement trigger, so a `Bulk` request fires it once and a `Row` request fires it
+  once per bounded INSERT, and the cell holds each request to its own count (the measure
+  round, 2026-10-10, narrowed the fold-1 same-count rule). The pure pins gain
   `a_named_identity_or_generated_column_refuses_in_one_class_and_names_the_fix` and
-  `every_fallback_reason_says_why_copy_was_not_used`. pins: c-4/C-017, C-018
+  `every_fallback_reason_says_why_copy_was_not_used` (no `StatementTrigger` reason; it
+  pins the `fdwname` fact instead). pins: c-4/C-017, C-018, C-023, C-024
 - `live_write_faults.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. It shares
   `live_write.rs`'s helpers (now `pub(crate)`); new fault cells live here because
   `live_write.rs` is at the file-size ceiling.
