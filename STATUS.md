@@ -11,11 +11,11 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
-**v1.5.4 (2026-10-10):** R-007 (one nanosecond wall on every write door; nested `timestamp_ns` leaves refuse), ENC-1 (a keyed table refuses its first write), CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Matrix 705/132/5/0 (`e845b73b`). [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
+**v1.5.4 (2026-10-10):** R-007 (one nanosecond wall on every write door; nested `timestamp_ns` leaves refuse), ENC-1 (a keyed table refuses its first write), CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Matrix 705/132/5/0. Tagged `v1.5.4` at `f4e424c1`; on PyPI 2026-10-10 12:23 UTC. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
 
-**v1.5.3 (2026-10-07):** SOURCE-URL-REDACT-1, -1-FN and -2 (credentials never displayed), ATTR-ID-1 (STAMP-2 gate 1.0812), the TA single-series slices, the ANSI -0.0 division, GROWN-STACK-GATE-1. Matrix 705/132/5/0. Tagged `v1.5.3` at `7a8fcf1a`; on PyPI 2026-10-08 09:45 UTC. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
+**v1.5.3 (2026-10-07):** SOURCE-URL-REDACT-1, -1-FN and -2 (credentials never displayed), ATTR-ID-1 (STAMP-2 gate 1.0812), the TA single-series slices, the ANSI -0.0 division, GROWN-STACK-GATE-1. Matrix 705/132/5/0. Tagged `v1.5.3` at `7a8fcf1a`. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
 
-**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1, TEXT-WRITE-TIMESTAMP-ZONE-1. Matrix 705/132/5/0. Tagged `v1.5.2` at `d0c50405`. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
+**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1, TEXT-WRITE-TIMESTAMP-ZONE-1. Matrix 705/132/5/0. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
 
 **v1.5.1 (2026-09-29):** S3 path writes (U12), CASESENS-1, the TIMESTAMP/NTZ/DATE/numeric store-assignment fixes, INTDIV-1. Matrix 705/132/5/0. Tagged `v1.5.1` at `db3a1f37`. [Notes](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
 

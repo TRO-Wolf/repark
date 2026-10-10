@@ -1,0 +1,248 @@
+<title>RePark v1.5.4 Release Notes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F2F5F7;
+  --surface: #FFFFFF;
+  --fg: #16232B;
+  --muted: #55676F;
+  --rule: #D5DEE3;
+  --accent: #0E6C88;
+  --accent-soft: #DCEEF3;
+  --code-bg: #E9EFF2;
+  --sec: #9B2C3A;      --sec-soft: #F7E3E5;
+  --chg: #8A5A00;      --chg-soft: #F6ECD3;
+  --perf: #0E6C88;     --perf-soft: #DCEEF3;
+  --fix: #2F6B3C;      --fix-soft: #DFEFE2;
+  --base: #55676F;     --base-soft: #E3E9EC;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1418; --surface: #151D22; --fg: #E3EBEF; --muted: #93A5AD; --rule: #27343B;
+    --accent: #4DB1CF; --accent-soft: #14303A; --code-bg: #1A252B;
+    --sec: #F0919C; --sec-soft: #3A1B20; --chg: #E5B95C; --chg-soft: #382C12;
+    --perf: #4DB1CF; --perf-soft: #14303A; --fix: #7FCB8F; --fix-soft: #183021;
+    --base: #93A5AD; --base-soft: #202C32; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1418; --surface: #151D22; --fg: #E3EBEF; --muted: #93A5AD; --rule: #27343B;
+  --accent: #4DB1CF; --accent-soft: #14303A; --code-bg: #1A252B;
+  --sec: #F0919C; --sec-soft: #3A1B20; --chg: #E5B95C; --chg-soft: #382C12;
+  --perf: #4DB1CF; --perf-soft: #14303A; --fix: #7FCB8F; --fix-soft: #183021;
+  --base: #93A5AD; --base-soft: #202C32; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.6; }
+.page { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, pre, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 0.08em 0.36em; border-radius: 3px; overflow-wrap: anywhere; }
+pre { background: var(--code-bg); padding: 14px 16px; border-radius: 4px; overflow-x: auto; margin: 0; line-height: 1.5; }
+pre code { background: none; padding: 0; font-size: 1em; overflow-wrap: normal; }
+
+.masthead { border-bottom: 2px solid var(--fg); padding-bottom: 22px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(38px, 7vw, 60px); line-height: 1.02; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { max-width: 64ch; margin: 16px 0 0; font-size: 17px; color: var(--fg); }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0; margin: 0; padding: 0; border-bottom: 1px solid var(--rule); }
+.facts div { padding: 16px 16px 16px 0; min-width: 0; }
+.facts dt { font-family: var(--mono); font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.facts dd { margin: 4px 0 0; font-family: var(--display); font-weight: 600; font-size: 21px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.facts dd small { display: block; font-family: var(--body); font-weight: 400; font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px; margin-top: 36px; }
+@media (min-width: 900px) { .layout { grid-template-columns: 200px minmax(0, 1fr); gap: 56px; } }
+nav.toc { font-size: 14px; }
+@media (min-width: 900px) { nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; } }
+nav.toc p { font-family: var(--mono); font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+@media (max-width: 899px) { nav.toc ul { flex-direction: row; flex-wrap: wrap; gap: 6px 18px; } }
+nav.toc a { text-decoration: none; color: var(--fg); }
+nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+main { display: flex; flex-direction: column; gap: 52px; min-width: 0; }
+section { display: flex; flex-direction: column; gap: 16px; min-width: 0; scroll-margin-top: 24px; }
+section > * { margin: 0; }
+.tag { align-self: flex-start; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 9px; border-radius: 2px; }
+.tag.sec { color: var(--sec); background: var(--sec-soft); }
+.tag.chg { color: var(--chg); background: var(--chg-soft); }
+.tag.perf { color: var(--perf); background: var(--perf-soft); }
+.tag.fix { color: var(--fix); background: var(--fix-soft); }
+.tag.base { color: var(--base); background: var(--base-soft); }
+h2 { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.12; text-wrap: balance; }
+h3 { font-family: var(--display); font-weight: 600; font-size: 20px; line-height: 1.2; margin-top: 10px; text-wrap: balance; }
+p, li { max-width: 68ch; }
+ul { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.ref { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.note { border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; color: var(--fg); }
+.note.warn { border-left-color: var(--chg); }
+
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.pair > div { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 14px 16px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pair h4 { margin: 0; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.pair p { margin: 0; font-size: 15px; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+td.num, th.num { text-align: right; padding-right: 20px; white-space: nowrap; }
+tr.hl td { font-weight: 600; }
+
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13.5px; }
+footer p { max-width: 80ch; margin: 0 0 6px; }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">RePark · patch release · fourth patch on 1.5.0</p>
+    <h1>v1.5.4 <span>Release Notes</span></h1>
+    <p class="lede">Every write door now stores the same nanosecond wall clock into a <code>timestamp_ns</code> column. A table that carries an encryption key refuses its first write instead of writing plaintext. Cross joins honour their condition. Three kinds of write that used to store a value now refuse; check them before upgrading.</p>
+  </header>
+
+  <dl class="facts">
+    <div><dt>Published</dt><dd>2026-10-10<small>PyPI, 12:23 UTC, five wheels</small></dd></div>
+    <div><dt>Tagged</dt><dd class="mono">f4e424c1<small>2026-10-10, 11:21 UTC</small></dd></div>
+    
+    <div><dt>Parity matrix</dt><dd>705 equal · 0 different<small>842 cells, unchanged from v1.5.3</small></dd></div>
+    <div><dt>Since v1.5.3</dt><dd>32 merges<small>from <span class="mono">7a8fcf1a</span></small></dd></div>
+  </dl>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Contents">
+      <p>In this release</p>
+      <ul>
+        <li><a href="#wall">Nanosecond wall</a></li>
+        <li><a href="#changes">Behaviour changes</a></li>
+        <li><a href="#enc">Encryption key</a></li>
+        <li><a href="#joins">Join conditions</a></li>
+        <li><a href="#fixes">Fixes</a></li>
+        <li><a href="#known">Known issues</a></li>
+        <li><a href="#upgrade">Upgrading</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <section id="wall">
+        <span class="tag fix">Wrong stored value, fixed</span>
+        <h2>One nanosecond wall on every write door</h2>
+        <p>In a session whose time zone is not UTC, <code>INSERT</code> stored the session wall clock into a top-level <code>timestamp_ns</code> column, while several other doors stored the UTC wall for the same value. The table held two different times for one input depending on which statement wrote it.</p>
+        <div class="pair">
+          <div><h4>Before</h4><p><code>INSERT OVERWRITE</code>, every <code>MERGE</code> arm, <code>UPDATE SET</code>, <code>overwritePartitions</code> and <code>insertInto(overwrite=True)</code> stored the UTC wall.</p></div>
+          <div><h4>Now</h4><p>Every door stores what <code>INSERT</code> stores, at full nanosecond precision. Run-end-encoded and dictionary-encoded sources store the same wall on the overwrite doors.</p></div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Checked on the final build</th><th class="num">Cells</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td>Answering <code>timestamp_ns</code> cells, five time zones, values read from the Parquet files</td><td class="num">1,095</td><td>equal to <code>INSERT</code></td></tr>
+              <tr><td>Control cells (other types and targets)</td><td class="num">8,225</td><td>identical to v1.5.3</td></tr>
+              <tr><td>Statements that do not touch a nanosecond column</td><td class="num">524</td><td>identical to v1.5.3</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Values written by the affected doors before this release keep the UTC wall. The fix does not rewrite stored data. If a non-UTC session wrote <code>timestamp_ns</code> through those doors, compare against the source and rewrite the affected rows.</p>
+        <p class="ref">PR #1018 · parity row R-007 · merge 58bf67e3</p>
+      </section>
+
+      <section id="changes">
+        <span class="tag chg">Behaviour change</span>
+        <h2>Three writes that now refuse</h2>
+        <p>Each of these stored something before. They now stop with a named error and write nothing.</p>
+
+        <h3>A nested <code>timestamp_ns</code> value</h3>
+        <p>A write that supplies a value for a column whose type holds a <code>timestamp_ns</code> below the top level (a struct field, an array element, a map key or value) refuses with <code>[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]</code>. Before, it stored a value, often the UTC wall. Converting nested values correctly is follow-up work, so this release refuses instead of storing a time that may be wrong.</p>
+        <ul>
+          <li><strong>Still works:</strong> omitting the column, supplying a bare <code>NULL</code> for it, updating or merging other columns, <code>DELETE</code>, compaction and other maintenance, and every read.</li>
+          <li><strong>Not affected:</strong> <code>CREATE TABLE AS SELECT</code>, <code>REPLACE TABLE AS SELECT</code> and <code>CALL system.add_files</code>, which take the source's own values.</li>
+          <li><strong>Also refuses:</strong> the same write sent to a branch, under write-audit-publish settings, inside <code>EXPLAIN ANALYZE</code>, or through <code>PREPARE</code> and <code>EXECUTE</code>.</li>
+          <li><strong>Not covered:</strong> nested <code>timestamptz_ns</code> and microsecond types behave as in v1.5.3.</li>
+        </ul>
+
+        <h3>An unfiltered <code>UPDATE</code> that would cut nanoseconds</h3>
+        <p><code>UPDATE</code> with no <code>WHERE</code> refuses when its <code>SET</code> value was narrowed from nanoseconds to microseconds by the expression around it, for example <code>array(c, NULL)[0]</code> or <code>CASE … ELSE NULL</code>. One such spelling stored a truncated, wrong value before; the others raised an unnamed error.</p>
+
+        <h3>Error text on a malformed write</h3>
+        <p>On a table that holds a nested <code>timestamp_ns</code> column, a write statement that fails to parse reports the nested refusal above where it used to report the parser's message. Other tables keep the parser's message.</p>
+        <p class="ref">PR #1018 · follow-up card ICE-TSNS-NESTED-1</p>
+      </section>
+
+      <section id="enc">
+        <span class="tag sec">Security</span>
+        <h2>A table with an encryption key refuses its first write</h2>
+        <p>RePark cannot encrypt table data yet. A table that carries the <code>encryption.key-id</code> property now refuses every statement that would write a data, delete, manifest or statistics file, with <code>UnsupportedOperationException</code>. The message names the table and the property and never repeats the key id.</p>
+        <div class="pair">
+          <div><h4>Spark 4.1.2 with Iceberg 1.11.0</h4><p>Ignores the key on format v3 and writes plaintext without warning.</p></div>
+          <div><h4>RePark v1.5.4</h4><p>Refuses the write on every format version. This is deliberately stricter than Spark.</p></div>
+        </div>
+        <ul>
+          <li><strong>Still works:</strong> <code>CREATE</code>, <code>SELECT</code>, time travel, snapshot expiry, orphan-file cleanup, rollback and other pointer moves, <code>ALTER</code>, and unsetting the key, after which writes run again.</li>
+          <li><strong>Unkeyed tables:</strong> unchanged. 395 statements compared against v1.5.3, none moved; CPU time within 2%.</li>
+        </ul>
+        <p class="note warn">Two gaps remain. A rollback or branch move can publish rows that were staged in plaintext before the key was set. A session that loaded the table before the key was added can leave one orphan data file behind before its commit is refused.</p>
+        <p class="ref">PR #1019 · ENC-1 · merge 9b230aed · residue card ENC-1-RESIDUE-1</p>
+      </section>
+
+      <section id="joins">
+        <span class="tag fix">Wrong answer, fixed</span>
+        <h2>Join conditions</h2>
+        <ul>
+          <li><strong>Cross join with a condition.</strong> <code>df.join(other, cond, "cross")</code> dropped the condition and returned every pairing. It now answers as the inner join, as Spark does. The recorded case returned 12 rows where Spark returns 2.</li>
+          <li><strong>Conditions Spark rejects.</strong> A non-deterministic condition such as <code>rand()</code>, or an untyped <code>NULL</code> condition, now refuses for every join type with Spark's error classes: <code>INVALID_NON_DETERMINISTIC_EXPRESSIONS</code> and <code>JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE</code>. Both the DataFrame and SQL doors refuse.</li>
+        </ul>
+        <p class="ref">PR #1010 · merge 153b6cb5</p>
+      </section>
+
+      <section id="fixes">
+        <span class="tag fix">Fixes</span>
+        <h2>Smaller fixes</h2>
+        <ul>
+          <li><strong><code>COUNT(*)</code> on change readers.</strong> <code>COUNT(*)</code>, <code>COUNT(1)</code>, <code>SELECT 1</code>, <code>df.count()</code> and <code>EXISTS</code> now answer over the changelog, incremental and lineage readers. They failed with an internal error before. <span class="ref">#1017</span></li>
+          <li><strong>Epoch constructors in SQL.</strong> <code>timestamp_seconds</code>, <code>timestamp_millis</code> and <code>timestamp_micros</code> answer on the SQL door as Spark does, including decimal arguments at their boundaries and Spark's refusals for overflow and unsupported argument types. <span class="ref">#1012</span></li>
+          <li><strong>pyarrow floor.</strong> The dependency is now <code>pyarrow&gt;=25.0.1</code>. pyarrow 25.0.0 can crash the process on a first <code>collect()</code>, <code>take()</code>, <code>head()</code>, <code>first()</code> or <code>toLocalIterator()</code> called from a thread. The fault is upstream and fixed in 25.0.1. <span class="ref">#1015</span></li>
+        </ul>
+      </section>
+
+      <section id="known">
+        <span class="tag chg">Known issues</span>
+        <h2>Carried to v1.5.5</h2>
+        <p>All three exist in v1.5.3 as well. They are grouped into one follow-up patch.</p>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Issue</th><th>What happens today</th></tr></thead>
+            <tbody>
+              <tr><td><code>timestamptz_ns</code> targets<br><span class="ref">R-008</span></td><td>The overwrite and <code>MERGE</code> doors store a wall clock as if it were UTC, where <code>INSERT</code> localises it. The mirror of the defect fixed above.</td></tr>
+              <tr><td>Nanoseconds lost before the store<br><span class="ref">R-017</span></td><td><code>coalesce(ns, NULL)</code>, <code>CASE … ELSE NULL</code>, <code>if(…, ns, NULL)</code> and <code>array(ns, NULL)[0]</code> are typed as microseconds, so the stored value is cut to microseconds. v1.5.5 will refuse these and keep storing a cast you wrote yourself.</td></tr>
+              <tr><td>Nested microsecond <code>TIMESTAMP_NTZ</code><br><span class="ref">R-011</span></td><td>Into a struct field, <code>INSERT</code> stores the UTC wall and a field assignment stores the session wall.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="upgrade">
+        <span class="tag base">Upgrading</span>
+        <h2>From v1.5.3</h2>
+        <pre><code>pip install --upgrade repark==1.5.4</code></pre>
+        <ul>
+          <li>The API freeze holds; no public name was removed or renamed.</li>
+          <li>pip will move pyarrow to 25.0.1 or later if you are on 25.0.0.</li>
+          <li>If a pipeline writes nested <code>timestamp_ns</code> values, it will now stop with the named refusal. Omit the column, supply <code>NULL</code>, or load through CTAS until the nested conversion ships.</li>
+          <li>If any table carries <code>encryption.key-id</code>, writes to it will stop. Unset the property to write plaintext knowingly.</li>
+          <li>If a non-UTC session wrote top-level <code>timestamp_ns</code> through the overwrite, <code>MERGE</code> or <code>UPDATE</code> doors on an earlier version, check those rows.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <p>RePark v1.5.4, tagged at <span class="mono">f4e424c13ff434bc90cdb100933c8a7642765219</span>. Parity matrix measured on a fresh release build of <span class="mono">e845b73b</span>, the last product commit before the version bump.</p>
+    <p>Full notes in the repository: <span class="mono">task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md</span>.</p>
+  </footer>
+</div>
