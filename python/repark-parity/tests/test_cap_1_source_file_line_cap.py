@@ -49,7 +49,6 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-spark/src/tests/partitioned_merge.rs", 1068),
     ("crates/repark-spark/src/tests/transform_overwrite.rs", 1181),
     ("crates/repark-spark/src/window_range.rs", 1225),
-    ("crates/repark-sql/src/guards/tests.rs", 1207),
     ("crates/repark-sql/src/tests.rs", 1513),
     ("crates/repark-sql/tests/cross_door.rs", 1253),
     ("crates/repark-ta/src/momentum.rs", 2098),
@@ -173,7 +172,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 34
+    assert len(rust_approved) == 33
     assert len(python_approved) == 29
 
 

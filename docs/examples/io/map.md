@@ -84,7 +84,9 @@ directory carries the one-liner (verified by scan, EX-26 round 2).
   delegation with its `ARGUMENT_REQUIRED` / `MIXED_TYPE_REPLACEMENT` arms
   (IO-DECLARED-1; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1 — R-3 restores
   PostgreSQL reads on `DataFrameReader.jdbc`, pinned in
-  `test_pg_jdbc_options.py`). `DataFrameReader.jdbc`
+  `test_pg_jdbc_options.py`; C-4 answers Postgres jdbc writes, so the writer
+  arm pins the `CONNECT-DECL-pg-write-modes` non-append refusal instead of
+  `NOT_IMPLEMENTED`). `DataFrameReader.jdbc`
   leaves the exceptions list — the non-Postgres refusal is the example.
 
 ## Pointers
