@@ -192,6 +192,8 @@ One write holds one pooled connection. Nothing is spawned.
 | C-013 | `INSERT INTO <source>.<schema>.<table> SELECT …` routes to the sink on the ANSI door and on the Spark door, one test row per door (order R-3). | Both doors ask bulk through the one driver and read the taken path plus the fallback sentence off the open writer (§10.1, §10.2); ANSI pins `crates/repark-sql/src/pg_insert.rs::tests` (offline routing plus 3 ignored live cells), Spark pins `crates/repark-spark/src/tests/pg_insert.rs` plus live `python/repark-parity/tests/live_db/test_c4_write.py` (14 cells). | PROVEN | §10. |
 | C-014 | The Spark-door writer option `write.path = bulk \| row` reaches `WritePath`, default `bulk`, and the C-6 Python convenience maps onto the same option (ruled 2026-10-08). | The shared parser refuses an unknown value naming both values and `row` forces the INSERT path with no fallback reason; default bulk and row-forced writes agree byte for byte live; no second path exists, so the future C-6 convenience has exactly this option to map onto (§10.1, §10.6). | PROVEN | §10. |
 | C-015 | DIFF-PROBE and the verifier pass (order R-1), and the unit's last live run on the C-0 container. | Step 2's live runs are recorded in §10.4; DIFF-PROBE and the verifier run on the merged tree in step 3, after this slice. | OPEN | §10.6. |
+| C-023 | A table with an enabled statement-level `INSERT` trigger takes the bulk path on a `Bulk` request (no fallback) and the row path on a `Row` request: one firing per write by bulk (BEFORE, AFTER and transition-table triggers alike), one firing per statement by row, the same target rows on both. | live `a_statement_trigger_fires_once_by_bulk_and_per_statement_by_row`, `bulk_and_row_leave_the_same_target_rows_under_a_statement_trigger`. | OPEN | §11.2. |
+| C-024 | A direct `postgres_fdw` foreign table takes the bulk path on a `Bulk` request (no fallback): the same remote rows and remote audit rows as the row path. Any other foreign table, and a partitioned table with any foreign leaf, keeps `RowFallback::ForeignTable`. | live `a_postgres_fdw_table_takes_the_bulk_path_and_other_wrappers_do_not`. | OPEN | §11.2. |
 
 ## 2. Four-line records (2026-10-08)
 
@@ -909,3 +911,59 @@ path exists). C-015 is step 3's: DIFF-PROBE and the verifier run on the merged
 tree, after this slice. The owner questions standing: a write-only role, an
 unmapped column, `batchsize` onto `rows_per_insert`, and the §10.3 class
 record.
+
+## 11. Measure round (2026-10-10): COPY against INSERT for triggers and foreign tables
+
+Branch `feat/c-4-routing`. Owner ruling 2026-10-10 (Frontier D13): the principle
+"INSERT's meaning is the contract, bulk is an optimisation" is ratified, but the
+two row-path routings for statement-level triggers and foreign tables (§8.3) are
+NOT ratified on assertion. Measure first, then keep bulk wherever the cell shows
+no divergence. Probe and verbatim output:
+[c-4-measure/](c-4-measure/map.md). Server: PostgreSQL 16.15, the C-0 container.
+Each cell runs the same 3 rows through one plain `INSERT` and one `COPY … FROM
+STDIN (FORMAT BINARY)`.
+
+### 11.1 The cells
+
+| cell | INSERT | COPY | diverges? |
+|---|---|---|---|
+| `stmt-before-after`: `BEFORE` + `AFTER … FOR EACH STATEMENT`, each appending to an audit table | 3 stored; audit `[before, after]` | 3 stored; audit `[before, after]` | no |
+| `stmt-transition`: `AFTER INSERT … REFERENCING NEW TABLE AS n`, auditing `count(*)` and the ordered ids | 3 stored; audit `(3, '1,2,3')` | 3 stored; audit `(3, '1,2,3')` | no |
+| `fdw-postgres`: loopback `postgres_fdw` table over a remote table with a default, a check, and row plus statement triggers; the write omits the defaulted column | 3 stored with `n` NULL; remote audit `row,stmt` per row, 6 rows in order | 3 stored with `n` NULL; the same 6 audit rows in order | no |
+| `fdw-postgres violation`: one row against the remote check | `23514` with the check text; 0 stored | the same `23514` and text; 0 stored | no |
+| `fdw-file`: `file_fdw` table (the image ships it) | `0A000 cannot insert into foreign table`; 0 stored | the same `0A000` and text; 0 stored | no |
+
+Two measured notes behind the table. The `n` NULL on both foreign paths is the
+FDW layer, not the probe: a direct local `INSERT` omitting `n` stores 7, so
+`postgres_fdw` sends NULL for the unlisted column on both paths alike. The
+`row,stmt` interleaving on both foreign paths shows one remote `INSERT` per row
+at the default options, so a remote statement trigger fires per row on both
+paths at any size under those options.
+
+### 11.2 Decisions
+
+No cell diverges, so both routings move, each exactly where measured:
+
+- **Statement-trigger tables go back to bulk (C-023).** COPY fires each
+  statement trigger once per write, which is one `INSERT` statement's meaning,
+  so a `Bulk` request takes COPY again. A `Row` request keeps firing once per
+  statement (the bounded-inserts count: full groups plus one single-row
+  statement per remainder row), where each statement carries the single-INSERT
+  meaning, as Spark's `batchsize` batches do. C-018's "same side tables" is
+  narrowed for this property only: the two requested paths now agree on the
+  target rows and differ on the trigger's firing count by construction. The old
+  routing forced `Bulk` requests onto the multi-fire path for agreement's sake;
+  D13 withholds ratification from exactly that trade.
+- **Direct `postgres_fdw` tables go back to bulk (C-024).** `TARGET_FACTS`
+  resolves the wrapper name, and only `relkind = 'f'` with
+  `fdwname = 'postgres_fdw'` loses the fallback. Every other foreign table
+  keeps `RowFallback::ForeignTable`: `file_fdw` (measured identical, but it
+  never writes, so keeping the fallback changes nothing observable), every
+  unmeasured wrapper (a writable wrapper without COPY support stores by INSERT
+  and refuses by COPY; routing it to bulk would be the assertion D13 forbids),
+  and a partitioned table with any foreign leaf (an unmeasured combination).
+  A NULL wrapper name falls back: fail-closed.
+
+`GENERATED ALWAYS` identity named in a write still refuses on both paths
+(ratified; Spark's JDBC writer names every column and Postgres refuses it too):
+a record, no code.
