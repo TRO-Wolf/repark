@@ -25,6 +25,7 @@ pub enum NestedWrite<'a> {
     Insert(InsertSupply<'a>),
     Update(&'a [Assignment]),
     Merge(&'a [MergeClause]),
+    Unreadable,
 }
 
 #[must_use]
@@ -91,6 +92,7 @@ pub fn refuse_nested_ns_supply(table: &Table, label: &str, write: &NestedWrite<'
             NestedWrite::Insert(insert) => insert_supply(insert, &names, field.name()),
             NestedWrite::Update(assignments) => assigned(assignments, field.name()),
             NestedWrite::Merge(clauses) => merged(clauses, &names, field.name()),
+            NestedWrite::Unreadable => Supply::Value,
         };
         if supply == Supply::Value {
             return Err(nested_ns_refusal(label, field.name(), &leaf));

@@ -44,12 +44,65 @@ async fn attempt(
     }
 }
 
-fn routes() -> Vec<(
+type Route = (
     &'static str,
     Option<&'static str>,
     Option<&'static str>,
     String,
-)> {
+);
+
+fn row_level_routes() -> Vec<Route> {
+    let branch = "ice.sales.t.branch_b1";
+    vec![
+        (
+            "update a branch with a where",
+            None,
+            None,
+            format!("UPDATE {branch} SET st = {VALUE} WHERE id = 1"),
+        ),
+        (
+            "update a branch with no where",
+            None,
+            None,
+            format!("UPDATE {branch} SET st = {VALUE}"),
+        ),
+        (
+            "merge update into a branch",
+            None,
+            None,
+            format!(
+                "MERGE INTO {branch} t USING (SELECT 1 AS id, {VALUE} AS st) s ON t.id = s.id \
+                 WHEN MATCHED THEN UPDATE SET st = s.st"
+            ),
+        ),
+        (
+            "merge insert into a branch",
+            None,
+            None,
+            format!(
+                "MERGE INTO {branch} t USING (SELECT 11 AS id, {VALUE} AS st) s ON t.id = s.id \
+                 WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.st)"
+            ),
+        ),
+        (
+            "insert overwrite a branch",
+            None,
+            None,
+            format!("INSERT OVERWRITE {branch} SELECT 5, {VALUE}, 0"),
+        ),
+        (
+            "merge under a wap branch",
+            Some("b1"),
+            None,
+            format!(
+                "MERGE INTO ice.sales.t t USING (SELECT 1 AS id, {VALUE} AS st) s ON t.id = s.id \
+                 WHEN MATCHED THEN UPDATE SET st = s.st"
+            ),
+        ),
+    ]
+}
+
+fn routes() -> Vec<Route> {
     let branch = "ice.sales.t.branch_b1";
     vec![
         (
@@ -109,51 +162,6 @@ fn routes() -> Vec<(
             None,
             format!("INSERT INTO ice.sales.t (id, st) SELECT 5, {VALUE}"),
         ),
-        (
-            "update a branch with a where",
-            None,
-            None,
-            format!("UPDATE {branch} SET st = {VALUE} WHERE id = 1"),
-        ),
-        (
-            "update a branch with no where",
-            None,
-            None,
-            format!("UPDATE {branch} SET st = {VALUE}"),
-        ),
-        (
-            "merge update into a branch",
-            None,
-            None,
-            format!(
-                "MERGE INTO {branch} t USING (SELECT 1 AS id, {VALUE} AS st) s ON t.id = s.id \
-                 WHEN MATCHED THEN UPDATE SET st = s.st"
-            ),
-        ),
-        (
-            "merge insert into a branch",
-            None,
-            None,
-            format!(
-                "MERGE INTO {branch} t USING (SELECT 11 AS id, {VALUE} AS st) s ON t.id = s.id \
-                 WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.st)"
-            ),
-        ),
-        (
-            "insert overwrite a branch",
-            None,
-            None,
-            format!("INSERT OVERWRITE {branch} SELECT 5, {VALUE}, 0"),
-        ),
-        (
-            "merge under a wap branch",
-            Some("b1"),
-            None,
-            format!(
-                "MERGE INTO ice.sales.t t USING (SELECT 1 AS id, {VALUE} AS st) s ON t.id = s.id \
-                 WHEN MATCHED THEN UPDATE SET st = s.st"
-            ),
-        ),
     ]
 }
 
@@ -163,7 +171,7 @@ async fn a_branch_or_wap_write_of_a_nested_nanosecond_leaf_is_refused_and_writes
     let (ctx, catalogs) = seeded(&wh, NESTED, "t").await;
     let files = count_parquet_files(wh.path());
     let mut wrong = Vec::new();
-    for (route, wap_branch, wap_id, write) in routes() {
+    for (route, wap_branch, wap_id, write) in routes().into_iter().chain(row_level_routes()) {
         set_wap(&ctx, wap_branch, wap_id);
         let outcome = attempt(&ctx, &catalogs, &write).await;
         set_wap(&ctx, None, None);
@@ -304,4 +312,58 @@ async fn a_branch_or_wap_write_to_a_table_with_no_such_leaf_is_not_gated() {
     let on_branch = "SELECT id FROM ice.sales.p.branch_b1";
     assert_eq!(rows(&ctx, &catalogs, on_branch).await, 4);
     assert_eq!(rows(&ctx, &catalogs, "SELECT id FROM ice.sales.p").await, 2);
+}
+
+#[tokio::test]
+async fn a_statement_the_router_rewrites_later_is_still_decided_on_its_target() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = seeded(&wh, NESTED, "t").await;
+    let ident = TableIdent::from_strs(["sales", "t"]).unwrap();
+    let loaded = catalogs["ice"].load_table(&ident).await.unwrap();
+    let first = loaded.metadata().current_snapshot_id().unwrap();
+    let travelled = format!("FROM ice.sales.t VERSION AS OF {first}");
+    let refused = [
+        format!("INSERT INTO ice.sales.t SELECT id + 20, st, k {travelled}"),
+        format!("INSERT INTO ice.sales.t.branch_b1 SELECT id + 20, st, k {travelled}"),
+        format!(
+            "MERGE WITH SCHEMA EVOLUTION INTO ice.sales.t t USING (SELECT 1 AS id, {VALUE} AS st) \
+             s ON t.id = s.id WHEN MATCHED THEN UPDATE SET st = s.st"
+        ),
+        format!("INSERT INTO ice.sales.t SELECT count(*), {VALUE}, 0 FROM ice.sales.t.snapshots"),
+    ];
+    for write in &refused {
+        let outcome = attempt(&ctx, &catalogs, write).await.expect_err(write);
+        assert!(outcome.contains(NOT_YET), "{write}: {outcome}");
+    }
+    assert_eq!(snapshots(&catalogs, "t").await, 1);
+    let allowed = [
+        format!("INSERT INTO ice.sales.t (id, k) SELECT id + 20, k {travelled}"),
+        "INSERT INTO ice.sales.t (id, k) SELECT count(*) + 40, 0 FROM ice.sales.t.snapshots"
+            .to_string(),
+        "MERGE WITH SCHEMA EVOLUTION INTO ice.sales.t t USING (SELECT 1 AS id) s ON t.id = s.id \
+         WHEN MATCHED THEN UPDATE SET k = 4"
+            .to_string(),
+    ];
+    for (index, write) in allowed.iter().enumerate() {
+        assert_eq!(attempt(&ctx, &catalogs, write).await, Ok(()), "{write}");
+        assert_eq!(snapshots(&catalogs, "t").await, index + 2, "{write}");
+    }
+}
+
+#[tokio::test]
+async fn a_statement_the_gate_cannot_read_is_refused_for_such_a_table_only() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = seeded(&wh, NESTED, "t").await;
+    let unreadable = format!("INSERT INTO ice.sales.t SELECT 5, {VALUE}, 0 FROM (");
+    let outcome = attempt(&ctx, &catalogs, &unreadable)
+        .await
+        .expect_err("refused");
+    assert!(outcome.contains(NOT_YET), "{outcome}");
+    let elsewhere = attempt(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.absent SELECT 5 FROM (",
+    )
+    .await;
+    assert!(!elsewhere.expect_err("a parser error").contains(NOT_YET));
 }

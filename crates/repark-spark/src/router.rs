@@ -138,6 +138,7 @@ async fn execute_calibrated(
     if crate::view_ddl::parse::is_create_view_statement(canonical_sql) {
         return Box::pin(execute_inner(ctx, catalogs, canonical_sql, write_options)).await;
     }
+    nested_ns::refuse_nested_supply(ctx, catalogs, canonical_sql, write_options).await?;
     // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
     let sql_after_meta: std::borrow::Cow<'_, str> =
         if crate::describe_show::metadata_table::rewrites_metadata_path(canonical_sql) {
@@ -292,7 +293,6 @@ async fn execute_inner(
     let sql = evolving.as_deref().unwrap_or(sql);
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
-    nested_ns::refuse_nested_supply(ctx, catalogs, sql, write_options.source_by_name).await?;
     if let Some(replace) = insert_positional::replace_where::parse_replace_where(sql)? {
         let execute = insert_positional::replace_where::execute_replace_where;
         return Box::pin(execute(ctx, catalogs, replace, write_options)).await;
