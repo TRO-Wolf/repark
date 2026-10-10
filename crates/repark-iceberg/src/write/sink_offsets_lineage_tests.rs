@@ -270,3 +270,35 @@ async fn a_corrupt_offsets_property_is_neither_a_mark_nor_a_record() {
     assert!(read_starting_mark(&corrupt, query()).is_err());
     assert!(read_resume_point(&corrupt, query()).is_err());
 }
+
+#[tokio::test]
+async fn the_mark_is_written_once_and_never_over_a_record() {
+    let (_warehouse, catalog, ident) = fixture("mark_once").await;
+    let empty = catalog.load_table(&ident).await.expect("load");
+    commit_starting_mark(&catalog, &empty, query())
+        .await
+        .expect("the first mark");
+    let stray = append_plain(&catalog, &ident, &[1]).await;
+    let kept = commit_starting_mark(&catalog, &stray, query())
+        .await
+        .expect("the second writer reads the first mark");
+    assert_eq!(
+        read_starting_mark(&kept, query()).expect("the mark"),
+        Some(StartingMark { head: None }),
+        "the first head stays"
+    );
+    assert_eq!(
+        commit_named(unstamped_since_stamp(&kept, query(), None)),
+        (head(&stray), String::from("append"))
+    );
+    let (_other_warehouse, catalog, ident) = fixture("mark_once_stamped").await;
+    let stale = catalog.load_table(&ident).await.expect("load");
+    let committed = stamped(&catalog, &stale, 0, &[1]).await;
+    let record = committed.metadata().properties()[&offsets_key()].clone();
+    let kept = commit_starting_mark(&catalog, &stale, query())
+        .await
+        .expect("the late mark reads the record");
+    assert_eq!(kept.metadata().properties()[&offsets_key()], record);
+    assert_eq!(read_starting_mark(&kept, query()).expect("no mark"), None);
+    assert!(read_resume_point(&kept, query()).expect("resume").is_some());
+}

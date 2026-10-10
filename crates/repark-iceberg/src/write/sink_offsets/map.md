@@ -9,6 +9,21 @@ directory holds the piece split out of it. The test files of the module stay bes
 
 ## Contents
 
+- `append_fence.rs`, `body_scope.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10): one catalog
+  wrapper, three rules.** Main's ENC-1 gate (`tests/enc_1_gate.rs`) allows `impl Catalog for`
+  in three files only, so that every catalog handle stays inside the encryption guard's
+  wrappers, and `append_fence.rs` is one of them. Fold 1's `BodySinkGuard` was a second
+  wrapper in `body_scope.rs` and failed that gate after the merge. It is gone: `AppendFence`
+  now carries a `Rule` (`Stamp` for the append fence, `StartingMark` for the write-once mark,
+  `BodySink` for the body's guard) over one forwarding implementation, and
+  `guard_body_catalog` builds it with `AppendFence::for_body`. The body rule's behaviour is
+  unchanged: at `update_table` and `publish_replace_table` on the scope's sink it admits a
+  commit only while the scope holds a claimed, unrecorded stamp, and it notes an unknown
+  outcome. The gate's allow-list is not edited. The entries below that name `BodySinkGuard`
+  describe this rule. The name `AppendFence` now says less than the type does; the file is
+  still the stopgap for F-APPEND-PIN-BASE-1, and when the fork lands that ask only the
+  `Stamp` rule retires.
+  pins: mb-4-foreach-eo/C-006, C-028
 - `lineage.rs`, `append_fence.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling D2):
   the starting mark.** `read_starting_mark(table, query)` reads the mark from the offsets
   property; `commit_starting_mark(catalog, table, query)` writes it in a property-only commit

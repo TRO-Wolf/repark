@@ -10,6 +10,7 @@ use iceberg::{
     TableIdent, ViewCreation,
 };
 
+use super::body_scope::{BodyScope, note_unknown_outcome, refuse_sink_commit, watches};
 use super::{ClaimedStamp, epoch_check, latch_refusal, main_lineage, stamped_by};
 use crate::microbatch::error::MicroBatchError;
 use crate::microbatch::offset::{Epoch, QUERY_ID_KEY, QueryId, SinkRecord, SnapshotId};
@@ -25,6 +26,7 @@ pub(super) struct AppendFence {
 enum Rule {
     Stamp(ClaimedStamp),
     StartingMark(QueryId),
+    BodySink(BodyScope),
 }
 
 enum Breach<'metadata> {
@@ -47,10 +49,25 @@ impl AppendFence {
         })
     }
 
+    pub(super) fn for_body(inner: &Arc<dyn Catalog>, scope: BodyScope) -> Arc<dyn Catalog> {
+        Arc::new(AppendFence {
+            inner: Arc::clone(inner),
+            rule: Rule::BodySink(scope),
+        })
+    }
+
     fn refuse(&self, refreshed: &Table) -> Option<Error> {
         match &self.rule {
             Rule::Stamp(claimed) => Self::refuse_stamp(claimed, refreshed),
             Rule::StartingMark(query) => already_started(refreshed, *query),
+            Rule::BodySink(scope) => refuse_sink_commit(scope, refreshed),
+        }
+    }
+
+    fn body_scope_on(&self, table: &Table) -> Option<&BodyScope> {
+        match &self.rule {
+            Rule::BodySink(scope) if watches(scope, table) => Some(scope),
+            _ => None,
         }
     }
 
@@ -276,14 +293,22 @@ impl Catalog for AppendFence {
     }
 
     async fn update_table(&self, commit: TableCommit) -> Result<Table> {
-        let refusal = match commit.base_table() {
-            Some(refreshed) => self.refuse(refreshed),
-            None => self.refuse(&self.inner.load_table(commit.identifier()).await?),
+        let (refusal, watched) = if let Some(refreshed) = commit.base_table() {
+            (self.refuse(refreshed), self.body_scope_on(refreshed))
+        } else {
+            let loaded = self.inner.load_table(commit.identifier()).await?;
+            (self.refuse(&loaded), self.body_scope_on(&loaded))
         };
-        match refusal {
-            Some(refusal) => Err(refusal),
-            None => self.inner.update_table(commit).await,
+        if let Some(refusal) = refusal {
+            return Err(refusal);
         }
+        let committed = self.inner.update_table(commit).await;
+        if let (Some(scope), Err(error)) = (watched, &committed)
+            && error.kind() == ErrorKind::CommitStateUnknown
+        {
+            note_unknown_outcome(scope);
+        }
+        committed
     }
 
     async fn publish_create_table(&self, table: Table) -> Result<Table> {
@@ -295,6 +320,11 @@ impl Catalog for AppendFence {
         table: Table,
         expected_base_metadata_location: Option<String>,
     ) -> Result<Table> {
+        if let Rule::BodySink(scope) = &self.rule
+            && let Some(refusal) = refuse_sink_commit(scope, &table)
+        {
+            return Err(refusal);
+        }
         self.inner
             .publish_replace_table(table, expected_base_metadata_location)
             .await
