@@ -212,6 +212,9 @@ pub fn engine_err_for_sql(sql: &str, err: DataFusionError) -> Error {
 #[allow(clippy::needless_pass_by_value)]
 #[must_use]
 pub fn engine_err(err: DataFusionError) -> Error {
+    if let Some(refusal) = repark_iceberg::write::EncryptedTableRefusal::find(&err) {
+        return Error::NotImplemented(refusal.to_string());
+    }
     match classify_datafusion_error(&err) {
         EngineErrorKind::Parse => Error::Parse(spark_parse_message(&err)),
         EngineErrorKind::Analysis => {

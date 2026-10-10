@@ -12,6 +12,9 @@ pub(crate) mod conflict_filter;
 pub(crate) mod conform;
 pub mod data_format;
 pub(crate) mod distribution;
+pub mod encryption;
+#[cfg(test)]
+mod encryption_tests;
 pub mod fanout_order;
 pub(crate) mod file_order;
 pub mod file_scoped_rewrite;
@@ -79,6 +82,11 @@ pub mod writer_plan;
 pub mod writer_props;
 
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
+pub use encryption::{
+    ENCRYPTION_KEY_ID_PROPERTY, EncryptedTableRefusal, carries_encryption_key,
+    normalize_encrypted_refusal, refuse_encrypted_properties, refuse_encrypted_table,
+    refuse_encrypted_write,
+};
 pub use illegal_argument::{
     IllegalArgumentMarker, NumberFormatMarker, illegal_argument_error, number_format_error,
 };

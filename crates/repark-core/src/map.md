@@ -366,6 +366,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `apply_with_subqueries` (IN / EXISTS / scalar subqueries count as reads) and
   `scan_url_hits_prefix` compares the decoded `ListingTableUrl::prefix` plus
   the `object_store` bucket, so percent-encoded keys refuse self-overwrite.
+- `error_map.rs` — **ENC-1 fold 1 (2026-10-09):** `engine_err` first asks
+  `repark_iceberg::write::EncryptedTableRefusal::find` for the keyed-table refusal. The
+  catalog guard raises it from inside a writer or a commit, wrapped by whatever layer was
+  writing; without this step the class and the text would depend on that layer. With it
+  every door maps to `NotImplemented` (`UnsupportedOperationException`) with the one text.
+  pins: enc-1/C-008
 - `error_map.rs` — **C-2d (2026-10-07):** `classify_external_tail` downcasts
   `repark_connect::ConnectError` to `EngineErrorKind::Connect`; `engine_err` takes the class from
   `From<ConnectError>` (`Config`, `NotImplemented`, else `DataFusion`) and flattens the

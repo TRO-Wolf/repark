@@ -1,0 +1,677 @@
+{
+  "cells": [
+    {
+      "cell": "E01",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "CREATE TABLE local.enc1.e01_create (id INT, name STRING) USING iceberg TBLPROPERTIES ('format-version' = '3', 'encryption.key-id' = 'review-test-key')",
+      "table_state": {
+        "exists": true,
+        "file_count": 0,
+        "properties": {
+          "current-snapshot-id": "none",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 0,
+        "snapshots": []
+      }
+    },
+    {
+      "cell": "E02",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "INSERT INTO local.enc1.e02_values VALUES (1, 'a'), (2, 'b')",
+      "table_state": {
+        "exists": true,
+        "file_count": 2,
+        "properties": {
+          "current-snapshot-id": "846378891137936602",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 2,
+        "snapshots": [
+          {
+            "id": "846378891137936602",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E03",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "INSERT INTO local.enc1.e03_select SELECT id, name FROM local.enc1.e02_values",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "4725844355901252696",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 2,
+        "snapshots": [
+          {
+            "id": "4725844355901252696",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E04",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "INSERT OVERWRITE local.enc1.e04_overwrite SELECT 3, 'c'",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "2584313345234963134",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 1,
+        "snapshots": [
+          {
+            "id": "2584313345234963134",
+            "op": "overwrite"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E05",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "CREATE TABLE local.enc1.e05_ctas USING iceberg TBLPROPERTIES ('format-version' = '3', 'encryption.key-id' = 'review-test-key') AS SELECT 1 AS id, 'a' AS name",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "8839232831745928529",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 1,
+        "snapshots": [
+          {
+            "id": "8839232831745928529",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E06",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "CREATE OR REPLACE TABLE local.enc1.e06_rtas USING iceberg TBLPROPERTIES ('format-version' = '3', 'encryption.key-id' = 'review-test-key') AS SELECT 1 AS id, 'a' AS name",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "9024402450052067074",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 1,
+        "snapshots": [
+          {
+            "id": "9024402450052067074",
+            "op": "overwrite"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E07",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "MERGE INTO local.enc1.e07_merge AS t USING (SELECT 1 AS id, 'a' AS name) AS s ON t.id = s.id WHEN MATCHED THEN UPDATE SET name = s.name WHEN NOT MATCHED THEN INSERT *",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "5770143168761440815",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 1,
+        "snapshots": [
+          {
+            "id": "5770143168761440815",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E08",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "UPDATE local.enc1.e08_update SET name = 'z' WHERE id = 1",
+      "table_state": {
+        "exists": true,
+        "file_count": 0,
+        "properties": {
+          "current-snapshot-id": "1981249525683701551",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 0,
+        "snapshots": [
+          {
+            "id": "1981249525683701551",
+            "op": "overwrite"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E09",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "DELETE FROM local.enc1.e09_delete_row WHERE id = 1",
+      "table_state": {
+        "exists": true,
+        "file_count": 0,
+        "properties": {
+          "current-snapshot-id": "1137470800329964878",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 0,
+        "snapshots": [
+          {
+            "id": "1137470800329964878",
+            "op": "delete"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E10",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "DELETE FROM local.enc1.e10_delete_all",
+      "table_state": {
+        "exists": true,
+        "file_count": 0,
+        "properties": {
+          "current-snapshot-id": "5621411509648664598",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 0,
+        "snapshots": [
+          {
+            "id": "5621411509648664598",
+            "op": "delete"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E11",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "TRUNCATE TABLE local.enc1.e11_truncate",
+      "table_state": {
+        "exists": true,
+        "file_count": 0,
+        "properties": {
+          "current-snapshot-id": "303764035418915530",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 0,
+        "snapshots": [
+          {
+            "id": "303764035418915530",
+            "op": "delete"
+          }
+        ]
+      }
+    },
+    {
+      "alter": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "cell": "E12",
+      "outcome": "ok",
+      "rows": [],
+      "setup_insert": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "statement": "INSERT INTO local.enc1.e12_alter_add VALUES (2, 'b')",
+      "table_state": {
+        "exists": true,
+        "file_count": 2,
+        "properties": {
+          "current-snapshot-id": "5176637742405419999",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "2",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 2,
+        "snapshots": [
+          {
+            "id": "4447023853210847402",
+            "op": "append"
+          },
+          {
+            "id": "5176637742405419999",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E13",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "spark.createDataFrame([(9, 'w')]).writeTo('local.enc1.e13_df_append').append()",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "2097094938847255398",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 1,
+        "snapshots": [
+          {
+            "id": "2097094938847255398",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "alter": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "cell": "E14",
+      "outcome": "ok",
+      "rows": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "setup_insert": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "statement": "CALL local.system.rewrite_data_files(table => 'enc1.e14_rewrite_data')",
+      "table_state": {
+        "exists": true,
+        "file_count": 2,
+        "properties": {
+          "current-snapshot-id": "7148208251645289968",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "2",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 2,
+        "snapshots": [
+          {
+            "id": "7148208251645289968",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "alter": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "cell": "E15",
+      "outcome": "ok",
+      "rows": [
+        [
+          0,
+          0
+        ]
+      ],
+      "setup_insert": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "statement": "CALL local.system.rewrite_manifests(table => 'enc1.e15_rewrite_manifests')",
+      "table_state": {
+        "exists": true,
+        "file_count": 2,
+        "properties": {
+          "current-snapshot-id": "1088025705286242088",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "2",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 2,
+        "snapshots": [
+          {
+            "id": "1088025705286242088",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "alter": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "cell": "E16",
+      "outcome": "ok",
+      "rows": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "setup_insert": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "statement": "CALL local.system.expire_snapshots(table => 'enc1.e16_expire', retain_last => 1)",
+      "table_state": {
+        "exists": true,
+        "file_count": 3,
+        "properties": {
+          "current-snapshot-id": "6966909290583134782",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "2",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 3,
+        "snapshots": [
+          {
+            "id": "4376169714550997688",
+            "op": "append"
+          },
+          {
+            "id": "6966909290583134782",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "alter": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "cell": "E17",
+      "outcome": "ok",
+      "rows": [],
+      "setup_insert": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "statement": "CALL local.system.remove_orphan_files(table => 'enc1.e17_orphans')",
+      "table_state": {
+        "exists": true,
+        "file_count": 2,
+        "properties": {
+          "current-snapshot-id": "8202117590581512396",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "2",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 2,
+        "snapshots": [
+          {
+            "id": "8202117590581512396",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "alter": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "cell": "E18",
+      "outcome": "ok",
+      "rows": [
+        [
+          1,
+          "a"
+        ],
+        [
+          2,
+          "b"
+        ]
+      ],
+      "setup_insert": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "statement": "SELECT * FROM local.enc1.e18_select ORDER BY id",
+      "table_state": {
+        "exists": true,
+        "file_count": 2,
+        "properties": {
+          "current-snapshot-id": "4460201810022431977",
+          "encryption.key-id": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "2",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 2,
+        "snapshots": [
+          {
+            "id": "4460201810022431977",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E19",
+      "create": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "outcome": "ok",
+      "rows": [],
+      "statement": "INSERT INTO local.enc1.e19_empty VALUES (1, 'a')",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "7084569180804491260",
+          "encryption.key-id": "",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 1,
+        "snapshots": [
+          {
+            "id": "7084569180804491260",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E20",
+      "create": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "outcome": "ok",
+      "rows": [],
+      "statement": "INSERT INTO local.enc1.e20_lookalike_a VALUES (1, 'a')",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "4955122396622048345",
+          "encryption.keyid": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 1,
+        "snapshots": [
+          {
+            "id": "4955122396622048345",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E21",
+      "create": {
+        "outcome": "ok",
+        "rows": []
+      },
+      "outcome": "ok",
+      "rows": [],
+      "statement": "INSERT INTO local.enc1.e21_lookalike_b VALUES (1, 'a')",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "766895486266556321",
+          "encryption.key-id-x": "review-test-key",
+          "format": "iceberg/parquet",
+          "format-version": "3",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 1,
+        "snapshots": [
+          {
+            "id": "766895486266556321",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E22",
+      "outcome": "ok",
+      "rows": [],
+      "statement": "INSERT INTO local.enc1.e22_control VALUES (1, 'a')",
+      "table_state": {
+        "exists": true,
+        "file_count": 1,
+        "properties": {
+          "current-snapshot-id": "8582566996068533125",
+          "format": "iceberg/parquet",
+          "format-version": "2",
+          "write.parquet.compression-codec": "zstd"
+        },
+        "row_count": 1,
+        "snapshots": [
+          {
+            "id": "8582566996068533125",
+            "op": "append"
+          }
+        ]
+      }
+    },
+    {
+      "cell": "E23",
+      "create": {
+        "error": {
+          "causes": [
+            "java.lang.IllegalArgumentException"
+          ],
+          "class": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+          "condition": null,
+          "exception": "pyspark.errors.exceptions.captured.IllegalArgumentException",
+          "python_cause": null,
+          "sqlstate": null,
+          "text": "Invalid properties for v2: [encryption.key-id]"
+        },
+        "outcome": "error"
+      },
+      "error": {
+        "causes": [
+          "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+        ],
+        "class": "TABLE_OR_VIEW_NOT_FOUND",
+        "condition": "TABLE_OR_VIEW_NOT_FOUND",
+        "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+        "python_cause": null,
+        "sqlstate": "42P01",
+        "text": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `local`.`enc1`.`e23_v2` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01; line 1 pos 12;\n'InsertIntoStatement 'UnresolvedRelation [local, enc1, e23_v2], [__required_write_privileges__=INSERT], false, false, false, false\n+- LocalRelation [col1#2518, col2#2519]\n"
+      },
+      "outcome": "error",
+      "statement": "INSERT INTO local.enc1.e23_v2 VALUES (1, 'a')",
+      "table_state": {
+        "exists": false,
+        "exists_error": {
+          "causes": [
+            "org.apache.spark.sql.catalyst.ExtendedAnalysisException"
+          ],
+          "class": "TABLE_OR_VIEW_NOT_FOUND",
+          "condition": "TABLE_OR_VIEW_NOT_FOUND",
+          "exception": "pyspark.errors.exceptions.captured.AnalysisException",
+          "python_cause": null,
+          "sqlstate": "42P01",
+          "text": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `local`.`enc1`.`e23_v2` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01; line 1 pos 19;\n'ShowTableProperties [key#2520, value#2521]\n+- 'UnresolvedTableOrView [local, enc1, e23_v2], SHOW TBLPROPERTIES, true\n"
+        }
+      }
+    }
+  ],
+  "preamble": {
+    "catalog": "hadoop",
+    "date": "2026-10-09",
+    "iceberg_jar": "org.apache.iceberg_iceberg-spark-runtime-4.1_2.13-1.11.0.jar",
+    "kms": "none configured",
+    "master": "local[2]",
+    "spark": "4.1.2"
+  }
+}

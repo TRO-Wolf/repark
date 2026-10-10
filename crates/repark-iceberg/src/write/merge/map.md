@@ -45,6 +45,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **WO RP50-A (2026-09-26):** the three `maybe_to_branch` calls drop the table argument and
   the `?` with the removed v1 kernel, so a MERGE into a branch of a format v1 table commits.
   pins: ice-nested-evo-1/C-053, C-057, C-060
+- `snapshot_commit.rs` — **ENC-1 round 2 (2026-10-09):** `commit_overwrite_on_ref` and
+  `commit_row_delta_kind_on_ref` refuse a target carrying `encryption.key-id` as commit
+  backstops; the MERGE doors also check at entry, so these only fire on direct calls.
+  pins: enc-1/C-005
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
   **ICE-OCC-SCOPED-1 (2026-09-17):** `MergeTarget` carries the MERGE's `conflict_filter`,
   computed once in `execute_merge` by `merge_conflict_filter`: the target-only conjuncts of the

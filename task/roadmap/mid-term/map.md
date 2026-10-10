@@ -730,6 +730,17 @@ declines it (a dated ruling in the intake, then the archive).
   `TIMESTAMP` into a `timestamp_ns` column as the UTC wall, while INSERT stores the session-zone wall (registry row
   `ICE-TSNS-SQL-1-R-007`). Widening the matchers alone is not the fix, because the NTZ wall cast is microsecond. The card
   holds the review's probe and its log, the acceptance criteria and the write-door checklist.
+- [enc-1-residue-1-card-2026-10-09.md](enc-1-residue-1-card-2026-10-09.md) **card ENC-1-RESIDUE-1
+  (2026-10-09, open):** what the keyed-table refusal does not cover, from the re-verify of PR #1019: a stale handle's
+  one orphan Parquet, an unkeyed table placed under a keyed table's location, ref-only commits that publish rows staged
+  before the key, the thirteen shapes whose clean refusal rests on entry checks, the textual gate and the
+  caller-built catalog, and the Glue metadata-directory limit. Each needs an owner call.
+- [fork-tablecommit-updates-1-card-2026-10-09.md](fork-tablecommit-updates-1-card-2026-10-09.md) **card
+  FORK-TABLECOMMIT-UPDATES-1 (2026-10-09, open, fork work):** a read accessor for `TableCommit`'s updates, so the
+  ENC-1 commit guard matches on values and stops reading `Debug` text.
+- [cluster-feature-ci-1-card-2026-10-09.md](cluster-feature-ci-1-card-2026-10-09.md) **card CLUSTER-FEATURE-CI-1
+  (2026-10-09, open):** no CI job builds or tests `repark-distributed --features cluster`; a regression there went
+  unseen until a verifier ran it by hand.
 - [enc-1-first-write-refusal-card-2026-10-09.md](enc-1-first-write-refusal-card-2026-10-09.md) **card
   ENC-1-FIRST-WRITE-REFUSAL-1 (2026-10-09, open, clerk guided by Muse, Opus verifier):** the owner's 2026-10-01 ruling
   (ES-3) that the first write to a table carrying `encryption.key-id` refuses, as Spark does without a KMS. The card's

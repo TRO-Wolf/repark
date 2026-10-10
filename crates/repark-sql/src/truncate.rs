@@ -47,6 +47,7 @@ pub(crate) async fn execute_truncate(
     }
     match resolve_iceberg_truncate_target(cx, table_name).await? {
         Some((catalog_name, catalog, table)) => {
+            repark_iceberg::write::refuse_encrypted_table(&table)?;
             repark_iceberg::write::commit_truncate(&catalog, &table).await?;
             let leaf = table
                 .identifier()
