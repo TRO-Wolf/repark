@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, ArrayRef, AsArray};
@@ -7,24 +8,19 @@ use repark_core::ReparkSession;
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
 
+const NANOS: &str = "2026-01-02 03:04:05.123456789";
+const TICKS: i64 = 1_767_323_045_123_456_789;
 const INSTANT: &str = "TIMESTAMP '2026-01-02 03:04:05.123456+00:00'";
-const WALLS: [(&str, i64); 2] = [
-    ("America/New_York", 1_767_305_045_123_456_000),
-    ("Asia/Kolkata", 1_767_342_845_123_456_000),
-];
-const REFUSAL: &str = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]";
-const LEAF: &str = "cannot be stored into this timestamp_ns leaf";
+const REFUSAL: &str = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible \
+                       data for the table `ice`.`ns`.";
+const NOT_YET: &str = "A nested timestamp_ns leaf is not writable yet";
 
-fn session(zone: &str, ansi: bool) -> ReparkSession {
+fn session(zone: &str) -> ReparkSession {
     ReparkSession::builder()
         .with_sql_dialect(Arc::new(SparkDialect))
         .with_extension(Arc::new(SparkExtension))
         .config("repark.sql.allowCreateFormatVersion3", "true")
         .config("spark.sql.session.timeZone", zone)
-        .config(
-            "spark.sql.ansi.enabled",
-            if ansi { "true" } else { "false" },
-        )
         .build()
         .expect("session")
 }
@@ -59,10 +55,7 @@ async fn catalog(session: &ReparkSession) -> TempDir {
     .await;
     run(
         session,
-        &format!(
-            "INSERT INTO ice.ns.src VALUES \
-             (1, {INSTANT}, CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns))"
-        ),
+        &format!("INSERT INTO ice.ns.src VALUES (1, {INSTANT}, CAST('{NANOS}' AS timestamp_ns))"),
     )
     .await;
     warehouse
@@ -80,9 +73,9 @@ fn leaf(array: &ArrayRef) -> Vec<Option<i64>> {
     }
 }
 
-async fn stored(session: &ReparkSession, table: &str) -> Vec<Option<i64>> {
+async fn stored(session: &ReparkSession, sql: &str) -> Vec<Option<i64>> {
     let batches = session
-        .sql(&format!("SELECT st FROM {table} ORDER BY id"))
+        .sql(sql)
         .await
         .expect("read")
         .collect()
@@ -94,442 +87,466 @@ async fn stored(session: &ReparkSession, table: &str) -> Vec<Option<i64>> {
         .collect()
 }
 
-#[derive(Clone, Copy, Debug)]
-enum Answer {
-    Wall,
-    Refused(&'static str),
+fn files_under(root: &Path) -> usize {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return 0;
+    };
+    entries
+        .flatten()
+        .map(|entry| {
+            let path = entry.path();
+            if path.is_dir() { files_under(&path) } else { 1 }
+        })
+        .sum()
 }
 
-const PAIR: &str = "STRUCT<a: timestamp_ns, b: TIMESTAMP>";
-const DOORS: [(&str, &str); 6] = [
+const SHAPES: [(&str, &str, &str, &str); 9] = [
     (
-        "insert select",
-        "INSERT INTO {t} SELECT id, {st} FROM ice.ns.src",
+        "struct",
+        "STRUCT<v: timestamp_ns, n: INT>",
+        "named_struct('v', {x}, 'n', 1)",
+        "`st`.`v`",
     ),
     (
-        "insert overwrite",
-        "INSERT OVERWRITE {t} SELECT id, {st} FROM ice.ns.src",
+        "struct in struct",
+        "STRUCT<i: STRUCT<v: timestamp_ns, n: INT>, m: INT>",
+        "named_struct('i', named_struct('v', {x}, 'n', 1), 'm', 2)",
+        "`st`.`i`.`v`",
+    ),
+    (
+        "array of struct",
+        "ARRAY<STRUCT<v: timestamp_ns, n: INT>>",
+        "array(named_struct('v', {x}, 'n', 1))",
+        "`st`.`element`.`v`",
+    ),
+    (
+        "array",
+        "ARRAY<timestamp_ns>",
+        "array({x})",
+        "`st`.`element`",
+    ),
+    (
+        "struct of array",
+        "STRUCT<a: ARRAY<timestamp_ns>, n: INT>",
+        "named_struct('a', array({x}), 'n', 1)",
+        "`st`.`a`.`element`",
+    ),
+    (
+        "map value",
+        "MAP<STRING, timestamp_ns>",
+        "map('k', {x})",
+        "`st`.`value`",
+    ),
+    (
+        "map key",
+        "MAP<timestamp_ns, INT>",
+        "map({x}, 1)",
+        "`st`.`key`",
+    ),
+    (
+        "map of struct",
+        "MAP<STRING, STRUCT<v: timestamp_ns, n: INT>>",
+        "map('k', named_struct('v', {x}, 'n', 1))",
+        "`st`.`value`.`v`",
+    ),
+    (
+        "struct, one field renamed",
+        "STRUCT<a: timestamp_ns, b: TIMESTAMP>",
+        "named_struct('q', {x}, 'b', {x})",
+        "`st`.`a`",
+    ),
+];
+const DOORS: [(&str, &str, &str); 17] = [
+    (
+        "insert values",
+        "INSERT INTO {t} VALUES (2, {st}, 0)",
+        "lit",
+    ),
+    (
+        "insert select",
+        "INSERT INTO {t} SELECT id, {st}, 0 FROM ice.ns.src",
+        "ns",
+    ),
+    (
+        "insert with a column list",
+        "INSERT INTO {t} (id, st) SELECT id, {st} FROM ice.ns.src",
+        "ns",
     ),
     (
         "insert by name",
-        "INSERT INTO {t} BY NAME SELECT {st} AS st, id FROM ice.ns.src",
+        "INSERT INTO {t} BY NAME SELECT 0 AS k, {st} AS st, id FROM ice.ns.src",
+        "ns",
+    ),
+    (
+        "insert by name, star",
+        "INSERT INTO {t} BY NAME SELECT * FROM (SELECT 0 AS k, {st} AS st, id FROM ice.ns.src) AS s",
+        "ns",
+    ),
+    (
+        "insert overwrite",
+        "INSERT OVERWRITE {t} SELECT id, {st}, 0 FROM ice.ns.src",
+        "ns",
+    ),
+    (
+        "insert overwrite values",
+        "INSERT OVERWRITE {t} VALUES (2, {st}, 0)",
+        "lit",
+    ),
+    (
+        "replace where",
+        "INSERT INTO {t} REPLACE WHERE id >= 0 SELECT id, {st}, 0 FROM ice.ns.src",
+        "ns",
     ),
     (
         "merge insert",
-        "MERGE INTO {t} t USING (SELECT id, {st} AS v FROM ice.ns.src) s ON t.id = s.id \
-         WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.v)",
+        "MERGE INTO {t} t USING (SELECT id + 5 AS id, {st} AS v FROM ice.ns.src) s ON t.id = s.id \
+         WHEN NOT MATCHED THEN INSERT (id, st, k) VALUES (s.id, s.v, 0)",
+        "ns",
+    ),
+    (
+        "merge insert star",
+        "MERGE INTO {t} t USING (SELECT id + 5 AS id, {st} AS st, 0 AS k FROM ice.ns.src) s \
+         ON t.id = s.id WHEN NOT MATCHED THEN INSERT *",
+        "ns",
     ),
     (
         "merge update",
         "MERGE INTO {t} t USING (SELECT id, {st} AS v FROM ice.ns.src) s ON t.id = s.id \
-         WHEN MATCHED THEN UPDATE SET st = s.v",
-    ),
-    ("update where", "UPDATE {t} SET st = {st} WHERE id >= 0"),
-];
-const BY_NAME_UNPAIRED: Answer = Answer::Refused("no source field of that name");
-const NOT_FOUND: Answer = Answer::Refused("[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]");
-const ARRAY_MERGE: Answer = Answer::Refused("cannot store-assign column `st`");
-const SPELLINGS: [(&str, &str, &str, [Answer; 6]); 6] = [
-    (
-        "names in order",
-        PAIR,
-        "named_struct('a', x, 'b', x)",
-        [Answer::Wall; 6],
+         WHEN MATCHED THEN UPDATE SET t.st = s.v",
+        "ns",
     ),
     (
-        "names swapped",
-        PAIR,
-        "named_struct('b', x, 'a', x)",
-        [Answer::Wall; 6],
+        "merge update star",
+        "MERGE INTO {t} t USING (SELECT id, {st} AS st, 0 AS k FROM ice.ns.src) s ON t.id = s.id \
+         WHEN MATCHED THEN UPDATE SET *",
+        "ns",
     ),
     (
-        "one field renamed",
-        PAIR,
-        "named_struct('q', x, 'b', x)",
-        [
-            BY_NAME_UNPAIRED,
-            Answer::Wall,
-            Answer::Wall,
-            NOT_FOUND,
-            NOT_FOUND,
-            NOT_FOUND,
-        ],
+        "update where",
+        "UPDATE {t} SET st = {st} WHERE id >= 0",
+        "lit",
+    ),
+    ("update with no where", "UPDATE {t} SET st = {st}", "lit"),
+    (
+        "insert select, an array element",
+        "INSERT INTO {t} SELECT id, {st}, 0 FROM ice.ns.src",
+        "array(ns, NULL)[0]",
     ),
     (
-        "one field differently cased",
-        PAIR,
-        "named_struct('A', x, 'b', x)",
-        [
-            BY_NAME_UNPAIRED,
-            Answer::Wall,
-            Answer::Wall,
-            Answer::Wall,
-            Answer::Wall,
-            Answer::Wall,
-        ],
+        "insert select from a temporary view",
+        "INSERT INTO {t} SELECT id, {st}, 0 FROM narrowed",
+        "x",
     ),
     (
-        "no name shared",
-        PAIR,
-        "named_struct('q', x, 'r', x)",
-        [
-            BY_NAME_UNPAIRED,
-            Answer::Wall,
-            Answer::Wall,
-            NOT_FOUND,
-            NOT_FOUND,
-            NOT_FOUND,
-        ],
-    ),
-    (
-        "one field renamed, in an array",
-        "ARRAY<STRUCT<a: timestamp_ns, b: TIMESTAMP>>",
-        "array(named_struct('q', x, 'b', x))",
-        [
-            BY_NAME_UNPAIRED,
-            Answer::Wall,
-            Answer::Wall,
-            ARRAY_MERGE,
-            ARRAY_MERGE,
-            Answer::Refused("the source field names are not the target's, in order"),
-        ],
+        "insert select from a subquery",
+        "INSERT INTO {t} SELECT id, v, 0 FROM (SELECT id, {st} AS v FROM ice.ns.src) AS s",
+        "coalesce(ns, NULL)",
     ),
 ];
 
 #[tokio::test]
-async fn a_struct_source_pairs_as_the_door_that_stores_it_pairs() {
+async fn every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing() {
+    let literal = format!("CAST('{NANOS}' AS timestamp_ns)");
     let mut wrong = Vec::new();
-    for (zone, wall) in WALLS {
-        let session = session(zone, true);
-        let _warehouse = catalog(&session).await;
-        for (shape_index, (spelling, column_type, value, answers)) in SPELLINGS.iter().enumerate() {
-            for (door_index, ((door, write), answer)) in DOORS.iter().zip(answers).enumerate() {
-                let table = format!("ice.ns.p{shape_index}_{door_index}");
-                run(
-                    &session,
-                    &format!(
-                        "CREATE TABLE {table} (id INT, st {column_type}) USING iceberg \
-                         TBLPROPERTIES ('format-version'='3')"
-                    ),
-                )
-                .await;
-                let value = if door.starts_with("update") {
-                    run(&session, &format!("INSERT INTO {table} (id) VALUES (1)")).await;
-                    value.replace('x', INSTANT)
-                } else {
-                    if door.starts_with("merge update") {
-                        run(&session, &format!("INSERT INTO {table} (id) VALUES (1)")).await;
-                    }
-                    (*value).to_string()
+    for zone in ["America/New_York", "Asia/Kolkata"] {
+        let session = session(zone);
+        let warehouse = catalog(&session).await;
+        run(
+            &session,
+            "CREATE TEMPORARY VIEW narrowed AS SELECT id, coalesce(ns, NULL) AS x FROM ice.ns.src",
+        )
+        .await;
+        for (shape_index, (shape, column_type, build, path)) in SHAPES.iter().enumerate() {
+            let table = format!("ice.ns.n{shape_index}");
+            run(
+                &session,
+                &format!(
+                    "CREATE TABLE {table} (id INT, st {column_type}, k INT) USING iceberg \
+                     TBLPROPERTIES ('format-version'='3')"
+                ),
+            )
+            .await;
+            run(
+                &session,
+                &format!("INSERT INTO {table} (id, k) VALUES (1, 0)"),
+            )
+            .await;
+            let before = files_under(warehouse.path());
+            for (door, write, value) in DOORS {
+                let value = match value {
+                    "lit" => literal.as_str(),
+                    other => other,
                 };
-                let write = write.replace("{t}", &table).replace("{st}", &value);
-                let outcome = attempt(&session, &write).await;
-                let label = format!("{zone} / {spelling} / {door}");
-                match (answer, outcome) {
-                    (Answer::Wall, Ok(())) => {
-                        let got = stored(&session, &table).await;
-                        if got != vec![Some(wall)] {
-                            wrong.push(format!("{label}: stored {got:?}"));
+                let write = write
+                    .replace("{t}", &table)
+                    .replace("{st}", &build.replace("{x}", value));
+                let label = format!("{zone} / {shape} / {door}");
+                match attempt(&session, &write).await {
+                    Ok(()) => wrong.push(format!("{label}: stored")),
+                    Err(error) => {
+                        let named = error.contains(REFUSAL)
+                            && error.contains(NOT_YET)
+                            && error.contains(&format!("Cannot safely cast {path} to"));
+                        if !named {
+                            wrong.push(format!("{label}: {error}"));
                         }
                     }
-                    (Answer::Refused(text), Err(error)) if error.contains(text) => {}
-                    (answer, outcome) => wrong.push(format!("{label}: {answer:?} but {outcome:?}")),
                 }
+            }
+            if files_under(warehouse.path()) != before {
+                wrong.push(format!("{zone} / {shape}: a file was written"));
+            }
+            let count = format!("SELECT count(*) FROM ice.ns.`n{shape_index}$snapshots`");
+            if stored(&session, &count).await != vec![Some(1)] {
+                wrong.push(format!("{zone} / {shape}: a snapshot was added"));
             }
         }
     }
     assert_eq!(wrong, Vec::<String>::new());
 }
 
+const FIELD_DOORS: [&str; 4] = [
+    "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id \
+     WHEN MATCHED THEN UPDATE SET t.st.v = s.ns",
+    "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id \
+     WHEN MATCHED THEN UPDATE SET st.v = s.x",
+    "UPDATE ice.ns.t SET st.v = CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns) WHERE id = 1",
+    "UPDATE ice.ns.t SET st.v = TIMESTAMP '2026-01-02 03:04:05'",
+];
+
 #[tokio::test]
-async fn the_refusal_names_the_leaf_and_the_reason() {
-    let session = session("America/New_York", true);
+async fn a_field_assignment_into_the_leaf_is_refused_too() {
+    let session = session("America/New_York");
     let _warehouse = catalog(&session).await;
     run(
         &session,
-        &format!(
-            "CREATE TABLE ice.ns.t (id INT, st {PAIR}) USING iceberg \
-             TBLPROPERTIES ('format-version'='3')"
-        ),
+        "CREATE TABLE ice.ns.t (id INT, st STRUCT<v: timestamp_ns, n: INT>) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    run(&session, "INSERT INTO ice.ns.t (id) VALUES (1)").await;
+    for write in FIELD_DOORS {
+        let refused = attempt(&session, write).await.expect_err(write);
+        assert!(refused.contains(REFUSAL), "{write}: {refused}");
+        assert!(
+            refused.contains("Cannot safely cast `st`.`v` to"),
+            "{write}: {refused}"
+        );
+    }
+    let snapshots = stored(&session, "SELECT count(*) FROM ice.ns.`t$snapshots`").await;
+    assert_eq!(snapshots, vec![Some(1)]);
+}
+
+#[tokio::test]
+async fn the_refusal_names_the_table_the_column_and_the_leaf() {
+    let session = session("America/New_York");
+    let _warehouse = catalog(&session).await;
+    run(
+        &session,
+        "CREATE TABLE ice.ns.t (id INT, st STRUCT<a: timestamp_ns, b: TIMESTAMP>) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
     )
     .await;
     let refused = attempt(
         &session,
-        "INSERT INTO ice.ns.t SELECT id, named_struct('q', x, 'b', x) FROM ice.ns.src",
+        "INSERT OVERWRITE ice.ns.t SELECT id, named_struct('q', ns, 'b', x) FROM ice.ns.src",
     )
     .await
     .expect_err("refused");
     let expected = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible \
-                    data for the table ``: Cannot safely cast `st`.`a` \"Struct(\"q\": \
-                    Timestamp(µs, \"UTC\"), \"b\": Timestamp(µs, \"UTC\"))\" to \
-                    \"TIMESTAMP_NS\". The nested source shape cannot be stored into this \
-                    timestamp_ns leaf: no source field of that name and nullability pairs with \
-                    it. SQLSTATE: KD000";
-    assert!(refused.contains(expected), "{refused}");
-    assert_eq!(stored(&session, "ice.ns.t").await, Vec::new());
+                    data for the table `ice`.`ns`.`t`: Cannot safely cast `st`.`a` to \
+                    \"TIMESTAMP_NS\". A nested timestamp_ns leaf is not writable yet: omit the \
+                    column `st` or supply NULL for it. SQLSTATE: KD000";
+    assert!(refused.ends_with(expected), "{refused}");
 }
 
-const NARROWED: [&str; 4] = [
-    "array(ns, NULL)",
-    "array(coalesce(ns, NULL))",
-    "array(CASE WHEN id = 1 THEN ns ELSE NULL END)",
-    "array(CAST(ns AS TIMESTAMP))",
-];
-const NARROWING_DOORS: [(&str, &str); 5] = [
-    (
-        "insert select",
-        "INSERT INTO {t} SELECT id, {st} FROM ice.ns.src",
-    ),
-    (
-        "insert select through a subquery",
-        "INSERT INTO {t} SELECT id, v FROM (SELECT id, {st} AS v FROM ice.ns.src) AS s",
-    ),
-    (
-        "insert overwrite",
-        "INSERT OVERWRITE {t} SELECT id, {st} FROM ice.ns.src",
-    ),
-    (
-        "insert by name",
-        "INSERT INTO {t} BY NAME SELECT {st} AS st, id FROM ice.ns.src",
-    ),
-    ("update where", "UPDATE {t} SET st = {st} WHERE id >= 0"),
+const UNSUPPLIED: [&str; 12] = [
+    "INSERT INTO ice.ns.t (id, k) VALUES (10, 0)",
+    "INSERT INTO ice.ns.t (id, k) SELECT id + 10, 0 FROM ice.ns.src",
+    "INSERT INTO ice.ns.t VALUES (12, NULL, 0)",
+    "INSERT INTO ice.ns.t SELECT id + 12, NULL, 0 FROM ice.ns.src",
+    "INSERT INTO ice.ns.t BY NAME SELECT 0 AS k, id + 13 AS id FROM ice.ns.src",
+    "INSERT INTO ice.ns.t BY NAME SELECT 0 AS k, NULL AS st, id + 14 AS id FROM ice.ns.src",
+    "UPDATE ice.ns.t SET k = k + 1 WHERE id >= 10",
+    "UPDATE ice.ns.t SET k = k + 1",
+    "UPDATE ice.ns.t SET st = NULL WHERE id = 10",
+    "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id + 9 \
+     WHEN MATCHED THEN UPDATE SET k = 7 \
+     WHEN NOT MATCHED THEN INSERT (id, k) VALUES (s.id + 20, 0)",
+    "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id + 30 \
+     WHEN NOT MATCHED THEN INSERT (id, st, k) VALUES (s.id + 30, NULL, 0)",
+    "DELETE FROM ice.ns.t WHERE id = 11",
 ];
 
 #[tokio::test]
-async fn a_narrowed_nanosecond_value_is_refused_not_truncated() {
-    let session = session("America/New_York", true);
-    let _warehouse = catalog(&session).await;
-    for (value_index, value) in NARROWED.iter().enumerate() {
-        for (door_index, (door, write)) in NARROWING_DOORS.iter().enumerate() {
-            let table = format!("ice.ns.c{value_index}_{door_index}");
-            let carried = if door.starts_with("update") {
-                ", ns timestamp_ns"
-            } else {
-                ""
-            };
-            run(
-                &session,
-                &format!(
-                    "CREATE TABLE {table} (id INT, st ARRAY<timestamp_ns>{carried}) \
-                     USING iceberg TBLPROPERTIES ('format-version'='3')"
-                ),
-            )
-            .await;
-            if door.starts_with("update") {
-                run(
-                    &session,
-                    &format!("INSERT INTO {table} (id, ns) SELECT id, ns FROM ice.ns.src"),
-                )
-                .await;
-            }
-            let write = write.replace("{t}", &table).replace("{st}", value);
-            let refused = attempt(&session, &write)
-                .await
-                .expect_err(&format!("{door}: {value}"));
-            assert!(refused.contains(REFUSAL), "{door} {value}: {refused}");
-            assert!(refused.contains(LEAF), "{door} {value}: {refused}");
-            assert!(
-                refused.contains("narrows a nanosecond value to microseconds"),
-                "{door} {value}: {refused}"
-            );
-        }
-    }
-    run(
-        &session,
-        "CREATE TABLE ice.ns.whole (id INT, st ARRAY<timestamp_ns>) USING iceberg \
-         TBLPROPERTIES ('format-version'='3')",
-    )
-    .await;
-    run(
-        &session,
-        "INSERT INTO ice.ns.whole SELECT id, array(ns, CAST(NULL AS timestamp_ns)) FROM ice.ns.src",
-    )
-    .await;
-    assert_eq!(
-        stored(&session, "ice.ns.whole").await,
-        vec![Some(1_767_323_045_123_456_789), None]
-    );
-}
-
-#[tokio::test]
-async fn a_field_beside_the_leaf_may_be_narrowed_and_merge_is_guarded_too() {
-    let session = session("America/New_York", true);
-    let _warehouse = catalog(&session).await;
-    run(
-        &session,
-        &format!(
-            "CREATE TABLE ice.ns.beside (id INT, st {PAIR}, ns timestamp_ns) USING iceberg \
-             TBLPROPERTIES ('format-version'='3')"
-        ),
-    )
-    .await;
-    let beside = "named_struct('a', ns, 'b', CAST(ns AS TIMESTAMP))";
-    run(
-        &session,
-        &format!("INSERT INTO ice.ns.beside SELECT id, {beside}, ns FROM ice.ns.src"),
-    )
-    .await;
-    assert_eq!(
-        stored(&session, "ice.ns.beside").await,
-        vec![Some(1_767_323_045_123_456_789)]
-    );
-    run(
-        &session,
-        &format!("UPDATE ice.ns.beside SET st = {beside} WHERE id >= 0"),
-    )
-    .await;
-    run(
-        &session,
-        "MERGE INTO ice.ns.beside t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN \
-         UPDATE SET st = named_struct('a', s.ns, 'b', CAST(s.ns AS TIMESTAMP))",
-    )
-    .await;
-    assert_eq!(
-        stored(&session, "ice.ns.beside").await,
-        vec![Some(1_767_323_045_123_456_789)]
-    );
-    let cut = "named_struct('a', coalesce(ns, NULL), 'b', x)";
-    for merge in [
-        format!(
-            "MERGE INTO ice.ns.beside t USING (SELECT id + 1 AS id, {cut} AS v FROM ice.ns.src) s \
-             ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.v)"
-        ),
-        format!(
-            "MERGE INTO ice.ns.beside t USING (SELECT id, {cut} AS v FROM ice.ns.src) s \
-             ON t.id = s.id WHEN MATCHED THEN UPDATE SET st = s.v"
-        ),
-        "MERGE INTO ice.ns.beside t USING (SELECT id, coalesce(ns, NULL) AS v FROM ice.ns.src) s \
-         ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = s.v"
-            .to_string(),
+async fn a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows() {
+    for properties in [
+        "",
+        ", 'write.delete.mode'='merge-on-read', 'write.update.mode'='merge-on-read', \
+         'write.merge.mode'='merge-on-read'",
     ] {
-        let refused = attempt(&session, &merge).await.expect_err(&merge);
-        assert!(refused.contains(REFUSAL), "{merge}: {refused}");
-        assert!(
-            refused.contains("narrows a nanosecond value to microseconds"),
-            "{merge}: {refused}"
-        );
-    }
-    assert_eq!(
-        stored(&session, "ice.ns.beside").await,
-        vec![Some(1_767_323_045_123_456_789)]
-    );
-}
-
-#[tokio::test]
-async fn a_required_zoned_column_refuses_an_overflow_as_main_does() {
-    let session = session("America/New_York", false);
-    let _warehouse = catalog(&session).await;
-    run(
-        &session,
-        "CREATE TABLE ice.ns.t (id INT, v timestamptz_ns NOT NULL, k INT) USING iceberg \
-         TBLPROPERTIES ('format-version'='3')",
-    )
-    .await;
-    let refused = attempt(
-        &session,
-        "INSERT INTO ice.ns.t SELECT 1, TIMESTAMP '3000-01-01 00:00:00.000001+00:00', 0",
-    )
-    .await
-    .expect_err("refused");
-    assert!(
-        refused.ends_with("Column 'v' is declared as non-nullable but contains null values"),
-        "{refused}"
-    );
-}
-
-const UNSTORABLE: [(&str, &str, &str); 4] = [
-    (
-        "UPDATE with no WHERE",
-        "UPDATE ice.ns.t SET st = named_struct('a', TIMESTAMP '2026-01-02 03:04:05', 'b', NULL)",
-        "this statement cannot store a nested value",
-    ),
-    (
-        "an integer leaf",
-        "INSERT INTO ice.ns.t SELECT id, named_struct('a', 5, 'b', x) FROM ice.ns.src",
-        "the source layout cannot carry a timestamp",
-    ),
-    (
-        "a struct where the leaf is",
-        "INSERT INTO ice.ns.t SELECT id, named_struct('a', named_struct('z', x), 'b', x) \
-         FROM ice.ns.src",
-        "the source nests differently from the target",
-    ),
-    (
-        "fewer fields than the target, by position",
-        "INSERT OVERWRITE ice.ns.t SELECT id, named_struct('q', x) FROM ice.ns.src",
-        "no source field pairs with it by position or by a complete set of names",
-    ),
-];
-
-#[tokio::test]
-async fn what_cannot_feed_the_leaf_is_refused_by_name() {
-    let session = session("America/New_York", true);
-    let _warehouse = catalog(&session).await;
-    run(
-        &session,
-        &format!(
-            "CREATE TABLE ice.ns.t (id INT, st {PAIR}) USING iceberg \
-             TBLPROPERTIES ('format-version'='3')"
-        ),
-    )
-    .await;
-    run(&session, "INSERT INTO ice.ns.t (id) VALUES (7)").await;
-    for (case, write, reason) in UNSTORABLE {
-        let refused = attempt(&session, write).await.expect_err(case);
-        assert!(refused.contains(REFUSAL), "{case}: {refused}");
-        assert!(refused.contains(LEAF), "{case}: {refused}");
-        assert!(refused.contains(reason), "{case}: {refused}");
-    }
-    assert_eq!(stored(&session, "ice.ns.t").await, vec![None]);
-    run(&session, "UPDATE ice.ns.t SET id = id + 1").await;
-}
-
-#[tokio::test]
-async fn a_null_struct_and_a_null_typed_field_store_as_they_are() {
-    let session = session("America/New_York", true);
-    let _warehouse = catalog(&session).await;
-    let value = "CASE WHEN id = 2 THEN NULL ELSE named_struct('v', x, 'w', NULL) END";
-    for (index, write) in [
-        "INSERT INTO {t} SELECT id, {st} FROM ice.ns.two",
-        "INSERT OVERWRITE {t} SELECT id, {st} FROM ice.ns.two",
-        "INSERT INTO {t} BY NAME SELECT {st} AS st, id FROM ice.ns.two",
-        "MERGE INTO {t} t USING (SELECT id, {st} AS v FROM ice.ns.two) s ON t.id = s.id \
-         WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.v)",
-    ]
-    .iter()
-    .enumerate()
-    {
-        if index == 0 {
-            run(
-                &session,
-                "CREATE TABLE ice.ns.two (id INT, x TIMESTAMP) USING iceberg \
-                 TBLPROPERTIES ('format-version'='3')",
-            )
-            .await;
-            run(
-                &session,
-                &format!("INSERT INTO ice.ns.two VALUES (1, {INSTANT}), (2, {INSTANT})"),
-            )
-            .await;
-        }
-        let table = format!("ice.ns.z{index}");
+        let session = session("America/New_York");
+        let _warehouse = catalog(&session).await;
         run(
             &session,
             &format!(
-                "CREATE TABLE {table} (id INT, st STRUCT<v: timestamp_ns, w: timestamp_ns>) \
-                 USING iceberg TBLPROPERTIES ('format-version'='3')"
+                "CREATE TABLE ice.ns.t USING iceberg TBLPROPERTIES ('format-version'='3'\
+                 {properties}) AS SELECT id, named_struct('v', ns, 'n', 1) AS st, 0 AS k \
+                 FROM ice.ns.src"
+            ),
+        )
+        .await;
+        let carried = "SELECT st FROM ice.ns.t WHERE id = 1";
+        assert_eq!(stored(&session, carried).await, vec![Some(TICKS)]);
+        let first = stored(
+            &session,
+            "SELECT snapshot_id FROM ice.ns.`t$snapshots` ORDER BY committed_at LIMIT 1",
+        )
+        .await;
+        for write in UNSUPPLIED {
+            run(&session, write).await;
+            assert_eq!(
+                stored(&session, carried).await,
+                vec![Some(TICKS)],
+                "{write}"
+            );
+        }
+        for call in [
+            "CALL ice.system.rewrite_data_files(table => 'ns.t', \
+             options => map('min-input-files', '2', 'rewrite-all', 'true'))",
+            "CALL ice.system.rewrite_manifests(table => 'ns.t')",
+        ] {
+            run(&session, call).await;
+            assert_eq!(stored(&session, carried).await, vec![Some(TICKS)], "{call}");
+        }
+        let nulls = stored(&session, "SELECT count(*) FROM ice.ns.t WHERE st IS NULL").await;
+        assert_eq!(nulls, vec![Some(6)], "{properties}");
+        let Some(Some(first)) = first.first() else {
+            panic!("no first snapshot");
+        };
+        let travelled = format!("SELECT st FROM ice.ns.t VERSION AS OF {first}");
+        assert_eq!(stored(&session, &travelled).await, vec![Some(TICKS)]);
+        let refused = attempt(
+            &session,
+            "INSERT INTO ice.ns.t SELECT id + 40, named_struct('v', ns, 'n', 1), 0 FROM ice.ns.src",
+        )
+        .await
+        .expect_err("refused");
+        assert!(refused.contains(NOT_YET), "{refused}");
+    }
+}
+
+#[tokio::test]
+async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
+    let session = session("America/New_York");
+    let _warehouse = catalog(&session).await;
+    for (index, (leaf_type, ticks)) in [
+        ("timestamptz_ns", 1_767_323_045_123_456_000_i64),
+        ("TIMESTAMP_NTZ", 1_767_323_045_123_456),
+        ("TIMESTAMP", 1_767_323_045_123_456),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let table = format!("ice.ns.c{index}");
+        run(
+            &session,
+            &format!(
+                "CREATE TABLE {table} (id INT, st STRUCT<v: {leaf_type}, n: INT>) USING iceberg \
+                 TBLPROPERTIES ('format-version'='3')"
             ),
         )
         .await;
         run(
             &session,
-            &write.replace("{t}", &table).replace("{st}", value),
+            &format!("INSERT INTO {table} SELECT id, named_struct('v', x, 'n', 1) FROM ice.ns.src"),
         )
         .await;
+        run(
+            &session,
+            &format!("UPDATE {table} SET st = named_struct('v', {INSTANT}, 'n', 2) WHERE id = 1"),
+        )
+        .await;
+        let read = format!("SELECT st FROM {table}");
         assert_eq!(
-            stored(&session, &table).await,
-            vec![Some(WALLS[0].1), None],
-            "{write}"
+            stored(&session, &read).await,
+            vec![Some(ticks)],
+            "{leaf_type}"
         );
     }
+}
+
+const NARROWED_UPDATES: [&str; 3] = [
+    "CASE WHEN id > 0 THEN {c} ELSE NULL END",
+    "if(id > 0, {c}, NULL)",
+    "array({c}, NULL)[0]",
+];
+
+#[tokio::test]
+async fn an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds() {
+    let session = session("America/New_York");
+    let _warehouse = catalog(&session).await;
+    run(
+        &session,
+        "CREATE TABLE ice.ns.u (id INT, v timestamp_ns, c timestamp_ns, z timestamptz_ns) USING \
+         iceberg TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    run(
+        &session,
+        "INSERT INTO ice.ns.u VALUES \
+         (1, NULL, CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns), \
+          CAST('2026-01-02 03:04:05.123456789+00:00' AS timestamptz_ns)), \
+         (2, NULL, CAST('2026-03-08 02:30:00.000000001' AS timestamp_ns), \
+          CAST('2026-03-08 07:30:00.000000001+00:00' AS timestamptz_ns))",
+    )
+    .await;
+    for value in NARROWED_UPDATES {
+        for source in ["c", "z"] {
+            let write = format!("UPDATE ice.ns.u SET v = {}", value.replace("{c}", source));
+            let refused = attempt(&session, &write).await.expect_err(&write);
+            let named = refused.contains("[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]")
+                && refused.contains("Cannot safely cast `v` \"TIMESTAMP\" to \"TIMESTAMP_NS\"")
+                && refused.contains("narrowed from nanoseconds to microseconds");
+            assert!(named, "{write}: {refused}");
+        }
+    }
+    let read = "SELECT v FROM ice.ns.u ORDER BY id";
+    assert_eq!(stored(&session, read).await, vec![None, None]);
+    for kept in ["CAST(c AS TIMESTAMP)", "date_trunc('second', c)"] {
+        run(
+            &session,
+            &format!("UPDATE ice.ns.u SET v = {kept} WHERE id > 0"),
+        )
+        .await;
+    }
+    assert_eq!(
+        stored(&session, read).await,
+        vec![
+            Some(1_767_323_045_000_000_000),
+            Some(1_772_937_000_000_000_000)
+        ]
+    );
+    run(&session, "UPDATE ice.ns.u SET v = c").await;
+    let walls = vec![Some(TICKS), Some(1_772_937_000_000_000_001)];
+    assert_eq!(stored(&session, read).await, walls);
+    run(
+        &session,
+        "UPDATE ice.ns.u SET v = CASE WHEN id > 0 THEN c ELSE CAST(NULL AS timestamp_ns) END",
+    )
+    .await;
+    assert_eq!(stored(&session, read).await, walls);
+    run(&session, "UPDATE ice.ns.u SET v = z").await;
+    assert_eq!(
+        stored(&session, read).await,
+        vec![
+            Some(1_767_305_045_123_456_789),
+            Some(1_772_940_600_000_000_001),
+        ]
+    );
+    run(&session, &format!("UPDATE ice.ns.u SET v = {INSTANT}")).await;
+    assert_eq!(
+        stored(&session, read).await,
+        vec![Some(1_767_305_045_123_456_000); 2]
+    );
 }

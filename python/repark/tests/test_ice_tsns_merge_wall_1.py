@@ -22,6 +22,7 @@ from typing import Any
 
 import _ice_tsns_merge_wall_1_doors as doors
 import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from repark import ReparkSession
@@ -228,38 +229,6 @@ def test_update_with_no_where_stores_a_literal(
         spark.stop()
 
 
-NESTED_TYPE = "STRUCT<v: timestamp_ns, n: INT>"
-NESTED_FRAME_DOORS = {
-    "df_append": lambda frame: frame.writeTo("ice.ns.t").append(),
-    "df_overwrite_partitions": lambda frame: frame.writeTo("ice.ns.t").overwritePartitions(),
-    "df_insert_into": lambda frame: frame.write.insertInto("ice.ns.t"),
-    "df_insert_into_overwrite": lambda frame: frame.write.insertInto("ice.ns.t", overwrite=True),
-    "df_save_append": lambda frame: frame.write.mode("append").saveAsTable("ice.ns.t"),
-}
-
-
-@pytest.mark.parametrize("door", list(NESTED_FRAME_DOORS))
-def test_a_nested_field_stores_the_session_wall_through_the_dataframe_doors(
-    tmp_path: Path, door: str
-) -> None:
-    """A ``struct<v: timestamp_ns>`` field stores the wall the top-level column stores."""
-    spark = open_edge_session(tmp_path, "true")
-    try:
-        v3 = "USING iceberg TBLPROPERTIES ('format-version' = '3')"
-        spark.sql("DROP TABLE ice.ns.t")
-        spark.sql(f"CREATE TABLE ice.ns.t (id INT, st {NESTED_TYPE}, top timestamp_ns) {v3}")
-        frame = spark.table("ice.ns.far").where("id = 2")
-        NESTED_FRAME_DOORS[door](
-            frame.selectExpr("id", "named_struct('v', c, 'n', 1) AS st", "c AS top")
-        )
-        stored = spark.sql("SELECT st.v AS nested, t.top FROM ice.ns.t t").to_arrow()
-        assert str(stored.column("nested").type) == NS_WALL
-        assert stored.column("nested").cast("int64").to_pylist() == [NEAR_NEW_YORK_WALL]
-        assert stored.column("top").cast("int64").to_pylist() == [NEAR_NEW_YORK_WALL]
-    finally:
-        spark.stop()
-
-
 WALL_SOURCES = {
     "n": (pa.timestamp("us"), 32_503_680_000_000_001, 1_767_323_045_123_456),
     "d": (pa.date32(), 376_200, 20_455),
@@ -306,108 +275,224 @@ def test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors
 
 NEAR_MICROS = 1_767_323_045_123_456
 INSTANT_ARROW = pa.timestamp("us", tz="UTC")
-ARROW_LAYOUTS = {
-    "list": ("ARRAY<timestamp_ns>", lambda: pa.array([[NEAR_MICROS]], pa.list_(INSTANT_ARROW))),
+ONE_INSTANT = pa.array([NEAR_MICROS], INSTANT_ARROW)
+ONE_INT = pa.array([1], pa.int32())
+ONE_PLACE = pa.array([0], pa.int32())
+ONE_WIDE_PLACE = pa.array([0], pa.int64())
+NESTED_LAYOUTS = {
+    "struct": (
+        "STRUCT<v: timestamp_ns, n: INT>",
+        lambda: pa.StructArray.from_arrays([ONE_INSTANT, ONE_INT], ["v", "n"]),
+        "`st`.`v`",
+    ),
+    "struct_one_name_differs": (
+        "STRUCT<a: timestamp_ns, b: TIMESTAMP>",
+        lambda: pa.StructArray.from_arrays([ONE_INSTANT, ONE_INSTANT], ["q", "b"]),
+        "`st`.`a`",
+    ),
+    "struct_in_struct": (
+        "STRUCT<i: STRUCT<v: timestamp_ns, n: INT>, m: INT>",
+        lambda: pa.StructArray.from_arrays(
+            [pa.StructArray.from_arrays([ONE_INSTANT, ONE_INT], ["v", "n"]), ONE_INT], ["i", "m"]
+        ),
+        "`st`.`i`.`v`",
+    ),
+    "list": (
+        "ARRAY<timestamp_ns>",
+        lambda: pa.array([[NEAR_MICROS]], pa.list_(INSTANT_ARROW)),
+        "`st`.`element`",
+    ),
     "large_list": (
         "ARRAY<timestamp_ns>",
         lambda: pa.array([[NEAR_MICROS]], pa.large_list(INSTANT_ARROW)),
+        "`st`.`element`",
     ),
     "list_view": (
         "ARRAY<timestamp_ns>",
-        lambda: pa.array([[NEAR_MICROS]], pa.list_view(INSTANT_ARROW)),
+        lambda: pa.ListViewArray.from_arrays(ONE_PLACE, ONE_INT, ONE_INSTANT),
+        "`st`.`element`",
+    ),
+    "large_list_view": (
+        "ARRAY<timestamp_ns>",
+        lambda: pa.LargeListViewArray.from_arrays(
+            ONE_WIDE_PLACE, pa.array([1], pa.int64()), ONE_INSTANT
+        ),
+        "`st`.`element`",
     ),
     "fixed_size_list": (
         "ARRAY<timestamp_ns>",
         lambda: pa.array([[NEAR_MICROS]], pa.list_(INSTANT_ARROW, 1)),
+        "`st`.`element`",
+    ),
+    "list_of_struct": (
+        "ARRAY<STRUCT<v: timestamp_ns, n: INT>>",
+        lambda: pa.ListArray.from_arrays(
+            pa.array([0, 1], pa.int32()),
+            pa.StructArray.from_arrays([ONE_INSTANT, ONE_INT], ["v", "n"]),
+        ),
+        "`st`.`element`.`v`",
+    ),
+    "struct_of_list": (
+        "STRUCT<a: ARRAY<timestamp_ns>, n: INT>",
+        lambda: pa.StructArray.from_arrays(
+            [pa.array([[NEAR_MICROS]], pa.list_(INSTANT_ARROW)), ONE_INT], ["a", "n"]
+        ),
+        "`st`.`a`.`element`",
     ),
     "dictionary_child": (
         "STRUCT<v: timestamp_ns, n: INT>",
+        lambda: pa.StructArray.from_arrays([ONE_INSTANT.dictionary_encode(), ONE_INT], ["v", "n"]),
+        "`st`.`v`",
+    ),
+    "run_end_encoded_child": (
+        "STRUCT<v: timestamp_ns, n: INT>",
         lambda: pa.StructArray.from_arrays(
-            [pa.array([NEAR_MICROS], INSTANT_ARROW).dictionary_encode(), pa.array([1], pa.int32())],
-            ["v", "n"],
+            [pa.RunEndEncodedArray.from_arrays(ONE_INT, ONE_INSTANT), ONE_INT], ["v", "n"]
         ),
+        "`st`.`v`",
     ),
     "map_value": (
         "MAP<STRING, timestamp_ns>",
         lambda: pa.array([[("k", NEAR_MICROS)]], pa.map_(pa.string(), INSTANT_ARROW)),
+        "`st`.`value`",
+    ),
+    "map_key": (
+        "MAP<timestamp_ns, INT>",
+        lambda: pa.array([[(NEAR_MICROS, 1)]], pa.map_(INSTANT_ARROW, pa.int32())),
+        "`st`.`key`",
     ),
 }
-LAYOUT_DOORS = {
-    "df_append": lambda frame: frame.writeTo("ice.ns.t").append(),
-    "df_overwrite_partitions": lambda frame: frame.writeTo("ice.ns.t").overwritePartitions(),
+
+
+def write_from_a_temporary_view(spark: Any, frame: Any) -> None:
+    """Hold ``frame`` as a SQL temporary view and INSERT from it."""
+    frame.createOrReplaceTempView("held")
+    spark.sql("INSERT INTO ice.ns.t SELECT id, st FROM held")
+
+
+NESTED_DOORS = {
+    "df_append": lambda _, frame: frame.writeTo("ice.ns.t").append(),
+    "df_overwrite_partitions": lambda _, frame: frame.writeTo("ice.ns.t").overwritePartitions(),
+    "df_overwrite_where": lambda _, frame: (
+        frame.writeTo("ice.ns.t").overwrite(doors.functions.col("id") >= 0)
+    ),
+    "df_insert_into": lambda _, frame: frame.write.insertInto("ice.ns.t"),
+    "df_insert_into_overwrite": lambda _, frame: (
+        frame.write.insertInto("ice.ns.t", overwrite=True)
+    ),
+    "df_save_append": lambda _, frame: frame.write.mode("append").saveAsTable("ice.ns.t"),
+    "cached_frame": lambda _, frame: frame.cache().writeTo("ice.ns.t").append(),
+    "temporary_view": write_from_a_temporary_view,
 }
+NOT_WRITABLE_YET = (
+    r"\[INCOMPATIBLE_DATA_FOR_TABLE\.CANNOT_SAFELY_CAST\] Cannot write incompatible data for "
+    r"the table `ice`\.`ns`\.`t`: Cannot safely cast {path} to \"TIMESTAMP_NS\"\. A nested "
+    r"timestamp_ns leaf is not writable yet"
+)
 
 
-def nested_leaf(value: Any) -> Any:
-    """Return the first leaf of a nested Python value read back from Arrow."""
-    while isinstance(value, (dict, list, tuple)):
-        value = next(iter(value.values())) if isinstance(value, dict) else value[-1]
-    return value
+def files_under(root: Path) -> list[str]:
+    """Return every file below ``root``."""
+    return sorted(str(path) for path in root.rglob("*") if path.is_file())
 
 
-def stored_nested_leaf(spark: Any) -> list[int | None]:
-    """Return the int64 ticks of the nested leaf of ``ice.ns.t.st`` ordered by ``id``."""
-    rows = spark.sql("SELECT st FROM ice.ns.t ORDER BY id").to_arrow().column("st").to_pylist()
-    leaves = [nested_leaf(row) for row in rows]
-    return [None if leaf is None else int(leaf.value) for leaf in leaves]
-
-
-@pytest.mark.parametrize("door", list(LAYOUT_DOORS))
-@pytest.mark.parametrize("layout", list(ARROW_LAYOUTS))
-def test_every_arrow_layout_stores_the_session_wall(tmp_path: Path, layout: str, door: str) -> None:
-    """A list, large list, list view, fixed-size list, dictionary child and map value conform."""
+@pytest.mark.parametrize("door", list(NESTED_DOORS))
+@pytest.mark.parametrize("layout", list(NESTED_LAYOUTS))
+def test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing(
+    tmp_path: Path, layout: str, door: str
+) -> None:
+    """Every Arrow layout of every container refuses at every DataFrame door, with no file."""
     spark = open_edge_session(tmp_path, "true")
     try:
-        column_type, build = ARROW_LAYOUTS[layout]
+        column_type, build, path = NESTED_LAYOUTS[layout]
         spark.sql("DROP TABLE ice.ns.t")
         v3 = "USING iceberg TBLPROPERTIES ('format-version' = '3')"
         spark.sql(f"CREATE TABLE ice.ns.t (id INT, st {column_type}) {v3}")
-        table = pa.table({"id": pa.array([1], pa.int32()), "st": build()})
-        LAYOUT_DOORS[door](doors.frame_of(spark, table))
-        assert stored_nested_leaf(spark) == [NEAR_NEW_YORK_WALL]
+        frame = doors.frame_of(spark, pa.table({"id": ONE_INT, "st": build()}))
+        before = files_under(tmp_path)
+        with pytest.raises(Exception, match=NOT_WRITABLE_YET.format(path=path.replace(".", r"\."))):
+            NESTED_DOORS[door](spark, frame)
+        assert files_under(tmp_path) == before
+        assert spark.sql("SELECT * FROM ice.ns.t.snapshots").to_arrow().num_rows == 0
     finally:
         spark.stop()
 
 
-PAIR_TYPE = "STRUCT<a: timestamp_ns, b: TIMESTAMP>"
-RENAMED = "named_struct('q', c, 'b', c) AS st"
-NAMED_REFUSAL = (
-    r"\[INCOMPATIBLE_DATA_FOR_TABLE\.CANNOT_SAFELY_CAST\].*`st`\.`a`.*"
-    r"cannot be stored into this timestamp_ns leaf"
-)
-PAIRING_DOORS = {
-    "df_append": (lambda frame: frame.writeTo("ice.ns.t").append(), None),
-    "df_save_append": (lambda frame: frame.write.mode("append").saveAsTable("ice.ns.t"), None),
-    "df_overwrite_partitions": (
-        lambda frame: frame.writeTo("ice.ns.t").overwritePartitions(),
-        NEAR_NEW_YORK_WALL,
-    ),
-    "df_insert_into_overwrite": (
-        lambda frame: frame.write.insertInto("ice.ns.t", overwrite=True),
-        NEAR_NEW_YORK_WALL,
+def data_file_ticks(spark: Any, table: str) -> list[int | None]:
+    """Return the int64 ticks of ``v`` read from the live Parquet data files of ``table``."""
+    files = spark.sql(f"SELECT content, file_path FROM {table}.files").to_arrow().to_pylist()
+    ticks: list[int | None] = []
+    for file in files:
+        if file["content"] == 0:
+            column = pq.read_table(file["file_path"], columns=["v"]).column("v")
+            assert str(column.type) == NS_WALL
+            ticks.extend(column.cast(pa.int64()).to_pylist())
+    return ticks
+
+
+@pytest.mark.parametrize("door", list(doors.DOORS))
+@pytest.mark.parametrize("zone", doors.ZONES)
+def test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file(
+    tmp_path: Path, zone: str, door: str
+) -> None:
+    """The Parquet file, read with pyarrow, holds every nanosecond digit of the session wall."""
+    spark = doors.open_session(zone, tmp_path)
+    try:
+        for source in ("ns", "tzns"):
+            expected = expected_wall_cell(zone, door, source)
+            if "error" in expected:
+                continue
+            table = f"ice.ns.t_{source}"
+            extra = f", c {doors.SOURCE_SQL_TYPES[source]}" if door == "update_column" else ""
+            doors.create_target(spark, table, "ts_ns", extra)
+            doors.DOORS[door](spark, table, source)
+            written = data_file_ticks(spark, table)
+            assert sorted(written) == sorted(expected["values"]), (zone, door, source)
+            assert all(value % 1_000 for value in written), (zone, door, source)
+    finally:
+        spark.stop()
+
+
+RUN_INSTANTS = (1_767_323_045_123_456_789, 1_772_955_000_000_000_001)
+RUN_NEW_YORK_WALLS = [1_767_305_045_123_456_789, 1_772_940_600_000_000_001]
+
+
+def write_runs_by_sql(statement: str) -> Any:
+    """Return a door that holds the frame as a temporary view and runs ``statement``."""
+
+    def write(spark: Any, frame: Any) -> None:
+        frame.createOrReplaceTempView("runs")
+        spark.sql(statement)
+
+    return write
+
+
+RUN_END_DOORS = {
+    "insert_overwrite": write_runs_by_sql("INSERT OVERWRITE ice.ns.t SELECT id, v FROM runs"),
+    "insert_by_name": write_runs_by_sql("INSERT INTO ice.ns.t BY NAME SELECT v, id FROM runs"),
+    "df_overwrite_partitions": lambda _, frame: frame.writeTo("ice.ns.t").overwritePartitions(),
+    "df_insert_into_overwrite": lambda _, frame: (
+        frame.write.insertInto("ice.ns.t", overwrite=True)
     ),
 }
 
 
-@pytest.mark.parametrize("door", list(PAIRING_DOORS))
-def test_a_renamed_struct_field_stores_one_wall_or_is_refused_by_name(
-    tmp_path: Path, door: str
+@pytest.mark.parametrize("door", list(RUN_END_DOORS))
+@pytest.mark.parametrize("encoding", ["run_end_encoded", "dictionary"])
+def test_an_encoded_instant_source_stores_the_session_wall(
+    tmp_path: Path, encoding: str, door: str
 ) -> None:
-    """The doors that store by position store the session wall; the by-name doors refuse."""
+    """A run-end or dictionary encoded instant stores the New York wall; main stored UTC's."""
     spark = open_edge_session(tmp_path, "true")
     try:
-        write, expected = PAIRING_DOORS[door]
-        spark.sql("DROP TABLE ice.ns.t")
-        v3 = "USING iceberg TBLPROPERTIES ('format-version' = '3')"
-        spark.sql(f"CREATE TABLE ice.ns.t (id INT, st {PAIR_TYPE}) {v3}")
-        frame = spark.table("ice.ns.far").where("id = 2").selectExpr("id", RENAMED)
-        if expected is None:
-            with pytest.raises(Exception, match=NAMED_REFUSAL):
-                write(frame)
-            assert stored_nested_leaf(spark) == []
+        instants = pa.array(list(RUN_INSTANTS), pa.timestamp("ns", tz="UTC"))
+        if encoding == "dictionary":
+            encoded = instants.dictionary_encode()
         else:
-            write(frame)
-            stored = spark.sql("SELECT st.a AS a FROM ice.ns.t").to_arrow().column("a")
-            assert stored.cast("int64").to_pylist() == [expected]
+            encoded = pa.RunEndEncodedArray.from_arrays(pa.array([1, 2], pa.int32()), instants)
+        table = pa.table({"id": pa.array([1, 2], pa.int32()), "v": encoded})
+        RUN_END_DOORS[door](spark, doors.frame_of(spark, table))
+        assert sorted(data_file_ticks(spark, "ice.ns.t")) == RUN_NEW_YORK_WALLS
+        assert stored_ticks(spark) == RUN_NEW_YORK_WALLS
     finally:
         spark.stop()
