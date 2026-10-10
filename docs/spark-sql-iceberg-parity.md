@@ -3273,12 +3273,14 @@ still open is `isModifiable`.
   target every temporal source. Ledger:
   `task/ledgers/staging/ice-tsns-merge-wall-1-ledger.md`.
 
-### ICE-TSNS-SQL-1-R-008 — FIXED 2026-10-10 (ICE-TSTZNS-WALL-1): every write door stores the same instant into `timestamptz_ns`
+### ICE-TSNS-SQL-1-R-008 — FIXED 2026-10-10 (ICE-TSTZNS-WALL-1): every measured write door stores the same instant into `timestamptz_ns`
 
 - **repark** — the mirror of R-007, on the zoned type. A `timestamptz_ns` column holds
-  instants, and every write door now stores the same one: an instant (`TIMESTAMP`,
-  `timestamptz_ns`) is kept, a wall (`TIMESTAMP_NTZ`, `timestamp_ns`, `DATE`) is localised in
-  the session zone, and no digit below the microsecond is dropped. Before (main `9b230aed`):
+  instants, and every write door of the measured matrices (nineteen facade doors, ten Rust
+  doors, the verifier's 47-door matrix, five zones) now stores the same one: an instant
+  (`TIMESTAMP`, `timestamptz_ns`) is kept, a wall (`TIMESTAMP_NTZ`, `timestamp_ns`, `DATE`)
+  is localised in the session zone, and no digit below the microsecond is dropped. Before
+  (main `9b230aed`):
   in a session whose zone is not UTC the INSERT doors localised a wall
   (`2026-01-02 03:04:05.123456789` in America/New_York stores `1767341045123456789`), while
   `INSERT OVERWRITE`, `INSERT … BY NAME`, MERGE insert and update, `UPDATE`,
@@ -3287,22 +3289,26 @@ still open is `isModifiable`.
   over five zones. `UPDATE t SET v = <column>` with no `WHERE` from a `TIMESTAMP`,
   `TIMESTAMP_NTZ` or `DATE` column raised the raw Arrow `arguments need to have the same data
   type` (6 and 60 cells) and now stores. A value past the nanosecond range answers as INSERT
-  does on every door: `[CAST_OVERFLOW]` naming `"TIMESTAMPTZ_NS"` under ANSI, NULL without
-  it; before, those doors raised a raw Arrow overflow and, for a `DATE` into a required
-  column, panicked (50 cells). The native ANSI door registers the kernel. `timestamp_ns` and
-  microsecond targets answer exactly what main answered.
+  does on every door of those matrices: `[CAST_OVERFLOW]` naming `"TIMESTAMPTZ_NS"` under
+  ANSI, NULL without it; before, those doors raised a raw Arrow overflow and, for a `DATE`
+  into a required column, panicked (50 cells). The native ANSI door registers the kernel.
+  `timestamp_ns` and microsecond targets answer exactly what main answered.
   **Not changed:** a `timestamptz_ns` leaf **nested** in a struct, an array or a map reads a
-  wall as UTC on every door, on main and now (one reading, no door disagreeing; card
+  wall as UTC on every probed door, on main and now (one reading, no door disagreeing; card
   ICE-TSNS-NESTED-1). With ANSI off, an out-of-range value into a **required** column is
   refused by Arrow's `declared as non-nullable but contains null values`, as INSERT refuses
   it for every type. Under ANSI the unfiltered `UPDATE` of an out-of-range `TIMESTAMP`
-  literal reports `[CAST_INVALID_INPUT]`, the mirror of row R-012.
+  literal reports `[CAST_INVALID_INPUT]`, the mirror of row R-012. The `EXPLAIN ANALYZE`
+  and `PREPARE`/`EXECUTE` carriers (measured 2026-10-10, R-008 verify, ledger §10) run the
+  write without the INSERT conform and store a naive wall as UTC; open under card
+  WRITE-BODY-CARRIERS-1.
 - **Apache Spark** — cannot write the type. *(oracle: documented — INSERT's rule, as R-007;
   the pins compute it with Python `zoneinfo` and check it against INSERT in five zones.)*
 - **Pin** — `python/repark/tests/test_ice_tstzns_wall_1.py` (nineteen doors in five zones,
   the gap and overlap walls of New York and Lord Howe, out-of-range values, every value read
   from the Parquet files); `crates/repark-spark/tests/timestamptz_ns_wall_doors.rs` (ten
-  doors, both row-level modes, five zones; out-of-range values);
+  doors, both row-level modes, five zones; out-of-range values; the Dictionary-encoded wall
+  on four overwrite doors, fold 1);
   `crates/repark-sql/src/v3/create.rs` (the ANSI door);
   `crates/repark-iceberg/src/write/ntz_store.rs` and `update_cast.rs` (the kernel per type,
   the nested leaf left alone); `crates/repark-functions/src/timestamp_ns_cast/tests.rs` (the

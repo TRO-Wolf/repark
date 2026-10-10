@@ -1,4 +1,9 @@
-# Unit ledger — ICE-TSTZNS-WALL-1 · a `timestamptz_ns` target stores one instant for one wall on every door
+# Unit ledger — ICE-TSTZNS-WALL-1 · a `timestamptz_ns` target stores one instant for one wall on every measured door
+
+**Scope (2026-10-10, R-008 verify):** "every door" below means every door of the
+three measured matrices (§4, §5); the `EXPLAIN ANALYZE` and `PREPARE`/`EXECUTE`
+carriers of §10 run the write without the INSERT conform and are outside the unit by
+orchestrator ruling, open under card WRITE-BODY-CARRIERS-1.
 
 **Date:** 2026-10-10 · **Branch:** `fix/ice-tstzns-wall-1` · **Base:** `9b230aed` ·
 **Model:** Claude Opus 5.5 (`claude-opus-5-5`) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
@@ -22,19 +27,20 @@ instants for one input, and `UPDATE` with no `WHERE` raised a raw Arrow error.
 |---|---|---|---|---|
 | C-001 | Main `9b230aed` is measured before any change and reproduces the defect: 38 cells differ from INSERT and 6 raise a raw Arrow error in the R-007 unit's own matrix; in the R-007 verifier's door matrix over five zones 348 cells differ and 60 raise the raw error; 50 cells panic on an out-of-range `DATE` into a required column. | §1, the scripts and counts. | **PROVEN** | §1. |
 | C-002 | Spark 4.1.2 with Iceberg 1.11.0 cannot write the type; the reference is what INSERT stores, and a `zoneinfo` rule reproduces INSERT on main in five zones, gap and overlap walls included. | §2: 300 INSERT cells of the verifier's matrix against the rule. | **PROVEN** | §2: 0 of 300 differ. |
-| C-003 | At head every write door stores, for the same source value and session zone, the instant INSERT stores, at full nanosecond precision, in UTC, America/New_York, Asia/Kolkata, Asia/Kathmandu and Australia/Lord_Howe, with the values read from the Parquet files. | The facade matrix (nineteen doors, five zones, four source types) and the gap and overlap test, both read with `pyarrow`; the Rust door matrix (ten doors, both row-level modes, five zones); the verifier's matrix re-run (§4). | **PROVEN** | §4: 0 cells differ from INSERT. |
+| C-003 | At head every write door of the three §4 matrices stores, for the same source value and session zone, the instant INSERT stores, at full nanosecond precision, in UTC, America/New_York, Asia/Kolkata, Asia/Kathmandu and Australia/Lord_Howe, with the values read from the Parquet files (the §10 carriers excepted). | The facade matrix (nineteen doors, five zones, four source types) and the gap and overlap test, both read with `pyarrow`; the Rust door matrix (ten doors, both row-level modes, five zones); the verifier's matrix re-run (§4). | **PROVEN** | §4: 0 cells differ from INSERT. |
 | C-004 | `UPDATE t SET v = <column>` with no `WHERE` from a `TIMESTAMP`, `TIMESTAMP_NTZ` or `DATE` column stores the rule's instant; main raised the raw Arrow `arguments need to have the same data type`. No raw or un-named error remains on a supply. | The `update_column` cells of the facade matrix; the Rust door `update with no where`; the verifier's matrix (§4). | **PROVEN** | §4: 0 raw errors of 60. |
-| C-005 | A value past the nanosecond range answers as INSERT answers on every door: `[CAST_OVERFLOW]` naming `"TIMESTAMPTZ_NS"` under ANSI, NULL without it in a nullable column; into a required column the write refuses and no door panics. | The Rust overflow pin (three source types, ten doors, both ANSI modes, nullable and required); the facade DataFrame pin; the verifier's overflow and required-column probes (§5). | **PROVEN** | §5: 0 panics of 50. |
+| C-005 | A value past the nanosecond range answers as INSERT answers on every door of the §4–§5 matrices (the §10 carriers excepted): `[CAST_OVERFLOW]` naming `"TIMESTAMPTZ_NS"` under ANSI, NULL without it in a nullable column; into a required column the write refuses and no door panics. | The Rust overflow pin (three source types, ten doors, both ANSI modes, nullable and required); the facade DataFrame pin; the verifier's overflow and required-column probes (§5). | **PROVEN** | §5: 0 panics of 50. |
 | C-006 | Controls are identical to main: every `timestamp_ns` cell, every microsecond `TIMESTAMP` and `TIMESTAMP_NTZ` cell on v3 and v2, values, logical type and error text. | The verifier's door matrix over five zones and its overflow and required-column probes, head against main (§6); the R-007 facade file, whose microsecond controls are held against main's recorded cells. | **PROVEN** | §6: 15,630 control cells, 0 moved. |
-| C-007 | A nested `timestamptz_ns` leaf is not converted and stores what it stored on main, from every door. | The nested probes on main and at head (§7); the `nested_leaf_cast_sql` unit pin; the R-007 Rust control `a_nested_zoned_or_microsecond_leaf_is_not_guarded`. | **PROVEN** | §7: identical on every door. |
+| C-007 | A nested `timestamptz_ns` leaf is not converted and stores what it stored on main, on every door of the §7 probes. | The nested probes on main and at head (§7); the `nested_leaf_cast_sql` unit pin; the R-007 Rust control `a_nested_zoned_or_microsecond_leaf_is_not_guarded`. | **PROVEN** | §7: identical on every probed door. |
 | C-008 | One function names the store kernel of a target (`ntz_store::store_kernel_udf_name`), and the shared conform and store sites ask it; no door is listed. The zoned kernel's return field is nullable where an overflow can answer NULL. | The name and SQL unit pins; the kernel's nullability pin; the diff (§3). | **PROVEN** | §3. |
 | C-009 | The native ANSI door resolves the zoned kernel the shared MERGE and UPDATE sites now emit. | An ANSI-door UPDATE, MERGE update and MERGE insert into `timestamptz_ns`. | **PROVEN** | §3.4; mutant M6. |
 | C-010 | Hand mutants are each killed by a named pin. | §8. | **PROVEN** | §8. |
 | C-011 | The unit's gates are green with real exit codes. | §9. | **PROVEN** | §9. |
 | C-012 | Main's recorded cells show the defect the pins fix: in the fixture of the R-007 unit, INSERT follows the rule and 19 cells of the control zone read a wall as UTC, 2 raise the raw error. | `test_the_rule_is_what_insert_stores_and_main_broke_it_on_38_cells`. | **PROVEN** | §1. |
-| C-013 | A nested `timestamptz_ns` leaf stores the instant a top-level column stores. | Out of this unit by the brief: nested leaves are not converted. Measured (§7). | **OPEN** | Q1: every door reads a wall as UTC there, one reading, no door disagreeing. Card ICE-TSNS-NESTED-1. |
+| C-013 | A nested `timestamptz_ns` leaf stores the instant a top-level column stores. | Out of this unit by the brief: nested leaves are not converted. Measured (§7). | **OPEN** | Q1: every probed door reads a wall as UTC there, one reading, no door disagreeing. Card ICE-TSNS-NESTED-1. |
 | C-014 | A NULL into a required column is refused by a named text. | Out of this unit: every column type, INSERT included (§5). | **OPEN** | Q2: Arrow's `declared as non-nullable but contains null values`, on main and at head. |
 | C-015 | Under ANSI, `UPDATE t SET v = <out-of-range TIMESTAMP literal>` with no `WHERE` reports INSERT's error class. | The mirror of R-012, which is open for the naive type (§5). | **OPEN** | Q3: `[CAST_INVALID_INPUT]` where INSERT raises `[CAST_OVERFLOW]`; main raised the raw Arrow error. |
+| C-016 | The `EXPLAIN ANALYZE` and `PREPARE`/`EXECUTE` carriers store what INSERT stores into a top-level `timestamptz_ns` column. | Out of this unit by orchestrator ruling 2026-10-10: those statements run the write without the INSERT conform (§10). | **OPEN** | Card WRITE-BODY-CARRIERS-1. |
 
 ## 1. Main, measured before any change (C-001, C-012)
 
@@ -181,8 +187,9 @@ both ANSI modes, zoned target:
 | `[CAST_OVERFLOW]` naming `"TIMESTAMPTZ_NS"` | 423 | 1,137 |
 
 The 230 panics are the 50 of §1 (a required column) and 180 of the overflow matrix (a `DATE`
-past the range into a nullable column through the same doors). Under ANSI every door now
-raises INSERT's `[CAST_OVERFLOW]`. With ANSI off a nullable column stores NULL on every door,
+past the range into a nullable column through the same doors). Under ANSI every door of
+the matrix now raises INSERT's `[CAST_OVERFLOW]`. With ANSI off a nullable column stores
+NULL on every door of the matrix,
 as INSERT does; no cell of the overflow matrix raises Arrow's non-nullable error for a
 nullable column (15 did on the first draft, before the kernel's return field was widened,
 §3.2).
@@ -290,10 +297,49 @@ Arrow's cast), the kernel's return-field pin fails, and 70 of the 133 facade tes
 | `make check-rust-file-size`, `make check-lib-rs` | 0 | |
 | the map, ledger, link, spelling and compaction gates | 0 | |
 
+## 10. What the unit does not reach (measured 2026-10-10, R-008 verify; C-016)
+
+Twenty cells, identical on main `9b230aed` and at head: `EXPLAIN ANALYZE INSERT`,
+`EXPLAIN ANALYZE VERBOSE`, `EXPLAIN ANALYZE INSERT OVERWRITE` and `PREPARE` +
+`EXECUTE` (insert and overwrite) store a naive `timestamp_ns` wall into a top-level
+`timestamptz_ns` column as if it were UTC, in the four non-UTC zones; INSERT localises
+it. From `TIMESTAMP`, `TIMESTAMP_NTZ` and `DATE` sources those routes raise DataFusion's
+internal error on both builds. These statements run the write without the INSERT
+conform. Orchestrator ruling: not this unit's site; open under card
+WRITE-BODY-CARRIERS-1
+([write-body-carriers-1-card-2026-10-10.md](../../roadmap/mid-term/write-body-carriers-1-card-2026-10-10.md)).
+
+## 11. Fold 1: the Dictionary pin (2026-10-10)
+
+`a_dictionary_encoded_wall_stores_inserts_instant_on_the_overwrite_doors`, beside the
+existing pins in `crates/repark-spark/tests/timestamptz_ns_wall_doors.rs`: the four §4
+walls Dictionary-encoded in a temp view go through `OVERWRITE`, `BY NAME`,
+`OVERWRITE … BY NAME` and dynamic partition `OVERWRITE` in America/New_York into a
+partitioned top-level `timestamptz_ns` column; each must store what `INSERT … SELECT`
+of the same walls plain stores, itself held to the fixed New York instants.
+
+Measured while writing it: INSERT of the Dictionary-encoded source refuses with
+`[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] ... cannot cast "Dictionary(Int32,
+Timestamp(ns))" to "TIMESTAMPTZ_NS"`, because the kernel refuses an encoded argument
+(the R-007 ledger's §11.3); `REPLACE WHERE` rides the INSERT conform and refuses the
+encoded source too. The pin's fourth door is therefore dynamic partition `OVERWRITE`,
+which routes through the fixed store like the other three.
+
+Verifier mutant T3 (`wall_kernel_reads` sees through `Dictionary` for the naive target
+only), applied by hand to `crates/repark-iceberg/src/write/ntz_store.rs` and restored
+byte for byte (`git status` clean of the file):
+
+| Run | Result |
+|---|---|
+| unmutated tree | the pin passes (1 passed) |
+| T3 applied | the pin fails: all four doors store the UTC-wall ticks `[1767323045123456789, -1, 1772937000000000001, 1793496600000000001]` for the New York instants |
+| restored | the pin passes (1 passed) |
+
 ## Q. Questions for a ruling
 
 - **Q1 (C-013, OWNER).** Should a nested `timestamptz_ns` leaf localise a wall in the session
-  zone, as a top-level column does? *Premise:* every door reads a wall as UTC there, on main
+  zone, as a top-level column does? *Premise:* every probed door reads a wall as UTC there,
+  on main
   and at head, so the doors agree with each other and disagree with the top-level rule; a
   naive nested leaf is refused outright since R-007. *Lean:* decide it inside
   ICE-TSNS-NESTED-1, with the naive leaf: the conversion is the same walk and the same
