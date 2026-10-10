@@ -12,7 +12,9 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
-use repark_iceberg::write::update_cast::{incompatible_update_message, store_assignment_cast_sql};
+use repark_iceberg::write::update_cast::{
+    incompatible_update_message, nested_leaf_cast_sql, store_assignment_cast_sql,
+};
 
 mod expand;
 mod render;
@@ -380,7 +382,15 @@ fn leaf_sql(
     let value_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut value);
     match &keyed.value_type {
         Some(source) => value_sql_for(&value_sql, source, target, path, case_sensitive),
-        None => Ok(store_assignment_cast_sql(&value_sql, target)),
+        None => Ok(assignment_cast_sql(&value_sql, target, path)),
+    }
+}
+
+fn assignment_cast_sql(value_sql: &str, target: &DataType, path: &[String]) -> String {
+    if path.len() > 1 {
+        nested_leaf_cast_sql(value_sql, target)
+    } else {
+        store_assignment_cast_sql(value_sql, target)
     }
 }
 
@@ -413,7 +423,7 @@ fn value_sql_for(
         {
             return Err(DataFusionError::Plan(text));
         }
-        return Ok(store_assignment_cast_sql(value_sql, target));
+        return Ok(assignment_cast_sql(value_sql, target, path));
     };
     let mut members = Vec::with_capacity(target_fields.len());
     let mut used = HashSet::new();
@@ -448,7 +458,7 @@ fn value_sql_for(
         return Err(render::extra_struct_fields(&extra, path));
     }
     if names_match_exactly(source_fields, target_fields) && !has_required_field(target_fields) {
-        return Ok(store_assignment_cast_sql(value_sql, target));
+        return Ok(assignment_cast_sql(value_sql, target, path));
     }
     Ok(format!(
         "CASE WHEN ({value_sql}) IS NULL THEN NULL ELSE named_struct({}) END",

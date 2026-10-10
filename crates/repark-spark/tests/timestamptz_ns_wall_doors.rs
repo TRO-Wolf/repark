@@ -318,7 +318,9 @@ async fn a_value_past_the_range_answers_as_insert_does_on_every_door() {
                             }
                         }
                         (false, false, Err(error)) => {
-                            if !error.contains("non-nullable") {
+                            if !(error.contains("non-nullable")
+                                || error.contains("cannot assign NULL to required column"))
+                            {
                                 wrong.push(format!("{label}: {error}"));
                             }
                         }
@@ -329,4 +331,71 @@ async fn a_value_past_the_range_answers_as_insert_does_on_every_door() {
         }
     }
     assert_eq!(wrong, Vec::<String>::new());
+}
+
+const LEAF_DOORS: [(&str, &[&str]); 4] = [
+    (
+        "insert select",
+        &["INSERT INTO ice.ns.t SELECT id, named_struct('v', w, 'k', 1) FROM ice.ns.src"],
+    ),
+    (
+        "insert overwrite",
+        &["INSERT OVERWRITE ice.ns.t SELECT id, named_struct('v', w, 'k', 1) FROM ice.ns.src"],
+    ),
+    (
+        "merge set struct",
+        &[
+            "INSERT INTO ice.ns.t (id) SELECT id FROM ice.ns.src",
+            "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.w, 'k', 1)",
+        ],
+    ),
+    (
+        "merge set field",
+        &[
+            "INSERT INTO ice.ns.t SELECT id, named_struct('v', l, 'k', 1) FROM ice.ns.src",
+            "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.st.v = s.w",
+        ],
+    ),
+];
+
+#[tokio::test]
+async fn a_nested_zoned_leaf_keeps_the_one_reading_main_has_on_every_door() {
+    let session = session("America/New_York", true);
+    let _warehouse = catalog(&session).await;
+    source(&session).await;
+    for (door, statements) in LEAF_DOORS {
+        run(&session, "DROP TABLE IF EXISTS ice.ns.t").await;
+        run(
+            &session,
+            "CREATE TABLE ice.ns.t (id INT, st STRUCT<v: timestamptz_ns, k: INT>) USING iceberg \
+             TBLPROPERTIES ('format-version'='3')",
+        )
+        .await;
+        for statement in statements {
+            run(&session, statement).await;
+        }
+        let batches = session
+            .sql("SELECT st.v FROM ice.ns.t ORDER BY id")
+            .await
+            .expect("read")
+            .collect()
+            .await
+            .expect("collect");
+        let leaves: Vec<Option<i64>> = batches
+            .iter()
+            .flat_map(|batch| {
+                let ints = cast(batch.column(0), &DataType::Int64).expect("ticks as int64");
+                ints.as_primitive::<Int64Type>().iter().collect::<Vec<_>>()
+            })
+            .collect();
+        let read_as_utc = vec![
+            Some(1_767_323_045_123_456_789),
+            Some(-1),
+            Some(1_772_937_000_000_000_001),
+            Some(1_793_496_600_000_000_001),
+        ];
+        assert_eq!(leaves, read_as_utc, "{door}");
+    }
 }
