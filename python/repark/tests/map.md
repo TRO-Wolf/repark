@@ -3181,6 +3181,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with the read-back each must produce (`hours(tz)` derived from the spec; the fork
   writes it since RP-28, fork #296 — the fixture's `blocked_on_fork` marker still names
   the closed ask until the recorder re-runs).
+- [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
+  the zoned mirror of the file below, 133 tests, every value read from the Parquet data files
+  with `pyarrow.parquet`, not through SELECT.
+  `test_every_door_stores_inserts_instant_in_timestamptz_ns`: the nineteen doors of
+  `_ice_tsns_merge_wall_1_doors.py` in five zones (UTC, America/New_York, Asia/Kolkata,
+  Asia/Kathmandu, Australia/Lord_Howe), from `TIMESTAMP`, `TIMESTAMP_NTZ`, `timestamp_ns` and
+  `timestamptz_ns` sources, against INSERT's rule computed with `zoneinfo`
+  (`instant_of_wall`: the offset before a transition, so a gap wall moves forward and an
+  overlap wall takes the earlier instant); nanosecond sources must keep non-zero digits below
+  the microsecond. `test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it`:
+  Lord Howe's half-hour gap and overlap and New York's through eight routes.
+  `test_a_date_past_the_range_never_panics_on_the_dataframe_doors`: ANSI on and off, nullable
+  and required. `test_the_rule_is_what_insert_stores_and_main_broke_it_on_38_cells` reads
+  main's recorded cells. The file below no longer holds `timestamptz_ns` as a control; its
+  microsecond controls are unchanged.
+  pins: ice-tstzns-wall-1/C-002, C-003, C-004, C-005, C-006, C-012
 - [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-MERGE-WALL-1
   fold 1 (2026-10-09), the pin budget:** the module is cut from 464 tests to 179. Kept: the 57
   `timestamp_ns` door tests in all three zones, and the control doors in **one** zone,

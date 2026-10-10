@@ -8,7 +8,7 @@ raised a raw Arrow error. Spark 4.1.2 with Iceberg 1.11.0 cannot write the type,
 expectation is INSERT's rule, computed here with ``zoneinfo`` and checked against INSERT in
 every zone. Every value is read from the Parquet data files with ``pyarrow``.
 
-pins: ice-tstzns-wall-1/C-003, C-004, C-005, C-006, C-007, C-008, C-011, C-012
+pins: ice-tstzns-wall-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010, C-011, C-012
 """
 
 from __future__ import annotations
