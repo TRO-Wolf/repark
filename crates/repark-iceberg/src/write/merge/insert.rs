@@ -108,10 +108,7 @@ fn zone_wrapping_stream_sql(
     plan: &datafusion::logical_expr::LogicalPlan,
     write_schema: &ArrowSchema,
 ) -> Option<String> {
-    use crate::write::ntz_store::{
-        PAIRS_EXACTLY, holds_nested_ns_wall, is_ltz_instant_target, nested_wall_conform_sql,
-        wall_cast_sql, wall_cast_udf_name,
-    };
+    use crate::write::ntz_store::{is_ltz_instant_target, wall_cast_sql, wall_cast_udf_name};
     let fields = write_schema.fields();
     let planned = if fields
         .iter()
@@ -128,10 +125,9 @@ fn zone_wrapping_stream_sql(
                 && crate::write::ntz_store::needs_ltz_instant_cast(&types[index])
         })
     };
-    if !(0..fields.len()).any(|index| {
-        let target = fields[index].data_type();
-        wall_cast_udf_name(target).is_some() || holds_nested_ns_wall(target) || instant(index)
-    }) {
+    if !(0..fields.len())
+        .any(|index| wall_cast_udf_name(fields[index].data_type()).is_some() || instant(index))
+    {
         return None;
     }
     let inner = "__repark_merge_insert_rows";
@@ -141,9 +137,7 @@ fn zone_wrapping_stream_sql(
         .map(|(index, field)| {
             let quoted = quote_ident(field.name());
             let column = format!("{inner}.{quoted}");
-            if let Some(wall) = wall_cast_sql(&column, field.data_type()).or_else(|| {
-                nested_wall_conform_sql(&column, field.data_type(), PAIRS_EXACTLY, field.name())
-            }) {
+            if let Some(wall) = wall_cast_sql(&column, field.data_type()) {
                 format!("({wall}) AS {quoted}")
             } else if instant(index) {
                 let cast = crate::write::update_cast::store_assignment_cast_sql(
@@ -375,12 +369,8 @@ fn update_assignment_probe_sql(
 }
 
 /// CAST a validated SET expression to the target Arrow type so the rewrite `CASE` unifies.
-pub(super) fn store_assignment_then_sql(
-    column: &str,
-    expr: &str,
-    target_type: &DataType,
-) -> String {
-    crate::write::update_cast::store_assignment_cast_sql_for(column, expr, target_type)
+pub(super) fn store_assignment_then_sql(expr: &str, target_type: &DataType) -> String {
+    crate::write::update_cast::store_assignment_cast_sql(expr, target_type)
 }
 
 /// Shared refusal — path label is `INSERT` or `UPDATE SET`; the matrix is not forked.
@@ -461,7 +451,7 @@ mod insert_gate_tests {
     #[test]
     fn store_assignment_then_sql_arrow_casts_to_the_target_type() {
         assert_eq!(
-            super::store_assignment_then_sql("b", "s.b", &DataType::Utf8),
+            super::store_assignment_then_sql("s.b", &DataType::Utf8),
             "arrow_cast((s.b), 'Utf8')"
         );
     }

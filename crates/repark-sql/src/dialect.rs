@@ -1,7 +1,5 @@
 //! [`AnsiDialect`] — the ANSI door's [`SqlDialect`] implementation.
 
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use datafusion::prelude::{DataFrame, SessionContext};
 use repark_core::{EngineContext, SqlDialect};
@@ -26,9 +24,6 @@ impl SqlDialect for AnsiDialect {
                 .as_ref()
                 .clone(),
         );
-        ctx.add_optimizer_rule(Arc::new(
-            repark_functions::timestamp_ns_cast::NestedNanosecondGuard,
-        ));
     }
 
     async fn execute(

@@ -24,6 +24,7 @@ use crate::{
 mod comment_on_table;
 mod hive_change_column;
 pub(crate) mod insert_positional;
+mod nested_ns;
 mod table_props_ddl;
 
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
@@ -291,6 +292,7 @@ async fn execute_inner(
     let sql = evolving.as_deref().unwrap_or(sql);
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
+    nested_ns::refuse_nested_supply(ctx, catalogs, sql, write_options.source_by_name).await?;
     if let Some(replace) = insert_positional::replace_where::parse_replace_where(sql)? {
         let execute = insert_positional::replace_where::execute_replace_where;
         return Box::pin(execute(ctx, catalogs, replace, write_options)).await;

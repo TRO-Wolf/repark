@@ -118,9 +118,6 @@ impl SessionExtension for SparkExtension {
     /// # Errors Whatever the composed [`TaExtension`] returns.
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
         repark_functions::register_all(ctx);
-        ctx.add_optimizer_rule(Arc::new(
-            repark_functions::timestamp_ns_cast::NestedNanosecondGuard,
-        ));
         ctx.register_udf(crate::spark_typed::spark_as_udf().as_ref().clone());
         ctx.register_udf(crate::spark_typed::suffix_literal_udf().as_ref().clone());
         // WI-2: the plain-INSERT ANSI store-assignment gate, BEFORE the Spark expression semantics.

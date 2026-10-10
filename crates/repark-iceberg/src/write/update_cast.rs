@@ -10,11 +10,6 @@ use super::store_assign::{
 
 #[must_use]
 pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
-    store_assignment_cast_sql_for("value", expr, target)
-}
-
-#[must_use]
-pub fn store_assignment_cast_sql_for(column: &str, expr: &str, target: &DataType) -> String {
     if let Some(wall) = super::ntz_store::wall_cast_sql(expr, target) {
         return wall;
     }
@@ -24,12 +19,6 @@ pub fn store_assignment_cast_sql_for(column: &str, expr: &str, target: &DataType
     if super::ntz_store::is_ltz_instant_target(target) {
         let instant = super::ntz_store::ltz_instant_cast_sql(expr);
         return format!("arrow_cast(({instant}), '{type_name}')");
-    }
-    let by_name = super::ntz_store::PAIRS_BY_NAME;
-    if let Some(conformed) =
-        super::ntz_store::nested_wall_conform_sql(expr, target, by_name, column)
-    {
-        return format!("arrow_cast({conformed}, '{type_name}')");
     }
     format!("arrow_cast(({expr}), '{type_name}')")
 }
@@ -317,22 +306,6 @@ mod tests {
         assert_eq!(
             store_assignment_cast_sql("s.v", &zoned_nanos),
             "arrow_cast((s.v), 'Timestamp(ns, \"UTC\")')"
-        );
-        let nested = DataType::Struct(vec![Field::new("v", nanos, true)].into());
-        assert_eq!(
-            store_assignment_cast_sql("s.st", &nested),
-            "arrow_cast(__repark_cast_timestamp_ns__((s.st), arrow_cast(NULL, \
-             'Struct(\"v\": Timestamp(ns))'), 'name', 'value'), 'Struct(\"v\": Timestamp(ns))')"
-        );
-        assert_eq!(
-            super::store_assignment_cast_sql_for("o'k", "s.st", &nested),
-            "arrow_cast(__repark_cast_timestamp_ns__((s.st), arrow_cast(NULL, \
-             'Struct(\"v\": Timestamp(ns))'), 'name', 'o''k'), 'Struct(\"v\": Timestamp(ns))')"
-        );
-        let nested_micros = DataType::Struct(vec![Field::new("v", micros, true)].into());
-        assert_eq!(
-            store_assignment_cast_sql("s.st", &nested_micros),
-            "arrow_cast((s.st), 'Struct(\"v\": Timestamp(µs))')"
         );
     }
 
