@@ -53,6 +53,13 @@ FAMILY_MORE = {
     "trunc_of_coalesce": "date_trunc('second', coalesce({c}, NULL))",
     "recast_of_coalesce": "CAST(coalesce({c}, NULL) AS {n})",
     "nested_case": "CASE WHEN {i} > 0 THEN coalesce({c}, NULL) ELSE CAST(NULL AS {n}) END",
+    "lambda": "transform(array({c}), x -> coalesce(x, NULL))[0]",
+    "greatest": "greatest({c}, NULL)",
+    "nullif": "nullif({c}, NULL)",
+    "struct_field": "named_struct('f', coalesce({c}, NULL)).f",
+    "case_three": (
+        "CASE WHEN {i} = 1 THEN {c} WHEN {i} = 2 THEN TIMESTAMP '2026-01-02 03:04:05' ELSE NULL END"
+    ),
 }
 WRITTEN = {
     "cast_ts": "CAST({c} AS TIMESTAMP)",
@@ -64,6 +71,7 @@ WRITTEN = {
     "if_of_trunc": "if({i} > 0, date_trunc('second', {c}), NULL)",
     "typed_ts_null": "coalesce({c}, CAST(NULL AS TIMESTAMP))",
     "typed_ntz_null": "coalesce({c}, CAST(NULL AS TIMESTAMP_NTZ))",
+    "beside_literal": "CASE WHEN {i} = 1 THEN {c} ELSE TIMESTAMP '2026-01-02 03:04:05' END",
 }
 KEPT = {
     "plain": "{c}",
@@ -73,6 +81,8 @@ KEPT = {
     "condition_only": (
         "CASE WHEN coalesce({c}, NULL) IS NOT NULL THEN {c} ELSE CAST(NULL AS {n}) END"
     ),
+    "struct_null_sibling": "named_struct('f', {c}, 'g', NULL).f",
+    "lambda_plain": "transform(array({c}), x -> x)[0]",
 }
 SPELLINGS = {**FAMILY, **FAMILY_MORE, **WRITTEN, **KEPT}
 MOR = (
@@ -142,11 +152,25 @@ CARRIERS = (
     "frame_view_merge",
     "cached_frame_append",
 )
+HUNTED = (
+    "merge_update_star",
+    "merge_insert_star",
+    "update_scalar_subquery",
+    "insert_reordered",
+    "sort_limit_insert",
+    "union_null_insert",
+    "df_union_null_append",
+    "lambda_first_insert",
+    "df_lambda_below_append",
+)
+UNION_NULL = ("union_null_insert", "df_union_null_append")
+CREATES = ("df_create_or_replace", "df_save_overwrite", "ctas", "rtas")
 DOORS = (
     *SQL_DOORS,
     *(f"{door}_mor" for door in ROW_LEVEL_DOORS),
     *FRAME_DOORS,
     *CARRIERS,
+    *HUNTED,
 )
 CORE_DOORS = (
     "insert_select",
@@ -165,10 +189,30 @@ CORE_DOORS = (
 )
 PARTITIONED = ("insert_overwrite_dynamic", "insert_overwrite_static")
 REFUSAL = "narrowed from nanoseconds to microseconds"
+REFUSAL_HEAD = re.compile(r'Cannot safely cast `v` "TIMESTAMP" to "TIMESTAMP(TZ)?_NS"')
+NANOSECOND_SCALE = 10**17
 _NOISE = re.compile(
     r"__repark_[a-z_]+_[0-9a-f]{16,}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     r"|/[^\s'\"]*tmp[^\s'\"]*|\bx\d+\b"
 )
+
+
+_SESSION_NAME = re.compile(r"__repark_tt_\d+|\b[pv]_x\d+\b|<X>|Column: \d+")
+COMPARED = 200
+
+
+def table_number(source: str, spelling: str, door: str) -> int:
+    """Return the number of the cell's table, the same in every run of a shard."""
+    row = list(SOURCES).index(source) * len(SPELLINGS) + list(SPELLINGS).index(spelling)
+    return row * len(DOORS) + DOORS.index(door) + 1
+
+
+def comparable(cell: dict[str, Any]) -> dict[str, Any]:
+    """Return ``cell`` without what differs between two runs of one statement."""
+    kept = {name: item for name, item in cell.items() if name != "refused"}
+    if "error" in kept:
+        kept["error"] = _SESSION_NAME.sub("<N>", kept["error"])[:COMPARED]
+    return kept
 
 
 def nanos_of(text: str) -> int:
@@ -486,6 +530,45 @@ def run_carrier(cell: Cell, door: str) -> None:
         cell.frame().cache().writeTo(table).append()
 
 
+def run_hunted(cell: Cell, door: str) -> None:
+    """Run one statement shape found while hunting for a door the refusal missed."""
+    table, spark, source = cell.table, cell.spark, cell.source
+    value_sql = cell.over(source, "id")
+    if door == "merge_update_star":
+        seed(spark, table)
+        cell.sql(
+            f"MERGE INTO {table} t USING ({cell.whole()}) s ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET *"
+        )
+    elif door == "merge_insert_star":
+        cell.sql(
+            f"MERGE INTO {table} t USING ({cell.whole()}) s ON t.id = s.id "
+            "WHEN NOT MATCHED THEN INSERT *"
+        )
+    elif door == "update_scalar_subquery":
+        seed(spark, table, source)
+        scalar = f"(SELECT max({cell.over('i.' + source, 'i.id')}) FROM {SRC} i)"
+        cell.sql(f"UPDATE {table} SET v = {scalar} WHERE id >= 0")
+    elif door == "insert_reordered":
+        cell.sql(f"INSERT INTO {table} (k, v, id) SELECT 0, {value_sql}, id FROM {SRC}")
+    elif door == "sort_limit_insert":
+        cell.sql(f"INSERT INTO {table} (id, v, k) {cell.select()} ORDER BY id LIMIT 3")
+    elif door == "lambda_first_insert":
+        beside = "size(transform(array(id), x -> x))"
+        cell.sql(f"INSERT INTO {table} (k, v, id) SELECT {beside}, {value_sql}, id FROM {SRC}")
+    elif door == "df_lambda_below_append":
+        below = spark.sql(f"SELECT id, ns, tzns, transform(array(id), x -> x) AS a FROM {SRC}")
+        below.selectExpr("id", f"{value_sql} AS v", "0 AS k").writeTo(table).append()
+    elif door == "union_null_insert":
+        cell.sql(
+            f"INSERT INTO {table} (id, v, k) {cell.select()} WHERE id > 1 "
+            "UNION ALL SELECT 1, NULL, 0"
+        )
+    else:
+        absent = spark.sql("SELECT 9 AS id, NULL AS v, 0 AS k")
+        spark.sql(cell.select()).unionByName(absent).writeTo(table).append()
+
+
 def measure(spark: Any, warehouse: Path, table: str, key: tuple[str, str, str, str]) -> dict:
     """Run the cell ``(target, source, spelling, door)`` and return what it stored."""
     target, source, spelling, door = key
@@ -498,11 +581,15 @@ def measure(spark: Any, warehouse: Path, table: str, key: tuple[str, str, str, s
             run_sql_door(cell, plain)
         elif door in FRAME_DOORS:
             run_frame_door(cell, door)
+        elif door in HUNTED:
+            run_hunted(cell, door)
         else:
             run_carrier(cell, door)
     except LookupError:
         return {"skip": True}
     except Exception as error:
         result["error"] = refusal_text(error)
+        if REFUSAL in str(error):
+            result["refused"] = True
     result["stored"] = stored(warehouse, table)
     return result

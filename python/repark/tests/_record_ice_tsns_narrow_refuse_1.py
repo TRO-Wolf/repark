@@ -3,11 +3,15 @@
 ``python _record_ice_tsns_narrow_refuse_1.py <commit>`` measures every cell in five zones and
 rewrites ``ice_tsns_narrow_refuse_1_base.json``; ``--output <path>`` measures a build for a
 comparison without touching the fixture, and ``--compare <path>`` prints how the cells of that
-file differ from the fixture. ``--shard <zone> <target>`` prints one shard as JSON; the parent
-uses it to run the twenty shards in parallel, ``--jobs`` at a time.
+file differ from the fixture. ``--extend`` measures only the cells the output file does not hold
+yet and adds them, which is how a spelling or a door added later is recorded on the same build.
+``--shard <zone> <target>`` prints one shard as JSON; the parent uses it to run the twenty
+shards in parallel, ``--jobs`` at a time.
 
 The fixture is compact: ``outcomes`` lists each distinct result once, and ``cells`` maps
-``zone|target|source|spelling`` to one outcome index per door, in the order of ``doors``.
+``zone|target|source|spelling`` to one outcome index per door, in the order of ``doors``. An
+error is kept to its first 240 characters; a cell measured since the unit carries ``refused``
+when the whole text holds the refusal, which a long table name pushes past that cut.
 """
 
 from __future__ import annotations
@@ -27,31 +31,30 @@ import _ice_tsns_narrow_refuse_1_doors as doors
 FIXTURE = Path(__file__).with_name("ice_tsns_narrow_refuse_1_base.json")
 
 
-def record_shard(zone: str, target: str) -> dict[str, Any]:
-    """Measure the cells of one zone and target in one session."""
+def record_shard(zone: str, target: str, known: frozenset[str]) -> dict[str, Any]:
+    """Measure the cells of one zone and target in one session, but for the ``known`` keys."""
     cells: dict[str, Any] = {}
     with tempfile.TemporaryDirectory(prefix="tsns-narrow-") as scratch:
         warehouse = Path(scratch)
         spark = doors.open_session(zone, warehouse)
-        count = 0
         for source in doors.SOURCES:
             for spelling in doors.SPELLINGS:
                 for door in doors.DOORS:
-                    count += 1
+                    name = f"{zone}|{target}|{source}|{spelling}|{door}"
+                    if name in known:
+                        continue
                     key = (target, source, spelling, door)
-                    table = f"ice.ns.x{count}"
-                    cells[f"{zone}|{target}|{source}|{spelling}|{door}"] = doors.measure(
-                        spark, warehouse, table, key
-                    )
+                    table = f"ice.ns.x{doors.table_number(source, spelling, door)}"
+                    cells[name] = doors.measure(spark, warehouse, table, key)
         spark.stop()
     return cells
 
 
-def run_shard(arguments: tuple[str, str]) -> dict[str, Any]:
+def run_shard(arguments: tuple[str, str, str]) -> dict[str, Any]:
     """Run one shard in a child process and return its cells."""
-    zone, target = arguments
+    zone, target, extend = arguments
     done = subprocess.run(
-        [sys.executable, __file__, "shard", "--shard", zone, target],
+        [sys.executable, __file__, "shard", "--shard", zone, target, *extend.split()],
         capture_output=True,
         text=True,
         check=False,
@@ -93,30 +96,28 @@ def unpack(fixture: dict[str, Any]) -> dict[str, Any]:
 
 
 def classify(cells: dict[str, Any], key: str) -> str:
-    """Name what the cell ``key`` stored against the plain column through the same door."""
+    """Name what the cell ``key`` stored against what INSERT stores for the plain column."""
     cell = cells[key]
     if cell.get("skip"):
         return "skip"
     if "error" in cell:
-        named = doors.REFUSAL in cell["error"]
+        named = cell.get("refused") or doors.REFUSAL_HEAD.search(cell["error"])
         return ("refused" if named else "error") + ("" if not cell["stored"] else "+stored")
-    zone, target, source, _, door = key.split("|")
-    reference = cells.get(f"{zone}|{target}|{source}|plain|{door}", {})
-    full = reference.get("stored")
-    if "error" in reference or not full:
-        full = cells[f"{zone}|{target}|{source}|plain|insert_select"]["stored"]
+    zone, target, source, _, _ = key.split("|")
+    full = dict(map(tuple, cells[f"{zone}|{target}|{source}|plain|insert_select"]["stored"]))
     got = cell["stored"]
     if not got:
         return "nothing"
-    if got == full:
-        return "full"
-    if any(isinstance(tick, str) for _, tick in got):
+    if any(isinstance(tick, str) or row not in full for row, tick in got):
         return "other"
+    if all(tick == full[row] for row, tick in got):
+        return "full"
     if target not in doors.NANOSECOND_TARGETS:
         return "other"
-    if got == [[row, tick // 1_000 * 1_000] for row, tick in full]:
+    if all(tick == full[row] // 1_000 * 1_000 for row, tick in got):
         return "cut"
-    if all(tick % 1_000 == 0 for _, tick in got):
+    scale = max(abs(tick) for _, tick in got)
+    if scale > doors.NANOSECOND_SCALE and all(tick % 1_000 == 0 for _, tick in got):
         return "cut+wall"
     return "other"
 
@@ -147,8 +148,8 @@ def compare(base: dict[str, Any], head: dict[str, Any]) -> Counter:
             moves[("missing", "")] += 1
             continue
         before, after = classify(base, key), classify(head, key)
-        same = base[key] == head[key]
-        moves[(before, after if not same or before != after else "same")] += 1
+        same = doors.comparable(base[key]) == doors.comparable(head[key])
+        moves[(before, "same" if same else after)] += 1
     return moves
 
 
@@ -160,9 +161,13 @@ def main() -> None:
     parser.add_argument("--jobs", type=int, default=10)
     parser.add_argument("--output", type=Path, default=FIXTURE)
     parser.add_argument("--compare", type=Path)
+    parser.add_argument("--extend", action="store_true")
     arguments = parser.parse_args()
+    known: dict[str, Any] = {}
+    if arguments.extend:
+        known = unpack(json.loads(arguments.output.read_text()))
     if arguments.shard:
-        json.dump(record_shard(*arguments.shard), sys.stdout)
+        json.dump(record_shard(*arguments.shard, frozenset(known)), sys.stdout)
         return
     if arguments.compare:
         base = unpack(json.loads(FIXTURE.read_text()))
@@ -170,8 +175,9 @@ def main() -> None:
         for (before, after), count in sorted(compare(base, head).items()):
             print(f"{count:6d}  {before} -> {after}")
         return
-    shards = [(zone, target) for zone in doors.ZONES for target in doors.TARGETS]
-    cells: dict[str, Any] = {}
+    extend = f"--extend --output {arguments.output}" if arguments.extend else ""
+    shards = [(zone, target, extend) for zone in doors.ZONES for target in doors.TARGETS]
+    cells: dict[str, Any] = dict(known)
     with ThreadPoolExecutor(max_workers=arguments.jobs) as pool:
         for shard in pool.map(run_shard, shards):
             cells.update(shard)
