@@ -19,25 +19,21 @@ const MICROS_PER_MILLI: i128 = 1_000;
 const TEN_POW_19: i128 = 10_000_000_000_000_000_000;
 const TWO_POW_63_AS_F64: f64 = 9_223_372_036_854_775_808.0;
 
-/// Build the Spark `timestamp_seconds` epoch-constructor UDF.
 #[must_use]
 pub fn timestamp_seconds_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkEpochCtor::new(Scale::Seconds)))
 }
 
-/// Build the Spark `timestamp_millis` epoch-constructor UDF.
 #[must_use]
 pub fn timestamp_millis_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkEpochCtor::new(Scale::Millis)))
 }
 
-/// Build the Spark `timestamp_micros` epoch-constructor UDF.
 #[must_use]
 pub fn timestamp_micros_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkEpochCtor::new(Scale::Micros)))
 }
 
-/// Return the three epoch-constructor UDFs for `register_all`.
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
@@ -133,12 +129,10 @@ impl ScalarUDFImpl for SparkEpochCtor {
     }
 }
 
-/// Return the LTZ micros type every epoch constructor answers.
 fn ltz_micros() -> DataType {
     DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::<str>::from("UTC")))
 }
 
-/// Unpack a dictionary-encoded argument to its value type.
 fn unpack_dictionary(array: &ArrayRef) -> Result<ArrayRef> {
     if let DataType::Dictionary(_, values) = array.data_type() {
         Ok(cast(array.as_ref(), values)?)
@@ -147,7 +141,6 @@ fn unpack_dictionary(array: &ArrayRef) -> Result<ArrayRef> {
     }
 }
 
-/// Refuse an argument whose type Spark rejects for this constructor.
 fn gate_input(name: &str, scale: Scale, data_type: &DataType) -> Result<()> {
     if matches!(data_type, DataType::Null) {
         return Ok(());
@@ -165,7 +158,6 @@ fn gate_input(name: &str, scale: Scale, data_type: &DataType) -> Result<()> {
     Err(unexpected_input(name, scale, data_type))
 }
 
-/// Build the `DATATYPE_MISMATCH` refusal for a rejected argument type.
 fn unexpected_input(name: &str, scale: Scale, data_type: &DataType) -> DataFusionError {
     let required = match scale {
         Scale::Seconds => "NUMERIC",
@@ -179,12 +171,10 @@ fn unexpected_input(name: &str, scale: Scale, data_type: &DataType) -> DataFusio
     ))
 }
 
-/// Check whether a type is one `timestamp_seconds` accepts.
 fn is_numeric(data_type: &DataType) -> bool {
     is_integral(data_type) || is_fractional(data_type)
 }
 
-/// Check whether a type is one `timestamp_millis` and `timestamp_micros` accept.
 fn is_integral(data_type: &DataType) -> bool {
     matches!(
         data_type,
@@ -199,7 +189,6 @@ fn is_integral(data_type: &DataType) -> bool {
     )
 }
 
-/// Check whether a type is a fractional numeric type.
 fn is_fractional(data_type: &DataType) -> bool {
     matches!(
         data_type,
@@ -212,7 +201,6 @@ fn is_fractional(data_type: &DataType) -> bool {
     )
 }
 
-/// Convert one argument column to epoch micros, or refuse it.
 fn epoch_micros(name: &str, scale: Scale, array: &ArrayRef) -> Result<Vec<Option<i64>>> {
     let factor = match scale {
         Scale::Seconds => MICROS_PER_SECOND,
@@ -282,7 +270,6 @@ fn epoch_micros(name: &str, scale: Scale, array: &ArrayRef) -> Result<Vec<Option
     }
 }
 
-/// Convert one decimal column of unscaled values at `decimal_scale` to micros.
 fn decimal_column(
     values: impl Iterator<Item = Option<i128>>,
     decimal_scale: i8,
@@ -296,7 +283,6 @@ fn decimal_column(
         .collect::<Result<Vec<_>>>()
 }
 
-/// Scale one integral column by `factor`, refusing on overflow.
 fn scaled_primitive<T>(array: &ArrayRef, factor: i128) -> Result<Vec<Option<i64>>>
 where
     T: ArrowPrimitiveType,
@@ -313,18 +299,15 @@ where
         .collect::<Result<Vec<_>>>()
 }
 
-/// Multiply one integral value into micros, refusing on overflow.
 fn checked_scale(unscaled: i128, factor: i128) -> Result<i64> {
     let micros = unscaled.checked_mul(factor).ok_or_else(long_overflow)?;
     i64::try_from(micros).map_err(|_| long_overflow())
 }
 
-/// Build the overflow refusal Spark answers as `long overflow`.
 fn long_overflow() -> DataFusionError {
     DataFusionError::Execution("long overflow".to_string())
 }
 
-/// Convert fractional seconds to micros: NaN and infinities answer NULL.
 fn double_seconds_to_micros(value: f64) -> Option<i64> {
     if !value.is_finite() {
         return None;
@@ -340,7 +323,6 @@ fn double_seconds_to_micros(value: f64) -> Option<i64> {
     }
 }
 
-/// Convert decimal seconds to micros, refusing inexact and out-of-range values.
 fn decimal_seconds_to_micros(unscaled: i128, decimal_scale: i8) -> Result<i64> {
     let shift = 6_i32 - i32::from(decimal_scale);
     if shift >= 0 {
@@ -363,7 +345,6 @@ fn decimal_seconds_to_micros(unscaled: i128, decimal_scale: i8) -> Result<i64> {
     }
 }
 
-/// Build the decimal range refusal Spark answers as `Overflow`.
 fn decimal_overflow() -> DataFusionError {
     DataFusionError::Execution("Overflow".to_string())
 }
