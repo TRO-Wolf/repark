@@ -544,6 +544,20 @@ pub(crate) fn shape_batch(
             _ => {
                 if plain_values_type(array.data_type()) == column.expected {
                     Arc::clone(array)
+                } else if column.mapping == PostgresMapping::Utf8
+                    && matches!(
+                        array.data_type(),
+                        DataType::Timestamp(TimeUnit::Microsecond, _)
+                    )
+                {
+                    render_session_strings(name, array, session_zone, display)?
+                } else if column.mapping == PostgresMapping::Date
+                    && matches!(
+                        array.data_type(),
+                        DataType::Timestamp(TimeUnit::Microsecond, _)
+                    )
+                {
+                    session_zone_date(name, array, session_zone, display)?
                 } else {
                     cast_to(&column.expected)?
                 }
@@ -558,6 +572,86 @@ pub(crate) fn shape_batch(
         .collect::<Vec<_>>();
     RecordBatch::try_new(Schema::new(fields).into(), arrays)
         .map_err(|error| DataFusionError::Execution(error.to_string()))
+}
+
+#[cfg(feature = "postgres")]
+fn wall_clocks(
+    name: &str,
+    array: &ArrayRef,
+    session_zone: &str,
+    display: &str,
+) -> Result<TimestampMicrosecondArray> {
+    use crate::session::zone_localiser::unlocalise;
+
+    let stamps = primitive_of(name, array)?;
+    match array.data_type() {
+        DataType::Timestamp(TimeUnit::Microsecond, Some(_)) => {
+            unlocalise(session_zone, stamps).map_err(|error| external(display, error))
+        }
+        _ => Ok(stamps.clone()),
+    }
+}
+
+#[cfg(feature = "postgres")]
+fn session_zone_date(
+    name: &str,
+    array: &ArrayRef,
+    session_zone: &str,
+    display: &str,
+) -> Result<ArrayRef> {
+    let walls: ArrayRef = Arc::new(wall_clocks(name, array, session_zone, display)?);
+    cast_with_options(&walls, &DataType::Date32, &strict_cast_options())
+        .map_err(|_| cast_refusal(name, &walls, &DataType::Date32))
+}
+
+#[cfg(feature = "postgres")]
+fn spark_wall_text(column: &str, source: &DataType, micros: i64) -> Result<String> {
+    use chrono::{DateTime, Datelike, Timelike};
+
+    let Some(wall) = DateTime::from_timestamp_micros(micros).map(|zoned| zoned.naive_utc()) else {
+        return Err(cast_overflow(
+            column,
+            &spark_cast_type_name(source),
+            "STRING",
+        ));
+    };
+    let mut text = format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+        wall.year(),
+        wall.month(),
+        wall.day(),
+        wall.hour(),
+        wall.minute(),
+        wall.second()
+    );
+    let fraction = wall.nanosecond() / 1000;
+    if fraction != 0 {
+        let mut digits = format!("{fraction:06}");
+        while digits.ends_with('0') {
+            digits.pop();
+        }
+        text.push('.');
+        text.push_str(&digits);
+    }
+    Ok(text)
+}
+
+#[cfg(feature = "postgres")]
+fn render_session_strings(
+    name: &str,
+    array: &ArrayRef,
+    session_zone: &str,
+    display: &str,
+) -> Result<ArrayRef> {
+    let walls = wall_clocks(name, array, session_zone, display)?;
+    let mut rendered = Vec::with_capacity(walls.len());
+    for wall in &walls {
+        match wall {
+            None => rendered.push(None),
+            Some(micros) => rendered.push(Some(spark_wall_text(name, array.data_type(), micros)?)),
+        }
+    }
+    Ok(Arc::new(StringArray::from(rendered)))
 }
 
 #[cfg(feature = "postgres")]

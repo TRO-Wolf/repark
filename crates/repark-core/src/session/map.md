@@ -83,6 +83,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   backquoted column; `CAST_INVALID_INPUT` for malformed text or bytes, with the offending
   value found by bisection, capped, and the column up front) and never a raw Arrow string.
   `shape_batch` takes `prefer_timestamp_ntz` instead of the whole settings.
+  **C-4 fold 2 item 3 (2026-10-10):** a timestamp into a date or text (`Utf8`) column
+  renders in the session zone: zoned instants unplace to the zone wall first, naive walls
+  render as they stand, and the text is Spark's `YYYY-MM-DD HH:MM:SS[.ffffff]` with the
+  fraction trimmed and the year padded to four digits, the Iceberg target's answer.
+  Timestamp and timestamptz columns keep their placement.
   pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.

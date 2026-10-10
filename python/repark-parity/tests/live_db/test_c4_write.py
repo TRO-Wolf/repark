@@ -467,9 +467,7 @@ FITTING_CASES: tuple[tuple[str, str, str], ...] = (
 )
 
 
-def _write_frame(
-    spark: ReparkSession, schema: str, table: str, frame: Any, path: str | None
-) -> None:
+def _write_frame(schema: str, table: str, frame: Any, path: str | None) -> None:
     """Append one frame through the jdbc writer, optionally forcing the row path."""
     writer = frame.write.option("write.path", path) if path else frame.write
     writer.jdbc(_url(), f"{schema}.{table}", mode="append", properties={"sslmode": "disable"})
@@ -503,7 +501,7 @@ def test_unstorable_values_refuse_on_all_three_paths(
             table = f"c{index}_{suffix}"
             conn.execute(f'CREATE TABLE "{schema}".{table} (id int4, v {pg_type})')
             with pytest.raises(expected) as excinfo:
-                _write_frame(spark, schema, table, frame, path)
+                _write_frame(schema, table, frame, path)
             message = str(excinfo.value)
             assert needle in message, (pg_type, expr, path, message)
             assert "`v`" in message, (pg_type, expr, path, message)
@@ -527,13 +525,136 @@ def test_fitting_values_store_on_all_three_paths(
         spark.sql(f'INSERT INTO pg."{schema}".{tables["sql"]} SELECT 2, {expr}').collect()
         assert _take(spark) is not None
         frame = spark.sql(f"SELECT 2 AS id, {expr} AS v")
-        _write_frame(spark, schema, tables["wb"], frame, None)
+        _write_frame(schema, tables["wb"], frame, None)
         assert _take(spark) is not None
-        _write_frame(spark, schema, tables["wr"], frame, "row")
+        _write_frame(schema, tables["wr"], frame, "row")
         assert _take(spark) is not None
         for door, table in tables.items():
             got = conn.execute(f'SELECT v::text FROM "{schema}".{table}').fetchall()
             assert got == [(want,)], (pg_type, expr, door, got)
+
+
+ZONE_CASES: tuple[tuple[str, str, str, str], ...] = (
+    ("UTC", "TIMESTAMP '2024-07-01 23:30:00'", "2024-07-01", "2024-07-01 23:30:00"),
+    (
+        "America/New_York",
+        "TIMESTAMP '2024-07-01 23:30:00'",
+        "2024-07-01",
+        "2024-07-01 23:30:00",
+    ),
+    (
+        "Asia/Kolkata",
+        "TIMESTAMP '2024-07-01 02:00:00'",
+        "2024-07-01",
+        "2024-07-01 02:00:00",
+    ),
+)
+
+ZONE_SHARED_ROWS: tuple[str, ...] = (
+    "TIMESTAMP '2024-07-01 12:00:00.123000'",
+    "TIMESTAMP_NTZ '2024-07-01 12:00:00.123456'",
+)
+
+
+def _zoned_session(tmp_path: Path, zone: str) -> ReparkSession:
+    """Open a session mounting the container as `pg` under one session zone."""
+    facade_session._reset_active_session_for_tests()
+    path = _write_config(tmp_path, "[default.database.postgres.pg]")
+    return (
+        repark.ReparkSession.builder.configFile(str(path))
+        .config("spark.sql.session.timeZone", zone)
+        .getOrCreate()
+    )
+
+
+def test_timestamps_into_date_and_text_columns_follow_the_session_zone(
+    tmp_path: Path, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """A timestamp into a date or text column stores the session-zone answer.
+
+    C-4 fold 2 item 3: the door used to store the UTC day and the RFC 3339 UTC
+    text. The Iceberg target in the same session stores the zone wall, and the
+    door now agrees with it in UTC, New York and Kolkata on all three paths.
+    """
+    conn, names = pg_live
+    schema = names["schema"]
+    for zone, day_expr, want_day, want_text in ZONE_CASES:
+        tag = {"UTC": "utc", "America/New_York": "ny", "Asia/Kolkata": "kol"}[zone]
+        rows = [(1, day_expr), *list(enumerate(ZONE_SHARED_ROWS, 2))]
+        session = _zoned_session(tmp_path, zone)
+        try:
+            date_tables = {}
+            text_tables = {}
+            for door in ("sql", "wb", "wr"):
+                date_table = f"z{tag}d_{door}"
+                text_table = f"z{tag}t_{door}"
+                conn.execute(f'CREATE TABLE "{schema}".{date_table} (id int4, v date)')
+                conn.execute(f'CREATE TABLE "{schema}".{text_table} (id int4, v text)')
+                date_tables[door] = date_table
+                text_tables[door] = text_table
+            for number, expr in rows:
+                session.sql(
+                    f'INSERT INTO pg."{schema}".{date_tables["sql"]} SELECT {number}, {expr}'
+                ).collect()
+                assert _take(session) is not None
+                session.sql(
+                    f'INSERT INTO pg."{schema}".{text_tables["sql"]} SELECT {number}, {expr}'
+                ).collect()
+                assert _take(session) is not None
+                frame = session.sql(f"SELECT {number} AS id, {expr} AS v")
+                _write_frame(schema, date_tables["wb"], frame, None)
+                assert _take(session) is not None
+                _write_frame(schema, date_tables["wr"], frame, "row")
+                assert _take(session) is not None
+                _write_frame(schema, text_tables["wb"], frame, None)
+                assert _take(session) is not None
+                _write_frame(schema, text_tables["wr"], frame, "row")
+                assert _take(session) is not None
+            want_dates = [(1, want_day), (2, "2024-07-01"), (3, "2024-07-01")]
+            want_texts = [
+                (1, want_text),
+                (2, "2024-07-01 12:00:00.123"),
+                (3, "2024-07-01 12:00:00.123456"),
+            ]
+            for door, table in date_tables.items():
+                got = conn.execute(
+                    f'SELECT id, v::text FROM "{schema}".{table} ORDER BY id'
+                ).fetchall()
+                assert got == want_dates, (zone, door, got)
+            for door, table in text_tables.items():
+                got = conn.execute(f'SELECT id, v FROM "{schema}".{table} ORDER BY id').fetchall()
+                assert got == want_texts, (zone, door, got)
+        finally:
+            session.stop()
+            facade_session._reset_active_session_for_tests()
+
+
+def test_timestamp_columns_keep_their_zone_placement(
+    tmp_path: Path, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """Timestamp and timestamptz columns store what they stored before item 3."""
+    conn, names = pg_live
+    schema = names["schema"]
+    session = _zoned_session(tmp_path, "America/New_York")
+    try:
+        tables = {}
+        for door in ("sql", "wb", "wr"):
+            table = f"zt_{door}"
+            conn.execute(f'CREATE TABLE "{schema}".{table} (id int4, ts timestamp, tz timestamptz)')
+            tables[door] = table
+        expr = "TIMESTAMP '2024-07-01 23:30:00'"
+        session.sql(
+            f'INSERT INTO pg."{schema}".{tables["sql"]} SELECT 1, {expr} AS ts, {expr} AS tz'
+        ).collect()
+        frame = session.sql(f"SELECT 1 AS id, {expr} AS ts, {expr} AS tz")
+        _write_frame(schema, tables["wb"], frame, None)
+        _write_frame(schema, tables["wr"], frame, "row")
+        for door, table in tables.items():
+            got = conn.execute(f'SELECT ts::text, tz::text FROM "{schema}".{table}').fetchone()
+            assert got == ("2024-07-01 23:30:00", "2024-07-02 03:30:00+00"), (door, got)
+    finally:
+        session.stop()
+        facade_session._reset_active_session_for_tests()
 
 
 def test_row_changing_statements_refuse_on_both_doors(

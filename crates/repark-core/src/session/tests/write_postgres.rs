@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use arrow::array::{
-    ArrayRef, BinaryArray, BooleanArray, Decimal128Array, Float64Array, Int64Array, RecordBatch,
-    StringArray,
+    Array, ArrayRef, BinaryArray, BooleanArray, Decimal128Array, Float64Array, Int64Array,
+    RecordBatch, StringArray,
 };
 use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use datafusion::error::DataFusionError;
@@ -247,11 +247,20 @@ fn shape_single(
     expected: DataType,
     array: ArrayRef,
 ) -> Result<RecordBatch, DataFusionError> {
+    shape_single_zone(mapping, expected, array, "UTC")
+}
+
+fn shape_single_zone(
+    mapping: PostgresMapping,
+    expected: DataType,
+    array: ArrayRef,
+    zone: &str,
+) -> Result<RecordBatch, DataFusionError> {
     shape_batch(
         &single_batch(array),
         &shaped_one(mapping, expected),
         false,
-        "UTC",
+        zone,
         "pg",
     )
 }
@@ -621,4 +630,247 @@ fn garbage_into_a_timestamp_column_refuses_while_fitting_text_parses() {
     )
     .expect("a fitting timestamp string parses");
     assert_eq!(shaped.num_rows(), 1);
+}
+
+fn instant_micros(rfc3339: &str) -> i64 {
+    chrono::DateTime::parse_from_rfc3339(rfc3339)
+        .expect("a valid instant")
+        .timestamp_micros()
+}
+
+fn wall_micros(text: &str) -> i64 {
+    chrono::NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.f")
+        .expect("a valid wall clock")
+        .and_utc()
+        .timestamp_micros()
+}
+
+fn zoned_ts(micros: &[i64]) -> ArrayRef {
+    Arc::new(arrow::array::TimestampMicrosecondArray::from(micros.to_vec()).with_timezone("UTC"))
+}
+
+fn naive_ts(micros: &[i64]) -> ArrayRef {
+    Arc::new(arrow::array::TimestampMicrosecondArray::from(
+        micros.to_vec(),
+    ))
+}
+
+fn shaped_text(shaped: &RecordBatch) -> Vec<Option<String>> {
+    let column = shaped
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("a text column");
+    (0..column.len())
+        .map(|index| {
+            if column.is_null(index) {
+                None
+            } else {
+                Some(column.value(index).to_string())
+            }
+        })
+        .collect()
+}
+
+fn shaped_days(shaped: &RecordBatch) -> Vec<Option<i32>> {
+    let column = shaped
+        .column(0)
+        .as_any()
+        .downcast_ref::<arrow::array::Date32Array>()
+        .expect("a date column");
+    (0..column.len())
+        .map(|index| {
+            if column.is_null(index) {
+                None
+            } else {
+                Some(column.value(index))
+            }
+        })
+        .collect()
+}
+
+fn days_since_epoch(year: i32, month: u32, day: u32) -> i32 {
+    chrono::NaiveDate::from_ymd_opt(year, month, day)
+        .expect("a valid date")
+        .signed_duration_since(chrono::NaiveDate::from_ymd_opt(1970, 1, 1).expect("the epoch"))
+        .num_days()
+        .try_into()
+        .expect("a date near the epoch")
+}
+
+#[test]
+fn zoned_timestamps_into_a_date_column_take_the_session_zone_day() {
+    let instant = instant_micros("2024-07-02T03:30:00Z");
+    for (zone, year, month, day) in [
+        ("UTC", 2024, 7, 2),
+        ("America/New_York", 2024, 7, 1),
+        ("Asia/Kolkata", 2024, 7, 2),
+    ] {
+        let shaped = shape_single_zone(
+            PostgresMapping::Date,
+            DataType::Date32,
+            zoned_ts(&[instant]),
+            zone,
+        )
+        .expect("an instant dates");
+        assert_eq!(
+            shaped_days(&shaped),
+            vec![Some(days_since_epoch(year, month, day))],
+            "{zone}"
+        );
+    }
+}
+
+#[test]
+fn zoned_timestamps_into_a_text_column_render_the_session_wall() {
+    let instant = instant_micros("2024-07-02T03:30:00Z");
+    for (zone, text) in [
+        ("UTC", "2024-07-02 03:30:00"),
+        ("America/New_York", "2024-07-01 23:30:00"),
+        ("Asia/Kolkata", "2024-07-02 09:00:00"),
+    ] {
+        let shaped = shape_single_zone(
+            PostgresMapping::Utf8,
+            DataType::Utf8,
+            zoned_ts(&[instant]),
+            zone,
+        )
+        .expect("an instant renders");
+        assert_eq!(shaped_text(&shaped), vec![Some(text.to_string())], "{zone}");
+    }
+}
+
+#[test]
+fn text_rendering_trims_the_fraction_like_spark() {
+    let walls = [
+        "2024-07-01 12:00:00",
+        "2024-07-01 12:00:00.123456",
+        "2024-07-01 12:00:00.123000",
+        "2024-07-01 12:00:00.000001",
+    ];
+    let micros: Vec<i64> = walls.iter().map(|wall| wall_micros(wall)).collect();
+    let shaped = shape_single(PostgresMapping::Utf8, DataType::Utf8, naive_ts(&micros))
+        .expect("walls render");
+    assert_eq!(
+        shaped_text(&shaped),
+        vec![
+            Some("2024-07-01 12:00:00".to_string()),
+            Some("2024-07-01 12:00:00.123456".to_string()),
+            Some("2024-07-01 12:00:00.123".to_string()),
+            Some("2024-07-01 12:00:00.000001".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn naive_timestamps_ignore_the_session_zone() {
+    let micros = wall_micros("2024-07-01 12:00:00");
+    for zone in ["UTC", "America/New_York", "Asia/Kolkata"] {
+        let shaped = shape_single_zone(
+            PostgresMapping::Utf8,
+            DataType::Utf8,
+            naive_ts(&[micros]),
+            zone,
+        )
+        .expect("a wall renders");
+        assert_eq!(
+            shaped_text(&shaped),
+            vec![Some("2024-07-01 12:00:00".to_string())],
+            "{zone}"
+        );
+        let shaped = shape_single_zone(
+            PostgresMapping::Date,
+            DataType::Date32,
+            naive_ts(&[micros]),
+            zone,
+        )
+        .expect("a wall dates");
+        assert_eq!(
+            shaped_days(&shaped),
+            vec![Some(days_since_epoch(2024, 7, 1))],
+            "{zone}"
+        );
+    }
+}
+
+#[test]
+fn text_rendering_pads_the_year_to_four_digits() {
+    let shaped = shape_single(
+        PostgresMapping::Utf8,
+        DataType::Utf8,
+        naive_ts(&[wall_micros("0001-01-01 00:00:00")]),
+    )
+    .expect("year one renders");
+    assert_eq!(
+        shaped_text(&shaped),
+        vec![Some("0001-01-01 00:00:00".to_string())]
+    );
+}
+
+#[test]
+fn null_timestamps_stay_null_in_date_and_text_columns() {
+    let nulls: ArrayRef = Arc::new(arrow::array::TimestampMicrosecondArray::from(vec![None]));
+    let shaped = shape_single(PostgresMapping::Utf8, DataType::Utf8, Arc::clone(&nulls))
+        .expect("a null renders");
+    assert_eq!(shaped_text(&shaped), vec![None]);
+    let shaped =
+        shape_single(PostgresMapping::Date, DataType::Date32, nulls).expect("a null dates");
+    assert_eq!(shaped_days(&shaped), vec![None]);
+}
+
+#[test]
+fn timestamp_and_timestamptz_columns_keep_their_placement() {
+    let instant = instant_micros("2024-07-02T03:30:00Z");
+    let wall = wall_micros("2024-07-01 23:30:00");
+    let shaped = shape_single_zone(
+        PostgresMapping::Timestamp,
+        DataType::Timestamp(TimeUnit::Microsecond, None),
+        zoned_ts(&[instant]),
+        "America/New_York",
+    )
+    .expect("an instant places");
+    let placed = shaped
+        .column(0)
+        .as_any()
+        .downcast_ref::<arrow::array::TimestampMicrosecondArray>()
+        .expect("a timestamp column");
+    assert_eq!(placed.value(0), wall);
+    let shaped = shape_single_zone(
+        PostgresMapping::Timestamp,
+        DataType::Timestamp(TimeUnit::Microsecond, None),
+        naive_ts(&[wall]),
+        "America/New_York",
+    )
+    .expect("a wall passes through");
+    let placed = shaped
+        .column(0)
+        .as_any()
+        .downcast_ref::<arrow::array::TimestampMicrosecondArray>()
+        .expect("a timestamp column");
+    assert_eq!(placed.value(0), wall);
+    let shaped = shape_single_zone(
+        PostgresMapping::Timestamptz,
+        DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+        zoned_ts(&[instant]),
+        "America/New_York",
+    )
+    .expect("an instant passes through");
+    let placed = shaped
+        .column(0)
+        .as_any()
+        .downcast_ref::<arrow::array::TimestampMicrosecondArray>()
+        .expect("a timestamptz column");
+    assert_eq!(placed.value(0), instant);
+}
+
+#[test]
+fn a_wall_past_the_calendar_refuses_named() {
+    let error = shape_single(PostgresMapping::Utf8, DataType::Utf8, naive_ts(&[i64::MAX]))
+        .expect_err("an unformattable wall refuses");
+    let message = error.to_string();
+    assert!(
+        message.contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+        "{message}"
+    );
+    assert!(message.contains("`v`"), "{message}");
 }
