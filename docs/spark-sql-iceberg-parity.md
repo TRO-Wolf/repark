@@ -3498,45 +3498,124 @@ still open is `isModifiable`.
   name) and `overwritePartitions` (Arrow's rule, Spark by name). Ledger clause C-037,
   question Q8.
 
-### ICE-TSNS-SQL-1-R-017 — OPEN (measured 2026-10-09): a nanosecond value beside an untyped NULL is typed as microseconds
+### ICE-TSNS-SQL-1-R-017 — DECLARED (ICE-TSNS-NARROW-REFUSE-1, 2026-10-10): a nanosecond value the analyzer narrowed refuses, ICE-TSNS-COERCION-1
 
-- **repark** — `coalesce(ns, NULL)`, `nvl(ns, NULL)`, `array(ns, NULL)`,
-  `CASE WHEN … THEN ns ELSE NULL END` and `if(…, ns, NULL)` over a `timestamp_ns` or
-  `timestamptz_ns` value are typed `Timestamp(µs, "UTC")` and carry the value floored to
-  microseconds, on main and at head: the NULL is cast to the planner's `Timestamp(ns)`, the
-  session rule reads that cast as the SQL `TIMESTAMP` (a microsecond instant), and the
-  nanosecond argument is narrowed to match. `coalesce(ns, CAST(NULL AS timestamp_ns))` keeps
-  nine digits. A **top-level** `timestamp_ns` column therefore stores `…123456000` for
-  `INSERT … SELECT coalesce(ns, NULL)` of `…123456789`, as on main: the verify of 2026-10-09
-  measured 520 answering cells (four spellings, thirteen doors, two source types, five
-  zones) and 510 store a cut value at head, 485 on main. ICE-TSNS-MERGE-WALL-1 corrected the
-  wall in 172 of them (a cut value at the UTC wall became a cut value at the session wall)
-  and cut no digit that main kept. **One door refuses:** `UPDATE` with no `WHERE` raised a
-  raw Arrow error for these spellings on main; it now refuses by name
-  (`… The value was narrowed from nanoseconds to microseconds before the store; give the NULL
-  beside it the type timestamp_ns`) instead of storing the cut value the unit's first fix
-  made it store. The same door's `array(ns, NULL)[0]` of a `timestamp_ns` source stored a cut
-  value at the UTC wall on main and is refused too. The third verify (2026-10-10, five zones) counts
-  480 of 650 cells storing a cut value at head (360 cut only, 120 cut and the wall moved); the
-  40 unfiltered-`UPDATE` cells take the refusal (35 raised a raw or schema error on main, 5
-  stored the cut wrong wall of the array element).
-  **Three written casts on that door disagree.** With no `WHERE`,
-  `SET v = CAST(c AS TIMESTAMP)` keeps all nine digits (the INSERT conform peels the cast),
-  while `SET v = CAST(c AS TIMESTAMP_NTZ)` and
-  `SET v = CASE WHEN id > 0 THEN CAST(c AS TIMESTAMP) ELSE NULL END` store the value cut to
-  microseconds (the second also moves a New York gap wall to 03:30). Main raised a raw Arrow
-  error for all three. None is refused: each narrowing is written, not inserted by type
-  coercion.
-- **Apache Spark** — has no nanosecond type; a `NULL` takes the type of its sibling.
-  *(oracle: documented — Spark's null-type coercion.)*
-- **Pin** — `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`
-  `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` (the one refusing door,
-  and nine digits for a typed NULL). The truncation on the other doors has no pin.
-- **Rationale** — OPEN, dated 2026-10-09. An expression-typing defect in the session's
-  timestamp rule, upstream of every store and outside ICE-TSNS-MERGE-WALL-1. The other doors
-  are not refused, because the same test would refuse a written `CAST(ns AS TIMESTAMP)` and
-  `date_trunc('second', ns)`, which store on main. Ledger clauses C-038 and C-043, question
-  Q9.
+- **repark** — `coalesce(ns, NULL)`, `array(ns, NULL)`, `CASE WHEN … THEN ns ELSE NULL END`
+  and `if(…, ns, NULL)` over a `timestamp_ns` or `timestamptz_ns` value are typed
+  `Timestamp(µs, "UTC")` and carry the value floored to microseconds: the NULL is cast to the
+  planner's `Timestamp(ns)`, the session rule reads that cast as the SQL `TIMESTAMP` (a
+  microsecond instant), and type coercion narrows the nanosecond argument to match. The
+  typing is unchanged and is card ICE-TSNS-COERCION-1; a query that stores nothing answers
+  as before. **A write refuses.** Since ICE-TSNS-NARROW-REFUSE-1 a value narrowed that way
+  does not reach a top-level `timestamp_ns` or `timestamptz_ns` column through any measured
+  write door: the statement raises
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the
+  table …: Cannot safely cast `v` "TIMESTAMP" to "TIMESTAMP_NS". The value was narrowed from
+  nanoseconds to microseconds before the store; give the NULL beside it the type
+  timestamp_ns. SQLSTATE: KD000` (the text the unfiltered `UPDATE` carried since R-007;
+  `"TIMESTAMPTZ_NS"` and `timestamptz_ns` for a zoned column) and stores nothing.
+  `coalesce(ns, CAST(NULL AS timestamp_ns))` keeps nine digits and stores.
+  **The owner rule (2026-10-10):** a narrowing the statement wrote stores, a narrowing the
+  analyzer inserted refuses. A `CAST`, a `TRY_CAST` or a `date_trunc` in the statement, also
+  as the branch beside the NULL (`CASE WHEN … THEN CAST(c AS TIMESTAMP) ELSE NULL END`),
+  stores exactly what it stored before.
+  **The owner's rulings of 2026-10-10 (fold 1), which the sentences below this paragraph
+  predate.** (1) A value narrowed beside a NULL typed `TIMESTAMP` or `TIMESTAMP_NTZ`, or
+  beside a microsecond column or literal that is not NULL (`coalesce(ns, ts)`,
+  `CASE … ELSE TIMESTAMP '…' END`, a `UNION` of a nanosecond branch with a microsecond one),
+  refuses on every door too, with a text that names the narrowed value: `… The value
+  ice.ns.src.ns was narrowed from nanoseconds to microseconds before the store, to match the
+  microsecond value beside it; write CAST(ice.ns.src.ns AS TIMESTAMP) if microseconds are
+  intended, or give the value beside it a nanosecond type. SQLSTATE: KD000`. (2) A cast or a
+  `date_trunc` written over a narrowed value stores where it stores what the same call stores
+  over the nanosecond value, measured with a pre-epoch value one nanosecond below a second
+  boundary: `CAST(… AS TIMESTAMP)` over either source, `date_trunc` (ten units) over a
+  `timestamptz_ns` value, `CAST(… AS DATE)` over a `timestamp_ns` value. Every other arm
+  differs and refuses: `date_trunc` over a `timestamp_ns` value, `CAST(… AS DATE)` over a
+  `timestamptz_ns` value, `CAST(… AS TIMESTAMP_NTZ)`, `TRY_CAST(… AS TIMESTAMP)` and a cast
+  back to a nanosecond type. (3) A cast a function's own signature asks for
+  (`date_trunc('second', ns)`, `from_utc_timestamp(ns, 'UTC')`) is the statement's and stores.
+  **Measured after the rulings** (base `8d1c4f49` against head `60687f7e`, 104,960 cells: the
+  89,600 below and six spellings added): 23,525 cells moved, every one into the refusal and
+  none leaving a value on disk; 81,215 are byte-identical; 220 refused on both with the newer
+  text; no cell that stores nine digits on the base moved and no cell of a microsecond target
+  moved. Refused on the head: 14,240 beside an untyped NULL, 2,225 beside a typed NULL, 4,830
+  beside a microsecond value, 3,640 under a written call whose result differs. Still storing
+  a cut value where the statement did not write the cut: 420 cells of a cached frame (card
+  ICE-TSNS-CACHE-1) and the four doors that create the table with a microsecond column
+  (2,576 cells, the typing of ICE-TSNS-COERCION-1). The unfiltered `UPDATE` keeps nine digits
+  under a written `CAST(c AS TIMESTAMP)` on 60 cells (card ICE-TSNS-UPDATE-CAST-1). The
+  `UNION` cell of `nvl` and `ifnull` is row R-019.
+  **Measured** (base `8d1c4f49` against the unit's head, five zones, 64 doors, 35 spellings,
+  two source types, four target types, 89,600 cells, every value read from the Parquet
+  files): 16,800 cells moved, every one into the refusal and none leaving a value on
+  disk (11,749 that stored a cut value, 3,706 that stored a cut value at another wall, 1,345
+  that raised another error or stored in part); 72,800 are byte-identical, the 27,084 that
+  store the right value among them. Of the row's 650-cell core (five spellings, thirteen
+  doors, two sources, the `timestamp_ns` target) the 480 cut cells refuse, the 40 refusals
+  of the unfiltered `UPDATE` are unchanged and the 130 `nvl` cells raise the error they
+  raised.
+  The same refusal covers the other places an untyped NULL is unified with a nanosecond
+  value: the NULL first, `element_at`, `greatest`, `nullif`, a lambda body
+  (`transform(a, x -> coalesce(x, NULL))`), a struct field built from the narrowed value, and
+  a `UNION` branch that is `NULL` (in SQL and through `unionByName`).
+  **Not refused:** `nvl(ns, NULL)` and `ifnull(ns, NULL)` are typed `STRING`
+  and fail store assignment by that door's own text on 56 of the 64 measured doors
+  (`INSERT … VALUES` and an `UPDATE` of a branch store nine digits; the `UNION ALL` with a
+  nanosecond branch is row R-019); a frame
+  materialised by `cache()` or `persist()` is microsecond data by the time it is written
+  (card ICE-TSNS-CACHE-1).
+  **Three written casts on the unfiltered `UPDATE`,** recorded as a disagreement by the
+  card, measured: `SET v = CAST(c AS TIMESTAMP)` keeps all nine digits there (the INSERT
+  conform peels a top-level cast to the planner's `Timestamp(ns)`), and stores the
+  microsecond instant's wall on every other door; `SET v = CAST(c AS TIMESTAMP_NTZ)` and
+  `SET v = CASE WHEN id > 0 THEN CAST(c AS TIMESTAMP) ELSE NULL END` store the microsecond
+  value on every door. All three are written narrowings and none moved.
+- **Apache Spark** — has no nanosecond type; an untyped `NULL` takes the type of its sibling
+  (`coalesce(TIMESTAMP_NTZ '…', NULL)` is `timestamp_ntz`), and a typed NULL widens the pair
+  (`coalesce(TIMESTAMP_NTZ '…', CAST(NULL AS TIMESTAMP))` is `timestamp`). An unsafe store
+  cast raises `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `v`
+  "TIMESTAMP" to "INT". SQLSTATE: KD000`. *(oracle: measured — Spark 4.1.2, 2026-10-10, the
+  typing and the class; the refusal itself has no Spark answer, the type cannot be written.)*
+- **Pin** — `crates/repark-spark/tests/timestamp_ns_narrow_refuse.rs` (40 doors on the Rust
+  door, five zones, each refusal by its own statement with the table read back);
+  `python/repark/tests/test_ice_tsns_narrow_refuse_1.py` (228 rows of the matrix through 64
+  doors, each cell held against the base fixture `ice_tsns_narrow_refuse_1_base.json`);
+  `crates/repark-functions/src/null_narrowing/tests.rs` (the mark);
+  `crates/repark-iceberg/src/write/narrowed_store/tests.rs` (the lineage walk and the text);
+  `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`
+  `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` (the first refusing
+  door, unchanged).
+- **Rationale** — DECLARED, dated 2026-10-10. The typing defect is upstream of every store
+  and stays open under card ICE-TSNS-COERCION-1, which turns these refusals back into
+  stores. After analysis a written narrowing and an inserted one are the same expression,
+  so the refusal reads a mark the analyzer places while they still differ: an untyped NULL
+  is tagged before type coercion, and the session's timestamp rule wraps the node when a
+  sibling is still a nanosecond value. The store walks the lineage of each value bound for a
+  nanosecond column and refuses when the mark sits beside the narrowing cast. Ledger:
+  `task/ledgers/staging/ice-tsns-narrow-refuse-1-ledger.md`.
+
+### ICE-TSNS-SQL-1-R-019 — OPEN (registered 2026-10-10, owner ruling on Q3 of ICE-TSNS-NARROW-REFUSE-1): a `UNION` of a nanosecond branch with `nvl(ns, NULL)` or `ifnull(ns, NULL)`
+
+- **repark** — the cell: `INSERT INTO t (id, v, k) SELECT id, ns AS v, 0 AS k FROM src WHERE
+  id = 1 UNION ALL SELECT id, nvl(ns, NULL) AS v, 0 AS k FROM src WHERE id > 1` into a
+  `timestamp_ns` or `timestamptz_ns` column `v` (door `union_insert`, spellings `nvl` and
+  `ifnull` of `python/repark/tests/ice_tsns_narrow_refuse_1_base.json`; two spellings, two
+  source types, two targets, five zones: 40 cells). `nvl(ns, NULL)` and `ifnull(ns, NULL)`
+  are typed `STRING`. **On the base `8d1c4f49`** the `UNION` is typed as a microsecond
+  timestamp and every row is stored floored to microseconds, the plain `ns` branch included
+  (`1767323045123456789` is stored as `1767323045123456000`). **Since fold 1 of
+  ICE-TSNS-NARROW-REFUSE-1** (head `60687f7e`) the 40 cells refuse by the rule for a
+  nanosecond branch narrowed beside a microsecond one (row R-017) and store nothing; the
+  owner's ruling on Q3 reads "not a refusal in this unit", and whether the cell keeps the
+  refusal is question Q7 of that unit's ledger. The typing of `nvl` and `ifnull` over a
+  nanosecond value is card ICE-TSNS-COERCION-1, which owns this row.
+- **Apache Spark** — has no nanosecond type; `nvl(x, NULL)` takes the type of `x`.
+  *(oracle: not measured for this cell; the typing rule is the one row R-017 measured for
+  `coalesce`.)*
+- **Pin** — `python/repark/tests/test_ice_tsns_narrow_refuse_1.py` (the `nvl` and `ifnull`
+  rows of `test_a_written_narrowing_and_a_kept_type_answer_what_the_base_answers`, door
+  `union_insert`).
 
 ### ICE-TSNS-SQL-1-R-018 — OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
 

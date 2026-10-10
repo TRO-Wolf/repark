@@ -1081,6 +1081,41 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- [null_narrowing.rs](null_narrowing.rs), `java_double.rs`, `instant_ts.rs`, `lambda_rebind.rs` —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
+  2026-10-10 built as fold 1):** the marks of a nanosecond value that type coercion narrows.
+  After analysis a narrowing the statement wrote and one the coercion inserted are the same
+  expression, so the difference is recorded while it exists. Two identity functions wrap the
+  value about to be narrowed: `__repark_narrowed_beside_null__` (beside an untyped `NULL`)
+  and `__repark_narrowed_beside_value__` (beside a typed NULL or a microsecond value). Both
+  return their argument with its type and nullability, are registered so a rendered statement
+  re-parses, and `simplify` removes them: the optimized plan and every value are unchanged.
+  - Before the first coercion (`FloatStringifyBeforeCoercion`, the rule registered in
+    `lambda_rebind.rs` where the first `SparkFloatStringify` was; it calls
+    `java_double::rewrite_float_plan` with `before_coercion` set): `before_coercion` turns a
+    cast from a nanosecond value to a microsecond instant, which only a DataFrame
+    `.cast("timestamp")` produces there, into the written-narrowing function, and
+    `tag_untyped_nulls` tags an untyped `NULL` literal beside a nanosecond branch in its
+    literal metadata; `tag_union_nulls` does the same for a `Null`-typed column of a `UNION`
+    branch. The second `SparkFloatStringify` runs after coercion and must not do either: a
+    cast it sees there is coercion's.
+  - In `spark_ltz_timestamp_cast` (`instant_ts.rs` `rewrite_plan`), one walk per expression:
+    on the way down `mark_coerced_branches` marks a cast from a nanosecond timestamp to a
+    coarser one when it is a branch of a `CASE`, or an argument of a function that also holds
+    a microsecond timestamp argument that is not such a cast; `mark_coerced_narrowing` marks
+    one at the root of the expression, where a `UNION` puts it. A cast that only fits a
+    function's signature (`date_trunc('second', ns)`) has no such sibling and is the
+    statement's. On the way up `keep_written_cast` keeps a written `CAST(… AS TIMESTAMP)`
+    over a marked subtree as the written-narrowing function (the session rule would drop it
+    as a cast between equal types), then `rewrite_cast` runs, then `settle_branches` removes
+    every tag and marks the nanosecond siblings of a branch that is by then a microsecond
+    timestamp: with the beside-a-NULL mark when the node held a tag. `settle_union_branches`
+    does the same across the branches of a `UNION`.
+  The tag never reaches an analyzed plan: `Cast` copies its source field's metadata, so a
+  tag left behind would show in a result schema. No rule is added to the analyzer. The store
+  reads the marks in `repark-iceberg` `write/narrowed_store.rs`. Eleven unit pins in
+  `null_narrowing/tests.rs`.
+  pins: ice-tsns-narrow-refuse-1/C-002, C-003, C-019, C-020
 - `timestamp_ns_cast.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel
   `__repark_cast_timestamptz_ns__` is now the one conversion every write door reaches for a
   top-level `timestamptz_ns` column, as the naive kernel is for `timestamp_ns`. Its return

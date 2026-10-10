@@ -42,7 +42,7 @@ pub fn analyzer_rules_with_higher_order_preparation(
     rules.insert(position + 1, Arc::new(HigherOrderPreparation));
     rules.insert(
         position + 2,
-        Arc::new(crate::java_double::SparkFloatStringify),
+        Arc::new(crate::null_narrowing::FloatStringifyBeforeCoercion),
     );
     rules.insert(
         position + 3,

@@ -30,6 +30,7 @@ pub mod insert_gate;
 pub mod merge;
 pub mod meta_delete;
 mod name_resolution;
+pub mod narrowed_store;
 pub mod negated_null_store;
 pub mod nested_column;
 pub mod nested_ns_gate;

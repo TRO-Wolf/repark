@@ -115,7 +115,7 @@ pub(crate) struct SparkFloatStringify;
 impl AnalyzerRule for SparkFloatStringify {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
         let ansi = crate::ansi::spark_ansi_enabled_from_options(config);
-        plan.transform_up_with_subqueries(|node| rewrite_float_plan(node, ansi))
+        plan.transform_up_with_subqueries(|node| rewrite_float_plan(node, ansi, false))
             .data()
     }
 
@@ -124,7 +124,11 @@ impl AnalyzerRule for SparkFloatStringify {
     }
 }
 
-fn rewrite_float_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<LogicalPlan>> {
+pub(crate) fn rewrite_float_plan(
+    plan: LogicalPlan,
+    ansi: bool,
+    before_coercion: bool,
+) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -135,7 +139,12 @@ fn rewrite_float_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<Logic
         let saved_name = name_preserver.save(&expr);
         let rewritten = expr.transform_up(|node| {
             let resolved = resolve_float_literal_input(node, &literals, &schema);
-            rewrite_float_expr(resolved.data, &schema, ansi)
+            let floated = rewrite_float_expr(resolved.data, &schema, ansi)?;
+            if before_coercion {
+                return floated
+                    .transform_data(|node| crate::null_narrowing::before_coercion(node, &schema));
+            }
+            Ok(floated)
         })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
@@ -827,7 +836,7 @@ mod tests {
                     .unwrap()
                     .build()
                     .unwrap();
-                let analyzed = rewrite_float_plan(outer, ansi).unwrap().data;
+                let analyzed = rewrite_float_plan(outer, ansi, false).unwrap().data;
                 let LogicalPlan::Projection(projection) = analyzed else {
                     panic!("projection plan for {text}");
                 };

@@ -36,6 +36,30 @@ refusals of the narrow card turn back into stores.
 - Controls do not move: `timestamptz_ns` values and microsecond spellings store byte-identical
   values to main.
 
+## What ICE-TSNS-NARROW-REFUSE-1 leaves for this card (2026-10-10)
+
+- The refusal is a mark and a guard: `repark-functions` `null_narrowing.rs` (tagged before
+  type coercion, settled in the session's timestamp rule) and `repark-iceberg`
+  `write/narrowed_store.rs`. Keeping the nanoseconds through the coercion removes the mark at
+  its source; the guard, its five call sites and the pins that expect a refusal go with it.
+- After the owner's rulings of 2026-10-10 the refusal also covers a NULL typed `TIMESTAMP`
+  or `TIMESTAMP_NTZ` beside a nanosecond value and a nanosecond value beside a microsecond
+  column or literal (the narrow card's ledger, section 11). This card decides the common
+  type of each pair, and turns those refusals into stores too.
+- `nvl` and `ifnull` over a nanosecond value are typed `STRING` today and belong to this
+  card by the owner's ruling on Q3. The one `UNION` shape that stored a cut value on the
+  base is registry row
+  [ICE-TSNS-SQL-1-R-019](../../../docs/spark-sql-iceberg-parity.md) (40 cells, named there).
+- The four doors that create the table from the query (`CREATE TABLE AS`, `REPLACE TABLE
+  AS`, `createOrReplace`, `saveAsTable` overwrite) type the new column as microseconds and
+  store the cut value: 2,576 cells of the matrix, no nanosecond column written. The typing
+  of this card is what changes them.
+- A frame materialised from a narrowed value is card
+  [ICE-TSNS-CACHE-1](ice-tsns-cache-1-card-2026-10-10.md).
+- The base matrix of 104,960 cells
+  (`python/repark/tests/ice_tsns_narrow_refuse_1_base.json`, recorder beside it) is the
+  never-worse reference for the doors and spellings above.
+
 ## Out of scope
 
 - The nested leaves (`struct`, `array`, `map` holding a `timestamp_ns` leaf): card

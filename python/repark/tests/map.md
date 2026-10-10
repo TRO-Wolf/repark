@@ -3271,6 +3271,75 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   it gives the 47 moved cells of the first fix and no other, the first line of the restated
   count (the ledger's §9.4).
   pins: ice-tsns-merge-wall-1/C-021, C-023
+- [test_ice_tsns_narrow_refuse_1.py](test_ice_tsns_narrow_refuse_1.py) —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
+  2026-10-10 built as fold 1):** the facade pins. A test runs one row of the matrix (a zone,
+  a target, a source, a spelling) through all 64 doors and holds each cell against the base
+  fixture with one rule (`hold`): a cell that stored a cut value on the base and whose
+  spelling the rule refuses must raise the named refusal and leave no value in any Parquet
+  file under the table; a cell that raised an error there must still store nothing; every
+  other cell must be the base's cell, stored values and error text.
+  `test_every_door_refuses_…`: `coalesce(ns, NULL)` and `coalesce(ns, CAST(NULL AS
+  TIMESTAMP))` in five zones, and in America/New_York every spelling narrowed beside an
+  untyped NULL, a typed NULL or a microsecond value, both sources, both nanosecond targets
+  (112 rows). `test_a_written_call_over_a_narrowed_value_stores_where_it_is_equal`: the three
+  `WRITTEN_OVER` spellings (28 rows); an equal arm stores the base's cell on every door but
+  the union, and its `INSERT … SELECT` stores what the twin written call stores over the
+  nanosecond value; a differing arm refuses. `test_a_written_narrowing_and_a_kept_type_…`:
+  eight written narrowings, seven kept types and the three string-typed spellings (`nvl`,
+  `ifnull`, `nvl2`) in America/New_York (72 rows); the only cells that move are a kept type
+  in a `UNION` with an untyped NULL branch and the plain nanosecond branch of a `UNION`
+  beside a microsecond one. `test_a_microsecond_target_does_not_move`: `TIMESTAMP` and
+  `TIMESTAMP_NTZ` targets (16 rows). `test_the_base_fixture_holds_the_counts_the_parity_row_records`:
+  the 650-cell core of the fixture. The frame cached with `cache()` is held to the base: it
+  is data by then, and stores the cut value (card ICE-TSNS-CACHE-1).
+  pins: ice-tsns-narrow-refuse-1/C-001, C-004, C-005, C-006, C-009, C-014, C-017, C-019, C-020, C-021, C-022
+- [_ice_tsns_narrow_refuse_1_doors.py](_ice_tsns_narrow_refuse_1_doors.py) —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10):** the write-door matrix of parity row R-017: five
+  session zones, four target column types (`timestamp_ns`, `timestamptz_ns` and the two
+  microsecond controls), two nanosecond source types, 41 spellings of the value and 64 doors.
+  The spellings are the five of the row (`FAMILY`), twelve more of the same family
+  (`FAMILY_MORE`), six narrowed beside a typed NULL or a microsecond value (`BESIDE_VALUE`),
+  three written calls over a narrowed value (`WRITTEN_OVER`, with the written twin of each
+  and the sources it was measured equal over), eight narrowings the statement writes
+  (`WRITTEN`) and seven that keep the type (`KEPT`). The doors are fifteen SQL statements, six of them again in merge-on-read,
+  eleven DataFrame writers, 23 statements that carry or defer a write (a branch, a staged
+  snapshot, `EXPLAIN ANALYZE`, `PREPARE` with `EXECUTE`, `CREATE TABLE AS`, a view, a
+  subquery, a join, an aggregate, a window, a cached frame) and nine found while hunting
+  (`HUNTED`: MERGE `*`, an `UPDATE` from a scalar subquery, reordered columns, a sort with a
+  limit, a `UNION` with an untyped NULL branch in SQL and through `unionByName`, a
+  higher-order function before the value in the same projection and below it in a frame). Four
+  moments carry non-zero digits below the microsecond: one plain, one before the epoch, one
+  inside New York's gap and one inside Lord Howe's. `stored` reads every Parquet file under
+  the table directory, so a branch, a staged snapshot and a replaced file are seen; a seed
+  row never holds a value, so any value on disk is the door's. `CORE_DOORS` are the thirteen
+  doors of the 650-cell count the row records. `comparable` drops what differs between two
+  runs of one statement (a session counter in a rewritten table name, the tail of a long
+  text).
+  pins: ice-tsns-narrow-refuse-1/C-001
+- [_record_ice_tsns_narrow_refuse_1.py](_record_ice_tsns_narrow_refuse_1.py) +
+  [ice_tsns_narrow_refuse_1_base.json](ice_tsns_narrow_refuse_1_base.json) —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10):** the recorder and what the base `8d1c4f49` (the
+  head of ICE-TSTZNS-WALL-1) stores in each of the 104,960 cells. 59,400 were measured and
+  committed before any product change; the 45,560 cells of the spellings and doors found
+  while hunting and of the six spellings the owner's rulings added were measured afterwards
+  on the same build of the base
+  (`--extend`, which measures only the cells a file does not hold). The fixture lists each
+  distinct result once (`outcomes`) and maps `zone|target|source|spelling` to one outcome
+  index per door. Twenty shards (a zone and a target each) run in parallel, about half an
+  hour on fourteen workers. `--output <path>` measures another build without touching the
+  fixture and `--compare <path>` counts how its cells moved, by class against what INSERT
+  stores for the plain column: `full` is that value, `cut` is it floored to microseconds,
+  `cut+wall` is a nanosecond value with no digit below the microsecond at another wall,
+  `refused` is the named refusal, `error` any other error, `other` anything else (a
+  microsecond column `CREATE TABLE AS` made, a partial store).
+  pins: ice-tsns-narrow-refuse-1/C-001, C-005, C-006, C-022
+- [_time_ice_tsns_narrow_refuse_1.py](_time_ice_tsns_narrow_refuse_1.py) —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10):** the cost probe: the median wall time of an
+  INSERT, a MERGE in both row-level modes and an `EXPLAIN` of a fifty-branch union over a
+  table with no nanosecond column, whose expressions hold untyped NULLs beside microsecond
+  timestamps. Run against the base and the head in turn (the ledger's cost section).
+  pins: ice-tsns-narrow-refuse-1/C-011, C-024
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and

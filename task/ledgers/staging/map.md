@@ -4,6 +4,21 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-tsns-narrow-refuse-1-ledger.md](ice-tsns-narrow-refuse-1-ledger.md) —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10), parity row R-017, stacked on ICE-TSTZNS-WALL-1:** a
+  nanosecond value that type coercion narrowed refuses by name on every measured write door;
+  a narrowing the statement wrote stores what it stored. The base measured first (five
+  zones, read from the Parquet files; the 650-cell core of the row reproduces), where the
+  written and the inserted narrowing can be told apart and why a mark placed during analysis,
+  the guard's call sites, head against base by door, the never-worse counts, the Spark class
+  measured, the hand mutants, the cost against the base and the gates. Section 11 is fold 1:
+  the owner's rulings of 2026-10-10 on the six questions (a written call over a narrowed
+  value measured arm by arm, a typed NULL and a microsecond value beside the nanosecond one
+  refuse, `nvl` and `ifnull` to the coercion card with registry row R-019, the cache site
+  and its count, the unfiltered `UPDATE`'s cells), the matrix of 104,960 cells on the final
+  source and the fold's mutants, cost and gates. Two clauses are OPEN with two questions (the
+  `UNION` cell of `nvl`, 80 base-error cells that no longer refuse by name). `risk_tier:
+  standard`. Branch `fix/ice-tsns-narrow-refuse-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

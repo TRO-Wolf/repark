@@ -4,14 +4,20 @@ use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, ExprSchema, Result};
 use datafusion::logical_expr::{
-    DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, Values, WriteOp,
+    DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, Statement as PlanStatement, Values,
+    WriteOp,
 };
+use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     DataType as SqlDataType, Expr as SqlExpr, SetExpr, Statement,
 };
 use repark_functions::timestamp_ns_cast::{
     is_temporal_source, timestamp_ns_cast_expr, timestamp_ns_target,
 };
+use repark_iceberg::write::narrowed_store::{
+    refuse_narrowed_ns_columns, refuse_narrowed_ns_inserts,
+};
+use repark_iceberg::write::negated_null_store::ViewDefinitionPlans;
 
 pub(crate) fn before_analysis(
     plan: LogicalPlan,
@@ -63,6 +69,45 @@ pub(crate) fn before_analysis(
         _ => Arc::clone(&projection.input),
     };
     rebuild(dml, exprs, input, changed)
+}
+
+pub(crate) fn refuse_narrowed_stores(ctx: &SessionContext, plan: &LogicalPlan) -> Result<()> {
+    let written = match plan {
+        LogicalPlan::Analyze(analyze) => analyze.input.as_ref(),
+        LogicalPlan::Statement(PlanStatement::Prepare(prepare)) => prepare.input.as_ref(),
+        other => other,
+    };
+    let LogicalPlan::Dml(dml) = written else {
+        return Ok(());
+    };
+    if !matches!(dml.op, WriteOp::Insert(_) | WriteOp::Update) {
+        return Ok(());
+    }
+    let schema = dml.target.schema();
+    let targets = schema
+        .fields()
+        .iter()
+        .map(|field| (field.name().as_str(), field.data_type()));
+    let views = ctx.state().config().get_extension::<ViewDefinitionPlans>();
+    let table = format!("`{}`", dml.table_name);
+    if matches!(dml.op, WriteOp::Insert(_)) {
+        return refuse_narrowed_ns_inserts(&table, dml.input.as_ref(), targets, views.as_deref());
+    }
+    refuse_narrowed_ns_columns(&table, dml.input.as_ref(), targets, views.as_deref())
+}
+
+pub(crate) fn refuse_narrowed_columns(
+    ctx: &SessionContext,
+    table: &str,
+    analyzed: &LogicalPlan,
+) -> Result<()> {
+    let schema = Arc::clone(analyzed.schema());
+    let targets = schema
+        .fields()
+        .iter()
+        .map(|field| (field.name().as_str(), field.data_type()));
+    let views = ctx.state().config().get_extension::<ViewDefinitionPlans>();
+    refuse_narrowed_ns_columns(table, analyzed, targets, views.as_deref())
 }
 
 pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {

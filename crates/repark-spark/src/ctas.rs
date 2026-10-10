@@ -207,6 +207,16 @@ pub(crate) async fn execute_ctas(
     // Re-analyze to a fixpoint.
     let analyzed_plan =
         repark_functions::analyze_eagerly(&ctx.state(), query.logical_plan().clone())?;
+    crate::insert_timestamp_ns::refuse_narrowed_columns(
+        ctx,
+        &crate::catalog_ops::quoted_table_display(
+            &std::iter::once(ctas.catalog.clone())
+                .chain(table_ident.namespace().iter().cloned())
+                .chain(std::iter::once(table_ident.name().to_string()))
+                .collect::<Vec<_>>(),
+        ),
+        &analyzed_plan,
+    )?;
     let query = ctx.execute_logical_plan(analyzed_plan).await?;
     let arrow_schema = Arc::new(query.schema().as_arrow().clone());
     if crate::spark_door_case_insensitive(ctx.state().config().options()) {
