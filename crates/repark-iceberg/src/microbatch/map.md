@@ -67,6 +67,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `Catalog` as a corrupt stamp, not `UnsupportedOffsetFormat`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-024
   pins: mb-2a/C-016
+- `stray_remedy.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10):** three more reasons a rollback
+  is not printed, one per lost bound of the walk: `PREVIOUS_GONE`, `HEAD_GONE`,
+  `HEAD_UNRECORDED`. The text pin runs over all five reasons.
+  pins: mb-4-foreach-eo/C-040
 - `stray_remedy.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10, owner ruling on the third
   verify's first two S1):** what a stray refusal tells the operator, as data. `StrayRemedy`
   holds where the stray sits (`under`: the stamped snapshot above it, or none), how to

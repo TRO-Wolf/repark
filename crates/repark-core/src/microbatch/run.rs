@@ -18,7 +18,7 @@ use repark_iceberg::write::nested_ns_gate::{NestedWrite, refuse_nested_ns_supply
 use repark_iceberg::write::sink_offsets::{
     BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, SinkMark, Stray,
     commit_stamp_only, commit_starting_mark, read_resume_point, read_starting_mark,
-    resolve_unknown_outcome, stray_on_main,
+    resolve_unknown_outcome, stray_at_a_table_start, stray_on_main,
 };
 use repark_iceberg::write::{
     CommitStateUnknownError, EncryptedTableRefusal, SESSION_SNAPSHOT_PREFIX,
@@ -364,11 +364,14 @@ impl Run {
         sink: &Table,
         cursor: &Cursor,
     ) -> Result<(), MicroBatchError> {
-        if !matches!(self.door, Door::ForeachBatch(_)) {
-            return Ok(());
-        }
-        self.refuse_replaced_sink(sink, cursor.epoch)?;
-        match stray_on_main(sink, self.shared.id, cursor.baseline)? {
+        let found = match &self.door {
+            Door::Table => stray_at_a_table_start(sink, self.shared.id)?,
+            Door::ForeachBatch(_) => {
+                self.refuse_replaced_sink(sink, cursor.epoch)?;
+                stray_on_main(sink, self.shared.id, cursor.baseline)?
+            }
+        };
+        match found {
             Some(stray) => Err(self.recovery(cursor.epoch, self.stray_reason(&stray).await)),
             None => Ok(()),
         }
@@ -472,7 +475,10 @@ impl Run {
                     base: &sink,
                     baseline: cursor.baseline,
                 };
-                let ran = self.foreach_batch(&scope, body.as_ref(), frame).await;
+                let ran = match fixed_at_the_batch_start(frame) {
+                    Ok(frame) => self.foreach_batch(&scope, body.as_ref(), frame).await,
+                    Err(error) => Err(error),
+                };
                 ran.map(|snapshot| (None, snapshot))
             }
         };
@@ -669,6 +675,14 @@ pub(crate) fn until_next_trigger(started_at: SystemTime, interval: Duration) -> 
         .map_or(0, |since| since.as_millis());
     let next_ms = started_ms / interval_ms * interval_ms + interval_ms;
     Duration::from_millis(u64::try_from(next_ms - started_ms).unwrap_or(u64::MAX))
+}
+
+fn fixed_at_the_batch_start(frame: DataFrame) -> Result<DataFrame, MicroBatchError> {
+    let (state, plan) = frame.into_parts();
+    let plan = state
+        .optimize(&plan)
+        .map_err(|error| engine_error(&error))?;
+    Ok(DataFrame::new(state, plan))
 }
 
 fn unknown_operation_id(error: &DataFusionError) -> Option<String> {

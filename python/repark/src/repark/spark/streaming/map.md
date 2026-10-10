@@ -115,7 +115,13 @@ The contract a user reads is the `Notes:` section of `DataStreamWriter.foreachBa
   loud on every start, where fold 3 was loud once for a snapshot under the batch's own
   stamp). The driver looks above the query's newest stamp and between its two newest stamps
   (down to the head the query started on, which the first stamp records as
-  `repark.cdc.starting-head`), at every start and before every callable.
+  `repark.cdc.starting-head`), at every start and before every callable. Since fold 5 the
+  stretch under the newest stamp is reported whether or not its lower end is still in the
+  table (an expiry may have removed it), and a `toTable` start under a name that has run
+  through `foreachBatch` is refused the same way. A healthy sink is not refused after an
+  expiry. One state stays out of reach: a stray under a stamp, a process death before the
+  driver's check, and then an expiry that keeps only the newest snapshot; the stray's
+  snapshot is gone with every bound (the ledger's fold 5 holds a sketch that closes it).
 - **The error says what resolves it, and each recipe is exact when followed.** Above the
   newest stamp: roll the sink back to the named snapshot and start again, or keep the rows
   and start under a new name with the printed `repark.cdc.start-after-snapshot-id`. Under a
@@ -135,14 +141,16 @@ The contract a user reads is the `Notes:` section of `DataStreamWriter.foreachBa
   `task/roadmap/mid-term/mb-sink-maintenance-path-1-card-2026-10-10.md`.
 - **Session settings.** A streaming plan runs under the session settings of the moment its
   batch starts (time zone, ANSI mode, the batch's own `current_timestamp()`), so both doors
-  store what the same statement stores as a batch write. The `toTable` door refuses a sink
+  store what the same statement stores as a batch write. `current_timestamp()` is one value
+  for the whole micro-batch on both doors: the frame a callable receives carries it as a
+  constant, as Spark's does (fold 5). The `toTable` door refuses a sink
   with a nested `timestamp_ns` leaf with the batch doors' text, and the `foreachBatch` door
   refuses a keyed sink (ENC-1) before it writes anything.
 - **`checkpointLocation` holds no state.** It is required and recorded. The state is the sink
   plus the query name; clearing the checkpoint resets nothing.
 
 Python holds none of this: the callable is handed to the driver, which owns every rule.
-pins: mb-4-foreach-eo/C-031, C-033
+pins: mb-4-foreach-eo/C-031, C-033, C-040, C-041
 
 ## Known limitations
 

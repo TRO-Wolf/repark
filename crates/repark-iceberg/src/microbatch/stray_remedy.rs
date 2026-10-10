@@ -8,6 +8,11 @@ pub const SHARED_STRETCH: &str =
     "another streaming query's batches share that stretch of the sink and would leave with it";
 pub const INSIDE_A_SNAPSHOT: &str = "the batch before it ends inside a source snapshot, so no new query name can deliver the rest exactly";
 
+pub const PREVIOUS_GONE: &str =
+    "the stamped batch before it is no longer in the table, so no snapshot is left to roll back to";
+pub const HEAD_GONE: &str = "the snapshot the query started on is no longer in the table, so no snapshot is left to roll back to";
+pub const HEAD_UNRECORDED: &str = "the query's first stamp does not record the head it started on, so rows that were in the sink before the query cannot be told from a stray";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Restart {
     SameName,
@@ -101,7 +106,10 @@ impl fmt::Display for StrayRemedy {
 
 #[cfg(test)]
 mod tests {
-    use super::{Discard, INSIDE_A_SNAPSHOT, Restart, SHARED_STRETCH, StrayRemedy};
+    use super::{
+        Discard, HEAD_GONE, HEAD_UNRECORDED, INSIDE_A_SNAPSHOT, PREVIOUS_GONE, Restart,
+        SHARED_STRETCH, StrayRemedy,
+    };
     use crate::microbatch::offset::SnapshotId;
 
     fn id(value: i64) -> SnapshotId {
@@ -161,7 +169,14 @@ mod tests {
             empty.to_string(),
             "Every start refuses while that snapshot sits above the newest stamped batch. The query first started on an empty sink, so there is no snapshot to roll back to: discarding its rows is a repair for the operator. To keep its rows, start the query under a new name."
         );
-        for why in [SHARED_STRETCH, INSIDE_A_SNAPSHOT] {
+        let reasons = [
+            SHARED_STRETCH,
+            INSIDE_A_SNAPSHOT,
+            PREVIOUS_GONE,
+            HEAD_GONE,
+            HEAD_UNRECORDED,
+        ];
+        for why in reasons {
             let unproven = StrayRemedy {
                 under: Some(id(9)),
                 discard: Discard::Unproven(why),

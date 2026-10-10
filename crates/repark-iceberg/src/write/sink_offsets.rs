@@ -27,7 +27,8 @@ mod lineage;
 use append_fence::AppendFence;
 pub use body_scope::{guard_body_catalog, in_body_scope, refuse_planned_sink_write};
 pub use lineage::{
-    Floor, SinkMark, Stamped, Stray, commit_starting_mark, read_starting_mark, stray_on_main,
+    Floor, SinkMark, Stamped, Stray, commit_starting_mark, read_starting_mark,
+    stray_at_a_table_start, stray_on_main,
 };
 
 pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";

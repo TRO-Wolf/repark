@@ -269,6 +269,25 @@ pins: mb-3/C-031
   The helpers that build the ending repeat `fence_tests.rs`'s private ones, because that file
   is outside this slice's footprint.
   pins: mb-4/C-114, C-029
+- `run.rs`, `exactly_once_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10, rulings on the
+  fourth verify).**
+  - **`Run::refuse_moved_sink` runs on both doors.** The `toTable` door asks
+    `stray_at_a_table_start`, at the start and before every batch: a name that holds a
+    starting mark, or whose newest stamp is a `foreachBatch` one, is walked and refused
+    exactly as the `foreachBatch` door refuses it. Fold 4 walked on the `foreachBatch` door
+    only, so one `toTable` run under the same name stamped over a stray that a process death
+    had hidden, and no later start read that stretch (source 40, sink 44). A name that only
+    ran through `toTable` is unchanged; the sink-replaced check stays a `foreachBatch` rule.
+  - **`fixed_at_the_batch_start`** optimizes the frame once before it goes to the body, with
+    the state the batch was planned under, so `current_timestamp()` and `current_date()`
+    are one value for the whole micro-batch: every action on the frame and the sink write
+    see the same literal. Before, each action folded its own time (`collect()` and the
+    stored row differed inside one body). Spark 4.1.2 measured: one value for two
+    `collect()` calls 1.3 s apart and the write.
+  - Pins: a `toTable` start under a `foreachBatch` name refuses twice with the remedy the
+    batch's own ending printed, for a stray above the stamp and under it; a name that only
+    ran through `toTable` takes a foreign commit as before.
+  pins: mb-4-foreach-eo/C-041, C-043
 - `run.rs`, `driver.rs`, `exactly_once_tests.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10,
   rulings on the third verify).**
   - **`Run::refuse_moved_sink`** asks `stray_on_main` (the walk above and under the newest

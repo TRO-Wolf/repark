@@ -4115,6 +4115,18 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   that died between the body's commit and check (b) left it unreported (measured in the third
   verify: a body that also wrote its batch from a helper thread, killed before the check:
   source 32 rows, sink 36, no signal on either run; now both restarts refuse).
+  Since fold 5 (2026-10-10) the stretch under the newest stamp is reported whether or not its
+  lower end is still in the table: after an expiry that removed the previous stamp, the first
+  stamp or the head the query started on, an unstamped snapshot there still refuses every
+  start (the fourth verify measured the fold-4 walk going silent there: source 32, sink 36).
+  The text then prints no rollback and says which bound is gone. A `toTable` start under a
+  name whose newest stamp is a `foreachBatch` one, or which holds a starting mark, runs the
+  same check and refuses the same way (fold 4: one `toTable` run hid the stray for good,
+  source 40, sink 44); a name that only ran through `toTable` is unchanged. A healthy sink
+  runs on after an expiry that keeps one, two or three snapshots. **One state is not
+  caught:** a stray under a stamp, a process death before check (b), and then an expiry that
+  keeps only the newest snapshot. The stray's snapshot and every bound are gone; the restart
+  runs on (measured: source 32, sink 36). The ledger's fold 5 sketches the closure.
   **The error says what resolves it, and each recipe is exact when followed** (ten public-door
   pins follow the printed text and count the rows). A stray above the newest stamp: roll the
   sink back to the snapshot the text names (`CALL <catalog>.system.rollback_to_snapshot`) and
@@ -4170,6 +4182,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_kill_before_the_first_commit_restarts_from_the_mark_without_a_duplicate`;
   `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_kill_between_a_twice_written_batch_and_the_audit_refuses_every_restart`;
   `python/repark/tests/test_mb_4_streaming_remedies.py` (ten pins, each following a printed remedy);
+  `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_expiry_of_the_previous_stamp_does_not_hide_a_stray_under_the_newest`,
+  `::test_a_table_door_start_under_the_same_name_does_not_hide_a_stray_under_a_stamp`,
+  `::test_a_healthy_sink_runs_on_after_an_ordinary_expiry`;
   `crates/repark-core/src/microbatch/exactly_once_tests.rs::a_failed_body_is_audited_and_the_restart_refuses_before_any_body`,
   `::at_epoch_zero_the_restart_reads_the_mark_and_refuses_before_any_body`,
   `::a_stray_sink_write_beside_the_stamped_commit_refuses_every_restart_above_or_under_the_stamp`;

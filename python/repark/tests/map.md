@@ -8126,7 +8126,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `spark.sql.caseSensitive` (green before the fix: bound at plan time); and
   `current_timestamp()`, which a streaming plan could not evaluate at all. The frame a body
   collects equals the batch read.
-  pins: mb-4-foreach-eo/C-034
+  **Fold 5 (2026-10-10):** on the `foreachBatch` door `current_timestamp()` and
+  `current_date()` are one value per micro-batch: two `collect()` calls 0.4 s apart and the
+  row the callable writes to the sink are equal, and the second batch's value is later
+  (red on the fold-4 build: the stored row was 0.8 s later than the collected one).
+  pins: mb-4-foreach-eo/C-034, C-043
 - [test_mb_4_streaming_sink_gates.py](test_mb_4_streaming_sink_gates.py) — **MB-4-FOREACH-EO
   fold 4 (2026-10-10, the third verify's first S2 and two S3):** the `toTable` door refuses a
   nested `timestamp_ns` leaf with the batch write's sentence and leaves the sink's files as

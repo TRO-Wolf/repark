@@ -560,6 +560,45 @@ async fn two_query_names_on_one_sink_each_keep_their_own_mark_and_stamps() {
 }
 
 #[tokio::test]
+async fn a_table_door_start_under_a_foreach_name_runs_the_walk_and_refuses_the_same_way() {
+    for own in [Own::AppendAfter, Own::AppendBefore] {
+        let fixture = Fixture::new().await;
+        bronze(&fixture).await;
+        let body = Shaped::new(&fixture.session, Stray::SpawnedAppend, 1, own);
+        let error = ended_with(&fixture, &body).await;
+        let expected = remedy(&error);
+        assert_eq!(expected.under.is_some(), own == Own::AppendAfter);
+        for attempt in 0..2 {
+            if attempt == 1 {
+                fixture.insert(SOURCE, "(6)").await;
+            }
+            let spec = table_spec(Trigger::AvailableNow, &options(ONE));
+            let handle = started(&fixture, spec).await;
+            let refused = handle
+                .await_termination(None)
+                .await
+                .expect_err("the table door walks a name whose newest stamp is a foreach one");
+            assert_eq!(handle.state(), QueryState::RecoveryRequired);
+            assert_eq!(remedy(&refused), expected, "{own:?}: start {attempt}");
+            assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5]);
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_name_that_only_ran_through_the_table_door_takes_a_foreign_commit_as_before() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let first = started(&fixture, table_spec(Trigger::AvailableNow, &options(ONE))).await;
+    assert_eq!(first.await_termination(None).await, Ok(true));
+    fixture.insert(SINK, "(99)").await;
+    fixture.insert(SOURCE, "(6)").await;
+    let second = started(&fixture, table_spec(Trigger::AvailableNow, &options(ONE))).await;
+    assert_eq!(second.await_termination(None).await, Ok(true));
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5, 6, 99]);
+}
+
+#[tokio::test]
 async fn the_table_door_writes_no_mark() {
     let fixture = Fixture::new().await;
     let handle = started(&fixture, table_spec(Trigger::AvailableNow, &options(ONE))).await;

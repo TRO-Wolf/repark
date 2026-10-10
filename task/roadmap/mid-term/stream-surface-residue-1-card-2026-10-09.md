@@ -132,3 +132,17 @@ ruling is revisited.
   `p/updown.py`).** It fails closed and does not misread the mark, and the build that wrote
   the mark runs on exactly afterwards. No such build is released (the mark and every reader
   of it are in PR #1011), so the text is left as it is.
+- **The offsets property is writable by `ALTER TABLE`, so a starting mark can be forged
+  (recorded 2026-10-10, MB-4 fold 5; fourth MB-4 verify, `forge_property.log`).** Summary
+  keys under `repark.cdc.` are refused on every write (fold 4), but the table property
+  `repark.cdc.offsets.<query id>` is an ordinary property. Repro: start a `foreachBatch`
+  query and kill it at the mark; `INSERT` a row into the sink; the restart refuses, naming
+  the row's snapshot; then
+  `ALTER TABLE <sink> SET TBLPROPERTIES ('repark.cdc.offsets.<query id>' =
+  '{"format-version":1,"pending-epoch":0,"starting-head":<the stray snapshot id>}')`;
+  the next start runs on with the stray kept (source 32 rows delivered once, 1 extra row).
+  It takes a deliberate operator who knows the query id, and it is arguably the repair path
+  for a foreign commit the operator wants to keep under the old name. Not fixed in fold 5:
+  the ruling is to card it. A fix would refuse `SET` and `UNSET` of a key under
+  `repark.cdc.offsets.` at the property doors, or sanction the edit as a procedure with the
+  maintenance card.

@@ -12,11 +12,13 @@ use super::append_fence::{AppendFence, refusal_of};
 use super::{main_lineage, masked, stamped_by};
 use crate::microbatch::error::{MicroBatchError, RecoveryReason};
 use crate::microbatch::offset::{
-    OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SinkRecord, SnapshotId, TableUuid,
+    Epoch, OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SPARK_QUERY_ID_KEY, SinkRecord,
+    SnapshotId, TableUuid,
 };
 use crate::microbatch::starting_mark::StartingMark;
 use crate::microbatch::stray_remedy::{
-    Discard, INSIDE_A_SNAPSHOT, Restart, SHARED_STRETCH, StrayRemedy,
+    Discard, HEAD_GONE, HEAD_UNRECORDED, INSIDE_A_SNAPSHOT, PREVIOUS_GONE, Restart, SHARED_STRETCH,
+    StrayRemedy,
 };
 
 #[derive(Debug, Clone)]
@@ -166,6 +168,7 @@ pub enum Floor {
     Previous(Stamped),
     Head(Option<SnapshotId>),
     Shared,
+    Lost(&'static str),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -213,25 +216,67 @@ pub fn stray_on_main(
     query: QueryId,
     baseline: Option<i64>,
 ) -> Result<Option<Stray>, MicroBatchError> {
+    walked(table, query, &Entry::Foreach(baseline))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn stray_at_a_table_start(
+    table: &Table,
+    query: QueryId,
+) -> Result<Option<Stray>, MicroBatchError> {
+    walked(table, query, &Entry::Table)
+}
+
+fn table_door_stamp(snapshot: &SnapshotRef) -> bool {
+    let summary = &snapshot.summary().additional_properties;
+    summary.contains_key(SPARK_QUERY_ID_KEY)
+}
+
+fn head_floor(head: Option<i64>, reached: bool) -> Floor {
+    match head {
+        Some(_) if !reached => Floor::Lost(HEAD_GONE),
+        head => Floor::Head(head.map(SnapshotId::new)),
+    }
+}
+
+enum Entry {
+    Foreach(Option<i64>),
+    Table,
+}
+
+fn walked(table: &Table, query: QueryId, entry: &Entry) -> Result<Option<Stray>, MicroBatchError> {
+    let table_door = matches!(entry, Entry::Table);
+    let baseline = match entry {
+        Entry::Foreach(baseline) => *baseline,
+        Entry::Table => match read_starting_mark(table, query)? {
+            Some(mark) => mark.head.map(SnapshotId::get),
+            None if newest_is_foreach(table, query) => None,
+            None => return Ok(None),
+        },
+    };
     let mine =
         |snapshot: &SnapshotRef| stamped_by(&snapshot.summary().additional_properties, query);
     let mut walk = main_lineage(table.metadata());
     let mut above = Vec::new();
     let mut stamp = None;
+    let mut reached = false;
     for snapshot in walk.by_ref() {
         if mine(snapshot) {
             stamp = Some(snapshot);
             break;
         }
         if Some(snapshot.snapshot_id()) == baseline {
+            reached = true;
             break;
         }
         above.push(snapshot);
     }
     let Some(stamp) = stamp else {
-        let floor = Floor::Head(baseline.map(SnapshotId::new));
-        return Ok(found(&above, None, false, floor));
+        return Ok(found(&above, None, false, head_floor(baseline, reached)));
     };
+    if table_door && table_door_stamp(stamp) {
+        return Ok(None);
+    }
     let newest = stamped_at(stamp)?;
     if let Some(stray) = found(&above, Some(newest.clone()), false, Floor::Newest) {
         return Ok(Some(stray));
@@ -240,22 +285,32 @@ pub fn stray_on_main(
     let head = started.and_then(|mark| mark.head).map(SnapshotId::get);
     let mut under = Vec::new();
     let mut previous = None;
+    let mut reached = false;
     for snapshot in walk {
         if mine(snapshot) {
             previous = Some(stamped_at(snapshot)?);
             break;
         }
         if Some(snapshot.snapshot_id()) == head {
+            reached = true;
             break;
         }
         under.push(snapshot);
     }
     let floor = match (previous, started) {
         (Some(previous), _) => Floor::Previous(previous),
-        (None, Some(mark)) => Floor::Head(mark.head),
-        (None, None) => return Ok(None),
+        (None, Some(_)) => head_floor(head, reached),
+        (None, None) if newest.record.epoch != Epoch::FIRST => Floor::Lost(PREVIOUS_GONE),
+        (None, None) if table_door_stamp(stamp) => return Ok(None),
+        (None, None) => Floor::Lost(HEAD_UNRECORDED),
     };
     Ok(found(&under, Some(newest), true, floor))
+}
+
+fn newest_is_foreach(table: &Table, query: QueryId) -> bool {
+    main_lineage(table.metadata())
+        .find(|snapshot| stamped_by(&snapshot.summary().additional_properties, query))
+        .is_some_and(|stamp| !table_door_stamp(stamp))
 }
 
 impl Stray {
@@ -284,6 +339,7 @@ impl Stray {
         };
         let discard = match (&self.floor, &self.newest) {
             (Floor::Shared, _) => Discard::Unproven(SHARED_STRETCH),
+            (Floor::Lost(why), _) => Discard::Unproven(why),
             (Floor::Newest, Some(newest)) => Discard::RollBack {
                 to: newest.snapshot,
                 then,

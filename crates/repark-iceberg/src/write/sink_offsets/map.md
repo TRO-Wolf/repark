@@ -9,6 +9,42 @@ directory holds the piece split out of it. The test files of the module stay bes
 
 ## Contents
 
+- `lineage.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10, ruling on the fourth verify's S1): the
+  walk reports without a lower bound, and the `toTable` door has an entry.**
+  - **No lower bound.** Fold 4's walk returned "nothing found" when the stretch under the
+    newest stamp ended with neither a previous stamp nor a recorded head, without looking at
+    what it had collected. An expiry that removes the previous stamp leaves exactly that
+    state, and a stray hidden by a process death was then accepted (source 32, sink 36). The
+    walk now stops at the first stamped snapshot of this query, the recorded head, or the
+    end of the retained lineage, and reports an unstamped snapshot it met on the way in every
+    case but one. `Floor::Lost(why)` says which bound is gone: `PREVIOUS_GONE` (the newest
+    stamp is of epoch 1 or later and no earlier stamp is retained: everything between a
+    stamp and its predecessor postdates the query, so what is unstamped there is a stray
+    whether or not the predecessor survived), `HEAD_GONE` (the head the first stamp or the
+    mark records is not on the lineage any more), `HEAD_UNRECORDED` (a `foreachBatch` first
+    stamp with no `repark.cdc.starting-head`, which only a build before fold 4 wrote). The
+    one case not reported is a `toTable` first stamp with no recorded head: rows under it
+    were in the sink before the query, and that door takes other writers.
+  - **No remedy that cannot be followed.** A lost bound prints no rollback
+    (`Discard::Unproven(why)`); a recorded head is offered as a rollback target only when the
+    walk reached it on the lineage (fold 4 printed an expired head).
+  - **A healthy sink is not refused.** With nothing unstamped under the newest stamp the
+    walk answers "clean" with or without a bound: after an expiry that keeps one, two or
+    three snapshots both doors run on.
+  - **`stray_at_a_table_start`** is the same walk for the `toTable` door. It runs only when
+    the name holds a starting mark or its newest stamp on the main branch is a
+    `foreachBatch` stamp (a stamp without the Spark keys the `toTable` door writes). A name
+    whose newest stamp is a `toTable` stamp, or which has neither stamp nor mark, is
+    answered "clean" as before.
+  - Cost: unchanged in kind. One pass over snapshots in the loaded metadata, no catalog
+    call, no file read; one step on a healthy sink. It reads to the end of the retained
+    lineage only when no bound is retained.
+  - Pins in `sink_offsets_lineage_tests.rs`: the three lost bounds with their reasons, above
+    and under a stamp; a sink with only stamps under the newest is clean without a bound, and
+    a `toTable`-begun first stamp over older rows is clean; the `toTable` entry walks only a
+    name whose mark or newest stamp is a `foreachBatch` one. Four older pins stamped a first
+    batch with no mark over a seeded sink; they now write the mark first, as the driver does.
+  pins: mb-4-foreach-eo/C-040, C-041, C-042
 - `lineage.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10, owner ruling on the third verify's
   first S1): the walk goes under the newest stamp.** `stray_on_main(table, query, baseline)`
   replaces `unstamped_since_stamp`. It reads the main lineage once, in memory, and looks at

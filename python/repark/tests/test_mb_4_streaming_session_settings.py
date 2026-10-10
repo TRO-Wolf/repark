@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -151,3 +152,40 @@ def test_current_timestamp_in_a_streaming_plan_is_the_batch_time(
         stored = _stored(tables, table)
         assert len(stored) == 1
         assert started <= stored[0]["v"] <= ended
+
+
+def test_current_timestamp_is_one_value_for_the_whole_micro_batch_on_the_foreach_door(
+    spark: ReparkSession, tables: Path
+) -> None:
+    spark.sql(f"INSERT INTO {_SOURCE} VALUES (1, TIMESTAMP '2024-01-01 00:30:00')")
+    spark.sql(f"INSERT INTO {_SOURCE} VALUES (2, TIMESTAMP '2024-01-01 00:30:00')")
+    spark.sql("CREATE TABLE sc.tz.fb (id BIGINT, now TIMESTAMP, today DATE)")
+    seen: list[list[tuple[object, ...]]] = []
+
+    def body(frame: DataFrame, batch_id: int) -> None:
+        first = [tuple(row) for row in frame.collect()]
+        time.sleep(0.4)
+        second = [tuple(row) for row in frame.collect()]
+        time.sleep(0.4)
+        frame.writeTo("sc.tz.fb").append()
+        seen.append([*first, *second])
+
+    query: StreamingQuery = (
+        spark.readStream.option("streaming-max-files-per-micro-batch", "1")
+        .table(_SOURCE)
+        .selectExpr("id", "current_timestamp() AS now", "current_date() AS today")
+        .writeStream.option("checkpointLocation", str(tables / "ck-now"))
+        .queryName("now")
+        .trigger(availableNow=True)
+        .foreachBatch(body)
+        .option("repark.cdc.sink", "sc.tz.fb")
+        .start()
+    )
+    assert query.awaitTermination() is None
+    stored = {row[0]: tuple(row) for row in spark.table("sc.tz.fb").collect()}
+    assert len(seen) == 2
+    for batch in seen:
+        assert len(batch) == 2
+        assert batch[0] == batch[1]
+        assert stored[batch[0][0]] == batch[0]
+    assert seen[0][0][1] < seen[1][0][1]

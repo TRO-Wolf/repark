@@ -1,10 +1,28 @@
 use super::*;
 use crate::microbatch::stray_remedy::{
-    Discard, INSIDE_A_SNAPSHOT, Restart, SHARED_STRETCH, StrayRemedy,
+    Discard, HEAD_GONE, HEAD_UNRECORDED, INSIDE_A_SNAPSHOT, PREVIOUS_GONE, Restart, SHARED_STRETCH,
+    StrayRemedy,
 };
 
 async fn stamped(catalog: &Arc<dyn Catalog>, table: &Table, epoch: u64, ids: &[i32]) -> Table {
-    let stamp = stamp_for(epoch, SinkDoor::ForeachBatch);
+    stamped_through(catalog, table, epoch, SinkDoor::ForeachBatch, ids).await
+}
+
+async fn first_stamp(catalog: &Arc<dyn Catalog>, seeded: &Table, ids: &[i32]) -> Table {
+    let marked = commit_starting_mark(catalog, seeded, query())
+        .await
+        .expect("the mark");
+    stamped(catalog, &marked, 0, ids).await
+}
+
+async fn stamped_through(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    epoch: u64,
+    door: SinkDoor,
+    ids: &[i32],
+) -> Table {
+    let stamp = stamp_for(epoch, door);
     let guard = BatchScope::enter(TableUuid::of(table), stamp).expect("enter");
     let files = stage(table, ids).await;
     guard
@@ -61,7 +79,7 @@ async fn the_walk_above_the_newest_stamp_names_the_stray_and_stops_at_the_baseli
         Some((head(&seeded), String::from("append")))
     );
     assert_eq!(walked(&seeded, query(), Some(head(&seeded))), None);
-    let epoch_zero = stamped(&catalog, &seeded, 0, &[2]).await;
+    let epoch_zero = first_stamp(&catalog, &seeded, &[2]).await;
     assert_eq!(walked(&epoch_zero, query(), None), None);
     let stray = append_plain(&catalog, &ident, &[3]).await;
     assert_eq!(
@@ -75,7 +93,7 @@ async fn the_walk_above_the_newest_stamp_names_the_stray_and_stops_at_the_baseli
 async fn a_snapshot_stamped_by_another_query_is_not_a_violation() {
     let (_warehouse, catalog, ident) = fixture("lineage_other").await;
     let seeded = append_plain(&catalog, &ident, &[1]).await;
-    let ours = stamped(&catalog, &seeded, 0, &[2]).await;
+    let ours = first_stamp(&catalog, &seeded, &[2]).await;
     let mark = SinkMark::of(&ours);
     let theirs = CommitStamp {
         record: record_for(other_query(), 0, 7),
@@ -332,7 +350,7 @@ fn stamp_of(table: &Table, epoch: u64) -> SnapshotId {
 async fn a_stray_under_the_newest_stamp_is_found_down_to_the_previous_stamp() {
     let (_warehouse, catalog, ident) = fixture("lineage_under").await;
     let seeded = append_plain(&catalog, &ident, &[1]).await;
-    let epoch_zero = stamped(&catalog, &seeded, 0, &[2]).await;
+    let epoch_zero = first_stamp(&catalog, &seeded, &[2]).await;
     let stray = append_plain(&catalog, &ident, &[3]).await;
     let epoch_one = stamped(&catalog, &stray, 1, &[3]).await;
     let found = stray_on_main(&epoch_one, query(), None)
@@ -416,11 +434,15 @@ async fn an_empty_start_a_markless_first_stamp_and_a_shared_stretch_are_told_apa
     let (_second, catalog, ident) = fixture("lineage_markless").await;
     let seeded = append_plain(&catalog, &ident, &[1]).await;
     let markless = stamped(&catalog, &seeded, 0, &[2]).await;
-    assert_eq!(walked(&markless, query(), None), None);
+    assert_eq!(
+        walked(&markless, query(), None),
+        Some((head(&seeded), String::from("append"))),
+        "a first stamp that records no head cannot vouch for what lies under it"
+    );
 
     let (_third, catalog, ident) = fixture("lineage_shared").await;
     let seeded = append_plain(&catalog, &ident, &[1]).await;
-    let epoch_zero = stamped(&catalog, &seeded, 0, &[2]).await;
+    let epoch_zero = first_stamp(&catalog, &seeded, &[2]).await;
     let theirs = stamped_by_another_query(&catalog, &epoch_zero, &[3]).await;
     assert_eq!(walked(&theirs, query(), None), None);
     let stray = append_plain(&catalog, &ident, &[4]).await;
@@ -554,4 +576,146 @@ async fn a_stamp_alone_refuses_the_mark_even_without_the_offsets_property() {
         "a mark landed over a stamped query"
     );
     assert_eq!(after.metadata_location(), bare.metadata_location());
+}
+
+fn lost(table: &Table, baseline: Option<i64>) -> (bool, Floor, Discard) {
+    let stray = stray_on_main(table, query(), baseline)
+        .expect("the walk")
+        .expect("a stray");
+    let discard = remedy_of(&stray, &[0, 1, 2, 3]).discard;
+    (stray.below, stray.floor, discard)
+}
+
+#[tokio::test]
+async fn a_stray_under_the_newest_stamp_is_reported_when_no_lower_bound_is_left() {
+    let (_warehouse, catalog, ident) = fixture("lost_previous").await;
+    let stray = append_plain(&catalog, &ident, &[1]).await;
+    let later = stamped(&catalog, &stray, 3, &[2]).await;
+    assert_eq!(
+        lost(&later, None),
+        (
+            true,
+            Floor::Lost(PREVIOUS_GONE),
+            Discard::Unproven(PREVIOUS_GONE)
+        )
+    );
+    assert_eq!(
+        walked(&later, query(), None).map(|found| found.0),
+        Some(head(&stray))
+    );
+
+    let (_second, catalog, ident) = fixture("lost_unrecorded").await;
+    let before = append_plain(&catalog, &ident, &[1]).await;
+    let first = stamped(&catalog, &before, 0, &[2]).await;
+    assert_eq!(
+        lost(&first, None),
+        (
+            true,
+            Floor::Lost(HEAD_UNRECORDED),
+            Discard::Unproven(HEAD_UNRECORDED)
+        )
+    );
+
+    let (_third, catalog, ident) = fixture("lost_head").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let marked = with_raw_mark(&catalog, &seeded, "424242").await;
+    assert_eq!(
+        lost(&marked, Some(424_242)),
+        (false, Floor::Lost(HEAD_GONE), Discard::Unproven(HEAD_GONE))
+    );
+    let first = stamped(&catalog, &marked, 0, &[2]).await;
+    assert_eq!(
+        lost(&first, Some(424_242)),
+        (true, Floor::Lost(HEAD_GONE), Discard::Unproven(HEAD_GONE))
+    );
+}
+
+#[tokio::test]
+async fn a_sink_with_nothing_unstamped_under_its_newest_stamp_is_healthy_without_a_bound() {
+    let (_warehouse, catalog, ident) = fixture("healthy_unbounded").await;
+    let empty = catalog.load_table(&ident).await.expect("load");
+    let third = stamped(&catalog, &empty, 3, &[1]).await;
+    assert_eq!(walked(&third, query(), None), None);
+    let theirs = stamped_by_another_query(&catalog, &third, &[2]).await;
+    let fourth = stamped(&catalog, &theirs, 4, &[3]).await;
+    assert_eq!(walked(&fourth, query(), None), None);
+    assert_eq!(
+        stray_at_a_table_start(&fourth, query()).expect("the walk"),
+        None
+    );
+
+    let (_second, catalog, ident) = fixture("healthy_table_begun").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let begun = stamped_through(&catalog, &seeded, 0, SinkDoor::Table, &[2]).await;
+    assert_eq!(walked(&begun, query(), None), None);
+    assert_eq!(
+        stray_at_a_table_start(&begun, query()).expect("the walk"),
+        None
+    );
+}
+
+fn at_a_table_start(table: &Table) -> Option<(i64, bool, Floor)> {
+    stray_at_a_table_start(table, query())
+        .expect("the walk")
+        .map(|stray| (stray.snapshot.get(), stray.below, stray.floor))
+}
+
+#[tokio::test]
+async fn a_table_start_walks_only_a_name_whose_mark_or_newest_stamp_is_a_foreach_one() {
+    let (_warehouse, catalog, ident) = fixture("table_only").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    assert_eq!(at_a_table_start(&seeded), None);
+    let first = stamped_through(&catalog, &seeded, 0, SinkDoor::Table, &[2]).await;
+    let foreign = append_plain(&catalog, &ident, &[3]).await;
+    assert_eq!(at_a_table_start(&foreign), None);
+    let second = stamped_through(&catalog, &foreign, 1, SinkDoor::Table, &[4]).await;
+    assert_eq!(at_a_table_start(&second), None);
+    assert_eq!(at_a_table_start(&first), None);
+    assert_eq!(
+        walked(&second, query(), None).map(|found| found.0),
+        Some(head(&foreign)),
+        "the foreach door reads the stretch between two table stamps"
+    );
+
+    let (_second, catalog, ident) = fixture("table_after_mark").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let marked = commit_starting_mark(&catalog, &seeded, query())
+        .await
+        .expect("the mark");
+    assert_eq!(at_a_table_start(&marked), None);
+    let stray = append_plain(&catalog, &ident, &[2]).await;
+    assert_eq!(
+        at_a_table_start(&stray),
+        Some((
+            head(&stray),
+            false,
+            Floor::Head(Some(SnapshotId::new(head(&seeded))))
+        ))
+    );
+    let over = stamped(&catalog, &stray, 0, &[2]).await;
+    assert_eq!(
+        at_a_table_start(&over),
+        Some((
+            head(&stray),
+            true,
+            Floor::Head(Some(SnapshotId::new(head(&seeded))))
+        ))
+    );
+    let above = append_plain(&catalog, &ident, &[5]).await;
+    assert_eq!(
+        at_a_table_start(&above),
+        Some((head(&above), false, Floor::Newest))
+    );
+
+    let (_third, catalog, ident) = fixture("table_after_foreach").await;
+    let empty = catalog.load_table(&ident).await.expect("load");
+    let marked = commit_starting_mark(&catalog, &empty, query())
+        .await
+        .expect("the mark");
+    let zero = stamped(&catalog, &marked, 0, &[1]).await;
+    assert_eq!(at_a_table_start(&zero), None);
+    let one = stamped_through(&catalog, &zero, 1, SinkDoor::Table, &[2]).await;
+    let foreign = append_plain(&catalog, &ident, &[3]).await;
+    assert_eq!(at_a_table_start(&one), None);
+    assert_eq!(at_a_table_start(&foreign), None);
 }
