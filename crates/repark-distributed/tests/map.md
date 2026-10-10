@@ -25,6 +25,13 @@ now unwraps the provider's `Result`, and `codec.rs` carries
 through both doors with the builder fix in the message; a `false` session and a plain
 `SessionContext::new()` are accepted. pins: ta-series-s2b/C-014
 
+**CLUSTER-TESTS-2 (2026-10-10):** the two cancel tests above are green again — their seed
+is `generate_series(0, 99999999)`, whose `LazyMemoryExec` the codec carries as a
+`GenerateSeriesNode`, instead of `range(100000000)`, which has planned the uncarried
+`StreamingTableExec` since RANGE-TVF-ID-1. The third red,
+`date_and_timestamp_predicates_measure_the_pushdown_surface`, went green under
+CLUSTER-CODEC-TEST-1. pins: cluster-tests-2/C-001, C-002, C-003
+
 - `local_executor.rs` — three pins against `LocalDataFusionExecutor`:
   `range(1000)` sum equals the direct DataFusion collect (C-001);
   `status` is `Queued`/`Running` before drain and `Completed` after (C-002);
@@ -33,14 +40,20 @@ through both doors with the builder fix in the message; a `false` session and a 
   pins: ballista-m1-a/C-001, C-002, C-003
 - `cluster_two_executors.rs` (`feature = "cluster"`) — one scheduler plus two in-process
   executors: `SELECT sum(x) FROM t` equals the local executor; both executors ran at least
-  one task; `status` walks Queued → Running → Completed. Table `t` is an in-memory table
+  one task; the polled `status` walk is monotone Queued → Running → Completed, with
+  Running seen unless the first poll already reads Completed, and Completed reached
+  after drain. Queued is allowed, never required: a fast scheduler is already Running
+  at the first 10 ms poll, and a poll cannot pin a transient it may have missed
+  (CLUSTER-STATUS-FLAKE-1, 2026-10-10). Table `t` is an in-memory table
   registered through `ReparkSessionProvider`. Step 2 adds: `repark_times_ten` registered on
   the RePark session resolves on the executors and equals the local answer; a cluster whose
   provider is a vanilla `SessionContext` fails to resolve the same UDF (stream error names
-  `repark_times_ten`); cancel of `range(100000000)` mid-flight sets `Cancelled` and
-  `running_executor_task_counts` reaches empty within 5 s; `repark_ballista_codec(&provider)`
-  installs the RePark physical wrapper and the Ballista logical default.
-  RANGE-TVF-ID-1 (2026-09-18): the cancel seed reads the `id` column.
+  `repark_times_ten`); cancel of `generate_series(0, 99999999)` mid-flight sets
+  `Cancelled` and `running_executor_task_counts` reaches empty within 5 s;
+  `repark_ballista_codec(&provider)` installs the RePark physical wrapper and the
+  Ballista logical default.
+  CLUSTER-TESTS-2 (2026-10-10): the cancel seed reads the `value` column; `range()`
+  planned `StreamingTableExec` since RANGE-TVF-ID-1 and fails at submit.
   pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
 - `codec.rs` (`feature = "cluster"`) — BALLISTA-M2-B: the installed physical codec is the
   RePark wrapper; the five Ballista shuffle nodes and an `IcebergTableScan` round-trip
@@ -65,8 +78,10 @@ through both doors with the builder fix in the message; a `false` session and a 
   `prefer_hash_join=false` and a `RepartitionExec` on both children.
   Step 2 adds: `Completed` on the two-stage hash aggregate reports per-stage rows and
   shuffle bytes > 0; the session spill directory has no `data*.arrow` shuffle files after
-  that job completes and after a long-range cancel.
-  RANGE-TVF-ID-1 (2026-09-18): the long-range seed reads the `id` column.
+  that job completes and after a long-series cancel.
+  CLUSTER-TESTS-2 (2026-10-10): the long-series seed is `generate_series(0, 99999999)`
+  reading the `value` column; `range()` planned `StreamingTableExec` since
+  RANGE-TVF-ID-1 and fails at submit.
   pins: ballista-m1-c/C-001, C-003, C-004
 - `iceberg_scan.rs` (`feature = "cluster"`) — BALLISTA-M1-D: `IcebergScanSpec` round-trip
   of catalog config, table identifier, snapshot id, projection, and filters (**CATALOG-1

@@ -1,7 +1,7 @@
 # v1.5.4 release notes (2026-10-10)
 
-Not tagged yet. The tag and the PyPI upload are the owner's; this file prepares them. Nothing
-here is a go decision.
+Tagged `v1.5.4` at `f4e424c1` on 2026-10-10 (11:21 UTC, on the owner's word); on PyPI the same
+day at 12:23 UTC, five wheels (release run 38048107485).
 
 v1.5.4 is the fourth patch on 1.5.0. It follows v1.5.3 (`7a8fcf1a`, notes
 [v1-5-3-release-notes-2026-10-07.md](v1-5-3-release-notes-2026-10-07.md)). It carries a
@@ -9,9 +9,7 @@ cross-join condition fix, two write-path fixes for nanosecond timestamps, the en
 refusal for keyed tables, `COUNT(*)` on the changelog, incremental and lineage readers, the
 pyarrow dependency floor, and the SQL door's `timestamp_seconds` family.
 
-Tag target: the merge commit of this release pull request on `main` (the workspace version
-moves to 1.5.4 in it). The last product commit is `e845b73b` (#1012). The tag and the PyPI
-publication are the owner's.
+The tag target is the release commit `f4e424c1`; the last product commit is `e845b73b` (#1012).
 
 ## Cross-join condition (#1010, `153b6cb5`)
 

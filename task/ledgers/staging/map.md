@@ -2360,3 +2360,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   re-measures both halves. `risk_tier: standard`. Branch
   `fix/cluster-codec-pushdown-test-1`.
   pins: cluster-codec-test-1/C-001, C-002
+- [cluster-tests-2-ledger.md](cluster-tests-2-ledger.md) —
+  **CLUSTER-TESTS-2 (2026-10-10), in flight:** the two other `cluster`-feature tests
+  that fail on main, fixed ahead of the CI job. The `range()` seed plans
+  `StreamingTableExec` since RANGE-TVF-ID-1, which the codec cannot carry (C-001);
+  the honest fix is test-side (C-002); the `generate_series` seed restores both
+  cancel pins (C-003). `risk_tier: standard`. Branch `fix/cluster-tests-2`.
+  pins: cluster-tests-2/C-001, C-002, C-003
