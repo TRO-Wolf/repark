@@ -53,6 +53,7 @@ async fn execute_partition_overwrite(
             "INSERT OVERWRITE … PARTITION target `{table_name}` could not be loaded: {error}"
         ))
     })?;
+    repark_iceberg::write::refuse_encrypted_table(&table)?;
     let request = partition_overwrite_request_from_exprs(partition_exprs)?;
     let mode = OverwriteMode {
         session_dynamic: repark_core::partition_overwrite_mode_from_ctx(cx.ctx).is_dynamic(),

@@ -4,6 +4,84 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
+  **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
+  `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
+  `repark_functions::spark_epoch_ctor` kernel per spelling, with Spark's values, refusal
+  classes and `timestamp` schema (C-002..C-005, C-008); the 304-cell live Spark 4.1.2
+  oracle (C-001, C-009) and its live drift check (C-007) sit under `python/repark/tests`;
+  the native door stays a declared refusal (C-006); fold 1 (2026-10-09) pins the
+  decimal-boundary order (C-010) and files the verdict S3s as O-3..O-5.
+  `risk_tier: standard`. Branch `fix/sql-epoch-constructors-1`.
+- [ice-tsns-merge-wall-1-ledger.md](ice-tsns-merge-wall-1-ledger.md) —
+  **ICE-TSNS-MERGE-WALL-1 (2026-10-09), readiness finding R-007:** every write door stores
+  the same nanosecond wall. Step 0: the review's test red on main (C-001), Spark 4.1.2 with
+  Iceberg 1.11.0 cannot touch `timestamp_ns` (C-002), main measured over 1926 cells with 38
+  wrong `timestamp_ns` values and 15 refusals that have an answer (C-003). The fix: the 38
+  right (C-004), 1605 control cells and every carry unmoved (C-005), the unfiltered `UPDATE`
+  (C-006), no digit dropped (C-007), one kernel per unit and no new one (C-008), the ANSI
+  door (C-009), overflow as INSERT answers (C-010), five mutants (C-011), gates (C-012).
+  Three clauses are OPEN, each a question: the `timestamptz_ns` mirror (C-013, Q1), the
+  nanosecond-to-microsecond narrowing (C-014, Q2), `UPDATE` / `DELETE` cast lowering
+  (C-015, Q3). `risk_tier: standard`. Branch `fix/ice-tsns-merge-wall-1`.
+  **Fold 1 (2026-10-09), after an independent verify failed `1be18c26`:** nested
+  `timestamp_ns` leaves store one wall from every door, fixed forward (C-016); an
+  out-of-range literal with ANSI off stores INSERT's NULL (C-018) and a wall-typed source
+  past the range answers as INSERT on the overwrite doors (C-019); the moved count restated on
+  the verify's wider matrix (C-021); the facade pins cut to 179 tests with carry at the Rust
+  door (C-023); six mutants (C-024); gates (C-025). Four more clauses are OPEN, each a
+  question: the nested microsecond `TIMESTAMP_NTZ` split (C-017, Q4, first for the owner), the
+  unfiltered `UPDATE`'s overflow class under ANSI (C-020, Q5), the kernel name on the ANSI
+  door (C-022, Q6), three raw nested refusals (C-026, Q7).
+  **Fold 2 (2026-10-09), after a re-verify failed `59462d6a` at the edges of the nested
+  form:** the conform pairs struct fields as its door pairs them (C-027), reads every Arrow
+  layout or refuses it (C-028), and a nested `timestamp_ns` leaf is stored as the rule's wall
+  or refused by one named text, parity row R-015 (C-029: 5009 answering cells of 9430, all the
+  rule's wall, 3052 named refusals, 1369 whose own source does not evaluate); a value narrowed
+  from nanoseconds is refused, not cut (C-030); the required `timestamptz_ns` control's text
+  is main's again (C-031); `UPDATE` with no `WHERE` is refused by name (C-032); the red check
+  of the pull request was the map lockstep guard (C-033); sixteen mutants (C-034); the
+  matrices re-run with no control moved (C-035); gates (C-036). Three more clauses are OPEN,
+  each a question: struct pairing against Spark's (C-037, Q8), the typing of a nanosecond
+  value beside a NULL (C-038, Q9), `VALUES` spellings that fail before any store (C-039,
+  Q10); and Q11 asks whether a named refusal is right where main stored a NULL leaf.
+  **The split (2026-10-09), owner-adopted amendment 3 after the second re-verify failed
+  `c6d947a3`:** the top-level fix ships and the nested form is withdrawn. The nested conform,
+  its pairing, layouts and lineage guard are deleted and their clauses REJECTED (C-016,
+  C-027 to C-030, C-032, C-034); one gate refuses, by one named text and before any file,
+  every write that supplies a value for a column holding a nested `timestamp_ns` leaf
+  (C-040), while statements that do not supply it, carries, maintenance and reads still run
+  (C-041) and zoned and microsecond nested leaves are untouched (C-042). Two top-level
+  findings are fixed: the unfiltered `UPDATE` refuses a value narrowed from nanoseconds
+  (C-043) and an encoded instant source stores the session wall (C-044); every door has a
+  pin read from the Parquet file (C-045); the verifier's matrices re-run (C-046); mutants
+  (C-047); gates (C-048). The nested store is OPEN as card ICE-TSNS-NESTED-1 (C-049, Q12).
+  **Split fold 1 (2026-10-10), after the verify of `8451702b` found the gate bypassed by a
+  branch or WAP write:** the one call moves ahead of the router's rewrites and an unparsed
+  write no longer passes (C-050); the allowed statements still run on a branch and under WAP
+  (C-051); the verify's three surviving mutants die and the scripts are re-run (C-052).
+  `CALL system.add_files` and three more facts are records (§12.5); Q13 asks about the text a
+  malformed write now gets.
+  **Split fold 2 (2026-10-10), after the verify of `b0175d05` found `EXPLAIN ANALYZE INSERT`
+  executing the write past the gate:** the gate decides every write a statement carries, by
+  the parser's visitor and not by a list of kinds, which also closes `PREPARE`/`EXECUTE` and
+  `CREATE TABLE AS INSERT` (C-053, with the table of the parser's `Statement` variants);
+  plain `EXPLAIN`, allowed statements and tables without the leaf are unchanged, six mutants
+  die (C-054). Q14 asks whether `EXPLAIN ANALYZE` should run a write at all.
+- [cross-join-condition-1-ledger.md](cross-join-condition-1-ledger.md) —
+  **CROSS-JOIN-CONDITION-1 (2026-10-08), from the STAMP-2-R5P6-2 hand-back:** a cross join with
+  a condition ignored it (12 rows where Spark answers 2); the H1 door now routes cross-with-condition
+  onto the inner path on both routes (C-001), `crossJoin` and `join(None, "cross")` are unmoved
+  (C-002), two self-join shapes answer as inner (C-003), shared-name and Column-list refusals are
+  kept (C-004), four mutations (C-005), neighbours unchanged (C-006), card and maps closed (C-007).
+  Fold 1 (2026-10-08): route assertions with the inequality and false cells SQL-only, live Spark
+  self-join literals, and the Spark-refused leniency pinned as cross-equals-inner, carried OPEN
+  (C-008) to card JOIN-CONDITION-REFUSALS-1.
+  Fold 2 (2026-10-08): the `JoinConditionRefusals` analyzer rule refuses those conditions with
+  Spark's class, condition and text on every how of both doors (C-008 PROVEN); the card is closed.
+  Fold 3 (2026-10-09): the refusals answer the accessors with no rule header (pins assert them);
+  the card re-opens narrowed to residues R-CJC-1..R-CJC-5.
+  `risk_tier: standard`. Branch `fix/cross-join-condition-1`.
 - [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
   **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
   under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort
@@ -2256,3 +2334,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   is the owner's decision. `risk_tier: standard`. Branch
   `fix/threaded-collect-segv-1`.
   pins: threaded-collect-segv-1/C-001, C-002
+- [empty-projection-count-1-ledger.md](../completed/empty-projection-count-1-ledger.md) —
+  **EMPTY-PROJECTION-COUNT-1 (2026-10-09), in flight:** `COUNT(*)` plans an
+  empty projection and the shared `conform_batch` rebuild refused it, so the
+  changelog, incremental, lineage and micro-batch readers failed
+  engine-internal. The four-caller audit (C-001), the base + Spark measurement
+  (C-008), the changelog (C-002), incremental (C-003), lineage (C-004) and
+  micro-batch (C-005) pins, the shared-site units (C-006), the neighbour guards
+  (C-007) and the gates + card filing (C-009). `risk_tier: standard`. Branch
+  `fix/empty-projection-count-1`.
+  pins: empty-projection-count-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009

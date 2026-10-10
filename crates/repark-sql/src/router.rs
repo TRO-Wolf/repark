@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::DataFrame;
 use datafusion::sql::parser::Statement as DFStatement;
-use datafusion::sql::sqlparser::ast::{Insert, ObjectType, Statement};
+use datafusion::sql::sqlparser::ast::{Insert, ObjectType, Statement, TableObject};
 use repark_core::EngineContext;
 use repark_iceberg::write::insert_defaults;
 
@@ -212,6 +212,11 @@ async fn execute_insert_routed(
     if let Some(frame) = crate::pg_insert::route_postgres_insert(cx, insert).await? {
         return Ok(frame);
     }
+    if let Some(preloaded) = preloaded.as_ref() {
+        repark_iceberg::write::refuse_encrypted_table(preloaded)?;
+    } else if let TableObject::TableName(name) = &insert.table {
+        guards::refuse_encrypted_write_target(cx, name).await?;
+    }
     if let Some(frame) = crate::session_insert::try_execute_session_insert(
         cx,
         insert,
@@ -232,6 +237,7 @@ async fn execute_identity_or_delegate(
     sql: &str,
     statement: &Statement,
 ) -> Result<DataFrame> {
+    guards::refuse_encrypted_dml_target(cx, statement).await?;
     if try_metadata_delete_door(cx, statement).await? {
         return cx.ctx.read_empty();
     }
@@ -318,10 +324,15 @@ pub(crate) async fn delegate_plan(
         Ok(plan) => plan,
         Err(err) => return Err(sniff::upgrade_error(sql, err)),
     };
-    let target = insert_defaults::dml_target(&plan)
+    let analyzed = match &plan {
+        datafusion::logical_expr::LogicalPlan::Analyze(analyze) => analyze.input.as_ref(),
+        _ => &plan,
+    };
+    let target = insert_defaults::dml_target(analyzed)
         .and_then(|(name, ident)| cx.catalogs.get(&name).map(|catalog| (catalog, ident)));
     let plan = match target {
         Some((catalog, ident)) => {
+            repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await?;
             insert_defaults::fill_insert_plan(catalog, &ident, listed, plan, preloaded).await?
         }
         None => plan,

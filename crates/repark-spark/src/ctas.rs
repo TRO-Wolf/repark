@@ -262,6 +262,7 @@ pub(crate) async fn execute_ctas(
         // Create: location + FileIO were resolved above the SELECT (ADV-3).
         let mut properties = catalogs.table_creation_properties(&ctas.catalog, &ctas.properties);
         crate::create_table::stamp_owner(ctx, &mut properties);
+        repark_iceberg::write::refuse_encrypted_properties(&properties, &table_ident)?;
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
             .location(plan.location)
@@ -270,11 +271,14 @@ pub(crate) async fn execute_ctas(
             .format_version(format_version)
             .properties(properties)
             .build();
-        let staged =
-            StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
-                .await
-                .map_err(iceberg_err)?
-                .with_replace_write(ctas.or_replace);
+        let staged = repark_iceberg::catalog::begin_staged_create(
+            plan.file_io,
+            table_ident.clone(),
+            creation,
+        )
+        .await
+        .map_err(iceberg_err)?
+        .with_replace_write(ctas.or_replace);
         (staged, None)
     } else {
         let existing = existing.ok_or_else(|| {
@@ -288,6 +292,8 @@ pub(crate) async fn execute_ctas(
             format_version,
         );
         crate::create_table::stamp_owner(ctx, &mut properties);
+        repark_iceberg::write::refuse_encrypted_properties(&properties, &table_ident)?;
+        repark_iceberg::write::refuse_encrypted_table(&existing)?;
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
             .schema(iceberg_schema)
@@ -636,6 +642,7 @@ pub(crate) async fn execute_ctas_service_managed(
     // Location deliberately not set: the service assigns it.
     let mut properties = catalogs.table_creation_properties(&ctas.catalog, &ctas.properties);
     crate::create_table::stamp_owner(ctx, &mut properties);
+    repark_iceberg::write::refuse_encrypted_properties(&properties, &table_ident)?;
     let creation = TableCreation::builder()
         .name(ctas.table.clone())
         .schema(iceberg_schema)

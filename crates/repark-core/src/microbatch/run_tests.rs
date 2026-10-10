@@ -547,3 +547,65 @@ async fn an_idle_restart_reports_the_next_batch_id_and_commits_nothing() {
         .json();
     assert_eq!(source["endOffset"], next["sources"][0]["endOffset"]);
 }
+
+fn files_under(root: &str) -> std::collections::BTreeSet<String> {
+    let mut pending = vec![std::path::PathBuf::from(root)];
+    let mut found = std::collections::BTreeSet::new();
+    while let Some(dir) = pending.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else {
+                found.insert(path.display().to_string());
+            }
+        }
+    }
+    found
+}
+
+#[tokio::test]
+async fn a_keyed_sink_refuses_the_batch_and_stages_no_file() {
+    use iceberg::transaction::{ApplyTransactionAction, Transaction};
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let sink = fixture.table("silver").await;
+    let catalog = fixture
+        .session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("catalog");
+    let tx = Transaction::new(&sink);
+    let tx = tx
+        .update_table_properties()
+        .set(
+            "encryption.key-id".to_string(),
+            "SEKRETKEYVAL9f3a7".to_string(),
+        )
+        .apply(tx)
+        .expect("apply");
+    tx.commit(catalog.as_ref()).await.expect("key set");
+    let before = files_under(&fixture.root());
+    let handle = started(&fixture, table_spec(Trigger::AvailableNow, &options(&[]))).await;
+    let ended = handle.await_termination(None).await;
+    let refusal = MicroBatchError::EncryptedSinkRefused {
+        sink: String::from("sales.silver"),
+    };
+    assert_eq!(
+        ended.map_err(|error| error.as_ref().clone()),
+        Err(refusal.clone())
+    );
+    assert_eq!(handle.exception().as_deref(), Some(&refusal));
+    let _ = handle.stop().await;
+    let after = files_under(&fixture.root());
+    let added: Vec<&String> = after.difference(&before).collect();
+    assert!(added.is_empty(), "{added:#?}");
+    assert_eq!(
+        fixture.table("silver").await.metadata().snapshots().count(),
+        0
+    );
+}

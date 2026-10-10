@@ -1,0 +1,733 @@
+# Unit ledger — ENC-1 · first write to a table carrying `encryption.key-id` refuses
+
+**Date:** 2026-10-09 · **Branch:** `fix/enc-1-first-write-refusal` · **Base:** `40fc916f` (main at pickup)
+**Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. Step 1 (survey + red test) landed and halted on the unruled surface;
+round 2 landed step 1b (the live-Spark recording the interim rulings name as their oracle)
+first, then the refusal plus the 35 Spark-door pins and the flipped `v3_cow` pin; round 3
+landed the ANSI (15), stamp (2) and facade (9) pins, the registry flip, and this ledger's
+steps 2–4 record. All work runs under the interim rulings in §Interim rulings (the owner can
+overturn any of them; see §Decisions for owner).
+
+**Retires:** this ledger moves to `../completed/` in this unit's last commit.
+
+**Why now.** Owner priority 2026-10-09, target v1.5.4. The 2026-10-01 ruling (ES-3) flips
+registry row ENC-1 from a dated DECLARED exclusion into a product card: a table whose
+properties carry `encryption.key-id` refuses at the first write, because this engine has no
+encryption support and would otherwise write plaintext into a table that asked for encryption.
+The readiness review of 2026-10-09 restated the ruling and shipped a probe whose second test
+(`encrypted_table_write_must_refuse_without_encryption_support`) is red on main.
+
+**Not in this unit:** the review probe's first test (timestamp wall time) is a different
+card; the v2-CREATE refusal Spark shows in E23 (out of scope — the ruling keeps CREATE
+succeeding; see §Step 1b); push; PRs; `gh`; AWS.
+
+## PROPOSITION LEDGER — ENC-1 — 2026-10-09
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-001 | The review's second test is ported into the crate's test tree | `crates/repark-spark/src/tests/enc_1.rs` carries the probe's behavior (v3 CREATE with the key, INSERT, assert refusal) | **PROVEN** | File committed this step; the test cites `pins: enc-1/C-001, C-002` |
+| C-002 | The ported test is red on the unmodified tree | `cargo test --locked -p repark-spark --lib enc_1` fails with the probe's message | **PROVEN** | §Measurements: `write unexpectedly succeeded with encryption requested and no KMS`; pinned by the same test |
+| C-003 | The refusal class, condition and text are ruled | Interim ruling IR-1 (§Interim rulings), enacted in `write::encryption` and pinned on every door | **PROVEN** | `crates/repark-iceberg/src/write/encryption.rs`; pins cite `enc-1/C-003` in `write/map.md` |
+| C-004 | The metadata-only scope (expiry, orphan sweep, pointer moves, ALTER-added key, CTAS-with-key) is ruled | Interim ruling IR-2 (§Interim rulings), enacted: rewrites refuse, expiry/sweep/moves/ALTER/SELECT run | **PROVEN** | §Step 2 seats; run-pins in `repark-spark/src/tests/enc_1.rs`; `write/map.md` cites `enc-1/C-004` |
+| C-005 | Steps 2–4 land per the brief (one helper, pins per path, registry flip) | One helper + seats (§Step 2), 35 + 15 + 2 + 9 pins + the flip (§Step 3), registry/maps/ledger (§Step 4) | **PROVEN** | §Step 2, §Step 3, §Step 4; every pin file's map row cites `enc-1/C-005` |
+| C-006 | The live-Spark recording is committed as the pins' source | `python/repark-parity/tests/live_spark/enc1_encryption_oracle.{py,json,sha256}` | **PROVEN** | §Step 1b; map rows cite `pins: enc-1/C-006` |
+| C-007 | Fold 1: every writing shape and every orphan or pointer shape of the Opus verdict is a pin, on v2 and v3 | `crates/repark-spark/src/tests/enc_1_fold.rs` and `crates/repark-core/src/microbatch/run_tests.rs` assert the refusal and that snapshots, refs, the metadata pointer and the full recursive file listing are unchanged | **PROVEN** | §Fold 1; red on `47ec4e41` (11 of 13 fold pins, the two controls green), green after the chokepoints |
+| C-008 | Fold 1: the refusal holds by construction at the two places every write passes | The catalog guard in `crates/repark-iceberg/src/catalog/encryption_guard.rs`: the file-create guard on the table's `FileIO`, the commit guard on `Catalog::update_table` and the two publish calls | **PROVEN** | §Fold 1 chokepoints; `crates/repark-iceberg/src/catalog/map.md` cites `enc-1/C-008` |
+| C-009 | Fold 1: a source-scan test keeps the two chokepoints closed | `crates/repark-iceberg/src/tests/enc_1_gate.rs` fails when a catalog, a table handle or a `FileIO` is built in `crates/` outside the guarded wrappers | **PROVEN** | §Fold 1 gate; the hand mutants of §Fold 1 |
+| C-010 | Fold 2: the re-verify's findings on the guard are pins and are fixed | `crates/repark-iceberg/src/catalog/tests/encryption_guard.rs`, `crates/repark-spark/src/tests/enc_1_fold.rs`: transparent `Debug`, hostile metadata text, an allow-list classifier that refuses an unknown update, the metadata-JSON exception bound to the metadata directory, a pin per decorator branch | **PROVEN** | §Fold 2; red on `78349722` (5 guard pins and 1 Spark pin), green after the fixes |
+
+## Ruling row
+
+The ruling's own rows, read 2026-10-09. None names an error class or message text.
+
+1. `task/roadmap/epic-term/release-roadmap-2026-08-29.md:365` (2026-10-01, the four open
+   questions): "**(3) ES-3:** the first write to a table carrying `encryption.key-id` refuses,
+   as Spark does without a KMS; `CREATE` keeps succeeding; ENC-1 becomes a product card."
+2. `task/roadmap/epic-term/contracts-ahead-of-code-2026-10-01.md:98` (ES-3): "**ruled
+   2026-10-01: refuse** — the first write to a table carrying `encryption.key-id` refuses, as
+   Spark does without a KMS, and `CREATE` keeps succeeding as in Spark; a product card, release
+   the owner's, flipping the ENC-1 pin on purpose".
+3. The registry row (§Registry) repeats row 2 verbatim as the 2026-10-01 amendment.
+4. The readiness restatement (2026-10-09) is the review probe
+   (`readiness_review_probe.rs:38-50`, the readiness-review evidence of 2026-10-09, embedded in the R-007 card):
+   it asserts only `result.is_err()` — no class, no text. Its log confirms both probe tests
+   fail on main for their own reasons.
+
+The superseded row: `task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md:63,95` (owner
+2026-08-24): the whole feature is a dated DECLARED exclusion, pinned by
+`v3_cow.rs::v3_create_with_encryption_key_id_still_scans_without_a_kms`.
+
+## Registry row
+
+`docs/spark-sql-iceberg-parity.md:1684-1704`, `#### ENC-1 — Iceberg table encryption keys are
+stored, never applied`. State on main: **DECLARED** (owner 2026-08-24), with the 2026-10-01
+refusal ruling appended as the amendment that a product card will enact. Recorded behavior:
+CREATE with the property succeeds; INSERT writes ordinary unencrypted Parquet (`PAR1`,
+measured 2026-09-18) with no error; SELECT returns the rows; metadata `encryption-keys`
+stays empty. Spark cell: with a configured KMS the key encrypts data, delete, manifest and
+manifest-list files; without a KMS the Spark session fails to write (oracle: documented —
+no value oracle, this engine never talks to a KMS). Pin:
+`crates/repark-spark/src/tests/v3_cow.rs::v3_create_with_encryption_key_id_still_scans_without_a_kms`.
+
+## Write-path survey
+
+Every path that can put a data, delete or metadata file into an Iceberg table, read from
+`crates/repark-iceberg/src/write/map.md`, `crates/repark-spark/src/map.md`, the two routers and
+the `call/` dispatch on 2026-10-09. No path checks `encryption.key-id` today: the only
+`encryption` mentions in `crates/` are the constant and assertions inside the old pin.
+
+| # | Path | Door | RePark entry | Pre-file shared site | Fork role |
+|---|---|---|---|---|---|
+| W-01 | INSERT VALUES / SELECT, plain | Spark | `router.rs::execute_insert_routed` → `passthrough_after_p11` | the router arm itself | DataFusion plans onto the fork's `IcebergTableProvider::insert_into`; files written by the fork's `TaskWriter` |
+| W-02 | INSERT with write options or session write conf | Spark | `execute_insert_routed` → `execute_append_with_options` | `write_options.rs::append_with_statement_options` → `commit_append_with_summary` | staging/commit actions only |
+| W-03 | INSERT BY NAME / evolution | Spark | `insert_by_name::execute_insert_by_name` | owned; commits through the W-02 family | staging/commit actions only |
+| W-04 | INSERT OVERWRITE whole table | Spark | `execute_insert_overwrite` | `commit_overwrite_replace_all_with_summary` and the `commit_overwrite_*` family | `OverwriteFiles` action |
+| W-05 | INSERT … REPLACE WHERE | Spark | `insert_positional/replace_where.rs` preparse | owned dynamic-overwrite commits (W-04 family) | `OverwriteFiles` action |
+| W-06 | CTAS | Spark | `ctas.rs::execute_ctas` (staged create) | the CTAS arm before `StagedTableTransaction::begin_create` stages files | staged transaction + owned staging |
+| W-07 | RTAS / CREATE OR REPLACE / REPLACE TABLE AS | Spark | `execute_ctas` replace mode / `normalize::replace_table` | the replace arm before `begin_replace` stages files | staged transaction + owned staging |
+| W-08 | MERGE | Spark + ANSI | `merge::execute_merge_statement` / `repark-sql` `merge::execute_merge` | `merge/snapshot_commit.rs::commit_overwrite_on_ref` + `commit_row_delta_kind_on_ref` | `OverwriteFiles` / `RowDelta` actions |
+| W-09 | UPDATE / DELETE, identity shapes (IN / EXISTS / plain) | Spark + ANSI | `predicate_dml::execute_predicate_dml` (claimed in `spark_ast.rs` / `commit_identity_dml`) | the one `execute_predicate_dml` seat | COW overwrite / MoR row-delta actions |
+| W-10 | DELETE, whole-file (metadata) | Spark + ANSI | `meta_delete::{try_metadata_delete, plan/commit_metadata_delete}` | the one meta-delete seat | `DeleteFilesAction::delete_from_row_filter` |
+| W-11 | UPDATE / DELETE, all other shapes | Spark + ANSI | DataFusion delegate (`spark_ast::execute_passthrough` / `delegate`) | the router arm before delegation | fork provider delete/update |
+| W-12 | TRUNCATE | Spark + ANSI | `truncate::execute_truncate` | `truncate.rs::commit_truncate_to` | snapshot commit |
+| W-13 | CALL rewrite_data_files | Spark | `call::execute_call` → `execute_rewrite_data_files` | the `execute_call` dispatch | fork `RewriteDataFiles` |
+| W-14 | CALL rewrite_manifests | Spark | `call::execute_call` | the `execute_call` dispatch | fork `RewriteManifestsAction` |
+| W-15 | CALL rewrite_position_delete_files | Spark | `call::execute_call` | the `execute_call` dispatch | fork rewrite action |
+| W-16 | CALL add_files | Spark | `call::execute_call` → `execute_add_files` | the `execute_call` dispatch | fork `AddFiles` (adopts parquet into the table) |
+| W-17 | DataFrameWriterV2 append / overwritePartitions / overwrite(condition) | Facade | composed SQL through a temp view: INSERT INTO, INSERT OVERWRITE, INSERT … REPLACE WHERE | W-01 / W-04 / W-05 | as the composed statement |
+| W-18 | DataFrameWriterV1 saveAsTable / save / insertInto | Facade | composed CREATE / CREATE OR REPLACE / INSERT / INSERT OVERWRITE | W-01 / W-04 / W-06 / W-07 | as the composed statement |
+| W-19 | DataFrameWriterV2 create / createOrReplace | Facade | composed CTAS / CREATE OR REPLACE through a temp view | W-06 / W-07 | as the composed statement |
+| W-20 | Micro-batch streaming sink (stamped commits) | Rust arms | `SiteStamp` arms in `write_options.rs` / `merge/snapshot_commit.rs` / `commit_stamp_only` | the W-02 / W-08 commit functions the arms call | as the arm |
+| W-21 | INSERT (all spellings that reach the provider) | ANSI | `repark-sql` `router.rs::execute_insert_routed` → `session_insert` or `delegate` | the router arm before `delegate` | fork `insert_into` |
+| W-22 | INSERT OVERWRITE PARTITION | ANSI | `insert_overwrite.rs` | owned partition-overwrite commits | `OverwriteFiles` action |
+| W-23 | MERGE / UPDATE / DELETE / TRUNCATE | ANSI | `merge.rs` / `commit_identity_dml` / meta-delete / `truncate.rs` | shared with W-08 / W-09 / W-10 / W-12 | as the Spark twin |
+
+Not file-putting, recorded for the scope ruling (Q2):
+
+| # | Path | Effect |
+|---|---|---|
+| M-01 | CALL expire_snapshots | metadata-only: drops snapshot refs, writes table metadata; deletes no live file and stages none |
+| M-02 | CALL remove_orphan_files | deletes unreachable files; stages no file and commits no snapshot |
+| M-03 | CALL rollback / fast_forward / cherrypick / set_current / rollback_to_timestamp | snapshot-pointer moves; metadata-only |
+| M-04 | ALTER TABLE … SET TBLPROPERTIES ('encryption.key-id' = …) | metadata-only property set; the key lands on the table and later writes refuse |
+| M-05 | CALL run_maintenance / apply_partitioning / register_table / plan_partitioning | maintenance planning, spec evolution, catalog adoption; no data-file write on the target |
+| M-06 | `DataFrame.writeStream` on a batch frame | already refuses (`WRITE_STREAM_NOT_ALLOWED`); no sink path exists behind it |
+
+Single-site answer: **no one RePark function** covers W-01…W-23 — the fork-planned shapes
+(W-01, W-11, W-21) never enter RePark write code. The smallest covering set is one helper
+plus dispatch-level call sites: the helper reads the target table's properties (exact key
+`encryption.key-id`) and refuses; it is called (a) in the Spark router's INSERT / DELETE /
+UPDATE / MERGE / CTAS / TRUNCATE arms before planning or delegation, (b) in the ANSI
+router's twins, (c) once in `call::execute_call` for the file-writing procedures, (d) in the
+CTAS/replace arm against the staged creation properties. No fork change is needed: every
+check sits before the first file is staged or planned, so a refused write leaves no orphan.
+W-17…W-20 funnel into the same seats (composed SQL; the sink's commit functions).
+
+## CREATE vs ALTER-added key
+
+CREATE (`create_table.rs:160-168`): TBLPROPERTIES are copied verbatim into the creation
+properties; only `format-version` is consumed and `owner` refused. `encryption.key-id`
+passes through on any format version, and CTAS copies its properties the same way
+(`ctas.rs` staged creation). Per the ruling, CREATE keeps succeeding.
+
+ALTER (`alter.rs` → `format_version.rs::alter_set_tblproperties`): only `format-version` is
+consumed; every other key is set verbatim through `set_properties_and_format_version`. Adding
+the key later succeeds as a metadata-only commit; every later W-path then refuses. Removing
+it with UNSET restores writability. Neither door validates the key's value.
+
+## Step-2-ready survey
+
+Recommended shape for the follow-up unit (not implemented here — halted on C-003):
+
+1. One helper in `repark-iceberg` (crate-private to the workspace): load the target table,
+   refuse when `metadata().properties()` contains `encryption.key-id`. Exact-key match only;
+   other `encryption.*`-looking keys stay unmoved (controls per the brief).
+2. Call sites: the §Survey seats (a)–(d). Each site refuses before planning, staging or
+   delegation, so no orphan file survives a refusal.
+3. Pins: one per W-path asserting the refusal AND an unchanged snapshot list and file
+   listing; the old pin flips to create-and-scan-as-main plus first-write-refuses under a
+   truthful name; controls without the property and with lookalike properties stay green.
+4. Registry ENC-1 moves from DECLARED to the refusal with the ruled class and text.
+
+## Step 1b — the live-Spark recording (2026-10-09)
+
+Step 1b ran before any product edit, on Spark 4.1.2 + Iceberg 1.11.0
+(`iceberg-spark-runtime-4.1_2.13-1.11.0.jar` from `~/.ivy2`), Hadoop catalog, `local[2]`,
+no KMS configured — the MB-0 bench shape. Recorder, recording and sha:
+`python/repark-parity/tests/live_spark/enc1_encryption_oracle.{py,json,sha256}` (C-006).
+Two runs, identical outcomes (E01–E22 run, E23 refuses); snapshot ids and the warehouse
+path vary between runs.
+
+The head finding: **Spark stores the key and then ignores it.** The v3 table properties
+carry `encryption.key-id` (E01–E02 `table_state`), and every write shape runs and lands
+plaintext Parquet (`PAR1` magic read off the E02 data file in the warehouse). There is no
+Spark refusal class to mirror on any v3 write path — the Q1 fallback governs everywhere.
+
+| Cell | Shape | Spark | Table after |
+|---|---|---|---|
+| E01 | CREATE v3 with the key | runs | exists, 0 snapshots, 0 files |
+| E02 | INSERT VALUES | runs | 1 `append`, 2 files, 2 rows |
+| E03 | INSERT SELECT | runs | 1 `append`, 1 file, 2 rows |
+| E04 | INSERT OVERWRITE | runs | 1 `overwrite`, 1 file, 1 row |
+| E05 | CTAS with the key | runs | exists, 1 `append`, 1 file, 1 row |
+| E06 | CREATE OR REPLACE AS with the key | runs | exists, 1 `overwrite`, 1 file, 1 row |
+| E07 | MERGE | runs | 1 `append`, 1 file, 1 row |
+| E08 | UPDATE | runs | 1 `overwrite`, 0 files, 0 rows (empty table) |
+| E09 | DELETE row-level | runs | 1 `delete`, 0 files, 0 rows (empty table) |
+| E10 | DELETE whole table | runs | 1 `delete`, 0 files, 0 rows (empty table) |
+| E11 | TRUNCATE | runs | 1 `delete`, 0 files, 0 rows (empty table) |
+| E12 | ALTER adds the key to a table with data, then INSERT | both run | 2 `append`, 2 files, 2 rows |
+| E13 | `df.writeTo(...).append()` | runs | 1 `append`, 1 file, 1 row |
+| E14 | CALL rewrite_data_files (2-file table) | runs, rewrote 0 | 1 `append`, 2 files, 2 rows |
+| E15 | CALL rewrite_manifests | runs | 1 `append`, 2 files, 2 rows |
+| E16 | CALL expire_snapshots retain_last 1 | runs | 2 `append`, 3 files, 3 rows |
+| E17 | CALL remove_orphan_files | runs | 1 `append`, 2 files, 2 rows |
+| E18 | SELECT | runs | 2 rows back |
+| E19 | empty value + INSERT | runs | 1 `append`, 1 file, 1 row |
+| E20 | `encryption.keyid` + INSERT | runs | 1 `append`, 1 file, 1 row |
+| E21 | `encryption.key-id-x` + INSERT | runs | 1 `append`, 1 file, 1 row |
+| E22 | no-key control INSERT | runs | 1 `append`, 1 file, 1 row |
+| E23 | CREATE v2 with the key, then INSERT | CREATE refuses; INSERT never runs (no table) | table absent |
+
+E23's refusal is `IllegalArgumentException` with no condition and no SQLSTATE, text
+`Invalid properties for v2: [encryption.key-id]` — a CREATE-time property validation,
+outside ENC-1 (the ruling keeps CREATE succeeding). Out-of-scope observation, carried in
+the hand-back; this unit does not touch the v2 CREATE surface.
+
+IR-2 classification (see §Interim rulings): every shape that writes data, delete or
+manifest files refuses in RePark as a dated divergence (Spark runs it in plaintext);
+expire_snapshots, remove_orphan_files, pointer moves, ALTER, planning/adoption and SELECT
+run as in Spark and on main.
+
+## Interim rulings (orchestrator, 2026-10-09)
+
+Interim answers to §Halt Q1–Q3, from the owner's ES-3 words ("the first write to a table
+carrying `encryption.key-id` refuses, as Spark does without a KMS; CREATE keeps
+succeeding") plus the §Step 1b measurement. Each is listed under §Decisions for owner so
+the owner can overturn it.
+
+- IR-1 (Q1 — class and text): the class and condition are Spark's as recorded, per write
+  path. Spark refuses no v3 write path, so the fallback governs everywhere:
+  `UnsupportedOperationException` (the step-1 lean; the house loud-refusal shape). The
+  text is RePark's own, one sentence: it names the table, the property
+  `encryption.key-id`, that RePark has no table encryption and will not write plaintext
+  into a table that asks for it, and the registry id ENC-1. It never echoes the key id's
+  value.
+- IR-2 (Q2 — which shapes refuse): a shape Spark refuses, RePark refuses; a shape Spark
+  runs without writing a data, delete or manifest file, RePark runs. A shape Spark runs
+  that writes data or manifests in plaintext despite the key refuses in RePark — never
+  write plaintext into a table that carries the key — each as a dated divergence row.
+  CTAS/RTAS carrying the key refuse as a whole statement, leaving no table behind (Spark
+  runs them, so no Spark "table created, write refused" shape applies).
+- IR-3 (Q3 — matching): the exact key `encryption.key-id`, any value including empty.
+  Spark draws no empty-vs-set distinction (E19 runs exactly like E02), so the default
+  stands. Lookalike keys are unmoved (E20–E21 run in Spark; they run in RePark too).
+
+## Decisions for owner
+
+0. **The divergence (2026-10-09, listed first):** the ruling's phrase "as Spark does
+   without a KMS" does not match what Spark 4.1.2 + Iceberg 1.11.0 does. The recording
+   (§Step 1b) shows Spark IGNORING the key on a v3 table and writing plaintext on every
+   write shape (E02–E17, E19 run), and refusing CREATE on v2 (E23). RePark refuses the
+   first write regardless and keeps CREATE succeeding on every format version, per the
+   owner's ES-3 words and the never-write-plaintext rule. Recorded as one dated row in
+   registry ENC-1 and §Divergence. Overturning re-scopes the helper's call sites and
+   re-writes every refusal pin.
+1. IR-1 (class `UnsupportedOperationException` + RePark's one-sentence text on every
+   refused write path): Spark refuses no v3 write path, so there is no Spark class to
+   mirror; the alternative is a new Spark-condition-shaped class. Overturning IR-1
+   re-texts every pin.
+2. IR-2 (refuse every data- or manifest-writing shape as a dated divergence though Spark
+   runs each in plaintext; run expiry, orphan sweep, pointer moves, ALTER and SELECT):
+   the alternative is matching Spark exactly (writing plaintext), which the owner's ES-3
+   words forbid. Overturning IR-2 re-scopes the helper's call sites.
+3. IR-3 (exact key, any value including empty; lookalikes unmoved): Spark treats empty,
+   set and absent identically (all run), so the empty-included reading is a judgment
+   call, not a measurement. Overturning IR-3 to "empty counts as absent" moves the E19
+   pin from refuse to run.
+
+## Measurements
+
+Unmodified tree (`40fc916f` + step-1 test only), 2026-10-09:
+
+```
+$ cargo test --locked -p repark-spark --lib enc_1
+test tests::enc_1::encrypted_table_write_must_refuse_without_encryption_support ... FAILED
+write unexpectedly succeeded with encryption requested and no KMS
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2635 filtered out
+```
+
+Step 1b (2026-10-09), live Spark 4.1.2 + Iceberg 1.11.0, no KMS:
+
+```
+$ ENC1_WAREHOUSE=/tmp/enc1-warehouse2 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 \
+    /tmp/sparkenv/bin/python python/repark-parity/tests/live_spark/enc1_encryption_oracle.py
+recorded E01: ok ... recorded E22: ok, recorded E23: error (23 cells)
+$ python3 -m json.tool enc1_encryption_oracle.json > /dev/null  # exit 0
+$ sha256sum -c enc1_encryption_oracle.sha256  # OK
+$ head -c 4 <E02 data file>  # PAR1
+```
+
+## Halt
+
+Step 1 of the brief is complete and committed. Steps 2–4 need decisions the brief did not
+make: the ruling (§Ruling) orders a refusal but names no error class, no condition details
+and no message text, and it is silent on every metadata-only and creation-time shape. The
+brief orders a halt with a proposal in exactly this case. Proposed answers below; the owner
+rules.
+
+- Q1 (RULING — class, condition, text): refuse with the house loud-refusal shape
+  `UnsupportedOperationException` (the class of the V3-GEO-1 and ORC/Avro declared
+  refusals), condition = the target table's stored properties contain `encryption.key-id`
+  (exact key, any value), text naming the table, the property, ENC-1 and the 2026-10-01
+  ruling, e.g. `Table <name> carries 'encryption.key-id' (<value redacted): RePark has no
+  KMS or table-encryption support, so the write refuses (ENC-1, ruled 2026-10-01)`. Lean:
+  adopt the house shape; Spark's own no-KMS text is unmeasured (the registry records a
+  documented oracle only) and mirroring it needs a live-Spark probe first.
+- Q2 (OWNER — scope): refuse every W-path (anything that commits data, delete or manifest
+  files, including CTAS/RTAS-with-the-key as a whole statement with no table left behind,
+  TRUNCATE, meta-delete and add_files); allow M-01…M-06 (pure metadata expiry, orphan
+  sweep, pointer moves, ALTER that adds the key, planning/adoption). Lean: adopt the
+  brief's step-2 default exactly as written.
+- Q3 (OWNER — key matching): match only the exact property `encryption.key-id`; a table
+  carrying other `encryption.*`-looking keys, or the key with an empty value, is
+  (a) refused like any value vs (b) unmoved. Lean: (a) for the exact key with any value
+  including empty (the table asked for encryption); other `encryption.*` keys unmoved.
+
+## Step 2 — the refusal (round 2, commit `8f900a71`)
+
+One helper, `crates/repark-iceberg/src/write/encryption.rs`: `refuse_encrypted_properties`
+(exact key `encryption.key-id`, any value including empty; lookalikes unmoved),
+`refuse_encrypted_table` and `refuse_encrypted_write` (a missing table loads-fail-open —
+the door's own missing-table error owns that shape). Every seat refuses with
+`UnsupportedOperationException` and one sentence naming the table, the property, no table
+encryption, no plaintext and ENC-1, never echoing the key value. Four seat families cover
+the §Write-path survey; every seat sits before staging, planning or delegation, so a
+refusal leaves no orphan file:
+
+| Family | Seats | Survey paths |
+|---|---|---|
+| Entry checks (both doors) | Spark `router.rs` INSERT arm, `router/delete_update.rs` DELETE/UPDATE arms, `merge.rs`, `insert_overwrite.rs`, `insert_by_name.rs`, `insert_positional/replace_where.rs`, `append_with_options.rs`, `truncate.rs`; ANSI `router.rs`, `merge.rs`, `insert_overwrite.rs`, `truncate.rs`, `guards.rs` | W-01…W-05, W-08, W-09, W-11, W-12, W-21…W-23 |
+| Post-plan DML-target checks | Spark `spark_ast.rs` (closes case-folding and `EXPLAIN ANALYZE` holes); ANSI `delegate_plan` (same `Analyze` unwrap) | W-09, W-11, W-21 |
+| CTAS/replace property checks | Spark `ctas.rs` (staged-creation properties on both arms, replace target); ANSI `create_table.rs` (staged properties, replace target) | W-06, W-07 |
+| File-writing CALLs + WAP | `call/rewrite_data_files.rs`, `call/rewrite_manifests.rs`, `call.rs` position-delete rewrite, `call/add_files.rs`, `call/branch_ops.rs` `publish_changes` | W-13…W-16, WAP (below) |
+| Commit backstops | `write_options.rs` (5 commit fns), `overwrite_commit.rs`, `merge/snapshot_commit.rs`, `predicate_dml.rs`, `meta_delete.rs`, `overwrite_filter.rs`, `partition_overwrite.rs`, `commit_target.rs` | W-02, W-08, W-09, W-10, W-20 |
+| Sink stamp | `sink_offsets.rs::commit_stamp_only` → `EncryptedSinkRefused` before scope claim | W-20 |
+
+Two survey gaps found while seating: WAP `publish_changes` (M-03 listed pointer moves but
+not publish, which commits a snapshot — it refuses) and RTAS-without-the-key onto a keyed
+table (`begin_replace` merges properties so the key persists — it refuses). Expiry, orphan
+sweep, pointer moves, `ALTER`, dry-run planning and `SELECT` run. `router.rs` sat at its
+1000-line ceiling, so the Spark DELETE/UPDATE doors moved to `router/delete_update.rs`
+(pure move).
+
+## Step 3 — pins (rounds 2–3)
+
+Every refusal pin asserts the class + text AND the unchanged snapshot list and file
+listing under the table location (no orphan data, delete, manifest or metadata file):
+
+| Battery | File | Pins |
+|---|---|---|
+| Spark door (round 2) | `crates/repark-spark/src/tests/enc_1.rs` | 35: INSERT VALUES/SELECT/options/BY NAME/OVERWRITE/REPLACE WHERE, CTAS (no table left), CREATE OR REPLACE with and without the key, MERGE, UPDATE (plain + case-folded), DELETE (predicate, whole, aliased), TRUNCATE, the three rewrites, add_files, WAP publish, direct commit backstop, dry-run/expiry/sweep/rollback run-pins, UNSET restores writes, empty value, lookalikes, SELECT, CREATE + empty scan, EXPLAIN runs / EXPLAIN ANALYZE refuses, v2 CREATE-with-key, no-key control |
+| Flipped pin (round 2) | `crates/repark-spark/src/tests/v3_cow.rs::v3_create_with_encryption_key_id_refuses_first_write` | create and scan as main; first write refuses; `encryption-keys` still empty |
+| ANSI door (round 3) | `crates/repark-sql/tests/enc_1.rs` | 15 over v2 tables (the refusal is version-independent): INSERT VALUES/SELECT/OVERWRITE PARTITION, CTAS with key, CREATE OR REPLACE without key onto keyed, MERGE, UPDATE, DELETE × 2, TRUNCATE, ALTER-added key, empty value, lookalikes, CREATE + SELECT, no-key control |
+| Stamp (round 3) | `crates/repark-iceberg/src/write/encryption_tests.rs` | 2: `commit_stamp_only` onto a keyed sink refuses `EncryptedSinkRefused` with snapshots and objects unchanged; a lookalike key stamps one snapshot |
+| Facade (round 3) | `python/repark/tests/test_enc_1.py` | 9: V2 append/overwritePartitions/overwrite(condition)/create-with-key/createOrReplace, V1 saveAsTable append+overwrite, insertInto append+overwrite, unkeyed + lookalike controls |
+
+WAP `publish_changes` is Spark-only (the ANSI door refuses `CALL`); the v2 CREATE-with-key
+case is pinned on both SQL doors. The round-2 flip commit went in unrun; round 3 ran it
+first (green, no fix).
+
+## Step 4 — registry, maps, ledger (round 3)
+
+Registry row ENC-1 (`docs/spark-sql-iceberg-parity.md`) moves DECLARED → FIXED 2026-10-09
+with the Before/After, the live-Spark oracle citation, the pin list and the one dated
+divergence row (§Divergence). North-star rows amended in place, dated:
+`task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md` lines 63 (§3 row) and 95 (gate-audit
+row 5). Map rows: `repark-spark/src/tests`, `repark-spark/src/router`, `repark-spark/src/call`,
+`repark-iceberg/src/write`, `repark-iceberg/src/microbatch`, `repark-sql/src`,
+`repark-sql/tests`, `python/repark/tests`, `python/repark-parity/tests/live_spark` (step 1b).
+
+## Divergence (2026-10-09, by ruling — §Decisions for owner item 0)
+
+ONE row. The ruling's phrase "as Spark does without a KMS" does not match what Spark
+4.1.2 + Iceberg 1.11.0 does. The recording (§Step 1b, `enc1_encryption_oracle.json`)
+shows Spark IGNORING the key on a v3 table and writing plaintext on every write shape
+(CREATE E01 runs; INSERT VALUES E02 / SELECT E03 / OVERWRITE E04 run; CTAS E05 and RTAS
+E06 run; MERGE E07, UPDATE E08, DELETE E09–E10, TRUNCATE E11 run; ALTER-added key + INSERT
+E12 runs; `df.writeTo().append()` E13 runs; `rewrite_data_files` E14 and `rewrite_manifests`
+E15 run; empty value E19 and lookalikes E20–E21 run), and refusing CREATE on v2 (E23,
+`IllegalArgumentException`, no condition). RePark refuses the first write regardless and
+keeps CREATE succeeding on every format version — the owner's ES-3 words plus the
+never-write-plaintext rule in round 2. Mirrored in registry row ENC-1.
+
+## Hand mutants (2026-10-09, round 3)
+
+One per seat family; each removal reddened exactly its pin and the restore went green:
+
+| Mutant | Removal | Pin | Result |
+|---|---|---|---|
+| M1 entry | Spark `router.rs` INSERT-arm `refuse_encrypted_write_target` call | `enc_1::encrypted_table_write_must_refuse_without_encryption_support` | FAILED, then 35/35 green on restore |
+| M2 backstop | `write_options.rs::commit_append_with_summary` `refuse_encrypted_table` | `enc_1::encrypted_table_direct_append_commit_refuses` | FAILED, then green on restore |
+| M3 stamp | `sink_offsets.rs::commit_stamp_only` key block | `encryption_tests::stamp_only_commit_onto_keyed_sink_refuses_without_writing` | FAILED, then 2/2 green on restore |
+| M4 CTAS | Spark `ctas.rs` create-arm `refuse_encrypted_properties` | `enc_1::encrypted_ctas_refuses_without_leaving_a_table` | FAILED, then green on restore |
+
+## Measurements (rounds 2–3)
+
+```
+$ cargo test --locked -p repark-spark --lib tests::enc_1
+test result: ok. 35 passed; 0 failed
+$ cargo test --locked -p repark-spark --lib tests::v3_cow::v3_create_with_encryption_key_id_refuses_first_write
+test result: ok. 1 passed; 0 failed
+$ cargo test --locked -p repark-sql --test enc_1
+test result: ok. 15 passed; 0 failed
+$ cargo test --locked -p repark-iceberg --lib write::encryption_tests
+test result: ok. 2 passed; 0 failed
+$ pytest python/repark/tests/test_enc_1.py -q
+9 passed
+```
+
+## Coverage attestation
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: enc-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause C-001..C-006 is pinned per its proof obligation; the quantified W-path survey (W-01..W-23) carries one pin per path on the door that spells it, plus the M-path run-pins and the lookalike/no-key controls.
+      artifacts: [crates/repark-spark/src/tests/enc_1.rs, crates/repark-sql/tests/enc_1.rs, python/repark/tests/test_enc_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Empty key value refuses, lookalike keys and unrelated properties run, ALTER-added and ALTER-removed keys flip writability both ways, case-folded and aliased DML targets refuse, EXPLAIN plans without writing while EXPLAIN ANALYZE refuses.
+      artifacts: [crates/repark-spark/src/tests/enc_1.rs, crates/repark-sql/tests/enc_1.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Every refusal seat sits before staging, planning or delegation; each refusal pin asserts unchanged snapshots, live files and warehouse objects, so a refused write leaves no orphan and a retry refuses identically.
+      artifacts: [crates/repark-spark/src/tests/enc_1.rs, crates/repark-iceberg/src/write/encryption_tests.rs]
+    - id: AT-4
+      status: N/A
+      justification: The checks are synchronous property reads on the already-loaded table or a fresh catalog load; no shared state, no ordering, no new concurrency.
+    - id: AT-5
+      status: ATTACKED
+      evidence: The refusal text never echoes the key id value (asserted in every battery); no credential, path or injection surface is added — the key is matched, never interpreted.
+      artifacts: [crates/repark-iceberg/src/write/encryption.rs, python/repark/tests/test_enc_1.py]
+    - id: AT-6
+      status: ATTACKED
+      evidence: CTAS-with-key leaves no table, CREATE OR REPLACE keeps the existing table and rows, UNSET restores writes, and metadata-only operations (expiry, sweep, ref moves) keep their behavior with rows asserted after.
+      artifacts: [crates/repark-spark/src/tests/enc_1.rs]
+    - id: AT-7
+      status: N/A
+      justification: One property-map lookup per write, plus one catalog load where the door had not already loaded the table; no loop, no growth, nothing system-breaking.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The refusal maps to UnsupportedOperationException through the house engine_err contract on every door; the Spark-without-KMS behavior it replaces is measured, not presumed, in the committed live recording.
+      artifacts: [python/repark-parity/tests/live_spark/enc1_encryption_oracle.json]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The refusal names the table, the property, the missing capability, the no-plaintext reason and the registry id ENC-1 in one sentence, identical on every door and the stamp path.
+      artifacts: [crates/repark-iceberg/src/write/encryption.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Four hand mutants (entry, backstop, stamp, CTAS) each reddened exactly their pin and went green on restore; every added branch (key present/absent, empty value, lookalike, missing table, Analyze unwrap) has a nameable input that flips it.
+      artifacts: [task/ledgers/staging/enc-1-ledger.md]
+  reattested: []
+  complete: true
+```
+
+## Fold 1 (2026-10-09, Opus worker, on PR #1019 head `47ec4e41`)
+
+**Errata to the sections above (they stay as written):**
+
+- §Write-path survey row **M-05 was wrong.** It files `CALL run_maintenance` as "no
+  data-file write on the target". `run_maintenance(dry_run => false)` compacts through
+  `rewrite_data_files::run_rewrite`, below the check that sits in
+  `execute_rewrite_data_files`, and rewrote 12 data files into 1 on a keyed table (verdict
+  S1). M-03 was wrong for the non-fast-forward `cherrypick_snapshot`, which writes
+  manifests. The survey also missed every write whose target `write_to_branch.rs` rewrites
+  before the router's arms run (explicit branch targets, `spark.wap.branch`,
+  `spark.wap.id`), the empty-table branch, and the micro-batch table sink's data files.
+- §Step 2's "one helper + seats" was not a single site, and AT-9's "identical on every
+  door" was false: the verifier found four renderings of the table name.
+- The branch named in the header was replaced by `fix/enc-1-refusal` when the lane's nine
+  commits were restated as `47ec4e41`.
+
+**The verdict (Opus verifier, `verdict.json`):** FAIL. Of 799 keyed write attempts, 407
+refuse cleanly, 38 write plaintext into a keyed table and 5 leave an orphan file or a moved
+metadata pointer. The ANSI door had no hole; unkeyed tables did not move.
+
+**Ruling (orchestrator, 2026-10-09):** stop patching seats; make it structural, at the two
+places every write must pass, with a gate test that keeps it closed, and one text.
+
+### Red pins (C-007, commit `4ca24eb4`)
+
+`crates/repark-spark/src/tests/enc_1_fold.rs` (13 tests; each writing shape on v2 and v3)
+and `a_keyed_sink_refuses_the_batch_and_stages_no_file` in
+`crates/repark-core/src/microbatch/run_tests.rs`. Each asserts the refusal class, the
+exact text, and that snapshots, refs, the metadata pointer and the full recursive file
+listing are unchanged. Measured on `47ec4e41` plus the pins:
+
+```
+$ cargo test --locked -p repark-spark --lib tests::enc_1_fold
+test result: FAILED. 2 passed; 11 failed        (the two green ones are the controls)
+$ cargo test --locked -p repark-core --lib microbatch::run::tests::a_keyed_sink
+  left: Err(Catalog("External error: Table sales.silver carries property ...
+ right: Err(EncryptedSinkRefused { sink: "sales.silver" })
+```
+
+### Chokepoints (C-008)
+
+One decorator, `EncryptionGuardCatalog` in
+`crates/repark-iceberg/src/catalog/encryption_guard.rs`, installed by the three catalog
+builders. The design reasons and the named exception live in
+`crates/repark-iceberg/src/catalog/map.md`; in short:
+
+| Chokepoint | Where | What it refuses on a keyed table |
+|---|---|---|
+| File create | the `FileIO` of every table handle the catalog returns (`load_table`, `create_table`, `register_table`, commit results) and of a staged create that carries the key (`begin_staged_create`) | `write`, `write_new`, `writer` on any path except a `*.metadata.json` / `*.metadata.json.gz` file name |
+| Commit | `Catalog::update_table`, reading the properties of the base the commit replaces as refreshed from the catalog in the same commit attempt | any commit carrying `AddSnapshot`, `SetStatistics` or `SetPartitionStatistics` |
+| Commit | `publish_create_table`, `publish_replace_table` | a staged table that carries the key and has a current snapshot |
+
+This covers the owned fork's own writers and commits (`IcebergTableProvider` INSERT,
+UPDATE, DELETE; `Transaction::commit`; every action), which RePark has no call site to
+wrap, without a fork edit. The S3 findings need no check of their own:
+`compute_table_stats`, `compute_partition_stats`, `rewrite_table_path` and the public
+`write::append` open a file through the table handle and refuse there.
+
+Entry seats added, for an earlier refusal that leaves refs unmoved (not for safety):
+`write_to_branch.rs` (`commit_write_on_branch` before the WAP branch is created,
+`commit_write_staged`), `call/run_maintenance_apply.rs` (`apply_steps`, when the plan holds
+a rewrite step).
+
+One text: `write::encryption::EncryptedTableRefusal`, rendered from the table identifier
+(`Table <namespace>.<table> carries property 'encryption.key-id': RePark has no table
+encryption and refuses to write plaintext into a table that asks for it (ENC-1).`).
+`repark_core::engine_err` and the micro-batch `engine_error` recover it from any depth, so
+the class is `UnsupportedOperationException` / `EncryptedSinkRefused` on every door. The
+text changed for the seats that rendered the SQL spelling (`` `mem`.`ns`.`c0` ``,
+`mem.ns.c88`): every pin now asserts the exact sentence.
+
+**Known limit, stated plainly.** `iceberg::TableCommit` exposes its updates only through
+`take_updates` and its builder is crate-private, so the commit guard cannot read the
+updates and still forward the commit. It matches the variant names in the commit's derived
+`Debug` rendering. It fails closed and is pinned
+(`a_snapshot_commit_refuses_at_the_catalog_for_a_handle_that_is_not_guarded`); a fork
+accessor `TableCommit::updates()` would replace it. The fork was not edited.
+
+**Residual, by design.** A handle loaded before another writer added the key keeps its
+plain `FileIO`, so a write through it can stage data files; the commit refreshes the base
+from the catalog, gets the guarded handle and refuses, and no pointer moves. The seats
+close this in a single session (they reload). A staged CTAS or replace that is refused
+after `begin` can leave its staged `*.metadata.json`; the entry seats refuse before
+`begin`.
+
+### Gate (C-009)
+
+`crates/repark-iceberg/src/tests/enc_1_gate.rs`, a source scan in the crate's test tree
+(no script added or edited). It fails when product code under `crates/` builds a catalog,
+a table handle or a `FileIO` outside the listed files, when a listed allowance no longer
+matches, or when a catalog builder does not return through the guard.
+
+### Verifier probes re-run, as they are (2026-10-09, debug build of this tree)
+
+| Probe | Attempts | Writes into a keyed table | Orphans / moved pointer |
+|---|---|---|---|
+| `probe.py keyed 2` and `keyed 3` (whole keyed pass, with `branch_` and `wap_`) | 644 | 0 | 0 |
+| `late.py` (v2, v3) | 68 lines | 0 | 0 |
+| `extra2.py` (`run_maintenance`, keyed and unkeyed twin) | 4 | 0 (keyed refuse; unkeyed twins compact as before) | 0 |
+| `zz_verify_probe.rs` (ANSI doors, `write::append`, stale handle) | 119 | 0 | 0 |
+| `mb_probe_append.rs` (micro-batch table sink) | 1 | 0 | 0 (`EncryptedSinkRefused`, `added=[]`) |
+
+`classify.py` still labels six rows per version WRITE and two ORPHAN. They are the rows
+the verifier also saw and did not count: a CTAS, `writeTo().create()` or `saveAsTable`
+into a NEW unkeyed table (three rows; the `saveAsTable` writer option is not a table
+property), a path Parquet write into a directory (`df_v1_parquet_into_table_dir`, not an
+Iceberg write), two INSERT statements after UNSET, and the metadata JSON of the CREATE or ALTER that
+introduces the key (the two ORPHAN rows). Branch and WAP rows: all refuse.
+
+### Unkeyed controls
+
+`probe.py unkeyed 2|3` on this tree against the verifier's base recordings
+(`base-unkeyed-v{2,3}.json`, main `4224aeee`), 312 statements per version, `cmp.py`:
+**0 moved.** The strict differences are the 1 to 4 byte `added-files-size` jitter in
+merge-on-read delete files (20 rows on v2, 1 on v3; the verifier's base-versus-base run
+shows 21 and 1) and one parse-error column number that follows the scratch path length.
+Lib suites: `repark-iceberg` 975, `repark-sql` 392, `repark-spark` 2681 passed.
+
+### Own hunt
+
+Every `write`, `writer`, `write_new`, `new_output`, `put`, `File::create`, `fs::write` and
+writer builder in product code under `crates/` was listed and accounted for:
+
+- the five `ParquetWriterBuilder` sites and the fork's manifest, manifest-list, puffin and
+  stats writers take `table.file_io()`: guarded;
+- `catalog/files.rs::write_text_file` (the `rewrite_table_path` file list): the table's
+  `FileIO`, guarded;
+- `counting_storage.rs`, `no_overwrite_storage.rs`: storage wrappers under the guard;
+- staged creates: `begin_staged_create`; staged replaces inherit the replaced table's
+  guarded `FileIO`;
+- `repark-core` `session/path_write.rs`, `text_io.rs`, `text_partition.rs`: path writers
+  (`df.write.parquet(path)` and text). They never write an Iceberg table. A path that
+  lies under a keyed table's directory receives plain files the table never references.
+  Out of the ruling's scope; reported to the orchestrator.
+
+Found beyond the verdict: a refused WAP-branch INSERT, UPDATE or DELETE also created the
+branch ref first (the verdict names MERGE and OVERWRITE); the seat in
+`commit_write_on_branch` closes all five.
+
+### Hand mutants (fold 1)
+
+| Mutant | Change | Red pin | Result |
+|---|---|---|---|
+| F1 file-create guard | `refuse_file_create` allows every path | `a_keyed_table_handle_creates_no_file_but_metadata_json`, `a_staged_create_with_the_key_…` | KILLED |
+| F2 commit guard | refuse only when the commit carries no base table | `a_snapshot_commit_refuses_at_the_catalog_for_a_handle_that_is_not_guarded` | KILLED |
+| F3 builder | one builder returns the bare catalog | `every_catalog_builder_returns_through_the_encryption_guard` | KILLED |
+| F4 bypass | `ctas.rs` calls `StagedTableTransaction::begin_create` directly | `every_catalog_table_handle_and_file_io_is_built_inside_the_guarded_wrappers` | KILLED |
+| F5 seat | `commit_write_on_branch` check removed | `keyed_table_wap_branch_refusals_leave_no_metadata_or_ref`, `keyed_table_wap_branch_writes_refuse` (refs moved; no data written) | KILLED |
+
+Each file was restored from a byte copy and the guard and gate pins re-ran green (12/12).
+
+### Decisions for owner (fold 1, added)
+
+- `CREATE BRANCH` on an EMPTY keyed table refuses: it commits an empty snapshot and writes
+  a manifest list. A branch on a keyed table that has a snapshot is a ref move and runs.
+- `compute_table_stats`, `compute_partition_stats` and `rewrite_table_path` refuse on a
+  keyed table (the never-write-plaintext rule of round 2; the verdict filed them unruled).
+- The fast-forward `cherrypick_snapshot` and `fast_forward` stay allowed (ref moves);
+  `publish_changes` keeps its round-2 refusal.
+
+## Fold 2 (2026-10-09, Opus worker, after the re-verify of `78349722`)
+
+**The re-verify (`reverify/verdict.json`):** the keyed-table claim HOLDS: 862 keyed write
+attempts, 0 plaintext data, delete, manifest, puffin or stats files written into a keyed
+table, 0 orphans, unkeyed 0 moved, no perf cost over 2%. Verdict FAIL on one S2 outside
+the claim, with S3 findings on the decorator. Rulings on fold 1's questions (orchestrator,
+2026-10-09): the `Debug`-text classification is accepted for v1.5.4 with the hardening
+below and a fork-accessor card; `CREATE BRANCH` on an empty keyed table, the two stats
+procedures and `rewrite_table_path` keep refusing, interim, listed for the owner.
+
+**Errata to §Fold 1:** "the commit guard ... matches the variant names in the commit's
+derived `Debug` rendering" described a substring search over the whole text, and "It
+fails closed" was true only for the three names it knew: an unknown variant passed. The
+file-create exception was a bare suffix test, not "narrow". All three are changed below.
+
+### Red pins (C-010, commit `96e8dc6c`)
+
+```
+$ cargo test --locked -p repark-iceberg --lib -- encryption        (on 78349722 plus the pins)
+test result: FAILED. 13 passed; 5 failed
+  the_guard_renders_exactly_what_the_catalog_it_wraps_renders      left: "EncryptionGuardCatalog { inner: MemoryCatalog { ...
+  metadata_text_that_names_a_file_adding_update_does_not_brick_a_keyed_table      property set: FeatureUnsupported => Table sales.t carries ...
+  the_metadata_json_exception_holds_only_in_the_table_metadata_directory, ..._follows_write_metadata_path      a keyed table must refuse: ()
+  publishing_a_keyed_staged_create_with_a_snapshot_refuses_at_the_catalog      (a slip in the pin's expected table name; fixed before the commit)
+$ cargo test --locked -p repark-spark --lib tests::enc_1_fold
+test result: FAILED. 13 passed; 1 failed      keyed_table_with_hostile_metadata_text_still_alters_expires_and_unsets
+```
+
+Green from the start, added to close the verifier's surviving mutants: the registered
+handle is guarded, and a statistics commit and both publish calls refuse at the catalog
+for a handle that is not guarded.
+
+### Fixes
+
+The design reasons and the variant table live in
+`crates/repark-iceberg/src/catalog/map.md` (fold 2 block). In short:
+
+| Finding | Fix |
+|---|---|
+| S2: the guard's `Debug` name breaks `repark-distributed` | `EncryptionGuardCatalog`'s `Debug` writes exactly what the wrapped catalog writes |
+| S3: a property value or column comment with `AddSnapshot {` bricks a keyed table | `update_variants` reads the pretty rendering by structure: the `updates` field line at indent 4 and the head of each entry at indent 8; text inside fields cannot land there |
+| S3: the deny-list fails open | `METADATA_ONLY_UPDATES` is an allow-list of 17 of the fork's 23 `TableUpdate` variants; any other or unknown name on a keyed base refuses; a pin with no-wildcard `match` blocks stops compiling when the fork adds a variant |
+| S3: the file-name exception is a bare suffix test | a `*.metadata.json(.gz)` write passes only as a direct child of the table's metadata directory (`write.metadata.path`, else `<location>/metadata`) |
+| S3: six surviving mutants | a pin per decorator branch; `base_is_keyed` holds the no-base branch so a pin can reach it; the gate names the qualified `Table` spellings |
+
+### `repark-distributed --features cluster`
+
+`cargo test --locked --no-fail-fast -p repark-distributed --features cluster --test codec --test iceberg_scan`
+
+| Side | `tests/codec.rs` | `tests/iceberg_scan.rs` |
+|---|---|---|
+| base `ca5a062a` (scratch worktree) | 11 passed, 1 failed | 8 passed |
+| head (this tree) | 11 passed, 1 failed | 8 passed |
+
+The per-test result lines are identical on both sides. The one failure on both is
+`date_and_timestamp_predicates_measure_the_pushdown_surface`; it is left as it is. Before
+the fix head showed 5 passed, 7 failed in `tests/codec.rs` (the verifier's run). Without
+`--no-fail-fast` cargo stops after `tests/codec.rs`, so `tests/iceberg_scan.rs` does not
+run; the command is recorded with the flag. **No CI job and no `make` target enables the
+`cluster` feature**, which is why this went unseen: card CLUSTER-FEATURE-CI-1.
+
+### Re-run of the re-verify's probes, as they are (debug build of this tree)
+
+| Probe | Attempts | Writes into a keyed table | Orphans / moved pointer |
+|---|---|---|---|
+| `probe.py keyed 2` and `keyed 3` (350 shapes each) | 700 | 0 | 0 |
+| `late.py`, `extra.py`, `extra2.py` | 68 + 30 + 4 lines | 0 | 0 |
+| `zz_verify_probe.rs` (ANSI doors, Rust API, cross-session, stale staging, the guarded `FileIO`) | 3 tests, 260 probe lines | 0 | 0 through a current handle; R-1 below through a stale one |
+| `mb_probe_append.rs` (micro-batch table sink) | 1 | 0 | 0 (`EncryptedSinkRefused`, `added=[]`) |
+
+Against the verifier's own head run, case by case, the only class changes are the seven
+hostile-text cases per version (`x_prop_value_*`, `x_base_prop_marker_*`,
+`x_column_comment_marker`): REFUSE to metadata-only, as intended. `classify.py` labels 8
+rows WRITE and 4 ORPHAN per version, the same rows as on the verifier's run: writes into
+a NEW unkeyed table (three rows), a path Parquet write, two INSERT statements after UNSET,
+the two co-located-table rows of R-2, and the metadata JSON of the CREATE or ALTER that
+introduces the key or moves a path (four rows). The guarded `FileIO` probe lines:
+`x.metadata.json` at the table root and `data/evil.parquet.metadata.json` now REFUSED
+(they WROTE on `78349722`); `metadata/v1.metadata.json.gz` WROTE; the rest REFUSED.
+
+### Unkeyed controls
+
+`probe.py unkeyed 2|3` on this tree against the verifier's base recordings (main
+`ca5a062a`), 340 statements per version, `cmp.py`: **0 moved.** Loose mode shows one row
+per version, a parse-error column number that follows the scratch path length. Strict
+mode adds `added-files-size` byte jitter only (22 rows on v2, 3 on v3: merge-on-read
+delete files, one copy-on-write update, two rewrites); the verifier's own head run shows
+the same jitter against base (20 and 3 rows).
+Lib suites on the final tree: `repark-iceberg` 991, `repark-sql` 392, `repark-spark`
+2682 passed, `repark-core --lib microbatch` 114.
+
+### Hand mutants (fold 2)
+
+| Mutant | Change | Red pin | Result |
+|---|---|---|---|
+| H1 | the guard's `Debug` names the guard | `the_guard_renders_exactly_what_the_catalog_it_wraps_renders` | KILLED |
+| H2 | `AddSnapshot` put on the allow-list | `every_fork_update_variant_is_classified_…`, `a_snapshot_commit_refuses_at_the_catalog_…` and two more | KILLED |
+| H3 | entry heads read at any indent | `an_unknown_update_variant_or_an_unreadable_commit_is_not_metadata_only`, `metadata_text_that_names_a_file_adding_update_…` and two more | KILLED |
+| H4 | the direct-child test dropped from the metadata-JSON rule | `the_metadata_json_rule_is_a_direct_child_with_a_full_suffix`, `the_metadata_json_exception_holds_only_in_the_table_metadata_directory` | KILLED |
+| H5 | a commit without a base table counts as unkeyed (the verifier's G6) | `a_commit_without_a_base_table_reads_the_key_from_the_catalog` | KILLED |
+| H6 | `register_table` returns the plain handle (G3) | `a_registered_keyed_table_comes_back_guarded` | KILLED |
+| H7 | `publish_replace_table` drops its check (G4) | `publishing_a_keyed_staged_replace_with_a_snapshot_refuses_at_the_catalog` | KILLED |
+| H8 | the classifier reads the compact rendering | `property_commits_pass_on_a_keyed_table_…`, `metadata_text_that_names_…` (fails closed: every keyed commit refuses) | KILLED |
+| H9 | product code calls `<iceberg::table::Table>::builder()` (G5) | `every_catalog_table_handle_and_file_io_is_built_inside_the_guarded_wrappers` | KILLED |
+
+G1 (suffix `contains`) and G2 (statistics names removed) no longer apply as written: the
+rule is now a directory-bound full-suffix test (H4 and the `a.metadata.json.parquet`
+rows) and an allow-list (H2). Each file was restored from a byte copy (`cmp` clean) and
+the guard and gate pins re-ran 24/24 green.
+
+### Recorded, not changed (2026-10-09; card ENC-1-RESIDUE-1)
+
+| # | Residue | State |
+|---|---|---|
+| R-1 | A handle loaded before the key was added stages one orphan Parquet; the commit then refuses, no snapshot, no pointer move. Re-measured on this tree: `stale-handle staging … STAGED 1 file(s)`, `stale-handle commit … ERR … files left=["parquet"] snaps_now=1`; a fresh handle refuses at staging with `added=[]`. No deterministic product path reaches it. | open, owner call |
+| R-2 | An unkeyed table created or registered under a keyed table's location writes plaintext there. The files belong to the other table; main does the same. | open, owner call |
+| R-3 | Ref-only commits publish rows staged before the key was added: the fast-forward `cherrypick_snapshot`, `set_current_snapshot`, `fast_forward` and `CREATE OR REPLACE BRANCH main AS OF VERSION` run; `publish_changes` refuses, by its entry check only. The rows were plaintext on disk before the key existed. | open, owner call |
+| R-4 | Thirteen refused shapes are clean (no moved ref, no stray metadata JSON, no success without work) only through their entry checks; plaintext safety does not rest on them (guard alone: 0 files over 700 + 117 attempts in the re-verify). | recorded |
+| R-5 | The gate test is textual; a catalog an embedder builds itself is outside the guard unless it calls `EncryptionGuardCatalog::install`. | recorded |
+| R-6 | New in fold 2: on a catalog that writes commit metadata through the base table's `FileIO` (Glue), a commit that moves a keyed table's metadata directory refuses. Read from the fork source; not run against AWS. | recorded |
+
+Cards filed: ENC-1-RESIDUE-1, FORK-TABLECOMMIT-UPDATES-1 (a `TableCommit::updates()`
+accessor in the fork, so the `Debug` reader can go), CLUSTER-FEATURE-CI-1.
+
+### Decisions for owner (fold 2)
+
+- Interim, kept by the orchestrator 2026-10-09: `CREATE BRANCH` on a keyed table with no
+  snapshot, `compute_table_stats`, `compute_partition_stats` and `rewrite_table_path`
+  refuse.
+- On a keyed base the commit guard also refuses `AssignUuid`, `AddEncryptionKey` and
+  `RemoveEncryptionKey`. No RePark path sends them; they are off the allow-list because
+  nothing proves them file-free or supported.
+- R-1, R-2, R-3 and the two choices on card ENC-1-RESIDUE-1 items 5 and 6.
+

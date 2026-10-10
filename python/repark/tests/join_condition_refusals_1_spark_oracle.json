@@ -1,0 +1,3647 @@
+{
+ "provenance": {
+  "spark": "4.1.2",
+  "measured": "2026-10-08",
+  "engine": "/tmp/sparkenv/bin/python, JAVA_HOME=/usr/lib/jvm/zulu-17-amd64, master local[1], shuffle.partitions 1",
+  "frames": {
+   "a": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ],
+   "a_schema": "id long, s string",
+   "b": [
+    [
+     2,
+     "x"
+    ],
+    [
+     3,
+     "y"
+    ],
+    [
+     4,
+     "z"
+    ],
+    [
+     9,
+     "q"
+    ]
+   ],
+   "b_schema": "k long, t string"
+  },
+  "doors": {
+   "df": "a.join(b, <cond>, <how>) then collect",
+   "sql": "SELECT * FROM l <JOIN> r ON <cond> over temp views l, r then collect"
+  },
+  "text": "err cells carry the head line of Spark's message (before the first ';'); plan tails carry generated attr ids and are not pinned",
+  "accessors": "2026-10-09: getCondition(), getErrorClass(), getMessageParameters() and getSqlState() measured on live Spark 4.1.2 (banner 4.1.2, /tmp/sparkenv, local[1]) for the 11 refusing conditions on the DataFrame door plus rand_lt_half and null_untyped on the SQL door: getErrorClass() equals getCondition() on every cell, getMessageParameters() equals the recorded params (values carry their double quotes), getSqlState() is 42K0E."
+ },
+ "cells": {
+  "df/cross/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "df/cross/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "df/cross/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E"
+  },
+  "df/cross/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/cross/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/cross/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": []
+  },
+  "df/cross/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/cross/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/cross/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E"
+  },
+  "df/cross/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E"
+  },
+  "df/cross/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E"
+  },
+  "df/cross/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/cross/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/cross/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E"
+  },
+  "df/full/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/full/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/full/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E"
+  },
+  "df/full/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/full/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/full/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     null,
+     null
+    ],
+    [
+     3,
+     "c",
+     null,
+     null
+    ],
+    [
+     null,
+     null,
+     2,
+     "x"
+    ],
+    [
+     null,
+     null,
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/full/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/full/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/full/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E"
+  },
+  "df/full/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E"
+  },
+  "df/full/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E"
+  },
+  "df/full/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/full/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/full/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E"
+  },
+  "df/inner/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "df/inner/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "df/inner/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E"
+  },
+  "df/inner/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/inner/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/inner/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": []
+  },
+  "df/inner/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/inner/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/inner/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E"
+  },
+  "df/inner/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E"
+  },
+  "df/inner/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E"
+  },
+  "df/inner/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/inner/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/inner/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ]
+   ]
+  },
+  "df/left_anti/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ]
+   ]
+  },
+  "df/left_anti/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "df/left_anti/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/left_anti/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": []
+  },
+  "df/left_anti/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "df/left_semi/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "df/left_semi/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": []
+  },
+  "df/left_semi/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/left_semi/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "df/left_semi/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E"
+  },
+  "df/left/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "df/left/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "df/left/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E"
+  },
+  "df/left/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/left/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/left/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     null,
+     null
+    ],
+    [
+     3,
+     "c",
+     null,
+     null
+    ]
+   ]
+  },
+  "df/left/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/left/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/left/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E"
+  },
+  "df/left/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E"
+  },
+  "df/left/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E"
+  },
+  "df/left/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/left/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/left/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E"
+  },
+  "df/right/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/right/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/right/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E"
+  },
+  "df/right/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/right/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/right/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     null,
+     null,
+     2,
+     "x"
+    ],
+    [
+     null,
+     null,
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/right/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/right/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E"
+  },
+  "df/right/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E"
+  },
+  "df/right/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E"
+  },
+  "df/right/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E"
+  },
+  "df/right/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E"
+  },
+  "df/right/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "df/right/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E"
+  },
+  "sql/cross/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "sql/cross/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "sql/cross/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON l.id = r.k AND rand(1) >= 0"
+  },
+  "sql/cross/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON 1"
+  },
+  "sql/cross/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON monotonically_increasing_id() >= 0"
+  },
+  "sql/cross/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": []
+  },
+  "sql/cross/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON NULL"
+  },
+  "sql/cross/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON spark_partition_id() >= 0"
+  },
+  "sql/cross/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON rand(7) < 0.5"
+  },
+  "sql/cross/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON randn(3) < 0"
+  },
+  "sql/cross/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON size(shuffle(array(l.id, r.k))) = 2"
+  },
+  "sql/cross/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON 'true'"
+  },
+  "sql/cross/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/cross/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l CROSS JOIN r ON uuid() is not null"
+  },
+  "sql/full/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/full/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/full/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON l.id = r.k AND rand(1) >= 0"
+  },
+  "sql/full/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON 1"
+  },
+  "sql/full/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON monotonically_increasing_id() >= 0"
+  },
+  "sql/full/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     null,
+     null
+    ],
+    [
+     3,
+     "c",
+     null,
+     null
+    ],
+    [
+     null,
+     null,
+     2,
+     "x"
+    ],
+    [
+     null,
+     null,
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/full/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON NULL"
+  },
+  "sql/full/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON spark_partition_id() >= 0"
+  },
+  "sql/full/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON rand(7) < 0.5"
+  },
+  "sql/full/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON randn(3) < 0"
+  },
+  "sql/full/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON size(shuffle(array(l.id, r.k))) = 2"
+  },
+  "sql/full/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON 'true'"
+  },
+  "sql/full/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/full/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l FULL OUTER JOIN r ON uuid() is not null"
+  },
+  "sql/inner/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "sql/inner/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "sql/inner/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON l.id = r.k AND rand(1) >= 0"
+  },
+  "sql/inner/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON 1"
+  },
+  "sql/inner/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON monotonically_increasing_id() >= 0"
+  },
+  "sql/inner/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": []
+  },
+  "sql/inner/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON NULL"
+  },
+  "sql/inner/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON spark_partition_id() >= 0"
+  },
+  "sql/inner/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON rand(7) < 0.5"
+  },
+  "sql/inner/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON randn(3) < 0"
+  },
+  "sql/inner/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON size(shuffle(array(l.id, r.k))) = 2"
+  },
+  "sql/inner/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON 'true'"
+  },
+  "sql/inner/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/inner/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l INNER JOIN r ON uuid() is not null"
+  },
+  "sql/left_anti/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ]
+   ]
+  },
+  "sql/left_anti/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ]
+   ]
+  },
+  "sql/left_anti/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON l.id = r.k AND rand(1) >= 0"
+  },
+  "sql/left_anti/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON 1"
+  },
+  "sql/left_anti/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON monotonically_increasing_id() >= 0"
+  },
+  "sql/left_anti/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "sql/left_anti/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON NULL"
+  },
+  "sql/left_anti/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON spark_partition_id() >= 0"
+  },
+  "sql/left_anti/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON rand(7) < 0.5"
+  },
+  "sql/left_anti/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON randn(3) < 0"
+  },
+  "sql/left_anti/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON size(shuffle(array(l.id, r.k))) = 2"
+  },
+  "sql/left_anti/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON 'true'"
+  },
+  "sql/left_anti/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": []
+  },
+  "sql/left_anti/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT ANTI JOIN r ON uuid() is not null"
+  },
+  "sql/left_semi/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "sql/left_semi/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "sql/left_semi/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON l.id = r.k AND rand(1) >= 0"
+  },
+  "sql/left_semi/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON 1"
+  },
+  "sql/left_semi/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON monotonically_increasing_id() >= 0"
+  },
+  "sql/left_semi/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": []
+  },
+  "sql/left_semi/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON NULL"
+  },
+  "sql/left_semi/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON spark_partition_id() >= 0"
+  },
+  "sql/left_semi/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON rand(7) < 0.5"
+  },
+  "sql/left_semi/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON randn(3) < 0"
+  },
+  "sql/left_semi/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON size(shuffle(array(l.id, r.k))) = 2"
+  },
+  "sql/left_semi/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON 'true'"
+  },
+  "sql/left_semi/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ]
+  },
+  "sql/left_semi/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT SEMI JOIN r ON uuid() is not null"
+  },
+  "sql/left/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "sql/left/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ]
+   ]
+  },
+  "sql/left/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON l.id = r.k AND rand(1) >= 0"
+  },
+  "sql/left/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON 1"
+  },
+  "sql/left/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON monotonically_increasing_id() >= 0"
+  },
+  "sql/left/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     null,
+     null
+    ],
+    [
+     2,
+     "b",
+     null,
+     null
+    ],
+    [
+     3,
+     "c",
+     null,
+     null
+    ]
+   ]
+  },
+  "sql/left/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON NULL"
+  },
+  "sql/left/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON spark_partition_id() >= 0"
+  },
+  "sql/left/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON rand(7) < 0.5"
+  },
+  "sql/left/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON randn(3) < 0"
+  },
+  "sql/left/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON size(shuffle(array(l.id, r.k))) = 2"
+  },
+  "sql/left/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON 'true'"
+  },
+  "sql/left/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/left/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l LEFT JOIN r ON uuid() is not null"
+  },
+  "sql/right/current_ts": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/right/eq": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/right/eq_and_rand": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"((id = k) AND (rand(1) >= 0))\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"((id = k) AND (rand(1) >= 0))\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON l.id = r.k AND rand(1) >= 0"
+  },
+  "sql/right/int_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"1\"",
+    "conditionType": "\"INT\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"1\" has the invalid type \"INT\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON 1"
+  },
+  "sql/right/mono_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(monotonically_increasing_id() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(monotonically_increasing_id() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON monotonically_increasing_id() >= 0"
+  },
+  "sql/right/null_typed": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     null,
+     null,
+     2,
+     "x"
+    ],
+    [
+     null,
+     null,
+     3,
+     "y"
+    ],
+    [
+     null,
+     null,
+     4,
+     "z"
+    ],
+    [
+     null,
+     null,
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/right/null_untyped": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"NULL\"",
+    "conditionType": "\"VOID\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON NULL"
+  },
+  "sql/right/partition_id": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(SPARK_PARTITION_ID() >= 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(SPARK_PARTITION_ID() >= 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON spark_partition_id() >= 0"
+  },
+  "sql/right/rand_lt_half": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(rand(7) < 0.5)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON rand(7) < 0.5"
+  },
+  "sql/right/randn": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(randn(3) < 0)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(randn(3) < 0)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON randn(3) < 0"
+  },
+  "sql/right/shuffle": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(size(shuffle(array(id, k))) = 2)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(size(shuffle(array(id, k))) = 2)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON size(shuffle(array(l.id, r.k))) = 2"
+  },
+  "sql/right/str_lit": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "errorClass": "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE",
+   "sqlstate": "42K0E",
+   "params": {
+    "joinCondition": "\"true\"",
+    "conditionType": "\"STRING\""
+   },
+   "head": "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"true\" has the invalid type \"STRING\", expected \"BOOLEAN\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON 'true'"
+  },
+  "sql/right/true_lit": {
+   "outcome": "rows",
+   "columns": [
+    "id",
+    "s",
+    "k",
+    "t"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     2,
+     "x"
+    ],
+    [
+     1,
+     "a",
+     3,
+     "y"
+    ],
+    [
+     1,
+     "a",
+     4,
+     "z"
+    ],
+    [
+     1,
+     "a",
+     9,
+     "q"
+    ],
+    [
+     2,
+     "b",
+     2,
+     "x"
+    ],
+    [
+     2,
+     "b",
+     3,
+     "y"
+    ],
+    [
+     2,
+     "b",
+     4,
+     "z"
+    ],
+    [
+     2,
+     "b",
+     9,
+     "q"
+    ],
+    [
+     3,
+     "c",
+     2,
+     "x"
+    ],
+    [
+     3,
+     "c",
+     3,
+     "y"
+    ],
+    [
+     3,
+     "c",
+     4,
+     "z"
+    ],
+    [
+     3,
+     "c",
+     9,
+     "q"
+    ]
+   ]
+  },
+  "sql/right/uuid": {
+   "outcome": "err",
+   "class": "AnalysisException",
+   "condition": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "errorClass": "INVALID_NON_DETERMINISTIC_EXPRESSIONS",
+   "sqlstate": "42K0E",
+   "params": {
+    "sqlExprs": "\"(uuid() IS NOT NULL)\""
+   },
+   "head": "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a deterministic expression, but the actual expression is \"(uuid() IS NOT NULL)\". SQLSTATE: 42K0E",
+   "query": "SELECT * FROM l RIGHT JOIN r ON uuid() is not null"
+  }
+ }
+}

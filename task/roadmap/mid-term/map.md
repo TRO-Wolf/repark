@@ -440,7 +440,7 @@ declines it (a dated ruling in the intake, then the archive).
 - [v1-5-1-release-notes-2026-09-29.md](v1-5-1-release-notes-2026-09-29.md) — **v1.5.1 release notes (2026-09-29):** the notes for the first patch on 1.5.0, covering `9392dbc3` (v1.5.0) to `8568e57a`: U12 S3 path writes with the live AWS acceptance result, CASESENS-1, the TIMESTAMP/NTZ/DATE/numeric store-assignment units, INTDIV-1, the RP-55 fork repin, one performance note, the rerun matrix (705/132/5/0), and the v1.5.2 follow-ups. Every line comes from a commit subject, a ledger, a verifier hand-back or the matrix.
 - [v1-5-2-release-notes-2026-10-03.md](v1-5-2-release-notes-2026-10-03.md) — **v1.5.2 release notes (2026-10-03):** the notes for the second patch on 1.5.0, from `db3a1f37` (v1.5.1): TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1 and TEXT-WRITE-TIMESTAMP-ZONE-1, the RP-56 fork repin, CI-1 wheel-smoke sharding and the C-0 disposable Postgres harness.
 - [v1-5-3-release-notes-2026-10-07.md](v1-5-3-release-notes-2026-10-07.md) — **v1.5.3 release notes (2026-10-07):** the notes for the third patch on 1.5.0, from `d0c50405` (v1.5.2) to `392f2350`: SOURCE-URL-REDACT-1, -1-FN and -2, ATTR-ID-1 with its ruled release note and the STAMP-2 gate record (1.0812), the TA single-series slices S0 to S3, the ANSI -0.0 division, GROWN-STACK-GATE-1, the connect and micro-batch groundwork that is not exposed, and the rerun matrix.
-- [v1-5-3-card-2026-10-04.md](v1-5-3-card-2026-10-04.md) — **card v1.5.3 (2026-10-04):** the third patch on 1.5.0, from main after `d0c50405`. Unit PARITY-LIVE-STOP-1 (clerk grade, not a release gate): no test stops the shared live-oracle context. The nightly `parity-live` run has been red since 2026-09-16 and cascaded on 09-19; it has 162 failed and 7,565 guard errors on `3f067bee`. The card records the measured history, more than one stopper, and the out-of-scope failures. The ATTR-ID-1 stack is not scheduled here. **SOURCE-URL-REDACT-1 (2026-10-06, security, release item):** a password inside a URL- or DSN-shaped source or catalog property value is masked on every display; the card carries the Security release-note line. Fold 2 (2026-10-06): the verifier's findings closed, a corpus pin, and the follow-up row SOURCE-URL-REDACT-1-FN (the `repark-functions` knob refusals, done in this PR: the echoed value is masked, no new crate edge). Fold 3 (2026-10-06): the re-verify's findings closed (raw `getDatabase`, storage paths as Spark shows them, Spark's key rule on every property display, TNS, multi-line documents). **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the row names the general fix (masked message parameters, scrubbed cause chain, credential-shaped chain cut, registered option doors).
+- [v1-5-3-card-2026-10-04.md](v1-5-3-card-2026-10-04.md) — **card v1.5.3 (2026-10-04):** the third patch on 1.5.0, from main after `d0c50405`. Unit PARITY-LIVE-STOP-1 (clerk grade, not a release gate): no test stops the shared live-oracle context. The nightly `parity-live` run has been red since 2026-09-16 and cascaded on 09-19; it has 162 failed and 7,565 guard errors on `3f067bee`. The card records the measured history, more than one stopper, and the out-of-scope failures. The ATTR-ID-1 stack is not scheduled here. **SOURCE-URL-REDACT-1 (2026-10-06, security, release item):** a password inside a URL- or DSN-shaped source or catalog property value is masked on every display; the card carries the Security release-note line. Fold 2 (2026-10-06): the verifier's findings closed, a corpus pin, and the follow-up row SOURCE-URL-REDACT-1-FN (the `repark-functions` knob refusals, done in this PR: the echoed value is masked, no new crate edge). Fold 3 (2026-10-06): the re-verify's findings closed (raw `getDatabase`, storage paths as Spark shows them, Spark's key rule on every property display, TNS, multi-line documents). **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the row names the general fix (masked message parameters, scrubbed cause chain, credential-shaped chain cut, registered option doors). **Readiness review 2026-10-09 (docs only):** a dated section under PARITY-LIVE-STOP-1 names the hard-coded `/tmp/sparkenv` path in seven test modules, the Hadoop race scan, the fnp8 shape pins and the compat smoke TIME cells; the unit stays closed.
 - [release-diff-1-5-1-pre-existing.md](release-diff-1-5-1-pre-existing.md) — **RELEASE-DIFF-1-5-1-PE (2026-09-29):** the wrong answers found on main by the v1.5.1 release differential and the per-PR verifiers that were already there before this release. PE-3 to PE-26 each carry a severity, Spark's answer and a card name, with the silent rows (S1) first.
 - [cast-overflow-in-table-insert-1.md](cast-overflow-in-table-insert-1.md) — **CAST-OVERFLOW-IN-TABLE-INSERT-1 card (2026-09-28):** an out-of-range fractional store into an integer column refuses `CAST_OVERFLOW_IN_TABLE_INSERT`, as Spark does. It is in flight as PR #891 (v1.5.2).
 - [polars-is-duplicated-1.md](polars-is-duplicated-1.md) — **POLARS-IS-DUPLICATED-1 card (2026-09-28, owner ruling):** `.filter(col('x').is_duplicated())` on both `rp.col` and `F.col`, with Polars 1.43.2 semantics (every occurrence, null==null, NaN==NaN, 0.0==-0.0). It is in flight as PR #883 (v1.5.2).
@@ -694,10 +694,18 @@ declines it (a dated ruling in the intake, then the archive).
   25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in 25.0.1), reproduced without RePark; the
   threaded test is in the facade suite and the floor awaits the owner.
 - [cross-join-condition-1-card-2026-10-08.md](cross-join-condition-1-card-2026-10-08.md) — **card
-  CROSS-JOIN-CONDITION-1 (2026-10-08, filed, not scheduled, from the STAMP-2-R5P6-2 hand-back, PR #997):**
+  CROSS-JOIN-CONDITION-1 (2026-10-08, closed 2026-10-08 by its unit, from the STAMP-2-R5P6-2 hand-back, PR #997):**
   `df.join(other, condition, "cross")` ignores the condition (12 rows where live Spark 4.1 answers 2),
   on main and on the PR branch alike, because the H1 door emits `CROSS JOIN` with no `ON`; sequenced
-  after PR #997 merges, as both touch the same door.
+  after PR #997 merges, as both touch the same door. The unit routes a cross with a condition onto the
+  inner path on both routes; `crossJoin` and shared-name/list refusals are unmoved.
+- [join-condition-refusals-1-card-2026-10-08.md](join-condition-refusals-1-card-2026-10-08.md) — **card
+  JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2,
+  re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5,
+  from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions
+  Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's
+  `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and
+  text on every `how` of both doors.
 - [c-3-null-stride-1-card-2026-10-08.md](c-3-null-stride-1-card-2026-10-08.md) — **card
   C-3-NULL-STRIDE-1 (2026-10-08, filed, not scheduled, from C-3 question Q3, PR #998):** the first
   stride's `OR col IS NULL` arm is a sequential scan of the whole table (about 1.1 s of a 7.3 s
@@ -708,15 +716,36 @@ declines it (a dated ruling in the intake, then the archive).
   `int2`/`int4`/`int8` partition columns and refuses the rest under `CONNECT-DECL-pg-partitioned-read`;
   the ruled order is `date` first, then timestamp once the zone rule is ruled, each with its own Spark grid.
 - [sql-epoch-constructors-1-card-2026-10-08.md](sql-epoch-constructors-1-card-2026-10-08.md) — **card
-  SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08, open, not scheduled, from the orchestrator's measurements on main `156be81c`):**
-  `timestamp_micros`, `timestamp_seconds` and `timestamp_millis` are `UNRESOLVED_ROUTINE` on the Spark SQL door
-  where Spark has all three as built-ins; the DataFrame door answers `timestamp_micros`. Step 0 records Spark's
-  answers and types; the native-door spelling is an open question for the owner.
+  SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08, closed the same day, from the orchestrator's measurements on main `156be81c`):**
+  `timestamp_micros`, `timestamp_seconds` and `timestamp_millis` resolve on the Spark SQL door and the DataFrame
+  door with Spark's values, refusal classes and `timestamp` schema; the native door stays a declared refusal.
+  Step 0 recorded 216 live Spark cells; the parity rows carry dated FIXED notes.
 - [cast-view-agg-nullability-1-card-2026-10-08.md](cast-view-agg-nullability-1-card-2026-10-08.md) — **card
   CAST-VIEW-AGG-NULLABILITY-1 (2026-10-08, open, not scheduled, not attributed to a unit):** `max` over a view of
   `CAST(… AS TIMESTAMP)` of arithmetic over `range` raises a DataFusion internal schema error (a field nullability
   mismatch at `ts`); `count(*)`, a plain `SELECT` and a parquet round trip answer. Step 0 shrinks the repro and
   records Spark's answer; the fix is at the source or reported upstream.
+- [ice-tsns-merge-wall-1-card-2026-10-09.md](ice-tsns-merge-wall-1-card-2026-10-09.md) **card ICE-TSNS-MERGE-WALL-1
+  (2026-10-09, open, grade B, executor tier not chosen, Opus verifier):** in a non-UTC session a MERGE writes a
+  `TIMESTAMP` into a `timestamp_ns` column as the UTC wall, while INSERT stores the session-zone wall (registry row
+  `ICE-TSNS-SQL-1-R-007`). Widening the matchers alone is not the fix, because the NTZ wall cast is microsecond. The card
+  holds the review's probe and its log, the acceptance criteria and the write-door checklist.
+- [enc-1-residue-1-card-2026-10-09.md](enc-1-residue-1-card-2026-10-09.md) **card ENC-1-RESIDUE-1
+  (2026-10-09, open):** what the keyed-table refusal does not cover, from the re-verify of PR #1019: a stale handle's
+  one orphan Parquet, an unkeyed table placed under a keyed table's location, ref-only commits that publish rows staged
+  before the key, the thirteen shapes whose clean refusal rests on entry checks, the textual gate and the
+  caller-built catalog, and the Glue metadata-directory limit. Each needs an owner call.
+- [fork-tablecommit-updates-1-card-2026-10-09.md](fork-tablecommit-updates-1-card-2026-10-09.md) **card
+  FORK-TABLECOMMIT-UPDATES-1 (2026-10-09, open, fork work):** a read accessor for `TableCommit`'s updates, so the
+  ENC-1 commit guard matches on values and stops reading `Debug` text.
+- [cluster-feature-ci-1-card-2026-10-09.md](cluster-feature-ci-1-card-2026-10-09.md) **card CLUSTER-FEATURE-CI-1
+  (2026-10-09, open):** no CI job builds or tests `repark-distributed --features cluster`; a regression there went
+  unseen until a verifier ran it by hand.
+- [enc-1-first-write-refusal-card-2026-10-09.md](enc-1-first-write-refusal-card-2026-10-09.md) **card
+  ENC-1-FIRST-WRITE-REFUSAL-1 (2026-10-09, open, clerk guided by Muse, Opus verifier):** the owner's 2026-10-01 ruling
+  (ES-3) that the first write to a table carrying `encryption.key-id` refuses, as Spark does without a KMS. The card's
+  coverage checklist lists every write and maintenance door named in the maps, and the pin
+  `v3_create_with_encryption_key_id_still_scans_without_a_kms` flips on purpose.
 - [utc-timestamp-port-1-card-2026-10-08.md](utc-timestamp-port-1-card-2026-10-08.md) — **card
   UTC-TIMESTAMP-PORT-1 (2026-10-08, open, not scheduled, ruled 2026-10-08 as a follow-up to ZONE-HORIZON-RENDER-1,
   from its C-012, R-1 and R-12):** `from_utc_timestamp` and `to_utc_timestamp` read standard time after 2099 because
@@ -743,3 +772,17 @@ declines it (a dated ruling in the intake, then the archive).
   relation with an unmapped column does not resolve even when the write omits it; the follow-up resolves the
   relation with unmapped columns marked unavailable and refuses only when one is named, with live pins on both
   doors.
+- [empty-projection-count-1-card-2026-10-09.md](empty-projection-count-1-card-2026-10-09.md) — **card
+  EMPTY-PROJECTION-COUNT-1 (2026-10-09, closed by the unit the same day):** `COUNT(*)` planned
+  an empty projection and the shared `conform_batch` rebuild refused it, failing the changelog,
+  incremental and lineage readers engine-internal. The shared-site fix serves all three plus the
+  micro-batch caller; the ledger holds the base/head tables and the Spark oracle. The MB-4 branch
+  carries an open copy of this card that the later merge must reconcile (ledger D-1).
+- [ice-tsns-nested-1-card-2026-10-09.md](ice-tsns-nested-1-card-2026-10-09.md) — **card
+  ICE-TSNS-NESTED-1 (2026-10-09, open):** store a nested `timestamp_ns` leaf by the session
+  wall on every door. Filed by the split of ICE-TSNS-MERGE-WALL-1 (pull request #1018), which
+  refuses such a write by name after three verifies failed the nested conform. The card
+  holds the starting evidence: the three verifies' tables, the three leak routes, the 700
+  planner-error cells, the pairing question (parity row R-016), the Arrow layout list and the
+  pins that carried no digit below the microsecond. Sibling: the nested microsecond
+  `TIMESTAMP_NTZ` split (R-011).

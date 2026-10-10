@@ -241,6 +241,61 @@ pub(crate) fn dml_target_ident(
     Some((kind, name.to_string(), parts[0].clone(), ident))
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn refuse_encrypted_write_target(
+    cx: &EngineContext<'_>,
+    table_name: &ObjectName,
+) -> Result<()> {
+    let parts: Vec<String> = table_name
+        .0
+        .iter()
+        .filter_map(|part| part.as_ident().map(|ident| ident.value.clone()))
+        .collect();
+    let Some((catalog_name, ident)) = complete_write_parts(cx, parts) else {
+        return Ok(());
+    };
+    let Some(catalog) = cx.catalogs.get(&catalog_name) else {
+        return Ok(());
+    };
+    repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn refuse_encrypted_dml_target(
+    cx: &EngineContext<'_>,
+    statement: &Statement,
+) -> Result<()> {
+    let name = match statement {
+        Statement::Delete(delete) => delete_target_name(delete),
+        Statement::Update(update) => object_name_of(&update.table),
+        _ => None,
+    };
+    let Some(name) = name else {
+        return Ok(());
+    };
+    refuse_encrypted_write_target(cx, name).await
+}
+
+fn complete_write_parts(
+    cx: &EngineContext<'_>,
+    mut parts: Vec<String>,
+) -> Option<(String, TableIdent)> {
+    if parts.is_empty() {
+        return None;
+    }
+    if parts.len() < 3 {
+        let state = cx.ctx.state();
+        let catalog = &state.config().options().catalog;
+        if parts.len() == 1 {
+            parts.insert(0, catalog.default_schema.clone());
+        }
+        parts.insert(0, catalog.default_catalog.clone());
+    }
+    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
+    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
+    Some((parts[0].clone(), ident))
+}
+
 /// A parsed `DELETE`'s target: the multi-delete `tables` form first, else the first FROM relation.
 fn delete_target_name(delete: &Delete) -> Option<&ObjectName> {
     if let Some(name) = delete.tables.first() {

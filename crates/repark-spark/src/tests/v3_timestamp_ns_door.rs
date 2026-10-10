@@ -39,6 +39,14 @@ fn int64_column(batches: &[RecordBatch], column: usize) -> Vec<Option<i64>> {
         .collect()
 }
 
+#[test]
+fn ns_wall_udf_name_matches_the_registered_udf() {
+    assert_eq!(
+        repark_iceberg::write::ntz_store::NS_WALL_CAST_UDF_NAME,
+        repark_functions::timestamp_ns_cast::TIMESTAMP_NS_CAST_NAME
+    );
+}
+
 #[tokio::test]
 async fn string_casts_keep_nine_digits_and_the_types() {
     let warehouse = TempDir::new().unwrap();

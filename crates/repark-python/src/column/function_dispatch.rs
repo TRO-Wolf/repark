@@ -354,7 +354,8 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "abs" | "hypot" | "bin" | "rint" | "base64" | "unbase64" | "size" | "cardinality"
         | "array_contains" | "array_has" | "ascii" | "length" | "character_length"
         | "char_length" | "reverse" | "sequence" | "generate_series" | "gen_series" | "split"
-        | "bround" | "conv" | "hash" | "format_number" | "mask" => {
+        | "bround" | "conv" | "hash" | "format_number" | "mask" | "timestamp_seconds"
+        | "timestamp_millis" | "timestamp_micros" => {
             return dispatch_spark::call_scalar_expr(name, exprs);
         }
         "repeat" => {
@@ -558,15 +559,15 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             expr_fn::date_part(exprs[0].clone(), exprs[1].clone())
         }
-        "timestamp_seconds" | "to_timestamp_seconds" => {
+        "to_timestamp_seconds" => {
             need(1)?;
             expr_fn::to_timestamp_seconds(vec![exprs[0].clone()])
         }
-        "timestamp_millis" | "to_timestamp_millis" => {
+        "to_timestamp_millis" => {
             need(1)?;
             expr_fn::to_timestamp_millis(vec![exprs[0].clone()])
         }
-        "timestamp_micros" | "to_timestamp_micros" => {
+        "to_timestamp_micros" => {
             need(1)?;
             expr_fn::to_timestamp_micros(vec![exprs[0].clone()])
         }
