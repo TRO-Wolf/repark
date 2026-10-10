@@ -32,6 +32,16 @@ pub(crate) struct ReplaceWhere {
     source: Box<Query>,
 }
 
+impl ReplaceWhere {
+    pub(crate) fn table(&self) -> &ObjectName {
+        &self.table
+    }
+
+    pub(crate) fn source(&self) -> &Query {
+        &self.source
+    }
+}
+
 pub(crate) fn sql_has_replace_where(sql: &str) -> bool {
     !matches!(parse_replace_where(sql), Ok(None))
 }

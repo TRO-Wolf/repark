@@ -3181,6 +3181,79 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with the read-back each must produce (`hours(tz)` derived from the spec; the fork
   writes it since RP-28, fork #296 — the fixture's `blocked_on_fork` marker still names
   the closed ask until the recorder re-runs).
+- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-MERGE-WALL-1
+  fold 1 (2026-10-09), the pin budget:** the module is cut from 464 tests to 179. Kept: the 57
+  `timestamp_ns` door tests in all three zones, and the control doors in **one** zone,
+  America/New_York (95 tests); they are the pins that kill the lane's mutant M5 and the
+  verify's X2. Dropped: the controls of UTC and Asia/Kolkata (190 tests) and the 108 carry
+  tests, which `crates/repark-spark/tests/timestamp_ns_wall_doors.rs` now holds at the Rust
+  door. Added, for doors only the facade has: a `TIMESTAMP_NTZ` or `DATE` past the range
+  through `overwritePartitions` and `insertInto(overwrite=True)`, ANSI on and off. The
+  sentences below the split's paragraph describe the module before the cut.
+  pins: ice-tsns-merge-wall-1/C-019, C-023
+  **The split (2026-10-09):** the nested store pins of folds 1 and 2 became refusal pins and
+  three top-level families were added, 351 tests in all (364 since split fold 1, which added
+  `test_a_branch_or_wap_write_of_a_nested_leaf_is_refused_and_writes_nothing`: thirteen routes
+  through a branch reference or a WAP setting, the DataFrame writers among them, each the
+  named refusal with no new file, one snapshot and two refs; pins:
+  ice-tsns-merge-wall-1/C-050; 374 since split fold 2, which added
+  `test_a_statement_that_wraps_a_nested_write_is_refused_and_writes_nothing`: eight
+  `EXPLAIN ANALYZE` spellings, `PREPARE` and `CREATE TABLE AS INSERT`, each the named refusal
+  with no new file and one snapshot, and a plain `EXPLAIN` after it that still answers; pins:
+  ice-tsns-merge-wall-1/C-053).
+  `test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing`: fourteen Arrow
+  layouts (struct, a struct with one name different, struct in struct, list, large list, list
+  view, large list view, fixed-size list, list of struct, struct of list, a dictionary child,
+  a run-end-encoded child, map value, map key) through eight routes (the six DataFrame
+  writers, a cached frame, a SQL temporary view): the named refusal with the target's leaf
+  path, no new file under the warehouse, no snapshot.
+  `test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file`: all
+  nineteen doors in three zones, `timestamp_ns` and `timestamptz_ns` sources, the stored
+  values read with `pyarrow.parquet` from the table's live data files, not through SELECT;
+  every value must equal the rule and end in non-zero digits below the microsecond.
+  `test_an_encoded_instant_source_stores_the_session_wall`: a run-end-encoded and a
+  dictionary-encoded `timestamp[ns, UTC]` column through `INSERT OVERWRITE`,
+  `INSERT … BY NAME`, `overwritePartitions` and `insertInto(overwrite=True)` in
+  America/New_York, read from the Parquet file; on main the run-end form stored the UTC wall.
+  pins: ice-tsns-merge-wall-1/C-040, C-044, C-045, C-047
+  **(2026-10-09):** every cell of the write-door matrix, one test per zone × target × door.
+  A `timestamp_ns` target must store the rule (`expected_wall`) or main's ratified refusal;
+  the 38 cells main got wrong and the 9 where it raised a raw Arrow error are named by
+  `main_was_wrong` / `main_refused_an_answer`, and
+  `test_main_recorded_the_rule_wherever_it_answered_right` checks the fixture against that
+  split (178 right, 38 wrong, 9 raw errors). Every control target (`timestamptz_ns`, and
+  microsecond `TIMESTAMP_NTZ` / `TIMESTAMP` on v3 and v2) must answer main's recorded cell
+  exactly, refusals included. Every carry (DELETE, sibling UPDATE and MERGE, the three
+  maintenance rewrites, both row-level modes) must read back the seeded ticks. Edge pins: an
+  instant past 2262 raises INSERT's `[CAST_OVERFLOW]` under ANSI and stores INSERT's NULL
+  without it on four doors; `UPDATE` with no `WHERE` stores a literal and a NULL. The matrix
+  takes about two minutes on eight workers. Mutant M5 (the UPDATE conform taking zoned
+  targets) reds the `tz_ns` `update_column` control in all three zones.
+  pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-010, C-011, C-012
+- [_ice_tsns_merge_wall_1_doors.py](_ice_tsns_merge_wall_1_doors.py) —
+  **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the write-door matrix: three session zones, six
+  target column types, nineteen doors over five source types and six carries in both row-level
+  modes, eight moments with non-zero digits below the microsecond (before the epoch, inside
+  New York's gap and overlap, on each side of both transitions). `expected_wall` is the rule
+  for a `timestamp_ns` target, computed with `zoneinfo`: Spark 4.1.2 with Iceberg 1.11.0
+  cannot read or write the type, so there is no Spark answer. The one moment a
+  `TIMESTAMP_NTZ '…'` literal refuses (a wall next to the epoch) is spelled
+  `to_timestamp_ntz('…')`.
+  pins: ice-tsns-merge-wall-1/C-002
+- [_record_ice_tsns_merge_wall_1_main.py](_record_ice_tsns_merge_wall_1_main.py) +
+  [ice_tsns_merge_wall_1_main.json](ice_tsns_merge_wall_1_main.json) —
+  **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the recorder and what main `40fc916f` stores in each
+  of the 1926 cells (the Arrow type and int64 ticks read back, or the refusal). Run it against
+  a build of main only; one fresh session and warehouse per door, the three zones in parallel.
+  `--output <path>` measures another build without touching the fixture.
+  pins: ice-tsns-merge-wall-1/C-003
+  **Fold 1 (2026-10-09):** the fixture keeps the 760 cells the pins read
+  (`doors.in_fixture`: every `timestamp_ns` door cell, and the control door cells of
+  America/New_York), 195 kB from 501 kB; they are the cells recorded at `40fc916f`, filtered,
+  not re-recorded. `--whole` records all 1926 cells for a comparison; run on the fold's head
+  it gives the 47 moved cells of the first fix and no other, the first line of the restated
+  count (the ledger's §9.4).
+  pins: ice-tsns-merge-wall-1/C-021, C-023
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and

@@ -769,3 +769,11 @@ declines it (a dated ruling in the intake, then the archive).
   incremental and lineage readers engine-internal. The shared-site fix serves all three plus the
   micro-batch caller; the ledger holds the base/head tables and the Spark oracle. The MB-4 branch
   carries an open copy of this card that the later merge must reconcile (ledger D-1).
+- [ice-tsns-nested-1-card-2026-10-09.md](ice-tsns-nested-1-card-2026-10-09.md) — **card
+  ICE-TSNS-NESTED-1 (2026-10-09, open):** store a nested `timestamp_ns` leaf by the session
+  wall on every door. Filed by the split of ICE-TSNS-MERGE-WALL-1 (pull request #1018), which
+  refuses such a write by name after three verifies failed the nested conform. The card
+  holds the starting evidence: the three verifies' tables, the three leak routes, the 700
+  planner-error cells, the pairing question (parity row R-016), the Arrow layout list and the
+  pins that carried no digit below the microsecond. Sibling: the nested microsecond
+  `TIMESTAMP_NTZ` split (R-011).

@@ -352,6 +352,50 @@ async fn opt_in_v3_timestamp_ns_select_round_trips_ns_values() {
 }
 
 #[tokio::test]
+async fn update_and_merge_into_timestamp_ns_store_the_wall() {
+    use datafusion::arrow::array::TimestampNanosecondArray;
+    use datafusion::arrow::datatypes::{DataType, TimeUnit};
+    use repark_core::SqlDialect;
+
+    let door = door_with_v3_opt_in().await;
+    crate::AnsiDialect.on_session_built(&door.ctx);
+    door.ok("CREATE TABLE ice.sales.wall (id INT, ts timestamp_ns) WITH (format_version = 3)")
+        .await;
+    door.ok("INSERT INTO ice.sales.wall VALUES (1, NULL), (3, NULL)")
+        .await;
+    door.ok("UPDATE ice.sales.wall SET ts = TIMESTAMP '2026-01-02 03:04:05.123456' WHERE id = 1")
+        .await;
+    door.ok(
+        "MERGE INTO ice.sales.wall AS t USING (SELECT CAST(2 AS INT) AS id, TIMESTAMP \
+         '2026-01-02 03:04:05.123456' AS ts UNION ALL SELECT CAST(3 AS INT) AS id, TIMESTAMP \
+         '2026-01-02 03:04:05.123456' AS ts) AS s ON t.id = s.id WHEN MATCHED THEN UPDATE SET \
+         ts = s.ts WHEN NOT MATCHED THEN INSERT (id, ts) VALUES (s.id, s.ts)",
+    )
+    .await;
+    let batches = door
+        .sql("SELECT ts FROM ice.sales.wall ORDER BY id")
+        .await
+        .expect("SELECT timestamp_ns");
+    assert_eq!(
+        batches[0].schema().field(0).data_type(),
+        &DataType::Timestamp(TimeUnit::Nanosecond, None)
+    );
+    let stored: Vec<Option<i64>> = batches
+        .iter()
+        .flat_map(|batch| {
+            batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<TimestampNanosecondArray>()
+                .expect("ns array")
+                .iter()
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert_eq!(stored, vec![Some(1_767_323_045_123_456_000); 3]);
+}
+
+#[tokio::test]
 async fn alter_set_properties_upgrades_v2_to_v3_with_the_opt_in() {
     let door = door_with_session_v3_opt_in().await;
     door.ok("CREATE TABLE ice.sales.up AS SELECT 1 AS id").await;

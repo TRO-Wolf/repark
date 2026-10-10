@@ -288,6 +288,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
   gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
   value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
+- `insert.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `zone_wrapping_stream_sql` wraps
+  every wall-clock target through `ntz_store::wall_cast_sql`, so a `timestamp_ns` column of a
+  MERGE INSERT takes the nanosecond wall kernel; MERGE UPDATE SET reaches the same kernel
+  through `store_assignment_cast_sql`. Before, both arms stored an instant's UTC wall in a
+  `timestamp_ns` column. Reason and scope: the `ntz_store.rs` row of the parent directory map.
+  pins: ice-tsns-merge-wall-1/C-004
 - `insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the MERGE INSERT and UPDATE SET
   stream builders plan through `analyzed_store_source` and `wrap_store_outputs`, so a
   fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column named; the

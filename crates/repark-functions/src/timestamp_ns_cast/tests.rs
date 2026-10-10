@@ -275,3 +275,31 @@ fn narrowing_a_microsecond_input_keeps_its_ticks() {
     let out = narrow(&walls, Tz::from_str("America/New_York").unwrap()).unwrap();
     assert_eq!(micros(&out), vec![Some(17_999_999_999)]);
 }
+
+#[test]
+fn the_return_field_is_nullable_where_an_overflow_answers_null() {
+    let instant = DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC")));
+    let nullable = |zoned: bool, source: DataType| {
+        let field = Arc::new(Field::new("x", source, false));
+        timestamp_ns_cast_udf(zoned)
+            .return_field_from_args(ReturnFieldArgs {
+                arg_fields: &[field],
+                scalar_arguments: &[None],
+            })
+            .unwrap()
+            .is_nullable()
+    };
+    assert!(nullable(false, instant.clone()));
+    assert!(nullable(false, DataType::Date32));
+    assert!(nullable(
+        false,
+        DataType::Timestamp(TimeUnit::Microsecond, None)
+    ));
+    assert!(!nullable(false, target_type(false)));
+    assert!(!nullable(true, instant));
+    assert!(!nullable(
+        true,
+        DataType::Timestamp(TimeUnit::Microsecond, None)
+    ));
+    assert!(nullable(true, DataType::Utf8));
+}

@@ -22,6 +22,7 @@ mod comment_on_table;
 mod delete_update;
 mod hive_change_column;
 pub(crate) mod insert_positional;
+mod nested_ns;
 mod table_props_ddl;
 
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
@@ -135,6 +136,7 @@ async fn execute_calibrated(
     if crate::view_ddl::parse::is_create_view_statement(canonical_sql) {
         return Box::pin(execute_inner(ctx, catalogs, canonical_sql, write_options)).await;
     }
+    nested_ns::refuse_nested_supply(ctx, catalogs, canonical_sql, write_options).await?;
     // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
     let sql_after_meta: std::borrow::Cow<'_, str> =
         if crate::describe_show::metadata_table::rewrites_metadata_path(canonical_sql) {

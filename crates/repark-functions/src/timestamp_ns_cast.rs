@@ -174,7 +174,9 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
         let nullable = match args.arg_fields.first() {
             Some(field) => {
                 self.checked_source(field.data_type())?;
-                field.is_nullable() || is_string_source(field.data_type())
+                field.is_nullable()
+                    || is_string_source(field.data_type())
+                    || (!self.zoned && *field.data_type() != target_type(false))
             }
             None => true,
         };
