@@ -8099,6 +8099,38 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   from the mark with no duplicate, and a stray then a kill at the first batch refuses the
   first restart. The remedy sentence the pins assert is the one in `error.rs`.
   pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022, C-024, C-028, C-029, C-030
+- [test_mb_4_streaming_remedies.py](test_mb_4_streaming_remedies.py) — **MB-4-FOREACH-EO
+  fold 4 (2026-10-10, the third verify's first two S1):** every remedy a stray refusal prints,
+  followed as printed, with the sink's rows counted exactly. A stray under a stamp (the body
+  writes its batch from a helper thread, then makes its stamped append) refuses two restarts
+  with no body run, and its text is parsed for the snapshot to roll back to and the
+  `repark.cdc.start-after-snapshot-id` position of the new query name: discard (roll back,
+  new name, the batch delivered again once), keep (new name from the newest stamp's
+  position), under the first stamp (roll back to the head the query started on), and on a
+  sink that started empty (no rollback offered). A stray above the newest stamp: roll back
+  under the same name, or a new name with the printed position; before any stamp: roll back
+  to the starting head, or a new name; on an empty sink only the new name. A batch that ends
+  inside a source snapshot is not offered a new name at all.
+  pins: mb-4-foreach-eo/C-033
+- [test_mb_4_streaming_session_settings.py](test_mb_4_streaming_session_settings.py) —
+  **MB-4-FOREACH-EO fold 4 (2026-10-10, the third verify's third S1):** both streaming doors
+  store what the same statement stores as a batch write, read back from the Parquet files:
+  five zone-dependent expressions under `America/New_York` and `Asia/Tokyo`, the zone set
+  through the builder and through `spark.conf.set`; an `INT` overflow with ANSI mode switched
+  off after the session started; a differently cased projection under both values of
+  `spark.sql.caseSensitive` (green before the fix: bound at plan time); and
+  `current_timestamp()`, which a streaming plan could not evaluate at all. The frame a body
+  collects equals the batch read.
+  pins: mb-4-foreach-eo/C-034
+- [test_mb_4_streaming_sink_gates.py](test_mb_4_streaming_sink_gates.py) — **MB-4-FOREACH-EO
+  fold 4 (2026-10-10, the third verify's first S2 and two S3):** the `toTable` door refuses a
+  nested `timestamp_ns` leaf with the batch write's sentence and leaves the sink's files as
+  they were; seven statements under a session conf carrying `repark.cdc.query-id` and five
+  writer shapes carrying a reserved key as an option (one in upper case) are refused by name
+  with the table unchanged, and a forged stamp can no longer hide a foreign write from a
+  restart; the `foreachBatch` door refuses a keyed sink before its mark, with no body run and
+  no file written.
+  pins: mb-4-foreach-eo/C-035, C-036, C-037
 - [test_dfcore_1_exports.py](test_dfcore_1_exports.py),
   [_dfcore_1_expected.py](_dfcore_1_expected.py) — **MB-4 fold 2 (2026-10-09):** the export
   pin declares the delta of fold 1's `map_bridge.py` split, which had left it red: `core` and
@@ -8126,6 +8158,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Fold 2 (2026-10-09):** the kill harness re-attaches on the newest metadata file that
   parses (a kill can leave the newest one empty, which made the random-kill pin fail about
   once in a hundred runs), and the MBE-19 pins read the reworded text.
+  **Fold 4 (2026-10-10):** the harness gains `write_twice_then_exit` (a helper thread appends
+  the batch, the body makes its stamped append, the process exits before the driver's
+  audit), and a pin at epochs 0 and 2 holds that both restarts end `RecoveryRequired` naming
+  the snapshot under the stamp, with the sink as the kill left it. pins: mb-4-foreach-eo/C-032
   pins: mb-4-foreach-eo/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012, C-014
 - [test_mb_4_streaming_foreach.py](test_mb_4_streaming_foreach.py) — **MB-4 round 3b
   (2026-10-08):** the foreach-door battery, split out so the wireup battery stays

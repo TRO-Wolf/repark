@@ -96,9 +96,15 @@ _KILL_HARNESS = textwrap.dedent(
             writer.start()
             writer.join()
             os._exit(45)
+        if mode == "write_twice_then_exit" and epoch == arg:
+            writer = threading.Thread(target=frame.writeTo("sc.eo.snk").append)
+            writer.start()
+            writer.join()
         frame.writeTo("sc.eo.snk").append()
         if mode == "exit_after_write" and epoch == arg:
             os._exit(42)
+        if mode == "write_twice_then_exit" and epoch == arg:
+            os._exit(46)
 
     def watch(base):
         while metadata_files() < base + arg + 1:
@@ -540,3 +546,20 @@ def test_stray_then_kill_at_the_first_batch_refuses_the_first_restart(tmp_path: 
         assert "(append) without a stamp" in end
         assert report["sink"] == [7000]
         assert report["epochs"] == []
+
+
+@pytest.mark.parametrize("epoch", [0, 2])
+def test_kill_between_a_twice_written_batch_and_the_audit_refuses_every_restart(
+    tmp_path: Path, epoch: int
+) -> None:
+    assert _harness(tmp_path, "init", 8)[0] == 0
+    assert _harness(tmp_path, "write_twice_then_exit", epoch)[0] == 46
+    twice = sorted([*range(4 * (epoch + 1)), *range(4 * epoch, 4 * (epoch + 1))])
+    for _ in range(2):
+        code, end, report = _harness_end(tmp_path)
+        assert code == 7
+        assert end.startswith("RecoveryRequiredException")
+        assert "(append) without a stamp" in end
+        assert "It sits under the stamped batch at snapshot" in end
+        assert report["sink"] == twice
+        assert report["epochs"] == list(range(epoch + 1))
