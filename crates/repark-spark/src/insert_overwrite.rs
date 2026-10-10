@@ -55,6 +55,7 @@ pub(crate) async fn execute_insert_overwrite(
     if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
         return Err(DataFusionError::Plan(message));
     }
+    crate::catalog_ops::refuse_encrypted_write_target(ctx, catalogs, Some(table_name)).await?;
     let marked = Box::pin(rewrite_overwrite_default_markers(
         ctx, catalogs, table_name, insert,
     ))

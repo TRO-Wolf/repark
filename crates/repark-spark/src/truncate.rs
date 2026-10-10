@@ -47,6 +47,7 @@ pub(crate) async fn execute_truncate(
     }
     match resolve_iceberg_truncate_target(ctx, catalogs, table_name).await? {
         Some((catalog_name, catalog, table, branch)) => {
+            repark_iceberg::write::refuse_encrypted_table(&table)?;
             repark_iceberg::write::commit_truncate_to(&catalog, &table, branch.as_deref()).await?;
             let namespace = namespace_schema_name(table.identifier().namespace());
             reregister(ctx, catalog, &catalog_name, &namespace).await?;

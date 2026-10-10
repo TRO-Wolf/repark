@@ -128,6 +128,100 @@ Source comments retain only API and safety contracts; implementation narration i
   it, so the wrapper reproduces the table-bucket contract on `LocalFs` and the Spark-door OR
   REPLACE pin commits through it. Test-only: no product path builds it.
   pins: aws-accept-replace-1/C-001
+- `encryption_guard.rs` — **ENC-1 fold 1 (2026-10-09):** the two places every Iceberg write
+  passes, guarded by construction. `EncryptionGuardCatalog::install(inner)` wraps a catalog;
+  the three builders in `builders.rs` return through it, so every catalog a session holds is
+  guarded. Reason: the round-2 lane guarded some forty call sites one by one and the verifier
+  walked around them (branch targets, WAP sessions, `run_maintenance`, cherry-pick, the
+  micro-batch sink); the owned fork's `IcebergTableProvider` also writes and commits inside
+  the fork, where RePark has no call site to guard.
+  **File create:** `load_table`, `create_table`, `register_table` and every commit result
+  pass `guard_table`. A table whose properties carry `encryption.key-id` comes back with a
+  `FileIO` whose storage refuses `write`, `write_new` and `writer`. Every data file, delete
+  file, puffin file, manifest, manifest list and stats file of this tree and of the fork is
+  opened through the table handle's `FileIO`, so a refused write opens no file and leaves no
+  orphan. Reads, `exists`, `list` and deletes delegate unchanged (expiry and orphan sweeps
+  still run). **The one exception, named narrowly:** a table-metadata JSON file (fold 2 below binds it to
+  the table's metadata directory) is written. That is the table-metadata JSON of the
+  commits the interim ruling allows (expiry, ref moves, ALTER, UNSET of the key itself); the
+  Glue catalog writes it through the base table's `FileIO`. A metadata JSON alone publishes
+  nothing: the pointer swap is the commit guard's.
+  **Commit:** `update_table` reads the properties of the metadata the commit is about to
+  replace (`TableCommit::base_table`, which `Transaction::do_commit` refreshed from the
+  catalog in the same attempt and which the catalog's base-location compare-and-swap binds;
+  a commit without one loads from the inner catalog). On a keyed base it refuses a commit
+  that carries `AddSnapshot`, `SetStatistics` or `SetPartitionStatistics`. Ref-only,
+  expiry-only, schema and property commits pass. This closes the stale-handle case: a handle
+  loaded before the key was added refuses at commit. `publish_create_table` and
+  `publish_replace_table` refuse a staged table that carries the key and has a current
+  snapshot (a staged replace inherits the replaced table's properties, so a keyed target
+  is seen without a second load; a schema-only CREATE or REPLACE has no current snapshot
+  and publishes).
+  **Known limit (fork API):** `TableCommit` exposes its updates only through
+  `take_updates`, and its builder is crate-private, so a decorator cannot read the updates
+  and still forward the commit. The guard therefore reads the variant names from
+  the commit's derived `Debug` rendering (fold 2 below made that structural and an
+  allow-list). It fails closed, and
+  `a_snapshot_commit_refuses_at_the_catalog_for_a_handle_that_is_not_guarded` goes red if a
+  fork repin changes that rendering. A `TableCommit::updates()` accessor in the fork would
+  replace the match; that is a fork change and is not made here.
+  `begin_staged_create` is the one door to `StagedTableTransaction::begin_create`: a
+  creation that carries the key gets the guarded `FileIO`, so a CTAS with the key writes no
+  data file even without its entry check.
+  The refusal is `write::encryption::EncryptedTableRefusal`: one text, built in one function.
+  pins: enc-1/C-008
+  **Fold 2 (2026-10-09), after the re-verify.** Four changes, each with its reason:
+  1. **`Debug` is transparent.** The guard renders exactly what the wrapped catalog renders.
+     `repark-distributed` (`iceberg_provider.rs::catalog_spec_from_debug`) reads the catalog
+     kind from a provider's `Debug` text; the derived rendering
+     (`EncryptionGuardCatalog { inner: MemoryCatalog {`) made every distributed Iceberg
+     scan encode refuse, on unkeyed tables too. Nothing that reads a catalog's `Debug`
+     text can now tell the guard is there.
+  2. **The commit classifier reads structure, not text.** The first form searched the
+     whole compact rendering for `AddSnapshot {`; a property value or a column comment
+     with that text made every later commit on a keyed table refuse, UNSET of the key
+     included. `update_variants` now reads the PRETTY rendering (`{:#?}`) line by line:
+     the field line `    updates: [` at indent 4, then the head of each list entry at
+     indent exactly 8, up to `    ],`. The standard formatter indents everything a nested
+     value writes by one more level per nesting, so text inside a variant's fields (and
+     the whole base table, which sits under `base_table:`) cannot land at indent 8 inside
+     the list, and a `Debug`-escaped string cannot hold a real line break. A rendering
+     the reader cannot follow is not metadata-only.
+  3. **Allow-list, not deny-list.** On a keyed base a commit passes only if every update
+     is in `METADATA_ONLY_UPDATES`; any other name, and any name the fork adds later,
+     refuses. The fork's `TableUpdate` at rev `076d5f9` has 23 variants:
+
+     | Variant | On a keyed base | Reason |
+     |---|---|---|
+     | `SetSnapshotRef`, `RemoveSnapshotRef` | pass | ref moves: branch, tag, rollback, fast-forward |
+     | `RemoveSnapshots`, `RemoveStatistics`, `RemovePartitionStatistics` | pass | expiry: entries leave the metadata, files are only deleted |
+     | `AddSchema`, `SetCurrentSchema`, `RemoveSchemas` | pass | schema evolution: metadata JSON only |
+     | `AddSpec`, `SetDefaultSpec`, `RemovePartitionSpecs` | pass | partition-spec evolution: metadata JSON only |
+     | `AddSortOrder`, `SetDefaultSortOrder` | pass | sort order: metadata JSON only |
+     | `SetProperties`, `RemoveProperties` | pass | ALTER properties, and UNSET of the key itself |
+     | `SetLocation` | pass | location: metadata JSON only |
+     | `UpgradeFormatVersion` | pass | format version: metadata JSON only |
+     | `AddSnapshot` | refuse | a snapshot has a manifest list and names manifests and data or delete files |
+     | `SetStatistics`, `SetPartitionStatistics` | refuse | each registers a statistics file (puffin, Parquet) written in plaintext |
+     | `AssignUuid` | refuse | no RePark commit path sends it; not proven, so not listed |
+     | `AddEncryptionKey`, `RemoveEncryptionKey` | refuse | key management needs the encryption RePark does not have |
+
+     `every_fork_update_variant_is_classified_and_only_the_named_ones_pass` builds one
+     value of each variant and classifies it through two `match` blocks with no wildcard,
+     so a fork repin that adds a variant fails to compile until the variant is named.
+  4. **The metadata-JSON exception is bound to the metadata directory.** A write passes
+     only for a direct child of the table's metadata location (`write.metadata.path`, else
+     `<location>/metadata`) whose name ends in `.metadata.json` or `.metadata.json.gz`.
+     The bare suffix test let `data/evil.parquet.metadata.json` through. **Limit that
+     follows:** the directory is the one of the metadata the handle was loaded with. On a
+     catalog that writes commit metadata through the base table's `FileIO` (Glue), a
+     commit that MOVES the metadata directory of a keyed table (`SET LOCATION`, a change
+     of `write.metadata.path`, a staged replace with a new location) refuses. The memory
+     catalog writes through its own `FileIO` and is not affected. Not exercised against
+     AWS here.
+  `base_is_keyed` holds the "no base table on the commit" branch (it loads from the
+  wrapped catalog) so that a pin can reach it: the fork never builds such a commit.
+  pins: enc-1/C-010
 - `files.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `write_text_file(file_io, path,
   contents)` writes one small text object through the table's fork `FileIO`
   (the Spark `rewrite_table_path` copy-plan file list). The helper lives here,

@@ -368,6 +368,7 @@ pub async fn commit_overwrite_by_row_filter_to(
     predicate: Predicate,
     branch: Option<&str>,
 ) -> Result<Table> {
+    crate::write::refuse_encrypted_table(table)?;
     let isolation = parse_overwrite_isolation(table)?;
     let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
@@ -402,6 +403,7 @@ pub async fn commit_replace_partitions_to(
     if replace_partitions_is_noop(&staged_files) {
         return Ok(table.clone());
     }
+    crate::write::refuse_encrypted_table(table)?;
     let isolation = parse_overwrite_isolation(table)?;
     let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);

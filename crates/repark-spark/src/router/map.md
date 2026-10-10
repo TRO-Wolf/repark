@@ -15,6 +15,12 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
 
 ## Contents
 
+- `delete_update.rs` — **ENC-1 round 2 (2026-10-09):** the DELETE/UPDATE doors moved out
+  of `../router.rs` (pure move; it sat at its 1000-line ceiling) so the encrypted-write
+  refusal fits: each door runs the house valves first, then refuses a target carrying
+  `encryption.key-id`, before the meta-delete door, predicate DML or provider delegation.
+  ObjectName-only target extraction (aliases would under-refuse BUG-001).
+  pins: enc-1/C-005
 - `insert_positional.rs` — **U8 WRITE-SQL PR1 (2026-09-24):** `prepare_positional_insert`
   runs after U6's by-name routing check in `execute_insert_routed`. It aliases a later
   projection item whose DataFusion name repeats an earlier one (`__repark_col_<n>`; a cast
