@@ -139,6 +139,20 @@ Design the nested store as one unit, then lift the refusal:
   router rewrites the target. The first split left it after that rewrite and ten routes
   stored the UTC wall, as main does.
 
+## Recorded by the last verify (2026-10-10)
+
+- A statement that carries a write is decided as that write: `EXPLAIN ANALYZE`, `PREPARE`
+  with `EXECUTE`, and `CREATE TABLE … AS INSERT` all execute the inner write on main. The
+  unit that lifts the refusal must keep that walk (`executed_writes` in
+  `repark-spark/src/router/nested_ns.rs`), or a wrapper becomes a way around again.
+- Whether `EXPLAIN ANALYZE` should execute a write at all is the ledger's Q14, wider than
+  this unit.
+- Top level: 36 of 48 `EXPLAIN ANALYZE INSERT` cells into a nanosecond column from another
+  timestamp type fail with a DataFusion internal error, on main too.
+- On a table with the leaf, a write the parser rejects reports the nested refusal and not
+  the parser's message (34 of 50 malformed statements, the two `DIV` spellings); lifting the
+  refusal restores the parser's text (ledger Q13).
+
 ## Siblings
 
 - **R-011** (ledger Q4): a nested microsecond `TIMESTAMP_NTZ` field stores the session wall

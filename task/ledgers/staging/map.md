@@ -53,6 +53,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-051); the verify's three surviving mutants die and the scripts are re-run (C-052).
   `CALL system.add_files` and three more facts are records (§12.5); Q13 asks about the text a
   malformed write now gets.
+  **Split fold 2 (2026-10-10), after the verify of `b0175d05` found `EXPLAIN ANALYZE INSERT`
+  executing the write past the gate:** the gate decides every write a statement carries, by
+  the parser's visitor and not by a list of kinds, which also closes `PREPARE`/`EXECUTE` and
+  `CREATE TABLE AS INSERT` (C-053, with the table of the parser's `Statement` variants);
+  plain `EXPLAIN`, allowed statements and tables without the leaf are unchanged, six mutants
+  die (C-054). Q14 asks whether `EXPLAIN ANALYZE` should run a write at all.
 - [cross-join-condition-1-ledger.md](cross-join-condition-1-ledger.md) —
   **CROSS-JOIN-CONDITION-1 (2026-10-08), from the STAMP-2-R5P6-2 hand-back:** a cross join with
   a condition ignored it (12 rows where Spark answers 2); the H1 door now routes cross-with-condition

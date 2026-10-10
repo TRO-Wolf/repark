@@ -3368,7 +3368,11 @@ still open is `isModifiable`.
   `t.branch_main`) and the session settings `spark.wap.id` and `spark.wap.branch` do not
   change the answer: the decision is taken on the table before the write is routed (the
   first split took it after, and ten such routes stored the UTC wall as main does).
-  `CALL system.add_files` is not refused; it takes the file's own values. **Still allowed:** a statement that does
+  `CALL system.add_files` is not refused; it takes the file's own values. A statement that
+  carries and runs a write is decided as that write: `EXPLAIN ANALYZE INSERT` / `UPDATE`,
+  `PREPARE … AS INSERT` (run by `EXECUTE`) and `CREATE TABLE … AS INSERT …`, each of which
+  executes the inner write on main, refuse when the inner write supplies the column; a plain
+  `EXPLAIN` executes nothing and answers as before. **Still allowed:** a statement that does
   not supply the column (an INSERT column list or `BY NAME` source without it, UPDATE and
   MERGE of other columns, DELETE), a bare `NULL` literal for the whole column, copy-on-write
   and merge-on-read carries of rows already stored, compaction and the other maintenance

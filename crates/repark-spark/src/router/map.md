@@ -92,14 +92,28 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   **The target:** the written name, and also the name with a `branch_<x>` reference removed
   (`split_write_ref_parts`, the function the branch rewrite uses), so `t.branch_x` and
   `t.branch_main` decide on `t`; a `tag_<x>` reference is left to the door's own refusal.
-  A session WAP setting does not change the written name. **A statement it cannot parse:**
-  the function applies the two rewrites `execute_inner` applies before parsing (map casts and
-  system functions, `WITH SCHEMA EVOLUTION`); if the statement still does not parse and its
-  head is `INSERT`, `UPDATE` or `MERGE` (`write_to_branch::write_target_parts`), the target
-  is loaded and a table with such a leaf refuses (`NestedWrite::Unreadable`). The cost: a
-  malformed write aimed at such a table reports the nested refusal, not the parser's error.
+  A session WAP setting does not change the written name.
+  **A statement that carries a write (split fold 2, 2026-10-10):** the parsed statement is
+  not matched against a list of write kinds with an arm that returns Ok for the rest; that
+  arm let `EXPLAIN ANALYZE INSERT`, `PREPARE … AS INSERT` (run by `EXECUTE`) and
+  `CREATE TABLE … AS INSERT …` execute a write past the gate. `executed_writes` answers every
+  write the statement runs: an `EXPLAIN` is looked into when its analyze flag is set and
+  answers nothing when it is not (a plain `EXPLAIN` executes nothing); a `PREPARE` is looked
+  into; for any other statement the parser's `visit_statements` hands over each statement
+  nested anywhere in it (a query body, a CTE, a subquery, a `CREATE TABLE AS` source, a
+  procedural block), and each INSERT, UPDATE and MERGE found is decided as if written alone.
+  `EXECUTE` carries a name only; its statement was decided at `PREPARE`.
+  **A statement it cannot parse:** the function applies the two rewrites `execute_inner`
+  applies before parsing (map casts and system functions, `WITH SCHEMA EVOLUTION`). If the
+  statement still does not parse: one `EXPLAIN` layer is peeled by its tokens
+  (`explained_statement`; the parser rejects a nested EXPLAIN, and the engine runs a doubled
+  `EXPLAIN ANALYZE`), a peeled layer without ANALYZE answers Ok, one with it is decided on
+  what remains; otherwise every `INSERT`, `UPDATE` or `MERGE` keyword in the statement gives
+  a written target (`write_to_branch::written_targets`), and a table with such a leaf
+  refuses (`NestedWrite::Unreadable`). The cost: a malformed write aimed at such a table
+  reports the nested refusal, not the parser's error.
   A target that is not an Iceberg table passes through to the door, which answers as before.
-  pins: ice-tsns-merge-wall-1/C-040, C-050
+  pins: ice-tsns-merge-wall-1/C-040, C-050, C-053
 
 ## Pointers
 

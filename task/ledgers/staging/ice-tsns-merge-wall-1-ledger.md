@@ -68,6 +68,8 @@ holds two different walls for one input.
 | C-050 | Split fold 1. The gate's one call runs before the router rewrites a branch or WAP write, on the written target with a branch reference removed; no routed write reaches a store without it. The ten routes the verify found storing, the two `UPDATE`-on-branch forms and MERGE into a branch take the named refusal, with no data file and no snapshot on any ref. | The Rust route pin (fifteen statements); the facade pin (thirteen routes, the DataFrame writers among them); `br.py` re-run in two zones (§12.4). | **PROVEN** | §12.1, §12.4: 0 of 24 routes store. |
 | C-051 | Split fold 1. On a branch and under both WAP settings, a statement that does not supply the column still runs on a table that holds such a leaf, and a table with no such leaf is not gated. | The Rust pins `a_branch_or_wap_statement_that_does_not_supply_the_column_still_runs` and `a_branch_or_wap_write_to_a_table_with_no_such_leaf_is_not_gated`, green before and after the fix. | **PROVEN** | §12.2. |
 | C-052 | Split fold 1. The verify's three surviving mutants (N1, N3, N5) and four of this fold's are each killed by a Rust pin; `nx.py`, `leak.py` and the door matrix are re-run with no nested cell storing and no control moved. | §12.3, §12.4. | **PROVEN** | §12.3, §12.4. |
+| C-053 | Split fold 2. A statement that carries and runs a write is decided as that write: the gate has no arm that returns Ok for a statement that can carry another, and an unparsed statement is decided on every write keyword in it. The six `EXPLAIN ANALYZE INSERT` spellings and the two `EXPLAIN ANALYZE UPDATE` forms refuse, with `PREPARE … AS INSERT` and `CREATE TABLE … AS INSERT`, which the same class holds. | The Rust pin (sixteen statements, no file, no snapshot); the facade pin (ten); the table of §13.2; `ex.py` and `hx.py` re-run (§13.4). | **PROVEN** | §13.1, §13.2, §13.4. |
+| C-054 | Split fold 2. A plain `EXPLAIN` and `EXPLAIN VERBOSE` answer and write nothing; `EXPLAIN ANALYZE` of a statement that does not supply the column still executes it; a wrapped write to a table with no such leaf is identical to main. The verify's mutants P2 and P3 and four of this fold's are killed. | The Rust pins, green before and after the fix; §13.3; `hx.py` in its `noleaf` mode (§13.4). | **PROVEN** | §13.3, §13.4: 0 false refusals. |
 
 ## 1. The red test (C-001)
 
@@ -1194,6 +1196,147 @@ facade routes fail.
 | `make check-rust-file-size`, `make check-lib-rs` | 0 | `router.rs` at 1000 of 1000 |
 | the map, ledger, link, spelling and compaction gates | 0 | |
 
+## 13. Split fold 2, after the verify of `b0175d05` (C-053, C-054)
+
+The verify (2026-10-10, 22,266 cells) held everything fold 1 claimed and found one more
+route: `EXPLAIN ANALYZE INSERT` executes the write, and the gate returned Ok for
+`Statement::Explain`. Six spellings stored the UTC wall; the two `EXPLAIN ANALYZE UPDATE`
+forms raised the raw Arrow error.
+
+### 13.1 The class, not the spelling (C-053)
+
+The fault was the shape of the code: a `match` over the parsed statement with arms for
+Insert, Query, Update and Merge and an arm that answered Ok for every other variant. Any
+variant that carries a statement and runs it went through that arm. Probing the class on
+`b0175d05` and on main found three such statements that commit a write, not one:
+
+- `EXPLAIN ANALYZE <write>` (the verify's finding), a doubled `EXPLAIN ANALYZE EXPLAIN
+  ANALYZE <write>` included;
+- `PREPARE p AS INSERT …` followed by `EXECUTE p`;
+- `CREATE TABLE z … AS INSERT INTO t …` and its `OR REPLACE` form: the statement fails
+  (`UInt64 is not supported`, the type of the INSERT's count) after the inner INSERT has
+  committed a snapshot to `t`.
+
+The `match` is gone. `executed_writes` answers every write a parsed statement runs:
+`EXPLAIN` is looked into when its analyze flag is set and answers nothing when it is not;
+`PREPARE` is looked into; for every other statement the parser's own visitor
+(`visit_statements`) hands over each statement nested anywhere in it, and each INSERT, UPDATE
+and MERGE found is decided as if written alone, by the function and the supply rule of
+§11.1. Nothing is listed by spelling, so a wrapper added to the parser later is walked by the
+same visitor.
+
+**Unparsed statements.** The parser rejects a nested EXPLAIN (`Explain must be root of the
+plan`) while the engine runs a doubled `EXPLAIN ANALYZE`, and `EXPLAIN ANALYZE` around
+`BY NAME` or `REPLACE WHERE` does not parse either. So when a statement does not parse, one
+EXPLAIN layer is peeled by its tokens: without ANALYZE the answer is Ok, with it the rest is
+decided by the whole function again. Any other unparsed statement is no longer read by its
+first word only: every `INSERT`, `UPDATE` or `MERGE` keyword in it gives a written target,
+and a table with the leaf refuses (the unreadable arm).
+
+### 13.2 The parser's `Statement` enum, every variant that carries a statement or a query
+
+Read once against sqlparser 0.62.0. "Runs" is what the router does with it on main and on
+head, measured where a probe is named; the gate's answer is the same mechanism in every row
+but the first three.
+
+| Variant | What it carries | Does the router run the carried write | How the gate decides |
+|---|---|---|---|
+| `Explain` | one statement, an analyze flag | yes with ANALYZE (stores); no without | looked into only when the flag is set; unparsed: the token peel |
+| `Prepare` | one statement | yes, at `EXECUTE` (stores) | looked into at `PREPARE`, so a refused statement is never prepared |
+| `Execute` | a name and parameters, no statement | runs what `PREPARE` kept; `EXECUTE IMMEDIATE` is not supported | nothing to read; decided at `PREPARE` |
+| `Query` | a body that may be `INSERT`, `UPDATE`, `MERGE` or `DELETE`, CTEs, set operations, subqueries, a parenthesised body | `WITH … INSERT`: refused as not implemented on main; parenthesised, set-operation, subquery and CTE-body writes: not implemented | visitor: each nested write decided |
+| `Insert` | a source query, which may itself be a write | the outer INSERT runs; a write as its source was not reached | visitor: both targets decided |
+| `Update`, `Merge`, `Delete` | subqueries in sources and predicates | yes | UPDATE and MERGE decided; a write nested in a subquery decided by the visitor; DELETE supplies no value |
+| `CreateTable` | an `AS` query | yes: `CREATE [OR REPLACE] TABLE … AS INSERT …` commits the inner INSERT, then fails | visitor: the inner write decided. A plain CTAS or RTAS of a SELECT holds no write and is not gated (§11.1) |
+| `CreateView`, `AlterView` | a query | no: `a view body must hold a single query statement`; a temporary view of an INSERT is a syntax error | visitor |
+| `Directory`, `Copy`, `CopyIntoSnowflake`, `Unload`, `Cache` | a source query | no: not implemented or unsupported for a write body | visitor |
+| `StartTransaction` (a `BEGIN … END` block), `Case`, `If`, `While`, `CreateProcedure`, `CreateTrigger`, `CreateFunction`, `CreateMacro`, `Declare`, `Open`, `Return` | statements or a query | no: a block is refused as multiple statements; the rest are unsupported | visitor |
+| `Call` | a function call, no statement | yes, the maintenance procedures | carries no write statement; `add_files` is a record (§12.5) |
+
+Every other variant carries no statement and no query.
+
+### 13.3 What still answers, and the mutants (C-054)
+
+Pinned, green before and after the fix: plain `EXPLAIN` and `EXPLAIN VERBOSE` of the
+refused INSERT and UPDATE, and `EXPLAIN EXPLAIN ANALYZE`, answer and write nothing;
+`EXPLAIN ANALYZE EXPLAIN INSERT` keeps main's `Nested EXPLAINs are not supported`;
+`EXPLAIN ANALYZE` of an INSERT that omits the column, of a bare NULL and of a sibling UPDATE
+each add a snapshot; a prepared INSERT that omits the column runs by `EXECUTE`; on a
+`struct<v: TIMESTAMP>` table the same wrappers run and a malformed UPDATE keeps the parser's
+text.
+
+| Mutant | Killed by |
+|---|---|
+| P2 (the verify's) an unparsed UPDATE is not sent to the unreadable arm | the wrapped-write pin (`UPDATE … WHERE (`) |
+| P3 (the verify's, restated for the new code) a write nested in another statement is not gated | the wrapped-write pin (the INSERT after `WITH`, both `CREATE TABLE AS` forms) |
+| Q1 `EXPLAIN ANALYZE` is read as a plain `EXPLAIN` | the wrapped-write pin |
+| Q2 the token peel does not see ANALYZE | the wrapped-write pin (the doubled form, `BY NAME`) |
+| Q3 `PREPARE` is not looked into | the wrapped-write pin |
+| Q4 a plain unparsed `EXPLAIN` is scanned for writes | the wrapped-write pin (a plain `EXPLAIN` around `BY NAME` would be refused; the pin holds `EXPLAIN EXPLAIN ANALYZE`, which that mutant refuses) |
+
+### 13.4 Re-runs
+
+The verify's scripts unchanged, head, America/New_York, against its base outputs.
+
+- `ex.py`, 15 statements on a table with the leaf and 15 on one without. With the leaf: 11
+  take the named refusal (the six `EXPLAIN ANALYZE INSERT` spellings, the branch and
+  `BY NAME` forms, the two UPDATE forms, the plain INSERT control), 3 answer and write no
+  file exactly as on base (`EXPLAIN`, `EXPLAIN VERBOSE`, `EXPLAIN ANALYZE SELECT`), 1 is
+  main's syntax error (`DESCRIBE INSERT`); **0 store** (6 stored on `b0175d05`). Without the
+  leaf: 15 of 15 identical to base in result, files and values.
+- `hx.py leaf` (310 cells, a table with the leaf): identical to the head the verify
+  measured in all 310; 264 are identical to base and 46 are the parser-message cells of
+  §13.5. No allowed statement that ran on main is refused: **0 false refusals**.
+- `hx.py noleaf` (310 cells, a table without it): 310 of 310 identical to base.
+- `hx.py hunt` (176 cells): **0 hold a stored nested value**. 155 are identical to the head
+  the verify measured. Of the 21 that moved, 1 is the stored `EXPLAIN ANALYZE` route, now
+  refused; 20 answered a refusal or an error of main's own before and take the nested
+  refusal now, because the unparsed arm reads every write keyword and no longer only the
+  first word: `EXPLAIN ANALYZE` around an INSERT the planner rejected and around MERGE (8), a
+  parenthesised INSERT (4), two statements in one call (4), a statement behind a byte-order
+  mark (4). They join the parser-message record of §13.5; nothing was stored in any of them
+  on either build.
+
+### 13.5 Records
+
+- **Top-level `EXPLAIN ANALYZE INSERT`.** 36 of the verify's 48 nanosecond-target cells
+  (an INSERT into `timestamp_ns` or `timestamptz_ns` from a source of another timestamp
+  type) fail with a DataFusion internal error on main and on head alike; the 12 that answer
+  and all 48 microsecond-target cells equal INSERT. Not a stored value; not touched here.
+- **Whether `EXPLAIN ANALYZE` should execute a write at all** is its own question (Q14).
+  Spark has no `EXPLAIN ANALYZE`; here it runs the write and returns the plan with metrics.
+- **The parser's message on a table with the leaf.** A write main rejects in its parser
+  reports the nested refusal there: 34 of the verify's 50 malformed statements and the two
+  `DIV` spellings (12 cells). On a table without the leaf all 310 cells are main's (Q13).
+- **`PREPARE … AS INSERT` and `CREATE TABLE … AS INSERT`** execute the inner write on main.
+  For a nested leaf they are gated now; that a failed `CREATE TABLE AS` leaves the inner
+  INSERT committed is true for every table and is not a nanosecond defect.
+
+### 13.6 Gates of the fold
+
+Run 2026-10-10 on the fix commit of this fold (the code) and on the tree of the records
+commit (the document gates), one cargo command at a time under the build lock on cores 32-47.
+The pins were red first: on `9060c5e4`, over the code of `b0175d05`, 14 of the 16 statements
+of the Rust wrapped-write pin run or raise another error, and 10 of the 10 facade wrappers
+fail.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo fmt --all -- --check` | 0 | |
+| `make rust-clippy` | 0 | |
+| `make rust-panic-ban` | 0 | |
+| `cargo test --locked -p repark-functions --lib` | 0 | 903 passed, 1 ignored |
+| `cargo test --locked -p repark-iceberg --lib` | 0 | 973 passed |
+| `cargo test --locked -p repark-spark --lib` | 0 | 2643 passed, 5 ignored |
+| `cargo test --locked -p repark-sql --lib` | 0 | 393 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_wall_doors --test timestamp_ns_nested_shapes` | 0 | 7 + 6 passed |
+| `make develop` | 0 | |
+| `pytest python/repark/tests/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 374 passed |
+| `pytest python/repark/tests -q -n 8 -k "iceberg or v3 or merge or timestamp or nested or struct"` | 0 | 3598 passed, 140 skipped, 11 xfailed |
+| `ruff check .` and `ruff format --check .` (0.15.22) | 0 | |
+| `make check-rust-file-size`, `make check-lib-rs` | 0 | |
+| the map, ledger, link, spelling and compaction gates | 0 | |
+
 ## Q. Questions for a ruling
 
 - **Q1 (C-013, RULING).** Should the mirror be fixed: a wall written into a `timestamptz_ns`
@@ -1284,6 +1427,13 @@ facade routes fail.
   the nested refusal and not the parser's message; on any other table the parser's message is
   unchanged (pinned). *Lean:* keep it until ICE-TSNS-NESTED-1: nothing is stored either way,
   and the alternative reopens the hole for every spelling the stock parser does not model.
+- **Q14 (OWNER).** Should `EXPLAIN ANALYZE` of a write execute the write? *Premise:* it
+  does, on main and on head, for INSERT, UPDATE and DELETE; `PREPARE`/`EXECUTE` and
+  `CREATE TABLE … AS INSERT` run a write too, the last one committing it before the
+  statement fails. The gate now decides each as the write it runs, so no nested leaf is
+  stored, but the behaviour itself is wider than nanoseconds. *Lean:* its own card: an
+  `EXPLAIN ANALYZE` of a DML is at least surprising, and the half-done `CREATE TABLE AS
+  INSERT` should refuse a write body before it runs.
 - **Also seen, no question:** `TIMESTAMP_NTZ '<wall>'` refuses `expects an Int64 wall` when
   the wall is within about 36 minutes of the epoch, in a plain `SELECT` too (O-4). It is not a
   nanosecond or Iceberg defect.

@@ -710,6 +710,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the column and run when they do not.
   `a_statement_the_gate_cannot_read_is_refused_for_such_a_table_only`: the fail-closed arm.
   pins: ice-tsns-merge-wall-1/C-050, C-051, C-052
+  **Split fold 2 (2026-10-10), a statement that wraps a write.**
+  `a_statement_that_wraps_a_write_is_decided_as_the_write_it_runs`: sixteen statements take
+  the named refusal with no file and no snapshot: six `EXPLAIN ANALYZE INSERT` spellings, the
+  two `EXPLAIN ANALYZE UPDATE` forms, a doubled `EXPLAIN ANALYZE`, a branch target and
+  `BY NAME` under it, `PREPARE … AS INSERT`, `CREATE TABLE … AS INSERT` and its
+  `OR REPLACE` form, an INSERT after a `WITH` clause, an unparsed UPDATE. Plain `EXPLAIN`,
+  `EXPLAIN VERBOSE` and `EXPLAIN EXPLAIN ANALYZE` of the same write answer and write nothing;
+  `EXPLAIN ANALYZE EXPLAIN INSERT` keeps main's `Nested EXPLAINs are not supported`.
+  `a_wrapped_statement_that_does_not_supply_the_column_still_runs`: `EXPLAIN ANALYZE` of an
+  omitted column, a bare NULL and a sibling UPDATE each add a snapshot; a prepared INSERT
+  that omits the column runs by `EXECUTE`.
+  `a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated`: the same wrappers on a
+  `struct<v: TIMESTAMP>` table, and main's parser text for a malformed UPDATE there.
+  pins: ice-tsns-merge-wall-1/C-053, C-054
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):**
   `ns_wall_udf_name_matches_the_registered_udf` pins `ntz_store::NS_WALL_CAST_UDF_NAME` equal
   to `timestamp_ns_cast::TIMESTAMP_NS_CAST_NAME`: the write path renders the name as SQL text
