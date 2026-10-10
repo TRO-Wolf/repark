@@ -99,8 +99,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `a_microsecond_target_takes_a_narrowed_value_as_before`,
   `a_query_that_stores_nothing_answers_as_before` (no field metadata, the column name, and
   a plain `EXPLAIN` of a refused INSERT) and `the_store_reads_the_mark_the_analyzer_places`
-  (the function name the two crates share).
-  pins: ice-tsns-narrow-refuse-1/C-003, C-004, C-005, C-006, C-008, C-009
+  (the two function names the crates share). Thirty-one hand mutants are each killed by a
+  pin of this file or of the two unit files (the ledger's section 8); the file is one of the
+  unit's gates with the three nanosecond files below it, whose nested and wall pins are
+  unchanged.
+  pins: ice-tsns-narrow-refuse-1/C-003, C-004, C-005, C-006, C-008, C-009, C-010, C-012, C-013
 - [timestamptz_ns_wall_doors.rs](timestamptz_ns_wall_doors.rs) — **ICE-TSTZNS-WALL-1
   (2026-10-10):** the zoned mirror of the file below.
   `every_door_stores_the_instant_insert_stores_in_a_zoned_column`: four walls (one before the

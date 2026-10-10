@@ -786,10 +786,13 @@ declines it (a dated ruling in the intake, then the archive).
   wrote stores and a narrowing the analyzer inserted refuses by name (parity row R-017). 480 of 650 top-level cells
   store a value cut to microseconds at main `58bf67e3`; a lineage test that refuses them also refuses written casts that
   store today. Carries the recorded disagreement over three written casts with no `WHERE`. Sibling: ICE-TSNS-COERCION-1.
+  Built 2026-10-10 on `fix/ice-tsns-narrow-refuse-1`, awaiting its verifier; the card's last section names the ledger and
+  its six open questions.
 - [ice-tsns-coercion-1-card-2026-10-10.md](ice-tsns-coercion-1-card-2026-10-10.md) — **card
   ICE-TSNS-COERCION-1 (2026-10-10, open, no release assigned):** nanosecond-aware type coercion so `coalesce`, `nvl`,
   `array`, `CASE ... ELSE NULL` and `if` keep nanoseconds beside a `timestamp_ns` operand (parity row R-017). Turns the
-  refusals of ICE-TSNS-NARROW-REFUSE-1 back into stores. Sibling: ICE-TSNS-NARROW-REFUSE-1.
+  refusals of ICE-TSNS-NARROW-REFUSE-1 back into stores. Sibling: ICE-TSNS-NARROW-REFUSE-1. The card lists what that
+  unit leaves for it: the mark and the guard to remove, four typings to decide, the 89,600-cell base matrix.
 - [ice-ntz-nested-wall-1-card-2026-10-10.md](ice-ntz-nested-wall-1-card-2026-10-10.md) — **card
   ICE-NTZ-NESTED-WALL-1 (2026-10-10, open, target v1.5.5, own unit):** a nested microsecond `TIMESTAMP_NTZ` field stores
   the session wall through field assignment (28 cells) and the UTC wall through every other door (106 cells) (parity row

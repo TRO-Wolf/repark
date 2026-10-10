@@ -72,6 +72,18 @@ verdict is recorded in the ledger.
   did not happen.
 - An Opus verifier on the product pull request.
 
+## Built (2026-10-10, branch `fix/ice-tsns-narrow-refuse-1`, awaiting its verifier)
+
+The unit's ledger is
+[ice-tsns-narrow-refuse-1-ledger.md](../../ledgers/staging/ice-tsns-narrow-refuse-1-ledger.md).
+The refusal reads a mark the analyzer places where the two narrowings still differ, not the
+lineage of the value. The recorded disagreement is resolved there (its section 7): the three
+written casts store what they stored, on every door. Six questions are open in the ledger:
+the written cast beside the NULL (Q1), a NULL typed as a microsecond type (Q2), `nvl` and
+`ifnull`, which are typed `STRING` (Q3), a cached frame (Q4), a narrowing beside a
+microsecond value that is not NULL (Q5), and the one door that keeps nine digits for a
+written `CAST(c AS TIMESTAMP)` (Q6).
+
 ## Out of scope
 
 - The nanosecond-aware typing that would turn these refusals back into stores: card

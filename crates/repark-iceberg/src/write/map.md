@@ -637,7 +637,12 @@ repark-core's error map.
   (the MERGE insert and update supplies, the `UPDATE` assignment probe), and from repark-spark
   the DataFusion `Dml` plan of `INSERT` and of `UPDATE` with no `WHERE`, the `UPDATE`
   assignment probe by table name, and `CREATE TABLE AS`. A microsecond target is never
-  walked. Three unit pins in `narrowed_store/tests.rs`.
+  walked. The walk refuses only when the cast that narrowed the value sits beside the marked
+  NULL (a direct sibling that is a cast from a nanosecond timestamp to a coarser one, or
+  `__repark_narrow_timestamp_ns__` of one; for a `UNION`, the other branch's column): the
+  mark is placed before the second coercion from the siblings' types, and a sibling whose
+  own coercion was still pending (`CASE … ELSE TIMESTAMP '…' END`) is narrowed inside itself,
+  not beside the NULL. Five unit pins in `narrowed_store/tests.rs`.
   pins: ice-tsns-narrow-refuse-1/C-004, C-007, C-008
 - `ntz_store.rs`, `update_cast.rs`, `merge/insert.rs`, `predicate_dml/lineage.rs` —
   **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned nanosecond target is named too.

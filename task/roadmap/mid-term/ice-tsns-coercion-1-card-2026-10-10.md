@@ -36,6 +36,20 @@ refusals of the narrow card turn back into stores.
 - Controls do not move: `timestamptz_ns` values and microsecond spellings store byte-identical
   values to main.
 
+## What ICE-TSNS-NARROW-REFUSE-1 leaves for this card (2026-10-10)
+
+- The refusal is a mark and a guard: `repark-functions` `null_narrowing.rs` (tagged before
+  type coercion, settled in the session's timestamp rule) and `repark-iceberg`
+  `write/narrowed_store.rs`. Keeping the nanoseconds through the coercion removes the mark at
+  its source; the guard, its five call sites and the pins that expect a refusal go with it.
+- Four typings the refusal does not cover and this card decides: a NULL typed `TIMESTAMP` or
+  `TIMESTAMP_NTZ` beside a nanosecond value, `nvl` and `ifnull` over a nanosecond value
+  (typed `STRING` today), a nanosecond value beside a microsecond column or literal, and a
+  frame materialised from a narrowed value (the narrow card's ledger, questions Q2 to Q5).
+- The base matrix of 89,600 cells
+  (`python/repark/tests/ice_tsns_narrow_refuse_1_base.json`, recorder beside it) is the
+  never-worse reference for the doors and spellings above.
+
 ## Out of scope
 
 - The nested leaves (`struct`, `array`, `map` holding a `timestamp_ns` leaf): card
