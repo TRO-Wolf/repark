@@ -31,7 +31,7 @@ holds two different walls for one input.
 | C-013 | A `timestamptz_ns` target stores one instant for one wall on every door. | Out of this unit by the brief's control rule; measured (O-1, O-6). | **OPEN** | Q1: 38 cells read a wall as UTC and 6 raise a raw Arrow error on main and at head. Parity row ICE-TSNS-SQL-1-R-008. |
 | C-014 | A nanosecond source narrows into a microsecond column the same way on every door. | Out of this unit by the brief's control rule; measured (O-2, O-3). | **OPEN** | Q2: 72 cells truncate toward zero or read a wall as UTC. Parity row ICE-TSNS-SQL-1-R-009. |
 | C-015 | `UPDATE` and `DELETE` lower the nanosecond cast spellings. | Out of this unit: a statement-lowering gap, not a stored value (O-5). | **OPEN** | Q3: 6 `timestamp_ns` cells stay refused. Parity row ICE-TSNS-SQL-1-R-010. |
-| C-016 | Fold 1. A `timestamp_ns` leaf nested in a struct, a list or a map (struct in struct, array of struct, array, struct of array, map value, map of struct) stores the wall a top-level column stores, from every door that answers; no door stores a second wall; what refuses, refused on main. | The nested matrix on main, at `1be18c26` and at head (§9.1); the Rust door pins; the kernel's unit pins. | **PROVEN** | §9.1: 4680 cells; 2142 answer, all by the rule (main: 556 of them a UTC wall; `1be18c26`: two walls in one table); 2538 refuse exactly as on main. |
+| C-016 | Fold 1. A `timestamp_ns` leaf nested in a struct, a list or a map (struct in struct, array of struct, array, struct of array, map value, map of struct) stores the wall a top-level column stores, from every door that answers; no door stores a second wall; what refuses, refused on main. | The nested matrix on main, at `1be18c26` and at head (§9.1); the Rust door pins; the kernel's unit pins. | **REJECTED** (2026-10-09, the split) | §11: the nested store is withdrawn by the split; a nested leaf refuses (C-040). Fold 1 measured 2142 answering cells, none wrong, and the re-verify then found the pairing and layout faults. Before the split: §9.1: 4680 cells; 2142 answer, all by the rule (main: 556 of them a UTC wall; `1be18c26`: two walls in one table); 2538 refuse exactly as on main. |
 | C-017 | A nested microsecond `TIMESTAMP_NTZ` field stores one wall for one input from every door. | Out of this fold by the ruling: a microsecond control. Measured, six nested doors and 22 more, three zones (§9.2). | **OPEN** | Q4: 28 cells (field assignment) store the session wall, 106 (every other door) the UTC wall, on main and at head. Parity row ICE-TSNS-SQL-1-R-011. |
 | C-018 | Fold 1. With ANSI off, an out-of-range `TIMESTAMP` or `DATE` literal through `UPDATE … WHERE` (both row-level modes) and `MERGE … INSERT VALUES` stores NULL, as INSERT does, the two edge instants whose session wall overflows included. | The verify's 42 cells re-measured (§9.3); the Rust door pin; the return-field unit pin. | **PROVEN** | §9.3: 42 of 42, from `declared as non-nullable but contains null values` at `1be18c26`. |
 | C-019 | Fold 1. A `TIMESTAMP_NTZ` or `DATE` past the nanosecond range through `INSERT OVERWRITE`, `INSERT … BY NAME`, `overwritePartitions` and `insertInto(overwrite=True)` answers as `INSERT … SELECT`: `[CAST_OVERFLOW]` under ANSI, NULL without; no Rust panic. | The verify's 96 cells re-measured (§9.3); the Rust door and facade pins; the `wall_kernel_reads` unit pin. | **PROVEN** | §9.3: 96 of 96, from a raw Arrow overflow and a caught panic on main and at `1be18c26`. |
@@ -42,19 +42,29 @@ holds two different walls for one input.
 | C-024 | Six hand mutants of the fold are each killed by a named pin. | §9.6. | **PROVEN** | §9.6. |
 | C-025 | The fold's gates are green with real exit codes. | §9.7. | **PROVEN** | §9.7. |
 | C-026 | A nested column answers, or refuses by name, wherever a top-level column answers. | Out of fold 1: none of these stores a value (§9.1). | **OPEN** | Q7, narrowed by fold 2 (C-032): `UPDATE` with no `WHERE` assigning a nested `timestamp_ns` column is now refused by name and `INSERT … VALUES` of `array(TIMESTAMP '…')` stores; what stays is `UPDATE` with no `WHERE` on a nested column of any other type (raw on main) and `INSERT OVERWRITE … VALUES`, which is C-039. Parity row ICE-TSNS-SQL-1-R-014. |
-| C-027 | Fold 2. The nested conform pairs struct fields exactly as the cast that follows it pairs them, the rule being an argument each site sets from the door's code: Arrow's cast (`cast`), DataFusion's struct cast (`name`), or names that must be the target's in order (`exact`). A struct with a renamed, recased or reordered field stores one wall from every door, or is refused by name. | The pairing pin at the Rust door (six spellings × six doors × two zones) and on the facade; the kernel's twenty-row pairing table; the re-verify's `nx.py` re-run (§10.1). | **PROVEN** | §10.1: the re-verify's 64 wrong-wall cells are 64 session walls; no answering cell of its 4750 differs from the rule. |
-| C-028 | Fold 2. Every Arrow layout that can carry a timestamp inside a nested value is conformed or refused, in one `match` with no arm that stores by default: struct, map, list, large list, list view, large list view, fixed-size list, dictionary and run-end-encoded at any depth conform; a union and a non-temporal scalar are refused. | The layout unit pins; six layouts through two DataFrame doors on the facade; the re-verify's `misc2.py` re-run (§10.2). | **PROVEN** | §10.2: list view, dictionary child and fixed-size list store the session wall on every door of `misc2.py`. |
-| C-029 | Fold 2. For a nested `timestamp_ns` leaf a door stores the rule's session wall at full precision or refuses before any file is written, by one named text built in one function, with a dated registry row. No cell stores a second wall, a cut value or a NULL the source did not hold. | Every nested cell of the re-verify's matrix and of this unit's classified (§10.3); the refusal-text pin. | **PROVEN** | §10.3. Registry row ICE-TSNS-SQL-1-R-015. The cells that are neither are statements whose own source does not evaluate (C-039), and a required leaf handed a NULL on the doors named in §10.3. |
-| C-030 | Fold 2. A nested value narrowed from nanoseconds anywhere in its lineage is refused, not stored cut to microseconds, on every door that emits the nested call, MERGE through a subquery included; a typed NULL keeps nine digits, and a microsecond field beside the leaf may still be narrowed. | The narrowing pins at the Rust door (four spellings × five doors, three MERGE spellings, the sibling case). | **PROVEN** | §10.4: `INSERT … SELECT array(ns, NULL)` is refused; the re-verify's 44 `arr_empty` cells that stored a cut value on both builds are refusals. |
+| C-027 | Fold 2. The nested conform pairs struct fields exactly as the cast that follows it pairs them, the rule being an argument each site sets from the door's code: Arrow's cast (`cast`), DataFusion's struct cast (`name`), or names that must be the target's in order (`exact`). A struct with a renamed, recased or reordered field stores one wall from every door, or is refused by name. | The pairing pin at the Rust door (six spellings × six doors × two zones) and on the facade; the kernel's twenty-row pairing table; the re-verify's `nx.py` re-run (§10.1). | **REJECTED** (2026-10-09, the split) | §11: withdrawn by the split with the nested conform; the pairing question is R-016 and card ICE-TSNS-NESTED-1. Before the split: §10.1: the re-verify's 64 wrong-wall cells are 64 session walls; no answering cell of its 4750 differs from the rule. |
+| C-028 | Fold 2. Every Arrow layout that can carry a timestamp inside a nested value is conformed or refused, in one `match` with no arm that stores by default: struct, map, list, large list, list view, large list view, fixed-size list, dictionary and run-end-encoded at any depth conform; a union and a non-temporal scalar are refused. | The layout unit pins; six layouts through two DataFrame doors on the facade; the re-verify's `misc2.py` re-run (§10.2). | **REJECTED** (2026-10-09, the split) | §11: withdrawn by the split; no layout is conformed, every layout refuses (C-040). Before the split: §10.2: list view, dictionary child and fixed-size list store the session wall on every door of `misc2.py`. |
+| C-029 | Fold 2. For a nested `timestamp_ns` leaf a door stores the rule's session wall at full precision or refuses before any file is written, by one named text built in one function, with a dated registry row. No cell stores a second wall, a cut value or a NULL the source did not hold. | Every nested cell of the re-verify's matrix and of this unit's classified (§10.3); the refusal-text pin. | **REJECTED** (2026-10-09, the split) | §11: withdrawn by the split after the second re-verify found three routes that stored a cut value; replaced by C-040, where no nested cell stores. Before the split: §10.3. Registry row ICE-TSNS-SQL-1-R-015. The cells that are neither are statements whose own source does not evaluate (C-039), and a required leaf handed a NULL on the doors named in §10.3. |
+| C-030 | Fold 2. A nested value narrowed from nanoseconds anywhere in its lineage is refused, not stored cut to microseconds, on every door that emits the nested call, MERGE through a subquery included; a typed NULL keeps nine digits, and a microsecond field beside the leaf may still be narrowed. | The narrowing pins at the Rust door (four spellings × five doors, three MERGE spellings, the sibling case). | **REJECTED** (2026-10-09, the split) | §11: withdrawn by the split; the lineage guard is deleted. Its top-level remainder is C-043. Before the split: §10.4: `INSERT … SELECT array(ns, NULL)` is refused; the re-verify's 44 `arr_empty` cells that stored a cut value on both builds are refusals. |
 | C-031 | Fold 2. A required `timestamptz_ns` column, a control, refuses an out-of-range value with main's text exactly. | The re-verify's six cells re-measured; the Rust door pin. | **PROVEN** | §10.2: 0 of the `misc2.py` control cells differ from main. |
-| C-032 | Fold 2. `UPDATE` with no `WHERE` assigning a column that holds a nested `timestamp_ns` leaf is refused by name, and an unrelated `UPDATE` with no `WHERE` on such a table still runs; `INSERT … VALUES` of `array(TIMESTAMP '…')` stores the session wall. | The unstorable pin; the any-depth pin's array row. | **PROVEN** | §10.3: 480 cells of this unit's matrix from a raw Arrow error to the named refusal. |
+| C-032 | Fold 2. `UPDATE` with no `WHERE` assigning a column that holds a nested `timestamp_ns` leaf is refused by name, and an unrelated `UPDATE` with no `WHERE` on such a table still runs; `INSERT … VALUES` of `array(TIMESTAMP '…')` stores the session wall. | The unstorable pin; the any-depth pin's array row. | **REJECTED** (2026-10-09, the split) | §11: withdrawn by the split; replaced by C-040 (the refusal) and C-041 (the unrelated statement still runs). Before the split: §10.3: 480 cells of this unit's matrix from a raw Arrow error to the named refusal. |
 | C-033 | The red check of pull request #1018 on `59462d6a` is found and fixed. | §10.6. | **PROVEN** | §10.6: the map lockstep guard, `crates/repark-functions/src/map.md`. |
-| C-034 | The re-verify's six nested mutants and this fold's own are each killed by a Rust-level pin. | §10.7. | **PROVEN** | §10.7. |
+| C-034 | The re-verify's six nested mutants and this fold's own are each killed by a Rust-level pin. | §10.7. | **REJECTED** (2026-10-09, the split) | §11: withdrawn by the split with the code the mutants broke; the split's mutants are C-047. Before the split: §10.7. |
 | C-035 | The re-verify's `nx.py` and `misc2.py`, unchanged, and this unit's whole matrix are re-run on head; no control cell moved. | §10.1, §10.2, §10.5. | **PROVEN** | §10.5. |
 | C-036 | The fold's gates are green with real exit codes. | §10.8. | **PROVEN** | §10.8. |
 | C-037 | Struct fields pair on each door as Spark pairs them. | Out of this unit: every struct column, on main. Spark 4.1.2 measured for the rule on `TIMESTAMP_NTZ` leaves (§10.1). | **OPEN** | Q8: the INSERT family pairs by name where Spark pairs by position; `INSERT … BY NAME` and `overwritePartitions` pair by Arrow's rule where Spark pairs by name. Parity row ICE-TSNS-SQL-1-R-016. |
 | C-038 | A nanosecond value beside an untyped NULL keeps its digits. | Out of this unit: expression typing, upstream of every store (§10.4). | **OPEN** | Q9: `coalesce(ns, NULL)` and four siblings are typed microseconds; a top-level `timestamp_ns` column stores the cut value on every door, as on main. Parity row ICE-TSNS-SQL-1-R-017. |
 | C-039 | A statement whose `VALUES` list holds a nested `TIMESTAMP` literal, a mixed map row or a struct of the wrong arity evaluates or is refused by name. | Out of this unit: the source fails with no table involved (§10.3). | **OPEN** | Q10. Parity row ICE-TSNS-SQL-1-R-018. |
+| C-040 | The split. A write that supplies a value for a column whose type holds a naive `timestamp_ns` leaf below the top level is refused before any file is written, on every door, by one named text that names the target column and leaf; one function decides and it reads the target type only. | The Rust door pin (nine shapes, seventeen doors, two zones, no file, no snapshot); the function's unit tests; the facade pin (fourteen layouts, eight routes); the verifier's nested matrices re-run (§11.4). | **PROVEN** | §11.1, §11.4: 0 nested cells store. Parity row R-015. |
+| C-041 | The split. A statement that does not supply such a column still runs: an INSERT column list or `BY NAME` source that omits it, a bare `NULL` literal for the whole column, UPDATE and MERGE of other columns, DELETE, both row-level modes, compaction, manifest rewrite, a read and a time-travel read; rows already stored keep every nanosecond. | The Rust door pin `a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows`. | **PROVEN** | §11.1. |
+| C-042 | The split. A nested `timestamptz_ns` leaf and a nested microsecond leaf are not refused and answer as main answers. | The Rust door control; the verifier's control shapes re-run (§11.4). | **PROVEN** | §11.4: 0 control cells moved. |
+| C-043 | The split. `UPDATE` with no `WHERE` whose `SET` value was narrowed from nanoseconds to microseconds (`CASE … ELSE NULL END`, `if(…, c, NULL)`, `array(c, NULL)[0]`) is refused by name and stores nothing; a plain column, a typed NULL, a zoned source and a literal store; the other doors are not refused. | The Rust door pin; `updtrunc.py` and `gq.py trunc` re-run (§11.2, §11.4). | **PROVEN** | §11.2. |
+| C-044 | The split. A run-end-encoded or dictionary-encoded instant source stores the session wall at full precision through `INSERT OVERWRITE`, `INSERT … BY NAME`, `overwritePartitions` and `insertInto(overwrite=True)`. | The facade pin in America/New_York read from the Parquet file; the kernel and `wall_kernel_reads` unit pins; `lx.py` re-run (§11.3, §11.4). | **PROVEN** | §11.3. |
+| C-045 | The split. Every top-level door has a pin that reads a value with non-zero digits below the microsecond from the Parquet file, not through SELECT. | `test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file`: nineteen doors, three zones, two source types. | **PROVEN** | §11.3. |
+| C-046 | The split. The verifier's `nx.py`, `nx2.py`, `lx.py`, `leak.py`, `updtrunc.py` and `gq.py` (door and trunc modes), unchanged, are re-run on head in America/New_York and Asia/Kolkata against its base outputs: no nested `timestamp_ns` cell stores, every answering top-level `timestamp_ns` cell equals INSERT, no control moved. | §11.4. | **PROVEN** | §11.4. |
+| C-047 | The split. Hand mutants of the gate, one per container kind and per statement form, and of the two top-level fixes are each killed by a named pin. | §11.5. | **PROVEN** | §11.5. |
+| C-048 | The split's gates are green with real exit codes. | §11.6. | **PROVEN** | §11.6. |
+| C-049 | A nested `timestamp_ns` leaf stores the session wall on every door. | Out of this unit by the owner's amendment 3: card ICE-TSNS-NESTED-1. | **OPEN** | Q12. The refusal of C-040 stands until that unit. Parity row R-015. |
 
 ## 1. The red test (C-001)
 
@@ -819,6 +829,212 @@ Scratch (the copies of both verifiers' scripts, their outputs for this head, the
 probe, the mutant and gate logs) is in `/tmp/oc-worker/tsns-wall-f1/`, outside the
 repository.
 
+## 11. The split, after the second re-verify of `c6d947a3` (C-040 to C-049)
+
+The second re-verify (2026-10-09, 72,077 cells, values read from the Parquet files, five
+zones) held every top-level claim and failed the nested form again: one nested S1 (a value
+cut to microseconds reached a nested leaf through an array element, a SQL temporary view and
+a cached frame, none of which a lineage guard can see), one nested S2 (700 cells answered
+with a planner error that has no name), and two top-level S1. The owner had adopted
+amendment 3 beforehand: if fold 2 failed on any nested shape, the pull request splits. The
+top-level fix ships; a nested `timestamp_ns` leaf refuses by name on every door; the nested
+store becomes card ICE-TSNS-NESTED-1
+([card](../../roadmap/mid-term/ice-tsns-nested-1-card-2026-10-09.md)). Order kept: red pins
+(`65bb2042`), then the fix (`e8a862fb` and the commits after it).
+
+### 11.1 One gate, by the target's type (C-040, C-041, C-042)
+
+**Removed.** The nested conform of folds 1 and 2 is deleted, not disabled: the kernel's nested
+call, the pairing words, the layout `match`, the lineage guard
+`repark_nested_timestamp_ns_guard` and every site that emitted them. `nested.rs`,
+`nested_tests.rs`, `lineage.rs` and `narrow.rs` are gone; the store sites in
+`repark-iceberg` and the INSERT hook are as they were before fold 1, plus fold 1's two
+top-level fixes (the wall kernel's nullable return field, `wall_kernel_reads`). No top-level
+path used any of the removed code. Clauses C-016, C-027 to C-030, C-032 and C-034 are
+REJECTED.
+
+**Added.** `repark_iceberg::write::nested_ns_gate::refuse_nested_ns_supply` decides, and
+nothing else does. It reads two things: the **target** column's type (is there a
+`Timestamp(ns, None)` below the top level, in a struct, a list of any layout, a map key or a
+map value) and the parsed statement (does it supply a value for that column). It never reads
+the source's type, so a source shape, an Arrow layout, a view or a cached frame cannot pass
+it. The Spark router calls it once at the top of `execute_inner`, before any door is chosen;
+every SQL door and every DataFrame writer reaches the store through that function, so the
+guard is one chokepoint and not a list of routes. It fires before the planner and before
+every older gate. The text:
+
+```text
+[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table
+`ice`.`ns`.`t`: Cannot safely cast `st`.`a` to "TIMESTAMP_NS". A nested timestamp_ns leaf is
+not writable yet: omit the column `st` or supply NULL for it. SQLSTATE: KD000
+```
+
+It names the target table, column and leaf, never the source expression (the last verify
+found the old text naming `named_struct(a,ice.ns.src.l)` on `INSERT OVERWRITE`).
+
+**Supplying a value.** Three answers per column: the statement does not name it; it gives a
+bare `NULL` literal for the whole column in every row; anything else. Only the last is
+refused. What the function cannot read counts as a value: `SELECT *`, a set operation, a
+`PARTITION` clause, a MERGE star, a DataFrame written by name, an assignment to a field
+inside the column.
+
+**The decision on an untyped NULL: it stores.** `INSERT … VALUES (1, NULL, 0)`,
+`INSERT … SELECT id, NULL, 0`, `UPDATE … SET st = NULL` and a MERGE clause that assigns or
+inserts `NULL` for the whole column run. Nothing is converted, so no wall can be wrong.
+`CAST(NULL AS …)` and a DataFrame `lit(None)` column are refused: the gate reads the
+statement's text for the literal and does not evaluate types.
+
+**Still allowed, each pinned** (`a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows`,
+both row-level modes): an INSERT column list or a `BY NAME` source that omits the column;
+UPDATE and MERGE of other columns; DELETE; the copy-on-write and merge-on-read carry of rows
+already stored, which read back every nanosecond; `rewrite_data_files` and
+`rewrite_manifests`; a read; a time-travel read.
+
+**Not gated, by decision.** `CREATE TABLE … AS SELECT` and `REPLACE TABLE … AS SELECT` (the
+leaf takes the source's own type, nothing is converted; it is also how the carry pin seeds
+its rows) and a column added by `ALTER TABLE` (the write that follows is gated). The streaming
+sink and the Rust `repark_iceberg::write::append` API are below the SQL router. The ANSI door
+cannot create such a column. A catalog failure while the gate loads the target is returned,
+not skipped (`a_target_that_fails_to_load_refuses_instead_of_writing_positionally` went red
+on the first draft, which skipped it).
+
+**Controls.** A nested `timestamptz_ns` leaf and a nested microsecond leaf are not matched
+(`a_nested_zoned_or_microsecond_leaf_is_not_guarded`); R-008 and R-011 stay as recorded.
+
+**The change from main, adopted.** A nested `timestamp_ns` write that stored on main now
+refuses: the session wall through `INSERT … SELECT`, `append` and field assignment, the UTC
+wall through `INSERT OVERWRITE`, MERGE and the overwrite writers.
+
+**Draft sentence for the v1.5.4 release note.** *Writing a value into a column that holds a
+`timestamp_ns` field inside a struct, an array or a map is refused with
+`[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … A nested timestamp_ns leaf is not writable
+yet`; earlier releases stored the session wall through some statements and the UTC wall
+through others. Rows already stored are read, carried and compacted unchanged; a statement
+that omits the column or gives it `NULL` still runs; a top-level `timestamp_ns` column now
+stores the session wall through every statement.*
+
+### 11.2 The unfiltered `UPDATE` no longer stores a cut value (C-043)
+
+`UPDATE t SET v = CASE … ELSE NULL END`, `if(…, c, NULL)` and `array(c, NULL)[0]` with no
+`WHERE` raised a raw Arrow error on main. The unit's first fix made that door answer, and
+since the expression is typed microseconds upstream (R-017) it stored a value cut to
+microseconds, and for a DST-gap wall an hour off: 25 cells of the re-verify. The INSERT hook
+now refuses an `UPDATE` plan whose `SET` value holds a cast from a nanosecond timestamp to a
+coarser one (`refuse_narrowed_update`; a typed NULL is not a narrowing, a `CASE` condition is
+not searched):
+
+```text
+[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table
+`ice.ns.u`: Cannot safely cast `v` "TIMESTAMP" to "TIMESTAMP_NS". The value was narrowed from
+nanoseconds to microseconds before the store; give the NULL beside it the type timestamp_ns.
+SQLSTATE: KD000
+```
+
+**Not widened.** The filtered `UPDATE` and every other door are untouched: they store the cut
+value on main (R-017) and a refusal there would also refuse a written
+`CAST(ns AS TIMESTAMP)` and `date_trunc('second', ns)`, which store on main. On this one door
+main answered nothing for these spellings, so nothing that stored is refused, with one
+exception: `array(c, NULL)[0]` of a `timestamp_ns` source stored a cut value at the UTC wall
+on main and is now refused (one cell per zone of `gq.py trunc`).
+
+### 11.3 Encoded sources, and pins read from the file (C-044, C-045)
+
+A run-end-encoded instant through `INSERT OVERWRITE`, `INSERT … BY NAME`,
+`overwritePartitions` and `insertInto(overwrite=True)` stored its UTC wall, on main and at
+`c6d947a3` (32 cells of the re-verify): `wall_kernel_reads` did not see through the encoding,
+so the plain cast kept the UTC reading. It now sees through `RunEndEncoded` and `Dictionary`
+for a nanosecond wall target, and `zone_store_frame` casts the column to its values' type
+(`wall_kernel_input`) before the kernel. The kernel is unchanged and still refuses an encoded
+argument, so the doors that refused such a source on main refuse it still.
+
+Pins: `test_an_encoded_instant_source_stores_the_session_wall` (both encodings, the four
+doors, America/New_York, non-zero digits below the microsecond, the value read from the
+Parquet file with `pyarrow.parquet`), and
+`test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file` (all nineteen
+doors, three zones, `timestamp_ns` and `timestamptz_ns` sources, read from the table's live
+data files, not through SELECT).
+
+### 11.4 The verifier's scripts re-run on the split (C-046)
+
+`nx.py`, `nx2.py`, `lx.py`, `leak.py` and `updtrunc.py` unchanged; `gq.py` with one setup line
+changed (it seeded its nested table by an INSERT that is now refused; the seed is the same
+SELECT as a CTAS). Head, America/New_York and Asia/Kolkata, against the verifier's own base
+outputs for `ca5a062a`.
+
+**Nested `timestamp_ns` cells, 16,070 in the two zones:**
+
+| Script | Cells | Named refusal | Stored | Other |
+|---|---|---|---|---|
+| `nx.py` (28 shapes, 19 doors, 5 sources) | 4,750 | 4,750 | 0 | 0 |
+| `nx2.py` (46 pairing shapes) | 8,740 | 8,740 | 0 | 0 |
+| `lx.py` (19 nested Arrow layouts) | 2,280 | 2,148 | 0 | 132 |
+| `leak.py` (42 placements of a narrowed value) | 84 | 84 | 0 | 0 |
+| `gq.py guard` (nested writes, America/New_York) | 46 | 46 | 0 | 0 |
+
+The 132 are not door outcomes: 120 are layouts the probe cannot build through pandas, on
+both builds, and 12 are the probe's own setup step writing a fixed-size list into a
+`timestamptz_ns` or `TIMESTAMP` sibling column, the raw Arrow error both builds raise. No
+older gate of main answers first on a gated column: the count of `CANNOT_FIND_DATA`,
+`EXTRA_STRUCT_FIELDS`, store-assignment and planner texts on these cells is 0, where the
+re-verify counted 11,950 over five zones.
+
+**Controls:** 570 nested control cells of `nx.py` (`timestamptz_ns`, `TIMESTAMP_NTZ` and
+`TIMESTAMP` leaves) are identical to base in value and in error text; 504 SELECT statements
+and 18 unrelated writes of `gq.py guard` are identical. **Controls moved: 0.**
+
+**Top-level `timestamp_ns` cells:** the 240 `top_dict` and `top_ree` cells of `lx.py`: every
+answering cell equals the rule; the 16 run-end-encoded cells of §11.3 are corrected and no
+other cell differs from `c6d947a3`. `gq.py guard`: the two top-level writes whose wall the
+unit corrects, as before. `gq.py trunc` (312 cells): 52 plain cells keep every digit; 52
+`nvl` cells are refused on both builds; of the 208 cells of a value beside an untyped NULL,
+192 store a cut value exactly as at `c6d947a3` (R-017) and 16 are refused: 4 are
+`coalesce` on the unfiltered `UPDATE`, a planner fault on both builds; 10 are the S1 cells of
+§11.2; 2 are the array element of §11.2. `updtrunc.py`: the `CASE` and `if` forms are
+refused, the plain column stores `…123456789`.
+
+**R-017, measured count kept as the re-verify stated it:** 510 of 520 answering cells store a
+value cut to microseconds at `c6d947a3` (485 on main); the unit corrected the wall in 172 of
+them and cut no digit main kept. After the split the 25 cells of §11.2 are refused and not
+cut. The remaining cut cells are main's and stay a recorded row.
+
+### 11.5 Mutants of the split (C-047)
+
+Each applied to the committed tree, run against the named suites, and restored.
+
+| Mutant | Killed by |
+|---|---|
+| S1 the gate skips a struct | the gate's unit pin; four door pins |
+| S2 the gate skips a map key | the unit pin; the door pin |
+| S3 the gate skips a map value | the unit pin; the door pin |
+| S4 the gate skips a list | the unit pin; the door pin |
+| S5 the gate skips the large, view and fixed-size lists | the unit pin only: an Iceberg table's Arrow type never has those layouts |
+| S6 the gate matches a zoned leaf too | the unit pin; the control door pin |
+| S7 a bare NULL is refused | the allowed-statement door pin |
+| S8 a bare NULL beside a value passes | the unit pin |
+| S9 a field assignment is not a supply | two unit pins; the field-assignment door pin |
+| S10 MERGE is not gated | two door pins |
+| S11 UPDATE is not gated | two door pins |
+| S12 a MERGE star is read as absent | the unit pin; the door pin |
+| S13 a source the gate cannot read is read as absent | two unit pins |
+| S14 `REPLACE WHERE` is not intercepted | the door pin |
+| S15 `BY NAME` is read by position only | the allowed-statement door pin |
+| S16 a failed load of the target is skipped | `a_target_that_fails_to_load_refuses_instead_of_writing_positionally` |
+| S17 the router does not call the gate | four door pins |
+| S19 the unfiltered `UPDATE` refusal is off | the `UPDATE` door pin |
+| S20 a typed NULL counts as narrowing | the `UPDATE` door pin |
+| S21 the store does not see through `RunEndEncoded` | the `ntz_store` unit pin |
+| S22 the store names no plain type for an encoded source | the `ntz_store` unit pin |
+| S23 the wall kernel's field is not nullable for an instant | the kernel pin; the overflow door pin |
+| S24 the unfiltered `UPDATE` searches a `CASE` condition | the `UPDATE` door pin |
+| S25 the store hands the kernel the encoded column | the facade pin `test_an_encoded_instant_source_stores_the_session_wall` |
+
+S20 and S24 survived the first run; a pin was added for each and they were run again.
+
+### 11.6 Gates of the split (C-048)
+
+Run on the unit's head with real exit codes; the list and the codes are in the hand-back of
+the round.
+
 ## Q. Questions for a ruling
 
 - **Q1 (C-013, RULING).** Should the mirror be fixed: a wall written into a `timestamptz_ns`
@@ -896,6 +1112,12 @@ repository.
   refuses those statements by name (§10.1), reading the ruling's "no third outcome" as
   excluding a NULL the source did not hold. Spark stores the value on the INSERT doors (by
   position) and refuses on the by-name doors. *Lean:* keep the refusal until Q8 is decided.
+- **Q12 (C-049, OWNER).** When is the nested store scheduled? *Premise:* a nested
+  `timestamp_ns` write that stored on main now refuses by name (§11.1), so a user of such a
+  column cannot write it in v1.5.4 except by CTAS; the card holds the evidence and the four
+  things the unit must settle first (pairing, layouts, the typing beside a NULL, the leak
+  routes). *Lean:* its own unit after R-016 and R-017 are ruled on, since both decide what
+  the stored value is.
 - **Also seen, no question:** `TIMESTAMP_NTZ '<wall>'` refuses `expects an Int64 wall` when
   the wall is within about 36 minutes of the epoch, in a plain `SELECT` too (O-4). It is not a
   nanosecond or Iceberg defect.

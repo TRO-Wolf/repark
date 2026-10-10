@@ -1036,31 +1036,23 @@ pins: rp-4-fork-repin/C-005, C-006
   wraps what is still not the target type. A `timestamptz_ns` target is left out: it is the
   unit's control and stays as main answers (parity row ICE-TSNS-SQL-1-R-008).
   pins: ice-tsns-merge-wall-1/C-006
-  **Fold 1 (2026-10-09):** an INSERT target column that holds a nested `timestamp_ns` leaf
-  (`Store::Nested`, by `ntz_store::holds_nested_ns_wall`) is conformed in `after_analysis`
-  only: the analyzer does not rewrite a struct-to-struct cast, so there is nothing to peel
-  before it. `conform_nested_casts` finds the planner's cast to the nested type wherever it
-  sits in the expression and puts the kernel's two-argument call under it; `INSERT … VALUES`
-  carries that cast inside the `VALUES` rows, so `conform_nested_values` rewrites those cells;
-  an expression with no cast whose type is not the target's is wrapped whole. A nested target
-  of an `UPDATE` with no `WHERE` is left out: that statement raises a raw Arrow error for
-  every nested struct on main and stores nothing (parity row ICE-TSNS-SQL-1-R-014).
-  pins: ice-tsns-merge-wall-1/C-016
-  **Fold 2 (2026-10-09):** the nested call is always put under a cast to the target column
-  (`conformed_cast`), so the cast that follows is DataFusion's and the pairing word is `name`:
-  the planner's own cast where there is one, a new one for a `VALUES` cell or an expression
-  that had none (a frame whose list layout was not the table's used to reach the sink
-  uncast and raise a raw Arrow type error). A `VALUES` cell whose type is no longer its
-  column's declared type (`array(TIMESTAMP '…')`, retyped by the analyzer) is conformed and
-  cast in place, where main raised a raw Arrow error. A nested
-  `timestamp_ns` column of an `UPDATE` with no `WHERE` (`Store::Carried`) must be carried
-  untouched; assigning it is refused by name, where main raised the raw
-  `arguments need to have the same data type`. The refusal of a narrowed value is not here:
-  it is the optimizer rule of `repark-functions/src/timestamp_ns_cast/lineage.rs`, which sees
-  the nested call this hook emits.
-  `extension.rs` adds that rule (`NestedNanosecondGuard`) to the session beside
-  `register_all`.
-  pins: ice-tsns-merge-wall-1/C-027, C-029, C-030
+  **The split (2026-10-09):** the nested conform of folds 1 and 2 is removed from this hook;
+  a nested target is not touched here and is refused earlier, at the router
+  (`router/nested_ns.rs`). One top-level refusal was added, `refuse_narrowed_update`: for an
+  `UPDATE` plan, a `SET` value into a naive `timestamp_ns` column that holds a cast from a
+  nanosecond timestamp to a coarser one (`narrows`; a typed NULL excepted, a `CASE` condition
+  not searched) is refused by name. That is the cast type coercion inserts for
+  `CASE … ELSE NULL END`, `if(…, c, NULL)` and `array(c, NULL)[0]` (parity row R-017). On main
+  the statement raised a raw Arrow error (the array form of a `timestamp_ns` source stored a
+  cut value at the UTC wall); once the unit made the unfiltered `UPDATE` answer, it stored a
+  value cut to microseconds, and in a DST gap an hour off. The text ends `The value was
+  narrowed from nanoseconds to microseconds before the store; give the NULL beside it the
+  type timestamp_ns`. **Why only here:** the other doors store such a value on main (cut, row
+  R-017) and a refusal there would also refuse a written `CAST(ns AS TIMESTAMP)`; this door
+  did not answer on main, so nothing that stored is refused.
+  `router.rs` makes the one call of `router/nested_ns.rs` at the top of `execute_inner`
+  (that directory's map).
+  pins: ice-tsns-merge-wall-1/C-043
 - `insert_timestamp_ns.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door's INSERT conform
   for Iceberg `timestamp_ns` / `timestamptz_ns` target columns, called from `spark_ast`.
   `before_analysis` replaces the planner's `CAST(… AS Timestamp(ns))` over a non-column source

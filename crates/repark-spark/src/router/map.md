@@ -72,6 +72,18 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
   (first linked from the `comment_on_table.rs` row above).
 
+- `nested_ns.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):**
+  `refuse_nested_supply` is the one call, made at the top of `router::execute_inner` before
+  any door is chosen, that hands an `INSERT` (plain, `OVERWRITE`, `BY NAME`, `REPLACE WHERE`),
+  `UPDATE` or `MERGE` statement and its resolved Iceberg target to
+  `repark_iceberg::write::nested_ns_gate::refuse_nested_ns_supply`. Every SQL door and every
+  DataFrame writer reaches the store through that function (the writers emit SQL), so the
+  refusal is one chokepoint and not a list of routes; it fires before the planner and before
+  any older gate, and it costs one catalog load of the target. A statement it cannot parse,
+  or a target that is not an Iceberg table, passes through to the door, which answers as
+  before. `insert_positional/replace_where.rs` gained the two accessors it reads.
+  pins: ice-tsns-merge-wall-1/C-040
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

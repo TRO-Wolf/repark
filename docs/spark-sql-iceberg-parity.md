@@ -3193,23 +3193,36 @@ still open is `isModifiable`.
   wall (main stored its UTC wall), without one it is the wall, nine digits either way.
   (f) A required `timestamptz_ns` column, a control, refuses an out-of-range value with
   main's text again. Counts are in the ledger's section 10.
+  **The split (2026-10-09, owner-adopted, after the second re-verify of `c6d947a3`).** The
+  nested store of folds 1 and 2 is withdrawn: three verifies found a wrong or a cut value in
+  it each time. What this row fixes is the **top-level** column. A column that holds a nested
+  `timestamp_ns` leaf refuses a write by name (row R-015, card ICE-TSNS-NESTED-1), which
+  changes main for the nested statements that stored there. Two top-level findings of that
+  verify are fixed with it: `UPDATE` with no `WHERE` refuses a value narrowed from
+  nanoseconds instead of storing it cut (row R-017), and a run-end-encoded instant stores the
+  session wall through `INSERT OVERWRITE`, `INSERT … BY NAME`, `overwritePartitions` and
+  `insertInto(overwrite=True)`, where main stored its UTC wall. Fold 1's (b), (c) and (d) and
+  fold 2's (f) stand; (a) of fold 1 and (a) to (e) of fold 2 are history. Counts are in the
+  ledger's section 11.
 - **Apache Spark** — cannot create, describe, read or write the type: Spark 4.1.2 with
   Iceberg 1.11.0 refuses the DDL (`[UNSUPPORTED_DATATYPE] Unsupported data type "TIMESTAMP_NS"`)
   and, on a table made through the Iceberg Java API, every statement
   (`UnsupportedOperationException: Cannot convert unsupported type to Spark: timestamp_ns`),
   measured 2026-10-09. *(oracle: documented — the rule is the one INSERT already follows,
   ICE-TSNS-SQL-1 clause 2 and ledger A-1; the pins compute it with Python `zoneinfo`.)*
-- **Pin** — `python/repark/tests/test_ice_tsns_merge_wall_1.py` (179 tests since fold 1: the
-  57 `timestamp_ns` door tests in three zones, the control doors in America/New_York, the
-  DataFrame-door nested and overflow pins), with main's answers for those cells in
-  `ice_tsns_merge_wall_1_main.json`;
+- **Pin** — `python/repark/tests/test_ice_tsns_merge_wall_1.py` (351 tests since the split:
+  the 57 `timestamp_ns` door tests in three zones, the control doors in America/New_York, the
+  overflow pins, every door read from the Parquet file, the encoded sources, the nested
+  refusals), with main's answers for those cells in `ice_tsns_merge_wall_1_main.json`;
   `crates/repark-spark/tests/timestamp_ns_wall_doors.rs` (the review's test, eight doors
-  on the Rust door, the nested doors and shapes, both overflow classes, the carries);
+  on the Rust door, both overflow classes, the carries);
+  `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs` (the nested refusal and the
+  unfiltered `UPDATE`);
   `crates/repark-sql/src/v3/create.rs` (the ANSI door);
-  `crates/repark-iceberg/src/write/update_cast.rs` and `ntz_store.rs` (the kernel per unit,
-  which sources it reads, the nested SQL);
-  `crates/repark-functions/src/timestamp_ns_cast/nested_tests.rs` (the nested conform and
-  the return field's nullability).
+  `crates/repark-iceberg/src/write/update_cast.rs` and `ntz_store.rs` (the kernel per unit
+  and which sources it reads);
+  `crates/repark-functions/src/timestamp_ns_cast/tests.rs` (the return field's
+  nullability).
 - **Rationale** — FIXED 2026-10-09. The four store sites in `repark-iceberg` matched a
   microsecond wall target only, so a nanosecond one took the instant path's plain Arrow cast.
   They now ask `ntz_store::wall_cast_udf_name`, which names the NTZ kernel for microseconds
@@ -3323,63 +3336,59 @@ still open is `isModifiable`.
   sites render the kernel by name, so the door must register it; the NTZ kernel set the
   precedent (WO NTZ-1). Ledger clause C-022, question Q6.
 
-### ICE-TSNS-SQL-1-R-014 — FIXED 2026-10-09 (ICE-TSNS-MERGE-WALL-1 fold 2) for two spellings; the third is row R-018
+### ICE-TSNS-SQL-1-R-014 — CLOSED 2026-10-09 for a `timestamp_ns` leaf (refused by R-015); the `VALUES` spelling is row R-018
 
-- **repark** — on main `40fc916f` and at head, none of these stores a value: (1)
-  `UPDATE t SET st = …` or `SET st.v = …` with no `WHERE` on any nested column, a
-  `timestamp_ns` source included, raises `Arrow error: … arguments need to have the same data
-  type` or `column types must match schema types`; (2) `INSERT … VALUES` of
-  `array(TIMESTAMP '…')` into `ARRAY<timestamp_ns>` raises `column types must match schema
-  types, expected List(Timestamp(ns)) but found List(Timestamp(µs, "UTC"))`, where
-  `INSERT … SELECT` of the same expression stores the session wall; (3)
-  `INSERT OVERWRITE … VALUES` of a struct, array or map holding a `TIMESTAMP` literal raises
-  the same class. MERGE refuses every array-bearing column by name
-  (`cannot store-assign column … not ANSI-store-assignable`), a `List(Timestamp(ns))` source
-  into the same type included.
+- **repark** — on main `40fc916f` none of these stored a value: (1) `UPDATE t SET st = …` or
+  `SET st.v = …` with no `WHERE` on any nested column raised `Arrow error: … arguments need
+  to have the same data type` or `column types must match schema types`; (2)
+  `INSERT … VALUES` of `array(TIMESTAMP '…')` into `ARRAY<timestamp_ns>` raised `column types
+  must match schema types`; (3) `INSERT OVERWRITE … VALUES` of a struct, array or map holding
+  a `TIMESTAMP` literal raised the same class. Since the split a column that holds a nested
+  `timestamp_ns` leaf takes the named refusal of R-015 on all three, before the planner. For
+  a nested column with no such leaf, (1) and (3) raise the raw error still.
 - **Apache Spark** — cannot write a nested `timestamp_ns`. *(oracle: none.)*
-- **Pin** — `crates/repark-spark/tests/timestamp_ns_wall_doors.rs`
-  `a_nested_nanosecond_leaf_stores_the_session_wall_at_any_depth` names the refusing doors per
-  shape.
-- **Rationale** — Measured by fold 1 of ICE-TSNS-MERGE-WALL-1, which conformed every nested
-  door that answers and changed no refusal. **Fold 2 (2026-10-09):** (1) `UPDATE` with no
-  `WHERE` assigning a column that holds a nested `timestamp_ns` leaf is refused by name
-  (R-015, condition 6); for a nested column with no such leaf it raises the raw error still.
-  (2) `INSERT … VALUES` of `array(TIMESTAMP '…')` into `ARRAY<timestamp_ns>` stores the
-  session wall. (3) `INSERT OVERWRITE … VALUES` fails in the `VALUES` list itself, for every
-  target type: row R-018. Ledger clauses C-026 and C-032.
+- **Pin** — `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`
+  `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` (the `VALUES`, overwrite
+  and unfiltered `UPDATE` doors).
+- **Rationale** — Measured by fold 1 of ICE-TSNS-MERGE-WALL-1. The raw errors of the other
+  nested columns are older than the unit and are not a nanosecond defect. Ledger clauses
+  C-026 and C-040.
 
-### ICE-TSNS-SQL-1-R-015 — DECLARED (ICE-TSNS-MERGE-WALL-1 fold 2, 2026-10-09): a nested source that cannot feed a `timestamp_ns` leaf is refused by one named text
+### ICE-TSNS-SQL-1-R-015 — DECLARED (ICE-TSNS-MERGE-WALL-1, the split, 2026-10-09): a nested `timestamp_ns` leaf refuses, ICE-TSNS-NESTED-1
 
-- **repark** — where a write door cannot store the session wall at full precision into a
-  nested `timestamp_ns` leaf, the statement is refused before any file is written with
+- **repark** — a write that supplies a value for a column whose type holds a naive
+  `timestamp_ns` leaf below the top level (a struct field, an array element, a map key or
+  value, at any depth) is refused before any file is written, on every door, with
   ``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the
-  table ``: Cannot safely cast `<column>`.`<leaf>` "<source type>" to "TIMESTAMP_NS". The
-  nested source shape cannot be stored into this timestamp_ns leaf: <reason>. SQLSTATE:
-  KD000``. One function builds it (`repark-functions`
-  `timestamp_ns_cast/nested.rs::nested_refusal`); the conditions are the six of its
-  `Unstorable`: (1) *the source layout cannot carry a timestamp* — a union, or an integer,
-  boolean, binary, decimal, time, duration or interval where the leaf belongs; (2) *the
-  source nests differently from the target* — a scalar where a struct, list or map is, or
-  the reverse; (3) *no source field pairs with it* — under the door's own pairing: by
-  position with fewer source fields than the target has, by name with no field of that name
-  (DataFusion would have stored NULL), with no name shared at all, or with a nullable field
-  for a required one, and on a door whose cast cannot be known, any field list that is not
-  the target's in order; (4) *the leaf is required and the value is NULL*, the one condition
-  raised while rows are read; (5) *the source narrows a nanosecond value to microseconds*
-  (row R-017); (6) *this statement cannot store a nested value* — `UPDATE` with no `WHERE`
-  assigning the column. MERGE and `UPDATE … WHERE` keep their own Spark texts for a struct
-  they cannot pair (`[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]`,
-  `EXTRA_STRUCT_FIELDS`) and MERGE its store-assignment refusal of an array-bearing column.
+  table `<catalog>`.`<namespace>`.`<table>`: Cannot safely cast `<column>`.`<leaf>` to
+  "TIMESTAMP_NS". A nested timestamp_ns leaf is not writable yet: omit the column `<column>`
+  or supply NULL for it. SQLSTATE: KD000``. The decision reads the target column's type and
+  whether the statement names the column, never the source, so every source shape, Arrow
+  layout, view and cached frame is refused alike. **Still allowed:** a statement that does
+  not supply the column (an INSERT column list or `BY NAME` source without it, UPDATE and
+  MERGE of other columns, DELETE), a bare `NULL` literal for the whole column, copy-on-write
+  and merge-on-read carries of rows already stored, compaction and the other maintenance
+  calls, reads and time travel, `CREATE TABLE … AS SELECT` (the leaf takes the source's own
+  type), and schema evolution. A DataFrame writer is refused when the frame has a column of
+  that name, a `lit(None)` column included. `timestamptz_ns` and microsecond nested leaves
+  are not refused and answer as main does (rows R-008, R-011).
+  **This changes main:** a nested `timestamp_ns` write that stored on main (the session wall
+  through `INSERT … SELECT`, `append` and field assignment, the UTC wall through
+  `INSERT OVERWRITE`, MERGE and the overwrite writers) now refuses.
 - **Apache Spark** — cannot write the type. The class and the first sentence are Spark's
   `CANNOT_SAFELY_CAST`; the second sentence is RePark's. *(oracle: none.)*
-- **Pin** — `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`
-  (`the_refusal_names_the_leaf_and_the_reason` holds the text; the pairing, narrowing and
-  unstorable pins hold each condition at the door);
-  `crates/repark-functions/src/timestamp_ns_cast/nested_tests.rs` (each condition at the
-  kernel); `python/repark/tests/test_ice_tsns_merge_wall_1.py` (the DataFrame doors).
-- **Rationale** — DECLARED 2026-10-09 by the orchestrator's ruling on the re-verify: a bug
-  release must not store a second wall, cut a nanosecond digit, or trade a stored value for
-  a raw error, so a nested leaf is stored by the rule or refused by name. Ledger clause C-029.
+- **Pin** — `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs` (nine shapes through
+  seventeen doors, no file and no snapshot; the whole text; the allowed statements; the
+  controls); `crates/repark-iceberg/src/write/nested_ns_gate.rs` (each container kind and
+  each statement form at the function);
+  `python/repark/tests/test_ice_tsns_merge_wall_1.py` (fourteen Arrow layouts through eight
+  DataFrame routes).
+- **Rationale** — DECLARED 2026-10-09 by the owner's adopted amendment 3 of pull request
+  #1018: two folds converted the nested value in place and three verifies found a wrong or
+  a cut value each time, so the top-level fix ships and the nested form refuses by name
+  until it is designed as its own unit, card ICE-TSNS-NESTED-1
+  (`task/roadmap/mid-term/ice-tsns-nested-1-card-2026-10-09.md`). Ledger clauses C-040 to
+  C-042.
 
 ### ICE-TSNS-SQL-1-R-016 — OPEN (measured 2026-10-09): struct fields pair by name or by position on different doors than Spark's
 
@@ -3391,9 +3400,9 @@ still open is `isModifiable`.
   (`Unsupported CAST from Struct …`). `INSERT OVERWRITE`, `INSERT … BY NAME`,
   `overwritePartitions` and `insertInto(overwrite=True)` pair as Arrow's cast does: by name
   when every target name is present, else **by position**. MERGE and `UPDATE … WHERE` pair
-  by name, case-insensitive, and refuse a missing or extra field with Spark's texts. Since
-  fold 2 a `timestamp_ns` leaf follows the door's pairing exactly and is refused (R-015)
-  where the door would leave it NULL; every other leaf type is as on main.
+  by name, case-insensitive, and refuse a missing or extra field with Spark's texts. A column
+  that holds a nested `timestamp_ns` leaf is refused whole since the split (R-015); every
+  other leaf type is as on main.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0, `struct<a: TIMESTAMP_NTZ, b: TIMESTAMP>`,
   measured 2026-10-09 for the pairing rule only: `INSERT … VALUES` / `SELECT`,
   `INSERT OVERWRITE` and `insertInto(overwrite=True)` pair **by position** (a swapped source
@@ -3403,12 +3412,11 @@ still open is `isModifiable`.
   find (`[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]`). Every door refuses a missing field
   (`STRUCT_MISSING_FIELDS` or `CANNOT_FIND_DATA`) and an extra one (`EXTRA_STRUCT_FIELDS`).
   *(oracle: live — 80 cells, eight spellings through ten doors.)*
-- **Pin** — `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`
-  `a_struct_source_pairs_as_the_door_that_stores_it_pairs` holds RePark's cell for six
-  spellings through six doors on a `timestamp_ns` leaf.
+- **Pin** — none; the measured cells are in the ledger's §10.1 and in card
+  ICE-TSNS-NESTED-1.
 - **Rationale** — OPEN, dated 2026-10-09. A divergence of every struct column, older than
-  the nanosecond types and wider than ICE-TSNS-MERGE-WALL-1, which made the conform follow
-  each door and changed no door's pairing. Three doors differ from Spark in kind: the
+  the nanosecond types and wider than ICE-TSNS-MERGE-WALL-1, which changed no door's
+  pairing. Three doors differ from Spark in kind: the
   `INSERT` family (by name, Spark by position), `INSERT … BY NAME` (Arrow's rule, Spark by
   name) and `overwritePartitions` (Arrow's rule, Spark by name). Ledger clause C-037,
   question Q8.
@@ -3422,16 +3430,26 @@ still open is `isModifiable`.
   session rule reads that cast as the SQL `TIMESTAMP` (a microsecond instant), and the
   nanosecond argument is narrowed to match. `coalesce(ns, CAST(NULL AS timestamp_ns))` keeps
   nine digits. A **top-level** `timestamp_ns` column therefore stores `…123456000` for
-  `INSERT … SELECT coalesce(ns, NULL)` of `…123456789`, through every door, as on main. A
-  **nested** leaf is refused instead (R-015, condition 5) since fold 2.
+  `INSERT … SELECT coalesce(ns, NULL)` of `…123456789`, as on main: the verify of 2026-10-09
+  measured 520 answering cells (four spellings, thirteen doors, two source types, five
+  zones) and 510 store a cut value at head, 485 on main. ICE-TSNS-MERGE-WALL-1 corrected the
+  wall in 172 of them (a cut value at the UTC wall became a cut value at the session wall)
+  and cut no digit that main kept. **One door refuses:** `UPDATE` with no `WHERE` raised a
+  raw Arrow error for these spellings on main; it now refuses by name
+  (`… The value was narrowed from nanoseconds to microseconds before the store; give the NULL
+  beside it the type timestamp_ns`) instead of storing the cut value the unit's first fix
+  made it store. The same door's `array(ns, NULL)[0]` of a `timestamp_ns` source stored a cut
+  value at the UTC wall on main and is refused too.
 - **Apache Spark** — has no nanosecond type; a `NULL` takes the type of its sibling.
   *(oracle: documented — Spark's null-type coercion.)*
 - **Pin** — `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`
-  `a_narrowed_nanosecond_value_is_refused_not_truncated` (the nested refusal on seven doors,
-  and nine digits for a typed NULL). The top-level truncation has no pin.
+  `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` (the one refusing door,
+  and nine digits for a typed NULL). The truncation on the other doors has no pin.
 - **Rationale** — OPEN, dated 2026-10-09. An expression-typing defect in the session's
-  timestamp rule, upstream of every store and outside ICE-TSNS-MERGE-WALL-1, which could
-  only refuse where it used to cut. Ledger clause C-038, question Q9.
+  timestamp rule, upstream of every store and outside ICE-TSNS-MERGE-WALL-1. The other doors
+  are not refused, because the same test would refuse a written `CAST(ns AS TIMESTAMP)` and
+  `date_trunc('second', ns)`, which store on main. Ledger clauses C-038 and C-043, question
+  Q9.
 
 ### ICE-TSNS-SQL-1-R-018 — OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
 
@@ -3443,7 +3461,7 @@ still open is `isModifiable`.
   literal and `to_timestamp_ntz(…)` panics in Arrow (`list array`), caught at the Python
   boundary. `INSERT OVERWRITE … VALUES` of the first kind therefore fails for every target
   type; `INSERT INTO … VALUES` of it stores, because the INSERT conform rewrites the rows
-  for a nanosecond target (since fold 2 for a nested one too). A struct literal in
+  for a top-level nanosecond target (a nested one is refused first, row R-015). A struct literal in
   `INSERT … VALUES` with fewer or more fields than the column fails in the planner
   (`type mismatch and can't cast to got Struct(…)`).
 - **Apache Spark** — evaluates all three; the last is refused by store assignment.

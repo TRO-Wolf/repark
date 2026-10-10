@@ -10,8 +10,11 @@ answered, recorded in ``ice_tsns_merge_wall_1_main.json`` for one zone, the one 
 The carries and the other zones' controls are pinned at the Rust door
 (``crates/repark-spark/tests/timestamp_ns_wall_doors.rs``).
 
-pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-016, C-019
-pins: ice-tsns-merge-wall-1/C-023, C-025, C-027, C-028, C-029, C-035, C-036
+A ``timestamp_ns`` leaf below the top level is not written yet: every DataFrame route refuses
+it by name and writes no file (ICE-TSNS-NESTED-1 lifts that).
+
+pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-019, C-021
+pins: ice-tsns-merge-wall-1/C-023, C-025, C-035, C-036, C-040, C-044, C-045, C-046, C-048
 """
 
 from __future__ import annotations
@@ -373,13 +376,11 @@ def write_from_a_temporary_view(spark: Any, frame: Any) -> None:
 NESTED_DOORS = {
     "df_append": lambda _, frame: frame.writeTo("ice.ns.t").append(),
     "df_overwrite_partitions": lambda _, frame: frame.writeTo("ice.ns.t").overwritePartitions(),
-    "df_overwrite_where": lambda _, frame: (
-        frame.writeTo("ice.ns.t").overwrite(doors.functions.col("id") >= 0)
+    "df_overwrite_where": lambda _, frame: frame.writeTo("ice.ns.t").overwrite(
+        doors.functions.col("id") >= 0
     ),
     "df_insert_into": lambda _, frame: frame.write.insertInto("ice.ns.t"),
-    "df_insert_into_overwrite": lambda _, frame: (
-        frame.write.insertInto("ice.ns.t", overwrite=True)
-    ),
+    "df_insert_into_overwrite": lambda _, frame: frame.write.insertInto("ice.ns.t", overwrite=True),
     "df_save_append": lambda _, frame: frame.write.mode("append").saveAsTable("ice.ns.t"),
     "cached_frame": lambda _, frame: frame.cache().writeTo("ice.ns.t").append(),
     "temporary_view": write_from_a_temporary_view,
@@ -471,9 +472,7 @@ RUN_END_DOORS = {
     "insert_overwrite": write_runs_by_sql("INSERT OVERWRITE ice.ns.t SELECT id, v FROM runs"),
     "insert_by_name": write_runs_by_sql("INSERT INTO ice.ns.t BY NAME SELECT v, id FROM runs"),
     "df_overwrite_partitions": lambda _, frame: frame.writeTo("ice.ns.t").overwritePartitions(),
-    "df_insert_into_overwrite": lambda _, frame: (
-        frame.write.insertInto("ice.ns.t", overwrite=True)
-    ),
+    "df_insert_into_overwrite": lambda _, frame: frame.write.insertInto("ice.ns.t", overwrite=True),
 }
 
 

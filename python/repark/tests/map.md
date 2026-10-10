@@ -3186,17 +3186,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   America/New_York (95 tests); they are the pins that kill the lane's mutant M5 and the
   verify's X2. Dropped: the controls of UTC and Asia/Kolkata (190 tests) and the 108 carry
   tests, which `crates/repark-spark/tests/timestamp_ns_wall_doors.rs` now holds at the Rust
-  door. Added, for doors only the facade has: a nested `struct<v: timestamp_ns>` through five
-  DataFrame writers, and a `TIMESTAMP_NTZ` or `DATE` past the range through
-  `overwritePartitions` and `insertInto(overwrite=True)`, ANSI on and off. The sentences below
-  describe the module before the cut.
-  pins: ice-tsns-merge-wall-1/C-016, C-019, C-023
-  **Fold 2 (2026-10-09):** sixteen more tests, 195 in all, for what only the DataFrame door
-  can be handed: six Arrow layouts (list, large list, list view, fixed-size list, a
-  dictionary-encoded struct child, a map value) through `append` and `overwritePartitions`
-  store the session wall, and a struct with one renamed field stores the session wall through
-  the two writers that store by position and is refused by name through the two that pair by
-  name. pins: ice-tsns-merge-wall-1/C-027, C-028, C-029, C-034
+  door. Added, for doors only the facade has: a `TIMESTAMP_NTZ` or `DATE` past the range
+  through `overwritePartitions` and `insertInto(overwrite=True)`, ANSI on and off. The
+  sentences below the split's paragraph describe the module before the cut.
+  pins: ice-tsns-merge-wall-1/C-019, C-023
+  **The split (2026-10-09):** the nested store pins of folds 1 and 2 became refusal pins and
+  three top-level families were added, 351 tests in all.
+  `test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing`: fourteen Arrow
+  layouts (struct, a struct with one name different, struct in struct, list, large list, list
+  view, large list view, fixed-size list, list of struct, struct of list, a dictionary child,
+  a run-end-encoded child, map value, map key) through eight routes (the six DataFrame
+  writers, a cached frame, a SQL temporary view): the named refusal with the target's leaf
+  path, no new file under the warehouse, no snapshot.
+  `test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file`: all
+  nineteen doors in three zones, `timestamp_ns` and `timestamptz_ns` sources, the stored
+  values read with `pyarrow.parquet` from the table's live data files, not through SELECT;
+  every value must equal the rule and end in non-zero digits below the microsecond.
+  `test_an_encoded_instant_source_stores_the_session_wall`: a run-end-encoded and a
+  dictionary-encoded `timestamp[ns, UTC]` column through `INSERT OVERWRITE`,
+  `INSERT … BY NAME`, `overwritePartitions` and `insertInto(overwrite=True)` in
+  America/New_York, read from the Parquet file; on main the run-end form stored the UTC wall.
+  pins: ice-tsns-merge-wall-1/C-040, C-044, C-045, C-047
   **(2026-10-09):** every cell of the write-door matrix, one test per zone × target × door.
   A `timestamp_ns` target must store the rule (`expected_wall`) or main's ratified refusal;
   the 38 cells main got wrong and the 9 where it raised a raw Arrow error are named by

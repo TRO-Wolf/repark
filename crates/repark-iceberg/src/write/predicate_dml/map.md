@@ -38,8 +38,6 @@ works, so the attribute is gone rather than documented.
   through the NTZ kernel. Before, an identity UPDATE of a `TIMESTAMP` into a `timestamp_ns`
   column stored the instant's UTC wall. Reason and scope: the `ntz_store.rs` row of the parent directory map.
   pins: ice-tsns-merge-wall-1/C-004
-  **Fold 1 (2026-10-09):** an assigned column that holds a nested `timestamp_ns` leaf takes
-  `ntz_store::nested_wall_conform_sql`. pins: ice-tsns-merge-wall-1/C-016
 - `residual.rs` — **RP-7 (2026-09-02):** `identity_scan_residual`, the key-bounds residual the
   identity DML scratch scan carries. Re-parses `selection_sql` (the spec carries SQL, not an AST)
   and matches only a POSITIVE uncorrelated `IN` or a positive `EXISTS` whose correlation is one

@@ -20,11 +20,6 @@ and the star-sentinel rewrite live here instead of in it.
   form stock sqlparser parses, and only there.
   pins: ipi-19-56-37-schema-evolution-write/C-005
 
-- `nested_assign.rs` — **ICE-TSNS-MERGE-WALL-1 fold 2 (2026-10-09):** the leaf cast is
-  `store_assignment_cast_sql_for`, called with the assignment's path, so the named refusal of
-  a nested `timestamp_ns` leaf (parity row ICE-TSNS-SQL-1-R-015) names the column it was
-  assigned through. The fold's own pairing is unchanged: by name, case as the session says,
-  a missing or extra field refused with Spark's text. pins: ice-tsns-merge-wall-1/C-029
 - `nested_assign.rs` + [nested_assign/](nested_assign/map.md) — **U8 WRITE-SQL PR2
   (2026-09-25):** nested struct-field assignment for the Spark door's UPDATE and MERGE. It
   lives here because `lib.rs` is at its manifest ceiling and `merge.rs` is near the file-size

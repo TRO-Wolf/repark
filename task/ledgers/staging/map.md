@@ -36,6 +36,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   each a question: struct pairing against Spark's (C-037, Q8), the typing of a nanosecond
   value beside a NULL (C-038, Q9), `VALUES` spellings that fail before any store (C-039,
   Q10); and Q11 asks whether a named refusal is right where main stored a NULL leaf.
+  **The split (2026-10-09), owner-adopted amendment 3 after the second re-verify failed
+  `c6d947a3`:** the top-level fix ships and the nested form is withdrawn. The nested conform,
+  its pairing, layouts and lineage guard are deleted and their clauses REJECTED (C-016,
+  C-027 to C-030, C-032, C-034); one gate refuses, by one named text and before any file,
+  every write that supplies a value for a column holding a nested `timestamp_ns` leaf
+  (C-040), while statements that do not supply it, carries, maintenance and reads still run
+  (C-041) and zoned and microsecond nested leaves are untouched (C-042). Two top-level
+  findings are fixed: the unfiltered `UPDATE` refuses a value narrowed from nanoseconds
+  (C-043) and an encoded instant source stores the session wall (C-044); every door has a
+  pin read from the Parquet file (C-045); the verifier's matrices re-run (C-046); mutants
+  (C-047); gates (C-048). The nested store is OPEN as card ICE-TSNS-NESTED-1 (C-049, Q12).
 - [cross-join-condition-1-ledger.md](cross-join-condition-1-ledger.md) —
   **CROSS-JOIN-CONDITION-1 (2026-10-08), from the STAMP-2-R5P6-2 hand-back:** a cross join with
   a condition ignored it (12 rows where Spark answers 2); the H1 door now routes cross-with-condition

@@ -78,16 +78,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   The expected walls are the facade matrix's `zoneinfo` values. Mutants M1, M2 and M3 of
   the ledger each red the wall test at the door they break.
   pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-011
-  **Fold 1 (2026-10-09), six pins from the verify.**
-  `nested_struct_doors_store_one_wall` is the verify's repro in three zones: six doors into
-  `struct<v: timestamp_ns>` store the wall the top-level column stores.
-  `a_nested_nanosecond_leaf_stores_the_session_wall_at_any_depth` runs eight doors over six
-  shapes (struct in struct, array of struct, array, struct of array, map value, map of
-  struct) and names, per shape, the doors that refuse: MERGE refuses every array-bearing
-  column with its store-assignment text. (Fold 2: `INSERT … VALUES` of
-  `array(TIMESTAMP '…')`, which raised main's raw Arrow error, now stores the session wall.) `a_nested_microsecond_ntz_field_keeps_the_split_main_has`
-  holds the control: field assignment stores the session wall, the other four doors the UTC
-  wall (parity row ICE-TSNS-SQL-1-R-011, OPEN).
+  **Fold 1 (2026-10-09), pins from the verify.**
+  `a_nested_microsecond_ntz_field_keeps_the_split_main_has` holds the control: field
+  assignment stores the session wall, the other four doors the UTC wall (parity row
+  ICE-TSNS-SQL-1-R-011, OPEN).
   `an_overflowing_literal_stores_null_without_ansi_as_insert_does` is the 42 cells' shape:
   four far literals and each zone's edge instant through `UPDATE … WHERE` (both row-level
   modes) and `MERGE … INSERT VALUES`.
@@ -96,28 +90,32 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `INSERT … BY NAME`, ANSI on and off. `untouched_rows_carry_their_nanosecond_ticks` is the
   carry pin the facade module gave up: DELETE, sibling UPDATE and MERGE and the three
   maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
-  Mutants F1, F2 and F5 of the ledger's §9.6 red the nested pins at the door each breaks, F3
-  the literal pin, F4 the wall-source pin.
-  pins: ice-tsns-merge-wall-1/C-016, C-017, C-018, C-019, C-023, C-024
+  The two nested store pins of fold 1 left with the split; the nested pins are the next row.
+  pins: ice-tsns-merge-wall-1/C-017, C-018, C-019, C-023, C-024
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
-  **ICE-TSNS-MERGE-WALL-1 fold 2 (2026-10-09):** the re-verify's repros at the Rust door.
-  `a_struct_source_pairs_as_the_door_that_stores_it_pairs` puts six spellings of a struct
-  (names in order, swapped, one renamed, one differently cased, none shared, one renamed
-  inside an array) through six doors in two zones and names, per cell, the session wall or
-  the refusal: the door-level pairing pin. `the_refusal_names_the_leaf_and_the_reason` holds
-  the whole text. `a_narrowed_nanosecond_value_is_refused_not_truncated` runs four narrowing
-  spellings through five doors, one of them through a subquery, and stores all nine digits
-  for a typed NULL. `a_required_zoned_column_refuses_an_overflow_as_main_does` holds the
-  control's text to its last word. `what_cannot_feed_the_leaf_is_refused_by_name` covers
-  `UPDATE` with no `WHERE`, an integer leaf, a misnested source and too few positional
-  fields, and that an unrelated `UPDATE` with no `WHERE` still runs.
-  `a_field_beside_the_leaf_may_be_narrowed_and_merge_is_guarded_too` stores nine digits
-  beside a microsecond field narrowed on purpose through INSERT, UPDATE and MERGE, and refuses
-  three MERGE spellings whose leaf was narrowed in the USING subquery.
-  `a_null_struct_and_a_null_typed_field_store_as_they_are` is the pin the first commit of the
-  fold lacked: a NULL struct and a struct with an untyped NULL field through four doors.
-  Sixteen hand mutants die on these and the kernel's pins (the ledger's section 10.7).
-  pins: ice-tsns-merge-wall-1/C-027, C-028, C-029, C-030, C-032, C-034
+  **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
+  `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,
+  struct in struct, array of struct, array, struct of array, map value, map key, map of
+  struct, a struct with one field renamed) through seventeen doors in two zones: `INSERT`
+  with `VALUES`, `SELECT`, a column list, `BY NAME` (named and star), `OVERWRITE` (both),
+  `REPLACE WHERE`, the four MERGE arms, `UPDATE` with and without a `WHERE`, and the three
+  routes the last verify leaked through that SQL can spell (an array element, a temporary
+  view, a subquery). Each must take the named refusal with the target's leaf path, and per
+  shape no file may appear under the warehouse and no snapshot be added.
+  `a_field_assignment_into_the_leaf_is_refused_too` covers `SET st.v = …` through UPDATE and
+  MERGE. `the_refusal_names_the_table_the_column_and_the_leaf` holds the whole text, on the
+  door that used to name the source expression.
+  `a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows` seeds a table by
+  CTAS (not gated) in both row-level modes and runs twelve statements that omit the column or
+  give it a bare `NULL` (INSERT forms, sibling UPDATE and MERGE, DELETE), two maintenance
+  calls and a time-travel read: all run and the seeded leaf reads back every nanosecond.
+  `a_nested_zoned_or_microsecond_leaf_is_not_guarded` is the control.
+  `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` is the top-level pin of
+  `refuse_narrowed_update`: three spellings from a `timestamp_ns` and a `timestamptz_ns`
+  source are refused and store nothing; a plain column, a typed NULL, a zoned source, a
+  literal, a microsecond literal beside an untyped NULL and a narrowing that sits only in a
+  `CASE` condition store; `CAST(c AS TIMESTAMP)` and `date_trunc` with a `WHERE` still store.
+  pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-043, C-047
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to

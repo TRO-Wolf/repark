@@ -602,48 +602,55 @@ repark-core's error map.
   parity row ICE-TSNS-SQL-1-R-008), and `refuse_ntz_writes` still gates the microsecond wall
   target only.
   pins: ice-tsns-merge-wall-1/C-008
-  **Fold 1 (2026-10-09), after the verify.** Three things changed at these sites.
-  *Nested leaves.* `holds_nested_ns_wall(target)` answers whether a struct, list or map type
-  holds a `Timestamp(ns, None)` leaf at any depth, and `nested_wall_conform_sql(expr, target)`
-  renders the kernel's two-argument call
-  `__repark_cast_timestamp_ns__((expr), arrow_cast(NULL, '<target type>'))`.
-  `store_assignment_cast_sql` wraps it in the store cast it already rendered (whole-struct
-  MERGE UPDATE SET and the nested-assignment fold's non-struct leaves), the MERGE INSERT and
-  identity-UPDATE projections emit it for such a column, and `zone_stores` names a nested
-  Iceberg column that holds such a leaf (its Arrow type without field metadata) so
-  `zone_store_frame` wraps the source column in the same call. Before, field assignment
-  (`SET t.st.v = …`) reached the leaf kernel and stored the session wall while nested INSERT,
-  MERGE INSERT, whole-struct assignment and the overwrite doors took the plain cast and stored
-  the UTC wall: two walls in one table for one input. A nested microsecond `TIMESTAMP_NTZ`
-  leaf is **not** conformed here: it is a control and its split is main's (parity row
-  ICE-TSNS-SQL-1-R-011).
-  *Wall-typed sources on the overwrite doors.* `wall_kernel_reads(source, target)` decides
-  whether `zone_store_frame` hands a column to the kernel. A microsecond NTZ target still takes
-  an instant source only (anything else would move microsecond controls). A nanosecond wall
-  target takes every temporal source that is not already the target type, so a
-  `TIMESTAMP_NTZ` or `DATE` past the nanosecond range answers `[CAST_OVERFLOW]` under ANSI and
-  NULL without it, as `INSERT … SELECT` does; before, the plain cast raised a raw Arrow
-  overflow in both modes and, for a `DATE` under ANSI, panicked on a multiplication. In range
-  the kernel and the cast give the same ticks.
-  *The kernel's nullability* is the `repark-functions` change (its directory map).
-  pins: ice-tsns-merge-wall-1/C-016, C-018, C-019
-  **Fold 2 (2026-10-09), after the re-verify.** The nested call now carries the pairing rule
-  of the cast that follows it and the column's name:
-  `__repark_cast_timestamp_ns__((expr), arrow_cast(NULL, '<type>'), '<pairing>', '<column>')`.
-  Each site names its own door, measured and read from the code, not guessed:
-  `store_assignment_cast_sql_for` passes `name` (`PAIRS_BY_NAME`), because the `arrow_cast` it
-  wraps the call in is DataFusion's struct cast; `zone_store_frame` passes `cast`
-  (`PAIRS_AS_ARROW_CAST`), because `positional_map_overwrite_batch` then runs Arrow's `cast`;
-  the MERGE INSERT and identity-UPDATE projections pass `exact` (`PAIRS_EXACTLY`), because no
-  cast of theirs follows and the value reaching them has already been rebuilt to the target's
-  names by the nested-assignment fold or passed the store-assignment gate. Fold 1 passed no
-  rule and the kernel paired by name as soon as one name matched, so a struct with one renamed
-  field kept the UTC wall through the overwrite doors. What the rules are and what the kernel
-  refuses: `repark-functions/src/timestamp_ns_cast/map.md`.
-  `holds_nested_ns_wall` also sees through a list view.
-  `store_assignment_cast_sql` keeps its two-argument form for callers that have no column
-  name; the MERGE renderers and the nested-assignment fold use `…_for` and name theirs.
-  pins: ice-tsns-merge-wall-1/C-027
+  **Fold 1 (2026-10-09), after the verify. Wall-typed sources on the overwrite doors.**
+  `wall_kernel_reads(source, target)` decides whether `zone_store_frame` hands a column to the
+  kernel. A microsecond NTZ target still takes an instant source only (anything else would
+  move microsecond controls). A nanosecond wall target takes every temporal source that is
+  not already the target type, so a `TIMESTAMP_NTZ` or `DATE` past the nanosecond range
+  answers `[CAST_OVERFLOW]` under ANSI and NULL without it, as `INSERT … SELECT` does; before,
+  the plain cast raised a raw Arrow overflow in both modes and, for a `DATE` under ANSI,
+  panicked on a multiplication. In range the kernel and the cast give the same ticks. The
+  kernel's nullability is the `repark-functions` change (its directory map).
+  pins: ice-tsns-merge-wall-1/C-018, C-019
+  **The split (2026-10-09).** For a nanosecond wall target `wall_kernel_reads` sees through a
+  `Dictionary` and a `RunEndEncoded` source to its values. A dictionary already stored the
+  session wall (the sink decoded it first); a run-end-encoded instant took the plain cast and
+  stored its UTC wall through `INSERT OVERWRITE`, `INSERT … BY NAME`, `overwritePartitions`
+  and `insertInto(overwrite=True)`, on main too. `wall_kernel_input(source)` names the
+  values' type of an encoded source, and `zone_store_frame` casts the column to it before the
+  kernel, so the kernel itself still refuses an encoded argument and the doors that refused
+  such a source on main refuse it still. A microsecond target is not widened.
+  The nested conform of folds 1 and 2 (`holds_nested_ns_wall`, `nested_wall_conform_sql`, the
+  pairing words) is removed from every site here; the sites are main's again for a nested
+  column. pins: ice-tsns-merge-wall-1/C-044
+- `nested_ns_gate.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** the one function
+  that decides whether a write is refused for a nested `timestamp_ns` leaf,
+  `refuse_nested_ns_supply(table, label, write)`. It reads the **target** table's type only:
+  `nested_ns_leaf` finds a `Timestamp(ns, None)` below the top level of a column (struct
+  field, list element of any of the five list layouts, map key or value) and answers its
+  path. It then asks whether the statement supplies a value for that column, from the parsed
+  statement and nothing else: an INSERT by position or by name (`InsertSupply`), an UPDATE's
+  assignments, a MERGE's clauses. Three answers: the column is not named (`Absent`), it is
+  given a bare `NULL` literal for the whole column in every row (`Null`), or anything else
+  (`Value`). Only `Value` is refused. What the function cannot read (a `SELECT *`, a set
+  operation, a `PARTITION` clause, a MERGE star, a frame written by name, a field assignment
+  into the column) counts as `Value`. It never looks at the source's type, so no source
+  layout, encoding, view or cached frame can pass it.
+  `nested_ns_refusal` builds the one text: ``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]
+  Cannot write incompatible data for the table <table>: Cannot safely cast `<column>`.`<leaf>`
+  to "TIMESTAMP_NS". A nested timestamp_ns leaf is not writable yet: omit the column
+  `<column>` or supply NULL for it. SQLSTATE: KD000``. It names the target column and leaf,
+  never the source expression.
+  **Why refuse and not convert:** two folds converted the nested value in place and three
+  verifies found a wrong or a cut value each time (pairing, layouts, three routes a lineage
+  guard cannot see). The owner's ruling is to refuse until the nested form is its own unit,
+  card ICE-TSNS-NESTED-1. **Why a `timestamptz_ns` or microsecond leaf is not matched:** they
+  are controls and stay byte-identical to main (parity rows R-008, R-011).
+  **Not gated:** `CREATE TABLE … AS SELECT` and a column added by schema evolution (the leaf
+  takes the source's type; nothing is converted), the streaming sink and the Rust `append`
+  API (below the SQL router). The one caller is `repark-spark/src/router/nested_ns.rs`.
+  Its unit tests hold one case per container kind and per statement form.
+  pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-047
 - `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
   (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI
   matrix stores anywhere. `refuse_negated_null_writes(ctx, table, plan, targets)` follows

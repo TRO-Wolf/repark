@@ -50,6 +50,10 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   into DATE/BOOLEAN with Spark's text like every other INSERT door.
   **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** through the narrowed gate this door refuses only
   the `-NULL` cells; a STRING source stores as on base. pins: store-ts-to-numeric-1/C-006
+  **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** `ReplaceWhere::table()` and `source()`
+  expose the parsed target and source query to `../nested_ns.rs`, which must read them before
+  the statement runs. Nothing else changed.
+  pins: ice-tsns-merge-wall-1/C-040
 - `partition_append.rs` — `INSERT INTO … PARTITION (…)` becomes a plain positional INSERT.
   Static values (Spark's string form, checked by an Arrow cast with `safe: false`,
   `CAST_INVALID_INPUT` on failure) go in at their table positions (or after a column list),
