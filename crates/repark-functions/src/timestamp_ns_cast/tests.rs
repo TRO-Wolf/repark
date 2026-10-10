@@ -1,10 +1,7 @@
 use std::str::FromStr;
 
-use datafusion::arrow::array::{
-    Int32Array, Int64Array, RunArray, StringArray, TimestampMicrosecondArray,
-    TimestampNanosecondArray,
-};
-use datafusion::arrow::datatypes::{Int32Type, TimestampNanosecondType};
+use datafusion::arrow::array::{StringArray, TimestampMicrosecondArray};
+use datafusion::arrow::datatypes::TimestampNanosecondType;
 use datafusion::logical_expr::{LogicalPlanBuilder, lit};
 
 use super::*;
@@ -305,38 +302,4 @@ fn the_return_field_is_nullable_where_an_overflow_answers_null() {
         DataType::Timestamp(TimeUnit::Microsecond, None)
     ));
     assert!(nullable(true, DataType::Utf8));
-}
-
-#[test]
-fn an_encoded_instant_is_decoded_and_takes_the_session_wall() {
-    let instants: ArrayRef = Arc::new(
-        TimestampNanosecondArray::from(vec![1_767_323_045_123_456_789, 1_772_955_000_000_000_001])
-            .with_timezone("UTC"),
-    );
-    let walls = vec![
-        Some(1_767_305_045_123_456_789),
-        Some(1_772_940_600_000_000_001),
-    ];
-    let keyed = DataType::Dictionary(
-        Box::new(DataType::Int32),
-        Box::new(instants.data_type().clone()),
-    );
-    let dictionary = cast(&instants, &keyed).unwrap();
-    let runs: ArrayRef = Arc::new(
-        RunArray::<Int32Type>::try_new(&Int32Array::from(vec![1, 2]), instants.as_ref()).unwrap(),
-    );
-    let wall = conversion(false, "America/New_York", true);
-    for encoded in [dictionary, runs] {
-        let udf = SparkTimestampNsCast::new(false);
-        assert_eq!(
-            udf.return_type(&[encoded.data_type().clone()]).unwrap(),
-            target_type(false)
-        );
-        assert_eq!(nanos(&wall.convert(&encoded).unwrap()), walls);
-    }
-    let numbers = Int64Array::from(vec![1, 2]);
-    let numbered: ArrayRef =
-        Arc::new(RunArray::<Int32Type>::try_new(&Int32Array::from(vec![1, 2]), &numbers).unwrap());
-    let udf = SparkTimestampNsCast::new(false);
-    assert!(udf.return_type(&[numbered.data_type().clone()]).is_err());
 }

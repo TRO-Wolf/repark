@@ -536,6 +536,22 @@ async fn an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds() {
     )
     .await;
     assert_eq!(stored(&session, read).await, walls);
+    run(
+        &session,
+        "UPDATE ice.ns.u SET v = CASE WHEN if(id > 0, c, NULL) IS NOT NULL THEN c \
+         ELSE CAST(NULL AS timestamp_ns) END",
+    )
+    .await;
+    assert_eq!(stored(&session, read).await, walls);
+    run(
+        &session,
+        &format!("UPDATE ice.ns.u SET v = if(id > 1, {INSTANT}, NULL)"),
+    )
+    .await;
+    assert_eq!(
+        stored(&session, read).await,
+        vec![None, Some(1_767_305_045_123_456_000)]
+    );
     run(&session, "UPDATE ice.ns.u SET v = z").await;
     assert_eq!(
         stored(&session, read).await,

@@ -63,6 +63,15 @@ pub fn wall_kernel_reads(source: &DataType, target: &DataType) -> bool {
 }
 
 #[must_use]
+pub fn wall_kernel_input(source: &DataType) -> Option<&DataType> {
+    match source {
+        DataType::Dictionary(_, values) => Some(values.as_ref()),
+        DataType::RunEndEncoded(_, values) => Some(values.data_type()),
+        _ => None,
+    }
+}
+
+#[must_use]
 pub fn ltz_instant_cast_sql(expr_sql: &str) -> String {
     format!("CAST(({expr_sql}) AS TIMESTAMP)")
 }
@@ -186,7 +195,17 @@ fn zone_store_frame(
                 .and_then(wall_cast_udf_name)
                 .and_then(|name| ctx.udf(name).ok());
             let store = match (target, wall) {
-                (_, Some(udf)) => Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![column])),
+                (_, Some(udf)) => {
+                    let value = match wall_kernel_input(source) {
+                        Some(plain) => {
+                            let plain =
+                                Field::new(field.name(), plain.clone(), field.is_nullable());
+                            Expr::Cast(Cast::new_from_field(Box::new(column), Arc::new(plain)))
+                        }
+                        None => column,
+                    };
+                    Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![value]))
+                }
                 (Some(target), None)
                     if is_ltz_instant_target(target) && needs_ltz_instant_cast(source) =>
                 {
@@ -247,7 +266,7 @@ mod tests {
 
     use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 
-    use super::wall_kernel_reads;
+    use super::{wall_kernel_input, wall_kernel_reads};
 
     #[test]
     fn the_kernel_reads_what_its_target_cannot_take_by_a_plain_cast() {
@@ -279,5 +298,8 @@ mod tests {
             assert_eq!(wall_kernel_reads(&source, &micros), into_micros, "{source}");
             assert_eq!(wall_kernel_reads(&source, &nanos), into_nanos, "{source}");
         }
+        assert_eq!(wall_kernel_input(&runs(&instant)), Some(&instant));
+        assert_eq!(wall_kernel_input(&keyed(&micros)), Some(&micros));
+        assert_eq!(wall_kernel_input(&instant), None);
     }
 }
