@@ -8103,10 +8103,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   let the restart resume; the first-batch pin asserts the new text, which names the head to
   roll back to. The remedies themselves are followed in `test_mb_4_streaming_remedies.py`.
   pins: mb-4-foreach-eo/C-032
-  **Fold 5 (2026-10-10, prevention):** a body whose helper thread writes the sink and which
-  then makes its own stamped append gets that append refused before it lands, naming the
-  stray; the query ends `RecoveryRequiredException` with the stray above the newest stamp,
-  the refusal as `__cause__`, no row of the batch twice, and two restarts refuse.
+  **Fold 5 (2026-10-10, prevention):** on all five thread routes a body whose helper writes
+  the sink and which then makes its own stamped append gets that append refused before it
+  lands, naming the stray; the query ends `RecoveryRequiredException` with the stray above
+  the newest stamp, the refusal as `__cause__`, no row of the batch twice, and two restarts
+  refuse. This replaces fold 4's pin of the same routes, which asserted the stray under the
+  stamp.
   pins: mb-4-foreach-eo/C-044
   pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022, C-024, C-028, C-029, C-030
 - [test_mb_4_streaming_remedies.py](test_mb_4_streaming_remedies.py) — **MB-4-FOREACH-EO
@@ -8121,6 +8123,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   under the same name, or a new name with the printed position; before any stamp: roll back
   to the starting head, or a new name; on an empty sink only the new name. A batch that ends
   inside a source snapshot is not offered a new name at all.
+  **Fold 5 (2026-10-10):** the four pins that followed a remedy for a stray under a stamp are
+  gone with the state: the body's stamped write is now refused over the stray, so no public
+  door produces it. Those texts are pinned in `stray_remedy.rs` and
+  `sink_offsets_lineage_tests.rs`; followed literally they were exact on the fold-4 build
+  (the fourth verify's 44 of 44). Six pins remain, all for a stray above the newest stamp or
+  before any stamp.
   pins: mb-4-foreach-eo/C-033
 - [test_mb_4_streaming_session_settings.py](test_mb_4_streaming_session_settings.py) —
   **MB-4-FOREACH-EO fold 4 (2026-10-10, the third verify's third S1):** both streaming doors
@@ -8176,16 +8184,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the batch, the body makes its stamped append, the process exits before the driver's
   audit), and a pin at epochs 0 and 2 holds that both restarts end `RecoveryRequired` naming
   the snapshot under the stamp, with the sink as the kill left it. pins: mb-4-foreach-eo/C-032
-  **Fold 5 (2026-10-10, the fourth verify's S1):** the harness gains `seed`, `expire`,
-  `append` and `table` (the same writer through `toTable`). After the same kill: an expiry
-  that removes the previous stamp still refuses both restarts and prints no rollback; a
-  `toTable` start under the same name refuses, at epochs 0 and 2, and so does the
-  `foreachBatch` start after it; a foreign row above the newest `foreachBatch` stamp refuses
-  a `toTable` start; a stray under the first stamp prints no rollback once the head the
+  **Fold 5 (2026-10-10, the fourth verify's S1 and the owner's rulings of the same day):**
+  the harness gains `seed`, `expire`, `append` and `table` (the same writer through
+  `toTable`), and `write_twice_then_exit` now dies at the refusal: the helper thread appends
+  the batch, the body's own stamped append is refused before it lands, and the process exits
+  before the driver's check. The pins: the batch's rows are in the sink once and both
+  restarts refuse, naming the stray above the newest stamp; no expiry hides it (two
+  snapshots retained: refused with the rollback printed; one retained: refused through both
+  doors with `stamped snapshot expired`); a `toTable` start under the same name refuses, at
+  epochs 0 and 2, and so does the `foreachBatch` start after it; a foreign row refuses a
+  `toTable` start above the newest `foreachBatch` stamp, and also after the name has since
+  run a clean `toTable` batch; a stray before any stamp prints no rollback once the head the
   query started on is expired. Kept behaviour, green before the fix: a healthy sink runs on
   through both doors after an expiry that retains one, two or three snapshots, and a query
-  begun through `toTable` runs through `foreachBatch` after an expiry.
-  pins: mb-4-foreach-eo/C-040, C-041, C-042
+  begun through `toTable` runs through `foreachBatch` after an expiry. The fold-4 kill pin
+  and the first fold-5 pins asserted a stray under the stamp; this build cannot produce one,
+  so they assert the refusal instead.
+  pins: mb-4-foreach-eo/C-040, C-041, C-042, C-044
   pins: mb-4-foreach-eo/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012, C-014
 - [test_mb_4_streaming_foreach.py](test_mb_4_streaming_foreach.py) — **MB-4 round 3b
   (2026-10-08):** the foreach-door battery, split out so the wireup battery stays

@@ -11,7 +11,9 @@ use iceberg::{
 };
 
 use super::body_scope::{BodyScope, note_unknown_outcome, refuse_sink_commit, watches};
-use super::{ClaimedStamp, epoch_check, latch_refusal, main_lineage, stamped_by};
+use super::{
+    ClaimedStamp, epoch_check, latch_refusal, main_lineage, over_a_stray, stamped_by, stray_since,
+};
 use crate::microbatch::error::MicroBatchError;
 use crate::microbatch::offset::{Epoch, QUERY_ID_KEY, QueryId, SinkRecord, SnapshotId};
 use crate::microbatch::starting_mark::StartingMark;
@@ -31,6 +33,7 @@ enum Rule {
 
 enum Breach<'metadata> {
     ConcurrentStamp(&'metadata SnapshotRef),
+    Stray(&'metadata SnapshotRef),
     BaseLeftMain,
 }
 
@@ -73,9 +76,7 @@ impl AppendFence {
 
     fn refuse_stamp(claimed: &ClaimedStamp, refreshed: &Table) -> Option<Error> {
         let metadata = refreshed.metadata();
-        let record = &claimed.stamp.record;
-        let (message, refusal) = if let Some(breach) = breach(metadata, claimed.base, record.query)
-        {
+        let (message, refusal) = if let Some(breach) = breach(metadata, claimed) {
             let message = Self::message(claimed, metadata, &breach);
             let refusal = Self::typed(claimed, refreshed, &breach, &message);
             (message, refusal)
@@ -105,6 +106,7 @@ impl AppendFence {
                 newer = newer.snapshot_id(),
                 query = record.query
             ),
+            Breach::Stray(stray) => format!("{prefix}; {}", over_a_stray(stray, &claimed.stamp)),
             Breach::BaseLeftMain => format!(
                 "{prefix}, which is no longer an ancestor of main (head {head}); nothing can be proven about {QUERY_ID_KEY}={query} above it",
                 head = display_snapshot(metadata.current_snapshot_id().map(SnapshotId::new)),
@@ -132,7 +134,7 @@ impl AppendFence {
                     .map(|concurrent| concurrent.run)
                     .filter(|run| *run != record.run)
             }
-            Breach::BaseLeftMain => None,
+            Breach::Stray(_) | Breach::BaseLeftMain => None,
         };
         match winner {
             Some(winner) => MicroBatchError::Fenced {
@@ -167,12 +169,12 @@ fn display_snapshot(snapshot: Option<SnapshotId>) -> String {
     snapshot.map_or_else(|| String::from("none"), |id| id.to_string())
 }
 
-fn breach(
-    metadata: &TableMetadata,
-    base: Option<SnapshotId>,
-    query: QueryId,
-) -> Option<Breach<'_>> {
-    let base = base.map(SnapshotId::get);
+fn breach<'metadata>(
+    metadata: &'metadata TableMetadata,
+    claimed: &ClaimedStamp,
+) -> Option<Breach<'metadata>> {
+    let query = claimed.stamp.record.query;
+    let base = claimed.base.map(SnapshotId::get);
     let mut reached = base.is_none();
     for snapshot in main_lineage(metadata) {
         if Some(snapshot.snapshot_id()) == base {
@@ -183,7 +185,10 @@ fn breach(
             return Some(Breach::ConcurrentStamp(snapshot));
         }
     }
-    (!reached).then_some(Breach::BaseLeftMain)
+    if !reached {
+        return Some(Breach::BaseLeftMain);
+    }
+    stray_since(metadata, base, &claimed.stamp).map(Breach::Stray)
 }
 
 pub(super) fn refusal_of(error: &Error) -> Option<MicroBatchError> {

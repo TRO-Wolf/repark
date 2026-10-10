@@ -10,7 +10,7 @@ pub const INSIDE_A_SNAPSHOT: &str = "the batch before it ends inside a source sn
 
 pub const PREVIOUS_GONE: &str =
     "the stamped batch before it is no longer in the table, so no snapshot is left to roll back to";
-pub const HEAD_GONE: &str = "the snapshot the query started on is no longer in the table, so no snapshot is left to roll back to";
+pub const HEAD_GONE: &str = "the snapshot the query started on is no longer on the sink's main branch, so the driver cannot name a snapshot to roll back to";
 pub const HEAD_UNRECORDED: &str = "the query's first stamp does not record the head it started on, so rows that were in the sink before the query cannot be told from a stray";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -55,7 +55,7 @@ fn shape_of(metadata: &TableMetadata) -> (i32, i32, i64) {
     )
 }
 
-fn unstamped(snapshot: &SnapshotRef) -> bool {
+pub(super) fn unstamped(snapshot: &SnapshotRef) -> bool {
     !snapshot
         .summary()
         .additional_properties
@@ -211,20 +211,13 @@ fn found(
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn stray_on_main(
-    table: &Table,
-    query: QueryId,
-    baseline: Option<i64>,
-) -> Result<Option<Stray>, MicroBatchError> {
-    walked(table, query, &Entry::Foreach(baseline))
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn stray_at_a_table_start(
-    table: &Table,
-    query: QueryId,
-) -> Result<Option<Stray>, MicroBatchError> {
-    walked(table, query, &Entry::Table)
+pub fn carried_by_foreach(table: &Table, query: QueryId) -> Result<bool, MicroBatchError> {
+    if read_starting_mark(table, query)?.is_some() {
+        return Ok(true);
+    }
+    Ok(main_lineage(table.metadata()).any(|snapshot| {
+        stamped_by(&snapshot.summary().additional_properties, query) && !table_door_stamp(snapshot)
+    }))
 }
 
 fn table_door_stamp(snapshot: &SnapshotRef) -> bool {
@@ -239,21 +232,12 @@ fn head_floor(head: Option<i64>, reached: bool) -> Floor {
     }
 }
 
-enum Entry {
-    Foreach(Option<i64>),
-    Table,
-}
-
-fn walked(table: &Table, query: QueryId, entry: &Entry) -> Result<Option<Stray>, MicroBatchError> {
-    let table_door = matches!(entry, Entry::Table);
-    let baseline = match entry {
-        Entry::Foreach(baseline) => *baseline,
-        Entry::Table => match read_starting_mark(table, query)? {
-            Some(mark) => mark.head.map(SnapshotId::get),
-            None if newest_is_foreach(table, query) => None,
-            None => return Ok(None),
-        },
-    };
+#[allow(clippy::missing_errors_doc)]
+pub fn stray_on_main(
+    table: &Table,
+    query: QueryId,
+    baseline: Option<i64>,
+) -> Result<Option<Stray>, MicroBatchError> {
     let mine =
         |snapshot: &SnapshotRef| stamped_by(&snapshot.summary().additional_properties, query);
     let mut walk = main_lineage(table.metadata());
@@ -274,9 +258,6 @@ fn walked(table: &Table, query: QueryId, entry: &Entry) -> Result<Option<Stray>,
     let Some(stamp) = stamp else {
         return Ok(found(&above, None, false, head_floor(baseline, reached)));
     };
-    if table_door && table_door_stamp(stamp) {
-        return Ok(None);
-    }
     let newest = stamped_at(stamp)?;
     if let Some(stray) = found(&above, Some(newest.clone()), false, Floor::Newest) {
         return Ok(Some(stray));
@@ -305,12 +286,6 @@ fn walked(table: &Table, query: QueryId, entry: &Entry) -> Result<Option<Stray>,
         (None, None) => Floor::Lost(HEAD_UNRECORDED),
     };
     Ok(found(&under, Some(newest), true, floor))
-}
-
-fn newest_is_foreach(table: &Table, query: QueryId) -> bool {
-    main_lineage(table.metadata())
-        .find(|snapshot| stamped_by(&snapshot.summary().additional_properties, query))
-        .is_some_and(|stamp| !table_door_stamp(stamp))
 }
 
 impl Stray {

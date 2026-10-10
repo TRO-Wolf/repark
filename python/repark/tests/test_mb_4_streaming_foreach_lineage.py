@@ -171,30 +171,6 @@ def test_thread_route_then_raise_ends_recovery_required_and_the_restart_refuses(
         assert _log(spark) == log
 
 
-@pytest.mark.parametrize(("route", "operation"), _THREAD_ROUTES)
-def test_thread_route_beside_the_stamped_write_refuses_every_restart(
-    spark: ReparkSession, tables: Path, route: str, operation: str
-) -> None:
-    body = _Stray(spark, route, "append")
-    failure = _recovery(_start(spark, body, tables))
-    stray = _unstamped_ids(spark)[-1]
-    assert f"sink advanced to snapshot {stray} ({operation}) without a stamp" in str(failure)
-    assert failure.epoch == 1
-    assert failure.__cause__ is None
-    assert _log(spark)[-2:] == [(operation, None), ("append", "1")]
-    under = f"It sits under the stamped batch at snapshot {_stamped_head(spark)}"
-    assert under in str(failure)
-    rows, log = _ids(spark), _log(spark)
-    for _ in range(2):
-        resumed = _Stray(spark, route, "append", at=9)
-        refused = _recovery(_start(spark, resumed, tables))
-        assert f"sink advanced to snapshot {stray} ({operation}) without a stamp" in str(refused)
-        assert under in str(refused)
-        assert resumed.calls == 0
-        assert _ids(spark) == rows
-        assert _log(spark) == log
-
-
 def test_main_thread_statement_while_a_body_runs_ends_recovery_required(
     spark: ReparkSession, tables: Path
 ) -> None:
@@ -456,11 +432,18 @@ def test_table_door_writes_no_mark(spark: ReparkSession, tables: Path) -> None:
 
 
 _OVER_A_STRAY = "landed on the sink without a stamp after this batch began"
+_ROWS_AFTER_A_REFUSED_STAMP = {
+    "thread_insert": [1, 2, 70, 90],
+    "thread_append": [1, 2, 3, 90],
+    "thread_overwrite": [70],
+    "pool_insert": [1, 2, 70, 90],
+    "to_thread_insert": [1, 2, 70, 90],
+}
 
 
-@pytest.mark.parametrize("route", ["thread_insert", "thread_append"])
+@pytest.mark.parametrize(("route", "operation"), _THREAD_ROUTES)
 def test_a_stamped_write_over_a_stray_that_landed_in_the_batch_is_refused_before_it_lands(
-    spark: ReparkSession, tables: Path, route: str
+    spark: ReparkSession, tables: Path, route: str, operation: str
 ) -> None:
     refused: list[str] = []
 
@@ -475,20 +458,23 @@ def test_a_stamped_write_over_a_stray_that_landed_in_the_batch_is_refused_before
     body = _Guarded(spark, route, "append")
     failure = _recovery(_start(spark, body, tables))
     stray = _unstamped_ids(spark)[-1]
+    named = f"sink advanced to snapshot {stray} ({operation}) without a stamp"
     assert len(refused) == 1
     assert _OVER_A_STRAY in refused[0]
-    assert f"snapshot {stray}" in refused[0]
-    assert _log(spark)[-2:] == [("append", "0"), ("append", None)]
-    assert f"sink advanced to snapshot {stray} (append) without a stamp" in str(failure)
+    assert f"snapshot {stray} ({operation})" in refused[0]
+    assert _log(spark)[-2:] == [("append", "0"), (operation, None)]
+    assert named in str(failure)
     assert "Every start refuses while that snapshot sits above the newest stamped batch" in str(
         failure
     )
+    assert "It sits under the stamped batch" not in str(failure)
+    assert failure.epoch == 1
     assert isinstance(failure.__cause__, PySparkException)
     rows = _ids(spark)
-    assert rows == ([1, 2, 3, 90] if route == "thread_append" else [1, 2, 70, 90])
+    assert rows == _ROWS_AFTER_A_REFUSED_STAMP[route]
     for _ in range(2):
         resumed = _Stray(spark, route, "append", at=9)
         again = _recovery(_start(spark, resumed, tables))
-        assert f"sink advanced to snapshot {stray} (append) without a stamp" in str(again)
+        assert named in str(again)
         assert resumed.calls == 0
         assert _ids(spark) == rows

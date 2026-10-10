@@ -31,6 +31,20 @@ That write is now refused by name (registry row `MB-4-RESERVED-SUMMARY-KEYS-1`),
 maintenance path exists against a live `foreachBatch` sink, sanctioned or not. Another
 streaming query's stamped batches still pass, by design.
 
+**A MUST before MB-5 closes (owner ruling D3, 2026-10-10, MB-4 fold 5): expiry on a sink
+with a live `foreachBatch` query retains the newest two stamps and everything between.** The
+lineage walk needs the stretch under the newest stamp to tell a stray from a clean sink. A
+stray left under a stamp, a process death before the driver's check, and an expiry that keeps
+only the newest snapshot leave nothing to read: the next start runs on (measured: source 32
+rows, sink 36). Fold 5 stops this build from committing a stamp over a stray, so the state is
+no longer produced on a catalog that checks a commit's requirements; stamps written before
+that rule, and a catalog that applies a commit without checking them, are still exposed. The
+sanctioned maintenance path must therefore own expiry for such a sink: `expire_snapshots`
+through it keeps this query's two newest stamped snapshots and every snapshot between them,
+whatever `retain_last` and `older_than` say, or refuses. Recording the expected parent in
+every stamp was weighed as the durable alternative and not adopted: another query's stamp
+that lands inside a batch from a second process mismatches without a stray (ledger, fold 5).
+
 **What the check does not look at**, measured in the third verify and kept: between batches, a
 property-only commit, a schema change, a branch or tag, a staged or branch write,
 `compute_table_stats`, and `expire_snapshots` that keeps the newest stamp. A shape for this

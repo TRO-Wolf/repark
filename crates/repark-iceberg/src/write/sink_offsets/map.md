@@ -31,20 +31,47 @@ directory holds the piece split out of it. The test files of the module stay bes
   - **A healthy sink is not refused.** With nothing unstamped under the newest stamp the
     walk answers "clean" with or without a bound: after an expiry that keeps one, two or
     three snapshots both doors run on.
-  - **`stray_at_a_table_start`** is the same walk for the `toTable` door. It runs only when
-    the name holds a starting mark or its newest stamp on the main branch is a
-    `foreachBatch` stamp (a stamp without the Spark keys the `toTable` door writes). A name
-    whose newest stamp is a `toTable` stamp, or which has neither stamp nor mark, is
-    answered "clean" as before.
+  - **`carried_by_foreach`** answers whether the `toTable` door walks a name (owner ruling
+    D2, 2026-10-10): yes when the sink holds the name's starting mark, or any stamp of the
+    name on the main branch is a `foreachBatch` stamp (one without the two Spark keys the
+    `toTable` door writes). Such a name is walked with the `foreachBatch` rules for as long
+    as that stamp is retained, also after later `toTable` batches. A name with only
+    `toTable` stamps, or with neither stamp nor mark, is not walked.
+  - **Why reporting with no floor is not a false positive** (owner ruling D1, measured). The
+    walk follows parent pointers from the newest stamp. An expiry removes snapshots from the
+    old end of that chain, so what stays reachable is an unbroken run from the head: when the
+    head the query started on is gone, everything older on the chain is unreachable too, and
+    an unstamped snapshot still reachable under the newest stamp was committed after the
+    query started. Measured on the release build with `retain_last`, `older_than`, a tag and
+    a branch holding a snapshot older than the starting head, and a rollback followed by an
+    expiry: the tagged or branched old snapshot stays in the table but is not reachable from
+    the stamp and is never reported; 9 healthy sinks ran on exactly, 7 real strays were
+    refused, and a rollback under the stamps is refused by MB-2's resume check before the
+    walk. The cells are in the ledger's fold 5.
   - Cost: unchanged in kind. One pass over snapshots in the loaded metadata, no catalog
     call, no file read; one step on a healthy sink. It reads to the end of the retained
     lineage only when no bound is retained.
   - Pins in `sink_offsets_lineage_tests.rs`: the three lost bounds with their reasons, above
     and under a stamp; a sink with only stamps under the newest is clean without a bound, and
-    a `toTable`-begun first stamp over older rows is clean; the `toTable` entry walks only a
-    name whose mark or newest stamp is a `foreachBatch` one. Four older pins stamped a first
-    batch with no mark over a seeded sink; they now write the mark first, as the driver does.
+    a `toTable`-begun first stamp over older rows is clean; a name is walked on the `toTable`
+    door once it ever carried a `foreachBatch` stamp or mark, and the stretch between two
+    later `toTable` stamps is then read. Four older pins stamped a first batch with no mark
+    over a seeded sink; they now write the mark first, as the driver does.
   pins: mb-4-foreach-eo/C-040, C-041, C-042
+- `append_fence.rs`, `lineage.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10, owner ruling:
+  prevention): a stamp is not committed over a stray.** The arm that let a stray end under a
+  batch's own stamp was not a re-base that skipped the fence; the fence ran on every attempt
+  and passed, for two reasons. The claim took whatever head the body's write had loaded as
+  its base, never comparing it with the head the driver read when the batch began; and
+  `breach` looked only for this query's own stamps between the refreshed head and that base.
+  Now `breach` also answers `Breach::Stray` for an unstamped snapshot in that stretch, on a
+  `foreachBatch` stamp, and the claim makes the matching check against the batch-start head
+  (the parent map, `sink_offsets.rs`). Another query's stamp in either stretch passes, and a
+  `toTable` stamp is not checked: that door takes other writers. Pins:
+  `a_stamped_commit_is_refused_over_a_stray_that_landed_after_the_batch_began` (the claim,
+  twice, and the `toTable` control), `the_fence_refuses_a_stray_that_landed_between_the_claim_and_the_commit`,
+  `another_query_s_stamp_since_the_batch_began_does_not_refuse_the_stamped_commit`.
+  pins: mb-4-foreach-eo/C-044
 - `lineage.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10, owner ruling on the third verify's
   first S1): the walk goes under the newest stamp.** `stray_on_main(table, query, baseline)`
   replaces `unstamped_since_stamp`. It reads the main lineage once, in memory, and looks at

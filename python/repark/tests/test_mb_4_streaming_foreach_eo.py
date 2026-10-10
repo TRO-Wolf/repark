@@ -122,6 +122,11 @@ _KILL_HARNESS = textwrap.dedent(
             writer = threading.Thread(target=frame.writeTo("sc.eo.snk").append)
             writer.start()
             writer.join()
+            try:
+                frame.writeTo("sc.eo.snk").append()
+            except Exception as error:
+                print("REFUSED " + str(error), flush=True)
+                os._exit(47)
         frame.writeTo("sc.eo.snk").append()
         if mode == "exit_after_write" and epoch == arg:
             os._exit(42)
@@ -571,72 +576,69 @@ def test_stray_then_kill_at_the_first_batch_refuses_the_first_restart(tmp_path: 
         assert report["epochs"] == []
 
 
-@pytest.mark.parametrize("epoch", [0, 2])
-def test_kill_between_a_twice_written_batch_and_the_audit_refuses_every_restart(
-    tmp_path: Path, epoch: int
-) -> None:
-    assert _harness(tmp_path, "init", 8)[0] == 0
-    assert _harness(tmp_path, "write_twice_then_exit", epoch)[0] == 46
-    twice = sorted([*range(4 * (epoch + 1)), *range(4 * epoch, 4 * (epoch + 1))])
-    for _ in range(2):
-        code, end, report = _harness_end(tmp_path)
-        assert code == 7
-        assert end.startswith("RecoveryRequiredException")
-        assert "(append) without a stamp" in end
-        assert "It sits under the stamped batch at snapshot" in end
-        assert report["sink"] == twice
-        assert report["epochs"] == list(range(epoch + 1))
-
-
-_UNDER = "It sits under the stamped batch at snapshot"
-_PREVIOUS_GONE = (
-    "No rollback is offered, because the stamped batch before it is no longer in the table"
-)
+_ABOVE = "Every start refuses while that snapshot sits above the newest stamped batch"
 _HEAD_GONE = (
-    "No rollback is offered, because the snapshot the query started on is no longer in the table"
+    "No rollback is offered, because the snapshot the query started on is no longer on the "
+    "sink's main branch"
 )
 
 
 def _contiguous_up_to(epochs: list[int], newest: int) -> bool:
-    return bool(epochs) and epochs == list(range(epochs[0], newest + 1))
+    return epochs == list(range(epochs[0] if epochs else 0, newest + 1))
 
 
-def _refused_under_the_stamp(tmp_path: Path, mode: str, sink: list[int], newest: int) -> str:
+def _refused_above_the_stamp(tmp_path: Path, mode: str, sink: list[int], newest: int) -> str:
     code, end, report = _harness_end(tmp_path, mode)
     assert code == 7
     assert end.startswith("RecoveryRequiredException")
     assert "(append) without a stamp" in end
-    assert _UNDER in end
+    assert _ABOVE in end
+    assert "It sits under the stamped batch" not in end
     assert report["sink"] == sink
     assert _contiguous_up_to(report["epochs"], newest)
     return end
 
 
-def test_expiry_of_the_previous_stamp_does_not_hide_a_stray_under_the_newest(
-    tmp_path: Path,
-) -> None:
-    assert _harness(tmp_path, "init", 8)[0] == 0
-    assert _harness(tmp_path, "write_twice_then_exit", 2)[0] == 46
-    assert _harness(tmp_path, "expire", 2)[0] == 0
-    twice = sorted([*range(12), *range(8, 12)])
-    for _ in range(2):
-        end = _refused_under_the_stamp(tmp_path, "run", twice, 2)
-        assert _PREVIOUS_GONE in end
-        assert "roll the sink back to snapshot" not in end
-        assert "To keep its rows, start the query under a new name with the reader option" in end
-
-
 @pytest.mark.parametrize("epoch", [0, 2])
-def test_a_table_door_start_under_the_same_name_does_not_hide_a_stray_under_a_stamp(
+def test_a_twice_written_batch_is_refused_at_its_stamped_write_and_a_kill_hides_nothing(
     tmp_path: Path, epoch: int
 ) -> None:
     assert _harness(tmp_path, "init", 8)[0] == 0
-    assert _harness(tmp_path, "write_twice_then_exit", epoch)[0] == 46
-    twice = sorted([*range(4 * (epoch + 1)), *range(4 * epoch, 4 * (epoch + 1))])
-    _refused_under_the_stamp(tmp_path, "table", twice, epoch)
+    assert _harness(tmp_path, "write_twice_then_exit", epoch)[0] == 47
+    once = list(range(4 * (epoch + 1)))
+    for _ in range(2):
+        _refused_above_the_stamp(tmp_path, "run", once, epoch - 1)
+
+
+def test_no_expiry_hides_a_stray_that_landed_in_a_killed_batch(tmp_path: Path) -> None:
+    assert _harness(tmp_path, "init", 8)[0] == 0
+    assert _harness(tmp_path, "write_twice_then_exit", 2)[0] == 47
+    once = list(range(12))
+    assert _harness(tmp_path, "expire", 2)[0] == 0
+    for _ in range(2):
+        end = _refused_above_the_stamp(tmp_path, "run", once, 1)
+        assert "To discard its rows, roll the sink back to snapshot" in end
+    assert _harness(tmp_path, "expire", 1)[0] == 0
+    for mode in ("run", "table", "run"):
+        code, end, report = _harness_end(tmp_path, mode)
+        assert code == 7
+        assert end.startswith("RecoveryRequiredException")
+        assert "stamped snapshot expired" in end
+        assert report["sink"] == once
+        assert report["epochs"] == []
+
+
+@pytest.mark.parametrize("epoch", [0, 2])
+def test_a_table_door_start_under_the_same_name_does_not_run_past_a_stray(
+    tmp_path: Path, epoch: int
+) -> None:
+    assert _harness(tmp_path, "init", 8)[0] == 0
+    assert _harness(tmp_path, "write_twice_then_exit", epoch)[0] == 47
+    once = list(range(4 * (epoch + 1)))
+    _refused_above_the_stamp(tmp_path, "table", once, epoch - 1)
     assert _harness(tmp_path, "append", 2)[0] == 0
-    _refused_under_the_stamp(tmp_path, "table", twice, epoch)
-    _refused_under_the_stamp(tmp_path, "run", twice, epoch)
+    _refused_above_the_stamp(tmp_path, "table", once, epoch - 1)
+    _refused_above_the_stamp(tmp_path, "run", once, epoch - 1)
 
 
 def test_a_stray_above_the_newest_foreach_stamp_refuses_a_table_door_start(
@@ -646,24 +648,31 @@ def test_a_stray_above_the_newest_foreach_stamp_refuses_a_table_door_start(
     assert _harness(tmp_path, "exit_after_write", 1)[0] == 42
     assert _harness(tmp_path, "seed", 7000)[0] == 0
     for _ in range(2):
-        code, end, report = _harness_end(tmp_path, "table")
-        assert code == 7
-        assert end.startswith("RecoveryRequiredException")
-        assert "Every start refuses while that snapshot sits above the newest stamped batch" in end
-        assert report["sink"] == [*range(8), 7000]
-        assert report["epochs"] == [0, 1]
+        _refused_above_the_stamp(tmp_path, "table", [*range(8), 7000], 1)
 
 
-def test_a_stray_under_the_first_stamp_prints_no_rollback_once_the_starting_head_is_expired(
+def test_a_foreign_commit_refuses_a_table_door_start_once_the_name_ran_through_foreach(
+    tmp_path: Path,
+) -> None:
+    assert _harness(tmp_path, "init", 2)[0] == 0
+    assert _harness_end(tmp_path, "run")[0] == 0
+    assert _harness(tmp_path, "append", 1)[0] == 0
+    assert _harness_end(tmp_path, "table")[0] == 0
+    assert _harness(tmp_path, "seed", 7000)[0] == 0
+    assert _harness(tmp_path, "append", 1)[0] == 0
+    for _ in range(2):
+        _refused_above_the_stamp(tmp_path, "table", [*range(12), 7000], 2)
+
+
+def test_a_stray_before_any_stamp_prints_no_rollback_once_the_starting_head_is_expired(
     tmp_path: Path,
 ) -> None:
     assert _harness(tmp_path, "init", 8)[0] == 0
     assert _harness(tmp_path, "seed", 9000)[0] == 0
-    assert _harness(tmp_path, "write_twice_then_exit", 0)[0] == 46
-    assert _harness(tmp_path, "expire", 2)[0] == 0
-    twice = [0, 0, 1, 1, 2, 2, 3, 3, 9000]
+    assert _harness(tmp_path, "write_twice_then_exit", 0)[0] == 47
+    assert _harness(tmp_path, "expire", 1)[0] == 0
     for _ in range(2):
-        end = _refused_under_the_stamp(tmp_path, "run", twice, 0)
+        end = _refused_above_the_stamp(tmp_path, "run", [0, 1, 2, 3, 9000], -1)
         assert _HEAD_GONE in end
         assert "roll the sink back to snapshot" not in end
 

@@ -271,23 +271,31 @@ pins: mb-3/C-031
   pins: mb-4/C-114, C-029
 - `run.rs`, `exactly_once_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10, rulings on the
   fourth verify).**
-  - **`Run::refuse_moved_sink` runs on both doors.** The `toTable` door asks
-    `stray_at_a_table_start`, at the start and before every batch: a name that holds a
-    starting mark, or whose newest stamp is a `foreachBatch` one, is walked and refused
-    exactly as the `foreachBatch` door refuses it. Fold 4 walked on the `foreachBatch` door
-    only, so one `toTable` run under the same name stamped over a stray that a process death
-    had hidden, and no later start read that stretch (source 40, sink 44). A name that only
-    ran through `toTable` is unchanged; the sink-replaced check stays a `foreachBatch` rule.
+  - **`Run::refuse_moved_sink` runs on both doors.** `Run::walk_a_foreach_name` asks
+    `carried_by_foreach` once, at a `toTable` start: a name that holds a starting mark, or
+    that ever carried a `foreachBatch` stamp still on the main branch, is walked at the
+    start and before every batch and refused exactly as the `foreachBatch` door refuses it
+    (owner ruling D2). Fold 4 walked on the `foreachBatch` door only, so one `toTable` run
+    under the same name stamped over a stray that a process death had hidden, and no later
+    start read that stretch (source 40, sink 44). A name that only ran through `toTable` is
+    unchanged; the sink-replaced check stays a `foreachBatch` rule.
+  - **`Run::enter_scope` enters the scope with `BatchScope::enter_on`**, so the scope holds
+    the head the driver read when the batch began and a `foreachBatch` stamped commit is
+    refused over a stray that landed after it (prevention; the rule is in the iceberg
+    crate's `sink_offsets` maps).
   - **`fixed_at_the_batch_start`** optimizes the frame once before it goes to the body, with
     the state the batch was planned under, so `current_timestamp()` and `current_date()`
     are one value for the whole micro-batch: every action on the frame and the sink write
     see the same literal. Before, each action folded its own time (`collect()` and the
     stored row differed inside one body). Spark 4.1.2 measured: one value for two
     `collect()` calls 1.3 s apart and the write.
-  - Pins: a `toTable` start under a `foreachBatch` name refuses twice with the remedy the
-    batch's own ending printed, for a stray above the stamp and under it; a name that only
-    ran through `toTable` takes a foreign commit as before.
-  pins: mb-4-foreach-eo/C-041, C-043
+  - Pins: a stray beside the body's stamped commit never ends under the stamp (written
+    before it, the stamped commit is refused and the batch's rows land once; written after
+    it, the stray is the head) and two restarts refuse; a `toTable` start under a
+    `foreachBatch` name refuses twice with the remedy the batch's own ending printed; a name
+    that ran through `foreachBatch` and then `toTable` still refuses a foreign commit on the
+    `toTable` door; a name that only ran through `toTable` takes one as before.
+  pins: mb-4-foreach-eo/C-041, C-043, C-044
 - `run.rs`, `driver.rs`, `exactly_once_tests.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10,
   rulings on the third verify).**
   - **`Run::refuse_moved_sink`** asks `stray_on_main` (the walk above and under the newest

@@ -639,83 +639,173 @@ async fn a_sink_with_nothing_unstamped_under_its_newest_stamp_is_healthy_without
     let theirs = stamped_by_another_query(&catalog, &third, &[2]).await;
     let fourth = stamped(&catalog, &theirs, 4, &[3]).await;
     assert_eq!(walked(&fourth, query(), None), None);
-    assert_eq!(
-        stray_at_a_table_start(&fourth, query()).expect("the walk"),
-        None
-    );
 
     let (_second, catalog, ident) = fixture("healthy_table_begun").await;
     let seeded = append_plain(&catalog, &ident, &[1]).await;
     let begun = stamped_through(&catalog, &seeded, 0, SinkDoor::Table, &[2]).await;
     assert_eq!(walked(&begun, query(), None), None);
-    assert_eq!(
-        stray_at_a_table_start(&begun, query()).expect("the walk"),
-        None
-    );
+    assert!(!carried(&begun));
 }
 
-fn at_a_table_start(table: &Table) -> Option<(i64, bool, Floor)> {
-    stray_at_a_table_start(table, query())
-        .expect("the walk")
-        .map(|stray| (stray.snapshot.get(), stray.below, stray.floor))
+fn carried(table: &Table) -> bool {
+    carried_by_foreach(table, query()).expect("the lineage reads")
 }
 
 #[tokio::test]
-async fn a_table_start_walks_only_a_name_whose_mark_or_newest_stamp_is_a_foreach_one() {
+async fn a_name_is_walked_on_the_table_door_once_it_ever_carried_a_foreach_stamp_or_mark() {
     let (_warehouse, catalog, ident) = fixture("table_only").await;
     let seeded = append_plain(&catalog, &ident, &[1]).await;
-    assert_eq!(at_a_table_start(&seeded), None);
+    assert!(!carried(&seeded));
     let first = stamped_through(&catalog, &seeded, 0, SinkDoor::Table, &[2]).await;
     let foreign = append_plain(&catalog, &ident, &[3]).await;
-    assert_eq!(at_a_table_start(&foreign), None);
     let second = stamped_through(&catalog, &foreign, 1, SinkDoor::Table, &[4]).await;
-    assert_eq!(at_a_table_start(&second), None);
-    assert_eq!(at_a_table_start(&first), None);
-    assert_eq!(
-        walked(&second, query(), None).map(|found| found.0),
-        Some(head(&foreign)),
-        "the foreach door reads the stretch between two table stamps"
-    );
+    assert!(!carried(&first));
+    assert!(!carried(&second));
+    let theirs = stamped_by_another_query(&catalog, &second, &[5]).await;
+    assert!(!carried(&theirs));
 
     let (_second, catalog, ident) = fixture("table_after_mark").await;
     let seeded = append_plain(&catalog, &ident, &[1]).await;
     let marked = commit_starting_mark(&catalog, &seeded, query())
         .await
         .expect("the mark");
-    assert_eq!(at_a_table_start(&marked), None);
-    let stray = append_plain(&catalog, &ident, &[2]).await;
-    assert_eq!(
-        at_a_table_start(&stray),
-        Some((
-            head(&stray),
-            false,
-            Floor::Head(Some(SnapshotId::new(head(&seeded))))
-        ))
-    );
-    let over = stamped(&catalog, &stray, 0, &[2]).await;
-    assert_eq!(
-        at_a_table_start(&over),
-        Some((
-            head(&stray),
-            true,
-            Floor::Head(Some(SnapshotId::new(head(&seeded))))
-        ))
-    );
-    let above = append_plain(&catalog, &ident, &[5]).await;
-    assert_eq!(
-        at_a_table_start(&above),
-        Some((head(&above), false, Floor::Newest))
+    assert!(carried(&marked));
+    let zero = stamped_through(&catalog, &marked, 0, SinkDoor::Table, &[2]).await;
+    assert!(
+        !carried(&zero),
+        "a mark the table door replaced leaves a table stamp and nothing else"
     );
 
     let (_third, catalog, ident) = fixture("table_after_foreach").await;
     let empty = catalog.load_table(&ident).await.expect("load");
-    let marked = commit_starting_mark(&catalog, &empty, query())
+    let zero = first_stamp(&catalog, &empty, &[1]).await;
+    assert!(carried(&zero));
+    let one = stamped_through(&catalog, &zero, 1, SinkDoor::Table, &[2]).await;
+    let two = stamped_through(&catalog, &one, 2, SinkDoor::Table, &[3]).await;
+    assert!(carried(&two), "the foreach stamp is still on the lineage");
+    let foreign = append_plain(&catalog, &ident, &[4]).await;
+    assert_eq!(
+        walked(&foreign, query(), None),
+        Some((head(&foreign), String::from("append")))
+    );
+    let three = stamped_through(&catalog, &foreign, 3, SinkDoor::Table, &[5]).await;
+    let under = stray_on_main(&three, query(), None)
+        .expect("the walk")
+        .expect("the stray between two table stamps of a foreach name");
+    assert!(under.below);
+    assert_eq!(under.snapshot.get(), head(&foreign));
+}
+
+fn refusal_text(error: &DataFusionError) -> String {
+    microbatch_cause(error).to_string()
+}
+
+#[tokio::test]
+async fn a_stamped_commit_is_refused_over_a_stray_that_landed_after_the_batch_began() {
+    let (_warehouse, catalog, ident) = fixture("over_a_stray").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let began = commit_starting_mark(&catalog, &seeded, query())
         .await
         .expect("the mark");
-    let zero = stamped(&catalog, &marked, 0, &[1]).await;
-    assert_eq!(at_a_table_start(&zero), None);
-    let one = stamped_through(&catalog, &zero, 1, SinkDoor::Table, &[2]).await;
-    let foreign = append_plain(&catalog, &ident, &[3]).await;
-    assert_eq!(at_a_table_start(&one), None);
-    assert_eq!(at_a_table_start(&foreign), None);
+    let stamp = stamp_for(0, SinkDoor::ForeachBatch);
+    let guard = BatchScope::enter_on(&began, stamp.clone()).expect("enter");
+    let stray = append_plain(&catalog, &ident, &[2]).await;
+    for attempt in 0..2 {
+        let files = stage(&stray, &[3]).await;
+        let refused = guard
+            .scope_body(commit_append_with_summary(
+                &catalog,
+                &stray,
+                files,
+                &[],
+                None,
+            ))
+            .await
+            .expect_err("a stamped commit over a stray");
+        assert_eq!(
+            refusal_text(&refused),
+            format!(
+                "epoch 0: snapshot {id} (append) landed on the sink without a stamp after this batch began, so the batch's stamped commit is refused before it lands over it",
+                id = head(&stray)
+            ),
+            "attempt {attempt}"
+        );
+        assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    }
+    let after = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(head(&after), head(&stray));
+    drop(guard);
+
+    let table_door = stamp_for(0, SinkDoor::Table);
+    let guard = BatchScope::enter_on(&began, table_door).expect("enter");
+    let files = stage(&stray, &[4]).await;
+    let landed = commit_append_with_summary(&catalog, &stray, files, &scoped(&guard), None)
+        .await
+        .expect("the table door takes other writers");
+    assert_eq!(stamped_snapshots(&landed), 1);
+}
+
+#[tokio::test]
+async fn another_query_s_stamp_since_the_batch_began_does_not_refuse_the_stamped_commit() {
+    let (_warehouse, catalog, ident) = fixture("over_theirs").await;
+    let empty = catalog.load_table(&ident).await.expect("load");
+    let began = commit_starting_mark(&catalog, &empty, query())
+        .await
+        .expect("the mark");
+    let theirs = stamped_by_another_query(&catalog, &began, &[1]).await;
+    let guard = BatchScope::enter_on(&began, stamp_for(0, SinkDoor::ForeachBatch)).expect("enter");
+    let files = stage(&theirs, &[2]).await;
+    let landed = guard
+        .scope_body(commit_append_with_summary(
+            &catalog,
+            &theirs,
+            files,
+            &[],
+            None,
+        ))
+        .await
+        .expect("another query's stamp is not a stray");
+    assert_eq!(
+        guard.outcome(),
+        ScopeOutcome::Committed {
+            snapshot: SnapshotId::new(head(&landed))
+        }
+    );
+}
+
+#[tokio::test]
+async fn the_fence_refuses_a_stray_that_landed_between_the_claim_and_the_commit() {
+    let (_warehouse, catalog, ident) = fixture("fence_stray").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let stray = append_plain(&catalog, &ident, &[2]).await;
+    for (door, refuses) in [(SinkDoor::ForeachBatch, true), (SinkDoor::Table, false)] {
+        let claimed = ClaimedStamp {
+            stamp: stamp_for(0, door),
+            base: Some(SnapshotId::new(head(&seeded))),
+            started: None,
+        };
+        let fenced = AppendFence::install(&catalog, &claimed);
+        let current = catalog.load_table(&ident).await.expect("reload");
+        let tx = Transaction::new(&current);
+        let tx = tx
+            .update_table_properties()
+            .set(String::from("fence.probe"), String::from("x"))
+            .apply(tx)
+            .expect("apply");
+        let outcome = tx.commit(fenced.as_ref()).await;
+        match outcome {
+            Err(error) if refuses => {
+                let text = error.to_string();
+                assert!(
+                    text.contains(&format!(
+                        "snapshot {id} (append) landed on the sink without a stamp after this batch began",
+                        id = head(&stray)
+                    )),
+                    "{text}"
+                );
+            }
+            Ok(_) if !refuses => {}
+            other => panic!("{door:?}: {other:?}"),
+        }
+    }
 }

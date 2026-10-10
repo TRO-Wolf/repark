@@ -125,11 +125,15 @@ repark-core's error map.
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
 - `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10,
-  ruling on the fourth verify's S1):** the module re-exports `stray_at_a_table_start`, the
-  `toTable` door's entry to the lineage walk, beside `stray_on_main`. The rule (the walk
-  reports without a lower bound; which names the `toTable` door walks) and the pins are in
-  the child directory's map under `lineage.rs`, fold 5.
-  pins: mb-4-foreach-eo/C-040, C-041
+  rulings on the fourth verify's S1):** the module re-exports `carried_by_foreach`, which
+  tells the `toTable` door whether a name is walked. The scope learns the head the driver
+  read when the batch began: `BatchScope::enter_on(table, stamp)` records it (`Began::At`),
+  while `enter` leaves it unread for callers that hold no table. On a `foreachBatch` stamp
+  `claim_checked` refuses, before the claim is taken, when `stray_since` finds an unstamped
+  snapshot between the head of the table the write loaded and that head; `over_a_stray` is
+  the one refusal text, shared with the fence. The rules and the pins are in the child
+  directory's map under `lineage.rs` and `append_fence.rs`, fold 5.
+  pins: mb-4-foreach-eo/C-040, C-041, C-044
 - `write_options.rs`, `sink_offsets.rs`, `merge/snapshot_commit.rs`,
   `sink_offsets_scope_tests.rs`, `sink_offsets_tests.rs` — **MB-4-FOREACH-EO fold 4
   (2026-10-10, ruling on the third verify's first S2): a batch write cannot forge a stamp.**

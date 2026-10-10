@@ -17,8 +17,8 @@ use repark_iceberg::microbatch::window::WindowLimit;
 use repark_iceberg::write::nested_ns_gate::{NestedWrite, refuse_nested_ns_supply};
 use repark_iceberg::write::sink_offsets::{
     BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, SinkMark, Stray,
-    commit_stamp_only, commit_starting_mark, read_resume_point, read_starting_mark,
-    resolve_unknown_outcome, stray_at_a_table_start, stray_on_main,
+    carried_by_foreach, commit_stamp_only, commit_starting_mark, read_resume_point,
+    read_starting_mark, resolve_unknown_outcome, stray_on_main,
 };
 use repark_iceberg::write::{
     CommitStateUnknownError, EncryptedTableRefusal, SESSION_SNAPSHOT_PREFIX,
@@ -62,6 +62,7 @@ struct Cursor {
     epoch: Epoch,
     from: Option<InputOffset>,
     baseline: Option<i64>,
+    walked: bool,
 }
 
 enum Wake {
@@ -128,6 +129,7 @@ impl Run {
         self.shared.resumed(resumed.clone());
         let mut cursor = self.resume(resumed.as_ref())?;
         self.refuse_unwritable_sink(&sink)?;
+        self.walk_a_foreach_name(&sink, &mut cursor)?;
         let sink = self
             .mark_the_start(sink, &mut cursor, resumed.is_none())
             .await?;
@@ -235,7 +237,7 @@ impl Run {
         let deadline = Instant::now() + self.shared.catalog_timeout;
         loop {
             let sink = self.load_sink().await?;
-            match BatchScope::enter(TableUuid::of(&sink), stamp.clone()) {
+            match BatchScope::enter_on(&sink, stamp.clone()) {
                 Ok(guard) => return Ok(Some((sink, guard))),
                 Err(MicroBatchError::SinkBusy { .. }) if Instant::now() < deadline => {
                     let retry = (Instant::now() + self.shared.polling_delay).min(deadline);
@@ -254,6 +256,7 @@ impl Run {
     }
 
     fn resume(&self, record: Option<&SinkRecord>) -> Result<Cursor, MicroBatchError> {
+        let foreach = matches!(self.door, Door::ForeachBatch(_));
         let Some(record) = record else {
             let generation = Generation::new(1).ok_or_else(|| {
                 MicroBatchError::Catalog(String::from("generation 1 is not a valid generation"))
@@ -263,6 +266,7 @@ impl Run {
                 epoch: Epoch::FIRST,
                 from: None,
                 baseline: None,
+                walked: foreach,
             });
         };
         let current = self.source.table_identifier();
@@ -287,6 +291,7 @@ impl Run {
             epoch: record.epoch.next(),
             from: record.offsets.inputs().first().cloned(),
             baseline: None,
+            walked: foreach,
         })
     }
 
@@ -345,6 +350,19 @@ impl Run {
         ))
     }
 
+    fn walk_a_foreach_name(
+        &self,
+        sink: &Table,
+        cursor: &mut Cursor,
+    ) -> Result<(), MicroBatchError> {
+        if matches!(self.door, Door::Table) && carried_by_foreach(sink, self.shared.id)? {
+            let mark = read_starting_mark(sink, self.shared.id)?;
+            cursor.baseline = mark.and_then(|mark| mark.head).map(SnapshotId::get);
+            cursor.walked = true;
+        }
+        Ok(())
+    }
+
     fn refuse_unwritable_sink(&self, sink: &Table) -> Result<(), MicroBatchError> {
         match &self.door {
             Door::Table => {
@@ -364,14 +382,13 @@ impl Run {
         sink: &Table,
         cursor: &Cursor,
     ) -> Result<(), MicroBatchError> {
-        let found = match &self.door {
-            Door::Table => stray_at_a_table_start(sink, self.shared.id)?,
-            Door::ForeachBatch(_) => {
-                self.refuse_replaced_sink(sink, cursor.epoch)?;
-                stray_on_main(sink, self.shared.id, cursor.baseline)?
-            }
-        };
-        match found {
+        if !cursor.walked {
+            return Ok(());
+        }
+        if matches!(self.door, Door::ForeachBatch(_)) {
+            self.refuse_replaced_sink(sink, cursor.epoch)?;
+        }
+        match stray_on_main(sink, self.shared.id, cursor.baseline)? {
             Some(stray) => Err(self.recovery(cursor.epoch, self.stray_reason(&stray).await)),
             None => Ok(()),
         }

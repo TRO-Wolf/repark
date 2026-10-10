@@ -312,8 +312,7 @@ async fn a_stray_sink_write_with_no_stamped_commit_ends_recovery_required() {
 }
 
 #[tokio::test]
-async fn a_stray_sink_write_beside_the_stamped_commit_refuses_every_restart_above_or_under_the_stamp()
- {
+async fn a_stray_sink_write_beside_the_stamped_commit_never_ends_under_the_stamp() {
     for own in [Own::AppendAfter, Own::AppendBefore] {
         let fixture = Fixture::new().await;
         bronze(&fixture).await;
@@ -327,28 +326,27 @@ async fn a_stray_sink_write_beside_the_stamped_commit_refuses_every_restart_abov
             (1, Some(0), unstamped[0], String::from("append")),
             "the handle does not record the epoch durable"
         );
-        assert_eq!(stamped_epochs(&sink), [0, 1]);
-        assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5]);
-        let (newest, newest_position) = stamp_at(&sink, 1);
-        let (previous, previous_position) = stamp_at(&sink, 0);
-        let expected = if own == Own::AppendAfter {
-            StrayRemedy {
-                under: Some(newest),
-                discard: Discard::RollBack {
-                    to: previous,
-                    then: Restart::NewName(Some(previous_position)),
-                },
-                keep: Restart::NewName(Some(newest_position)),
-            }
+        let landed = own == Own::AppendBefore;
+        let (stamps, rows, durable): (&[u64], &[i64], u64) = if landed {
+            (&[0, 1], &[1, 2, 3, 4, 4, 5, 5], 1)
         } else {
-            StrayRemedy {
-                under: None,
-                discard: Discard::RollBack {
-                    to: newest,
-                    then: Restart::SameName,
-                },
-                keep: Restart::NewName(Some(newest_position)),
-            }
+            (&[0], &[1, 2, 3, 4, 5], 0)
+        };
+        assert_eq!(stamped_epochs(&sink), stamps, "{own:?}");
+        assert_eq!(fixture.ids(SINK).await, rows, "{own:?}");
+        assert_eq!(
+            sink.metadata().current_snapshot_id(),
+            Some(unstamped[0]),
+            "{own:?}: the stray is the head, above every stamp"
+        );
+        let (newest, newest_position) = stamp_at(&sink, durable);
+        let expected = StrayRemedy {
+            under: None,
+            discard: Discard::RollBack {
+                to: newest,
+                then: Restart::SameName,
+            },
+            keep: Restart::NewName(Some(newest_position)),
         };
         assert_eq!(remedy(&error), expected, "{own:?}: the batch's own ending");
         for attempt in 0..2 {
@@ -359,12 +357,17 @@ async fn a_stray_sink_write_beside_the_stamped_commit_refuses_every_restart_abov
             let refused = ended_with(&fixture, &resumed).await;
             assert_eq!(
                 unstamped_commit(&refused),
-                (2, Some(1), unstamped[0], String::from("append")),
+                (
+                    durable + 1,
+                    Some(durable),
+                    unstamped[0],
+                    String::from("append")
+                ),
                 "{own:?}: restart {attempt}, which has no batch to run when it is 0"
             );
             assert_eq!(remedy(&refused), expected, "{own:?}: restart {attempt}");
             assert_eq!(resumed.calls(), 0, "a refused restart runs no body");
-            assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5]);
+            assert_eq!(fixture.ids(SINK).await, rows);
         }
     }
 }
@@ -567,7 +570,7 @@ async fn a_table_door_start_under_a_foreach_name_runs_the_walk_and_refuses_the_s
         let body = Shaped::new(&fixture.session, Stray::SpawnedAppend, 1, own);
         let error = ended_with(&fixture, &body).await;
         let expected = remedy(&error);
-        assert_eq!(expected.under.is_some(), own == Own::AppendAfter);
+        let rows = fixture.ids(SINK).await;
         for attempt in 0..2 {
             if attempt == 1 {
                 fixture.insert(SOURCE, "(6)").await;
@@ -577,11 +580,40 @@ async fn a_table_door_start_under_a_foreach_name_runs_the_walk_and_refuses_the_s
             let refused = handle
                 .await_termination(None)
                 .await
-                .expect_err("the table door walks a name whose newest stamp is a foreach one");
+                .expect_err("the table door walks a name that carried a foreach stamp");
             assert_eq!(handle.state(), QueryState::RecoveryRequired);
             assert_eq!(remedy(&refused), expected, "{own:?}: start {attempt}");
-            assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 4, 5, 5]);
+            assert_eq!(fixture.ids(SINK).await, rows);
         }
+    }
+}
+
+#[tokio::test]
+async fn a_name_that_ever_ran_through_foreach_stays_walked_on_the_table_door() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let body = Shaped::new(&fixture.session, Stray::Nothing, 9, Own::AppendAfter);
+    let foreach = started(&fixture, body.spec()).await;
+    assert_eq!(foreach.await_termination(None).await, Ok(true));
+    fixture.insert(SOURCE, "(6)").await;
+    let table = started(&fixture, table_spec(Trigger::AvailableNow, &options(ONE))).await;
+    assert_eq!(table.await_termination(None).await, Ok(true));
+    assert_eq!(stamped_epochs(&fixture.table("silver").await), [0, 1, 2]);
+    fixture.insert(SINK, "(99)").await;
+    fixture.insert(SOURCE, "(7)").await;
+    for _ in 0..2 {
+        let again = started(&fixture, table_spec(Trigger::AvailableNow, &options(ONE))).await;
+        let refused = again
+            .await_termination(None)
+            .await
+            .expect_err("a foreign commit above the newest table stamp of a foreach name");
+        let foreign = unstamped_snapshots(&fixture.table("silver").await)[0];
+        assert_eq!(
+            unstamped_commit(&refused),
+            (3, Some(2), foreign, String::from("append"))
+        );
+        assert_eq!(remedy(&refused).under, None);
+        assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5, 6, 99]);
     }
 }
 

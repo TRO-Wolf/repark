@@ -16,18 +16,11 @@ _START_AFTER = "repark.cdc.start-after-snapshot-id"
 _ROLL_BACK = re.compile(
     r"roll the sink back to snapshot (\d+) \(CALL system\.rollback_to_snapshot\)"
 )
-_DISCARD_NEW_NAME = re.compile(
-    r"To discard its rows, roll the sink back to snapshot \d+ \(CALL "
-    r"system\.rollback_to_snapshot\) and start the query under a new name"
-    rf"(?: with the reader option {re.escape(_START_AFTER)}=(\d+))?\."
-)
 _KEEP = re.compile(
     r"To keep its rows, start the query under a new name"
     rf"(?: with the reader option {re.escape(_START_AFTER)}=(\d+))?[.;]"
 )
 _SAME_NAME = "and start the query again."
-_UNDER = "It sits under the stamped batch at snapshot {stamp}: rolling the sink back to its "
-_UNDER += "newest stamped snapshot does not remove it, and every start refuses while it is there."
 _ABOVE = "Every start refuses while that snapshot sits above the newest stamped batch."
 _EMPTY_START = (
     "The query first started on an empty sink, so there is no snapshot to roll back to: "
@@ -149,86 +142,6 @@ def _roll_back(spark: ReparkSession, text: str) -> int:
     target = int(_ROLL_BACK.search(text).group(1))
     spark.sql(f"CALL sc.system.rollback_to_snapshot('rm.snk', {target})")
     return target
-
-
-def _stray_under_the_stamp(spark: ReparkSession, root: Path, at: int) -> int:
-    with pytest.raises(RecoveryRequiredException):
-        _start(spark, _Body(spark, "under", at), root).awaitTermination()
-    snapshots = _snapshots(spark, _SINK)
-    assert snapshots[-1][1] == str(at)
-    assert snapshots[-2][1] is None
-    return snapshots[-2][0]
-
-
-def test_stray_under_the_stamp_refuses_every_start_and_the_discard_remedy_is_exact(
-    spark: ReparkSession, tables: Path
-) -> None:
-    stray = _stray_under_the_stamp(spark, tables, at=1)
-    assert _ids(spark) == [1, 2, 3, 3, 90]
-    spark.sql(f"INSERT INTO {_SOURCE} VALUES (4, 'd')")
-    text = _refused(spark, tables, stray)
-    assert _UNDER.format(stamp=_stamped(spark, 1)) in text
-    discard = _DISCARD_NEW_NAME.search(text)
-    assert discard.group(1) == str(_snapshots(spark, _SOURCE)[0][0])
-    assert _roll_back(spark, text) == _stamped(spark, 0)
-    old_name = _Body(spark)
-    with pytest.raises(RecoveryRequiredException, match="disagrees with property epoch 1"):
-        _start(spark, old_name, tables).awaitTermination()
-    assert old_name.calls == 0
-    replayed = _Body(spark)
-    restart = _start(spark, replayed, tables, name="rm2", start_after=discard.group(1))
-    assert restart.awaitTermination() is None
-    assert replayed.calls == 2
-    assert _ids(spark) == [1, 2, 3, 4, 90]
-
-
-def test_stray_under_the_stamp_and_the_keep_remedy_delivers_the_rest_once(
-    spark: ReparkSession, tables: Path
-) -> None:
-    stray = _stray_under_the_stamp(spark, tables, at=1)
-    spark.sql(f"INSERT INTO {_SOURCE} VALUES (4, 'd')")
-    text = _refused(spark, tables, stray)
-    keep = _KEEP.search(text)
-    assert keep.group(1) == str(_snapshots(spark, _SOURCE)[1][0])
-    assert "a new name without that option delivers every stamped batch again" in text
-    kept = _Body(spark)
-    restart = _start(spark, kept, tables, name="rm2", start_after=keep.group(1))
-    assert restart.awaitTermination() is None
-    assert kept.calls == 1
-    assert _ids(spark) == [1, 2, 3, 3, 4, 90]
-
-
-def test_stray_under_the_first_stamp_rolls_back_to_the_head_the_query_started_on(
-    spark: ReparkSession, tables: Path
-) -> None:
-    seed = _snapshots(spark, _SINK)[0][0]
-    stray = _stray_under_the_stamp(spark, tables, at=0)
-    assert _ids(spark) == [1, 1, 2, 2, 90]
-    text = _refused(spark, tables, stray)
-    assert _UNDER.format(stamp=_stamped(spark, 0)) in text
-    discard = _DISCARD_NEW_NAME.search(text)
-    assert discard.group(1) is None
-    assert _roll_back(spark, text) == seed
-    replayed = _Body(spark)
-    assert _start(spark, replayed, tables, name="rm2").awaitTermination() is None
-    assert replayed.calls == 2
-    assert _ids(spark) == [1, 2, 3, 90]
-
-
-def test_stray_under_the_first_stamp_of_an_empty_sink_offers_no_rollback(
-    spark: ReparkSession, empty_sink: Path
-) -> None:
-    stray = _stray_under_the_stamp(spark, empty_sink, at=0)
-    text = _refused(spark, empty_sink, stray)
-    assert _EMPTY_START in text
-    assert _ROLL_BACK.search(text) is None
-    keep = _KEEP.search(text)
-    assert keep.group(1) == str(_snapshots(spark, _SOURCE)[0][0])
-    kept = _Body(spark)
-    restart = _start(spark, kept, empty_sink, name="rm2", start_after=keep.group(1))
-    assert restart.awaitTermination() is None
-    assert kept.calls == 1
-    assert _ids(spark) == [1, 1, 2, 2, 3]
 
 
 def _foreign_insert_after_two_batches(spark: ReparkSession, root: Path) -> int:

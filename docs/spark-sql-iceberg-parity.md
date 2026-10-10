@@ -4120,13 +4120,27 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   stamp or the head the query started on, an unstamped snapshot there still refuses every
   start (the fourth verify measured the fold-4 walk going silent there: source 32, sink 36).
   The text then prints no rollback and says which bound is gone. A `toTable` start under a
-  name whose newest stamp is a `foreachBatch` one, or which holds a starting mark, runs the
-  same check and refuses the same way (fold 4: one `toTable` run hid the stray for good,
-  source 40, sink 44); a name that only ran through `toTable` is unchanged. A healthy sink
-  runs on after an expiry that keeps one, two or three snapshots. **One state is not
-  caught:** a stray under a stamp, a process death before check (b), and then an expiry that
-  keeps only the newest snapshot. The stray's snapshot and every bound are gone; the restart
-  runs on (measured: source 32, sink 36). The ledger's fold 5 sketches the closure.
+  name that ever carried a `foreachBatch` stamp or mark still on the sink runs the same check
+  and refuses the same way (fold 4: one `toTable` run hid the stray for good, source 40,
+  sink 44); a name that only ran through `toTable` is unchanged. A healthy sink runs on
+  after an expiry that keeps one, two or three snapshots.
+  **Prevention (fold 5).** A stamped commit of a `foreachBatch` batch is refused before it
+  lands when an unstamped snapshot sits between its parent and the head the driver read when
+  the batch began (`... landed on the sink without a stamp after this batch began, so the
+  batch's stamped commit is refused before it lands over it`). The stray is then above the
+  newest stamp, where check (a) finds it at every start and where no expiry removes it (an
+  expiry keeps the head; if it removes the stamp under it, the resume check refuses with
+  `stamped snapshot expired`). Measured: the kill choreography that was silent, followed by
+  an expiry down to one snapshot, now refuses every start on both doors.
+  **A limit: expiry down to one snapshot over a stray an earlier build left under a stamp.**
+  The stray's snapshot and every bound are gone, and the next start runs on (measured on the
+  build before the prevention rule: source 32, sink 36). This build does not produce that
+  state on a catalog that checks a commit's requirements. Recording the expected parent in
+  every stamp would leave durable evidence, but one legal interleaving mismatches without a
+  stray (another query's stamp landing inside the batch from a second process), so it is
+  not built (owner ruling D3; the ledger's fold 5 holds the sketch). Until card
+  MB-SINK-MAINTENANCE-PATH-1 lands: an expiry on a sink with a live `foreachBatch` query
+  must retain the newest two stamps and everything between.
   **The error says what resolves it, and each recipe is exact when followed** (ten public-door
   pins follow the printed text and count the rows). A stray above the newest stamp: roll the
   sink back to the snapshot the text names (`CALL <catalog>.system.rollback_to_snapshot`) and
@@ -4172,7 +4186,6 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_kills_at_sink_commits_restart_without_a_duplicate`,
   `::test_random_kills_restart_without_a_duplicate`;
   `python/repark/tests/test_mb_4_streaming_foreach_lineage.py::test_thread_route_then_raise_ends_recovery_required_and_the_restart_refuses`,
-  `::test_thread_route_beside_the_stamped_write_refuses_every_restart`,
   `::test_main_thread_statement_while_a_body_runs_ends_recovery_required`,
   `::test_foreign_insert_between_runs_refuses_the_restart`,
   `::test_sink_dropped_and_recreated_after_the_stamped_write_ends_recovery_required`;
@@ -4180,14 +4193,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_first_start_writes_the_mark_into_the_offsets_property`;
   `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_stray_then_kill_at_the_first_batch_refuses_the_first_restart`,
   `::test_kill_before_the_first_commit_restarts_from_the_mark_without_a_duplicate`;
-  `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_kill_between_a_twice_written_batch_and_the_audit_refuses_every_restart`;
-  `python/repark/tests/test_mb_4_streaming_remedies.py` (ten pins, each following a printed remedy);
-  `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_expiry_of_the_previous_stamp_does_not_hide_a_stray_under_the_newest`,
-  `::test_a_table_door_start_under_the_same_name_does_not_hide_a_stray_under_a_stamp`,
+  `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_a_twice_written_batch_is_refused_at_its_stamped_write_and_a_kill_hides_nothing`;
+  `python/repark/tests/test_mb_4_streaming_remedies.py` (six pins, each following a printed remedy);
+  `python/repark/tests/test_mb_4_streaming_foreach_eo.py::test_no_expiry_hides_a_stray_that_landed_in_a_killed_batch`,
+  `::test_a_table_door_start_under_the_same_name_does_not_run_past_a_stray`,
+  `::test_a_foreign_commit_refuses_a_table_door_start_once_the_name_ran_through_foreach`,
   `::test_a_healthy_sink_runs_on_after_an_ordinary_expiry`;
+  `python/repark/tests/test_mb_4_streaming_foreach_lineage.py::test_a_stamped_write_over_a_stray_that_landed_in_the_batch_is_refused_before_it_lands`;
   `crates/repark-core/src/microbatch/exactly_once_tests.rs::a_failed_body_is_audited_and_the_restart_refuses_before_any_body`,
   `::at_epoch_zero_the_restart_reads_the_mark_and_refuses_before_any_body`,
-  `::a_stray_sink_write_beside_the_stamped_commit_refuses_every_restart_above_or_under_the_stamp`;
+  `::a_stray_sink_write_beside_the_stamped_commit_never_ends_under_the_stamp`;
   `crates/repark-iceberg/src/write/sink_offsets_lineage_tests.rs::a_stray_under_the_newest_stamp_is_found_down_to_the_previous_stamp`
 - **Rationale** — DECLARED 2026-10-09 (owner ruling "FIX IT" on the MB-4 verify's S1;
   orchestrator ruling of the same day after the re-verify: an invariant on the sink's lineage,

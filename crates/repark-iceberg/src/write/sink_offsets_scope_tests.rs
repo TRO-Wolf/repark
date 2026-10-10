@@ -36,7 +36,7 @@ async fn a_foreign_writer_inside_the_scope_commits_as_on_main_and_leaves_the_cla
     let (_warehouse, catalog, ident) = fixture("foreign_writer").await;
     let table = append_plain(&catalog, &ident, &[1]).await;
     let plain_keys = head_summary_keys(&table);
-    let stamp = stamp_for(5, SinkDoor::ForeachBatch);
+    let stamp = stamp_for(5, SinkDoor::Table);
     let guard = BatchScope::enter(TableUuid::of(&table), stamp.clone()).expect("enter");
     let other_session = catalog
         .load_table(&ident)
@@ -55,7 +55,7 @@ async fn a_foreign_writer_inside_the_scope_commits_as_on_main_and_leaves_the_cla
     let batch_files = stage(&table, &[2, 3]).await;
     let batch = commit_append_with_summary(&catalog, &table, batch_files, &scoped(&guard), None)
         .await
-        .expect("the batch commit lands after the foreign one");
+        .expect("the table door's batch commit lands after the foreign one");
     assert_stamped_head(&batch, &stamp);
     assert!(matches!(guard.outcome(), ScopeOutcome::Committed { .. }));
     drop(guard);
@@ -66,6 +66,35 @@ async fn a_foreign_writer_inside_the_scope_commits_as_on_main_and_leaves_the_cla
     );
     assert_eq!(stamped_snapshots(&reloaded), 1);
     assert_eq!(live_ids(&reloaded).await, vec![1, 2, 3, 777]);
+}
+
+#[tokio::test]
+async fn a_foreign_writer_inside_a_foreach_scope_fails_the_batch_commit_at_the_fence() {
+    let (_warehouse, catalog, ident) = fixture("foreign_writer_foreach").await;
+    let table = append_plain(&catalog, &ident, &[1]).await;
+    let stamp = stamp_for(5, SinkDoor::ForeachBatch);
+    let guard = BatchScope::enter(TableUuid::of(&table), stamp).expect("enter");
+    let foreign = append_plain(&catalog, &ident, &[777]).await;
+    for attempt in 0..2 {
+        let batch_files = stage(&table, &[2, 3]).await;
+        let refused =
+            commit_append_with_summary(&catalog, &table, batch_files, &scoped(&guard), None)
+                .await
+                .expect_err("a stamp over a snapshot that landed after the claim");
+        let text = microbatch_cause(&refused).to_string();
+        let stray = foreign.metadata().current_snapshot_id().expect("head");
+        assert!(
+            text.contains(&format!(
+                "snapshot {stray} (append) landed on the sink without a stamp after this batch began"
+            )),
+            "attempt {attempt}: {text}"
+        );
+        assert_eq!(guard.outcome(), ScopeOutcome::NotCommitted);
+    }
+    drop(guard);
+    let reloaded = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(stamped_snapshots(&reloaded), 0);
+    assert_eq!(live_ids(&reloaded).await, vec![1, 777]);
 }
 
 #[tokio::test]

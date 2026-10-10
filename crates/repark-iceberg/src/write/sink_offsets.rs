@@ -27,8 +27,8 @@ mod lineage;
 use append_fence::AppendFence;
 pub use body_scope::{guard_body_catalog, in_body_scope, refuse_planned_sink_write};
 pub use lineage::{
-    Floor, SinkMark, Stamped, Stray, commit_starting_mark, read_starting_mark,
-    stray_at_a_table_start, stray_on_main,
+    Floor, SinkMark, Stamped, Stray, carried_by_foreach, commit_starting_mark, read_starting_mark,
+    stray_on_main,
 };
 
 pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";
@@ -77,6 +77,13 @@ struct ScopeEntry {
     refused: Option<MicroBatchError>,
     violation: Option<MicroBatchError>,
     outcome_unknown: bool,
+    began: Began,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Began {
+    Unread,
+    At(Option<i64>),
 }
 
 fn scopes() -> MutexGuard<'static, HashMap<TableUuid, ScopeEntry>> {
@@ -125,6 +132,20 @@ impl fmt::Debug for ScopeToken {
 impl BatchScope {
     #[allow(clippy::missing_errors_doc)]
     pub fn enter(sink: TableUuid, stamp: CommitStamp) -> Result<BatchScopeGuard, MicroBatchError> {
+        Self::entered(sink, stamp, Began::Unread)
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn enter_on(table: &Table, stamp: CommitStamp) -> Result<BatchScopeGuard, MicroBatchError> {
+        let head = table.metadata().current_snapshot_id();
+        Self::entered(TableUuid::of(table), stamp, Began::At(head))
+    }
+
+    fn entered(
+        sink: TableUuid,
+        stamp: CommitStamp,
+        began: Began,
+    ) -> Result<BatchScopeGuard, MicroBatchError> {
         let mut entries = scopes();
         if entries.contains_key(&sink) {
             return Err(MicroBatchError::SinkBusy {
@@ -142,6 +163,7 @@ impl BatchScope {
                 refused: None,
                 violation: None,
                 outcome_unknown: false,
+                began,
             },
         );
         Ok(BatchScopeGuard { sink, token })
@@ -189,6 +211,11 @@ impl BatchScope {
                 entry.refused = Some(error.clone());
             }
             return Err(error);
+        }
+        if let Began::At(head) = entry.began
+            && let Some(stray) = stray_since(table.metadata(), head, &entry.stamp)
+        {
+            return Err(over_a_stray(stray, &entry.stamp));
         }
         entry.claimed = true;
         Ok(Some(ClaimedStamp::on(table, entry.stamp.clone())))
@@ -282,6 +309,28 @@ impl ClaimedStamp {
         mark_committed(committed, &self.stamp, snapshot);
         Ok(())
     }
+}
+
+fn stray_since<'metadata>(
+    metadata: &'metadata TableMetadata,
+    floor: Option<i64>,
+    stamp: &CommitStamp,
+) -> Option<&'metadata SnapshotRef> {
+    if stamp.door != SinkDoor::ForeachBatch {
+        return None;
+    }
+    main_lineage(metadata)
+        .take_while(|snapshot| Some(snapshot.snapshot_id()) != floor)
+        .find(|snapshot| lineage::unstamped(snapshot))
+}
+
+fn over_a_stray(stray: &SnapshotRef, stamp: &CommitStamp) -> MicroBatchError {
+    MicroBatchError::Catalog(format!(
+        "epoch {epoch}: snapshot {id} ({operation}) landed on the sink without a stamp after this batch began, so the batch's stamped commit is refused before it lands over it",
+        epoch = stamp.record.epoch,
+        id = stray.snapshot_id(),
+        operation = stray.summary().operation.as_str()
+    ))
 }
 
 fn mark_committed(sink: &Table, stamp: &CommitStamp, snapshot: SnapshotId) {

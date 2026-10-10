@@ -118,10 +118,17 @@ The contract a user reads is the `Notes:` section of `DataStreamWriter.foreachBa
   `repark.cdc.starting-head`), at every start and before every callable. Since fold 5 the
   stretch under the newest stamp is reported whether or not its lower end is still in the
   table (an expiry may have removed it), and a `toTable` start under a name that has run
-  through `foreachBatch` is refused the same way. A healthy sink is not refused after an
-  expiry. One state stays out of reach: a stray under a stamp, a process death before the
-  driver's check, and then an expiry that keeps only the newest snapshot; the stray's
-  snapshot is gone with every bound (the ledger's fold 5 holds a sketch that closes it).
+  through `foreachBatch` (its mark, or any of its `foreachBatch` stamps, is still on the
+  sink) is refused the same way. A healthy sink is not refused after an expiry.
+- **A stamp is not committed over a stray (fold 5).** If an unstamped snapshot lands on the
+  sink after a batch began, the callable's own sink write is refused before it lands; the
+  batch ends `RecoveryRequiredException` with the stray above the newest stamp, where every
+  start finds it and no expiry can remove it.
+- **A limit.** A stray that an earlier build of this branch left under a stamp, followed by
+  an expiry that keeps only the newest snapshot, cannot be seen: the stray's snapshot is
+  gone with every bound, and the next start runs on. This build no longer produces that
+  state. Until card MB-SINK-MAINTENANCE-PATH-1 lands, run expiry on a sink with a live
+  `foreachBatch` query so that it retains the newest two stamps and everything between.
 - **The error says what resolves it, and each recipe is exact when followed.** Above the
   newest stamp: roll the sink back to the named snapshot and start again, or keep the rows
   and start under a new name with the printed `repark.cdc.start-after-snapshot-id`. Under a
@@ -150,7 +157,7 @@ The contract a user reads is the `Notes:` section of `DataStreamWriter.foreachBa
   plus the query name; clearing the checkpoint resets nothing.
 
 Python holds none of this: the callable is handed to the driver, which owns every rule.
-pins: mb-4-foreach-eo/C-031, C-033, C-040, C-041
+pins: mb-4-foreach-eo/C-031, C-033, C-040, C-041, C-044
 
 ## Known limitations
 
