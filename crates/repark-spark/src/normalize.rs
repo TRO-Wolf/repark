@@ -25,6 +25,7 @@ use crate::merge;
 
 pub(crate) mod clustered_by;
 pub(crate) mod create_clauses;
+pub(crate) mod join_condition;
 pub(crate) mod map_ordering;
 pub(crate) mod replace_table;
 pub(crate) mod sort_key_projection;

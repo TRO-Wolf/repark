@@ -38,6 +38,7 @@ pub(super) async fn execute_rewrite_manifests(
     let table_arg = args.require_string("table", 0)?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    repark_iceberg::write::refuse_encrypted_table(&table)?;
 
     let spec_id = match requested_spec {
         Some(id) => table

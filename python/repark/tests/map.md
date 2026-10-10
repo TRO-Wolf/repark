@@ -1,5 +1,16 @@
 # map — python/repark/tests
 
+CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09): `test_join_condition_refusals_1.py` pins the refusals through the exception accessors (`getCondition`, `getErrorClass`, `getMessageParameters`, `getSqlState`) instead of the head line: the engine now surfaces the bare bracketed condition with no analyzer-rule header, and the refusal text starts with `[CONDITION]`; `test_refused_join_inside_a_subquery_expression_refuses` pins the refused join nested in an `IN` subquery (kills the m5 plan-descent mutant). pins: cross-join-condition-1/C-008
+
+CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `test_join_condition_refusals_1.py` pins the refusals per how per door (134 legs): the DataFrame door over all 7 hows and the SQL door over the 6 non-cross hows refuse `rand(7) < 0.5`, eq-and-`rand`, untyped NULL, `1`, `'true'` and bare `rand(1)` (the type-first order) with Spark's class, condition, SQLSTATE `42K0E` and head line (the engine prefixes the `join_condition_refusals` / `caused by` analyzer header, stripped the way the `spark_expr_semantics` header is); `uuid`, `shuffle` and `randn` witness the general rule on inner over both doors; the equality/TRUE/typed-NULL/`current_timestamp` controls replay the oracle's rows and columns; SQL `CROSS JOIN ... ON` keeps its pre-existing parse refusal (Spark answers; tracked as the fold's out-of-scope divergence). The two fold-1 leniency pins in `test_cross_join_condition_1.py` now assert cross and inner refuse alike. pins: cross-join-condition-1/C-008
+
+CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09): `join_condition_refusals_1_spark_oracle.json` gains the 2026-10-09 accessor recording: `errorClass` on every refusing cell (measured equal to the condition on live Spark 4.1.2 for the 11 refusing conditions) and a provenance note for the `getCondition` / `getErrorClass` / `getMessageParameters` / `getSqlState` measurement. pins: cross-join-condition-1/C-008
+
+CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `join_condition_refusals_1_spark_oracle.json` records live Spark 4.1.2 (`/tmp/sparkenv`, `local[1]`) over the `a = [(1,a),(2,b),(3,c)]`, `b = [(2,x),(3,y),(4,z),(9,q)]` frames: 196 cells (7 hows × 14 conditions × the DataFrame and SQL doors). Every how refuses `rand`/`randn`/`uuid`/`shuffle`/`monotonically_increasing_id`/`spark_partition_id` conditions with `INVALID_NON_DETERMINISTIC_EXPRESSIONS` and untyped-NULL/`1`/`'true'` conditions with `JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE` (class, condition, SQLSTATE `42K0E`, message parameters and head line per cell); `CAST(NULL AS BOOLEAN)`, `current_timestamp()` and the equality/TRUE controls answer rows. pins: cross-join-condition-1/C-008
+
+CROSS-JOIN-CONDITION-1 (2026-10-08): `test_cross_join_condition_1.py` pins the H1 cross door with a condition against the orchestrator's live Spark 4.1.2 recording: the equality (2 rows), inequality (9 rows) and false (0 rows) conditions, the aliased select, and the join-then-filter cell, each on the native route and with `_join_exact_plan` forced to miss, with rows and columns equal to the same condition under `"inner"`. `join(other, None, "cross")` and `crossJoin` stay Cartesian (12 rows); shared names under `"cross"` and a list of Columns keep main's refusals; two self-join shapes answer exactly as `"inner"`. Three mutations run against the file, each red then reverted; the neighbour run over this directory shows zero flips. Fold 1 (2026-10-08, the Opus verifier's findings): the `route` fixture counts `_join_exact_plan` hits the way the verifier did, and the equality (2 joins), aliased, join-then-filter, Cartesian (2 joins) and both self-join cells assert the taken route is the named one; the inequality and false cells run SQL-only now (the exact planner takes one equality or no condition, so they were SQL on both parameters). Both self-joins pin live Spark 4.1.2 literals re-measured here (three diagonal rows; `[(2, "b", 2, "b")]`); the five condition literals were re-derived on the same live Spark and are unchanged. Two pins without a route claim assert `(id == k) & (rand(1) >= 0)` and `lit(None)` answer as the same call with `"inner"` (rows and columns, never the row count, never a refusal). pins: cross-join-condition-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+ENC-1 round 3 (2026-10-09): `test_enc_1.py` is the facade door of the keyed-table refusal — V2 `writeTo` append, overwritePartitions, overwrite(condition), create-with-key (no table left behind) and createOrReplace onto a keyed table, V1 `saveAsTable` append/overwrite and `insertInto` append/overwrite each refuse `UnsupportedOperationException` with the one-sentence text and unchanged snapshots, rows and warehouse files; unkeyed and lookalike tables run. pins: enc-1/C-005 Fold 1 (2026-10-09) adds `writeTo(<table>.branch_b1).append()` and the two WAP session keys (`spark.wap.branch`, `spark.wap.id`, SQL INSERT and `writeTo` append) on format v2 and v3, with refs unchanged, and makes the text assertion exact. pins: enc-1/C-007
+
 OFFSET-NESTED-SORT-1 (2026-10-08): `test_offset_nested_sort_1.py` pins an `OFFSET` under a nested `ORDER BY` on the three doors against `offset_nested_sort_1_spark_oracle.json`, recorded from live Spark 4.1.2 with value and Arrow type. The Spark-dialect SQL door runs 31 statements (the reported one, the 19 others DataFusion 54.1.0 answers wrong, 11 controls) and the DataFrame door runs 15 shapes (`orderBy().offset().limit()` under an outer `orderBy`, `sort` + `limit` + `offset`, offset-only under a descending or different-key sort), each at `spark.sql.shuffle.partitions` 1, 2 and 16; a `createDataFrame` view scans one partition at every setting, so on main these were wrong at all three. The native ANSI door runs the same statements by value over a `CREATE TABLE AS` table under `SET datafusion.execution.target_partitions`. `test_live_spark_answers_every_recorded_cell` replays every cell on the shared live session over its own temp view (`offset_nested_sort_1_oracle`); it stops nothing and reads no environment. pins: offset-nested-sort-1/C-002, C-007
 
 SOURCE-URL-REDACT-1-FN fold 2 (2026-10-06): `test_source_url_redact_1_fn.py` pins the builder door for `repark.sql.maxArrayElements`, `repark.sql.allowLocalFilesystemDDL`, `spark.sql.session.timeZone`, and `repark.merge.file-scoped-rewrite`. A URL password becomes `postgresql://u:***@h/db`. The plan knobs stay `AnalysisException`; the time-zone and file-scoped knobs stay `IllegalArgumentException`.
@@ -3170,6 +3181,79 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with the read-back each must produce (`hours(tz)` derived from the spec; the fork
   writes it since RP-28, fork #296 — the fixture's `blocked_on_fork` marker still names
   the closed ask until the recorder re-runs).
+- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-MERGE-WALL-1
+  fold 1 (2026-10-09), the pin budget:** the module is cut from 464 tests to 179. Kept: the 57
+  `timestamp_ns` door tests in all three zones, and the control doors in **one** zone,
+  America/New_York (95 tests); they are the pins that kill the lane's mutant M5 and the
+  verify's X2. Dropped: the controls of UTC and Asia/Kolkata (190 tests) and the 108 carry
+  tests, which `crates/repark-spark/tests/timestamp_ns_wall_doors.rs` now holds at the Rust
+  door. Added, for doors only the facade has: a `TIMESTAMP_NTZ` or `DATE` past the range
+  through `overwritePartitions` and `insertInto(overwrite=True)`, ANSI on and off. The
+  sentences below the split's paragraph describe the module before the cut.
+  pins: ice-tsns-merge-wall-1/C-019, C-023
+  **The split (2026-10-09):** the nested store pins of folds 1 and 2 became refusal pins and
+  three top-level families were added, 351 tests in all (364 since split fold 1, which added
+  `test_a_branch_or_wap_write_of_a_nested_leaf_is_refused_and_writes_nothing`: thirteen routes
+  through a branch reference or a WAP setting, the DataFrame writers among them, each the
+  named refusal with no new file, one snapshot and two refs; pins:
+  ice-tsns-merge-wall-1/C-050; 374 since split fold 2, which added
+  `test_a_statement_that_wraps_a_nested_write_is_refused_and_writes_nothing`: eight
+  `EXPLAIN ANALYZE` spellings, `PREPARE` and `CREATE TABLE AS INSERT`, each the named refusal
+  with no new file and one snapshot, and a plain `EXPLAIN` after it that still answers; pins:
+  ice-tsns-merge-wall-1/C-053).
+  `test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing`: fourteen Arrow
+  layouts (struct, a struct with one name different, struct in struct, list, large list, list
+  view, large list view, fixed-size list, list of struct, struct of list, a dictionary child,
+  a run-end-encoded child, map value, map key) through eight routes (the six DataFrame
+  writers, a cached frame, a SQL temporary view): the named refusal with the target's leaf
+  path, no new file under the warehouse, no snapshot.
+  `test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file`: all
+  nineteen doors in three zones, `timestamp_ns` and `timestamptz_ns` sources, the stored
+  values read with `pyarrow.parquet` from the table's live data files, not through SELECT;
+  every value must equal the rule and end in non-zero digits below the microsecond.
+  `test_an_encoded_instant_source_stores_the_session_wall`: a run-end-encoded and a
+  dictionary-encoded `timestamp[ns, UTC]` column through `INSERT OVERWRITE`,
+  `INSERT … BY NAME`, `overwritePartitions` and `insertInto(overwrite=True)` in
+  America/New_York, read from the Parquet file; on main the run-end form stored the UTC wall.
+  pins: ice-tsns-merge-wall-1/C-040, C-044, C-045, C-047
+  **(2026-10-09):** every cell of the write-door matrix, one test per zone × target × door.
+  A `timestamp_ns` target must store the rule (`expected_wall`) or main's ratified refusal;
+  the 38 cells main got wrong and the 9 where it raised a raw Arrow error are named by
+  `main_was_wrong` / `main_refused_an_answer`, and
+  `test_main_recorded_the_rule_wherever_it_answered_right` checks the fixture against that
+  split (178 right, 38 wrong, 9 raw errors). Every control target (`timestamptz_ns`, and
+  microsecond `TIMESTAMP_NTZ` / `TIMESTAMP` on v3 and v2) must answer main's recorded cell
+  exactly, refusals included. Every carry (DELETE, sibling UPDATE and MERGE, the three
+  maintenance rewrites, both row-level modes) must read back the seeded ticks. Edge pins: an
+  instant past 2262 raises INSERT's `[CAST_OVERFLOW]` under ANSI and stores INSERT's NULL
+  without it on four doors; `UPDATE` with no `WHERE` stores a literal and a NULL. The matrix
+  takes about two minutes on eight workers. Mutant M5 (the UPDATE conform taking zoned
+  targets) reds the `tz_ns` `update_column` control in all three zones.
+  pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-010, C-011, C-012
+- [_ice_tsns_merge_wall_1_doors.py](_ice_tsns_merge_wall_1_doors.py) —
+  **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the write-door matrix: three session zones, six
+  target column types, nineteen doors over five source types and six carries in both row-level
+  modes, eight moments with non-zero digits below the microsecond (before the epoch, inside
+  New York's gap and overlap, on each side of both transitions). `expected_wall` is the rule
+  for a `timestamp_ns` target, computed with `zoneinfo`: Spark 4.1.2 with Iceberg 1.11.0
+  cannot read or write the type, so there is no Spark answer. The one moment a
+  `TIMESTAMP_NTZ '…'` literal refuses (a wall next to the epoch) is spelled
+  `to_timestamp_ntz('…')`.
+  pins: ice-tsns-merge-wall-1/C-002
+- [_record_ice_tsns_merge_wall_1_main.py](_record_ice_tsns_merge_wall_1_main.py) +
+  [ice_tsns_merge_wall_1_main.json](ice_tsns_merge_wall_1_main.json) —
+  **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the recorder and what main `40fc916f` stores in each
+  of the 1926 cells (the Arrow type and int64 ticks read back, or the refusal). Run it against
+  a build of main only; one fresh session and warehouse per door, the three zones in parallel.
+  `--output <path>` measures another build without touching the fixture.
+  pins: ice-tsns-merge-wall-1/C-003
+  **Fold 1 (2026-10-09):** the fixture keeps the 760 cells the pins read
+  (`doors.in_fixture`: every `timestamp_ns` door cell, and the control door cells of
+  America/New_York), 195 kB from 501 kB; they are the cells recorded at `40fc916f`, filtered,
+  not re-recorded. `--whole` records all 1926 cells for a comparison; run on the fold's head
+  it gives the 47 moved cells of the first fix and no other, the first line of the restated
+  count (the ledger's §9.4).
+  pins: ice-tsns-merge-wall-1/C-021, C-023
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
@@ -10002,3 +10086,16 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   reproduces without RePark. With the skip bypassed on 25.0.0 the worker dies with
   signal 11 on five of the six doors.
   pins: threaded-collect-segv-1/C-001, C-002
+- [test_empty_projection_count_1.py](test_empty_projection_count_1.py) —
+  **EMPTY-PROJECTION-COUNT-1 (2026-10-09):** `COUNT(*)` over the changelog,
+  incremental and lineage readers. Twenty pins: the changelog reader on v2,
+  v3, single-file, ten-file and MOR-delete histories; the incremental reader
+  over plain, ten-snapshot, v3 and delete-holding windows; the lineage reader's
+  `COUNT(*) AS _row_id` and `df.count()` on the v3 DV fixture; guards for the
+  v2 alias, empty results, filtered counts, the `V3-ROWID-2` lineage refusal and
+  the neighbouring plain, snapshot, metadata-column and changelog-view counts.
+  Expected values are the row-returning forms, equal to live PySpark 4.1.2 on
+  both shared doors (incremental 3, changes 5, v3 incremental 2, v3 changes 4).
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here.
+  pins: empty-projection-count-1/C-002, C-003, C-004, C-007, C-008, C-009

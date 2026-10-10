@@ -131,6 +131,10 @@ pub(crate) async fn execute_create_table(
     let format_version =
         iceberg_create_format_version(cx.ctx, properties.format_version.as_deref())?;
 
+    if query.is_some() {
+        refuse_keyed_ctas(&target, &properties, existing.as_ref())?;
+    }
+
     // Resolve the placement before running the SELECT so target errors fail before writes.
     let placement = resolve_placement(&target, &properties, cx.catalogs, existing).await?;
     let replace_write = create.or_replace && query.is_some();
@@ -163,6 +167,21 @@ pub(crate) async fn execute_create_table(
             )
             .await
         }
+    }
+}
+
+fn refuse_keyed_ctas(
+    target: &CreateTarget,
+    properties: &TableProperties,
+    existing: Option<&Table>,
+) -> Result<()> {
+    repark_iceberg::write::refuse_encrypted_properties(
+        &properties.extra_properties,
+        &target.ident(),
+    )?;
+    match existing {
+        Some(existing) => repark_iceberg::write::refuse_encrypted_table(existing),
+        None => Ok(()),
     }
 }
 
@@ -207,7 +226,7 @@ async fn execute_staged_create(
                 Some(location),
                 None,
             );
-            StagedTableTransaction::begin_create(*file_io, target.ident(), creation)
+            repark_iceberg::catalog::begin_staged_create(*file_io, target.ident(), creation)
                 .await
                 .map_err(iceberg_err)?
                 .with_replace_write(replace_write)

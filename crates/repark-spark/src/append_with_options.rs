@@ -41,6 +41,7 @@ pub(crate) async fn execute_append_with_options(
              `{table_sql}` (ICE-WRITE-OPTIONS-1)"
         )));
     };
+    repark_iceberg::write::refuse_encrypted_table(&table)?;
     if insert.source.is_none() {
         return Err(DataFusionError::Plan(
             "INSERT with write options requires a SELECT or VALUES source".to_string(),

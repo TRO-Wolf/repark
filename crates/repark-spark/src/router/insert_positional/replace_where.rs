@@ -32,6 +32,16 @@ pub(crate) struct ReplaceWhere {
     source: Box<Query>,
 }
 
+impl ReplaceWhere {
+    pub(crate) fn table(&self) -> &ObjectName {
+        &self.table
+    }
+
+    pub(crate) fn source(&self) -> &Query {
+        &self.source
+    }
+}
+
 pub(crate) fn sql_has_replace_where(sql: &str) -> bool {
     !matches!(parse_replace_where(sql), Ok(None))
 }
@@ -207,6 +217,7 @@ pub(crate) async fn execute_replace_where(
                 .unwrap_or(error));
         }
     };
+    repark_iceberg::write::refuse_encrypted_table(&table)?;
     let by_name = by_name_source(ctx, catalogs, options, &catalog_name, &table, source).await?;
     let source = by_name.as_deref().unwrap_or(source);
     let PreparedInsert { sql, insert, .. } = match &by_name {

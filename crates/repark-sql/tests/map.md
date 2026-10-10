@@ -252,6 +252,17 @@ holds behavior observed from outside the crate.
   `f64::to_bits` `sum`/`avg` at `target_partitions` 1/2/8 over the catastrophic-cancellation
   fixture, plus stability and the p=8 spread disclosure. Matrix cite:
   `ansi_door_sum_f64_bits_at_target_partitions_1`.
+- `enc_1.rs` — **ENC-1 round 3 (2026-10-09):** the ANSI door's twin of the Spark
+  `enc_1.rs` battery, 15 pins over v2 tables (the refusal is version-independent; v3
+  lives on the Spark door): INSERT VALUES/SELECT, INSERT OVERWRITE PARTITION, CTAS
+  with the key (no table left), CREATE OR REPLACE without the key onto a keyed table,
+  MERGE, UPDATE, DELETE (predicate and whole), TRUNCATE, ALTER-added key, the empty
+  value, lookalike and no-key controls, and CREATE-plus-SELECT running. Every refusal
+  pins `UnsupportedOperationException` with RePark's one-sentence text and unchanged
+  snapshots, live files and warehouse objects.
+  Fold 1 (2026-10-09): the text assertion is exact, not a set of needles.
+  pins: enc-1/C-008
+  pins: enc-1/C-005
 
 ## Pointers
 

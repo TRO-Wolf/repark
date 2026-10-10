@@ -79,6 +79,7 @@ pub async fn commit_overwrite_by_filter_with_summary(
     summary_extra: &[(String, String)],
     validation: FilterValidation<'_>,
 ) -> Result<Table> {
+    crate::write::refuse_encrypted_table(table)?;
     if extras_need_removed_files(summary_extra) {
         return Err(DataFusionError::NotImplemented(
             "INSERT INTO … REPLACE WHERE cannot set a snapshot property that names an engine \

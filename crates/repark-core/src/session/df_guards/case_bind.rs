@@ -38,9 +38,9 @@ pub use super::frame_lineage::{all_ids, ambiguous, ambiguous_images, renewed_abs
 pub use super::join_exact::{ExactJoin, ExactKeys, join_exact_sides};
 pub use super::predicate_names::fold_frame_qualifiers;
 pub use super::self_join::{AttrRefText, JoinSide, Prepared, PreparedCondition, Refusal};
-pub use super::self_join::{SELF_JOIN_CONDITION, SelfJoinRules, check_refs, missing_condition};
-pub use super::self_join::{missing_message, parse_attr_refs, prepare_join_condition};
-pub use super::self_join::{quoted_names, self_join_message};
+pub use super::self_join::{NONDETERMINISTIC_FUNCTION_NAMES, SELF_JOIN_CONDITION, SelfJoinRules};
+pub use super::self_join::{check_refs, missing_condition, missing_message, parse_attr_refs};
+pub use super::self_join::{prepare_join_condition, quoted_names, self_join_message};
 pub use super::sort_names::{FreeNameOffense, free_expr_names, refuse_free_names};
 pub use super::sort_names::{SortShape, bind_free_names, bind_qualified_free_refs};
 pub use super::sort_names::{engine_field_is_unique, grandchild_key, grandchild_qualified_key};

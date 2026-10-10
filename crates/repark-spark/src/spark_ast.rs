@@ -134,6 +134,13 @@ pub(crate) fn apply_pregate_judge_rewrites(
     );
 }
 
+fn under_analyze(plan: &LogicalPlan) -> &LogicalPlan {
+    match plan {
+        LogicalPlan::Analyze(analyze) => analyze.input.as_ref(),
+        other => other,
+    }
+}
+
 async fn execute_passthrough_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -216,10 +223,11 @@ async fn execute_passthrough_inner(
     // Eager analysis exposes Spark-adjusted types to Arrow export and CTAS schema derivation.
     let plan = repark_functions::analyze_eagerly(&state, plan)?;
     let plan = conform_insert_narrowed_ints(ctx, plan).await?;
-    let target = insert_defaults::dml_target(&plan)
+    let target = insert_defaults::dml_target(under_analyze(&plan))
         .and_then(|(name, ident)| catalogs.get(&name).map(|catalog| (catalog, ident)));
     let plan = match target {
         Some((catalog, ident)) => {
+            repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await?;
             Box::pin(insert_defaults::fill_insert_plan(
                 catalog,
                 &ident,

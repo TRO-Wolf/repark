@@ -43,6 +43,13 @@ live Spark 4.1.2 reading Postgres 16.15 through pgjdbc 42.7.13. The C-3 design n
 `CONNECT-DECL-pg-partitioned-read` row take their Spark halves from these cells. Nothing here is
 collected by pytest, and no RePark code runs.
 
+ENC-1 (2026-10-09): the table-encryption oracle for the first-write refusal (1.5.4). It records
+23 cells, `E01`…`E23`, on live Spark 4.1.2 + Iceberg 1.11.0 over a local Hadoop catalog with no
+KMS configured: every write shape against a v3 table carrying `encryption.key-id`, the four
+maintenance `CALL`s, a plain `SELECT`, the empty value, two lookalike keys, a no-key control,
+and a v2 table with the key. The ENC-1 pins take their Spark halves from these cells. Nothing
+here is collected by pytest, and no RePark code runs.
+
 ## Contents
 
 - `mb0_streaming_oracle.py` is the recorder. There is one function per cell, and
@@ -159,6 +166,16 @@ collected by pytest, and no RePark code runs.
   this file, so the Rust arithmetic is compared with Spark's own numbers.
 - `c3_partition_oracle.sha256` holds `sha256sum` of both files. Check it with `sha256sum -c`
   from this directory. pins: c-3/C-001
+- `enc1_encryption_oracle.py` is the ENC-1 recorder. `record_all` runs the 23 cells in order,
+  each on a fresh table, and records the outcome (rows or the error's condition, exception,
+  SQLSTATE, JVM cause chain and full text) plus the table state after (properties, snapshots,
+  file count, row count). Run it through the managed interpreter only, with `ENC1_WAREHOUSE`
+  pointing at an empty private directory; `ENC1_OUT` redirects the JSON for a re-run
+  comparison. A re-run repeats every outcome; snapshot ids and the warehouse path vary.
+- `enc1_encryption_oracle.json` is that recording: the Spark, jar, catalog, master and KMS
+  preamble plus the 23 cells in recorder order, pretty-printed with sorted keys.
+- `enc1_encryption_oracle.sha256` holds `sha256sum` of the JSON. Check it with `sha256sum -c`
+  from this directory. pins: enc-1/C-006
 
 ## C-3 fold 1 cells (2026-10-08)
 
@@ -189,6 +206,23 @@ byte. Two more tables: `c3o.mx` (one column `"Mixed"`) and `c3o.twins` (`"Mixed"
   (`C3-Q01`, `Q02`).
 - A `limit` over a partitioned V1 JDBC scan is not pushed (`C3-L01`).
 - Every recorded cut list is strictly increasing, the `i64` extremes included.
+
+## ENC-1 measured notes (2026-10-09, read from the recording)
+
+- Spark stores the key on a v3 table (`E01`–`E02` properties carry it) and then ignores it:
+  every write shape runs and lands plaintext Parquet (`PAR1` magic read off the `E02` data
+  file): `E02` INSERT VALUES, `E03` INSERT SELECT, `E04` INSERT OVERWRITE, `E05` CTAS, `E06`
+  CREATE OR REPLACE AS, `E07` MERGE, `E08` UPDATE, `E09` row-level DELETE, `E10` whole-table
+  DELETE, `E11` TRUNCATE, `E12` INSERT after ALTER adds the key, `E13` `df.writeTo.append`.
+- The four maintenance `CALL`s run: `E14` rewrite_data_files, `E15` rewrite_manifests, `E16`
+  expire_snapshots, `E17` remove_orphan_files. `E18` SELECT reads the rows.
+- The empty value (`E19`) and both lookalikes (`E20` `encryption.keyid`, `E21`
+  `encryption.key-id-x`) behave exactly like the set key: Spark runs the write. The no-key
+  control (`E22`) runs.
+- `E23`: CREATE of a v2 table with the key is refused before any write:
+  `IllegalArgumentException` with no condition and no SQLSTATE, text `Invalid properties for
+  v2: [encryption.key-id]`. The v2 CREATE surface is outside ENC-1 (the ruling keeps CREATE
+  succeeding); recorded here as an out-of-scope observation.
 
 ## FOREACH-WRAP-1 measured notes (2026-10-07, read from the recording)
 

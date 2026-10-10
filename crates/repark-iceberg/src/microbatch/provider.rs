@@ -191,7 +191,8 @@ mod tests {
     use std::collections::HashMap;
     use std::fs;
 
-    use datafusion::arrow::array::{Array, Int32Array, StringArray};
+    use datafusion::arrow::array::{Array, Int32Array, Int64Array, StringArray};
+    use datafusion::arrow::record_batch::RecordBatch;
     use datafusion::prelude::SessionContext;
     use iceberg::spec::{
         DataContentType, DataFile, DataFileBuilder, DataFileFormat, NestedField, PrimitiveType,
@@ -668,5 +669,64 @@ mod tests {
                 .contains("Cannot find the end snapshot: 999"),
             "unexpected message: {error}"
         );
+    }
+
+    #[tokio::test]
+    async fn provider_counts_rows_through_an_empty_projection() {
+        let (_warehouse, table) = counted_table().await;
+        let planner = WindowPlanner::new(table.clone(), ReadCaps::default());
+        let from = planner
+            .initial_offset(&StartPosition::Earliest)
+            .await
+            .expect("initial")
+            .expect("some");
+        let plan = planner
+            .next_window(&from, WindowLimit::Unbounded)
+            .await
+            .expect("window")
+            .expect("some");
+        assert_eq!(plan.files.len(), 3);
+        let read_schema = table.metadata().current_schema().clone();
+        let provider = provider_for_plan(table, &plan, &read_schema).expect("provider");
+        let ctx = SessionContext::new();
+        ctx.register_table("counts", Arc::clone(&provider))
+            .expect("register");
+        let batches = ctx
+            .sql("SELECT COUNT(*) AS total FROM counts")
+            .await
+            .expect("sql")
+            .collect()
+            .await
+            .expect("collect");
+        assert_eq!(batches.len(), 1);
+        let total = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("Int64")
+            .value(0);
+        assert_eq!(total, 3);
+        let listed = ctx
+            .sql("SELECT id FROM counts")
+            .await
+            .expect("sql")
+            .collect()
+            .await
+            .expect("collect");
+        let listed_rows: usize = listed.iter().map(RecordBatch::num_rows).sum();
+        assert_eq!(listed_rows, 3);
+        let state = ctx.state();
+        let empty: Vec<usize> = Vec::new();
+        let scan = provider
+            .scan(&state, Some(&empty), &[], None)
+            .await
+            .expect("scan");
+        let stream = scan.execute(0, ctx.task_ctx()).expect("execute");
+        let projected: Vec<RecordBatch> = futures::TryStreamExt::try_collect(stream)
+            .await
+            .expect("stream");
+        assert!(projected.iter().all(|batch| batch.num_columns() == 0));
+        let rows: usize = projected.iter().map(RecordBatch::num_rows).sum();
+        assert_eq!(rows, 3);
     }
 }

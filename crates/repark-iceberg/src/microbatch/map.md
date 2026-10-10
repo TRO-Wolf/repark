@@ -100,6 +100,11 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `stamped write into <sink> needs <property>=serializable`.
   pins: mb-1/C-006, C-020, C-024, C-036, mb-2c/C-007
   pins: mb-2a/C-014, C-022
+  ENC-1 round 2 (2026-10-09) adds `EncryptedSinkRefused { sink }` with the house
+  one-sentence text, raised by `commit_stamp_only` before scope claim.
+  Fold 1 (2026-10-09): its text is `write::encryption::refusal_text`, the one function, and
+  `From<EncryptedTableRefusal>` builds it.
+  pins: enc-1/C-005
 - `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
   `WindowLimit`, `PlannedFile`, `WindowPlan`, and
   `WindowPlanner::{new, named, initial_offset, next_window}` over a held
@@ -153,6 +158,11 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   crate's `conform_batch`, untouched.
   pins: mb-1/C-012, C-015, C-016, C-022, C-033
   pins: mb-4/C-027
+  **EMPTY-PROJECTION-COUNT-1 step 1 (2026-10-09):** the red-first
+  `provider_counts_rows_through_an_empty_projection` pin — `COUNT(*)` over a
+  three-file window holding an empty file, read through the shared
+  `conform_batch` with no product change on this branch.
+  pins: empty-projection-count-1/C-005
 
 ## Design notes
 

@@ -126,6 +126,8 @@ pub enum MicroBatchError {
     },
     #[error("stamped write into {sink} needs {property}=serializable")]
     MergeIsolationRefused { sink: String, property: String },
+    #[error("{}", crate::write::encryption::refusal_text(sink))]
+    EncryptedSinkRefused { sink: String },
     #[error("batch {epoch} failed: {cause}")]
     BatchFailed { epoch: Epoch, cause: String },
     #[error("Cannot wait for a query state from the same thread that is running the query")]
@@ -186,6 +188,14 @@ fn operation_suffix(operation: Option<&str>) -> String {
     operation.map_or_else(String::new, |name| format!(" ({name})"))
 }
 
+impl From<crate::write::EncryptedTableRefusal> for MicroBatchError {
+    fn from(refusal: crate::write::EncryptedTableRefusal) -> Self {
+        MicroBatchError::EncryptedSinkRefused {
+            sink: refusal.table().to_string(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use uuid::Uuid;
@@ -206,8 +216,6 @@ mod tests {
 
     #[test]
     fn every_error_variant_renders_a_message() {
-        let query = query_id();
-        let table = table_uuid();
         let errors = [
             MicroBatchError::NonAppendSnapshot {
                 table: String::from("bronze.events"),
@@ -245,6 +253,15 @@ mod tests {
             MicroBatchError::SinkCommittedTwice {
                 epoch: Epoch::FIRST,
             },
+        ];
+        assert!(errors.iter().all(|error| !error.to_string().is_empty()));
+    }
+
+    #[test]
+    fn remaining_error_variants_render_a_message() {
+        let query = query_id();
+        let table = table_uuid();
+        let errors = [
             MicroBatchError::AlreadyCommitted {
                 query,
                 epoch: Epoch::FIRST,
@@ -291,6 +308,9 @@ mod tests {
             MicroBatchError::MergeIsolationRefused {
                 sink: String::from("silver.events"),
                 property: String::from("write.merge.isolation-level"),
+            },
+            MicroBatchError::EncryptedSinkRefused {
+                sink: String::from("silver.events"),
             },
             MicroBatchError::BatchFailed {
                 epoch: Epoch::FIRST,

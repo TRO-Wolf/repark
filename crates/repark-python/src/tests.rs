@@ -958,3 +958,38 @@ fn masking_a_message_twice_is_a_no_op() {
     let via = super::exceptions::mask_user_visible(text);
     assert_eq!(super::exceptions::mask_user_visible(&via), via);
 }
+
+#[test]
+fn to_py_err_attaches_condition_and_params_to_join_refusals() {
+    Python::attach(|py| {
+        let nondet = "[INVALID_NON_DETERMINISTIC_EXPRESSIONS] The operator expects a \
+             deterministic expression, but the actual expression is \"(rand(7) < 0.5)\". \
+             SQLSTATE: 42K0E";
+        let raised = to_py_err(Error::Analysis(nondet.to_string()));
+        assert!(raised.is_instance_of::<AnalysisException>(py));
+        let (condition, params, message) = spark_error_parts(py, &raised);
+        assert_eq!(condition, "INVALID_NON_DETERMINISTIC_EXPRESSIONS");
+        assert_eq!(
+            params,
+            HashMap::from([("sqlExprs".to_string(), "\"(rand(7) < 0.5)\"".to_string())])
+        );
+        assert_eq!(message, nondet);
+        let not_boolean = "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE] The join condition \"NULL\" has \
+             the invalid type \"VOID\", expected \"BOOLEAN\". SQLSTATE: 42K0E";
+        let raised = to_py_err(Error::Analysis(not_boolean.to_string()));
+        let (condition, params, message) = spark_error_parts(py, &raised);
+        assert_eq!(condition, "JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE");
+        assert_eq!(
+            params,
+            HashMap::from([
+                ("joinCondition".to_string(), "\"NULL\"".to_string()),
+                ("conditionType".to_string(), "\"VOID\"".to_string()),
+            ])
+        );
+        assert_eq!(message, not_boolean);
+        let foreign = to_py_err(Error::Analysis(
+            "[UNRESOLVED_COLUMN.WITH_SUGGESTION] cannot resolve x. SQLSTATE: 42703".to_string(),
+        ));
+        assert!(foreign.value(py).getattr("_spark_error_class").is_err());
+    });
+}

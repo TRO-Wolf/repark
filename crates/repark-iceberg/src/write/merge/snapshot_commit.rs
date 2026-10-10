@@ -176,6 +176,7 @@ pub(crate) async fn commit_overwrite_on_ref(
     if affected.is_empty() && new_files.is_empty() {
         return Ok(());
     }
+    crate::write::refuse_encrypted_table(table)?;
     let new_file_paths = abort::written_file_paths(&new_files);
     let stamp = SiteStamp::claim_isolated(table, branch, summary_extra, scope)?;
     let summary_extra = stamp.extras(summary_extra)?;
@@ -389,6 +390,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     if pairs.is_empty() && data_files.is_empty() {
         return Ok(());
     }
+    crate::write::refuse_encrypted_table(table)?;
     let data_file_paths = abort::written_file_paths(&data_files);
     let stamp = SiteStamp::claim_isolated(table, branch, summary_extra, &policy.scope)?;
     let pair_count = pairs.len() as u64;

@@ -1,5 +1,12 @@
 # EMPTY-PROJECTION-COUNT-1 — `COUNT(*)` fails with the engine-internal row-count error over three readers
 
+**Status: CLOSED 2026-10-09** by unit EMPTY-PROJECTION-COUNT-1 (branch
+`fix/empty-projection-count-1`, ledger
+[empty-projection-count-1-ledger.md](../../ledgers/completed/empty-projection-count-1-ledger.md)):
+the three repros below answer on the head with Spark-equal counts, and the shared fix also
+covers the fourth `conform_batch` caller (the micro-batch provider). The MB-4 branch carries
+an open copy of this card; the later merge must reconcile the two (ledger D-1).
+
 **Filed:** 2026-10-09 by the MB-4 lane (round 4 step 7), owed from the round-3c measurement
 (MB-4 ledger D-44) and re-measured first-hand on this tree the same day. One card for three
 doors with one shared site.

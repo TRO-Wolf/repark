@@ -1,5 +1,7 @@
 # map — repark-spark/src
 
+CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `extension.rs` seats `normalize/join_condition.rs`'s `JoinConditionRefusals` between `spark_integral_literal` and `type_coercion` (one line; `lib.rs` stays at its 156-line ceiling, so the rule lives under `normalize/` with its one `mod` line in `normalize.rs`). `extension/tests.rs` pins the new seat. pins: cross-join-condition-1/C-008
+
 U1-MEM-LAYOUT-1 (2026-09-23): Spark create resolution uses the registered memory warehouse layout root. On a `TempFallbackAllowed` catalog only, an orphan scan refuses a path that holds another table's metadata file or an unreadable one, or whose ancestor walk (`call/map.md`) reaches a `metadata/` directory holding one (the other table of any catalog); and a path that holds another table of the same catalog, lies inside one outside the swept table's own location, or lies inside the swept table's own location when another table shares it. See `tests/map.md` and `call/map.md`. pins: u1-mem-layout-1/C-002, C-011, C-014, C-020, C-025, C-029
 
 ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `merge_fragments.rs` passes the clause home scope — NOT MATCHED [BY TARGET] fragments resolve bare references against the source alias, NOT MATCHED BY SOURCE against the target alias, MATCHED/ON against both. pins: ice-mixed-case-1/C-004
@@ -33,6 +35,24 @@ pins: rp-4-fork-repin/C-005, C-006
   **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s
   `analyze_built_plan` on the existing `normalize` line (the root stays at 156), for the
   binding's native join door. pins: stamp-2-r5p6-2/C-002
+- `router.rs`, `catalog_ops.rs`, `merge.rs`, `insert_overwrite.rs`, `insert_by_name.rs`,
+  `append_with_options.rs`, `truncate.rs`, `ctas.rs`, `spark_ast.rs` — **ENC-1 round 2
+  (2026-10-09):** the Spark seats of the keyed-table refusal. `catalog_ops.rs` gains
+  `refuse_encrypted_write_target`; the INSERT, DELETE/UPDATE (now in `router/delete_update.rs`,
+  a pure move off the ceiling), MERGE, OVERWRITE, BY NAME, options and TRUNCATE arms check at
+  entry, `ctas.rs` checks staged properties and the replace target, and `spark_ast.rs` re-checks
+  the post-plan DML target (case-folding and `EXPLAIN ANALYZE`). Pinned in `tests/enc_1.rs`.
+  pins: enc-1/C-005
+  **Fold 1 (2026-10-09):** `write_to_branch.rs` runs before the router's arms and rewrites
+  the target, so the arms never saw a branch or WAP write. `commit_write_on_branch` and
+  `commit_write_staged` now refuse a keyed table right after resolving it, before the WAP
+  branch is created, so a refused write leaves refs and the metadata pointer unmoved.
+  `create_table.rs` and `ctas.rs` open a staged create through
+  `repark_iceberg::catalog::begin_staged_create`. Every seat passes the table identifier,
+  so the text is one. Safety does not rest on these seats: the catalog guard in
+  `repark-iceberg` refuses the file and the commit without them. Pinned in
+  `tests/enc_1_fold.rs`.
+  pins: enc-1/C-007, C-008
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)
@@ -1030,6 +1050,36 @@ pins: rp-4-fork-repin/C-005, C-006
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.
   pins: unresolved-routine-1/C-006
+- `insert_timestamp_ns.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the conform also runs
+  for an `UPDATE` plan (`ns_store_targets`), on its naive `timestamp_ns` targets only. An
+  `UPDATE` with no `WHERE` is not an identity DML: DataFusion plans it as a `Dml(Update)` over
+  a projection that casts each `SET` value to the column type, and the fork's update node
+  then raised `arguments need to have the same data type` for a microsecond or zoned source.
+  `before_analysis` peels that planner cast into the nanosecond wall kernel before the
+  session analyzer can narrow a `timestamptz_ns` source to microseconds; `after_analysis`
+  wraps what is still not the target type. A `timestamptz_ns` target is left out: it is the
+  unit's control and stays as main answers (parity row ICE-TSNS-SQL-1-R-008).
+  pins: ice-tsns-merge-wall-1/C-006
+  **The split (2026-10-09):** the nested conform of folds 1 and 2 is removed from this hook;
+  a nested target is not touched here and is refused earlier, at the router
+  (`router/nested_ns.rs`). One top-level refusal was added, `refuse_narrowed_update`: for an
+  `UPDATE` plan, a `SET` value into a naive `timestamp_ns` column that holds a cast from a
+  nanosecond timestamp to a coarser one (`narrows`; a typed NULL excepted, a `CASE` condition
+  not searched) is refused by name. That is the cast type coercion inserts for
+  `CASE … ELSE NULL END`, `if(…, c, NULL)` and `array(c, NULL)[0]` (parity row R-017). On main
+  the statement raised a raw Arrow error (the array form of a `timestamp_ns` source stored a
+  cut value at the UTC wall); once the unit made the unfiltered `UPDATE` answer, it stored a
+  value cut to microseconds, and in a DST gap an hour off. The text ends `The value was
+  narrowed from nanoseconds to microseconds before the store; give the NULL beside it the
+  type timestamp_ns`. **Why only here:** the other doors store such a value on main (cut, row
+  R-017) and a refusal there would also refuse a written `CAST(ns AS TIMESTAMP)`; this door
+  did not answer on main, so nothing that stored is refused.
+  `router.rs` makes the one call of `router/nested_ns.rs` in `execute_calibrated`, before the
+  branch and WAP rewrite (that directory's map; split fold 1). `write_to_branch.rs` gained
+  `written_targets`, the target after every `INSERT`, `UPDATE` or `MERGE` keyword read from
+  the tokens, for a statement the gate cannot parse (fold 2 widened it from the statement's
+  head to every such keyword). pins: ice-tsns-merge-wall-1/C-050, C-053
+  pins: ice-tsns-merge-wall-1/C-043
 - `insert_timestamp_ns.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door's INSERT conform
   for Iceberg `timestamp_ns` / `timestamptz_ns` target columns, called from `spark_ast`.
   `before_analysis` replaces the planner's `CAST(… AS Timestamp(ns))` over a non-column source

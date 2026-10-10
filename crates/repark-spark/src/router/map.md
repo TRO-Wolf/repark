@@ -15,6 +15,12 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
 
 ## Contents
 
+- `delete_update.rs` — **ENC-1 round 2 (2026-10-09):** the DELETE/UPDATE doors moved out
+  of `../router.rs` (pure move; it sat at its 1000-line ceiling) so the encrypted-write
+  refusal fits: each door runs the house valves first, then refuses a target carrying
+  `encryption.key-id`, before the meta-delete door, predicate DML or provider delegation.
+  ObjectName-only target extraction (aliases would under-refuse BUG-001).
+  pins: enc-1/C-005
 - `insert_positional.rs` — **U8 WRITE-SQL PR1 (2026-09-24):** `prepare_positional_insert`
   runs after U6's by-name routing check in `execute_insert_routed`. It aliases a later
   projection item whose DataFusion name repeats an earlier one (`__repark_col_<n>`; a cast
@@ -71,6 +77,49 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs) and
   [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
   (first linked from the `comment_on_table.rs` row above).
+
+- `nested_ns.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):**
+  `refuse_nested_supply` is the one call that hands an `INSERT` (plain, `OVERWRITE`,
+  `BY NAME`, `REPLACE WHERE`), `UPDATE` or `MERGE` statement and its Iceberg target to
+  `repark_iceberg::write::nested_ns_gate::refuse_nested_ns_supply`. It costs one catalog load
+  of the target. `insert_positional/replace_where.rs` gained the two accessors it reads.
+  **Where the call sits (split fold 1, 2026-10-10):** in `router::execute_calibrated`, on the
+  statement as the caller wrote it, before the metadata-table, changes, write-to-branch, WAP
+  and time-travel rewrites. The first split called it at the top of `execute_inner`, which
+  runs after `write_to_branch::apply_write_to_branch`; that function points a branch or WAP
+  append at a temporary provider (`datafusion.public.<name>`), so the gate saw a target that
+  was not an Iceberg table and ten routes stored the UTC wall. **Why no routed write can go
+  around it:** every public entry of this module ends in `execute_in_session`, which either
+  answers a temporary-view statement or calls `execute_calibrated`; `execute_inner` has two
+  callers, the `CREATE VIEW` arm of `execute_calibrated` and `execute_time_travelled`, which
+  only `execute_calibrated` calls after the gate. What re-enters with a statement of its own
+  (the maintenance and partitioning `CALL`s) re-enters by the public `execute`, so it passes
+  the gate again; a DataFrame writer enters by the public entry with the real name.
+  **The target:** the written name, and also the name with a `branch_<x>` reference removed
+  (`split_write_ref_parts`, the function the branch rewrite uses), so `t.branch_x` and
+  `t.branch_main` decide on `t`; a `tag_<x>` reference is left to the door's own refusal.
+  A session WAP setting does not change the written name.
+  **A statement that carries a write (split fold 2, 2026-10-10):** the parsed statement is
+  not matched against a list of write kinds with an arm that returns Ok for the rest; that
+  arm let `EXPLAIN ANALYZE INSERT`, `PREPARE … AS INSERT` (run by `EXECUTE`) and
+  `CREATE TABLE … AS INSERT …` execute a write past the gate. `executed_writes` answers every
+  write the statement runs: an `EXPLAIN` is looked into when its analyze flag is set and
+  answers nothing when it is not (a plain `EXPLAIN` executes nothing); a `PREPARE` is looked
+  into; for any other statement the parser's `visit_statements` hands over each statement
+  nested anywhere in it (a query body, a CTE, a subquery, a `CREATE TABLE AS` source, a
+  procedural block), and each INSERT, UPDATE and MERGE found is decided as if written alone.
+  `EXECUTE` carries a name only; its statement was decided at `PREPARE`.
+  **A statement it cannot parse:** the function applies the two rewrites `execute_inner`
+  applies before parsing (map casts and system functions, `WITH SCHEMA EVOLUTION`). If the
+  statement still does not parse: one `EXPLAIN` layer is peeled by its tokens
+  (`explained_statement`; the parser rejects a nested EXPLAIN, and the engine runs a doubled
+  `EXPLAIN ANALYZE`), a peeled layer without ANALYZE answers Ok, one with it is decided on
+  what remains; otherwise every `INSERT`, `UPDATE` or `MERGE` keyword in the statement gives
+  a written target (`write_to_branch::written_targets`), and a table with such a leaf
+  refuses (`NestedWrite::Unreadable`). The cost: a malformed write aimed at such a table
+  reports the nested refusal, not the parser's error.
+  A target that is not an Iceberg table passes through to the door, which answers as before.
+  pins: ice-tsns-merge-wall-1/C-040, C-050, C-053
 
 ## Pointers
 

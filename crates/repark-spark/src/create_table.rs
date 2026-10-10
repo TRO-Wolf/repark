@@ -740,9 +740,10 @@ async fn commit_staged_schema_only(
         .format_version(format_version)
         .properties(properties)
         .build();
-    let staged = StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
-        .await
-        .map_err(iceberg_err)?;
+    let staged =
+        repark_iceberg::catalog::begin_staged_create(plan.file_io, table_ident.clone(), creation)
+            .await
+            .map_err(iceberg_err)?;
     // Schema-only: no data write — empty pending files publish metadata only.
     staged
         .add_data_files(Vec::new())

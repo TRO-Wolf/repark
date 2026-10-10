@@ -127,6 +127,11 @@ pins: mb-3/C-031
   `start_below_catalog_check` is `pub` and no longer `cfg(test)` (the `Skip` arm with it),
   so the `_native` doors start on the memory catalogs the pins run on; `start` keeps the
   MBE-8 refusal. pins: mb-4/C-024
+- `run.rs`, ENC-1 fold 1 (2026-10-09): `engine_error` maps the keyed-table refusal to
+  `MicroBatchError::EncryptedSinkRefused` (the verifier saw `Catalog("External error: …")`).
+  The table sink staged Parquet before the commit refused; the catalog guard now refuses the
+  first file, so no orphan is left under the sink.
+  pins: enc-1/C-007, C-008
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and
@@ -212,6 +217,10 @@ pins: mb-3/C-031
   pins: mb-3/C-008
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).
 - `run_tests.rs` — the trigger-loop and lifecycle pins (`#[cfg(test)] #[path]` from `run.rs`).
+  ENC-1 fold 1 (2026-10-09) adds `a_keyed_sink_refuses_the_batch_and_stages_no_file`: a
+  sink carrying `encryption.key-id` ends the query with `EncryptedSinkRefused` and no file
+  appears under the warehouse.
+  pins: enc-1/C-007
   pins: mb-3/C-004
 - `fence_tests.rs` — the racing-driver pins (round 3, 2026-10-08), on both doors: two drivers
   of one query in two sessions over twenty rounds (each epoch stamped once, the rows once, no

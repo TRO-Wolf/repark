@@ -16,6 +16,7 @@ use crate::catalog::caches::{CatalogCaches, IcebergCacheSettings};
 use crate::catalog::counting_storage::{
     CountingStorageFactory, glue_default_storage_factory, s3tables_default_storage_factory,
 };
+use crate::catalog::encryption_guard::EncryptionGuardCatalog;
 use crate::catalog::location::storage_factory_for_location;
 
 /// Build the AWS-free in-memory catalog over `warehouse` for local development and tests.
@@ -88,7 +89,7 @@ pub(crate) async fn memory_catalog_wired(
         .load("memory", props)
         .await
         .map_err(iceberg_to_datafusion)?;
-    Ok(Arc::new(catalog))
+    Ok(EncryptionGuardCatalog::install(Arc::new(catalog)))
 }
 
 /// Build the AWS Glue catalog from `props`.
@@ -122,7 +123,7 @@ pub async fn glue_catalog_counted<S: BuildHasher>(
             .load("glue", clone_props(props))
             .await
             .map_err(iceberg_to_datafusion)?;
-        Ok(Arc::new(catalog) as Arc<dyn Catalog>)
+        Ok(EncryptionGuardCatalog::install(Arc::new(catalog)))
     }
     .instrument(tracing::info_span!(
         "catalog.glue_catalog",
@@ -162,7 +163,7 @@ pub async fn s3tables_catalog_counted<S: BuildHasher>(
             .load("s3tables", clone_props(props))
             .await
             .map_err(iceberg_to_datafusion)?;
-        Ok(Arc::new(catalog) as Arc<dyn Catalog>)
+        Ok(EncryptionGuardCatalog::install(Arc::new(catalog)))
     }
     .instrument(tracing::info_span!(
         "catalog.s3tables_catalog",

@@ -7,6 +7,11 @@ WO NTZ-1 slice 1 support. The parent `timestamp_ntz_cast.rs` holds the embedded 
 the wall literal (`__repark_timestamp_ntz__`), registered through `instant_ts::functions()` and
 reached only through the SQL door's literal and cast lowering and the DataFrame-door cast.
 
+**ICE-TSNS-MERGE-WALL-1 (2026-10-09):** this kernel stays microsecond. It was not extended to
+carry a nanosecond unit, because the nanosecond wall conversion already lives in
+[../timestamp_ns_cast/map.md](../timestamp_ns_cast/map.md) and INSERT already runs it; a unit
+parameter here would be a second nanosecond conversion beside that one.
+
 ## Contents
 
 - `tests.rs` — the module's `#[cfg(test)]` suite: the literal parse table (a zoned wall, a
