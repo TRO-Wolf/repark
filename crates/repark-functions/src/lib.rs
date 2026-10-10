@@ -39,6 +39,7 @@ mod java_regex;
 pub mod json;
 pub mod lambda_rebind;
 pub mod merge_schema;
+pub mod null_narrowing;
 pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;

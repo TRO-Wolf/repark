@@ -168,6 +168,21 @@ pub fn zone_stores(
             }
         })
         .collect();
+    let label = table
+        .identifier()
+        .namespace()
+        .iter()
+        .map(String::as_str)
+        .chain(std::iter::once(table.identifier().name()))
+        .map(|part| format!("`{}`", part.replace('`', "``")))
+        .collect::<Vec<_>>()
+        .join(".");
+    let unguarded = DataType::Null;
+    let pairs = names
+        .iter()
+        .zip(&targets)
+        .map(|(name, target)| (name.as_str(), target.as_ref().unwrap_or(&unguarded)));
+    super::narrowed_store::refuse_narrowed_ns_writes(ctx, &label, frame.logical_plan(), pairs)?;
     zone_store_frame(ctx, frame, &targets)
 }
 
@@ -250,6 +265,7 @@ pub fn refuse_ntz_writes<'a>(
     targets: impl IntoIterator<Item = (&'a str, &'a DataType)>,
 ) -> Result<()> {
     let targets: Vec<(&str, &DataType)> = targets.into_iter().collect();
+    super::narrowed_store::refuse_narrowed_ns_writes(ctx, table, plan, targets.iter().copied())?;
     if !targets
         .iter()
         .any(|(_, data_type)| is_ntz_wall_target(data_type))

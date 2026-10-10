@@ -1081,6 +1081,40 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- [null_narrowing.rs](null_narrowing.rs), `java_double.rs`, `instant_ts.rs` —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017):** the mark of a nanosecond
+  value that type coercion narrows beside an untyped `NULL`. After analysis a narrowing the
+  statement wrote and one the coercion inserted are the same expression, so the difference is
+  recorded while it exists, in two passes that already run:
+  - `tag_untyped_nulls`, called for every expression node by the `SparkFloatStringify`
+    instance that runs before `type_coercion` (`java_double.rs` `rewrite_float_plan`): an
+    untyped `NULL` literal that is a direct branch of a function call or a `CASE`, beside a
+    branch whose Arrow type is a nanosecond timestamp, takes a tag in its literal metadata.
+    That pass walks every expression of every plan node bottom-up, lambda bodies included,
+    and never stops early; `HigherOrderPreparation` beside it stops at the first higher-order
+    function of a plan, which hid every NULL after one. `tag_union_nulls` does the same for a `UNION`
+    branch whose column has the type `Null` beside a nanosecond column of another branch: the
+    column is replaced by a tagged `NULL` literal of the same name, in the branch's projection
+    or in one added above a branch that is not a projection.
+  - `settle_tagged_nulls`, called after `rewrite_cast` for every node by
+    `spark_ltz_timestamp_cast` (`instant_ts.rs`): a node that holds a tagged `NULL` loses the
+    tag, always. If the `NULL` is by then a microsecond timestamp and a sibling is still a
+    nanosecond timestamp, the coercion that follows narrows that sibling, and the node is
+    wrapped in `__repark_narrowed_beside_null__`. A sibling the statement narrowed itself is
+    already a microsecond value there, so `CASE WHEN … THEN CAST(c AS TIMESTAMP) ELSE NULL
+    END` is not wrapped. `settle_union_nulls` wraps the `NULL` column of a `UNION` branch on
+    the same test.
+  - `__repark_narrowed_beside_null__` returns its argument with its argument's type and
+    nullability, is registered so a rendered statement re-parses, and its `simplify` removes
+    it: the optimized plan and every evaluated value are what they were. The tag never
+    reaches an analyzed plan: `Cast` copies its source field's metadata, so a tag left behind
+    would show in a result schema.
+  Why here: the written and the inserted narrowing differ only before the first coercion (is
+  the `NULL` typed) and between the session rule and the second coercion (is the sibling
+  still nanoseconds). No pass is added; a statement without an untyped `NULL` beside a
+  nanosecond branch is not changed. The store reads the mark in
+  `repark-iceberg` `write/narrowed_store.rs`. Eight unit pins in `null_narrowing/tests.rs`.
+  pins: ice-tsns-narrow-refuse-1/C-002, C-003
 - `timestamp_ns_cast.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel
   `__repark_cast_timestamptz_ns__` is now the one conversion every write door reaches for a
   top-level `timestamptz_ns` column, as the naive kernel is for `timestamp_ns`. Its return

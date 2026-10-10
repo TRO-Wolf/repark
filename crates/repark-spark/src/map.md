@@ -1044,6 +1044,25 @@ pins: rp-4-fork-repin/C-005, C-006
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.
   pins: unresolved-routine-1/C-006
+- `insert_timestamp_ns.rs`, `spark_ast.rs`, `ctas.rs`, `update_cast.rs` —
+  **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017):** the SQL door's calls of the
+  narrowed-value guard (`repark-iceberg` `write/narrowed_store.rs`).
+  `insert_timestamp_ns::refuse_narrowed_stores` runs in `spark_ast` on the analyzed plan
+  before the INSERT conform: it finds the `Dml` of an `INSERT` or an `UPDATE` at the top,
+  under `EXPLAIN ANALYZE` or inside `PREPARE`, pairs its input columns with the target's by
+  position and refuses a marked value into a nanosecond column. That is the door of
+  `INSERT … VALUES`, `INSERT … SELECT` in every spelling, `REPLACE WHERE`, the DataFrame
+  `append`, `insertInto` and `saveAsTable` in append mode (they run an `INSERT` over a temp
+  view), `EXPLAIN ANALYZE INSERT` and `PREPARE`; a prepared statement is refused when it is
+  prepared, so `EXECUTE` finds none. A plain `EXPLAIN` writes nothing and is not refused.
+  `refuse_narrowed_columns` is the same for `CREATE TABLE AS` and `CREATE OR REPLACE TABLE
+  AS` (`ctas.rs`, after the query is analyzed): a column the statement would create as a
+  nanosecond timestamp from a marked value refuses and no table is created.
+  `update_cast.rs` calls the guard on the assignment probe with the statement's table name,
+  so `UPDATE` with and without a `WHERE` carry the text the unfiltered `UPDATE` carried
+  before. The unfiltered `UPDATE` keeps its older lineage test (`Narrowed::refuse`) as well:
+  it refused more there than the mark does, and no cell of that door moves.
+  pins: ice-tsns-narrow-refuse-1/C-004, C-008
 - `insert_timestamp_ns.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the `UPDATE` conform runs
   for a `timestamptz_ns` target too. R-007 had filtered zoned targets out of it to hold the
   type as a control, which is what left `UPDATE t SET v = <column>` with no `WHERE` on the

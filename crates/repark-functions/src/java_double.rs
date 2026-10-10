@@ -125,6 +125,11 @@ impl AnalyzerRule for SparkFloatStringify {
 }
 
 fn rewrite_float_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<LogicalPlan>> {
+    let tagged = crate::null_narrowing::tag_union_nulls(plan)?;
+    if tagged.transformed {
+        return Ok(tagged);
+    }
+    let plan = tagged.data;
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -135,7 +140,8 @@ fn rewrite_float_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<Logic
         let saved_name = name_preserver.save(&expr);
         let rewritten = expr.transform_up(|node| {
             let resolved = resolve_float_literal_input(node, &literals, &schema);
-            rewrite_float_expr(resolved.data, &schema, ansi)
+            rewrite_float_expr(resolved.data, &schema, ansi)?
+                .transform_data(|node| crate::null_narrowing::tag_untyped_nulls(node, &schema))
         })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;

@@ -7,6 +7,7 @@ use datafusion::sql::sqlparser::ast::{
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
+use repark_iceberg::write::narrowed_store::refuse_narrowed_ns_writes;
 use repark_iceberg::write::negated_null_store::refuse_negated_null_writes;
 use repark_iceberg::write::ntz_store::refuse_ntz_writes;
 use repark_iceberg::write::update_cast::{incompatible_store_message, incompatible_update_message};
@@ -158,6 +159,12 @@ async fn refuse_incompatible_update_cast(
         refuse_void_writes(ctx, "``", frame.logical_plan(), pair)?;
         let pair = [(column.as_str(), field.data_type())];
         refuse_negated_null_writes(ctx, "``", frame.logical_plan(), pair)?;
+        let pair = [(column.as_str(), field.data_type())];
+        let named = format!(
+            "`{}`",
+            crate::catalog_ops::name_parts(object_name).join(".")
+        );
+        refuse_narrowed_ns_writes(ctx, &named, frame.logical_plan(), pair)?;
         let pair = [(column.as_str(), field.data_type())];
         refuse_ntz_writes(ctx, "``", frame.logical_plan(), pair)?;
         if let Some(literal) = integer_literal_source_type(&assignment.value)

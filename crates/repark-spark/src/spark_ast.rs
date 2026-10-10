@@ -239,6 +239,7 @@ async fn execute_passthrough_inner(
         }
         None => plan,
     };
+    crate::insert_timestamp_ns::refuse_narrowed_stores(ctx, &plan)?;
     let plan = crate::insert_timestamp_ns::after_analysis(plan)?;
     if insert_source {
         return ctx.execute_logical_plan(insert_input(&plan)?).await;

@@ -610,6 +610,35 @@ repark-core's error map.
   `ltz_instant_cast_sql` / `needs_ltz_instant_cast` / `analyzed_types` serve the MERGE
   renderers. Callers: repark-spark `insert_by_name.rs` and `insert_overwrite.rs`.
   pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
+- [narrowed_store.rs](narrowed_store.rs), `ntz_store.rs` — **ICE-TSNS-NARROW-REFUSE-1
+  (2026-10-10, parity row R-017):** the store guard for a nanosecond value that type coercion
+  narrowed beside an untyped `NULL`. `refuse_narrowed_ns_writes(ctx, table, plan, targets)`
+  analyzes the supply and, for each target that is a top-level nanosecond timestamp, walks
+  the lineage of the paired output column; `__repark_narrowed_beside_null__` (the mark
+  `repark-functions` `null_narrowing.rs` places, the name pinned equal in repark-spark) on a
+  value-carrying path refuses with the text the unfiltered `UPDATE` already carried:
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `v` "TIMESTAMP" to
+  "TIMESTAMP_NS". The value was narrowed from nanoseconds to microseconds before the store;
+  give the NULL beside it the type timestamp_ns. SQLSTATE: KD000` (Spark 4.1.2 raises that
+  class and state for an unsafe store cast, measured 2026-10-10).
+  `refuse_narrowed_ns_columns` is the same over a plan that is already analyzed.
+  `column_narrowed` follows a column through projections, aliases, filters, sorts, limits,
+  repartitions, `DISTINCT`, `VALUES`, every `UNION` branch, the side of a join, the group and
+  aggregate expressions, the window expressions, and a table scan that is an inlined or a
+  catalog view (`negated_null_store::ViewDefinitionPlans`); any other node refuses if the
+  mark is anywhere below it. `expr_narrowed` follows a branch only when its type holds a
+  timestamp, a `CASE` through its results and not its conditions, an aggregate or a window
+  through its arguments, a higher-order function into its lambda bodies, and a scalar
+  subquery into its plan. A narrowed value that only feeds a condition, an ordering or a
+  cast through a string does not refuse.
+  The guard is called where a door already pairs a supply with its target columns:
+  `ntz_store::zone_stores` (`INSERT OVERWRITE`, static and dynamic partition overwrite,
+  `INSERT … BY NAME`, and the DataFrame writers that ride them), `ntz_store::refuse_ntz_writes`
+  (the MERGE insert and update supplies, the `UPDATE` assignment probe), and from repark-spark
+  the DataFusion `Dml` plan of `INSERT` and of `UPDATE` with no `WHERE`, the `UPDATE`
+  assignment probe by table name, and `CREATE TABLE AS`. A microsecond target is never
+  walked. Three unit pins in `narrowed_store/tests.rs`.
+  pins: ice-tsns-narrow-refuse-1/C-004, C-007, C-008
 - `ntz_store.rs`, `update_cast.rs`, `merge/insert.rs`, `predicate_dml/lineage.rs` —
   **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned nanosecond target is named too.
   `store_kernel_udf_name(target)` answers the registered kernel of the three types a plain
