@@ -85,7 +85,17 @@ _KILL_HARNESS = textwrap.dedent(
         spark.stop()
         sys.exit(0)
 
+    def stray():
+        spark.sql("INSERT INTO sc.eo.snk VALUES (7000, 'stray')")
+
     def body(frame, epoch):
+        if mode == "exit_before_write" and epoch == arg:
+            os._exit(41)
+        if mode == "stray_then_exit" and epoch == arg:
+            writer = threading.Thread(target=stray)
+            writer.start()
+            writer.join()
+            os._exit(45)
         frame.writeTo("sc.eo.snk").append()
         if mode == "exit_after_write" and epoch == arg:
             os._exit(42)
@@ -109,7 +119,12 @@ _KILL_HARNESS = textwrap.dedent(
         .trigger(availableNow=True)
         .start()
     )
-    query.awaitTermination(120)
+    try:
+        query.awaitTermination(120)
+    except Exception as error:
+        print("END " + type(error).__name__ + " " + str(error), flush=True)
+        report()
+        os._exit(7)
     report()
     spark.stop()
     os._exit(0)
@@ -165,6 +180,11 @@ def _log(spark: ReparkSession, table: str) -> list[tuple[str, str | None, str | 
         )
         for row in rows
     ]
+
+
+def _properties(spark: ReparkSession) -> list[tuple[str, str]]:
+    rows = spark.sql(f"SHOW TBLPROPERTIES {_SINK}").collect()
+    return [(row[0], row[1]) for row in rows if not row[0].startswith("repark.cdc.offsets.")]
 
 
 def _failure(query: StreamingQuery) -> StreamingQueryException:
@@ -366,13 +386,13 @@ def test_unstampable_sink_write_refuses_before_it_commits(
     spark.sql(f"INSERT INTO {_SINK} VALUES (90, 'kept')")
     spark.sql(f"INSERT INTO {_SINK} VALUES (91, 'kept')")
     before = _log(spark, _SINK)
-    properties = spark.sql(f"SHOW TBLPROPERTIES {_SINK}").collect()
+    properties = _properties(spark)
     failure = _failure(_start(spark, _Body(spark, shape), tables))
     assert failure.getCondition() == "STREAM_FAILED"
     assert f"[{_UNSTAMPED_WRITE}] epoch 0: this commit to the declared sink" in str(failure)
     assert _ids(spark, _SINK) == [90, 91]
     assert _log(spark, _SINK) == before
-    assert spark.sql(f"SHOW TBLPROPERTIES {_SINK}").collect() == properties
+    assert _properties(spark) == properties
 
 
 @pytest.mark.parametrize(
@@ -433,6 +453,21 @@ def test_sink_write_from_another_thread_ends_recovery_required(
         spark.stop()
 
 
+def _harness_end(tmp_path: Path) -> tuple[int, str, dict[str, list[int]]]:
+    script = tmp_path / "eo_kill_harness.py"
+    done = subprocess.run(
+        [sys.executable, str(script), str(tmp_path), "run", "0"],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    lines = done.stdout.splitlines()
+    ends = [line[4:] for line in lines if line.startswith("END ")]
+    reports = [json.loads(line[7:]) for line in lines if line.startswith("REPORT ")]
+    return done.returncode, ends[-1] if ends else "", reports[-1]
+
+
 def _harness(tmp_path: Path, mode: str, arg: int) -> tuple[int, dict[str, list[int]] | None]:
     script = tmp_path / "eo_kill_harness.py"
     if not script.exists():
@@ -481,3 +516,27 @@ def test_random_kills_restart_without_a_duplicate(tmp_path: Path) -> None:
     assert code == 0
     _assert_exact(report)
     assert len(report["sink"]) == 64
+
+
+def test_kill_before_the_first_commit_restarts_from_the_mark_without_a_duplicate(
+    tmp_path: Path,
+) -> None:
+    assert _harness(tmp_path, "init", 6)[0] == 0
+    assert _harness(tmp_path, "exit_before_write", 0)[0] == 41
+    assert _harness(tmp_path, "exit_before_write", 0)[0] == 41
+    code, report = _harness(tmp_path, "run", 0)
+    assert code == 0
+    _assert_exact(report)
+    assert len(report["sink"]) == 24
+
+
+def test_stray_then_kill_at_the_first_batch_refuses_the_first_restart(tmp_path: Path) -> None:
+    assert _harness(tmp_path, "init", 6)[0] == 0
+    assert _harness(tmp_path, "stray_then_exit", 0)[0] == 45
+    for _ in range(2):
+        code, end, report = _harness_end(tmp_path)
+        assert code == 7
+        assert end.startswith("RecoveryRequiredException")
+        assert "(append) without a stamp" in end
+        assert report["sink"] == [7000]
+        assert report["epochs"] == []

@@ -177,3 +177,37 @@ async fn the_mark_names_a_branch_a_rollback_and_a_replaced_table() {
             .starts_with("the table under the sink's name was replaced (uuid ")
     );
 }
+
+fn offsets_key() -> String {
+    format!("{OFFSETS_PROPERTY_PREFIX}{query}", query = query())
+}
+
+async fn with_raw_mark(catalog: &Arc<dyn Catalog>, table: &Table, head: &str) -> Table {
+    let value = format!("{{\"format-version\":1,\"pending-epoch\":0,\"starting-head\":{head}}}");
+    let tx = Transaction::new(table);
+    let tx = tx
+        .update_table_properties()
+        .set(offsets_key(), value)
+        .apply(tx)
+        .expect("apply the mark");
+    tx.commit(catalog.as_ref()).await.expect("the mark commits")
+}
+
+#[tokio::test]
+async fn a_pending_starting_mark_reads_as_no_durable_record_and_the_first_stamp_replaces_it() {
+    let (_warehouse, catalog, ident) = fixture("mark_pending").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let marked = with_raw_mark(&catalog, &seeded, &head(&seeded).to_string()).await;
+    assert_eq!(read_resume_point(&marked, query()).expect("resume"), None);
+    assert_eq!(
+        unstamped_since_stamp(&marked, query(), Some(head(&seeded))),
+        None
+    );
+    let committed = stamped(&catalog, &marked, 0, &[2]).await;
+    let resumed = read_resume_point(&committed, query())
+        .expect("resume")
+        .expect("the first stamp is durable");
+    assert_eq!(resumed.epoch, Epoch::new(0));
+    let value = &committed.metadata().properties()[&offsets_key()];
+    assert!(!value.contains("pending-epoch"), "{value}");
+}

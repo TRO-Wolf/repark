@@ -577,6 +577,33 @@ mod tests {
     }
 
     #[test]
+    fn the_unstamped_reasons_name_the_stray_and_both_remedies() {
+        let commit = RecoveryReason::UnstampedSinkCommit {
+            snapshot: SnapshotId::new(11),
+            operation: Some(String::from("append")),
+        };
+        assert_eq!(
+            commit.to_string(),
+            "sink advanced to snapshot 11 (append) without a stamp; a commit bypassed the batch scope. Its rows are in the sink and the query will not run past them. Either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name"
+        );
+        let unnamed = RecoveryReason::UnstampedSinkCommit {
+            snapshot: SnapshotId::new(11),
+            operation: None,
+        };
+        assert_eq!(
+            unnamed.to_string(),
+            "sink advanced to snapshot 11 without a stamp; a commit bypassed the batch scope"
+        );
+        let change = RecoveryReason::UnstampedSinkChange {
+            what: String::from("table property owner changed"),
+        };
+        assert_eq!(
+            change.to_string(),
+            "the sink changed without a stamp during the batch: table property owner changed. The query will not run past the change. Either roll the sink back to its newest stamped snapshot (to the head the query first started on, if no batch is stamped yet), or start the query under a new name"
+        );
+    }
+
+    #[test]
     fn sink_committed_twice_names_the_loss_and_the_fix() {
         let twice = MicroBatchError::SinkCommittedTwice {
             epoch: Epoch::new(4),

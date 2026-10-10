@@ -13,10 +13,10 @@ use crate::Session;
 use crate::microbatch::driver::{
     BatchBody, QueryState, ShutdownOutcome, SinkSpec, StreamSpec, Trigger,
 };
-use crate::microbatch::lifecycle_tests::ONE;
+use crate::microbatch::lifecycle_tests::{ONE, named};
 use crate::microbatch::table_door_tests::{ARMED_LANDED, ARMED_LOST, FLAKY_SINK, flaky};
 use crate::microbatch::testing::{
-    Fixture, SINK, SOURCE, SinkWriter, append_frame, options, stamped_epochs, started,
+    Fixture, SINK, SOURCE, SinkWriter, append_frame, options, stamped_epochs, started, table_spec,
 };
 
 async fn bronze(fixture: &Fixture) {
@@ -351,24 +351,182 @@ async fn a_failed_body_is_audited_and_the_restart_refuses_before_any_body() {
     }
 }
 
+fn offsets_property(sink: &iceberg::table::Table) -> Vec<String> {
+    let mut values: Vec<String> = sink
+        .metadata()
+        .properties()
+        .iter()
+        .filter(|(key, _)| key.starts_with("repark.cdc.offsets."))
+        .map(|(_, value)| value.clone())
+        .collect();
+    values.sort();
+    values
+}
+
 #[tokio::test]
-async fn at_epoch_zero_a_restart_replays_and_is_stopped_again() {
+async fn at_epoch_zero_the_restart_reads_the_mark_and_refuses_before_any_body() {
     let fixture = Fixture::new().await;
+    fixture.insert(SINK, "(90)").await;
     bronze(&fixture).await;
     let body = Shaped::new(&fixture.session, Stray::SpawnedAppend, 0, Own::RaiseAfter);
     let first = unstamped_commit(ended_with(&fixture, &body).await.as_ref());
     assert_eq!((first.0, first.1), (0, None));
-    let resumed = Shaped::new(&fixture.session, Stray::SpawnedAppend, 0, Own::RaiseAfter);
-    let second = unstamped_commit(ended_with(&fixture, &resumed).await.as_ref());
-    assert_eq!((second.0, second.1), (0, None));
-    assert_ne!(first.2, second.2, "the replay's own stray is the one named");
-    assert_eq!(
-        resumed.calls(),
-        1,
-        "no stamp exists, so the restart cannot refuse"
-    );
-    assert_eq!(fixture.ids(SINK).await, [1, 1, 2, 2, 3, 3]);
+    for attempt in 0..2 {
+        let resumed = Shaped::new(&fixture.session, Stray::SpawnedAppend, 0, Own::AppendAfter);
+        let refused = unstamped_commit(ended_with(&fixture, &resumed).await.as_ref());
+        assert_eq!(refused, first, "restart {attempt} names the first stray");
+        assert_eq!(resumed.calls(), 0, "restart {attempt} ran a body");
+        assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 90], "restart {attempt}");
+    }
     assert!(stamped_epochs(&fixture.table("silver").await).is_empty());
+}
+
+#[tokio::test]
+async fn the_first_start_writes_the_mark_and_the_first_stamp_replaces_it() {
+    for seeded in [false, true] {
+        let fixture = Fixture::new().await;
+        if seeded {
+            fixture.insert(SINK, "(90)").await;
+        }
+        let head = fixture
+            .table("silver")
+            .await
+            .metadata()
+            .current_snapshot_id();
+        bronze(&fixture).await;
+        let failing = Shaped::new(&fixture.session, Stray::ExplainInsert, 0, Own::RaiseAfter);
+        let error = ended_with(&fixture, &failing).await;
+        assert!(
+            matches!(error.as_ref(), MicroBatchError::BatchFailed { .. }),
+            "{error:?}"
+        );
+        let sink = fixture.table("silver").await;
+        let starting = head.map_or_else(|| String::from("null"), |id| id.to_string());
+        assert_eq!(
+            offsets_property(&sink),
+            [format!(
+                "{{\"format-version\":1,\"pending-epoch\":0,\"starting-head\":{starting}}}"
+            )],
+            "seeded: {seeded}"
+        );
+        assert_eq!(sink.metadata().current_snapshot_id(), head);
+        let location = sink.metadata_location().map(str::to_string);
+        let again = Shaped::new(&fixture.session, Stray::ExplainInsert, 0, Own::RaiseAfter);
+        ended_with(&fixture, &again).await;
+        assert_eq!(
+            fixture
+                .table("silver")
+                .await
+                .metadata_location()
+                .map(str::to_string),
+            location,
+            "a restart that finds the mark writes nothing"
+        );
+        let healthy = SinkWriter::new(&fixture.session, SINK, 1);
+        let handle = started(&fixture, healthy.spec(&options(ONE))).await;
+        assert_eq!(handle.await_termination(None).await, Ok(true));
+        let sink = fixture.table("silver").await;
+        assert_eq!(stamped_epochs(&sink), [0, 1]);
+        let values = offsets_property(&sink);
+        assert_eq!(values.len(), 1);
+        assert!(!values[0].contains("pending-epoch"), "{values:?}");
+        let expected: Vec<i64> = if seeded {
+            vec![1, 2, 3, 4, 5, 90]
+        } else {
+            vec![1, 2, 3, 4, 5]
+        };
+        assert_eq!(fixture.ids(SINK).await, expected);
+    }
+}
+
+#[tokio::test]
+async fn a_start_with_no_mark_and_no_stamp_takes_the_head_it_finds_and_marks_it() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    fixture.insert(SINK, "(70)").await;
+    fixture.insert(SINK, "(71)").await;
+    let head = fixture
+        .table("silver")
+        .await
+        .metadata()
+        .current_snapshot_id()
+        .expect("the rows a markless run left");
+    let body = SinkWriter::new(&fixture.session, SINK, 1);
+    let handle = started(&fixture, body.spec(&options(ONE))).await;
+    assert_eq!(handle.await_termination(None).await, Ok(true));
+    assert_eq!(body.calls(), 2);
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5, 70, 71]);
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    fixture.insert(SINK, "(70)").await;
+    let head_before = fixture
+        .table("silver")
+        .await
+        .metadata()
+        .current_snapshot_id()
+        .expect("a head");
+    assert_ne!(head, head_before);
+    let failing = Shaped::new(&fixture.session, Stray::ExplainInsert, 0, Own::RaiseAfter);
+    ended_with(&fixture, &failing).await;
+    assert_eq!(
+        offsets_property(&fixture.table("silver").await),
+        [format!(
+            "{{\"format-version\":1,\"pending-epoch\":0,\"starting-head\":{head_before}}}"
+        )]
+    );
+}
+
+#[tokio::test]
+async fn two_query_names_on_one_sink_each_keep_their_own_mark_and_stamps() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    let first = SinkWriter::new(&fixture.session, SINK, 1);
+    let a = started(&fixture, named(first.spec(&options(ONE)), "a")).await;
+    assert_eq!(a.await_termination(None).await, Ok(true));
+    let failing = Shaped::new(&fixture.session, Stray::ExplainInsert, 0, Own::RaiseAfter);
+    let b = started(&fixture, named(failing.spec(), "b")).await;
+    assert!(b.await_termination(None).await.is_err());
+    assert_ne!(a.id(), b.id());
+    let values = offsets_property(&fixture.table("silver").await);
+    assert_eq!(values.len(), 2);
+    assert_eq!(
+        values
+            .iter()
+            .filter(|value| value.contains("pending-epoch"))
+            .count(),
+        1,
+        "{values:?}"
+    );
+    let second = SinkWriter::new(&fixture.session, SINK, 1);
+    let b = started(&fixture, named(second.spec(&options(ONE)), "b")).await;
+    assert_eq!(b.await_termination(None).await, Ok(true));
+    fixture.insert(SOURCE, "(6)").await;
+    let resumed = SinkWriter::new(&fixture.session, SINK, 1);
+    let a = started(&fixture, named(resumed.spec(&options(ONE)), "a")).await;
+    assert_eq!(a.await_termination(None).await, Ok(true));
+    assert_eq!(resumed.calls(), 1);
+    assert_eq!(fixture.ids(SINK).await, [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6]);
+    let values = offsets_property(&fixture.table("silver").await);
+    assert!(values.iter().all(|value| !value.contains("pending-epoch")));
+}
+
+#[tokio::test]
+async fn the_table_door_writes_no_mark() {
+    let fixture = Fixture::new().await;
+    let handle = started(&fixture, table_spec(Trigger::AvailableNow, &options(ONE))).await;
+    assert_eq!(handle.await_termination(None).await, Ok(true));
+    let sink = fixture.table("silver").await;
+    assert!(offsets_property(&sink).is_empty());
+    assert_eq!(sink.metadata().metadata_log().len(), 0);
+    let idle = SinkWriter::new(&fixture.session, SINK, 1);
+    let foreach = started(&fixture, named(idle.spec(&options(ONE)), "f")).await;
+    assert_eq!(foreach.await_termination(None).await, Ok(true));
+    assert_eq!(idle.calls(), 0);
+    let values = offsets_property(&fixture.table("silver").await);
+    assert_eq!(
+        values,
+        ["{\"format-version\":1,\"pending-epoch\":0,\"starting-head\":null}"]
+    );
 }
 
 #[tokio::test]

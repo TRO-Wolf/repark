@@ -371,3 +371,82 @@ def _stamped_head(spark: ReparkSession) -> int:
         f"SELECT snapshot_id, summary FROM {_SINK}.snapshots ORDER BY committed_at"
     ).collect()
     return [row.snapshot_id for row in rows if "repark.cdc.epoch" in dict(row.summary)][-1]
+
+
+_REMEDIES = (
+    "Its rows are in the sink and the query will not run past them. Either roll the sink back "
+    "to its newest stamped snapshot (to the head the query first started on, if no batch is "
+    "stamped yet), or start the query under a new name"
+)
+
+
+@pytest.mark.parametrize("route", ["thread_insert", "thread_append"])
+def test_stray_at_the_first_batch_refuses_the_first_restart_from_the_mark(
+    spark: ReparkSession, tables: Path, route: str
+) -> None:
+    body = _Stray(spark, route, "raise", at=0)
+    failure = _recovery(_start(spark, body, tables))
+    stray = _unstamped_ids(spark)[-1]
+    text = f"sink advanced to snapshot {stray} (append) without a stamp"
+    assert text in str(failure)
+    assert _REMEDIES in str(failure)
+    assert failure.epoch == 0
+    rows, log = _ids(spark), _log(spark)
+    for _ in range(2):
+        resumed = _Stray(spark, route, "append", at=9)
+        refused = _recovery(_start(spark, resumed, tables))
+        assert text in str(refused)
+        assert _REMEDIES in str(refused)
+        assert resumed.calls == 0
+        assert _ids(spark) == rows
+        assert _log(spark) == log
+    seed = spark.sql(f"SELECT snapshot_id FROM {_SINK}.snapshots ORDER BY committed_at").collect()[
+        0
+    ][0]
+    spark.sql(f"CALL sc.system.rollback_to_snapshot('ln.snk', {seed})")
+    recovered = _Stray(spark, route, "append", at=9)
+    assert _start(spark, recovered, tables).awaitTermination() is None
+    assert recovered.calls == 2
+    assert _ids(spark) == [1, 2, 3, 90]
+
+
+def _offsets(spark: ReparkSession) -> list[str]:
+    rows = spark.sql(f"SHOW TBLPROPERTIES {_SINK}").collect()
+    return [row[1] for row in rows if row[0].startswith("repark.cdc.offsets.")]
+
+
+def _raise_before_any_write(frame: DataFrame, batch_id: int) -> None:
+    raise ValueError("mb4 body failed before its sink write")
+
+
+def test_first_start_writes_the_mark_into_the_offsets_property(
+    spark: ReparkSession, tables: Path
+) -> None:
+    seed = spark.sql(f"SELECT snapshot_id FROM {_SINK}.snapshots").collect()[0][0]
+    assert _offsets(spark) == []
+    with pytest.raises(StreamingQueryException):
+        _start(spark, _raise_before_any_write, tables).awaitTermination()
+    mark = f'{{"format-version":1,"pending-epoch":0,"starting-head":{seed}}}'
+    assert _offsets(spark) == [mark]
+    assert _log(spark) == [("append", None)]
+    healthy = _Stray(spark, "thread_insert", "append", at=9)
+    assert _start(spark, healthy, tables).awaitTermination() is None
+    values = _offsets(spark)
+    assert len(values) == 1
+    assert "pending-epoch" not in values[0]
+    assert _ids(spark) == [1, 2, 3, 90]
+
+
+def test_table_door_writes_no_mark(spark: ReparkSession, tables: Path) -> None:
+    query = (
+        spark.readStream.table(_SOURCE)
+        .writeStream.option("checkpointLocation", str(tables / "ck"))
+        .queryName("ln")
+        .trigger(availableNow=True)
+        .toTable(_SINK)
+    )
+    assert query.awaitTermination() is None
+    values = _offsets(spark)
+    assert len(values) == 1
+    assert "pending-epoch" not in values[0]
+    assert _log(spark) == [("append", None), ("append", "0")]
