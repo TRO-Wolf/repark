@@ -216,6 +216,27 @@ fn a_cast_coercion_left_over_a_nanosecond_value_is_marked() {
 }
 
 #[test]
+fn the_session_rule_marks_a_cast_coercion_left_at_the_root_of_a_projection() {
+    let narrowed = table_scan(Some("t"), &arrow(), None)
+        .unwrap()
+        .project(vec![col("id"), cast(col("c"), micros()).alias("v")])
+        .unwrap()
+        .build()
+        .unwrap();
+    let analyzed = crate::instant_ts::ltz_timestamp_cast_rule()
+        .analyze(narrowed, &ConfigOptions::new())
+        .unwrap();
+    let LogicalPlan::Projection(projection) = analyzed else {
+        panic!("a projection");
+    };
+    assert_eq!(
+        marks(&projection.expr[1]),
+        vec![format!("{NARROWED_BESIDE_VALUE_NAME}(t.c)")]
+    );
+    assert!(marks(&projection.expr[0]).is_empty());
+}
+
+#[test]
 fn the_marker_is_its_argument_and_the_optimizer_drops_it() {
     for untyped_null in [true, false] {
         let udf = narrowed_beside_udf(untyped_null);
