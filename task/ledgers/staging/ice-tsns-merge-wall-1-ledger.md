@@ -1032,8 +1032,34 @@ S20 and S24 survived the first run; a pin was added for each and they were run a
 
 ### 11.6 Gates of the split (C-048)
 
-Run on the unit's head with real exit codes; the list and the codes are in the hand-back of
-the round.
+Run 2026-10-09 on `e44c2610` (the code) and on the tree of the records commit (the document
+gates), one cargo command at a time under the build lock on cores 32-47.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo fmt --all -- --check` | 0 | |
+| `make rust-clippy` | 0 | |
+| `make rust-panic-ban` | 0 | |
+| `cargo test --locked -p repark-functions --lib` | 0 | 903 passed, 1 ignored |
+| `cargo test --locked -p repark-iceberg --lib` | 0 | 973 passed |
+| `cargo test --locked -p repark-spark --lib` | 0 | 2634 passed, 5 ignored |
+| `cargo test --locked -p repark-sql --lib` | 0 | 393 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_wall_doors --test timestamp_ns_nested_shapes` | 0 | 7 + 6 passed |
+| `make develop` | 0 | |
+| `pytest python/repark/tests/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 351 passed |
+| `pytest python/repark/tests -q -n 8 -k "iceberg or v3 or merge or timestamp or nested or struct"` | 0 | 3575 passed, 140 skipped, 11 xfailed |
+| `ruff check .` and `ruff format --check .` (0.15.22) | 0 | |
+| `python3 scripts/sync_map_md.py --check` | 0 | 374 maps clean |
+| `bash scripts/check_map_md.sh --base origin/main`, and against `ca5a062a` | 0 | |
+| `make check-ledger-grammar`, `make check-ledgers` | 0 | |
+| `make check-docs-links` | 0 | 7523 links |
+| `make spell-check` | 0 | |
+| `make check-rust-file-size`, `make check-lib-rs` | 0 | `router.rs` at 1000 of 1000 |
+| `make check-docs-compaction` | 0 | |
+
+The pins were seen red first: on `65bb2042`, which holds the pins over the fold's code, five of
+the six Rust nested-shape tests and 116 of the 351 facade tests fail (112 nested refusals and
+the four run-end-encoded doors).
 
 ## Q. Questions for a ruling
 
