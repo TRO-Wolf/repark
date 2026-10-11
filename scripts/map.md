@@ -1,5 +1,7 @@
 # map — scripts/
 
+MB-4 fold 1 follow-up (2026-10-09): record the `check_lib_py.py` ratchet `dataframe/core.py` 3461 → 3260 landed in the S2 UDF commit (the map-bridge execution family moves unchanged to `map_bridge.py`), shrink-only, with the CAP-1 mirror in this commit. pins: mb-4/C-039
+MB-4 item 9 (2026-10-09): `check_lib_py.py` ratchets `session/session_core.py` 2277 → 2269 (`stop` hands the query stops and the two temp-dir cleanups to `session_surface.release_session_resources` behind a one-line call), shrink-only, with the CAP-1 mirror. pins: mb-4/C-030
 STAMP-2-R5P6-2 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3462 → 3461 (the H1 join door builds its statement in three lines and hands the route choice to `join_attr_tokens._join_exact_or_sql`), shrink-only, with the CAP-1 mirror. pins: stamp-2-r5p6-2/C-003
 SOURCE-URL-REDACT-2 fold 4 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3971 → 3965 (the redundant inner mapInArrow user-call handler is gone), `dataframe/joins_columns.py` 1169 → 1117 (`_grouped_agg_pandas` moves unchanged to `udf_bridge.py`) and `spark/functions_udf.py` 1300 → 1287 (`_refuse_udtf_as_scalar_udf` moves unchanged to `udtf.py`), with the CAP-1 mirror, shrink-only. pins: source-url-redact-1/C-076
 SOURCE-URL-REDACT-2 fold 4 H3 (2026-10-07): `check_lib_py.py` sets `dataframe/core.py` 3965 → 3969 for the mapInArrow `PySparkException` scrub, still below the 3971 base, with the CAP-1 mirror. pins: source-url-redact-1/C-077

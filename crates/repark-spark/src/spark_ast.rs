@@ -243,7 +243,9 @@ async fn execute_passthrough_inner(
     if insert_source {
         return ctx.execute_logical_plan(insert_input(&plan)?).await;
     }
-    let dataframe = ctx.execute_logical_plan(plan).await?;
+    let dataframe = repark_core::PreExecute::new(ctx, catalogs)
+        .execute(plan)
+        .await?;
     if !is_eager_command {
         return Ok(dataframe);
     }

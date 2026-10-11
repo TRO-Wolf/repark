@@ -6,7 +6,7 @@
   "rows": 35,
   "frozen_rows": 30,
   "unfrozen_rows": 5,
-  "frozen_names": 891
+  "frozen_names": 893
  },
  "rows": [
   {
@@ -5318,6 +5318,14 @@
     },
     {
      "name": "PySparkValueError",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "RecoveryRequiredException",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "StreamingQueryException",
      "source": "python/repark/src/repark/errors.py"
     },
     {

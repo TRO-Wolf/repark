@@ -10,18 +10,30 @@ use iceberg::{
     TableIdent, ViewCreation,
 };
 
-use super::{ClaimedStamp, epoch_check, latch_refusal, main_lineage, stamped_by};
+use super::body_scope::{BodyScope, note_unknown_outcome, refuse_sink_commit, watches};
+use super::{
+    ClaimedStamp, epoch_check, latch_refusal, main_lineage, over_a_stray, stamped_by, stray_since,
+};
 use crate::microbatch::error::MicroBatchError;
-use crate::microbatch::offset::{QUERY_ID_KEY, QueryId, SinkRecord, SnapshotId};
+use crate::microbatch::offset::{Epoch, QUERY_ID_KEY, QueryId, SinkRecord, SnapshotId};
+use crate::microbatch::starting_mark::StartingMark;
 
 #[derive(Debug)]
 pub(super) struct AppendFence {
     inner: Arc<dyn Catalog>,
-    claimed: ClaimedStamp,
+    rule: Rule,
+}
+
+#[derive(Debug)]
+enum Rule {
+    Stamp(ClaimedStamp),
+    StartingMark(QueryId),
+    BodySink(BodyScope),
 }
 
 enum Breach<'metadata> {
     ConcurrentStamp(&'metadata SnapshotRef),
+    Stray(&'metadata SnapshotRef),
     BaseLeftMain,
 }
 
@@ -29,23 +41,50 @@ impl AppendFence {
     pub(super) fn install(inner: &Arc<dyn Catalog>, claimed: &ClaimedStamp) -> Arc<dyn Catalog> {
         Arc::new(AppendFence {
             inner: Arc::clone(inner),
-            claimed: claimed.clone(),
+            rule: Rule::Stamp(claimed.clone()),
+        })
+    }
+
+    pub(super) fn for_starting_mark(inner: &Arc<dyn Catalog>, query: QueryId) -> Arc<dyn Catalog> {
+        Arc::new(AppendFence {
+            inner: Arc::clone(inner),
+            rule: Rule::StartingMark(query),
+        })
+    }
+
+    pub(super) fn for_body(inner: &Arc<dyn Catalog>, scope: BodyScope) -> Arc<dyn Catalog> {
+        Arc::new(AppendFence {
+            inner: Arc::clone(inner),
+            rule: Rule::BodySink(scope),
         })
     }
 
     fn refuse(&self, refreshed: &Table) -> Option<Error> {
+        match &self.rule {
+            Rule::Stamp(claimed) => Self::refuse_stamp(claimed, refreshed),
+            Rule::StartingMark(query) => already_started(refreshed, *query),
+            Rule::BodySink(scope) => refuse_sink_commit(scope, refreshed),
+        }
+    }
+
+    fn body_scope_on(&self, table: &Table) -> Option<&BodyScope> {
+        match &self.rule {
+            Rule::BodySink(scope) if watches(scope, table) => Some(scope),
+            _ => None,
+        }
+    }
+
+    fn refuse_stamp(claimed: &ClaimedStamp, refreshed: &Table) -> Option<Error> {
         let metadata = refreshed.metadata();
-        let record = &self.claimed.stamp.record;
-        let (message, refusal) =
-            if let Some(breach) = breach(metadata, self.claimed.base, record.query) {
-                let message = self.message(metadata, &breach);
-                let refusal = self.typed(refreshed, &breach, &message);
-                (message, refusal)
-            } else {
-                let refusal = epoch_check(refreshed, &self.claimed.stamp).err()?;
-                (refusal.to_string(), refusal)
-            };
-        latch_refusal(refreshed, &self.claimed.stamp, &refusal);
+        let (message, refusal) = if let Some(breach) = breach(metadata, claimed) {
+            let message = Self::message(claimed, metadata, &breach);
+            let refusal = Self::typed(claimed, refreshed, &breach, &message);
+            (message, refusal)
+        } else {
+            let refusal = epoch_check(refreshed, &claimed.stamp).err()?;
+            (refusal.to_string(), refusal)
+        };
+        latch_refusal(refreshed, &claimed.stamp, &refusal);
         Some(
             Error::new(ErrorKind::DataInvalid, message)
                 .with_retryable(false)
@@ -53,9 +92,9 @@ impl AppendFence {
         )
     }
 
-    fn message(&self, metadata: &TableMetadata, breach: &Breach<'_>) -> String {
-        let record = &self.claimed.stamp.record;
-        let base = display_snapshot(self.claimed.base);
+    fn message(claimed: &ClaimedStamp, metadata: &TableMetadata, breach: &Breach<'_>) -> String {
+        let record = &claimed.stamp.record;
+        let base = display_snapshot(claimed.base);
         let prefix = format!(
             "append fence: query {query} epoch {epoch} pinned base snapshot {base}",
             query = record.query,
@@ -67,6 +106,7 @@ impl AppendFence {
                 newer = newer.snapshot_id(),
                 query = record.query
             ),
+            Breach::Stray(stray) => format!("{prefix}; {}", over_a_stray(stray, &claimed.stamp)),
             Breach::BaseLeftMain => format!(
                 "{prefix}, which is no longer an ancestor of main (head {head}); nothing can be proven about {QUERY_ID_KEY}={query} above it",
                 head = display_snapshot(metadata.current_snapshot_id().map(SnapshotId::new)),
@@ -75,8 +115,13 @@ impl AppendFence {
         }
     }
 
-    fn typed(&self, refreshed: &Table, breach: &Breach<'_>, message: &str) -> MicroBatchError {
-        let stamp = &self.claimed.stamp;
+    fn typed(
+        claimed: &ClaimedStamp,
+        refreshed: &Table,
+        breach: &Breach<'_>,
+        message: &str,
+    ) -> MicroBatchError {
+        let stamp = &claimed.stamp;
         if let Err(durable) = epoch_check(refreshed, stamp) {
             return durable;
         }
@@ -89,7 +134,7 @@ impl AppendFence {
                     .map(|concurrent| concurrent.run)
                     .filter(|run| *run != record.run)
             }
-            Breach::BaseLeftMain => None,
+            Breach::Stray(_) | Breach::BaseLeftMain => None,
         };
         match winner {
             Some(winner) => MicroBatchError::Fenced {
@@ -102,16 +147,34 @@ impl AppendFence {
     }
 }
 
+fn already_started(refreshed: &Table, query: QueryId) -> Option<Error> {
+    let metadata = refreshed.metadata();
+    let marked = metadata
+        .properties()
+        .contains_key(&StartingMark::property_key(query));
+    let stamped = main_lineage(metadata)
+        .any(|snapshot| stamped_by(&snapshot.summary().additional_properties, query));
+    (marked || stamped).then(|| {
+        let refusal = MicroBatchError::AlreadyCommitted {
+            query,
+            epoch: Epoch::FIRST,
+        };
+        Error::new(ErrorKind::DataInvalid, refusal.to_string())
+            .with_retryable(false)
+            .with_source(refusal)
+    })
+}
+
 fn display_snapshot(snapshot: Option<SnapshotId>) -> String {
     snapshot.map_or_else(|| String::from("none"), |id| id.to_string())
 }
 
-fn breach(
-    metadata: &TableMetadata,
-    base: Option<SnapshotId>,
-    query: QueryId,
-) -> Option<Breach<'_>> {
-    let base = base.map(SnapshotId::get);
+fn breach<'metadata>(
+    metadata: &'metadata TableMetadata,
+    claimed: &ClaimedStamp,
+) -> Option<Breach<'metadata>> {
+    let query = claimed.stamp.record.query;
+    let base = claimed.base.map(SnapshotId::get);
     let mut reached = base.is_none();
     for snapshot in main_lineage(metadata) {
         if Some(snapshot.snapshot_id()) == base {
@@ -122,7 +185,10 @@ fn breach(
             return Some(Breach::ConcurrentStamp(snapshot));
         }
     }
-    (!reached).then_some(Breach::BaseLeftMain)
+    if !reached {
+        return Some(Breach::BaseLeftMain);
+    }
+    stray_since(metadata, base, &claimed.stamp).map(Breach::Stray)
 }
 
 pub(super) fn refusal_of(error: &Error) -> Option<MicroBatchError> {
@@ -232,14 +298,22 @@ impl Catalog for AppendFence {
     }
 
     async fn update_table(&self, commit: TableCommit) -> Result<Table> {
-        let refusal = match commit.base_table() {
-            Some(refreshed) => self.refuse(refreshed),
-            None => self.refuse(&self.inner.load_table(commit.identifier()).await?),
+        let (refusal, watched) = if let Some(refreshed) = commit.base_table() {
+            (self.refuse(refreshed), self.body_scope_on(refreshed))
+        } else {
+            let loaded = self.inner.load_table(commit.identifier()).await?;
+            (self.refuse(&loaded), self.body_scope_on(&loaded))
         };
-        match refusal {
-            Some(refusal) => Err(refusal),
-            None => self.inner.update_table(commit).await,
+        if let Some(refusal) = refusal {
+            return Err(refusal);
         }
+        let committed = self.inner.update_table(commit).await;
+        if let (Some(scope), Err(error)) = (watched, &committed)
+            && error.kind() == ErrorKind::CommitStateUnknown
+        {
+            note_unknown_outcome(scope);
+        }
+        committed
     }
 
     async fn publish_create_table(&self, table: Table) -> Result<Table> {
@@ -251,6 +325,11 @@ impl Catalog for AppendFence {
         table: Table,
         expected_base_metadata_location: Option<String>,
     ) -> Result<Table> {
+        if let Rule::BodySink(scope) = &self.rule
+            && let Some(refusal) = refuse_sink_commit(scope, &table)
+        {
+            return Err(refusal);
+        }
         self.inner
             .publish_replace_table(table, expected_base_metadata_location)
             .await

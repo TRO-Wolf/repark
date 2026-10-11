@@ -84,9 +84,16 @@ network.
   `SparkSession.client` / `SparkSession.copyFromLocalToFs` /
   `SparkSession.registerProgressHandler` /
   `SparkSession.removeProgressHandler` / `SparkSession.clearProgressHandlers`
-  refuse with `ONLY_SUPPORTED_WITH_SPARK_CONNECT`, and `SparkSession.readStream` /
-  `SparkSession.streams` / `SparkSession.dataSource` refuse `NOT_IMPLEMENTED`.
+  refuse with `ONLY_SUPPORTED_WITH_SPARK_CONNECT`, and `SparkSession.dataSource` refuses
+  `NOT_IMPLEMENTED`. `SparkSession.readStream` and `SparkSession.streams` left this example
+  when MB-4 made them answer (2026-10-10); they are in `streaming_entry_points.py` below.
   pins: session-surface-1/C-003, C-004
+- [streaming_entry_points.py](streaming_entry_points.py) — **MB-4 fold 4 (2026-10-10, the
+  third verify's second S2: the `example-coverage execute` CI job was red on the branch):**
+  `SparkSession.readStream` answers a fresh `DataStreamReader` on each read and
+  `SparkSession.streams` answers the `StreamingQueryManager`, whose `active` list is empty on
+  an idle session. No query is started: the public start doors refuse a local catalog.
+  pins: mb-4-foreach-eo/C-038
 - [artifacts_profile_tvf.py](artifacts_profile_tvf.py) —
   `SparkSession.addArtifact` / `SparkSession.addArtifacts` copy a pyfile onto
   `sys.path` (import asserted), `SparkSession.profile` no-ops over the empty

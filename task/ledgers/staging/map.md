@@ -160,6 +160,41 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   is filed.
   `risk_tier: standard`.
   Branch `feat/mb-3-driver`.
+- [mb-4-ledger.md](mb-4-ledger.md) —
+  **MB-4 (2026-10-08), the streaming facade, SURFACE HALF:** the stub binding's reader
+  checks (C-001) and start doors (C-002), the two native exceptions (C-003), the
+  builders (C-004), the end-to-end §4 refusals (C-005), the query surface (C-006) and
+  the IPI-47 cells measured against the stub (C-007); the valid-spec terminal, writer
+  unknowns, the missing-format default, the trigger grammar and a sourceless `load()`
+  stay open (C-009..C-013) and the round hands back HALT.
+  `risk_tier: standard`.
+  Branch `feat/mb-4-facade`.
+- [mb-4-foreach-eo-ledger.md](mb-4-foreach-eo-ledger.md) —
+  **MB-4-FOREACH-EO (2026-10-09), `foreachBatch` exactly-once on the declared sink (owner
+  ruling "FIX IT" on the MB-4 verify's S1):** the design note (the ambient body scope, the
+  write-shape table, the body's outcomes, the restart cases, the side-effect contract), the
+  six four-line records, the amendments found while building, the measured write shapes, the
+  eight mutants, the verify's scenarios re-run, and the clauses C-001..C-014 proven; C-015
+  stays open for the owner's ruling on the two limits. **Fold 2 (2026-10-09):** the lineage
+  invariant (C-016..C-027). **Fold 3 (2026-10-10, owner rulings D2 to D5):** the starting mark
+  in the offsets property, the remedy text and the maintenance card, the side-effect contract
+  (C-028..C-031); C-015 stays open for D5, the re-verify and the quiet-box timing.
+  **Fold 4 (2026-10-10, rulings on the third verify's three S1 and two S2):** the restart
+  walk under the newest stamp, the remedies as data and followed as printed, the session
+  settings a streaming plan runs under, the nested `timestamp_ns` gate on the `toTable` door,
+  the reserved `repark.cdc.*` summary keys, the keyed sink refused before its mark, the
+  session example, the seven S3 dispositions and the pins for two surviving mutants
+  (C-032..C-039). **Fold 5 (2026-10-10, the fourth verify's S1 and the owner's rulings of the
+  same day):** the walk reports without a lower bound (D1, measured), the `toTable` door
+  walks a name that ever ran through `foreachBatch` (D2), the expected-parent sketch with
+  both conditions answered and not built (D3), the arm named and closed (a stamp is not
+  committed over a stray), one batch time on the `foreachBatch` door (C-040..C-044).
+  **Fold 6 (2026-10-10, the fifth verify's S1):** a dated correction of fold 5's claim, the
+  table of every commit arm, the stray rule moved to the one fence every stamped commit
+  passes on every attempt (the row-level arms had committed outside it), a structural gate,
+  the race matrix (4,608 trials, 0 strays under a stamp), MBE-8's text (C-045..C-047).
+  `risk_tier: high`.
+  Branch `feat/mb-4-foreach-exactly-once`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
   in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,

@@ -27,8 +27,8 @@ use crate::microbatch::testing::{
 };
 
 const ARMED_NONE: u8 = 0;
-const ARMED_LANDED: u8 = 1;
-const ARMED_LOST: u8 = 2;
+pub(super) const ARMED_LANDED: u8 = 1;
+pub(super) const ARMED_LOST: u8 = 2;
 pub(super) const ARMED_STALL_LANDED: u8 = 3;
 pub(super) const ARMED_STALL_LOST: u8 = 4;
 

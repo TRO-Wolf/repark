@@ -124,6 +124,91 @@ repark-core's error map.
   exact file-size baseline. 2 in-module pins (the move writes the new metadata file
   under the new location and advances the catalog pointer; the next property commit
   lands under the new location while the old metadata file stays).
+- `sink_offsets.rs`, `write_options.rs`, `sink_offsets_probe_tests.rs`,
+  `sink_offsets_body_scope_tests.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10): a claimed site
+  has one way to commit.** `SiteStamp::commit(tx, catalog)` adds the offsets property,
+  commits through `AppendFence::install` and records the outcome; it returns the committed
+  table or a `StampedFailure` (`NotLanded` with the catalog's error, so the caller can delete
+  what it staged, or `Other`). `transaction`, `fenced`, `attempt`, `failed` and `record` are
+  private; `commit_append` is gone. `ClaimedStamp`'s `summary_entries`, `stamp_transaction`
+  and `record_commit` are crate-private. A claim's `base` is the batch-start head when the
+  scope holds one (`Began::At`), and `claim_checked` no longer checks for a stray: the rule
+  is in the fence (child map, `append_fence.rs`, fold 6). The append arm in
+  `write_options.rs` commits through `SiteStamp::commit`. The probe catalog of the tests can
+  skip a commit before racing (an empty racer) and can land a property-only commit.
+  pins: mb-4-foreach-eo/C-045, C-046
+- `sink_offsets_stray_fence_tests.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10, the fifth
+  verify's S1):** one deterministic pin over every arm that can carry a stamp (`ARMS`: append,
+  copy-on-write with and without rewritten files, merge-on-read, stamp-only). A test catalog
+  lands a foreign append at the arm's first `update_table`, so the arm's commit conflicts and
+  is retried on the refreshed table. On a `foreachBatch` stamp every arm must be refused,
+  naming the stray, with no stamp and no half of one on the table; on a `toTable` stamp every
+  arm still lands over the foreign commit. A child of the probe module.
+  pins: mb-4-foreach-eo/C-045
+- `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10,
+  rulings on the fourth verify's S1):** the module re-exports `carried_by_foreach`, which
+  tells the `toTable` door whether a name is walked. The scope learns the head the driver
+  read when the batch began: `BatchScope::enter_on(table, stamp)` records it (`Began::At`),
+  while `enter` leaves it unread for callers that hold no table. On a `foreachBatch` stamp
+  `claim_checked` refuses, before the claim is taken, when `stray_since` finds an unstamped
+  snapshot between the head of the table the write loaded and that head; `over_a_stray` is
+  the one refusal text, shared with the fence. The rules and the pins are in the child
+  directory's map under `lineage.rs` and `append_fence.rs`, fold 5.
+  pins: mb-4-foreach-eo/C-040, C-041, C-044
+- `write_options.rs`, `sink_offsets.rs`, `merge/snapshot_commit.rs`,
+  `sink_offsets_scope_tests.rs`, `sink_offsets_tests.rs` — **MB-4-FOREACH-EO fold 4
+  (2026-10-10, ruling on the third verify's first S2): a batch write cannot forge a stamp.**
+  `summary_with_extras` is where every snapshot summary takes its caller extras, and it now
+  refuses a key under `repark.cdc.` by name (`IllegalArgumentException`: "snapshot property
+  <key> is reserved for a streaming query's commit stamp; remove it from this write"). The
+  scope token stays the one reserved key a caller may pass, and it is dropped as before. The
+  stamp itself no longer travels as extras: `SiteStamp::summary` builds the caller's summary
+  through the same function and then adds the claimed stamp, so the three stamped arms and
+  `commit_stamp_only` are the only writers of those keys (`SiteStamp::extras` is gone).
+  `ClaimedStamp` gains `started`: a claim made while the offsets property still holds the
+  starting mark carries the mark's head into the summary (`starting_mark.rs`, fold 4). The
+  earlier pin that an unscoped commit keeps a caller's `repark.cdc.note` is reversed.
+  pins: mb-4-foreach-eo/C-032, C-036
+- `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10,
+  owner ruling D2):** `property_record` reads a pending starting mark as no record, and the
+  module re-exports `read_starting_mark` and `commit_starting_mark`. The rule, the write-once
+  fence and the pins are in the child directory's map under `lineage.rs`, fold 3. The
+  write-once pin (`the_mark_is_written_once_and_never_over_a_record`) joined
+  `sink_offsets_lineage_tests.rs` with the wrapper fold.
+  pins: mb-4-foreach-eo/C-028
+- `sink_offsets/lineage.rs`, `sink_offsets_lineage_tests.rs`, `sink_offsets.rs`,
+  `merge/snapshot_commit.rs`, `insert_defaults.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09,
+  orchestrator ruling after the re-verify):** the lineage invariant and the claimed state.
+  - `sink_offsets.rs` declares the child `lineage` and re-exports `SinkMark`,
+    `unstamped_since_stamp` and `refuse_planned_sink_write`.
+  - **A failed stamped attempt releases the claim.** `SiteStamp` now remembers its sink and
+    whether its commit was attempted. A site that drops it before the commit (a staging
+    failure after the claim) releases the claim; a commit that fails releases it unless the
+    failure is `CommitStateUnknown`. The guard then refuses unstamped commits again and a
+    retry of the write is admitted as the batch's one stamped commit. The append arm does this
+    in `commit_append`; the two merge arms call `attempt` before and `failed` after their
+    commit. Before, the claim stayed held, the guard admitted everything, and a retry was
+    refused `SinkCommittedTwice` although nothing had landed.
+  - **`SinkCommittedTwice` beside an unknown outcome.** A second claim while the first one's
+    outcome is unknown is refused with its own text, not MBE-13's, because nothing is known to
+    have landed. A held claim with a known outcome still answers `SinkCommittedTwice`.
+  - `insert_defaults::table_reference_target` is public: the pre-execute belt in `repark-core`
+    resolves a DML node's target with it.
+  - This touches the append arm the `toTable` door commits through. On that door a failed
+    commit ends the query and drops the scope, so the released claim is never read.
+  pins: mb-4-foreach-eo/C-016, C-017, C-020
+- `sink_offsets/body_scope.rs`, `sink_offsets_body_scope_tests.rs`, `sink_offsets.rs`,
+  `session_write_conf.rs` — **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT"):**
+  `foreachBatch` exactly-once on the declared sink. `sink_offsets.rs` declares the child
+  `body_scope` and re-exports `guard_body_catalog`, `in_body_scope` and `unstamped_above`;
+  `SiteStamp::claim_with` falls back to the ambient body scope when the extras carry no
+  token; a scope entry also keeps the first `SinkCommittedTwice` or `UnstampedSinkWrite` it
+  refused (`BatchScopeGuard::body_refusal`, after a latched durable refusal) and whether a
+  commit's outcome was unknown (`outcome_unknown`). `session_write_conf_is_set` answers true
+  inside a body scope. `sink_offsets_body_scope_tests.rs` holds the eight unit pins, the
+  table-replacement refusal among them. The design, the limits and the pin list are in the
+  child directory's map, `sink_offsets/map.md`, under `body_scope.rs`.
+  pins: mb-4-foreach-eo/C-001, C-004, C-006
 - `sink_offsets/append_fence.rs`, `sink_offsets_append_fence_tests.rs`, `sink_offsets.rs`,
   `sink_offsets_fence_tests.rs`, `sink_offsets_probe_tests.rs`, `write_options.rs` — **MB-2c
   closing slice, the append fence (2026-10-07, owner ruling ~20:55 EDT: `F-APPEND-PIN-BASE-1` is

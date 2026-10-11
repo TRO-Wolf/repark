@@ -60,7 +60,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive method family behind re-export bindings.",
     ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        3461,
+        3260,
         "The DataFrame facade still combines many plan-building method families.",
         "Extract one existing method region when a charter changes that responsibility.",
     ),
@@ -85,7 +85,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split transformers by feature family with stable public re-exports.",
     ),
     "python/repark/src/repark/spark/session/session_core.py": (
-        2277,
+        2269,
         "SparkSession lifecycle and query entry points share one facade module.",
         "Split construction and configuration from query and catalog methods.",
     ),

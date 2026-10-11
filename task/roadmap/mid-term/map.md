@@ -62,6 +62,35 @@ declines it (a dated ruling in the intake, then the archive).
   re-pointed to 1.7 on 2026-10-04):** structured streaming read and write of Iceberg tables leaves the v1.5.0
   parity gate (3 inventory cells, IPI-47); the design is ruled in the epic-term micro-batch plan, step 0 is slice
   MB-0.
+- [file-source-1-card-2026-10-09.md](file-source-1-card-2026-10-09.md) — **card FILE-SOURCE-1
+  (2026-10-09, MB-4 item 12, W-Q5 ruling; slot MB-5 multi-source):** inventory cell
+  `W-STREAM-WRITE-FILESRC` defined (a file-source stream into the Iceberg sink), registered
+  refusal MBE-7 on both doors with today's answers quoted, Spark's MB-0c file-source answers
+  as the match target, step 0 the unmeasured file-to-Iceberg combination, and the MB-5 design
+  questions. Closes when MB-5 lands file sources or the owner declines them.
+  pins: mb-4/C-033
+- [temp-checkpoint-1-card-2026-10-09.md](temp-checkpoint-1-card-2026-10-09.md) — **card
+  TEMP-CHECKPOINT-1 (2026-10-09, MB-4 round 4, W-Q2 follow-through):** the Spark-matching
+  answer for `foreachBatch` with no `checkpointLocation` — runs on a temporary checkpoint
+  with the exact `ResolveWriteToStream` warning quoted (MB-0c cell D3), the temp dir deleted
+  on clean termination, a restart replaying from the start; the design questions for the
+  matching slice. The product keeps the W8 refusal. Closes when a slice lands it or the
+  owner declines it.
+  pins: mb-4/C-034
+- [stream-python-udf-1-card-2026-10-09.md](stream-python-udf-1-card-2026-10-09.md) — **card
+  STREAM-PYTHON-UDF-1 (2026-10-09, MB-4 fold 1, from the Opus verify S2-UDF):** the
+  Spark-matching answer for Python UDFs over a streaming frame — Spark runs all five
+  doors (verify cells `plan.udf.*`), only `complete` output mode refuses; the product
+  refuses MBE-18 at start and answers DM-3 on batch actions. Closes when a slice
+  executes the function per micro-batch or the owner declines it.
+  pins: mb-4/C-039
+- [stream-surface-residue-1-card-2026-10-09.md](stream-surface-residue-1-card-2026-10-09.md) — **card
+  STREAM-SURFACE-RESIDUE-1 (2026-10-09, MB-4 fold 1b, from the Opus verify S3s):**
+  the 31 action/writer doors whose class or text differs from Spark on a
+  streaming frame (none returns rows, none hangs), the five now-declared
+  absent members, and the fence test that never reaches the append fence.
+  Closes when a slice lands the Spark shapes or the owner declines them.
+  pins: mb-4/C-044
 - [ice-variant-1-6.md](ice-variant-1-6.md) — **card ICE-VARIANT (2026-09-27, v1.6.0, owner ruling C-4):**
   the `variant` type leaves the v1.5.0 gate (cell `TY-VARIANT-V3`, shredded Parquet in the Spark leg, fork issue
   R88 open) and is scheduled as integration of the upstream `parquet-variant*` crates the fork already links
@@ -652,6 +681,13 @@ declines it (a dated ruling in the intake, then the archive).
   raises `DIVIDE_BY_ZERO` on `%`, answers `NULL` on `mod`/`pmod`, `NaN` on a `-0.0` divisor,
   and cannot parse infix `div`; the guard learns its operator, with the error text per operator;
   grade lean B, small.
+- [mb-sink-maintenance-path-1-card-2026-10-10.md](mb-sink-maintenance-path-1-card-2026-10-10.md) — **card
+  MB-SINK-MAINTENANCE-PATH-1 (2026-10-10, open, a MUST before MB-5 closes; owner ruling D3):** a
+  sanctioned maintenance path against a live `foreachBatch` sink. The lineage invariant makes
+  the declared sink exclusive while a query name lives, so compaction and every foreign write
+  end the query `RecoveryRequiredException`; the card lists what refuses, why that cannot be
+  the end state, and three shapes to weigh (a stamped maintenance commit, an acknowledged
+  snapshot, data-neutral operations passing).
 - [mb-pending-window-1-card-2026-10-07.md](mb-pending-window-1-card-2026-10-07.md) — **card
   MB-PENDING-WINDOW-1 (2026-10-07, filed by claude-opus-5-5 for the orchestrator, from MB-3
   fold 1, PR #994):** a restart after a failed batch replans that batch's window, so the same

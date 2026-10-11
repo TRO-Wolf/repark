@@ -49,6 +49,7 @@ impl<'a> PreExecute<'a> {
     /// # Errors
     /// Any execution failure.
     pub async fn execute(&self, plan: LogicalPlan) -> DfResult<DataFrame> {
+        crate::microbatch::body_statements::refuse_unstamped_sink_dml(&plan, self.catalogs).await?;
         self.ctx.execute_logical_plan(plan).await
     }
 

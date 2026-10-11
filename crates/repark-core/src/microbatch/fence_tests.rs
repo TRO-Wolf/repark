@@ -21,7 +21,7 @@ use crate::microbatch::driver::{
 use crate::microbatch::lifecycle_tests::{Mode, ONE, Probe, ended, eventually, named};
 use crate::microbatch::progress::StatusMessage;
 use crate::microbatch::table_door_tests::{FLAKY_SINK, LoadHook, flaky};
-use crate::microbatch::testing::{Fixture, SINK, SOURCE, options};
+use crate::microbatch::testing::{Fixture, SINK, SOURCE, SinkWriter, options};
 use crate::time_travel::microbatch_source::MicroBatchSource;
 
 const DOORS: [bool; 2] = [false, true];
@@ -284,7 +284,7 @@ async fn raced(foreach: bool, same_run: bool, racer: Racer) -> Raced {
         RunId::fresh()
     };
     let stamp = first_epoch_of(&fixture, handle.id(), run).await;
-    let refresh_inside_the_commit = if foreach { 3 } else { 2 };
+    let refresh_inside_the_commit = if foreach { 4 } else { 2 };
     catalog.on_load(Some(racing(
         &inner,
         &stamp,
@@ -360,6 +360,47 @@ async fn a_racing_commit_at_the_fence_ends_the_driver_fenced() {
         let raced = stamped_race(foreach, false).await;
         assert_eq!(raced.body.calls(), usize::from(foreach));
         assert_the_restart_continues(&raced.fixture, foreach, &raced.handle).await;
+    }
+}
+
+#[tokio::test]
+async fn a_writing_body_that_loses_its_epoch_ends_fenced_and_lands_no_row() {
+    for the_bodys_load_or_its_commit in [3, 4] {
+        let fixture = Fixture::new().await;
+        fixture.insert(SOURCE, "(1)").await;
+        fixture.insert(SOURCE, "(2)").await;
+        let catalog = flaky(&fixture).await;
+        let inner = fixture
+            .session
+            .catalogs_snapshot()
+            .get("ice")
+            .cloned()
+            .expect("the memory catalog");
+        let body = SinkWriter::new(&fixture.session, FLAKY_SINK, 1);
+        let handle = registered(&fixture.session, named(body.spec(&options(ONE)), "raced")).await;
+        let winner = RunId::fresh();
+        let stamp = first_epoch_of(&fixture, handle.id(), winner).await;
+        catalog.on_load(Some(racing(
+            &inner,
+            &stamp,
+            the_bodys_load_or_its_commit,
+            Racer::Stamp,
+        )));
+        handle.start_below_catalog_check().expect("start");
+        let ending = ended(&handle).await;
+        catalog.on_load(None);
+        assert!(
+            fenced_by(&ending, winner),
+            "load {the_bodys_load_or_its_commit}: {ending:?}"
+        );
+        assert_eq!(body.calls(), 1);
+        let sink = fixture.table("silver").await;
+        assert_eq!(
+            stamps_of(&sink, handle.id()),
+            [(0, winner.to_string())],
+            "load {the_bodys_load_or_its_commit}"
+        );
+        assert!(fixture.ids(SINK).await.is_empty());
     }
 }
 

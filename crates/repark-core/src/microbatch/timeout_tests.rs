@@ -16,7 +16,7 @@ use crate::microbatch::lifecycle_tests::{BOUND, Mode, Probe, ended, eventually, 
 use crate::microbatch::table_door_tests::{
     ARMED_STALL_LANDED, ARMED_STALL_LOST, FLAKY_SINK, FLAKY_SOURCE, LoadHook, flaky,
 };
-use crate::microbatch::testing::{Fixture, SINK, SOURCE, options, stamped_epochs};
+use crate::microbatch::testing::{Fixture, SINK, SOURCE, mark_the_start, options, stamped_epochs};
 use crate::time_travel::microbatch_source::MicroBatchSource;
 
 const LIMIT: Duration = Duration::from_millis(100);
@@ -123,7 +123,7 @@ async fn a_stalled_reload_after_the_body_leaves_the_batch_unstamped() {
     let catalog = flaky(&fixture).await;
     let body = Probe::new(Mode::Record);
     let handle = registered(&fixture, door_spec(Some(&body), Trigger::Once)).await;
-    catalog.on_load(Some(stall_from("silver", 2)));
+    catalog.on_load(Some(stall_from("silver", 3)));
     handle.start_below_catalog_check().expect("start");
     let error = ended(&handle).await.expect_err("the catalog stalls");
     assert_eq!(*error, timed_out("load the sink"));
@@ -146,6 +146,9 @@ async fn a_stalled_commit_goes_to_the_unknown_outcome_walk() {
         let body = Probe::new(Mode::Record);
         let spec = || door_spec(foreach.then_some(&body), Trigger::Once);
         let landed = registered(&fixture, spec()).await;
+        if foreach {
+            mark_the_start(&fixture, &landed).await;
+        }
         catalog.arm(ARMED_STALL_LANDED);
         landed.start_below_catalog_check().expect("start");
         assert_eq!(ended(&landed).await, Ok(true), "foreachBatch: {foreach}");
@@ -224,21 +227,24 @@ async fn an_unstamped_batch_ends_recovery_required_over_a_stalled_catalog() {
     handle.start_below_catalog_check().expect("start");
     let error = ended(&handle).await.expect_err("the batch is unstamped");
     catalog.on_load(None);
-    let stamp = fixture
-        .table("silver")
-        .await
-        .metadata()
-        .current_snapshot_id()
-        .expect("the stamp landed on the replaced sink");
+    assert_eq!(
+        fixture
+            .table("silver")
+            .await
+            .metadata()
+            .current_snapshot_id(),
+        None,
+        "no stamp lands on the replaced sink"
+    );
     assert!(
         matches!(
             error.as_ref(),
             MicroBatchError::RecoveryRequired {
                 epoch,
                 durable: None,
-                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+                reason: RecoveryReason::UnstampedSinkChange { .. },
                 ..
-            } if *epoch == Epoch::FIRST && snapshot.get() == stamp
+            } if *epoch == Epoch::FIRST
         ),
         "{error:?}"
     );
@@ -305,7 +311,7 @@ async fn a_stop_timeout_over_a_stalled_catalog_still_returns() {
     let mut spec = door_spec(Some(&body), Trigger::Once);
     spec.stop_timeout = Some(Duration::from_millis(50));
     let handle = registered(&fixture, spec).await;
-    catalog.on_load(Some(stall_from("silver", 2)));
+    catalog.on_load(Some(stall_from("silver", 3)));
     handle.start_below_catalog_check().expect("start");
     eventually("the body never ran", || body.calls() == 1).await;
     let outcome = tokio::time::timeout(BOUND, handle.stop())

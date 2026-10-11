@@ -7,6 +7,7 @@ use thiserror::Error;
 use crate::microbatch::offset::{
     Epoch, FilePosition, QueryId, RunId, SinkRecord, SnapshotId, TableUuid,
 };
+use crate::microbatch::stray_remedy::StrayRemedy;
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[non_exhaustive]
@@ -36,7 +37,7 @@ pub enum MicroBatchError {
     #[error("{feature} is not implemented")]
     FeatureRefused { feature: String },
     #[error(
-        "streaming needs a shared catalog; {catalog} is a local filesystem catalog. Use Glue, S3 Tables, the Postgres catalog or REST"
+        "streaming needs a shared catalog; {catalog} is a local filesystem catalog. Use Glue or S3 Tables"
     )]
     LocalCatalogRefused { catalog: String },
     #[error("source table {table} has no primary key; a streaming source must be keyed (O-6)")]
@@ -53,6 +54,10 @@ pub enum MicroBatchError {
         "epoch {epoch} already stamped the sink; refusing a second sink write in the same batch: a restart resumes after epoch {epoch}, so this write's rows would never land. Write the sink once per batch body, or combine the writes into a single write"
     )]
     SinkCommittedTwice { epoch: Epoch },
+    #[error(
+        "epoch {epoch}: this commit to the declared sink {sink} cannot carry the epoch stamp, so it is refused before it lands. Inside a foreachBatch body the sink takes one commit per batch, from an append, an INSERT INTO, a MERGE, or an UPDATE or DELETE that rewrites rows inside data files; every other commit is refused, including a DELETE that drops whole files or matches no row, an overwrite, DDL and maintenance. Write any other table freely"
+    )]
+    UnstampedSinkWrite { sink: String, epoch: Epoch },
     #[error("query {query} epoch {epoch} is already committed")]
     AlreadyCommitted { query: QueryId, epoch: Epoch },
     #[error("query {query} epoch {epoch} lost the sink to run {winner}; stop this driver")]
@@ -169,9 +174,29 @@ pub enum RecoveryReason {
     )]
     StampNotInLineage { snapshot: SnapshotId },
     #[error(
-        "sink advanced to snapshot {snapshot} without a stamp; a commit bypassed the batch scope"
+        "sink advanced to snapshot {snapshot}{} without a stamp; a commit bypassed the batch scope",
+        operation_suffix(.operation.as_deref())
     )]
-    UnstampedSinkCommit { snapshot: SnapshotId },
+    UnstampedSinkCommit {
+        snapshot: SnapshotId,
+        operation: Option<String>,
+    },
+    #[error(
+        "sink advanced to snapshot {snapshot} ({operation}) without a stamp; a commit bypassed the batch scope. Its rows are in the sink. {remedy}"
+    )]
+    StraySinkCommit {
+        snapshot: SnapshotId,
+        operation: String,
+        remedy: StrayRemedy,
+    },
+    #[error(
+        "the sink changed without a stamp during the batch: {what}. The change is still in place: a restart does not undo it, and it checks only the snapshots on the sink's main branch"
+    )]
+    UnstampedSinkChange { what: String },
+}
+
+fn operation_suffix(operation: Option<&str>) -> String {
+    operation.map_or_else(String::new, |name| format!(" ({name})"))
 }
 
 impl From<crate::write::EncryptedTableRefusal> for MicroBatchError {
@@ -187,6 +212,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::*;
+    use crate::microbatch::stray_remedy::{Discard, Restart};
 
     fn query_id() -> QueryId {
         QueryId::new(Uuid::nil())
@@ -364,6 +390,10 @@ mod tests {
             },
             RecoveryReason::UnstampedSinkCommit {
                 snapshot: SnapshotId::new(11),
+                operation: Some(String::from("append")),
+            },
+            RecoveryReason::UnstampedSinkChange {
+                what: String::from("table property owner changed"),
             },
         ];
         for reason in reasons {
@@ -469,7 +499,7 @@ mod tests {
         };
         assert_eq!(
             error.to_string(),
-            "streaming needs a shared catalog; hadoop is a local filesystem catalog. Use Glue, S3 Tables, the Postgres catalog or REST"
+            "streaming needs a shared catalog; hadoop is a local filesystem catalog. Use Glue or S3 Tables"
         );
     }
 
@@ -543,6 +573,61 @@ mod tests {
         assert_eq!(
             required.to_string(),
             "recovery required for query 00000000-0000-0000-0000-000000000000 epoch 3: stamped snapshot expired; raise history.expire.min-snapshots-to-keep retention"
+        );
+    }
+
+    #[test]
+    fn unstamped_sink_write_names_the_sink_the_epoch_and_what_the_sink_takes() {
+        let refused = MicroBatchError::UnstampedSinkWrite {
+            sink: String::from("silver.events"),
+            epoch: Epoch::new(4),
+        };
+        assert_eq!(
+            refused.to_string(),
+            "epoch 4: this commit to the declared sink silver.events cannot carry the epoch stamp, so it is refused before it lands. Inside a foreachBatch body the sink takes one commit per batch, from an append, an INSERT INTO, a MERGE, or an UPDATE or DELETE that rewrites rows inside data files; every other commit is refused, including a DELETE that drops whole files or matches no row, an overwrite, DDL and maintenance. Write any other table freely"
+        );
+    }
+
+    #[test]
+    fn the_unstamped_reasons_name_the_stray_and_only_a_stray_on_main_prints_remedies() {
+        let stray = RecoveryReason::StraySinkCommit {
+            snapshot: SnapshotId::new(11),
+            operation: String::from("append"),
+            remedy: StrayRemedy {
+                under: None,
+                discard: Discard::RollBack {
+                    to: SnapshotId::new(7),
+                    then: Restart::SameName,
+                },
+                keep: Restart::NewName(None),
+            },
+        };
+        assert_eq!(
+            stray.to_string(),
+            "sink advanced to snapshot 11 (append) without a stamp; a commit bypassed the batch scope. Its rows are in the sink. Every start refuses while that snapshot sits above the newest stamped batch. To discard its rows, roll the sink back to snapshot 7 (CALL system.rollback_to_snapshot) and start the query again. To keep its rows, start the query under a new name."
+        );
+        let off_main = RecoveryReason::UnstampedSinkCommit {
+            snapshot: SnapshotId::new(11),
+            operation: Some(String::from("append")),
+        };
+        assert_eq!(
+            off_main.to_string(),
+            "sink advanced to snapshot 11 (append) without a stamp; a commit bypassed the batch scope"
+        );
+        let unnamed = RecoveryReason::UnstampedSinkCommit {
+            snapshot: SnapshotId::new(11),
+            operation: None,
+        };
+        assert_eq!(
+            unnamed.to_string(),
+            "sink advanced to snapshot 11 without a stamp; a commit bypassed the batch scope"
+        );
+        let change = RecoveryReason::UnstampedSinkChange {
+            what: String::from("table property owner changed"),
+        };
+        assert_eq!(
+            change.to_string(),
+            "the sink changed without a stamp during the batch: table property owner changed. The change is still in place: a restart does not undo it, and it checks only the snapshots on the sink's main branch"
         );
     }
 

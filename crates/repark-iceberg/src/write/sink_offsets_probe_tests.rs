@@ -21,6 +21,7 @@ struct ProbeCatalog {
     seen: Mutex<Vec<String>>,
     racers: Mutex<Vec<Vec<DataFile>>>,
     stamped_racer: Mutex<Option<(CommitStamp, Vec<DataFile>)>>,
+    property_racer: Mutex<Option<String>>,
     captured: Mutex<Option<TableCommit>>,
     failing_loads: AtomicUsize,
     loads: AtomicUsize,
@@ -40,6 +41,7 @@ impl ProbeCatalog {
             seen: Mutex::new(Vec::new()),
             racers: Mutex::new(Vec::new()),
             stamped_racer: Mutex::new(None),
+            property_racer: Mutex::new(None),
             captured: Mutex::new(None),
             failing_loads: AtomicUsize::new(0),
             loads: AtomicUsize::new(0),
@@ -60,12 +62,26 @@ impl ProbeCatalog {
 
     async fn race_plain(&self, ident: &TableIdent) -> iceberg::Result<()> {
         let racer = self.racers.lock().expect("racers").pop();
-        let Some(files) = racer else {
+        let Some(files) = racer.filter(|files| !files.is_empty()) else {
             return Ok(());
         };
         let current = self.inner.load_table(ident).await?;
         let tx = Transaction::new(&current);
         let tx = tx.fast_append().add_data_files(files).apply(tx)?;
+        tx.commit(self.inner.as_ref()).await.map(|_| ())
+    }
+
+    async fn race_property(&self, ident: &TableIdent) -> iceberg::Result<()> {
+        let racer = self.property_racer.lock().expect("property").take();
+        let Some(key) = racer else {
+            return Ok(());
+        };
+        let current = self.inner.load_table(ident).await?;
+        let tx = Transaction::new(&current);
+        let tx = tx
+            .update_table_properties()
+            .set(key, String::from("foreign"))
+            .apply(tx)?;
         tx.commit(self.inner.as_ref()).await.map(|_| ())
     }
 
@@ -75,7 +91,11 @@ impl ProbeCatalog {
             return Ok(());
         };
         let current = self.inner.load_table(ident).await?;
-        let claimed = ClaimedStamp { stamp, base: None };
+        let claimed = ClaimedStamp {
+            stamp,
+            base: None,
+            started: None,
+        };
         let summary: HashMap<String, String> = claimed
             .summary_entries()
             .expect("racer entries")
@@ -182,6 +202,7 @@ impl Catalog for ProbeCatalog {
         self.seen.lock().expect("seen").push(format!("{commit:?}"));
         self.race_plain(commit.identifier()).await?;
         self.race_stamped(commit.identifier()).await?;
+        self.race_property(commit.identifier()).await?;
         match self.mode {
             ProbeMode::Forward => self.inner.update_table(commit).await,
             ProbeMode::Capture => {
@@ -841,3 +862,12 @@ mod isolation;
 
 #[path = "sink_offsets_append_fence_tests.rs"]
 mod append_fence;
+
+#[path = "sink_offsets_body_scope_tests.rs"]
+mod body_scope;
+
+#[path = "sink_offsets_lineage_tests.rs"]
+mod lineage_pins;
+
+#[path = "sink_offsets_stray_fence_tests.rs"]
+mod stray_fence;

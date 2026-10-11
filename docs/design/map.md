@@ -85,6 +85,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   [../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3.
 
 - [v1-0-api-freeze.json](v1-0-api-freeze.json) — **the frozen-surface register (2026-09-02,
+  **MB-4 round 3c (2026-10-08):** the register gains two Python names, `RecoveryRequiredException` and `StreamingQueryException` (`python/repark/src/repark/errors.py`, the item-2 re-exports); frozen names 891 → 893, regenerated with `scripts/build_api_freeze.py --write`.
   **U7 PR1 (2026-09-24):** the register gains one Python name, `NumberFormatException` (`python/repark/src/repark/errors.py`, the `IllegalArgumentException` leaf a non-integer `output-spec-id` raises, as Spark does); frozen names 890 → 891, regenerated with `scripts/build_api_freeze.py --write`.
   API-FREEZE):** every row of the packet with its decision, `frozen` flag, the members the
   decision leaves pre-stable, and — for the 30 frozen rows — the exact frozen names: 782 Python

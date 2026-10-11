@@ -1,6 +1,6 @@
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use datafusion::error::DataFusionError;
@@ -15,17 +15,28 @@ use crate::microbatch::error::{MicroBatchError, RecoveryReason};
 use crate::microbatch::offset::{
     OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SinkDoor, SinkRecord, SnapshotId, TableUuid,
 };
+use crate::microbatch::starting_mark::StartingMark;
+use crate::write::commit_error::commit_err;
 use crate::write::merge::{CommitScope, IsolationLevel, OPERATION_ID_PROP};
 use crate::write::summary_collision::EngineSummary;
 use crate::write::write_options::summary_with_extras;
 
 mod append_fence;
+mod body_scope;
+mod lineage;
 
 use append_fence::AppendFence;
+pub use body_scope::{guard_body_catalog, in_body_scope, refuse_planned_sink_write};
+pub use lineage::{
+    Floor, SinkMark, Stamped, Stray, carried_by_foreach, commit_starting_mark, read_starting_mark,
+    stray_on_main,
+};
 
 pub const SCOPE_TOKEN_KEY: &str = "repark.cdc.scope-token";
 
-const STAMP_KEY_PREFIXES: [&str; 2] = ["repark.cdc.", "spark.sql.streaming."];
+pub(crate) const RESERVED_STAMP_PREFIX: &str = "repark.cdc.";
+
+const STAMP_KEY_PREFIXES: [&str; 2] = [RESERVED_STAMP_PREFIX, "spark.sql.streaming."];
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ScopeToken(Uuid);
@@ -40,6 +51,7 @@ pub struct CommitStamp {
 pub struct ClaimedStamp {
     pub stamp: CommitStamp,
     pub base: Option<SnapshotId>,
+    pub started: Option<StartingMark>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,6 +76,15 @@ struct ScopeEntry {
     claimed: bool,
     committed: Option<SnapshotId>,
     refused: Option<MicroBatchError>,
+    violation: Option<MicroBatchError>,
+    outcome_unknown: bool,
+    began: Began,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Began {
+    Unread,
+    At(Option<i64>),
 }
 
 fn scopes() -> MutexGuard<'static, HashMap<TableUuid, ScopeEntry>> {
@@ -112,6 +133,20 @@ impl fmt::Debug for ScopeToken {
 impl BatchScope {
     #[allow(clippy::missing_errors_doc)]
     pub fn enter(sink: TableUuid, stamp: CommitStamp) -> Result<BatchScopeGuard, MicroBatchError> {
+        Self::entered(sink, stamp, Began::Unread)
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn enter_on(table: &Table, stamp: CommitStamp) -> Result<BatchScopeGuard, MicroBatchError> {
+        let head = table.metadata().current_snapshot_id();
+        Self::entered(TableUuid::of(table), stamp, Began::At(head))
+    }
+
+    fn entered(
+        sink: TableUuid,
+        stamp: CommitStamp,
+        began: Began,
+    ) -> Result<BatchScopeGuard, MicroBatchError> {
         let mut entries = scopes();
         if entries.contains_key(&sink) {
             return Err(MicroBatchError::SinkBusy {
@@ -127,6 +162,9 @@ impl BatchScope {
                 claimed: false,
                 committed: None,
                 refused: None,
+                violation: None,
+                outcome_unknown: false,
+                began,
             },
         );
         Ok(BatchScopeGuard { sink, token })
@@ -152,10 +190,18 @@ impl BatchScope {
         else {
             return Ok(None);
         };
+        if entry.claimed && entry.outcome_unknown && entry.committed.is_none() {
+            return Err(MicroBatchError::Catalog(format!(
+                "epoch {epoch}: an earlier stamped commit of this batch to the sink is still in flight or its outcome is unknown, so a second one is refused",
+                epoch = entry.stamp.record.epoch
+            )));
+        }
         if entry.claimed {
-            return Err(MicroBatchError::SinkCommittedTwice {
+            let twice = MicroBatchError::SinkCommittedTwice {
                 epoch: entry.stamp.record.epoch,
-            });
+            };
+            entry.violation = Some(twice.clone());
+            return Err(twice);
         }
         if let Some(refused) = &entry.refused {
             return Err(refused.clone());
@@ -168,10 +214,11 @@ impl BatchScope {
             return Err(error);
         }
         entry.claimed = true;
-        Ok(Some(ClaimedStamp {
-            stamp: entry.stamp.clone(),
-            base: table.metadata().current_snapshot_id().map(SnapshotId::new),
-        }))
+        let mut claimed = ClaimedStamp::on(table, entry.stamp.clone());
+        if let Began::At(head) = entry.began {
+            claimed.base = head.map(SnapshotId::new);
+        }
+        Ok(Some(claimed))
     }
 }
 
@@ -188,6 +235,20 @@ impl BatchScopeGuard {
             None => ScopeOutcome::NotCommitted,
         }
     }
+
+    #[must_use]
+    pub fn body_refusal(&self) -> Option<MicroBatchError> {
+        let entries = scopes();
+        let entry = entries.get(&self.sink)?;
+        entry.refused.clone().or_else(|| entry.violation.clone())
+    }
+
+    #[must_use]
+    pub fn outcome_unknown(&self) -> bool {
+        scopes()
+            .get(&self.sink)
+            .is_some_and(|entry| entry.outcome_unknown)
+    }
 }
 
 impl Drop for BatchScopeGuard {
@@ -197,13 +258,27 @@ impl Drop for BatchScopeGuard {
 }
 
 impl ClaimedStamp {
-    #[allow(clippy::missing_errors_doc)]
-    pub fn summary_entries(&self) -> Result<Vec<(String, String)>, MicroBatchError> {
-        self.stamp.record.summary_entries(self.stamp.door)
+    fn on(table: &Table, stamp: CommitStamp) -> ClaimedStamp {
+        let started = read_starting_mark(table, stamp.record.query).ok().flatten();
+        ClaimedStamp {
+            stamp,
+            base: table.metadata().current_snapshot_id().map(SnapshotId::new),
+            started,
+        }
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn stamp_transaction(&self, tx: Transaction) -> Result<Transaction, MicroBatchError> {
+    pub(crate) fn summary_entries(&self) -> Result<Vec<(String, String)>, MicroBatchError> {
+        let mut entries = self.stamp.record.summary_entries(self.stamp.door)?;
+        entries.extend(self.started.map(|mark| mark.summary_entry()));
+        Ok(entries)
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub(crate) fn stamp_transaction(
+        &self,
+        tx: Transaction,
+    ) -> Result<Transaction, MicroBatchError> {
         let (key, value) = self.stamp.record.property()?;
         tx.update_table_properties()
             .set(key, value)
@@ -212,7 +287,7 @@ impl ClaimedStamp {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn record_commit(self, committed: &Table) -> Result<(), MicroBatchError> {
+    pub(crate) fn record_commit(self, committed: &Table) -> Result<(), MicroBatchError> {
         let record = &self.stamp.record;
         let Some(head) = committed.metadata().current_snapshot() else {
             return Err(MicroBatchError::Catalog(format!(
@@ -228,12 +303,37 @@ impl ClaimedStamp {
                 query: record.query,
                 epoch: record.epoch,
                 durable: None,
-                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+                reason: RecoveryReason::UnstampedSinkCommit {
+                    snapshot,
+                    operation: None,
+                },
             });
         }
         mark_committed(committed, &self.stamp, snapshot);
         Ok(())
     }
+}
+
+fn stray_since<'metadata>(
+    metadata: &'metadata TableMetadata,
+    floor: Option<i64>,
+    stamp: &CommitStamp,
+) -> Option<&'metadata SnapshotRef> {
+    if stamp.door != SinkDoor::ForeachBatch {
+        return None;
+    }
+    main_lineage(metadata)
+        .take_while(|snapshot| Some(snapshot.snapshot_id()) != floor)
+        .find(|snapshot| lineage::unstamped(snapshot))
+}
+
+fn over_a_stray(stray: &SnapshotRef, stamp: &CommitStamp) -> MicroBatchError {
+    MicroBatchError::Catalog(format!(
+        "epoch {epoch}: snapshot {id} ({operation}) landed on the sink without a stamp after this batch began, so the batch's stamped commit is refused before it lands over it",
+        epoch = stamp.record.epoch,
+        id = stray.snapshot_id(),
+        operation = stray.summary().operation.as_str()
+    ))
 }
 
 fn mark_committed(sink: &Table, stamp: &CommitStamp, snapshot: SnapshotId) {
@@ -242,6 +342,16 @@ fn mark_committed(sink: &Table, stamp: &CommitStamp, snapshot: SnapshotId) {
         && entry.stamp == *stamp
     {
         entry.committed = Some(snapshot);
+    }
+}
+
+fn release_claim(sink: &Table, stamp: &CommitStamp) {
+    if let Some(entry) = scopes().get_mut(&TableUuid::of(sink))
+        && entry.claimed
+        && entry.committed.is_none()
+        && entry.stamp == *stamp
+    {
+        entry.claimed = false;
     }
 }
 
@@ -413,12 +523,13 @@ fn stamped_by(summary: &HashMap<String, String>, query: QueryId) -> bool {
 
 fn property_record(table: &Table, query: QueryId) -> Result<Option<SinkRecord>, MicroBatchError> {
     let key = format!("{OFFSETS_PROPERTY_PREFIX}{query}");
-    table
-        .metadata()
-        .properties()
-        .get(&key)
-        .map(|value| SinkRecord::from_property(query, value))
-        .transpose()
+    let Some(value) = table.metadata().properties().get(&key) else {
+        return Ok(None);
+    };
+    if StartingMark::from_property(value)?.is_some() {
+        return Ok(None);
+    }
+    SinkRecord::from_property(query, value).map(Some)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -447,13 +558,11 @@ pub async fn commit_stamp_only(
     if active.is_none() {
         epoch_check(table, stamp)?;
     }
-    let claimed = active.unwrap_or_else(|| ClaimedStamp {
-        stamp: stamp.clone(),
-        base: table.metadata().current_snapshot_id().map(SnapshotId::new),
-    });
+    let claimed = active.unwrap_or_else(|| ClaimedStamp::on(table, stamp.clone()));
     let engine = EngineSummary::for_append(table, &[], None);
-    let (operation_id, summary) = summary_with_extras(&claimed.summary_entries()?, &engine)
-        .map_err(|error| masked(&error))?;
+    let (operation_id, mut summary) =
+        summary_with_extras(&[], &engine).map_err(|error| masked(&error))?;
+    summary.extend(claimed.summary_entries()?);
     let tx = Transaction::new(table);
     let tx = tx
         .merge_append()
@@ -557,6 +666,16 @@ fn landed_attempt(
 #[derive(Debug, Default)]
 pub(crate) struct SiteStamp {
     claimed: Option<ClaimedStamp>,
+    sink: Option<Table>,
+    attempted: AtomicBool,
+}
+
+impl Drop for SiteStamp {
+    fn drop(&mut self) {
+        if !self.attempted.load(Ordering::SeqCst) {
+            self.release();
+        }
+    }
 }
 
 impl SiteStamp {
@@ -592,7 +711,9 @@ impl SiteStamp {
         if branch.is_some_and(|name| name != MAIN_BRANCH) {
             return Ok(SiteStamp::default());
         }
-        let Some(token) = ScopeToken::carried_by(extra) else {
+        let Some(token) =
+            ScopeToken::carried_by(extra).or_else(|| body_scope::ambient_token(table))
+        else {
             return Ok(SiteStamp::default());
         };
         let claimed = BatchScope::claim_checked(table, &token, |stamp| {
@@ -600,61 +721,102 @@ impl SiteStamp {
             isolation()
         })
         .map_err(microbatch_error)?;
-        Ok(SiteStamp { claimed })
+        Ok(SiteStamp {
+            sink: claimed.is_some().then(|| table.clone()),
+            claimed,
+            attempted: AtomicBool::new(false),
+        })
     }
 
-    pub(crate) fn extras<'extra>(
+    fn release(&self) {
+        if let (Some(claimed), Some(sink)) = (&self.claimed, &self.sink) {
+            release_claim(sink, &claimed.stamp);
+        }
+    }
+
+    fn attempt(&self) {
+        self.attempted.store(true, Ordering::SeqCst);
+    }
+
+    fn failed(&self, error: &iceberg::Error) {
+        if error.kind() != ErrorKind::CommitStateUnknown {
+            self.release();
+        }
+    }
+
+    pub(crate) fn summary(
         &self,
-        extra: &'extra [(String, String)],
-    ) -> datafusion::error::Result<Cow<'extra, [(String, String)]>> {
-        let carries_token = extra.iter().any(|(key, _)| key == SCOPE_TOKEN_KEY);
-        if self.claimed.is_none() && !carries_token {
-            return Ok(Cow::Borrowed(extra));
-        }
-        let mut stamped: Vec<(String, String)> = extra
-            .iter()
-            .filter(|(key, _)| key != SCOPE_TOKEN_KEY)
-            .cloned()
-            .collect();
+        extra: &[(String, String)],
+        engine: &EngineSummary,
+    ) -> datafusion::error::Result<(String, HashMap<String, String>)> {
+        let (operation_id, mut summary) = summary_with_extras(extra, engine)?;
         if let Some(claimed) = &self.claimed {
-            stamped.extend(claimed.summary_entries().map_err(microbatch_error)?);
+            summary.extend(claimed.summary_entries().map_err(microbatch_error)?);
         }
-        Ok(Cow::Owned(stamped))
+        Ok((operation_id, summary))
     }
 
-    pub(crate) fn transaction(&self, tx: Transaction) -> datafusion::error::Result<Transaction> {
+    fn transaction(&self, tx: Transaction) -> datafusion::error::Result<Transaction> {
         match &self.claimed {
             Some(claimed) => claimed.stamp_transaction(tx).map_err(microbatch_error),
             None => Ok(tx),
         }
     }
 
-    pub(crate) fn fenced(&self, catalog: &Arc<dyn Catalog>) -> Arc<dyn Catalog> {
+    fn fenced(&self, catalog: &Arc<dyn Catalog>) -> Arc<dyn Catalog> {
         match &self.claimed {
             Some(claimed) => AppendFence::install(catalog, claimed),
             None => Arc::clone(catalog),
         }
     }
 
-    pub(crate) async fn commit_append(
-        &self,
+    pub(crate) async fn commit(
+        mut self,
         tx: Transaction,
         catalog: &Arc<dyn Catalog>,
-    ) -> datafusion::error::Result<iceberg::Result<Table>> {
-        let result = tx.commit(self.fenced(catalog).as_ref()).await;
-        match (&self.claimed, result) {
-            (Some(_), Err(error)) => match append_fence::refusal_of(&error) {
-                Some(refusal) => Err(microbatch_error(refusal)),
-                None => Ok(Err(error)),
+    ) -> Result<Table, StampedFailure> {
+        let tx = self.transaction(tx).map_err(StampedFailure::Other)?;
+        self.attempt();
+        let committed = match tx.commit(self.fenced(catalog).as_ref()).await {
+            Ok(committed) => committed,
+            Err(error) => {
+                if self.claimed.is_some() {
+                    self.failed(&error);
+                }
+                return Err(StampedFailure::NotLanded(error));
+            }
+        };
+        match self.claimed.take() {
+            Some(claimed) => match claimed.record_commit(&committed) {
+                Ok(()) => Ok(committed),
+                Err(error) => Err(StampedFailure::Other(microbatch_error(error))),
             },
-            (_, result) => Ok(result),
+            None => Ok(committed),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum StampedFailure {
+    NotLanded(iceberg::Error),
+    Other(DataFusionError),
+}
+
+impl StampedFailure {
+    pub(crate) fn not_landed(&self) -> Option<&iceberg::Error> {
+        match self {
+            StampedFailure::NotLanded(error) => Some(error),
+            StampedFailure::Other(_) => None,
         }
     }
 
-    pub(crate) fn record(self, committed: &Table) -> datafusion::error::Result<()> {
-        match self.claimed {
-            Some(claimed) => claimed.record_commit(committed).map_err(microbatch_error),
-            None => Ok(()),
+    pub(crate) fn into_error(self, operation_id: &str) -> DataFusionError {
+        match self {
+            StampedFailure::NotLanded(error) => match append_fence::refusal_of(&error) {
+                Some(refusal) => microbatch_error(refusal),
+                None => commit_err(error, operation_id),
+            },
+            StampedFailure::Other(error) => error,
         }
     }
 }

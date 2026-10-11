@@ -592,13 +592,14 @@ async fn record_commit_refuses_a_head_without_the_stamp() {
     let claimed = ClaimedStamp {
         stamp: stamp_for(2, SinkDoor::Table),
         base: None,
+        started: None,
     };
     let head = SnapshotId::new(table.metadata().current_snapshot_id().expect("head"));
     match claimed.record_commit(&table).expect_err("unstamped head") {
         MicroBatchError::RecoveryRequired {
             epoch,
             durable: None,
-            reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+            reason: RecoveryReason::UnstampedSinkCommit { snapshot, .. },
             ..
         } => {
             assert_eq!(epoch, Epoch::new(2));
@@ -961,13 +962,19 @@ async fn a_concurrent_unrelated_append_still_commits_both_halves_exactly_once() 
 }
 
 #[test]
-fn site_stamp_without_a_claim_borrows_the_caller_extras() {
-    let extra = [(String::from("k"), String::from("v"))];
+fn a_site_without_a_claim_keeps_the_caller_extras_and_refuses_a_reserved_key_by_name() {
     let site = SiteStamp::default();
-    assert!(matches!(
-        site.extras(&extra).expect("extras"),
-        std::borrow::Cow::Borrowed(_)
-    ));
+    let engine = EngineSummary::default();
+    let extra = [(String::from("k"), String::from("v"))];
+    let (_, summary) = site.summary(&extra, &engine).expect("summary");
+    assert_eq!(summary.get("k").map(String::as_str), Some("v"));
+    for key in [QUERY_ID_KEY, "repark.cdc.epoch", "REPARK.CDC.Anything"] {
+        let forged = [(key.to_string(), String::from("x"))];
+        let refused = site.summary(&forged, &engine).expect_err("a reserved key");
+        assert!(refused.to_string().contains(&format!(
+            "snapshot property {key} is reserved for a streaming query's commit stamp; remove it from this write"
+        )));
+    }
 }
 
 #[path = "sink_offsets_scope_tests.rs"]

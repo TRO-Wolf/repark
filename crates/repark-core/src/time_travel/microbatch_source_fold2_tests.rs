@@ -5,7 +5,12 @@ use datafusion::arrow::util::pretty::pretty_format_batches;
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{NamespaceIdent, TableCreation};
+use repark_common::Generation;
+use repark_iceberg::microbatch::offset::{
+    Epoch, OffsetFormatVersion, OffsetVector, QueryId, RunId,
+};
 use tempfile::TempDir;
+use uuid::Uuid;
 
 use super::*;
 
@@ -359,5 +364,90 @@ async fn planner_errors_name_the_table_as_the_source_was_opened() {
             end.table,
             TableUuid::of(&replacement)
         )
+    );
+}
+
+#[test]
+fn a_state_snapshot_carries_the_settings_and_the_start_time_of_its_moment() {
+    let context = SessionContext::new();
+    let weak = WeakSessionState::of(&context);
+    let first = weak.snapshot().expect("the context is alive");
+    let started = first
+        .execution_props()
+        .query_execution_start_time
+        .expect("a snapshot marks its start");
+    context
+        .state_ref()
+        .write()
+        .config_mut()
+        .options_mut()
+        .set("datafusion.execution.batch_size", "17")
+        .expect("the setting must apply");
+    let second = weak.snapshot().expect("the context is alive");
+    let props = second.execution_props();
+    let bound = props
+        .config_options()
+        .expect("a snapshot binds the settings its plan runs under");
+    assert_eq!(bound.execution.batch_size, 17);
+    assert_eq!(second.config().options().execution.batch_size, 17);
+    assert!(props.query_execution_start_time.expect("a start time") >= started);
+    drop(context);
+    assert!(weak.snapshot().is_none());
+}
+
+fn record_ending_at(offset: InputOffset) -> SinkRecord {
+    SinkRecord {
+        format: OffsetFormatVersion::CURRENT,
+        query: QueryId::new(Uuid::nil()),
+        run: RunId::new(Uuid::nil()),
+        epoch: Epoch::new(0),
+        generation: Generation::new(1).expect("generation 1 is valid"),
+        offsets: OffsetVector::single(offset),
+    }
+}
+
+#[tokio::test]
+async fn only_an_offset_that_ends_its_snapshot_is_a_start_after_position() {
+    let (_warehouse, session) = session_with_two_appends().await;
+    let options = SourceOptions::from_options(&options_of(&[])).expect("no option must parse");
+    let source = MicroBatchSource::open(&session, "ice.sales.orders", options)
+        .await
+        .expect("the source must open");
+    let from = source
+        .initial_offset()
+        .await
+        .expect("the initial offset must resolve")
+        .expect("a nonempty table must have a start");
+    let end = source
+        .next_batch(&from, WindowLimit::Unbounded)
+        .await
+        .expect("the window must plan")
+        .expect("two appends are one unbounded batch")
+        .end;
+    assert!(end.position.get() > 0);
+    assert_eq!(
+        source
+            .whole_snapshot_end(&record_ending_at(end.clone()))
+            .await,
+        Some(end.snapshot)
+    );
+    let inside = InputOffset {
+        position: FilePosition::new(end.position.get() - 1),
+        ..end.clone()
+    };
+    assert_eq!(
+        source.whole_snapshot_end(&record_ending_at(inside)).await,
+        None
+    );
+    let elsewhere = InputOffset {
+        table: TableUuid::new(Uuid::nil()),
+        table_name: String::from("ice.sales.other"),
+        ..end
+    };
+    assert_eq!(
+        source
+            .whole_snapshot_end(&record_ending_at(elsewhere))
+            .await,
+        None
     );
 }

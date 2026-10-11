@@ -4139,6 +4139,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `DUPLICATED_ARTIFACT` arm, `render`'s `type`-check-first order, and `tvf.json_tuple`'s
   string-literal-Column field conversion (R-4/R-5/R-6).
   pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  **MB-4 item 10 (2026-10-09):** the SES-DECL-readStream/-streams pins flip to answer
+  pins — `test_read_stream_declared` becomes `test_read_stream_answers_reader` (cell
+  `readStream_type`), `test_streams_declared` becomes `test_streams_answers_manager`
+  (cells `streams_type`, `streams_active`), `test_declared_properties_raise_under_hasattr`
+  becomes `test_streaming_properties_answer_under_hasattr` (the wired doors answer
+  `True`; `dataSource` and `client` still raise). pins: mb-4/C-031
 - `test_io_text_1.py` + `facade_reader_writer_oracle.json` — **IO-TEXT-1 (2026-09-14):**
   the `text` reader/writer card against the run-15b live-PySpark-4.1.2 fixture copied
   unchanged. Reads pin the universal-newline split with one trailing terminator dropped,
@@ -8044,6 +8050,232 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   partitioned text (4 parts), localCheckpoint (20), transpose (1) and the
   ML fit ([2.0, [3.0]]). Every constant recorded from a base run first.
   pins: grown-stack-gate-1/C-002, C-003, C-004
+- [test_mb_4_streaming_surface.py](test_mb_4_streaming_surface.py) — **MB-4 surface half
+  (2026-10-08):** one test per streaming builder method, per named option, and per
+  driver-free §4 refusal, each asserting class, SQLSTATE and message text; MB-0-recorded
+  cells cite their cell id in the test name (W8 verbatim, R3/R6, W3, W4 divergence
+  anchors). Terminal-reaching tests assert the builtin `NotImplementedError` type only.
+  pins: mb-4/C-004, C-005, C-006, C-007 **MB-4 round 2 (2026-10-08):** sixteen
+  trigger-parser pins, one per refusal class plus accepts and the padded-input strip
+  proofs, each asserting class, condition, SQLSTATE, text and message parameters
+  against its MB-0c cell; the full 152-string sweep lives in the Rust tests.
+  pins: mb-4/C-020 **MB-4 round 2 (2026-10-08):** two mutant-hardening pins, the `toTable` unknown-option refusal and the sink-before-unknowns order. pins: mb-4/C-021
+  **MB-4 round 2b (2026-10-08):** the stub-terminal reader tests return frames; the
+  sourceless-load and `foreachBatch` MBE-10 pins take their ruled shapes.
+  pins: mb-4/C-023
+  **MB-4 round 3 (2026-10-08):** the query members delegate to the native handle;
+  `outputMode` pins O1/O2 at the setter; the terminal-reaching writer tests pin the
+  frame refusal past validation. pins: mb-4/C-024, C-025
+  **MB-4 item 10 (2026-10-09):** `writeStream` answers a writer on a streaming frame
+  and the public `readStream` door loads one. pins: mb-4/C-031
+  **MB-4 item 11 (2026-10-09):** the credential pin: a credential-bearing
+  checkpoint and option value appear in none of status, lastProgress, repr, the
+  run error, EXPLAIN, the snapshot summaries and the table properties, and the
+  value-echo refusal carries the masked form. pins: mb-4/C-032
+  **MB-4 fold 1 (2026-10-09):** the credential pin moves to the fold-1 battery
+  with real echoing-refusal legs; `format(5)` refuses `NOT_STR` at the setter
+  on both builders. pins: mb-4/C-037
+- [test_mb_4_streaming_wireup.py](test_mb_4_streaming_wireup.py) — **MB-4 round 2b
+  (2026-10-08):** the reader wire-up battery, split out so the surface battery stays
+  under its ceiling: MB0-R1 schema through `load` and `table`, the folded and ignored
+  format doors, every C-014 option case with `from_options`' answer, DM-3 on every
+  batch-action door with per-family batch controls, and MBE-7 `withWatermark`.
+  pins: mb-4/C-023, C-014
+  **MB-4 round 3 (2026-10-08):** the Table-door run battery: MB0-W1/W2/W5/W7/T1/T3
+  replays, start-by-path and start-by-path-option, MBE-13, W3, M3, the dated
+  missing-sink row, the sink-option match arm, the catalog-timeout grammar, and the
+  conf map effects and refusals. pins: mb-4/C-025
+  **MB-4 round 3b (2026-10-08):** the first foreach pin (a `writeTo` body commits
+  once, stamped with the `repark.cdc` keys); the foreach format-ignored test now
+  runs through the live arm. The remaining foreach pins split out below.
+  pins: mb-4/C-026
+- [test_mb_4_streaming_foreach_lineage.py](test_mb_4_streaming_foreach_lineage.py) —
+  **MB-4-FOREACH-EO fold 2 (2026-10-09, orchestrator ruling after the re-verify):** the
+  lineage invariant through the public doors, built from the re-verify's repros. Five thread
+  routes (`threading.Thread` `INSERT`, `writeTo.append` and `INSERT OVERWRITE`,
+  `ThreadPoolExecutor`, `asyncio.to_thread`), each followed by a raise (the query ends
+  `RecoveryRequiredException` naming the snapshot and its operation, with the body's error as
+  `__cause__`, and two restarts refuse without calling the body) and each beside the body's
+  own stamped append (the same ending; the restart runs no body and adds no row); a
+  main-thread statement while a body runs; `EXPLAIN ANALYZE` of an `INSERT ... SELECT`, an
+  `INSERT ... VALUES`, an `UPDATE` and a `DELETE` refused MBE-19 before landing, raised or
+  swallowed, and a plain `EXPLAIN` passing; the retry after a failed stamped write (the sink's
+  metadata directory read-only for the first attempt) landing stamped once, and an `ALTER`
+  and an `INSERT OVERWRITE` after such a failure still refused; the body's exception as
+  `__cause__` on all three raising doors; drop-and-recreate after the stamped write; a
+  foreign `INSERT` between runs refusing the restart, and a rollback to the newest stamped
+  snapshot recovering it. The helper threads never call `collect()` (card
+  THREADED-COLLECT-SEGV-1). The re-verify's own scripts and kill set were re-run beside
+  these pins; the MB-4-FOREACH-EO ledger's fold-2 proof holds the table.
+  **Fold 3 (2026-10-10, owner rulings D2 and D3):** a stray at the first batch refuses the
+  first restart from the starting mark, the error carries both remedies, and a rollback to
+  the head the query started on recovers it; the first start writes the mark into the
+  offsets property and the first stamp replaces it; the `toTable` door writes none. In the
+  exactly-once battery two subprocess pins join: a kill before the first commit restarts
+  from the mark with no duplicate, and a stray then a kill at the first batch refuses the
+  first restart. The remedy sentence the pins assert is the one in `error.rs`.
+  **Fold 4 (2026-10-10):** the five thread routes beside the stamped append now refuse two
+  restarts as well (the stray is under the batch's stamp, and the text says so) where fold 3
+  let the restart resume; the first-batch pin asserts the new text, which names the head to
+  roll back to. The remedies themselves are followed in `test_mb_4_streaming_remedies.py`.
+  pins: mb-4-foreach-eo/C-032
+  **Fold 5 (2026-10-10, prevention):** on all five thread routes a body whose helper writes
+  the sink and which then makes its own stamped append gets that append refused before it
+  lands, naming the stray; the query ends `RecoveryRequiredException` with the stray above
+  the newest stamp, the refusal as `__cause__`, no row of the batch twice, and two restarts
+  refuse. This replaces fold 4's pin of the same routes, which asserted the stray under the
+  stamp.
+  pins: mb-4-foreach-eo/C-044
+  pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-020, C-022, C-024, C-028, C-029, C-030
+- [test_mb_4_streaming_row_level_race.py](test_mb_4_streaming_row_level_race.py) —
+  **MB-4-FOREACH-EO fold 6 (2026-10-10, the fifth verify's S1):** a row-level body against a
+  concurrent foreign commit, through the public door. The body issues one `UPDATE`, `DELETE`,
+  matched-update `MERGE` or matched-delete `MERGE` on its sink while a helper thread issues a
+  foreign `INSERT` after a delay; twelve fresh sinks per statement, the delays spread over
+  0 to 44 ms from a fixed seed. No stamped snapshot may have an unstamped parent born after
+  the seed, and every run must end `RecoveryRequiredException`. Red for `UPDATE` on the
+  fold-5 build (two or three of twelve runs put the stray under the stamp). The race is
+  statistical here; the deterministic pin per arm is in the iceberg crate
+  (`sink_offsets_stray_fence_tests.rs`).
+  pins: mb-4-foreach-eo/C-045
+- [test_mb_4_streaming_remedies.py](test_mb_4_streaming_remedies.py) — **MB-4-FOREACH-EO
+  fold 4 (2026-10-10, the third verify's first two S1):** every remedy a stray refusal prints,
+  followed as printed, with the sink's rows counted exactly. A stray under a stamp (the body
+  writes its batch from a helper thread, then makes its stamped append) refuses two restarts
+  with no body run, and its text is parsed for the snapshot to roll back to and the
+  `repark.cdc.start-after-snapshot-id` position of the new query name: discard (roll back,
+  new name, the batch delivered again once), keep (new name from the newest stamp's
+  position), under the first stamp (roll back to the head the query started on), and on a
+  sink that started empty (no rollback offered). A stray above the newest stamp: roll back
+  under the same name, or a new name with the printed position; before any stamp: roll back
+  to the starting head, or a new name; on an empty sink only the new name. A batch that ends
+  inside a source snapshot is not offered a new name at all.
+  **Fold 5 (2026-10-10):** the four pins that followed a remedy for a stray under a stamp are
+  gone with the state: the body's stamped write is now refused over the stray, so no public
+  door produces it. Those texts are pinned in `stray_remedy.rs` and
+  `sink_offsets_lineage_tests.rs`; followed literally they were exact on the fold-4 build
+  (the fourth verify's 44 of 44). Six pins remain, all for a stray above the newest stamp or
+  before any stamp.
+  pins: mb-4-foreach-eo/C-033
+- [test_mb_4_streaming_session_settings.py](test_mb_4_streaming_session_settings.py) —
+  **MB-4-FOREACH-EO fold 4 (2026-10-10, the third verify's third S1):** both streaming doors
+  store what the same statement stores as a batch write, read back from the Parquet files:
+  five zone-dependent expressions under `America/New_York` and `Asia/Tokyo`, the zone set
+  through the builder and through `spark.conf.set`; an `INT` overflow with ANSI mode switched
+  off after the session started; a differently cased projection under both values of
+  `spark.sql.caseSensitive` (green before the fix: bound at plan time); and
+  `current_timestamp()`, which a streaming plan could not evaluate at all. The frame a body
+  collects equals the batch read.
+  **Fold 5 (2026-10-10):** on the `foreachBatch` door `current_timestamp()` and
+  `current_date()` are one value per micro-batch: two `collect()` calls 0.4 s apart and the
+  row the callable writes to the sink are equal, and the second batch's value is later
+  (red on the fold-4 build: the stored row was 0.8 s later than the collected one).
+  pins: mb-4-foreach-eo/C-034, C-043
+- [test_mb_4_streaming_sink_gates.py](test_mb_4_streaming_sink_gates.py) — **MB-4-FOREACH-EO
+  fold 4 (2026-10-10, the third verify's first S2 and two S3):** the `toTable` door refuses a
+  nested `timestamp_ns` leaf with the batch write's sentence and leaves the sink's files as
+  they were; seven statements under a session conf carrying `repark.cdc.query-id` and five
+  writer shapes carrying a reserved key as an option (one in upper case) are refused by name
+  with the table unchanged, and a forged stamp can no longer hide a foreign write from a
+  restart; the `foreachBatch` door refuses a keyed sink before its mark, with no body run and
+  no file written.
+  pins: mb-4-foreach-eo/C-035, C-036, C-037
+- [test_dfcore_1_exports.py](test_dfcore_1_exports.py),
+  [_dfcore_1_expected.py](_dfcore_1_expected.py) — **MB-4 fold 2 (2026-10-09):** the export
+  pin declares the delta of fold 1's `map_bridge.py` split, which had left it red: `core` and
+  the package lose `_drop_mia_temp_views`, `contextlib` and `weakref`, both new-submodule sets
+  gain `map_bridge`, and `EXPECTED_DATAFRAME_REBOUND` lists the seven private class names
+  that now bind a `map_bridge` function of another name. No public name moves.
+  pins: mb-4-foreach-eo/C-021
+- [test_mb_4_streaming_foreach_eo.py](test_mb_4_streaming_foreach_eo.py) —
+  **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT" on the MB-4 verify's S1):** the
+  `foreachBatch` exactly-once battery through the public doors. One process: the body's
+  append and `INSERT INTO` carry the stamp in their own snapshot; write-then-raise restarts
+  without a duplicate; a second append refuses MBE-13, raised or swallowed; `MERGE`, `UPDATE`
+  and `DELETE` are stamped under serializable isolation; eleven shapes that cannot carry the
+  stamp refuse MBE-19 with the sink, its snapshots and its properties unchanged; a body with
+  no sink write gets the stamp-only snapshot; a second table is an unstamped side output; a
+  sink write from another thread ends `RecoveryRequiredException`. Subprocesses, over a memory
+  catalog re-attached with `register_table` on the newest metadata file: exit after the sink
+  write, kills at sink commits, kills at fixed delays. Measured red on the base build: 14 of
+  the first 15 pins failed and the no-sink-write pin passed.
+  `test_mb_4_streaming_foreach.py::test_foreach_door_replays_mb0_w4_stamped` and
+  `test_mb_4_streaming_wireup.py::test_foreach_door_first_pin_write_to_commits_once_stamped`
+  now read one stamped snapshot per batch.
+  The kill pins mirror the MB-4 verify's choreographies, which were also re-run from its own
+  scripts (the MB-4-FOREACH-EO ledger holds the counts).
+  **Fold 2 (2026-10-09):** the kill harness re-attaches on the newest metadata file that
+  parses (a kill can leave the newest one empty, which made the random-kill pin fail about
+  once in a hundred runs), and the MBE-19 pins read the reworded text.
+  **Fold 4 (2026-10-10):** the harness gains `write_twice_then_exit` (a helper thread appends
+  the batch, the body makes its stamped append, the process exits before the driver's
+  audit), and a pin at epochs 0 and 2 holds that both restarts end `RecoveryRequired` naming
+  the snapshot under the stamp, with the sink as the kill left it. pins: mb-4-foreach-eo/C-032
+  **Fold 5 (2026-10-10, the fourth verify's S1 and the owner's rulings of the same day):**
+  the harness gains `seed`, `expire`, `append` and `table` (the same writer through
+  `toTable`), and `write_twice_then_exit` now dies at the refusal: the helper thread appends
+  the batch, the body's own stamped append is refused before it lands, and the process exits
+  before the driver's check. The pins: the batch's rows are in the sink once and both
+  restarts refuse, naming the stray above the newest stamp; no expiry hides it (two
+  snapshots retained: refused with the rollback printed; one retained: refused through both
+  doors with `stamped snapshot expired`); a `toTable` start under the same name refuses, at
+  epochs 0 and 2, and so does the `foreachBatch` start after it; a foreign row refuses a
+  `toTable` start above the newest `foreachBatch` stamp, and also after the name has since
+  run a clean `toTable` batch; a stray before any stamp prints no rollback once the head the
+  query started on is expired. Kept behaviour, green before the fix: a healthy sink runs on
+  through both doors after an expiry that retains one, two or three snapshots, and a query
+  begun through `toTable` runs through `foreachBatch` after an expiry. The fold-4 kill pin
+  and the first fold-5 pins asserted a stray under the stamp; this build cannot produce one,
+  so they assert the refusal instead.
+  pins: mb-4-foreach-eo/C-040, C-041, C-042, C-044
+  pins: mb-4-foreach-eo/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012, C-014
+- [test_mb_4_streaming_foreach.py](test_mb_4_streaming_foreach.py) — **MB-4 round 3b
+  (2026-10-08):** the foreach-door battery, split out so the wireup battery stays
+  under its ceiling: MB0-T2 batches, MB0-R1 resume rows, MB0-W4 stamped appends,
+  the raising body with the Python error in the `STREAM_FAILED` cause (MB0-W6,
+  MBE-16), the W8-rule refusal, `collect`/`count`/`show` in the body, and MBE-10
+  through the live door. Round 3c (2026-10-08) lands the `count` leg on the
+  batch-action pin. pins: mb-4/C-026, C-027
+  **MB-4 item 12 (2026-10-09):** the public-door mirror of the MB0-R1 resume
+  replay. pins: mb-4/C-033
+- [test_mb_4_streaming_manager.py](test_mb_4_streaming_manager.py) — **MB-4 round 3c
+  (2026-10-08):** the manager battery: `active` lists a running query and drops a
+  stopped one, `get` by id, `awaitAnyTermination` after one of two queries stops,
+  `resetTerminated` clears the record, and a failed query's error raises through
+  `awaitAnyTermination`. The M1/M2 `get` pins stay in the surface battery.
+  pins: mb-4/C-028
+  **MB-4 item 9 (2026-10-09):** the `spark.stop` pins: a running query goes
+  inactive and a second stop is quiet, a failed query never raises, and a
+  recovery-required query (the sink replaced under the body) raises the first
+  RecoveryRequired after the warehouse and artifact dirs are gone.
+  pins: mb-4/C-030
+- [test_mb_4_streaming_fold1.py](test_mb_4_streaming_fold1.py) — **MB-4 fold 1
+  (2026-10-09):** the verify-follow-up battery. MBE-8: `toTable`, `start(path)`
+  and `foreachBatch` start refuse `LOCAL_CATALOG_REFUSED` on a memory catalog
+  and on a `type=hadoop` catalog through the public doors; the private
+  `_native` test seam runs on a memory catalog and is unreferenced by the
+  public package. The four older batteries' `spark` fixtures opt in through
+  that seam. pins: mb-4/C-036 The credential pin lands here with the masked
+  echoing-refusal legs (catalog-timeout interval refusal on both doors, the
+  sink mismatch, both format refusals with parameters). pins: mb-4/C-037
+  The SIGINT pin runs all four wait variants in a subprocess, interrupts at
+  2 s, and asserts the wait raises with the query still active within 10 s.
+  pins: mb-4/C-038
+  `isStreaming` stays True through the five Python-UDF doors with `writeStream`
+  answering and `withWatermark` refusing MBE-7; every start door refuses MBE-18;
+  batch actions answer DM-3 through the native guard. pins: mb-4/C-039
+  Fold 1b pins the folded `PATH` option on the reader `load` fallback and on
+  the plain-`start` path fallback, and the surface continuous pin gains the
+  path its start now needs to reach the trigger check. pins: mb-4/C-040
+  Fold 1b pins `toTable('')`/`toTable('   ')` to Spark's
+  `PARSE_EMPTY_STATEMENT` text and `toTable(5)`/`toTable(None)`/`get(5)`/
+  `get(None)` to `NOT_STR`. pins: mb-4/C-041
+  Fold 1b pins `query.stop()` raising `RecoveryRequired` after the sink is
+  replaced under a `foreachBatch` body. pins: mb-4/C-042
+  Fold 1b pins the five declared members (`partitionBy`,
+  `processAllAvailable`, `explain`, `addListener`, `removeListener`) to
+  `NOT_IMPLEMENTED` with the member-naming text and parameters.
+  pins: mb-4/C-043
 
 ## I want to...
 
@@ -8544,7 +8776,8 @@ through `core` or the package. pins: eager-budget-1/C-010
   C-001…C-005 pins are the evidence the registry BL-11 FIXED cites.
   pins: bl-11-numeric-binary/C-001, C-002, C-003, C-004, C-005, C-006
 - **FNP-MISC-1 (2026-09-15):** `test_fnp_misc_1.py::test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark` pins `call_function` on #597's six camel-case aliases to the measured Spark 4.1.2 answers (pins: fnp-misc-1/F-4).
-
+  **MB-4-FOREACH-EO fold 6 (2026-10-10):** the MBE-8 pin reads the corrected text, "Use Glue
+  or S3 Tables". pins: mb-4-foreach-eo/C-047
 - [test_java_double_str_1.py](test_java_double_str_1.py) — **JAVA-DOUBLE-STR-1
   (2026-09-15):** Spark-door DOUBLE/FLOAT stringify answers Java
   `Double.toString` / `Float.toString` (registry BL-7 FIXED), measured against

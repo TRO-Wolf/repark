@@ -822,6 +822,7 @@ fn grown_stack_guard_rejects_bypass_sites() {
     let allowed: &[(&str, &str)] = &[
         ("cdf_infer/infer.rs", "name.to_owned()"),
         ("type_bridge.rs", "collation.into_owned()"),
+        ("trigger_interval.rs", "to_owned()"),
     ];
     let prod_markers = ["pub fn", "pub(crate) fn", "#[pyfunction]", "#[pymethods]"];
     let mut offenders = Vec::new();
