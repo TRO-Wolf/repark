@@ -1540,6 +1540,11 @@ stamp is expired the name follows the `toTable` rule while its later stamps rema
 measured silent 96 of 96 over a stray above the newest stamp and 277 of 480 foreign
 commits under a stamp in a raced run, not worse than main or the previous head, with
 carrying the key forward open as Q1.
+**Proof.** Pin A fails alone under hand-applied N2 (130 passed, 1 failed) and Pin B
+fails alone under hand-applied N3 (130 passed, 1 failed); each mutant was restored
+with `git checkout`, `git status` showing only the test file, and both runs on the
+real line pass 131 of 131. The full `repark-iceberg` lib suite passes 1060 of 1060.
+**Open.** Q1: whether a carried name's later `toTable` stamps should record the key.
 
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
