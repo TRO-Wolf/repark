@@ -63,7 +63,8 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   fraction digits; timestamps and dates outside the four-digit years render ISO dates;
   decimals, bools, ints, strings and binaries render plainly.
   **C-4 fold 3 S3 (2026-10-11):** a gap wall into a timestamptz column refuses
-  naming the column. pins: c-4/C-013, C-014
+  naming the column. **C-4 fold 4 item 3 (2026-10-11):** the gap pin also
+  names the column's Postgres type. pins: c-4/C-013, C-014
 - `write_postgres_interval.rs` — **C-4 fold 4 item 1 (2026-10-11):** the interval
   carve-out pins at the `shape_batch` chokepoint, in their own module because the
   shape file sits at its ceiling: an engine `Interval` into an interval column

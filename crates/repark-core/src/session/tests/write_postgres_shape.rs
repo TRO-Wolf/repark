@@ -976,6 +976,7 @@ fn a_gap_wall_into_a_timestamptz_column_refuses_naming_the_column() {
     .expect_err("a gap wall refuses");
     let message = gap.to_string();
     assert!(message.contains("`v`"), "{message}");
+    assert!(message.contains("timestamptz"), "{message}");
     assert!(!message.contains("``"), "{message}");
 }
 

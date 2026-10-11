@@ -119,6 +119,14 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   gate; every non-interval source into an interval column still refuses, and an
   interval into a text column still refuses. The shared Iceberg rule is
   untouched.
+  **C-4 fold 4 item 3 (2026-10-11):** the gap-wall refusal into a
+  timestamptz column names the real column type: the placement arm retargets
+  the localiser's `timestamp` label at its own site, as the read path does
+  (`retargeted`, mirroring `repark_connect::provider::scan`). The date arm
+  keeps the `timestamp` label (ledger §15: the shape file sits at its
+  ceiling, so the date pin has no room yet). The store-assignment refusal
+  text is the shared Iceberg builder, so it stays byte-identical here
+  (ledger §15).
   pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.

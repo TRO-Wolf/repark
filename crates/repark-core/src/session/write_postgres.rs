@@ -28,7 +28,7 @@ use repark_common::{SourceKind, spark_error};
 #[cfg(feature = "postgres")]
 use repark_connect::postgres::PostgresMapping;
 #[cfg(feature = "postgres")]
-use repark_connect::{PostgresSettings, ResolvedSource};
+use repark_connect::{ConnectError, PostgresSettings, ResolvedSource};
 #[cfg(feature = "postgres")]
 use repark_iceberg::write::{
     WRITE_SPARK_CLASS, ansi_store_assignable, normalize_for_assignment,
@@ -460,9 +460,27 @@ fn place_wall(name: &str, array: &ArrayRef, session_zone: &str, display: &str) -
     use crate::session_time_zone::canonical_session_zone_id;
 
     let wall = primitive_of(name, array)?;
-    let localised =
-        localise_at(session_zone, wall, name).map_err(|error| external(display, error))?;
+    let localised = localise_at(session_zone, wall, name)
+        .map_err(|error| external(display, retargeted(error, "timestamptz")))?;
     Ok(Arc::new(localised.with_timezone(canonical_session_zone_id(session_zone))) as ArrayRef)
+}
+
+#[cfg(feature = "postgres")]
+fn retargeted(error: ConnectError, postgres_type: &'static str) -> ConnectError {
+    match error {
+        ConnectError::UnrepresentableValue {
+            column,
+            index,
+            reason,
+            ..
+        } => ConnectError::UnrepresentableValue {
+            column,
+            postgres_type,
+            index,
+            reason,
+        },
+        other => other,
+    }
 }
 
 #[cfg(feature = "postgres")]
