@@ -1443,6 +1443,7 @@ and a `toTable`-only name never does. Retention is as D2: once every snapshot th
 carries the name is expired the name is no longer carried. The driver's decision at
 start and the fence's decision at commit use the SAME predicate, so one run never
 refuses what the next accepts.
+Fold 9 (2026-10-11) corrects the retention sentence above; the corrected statement is in the fold-9 section.
 
 ### Item 1: the S1
 
@@ -1517,6 +1518,28 @@ restart on each door is the typed exception with both remedies. Recorded in the
 The two lib suites, clippy, the panic ban, format, the thirteen `test_mb_4_*`
 batteries on the release build, the map sync, the ledger grammar and the comment ban
 are in the hand-back; all ran on the final source.
+
+## Fold 9 — the eighth verify's two S3s — 2026-10-11
+
+**What the verifier found.** The retention limit of a mark-only name is the one
+`toTable` stamp that records the key, not every stamp of the name: once it is expired
+a stray above the newest stamp is stamped over silently in 96 of 96 and a raced
+`toTable` run puts the foreign commit under a stamp in 277 of 480. Two of nine mutants
+survive, N2 (any name's key-carrying `toTable` stamp carries this name) and N3 (the key
+must parse, not merely be present), each for a missing pin.
+**What changed.** No product line. Two pins in `sink_offsets_lineage_tests.rs`:
+`another_name_s_key_carrying_table_stamp_does_not_carry_this_name` (the other name
+marked and then stamped once by `toTable`, this name with only `toTable` stamps:
+carried for the other name, not for this one) and
+`a_table_stamp_with_an_unparsable_starting_head_still_carries_the_name` (a `toTable`
+stamp whose key value is `not-a-head` with no mark left: still carried). The corrected
+retention sentence: a name carried by `foreachBatch` stamps is traced by every such
+stamp, while a mark-only name is traced by the mark and then by its first `toTable`
+stamp alone, because later `toTable` stamps do not record the key, so once that first
+stamp is expired the name follows the `toTable` rule while its later stamps remain;
+measured silent 96 of 96 over a stray above the newest stamp and 277 of 480 foreign
+commits under a stamp in a raced run, not worse than main or the previous head, with
+carrying the key forward open as Q1.
 
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 

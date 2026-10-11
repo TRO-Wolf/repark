@@ -81,9 +81,19 @@ directory holds the piece split out of it. The test files of the module stay bes
     name. The first stamp over the mark replaces the property with the record but keeps
     the key in its summary, so a mark-only name stays carried; a `toTable`-only name
     never writes the key and stays unwalked. The driver's start and the fence read the
-    same predicate, so one run never refuses what the next accepts. Retention is as
-    before: once every snapshot that carries the name is expired the name is no longer
-    carried. Pins: `a_table_stamp_over_the_starting_mark_keeps_the_name_carried`,
+    same predicate, so one run never refuses what the next accepts.
+    Fold 9 (2026-10-11, the eighth verify's S3): the retention limit is one snapshot
+    for a mark-only name. A name carried by `foreachBatch` stamps is traced by every
+    such stamp, but a mark-only name is traced by the mark and then by its first
+    `toTable` stamp alone, because later `toTable` stamps do not record the key. Once
+    that first stamp is expired the name follows the `toTable` rule again while its
+    later stamps remain: the eighth verify measured a stray above the newest stamp
+    stamped over by a `toTable` restart, silent 96 of 96, and a raced `toTable` run
+    putting the foreign commit under a stamp in 277 of 480. This is not worse than
+    main, where a `toTable` name takes a foreign commit silently, nor than the
+    previous head, which forgot the name at its first `toTable` stamp. Whether a
+    carried name's later `toTable` stamps should carry the key forward is open (Q1).
+    Pins: `a_table_stamp_over_the_starting_mark_keeps_the_name_carried`,
     `a_second_table_stamp_of_a_marked_name_is_refused_over_a_stray`,
     `another_name_s_foreach_stamp_does_not_carry_this_name`,
     `another_name_s_key_carrying_table_stamp_does_not_carry_this_name`,
