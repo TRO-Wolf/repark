@@ -1,12 +1,13 @@
 # ICE-NTZ-NESTED-WALL-1 progress
 
-**Step:** round 2 stopped before the walk. No product change.
+**Step:** 1 committed. `zone_store_frame` calls `nested_micro_ntz_wall_sql`.
 
-**Evidence commit:** `7e31ed1aa53e1e19e5b0cbce83b2a748f02653ae`
+**Walk commit:** `e926fbe89e3eec9e9eaaff6284b948a5c1f37d25`
 
-**Measured tree:** `2c33f289c177edc439de6c58a6beef45c53e7ba1`
+**Red pin:** `evidence/pin-red-step1.txt`. On the parent, America/New_York and
+Asia/Kolkata store `1767323045123456`. On the commit the three zones store the
+session wall.
 
-**Next:** a ruling on Q3 in
-[the ledger](../../ledgers/staging/ice-ntz-nested-wall-1-ledger.md) section 6.
-`store_assignment_cast_sql` and `update_projection_sql` cannot tell an instant
-leaf from a wall leaf. The fix is not started.
+**Next:** step 2, one commit per site: `zone_wrapping_stream_sql`,
+`store_assignment_cast_sql`, `update_projection_sql`,
+`insert_timestamp_ns::after_analysis`.
