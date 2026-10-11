@@ -18,6 +18,7 @@ pub mod cast_map;
 pub mod collection;
 pub mod count_if;
 pub mod csv;
+pub mod current_date;
 pub mod datetime;
 pub mod decimal_cast;
 pub mod decimal_precision;
@@ -128,6 +129,7 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in instant_ts::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
+    ctx.register_udf(current_date::current_date_udf().as_ref().clone());
     for udf in string::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
