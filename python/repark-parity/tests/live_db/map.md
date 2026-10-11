@@ -164,6 +164,10 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   INTERVAL forms store what one plain INSERT stores on all three paths, read
   back as text) and one more refusal row (an INTERVAL into a text column
   refuses with the store-assignment class).
+  **C-4 fold 4 item 2 (2026-10-11):** two oracle faults fixed, coverage
+  unchanged: the bytea oracle plain-INSERT uses Postgres's own bytea spelling
+  (Spark's `X'41'` is a bit string there), and the text-rendering oracle uses
+  `DATE '9999-12-31'` (the engine cannot evaluate year 10000).
   pins: c-4/C-013, C-014
 - `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
   drops its INSERT case (append INSERT writes now; the write pins live in
