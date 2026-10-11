@@ -167,7 +167,11 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   **C-4 fold 4 item 2 (2026-10-11):** two oracle faults fixed, coverage
   unchanged: the bytea oracle plain-INSERT uses Postgres's own bytea spelling
   (Spark's `X'41'` is a bit string there), and the text-rendering oracle uses
-  `DATE '9999-12-31'` (the engine cannot evaluate year 10000).
+  `DATE '9999-12-31'` (the engine cannot evaluate year 10000). The same run
+  exposed the same fault one cell later: a `TIMESTAMP_NTZ` year-10000 literal
+  fails to parse, and so does year 9999 — the NTZ literal parser caps at the
+  nanosecond range (2262 parses, 2300 fails) — so that cell uses
+  `TIMESTAMP_NTZ '2262-01-01 00:00:00'`.
   pins: c-4/C-013, C-014
 - `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
   drops its INSERT case (append INSERT writes now; the write pins live in
