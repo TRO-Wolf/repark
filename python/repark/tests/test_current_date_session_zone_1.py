@@ -21,6 +21,7 @@ from zoneinfo import ZoneInfo
 import pyarrow as pa
 import pytest
 
+import repark
 from repark import ReparkSession
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
@@ -74,6 +75,15 @@ def _single_int(session: ReparkSession, sql: str) -> int:
     arrow = session.sql(sql).to_arrow()
     value = arrow.column(0).to_pylist()[0]
     assert isinstance(value, int)
+    return value
+
+
+def _native_single_date(sql: str) -> date:
+    """The one DATE value of a single-cell native-door query, asserting the Arrow type."""
+    arrow = repark.sql(sql).to_arrow()
+    assert pa.types.is_date32(arrow.schema.field(0).type)
+    value = arrow.column(0).to_pylist()[0]
+    assert isinstance(value, date)
     return value
 
 
@@ -185,6 +195,24 @@ def test_value_is_fixed_within_one_query() -> None:
         assert multi == [expected, expected, expected]
     finally:
         session.stop()
+
+
+def test_native_door_dataframe_agrees_with_sql_under_set_time_zone() -> None:
+    """Fold 1: after SET TIME ZONE the native DataFrame pair answers the zone date."""
+    zone, expected = _differing_zone()
+    repark.sql(f"SET TIME ZONE = '{zone}'").to_arrow()
+    try:
+        assert _native_single_date("SELECT current_date()") == expected
+        frame = repark.sql("SELECT 1 AS one").select(
+            F.current_date().alias("a"), F.curdate().alias("b")
+        )
+        arrow = frame.to_arrow()
+        assert pa.types.is_date32(arrow.schema.field(0).type)
+        assert pa.types.is_date32(arrow.schema.field(1).type)
+        assert arrow.column(0).to_pylist() == [expected]
+        assert arrow.column(1).to_pylist() == [expected]
+    finally:
+        repark.sql("RESET datafusion.execution.time_zone").to_arrow()
 
 
 @pytest.mark.parametrize("style", ["build", "set"])

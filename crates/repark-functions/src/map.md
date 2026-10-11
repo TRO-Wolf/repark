@@ -593,6 +593,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `return_field_from_args` — the only delta from upstream is the zone the date is read in.
   One `lib.rs` register line; the DataFrame door builds it via `current_date::current_date()`.
   The Rust pins went red under the hand revert (C-005).
+  **Fold 1 (2026-10-11):** when the carrier is absent (native door) the fold reads
+  `execution.time_zone` exactly as the builtin does (UTC when unset or unparsable); a
+  present carrier wins, even when set to UTC. The native DataFrame pair agrees with native
+  SQL under `SET TIME ZONE` again.
   pins: current-date-session-zone-1/C-002, C-003, C-004, C-005
 - `session_names.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the SQL-door
   `current_catalog()` / `current_schema()` / `current_database()` nullary UDFs — one

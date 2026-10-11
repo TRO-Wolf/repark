@@ -1,9 +1,11 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use arrow::array::timezone::Tz;
 use arrow::datatypes::DataType;
 use arrow::datatypes::DataType::Date32;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, TimeZone as _, Utc};
+use datafusion::common::config::ConfigOptions;
 use datafusion::common::{ScalarValue, internal_err};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::expr::ScalarFunction;
@@ -13,7 +15,7 @@ use datafusion::logical_expr::{
 };
 use repark_common::zone_horizon::wall_at_instant;
 
-use crate::session_time_zone::session_time_zone_from_options;
+use crate::session_time_zone::SessionTimeZoneConfig;
 use crate::timestamp_cast::parse_session_zone;
 
 #[must_use]
@@ -34,6 +36,18 @@ pub(crate) fn session_start_days(start: &DateTime<Utc>, zone_id: &str) -> Result
         ))
     })?;
     epoch_days(wall.date())
+}
+
+fn execution_zone_days(start: &DateTime<Utc>, options: &ConfigOptions) -> Result<i32> {
+    let zone = options
+        .execution
+        .time_zone
+        .as_ref()
+        .and_then(|zone_id| zone_id.parse::<Tz>().ok());
+    match zone {
+        Some(zone) => epoch_days(zone.from_utc_datetime(&start.naive_utc()).date_naive()),
+        None => epoch_days(start.date_naive()),
+    }
 }
 
 fn epoch_days(date: NaiveDate) -> Result<i32> {
@@ -99,8 +113,11 @@ impl ScalarUDFImpl for SparkCurrentDate {
         let Some(start) = info.query_execution_start_time() else {
             return Ok(ExprSimplifyResult::Original(args));
         };
-        let zone_id = session_time_zone_from_options(info.config_options());
-        let days = session_start_days(&start, zone_id)?;
+        let options = info.config_options();
+        let days = match options.extensions.get::<SessionTimeZoneConfig>() {
+            Some(carrier) => session_start_days(&start, carrier.zone())?,
+            None => execution_zone_days(&start, options)?,
+        };
         Ok(ExprSimplifyResult::Simplified(Expr::Literal(
             ScalarValue::Date32(Some(days)),
             None,
@@ -136,6 +153,27 @@ mod tests {
         let field = batches[0].schema().field(0).clone();
         let value = batches[0].column(0).as_primitive::<Date32Type>().value(0);
         (value, field.data_type().clone())
+    }
+
+    async fn set_execution_zone(ctx: &SessionContext, zone: &str) {
+        ctx.sql(&format!("SET datafusion.execution.time_zone = '{zone}'"))
+            .await
+            .expect("set execution zone")
+            .collect()
+            .await
+            .expect("collect set");
+    }
+
+    fn differing_zone() -> (&'static str, i32) {
+        let probe = Utc::now();
+        let kiritimati = session_start_days(&probe, "Pacific/Kiritimati").expect("kiritimati");
+        let utc = session_start_days(&probe, "UTC").expect("utc");
+        if kiritimati == utc {
+            let pago = session_start_days(&probe, "Pacific/Pago_Pago").expect("pago");
+            ("Pacific/Pago_Pago", pago)
+        } else {
+            ("Pacific/Kiritimati", kiritimati)
+        }
     }
 
     #[test]
@@ -202,6 +240,45 @@ mod tests {
         let (got, data_type) = single_date(&ctx_at("UTC"), "SELECT current_date()").await;
         assert_eq!(data_type, DataType::Date32);
         assert_eq!(got, expected);
+    }
+
+    #[tokio::test]
+    async fn carrier_absent_falls_back_to_execution_time_zone() {
+        let (zone, expected) = differing_zone();
+        let owned = SessionContext::new();
+        crate::register_all(&owned);
+        set_execution_zone(&owned, zone).await;
+        let builtin = SessionContext::new();
+        set_execution_zone(&builtin, zone).await;
+        let (got, data_type) = single_date(&owned, "SELECT current_date()").await;
+        let (builtin_got, _) = single_date(&builtin, "SELECT current_date()").await;
+        assert_eq!(data_type, DataType::Date32);
+        assert_eq!(got, expected, "zone {zone}");
+        assert_eq!(got, builtin_got, "owned fallback matches the builtin");
+    }
+
+    #[tokio::test]
+    async fn carrier_absent_without_execution_zone_answers_utc() {
+        let expected = session_start_days(&Utc::now(), "UTC").expect("utc");
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let (got, data_type) = single_date(&ctx, "SELECT current_date()").await;
+        assert_eq!(data_type, DataType::Date32);
+        assert_eq!(got, expected);
+    }
+
+    #[tokio::test]
+    async fn carrier_present_wins_over_execution_time_zone() {
+        let (zone, zone_days) = differing_zone();
+        let utc = session_start_days(&Utc::now(), "UTC").expect("utc");
+        let utc_carrier = ctx_at("UTC");
+        set_execution_zone(&utc_carrier, zone).await;
+        let (got, _) = single_date(&utc_carrier, "SELECT current_date()").await;
+        assert_eq!(got, utc, "explicit UTC carrier wins over {zone}");
+        let zone_carrier = ctx_at(zone);
+        set_execution_zone(&zone_carrier, "UTC").await;
+        let (got, _) = single_date(&zone_carrier, "SELECT current_date()").await;
+        assert_eq!(got, zone_days, "carrier {zone} wins over the UTC knob");
     }
 
     #[tokio::test]
