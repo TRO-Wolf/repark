@@ -65,6 +65,17 @@ directory holds the piece split out of it. The test files of the module stay bes
     `toTable` door writes). Such a name is walked with the `foreachBatch` rules for as long
     as that stamp is retained, also after later `toTable` batches. A name with only
     `toTable` stamps, or with neither stamp nor mark, is not walked.
+    Fold 8 (2026-10-11, the seventh verify's S1, ruling R1): a `toTable` stamp of the
+    name that records the starting head (`repark.cdc.starting-head`) also carries the
+    name. The first stamp over the mark replaces the property with the record but keeps
+    the key in its summary, so a mark-only name stays carried; a `toTable`-only name
+    never writes the key and stays unwalked. The driver's start and the fence read the
+    same predicate, so one run never refuses what the next accepts. Retention is as
+    before: once every snapshot that carries the name is expired the name is no longer
+    carried. Pins: `a_table_stamp_over_the_starting_mark_keeps_the_name_carried`,
+    `a_second_table_stamp_of_a_marked_name_is_refused_over_a_stray`,
+    `another_name_s_foreach_stamp_does_not_carry_this_name`.
+    pins: mb-4-foreach-eo/C-050
   - **Why reporting with no floor is not a false positive** (owner ruling D1, measured). The
     walk follows parent pointers from the newest stamp. An expiry removes snapshots from the
     old end of that chain, so what stays reachable is an unbroken run from the head: when the

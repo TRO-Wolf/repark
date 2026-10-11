@@ -1,4 +1,5 @@
 use super::*;
+use crate::microbatch::starting_mark::STARTING_HEAD_SUMMARY_KEY;
 use crate::microbatch::stray_remedy::{
     Discard, HEAD_GONE, HEAD_UNRECORDED, INSIDE_A_SNAPSHOT, PREVIOUS_GONE, Restart, SHARED_STRETCH,
     StrayRemedy,
@@ -672,8 +673,8 @@ async fn a_name_is_walked_on_the_table_door_once_it_ever_carried_a_foreach_stamp
     assert!(carried(&marked));
     let zero = stamped_through(&catalog, &marked, 0, SinkDoor::Table, &[2]).await;
     assert!(
-        !carried(&zero),
-        "a mark the table door replaced leaves a table stamp and nothing else"
+        carried(&zero),
+        "the first table stamp over a mark records the starting head"
     );
 
     let (_third, catalog, ident) = fixture("table_after_foreach").await;
@@ -694,6 +695,60 @@ async fn a_name_is_walked_on_the_table_door_once_it_ever_carried_a_foreach_stamp
         .expect("the stray between two table stamps of a foreach name");
     assert!(under.below);
     assert_eq!(under.snapshot.get(), head(&foreign));
+}
+
+#[tokio::test]
+async fn a_table_stamp_over_the_starting_mark_keeps_the_name_carried() {
+    let (_warehouse, catalog, ident) = fixture("mark_table_stamp").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    assert!(!carried(&seeded));
+    let marked = commit_starting_mark(&catalog, &seeded, query())
+        .await
+        .expect("the mark");
+    assert!(carried(&marked));
+    let zero = stamped_through(&catalog, &marked, 0, SinkDoor::Table, &[2]).await;
+    assert_eq!(
+        read_starting_mark(&zero, query()).expect("the property reads"),
+        None
+    );
+    let summary = &zero
+        .metadata()
+        .current_snapshot()
+        .expect("head")
+        .summary()
+        .additional_properties;
+    assert!(summary.contains_key(STARTING_HEAD_SUMMARY_KEY));
+    assert!(carried(&zero));
+    let one = stamped_through(&catalog, &zero, 1, SinkDoor::Table, &[3]).await;
+    assert!(carried(&one));
+}
+
+#[tokio::test]
+async fn another_name_s_foreach_stamp_does_not_carry_this_name() {
+    let (_warehouse, catalog, ident) = fixture("two_names_carried").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let theirs = CommitStamp {
+        record: record_for(other_query(), 0, 7),
+        door: SinkDoor::ForeachBatch,
+    };
+    let guard = BatchScope::enter(TableUuid::of(&seeded), theirs).expect("enter");
+    let files = stage(&seeded, &[2]).await;
+    let after_theirs = commit_append_with_summary(&catalog, &seeded, files, &scoped(&guard), None)
+        .await
+        .expect("their stamp");
+    drop(guard);
+    assert!(!carried(&after_theirs));
+    let _first = stamped_through(&catalog, &after_theirs, 0, SinkDoor::Table, &[3]).await;
+    let foreign = append_plain(&catalog, &ident, &[4]).await;
+    let second = stamped_through(&catalog, &foreign, 1, SinkDoor::Table, &[5]).await;
+    assert!(!carried(&second));
+    for snapshot in main_lineage(second.metadata()) {
+        let summary = &snapshot.summary().additional_properties;
+        if stamped_by(summary, query()) {
+            assert!(!summary.contains_key(STARTING_HEAD_SUMMARY_KEY));
+        }
+    }
+    assert!(carried_by_foreach(&second, other_query()).expect("their lineage reads"));
 }
 
 fn refusal_text(error: &DataFusionError) -> String {

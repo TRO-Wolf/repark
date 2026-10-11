@@ -8148,6 +8148,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   source and sink row sets equal. Attempts loop until the foreign lands, so the pin is
   deterministic once the race hits.
   pins: mb-4-foreach-eo/C-048
+- [test_mb_4_streaming_markdeep.py](test_mb_4_streaming_markdeep.py) —
+  **MB-4-FOREACH-EO fold 8 (2026-10-11, the seventh verify's S1):** the mark-only
+  door-switch choreography. A `foreachBatch` start whose body raises before any write
+  leaves only the starting mark; a `toTable` run under the same name races one foreign
+  delete of delivered rows. No foreign commit ever sits under a stamp, and the restart
+  on each door, with and without `expire_snapshots` to one snapshot, is refused by
+  name, never silent. Attempts loop until the foreign lands, so the pin is
+  deterministic once the race hits.
+  pins: mb-4-foreach-eo/C-050
 - [test_mb_4_streaming_remedies.py](test_mb_4_streaming_remedies.py) — **MB-4-FOREACH-EO
   fold 4 (2026-10-10, the third verify's first two S1):** every remedy a stray refusal prints,
   followed as printed, with the sink's rows counted exactly. A stray under a stamp (the body

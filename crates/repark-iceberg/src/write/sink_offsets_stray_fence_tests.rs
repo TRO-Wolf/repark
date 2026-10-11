@@ -1,4 +1,5 @@
 use super::*;
+use crate::microbatch::starting_mark::STARTING_HEAD_SUMMARY_KEY;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Foreign {
@@ -294,6 +295,61 @@ async fn a_table_door_stamp_under_a_foreach_carried_name_is_refused_over_a_stray
                 "{cell}: the stray is the head"
             );
         }
+    }
+}
+
+async fn raced_after_a_first_table_stamp(arm: Arm) -> Raced {
+    let name = format!("{}_marked_table_first", arm_name(arm)).to_lowercase();
+    let (_warehouse, memory, ident) = fixture(&name).await;
+    let (table, seeded) = seed(&memory, &ident).await;
+    commit_starting_mark(&memory, &table, query())
+        .await
+        .expect("mark");
+    let first = stamped_append(&memory, &ident, &stamp_for(0, SinkDoor::Table), &[80]).await;
+    let summary = &first
+        .metadata()
+        .current_snapshot()
+        .expect("head")
+        .summary()
+        .additional_properties;
+    assert!(summary.contains_key(STARTING_HEAD_SUMMARY_KEY));
+    let table = memory.load_table(&ident).await.expect("reload");
+    let began = table.metadata().current_snapshot_id();
+    let stamp = stamp_for(1, SinkDoor::Table);
+    let guard = BatchScope::enter_on(&table, stamp.clone()).expect("enter");
+    land(&memory, &ident, Foreign::Stray, 90).await;
+    let loaded = memory.load_table(&ident).await.expect("reload");
+    let outcome = run_arm(arm, &memory, &loaded, &seeded, &guard, &stamp, false).await;
+    drop(guard);
+    Raced {
+        outcome,
+        after: memory.load_table(&ident).await.expect("reload"),
+        began,
+        updates: 0,
+    }
+}
+
+#[tokio::test]
+async fn a_second_table_stamp_of_a_marked_name_is_refused_over_a_stray() {
+    for arm in ARMS {
+        let raced = raced_after_a_first_table_stamp(arm).await;
+        let cell = format!("{arm:?}");
+        let strays = unstamped_on_main(&raced.after, raced.began);
+        assert_eq!(strays.len(), 1, "{cell}: the stray landed");
+        let refused = raced.outcome.expect_err(&cell);
+        assert!(
+            refused.contains(&format!(
+                "snapshot {stray} (append) landed on the sink without a stamp after this batch began",
+                stray = strays[0]
+            )),
+            "{cell}: {refused}"
+        );
+        assert!(ours_since(&raced.after, raced.began).is_empty(), "{cell}");
+        assert_eq!(
+            raced.after.metadata().current_snapshot_id(),
+            Some(strays[0]),
+            "{cell}: the stray is the head"
+        );
     }
 }
 

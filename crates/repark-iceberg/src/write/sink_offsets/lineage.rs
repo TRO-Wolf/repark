@@ -15,7 +15,7 @@ use crate::microbatch::offset::{
     Epoch, OFFSETS_PROPERTY_PREFIX, QUERY_ID_KEY, QueryId, SPARK_QUERY_ID_KEY, SinkRecord,
     SnapshotId, TableUuid,
 };
-use crate::microbatch::starting_mark::StartingMark;
+use crate::microbatch::starting_mark::{STARTING_HEAD_SUMMARY_KEY, StartingMark};
 use crate::microbatch::stray_remedy::{
     Discard, HEAD_GONE, HEAD_UNRECORDED, INSIDE_A_SNAPSHOT, PREVIOUS_GONE, Restart, SHARED_STRETCH,
     StrayRemedy,
@@ -216,7 +216,9 @@ pub fn carried_by_foreach(table: &Table, query: QueryId) -> Result<bool, MicroBa
         return Ok(true);
     }
     Ok(main_lineage(table.metadata()).any(|snapshot| {
-        stamped_by(&snapshot.summary().additional_properties, query) && !table_door_stamp(snapshot)
+        let summary = &snapshot.summary().additional_properties;
+        stamped_by(summary, query)
+            && (!table_door_stamp(snapshot) || summary.contains_key(STARTING_HEAD_SUMMARY_KEY))
     }))
 }
 
