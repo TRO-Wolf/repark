@@ -37,6 +37,7 @@ pub(super) async fn execute_add_files(
 
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    repark_iceberg::write::refuse_encrypted_table(&table)?;
     let table = ensure_name_mapping_pretty(&table, catalog.as_ref()).await?;
 
     let result = AddFiles::new(table, AddFilesSource::Directory(source_dir))

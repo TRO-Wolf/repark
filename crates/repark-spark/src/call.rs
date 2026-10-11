@@ -366,6 +366,7 @@ async fn execute_rewrite_position_delete_files(
     let table_arg = bound.require_string("table")?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    repark_iceberg::write::refuse_encrypted_table(&table)?;
     let pairs = rewrite_options::extract_option_pairs(&bound, "rewrite_position_delete_files")?;
     let options = rewrite_options::parse_rpd_options(&pairs, &table)?;
     let case_sensitive = !crate::spark_door_case_insensitive(ctx.state().config().options());

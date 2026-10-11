@@ -99,6 +99,7 @@ pub async fn commit_append_to(
     new_files: Vec<DataFile>,
     branch: Option<&str>,
 ) -> Result<Table> {
+    crate::write::refuse_encrypted_table(table)?;
     let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
     let action = tx

@@ -61,6 +61,18 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::reverse(exprs[0].clone())
         }
+        "timestamp_seconds" => {
+            need(1)?;
+            repark_functions::spark_epoch_ctor::timestamp_seconds_udf().call(vec![exprs[0].clone()])
+        }
+        "timestamp_millis" => {
+            need(1)?;
+            repark_functions::spark_epoch_ctor::timestamp_millis_udf().call(vec![exprs[0].clone()])
+        }
+        "timestamp_micros" => {
+            need(1)?;
+            repark_functions::spark_epoch_ctor::timestamp_micros_udf().call(vec![exprs[0].clone()])
+        }
         "bround" | "conv" | "hash" | "format_number" | "mask" => math_expr(name, exprs)?,
         "split" => {
             if exprs.len() != 2 && exprs.len() != 3 {

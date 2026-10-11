@@ -840,13 +840,17 @@ async fn date_and_timestamp_predicates_measure_the_pushdown_surface() {
         None,
         vec!["ts = TIMESTAMP '2024-01-02 03:04:05'".to_owned()],
     );
-    match timestamp_spec.scan(&context).await {
-        Ok(_) => panic!("the fork bound a string-typed timestamp literal as a scan predicate"),
-        Err(error) => assert!(
-            error.to_string().contains("timestamp"),
-            "timestamp literal refusal should name its type, got {error}"
-        ),
-    }
+    let timestamp_scan = match timestamp_spec.scan(&context).await {
+        Ok(scan) => scan,
+        Err(error) => {
+            panic!("measured: the timestamp scan succeeds with the predicate dropped, got {error}");
+        }
+    };
+    assert!(
+        plan_verbose(&timestamp_scan).contains("predicate:[]"),
+        "measured: the fork drops the TIMESTAMP predicate out of the scan node, got {}",
+        plan_verbose(&timestamp_scan)
+    );
     let spec = named_spec(
         &warehouse_text,
         "dates",
@@ -855,8 +859,8 @@ async fn date_and_timestamp_predicates_measure_the_pushdown_surface() {
     );
     let scan = built_scan(&context, &spec).await;
     assert!(
-        plan_verbose(&scan).contains("predicate:[]"),
-        "measured: the fork drops the DATE predicate out of the scan node, got {}",
+        plan_verbose(&scan).contains("predicate:[d = 2024-01-01]"),
+        "measured: the fork pushes the DATE predicate into the scan node, got {}",
         plan_verbose(&scan)
     );
     let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
@@ -868,6 +872,16 @@ async fn date_and_timestamp_predicates_measure_the_pushdown_surface() {
             let decoded = decoded_scan(physical, &buffer, "date-predicate");
             assert_same_scan("date-predicate", &decoded, &scan);
             cluster_batches("date-predicate", &session, &context, &scan).await;
+        }
+    }
+    match encode_or_refusal(physical, &timestamp_scan, "timestamp-predicate") {
+        Err(message) => {
+            assert_refusal_names_field("timestamp-predicate", &message, "predicate");
+        }
+        Ok(buffer) => {
+            let decoded = decoded_scan(physical, &buffer, "timestamp-predicate");
+            assert_same_scan("timestamp-predicate", &decoded, &timestamp_scan);
+            cluster_batches("timestamp-predicate", &session, &context, &timestamp_scan).await;
         }
     }
     drop(session);

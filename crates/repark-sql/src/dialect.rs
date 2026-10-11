@@ -19,6 +19,13 @@ impl SqlDialect for AnsiDialect {
                 .as_ref()
                 .clone(),
         );
+        for zoned in [false, true] {
+            ctx.register_udf(
+                repark_functions::timestamp_ns_cast::timestamp_ns_cast_udf(zoned)
+                    .as_ref()
+                    .clone(),
+            );
+        }
     }
 
     async fn execute(

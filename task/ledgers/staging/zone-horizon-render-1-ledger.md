@@ -258,7 +258,9 @@ Notes on the classes:
 
 Out of scope, observed while measuring:
 
-- **R-6.** `timestamp_micros`, `timestamp_seconds`: `UNRESOLVED_ROUTINE`.
+- **R-6.** CLOSED 2026-10-08 (SQL-EPOCH-CONSTRUCTORS-1): `timestamp_micros`,
+  `timestamp_seconds` and `timestamp_millis` resolve on the Spark SQL door and the DataFrame
+  door with Spark's answers.
 - **R-7.** The grid holds only zones whose final rule is "the n-th weekday of a month". A zone
   whose final rule is a fixed date, or whose table ends before 2099, was not measured.
 - **R-8.** The facade's styled `show()` prints an instant in UTC with its Arrow type, not in the

@@ -21,7 +21,7 @@ const TOKEN: &str = "__REPARK_ATTR_";
 
 const PLACEHOLDER: &str = "__rp_ref_";
 
-const NONDETERMINISTIC: &[&str] = &[
+pub const NONDETERMINISTIC_FUNCTION_NAMES: &[&str] = &[
     "input_file_block_length",
     "input_file_block_start",
     "input_file_name",
@@ -256,7 +256,7 @@ fn foldable(expr: &SqlExpr) -> bool {
         | SqlExpr::InSubquery { .. } => ControlFlow::Break(()),
         SqlExpr::Function(function)
             if function.over.is_some()
-                || NONDETERMINISTIC
+                || NONDETERMINISTIC_FUNCTION_NAMES
                     .contains(&function.name.to_string().to_ascii_lowercase().as_str()) =>
         {
             ControlFlow::Break(())

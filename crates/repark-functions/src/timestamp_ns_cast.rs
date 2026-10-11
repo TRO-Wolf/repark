@@ -121,6 +121,13 @@ impl SparkTimestampNsCast {
         }
     }
 
+    fn already_stored(&self, data_type: &DataType) -> bool {
+        matches!(
+            data_type,
+            DataType::Timestamp(TimeUnit::Nanosecond, zone) if zone.is_some() == self.zoned
+        )
+    }
+
     fn checked_source(&self, data_type: &DataType) -> Result<()> {
         if matches!(data_type, DataType::Null)
             || is_string_source(data_type)
@@ -174,7 +181,9 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
         let nullable = match args.arg_fields.first() {
             Some(field) => {
                 self.checked_source(field.data_type())?;
-                field.is_nullable() || is_string_source(field.data_type())
+                field.is_nullable()
+                    || is_string_source(field.data_type())
+                    || !self.already_stored(field.data_type())
             }
             None => true,
         };

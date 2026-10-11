@@ -175,13 +175,13 @@ def test_every_audit_row_names_a_pin() -> None:
 
 
 def test_the_three_softened_glyphs_are_now_green_with_their_dated_clause() -> None:
-    """C-001: types, encryption and DV maintenance read ✅ by dated DECLARED residual."""
+    """C-001: types and DV maintenance read ✅ by dated clause; encryption reads FIXED (ENC-1)."""
     types = _matrix_row("Read/write: v3 types + default values")
     assert types.startswith("| Read/write: v3 types + default values | ✅ by dated DECLARED")
     assert "V3-GEO-1" in types and "V3-VARIANT-SHRED-1" in types
     encryption = _matrix_row("Table encryption keys")
-    assert "✅ by dated DECLARED exclusion" in encryption and "❌" not in encryption
-    assert "ENC-1" in encryption and "2026-08-24" in encryption
+    assert "✅ **FIXED 2026-10-09 (ENC-1" in encryption and "❌" not in encryption
+    assert "ENC-1" in encryption and "2026-10-01" in encryption
     maintenance = _matrix_row("Maintain: DV / delete-file maintenance")
     assert "✅ B-MOR-3 FIXED" in maintenance and "⚠" not in maintenance
     assert "B-MOR-3-FLOOR-1" in maintenance

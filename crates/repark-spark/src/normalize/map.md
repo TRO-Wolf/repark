@@ -62,6 +62,22 @@ here and is re-exported in one line.
   built without the SQL planner is refused and analyzed exactly as the statement would be.
   pins: stamp-2-r5p6-2/C-002, C-005
   pins: u9-types-1/C-012
+  **CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08):** `render` and `input_schema` are
+  `pub(crate)` for the join-condition rule below; `render_literal` renders decimal
+  scalars scaled (`0.5`, never DataFusion's `Some(5),1,1` tuple), which no pin had
+  depended on. pins: cross-join-condition-1/C-008
+- `join_condition.rs` — **CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08):**
+  `JoinConditionRefusals`, the Spark door's analyzer rule over `LogicalPlan::Join`
+  filters, seated directly before `type_coercion` (after the integral-literal rule,
+  so `ON 1` reports `INT`). The type check runs first and the nondeterminism walk
+  second, the order live Spark 4.1.2 shows for a condition that is both; the walk
+  reads core's `NONDETERMINISTIC_FUNCTION_NAMES` and descends into subquery plans.
+  Errors carry Spark's head lines (`INVALID_NON_DETERMINISTIC_EXPRESSIONS`,
+  `JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE`, SQLSTATE `42K0E`); only the condition
+  rendering is RePark's. The rule fires for every SQL-planned join, so the
+  DataFrame door (whose SQL route plans here) and free SQL share the one site;
+  the exact-native path carries single-equality keys only and needs no check.
+  pins: cross-join-condition-1/C-008
 - `replace_table.rs` — **IPI-25 (2026-09-20):** `REPLACE TABLE [AS SELECT]` is Spark's elided
   spelling of `CREATE OR REPLACE TABLE`, and the behaviour behind it already shipped (registry
   `RTAS-OPS-1`). `rewrite_replace_table` inserts `CREATE OR` before the leading `REPLACE`, and it

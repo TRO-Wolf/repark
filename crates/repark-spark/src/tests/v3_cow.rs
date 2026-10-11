@@ -599,9 +599,8 @@ async fn adopted_v3_mor_merge_matched_update_keeps_row_id() {
     assert_eq!(live_manifest_count(&catalogs, "adopt_mor").await, 3);
 }
 
-/// pins: v3e-1-2-cow-oracle/C-009
 #[tokio::test]
-async fn v3_create_with_encryption_key_id_still_scans_without_a_kms() {
+async fn v3_create_with_encryption_key_id_refuses_first_write() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     run(
@@ -613,19 +612,47 @@ async fn v3_create_with_encryption_key_id_still_scans_without_a_kms() {
         ),
     )
     .await;
-    run(
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.enc").await,
+        Vec::<(i32, String)>::new()
+    );
+    let error = match execute(
         &ctx,
         &catalogs,
         "INSERT INTO ice.sales.enc SELECT * FROM src",
     )
-    .await;
+    .await
+    {
+        Ok(frame) => frame
+            .collect()
+            .await
+            .map(|_| ())
+            .expect_err("first write to a keyed table must refuse"),
+        Err(error) => error,
+    };
+    let mapped = repark_core::engine_err(error);
+    assert!(matches!(&mapped, repark_core::Error::NotImplemented(_)));
     assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.enc").await,
-        vec![(1, "a".into()), (2, "b".into()), (3, "c".into())],
-        "this engine does not implement table encryption: rows must stay readable"
+        mapped.exception_class(),
+        repark_core::ErrorClass::Unsupported
     );
+    let message = mapped.to_string();
+    for needle in [
+        "sales.enc",
+        "encryption.key-id",
+        "no table encryption",
+        "plaintext",
+        "ENC-1",
+    ] {
+        assert!(message.contains(needle), "got: {message}");
+    }
+    assert!(!message.contains("not-a-key"), "got: {message}");
     let table = load_sales(&catalogs, "enc").await;
     assert_eq!(table.metadata().format_version(), FormatVersion::V3);
+    assert!(
+        table.metadata().current_snapshot_id().is_none(),
+        "a refused write must not commit a snapshot"
+    );
     assert!(
         table.metadata().encryption_keys_iter().next().is_none(),
         "setting {ENCRYPTION_KEY_ID_PROP} must not populate table-metadata encryption-keys"

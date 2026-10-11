@@ -34,6 +34,20 @@ pub(super) async fn apply_steps(
     table_arg: &str,
     steps: &[PlannedStep],
 ) -> Result<DataFrame> {
+    let rewrites = steps.iter().any(|step| {
+        step.skip_reason.is_none()
+            && matches!(
+                step.action,
+                StepAction::RewritePositionDeleteFiles
+                    | StepAction::RewriteDataFiles { .. }
+                    | StepAction::RewriteManifests
+            )
+    });
+    if rewrites {
+        let catalog = crate::catalog_handle(catalogs, catalog_name)?;
+        let ident = super::resolve_table_ident(catalog_name, table_arg)?;
+        repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await?;
+    }
     let mut rows: Vec<(i32, String, String, String, String)> = Vec::new();
     let mut stopped = false;
     for step in steps {

@@ -112,7 +112,7 @@ fn invalid_ordering(resolved: &str, symbol: &str, map_type: &DataType) -> DataFu
     ))
 }
 
-fn input_schema(node: &LogicalPlan) -> DFSchema {
+pub(crate) fn input_schema(node: &LogicalPlan) -> DFSchema {
     let mut merged = DFSchema::empty();
     for input in node.inputs() {
         merged.merge(input.schema());
@@ -128,7 +128,7 @@ fn map_type_of(expr: &Expr, schema: &DFSchema) -> Option<DataType> {
     expr.get_type(schema).ok().filter(is_map)
 }
 
-fn render(expr: &Expr) -> String {
+pub(crate) fn render(expr: &Expr) -> String {
     match expr {
         Expr::Column(column) => column.name.clone(),
         Expr::Alias(alias) => render(&alias.expr),
@@ -145,8 +145,34 @@ fn render_literal(value: &ScalarValue) -> String {
         ScalarValue::Utf8(Some(text))
         | ScalarValue::Utf8View(Some(text))
         | ScalarValue::LargeUtf8(Some(text)) => text.clone(),
+        ScalarValue::Decimal32(Some(unscaled), _, scale) => {
+            render_decimal(i128::from(*unscaled), *scale)
+        }
+        ScalarValue::Decimal64(Some(unscaled), _, scale) => {
+            render_decimal(i128::from(*unscaled), *scale)
+        }
+        ScalarValue::Decimal128(Some(unscaled), _, scale) => render_decimal(*unscaled, *scale),
+        ScalarValue::Decimal256(Some(unscaled), _, scale) => unscaled
+            .to_i128()
+            .map_or_else(|| value.to_string(), |int| render_decimal(int, *scale)),
         other if other.is_null() => "NULL".to_owned(),
         other => other.to_string(),
+    }
+}
+
+fn render_decimal(unscaled: i128, scale: i8) -> String {
+    let sign = if unscaled.is_negative() { "-" } else { "" };
+    let mut digits = unscaled.unsigned_abs().to_string();
+    let scale = usize::try_from(i32::from(scale).max(0)).unwrap_or(0);
+    while digits.len() <= scale {
+        digits.insert(0, '0');
+    }
+    let split = digits.len() - scale;
+    let (whole, frac) = digits.split_at(split);
+    if scale == 0 {
+        format!("{sign}{whole}")
+    } else {
+        format!("{sign}{whole}.{frac}")
     }
 }
 

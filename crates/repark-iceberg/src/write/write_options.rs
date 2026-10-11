@@ -429,6 +429,7 @@ pub async fn commit_append_with_summary(
     summary_extra: &[(String, String)],
     branch: Option<&str>,
 ) -> Result<Table> {
+    crate::write::refuse_encrypted_table(table)?;
     let stamp = SiteStamp::claim(table, branch, summary_extra)?;
     let summary_extra = stamp.extras(summary_extra)?;
     let engine = EngineSummary::for_append(table, &new_files, branch);
@@ -452,6 +453,7 @@ pub async fn commit_replace_write_with_summary(
     staged_files: Vec<DataFile>,
     summary_extra: &[(String, String)],
 ) -> Result<Table> {
+    crate::write::refuse_encrypted_table(table)?;
     let engine = EngineSummary::for_overwrite(table, &staged_files, None);
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
@@ -492,6 +494,7 @@ pub async fn commit_overwrite_replace_all_with_summary(
     summary_extra: &[(String, String)],
     isolation_override: Option<&str>,
 ) -> Result<Table> {
+    crate::write::refuse_encrypted_table(table)?;
     let isolation = isolation_with_override(table, isolation_override)?;
     let engine =
         engine_summary_for_replace_all(table, &staged_files, branch, summary_extra).await?;
@@ -547,6 +550,7 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
     summary_extra: &[(String, String)],
     isolation_override: Option<&str>,
 ) -> Result<Table> {
+    crate::write::refuse_encrypted_table(table)?;
     let isolation = isolation_with_override(table, isolation_override)?;
     let engine = engine_summary_for_row_filter(
         table,
@@ -609,6 +613,7 @@ pub async fn commit_replace_partitions_with_summary(
     if crate::write::overwrite_scope::replace_partitions_is_noop(&staged_files) {
         return Ok(table.clone());
     }
+    crate::write::refuse_encrypted_table(table)?;
     let isolation = isolation_with_override(table, isolation_override)?;
     let engine =
         engine_summary_for_replace_partitions(table, &staged_files, branch, summary_extra).await?;

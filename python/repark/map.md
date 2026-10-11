@@ -24,7 +24,7 @@ remains the deprecation shim. Native lazy DataFrame API is not this phase.
   `module-name = repark._native`; `python-source = src`; `features = ["extension-module",
   "allocator-mimalloc"]` — the wheel ships the mimalloc global allocator (AL-1b verdict,
   2026-08-16; rationale comment sits on the line, numbers in the parity bench map).
-  Runtime deps: `pyarrow>=25` and `pydantic>=2.10,<3` (**PYC-3**, 2026-08-22 — BaseModel
+  Runtime deps: `pyarrow>=25.0.1` (floor raised 2026-10-09, THREADED-COLLECT-SEGV-1) and `pydantic>=2.10,<3` (**PYC-3**, 2026-08-22 — BaseModel
   for MERGE clause records and smartCsv ingest state; the phase-3 freeze was pyarrow
   only). `numpy` / `pandas` / `polars` / `ml-ext` stay lazy extras. Version is `0.0.0`
   until the release PR makes it `dynamic` (design §4 Q6).

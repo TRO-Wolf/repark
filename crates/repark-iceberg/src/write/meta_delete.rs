@@ -148,6 +148,7 @@ pub async fn commit_metadata_delete(
     catalog: &Arc<dyn Catalog>,
     plan: MetaDeletePlan,
 ) -> Result<()> {
+    crate::write::refuse_encrypted_table(&plan.table)?;
     let (operation_id, summary) = operation_id_and_summary();
     let transaction = Transaction::new(&plan.table);
     let action = transaction

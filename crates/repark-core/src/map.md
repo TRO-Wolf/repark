@@ -366,6 +366,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `apply_with_subqueries` (IN / EXISTS / scalar subqueries count as reads) and
   `scan_url_hits_prefix` compares the decoded `ListingTableUrl::prefix` plus
   the `object_store` bucket, so percent-encoded keys refuse self-overwrite.
+- `error_map.rs` — **ENC-1 fold 1 (2026-10-09):** `engine_err` first asks
+  `repark_iceberg::write::EncryptedTableRefusal::find` for the keyed-table refusal. The
+  catalog guard raises it from inside a writer or a commit, wrapped by whatever layer was
+  writing; without this step the class and the text would depend on that layer. With it
+  every door maps to `NotImplemented` (`UnsupportedOperationException`) with the one text.
+  pins: enc-1/C-008
 - `error_map.rs` — **C-2d (2026-10-07):** `classify_external_tail` downcasts
   `repark_connect::ConnectError` to `EngineErrorKind::Connect`; `engine_err` takes the class from
   `From<ConnectError>` (`Config`, `NotImplemented`, else `DataFusion`) and flattens the
@@ -406,6 +412,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **CAST-OVERFLOW-INSERT-1 (2026-09-29):** an `Execution` message headed
   `[CAST_OVERFLOW_IN_TABLE_INSERT]` classifies `Arithmetic` and renders verbatim, beside
   `ARITHMETIC_OVERFLOW`.
+  **CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09):** `join_refusal_message` peels the
+  `join_condition_refusals` rule wrap to the bare `[CONDITION] … SQLSTATE: 42K0E` payload, gated
+  on the rule name and the two join heads, so the facade accessors answer Spark's condition;
+  foreign rule wraps and bare heads keep the full display. pins: cross-join-condition-1/C-008
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see

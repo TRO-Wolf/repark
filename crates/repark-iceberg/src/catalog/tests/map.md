@@ -117,6 +117,24 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   path succeeds; a second `writer()` on an existing path fails `Unexpected` with the same text
   `write()` refuses with.
   pins: aws-accept-replace-1/C-001
+- `encryption_guard.rs` — **ENC-1 fold 1 (2026-10-09):** the guard's own pins, with no
+  entry check in the way: a keyed table handle creates no data, delete, puffin, manifest,
+  manifest-list or stats file and does write a `.metadata.json`; an unkeyed or
+  lookalike-key handle writes and commits as before; a snapshot commit through a handle
+  that is NOT guarded refuses at `update_table` and leaves the pointer; a handle loaded
+  before the key was added refuses at commit; property commits pass on a keyed table and
+  UNSET restores writes; the refusal is found through a source chain and through
+  rendered text.
+  pins: enc-1/C-008
+  **Fold 2 (2026-10-09), from the re-verify:** the guard's `Debug` renders exactly what the
+  wrapped catalog renders (`repark-distributed` reads the catalog kind from that text);
+  metadata text that names a file-adding update (a property value, with the verifier's
+  hostile values and two that forge a list element) does not brick a keyed table; the
+  metadata-JSON exception holds only for a direct child of the table's metadata directory
+  and follows `write.metadata.path`; and one pin per decorator branch the verifier's
+  mutants walked through: `register_table` returns a guarded handle, a statistics commit
+  and both publish calls refuse at the catalog for a handle that is not guarded.
+  pins: enc-1/C-010
 
 ## Pointers
 

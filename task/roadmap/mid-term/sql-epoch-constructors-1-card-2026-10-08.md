@@ -2,7 +2,10 @@
 
 **Date:** 2026-10-08. **Filed by:** Claude (Haiku 5.5), docs lane, from the orchestrator's brief.
 
-**Status:** open. Not scheduled.
+**Status:** closed 2026-10-08 — landed by SQL-EPOCH-CONSTRUCTORS-1
+(`fix/sql-epoch-constructors-1`): the three names resolve on the Spark SQL door, the
+parity rows named in "Measured" carry dated FIXED notes, and the native door stays a
+declared refusal (pinned). See "Close" below.
 
 **Retires:** when the unit that registers the three names on the Spark SQL door merges, and the
 parity rows below are updated in that change.
@@ -81,3 +84,27 @@ these names.
 
 - The parity document: [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md).
 - The shape of a card: [fa-6-duplicate-view-schemas-card-2026-10-08.md](fa-6-duplicate-view-schemas-card-2026-10-08.md).
+
+## Close (2026-10-08)
+
+Step 0 recorded 216 cells on live Spark 4.1.2 (54 inputs × `UTC` /
+`America/New_York` × ANSI off / on, both doors); all four groups are
+byte-identical. `timestamp_seconds` takes NUMERIC (fractional seconds kept,
+double NaN/Inf answer NULL, huge doubles saturate, decimal exact-or-error);
+`timestamp_millis` / `timestamp_micros` take INTEGRAL only. Strings, booleans,
+timestamps and wrongly-typed NULLs refuse `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`
+42K09; overflows are unclassified (`long overflow` / `Overflow` /
+`Rounding necessary`). Spark refuses the `to_timestamp_*` spellings as
+`UNRESOLVED_ROUTINE`.
+
+The owner open question resolved to the lean: Spark door only, native door a
+declared refusal (pinned `sql-epoch-constructors-1/C-006`). The out-of-scope
+facade-schema item fixed itself: no Python change was needed once the kernel
+answered LTZ micros. Stale rows, all updated with dated notes in this change:
+the ZONE-HORIZON-RENDER-1 "do not exist" sentence, B-TZ-2, the EX-7
+`timestamp_seconds` schema half (whose `string` reading was already stale on
+base main), and zone-horizon residue R-6.
+
+Left open, out of scope: `to_timestamp_seconds` / `to_timestamp_millis` /
+`to_timestamp_micros` resolve on this engine's SQL door through DataFusion
+builtins where Spark refuses them; untouched by this unit.

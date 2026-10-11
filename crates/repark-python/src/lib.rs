@@ -17,6 +17,7 @@ mod deep_stack;
 mod fence;
 pub mod frame_lineage;
 mod is_duplicated;
+mod join_refusal;
 mod logical_names;
 mod ml;
 mod orc_io;
@@ -61,7 +62,7 @@ pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
     }
     match err.exception_class() {
         ErrorClass::Parse => ParseException::new_err(message),
-        ErrorClass::Analysis => AnalysisException::new_err(message),
+        ErrorClass::Analysis => join_refusal::analysis_py_err(message),
         ErrorClass::Arithmetic => ArithmeticException::new_err(message),
         ErrorClass::Unsupported => UnsupportedOperationException::new_err(message),
         ErrorClass::IllegalArgument => IllegalArgumentException::new_err(message),

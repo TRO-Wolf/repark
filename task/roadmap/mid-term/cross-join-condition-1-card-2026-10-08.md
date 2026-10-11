@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-08. **Filed by:** Claude (Haiku 5.5), docs lane, from the orchestrator's brief. **Source:** the STAMP-2-R5P6-2 lane's hand-back (PR #997, not on main yet), its first out-of-scope item.
 
-**Status:** filed, not scheduled. Sequenced after PR #997 merges, because both touch the same door.
+**Status:** closed 2026-10-08 by its unit. Sequenced after PR #997 merges, because both touch the same door.
 
 ## Why
 

@@ -104,7 +104,7 @@ async fn setup_with_owner_and_settings(
     zone: &str,
 ) -> (SessionContext, CatalogRegistry) {
     let warehouse = wh.path().to_str().unwrap().to_string();
-    let catalog: Arc<dyn Catalog> = Arc::new(
+    let catalog = repark_iceberg::catalog::EncryptionGuardCatalog::install(Arc::new(
         MemoryCatalogBuilder::default()
             .with_storage_factory(Arc::new(LocalFsStorageFactory))
             .load(
@@ -113,7 +113,7 @@ async fn setup_with_owner_and_settings(
             )
             .await
             .unwrap(),
-    );
+    ));
     let ns_props = HashMap::from([("location".to_string(), format!("{warehouse}/sales"))]);
     catalog
         .create_namespace(&NamespaceIdent::new("sales".to_string()), ns_props)
@@ -185,7 +185,7 @@ pub(super) async fn setup_strict_catalog(
     wh: &TempDir,
 ) -> (SessionContext, CatalogRegistry, String) {
     let warehouse = wh.path().to_str().unwrap().to_string();
-    let catalog: Arc<dyn Catalog> = Arc::new(
+    let catalog = repark_iceberg::catalog::EncryptionGuardCatalog::install(Arc::new(
         MemoryCatalogBuilder::default()
             .with_storage_factory(Arc::new(LocalFsStorageFactory))
             .load(
@@ -194,7 +194,7 @@ pub(super) async fn setup_strict_catalog(
             )
             .await
             .unwrap(),
-    );
+    ));
     let ctx = SessionContext::new_with_config(crate::extension::apply_spark_float_as_decimal(
         datafusion::prelude::SessionConfig::new(),
     ));

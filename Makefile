@@ -187,6 +187,10 @@ rust-check: ## cargo check
 rust-test: ## cargo test (workspace; see note above re: --all-features)
 	cargo test --locked --workspace
 
+.PHONY: rust-test-cluster
+rust-test-cluster: ## cargo test for repark-distributed with the cluster feature (Ballista executor)
+	cargo test --locked --no-fail-fast -p repark-distributed --features cluster
+
 # ------------------------------------------------------------------------------------------------
 # Python
 # ------------------------------------------------------------------------------------------------

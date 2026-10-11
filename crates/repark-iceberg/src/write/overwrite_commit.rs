@@ -18,6 +18,7 @@ pub async fn commit_overwrite_replace_all_to(
     staged_files: Vec<DataFile>,
     branch: Option<&str>,
 ) -> Result<Table> {
+    crate::write::refuse_encrypted_table(table)?;
     let isolation = parse_overwrite_isolation(table)?;
     let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
@@ -46,6 +47,7 @@ pub async fn commit_replace_write(
     table: &Table,
     staged_files: Vec<DataFile>,
 ) -> Result<Table> {
+    crate::write::refuse_encrypted_table(table)?;
     let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
     let action = tx

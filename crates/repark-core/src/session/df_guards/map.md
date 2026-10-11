@@ -398,6 +398,10 @@ wrapped optimizer rule) and declares this directory.
   option A: Spark Classic is the oracle, no "left wins" tie-break; sketch
   `attr-id-1-selfjoin-design.md` §1.1–§1.4, §2.2). No facade calls it yet: SJ-2 wires the
   token and the seam, SJ-3 the condition join, SJ-4 the post-join surfaces.
+  **CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08):** the nondeterministic-function list is
+  published as `NONDETERMINISTIC_FUNCTION_NAMES` (re-exported through `case_bind.rs`),
+  the single home the Spark door's join-condition rule reads; the `foldable` use is
+  unchanged. pins: cross-join-condition-1/C-008
   - `parse_attr_refs(sql)` reads the reference tokens SJ-2 will render,
     `__REPARK_ATTR_<id>__F<frame>__<qualifiers>__` (the frame field sits before the
     greedy qualifier group, and the qualifier group ends at its last `__`, as the

@@ -736,3 +736,44 @@ unit rewrote say so; the rest are recorded here only and owned elsewhere.
 | C-9 | `IcebergTableScan::statistics()` reports exact counts so DataFusion folds `count(*)` (PERF-ICE-COUNTSTAR-1, FIXED); row R1 claimed the fold. | `docs/spark-sql-iceberg-parity.md:7094-7101`; `docs/cutover/production-iceberg-status-2026-09-14.md:173` | No fold at the current pin (plan keeps `IcebergTableScan`); the answer is correct and the fold pins self-skip. Registry row rewritten, FIXED to OPEN; cutover R1 rewritten above. |
 | C-10 | The ordinary read path promoted correctly (V3-COV-2, FIXED), and E1 PROVEN incl. type promotion. | `docs/spark-sql-iceberg-parity.md:1241-1242`; `docs/cutover/production-iceberg-status-2026-09-14.md:209` | Range predicates on a promoted column silently drop pre-promotion rows (2 of 10 correct on RePark, 10 of 10 on Spark). Registry row not rewritten here. |
 | C-11 | Unquoted identifiers agree with Spark (ID-1). | `docs/spark-sql-iceberg-parity.md:670-671` | Holds for lower-case columns; a stored `userId` fails unquoted on the SQL door. Registry row not rewritten here. |
+
+## 12. Readiness note, 2026-10-09
+
+This section points. It records the readiness review of main `40fc916f` against this assessment and
+restates no registry row. The header above says this assessment is superseded by the 2026-09-16
+rating, so read the rows here as the 2026-09-14 record.
+
+**Qualified scope.** v2 Parquet on Glue and on S3 Tables, with a single writer per table, is the
+qualified scope. The single-writer rule is the one cited in §7 and §10 of this file.
+
+**v3 declared subset.** The review names five items. Each one links to its row or card:
+
+- **GEO:** `V3-GEO-1`, DECLARED, [registry](../spark-sql-iceberg-parity.md) line 2906.
+- **VARIANT shredding:** `V3-VARIANT-SHRED-1`, DECLARED, registry line 2936. The 1.6 card
+  [ice-variant-1-6.md](../../task/roadmap/mid-term/ice-variant-1-6.md) schedules the work.
+- **ENC-1:** DECLARED, registry line 1684. The refusal card
+  [enc-1-first-write-refusal-card-2026-10-09.md](../../task/roadmap/mid-term/enc-1-first-write-refusal-card-2026-10-09.md).
+- **R-007:** `ICE-TSNS-SQL-1-R-007`, OPEN, registry line 3130. The card
+  [ice-tsns-merge-wall-1-card-2026-10-09.md](../../task/roadmap/mid-term/ice-tsns-merge-wall-1-card-2026-10-09.md).
+- **Write-default NULL. The tree contradicts the review.** The review lists write-default NULL as
+  declared. The registry does not. `ICE-V3-WRITE-DEFAULT-1` (registry line 16121) reads FIXED
+  2026-09-17, and its partition-overwrite row `ICE-V3-WRITE-DEFAULT-1-OVERWRITE-PART` (line 16179)
+  reads FIXED too. The NULL wording in this assessment (C-1 above, and the V1 row) predates those
+  rows. This note records both and does not choose between them. The owner decides the declared
+  subset.
+
+**Qualification gaps.** Recorded on the scopes they govern. No new units.
+
+- **Fork credentialed fault-injection cells (PR7 ledger gate 8).** The fork handoff names gate 8
+  as credentialed AWS, owner-run ([iceberg-rust-handoff-2026-08-23.md](../../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md),
+  lines 26-28). The nearest fault-injection item in the tree is the Glue commit fault seam
+  ([night-report-2026-09-19-23a.md](../../task/roadmap/mid-term/night-report-2026-09-19-23a.md),
+  Q-23a-A). The tree does not call gate 8 a fault-injection gate.
+- **Memory-pool bound (spill-matrix baseline).** [docs/perf/spill-matrix-baseline.md](../perf/spill-matrix-baseline.md)
+  records that the pool bounds only the operators that register with it. The Iceberg scan and the
+  facade boundary (`collect`, `toPandas`) are not pool-accounted. Claims about bounded memory hold
+  only for the registered operators.
+
+**Fork CI run.** Pinned fork CI run 37385290752 failed on the MinIO image pull, before any test ran.
+The review re-ran it on 2026-10-09. A re-run is not a re-triage. Its result was not known when this
+note was written. The tree does not contain that run, so this note records it and nothing more.

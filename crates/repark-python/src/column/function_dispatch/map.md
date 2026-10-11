@@ -72,6 +72,11 @@ unit — so a new family gets a child module and the parent's default arm falls 
   (2 args) over `string::call_format_number`. pins: fnp-math-1/C-002, C-003
   **FNP-MATH-1 mask slice (2026-09-16, run 18a):** `mask` joins the converged arms
   (1–5 args) over `string::call_mask`. pins: fnp-math-1/C-002, C-003
+  **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis`
+  / `timestamp_micros` join the converged arms over
+  `repark_functions::spark_epoch_ctor` (the UDFs `register_all` installs; no `expr_fn`
+  builder — that file sits on its exact baseline).
+  pins: sql-epoch-constructors-1/C-004, C-005
 
 ## Pointers
 

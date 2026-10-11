@@ -269,6 +269,7 @@ pub(super) async fn execute_publish_changes(
     let table_arg = args.require_string("table", 0)?;
     let wap_id = args.require_string("wap_id", 1)?;
     let (ident, table) = load_call_table(&catalog, catalog_name, &table_arg).await?;
+    repark_iceberg::write::refuse_encrypted_table(&table)?;
     let staged = staged_snapshot_for_wap_id(table.metadata(), &wap_id)
         .map_err(|error| illegal_argument_error(error.message().to_string()))?;
     let source_snapshot_id = staged.snapshot_id();

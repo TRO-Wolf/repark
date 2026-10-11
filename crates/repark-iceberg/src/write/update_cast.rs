@@ -10,8 +10,16 @@ use super::store_assign::{
 
 #[must_use]
 pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
-    if super::ntz_store::is_ntz_wall_target(target) {
-        return super::ntz_store::ntz_wall_cast_sql(expr);
+    match super::ntz_store::store_kernel_sql(expr, target) {
+        Some(stored) => stored,
+        None => nested_leaf_cast_sql(expr, target),
+    }
+}
+
+#[must_use]
+pub fn nested_leaf_cast_sql(expr: &str, target: &DataType) -> String {
+    if let Some(wall) = super::ntz_store::wall_cast_sql(expr, target) {
+        return wall;
     }
     let type_name = without_field_metadata(target)
         .to_string()
@@ -167,7 +175,7 @@ fn spark_update_type_name(data_type: &DataType) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
-    use datafusion::arrow::datatypes::{DataType, Field};
+    use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
     use std::sync::Arc;
 
     use super::{
@@ -287,6 +295,33 @@ mod tests {
         assert_eq!(
             store_assignment_cast_sql("'it''s'", &DataType::Utf8),
             "arrow_cast(('it''s'), 'Utf8')"
+        );
+    }
+
+    #[test]
+    fn a_wall_target_casts_through_the_kernel_of_its_unit() {
+        let micros = DataType::Timestamp(TimeUnit::Microsecond, None);
+        let nanos = DataType::Timestamp(TimeUnit::Nanosecond, None);
+        let zoned_nanos = DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into()));
+        assert_eq!(
+            store_assignment_cast_sql("s.v", &micros),
+            "__repark_cast_timestamp_ntz__((s.v))"
+        );
+        assert_eq!(
+            store_assignment_cast_sql("s.v", &nanos),
+            "__repark_cast_timestamp_ns__((s.v))"
+        );
+        assert_eq!(
+            store_assignment_cast_sql("s.v", &zoned_nanos),
+            "__repark_cast_timestamptz_ns__((s.v))"
+        );
+        assert_eq!(
+            super::nested_leaf_cast_sql("s.v", &zoned_nanos),
+            "arrow_cast((s.v), 'Timestamp(ns, \"UTC\")')"
+        );
+        assert_eq!(
+            super::nested_leaf_cast_sql("s.v", &micros),
+            "__repark_cast_timestamp_ntz__((s.v))"
         );
     }
 

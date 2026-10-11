@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-08. **Filed by:** Claude (Haiku 5.5), docs lane, from the orchestrator's measurements. **Source:** the orchestrator's measurements of 2026-10-08, and the C-3 verifier's out-of-scope observation in PR #998.
 
-**Status:** cause found 2026-10-08 (pyarrow 25.0.0's, see "Cause"); the dependency floor awaits the owner.
+**Status:** cause found 2026-10-08 (pyarrow 25.0.0's, see "Cause"). The owner raised the floor to `pyarrow>=25.0.1` on 2026-10-09, for v1.5.4. The card retires when that release ships.
 
 It is not a regression in v1.5.3: 1.5.1 and 1.5.2 behave the same. A user whose environment pins pyarrow 25.0.0 can crash the process by calling `collect()` from a worker thread.
 
@@ -65,8 +65,9 @@ The evidence, the tables and the recommendation are in the
 [ledger](../../ledgers/staging/threaded-collect-segv-1-ledger.md). The facade test is
 `python/repark/tests/test_threaded_collect_segv_1.py`; it skips on pyarrow 25.0.0.
 
-**Still the owner's:** the floor. The change would be `pyarrow>=25.0.1` in
-`python/repark/pyproject.toml` line 20.
+**Ruled 2026-10-09 (owner):** the floor is `pyarrow>=25.0.1`, in `python/repark/pyproject.toml`
+and, in step, `python/repark-parity/pyproject.toml`. It ships in v1.5.4. An environment pinned to
+pyarrow 25.0.0 must move to 25.0.1 to take that release.
 
 ## What is not known
 

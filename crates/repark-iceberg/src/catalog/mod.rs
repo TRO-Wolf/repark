@@ -15,6 +15,7 @@ mod catalog_ops;
 mod changelog;
 mod changelog_view;
 mod counting_storage;
+mod encryption_guard;
 mod files;
 mod incremental_append;
 mod io_stats;
@@ -53,6 +54,7 @@ pub use counting_storage::{
     S3TABLES_DEFAULT_CONFIGURED_SCHEME, glue_default_storage_factory,
     s3tables_default_storage_factory,
 };
+pub use encryption_guard::{EncryptionGuardCatalog, begin_staged_create, guard_table};
 pub use files::write_text_file;
 pub use iceberg::TableMetadataCacheStats;
 pub use iceberg::arrow::ParquetFooterCacheStats;
