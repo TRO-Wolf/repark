@@ -113,6 +113,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   keep the Arrow cast.
   **C-4 fold 3 S3 (2026-10-11):** the three placement call sites pass the column
   name, so a gap wall into timestamptz refuses naming the column.
+  **C-4 fold 4 item 1 (2026-10-11):** the store-assignment gate carries a
+  Postgres-only carve-out: an engine `Interval` source into an interval
+  (`ServerText`) column passes and stores through the Arrow cast, as before the
+  gate; every non-interval source into an interval column still refuses, and an
+  interval into a text column still refuses. The shared Iceberg rule is
+  untouched.
   pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.

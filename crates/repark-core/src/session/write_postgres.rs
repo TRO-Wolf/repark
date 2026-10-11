@@ -854,6 +854,9 @@ fn refuse_unless_store_assignable(
 ) -> Result<()> {
     let judged_source = normalize_for_assignment(source);
     let judged_target = normalize_for_assignment(target);
+    if mapping == PostgresMapping::ServerText && matches!(judged_source, DataType::Interval(_)) {
+        return Ok(());
+    }
     if !ansi_store_assignable(judged_source, judged_target) {
         return refuse_unless_ansi_store_assignable(
             "INSERT INTO",

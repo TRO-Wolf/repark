@@ -64,6 +64,11 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   decimals, bools, ints, strings and binaries render plainly.
   **C-4 fold 3 S3 (2026-10-11):** a gap wall into a timestamptz column refuses
   naming the column. pins: c-4/C-013, C-014
+- `write_postgres_interval.rs` — **C-4 fold 4 item 1 (2026-10-11):** the interval
+  carve-out pins at the `shape_batch` chokepoint, in their own module because the
+  shape file sits at its ceiling: an engine `Interval` into an interval column
+  stores as Arrow text, an interval into a text column still refuses with the
+  store-assignment class. pins: c-4/C-013, C-014
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
   argument refuses as `NumberFormat` before any connection. pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned

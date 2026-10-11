@@ -545,6 +545,7 @@ STORE_ASSIGNMENT_CASES: tuple[tuple[str, str], ...] = (
     ("timestamp", "'2024-07-01 12:00:00'"),
     ("numeric(10,2)", "'1.5'"),
     ("bytea", "'abc'"),
+    ("text", "INTERVAL '1' DAY"),
 )
 
 ASSIGNABLE_STORE_CASES: tuple[tuple[str, str, str], ...] = (
@@ -662,6 +663,47 @@ def test_assignable_pairs_store_bytes_equal_to_plain_insert(
         for door in ("sql", "wb", "wr"):
             got = conn.execute(f'SELECT v::text FROM "{schema}".{tables[door]}').fetchall()
             assert got == want, (typed, expr, door, got, want)
+
+
+INTERVAL_STORE_CASES: tuple[tuple[str, str], ...] = (
+    ("INTERVAL '1' DAY", "'1 day'"),
+    ("INTERVAL '3' MONTH", "'3 months'"),
+    ("INTERVAL '-5' HOUR", "'-5 hours'"),
+    ("INTERVAL '90' MINUTE", "'90 minutes'"),
+    ("INTERVAL '0.000001' SECOND", "'0.000001 seconds'"),
+    ("make_interval(1, 2, 0, 3, 4, 5, 6.5)", "'1 year 2 months 3 days 04:05:06.5'"),
+)
+
+
+def test_interval_values_store_bytes_equal_to_plain_insert(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """Every engine INTERVAL stores what one plain INSERT stores, on all three paths.
+
+    C-4 fold 4 item 1: the store-assignment gate keeps its refusal for every
+    non-interval source into an interval column, but an engine INTERVAL passes
+    the Postgres chokepoint and stores, byte for byte with plain INSERT.
+    """
+    conn, names = pg_live
+    schema = names["schema"]
+    for index, (expr, plain) in enumerate(INTERVAL_STORE_CASES):
+        tables = {}
+        for door in ("sql", "wb", "wr", "plain"):
+            table = f"i{index}_{door}"
+            conn.execute(f'CREATE TABLE "{schema}".{table} (id int4, v interval)')
+            tables[door] = table
+        spark.sql(f'INSERT INTO pg."{schema}".{tables["sql"]} SELECT 2, {expr}').collect()
+        assert _take(spark) is not None
+        frame = spark.sql(f"SELECT 2 AS id, {expr} AS v")
+        _write_frame(schema, tables["wb"], frame, None)
+        assert _take(spark) is not None
+        _write_frame(schema, tables["wr"], frame, "row")
+        assert _take(spark) is not None
+        conn.execute(f'INSERT INTO "{schema}".{tables["plain"]} SELECT 2, {plain}')
+        want = conn.execute(f'SELECT v::text FROM "{schema}".{tables["plain"]}').fetchall()
+        for door in ("sql", "wb", "wr"):
+            got = conn.execute(f'SELECT v::text FROM "{schema}".{tables[door]}').fetchall()
+            assert got == want, (expr, door, got, want)
 
 
 TEXT_RENDER_EXPRS: tuple[str, ...] = (
