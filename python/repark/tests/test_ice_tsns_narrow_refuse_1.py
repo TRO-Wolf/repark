@@ -54,7 +54,7 @@ NARROWS_A_PLAIN_BRANCH = {
     "case_of_cast": doors.SOURCES,
     "coalesce_of_cast": doors.SOURCES,
     "if_of_trunc": doors.SOURCES,
-    "cast_date": ("ns",),
+    "cast_date": doors.SOURCES,
     "nvl": doors.SOURCES,
     "ifnull": doors.SOURCES,
     **dict.fromkeys(doors.WRITTEN_OVER, doors.SOURCES),

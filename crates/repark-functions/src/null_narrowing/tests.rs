@@ -408,47 +408,77 @@ fn all_marks(plan: &LogicalPlan) -> Vec<String> {
 }
 
 #[test]
-fn a_cast_to_the_sql_timestamp_type_before_coercion_is_the_statements() {
+fn a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion() {
+    let schema = wide();
     for source in ["c", "z"] {
-        let out = before_coercion(cast(col(source), nanos()), &wide()).unwrap();
-        assert_eq!(out.data, written(col(source)), "{source}");
+        let below = coalesce(vec![cast(col(source), nanos()), col("m")]);
+        let out = before_coercion(below, &schema).unwrap().data;
+        assert_eq!(
+            out,
+            coalesce(vec![written(col(source)), col("m")]),
+            "{source}"
+        );
+        let beside_null = coalesce(vec![cast(col(source), nanos()), untyped()]);
+        let out = before_coercion(beside_null, &schema).unwrap().data;
+        assert_eq!(
+            out,
+            coalesce(vec![written(col(source)), untyped()]),
+            "{source}"
+        );
     }
-    for kept in [cast(col("m"), nanos()), cast(col("d"), nanos())] {
+    for kept in [
+        cast(col("c"), nanos()),
+        cast(col("z"), nanos()),
+        cast(col("c"), nanos()).alias("v"),
+        coalesce(vec![cast(col("m"), nanos()), col("m")]),
+        coalesce(vec![cast(col("d"), nanos()), col("m")]),
+    ] {
         assert!(
-            !before_coercion(kept.clone(), &wide()).unwrap().transformed,
+            !before_coercion(kept.clone(), &schema).unwrap().transformed,
             "{kept}"
         );
     }
     let beside = coalesce(vec![cast(written(col("c")), micros()), col("m")]);
-    assert!(!mark_coerced_branches(beside, &wide()).unwrap().transformed);
-    let rows = datafusion::logical_expr::LogicalPlanBuilder::values(vec![vec![
-        written(lit(ScalarValue::TimestampNanosecond(Some(1), None))),
-        coalesce(vec![
-            written(lit(ScalarValue::TimestampNanosecond(Some(1), None))),
-            lit(ScalarValue::TimestampMicrosecond(
-                Some(1),
-                Some(Arc::from("UTC")),
-            )),
-        ]),
-    ]])
-    .unwrap()
-    .build()
-    .unwrap();
-    let LogicalPlan::Values(kept) = keep_values_roots(rows).unwrap().data else {
-        panic!("a values node");
+    assert!(!mark_coerced_branches(beside, &schema).unwrap().transformed);
+}
+
+#[test]
+fn a_zoned_branch_of_a_union_beside_a_date_branch_is_marked_before_coercion() {
+    let scan = || table_scan(Some("t"), wide().as_arrow(), None).unwrap();
+    let union = |value: Expr, other: Expr| {
+        let rows = scan().project(vec![value]).unwrap().build().unwrap();
+        let dates = scan().project(vec![other]).unwrap().build().unwrap();
+        let schema = Arc::clone(rows.schema());
+        LogicalPlan::Union(Union {
+            inputs: vec![Arc::new(rows), Arc::new(dates)],
+            schema,
+        })
     };
-    assert!(
-        matches!(&kept.values[0][0], Expr::Cast(cast) if sql_timestamp(cast.field.data_type())),
-        "{}",
-        kept.values[0][0]
+    let marked = tag_union_nulls(union(col("z").alias("v"), col("d").alias("v"))).unwrap();
+    assert!(marked.transformed);
+    assert_eq!(
+        marks(&branch_at(&marked.data, 0)),
+        vec![format!("{NARROWED_BESIDE_VALUE_NAME}(t.z)")]
     );
-    assert!(
-        kept.values[0][1]
-            .to_string()
-            .contains(crate::timestamp_ns_cast::NARROW_TIMESTAMP_NS_NAME),
-        "{}",
-        kept.values[0][1]
-    );
+    assert_eq!(branch_at(&marked.data, 0).schema_name().to_string(), "v");
+    assert!(!tag_union_nulls(marked.data).unwrap().transformed);
+    for (value, other) in [
+        (col("c").alias("v"), col("d").alias("v")),
+        (col("z").alias("v"), col("m").alias("v")),
+        (col("z").alias("v"), col("z").alias("v")),
+    ] {
+        assert!(!tag_union_nulls(union(value, other)).unwrap().transformed);
+    }
+}
+
+fn branch_at(plan: &LogicalPlan, input: usize) -> Expr {
+    let LogicalPlan::Union(union) = plan else {
+        unreachable!()
+    };
+    let LogicalPlan::Projection(projection) = union.inputs[input].as_ref() else {
+        unreachable!()
+    };
+    projection.expr[0].clone()
 }
 
 #[test]
@@ -643,5 +673,18 @@ fn the_mark_returns_the_field_of_its_argument() {
             })
             .unwrap();
         assert_eq!(returned, argument);
+        let named = marked(coalesce(vec![col("c"), col("m")]), untyped_null);
+        assert_eq!(named.schema_name().to_string(), "coalesce(c,m)");
     }
+    let idle = written(col("m"));
+    let Expr::ScalarFunction(function) = &idle else {
+        panic!("a function");
+    };
+    let context = SimplifyContext::builder()
+        .with_schema(Arc::new(schema()))
+        .build();
+    let simplified = function.func.simplify(vec![col("m")], &context).unwrap();
+    assert!(matches!(simplified, ExprSimplifyResult::Simplified(expr) if expr == col("m")));
+    let narrowing = function.func.simplify(vec![col("c")], &context).unwrap();
+    assert!(matches!(narrowing, ExprSimplifyResult::Original(_)));
 }

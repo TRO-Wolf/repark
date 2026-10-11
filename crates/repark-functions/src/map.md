@@ -1113,10 +1113,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
     does the same across the branches of a `UNION`.
   **Fold 2 (2026-10-11, ledger section 12).** `before_coercion` also reads the SQL spelling:
   a cast of a nanosecond value to zoneless `Timestamp(ns)`, the wire type of `CAST(x AS
-  TIMESTAMP)`, becomes the written-narrowing function before the first coercion, as the
-  DataFrame cast does, so a cast coercion leaves over it is not marked
-  (`coalesce(CAST(ns AS TIMESTAMP), ts)` stores). A `VALUES` cell keeps the cast at its root
-  (`keep_values_roots`): the cell classifier of `timestamp_ns_cast.rs` reads that shape.
+  TIMESTAMP)`, becomes the written-narrowing function before the first coercion when it is
+  an argument of another expression, so a cast coercion leaves over it is not marked
+  (`coalesce(CAST(ns AS TIMESTAMP), ts)` stores). A cast at the root of an expression, also
+  under an alias, is left for the session rule as on main: converting it there made a
+  `SELECT DISTINCT … CAST(c AS TIMESTAMP)` that main fails with an internal error store,
+  and a `VALUES` cell's root is what the cell classifier of `timestamp_ns_cast.rs` reads.
   `settle_branches` marks a nanosecond sibling only when the node's result type, asked from
   the type-coercion rewriter (`loses_nanoseconds`), holds a coarser timestamp and no
   nanosecond one: `named_struct('f', ns, 'g', ts)` is not marked, and the store can refuse on
@@ -1135,8 +1137,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   - *M1* (`coerced`, `narrows`): a cast coercion left that takes a nanosecond leaf to a
     coarser one at any depth of a list, struct or map, or a zoned nanosecond value to the
     zoneless wire type (what coercion does beside a `DATE`); marked as a branch of a `CASE`,
-    as an argument beside a coarser sibling or beside such a wire cast, and at the root of an
-    expression (not at the root of a `VALUES` cell, where the wire cast is a written one).
+    as an argument beside a coarser sibling or beside such a wire cast, and, for a coarser
+    target only, at the root of an expression (a wire cast at a root may be a written one).
+    The root case of the wire cast is a `UNION` of a zoned branch and a `DATE` branch:
+    `tag_union_nulls` marks the zoned branch before coercion (`zoned_beside_a_date`).
   - *M2* (`settle_branches`, `kind_of`, `loses_nanoseconds`): a branch that holds
     nanoseconds beside one that holds a coarser timestamp, when the coerced node's type
     holds no nanoseconds; `array_append(array(ns), ts)` is marked with no cast in the plan.
@@ -1145,8 +1149,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
     function when a mark is in its subtree; over a column it is kept first and dropped
     again unless the plan below holds a mark, an inlined view holds one, or a scan is a view
     whose plan this crate cannot read (`TableType` other than `Base`).
-  - *Schemas.* The mark returns its argument's field, so a column's `PARQUET:field_id`
-    passes through it; `untagged_schema` takes the untyped-NULL tag out of a `UNION` schema.
+  - *Schemas and names.* The mark returns its argument's field, so a column's
+    `PARQUET:field_id` passes through it, and its argument's name, so marking adds no alias
+    to a plan; `untagged_schema` takes the untyped-NULL tag out of a `UNION` schema. The
+    written-narrowing function over a value that is already a microsecond instant is
+    removed by the optimizer (`simplify` in `timestamp_ns_cast.rs`), so a cast kept for the
+    store costs a read nothing.
   The tag never reaches an analyzed plan: `Cast` copies its source field's metadata, so a
   tag left behind would show in a result schema. No rule is added to the analyzer. The store
   reads the marks in `repark-iceberg` `write/narrowed_store.rs`. Eleven unit pins in

@@ -17,6 +17,7 @@ use datafusion::arrow::error::ArrowError;
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
     ScalarUDF, ScalarUDFImpl, Signature, Values, Volatility,
@@ -476,6 +477,17 @@ impl ScalarUDFImpl for NarrowTimestampNs {
                 "'{NARROW_TIMESTAMP_NS_NAME}' expects one argument"
             ))),
         }
+    }
+
+    fn simplify(&self, mut args: Vec<Expr>, info: &SimplifyContext) -> Result<ExprSimplifyResult> {
+        let narrowed = |value: &Expr| {
+            info.get_data_type(value)
+                .is_ok_and(|kind| kind == narrowed_type())
+        };
+        if args.len() == 1 && narrowed(&args[0]) {
+            return Ok(ExprSimplifyResult::Simplified(args.remove(0)));
+        }
+        Ok(ExprSimplifyResult::Original(args))
     }
 }
 

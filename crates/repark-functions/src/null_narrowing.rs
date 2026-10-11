@@ -12,7 +12,7 @@ use datafusion::logical_expr::expr::{Cast, ScalarFunction};
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
-    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, TableType, Union, Values, Volatility,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, TableType, Union, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercionRewriter;
@@ -113,6 +113,11 @@ impl ScalarUDFImpl for NarrowedBeside {
         (args.arg_fields.first().map(Arc::clone)).ok_or_else(one_argument)
     }
 
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        let value = args.first().ok_or_else(one_argument)?;
+        Ok(value.schema_name().to_string())
+    }
+
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         args.args.into_iter().next().ok_or_else(one_argument)
     }
@@ -142,8 +147,7 @@ impl AnalyzerRule for FloatStringifyBeforeCoercion {
             if tagged.transformed {
                 return Ok(tagged);
             }
-            crate::java_double::rewrite_float_plan(tagged.data, ansi, true)?
-                .transform_data(keep_values_roots)
+            crate::java_double::rewrite_float_plan(tagged.data, ansi, true)
         })
         .data()
     }
@@ -153,48 +157,9 @@ impl AnalyzerRule for FloatStringifyBeforeCoercion {
     }
 }
 
-fn keep_values_roots(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
-    let LogicalPlan::Values(values) = plan else {
-        return Ok(Transformed::no(plan));
-    };
-    let written = |cell: &Expr| crate::timestamp_ns_cast::is_narrow_timestamp_ns(peeled(cell));
-    if !values.values.iter().flatten().any(written) {
-        return Ok(Transformed::no(LogicalPlan::Values(values)));
-    }
-    let rows = values
-        .values
-        .into_iter()
-        .map(|row| row.into_iter().map(sql_cast_at_root).collect())
-        .collect();
-    Ok(Transformed::yes(LogicalPlan::Values(Values {
-        schema: values.schema,
-        values: rows,
-    })))
-}
-
-fn sql_cast_at_root(cell: Expr) -> Expr {
-    match cell {
-        Expr::Alias(mut alias) => {
-            alias.expr = Box::new(sql_cast_at_root(*alias.expr));
-            Expr::Alias(alias)
-        }
-        Expr::ScalarFunction(mut function)
-            if function.func.name() == crate::timestamp_ns_cast::NARROW_TIMESTAMP_NS_NAME
-                && function.args.len() == 1 =>
-        {
-            let value = function.args.remove(0);
-            Expr::Cast(Cast::new(
-                Box::new(value),
-                DataType::Timestamp(TimeUnit::Nanosecond, None),
-            ))
-        }
-        other => other,
-    }
-}
-
 pub(crate) fn before_coercion(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     if let Expr::Cast(cast) = &expr
-        && (instant(cast.field.data_type()) || sql_timestamp(cast.field.data_type()))
+        && instant(cast.field.data_type())
         && !is_narrowing_mark(&cast.expr)
         && holds(&cast.expr, schema, true)
     {
@@ -202,7 +167,22 @@ pub(crate) fn before_coercion(expr: Expr, schema: &DFSchema) -> Result<Transform
             crate::timestamp_ns_cast::narrow_timestamp_ns_expr((*cast.expr).clone()),
         ));
     }
-    tag_untyped_nulls(expr, schema)
+    let written = |branch: &Expr| {
+        matches!(branch, Expr::Cast(cast)
+            if sql_timestamp(cast.field.data_type())
+                && !is_narrowing_mark(&cast.expr)
+                && holds(&cast.expr, schema, true))
+    };
+    if matches!(expr, Expr::Alias(_)) || !any_branch(&expr, written) {
+        return tag_untyped_nulls(expr, schema);
+    }
+    expr.map_children(|branch| match branch {
+        Expr::Cast(cast) if written(&Expr::Cast(cast.clone())) => Ok(Transformed::yes(
+            crate::timestamp_ns_cast::narrow_timestamp_ns_expr(*cast.expr),
+        )),
+        other => Ok(Transformed::no(other)),
+    })?
+    .transform_data(|node| tag_untyped_nulls(node, schema))
 }
 
 fn coerced(expr: &Expr, schema: &DFSchema) -> bool {
@@ -241,7 +221,6 @@ fn to_the_wire_type(expr: &Expr) -> bool {
 pub(crate) struct Marks {
     scoped: bool,
     produces: bool,
-    values: bool,
     kept: Cell<bool>,
 }
 
@@ -251,7 +230,6 @@ impl Marks {
         Self {
             scoped: produces && holds_nanoseconds(schema),
             produces,
-            values: matches!(plan, LogicalPlan::Values(_)),
             kept: Cell::new(false),
         }
     }
@@ -275,7 +253,7 @@ impl Marks {
             return expr.transform_up(settling);
         }
         let marking = |node| mark_coerced_branches(node, schema);
-        mark_coerced_narrowing(expr, schema, !self.values)
+        mark_coerced_narrowing(expr, schema, false)
             .transform_data(|root| root.transform_down_up(marking, settling))
     }
 
@@ -546,7 +524,8 @@ pub(crate) fn tag_union_nulls(plan: LogicalPlan) -> Result<Transformed<LogicalPl
         let schema = Arc::clone(input.schema());
         let untyped =
             |index: usize| untyped_column(input, index) && beside_nanoseconds(union, index);
-        if !(0..schema.fields().len()).any(untyped) {
+        let zoned = |index: usize| zoned_beside_a_date(union, input, index);
+        if !(0..schema.fields().len()).any(|index| untyped(index) || zoned(index)) {
             inputs.push(Arc::clone(input));
             continue;
         }
@@ -566,6 +545,13 @@ pub(crate) fn tag_union_nulls(plan: LogicalPlan) -> Result<Transformed<LogicalPl
             if untyped(index) {
                 exprs[index] = Expr::Literal(ScalarValue::Null, Some(tag()))
                     .alias_qualified(qualifier.cloned(), field.name());
+            } else if zoned(index) {
+                let value = match std::mem::take(&mut exprs[index]) {
+                    Expr::Alias(alias) => *alias.expr,
+                    value => value,
+                };
+                exprs[index] =
+                    marked(value, false).alias_qualified(qualifier.cloned(), field.name());
             }
         }
         let rebuilt = Projection::try_new(exprs, source)?;
@@ -699,6 +685,23 @@ fn quick_type(input: &LogicalPlan, index: usize) -> Option<DataType> {
         Some(Expr::Literal(value, _)) => Some(value.data_type()),
         _ => declared(),
     }
+}
+
+fn zoned_beside_a_date(union: &Union, input: &LogicalPlan, index: usize) -> bool {
+    let zoned = matches!(
+        branch_type(input, index),
+        Some(DataType::Timestamp(TimeUnit::Nanosecond, Some(_)))
+    );
+    let marked = matches!(input, LogicalPlan::Projection(projection)
+        if projection.expr.get(index).is_some_and(|expr| is_narrowing_mark(peeled(expr))));
+    zoned
+        && !marked
+        && union.inputs.iter().any(|other| {
+            matches!(
+                branch_type(other, index),
+                Some(DataType::Date32 | DataType::Date64)
+            )
+        })
 }
 
 fn beside_nanoseconds(union: &Union, index: usize) -> bool {

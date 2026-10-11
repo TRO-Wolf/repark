@@ -45,7 +45,7 @@ fn clear_batch(batch: &RecordBatch, shown: &mut Option<String>) -> Result<Record
                         return Some(text.to_string());
                     }
                     let plain = strip_marks(text);
-                    if plain != text && shown.as_deref() == Some(plain.as_str()) {
+                    if shown.as_deref() == Some(plain.as_str()) {
                         return Some(SAME_TEXT.to_string());
                     }
                     *shown = Some(plain.clone());
