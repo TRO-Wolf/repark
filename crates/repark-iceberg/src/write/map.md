@@ -572,8 +572,9 @@ repark-core's error map.
   paired with an instant (`Timestamp` with a zone, any unit). That leaf becomes
   `__repark_cast_timestamp_ntz__`. A `None` source, a wall, a string, a date, an
   integer, a `timestamp_ns` leaf, a nested `TIMESTAMP` leaf, a list and a map stay
-  the original expression. Step 1 calls it from `ntz_store::zone_store_frame` only
-  (`zone_stores` now hands that function the Arrow type of a struct, list or map).
+  the original expression. `ntz_store::zone_store_frame` and
+  `merge/insert.rs` `zone_wrapping_stream_sql` call it (`zone_stores` hands the
+  walk the Arrow type of a struct, list or map).
   pins: ice-ntz-nested-wall-1/C-003
 - `update_cast.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_cast_sql` is the one
   home of the `arrow_cast((expr), '<type>')` store-assignment cast, with the field ids

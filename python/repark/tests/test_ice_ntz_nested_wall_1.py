@@ -1,7 +1,8 @@
 """ICE-NTZ-NESTED-WALL-1: a nested microsecond ``TIMESTAMP_NTZ`` leaf stores one wall.
 
-The doors wired so far are the ones ``zone_store_frame`` serves: ``INSERT … BY NAME``,
-``INSERT OVERWRITE … SELECT``, ``overwritePartitions`` and ``insertInto(overwrite=True)``.
+The doors wired so far are the ones ``zone_store_frame`` serves (``INSERT … BY NAME``,
+``INSERT OVERWRITE … SELECT``, ``overwritePartitions``, ``insertInto(overwrite=True)``)
+and the MERGE INSERT doors ``zone_wrapping_stream_sql`` serves.
 An instant stores the session wall. A wall literal stores ``1767323045123456`` in every
 zone. A nested ``TIMESTAMP`` leaf stores the instant.
 
@@ -140,6 +141,65 @@ def test_zone_store_doors_store_the_session_wall(tmp_path: Path, zone: str) -> N
         control = "ice.ns.ltz"
         create_nested(spark, control, "TIMESTAMP")
         by_name_from_column(spark, control)
+        assert leaf_ticks(spark, control, "st.v") == [WALL_TICK]
+    finally:
+        spark.stop()
+
+
+def merge_insert_column(spark: Any, table: str) -> None:
+    """MERGE INSERT of the source column."""
+    spark.sql(
+        f"MERGE INTO {table} t USING ice.ns.src s ON t.id = s.id "
+        "WHEN NOT MATCHED THEN INSERT (id, st, k) "
+        "VALUES (s.id, named_struct('v', s.l, 'n', 1), 0)"
+    )
+
+
+def merge_insert_star(spark: Any, table: str) -> None:
+    """MERGE ``INSERT *`` of the source column."""
+    spark.sql(
+        f"MERGE INTO {table} t USING ("
+        "SELECT id, named_struct('v', l, 'n', 1) AS st, 0 AS k FROM ice.ns.src"
+        ") s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    )
+
+
+def merge_insert_literal(spark: Any, table: str, literal: str) -> None:
+    """MERGE INSERT of one literal."""
+    spark.sql(
+        f"MERGE INTO {table} t USING (SELECT 1 AS id) s ON t.id = s.id "
+        "WHEN NOT MATCHED THEN INSERT (id, st, k) "
+        f"VALUES (s.id, named_struct('v', {literal}, 'n', 1), 0)"
+    )
+
+
+@pytest.mark.parametrize("zone", ZONES)
+def test_merge_insert_doors_store_the_session_wall(tmp_path: Path, zone: str) -> None:
+    """MERGE INSERT stores the session wall of an instant and leaves a wall literal."""
+    spark = open_session(zone, tmp_path)
+    try:
+        write_source(spark)
+        expected = SESSION_WALL[zone]
+        doors = (
+            ("column", merge_insert_column),
+            ("star", merge_insert_star),
+        )
+        for name, write in doors:
+            table = f"ice.ns.{name}"
+            create_nested(spark, table, "TIMESTAMP_NTZ")
+            write(spark, table)
+            assert leaf_ticks(spark, table, "st.v") == [expected], name
+        literal = "ice.ns.literal"
+        create_nested(spark, literal, "TIMESTAMP_NTZ")
+        merge_insert_literal(spark, literal, INSTANT)
+        assert leaf_ticks(spark, literal, "st.v") == [expected]
+        wall = "ice.ns.wall"
+        create_nested(spark, wall, "TIMESTAMP_NTZ")
+        merge_insert_literal(spark, wall, WALL)
+        assert leaf_ticks(spark, wall, "st.v") == [WALL_TICK]
+        control = "ice.ns.ltz"
+        create_nested(spark, control, "TIMESTAMP")
+        merge_insert_column(spark, control)
         assert leaf_ticks(spark, control, "st.v") == [WALL_TICK]
     finally:
         spark.stop()

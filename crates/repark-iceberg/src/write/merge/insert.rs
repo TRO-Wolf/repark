@@ -109,51 +109,46 @@ fn zone_wrapping_stream_sql(
     write_schema: &ArrowSchema,
 ) -> Option<String> {
     use crate::write::ntz_store::{
-        is_ltz_instant_target, store_kernel_sql as wall_cast_sql,
-        store_kernel_udf_name as wall_cast_udf_name,
+        is_ltz_instant_target, needs_ltz_instant_cast, store_kernel_sql as wall_cast_sql,
     };
+    use crate::write::update_cast::nested_micro_ntz_wall_sql;
     let fields = write_schema.fields();
-    let planned = if fields
-        .iter()
-        .any(|field| is_ltz_instant_target(field.data_type()))
-    {
-        crate::write::ntz_store::analyzed_types(ctx, plan)
-            .filter(|types| types.len() == fields.len())
-    } else {
-        None
-    };
+    let planned = crate::write::ntz_store::analyzed_types(ctx, plan)
+        .filter(|types| types.len() == fields.len());
     let instant = |index: usize| {
         planned.as_ref().is_some_and(|types| {
             is_ltz_instant_target(fields[index].data_type())
-                && crate::write::ntz_store::needs_ltz_instant_cast(&types[index])
+                && needs_ltz_instant_cast(&types[index])
         })
     };
-    if !(0..fields.len())
-        .any(|index| wall_cast_udf_name(fields[index].data_type()).is_some() || instant(index))
-    {
+    let inner = "__repark_merge_insert_rows";
+    let mut changed = false;
+    let mut projection = Vec::with_capacity(fields.len());
+    for (index, field) in fields.iter().enumerate() {
+        let quoted = quote_ident(field.name());
+        let column = format!("{inner}.{quoted}");
+        let source = planned.as_ref().map(|types| &types[index]);
+        if let Some(nested) = nested_micro_ntz_wall_sql(&column, source, field.data_type()) {
+            changed = true;
+            projection.push(format!("({nested}) AS {quoted}"));
+            continue;
+        }
+        if let Some(wall) = wall_cast_sql(&column, field.data_type()) {
+            changed = true;
+            projection.push(format!("({wall}) AS {quoted}"));
+        } else if instant(index) {
+            changed = true;
+            let cast =
+                crate::write::update_cast::store_assignment_cast_sql(&column, field.data_type());
+            projection.push(format!("({cast}) AS {quoted}"));
+        } else {
+            projection.push(format!("{column} AS {quoted}"));
+        }
+    }
+    if !changed {
         return None;
     }
-    let inner = "__repark_merge_insert_rows";
-    let projection = fields
-        .iter()
-        .enumerate()
-        .map(|(index, field)| {
-            let quoted = quote_ident(field.name());
-            let column = format!("{inner}.{quoted}");
-            if let Some(wall) = wall_cast_sql(&column, field.data_type()) {
-                format!("({wall}) AS {quoted}")
-            } else if instant(index) {
-                let cast = crate::write::update_cast::store_assignment_cast_sql(
-                    &column,
-                    field.data_type(),
-                );
-                format!("({cast}) AS {quoted}")
-            } else {
-                format!("{column} AS {quoted}")
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
+    let projection = projection.join(", ");
     Some(format!("SELECT {projection} FROM ({sql}) AS {inner}"))
 }
 

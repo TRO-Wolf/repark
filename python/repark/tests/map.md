@@ -3185,9 +3185,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_ice_ntz_nested_wall_1.py](test_ice_ntz_nested_wall_1.py) — **ICE-NTZ-NESTED-WALL-1
   (2026-10-11):** the doors `zone_store_frame` serves (`INSERT … BY NAME`,
   `INSERT OVERWRITE … SELECT`, `overwritePartitions`, `insertInto(overwrite=True)`)
-  store the session wall of an instant into `struct<v: TIMESTAMP_NTZ, n: INT>` in
-  UTC, America/New_York and Asia/Kolkata. A wall literal stays `1767323045123456`.
-  A nested `TIMESTAMP` leaf stays the instant. Values are `toArrow()` cast to int64.
+  and the MERGE INSERT doors `zone_wrapping_stream_sql` serves (column list,
+  `INSERT *`, literal) store the session wall of an instant into
+  `struct<v: TIMESTAMP_NTZ, n: INT>` in UTC, America/New_York and Asia/Kolkata.
+  A wall literal stays `1767323045123456`. A nested `TIMESTAMP` leaf stays the
+  instant. Values are `toArrow()` cast to int64.
   pins: ice-ntz-nested-wall-1/C-003
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files
