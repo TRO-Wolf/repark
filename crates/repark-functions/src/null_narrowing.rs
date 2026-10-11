@@ -74,6 +74,18 @@ pub fn is_narrowing_mark(expr: &Expr) -> bool {
     )
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub fn marked_value(expr: Expr) -> std::result::Result<(Expr, bool), Expr> {
+    match expr {
+        Expr::ScalarFunction(mut mark) if mark.args.len() == 1 => match mark.func.name() {
+            NARROWED_BESIDE_NULL_NAME => Ok((mark.args.remove(0), true)),
+            NARROWED_BESIDE_VALUE_NAME => Ok((mark.args.remove(0), false)),
+            _ => Err(Expr::ScalarFunction(mark)),
+        },
+        other => Err(other),
+    }
+}
+
 fn marked(value: Expr, beside_untyped_null: bool) -> Expr {
     Expr::ScalarFunction(ScalarFunction::new_udf(
         narrowed_beside_udf(beside_untyped_null),
@@ -371,7 +383,8 @@ fn input_schema(plan: &LogicalPlan) -> DFSchema {
 }
 
 fn drop_kept_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    let kept = crate::timestamp_ns_cast::is_narrow_timestamp_ns(&expr);
+    let kept = crate::timestamp_ns_cast::is_narrow_timestamp_ns(&expr)
+        && crate::timestamp_ns_cast::narrowed_beside(&expr).is_none();
     match expr {
         Expr::ScalarFunction(mut function)
             if kept
@@ -386,8 +399,10 @@ fn drop_kept_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
 }
 
 fn holds_mark(expr: &Expr) -> bool {
-    expr.exists(|node| Ok(is_narrowing_mark(node)))
-        .unwrap_or(false)
+    let narrowed = |node: &Expr| {
+        is_narrowing_mark(node) || crate::timestamp_ns_cast::narrowed_beside(node).is_some()
+    };
+    expr.exists(|node| Ok(narrowed(node))).unwrap_or(false)
 }
 
 fn plan_holds_mark(plan: &LogicalPlan) -> bool {
@@ -520,14 +535,19 @@ enum Kind {
 }
 
 fn kind_of(branch: &Expr, schema: &DFSchema) -> Kind {
-    match branch.get_type(schema) {
-        Ok(found) if nested_nanoseconds(&found) => {
-            if is_narrowing_mark(branch) {
-                Kind::Other
-            } else {
-                Kind::Nanoseconds
-            }
-        }
+    let found = match branch {
+        Expr::ScalarFunction(function) => match function.func.name() {
+            NARROWED_BESIDE_NULL_NAME | NARROWED_BESIDE_VALUE_NAME => return Kind::Other,
+            crate::timestamp_ns_cast::NARROW_TIMESTAMP_NS_NAME => return Kind::Coarser,
+            _ => branch.get_type(schema),
+        },
+        Expr::Cast(cast) => Ok(cast.field.data_type().clone()),
+        Expr::TryCast(cast) => Ok(cast.field.data_type().clone()),
+        Expr::Literal(value, _) => Ok(value.data_type()),
+        other => other.get_type(schema),
+    };
+    match found {
+        Ok(found) if nested_nanoseconds(&found) => Kind::Nanoseconds,
         Ok(found) if nested_coarser(&found) => Kind::Coarser,
         _ => Kind::Other,
     }

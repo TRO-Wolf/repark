@@ -64,6 +64,12 @@ fn marks(expr: &Expr) -> Vec<String> {
         {
             found.push(format!("{}({})", function.func.name(), function.args[0]));
         }
+        if let Expr::ScalarFunction(function) = node
+            && let Some(untyped_null) = crate::timestamp_ns_cast::narrowed_beside(node)
+        {
+            let mark = narrowed_beside_udf(untyped_null);
+            found.push(format!("{}({})", mark.name(), function.args[0]));
+        }
         Ok(TreeNodeRecursion::Continue)
     })
     .unwrap();
@@ -742,6 +748,87 @@ fn a_pending_timestamp_literal_and_a_stale_union_type_are_not_nanoseconds() {
     }))
     .unwrap();
     assert_eq!(fresh.schema().field(0).data_type(), &nanos());
+}
+
+#[test]
+fn a_branch_is_typed_without_a_lookup_where_its_node_says_the_type() {
+    let schema = wide();
+    for (branch, kind) in [
+        (col("c"), Kind::Nanoseconds),
+        (col("z"), Kind::Nanoseconds),
+        (col("a"), Kind::Nanoseconds),
+        (col("m"), Kind::Coarser),
+        (col("b"), Kind::Coarser),
+        (col("id"), Kind::Other),
+        (col("d"), Kind::Other),
+        (written(col("c")), Kind::Coarser),
+        (marked(col("c"), true), Kind::Other),
+        (marked(col("a"), false), Kind::Other),
+        (cast(col("c"), micros()), Kind::Coarser),
+        (cast(col("m"), nanos()), Kind::Nanoseconds),
+        (cast(col("c"), DataType::Utf8), Kind::Other),
+        (
+            lit(ScalarValue::TimestampMicrosecond(Some(1), None)),
+            Kind::Coarser,
+        ),
+        (lit(1_i64), Kind::Other),
+        (coalesce(vec![col("c"), col("c")]), Kind::Nanoseconds),
+        (coalesce(vec![col("m"), col("m")]), Kind::Coarser),
+    ] {
+        assert!(kind_of(&branch, &schema) == kind, "{branch}");
+        let typed = match branch.get_type(&schema) {
+            Ok(found) if nested_nanoseconds(&found) && !is_narrowing_mark(&branch) => {
+                Kind::Nanoseconds
+            }
+            Ok(found) if nested_nanoseconds(&found) => Kind::Other,
+            Ok(found) if nested_coarser(&found) => Kind::Coarser,
+            _ => Kind::Other,
+        };
+        assert!(typed == kind, "{branch}");
+    }
+}
+
+#[test]
+fn the_narrowing_kernel_over_a_mark_carries_the_mark_and_prints_as_the_written_one() {
+    for untyped_null in [true, false] {
+        let narrowed = written(marked(col("c"), untyped_null));
+        let Expr::ScalarFunction(kernel) = &narrowed else {
+            panic!("a function");
+        };
+        assert_eq!(kernel.args, vec![col("c")]);
+        assert_eq!(
+            crate::timestamp_ns_cast::narrowed_beside(&narrowed),
+            Some(untyped_null)
+        );
+        assert_eq!(narrowed.to_string(), written(col("c")).to_string());
+        assert_eq!(
+            narrowed.schema_name().to_string(),
+            written(col("c")).schema_name().to_string()
+        );
+        assert_ne!(narrowed, written(col("c")));
+        assert!(holds_mark(&narrowed));
+        assert!(!is_narrowing_mark(&narrowed));
+        assert!(kind_of(&narrowed, &schema()) == Kind::Coarser);
+    }
+    assert_eq!(
+        crate::timestamp_ns_cast::narrowed_beside(&written(col("c"))),
+        None
+    );
+    assert!(!holds_mark(&written(col("c"))));
+    let scan = table_scan(Some("t"), &arrow(), None).unwrap();
+    let plan = scan
+        .project(vec![
+            coalesce(vec![cast(col("c"), micros()), col("m")]).alias("v"),
+        ])
+        .unwrap()
+        .build()
+        .unwrap();
+    let LogicalPlan::Projection(projection) = session_rule(plan) else {
+        panic!("a projection");
+    };
+    let shown = projection.expr[0].to_string();
+    assert!(!shown.contains("__repark_narrowed"), "{shown}");
+    assert_eq!(marks(&projection.expr[0]).len(), 1, "{shown}");
 }
 
 #[test]

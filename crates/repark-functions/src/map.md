@@ -1149,6 +1149,18 @@ scalars live under [`try_invert/`](try_invert/map.md).
     `with_branch_types` gives a union node the types its branches now have before
     `settle_union_branches` and the nodes above read it. Both were hidden while the store
     asked for a cast on the mark, and each stored a written value on main.
+  - *The mark inside the kernel.* Where the analyzer's cut is the narrowing kernel
+    (`rewrite_cast` turns a marked cast to an instant into it), the mark is not a second
+    node: `narrow_timestamp_ns_expr` over a mark answers the kernel with the mark as its
+    alias (`timestamp_ns_cast.rs`: three instances of one function, one name;
+    `narrowed_beside` reads which). It prints, names and types as the written kernel does,
+    so such a plan is main's text and costs what main's costs; measured, the wrapper node
+    on each narrowed branch made a mixed nanosecond and microsecond read 6% slower (every
+    type and name lookup above it pays DataFusion's function resolution once more). The
+    wrapper remains where no kernel is: a plain cast the second coercion left in the first
+    analysis, a cast to a naive microsecond type, a container cast, and a mark with no cast.
+    `kind_of` reads a branch's kind from the node where the node says it (a cast, a literal,
+    the kernel, a mark) and asks the schema only for the rest.
   - *M2* (`settle_branches`, `kind_of`, `loses_nanoseconds`): a branch that holds
     nanoseconds beside one that holds a coarser timestamp, when the coerced node's type
     holds no nanoseconds; `array_append(array(ns), ts)` is marked with no cast in the plan.

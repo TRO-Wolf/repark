@@ -410,7 +410,15 @@ fn malformed(value: &str, target: &str) -> String {
 }
 
 static NARROW_TIMESTAMP_NS: LazyLock<Arc<ScalarUDF>> =
-    LazyLock::new(|| Arc::new(ScalarUDF::from(NarrowTimestampNs::new())));
+    LazyLock::new(|| Arc::new(ScalarUDF::from(NarrowTimestampNs::new(None))));
+static NARROWED_BESIDE_NULL: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
+    let mark = crate::null_narrowing::NARROWED_BESIDE_NULL_NAME;
+    Arc::new(ScalarUDF::from(NarrowTimestampNs::new(Some(mark))))
+});
+static NARROWED_BESIDE_VALUE: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
+    let mark = crate::null_narrowing::NARROWED_BESIDE_VALUE_NAME;
+    Arc::new(ScalarUDF::from(NarrowTimestampNs::new(Some(mark))))
+});
 
 #[must_use]
 pub fn is_narrow_timestamp_ns(expr: &Expr) -> bool {
@@ -421,22 +429,41 @@ pub fn is_narrow_timestamp_ns(expr: &Expr) -> bool {
 }
 
 #[must_use]
+pub fn narrowed_beside(expr: &Expr) -> Option<bool> {
+    let Expr::ScalarFunction(function) = expr else {
+        return None;
+    };
+    if function.func.name() != NARROW_TIMESTAMP_NS_NAME {
+        return None;
+    }
+    match function.func.aliases().first().map(String::as_str) {
+        Some(crate::null_narrowing::NARROWED_BESIDE_NULL_NAME) => Some(true),
+        Some(crate::null_narrowing::NARROWED_BESIDE_VALUE_NAME) => Some(false),
+        _ => None,
+    }
+}
+
+#[must_use]
 pub fn narrow_timestamp_ns_expr(expr: Expr) -> Expr {
-    Expr::ScalarFunction(ScalarFunction::new_udf(
-        Arc::clone(&NARROW_TIMESTAMP_NS),
-        vec![expr],
-    ))
+    let (kernel, value) = match crate::null_narrowing::marked_value(expr) {
+        Ok((value, true)) => (&NARROWED_BESIDE_NULL, value),
+        Ok((value, false)) => (&NARROWED_BESIDE_VALUE, value),
+        Err(written) => (&NARROW_TIMESTAMP_NS, written),
+    };
+    Expr::ScalarFunction(ScalarFunction::new_udf(Arc::clone(kernel), vec![value]))
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct NarrowTimestampNs {
     signature: Signature,
+    aliases: Vec<String>,
 }
 
 impl NarrowTimestampNs {
-    fn new() -> Self {
+    fn new(mark: Option<&str>) -> Self {
         Self {
             signature: Signature::any(1, Volatility::Stable),
+            aliases: mark.map(str::to_string).into_iter().collect(),
         }
     }
 }
@@ -448,6 +475,10 @@ impl ScalarUDFImpl for NarrowTimestampNs {
 
     fn signature(&self) -> &Signature {
         &self.signature
+    }
+
+    fn aliases(&self) -> &[String] {
+        &self.aliases
     }
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {

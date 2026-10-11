@@ -38,6 +38,10 @@ The parent's entry in [../map.md](../map.md) holds the reasons.
     and an integer round trip, with no cast on it, as a list under a list cast, and under
     arithmetic; a plain column, a `CASE` that only tests the narrowed value or compares it,
     a cast over an unmarked value, the key of a selecting call and a boolean call do not.
+  - `the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut`: the kernel aliased
+    with either mark name refuses and names its argument, a written kernel above it
+    forgives it, `date_trunc` forgives the zoned one only, and the `INSERT` look-through
+    does not take it for the planner's cast.
   - `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node`: under
     `ROLLUP` the plain aggregate and the grouping id have no narrowing and the narrowed
     aggregate has; in a lateral subquery an outer reference is followed to its own column

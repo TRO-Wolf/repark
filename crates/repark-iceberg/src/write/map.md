@@ -656,6 +656,10 @@ repark-core's error map.
   read as a subtree; `subtree_narrowed` is gone. Within an expression every argument is
   followed whatever its type, but a `CASE` condition, the key of a selecting call
   (`SELECTING_UDF_NAMES`), a comparison, a predicate and a call typed boolean.
+  The analyzer's cut reaches the guard in two shapes and both are read: a cast or the
+  narrowing kernel over a mark function, and the narrowing kernel whose alias is a mark
+  name (`narrowed_beside`; `repark-functions` folds the mark into the kernel where it can).
+  `conformed` does not look through a kernel that carries a mark.
   **What forgives** (`Call`, `Cut`, `found`): the walk remembers the nearest written call it
   passed and forgets it at any node that is not an alias, a column, a `CASE` branch or
   `coalesce`; at the mark the node on it says how the value was cut. A written cast to

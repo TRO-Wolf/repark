@@ -39,7 +39,10 @@ pub(super) fn sql_text(expr: &Expr) -> String {
                 return format!("{}[{}]", first(), sql_text(&function.args[1]));
             }
             match name {
-                NARROW_TIMESTAMP_NS_UDF_NAME if function.args.first().is_some_and(marked) => {
+                NARROW_TIMESTAMP_NS_UDF_NAME
+                    if function.args.first().is_some_and(marked)
+                        || !function.func.aliases().is_empty() =>
+                {
                     first()
                 }
                 NARROW_TIMESTAMP_NS_UDF_NAME => format!("CAST({} AS TIMESTAMP)", first()),

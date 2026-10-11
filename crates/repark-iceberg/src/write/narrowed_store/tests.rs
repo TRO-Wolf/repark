@@ -190,6 +190,54 @@ async fn a_mark_refuses_through_every_argument_that_carries_the_value_and_no_oth
     }
 }
 
+fn kernel(mark: &'static str, column: &str) -> Expr {
+    let kind = if column == "z" {
+        zoned_nanos()
+    } else {
+        nanos()
+    };
+    create_udf(
+        NARROW_TIMESTAMP_NS_UDF_NAME,
+        vec![kind],
+        instant(),
+        Volatility::Immutable,
+        Arc::new(|args: &[ColumnarValue]| Ok(args[0].clone())),
+    )
+    .with_aliases([mark])
+    .call(vec![col(column)])
+}
+
+#[tokio::test]
+async fn the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut() {
+    let ctx = session();
+    let id = DataType::Int32;
+    for (mark, untyped_null) in [
+        (NARROWED_BESIDE_NULL_UDF_NAME, true),
+        (NARROWED_BESIDE_VALUE_UDF_NAME, false),
+    ] {
+        let narrowed = coalesce(vec![kernel(mark, "m"), col("u")]);
+        let plan = plan_of(&ctx, narrowed.clone()).await;
+        let found = column_narrowed(&plan, 1, None).expect("the kernel's mark");
+        assert_eq!(found.value, "src.m");
+        assert_eq!(found.beside_untyped_null, untyped_null);
+        let written = identity(NARROW_TIMESTAMP_NS_UDF_NAME, instant(), instant(), narrowed);
+        let forgiven = plan_of(&ctx, written).await;
+        assert_eq!(column_narrowed(&forgiven, 1, None), None);
+        let trunc = plan_of(&ctx, date_trunc(lit("second"), kernel(mark, "m"))).await;
+        assert!(column_narrowed(&trunc, 1, None).is_some());
+        let zoned = plan_of(&ctx, date_trunc(lit("second"), kernel(mark, "z"))).await;
+        assert_eq!(column_narrowed(&zoned, 1, None), None);
+        let root =
+            datafusion::logical_expr::LogicalPlanBuilder::from(plan_of(&ctx, col("m")).await)
+                .project(vec![col("id"), kernel(mark, "v").alias("v")])
+                .unwrap()
+                .build()
+                .unwrap();
+        let pairs = [("id", &id), ("v", &nanos())];
+        assert!(refuse_narrowed_ns_inserts("`t`", &root, pairs, None).is_err());
+    }
+}
+
 #[tokio::test]
 async fn a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node() {
     let ctx = session();

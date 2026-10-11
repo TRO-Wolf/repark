@@ -34,7 +34,7 @@ holds the reasons.
   - `the_nanosecond_branch_of_a_union_beside_an_untyped_null_branch_is_marked`,
     `the_nanosecond_branch_of_a_union_beside_a_microsecond_branch_is_marked`,
     `a_union_of_one_kind_is_left_alone`.
-  Fold 2 (2026-10-11) added ten:
+  Fold 2 (2026-10-11) added twelve:
   - `a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion`: the wire
     cast over a naive and a zoned nanosecond value, as an argument, becomes the
     written-narrowing function (also beside an untyped NULL, which is then not tagged); at
@@ -58,6 +58,12 @@ holds the reasons.
     cast over a `TIMESTAMP` literal's wire cast or a nanosecond literal is not marked; a
     union planned as nanoseconds whose branches are microseconds takes their type, the
     union above it marks nothing, and a union whose branches agree is left as it is.
+  - `a_branch_is_typed_without_a_lookup_where_its_node_says_the_type`: `kind_of` equals
+    the kind the schema gives for seventeen branches.
+  - `the_narrowing_kernel_over_a_mark_carries_the_mark_and_prints_as_the_written_one`: one
+    node over the value, the written kernel's text and name, not equal to it, counted as a
+    mark by `holds_mark`; the session rule over a coerced branch leaves no mark name in
+    the plan's text.
   - `the_mark_returns_the_field_of_its_argument`: the field, the argument's name, and the
     optimizer drops the written-narrowing function over a microsecond instant only.
   pins: ice-tsns-narrow-refuse-1/C-003, C-019, C-020

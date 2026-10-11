@@ -116,7 +116,10 @@ fn conformed(expr: &Expr) -> Option<&Column> {
     let source = match expr {
         Expr::Alias(alias) => return conformed(&alias.expr),
         Expr::Cast(cast) => cast.expr.as_ref(),
-        Expr::ScalarFunction(function) if function.func.name() == NARROW_TIMESTAMP_NS_UDF_NAME => {
+        Expr::ScalarFunction(function)
+            if function.func.name() == NARROW_TIMESTAMP_NS_UDF_NAME
+                && narrowed_beside(function).is_none() =>
+        {
             function.args.first()?
         }
         _ => return None,
@@ -467,6 +470,9 @@ fn function_lineage(
     }
     if name == NARROW_TIMESTAMP_NS_UDF_NAME {
         let value = function.args.first()?;
+        if let Some(beside_untyped_null) = narrowed_beside(function) {
+            return found((value, beside_untyped_null), Cut::Instant, input, walk);
+        }
         return match mark_of(value) {
             Some(marked) => found(marked, Cut::Instant, input, walk),
             None => through(value, Call::Timestamp),
@@ -521,6 +527,14 @@ fn compares(operator: Operator) -> bool {
             | Operator::RegexNotMatch
             | Operator::RegexNotIMatch
     )
+}
+
+fn narrowed_beside(kernel: &ScalarFunction) -> Option<bool> {
+    match kernel.func.aliases().first().map(String::as_str) {
+        Some(NARROWED_BESIDE_NULL_UDF_NAME) => Some(true),
+        Some(NARROWED_BESIDE_VALUE_UDF_NAME) => Some(false),
+        _ => None,
+    }
 }
 
 fn mark_of(expr: &Expr) -> Option<(&Expr, bool)> {
