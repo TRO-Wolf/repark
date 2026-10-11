@@ -25,13 +25,21 @@ door and UPDATE from a sibling `TIMESTAMP` column store the session wall. A
 wall literal stays `1767323045123456`. A field assignment stays the session
 wall. A nested `TIMESTAMP` leaf stays the instant.
 
-**Step 2, identity update:** `update_projection_sql` calls the same walk. One
-`analyzed_types` of the SET expressions, inside `collect_identity_update_rows`,
-supplies the source types. A failed analysis passes `None`, and the expression
-stays main's. Red without the call: the unit test's projection is
-`(s) AS `st`` (`evidence/pin-red-step2-update.txt`). Green with the call.
-The identity facade (sibling column, wall literal, nested `TIMESTAMP`) stores
-the session wall, `1767323045123456`, and the instant. Those stored values are
-already the fold's, so this call does not move them.
+**Step 2, identity update:** `3a4d12c5b9a36b603df939860c31b3c9b7dff6f3` calls
+the same walk from `update_projection_sql`. One `analyzed_types` of the SET
+expressions, inside `collect_identity_update_rows`, supplies the source
+types. A failed analysis passes `None`, and the expression stays main's.
+Red without the call: the unit test's projection is `(s) AS `st``
+(`evidence/pin-red-step2-update.txt`). Green with the call. The identity
+facade stores the session wall, `1767323045123456` for a wall literal, and
+the instant for a nested `TIMESTAMP`. Those stored values are already the
+fold's, so this call does not move them.
 
-**Next:** `insert_timestamp_ns::after_analysis`.
+**Halt before `insert_timestamp_ns::after_analysis`.** `ns_store_targets`
+returns `None` unless a top-level field is nanosecond timestamp, and
+`after_analysis` returns the plan there. A nested microsecond
+`TIMESTAMP_NTZ` insert never reaches a call. The projection values are
+logical `Expr`s. The walk takes SQL text, and this repo has no unparser.
+The caller in `spark_ast.rs` has the session. Rendering each `Expr` and
+planning the walk's SQL back is more than the call. No product line of
+that site is written.
