@@ -3271,6 +3271,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   it gives the 47 moved cells of the first fix and no other, the first line of the restated
   count (the ledger's §9.4).
   pins: ice-tsns-merge-wall-1/C-021, C-023
+- [test_ice_tsns_narrow_refuse_1_rule.py](test_ice_tsns_narrow_refuse_1_rule.py) —
+  **ICE-TSNS-NARROW-REFUSE-1, fold 2 (2026-10-11, ledger section 12):** the redesigned rule
+  through the DataFrame writers, 67 tests in America/New_York over a source that also holds
+  a `TIMESTAMP` and a `TIMESTAMP_NTZ` column. A written cast beside a microsecond value
+  stores what the cast alone stores, from SQL and from the functions API; a plain column
+  stores nine digits beside a narrowing under `ROLLUP`, `CUBE` and `LATERAL`; thirteen
+  narrowed shapes (containers, a DATE sibling, LATERAL, a round trip through a string and an
+  integer, a narrowed aggregate under `ROLLUP`) and four naive-only ones (a `TIMESTAMP_NTZ`
+  sibling under a written cast, a cast above an arm that refuses) refuse through
+  `writeTo().append()` with no internal name in the text, no value, no snapshot, and the
+  table takes the next write; a cast written over a frame column, a view or a subquery that
+  holds the narrowing stores as the inline cast does; a read's Arrow schema, the field ids
+  of the Parquet it writes and `EXPLAIN VERBOSE` show nothing of the unit.
+  pins: ice-tsns-narrow-refuse-1/C-028, C-029, C-030, C-031, C-032, C-033, C-034
 - [test_ice_tsns_narrow_refuse_1.py](test_ice_tsns_narrow_refuse_1.py) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
   2026-10-10 built as fold 1):** the facade pins. A test runs one row of the matrix (a zone,
