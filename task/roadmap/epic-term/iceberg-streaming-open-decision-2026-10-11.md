@@ -15,7 +15,7 @@ they do not; every proposal below is a lean, not a rule.
 
 The eighth verify of PR #1011 (`feat/mb-4-facade`, head `48e961ef`) passed with no S1 and no
 S2 and left one owner question (fold 9 of
-[mb-4-foreach-eo-ledger.md](../../ledgers/staging/mb-4-foreach-eo-ledger.md) on that branch).
+`mb-4-foreach-eo-ledger.md` among the staging ledgers of that branch; it is not on main, so it is named here and not linked).
 
 A query name that ever ran through `foreachBatch` is walked on the `toTable` door too (ruling
 D2). The trace that says so is one marker on one snapshot: the first `toTable` stamp written over
