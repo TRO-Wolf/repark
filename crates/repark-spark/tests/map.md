@@ -68,6 +68,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `a_written_cast_beside_a_microsecond_value_stores_on_every_door`: `coalesce(CAST(c AS
   TIMESTAMP), ts)`, the array, the `CASE` and the DATE sibling store the column `CAST(c AS
   TIMESTAMP)` stores, three zones, both sources and targets (red on `45260e44`: refused).
+  `a_union_of_written_casts_and_a_values_row_with_a_written_cast_store`: three `UNION ALL`
+  branches that each write the cast, the same union read through `coalesce(v, ts)` above a
+  join, and an `INSERT … VALUES` row whose written cast sits beside a `TIMESTAMP` literal,
+  a string cast or a typed NULL store what the cast alone stores (the verifier's doors
+  suite found both refusing on the fold's second build).
   `a_plain_column_stores_beside_a_narrowing_under_rollup_cube_and_lateral`: a plain column
   stores nine digits when a narrowing sits in a `WHERE`, a sibling aggregate or a sibling
   column under `ROLLUP`, `CUBE` and `LATERAL` (red on `45260e44`: refused).

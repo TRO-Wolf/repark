@@ -692,6 +692,59 @@ fn a_settled_tag_leaves_no_alias_and_a_null_cast_is_not_read_as_written() {
 }
 
 #[test]
+fn a_pending_timestamp_literal_and_a_stale_union_type_are_not_nanoseconds() {
+    let schema = wide();
+    let literal = cast(lit("2001-02-03 04:05:06"), nanos());
+    let wire = lit(ScalarValue::TimestampNanosecond(Some(1), None));
+    for pending in [literal, wire] {
+        let beside = coalesce(vec![written(col("c")), cast(pending.clone(), micros())]);
+        assert!(
+            !mark_coerced_branches(beside, &schema).unwrap().transformed,
+            "{pending}"
+        );
+    }
+    let scan = || table_scan(Some("t"), wide().as_arrow(), None).unwrap();
+    let branch = || {
+        Arc::new(
+            scan()
+                .project(vec![written(col("c")).alias("v")])
+                .unwrap()
+                .build()
+                .unwrap(),
+        )
+    };
+    let declared = scan()
+        .project(vec![col("c").alias("v")])
+        .unwrap()
+        .build()
+        .unwrap();
+    let stale = LogicalPlan::Union(Union {
+        inputs: vec![branch(), branch()],
+        schema: Arc::clone(declared.schema()),
+    });
+    assert_eq!(stale.schema().field(0).data_type(), &nanos());
+    let typed = with_branch_types(stale.clone()).unwrap();
+    assert_eq!(typed.schema().field(0).data_type(), &micros());
+    assert_eq!(typed.schema().field(0).name(), "v");
+    let outer = LogicalPlan::Union(Union {
+        inputs: vec![Arc::new(typed), branch()],
+        schema: Arc::clone(declared.schema()),
+    });
+    let settled = Marks::of(&outer, &DFSchema::empty())
+        .settle_plan(outer)
+        .unwrap()
+        .data;
+    assert!(all_marks(&settled).is_empty(), "{settled}");
+    assert_eq!(settled.schema().field(0).data_type(), &micros());
+    let fresh = with_branch_types(LogicalPlan::Union(Union {
+        inputs: vec![Arc::new(declared.clone()), Arc::new(declared.clone())],
+        schema: Arc::clone(declared.schema()),
+    }))
+    .unwrap();
+    assert_eq!(fresh.schema().field(0).data_type(), &nanos());
+}
+
+#[test]
 fn the_mark_returns_the_field_of_its_argument() {
     let metadata =
         std::collections::HashMap::from([("PARQUET:field_id".to_string(), "2".to_string())]);

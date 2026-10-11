@@ -1141,6 +1141,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
     target only, at the root of an expression (a wire cast at a root may be a written one).
     The root case of the wire cast is a `UNION` of a zoned branch and a `DATE` branch:
     `tag_union_nulls` marks the zoned branch before coercion (`zoned_beside_a_date`).
+    A source that only looks like nanoseconds is not one: a cast to the wire type that the
+    session rule has not read yet (`TIMESTAMP '…'`, `CAST('…' AS TIMESTAMP)`) and a
+    nanosecond literal are microsecond values in waiting, and a cast coercion leaves over
+    them is not marked. A `UNION` keeps the type it was planned with until the second
+    coercion, so a union of written casts still reads nanoseconds from above;
+    `with_branch_types` gives a union node the types its branches now have before
+    `settle_union_branches` and the nodes above read it. Both were hidden while the store
+    asked for a cast on the mark, and each stored a written value on main.
   - *M2* (`settle_branches`, `kind_of`, `loses_nanoseconds`): a branch that holds
     nanoseconds beside one that holds a coarser timestamp, when the coerced node's type
     holds no nanoseconds; `array_append(array(ns), ts)` is marked with no cast in the plan.

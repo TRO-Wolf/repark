@@ -299,6 +299,8 @@ async fn a_written_cast_beside_a_microsecond_value_stores_on_every_door() {
         "array(CAST({c} AS TIMESTAMP), ts)[0]",
         "CASE WHEN id > 0 THEN CAST({c} AS TIMESTAMP) ELSE ts END",
         "coalesce(CAST({c} AS TIMESTAMP), DATE '2001-02-03')",
+        "coalesce(CAST({c} AS TIMESTAMP), TIMESTAMP '2001-02-03 04:05:06.654321')",
+        "greatest(CAST({c} AS TIMESTAMP), CAST('1500-02-03 04:05:06' AS TIMESTAMP))",
     ];
     for zone in ZONES {
         let mut matrix = Matrix::open(zone).await;
@@ -319,6 +321,61 @@ async fn a_written_cast_beside_a_microsecond_value_stores_on_every_door() {
                             .await;
                         assert_eq!(stored, reference, "{zone}: {door}: {query}");
                     }
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_union_of_written_casts_and_a_values_row_with_a_written_cast_store() {
+    for zone in [ZONES[0], ZONES[1]] {
+        let mut matrix = Matrix::open(zone).await;
+        for target in TARGETS {
+            for (source, kind) in SOURCES {
+                let part = format!("SELECT id, CAST({source} AS TIMESTAMP) AS v FROM ice.ns.src");
+                let three = format!(
+                    "{part} WHERE id % 3 = 0 UNION ALL {part} WHERE id % 3 = 1 UNION ALL {part} \
+                     WHERE id % 3 = 2"
+                );
+                let above = format!(
+                    "SELECT id, coalesce(v, ts) AS v FROM ({three}) u JOIN (SELECT \
+                     id AS i, ts FROM ice.ns.src) s ON u.id = s.i"
+                );
+                for (door, flags, template) in DOORS {
+                    let reference = matrix
+                        .store(target)
+                        .stores(door, flags, template, &part)
+                        .await;
+                    for query in [&three, &above] {
+                        let stored = matrix
+                            .store(target)
+                            .stores(door, flags, template, query)
+                            .await;
+                        assert_eq!(stored, reference, "{zone}: {door}: {query}");
+                    }
+                }
+                let zone_suffix = if kind == "timestamptz_ns" {
+                    "+00:00"
+                } else {
+                    ""
+                };
+                let literal = format!("CAST('{}{zone_suffix}' AS {kind})", MOMENTS[0].0);
+                let alone =
+                    format!("INSERT INTO {{t}} (id, v) VALUES (1, CAST({literal} AS TIMESTAMP))");
+                let reference = matrix.store(target).stores("values", "", &alone, "").await;
+                assert_eq!(reference.len(), 1, "{zone}: {alone}");
+                for sibling in [
+                    "TIMESTAMP '2001-02-03 04:05:06.654321'",
+                    "CAST('2001-02-03 04:05:06' AS TIMESTAMP)",
+                    "CAST(NULL AS TIMESTAMP)",
+                ] {
+                    let beside = format!(
+                        "INSERT INTO {{t}} (id, v) VALUES (1, coalesce(CAST({literal} AS \
+                         TIMESTAMP), {sibling}))"
+                    );
+                    let stored = matrix.store(target).stores("values", "", &beside, "").await;
+                    assert_eq!(stored, reference, "{zone}: {beside}");
                 }
             }
         }

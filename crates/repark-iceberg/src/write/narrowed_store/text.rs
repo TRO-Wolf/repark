@@ -1,6 +1,7 @@
 use std::fmt::Write;
 
 use datafusion::arrow::datatypes::{DataType, IntervalUnit, TimeUnit};
+use datafusion::arrow::util::display::array_value_to_string;
 use datafusion::common::ScalarValue;
 use datafusion::logical_expr::Expr;
 
@@ -187,9 +188,13 @@ fn literal_text(value: &ScalarValue) -> String {
 }
 
 fn timestamp_text(value: &ScalarValue) -> String {
-    let shown = value.to_string();
-    let shown = shown.trim_end_matches('Z').replace('T', " ");
-    shown.split('+').next().unwrap_or_default().to_string()
+    let shown = (value.to_array().ok())
+        .and_then(|array| array_value_to_string(array.as_ref(), 0).ok())
+        .unwrap_or_default();
+    match shown.strip_suffix('Z') {
+        Some(instant) => format!("{}+00:00", instant.replace('T', " ")),
+        None => shown.replace('T', " "),
+    }
 }
 
 fn interval_text(months: i32, days: i32, nanoseconds: i64) -> String {

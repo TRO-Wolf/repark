@@ -15,7 +15,7 @@ use datafusion::logical_expr::{
     ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, TableType, Union, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
-use datafusion::optimizer::analyzer::type_coercion::TypeCoercionRewriter;
+use datafusion::optimizer::analyzer::type_coercion::{TypeCoercionRewriter, coerce_union_schema};
 
 pub const NARROWED_BESIDE_NULL_NAME: &str = "__repark_narrowed_beside_null__";
 pub const NARROWED_BESIDE_VALUE_NAME: &str = "__repark_narrowed_beside_value__";
@@ -190,6 +190,8 @@ fn coerced(expr: &Expr, schema: &DFSchema) -> bool {
     matches!(expr, Expr::Cast(cast)
     if !is_narrowing_mark(&cast.expr)
         && !null_literal(&cast.expr)
+        && !to_the_wire_type(&cast.expr)
+        && !matches!(cast.expr.as_ref(), Expr::Literal(_, _))
         && cast.expr.get_type(schema).is_ok_and(|source| {
             narrows(&source, cast.field.data_type())
         }))
@@ -302,7 +304,7 @@ impl Marks {
 
     pub(crate) fn settle_plan(&self, plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         if !self.kept.get() || plan.inputs().into_iter().any(plan_holds_mark) {
-            return settle_union_branches(plan);
+            return settle_union_branches(with_branch_types(plan)?);
         }
         let schema = input_schema(&plan);
         plan.map_expressions(|expr| expr.transform_up(|node| Ok(drop_kept_cast(node, &schema))))?
@@ -321,6 +323,43 @@ fn named_by_itself(expr: Expr) -> Expr {
         }
         other => other,
     }
+}
+
+fn with_branch_types(plan: LogicalPlan) -> Result<LogicalPlan> {
+    let LogicalPlan::Union(union) = plan else {
+        return Ok(plan);
+    };
+    let stale = |(index, field): (usize, &Arc<Field>)| {
+        matches!(field.data_type(), DataType::Timestamp(_, _))
+            && union.inputs.iter().any(|input| {
+                (input.schema().fields().get(index))
+                    .is_some_and(|branch| branch.data_type() != field.data_type())
+            })
+    };
+    if !union.schema.fields().iter().enumerate().any(stale) {
+        return Ok(LogicalPlan::Union(union));
+    }
+    let Ok(coerced) = coerce_union_schema(&union.inputs) else {
+        return Ok(LogicalPlan::Union(union));
+    };
+    let fields = union
+        .schema
+        .iter()
+        .zip(coerced.fields())
+        .map(|((qualifier, field), found)| {
+            let typed = field
+                .as_ref()
+                .clone()
+                .with_data_type(found.data_type().clone());
+            (qualifier.cloned(), Arc::new(typed))
+        })
+        .collect();
+    let typed = DFSchema::new_with_metadata(fields, union.schema.as_arrow().metadata().clone())?;
+    let dependencies = union.schema.functional_dependencies().clone();
+    Ok(LogicalPlan::Union(Union {
+        inputs: union.inputs,
+        schema: Arc::new(typed.with_functional_dependencies(dependencies)?),
+    }))
 }
 
 fn input_schema(plan: &LogicalPlan) -> DFSchema {
