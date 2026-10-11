@@ -516,6 +516,14 @@ fn a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked() {
             "{kept}"
         );
     }
+    let typed_null = cast(cast(untyped(), zoned()), micros());
+    let beside_null = coalesce(vec![cast(col("z"), micros()), typed_null.clone()]);
+    let out = mark_coerced_branches(beside_null, &schema).unwrap().data;
+    assert_eq!(
+        marks(&out),
+        vec![format!("{NARROWED_BESIDE_VALUE_NAME}(z)")]
+    );
+    assert!(!mark_coerced_narrowing(typed_null, &schema, true).transformed);
     let fitted = call(
         "one_list",
         vec![(cast(col("a"), list(micros())), list(micros()))],
