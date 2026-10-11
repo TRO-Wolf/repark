@@ -1089,3 +1089,35 @@ refused values plain INSERT stores (`' 12 '` and `'0x10'` into int4, `'1e3'` and
 `'NaN'` into numeric, double NaN/Infinity into numeric, long integers into the
 `Decimal128(38,18)` mapping, Postgres-spelled dates and infinities, string
 booleans) refuse under the engine's rule, as the Iceberg target refuses them.
+
+### 14.2 Item 2: values into a text column render as the engine's `CAST AS STRING`
+
+The chokepoint called the Arrow cast for text columns, so a double Infinity
+stored `inf`, `1e7` stored `10000000.0`, a nanosecond timestamp stored an RFC
+3339 instant, and years outside 0001..9999 miscounted their digits. Now every
+source into a `Utf8`-mapped column renders what the engine's `CAST(x AS STRING)`
+gives in the session zone: floats through the Java digit engine, timestamps of
+all four units through the shared wall clock and Spark wall formatter, dates
+through the shared ISO date (identical to the Arrow rendering on every date:
+chrono's `Debug` already spells ISO years), and ints, decimals, bools, binaries
+and strings through the Arrow cast the engine itself uses for those types.
+
+No second implementation: the scalar Java digit engine (`java_double/` with
+`bigint.rs`) and the tick/wall/format kernels (`spark_timestamp_text.rs`) moved
+from `repark-functions` to `repark-common` (pure moves; `repark-core` cannot
+take an edge on the tier-3 capability crate, and the zone-horizon move set the
+precedent), and both `repark-functions` and the chokepoint call them. Fold 2's
+own timestamp text renderer is deleted. Date columns and the timestamp column
+arms are untouched.
+
+Kept divergences from `CAST`, both deliberate. A wall the calendar cannot place
+(`i64::MAX` micros) still refuses instead of storing NULL, as fold 2 pinned;
+the string-cast UDF answers NULL there. The rendering is uniform on both doors,
+as fold 2's session-zone rendering was, while the ANSI door's own `CAST` keeps
+Arrow text (it never installs the float-stringify rule). Only `Utf8`-mapped
+columns render this way; uuid/json/interval columns keep the Arrow cast, and a
+`Date64` source (unreachable from SQL) keeps the Arrow rendering so it still
+equals `CAST` exactly.
+
+S3-years (2026-10-11 verdict) is closed by the shared ISO date, except the gap
+wall's empty column name, which the S3 batch names.

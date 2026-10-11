@@ -58,6 +58,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   falls past chrono's calendar refuses `TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`).
   H-TZ did not fire. `session.rs` holds 1000 lines: its two new `mod` lines are paid for by two
   shed comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
+  **C-4 fold 3 item 2 (2026-10-11):** `zone_of` is `pub(crate)` so the text renderer
+  parses the session zone through the same canonicalisation.
   pins: c-2/C-098, C-108, C-109, C-110, C-111
 - `write_postgres.rs` — **C-4 step 2 (2026-10-09):** `execute_postgres_write` is the one
   Postgres sink driver both SQL doors and the `df.write.jdbc` binding call. It builds a
@@ -97,6 +99,15 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   (`ServerText`) columns take string sources and null only and name the Postgres type
   in the same refusal family. The malformed-string invalid-input pins are deleted with
   their now-unreachable arm; numeric overflow and invalid-bytes refusals stay.
+  **C-4 fold 3 item 2 (2026-10-11):** values into a text column render as the engine's
+  `CAST(x AS STRING)` in the session zone: floats through the shared Java digit engine,
+  timestamps of every unit through the shared wall clock and Spark wall formatter,
+  dates through the shared ISO date, everything else through the Arrow cast the engine
+  itself uses for those types. Fold 2's own timestamp text renderer is deleted. The
+  rendering is uniform on both doors, as fold 2's session-zone rendering was; the ANSI
+  door's own CAST keeps Arrow text there. Unformattable walls still refuse instead of
+  storing NULL. Only `Utf8`-mapped columns render this way; uuid/json/interval columns
+  keep the Arrow cast.
   pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.

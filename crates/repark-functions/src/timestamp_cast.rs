@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use arrow::array::timezone::Tz;
-use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Timelike};
+use chrono::NaiveDateTime;
 use datafusion::arrow::array::{
     Array, ArrayRef, AsArray, Date32Array, Float64Array, Int64Array, StringArray, StringBuilder,
 };
@@ -21,7 +21,8 @@ use datafusion::logical_expr::{
 use crate::ansi::spark_ansi_enabled_from_options;
 use crate::datetime::invoke_local_dates;
 use crate::session_time_zone::session_time_zone_from_options;
-use repark_common::zone_horizon::{wall_at_instant, wall_to_unix_seconds};
+use repark_common::spark_timestamp_text::{TickUnit, wall_clock_from_ticks};
+use repark_common::zone_horizon::wall_to_unix_seconds;
 
 /// The embedded integer-target UDF: floored epoch seconds as `Int64`.
 #[must_use]
@@ -269,6 +270,12 @@ impl ScalarUDFImpl for SparkTimestampToString {
         let session_zone =
             parse_session_zone(session_time_zone_from_options(args.config_options.as_ref()))?;
         let ticks = timestamp_ticks(arrays[0].as_ref())?;
+        let tick_unit = match unit {
+            TimeUnit::Second => TickUnit::Second,
+            TimeUnit::Millisecond => TickUnit::Millisecond,
+            TimeUnit::Microsecond => TickUnit::Microsecond,
+            TimeUnit::Nanosecond => TickUnit::Nanosecond,
+        };
         let mut builder = StringBuilder::with_capacity(ticks.len(), ticks.len() * 32);
         for row in 0..ticks.len() {
             if ticks.is_null(row) {
@@ -277,9 +284,9 @@ impl ScalarUDFImpl for SparkTimestampToString {
             }
             match wall_clock_from_ticks(
                 ticks.value(row),
-                unit,
-                zone_annotation.as_ref(),
-                session_zone,
+                tick_unit,
+                zone_annotation.is_some(),
+                &session_zone,
             ) {
                 Some(wall) => builder.append_value(format_spark_timestamp_string(wall)),
                 None => builder.append_null(),
@@ -687,68 +694,7 @@ pub(crate) fn parse_session_zone(zone_id: &str) -> Result<Tz> {
     })
 }
 
-/// Ticks → microseconds.
-fn ticks_to_micros(ticks: i64, unit: TimeUnit) -> Option<i64> {
-    match unit {
-        TimeUnit::Second => ticks.checked_mul(1_000_000),
-        TimeUnit::Millisecond => ticks.checked_mul(1_000),
-        TimeUnit::Microsecond => Some(ticks),
-        TimeUnit::Nanosecond => Some(ticks.div_euclid(1_000)),
-    }
-}
-
-/// LTZ (`Some` annotation) → session-zone wall.
-fn wall_clock_from_ticks(
-    ticks: i64,
-    unit: TimeUnit,
-    zone_annotation: Option<&Arc<str>>,
-    session_zone: Tz,
-) -> Option<NaiveDateTime> {
-    let utc = match unit {
-        TimeUnit::Nanosecond => DateTime::from_timestamp_nanos(ticks),
-        _ => DateTime::from_timestamp_micros(ticks_to_micros(ticks, unit)?)?,
-    };
-    if zone_annotation.is_some() {
-        wall_at_instant(&session_zone, &utc.naive_utc())
-    } else {
-        Some(utc.naive_utc())
-    }
-}
-
-/// Spark `CAST(ts AS STRING)` is `yyyy-MM-dd HH:mm:ss` plus a fraction without trailing zeros.
-pub(crate) fn format_spark_timestamp_string(wall: NaiveDateTime) -> String {
-    let date = format_iso_local_date(wall.date());
-    let time = format!(
-        "{:02}:{:02}:{:02}",
-        wall.hour(),
-        wall.minute(),
-        wall.second()
-    );
-    let nanos = wall.nanosecond();
-    if nanos == 0 {
-        format!("{date} {time}")
-    } else {
-        let mut fraction = format!("{nanos:09}");
-        while fraction.ends_with('0') {
-            fraction.pop();
-        }
-        format!("{date} {time}.{fraction}")
-    }
-}
-
-/// `DateTimeFormatter.ISO_LOCAL_DATE` as Spark 4.1.2 emitted it under the record probe.
-fn format_iso_local_date(date: NaiveDate) -> String {
-    let year = date.year();
-    let month = date.month();
-    let day = date.day();
-    if (0..=9999).contains(&year) {
-        format!("{year:04}-{month:02}-{day:02}")
-    } else if year > 9999 {
-        format!("+{year}-{month:02}-{day:02}")
-    } else {
-        format!("-{abs:04}-{month:02}-{day:02}", abs = year.unsigned_abs())
-    }
-}
+pub(crate) use repark_common::spark_timestamp_text::format_spark_timestamp_string;
 
 /// True when the sole argument is nullable (or absent, which the signature makes unreachable).
 fn nullable_like_argument(args: &ReturnFieldArgs<'_>) -> bool {
@@ -760,6 +706,8 @@ fn nullable_like_argument(args: &ReturnFieldArgs<'_>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::NaiveDate;
+    use repark_common::spark_timestamp_text::ticks_to_micros;
 
     /// Spark floors negative fractional epoch seconds: `-0.5 s → -1` and `-1.25 s → -2`.
     #[test]
@@ -855,8 +803,12 @@ mod tests {
     #[test]
     fn nanosecond_ticks_render_every_digit() {
         let zone = Tz::from_str("UTC").unwrap();
-        let wall =
-            wall_clock_from_ticks(1_767_398_400_000_000_001, TimeUnit::Nanosecond, None, zone);
+        let wall = wall_clock_from_ticks(
+            1_767_398_400_000_000_001,
+            TickUnit::Nanosecond,
+            false,
+            &zone,
+        );
         assert_eq!(
             wall.map(format_spark_timestamp_string).as_deref(),
             Some("2026-01-03 00:00:00.000000001")
@@ -921,15 +873,9 @@ mod tests {
     fn ltz_renders_in_the_session_zone_and_ntz_does_not() {
         let new_york = Tz::from_str("America/New_York").expect("IANA zone");
         let modern_utc_micros = 1_718_452_800_000_000_i64; // 2024-06-15T12:00:00Z
-        let utc_annotation = Some(Arc::<str>::from("UTC"));
-        let ltz = wall_clock_from_ticks(
-            modern_utc_micros,
-            TimeUnit::Microsecond,
-            utc_annotation.as_ref(),
-            new_york,
-        )
-        .expect("in chrono range");
-        let ntz = wall_clock_from_ticks(modern_utc_micros, TimeUnit::Microsecond, None, new_york)
+        let ltz = wall_clock_from_ticks(modern_utc_micros, TickUnit::Microsecond, true, &new_york)
+            .expect("in chrono range");
+        let ntz = wall_clock_from_ticks(modern_utc_micros, TickUnit::Microsecond, false, &new_york)
             .expect("in chrono range");
         assert_eq!(format_spark_timestamp_string(ltz), "2024-06-15 08:00:00");
         assert_eq!(format_spark_timestamp_string(ntz), "2024-06-15 12:00:00");
@@ -939,10 +885,10 @@ mod tests {
     #[test]
     fn nanosecond_ticks_floor_to_microseconds() {
         assert_eq!(
-            ticks_to_micros(123_456_789, TimeUnit::Nanosecond),
+            ticks_to_micros(123_456_789, TickUnit::Nanosecond),
             Some(123_456)
         );
-        assert_eq!(ticks_to_micros(-1_500, TimeUnit::Nanosecond), Some(-2));
+        assert_eq!(ticks_to_micros(-1_500, TickUnit::Nanosecond), Some(-2));
     }
 
     /// TZ-8: LTZ `2024-06-15T03:00:00Z` is 2024-06-14 in New York; NTZ ticks stay 2024-06-15.

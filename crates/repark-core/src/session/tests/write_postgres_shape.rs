@@ -606,6 +606,24 @@ fn naive_ts(micros: &[i64]) -> ArrayRef {
     ))
 }
 
+fn zoned_ns(nanos: &[i64]) -> ArrayRef {
+    Arc::new(arrow::array::TimestampNanosecondArray::from(nanos.to_vec()).with_timezone("UTC"))
+}
+
+fn naive_ns(nanos: &[i64]) -> ArrayRef {
+    Arc::new(arrow::array::TimestampNanosecondArray::from(nanos.to_vec()))
+}
+
+fn second_ts(seconds: &[i64]) -> ArrayRef {
+    Arc::new(arrow::array::TimestampSecondArray::from(seconds.to_vec()))
+}
+
+fn millis_ts(millis: &[i64]) -> ArrayRef {
+    Arc::new(arrow::array::TimestampMillisecondArray::from(
+        millis.to_vec(),
+    ))
+}
+
 fn shaped_text(shaped: &RecordBatch) -> Vec<Option<String>> {
     let column = shaped
         .column(0)
@@ -756,6 +774,138 @@ fn text_rendering_pads_the_year_to_four_digits() {
         shaped_text(&shaped),
         vec![Some("0001-01-01 00:00:00".to_string())]
     );
+}
+
+#[test]
+fn floats_into_a_text_column_render_like_java_tostring() {
+    let doubles: Vec<(f64, &str)> = vec![
+        (f64::INFINITY, "Infinity"),
+        (f64::NEG_INFINITY, "-Infinity"),
+        (f64::NAN, "NaN"),
+        (10_000_000.0, "1.0E7"),
+        (1e16, "1.0E16"),
+        (1e-5, "1.0E-5"),
+        (123_456_789.125, "1.23456789125E8"),
+        (-0.0, "-0.0"),
+        (0.0, "0.0"),
+        (1.0, "1.0"),
+        (1_000_000.0, "1000000.0"),
+    ];
+    for (value, text) in doubles {
+        let shaped = shape_single(PostgresMapping::Utf8, DataType::Utf8, float64(&[value]))
+            .expect("a double renders");
+        assert_eq!(
+            shaped_text(&shaped),
+            vec![Some(text.to_string())],
+            "{value}"
+        );
+    }
+    let floats: Vec<(f32, &str)> = vec![
+        (f32::INFINITY, "Infinity"),
+        (f32::NAN, "NaN"),
+        (1e10, "1.0E10"),
+        (0.1, "0.1"),
+        (-0.0, "-0.0"),
+    ];
+    for (value, text) in floats {
+        let shaped = shape_single(PostgresMapping::Utf8, DataType::Utf8, float32(&[value]))
+            .expect("a float renders");
+        assert_eq!(
+            shaped_text(&shaped),
+            vec![Some(text.to_string())],
+            "{value}"
+        );
+    }
+    let nulls: ArrayRef = Arc::new(arrow::array::Float64Array::from(vec![None]));
+    let shaped =
+        shape_single(PostgresMapping::Utf8, DataType::Utf8, nulls).expect("a null renders");
+    assert_eq!(shaped_text(&shaped), vec![None]);
+}
+
+#[test]
+fn nanosecond_second_and_millisecond_timestamps_render_the_session_wall() {
+    let nanos = instant_micros("2024-07-02T03:30:00Z") * 1_000 + 123_456_789;
+    for (zone, text) in [
+        ("UTC", "2024-07-02 03:30:00.123456789"),
+        ("America/New_York", "2024-07-01 23:30:00.123456789"),
+    ] {
+        let shaped = shape_single_zone(
+            PostgresMapping::Utf8,
+            DataType::Utf8,
+            zoned_ns(&[nanos]),
+            zone,
+        )
+        .expect("an instant renders");
+        assert_eq!(shaped_text(&shaped), vec![Some(text.to_string())], "{zone}");
+    }
+    let shaped = shape_single(
+        PostgresMapping::Utf8,
+        DataType::Utf8,
+        naive_ns(&[wall_micros("2024-07-01 12:00:00") * 1_000 + 500]),
+    )
+    .expect("a wall renders");
+    assert_eq!(
+        shaped_text(&shaped),
+        vec![Some("2024-07-01 12:00:00.0000005".to_string())]
+    );
+    let shaped = shape_single(PostgresMapping::Utf8, DataType::Utf8, second_ts(&[-1]))
+        .expect("a second wall renders");
+    assert_eq!(
+        shaped_text(&shaped),
+        vec![Some("1969-12-31 23:59:59".to_string())]
+    );
+    let shaped = shape_single(PostgresMapping::Utf8, DataType::Utf8, millis_ts(&[0]))
+        .expect("a millisecond wall renders");
+    assert_eq!(
+        shaped_text(&shaped),
+        vec![Some("1970-01-01 00:00:00".to_string())]
+    );
+}
+
+#[test]
+fn timestamps_outside_the_four_digit_years_render_iso_dates() {
+    for (year, month, day, text) in [
+        (10_000, 1, 1, "+10000-01-01 00:00:00"),
+        (-1, 1, 1, "-0001-01-01 00:00:00"),
+        (0, 6, 1, "0000-06-01 00:00:00"),
+    ] {
+        let micros = i64::from(days_since_epoch(year, month, day)) * 86_400_000_000;
+        let shaped = shape_single(PostgresMapping::Utf8, DataType::Utf8, naive_ts(&[micros]))
+            .expect("a far wall renders");
+        assert_eq!(shaped_text(&shaped), vec![Some(text.to_string())], "{text}");
+    }
+}
+
+#[test]
+fn dates_into_a_text_column_render_iso_dates() {
+    let cases: Vec<(i32, &str)> = vec![
+        (days_since_epoch(2024, 7, 1), "2024-07-01"),
+        (days_since_epoch(1, 1, 1), "0001-01-01"),
+        (days_since_epoch(10_000, 1, 1), "+10000-01-01"),
+        (days_since_epoch(-1, 1, 1), "-0001-01-01"),
+    ];
+    for (day, text) in cases {
+        let shaped = shape_single(PostgresMapping::Utf8, DataType::Utf8, date32(&[day]))
+            .expect("a date renders");
+        assert_eq!(shaped_text(&shaped), vec![Some(text.to_string())], "{text}");
+    }
+}
+
+#[test]
+fn decimals_bools_ints_and_binaries_into_a_text_column_render_plainly() {
+    let binary: ArrayRef = Arc::new(BinaryArray::from_opt_vec(vec![Some(&[0x41][..])]));
+    let cases: Vec<(ArrayRef, &str)> = vec![
+        (decimal(&[150], 3, 2), "1.50"),
+        (boolean(&[true]), "true"),
+        (int64(&[12]), "12"),
+        (utf8(&["kept"]), "kept"),
+        (binary, "A"),
+    ];
+    for (array, text) in cases {
+        let shaped = shape_single(PostgresMapping::Utf8, DataType::Utf8, array)
+            .expect("an atomic value renders");
+        assert_eq!(shaped_text(&shaped), vec![Some(text.to_string())], "{text}");
+    }
 }
 
 #[test]

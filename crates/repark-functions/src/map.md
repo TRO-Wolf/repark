@@ -885,7 +885,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - **octo C1-Q-004:** `perf_measure_date_format_compile_once` /
   `perf_measure_substring_char_indices` gated on `REPARK_PERF_MEASURE=1` (not default suite tax).
 - **octo C2-Q-001:** `compile_java_pattern` apostrophe/punct edges + unterminated-quote Err pin.
-- `java_double.rs` + `java_double/` — **JAVA-DOUBLE-FD-1 port (2026-09-15):**
+- `java_double.rs` + `java_double/` — **C-4 fold 3 item 2 (2026-10-11):** the scalar
+  digit engine and `bigint.rs` moved to `repark-common`'s `java_double/` so the
+  Postgres write chokepoint calls the one function; `dtoa.rs` keeps the two
+  array wrappers and re-exports the scalars, so every importer is untouched and
+  no second formatter exists. The behaviour pins stay here.
+  **JAVA-DOUBLE-FD-1 port (2026-09-15):**
   `dtoa.rs` (independent JDK 17 `FloatingDecimal` port) + `bigint.rs` (ported
   `FDBigInteger`), `tests_corpus.rs` (byte-equality over
   `REPARK_JDK17_TOSTRING_CORPUS`, green on all 39,427 rows) with full
@@ -1039,7 +1044,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the call also passes
   `timestamp_type.is_ntz()`, so the pass reads a `TIMESTAMP` literal by the session's
   default timestamp type. pins: ntz-store-doors-1/C-009
-- `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
+- `timestamp_cast.rs` — **C-4 fold 3 item 2 (2026-10-11):** the tick, wall-clock and
+  formatting kernels of `__repark_timestamp_to_string__` moved to
+  `repark-common`'s `spark_timestamp_text.rs` so the Postgres write chokepoint calls
+  the one function; this file keeps the UDF shell, the analyzer rewrites and the pins,
+  and re-exports the formatter for `timestamp_ntz_cast.rs`.
+  **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
   `-1` and `-1.25 s` is `-2`; truncation toward zero agrees on every positive instant and every

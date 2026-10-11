@@ -11,13 +11,18 @@ use crate::catalog_state::CatalogRegistry;
 
 #[cfg(feature = "postgres")]
 use arrow::array::{
-    Array, ArrayRef, AsArray, BinaryArray, BinaryViewArray, LargeBinaryArray, RecordBatch,
-    StringArray, TimestampMicrosecondArray,
+    Array, ArrayRef, AsArray, BinaryArray, BinaryViewArray, Float32Array, Float64Array,
+    LargeBinaryArray, RecordBatch, StringArray, StringBuilder, TimestampMicrosecondArray,
 };
 #[cfg(feature = "postgres")]
-use arrow::compute::{CastOptions, cast_with_options};
+use arrow::compute::{CastOptions, cast, cast_with_options};
 #[cfg(feature = "postgres")]
-use arrow::datatypes::{DataType, Field, Schema, TimeUnit, TimestampMicrosecondType};
+use arrow::datatypes::{
+    DataType, Date32Type, Field, Float32Type, Float64Type, Int64Type, Schema, TimeUnit,
+    TimestampMicrosecondType,
+};
+#[cfg(feature = "postgres")]
+use chrono::DateTime;
 #[cfg(feature = "postgres")]
 use repark_common::{SourceKind, spark_error};
 #[cfg(feature = "postgres")]
@@ -550,13 +555,8 @@ pub(crate) fn shape_batch(
             _ => {
                 if plain_values_type(array.data_type()) == column.expected {
                     Arc::clone(array)
-                } else if column.mapping == PostgresMapping::Utf8
-                    && matches!(
-                        array.data_type(),
-                        DataType::Timestamp(TimeUnit::Microsecond, _)
-                    )
-                {
-                    render_session_strings(name, array, session_zone, display)?
+                } else if column.mapping == PostgresMapping::Utf8 {
+                    render_spark_strings(name, array, session_zone, display)?
                 } else if column.mapping == PostgresMapping::Date
                     && matches!(
                         array.data_type(),
@@ -611,53 +611,113 @@ fn session_zone_date(
 }
 
 #[cfg(feature = "postgres")]
-fn spark_wall_text(column: &str, source: &DataType, micros: i64) -> Result<String> {
-    use chrono::{DateTime, Datelike, Timelike};
+fn render_double_strings(values: &Float64Array) -> StringArray {
+    use repark_common::java_double::with_java_double_text;
 
-    let Some(wall) = DateTime::from_timestamp_micros(micros).map(|zoned| zoned.naive_utc()) else {
-        return Err(cast_overflow(
-            column,
-            &spark_cast_type_name(source),
-            "STRING",
-        ));
-    };
-    let mut text = format!(
-        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
-        wall.year(),
-        wall.month(),
-        wall.day(),
-        wall.hour(),
-        wall.minute(),
-        wall.second()
-    );
-    let fraction = wall.nanosecond() / 1000;
-    if fraction != 0 {
-        let mut digits = format!("{fraction:06}");
-        while digits.ends_with('0') {
-            digits.pop();
+    let mut rendered = StringBuilder::with_capacity(values.len(), values.len() * 24);
+    for index in 0..values.len() {
+        if values.is_null(index) {
+            rendered.append_null();
+        } else {
+            with_java_double_text(values.value(index), |text| {
+                rendered.append_value(text);
+            });
         }
-        text.push('.');
-        text.push_str(&digits);
     }
-    Ok(text)
+    rendered.finish()
 }
 
 #[cfg(feature = "postgres")]
-fn render_session_strings(
+fn render_float_strings(values: &Float32Array) -> StringArray {
+    use repark_common::java_double::with_java_float_text;
+
+    let mut rendered = StringBuilder::with_capacity(values.len(), values.len() * 24);
+    for index in 0..values.len() {
+        if values.is_null(index) {
+            rendered.append_null();
+        } else {
+            with_java_float_text(values.value(index), |text| {
+                rendered.append_value(text);
+            });
+        }
+    }
+    rendered.finish()
+}
+
+#[cfg(feature = "postgres")]
+fn render_spark_strings(
     name: &str,
     array: &ArrayRef,
     session_zone: &str,
     display: &str,
 ) -> Result<ArrayRef> {
-    let walls = wall_clocks(name, array, session_zone, display)?;
-    let mut rendered = Vec::with_capacity(walls.len());
-    for wall in &walls {
-        match wall {
-            None => rendered.push(None),
-            Some(micros) => rendered.push(Some(spark_wall_text(name, array.data_type(), micros)?)),
+    use repark_common::spark_timestamp_text::{
+        TickUnit, format_iso_local_date, format_spark_timestamp_string, wall_clock_from_ticks,
+    };
+
+    let mut current = Arc::clone(array);
+    while matches!(current.data_type(), DataType::Dictionary(..)) {
+        let decoded = decoded_values(&current);
+        if decoded.data_type() == current.data_type() {
+            break;
         }
+        current = decoded;
     }
-    Ok(Arc::new(StringArray::from(rendered)))
+    let from = spark_cast_type_name(array.data_type());
+    match current.data_type() {
+        DataType::Float64 => Ok(Arc::new(render_double_strings(
+            current.as_primitive::<Float64Type>(),
+        ))),
+        DataType::Float32 => Ok(Arc::new(render_float_strings(
+            current.as_primitive::<Float32Type>(),
+        ))),
+        DataType::Date32 => {
+            let days = current.as_primitive::<Date32Type>();
+            let mut rendered = Vec::with_capacity(days.len());
+            for day in days.iter() {
+                let date = day.map(|value| {
+                    DateTime::from_timestamp(i64::from(value) * 86_400, 0).map(|at| at.date_naive())
+                });
+                match date {
+                    None => rendered.push(None),
+                    Some(None) => return Err(cast_overflow(name, &from, "STRING")),
+                    Some(Some(value)) => rendered.push(Some(format_iso_local_date(value))),
+                }
+            }
+            Ok(Arc::new(StringArray::from(rendered)))
+        }
+        DataType::Timestamp(unit, zone) => {
+            let ticks = cast(current.as_ref(), &DataType::Int64).map_err(|error| {
+                DataFusionError::Execution(format!(
+                    "column `{name}`: failed to read timestamp ticks ({error})"
+                ))
+            })?;
+            let ticks = ticks.as_primitive::<Int64Type>();
+            let parsed = crate::session::zone_localiser::zone_of(session_zone)
+                .map_err(|error| external(display, error))?;
+            let tick_unit = match unit {
+                TimeUnit::Second => TickUnit::Second,
+                TimeUnit::Millisecond => TickUnit::Millisecond,
+                TimeUnit::Microsecond => TickUnit::Microsecond,
+                TimeUnit::Nanosecond => TickUnit::Nanosecond,
+            };
+            let zoned = zone.is_some();
+            let mut rendered = StringBuilder::with_capacity(ticks.len(), ticks.len() * 32);
+            for row in 0..ticks.len() {
+                if ticks.is_null(row) {
+                    rendered.append_null();
+                    continue;
+                }
+                match wall_clock_from_ticks(ticks.value(row), tick_unit, zoned, &parsed) {
+                    Some(wall) => rendered.append_value(format_spark_timestamp_string(wall)),
+                    None => return Err(cast_overflow(name, &from, "STRING")),
+                }
+            }
+            Ok(Arc::new(rendered.finish()))
+        }
+        _ => cast_with_options(&current, &DataType::Utf8, &strict_cast_options())
+            .map_err(|_| cast_refusal(name, &current, &DataType::Utf8)),
+    }
 }
 
 #[cfg(feature = "postgres")]

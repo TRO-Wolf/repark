@@ -51,7 +51,7 @@ mod placement {
         }
     }
 
-    fn zone_of(id: &str) -> repark_connect::Result<Tz> {
+    pub(crate) fn zone_of(id: &str) -> repark_connect::Result<Tz> {
         Tz::from_str(&canonical_session_zone_id(id)).map_err(|error| ConnectError::Arrow {
             message: error.to_string(),
         })
@@ -124,7 +124,7 @@ mod placement {
 }
 
 #[cfg(feature = "postgres")]
-pub(crate) use placement::{localise_at, unlocalise};
+pub(crate) use placement::{localise_at, unlocalise, zone_of};
 
 #[cfg(all(test, feature = "postgres"))]
 mod tests;

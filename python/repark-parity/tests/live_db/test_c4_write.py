@@ -664,6 +664,75 @@ def test_assignable_pairs_store_bytes_equal_to_plain_insert(
             assert got == want, (typed, expr, door, got, want)
 
 
+TEXT_RENDER_EXPRS: tuple[str, ...] = (
+    "CAST('Infinity' AS DOUBLE)",
+    "CAST('-Infinity' AS DOUBLE)",
+    "CAST('NaN' AS DOUBLE)",
+    "1e7",
+    "1e16",
+    "1e-5",
+    "CAST(123456789.125 AS DOUBLE)",
+    "CAST('-0.0' AS DOUBLE)",
+    "CAST('Infinity' AS FLOAT)",
+    "CAST('-Infinity' AS FLOAT)",
+    "CAST('NaN' AS FLOAT)",
+    "CAST(1e7 AS FLOAT)",
+    "CAST(1e16 AS FLOAT)",
+    "CAST(1e-5 AS FLOAT)",
+    "CAST(123456789.125 AS FLOAT)",
+    "CAST('-0.0' AS FLOAT)",
+    "1.50BD",
+    "-0.10BD",
+    "DATE '2024-07-01'",
+    "DATE '0001-01-01'",
+    "DATE '10000-01-01'",
+    "DATE '-0001-01-01'",
+    "TIMESTAMP '2024-07-01 12:00:00+00'",
+    "TIMESTAMP '10000-01-01 00:00:00+00'",
+    "TIMESTAMP '-0001-01-01 00:00:00+00'",
+    "TIMESTAMP_NTZ '2024-07-01 12:00:00'",
+    "TIMESTAMP_NTZ '2024-07-01 12:00:00.123456'",
+    "TIMESTAMP_NTZ '10000-01-01 00:00:00'",
+    "CAST(TIMESTAMP '2024-07-01 12:00:00+00' AS TIMESTAMP_NS)",
+    "CAST(TIMESTAMP_NTZ '2024-07-01 12:00:00.123456789' AS TIMESTAMP_NS)",
+    "true",
+    "false",
+    "X'41'",
+)
+
+
+def test_text_columns_store_cast_as_string_on_all_three_paths(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]], tmp_path: Path
+) -> None:
+    """Every source into text stores what CAST AS STRING gives, in both zones.
+
+    C-4 fold 3 item 2: the chokepoint calls the engine's Spark string cast, so a
+    double Infinity stores 'Infinity' and a nanosecond timestamp stores its
+    session-zone wall, on the SQL door, the writer default and write.path=row.
+    """
+    conn, names = pg_live
+    schema = names["schema"]
+    for zone_index, zone in enumerate(("UTC", "America/New_York")):
+        session = _zoned_session(tmp_path, zone)
+        for index, expr in enumerate(TEXT_RENDER_EXPRS):
+            want = session.sql(f"SELECT CAST({expr} AS STRING)").collect()[0][0]
+            tables = {}
+            for door in ("sql", "wb", "wr"):
+                table = f"r{zone_index}_{index}_{door}"
+                conn.execute(f'CREATE TABLE "{schema}".{table} (id int4, v text)')
+                tables[door] = table
+            session.sql(f'INSERT INTO pg."{schema}".{tables["sql"]} SELECT 2, {expr}').collect()
+            assert _take(session) is not None
+            frame = session.sql(f"SELECT 2 AS id, {expr} AS v")
+            _write_frame(schema, tables["wb"], frame, None)
+            assert _take(session) is not None
+            _write_frame(schema, tables["wr"], frame, "row")
+            assert _take(session) is not None
+            for door in ("sql", "wb", "wr"):
+                got = conn.execute(f'SELECT v FROM "{schema}".{tables[door]}').fetchall()
+                assert got == [(want,)], (zone, expr, door, got, want)
+
+
 ZONE_CASES: tuple[tuple[str, str, str, str], ...] = (
     ("UTC", "TIMESTAMP '2024-07-01 23:30:00'", "2024-07-01", "2024-07-01 23:30:00"),
     (

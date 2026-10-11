@@ -151,6 +151,11 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   pairs store what one plain INSERT stores on all three paths, read back as text).
   The invalid-input string rows and the fitting string/bool-cross rows are deleted:
   those pairs refuse by type now.
+  **C-4 fold 3 item 2 (2026-10-11):**
+  `test_text_columns_store_cast_as_string_on_all_three_paths` (thirty-three
+  expressions — floats and doubles, decimals, dates, timestamps in three units,
+  booleans, binary — store what the engine's own `CAST(x AS STRING)` gives in UTC
+  and America/New_York, on the SQL door, the writer default and `write.path=row`).
   pins: c-4/C-013, C-014
 - `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
   drops its INSERT case (append INSERT writes now; the write pins live in
