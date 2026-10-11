@@ -288,6 +288,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
   gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
   value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
+- `insert.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `zone_wrapping_stream_sql` calls
+  `update_cast::nested_micro_ntz_wall_sql` with the source type `analyzed_types` already
+  returns, so a microsecond `TIMESTAMP_NTZ` leaf below the top level stores the session
+  wall when the supply is an instant. A wall supply is not wrapped. A top-level timestamp
+  stays on `store_kernel_sql`. pins: ice-ntz-nested-wall-1/C-003
 - `insert.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `zone_wrapping_stream_sql` asks
   `ntz_store::store_kernel_sql`, so a `timestamptz_ns` column of a MERGE INSERT goes through
   the zoned kernel and a wall is localised in the session zone, as INSERT localises it.

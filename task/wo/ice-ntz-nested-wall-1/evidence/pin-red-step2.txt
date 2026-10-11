@@ -1,0 +1,121 @@
+🍹 Building a mixed python/rust project
+🐍 Found CPython 3.12 at <repo>/.venv/bin/python
+🔗 Found pyo3 bindings with abi3-py3.12 support
+📡 Using build options features from pyproject.toml
+Using Python 3.12.3 environment at: <repo>/.venv
+Checked 10 packages in 1ms
+   Compiling repark-iceberg v1.5.4 (<repo>/crates/repark-iceberg)
+    Building [=======================> ] 606/611: repark-iceberg              
+   Compiling repark-core v1.5.4 (<repo>/crates/repark-core)
+    Building [=======================> ] 606/611: repark-core, repark-iceberg 
+    Building [=======================> ] 607/611: repark-core                 
+   Compiling repark-ta v1.5.4 (<repo>/crates/repark-ta)
+    Building [=======================> ] 607/611: repark-core, repark-ta      
+   Compiling repark-spark v1.5.4 (<repo>/crates/repark-spark)
+    Building [=======================> ] 607/611: repark-spark, repark-core, …
+    Building [=======================> ] 608/611: repark-spark, repark-core   
+    Building [=======================> ] 609/611: repark-spark                
+   Compiling repark-python v1.5.4 (<repo>/crates/repark-python)
+    Building [=======================> ] 610/611: repark-python               
+    Finished `release` profile [optimized] target(s) in 7m 08s
+📦 Built wheel for abi3 Python ≥ 3.12 to <wheel>/repark-wheel.whl
+✏️ Setting installed package as editable
+🛠 Installed repark-1.5.4
+.FF                                                                      [100%]
+=================================== FAILURES ===================================
+_______ test_merge_insert_doors_store_the_session_wall[America/New_York] _______
+
+tmp_path = PosixPath('<pytest-tmp>/pytest-1914/test_merge_insert_doors_store_1')
+zone = 'America/New_York'
+
+    @pytest.mark.parametrize("zone", ZONES)
+    def test_merge_insert_doors_store_the_session_wall(tmp_path: Path, zone: str) -> None:
+        """MERGE INSERT stores the session wall of an instant and leaves a wall literal."""
+        spark = open_session(zone, tmp_path)
+        try:
+            write_source(spark)
+            expected = SESSION_WALL[zone]
+            doors = (
+                ("column", merge_insert_column),
+                ("star", merge_insert_star),
+            )
+            for name, write in doors:
+                table = f"ice.ns.{name}"
+                create_nested(spark, table, "TIMESTAMP_NTZ")
+                write(spark, table)
+>               assert leaf_ticks(spark, table, "st.v") == [expected], name
+E               AssertionError: column
+E               assert [1767323045123456] == [1767305045123456]
+E                 
+E                 At index 0 diff: 1767323045123456 != 1767305045123456
+E                 
+E                 Full diff:
+E                   [
+E                 -     1767305045123456,
+E                 ?          ^^
+E                 +     1767323045123456,
+E                 ?          ^^
+E                   ]
+
+python/repark/tests/test_ice_ntz_nested_wall_1.py:191: AssertionError
+_________ test_merge_insert_doors_store_the_session_wall[Asia/Kolkata] _________
+
+tmp_path = PosixPath('<pytest-tmp>/pytest-1914/test_merge_insert_doors_store_2')
+zone = 'Asia/Kolkata'
+
+    @pytest.mark.parametrize("zone", ZONES)
+    def test_merge_insert_doors_store_the_session_wall(tmp_path: Path, zone: str) -> None:
+        """MERGE INSERT stores the session wall of an instant and leaves a wall literal."""
+        spark = open_session(zone, tmp_path)
+        try:
+            write_source(spark)
+            expected = SESSION_WALL[zone]
+            doors = (
+                ("column", merge_insert_column),
+                ("star", merge_insert_star),
+            )
+            for name, write in doors:
+                table = f"ice.ns.{name}"
+                create_nested(spark, table, "TIMESTAMP_NTZ")
+                write(spark, table)
+>               assert leaf_ticks(spark, table, "st.v") == [expected], name
+E               AssertionError: column
+E               assert [1767323045123456] == [1767342845123456]
+E                 
+E                 At index 0 diff: 1767323045123456 != 1767342845123456
+E                 
+E                 Full diff:
+E                   [
+E                 -     1767342845123456,
+E                 ?          - ^
+E                 +     1767323045123456,
+E                 ?           ^^
+E                   ]
+
+python/repark/tests/test_ice_ntz_nested_wall_1.py:191: AssertionError
+=========================== short test summary info ============================
+FAILED python/repark/tests/test_ice_ntz_nested_wall_1.py::test_merge_insert_doors_store_the_session_wall[America/New_York] - AssertionError: column
+assert [1767323045123456] == [1767305045123456]
+  
+  At index 0 diff: 1767323045123456 != 1767305045123456
+  
+  Full diff:
+    [
+  -     1767305045123456,
+  ?          ^^
+  +     1767323045123456,
+  ?          ^^
+    ]
+FAILED python/repark/tests/test_ice_ntz_nested_wall_1.py::test_merge_insert_doors_store_the_session_wall[Asia/Kolkata] - AssertionError: column
+assert [1767323045123456] == [1767342845123456]
+  
+  At index 0 diff: 1767323045123456 != 1767342845123456
+  
+  Full diff:
+    [
+  -     1767342845123456,
+  ?          - ^
+  +     1767323045123456,
+  ?           ^^
+    ]
+2 failed, 1 passed, 3 deselected in 0.45s

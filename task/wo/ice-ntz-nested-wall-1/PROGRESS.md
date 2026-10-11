@@ -8,6 +8,10 @@
 Asia/Kolkata store `1767323045123456`. On the commit the three zones store the
 session wall.
 
-**Next:** step 2, one commit per site: `zone_wrapping_stream_sql`,
-`store_assignment_cast_sql`, `update_projection_sql`,
+**Step 2, merge insert:** `1aa27854810ecaa157717faf718f8fa0c3c62963` calls the same walk from
+`zone_wrapping_stream_sql`. Red on the parent: the column-list door stores
+`1767323045123456` in America/New_York and Asia/Kolkata
+(`evidence/pin-red-step2.txt`). Green on the commit.
+
+**Next:** `store_assignment_cast_sql`, then `update_projection_sql`, then
 `insert_timestamp_ns::after_analysis`.
