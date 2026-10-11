@@ -2352,3 +2352,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the honest fix is test-side (C-002); the `generate_series` seed restores both
   cancel pins (C-003). `risk_tier: standard`. Branch `fix/cluster-tests-2`.
   pins: cluster-tests-2/C-001, C-002, C-003
+- [parity-live-infra-2-ledger.md](parity-live-infra-2-ledger.md) —
+  **PARITY-LIVE-INFRA-2 (2026-10-11):** the nightly live run goes green on all
+  ten reds, tests and prose only. The six `FileNotFoundError` reproduce tests
+  resolve the recorder interpreter through one helper (env override, box lane,
+  else the venv interpreter the runner's `record` extra provides), green both
+  ways (C-001); the stale int64 Column-door pin is int32 per live Spark
+  (C-002); hour/minute/second demote to known-FAIL metas (both engines refuse
+  `UNSUPPORTED_TIME_TYPE` byte-identically) with the always-PASS count at 212
+  (C-003); the 400k race wires its side session's catalog conf
+  (order-dependence, not a timing race; 20/20 standalone, prefixed orders
+  fixed) (C-004). `risk_tier: standard`. Branch
+  `test/parity-live-infra-2`.
+  pins: parity-live-infra-2/C-001, C-002, C-003, C-004
