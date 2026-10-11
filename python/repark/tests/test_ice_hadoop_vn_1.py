@@ -699,6 +699,11 @@ def test_live_spark_race_scan_forwards(tmp_path: Path) -> None:
                     table_root / "metadata" / "v2.metadata.json",
                 )
                 slow = spark.newSession()
+                slow.conf.set(
+                    f"spark.sql.catalog.{_SPARK_CATALOG}", "org.apache.iceberg.spark.SparkCatalog"
+                )
+                slow.conf.set(f"spark.sql.catalog.{_SPARK_CATALOG}.type", "hadoop")
+                slow.conf.set(f"spark.sql.catalog.{_SPARK_CATALOG}.warehouse", str(_WAREHOUSE))
                 data_root = table_root / "data"
                 before = {str(path) for path in data_root.rglob("*.parquet")}
                 thread = threading.Thread(target=_slow_race_insert, args=(slow, outcome_box))

@@ -1034,7 +1034,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   prefix, `v3` in the message, winner bytes per writer) and adds stale INSERT OVERWRITE,
   TRUNCATE, ALTER SET TBLPROPERTIES and saveAsTable(overwrite); `writeTo().overwrite`
   refuses declared on stale and fresh handles alike, pinned as the pre-existing refusal.
-  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **PARITY-LIVE-INFRA-2 (2026-10-11):** the 400k race wires the `vn` catalog conf
+  onto its `newSession` side session, which otherwise resolves `vn.ns.conc`
+  against `spark_catalog` (`REQUIRES_SINGLE_PART_NAMESPACE`) whenever another
+  module boots the shared context first — the nightly shape, red since 10-07.
+  Standalone the builder conf masked it (20/20 green either way).
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, parity-live-infra-2/C-004
 - [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
   combined interpreter; invocation in its docstring).
