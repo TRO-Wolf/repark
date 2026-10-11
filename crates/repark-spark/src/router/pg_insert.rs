@@ -75,7 +75,7 @@ async fn execute_postgres_insert(
             postgres_write_upsert_refusal("REPLACE INTO"),
         ));
     }
-    let deduplicated = super::insert_positional::deduplicate_source_names(insert);
+    let deduplicated = super::insert_positional::alias_source_positionally(insert);
     let current = deduplicated.as_ref().unwrap_or(insert);
     let Some(origin) = current.source.as_ref() else {
         return Err(DataFusionError::Plan(

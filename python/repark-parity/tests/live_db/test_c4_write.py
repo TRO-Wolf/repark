@@ -642,7 +642,7 @@ def test_assignable_pairs_store_bytes_equal_to_plain_insert(
     """
     conn, names = pg_live
     schema = names["schema"]
-    conn.execute(f'CREATE TYPE "{schema}".mood AS ENUM (\'happy\', \'sad\')')
+    conn.execute(f"CREATE TYPE \"{schema}\".mood AS ENUM ('happy', 'sad')")
     for index, (pg_type, expr, plain) in enumerate(ASSIGNABLE_STORE_CASES):
         typed = pg_type.format(schema=schema)
         tables = {}
@@ -880,6 +880,33 @@ def test_repeated_select_expressions_store_positionally(
         (1, 1),
         (5, 5),
     ]
+
+
+POSITIONAL_ALIAS_CASES: tuple[tuple[str, str, str, list[tuple[Any, ...]]], ...] = (
+    ("SELECT 1, '1'", "int4", "text", [(1, "1")]),
+    ("SELECT '1', 1", "text", "int4", [("1", 1)]),
+    ("SELECT 1, 1BD", "int4", "text", [(1, "1")]),
+    ("SELECT true, 'true'", "boolean", "text", [(True, "true")]),
+)
+
+
+def test_positionally_aliased_expressions_store_by_position(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """Two expressions sharing one display name store by position, not by name.
+
+    C-4 fold 3 item 3: the Postgres INSERT source aliases every unnamed
+    expression by position, so SELECT 1, '1' plans instead of colliding.
+    """
+    conn, names = pg_live
+    schema = names["schema"]
+    for index, (source, left, right, want) in enumerate(POSITIONAL_ALIAS_CASES):
+        table = f"pos{index}"
+        conn.execute(f'CREATE TABLE "{schema}".{table} (a {left}, b {right})')
+        spark.sql(f'INSERT INTO pg."{schema}".{table} {source}').collect()
+        assert _take(spark) == ("bulk", 1, None)
+        got = conn.execute(f'SELECT a, b FROM "{schema}".{table}').fetchall()
+        assert got == want, (source, got)
 
 
 def test_row_changing_statements_refuse_on_both_doors(

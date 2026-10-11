@@ -1121,3 +1121,19 @@ equals `CAST` exactly.
 
 S3-years (2026-10-11 verdict) is closed by the shared ISO date, except the gap
 wall's empty column name, which the S3 batch names.
+
+### 14.3 Item 3: the Postgres INSERT source aliases by position on both routes
+
+Fold 2 keyed its alias on the expression text, so `SELECT 1, '1'` still
+collided on the one display name (`Schema contains duplicate`). Both Postgres
+routes now alias every UNNAMED projection item by position before planning;
+named items keep the expression-text collision rule (renaming a named item
+would break `GROUP BY`/`ORDER BY` references to its alias, and the downstream
+sink reads the frame by position, never by name). On the Spark door the new
+walk sits beside the shared Iceberg rewrite, which is untouched; on the ANSI
+door the pg-local mirror is renamed to the same function. The Spark unit pin
+bites (it failed with the verdict's exact error before the fix, after the test
+harness gained the production display rule it was missing); the ANSI door
+installs no display rule, so its four-statement pin guards routing there, and
+`1BD` parses there as an implicit alias. The live pin stores all four sources
+by position through the SQL door.

@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use datafusion::error::DataFusionError;
 use datafusion::prelude::SessionContext;
@@ -25,6 +26,7 @@ fn spark_context() -> SessionContext {
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }
+    ctx.add_analyzer_rule(Arc::new(crate::SparkProjectionDisplay));
     ctx
 }
 
@@ -273,6 +275,10 @@ async fn pg_insert_with_repeated_expressions_plans_positionally() {
         "SELECT 1, 1",
         "SELECT 1 AS a, 1 AS a",
         "SELECT x, x FROM (VALUES (5)) AS one(x)",
+        "SELECT 1, '1'",
+        "SELECT '1', 1",
+        "SELECT 1, 1BD",
+        "SELECT true, 'true'",
     ] {
         let error = run(
             &ctx,

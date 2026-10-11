@@ -36,6 +36,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   planning; a `SELECT *, CAST(id AS STRING)` no longer leaks DataFusion's `Projections require
   unique expression names`. Its two children are in [insert_positional/](insert_positional/map.md).
   pins: u8-write-sql/C-011, C-023
+  **C-4 fold 3 item 3 (2026-10-11):** `alias_source_positionally`, beside the shared
+  rewrite and used only by the Postgres route: it aliases every UNNAMED projection
+  item by position (two different expressions can share one display name, which no
+  expression-text key can see), keeping the collision rule for named items. The shared
+  Iceberg path is untouched.
   **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** after that rewrite (`rewrite_positional_insert`)
   it runs `void_type::refuse_insert_source_types` on the prepared statement, so every
   positional INSERT door — append, owned append, OVERWRITE and VALUES — refuses a `-NULL`
@@ -92,6 +97,9 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   [../tests/pg_insert.rs](../tests/pg_insert.rs).
   **C-4 merge (2026-10-10):** the route runs before the ENC-1 guard in
   `execute_insert_routed`; the guard still sees every Iceberg target.
+  **C-4 fold 3 item 3 (2026-10-11):** the route calls `alias_source_positionally`,
+  so `SELECT 1, '1'` and its siblings plan instead of colliding on one display
+  name. pins: c-4/C-013
   **C-4 fold 2 item 5 (2026-10-10):** the source passes through the Iceberg route's
   `deduplicate_source_names` before planning, so a positional INSERT never depends on
   the SELECT's output names.

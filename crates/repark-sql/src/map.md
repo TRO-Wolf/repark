@@ -115,6 +115,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   **C-4 merge (2026-10-10):** the route runs before the ENC-1 guard in
   `execute_insert_routed`; a Postgres source is not an Iceberg table, so the guard still
   sees every Iceberg target.
+  **C-4 fold 3 item 3 (2026-10-11):** the local mirror is renamed to
+  `alias_source_positionally` and aliases every UNNAMED projection item by position,
+  as the Spark door's does; named items keep the collision rule. This door installs
+  no display rule, so its four-statement pin guards routing, not a collision.
   pins: c-4/C-013
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic

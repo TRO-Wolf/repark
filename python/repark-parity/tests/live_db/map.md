@@ -156,6 +156,9 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   expressions — floats and doubles, decimals, dates, timestamps in three units,
   booleans, binary — store what the engine's own `CAST(x AS STRING)` gives in UTC
   and America/New_York, on the SQL door, the writer default and `write.path=row`).
+  **C-4 fold 3 item 3 (2026-10-11):**
+  `test_positionally_aliased_expressions_store_by_position` (the four
+  same-display-name sources store by position through the SQL door).
   pins: c-4/C-013, C-014
 - `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
   drops its INSERT case (append INSERT writes now; the write pins live in
