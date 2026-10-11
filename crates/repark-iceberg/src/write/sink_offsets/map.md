@@ -37,6 +37,17 @@ directory holds the piece split out of it. The test files of the module stay bes
   path exactly. Pins: the two carried-name pins in `sink_offsets_stray_fence_tests.rs`;
   the kept-behaviour proof is the fold-6 `toTable` pin beside them.
   pins: mb-4-foreach-eo/C-048
+  Fold 8 (2026-10-11, the seventh verify's S3): the raced `toTable` batch itself still
+  ends `StreamingQueryException [STREAM_FAILED]` with the fence's text, while the
+  `foreachBatch` door ends the same race `RecoveryRequiredException`. On that door the
+  typed ending comes from the post-body audit, which converts the landed stray into a
+  reason with its remedy; the `toTable` door has no audit, and the fence's refusal
+  reaches the binding as an untyped catalog error, so mapping it there would couple
+  the mapper to the fence's wording, and typing it at the fence would re-pin every
+  text that asserts the shared refusal. The restart on each door is the typed
+  `RecoveryRequiredException` with both remedies, which is where the operator acts.
+  No code change; the difference is recorded here.
+  pins: mb-4-foreach-eo/C-050
 - `lineage.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10, ruling on the fourth verify's S1): the
   walk reports without a lower bound, and the `toTable` door has an entry.**
   - **No lower bound.** Fold 4's walk returned "nothing found" when the stretch under the
