@@ -7804,23 +7804,28 @@ the pin rather than obeying it.
 > [`task/s5-v-landing-ledger.md`](../task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md). TZ-6 / TZ-7 FIXED
 > notes were already in-file from #85 (not duplicated). No new `live-mirror:` tokens.
 
-### TZ-9 — `current_date` answers the UTC date, not the session-zone date
+### TZ-9 — `current_date` answers the UTC date, not the session-zone date — FIXED 2026-10-10
 
-- **repark** — `SELECT current_date` answers the UTC calendar date whatever
-  `spark.sql.session.timeZone` holds: under `Pacific/Kiritimati` (UTC+14) on
-  2026-09-18 the engine answered `2026-09-18` while the session-zone date was
-  already `2026-09-19` (measured in-repo on the release module, no JVM).
+- **repark** — `SELECT current_date` answers the session-zone calendar date. Before
+  CURRENT-DATE-SESSION-ZONE-1 it answered UTC whatever `spark.sql.session.timeZone`
+  held: under `Pacific/Kiritimati` (UTC+14) on 2026-09-18 the engine answered
+  `2026-09-18` while the session-zone date was already `2026-09-19` (measured in-repo
+  on the release module, no JVM).
 - **Apache Spark** — answers `current_date` in the session time zone: PySpark 4.1.2 measured
   2026-09-18 13:03 UTC answered `2026-09-19` under `Pacific/Kiritimati` and `2026-09-18` under
   `UTC` and `Etc/GMT+12`, each equal to that zone's calendar date (run 22b probe `probe_tz9.py`).
 - **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py::test_q14_current_date_answers_the_session_zone_date`
-  (`xfail(strict=True)` over `Pacific/Kiritimati` and `Etc/GMT+12`, midnight-race
-  guarded); `…::test_q14_current_date_bare_and_paren` now compares against the
-  session's configured zone instead of the host-local date.
-- **Rationale** — OPEN (2026-09-18), intent to FIX. Product defect, not a test
-  bug: the date builtin does not read the session zone. Test-only unit
-  TEST-HYGIENE-1 files it here and holds it red-on-purpose; the engine fix is a
-  later unit.
+  (the strict xfail retired; asserts over `Pacific/Kiritimati` and `Etc/GMT+12`,
+  midnight-race guarded); `…::test_q14_current_date_bare_and_paren` compares against the
+  session's configured zone instead of the host-local date;
+  `python/repark/tests/test_current_date_session_zone_1.py` (every `current_date`-rooted
+  spelling, both setting styles, UTC control, stored value);
+  `crates/repark-functions/src/current_date.rs::tests`.
+- **Rationale** — FIXED by CURRENT-DATE-SESSION-ZONE-1 (2026-10-10). DataFusion's
+  builtin folds the date at plan time from `datafusion.execution.time_zone`, which RePark
+  never sets; the owned `current_date` folds the query start time through the
+  `SessionTimeZoneConfig` carrier instead. SQL `curdate()` stays an open row (R-1 in the
+  unit ledger): it never resolved, which is a missing registration, not this defect.
 
 ### FN-1 — `element_at` out of range is NULL under ANSI
 
