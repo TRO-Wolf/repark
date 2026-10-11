@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use datafusion::arrow::datatypes::{DataType, IntervalUnit, TimeUnit};
 use datafusion::arrow::util::display::array_value_to_string;
-use datafusion::common::ScalarValue;
+use datafusion::common::{Column, ScalarValue};
 use datafusion::logical_expr::Expr;
 
 use super::{
@@ -10,6 +10,7 @@ use super::{
     TIMESTAMP_TO_DATE_UDF_NAME,
 };
 
+const GENERATED_PREFIX: &str = "__repark_";
 const NS_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ns__";
 const NS_ZONED_CAST_UDF_NAME: &str = "__repark_cast_timestamptz_ns__";
 const TRANSPARENT_UDF_NAMES: [&str; 4] = [
@@ -23,7 +24,7 @@ const INDEXING_UDF_NAMES: [&str; 2] = ["array_element", "__repark_array_get__"];
 pub(super) fn sql_text(expr: &Expr) -> String {
     match expr {
         Expr::Alias(alias) => sql_text(&alias.expr),
-        Expr::Column(column) | Expr::OuterReferenceColumn(_, column) => column.flat_name(),
+        Expr::Column(column) | Expr::OuterReferenceColumn(_, column) => column_text(column),
         Expr::LambdaVariable(variable) => variable.name.clone(),
         Expr::Literal(value, _) => literal_text(value),
         Expr::Cast(cast) if marked(&cast.expr) => sql_text(&cast.expr),
@@ -87,6 +88,16 @@ pub(super) fn sql_text(expr: &Expr) -> String {
         Expr::IsNull(value) => format!("{} IS NULL", sql_text(value)),
         Expr::IsNotNull(value) => format!("{} IS NOT NULL", sql_text(value)),
         other => other.human_display().to_string(),
+    }
+}
+
+fn column_text(column: &Column) -> String {
+    let generated = (column.relation.as_ref())
+        .is_some_and(|relation| relation.table().starts_with(GENERATED_PREFIX));
+    if generated {
+        column.name.clone()
+    } else {
+        column.flat_name()
     }
 }
 

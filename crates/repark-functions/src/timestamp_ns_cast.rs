@@ -453,10 +453,23 @@ pub fn narrow_timestamp_ns_expr(expr: Expr) -> Expr {
     Expr::ScalarFunction(ScalarFunction::new_udf(Arc::clone(kernel), vec![value]))
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash)]
 struct NarrowTimestampNs {
     signature: Signature,
     aliases: Vec<String>,
+}
+
+#[expect(
+    clippy::missing_fields_in_debug,
+    reason = "An engine error prints this text; it stays the text main prints."
+)]
+impl std::fmt::Debug for NarrowTimestampNs {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("NarrowTimestampNs")
+            .field("signature", &self.signature)
+            .finish()
+    }
 }
 
 impl NarrowTimestampNs {
@@ -517,6 +530,12 @@ impl ScalarUDFImpl for NarrowTimestampNs {
         };
         if args.len() == 1 && narrowed(&args[0]) {
             return Ok(ExprSimplifyResult::Simplified(args.remove(0)));
+        }
+        if !self.aliases.is_empty() {
+            let written = ScalarFunction::new_udf(Arc::clone(&NARROW_TIMESTAMP_NS), args);
+            return Ok(ExprSimplifyResult::Simplified(Expr::ScalarFunction(
+                written,
+            )));
         }
         Ok(ExprSimplifyResult::Original(args))
     }

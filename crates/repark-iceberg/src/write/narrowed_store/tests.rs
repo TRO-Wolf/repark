@@ -219,6 +219,17 @@ async fn the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut() {
         let plan = plan_of(&ctx, narrowed.clone()).await;
         let found = column_narrowed(&plan, 1, None).expect("the kernel's mark");
         assert_eq!(found.value, "src.m");
+        let generated = ctx
+            .table("src")
+            .await
+            .unwrap()
+            .alias("__repark_selx_1")
+            .unwrap()
+            .select(vec![col("id"), coalesce(vec![kernel(mark, "m"), col("u")])])
+            .unwrap()
+            .into_unoptimized_plan();
+        let found = column_narrowed(&generated, 1, None).expect("the kernel's mark");
+        assert_eq!(found.value, "m");
         assert_eq!(found.beside_untyped_null, untyped_null);
         let written = identity(NARROW_TIMESTAMP_NS_UDF_NAME, instant(), instant(), narrowed);
         let forgiven = plan_of(&ctx, written).await;

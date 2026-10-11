@@ -806,6 +806,14 @@ fn the_narrowing_kernel_over_a_mark_carries_the_mark_and_prints_as_the_written_o
             written(col("c")).schema_name().to_string()
         );
         assert_ne!(narrowed, written(col("c")));
+        assert_eq!(format!("{narrowed:?}"), format!("{:?}", written(col("c"))));
+        let context = SimplifyContext::builder()
+            .with_schema(Arc::new(schema()))
+            .build();
+        let optimized = kernel.func.simplify(vec![col("c")], &context).unwrap();
+        assert!(
+            matches!(optimized, ExprSimplifyResult::Simplified(plain) if plain == written(col("c")))
+        );
         assert!(holds_mark(&narrowed));
         assert!(!is_narrowing_mark(&narrowed));
         assert!(kind_of(&narrowed, &schema()) == Kind::Coarser);
