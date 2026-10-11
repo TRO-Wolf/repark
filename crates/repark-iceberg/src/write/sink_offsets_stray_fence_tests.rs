@@ -210,6 +210,119 @@ async fn every_arm_of_the_table_door_still_lands_over_a_foreign_commit() {
     }
 }
 
+fn ours_since(table: &Table, began: Option<i64>) -> Vec<(i64, Option<i64>)> {
+    main_lineage(table.metadata())
+        .take_while(|snapshot| Some(snapshot.snapshot_id()) != began)
+        .filter(|snapshot| stamped_by(&snapshot.summary().additional_properties, query()))
+        .map(|snapshot| (snapshot.snapshot_id(), snapshot.parent_snapshot_id()))
+        .collect()
+}
+
+async fn raced_on_carried(arm: Arm, window: Window, marked: bool) -> Raced {
+    let carried = if marked { "marked" } else { "carried" };
+    let name = format!("{}_{carried}_{window:?}", arm_name(arm)).to_lowercase();
+    let (_warehouse, memory, ident) = fixture(&name).await;
+    let (table, seeded) = seed(&memory, &ident).await;
+    let epoch = if marked {
+        commit_starting_mark(&memory, &table, query())
+            .await
+            .expect("mark");
+        0
+    } else {
+        stamped_append(
+            &memory,
+            &ident,
+            &stamp_for(0, SinkDoor::ForeachBatch),
+            &[80],
+        )
+        .await;
+        1
+    };
+    let table = memory.load_table(&ident).await.expect("reload");
+    let began = table.metadata().current_snapshot_id();
+    let (probe, catalog) = probed(&memory);
+    let stamp = stamp_for(epoch, SinkDoor::Table);
+    let guard = BatchScope::enter_on(&table, stamp.clone()).expect("enter");
+    let mut loaded = table.clone();
+    match window {
+        Window::BeforeTheClaim => {
+            land(&memory, &ident, Foreign::Stray, 90).await;
+            loaded = memory.load_table(&ident).await.expect("reload");
+        }
+        Window::ClaimToCommit | Window::DuringARetry => {
+            let files = stage(&table, &[91]).await;
+            let mut racers = Vec::new();
+            racers.push(files);
+            if window == Window::DuringARetry {
+                racers.push(Vec::new());
+                let opener = stage(&table, &[92]).await;
+                *probe.stamped_racer.lock().expect("stamped") = Some((their_stamp(), opener));
+            }
+            *probe.racers.lock().expect("racers") = racers;
+        }
+    }
+    let outcome = run_arm(arm, &catalog, &loaded, &seeded, &guard, &stamp, false).await;
+    drop(guard);
+    Raced {
+        outcome,
+        after: memory.load_table(&ident).await.expect("reload"),
+        began,
+        updates: probe.seen().len(),
+    }
+}
+
+#[tokio::test]
+async fn a_table_door_stamp_under_a_foreach_carried_name_is_refused_over_a_stray() {
+    for arm in ARMS {
+        for window in WINDOWS {
+            let raced = raced_on_carried(arm, window, false).await;
+            let cell = format!("{arm:?} {window:?}");
+            let strays = unstamped_on_main(&raced.after, raced.began);
+            assert_eq!(strays.len(), 1, "{cell}: the stray landed");
+            let refused = raced.outcome.expect_err(&cell);
+            assert!(
+                refused.contains(&format!(
+                    "snapshot {stray} (append) landed on the sink without a stamp after this batch began",
+                    stray = strays[0]
+                )),
+                "{cell}: {refused}"
+            );
+            assert!(ours_since(&raced.after, raced.began).is_empty(), "{cell}");
+            assert_eq!(
+                raced.after.metadata().current_snapshot_id(),
+                Some(strays[0]),
+                "{cell}: the stray is the head"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_table_door_stamp_under_a_marked_name_is_refused_over_a_stray() {
+    for arm in ARMS {
+        for window in WINDOWS {
+            let raced = raced_on_carried(arm, window, true).await;
+            let cell = format!("{arm:?} {window:?}");
+            let strays = unstamped_on_main(&raced.after, raced.began);
+            assert_eq!(strays.len(), 1, "{cell}: the stray landed");
+            let refused = raced.outcome.expect_err(&cell);
+            assert!(
+                refused.contains(&format!(
+                    "snapshot {stray} (append) landed on the sink without a stamp after this batch began",
+                    stray = strays[0]
+                )),
+                "{cell}: {refused}"
+            );
+            assert!(ours_since(&raced.after, raced.began).is_empty(), "{cell}");
+            assert_eq!(
+                raced.after.metadata().current_snapshot_id(),
+                Some(strays[0]),
+                "{cell}: the stray is the head"
+            );
+        }
+    }
+}
+
 #[tokio::test]
 async fn a_stray_buried_under_another_query_s_stamp_still_refuses_every_arm() {
     for arm in ARMS {

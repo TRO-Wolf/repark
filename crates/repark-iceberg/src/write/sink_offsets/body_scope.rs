@@ -115,7 +115,10 @@ fn admit_sink_commit(scope: &BodyScope, table: &Table) -> Option<MicroBatchError
         let Began::At(head) = entry.began else {
             return None;
         };
-        let stray = stray_since(table.metadata(), head, &entry.stamp)?;
+        let stray = match stray_since(table, head, &entry.stamp) {
+            Ok(stray) => stray?,
+            Err(error) => return Some(error),
+        };
         return Some(over_a_stray(stray, &entry.stamp));
     }
     let refusal = MicroBatchError::UnstampedSinkWrite {

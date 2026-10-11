@@ -29,6 +29,14 @@ directory holds the piece split out of it. The test files of the module stay bes
   commit; a stray buried under another query's stamp) and
   `sink_offsets_body_scope_tests.rs::the_guard_checks_a_claimed_sink_commit_for_a_stray_whatever_built_it`.
   pins: mb-4-foreach-eo/C-045
+  Fold 7 (2026-10-11, the sixth verify's S1): the stray leg also runs for a `toTable`
+  stamp when the name is carried by `foreachBatch` on the sink (`carried_by_foreach`, the
+  D2 predicate the walk uses). `stray_since` takes the table the fence already holds and
+  reads only what is in its loaded metadata, the starting-mark property and the main
+  lineage; no catalog call, no file read, no new seam. A `toTable`-only name takes the old
+  path exactly. Pins: the two carried-name pins in `sink_offsets_stray_fence_tests.rs`;
+  the kept-behaviour proof is the fold-6 `toTable` pin beside them.
+  pins: mb-4-foreach-eo/C-048
 - `lineage.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10, ruling on the fourth verify's S1): the
   walk reports without a lower bound, and the `toTable` door has an entry.**
   - **No lower bound.** Fold 4's walk returned "nothing found" when the stretch under the

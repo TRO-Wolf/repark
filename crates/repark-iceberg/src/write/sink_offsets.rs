@@ -314,17 +314,19 @@ impl ClaimedStamp {
     }
 }
 
-fn stray_since<'metadata>(
-    metadata: &'metadata TableMetadata,
+fn stray_since<'table>(
+    table: &'table Table,
     floor: Option<i64>,
     stamp: &CommitStamp,
-) -> Option<&'metadata SnapshotRef> {
-    if stamp.door != SinkDoor::ForeachBatch {
-        return None;
+) -> Result<Option<&'table SnapshotRef>, MicroBatchError> {
+    if stamp.door != SinkDoor::ForeachBatch
+        && !lineage::carried_by_foreach(table, stamp.record.query)?
+    {
+        return Ok(None);
     }
-    main_lineage(metadata)
+    Ok(main_lineage(table.metadata())
         .take_while(|snapshot| Some(snapshot.snapshot_id()) != floor)
-        .find(|snapshot| lineage::unstamped(snapshot))
+        .find(|snapshot| lineage::unstamped(snapshot)))
 }
 
 fn over_a_stray(stray: &SnapshotRef, stamp: &CommitStamp) -> MicroBatchError {

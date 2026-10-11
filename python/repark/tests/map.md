@@ -8138,6 +8138,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   statistical here; the deterministic pin per arm is in the iceberg crate
   (`sink_offsets_stray_fence_tests.rs`).
   pins: mb-4-foreach-eo/C-045
+- [test_mb_4_streaming_door_switch.py](test_mb_4_streaming_door_switch.py) —
+  **MB-4-FOREACH-EO fold 7 (2026-10-11, the sixth verify's S1):** the verifier's door-switch
+  choreography through the public door. A `foreachBatch` run, three more source commits, a
+  `toTable` run under the same name while one foreign statement (an insert, a delete of
+  delivered rows, a duplicate of delivered rows) lands, per restart door. The raced run is
+  refused by name or the restart is; after `expire_snapshots` to one snapshot the restart
+  on each door is refused by name, never silent; following the printed rollback leaves the
+  source and sink row sets equal. Attempts loop until the foreign lands, so the pin is
+  deterministic once the race hits.
+  pins: mb-4-foreach-eo/C-048
 - [test_mb_4_streaming_remedies.py](test_mb_4_streaming_remedies.py) — **MB-4-FOREACH-EO
   fold 4 (2026-10-10, the third verify's first two S1):** every remedy a stray refusal prints,
   followed as printed, with the sink's rows counted exactly. A stray under a stamp (the body

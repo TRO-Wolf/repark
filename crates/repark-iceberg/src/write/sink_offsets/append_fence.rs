@@ -76,13 +76,17 @@ impl AppendFence {
 
     fn refuse_stamp(claimed: &ClaimedStamp, refreshed: &Table) -> Option<Error> {
         let metadata = refreshed.metadata();
-        let (message, refusal) = if let Some(breach) = breach(metadata, claimed) {
-            let message = Self::message(claimed, metadata, &breach);
-            let refusal = Self::typed(claimed, refreshed, &breach, &message);
-            (message, refusal)
-        } else {
-            let refusal = epoch_check(refreshed, &claimed.stamp).err()?;
-            (refusal.to_string(), refusal)
+        let (message, refusal) = match breach(refreshed, claimed) {
+            Err(error) => (error.to_string(), error),
+            Ok(Some(found)) => {
+                let message = Self::message(claimed, metadata, &found);
+                let refusal = Self::typed(claimed, refreshed, &found, &message);
+                (message, refusal)
+            }
+            Ok(None) => {
+                let refusal = epoch_check(refreshed, &claimed.stamp).err()?;
+                (refusal.to_string(), refusal)
+            }
         };
         latch_refusal(refreshed, &claimed.stamp, &refusal);
         Some(
@@ -169,10 +173,11 @@ fn display_snapshot(snapshot: Option<SnapshotId>) -> String {
     snapshot.map_or_else(|| String::from("none"), |id| id.to_string())
 }
 
-fn breach<'metadata>(
-    metadata: &'metadata TableMetadata,
+fn breach<'table>(
+    table: &'table Table,
     claimed: &ClaimedStamp,
-) -> Option<Breach<'metadata>> {
+) -> std::result::Result<Option<Breach<'table>>, MicroBatchError> {
+    let metadata = table.metadata();
     let query = claimed.stamp.record.query;
     let base = claimed.base.map(SnapshotId::get);
     let mut reached = base.is_none();
@@ -182,13 +187,13 @@ fn breach<'metadata>(
             break;
         }
         if stamped_by(&snapshot.summary().additional_properties, query) {
-            return Some(Breach::ConcurrentStamp(snapshot));
+            return Ok(Some(Breach::ConcurrentStamp(snapshot)));
         }
     }
     if !reached {
-        return Some(Breach::BaseLeftMain);
+        return Ok(Some(Breach::BaseLeftMain));
     }
-    stray_since(metadata, base, &claimed.stamp).map(Breach::Stray)
+    Ok(stray_since(table, base, &claimed.stamp)?.map(Breach::Stray))
 }
 
 pub(super) fn refusal_of(error: &Error) -> Option<MicroBatchError> {

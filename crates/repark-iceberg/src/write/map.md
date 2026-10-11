@@ -145,6 +145,12 @@ repark-core's error map.
   naming the stray, with no stamp and no half of one on the table; on a `toTable` stamp every
   arm still lands over the foreign commit. A child of the probe module.
   pins: mb-4-foreach-eo/C-045
+  Fold 7 (2026-10-11, the sixth verify's S1): two pins over every arm by three windows where
+  the `toTable` stamp runs under a name the `foreachBatch` door carried, once with a
+  `foreachBatch` stamp on the sink and once with only the starting mark. Every cell is
+  refused with the fence's text and the stray stays the head. The fold-6 `toTable` pin, on a
+  name that only ran through `toTable`, still lands and is the kept-behaviour proof.
+  pins: mb-4-foreach-eo/C-048
 - `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10,
   rulings on the fourth verify's S1):** the module re-exports `carried_by_foreach`, which
   tells the `toTable` door whether a name is walked. The scope learns the head the driver
