@@ -609,6 +609,103 @@ def command_summarize(arguments: argparse.Namespace) -> None:
     print(f"rows {len(keys)} differ {differ}", file=sys.stderr)
 
 
+FIELD_DOORS = (
+    "merge_update_field",
+    "merge_update_field_literal",
+    "update_field_where",
+    "update_field_nowhere",
+    "update_field_col_where",
+    "update_field_col_nowhere",
+)
+INSTANT_SOURCES = ("ts_literal", "ts_column")
+
+
+def command_summary_head(arguments: argparse.Namespace) -> None:
+    """Write the five head counts from the three JSONL files."""
+    head = load_cells(Path(arguments.head))
+    spark = load_cells(Path(arguments.spark))
+    main = load_cells(Path(arguments.main))
+    spark_equal = 0
+    spark_total = 0
+    spark_differ: list[str] = []
+    utc_wall: dict[tuple[str, str], int] = {}
+    for key, cell in sorted(head.items()):
+        schema, door, mode, zone, source = key
+        if schema != "ntz_nested" or source not in INSTANT_SOURCES:
+            continue
+        spark_total += 1
+        same = tick_text(cell) == tick_text(spark.get(key, {}))
+        if same:
+            spark_equal += 1
+        else:
+            spark_differ.append(
+                f"{schema} {door} {mode} {zone} {source} head={tick_text(cell)} "
+                f"spark={tick_text(spark.get(key, {}))}"
+            )
+        if zone != "UTC" and "error_class" not in cell and cell.get("ticks_us") == [INSTANT_US]:
+            utc_wall[(door, source)] = utc_wall.get((door, source), 0) + 1
+    field_equal, field_total, field_moved = compare_group(
+        head, main, lambda key: key[1] in FIELD_DOORS
+    )
+    ltz_equal, ltz_total, ltz_moved = compare_group(head, main, lambda key: key[0] == "ltz_nested")
+    top_equal, top_total, top_moved = compare_group(head, main, lambda key: key[0] == "ntz_top")
+    lines = [
+        "# ICE-NTZ-NESTED-WALL-1 head counts",
+        "",
+        "Counts are computed by `probe.py summary-head` from the JSONL files.",
+        "Ticks are microseconds from `toArrow()` cast to int64.",
+        "",
+        f"ntz_nested instant cells equal to Spark: {spark_equal} of {spark_total}.",
+        f"field-assignment cells identical to main: {field_equal} of {field_total}.",
+        f"ltz_nested cells identical to main: {ltz_equal} of {ltz_total}.",
+        f"ntz_top cells identical to main: {top_equal} of {top_total}.",
+        f"instant cells still on the UTC wall outside UTC: {sum(utc_wall.values())}.",
+        "",
+        "## Instant cells still on the UTC wall, by door and source",
+        "",
+    ]
+    if utc_wall:
+        for (door, source), count in sorted(utc_wall.items()):
+            lines.append(f"- {door} {source}: {count}")
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Cells that differ from Spark", ""])
+    lines.extend(spark_differ or ["- none"])
+    lines.extend(["", "## Controls that moved", ""])
+    moved = field_moved + ltz_moved + top_moved
+    lines.extend(moved or ["- none"])
+    lines.append("")
+    Path(arguments.summary).write_text("\n".join(lines), encoding="utf-8")
+    print(
+        f"spark {spark_equal}/{spark_total} field {field_equal}/{field_total} "
+        f"ltz {ltz_equal}/{ltz_total} top {top_equal}/{top_total} "
+        f"utc_wall {sum(utc_wall.values())} moved {len(moved)}",
+        file=sys.stderr,
+    )
+
+
+def compare_group(
+    head: dict[tuple[str, str, str, str, str], dict[str, Any]],
+    main: dict[tuple[str, str, str, str, str], dict[str, Any]],
+    keep: Any,
+) -> tuple[int, int, list[str]]:
+    """Return equal count, total, and the lines that differ from main."""
+    equal = 0
+    total = 0
+    moved: list[str] = []
+    keys = sorted(key for key in set(head) | set(main) if keep(key))
+    for key in keys:
+        total += 1
+        left = tick_text(head.get(key, {}))
+        right = tick_text(main.get(key, {}))
+        if left == right:
+            equal += 1
+        else:
+            schema, door, mode, zone, source = key
+            moved.append(f"{schema} {door} {mode} {zone} {source} head={left} main={right}")
+    return equal, total, moved
+
+
 def load_cells(path: Path) -> dict[tuple[str, str, str, str, str], dict[str, Any]]:
     """Return measured cells keyed by schema, door, mode, zone and source."""
     found: dict[tuple[str, str, str, str, str], dict[str, Any]] = {}
@@ -642,6 +739,12 @@ def build_parser() -> argparse.ArgumentParser:
     summary.add_argument("--spark", required=True)
     summary.add_argument("--summary", required=True)
     summary.set_defaults(func=command_summarize)
+    head = sub.add_parser("summary-head")
+    head.add_argument("--head", required=True)
+    head.add_argument("--spark", required=True)
+    head.add_argument("--main", required=True)
+    head.add_argument("--summary", required=True)
+    head.set_defaults(func=command_summary_head)
     return parser
 
 

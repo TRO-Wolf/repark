@@ -22,10 +22,11 @@ names the store sites. It changes no product code.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Main `2c33f289` is measured before any change and shows the split of the registry row. | The step-0 probe output. | **OPEN** | §1. Field assignment stores the session wall (28 cells). The other answering doors store the UTC wall (102 cells). No pin cites this clause yet. |
-| C-002 | Spark 4.1.2 with Iceberg 1.11 is measured on every nested door of the inventory. | The Spark probe output. | **OPEN** | §2. Spark stores the session wall on every door it answers. No pin cites this clause yet. |
-| C-003 | Every nested door stores the wall Spark stores, in three zones. | Pins, next round. | **OPEN** | Q1. The rule Spark measured is the session wall, including the doors RePark still errors. |
-| C-004 | Controls are identical to main. | Pins, next round. | **OPEN** | §4. This round changed no product code, so the controls are main's. A nested `TIMESTAMP` leaf localises an NTZ literal only on field assignment. |
+| C-001 | Main `2c33f289` is measured before any change and shows the split of the registry row. | The step-0 probe output. | **PROVEN** | §1. [repark-main.jsonl](../../wo/ice-ntz-nested-wall-1/evidence/repark-main.jsonl) and [summary.md](../../wo/ice-ntz-nested-wall-1/evidence/summary.md). Field assignment stores the session wall. The other answering doors store the UTC wall. |
+| C-002 | Spark 4.1.2 with Iceberg 1.11 is measured on every nested door of the inventory. | The Spark probe output. | **PROVEN** | §2. [spark-4.1.2.jsonl](../../wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl). Spark stores the session wall on every door it answers. |
+| C-003 | Every nested door stores the wall Spark stores, in three zones. | Head probe and the facade pins. | **OPEN** | Q5. Column instants on the wired doors store the session wall. The cells in §8 still store the UTC wall or still refuse. The row R-011 is narrowed, not closed. |
+| C-004 | Controls are identical to main. | Head probe. | **PROVEN** | [summary-head.md](../../wo/ice-ntz-nested-wall-1/evidence/summary-head.md): field-assignment 324 of 324, `ltz_nested` 396 of 396, `ntz_top` 396 of 396, moved 0. pins: ice-ntz-nested-wall-1/C-004 |
+| C-005 | `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` store the session wall. | Head probe against main. | **OPEN** | They still refuse with main's error (`update_whole_nowhere`, `update_col_nowhere`, `insert_overwrite_values`). Not a stored-value change. |
 
 ## 1. Main, measured before any change (C-001)
 
@@ -231,3 +232,60 @@ are stop lines of this round. No product file was edited.
   does not cover `update_projection_sql`. *Lean:* allow the parameter. It is
   the source type three of the five sites already hold, passed into the two
   that do not. The walk stays one function. No sixth site, no third crate.
+- **Q4 (C-003, RULING). Round 5.** No renderer and no re-parse. One decision
+  function, two emitters. Ruled and applied: `nested_micro_ntz_decision`.
+- **Q5 (C-003, RULING). Round 5.** A source analyzed as a wall is not wrapped.
+  Literal cells that stay on `1767323045123456` are equal to main and stay.
+  The list is §8. The row is narrowed. C-003 stays open.
+
+## 7. Callers of the two signature changes
+
+`store_assignment_cast_sql(expr, source, target)`:
+
+| Caller | Passes |
+|---|---|
+| `merge/insert.rs` `zone_wrapping_stream_sql` LTZ arm | the planned source from `analyzed_types` |
+| `merge/insert.rs` `store_assignment_then_sql` | `None`. The caller has the SQL text and the target type only. |
+| `merge/mod.rs` `rewrite_column_with_maps` | `None`, through `store_assignment_then_sql` |
+| `merge/not_matched_by_source.rs` `rewrite_else` | `None`, through `store_assignment_then_sql` |
+| `repark-spark` `nested_assign.rs` `assignment_cast_sql` | the probed type when `probe_type` returns one, else `None`. A path longer than one step calls `nested_leaf_cast_sql` and does not call this function. |
+
+`update_projection_sql(schema, alias, assignments, sources)`:
+
+| Caller | Passes |
+|---|---|
+| `predicate_dml.rs` `collect_identity_update_rows` | one `analyzed_types` of the SET expressions, or `None` when that analysis fails |
+
+## 8. Head measurement
+
+[repark-head.jsonl](../../wo/ice-ntz-nested-wall-1/evidence/repark-head.jsonl),
+counted by `probe.py summary-head` into
+[summary-head.md](../../wo/ice-ntz-nested-wall-1/evidence/summary-head.md).
+
+- ntz_nested instant cells equal to Spark: 173 of 264.
+- field-assignment cells identical to main: 324 of 324.
+- `ltz_nested` identical to main: 396 of 396.
+- `ntz_top` identical to main: 396 of 396.
+- instant cells still on the UTC wall outside UTC: 22.
+
+Those 22, by door and source: `insert_values` `ts_literal` 2;
+`merge_update_star` `ts_column` 4; `merge_update_star` `ts_literal` 4;
+`merge_update_whole` `ts_literal` 4; `merge_update_whole_literal` `ts_literal` 4;
+`update_whole_where` `ts_literal` 4. They are equal to main. The bare-context
+probe that types `TIMESTAMP '…+00:00'` as `Timestamp(Nanosecond, None)` is
+`crates/repark-spark/src/merge/nested_assign/tests.rs`, and it is not fixed
+here.
+
+## Release note
+
+Nested `TIMESTAMP_NTZ` values written by `INSERT` before the fix hold the UTC wall.
+
+| Door | Before | After |
+|---|---|---|
+| `INSERT … SELECT`, `INSERT … BY NAME`, `INSERT OVERWRITE … SELECT`, `REPLACE WHERE` | UTC wall | session wall, column and literal |
+| DataFrame `append`, `insertInto`, `saveAsTable`, `overwritePartitions`, `overwrite(condition)`, `insertInto(overwrite=True)` | UTC wall | session wall, column and literal |
+| MERGE INSERT, `INSERT *`, literal INSERT | UTC wall | session wall, column and literal |
+| MERGE UPDATE of a column, `UPDATE … WHERE` from a sibling column | UTC wall | session wall |
+| Field assignment | session wall | session wall |
+| `INSERT … VALUES` of a literal, MERGE `UPDATE SET *`, whole-struct literal MERGE and `UPDATE … WHERE` | UTC wall | UTC wall |
+| `UPDATE` with no `WHERE`, `INSERT OVERWRITE … VALUES` | refusal | the same refusal |

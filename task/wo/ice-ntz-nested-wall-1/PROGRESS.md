@@ -47,5 +47,9 @@ the plan. Red on the parent: `INSERT … SELECT` of a column stores
 DataFrame `append` store the session wall. A literal stays
 `1767323045123456`.
 
-**Next:** step 3. Rebuild, probe, `summary-head.md`, the gate list, the
-ledger, and the narrowed R-011 row.
+**Step 3:** release rebuilt. Head probe
+`evidence/repark-head.jsonl` (1191 lines). `probe.py summary-head` wrote
+`evidence/summary-head.md`: Spark 173 of 264, field 324 of 324, `ltz_nested`
+396 of 396, `ntz_top` 396 of 396, UTC-wall remainder 22, controls moved 0.
+R-011 is narrowed. C-003 stays open for those 22 and the doors that still
+refuse. C-004 is proven. Gates follow.

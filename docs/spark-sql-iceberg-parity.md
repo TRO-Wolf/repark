@@ -3348,30 +3348,25 @@ still open is `isModifiable`.
   `DELETE` statements, not a stored-value defect; out of ICE-TSNS-MERGE-WALL-1's scope.
   Ledger question Q3.
 
-### ICE-TSNS-SQL-1-R-011 — OPEN (measured 2026-10-09): a nested microsecond `TIMESTAMP_NTZ` field stores two walls
+### ICE-TSNS-SQL-1-R-011 — NARROWED (2026-10-11): a nested microsecond `TIMESTAMP_NTZ` leaf stores the session wall, except the literal cells that stay on the UTC wall
 
-- **repark** — the microsecond twin of the nested split R-007's fold 1 closed for
-  `timestamp_ns`, on main `40fc916f` and unchanged at head. Into
-  `struct<v: TIMESTAMP_NTZ, n: INT>` in a session whose zone is not UTC, an instant
-  (`TIMESTAMP`, `timestamptz_ns`) stores its **session** wall through field assignment
-  (`MERGE … UPDATE SET t.st.v = …` from a column or a literal, `UPDATE … SET st.v = …`
-  from a column or a literal: 28 measured cells) and its **UTC** wall through every other
-  door (nested `INSERT … VALUES` / `SELECT` / `BY NAME` / `OVERWRITE` / `REPLACE WHERE`,
-  MERGE INSERT, whole-struct assignment by MERGE or UPDATE, the DataFrame writers: 106
-  cells). `TIMESTAMP '2026-01-02 03:04:05.123456+00:00'` in America/New_York stores
-  `1767305045123456` by `SET t.st.v` and `1767323045123456` by `INSERT`; in Asia/Kolkata
-  `1767342845123456` and `1767323045123456`. A wall source and a UTC session agree on every
-  door (379 cells).
+- **repark** — into `struct<v: TIMESTAMP_NTZ, n: INT>`, a column instant stores the
+  session wall through `INSERT … SELECT`, `INSERT … BY NAME`, `INSERT OVERWRITE … SELECT`,
+  `REPLACE WHERE`, MERGE INSERT, whole-struct MERGE UPDATE of a column, `UPDATE … WHERE`
+  from a sibling column, and the DataFrame writers (`append`, `insertInto`, `saveAsTable`,
+  `overwritePartitions`, `overwrite(condition)`, `insertInto(overwrite=True)`). Field
+  assignment already stored that wall and is unchanged. These literal cells still store
+  `1767323045123456` in every zone, equal to main: `INSERT … VALUES`, MERGE `UPDATE SET *`,
+  whole-struct MERGE UPDATE of a literal, and `UPDATE … WHERE` of a literal.
+  `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` still refuse as main refuses.
 - **Apache Spark** — a `TIMESTAMP` assigned to a `TIMESTAMP_NTZ` field stores its wall in the
-  session zone on every door. *(oracle: documented — Spark's `TIMESTAMP` to `TIMESTAMP_NTZ`
-  cast rule, the one the top-level column follows since NTZ-STORE-DOORS-1; the nested doors
-  were not measured on Spark by this unit.)*
+  session zone on every door it answers. *(oracle: [spark-4.1.2.jsonl](../task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl).)*
 - **Pin** — `crates/repark-spark/tests/timestamp_ns_wall_doors.rs`
-  `a_nested_microsecond_ntz_field_keeps_the_split_main_has` holds the six nested doors in
-  three zones as they are, so the day this row is fixed the pin goes red and is rewritten.
-- **Rationale** — OPEN, dated 2026-10-09. A microsecond control of ICE-TSNS-MERGE-WALL-1,
-  left alone by ruling. The field-assignment value is the one the rule asks for; nested
-  INSERT has no NTZ conform. Ledger clause C-017, question Q4.
+  `a_nested_literal_keeps_the_utc_wall_and_field_assignment_stores_the_session_wall`
+  holds the literal doors on the UTC wall and field assignment on the session wall.
+  The facade `test_ice_ntz_nested_wall_1.py` holds the column doors.
+- **Rationale** — NARROWED, dated 2026-10-11. A source analyzed as a wall is not wrapped.
+  Ledger ICE-NTZ-NESTED-WALL-1 C-003 stays open for the cells in that list.
 
 ### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
 
