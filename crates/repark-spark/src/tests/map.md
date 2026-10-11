@@ -744,6 +744,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated`: the same wrappers on a
   `struct<v: TIMESTAMP>` table, and main's parser text for a malformed UPDATE there.
   pins: ice-tsns-merge-wall-1/C-053, C-054
+- `v3_timestamp_ns_door.rs` (zoned name) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
+  `ns_wall_udf_name_matches_the_registered_udf` also pins
+  `ntz_store::NS_INSTANT_CAST_UDF_NAME` equal to `TIMESTAMPTZ_NS_CAST_NAME`.
+  pins: ice-tstzns-wall-1/C-008
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):**
   `ns_wall_udf_name_matches_the_registered_udf` pins `ntz_store::NS_WALL_CAST_UDF_NAME` equal
   to `timestamp_ns_cast::TIMESTAMP_NS_CAST_NAME`: the write path renders the name as SQL text

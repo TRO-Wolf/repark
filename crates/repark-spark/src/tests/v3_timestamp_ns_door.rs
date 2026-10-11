@@ -45,6 +45,10 @@ fn ns_wall_udf_name_matches_the_registered_udf() {
         repark_iceberg::write::ntz_store::NS_WALL_CAST_UDF_NAME,
         repark_functions::timestamp_ns_cast::TIMESTAMP_NS_CAST_NAME
     );
+    assert_eq!(
+        repark_iceberg::write::ntz_store::NS_INSTANT_CAST_UDF_NAME,
+        repark_functions::timestamp_ns_cast::TIMESTAMPTZ_NS_CAST_NAME
+    );
 }
 
 #[tokio::test]

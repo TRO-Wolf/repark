@@ -153,6 +153,20 @@ Design the nested store as one unit, then lift the refusal:
   the parser's message (34 of 50 malformed statements, the two `DIV` spellings); lifting the
   refusal restores the parser's text (ledger Q13).
 
+## A nested `timestamptz_ns` leaf (measured 2026-10-10, ICE-TSTZNS-WALL-1)
+
+Not refused and not converted. On main `9b230aed` and after ICE-TSTZNS-WALL-1 every probed
+door that answers stores one reading in such a leaf: an instant source is kept, a wall
+(`TIMESTAMP_NTZ`, `timestamp_ns`) is read as UTC and a `DATE` as midnight UTC, in every
+session zone (the verifier's `nx.py` shape `struct<v: timestamptz_ns, a: array<…>>` through
+nineteen doors and a struct-only probe with field assignment, three zones). The doors agree
+with each other, so no table holds two instants for one input, and nine digits are kept. They
+disagree with the top-level column, which since ICE-TSTZNS-WALL-1 localises a wall in the
+session zone on every measured door (the `EXPLAIN ANALYZE` and `PREPARE`/`EXECUTE` carriers
+excepted, measured 2026-10-10, R-008 verify; card WRITE-BODY-CARRIERS-1). This unit decides
+whether the nested leaf follows the top-level rule; the store cast for a leaf is
+`update_cast::nested_leaf_cast_sql`, kept apart on purpose.
+
 ## Siblings
 
 - **R-011** (ledger Q4): a nested microsecond `TIMESTAMP_NTZ` field stores the session wall

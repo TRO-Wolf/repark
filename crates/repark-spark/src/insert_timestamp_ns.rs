@@ -90,7 +90,12 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
         };
         if matches!(dml.op, WriteOp::Update) {
             let table = dml.table_name.to_string();
-            refuse_narrowed_update(expr, &table, field.name(), source_schema.as_ref())?;
+            let narrowed = Narrowed {
+                table: &table,
+                column: field.name(),
+                zoned,
+            };
+            narrowed.refuse(expr, source_schema.as_ref())?;
         }
         let Ok(found) = expr.get_type(source_schema.as_ref()) else {
             exprs.push(expr.clone());
@@ -112,16 +117,34 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
     rebuild(dml, exprs, input, changed)
 }
 
-fn refuse_narrowed_update(expr: &Expr, table: &str, column: &str, schema: &DFSchema) -> Result<()> {
-    if !narrows(expr, schema) {
-        return Ok(());
+struct Narrowed<'a> {
+    table: &'a str,
+    column: &'a str,
+    zoned: bool,
+}
+
+impl Narrowed<'_> {
+    fn refuse(&self, expr: &Expr, schema: &DFSchema) -> Result<()> {
+        if !narrows(expr, schema) {
+            return Ok(());
+        }
+        let Self {
+            table,
+            column,
+            zoned,
+        } = self;
+        let (upper, lower) = if *zoned {
+            ("TIMESTAMPTZ_NS", "timestamptz_ns")
+        } else {
+            ("TIMESTAMP_NS", "timestamp_ns")
+        };
+        Err(datafusion::error::DataFusionError::Plan(format!(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+             the table `{table}`: Cannot safely cast `{column}` \"TIMESTAMP\" to \"{upper}\". The \
+             value was narrowed from nanoseconds to microseconds before the store; give the NULL \
+             beside it the type {lower}. SQLSTATE: KD000"
+        )))
     }
-    Err(datafusion::error::DataFusionError::Plan(format!(
-        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the \
-         table `{table}`: Cannot safely cast `{column}` \"TIMESTAMP\" to \"TIMESTAMP_NS\". The \
-         value was narrowed from nanoseconds to microseconds before the store; give the NULL \
-         beside it the type timestamp_ns. SQLSTATE: KD000"
-    )))
 }
 
 fn narrows(expr: &Expr, schema: &DFSchema) -> bool {
@@ -186,11 +209,9 @@ fn ns_store_targets(plan: &LogicalPlan) -> Option<Vec<Option<bool>>> {
     let LogicalPlan::Dml(dml) = plan else {
         return None;
     };
-    let wall_only = match dml.op {
-        WriteOp::Insert(_) => false,
-        WriteOp::Update => true,
-        _ => return None,
-    };
+    if !matches!(dml.op, WriteOp::Insert(_) | WriteOp::Update) {
+        return None;
+    }
     let schema = dml.target.schema();
     let fields = schema.fields();
     let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
@@ -201,7 +222,7 @@ fn ns_store_targets(plan: &LogicalPlan) -> Option<Vec<Option<bool>>> {
     }
     let targets: Vec<Option<bool>> = fields
         .iter()
-        .map(|field| timestamp_ns_target(field.data_type()).filter(|zoned| !(wall_only && *zoned)))
+        .map(|field| timestamp_ns_target(field.data_type()))
         .collect();
     targets.iter().any(Option::is_some).then_some(targets)
 }

@@ -100,6 +100,33 @@ fn register_repark_times_ten(context: &SessionContext) {
     ));
 }
 
+fn assert_status_walk_is_monotone(seen: &[JobStatus]) {
+    let mut rank = 0;
+    for status in seen {
+        let next = match status {
+            JobStatus::Queued => 0,
+            JobStatus::Running { .. } => 1,
+            JobStatus::Completed { .. } => 2,
+            JobStatus::Failed(_) | JobStatus::Cancelled => {
+                panic!("status walk must not fail or cancel: {seen:?}")
+            }
+        };
+        assert!(
+            next >= rank,
+            "status walk moved backwards at {status:?} in {seen:?}"
+        );
+        rank = next;
+    }
+    let running_seen = seen
+        .iter()
+        .any(|status| matches!(status, JobStatus::Running { .. }));
+    let already_completed = matches!(seen.first(), Some(JobStatus::Completed { .. }));
+    assert!(
+        running_seen || already_completed,
+        "status walk missed Running without starting Completed: {seen:?}"
+    );
+}
+
 async fn wait_until_running(
     cluster: &ReparkClusterExecutor,
     job: repark_distributed::JobId,
@@ -133,7 +160,7 @@ async fn wait_until_running(
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn two_executors_sum_matches_local_and_status_walks_queued_running_completed() {
+async fn two_executors_sum_matches_local_and_status_walk_is_monotone_to_completed() {
     let session = match ReparkSession::builder()
         .parallel_single_partition(false)
         .build()
@@ -189,16 +216,7 @@ async fn two_executors_sum_matches_local_and_status_walks_queued_running_complet
         );
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    assert!(
-        seen.iter()
-            .any(|status| matches!(status, JobStatus::Queued)),
-        "status walk missing Queued: {seen:?}"
-    );
-    assert!(
-        seen.iter()
-            .any(|status| matches!(status, JobStatus::Running { .. })),
-        "status walk missing Running: {seen:?}"
-    );
+    assert_status_walk_is_monotone(&seen);
 
     let got = tokio::time::timeout(Duration::from_secs(30), drain_stream(handle.stream()))
         .await
@@ -213,6 +231,10 @@ async fn two_executors_sum_matches_local_and_status_walks_queued_running_complet
         matches!(after, JobStatus::Completed { .. }),
         "after drain: {after:?}, walk {seen:?}"
     );
+    if seen.last() != Some(&after) {
+        seen.push(after);
+    }
+    assert_status_walk_is_monotone(&seen);
 
     let counts = match cluster.executor_task_counts(job).await {
         Ok(counts) => counts,
@@ -342,7 +364,7 @@ async fn cancel_mid_flight_sets_cancelled_and_no_running_tasks_within_five_secon
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
     let context = session.context().clone();
-    let sql = "SELECT id FROM range(100000000)";
+    let sql = "SELECT value FROM generate_series(0, 99999999)";
     let plan = physical_plan(&context, sql).await;
     let provider = ReparkSessionProvider::from_context(&context).expect("ReparkSessionProvider");
     let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {

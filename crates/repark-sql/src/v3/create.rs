@@ -396,6 +396,47 @@ async fn update_and_merge_into_timestamp_ns_store_the_wall() {
 }
 
 #[tokio::test]
+async fn update_and_merge_into_timestamptz_ns_store_the_instant() {
+    use datafusion::arrow::datatypes::{DataType, Int64Type, TimeUnit};
+    use repark_core::SqlDialect;
+
+    let door = door_with_v3_opt_in().await;
+    crate::AnsiDialect.on_session_built(&door.ctx);
+    door.ok("CREATE TABLE ice.sales.zoned (id INT, ts timestamptz_ns) WITH (format_version = 3)")
+        .await;
+    door.ok("INSERT INTO ice.sales.zoned VALUES (1, NULL), (3, NULL)")
+        .await;
+    door.ok("UPDATE ice.sales.zoned SET ts = TIMESTAMP '2026-01-02 03:04:05.123456' WHERE id = 1")
+        .await;
+    door.ok(
+        "MERGE INTO ice.sales.zoned AS t USING (SELECT CAST(2 AS INT) AS id, TIMESTAMP \
+         '2026-01-02 03:04:05.123456' AS ts UNION ALL SELECT CAST(3 AS INT) AS id, TIMESTAMP \
+         '2026-01-02 03:04:05.123456' AS ts) AS s ON t.id = s.id WHEN MATCHED THEN UPDATE SET \
+         ts = s.ts WHEN NOT MATCHED THEN INSERT (id, ts) VALUES (s.id, s.ts)",
+    )
+    .await;
+    let batches = door
+        .sql("SELECT ts FROM ice.sales.zoned ORDER BY id")
+        .await
+        .expect("SELECT timestamptz_ns");
+    assert!(matches!(
+        batches[0].schema().field(0).data_type(),
+        DataType::Timestamp(TimeUnit::Nanosecond, Some(_))
+    ));
+    let stored: Vec<Option<i64>> = batches
+        .iter()
+        .flat_map(|batch| {
+            let ticks = datafusion::arrow::compute::cast(batch.column(0), &DataType::Int64)
+                .expect("ticks as int64");
+            datafusion::arrow::array::AsArray::as_primitive::<Int64Type>(&ticks)
+                .iter()
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert_eq!(stored, vec![Some(1_767_323_045_123_456_000); 3]);
+}
+
+#[tokio::test]
 async fn alter_set_properties_upgrades_v2_to_v3_with_the_opt_in() {
     let door = door_with_session_v3_opt_in().await;
     door.ok("CREATE TABLE ice.sales.up AS SELECT 1 AS id").await;

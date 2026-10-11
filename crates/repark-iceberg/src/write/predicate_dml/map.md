@@ -32,6 +32,10 @@ works, so the attribute is gone rather than documented.
   assigned value whose target is `Timestamp(µs, None)` in the `ntz_store` wall-cast UDF
   call, so an identity UPDATE stores the session-zone wall; every other target keeps
   the raw projection. pins: ntz-1/C-006
+- `lineage.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `update_projection_sql` asks
+  `ntz_store::store_kernel_sql`, so an assigned value whose target is `timestamptz_ns` goes
+  through the zoned kernel in both row-level modes. Reason and scope: the `ntz_store.rs` row
+  of the parent directory map. pins: ice-tstzns-wall-1/C-003
 - `lineage.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `update_projection_sql` asks
   `ntz_store::wall_cast_sql` for the wrap, so an assigned value whose target is
   `Timestamp(ns, None)` goes through the nanosecond wall kernel as a microsecond one goes
