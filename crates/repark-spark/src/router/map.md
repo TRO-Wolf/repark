@@ -78,6 +78,15 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
   (first linked from the `comment_on_table.rs` row above).
 
+- [explain_marks.rs](explain_marks.rs) — **ICE-TSNS-NARROW-REFUSE-1, fold 2 (2026-10-11):**
+  an analyzed plan carries the marks of a narrowed nanosecond value (a frame or a view may
+  be written later), and `EXPLAIN VERBOSE` prints analyzed plans. `without_marks` collects
+  the rows of an `EXPLAIN` that does not run its statement, erases both mark calls from the
+  text of each logical plan row and keeps the argument (`strip_marks`, parentheses counted
+  outside double quotes), and writes `SAME TEXT AS ABOVE` where a row then equals the row
+  shown before it, as main prints it. `spark_ast` calls it for a `LogicalPlan::Explain`;
+  `EXPLAIN ANALYZE` prints physical plans, which hold no mark. One unit pin of the erasure.
+  pins: ice-tsns-narrow-refuse-1/C-034
 - `nested_ns.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):**
   `refuse_nested_supply` is the one call that hands an `INSERT` (plain, `OVERWRITE`,
   `BY NAME`, `REPLACE WHERE`), `UPDATE` or `MERGE` statement and its Iceberg target to

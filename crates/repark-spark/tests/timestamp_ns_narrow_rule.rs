@@ -790,3 +790,55 @@ async fn the_refusal_names_what_the_statement_wrote() {
         );
     }
 }
+
+#[tokio::test]
+async fn a_read_shows_no_mark_no_tag_and_keeps_its_field_metadata() {
+    let session = session(ZONES[1]);
+    let _warehouse = catalog(&session).await;
+    let metadata = |sql: String| {
+        let session = &session;
+        async move {
+            let frame = session.sql(&sql).await.expect("read");
+            frame.schema().field(1).metadata().clone()
+        }
+    };
+    let plain = metadata("SELECT id, ns AS v FROM ice.ns.src".to_string()).await;
+    assert!(!plain.is_empty(), "{plain:?}");
+    for branch in [
+        "SELECT 0, NULL",
+        "SELECT 0, TIMESTAMP '2001-02-03 04:05:06'",
+        "SELECT 0, CAST(NULL AS TIMESTAMP)",
+        "SELECT 0, DATE '2001-02-03'",
+    ] {
+        let sql = format!("SELECT id, ns AS v FROM ice.ns.src UNION ALL {branch}");
+        assert_eq!(metadata(sql.clone()).await, plain, "{sql}");
+    }
+    for read in [
+        "SELECT id, coalesce(ns, ts) AS v FROM ice.ns.src",
+        "SELECT id, coalesce(tzns, NULL) FROM ice.ns.src",
+        "SELECT id, ns AS v FROM ice.ns.src UNION ALL SELECT 0, NULL",
+        "SELECT id, CAST(v AS TIMESTAMP) FROM (SELECT id, coalesce(ns, ts) AS v FROM ice.ns.src) q",
+        "SELECT id, array_append(array(ns), ts)[0] FROM ice.ns.src",
+        "INSERT INTO ice.ns.src (id, ns) SELECT id, coalesce(ns, ts) FROM ice.ns.src",
+    ] {
+        for explain in [
+            "EXPLAIN",
+            "EXPLAIN VERBOSE",
+            "EXPLAIN EXTENDED",
+            "EXPLAIN FORMATTED",
+        ] {
+            let sql = format!("{explain} {read}");
+            let Ok(frame) = session.sql(&sql).await else {
+                continue;
+            };
+            let batches = frame.collect().await.expect(&sql);
+            let shown = datafusion::arrow::util::pretty::pretty_format_batches(&batches)
+                .expect("text")
+                .to_string();
+            assert!(
+                !shown.contains("__repark_narrowed") && !shown.contains("repark.untyped_null"),
+                "{sql}: {shown}"
+            );
+        }
+    }
+}

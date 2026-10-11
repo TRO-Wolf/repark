@@ -20,6 +20,7 @@ use crate::{
 
 mod comment_on_table;
 mod delete_update;
+pub(crate) mod explain_marks;
 mod hive_change_column;
 pub(crate) mod insert_positional;
 mod nested_ns;
