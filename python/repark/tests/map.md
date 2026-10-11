@@ -7620,7 +7620,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_live_fnp8review_r2_multihop_lineage_matches_spark`): join-fed widths
   with immune aggregates, and multi-hop nullability with union branches.
   The held-set re-run (four pin files, live leg, verify, mutations) is C-008.
-  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010
+  **PARITY-LIVE-INFRA-2 (2026-10-11):** the `array(1, NULL, 3)` indexed-transform
+  case pins the Column door at int32 — the engine converged on Spark's measured
+  `list<element: int32>` (banner 4.1.2 UTC, both ANSI settings) and the old
+  int64 pin reded the nightly.
+  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010, parity-live-infra-2/C-002
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   FNP-8 pins invalid-return errors for a function, a callable object, and `functools.partial`.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
