@@ -116,6 +116,22 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   test feeds the scanner four made-up sources and requires one violation each. A new arm is
   added by listing its file, which makes the pairing rule apply to it.
   pins: mb-4-foreach-eo/C-046
+  Fold 7 (2026-10-11, the sixth verify's finding 3): this gate is a tripwire for one
+  honest mistake, a bare `tx.commit(catalog)` in a stamped arm of the fold-5 shape, which
+  its second test proves it catches. It is not the rule's holder: the sixth verify walked
+  around it four ways by reading, plus the demonstrated mutant. `SiteStamp::fenced`
+  returning the bare catalog for a claimed stamp (mutant Y1) keeps the line reading
+  `tx.commit(self.fenced(catalog).as_ref())` and stays green. In the stamp's own files any
+  line with `.commit(` passes when it contains the letters `fenced`, so a variable named
+  `unfenced` passes. `Transaction::commit(tx, ...)` in call form is not matched by
+  `'.commit('`. A listed arm is checked by counts only (claims, stamped summaries,
+  `.commit(tx, catalog)` strings), not by which transaction each commit takes; and
+  `SiteStamp::claim` reached through an import alias or `Self::` is not seen in a new file.
+  The rule itself is held by the behaviour pins: `sink_offsets_stray_fence_tests.rs` (every
+  arm refused over a stray in every window, legal commits landed, carried-name and
+  non-append strays), `sink_offsets_body_scope_tests.rs` (the backstop), and the core
+  microbatch driver pins. Under Y1 thirteen iceberg pins and six core pins fail while both
+  gate tests pass.
 - `enc_1_gate.rs` — **ENC-1 fold 1 (2026-10-09):** the source-scan gate that keeps the two
   chokepoints closed. It reads every Rust source under `crates/`, drops test code
   (`tests/`, `benches/`, `#[cfg(test)]` items and modules, and every module a test module
