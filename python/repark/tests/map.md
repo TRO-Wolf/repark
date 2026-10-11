@@ -2085,6 +2085,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: perf-dynflatten-1-measure/C-002, C-003
   pins: cutover-schema-1/C-001
   pins: dynflatten-listnull-1/C-004
+- [test_current_date_session_zone_1.py](test_current_date_session_zone_1.py) —
+  **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** `current_date()` answers the session-zone
+  date. The differing zone is computed at run time (+14 / -11, one always differs, no
+  skip): every SQL spelling rooted in `current_date`, the DataFrame pair, the WHERE
+  filter and the stored Iceberg value assert the zone date, both setting styles, both ANSI
+  modes on the SQL leg; the UTC control and the per-query fix hold.
+  The pre-existing strict-xfail TZ-9 pin in `test_spark_sql_grammar_1.py` flips to
+  equality in the same change and the registry row reads FIXED. The file re-runs the
+  step-0 matrix cell list (C-001) and its pins went red under the hand revert (C-005).
+  pins: current-date-session-zone-1/C-001, C-003, C-004, C-005
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
@@ -2487,6 +2497,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `current_database` / `current_schema` answer the engine defaults (value, string
   type, non-null); the paren-less spellings stay in `Q14_REFUSING_BARE`.
   pins: ice-catalog-session-1/C-011, C-029.
+  **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** TZ-9 is FIXED — the strict-xfail
+  session-zone pin asserts the converged date and the registry row reads FIXED.
+  pins: current-date-session-zone-1/C-003.
 - [test_unresolved_routine_1.py](test_unresolved_routine_1.py) +
   [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) —
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** every unknown routine refuses with Spark's

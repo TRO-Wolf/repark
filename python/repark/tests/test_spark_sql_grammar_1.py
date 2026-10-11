@@ -320,12 +320,12 @@ def test_q14_current_date_bare_and_paren(spark: ReparkSession) -> None:
         assert table.schema.field("v").nullable is True
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="TZ-9: current_date answers the UTC date under a non-UTC session zone",
-)
 def test_q14_current_date_answers_the_session_zone_date(spark: ReparkSession) -> None:
-    """Q14-2/3 session-zone pin: ``current_date`` follows the session zone."""
+    """Q14-2/3 session-zone pin: ``current_date`` follows the session zone.
+
+    TZ-9 FIXED by CURRENT-DATE-SESSION-ZONE-1 (2026-10-10): the strict xfail is
+    retired and the pin asserts the converged behaviour.
+    """
     for zone_name in ("Pacific/Kiritimati", "Etc/GMT+12"):
         spark.conf.set("spark.sql.session.timeZone", zone_name)
         assert spark.conf.get("spark.sql.session.timeZone") == zone_name
