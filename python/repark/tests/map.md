@@ -1039,7 +1039,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   against `spark_catalog` (`REQUIRES_SINGLE_PART_NAMESPACE`) whenever another
   module boots the shared context first — the nightly shape, red since 10-07.
   Standalone the builder conf masked it (20/20 green either way).
-  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, parity-live-infra-2/C-004
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009. pins: parity-live-infra-2/C-004
 - [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
   combined interpreter; invocation in its docstring).
@@ -7629,7 +7629,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   case pins the Column door at int32 — the engine converged on Spark's measured
   `list<element: int32>` (banner 4.1.2 UTC, both ANSI settings) and the old
   int64 pin reded the nightly.
-  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010, parity-live-infra-2/C-002
+  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010. pins: parity-live-infra-2/C-002
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   FNP-8 pins invalid-return errors for a function, a callable object, and `functools.partial`.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
