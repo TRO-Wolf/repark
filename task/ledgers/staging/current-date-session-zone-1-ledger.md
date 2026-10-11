@@ -72,10 +72,49 @@ except SQL `curdate()`.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | Step-0 table above is the measured main behaviour: 352 compared cells, 104 same-cause diffs, 16 R-1 diffs, every other cell equal. | The 32 probe JSON files (kept outside the repo); this section. | PROVEN | Spark 4.1.2 live, RePark base `2c33f289`, 2026-10-10 22:16–22:23 UTC. pins: current-date-session-zone-1/C-001 |
-| C-002 | The fix lands at the one place every door passes: `current_date` (parens, bare, DataFrame, `F.curdate`) answers the session-zone date in force when the query starts. | Step-1 cause paragraph in the hand-back; the diff. | PROVEN | DataFusion's builtin folds at plan time from `execution.time_zone`, which RePark never sets (parity doc declines that knob, D-B2), so it answered UTC under every zone. The owned `SparkCurrentDate` (`crates/repark-functions/src/current_date.rs`) folds the query start time through the `SessionTimeZoneConfig` carrier instead, `Stable`/`Date32`/`today` alias kept, no `return_field` delta. SQL text on every door (batch, ANSI, streaming plans share the `register_all` registry) resolves it; the DataFrame door builds it via `current_date::current_date()` (line-neutral dispatch rewire). pins: current-date-session-zone-1/C-002 |
+| C-002 | The fix lands at the one place every door passes: `current_date` (parens, bare, DataFrame, `F.curdate`) answers the session-zone date in force when the query starts. | Step-1 cause paragraph in the hand-back; the diff. | PROVEN | DataFusion's builtin folds at plan time from `execution.time_zone`, which RePark never sets (parity doc declines that knob, D-B2), so it answered UTC under every zone. The owned `SparkCurrentDate` (`crates/repark-functions/src/current_date.rs`) folds the query start time through the `SessionTimeZoneConfig` carrier instead, `Stable`/`Date32`/`today` alias kept, no `return_field` delta. SQL text resolves the owned UDF wherever `register_all` ran (Spark facade sessions via the extension's `register`, `F.expr` fragments via the shared parse context); the DataFrame door builds it directly via `current_date::current_date()` (line-neutral dispatch rewire). The native SQL door never calls `register_all` and keeps the builtin (`current_timezone()` is `UNRESOLVED_ROUTINE` there, measured 2026-10-11). Streaming batch sessions clone the parent session state (read, not driven), so they resolve whichever `current_date` the parent registered. pins: current-date-session-zone-1/C-002 |
 | C-003 | After the fix the 104 same-cause cells answer Spark, both setting styles, both ANSI modes, and the stored-value cell reads the session-zone date back. | `test_current_date_session_zone_1.py` + re-run of the step-0 matrix. | PROVEN | Matrix re-run on the fix: 320/320 checks against the zoneinfo-expected zone date (all 16 blocks; UTC date had rolled to 10-11, so the differing zone is Pago_Pago there). Facade file: 11 passed. The pre-existing strict-xfail TZ-9 pin flips to equality and the registry row reads FIXED. pins: current-date-session-zone-1/C-003 |
 | C-004 | Under UTC every cell answers exactly as on main; no expression that matches Spark today moves; the per-query fix (N-1) still holds. | UTC control in the facade pins; Rust pins at the fix site. | PROVEN | Rust `sql_under_utc_answers_the_utc_date` + facade `test_utc_control_matches_the_utc_date` (both styles); `today_alias_and_repeat_reference_agree` + facade stability pin hold N-1; full libs green (functions 917, spark 2692, sql 394). `today()` under non-UTC is zone-aware now (it is the same UDF; nothing resolves it). pins: current-date-session-zone-1/C-004 |
 | C-005 | Each pin fails for its reason: the fix reverted by hand turns the pins red, restored byte for byte after. | Revert-proof runs in the hand-back. | PROVEN | Revert = `simplify` reads `"UTC"` (one-spot hand edit): Rust 2 zone tests red (20737 vs 20736), facade 9 zone pins red with the 2 UTC controls green; `git checkout --` restore, tree clean of the edit. pins: current-date-session-zone-1/C-005 |
 | C-006 | SQL `curdate()` resolves with Spark's answer. | None in this unit. | OPEN | R-1: other cause (missing registration, fails at UTC too); carried, not fixed. |
+| C-007 | When the carrier is absent the owned fold reads `execution.time_zone` exactly as the builtin does (the zone date when set, UTC when unset); when the carrier is present it wins, even when set to UTC. | Rust fallback + control pins with a hand-revert run; the native-door facade pin red on the pre-fix module, green after the rebuild. | PROVEN | Fold 1, 2026-10-11. Presence, not value, tells the two apart: the Spark `configure` hook always installs the carrier (even for UTC), native sessions never do. Revert run: the fallback pin red (20737 vs 20736), both controls green; file restored byte for byte. Facade: new pin red on the pre-fix module (DataFrame 10-11 vs zone 10-10), file 12/12 green after the rebuild. pins: current-date-session-zone-1/C-007 |
+| C-008 | A fixed-instant pin sits 30 minutes either side of local midnight in `Asia/Kolkata` and `America/New_York`, and goes red under a one-hour shift of the folded instant. | Verifier mutant M10 applied by hand and restored byte for byte. | PROVEN | Fold 1, 2026-10-11. M10 red on the Kolkata after-midnight leg (20736 vs 20737); the before-midnight legs catch the symmetric +1h shift. pins: current-date-session-zone-1/C-008 |
 
 No `COVERAGE_ATTESTATION` is filed while C-006 is OPEN.
+
+## Fold 1 — carrier-absent fallback + midnight pin (2026-10-11)
+
+Verifier verdict FAIL on `0df026f0`: one S1 (F1), two S3s (F2, F3), one note (F4).
+F1: on the native door after `SET TIME ZONE`, the DataFrame pair answered the UTC date
+while native SQL answered the zone date; main answered the zone date on both. Cause: the
+dispatch arm is shared by both doors and the owned UDF read only the carrier (absent on a
+native session, so UTC); the native SQL door never calls `register_all`, so it kept the
+builtin, which reads `execution.time_zone`. F2 is the ledger sentence corrected in C-002
+above.
+
+Ruling (made, not re-opened): the native `SET TIME ZONE` / `execution.time_zone` surface
+must not move. Carrier absent means falling back to `execution.time_zone` exactly as the
+builtin does (UTC when unset or unparsable); carrier present means it wins, as before.
+
+The two states are told apart by carrier presence
+(`options.extensions.get::<SessionTimeZoneConfig>()`), never by comparing values: the
+Spark `configure` hook installs the carrier on every session, including an explicit-UTC
+one, while no native session installs it — so an explicit-UTC Spark session with the knob
+set elsewhere still answers UTC (pinned in both directions by
+`carrier_present_wins_over_execution_time_zone`).
+
+Pins: `carrier_absent_falls_back_to_execution_time_zone` (also asserts owned == builtin in
+the same zone), `carrier_absent_without_execution_zone_answers_utc`,
+`carrier_present_wins_over_execution_time_zone`, facade
+`test_native_door_dataframe_agrees_with_sql_under_set_time_zone`. Revert runs are recorded
+under C-007/C-008; every touched file was restored byte for byte (hash re-verified) after
+its red run.
+
+Mutant M10 (folded instant shifted one hour, survived the first pin set) is killed by
+`thirty_minutes_either_side_of_local_midnight` (C-008). M8 (Stable to Volatile) still
+survives, judged equivalent: `simplify` folds before volatility is consulted.
+
+F4 (not a defect): on the facade the carrier wins over a user-set
+`datafusion.execution.time_zone`, which is the Spark-consistent answer (main showed the
+knob's date while `current_timezone()` said UTC). Fold 1 does not move the facade: the
+carrier-present path keeps the first landing's logic.

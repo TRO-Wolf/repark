@@ -2097,7 +2097,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Fold 1 (2026-10-11):** the native-door pin sets `SET TIME ZONE` to the runtime-chosen
   differing zone and asserts SQL `current_date()` plus the DataFrame pair all answer that
   zone's date, resetting the knob afterwards.
-  pins: current-date-session-zone-1/C-001, C-003, C-004, C-005
+  pins: current-date-session-zone-1/C-001, C-003, C-004, C-005, C-007
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals

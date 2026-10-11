@@ -9,7 +9,7 @@ The differing zone is computed at run time: ``Pacific/Kiritimati`` (+14) differs
 date during UTC 10:00-24:00 and ``Pacific/Pago_Pago`` (-11) during UTC 00:00-11:00, so one
 of the two always differs and no skip exists.
 
-pins: current-date-session-zone-1/C-003, C-004
+pins: current-date-session-zone-1/C-003, C-004, C-007
 """
 
 from __future__ import annotations

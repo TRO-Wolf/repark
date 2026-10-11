@@ -598,7 +598,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   present carrier wins, even when set to UTC. The native DataFrame pair agrees with native
   SQL under `SET TIME ZONE` again. A fixed-instant pin sits thirty minutes either side of
   local midnight in `Asia/Kolkata` and `America/New_York`, red under a one-hour shift.
-  pins: current-date-session-zone-1/C-002, C-003, C-004, C-005
+  pins: current-date-session-zone-1/C-002, C-003, C-004, C-005, C-007, C-008
 - `session_names.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the SQL-door
   `current_catalog()` / `current_schema()` / `current_database()` nullary UDFs — one
   `SessionName` impl, non-nullable Utf8, `Stable`. `current_database` shares the
