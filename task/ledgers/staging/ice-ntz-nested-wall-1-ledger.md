@@ -157,6 +157,49 @@ Not in this inventory, and not proposed here: a nested `timestamp_ns` leaf
 (refused under ICE-TSNS-NESTED-1), nested `timestamptz_ns` localisation, and
 the nanosecond narrowing guard (R-017).
 
+## 6. Round 2 stopped before the walk (2026-10-11)
+
+Q1 and Q2 were ruled yes: one walk, called from the five sites, wrapping a
+microsecond `TIMESTAMP_NTZ` leaf below the top level only when the supply at
+that leaf is an instant. The walk was not written. Two of the five sites cannot
+tell an instant supply from a wall supply, and the type that would tell them
+is not in their arguments.
+
+`ntz_store::zone_store_frame` can tell. `analyzed_types` already returns each
+column's source `DataType`, and a struct's leaf types are inside it. An instant
+leaf is `Timestamp(_, Some(_))`. A wall leaf is `Timestamp(_, None)`.
+
+`merge/insert.rs` `zone_wrapping_stream_sql` can tell with the same
+`analyzed_types` call it already makes. Today that call runs only when a
+top-level column is `is_ltz_instant_target`, so a struct column does not load
+it. The function and the plan are already in the site.
+
+`insert_timestamp_ns::after_analysis` can tell. `expr.get_type` already returns
+the source `DataType`. `ns_store_targets` returns `None` unless a top-level
+column is `timestamp_ns`, so a microsecond struct never reaches that line. The
+type API is already in the function.
+
+`update_cast::store_assignment_cast_sql(expr, target)` cannot tell. It is a
+pure function of the SQL text and the target type. `named_struct('v', s.l, 'n', 1)`
+and a column reference do not carry the leaf's type. A `TIMESTAMP` literal
+does; the column supply in the measured 102 cells does not. The caller that
+has the source type drops it: `repark-spark` `merge/nested_assign.rs`
+`value_sql_for` probes `keyed.value_type` and, when the struct names match,
+calls `assignment_cast_sql`, which calls `store_assignment_cast_sql` with the
+target only. The merge rewriters `rewrite_column_with_maps` and
+`not_matched_by_source::rewrite_else` also call `store_assignment_then_sql`
+with the target type only.
+
+`predicate_dml/lineage.rs` `update_projection_sql` cannot tell. Assignments are
+`(column, sql)` pairs (`scalar_set_assignments`). The projection matches
+`store_kernel_sql(expr_sql, field.data_type())` on the target field. The
+caller `collect_identity_update_rows` has a `SessionContext` only after that
+SQL is built.
+
+Passing `source: &DataType` into those two functions, or walking the value in
+`value_sql_for` instead, is either a new parameter seam or a sixth site. Both
+are stop lines of this round. No product file was edited.
+
 ## Q. Questions for a ruling
 
 - **Q1 (C-003, RULING).** Is the session wall the stored value on every nested
@@ -177,3 +220,14 @@ the nanosecond narrowing guard (R-017).
   The walk names `__repark_cast_timestamp_ntz__` for a microsecond NTZ leaf
   only, so a `timestamp_ns` leaf, a `timestamptz_ns` leaf and a top-level
   column stay on today's path.
+- **Q3 (C-003, RULING). Round 2 stop.** May the one walk take
+  `(expr_sql, source, target)` and may `store_assignment_cast_sql` and
+  `update_projection_sql` gain a `source: &DataType` argument, filled by the
+  caller that already has the leaf type (`value_sql_for`) or by the existing
+  analyzer at `collect_identity_update_rows` before the projection is built?
+  *Premise:* §6. Without the source type those two sites cannot wrap an instant
+  leaf and leave a wall leaf as the same expression. Threading the type is a
+  new parameter. Walking in `value_sql_for` instead is a sixth site, and it
+  does not cover `update_projection_sql`. *Lean:* allow the parameter. It is
+  the source type three of the five sites already hold, passed into the two
+  that do not. The walk stays one function. No sixth site, no third crate.
