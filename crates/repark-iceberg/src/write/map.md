@@ -155,6 +155,16 @@ repark-core's error map.
   overwrite and one where it is a delete, each over every arm, both red under the mutant
   that sees append strays only.
   pins: mb-4-foreach-eo/C-049
+  Fold 8 (2026-10-11, the seventh verify's S1): one pin over every arm where the second
+  `toTable` stamp of a mark-only name is refused over a stray, after the first stamp
+  replaced the mark.
+  pins: mb-4-foreach-eo/C-050
+  Fold 8 (2026-10-11, the seventh verify's S3): one pin where the offsets property is a
+  starting mark with a bad pending epoch. The fence refuses the stamped commit with that
+  error, the body guard refuses too, and nothing lands; beside a second corrupt stamp
+  the fence still reports the mark. Red under the three mutants that swallow the failed
+  predicate read.
+  pins: mb-4-foreach-eo/C-051
 - `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10,
   rulings on the fourth verify's S1):** the module re-exports `carried_by_foreach`, which
   tells the `toTable` door whether a name is walked. The scope learns the head the driver

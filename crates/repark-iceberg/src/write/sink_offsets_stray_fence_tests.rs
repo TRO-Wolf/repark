@@ -379,6 +379,117 @@ async fn a_table_door_stamp_under_a_marked_name_is_refused_over_a_stray() {
     }
 }
 
+async fn with_corrupt_mark(catalog: &Arc<dyn Catalog>, table: &Table) -> Table {
+    let key = format!("{OFFSETS_PROPERTY_PREFIX}{query}", query = query());
+    let value = String::from("{\"format-version\":1,\"pending-epoch\":1,\"starting-head\":null}");
+    let tx = Transaction::new(table);
+    let tx = tx
+        .update_table_properties()
+        .set(key, value)
+        .apply(tx)
+        .expect("apply the corrupt mark");
+    tx.commit(catalog.as_ref())
+        .await
+        .expect("the corrupt mark commits")
+}
+
+async fn refused_at_the_fence(catalog: &Arc<dyn Catalog>, table: &Table, epoch: u64) -> String {
+    let claimed = ClaimedStamp {
+        stamp: stamp_for(epoch, SinkDoor::Table),
+        base: table.metadata().current_snapshot_id().map(SnapshotId::new),
+        started: None,
+    };
+    let fenced = AppendFence::install(catalog, &claimed);
+    let files = stage(table, &[90]).await;
+    let tx = Transaction::new(table);
+    let tx = tx
+        .fast_append()
+        .add_data_files(files)
+        .apply(tx)
+        .expect("apply the append");
+    tx.commit(fenced.as_ref())
+        .await
+        .expect_err("the fence refuses")
+        .to_string()
+}
+
+#[tokio::test]
+async fn a_corrupt_starting_mark_refuses_the_stamped_commit_at_the_fence_and_the_guard() {
+    let (_warehouse, memory, ident) = fixture("corrupt_mark_fence").await;
+    let (table, _seeded) = seed(&memory, &ident).await;
+    let corrupt = with_corrupt_mark(&memory, &table).await;
+    let before = corrupt.metadata().current_snapshot_id();
+    let snapshots = corrupt.metadata().snapshots().count();
+    let refused = refused_at_the_fence(&memory, &corrupt, 0).await;
+    assert!(refused.contains("only epoch 0 can be pending"), "{refused}");
+    let after = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(after.metadata().current_snapshot_id(), before);
+    assert_eq!(after.metadata().snapshots().count(), snapshots);
+
+    let (_warehouse, memory, ident) = fixture("corrupt_mark_guard").await;
+    let (table, _seeded) = seed(&memory, &ident).await;
+    let stamp = stamp_for(0, SinkDoor::Table);
+    let guard = BatchScope::enter_on(&table, stamp.clone()).expect("enter");
+    BatchScope::claim(&table, guard.token()).expect("claim");
+    let corrupt = with_corrupt_mark(&memory, &table).await;
+    let before = corrupt.metadata().current_snapshot_id();
+    let refused = guard
+        .scope_body(async {
+            let guarded = guard_body_catalog(&memory);
+            let tx = Transaction::new(&corrupt);
+            let tx = tx
+                .update_table_properties()
+                .set(String::from("eo.touched"), String::from("yes"))
+                .apply(tx)
+                .expect("apply");
+            tx.commit(guarded.as_ref()).await
+        })
+        .await
+        .expect_err("the guard refuses")
+        .to_string();
+    assert!(refused.contains("only epoch 0 can be pending"), "{refused}");
+    drop(guard);
+    let after = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(after.metadata().current_snapshot_id(), before);
+    assert!(!after.metadata().properties().contains_key("eo.touched"));
+
+    let (_warehouse, memory, ident) = fixture("corrupt_mark_precedence").await;
+    let (table, _seeded) = seed(&memory, &ident).await;
+    let files = stage(&table, &[70]).await;
+    let summary = HashMap::from([
+        (String::from("repark.cdc.format-version"), String::from("1")),
+        (
+            String::from("repark.cdc.query-id"),
+            query().get().to_string(),
+        ),
+        (
+            String::from("repark.cdc.run-id"),
+            String::from("bbbbbbbb-0000-4000-8000-0000000000b2"),
+        ),
+        (String::from("repark.cdc.epoch"), String::from("soon")),
+        (String::from("repark.cdc.generation"), String::from("1")),
+        (String::from("repark.cdc.offsets"), String::from("[]")),
+    ]);
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .fast_append()
+        .add_data_files(files)
+        .set_snapshot_properties(summary)
+        .apply(tx)
+        .expect("apply the corrupt stamp");
+    let stamped = tx
+        .commit(memory.as_ref())
+        .await
+        .expect("the corrupt stamp lands");
+    let corrupt = with_corrupt_mark(&memory, &stamped).await;
+    let before = corrupt.metadata().current_snapshot_id();
+    let refused = refused_at_the_fence(&memory, &corrupt, 0).await;
+    assert!(refused.contains("only epoch 0 can be pending"), "{refused}");
+    assert!(!refused.contains("soon"), "{refused}");
+    let after = memory.load_table(&ident).await.expect("reload");
+    assert_eq!(after.metadata().current_snapshot_id(), before);
+}
+
 async fn land_row_overwrite(
     memory: &Arc<dyn Catalog>,
     ident: &TableIdent,
