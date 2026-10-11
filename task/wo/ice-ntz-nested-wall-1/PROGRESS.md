@@ -35,11 +35,17 @@ facade stores the session wall, `1767323045123456` for a wall literal, and
 the instant for a nested `TIMESTAMP`. Those stored values are already the
 fold's, so this call does not move them.
 
-**Step 2, insert analysis:** `after_analysis` asks `nested_micro_ntz_decision`,
-the one type decision the SQL walk now asks too. The four committed sites
-still emit the same SQL (`the_four_sites_keep_the_sql_the_walk_emitted`).
-A selected instant leaf becomes the NTZ kernel. A column with no selected
-leaf is the same expression. A target with no nested microsecond
-`TIMESTAMP_NTZ` leaf keeps the plan. Plain `INSERT … SELECT` and DataFrame
-`append` of a column instant store the session wall. A literal stays
-`1767323045123456`. Red pin follows.
+**Step 2, insert analysis:** `26f8843a7b8ca0e9773f40065efde0ecdae94713` asks
+`nested_micro_ntz_decision` from `after_analysis`. The SQL walk asks the same
+decision and still emits the same SQL
+(`the_four_sites_keep_the_sql_the_walk_emitted`). A selected instant leaf
+becomes the NTZ kernel. A column with no selected leaf is the same
+expression. A target with no nested microsecond `TIMESTAMP_NTZ` leaf keeps
+the plan. Red on the parent: `INSERT … SELECT` of a column stores
+`1767323045123456` in America/New_York and Asia/Kolkata
+(`evidence/pin-red-step2-insert.txt`). Green on the commit: that door and
+DataFrame `append` store the session wall. A literal stays
+`1767323045123456`.
+
+**Next:** step 3. Rebuild, probe, `summary-head.md`, the gate list, the
+ledger, and the narrowed R-011 row.
