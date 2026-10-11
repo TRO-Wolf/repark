@@ -1034,7 +1034,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   prefix, `v3` in the message, winner bytes per writer) and adds stale INSERT OVERWRITE,
   TRUNCATE, ALTER SET TBLPROPERTIES and saveAsTable(overwrite); `writeTo().overwrite`
   refuses declared on stale and fresh handles alike, pinned as the pre-existing refusal.
-  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **PARITY-LIVE-INFRA-2 (2026-10-11):** the 400k race wires the `vn` catalog conf
+  onto its `newSession` side session, which otherwise resolves `vn.ns.conc`
+  against `spark_catalog` (`REQUIRES_SINGLE_PART_NAMESPACE`) whenever another
+  module boots the shared context first — the nightly shape, red since 10-07.
+  Standalone the builder conf masked it (20/20 green either way).
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009. pins: parity-live-infra-2/C-004
 - [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
   combined interpreter; invocation in its docstring).
@@ -7642,7 +7647,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_live_fnp8review_r2_multihop_lineage_matches_spark`): join-fed widths
   with immune aggregates, and multi-hop nullability with union branches.
   The held-set re-run (four pin files, live leg, verify, mutations) is C-008.
-  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010
+  **PARITY-LIVE-INFRA-2 (2026-10-11):** the `array(1, NULL, 3)` indexed-transform
+  case pins the Column door at int32 — the engine converged on Spark's measured
+  `list<element: int32>` (banner 4.1.2 UTC, both ANSI settings) and the old
+  int64 pin reded the nightly.
+  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010. pins: parity-live-infra-2/C-002
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   FNP-8 pins invalid-return errors for a function, a callable object, and `functools.partial`.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
@@ -9999,3 +10008,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here.
   pins: empty-projection-count-1/C-002, C-003, C-004, C-007, C-008, C-009
+- [_spark_python.py](_spark_python.py) — **PARITY-LIVE-INFRA-2 (2026-10-11):**
+  one resolver for the interpreter that runs live-Spark recorder subprocesses.
+  `resolve_live_spark_python` honours `REPARK_SPARKENV_PYTHON` when set, else
+  takes the box lane's `sparkenv/bin/python` when present, else the current
+  interpreter (the nightly runner carries PySpark in the venv through the
+  `record` extra, so the reproduce tests run there instead of failing
+  `FileNotFoundError`). Callers: the six `test_live_oracle_fixture_reproduces`
+  tests and `test_ice_rdf_options_1.py`'s rerun test, which no longer skips
+  when the box lane is absent. No module docstring: the lane's no-comments
+  ruling covers the new file; the contract lives here.
+  pins: parity-live-infra-2/C-001

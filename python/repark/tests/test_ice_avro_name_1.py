@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import _spark_python as spark_python
 import pytest
 
 from repark import ReparkSession
@@ -115,7 +116,7 @@ def test_live_oracle_fixture_reproduces(tmp_path: Path) -> None:
     environ.setdefault("SPARK_LOCAL_IP", "127.0.0.1")
     completed = subprocess.run(
         [
-            "/tmp/sparkenv/bin/python",
+            spark_python.resolve_live_spark_python(),
             str(Path(__file__).with_name("_record_ice_avro_name_1_oracle.py")),
             "--warehouse",
             str(tmp_path / "live-wh"),

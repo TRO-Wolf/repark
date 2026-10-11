@@ -123,14 +123,12 @@ _PINNED_PASSING_APACHE_TESTS: tuple[str, ...] = (
     "pyspark.sql.tests.test_functions.FunctionsTests.test_from_csv",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_from_xml",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_greatest",
-    "pyspark.sql.tests.test_functions.FunctionsTests.test_hour",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_inverse_trig_functions",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_json_tuple_empty_fields",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_lit_list",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_lit_time",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_math_functions",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_median",
-    "pyspark.sql.tests.test_functions.FunctionsTests.test_minute",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_monthname",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_ndarray_input",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_reciprocal_trig_functions",
@@ -139,7 +137,6 @@ _PINNED_PASSING_APACHE_TESTS: tuple[str, ...] = (
     "pyspark.sql.tests.test_functions.FunctionsTests.test_schema_of_csv",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_schema_of_json",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_schema_of_xml",
-    "pyspark.sql.tests.test_functions.FunctionsTests.test_second",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_str_ndarray",
     "pyspark.sql.tests.test_functions.FunctionsTests.test_when",
     "pyspark.sql.tests.test_group.GroupTests.test_assert_classic_mode",
@@ -273,18 +270,20 @@ _KNOWN_FAIL_MAP_NESTED_ID = (
 _KNOWN_FAIL_COLLATED_UDF_ID = (
     "pyspark.sql.tests.test_udf.UDFTests.test_udf_with_collated_string_types"
 )
+_KNOWN_FAIL_TIME_HOUR_ID = "pyspark.sql.tests.test_functions.FunctionsTests.test_hour"
+_KNOWN_FAIL_TIME_MINUTE_ID = "pyspark.sql.tests.test_functions.FunctionsTests.test_minute"
+_KNOWN_FAIL_TIME_SECOND_ID = "pyspark.sql.tests.test_functions.FunctionsTests.test_second"
 _KNOWN_FAIL_DEMOTED_IDS: tuple[str, ...] = (
     _KNOWN_FAIL_MAP_EMPTY_ID,
     _KNOWN_FAIL_MAP_NESTED_ID,
     _KNOWN_FAIL_COLLATED_UDF_ID,
+    _KNOWN_FAIL_TIME_HOUR_ID,
+    _KNOWN_FAIL_TIME_MINUTE_ID,
+    _KNOWN_FAIL_TIME_SECOND_ID,
 )
 
-# 215 = census PASS union MINUS 55 pandas-version-sensitive rows (Apache's
-# pyspark.testing helpers import pandas.core.common._builtin_table, removed in
-# pandas 3) MINUS the three FA-4 / G15 demotions above. Pins must be always-green
-# in the locked env; dropping a pin silently re-opens charter G9.
-assert len(_PINNED_PASSING_APACHE_TESTS) == 215, (
-    f"smoke pin count must stay 215 always-green Apache PASSes "
+assert len(_PINNED_PASSING_APACHE_TESTS) == 212, (
+    f"smoke pin count must stay 212 always-green Apache PASSes "
     f"(got {len(_PINNED_PASSING_APACHE_TESTS)})"
 )
 assert not (set(_KNOWN_FAIL_DEMOTED_IDS) & set(_PINNED_PASSING_APACHE_TESTS)), (
@@ -406,6 +405,48 @@ def test_meta_known_fail_udf_with_collated_string_types(_compat_provenance: obje
         test_id=_KNOWN_FAIL_COLLATED_UDF_ID,
         expected_status="FAIL-MISSING",
         cause_needles=("string collate fr", "does not implement collation"),
+    )
+
+
+def test_meta_known_fail_hour_over_time(_compat_provenance: object) -> None:
+    """SPARK-52892 hour(time): live Spark 4.1.2 refuses exactly like RePark.
+
+    Both raise UNSUPPORTED_TIME_TYPE 0A000, so the old PASS pin was stale.
+    pins: parity-live-infra-2/C-003
+    """
+    _assert_known_fail_apache(
+        _compat_provenance,
+        test_id=_KNOWN_FAIL_TIME_HOUR_ID,
+        expected_status="FAIL-MISSING",
+        cause_needles=("UNSUPPORTED_TIME_TYPE", "TIME is not supported"),
+    )
+
+
+def test_meta_known_fail_minute_over_time(_compat_provenance: object) -> None:
+    """SPARK-52893 minute(time): live Spark 4.1.2 refuses exactly like RePark.
+
+    Both raise UNSUPPORTED_TIME_TYPE 0A000, so the old PASS pin was stale.
+    pins: parity-live-infra-2/C-003
+    """
+    _assert_known_fail_apache(
+        _compat_provenance,
+        test_id=_KNOWN_FAIL_TIME_MINUTE_ID,
+        expected_status="FAIL-MISSING",
+        cause_needles=("UNSUPPORTED_TIME_TYPE", "TIME is not supported"),
+    )
+
+
+def test_meta_known_fail_second_over_time(_compat_provenance: object) -> None:
+    """SPARK-52894 second(time): live Spark 4.1.2 refuses exactly like RePark.
+
+    Both raise UNSUPPORTED_TIME_TYPE 0A000, so the old PASS pin was stale.
+    pins: parity-live-infra-2/C-003
+    """
+    _assert_known_fail_apache(
+        _compat_provenance,
+        test_id=_KNOWN_FAIL_TIME_SECOND_ID,
+        expected_status="FAIL-MISSING",
+        cause_needles=("UNSUPPORTED_TIME_TYPE", "TIME is not supported"),
     )
 
 
