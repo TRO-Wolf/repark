@@ -4,6 +4,14 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-ntz-nested-wall-1-ledger.md](ice-ntz-nested-wall-1-ledger.md) —
+  **ICE-NTZ-NESTED-WALL-1 (2026-10-11), parity row R-011, step 0:** a nested
+  microsecond `TIMESTAMP_NTZ` field stores the session wall on field assignment
+  and the UTC wall on every other answering door. Main `2c33f289` measured
+  first (C-001): 28 session-wall cells, 102 UTC-wall cells. Spark 4.1.2 with
+  Iceberg 1.11 stores the session wall on every door it answers (C-002). The
+  fix and the control pins are the next round (C-003, C-004), both OPEN.
+  `risk_tier: standard`. Branch `fix/ice-ntz-nested-wall-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6
