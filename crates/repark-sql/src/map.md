@@ -119,6 +119,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `alias_source_positionally` and aliases every UNNAMED projection item by position,
   as the Spark door's does; named items keep the collision rule. This door installs
   no display rule, so its four-statement pin guards routing, not a collision.
+  **C-4 fold 3 S3 (2026-10-11):** the driver-reaching pins assert through
+  `assert_reached_pg_driver`, which also accepts the not-compiled refusal, so the
+  suite is green without the `postgres` feature.
   pins: c-4/C-013
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic

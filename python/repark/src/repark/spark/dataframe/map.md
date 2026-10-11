@@ -1076,6 +1076,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `write.path` carriage contract: one `COPY` statement on bulk, one multi-row `INSERT`
   per batch on row, so statement triggers fire once per batch on the row path and a
   per-statement row cap can refuse bulk while admitting row.
+  **C-4 fold 3 S3 (2026-10-11):** the docstring states both row-path statement
+  bounds (up to 256 rows or about 1 MiB per statement).
   pins: c-4/C-014
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** both `option` methods

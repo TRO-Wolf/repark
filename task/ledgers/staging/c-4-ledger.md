@@ -1137,3 +1137,46 @@ harness gained the production display rule it was missing); the ANSI door
 installs no display rule, so its four-statement pin guards routing there, and
 `1BD` parses there as an implicit alias. The live pin stores all four sources
 by position through the SQL door.
+
+### 14.4 The S3 batch (2026-10-11)
+
+The verdict's seven S3 (indices 3-9) land as four fixes and three records.
+Findings 3 is item 1's consequence, recorded in §14.1 as S3-17values, not
+fixed: the seventeen refused values stay refused under the engine's rule, as
+the Iceberg target refuses them. Findings 4 is half-closed by item 1: a
+malformed STRING can no longer reach the invalid-input arm (it refuses at the
+store-assignment gate), so the only value that still echoes is non-UTF8 bytes,
+spelled as hex capped at 100 bytes; the class half stays open (row
+S3-invalid-class below). Findings 5 is closed: item 2 fixed the year spellings
+(§14.2) and this batch names the gap column.
+
+Fixed in this batch (commit `1a8db43a` unless named):
+
+- **The gap wall names its column (findings 5).** `localise_at`, `unlocalise`,
+  `place` and `unplace` take the column name and carry it into the
+  `UnrepresentableValue` refusal, so a gap wall into timestamptz refuses naming
+  `v` instead of the empty column. The read-path `localise` keeps the empty
+  name (it has no column). Pin:
+  `a_gap_wall_into_a_timestamptz_column_refuses_naming_the_column`.
+- **The live pin's budget leaves the suite load (findings 6).**
+  `a_row_write_idle_past_the_read_timeout_ends_as_that_timeout` failed 3 of 13
+  full-suite runs with a `Timeout { which: Read }` at open or the first write.
+  The three row iterations now open and write the first batch through
+  `open_row_writer_past_load`, which retries past `Timeout` with a 120 s
+  deadline, and the bulk control retries likewise (180 s). What the pin
+  asserts is unchanged: after the 2200 ms idle the write-again and the finish
+  both answer `Timeout { which: Read }` with 0 rows, and the bulk control
+  still commits 600 rows (a COPY is not idle).
+- **The byte bound reaches the user docs (findings 7, commit `d2c98f41`).**
+  `docs/guide/repark-toml.md` and the `writer_jdbc` docstring now say the row
+  path sends statements of up to 256 rows or about 1 MiB per statement.
+- **The route's tests run without the feature (findings 9).** Both `pg_insert`
+  suites assert through `assert_reached_pg_driver`, which accepts either the
+  driver refusal or the not-compiled refusal while still refusing the default
+  hook. Bare: `repark-sql` 9 passed with 4 ignored, `repark-spark` 10 passed;
+  with `--features repark-core/postgres`: the same counts.
+
+| id | date | what | the record |
+|---|---|---|---|
+| S3-default | 2026-10-11 | `INSERT INTO pg.s.d2 VALUES (1, DEFAULT)` answers `No field named default`; a column left out of the list takes its Postgres default (77). No fix in this batch. | Open: the column's default, or a named refusal. |
+| S3-invalid-class | 2026-10-11 | After item 1 the invalid-input arm fires only for non-UTF8 bytes into text (capped hex echo, pinned by `invalid_bytes_into_text_refuse_naming_the_bytes`); malformed strings refuse at the store-assignment gate instead. The arm still arrives as a generic `PySparkException` with the engine prefix while overflow arrives as `ArithmeticException`. | Open: one named class for both refusals. |

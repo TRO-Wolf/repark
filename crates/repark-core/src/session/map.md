@@ -60,6 +60,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   shed comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
   **C-4 fold 3 item 2 (2026-10-11):** `zone_of` is `pub(crate)` so the text renderer
   parses the session zone through the same canonicalisation.
+  **C-4 fold 3 S3 (2026-10-11):** `localise_at`, `unlocalise`, `place` and
+  `unplace` take the column name and carry it into the `UnrepresentableValue`
+  refusal; the read-path `localise` keeps the empty name (it has no column).
   pins: c-2/C-098, C-108, C-109, C-110, C-111
 - `write_postgres.rs` — **C-4 step 2 (2026-10-09):** `execute_postgres_write` is the one
   Postgres sink driver both SQL doors and the `df.write.jdbc` binding call. It builds a
@@ -108,6 +111,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   door's own CAST keeps Arrow text there. Unformattable walls still refuse instead of
   storing NULL. Only `Utf8`-mapped columns render this way; uuid/json/interval columns
   keep the Arrow cast.
+  **C-4 fold 3 S3 (2026-10-11):** the three placement call sites pass the column
+  name, so a gap wall into timestamptz refuses naming the column.
   pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.

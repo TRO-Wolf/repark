@@ -29,6 +29,8 @@ The pins of [../zone_localiser.rs](../zone_localiser.rs) (`#[cfg(all(test, featu
     reads, so place-then-unplace is the identity, including the fold, where two instants
     share one wall); `localise_at` places at an explicit zone id. Both are shared through
     one `convert` helper with `localise`, whose behavior is unchanged.
+  - **C-4 fold 3 S3 (2026-10-11):** the pins pass the new column argument (empty:
+    the unit pins assert the refusal reason and row, not the column).
   pins: c-2/C-098, C-108, C-109, C-110, C-111, C-117
 
 ## Pointers

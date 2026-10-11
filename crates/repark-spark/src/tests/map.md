@@ -2514,6 +2514,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **C-4 fold 2 item 5 (2026-10-10):**
   `pg_insert_with_repeated_expressions_plans_positionally` pins the three repeated-name
   sources reaching the driver.
+  **C-4 fold 3 S3 (2026-10-11):** the driver-reaching pins assert through
+  `assert_reached_pg_driver`, which also accepts the not-compiled refusal, so the
+  suite is green without the `postgres` feature.
   pins: c-4/C-013, C-014
 
 ## Mapping rule

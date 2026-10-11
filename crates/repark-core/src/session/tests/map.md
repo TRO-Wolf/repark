@@ -61,7 +61,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   (infinities, NaN, 1e7, 1e16, 1e-5, 123456789.125, -0.0, both widths); nanosecond,
   second and millisecond timestamps render the session-zone wall with up to nine
   fraction digits; timestamps and dates outside the four-digit years render ISO dates;
-  decimals, bools, ints, strings and binaries render plainly. pins: c-4/C-013, C-014
+  decimals, bools, ints, strings and binaries render plainly.
+  **C-4 fold 3 S3 (2026-10-11):** a gap wall into a timestamptz column refuses
+  naming the column. pins: c-4/C-013, C-014
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
   argument refuses as `NumberFormat` before any connection. pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned

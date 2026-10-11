@@ -23,6 +23,10 @@ See [../map.md](../map.md).
   with a second `write`, with a remainder `commit` must flush, and with a full group so that
   `COMMIT` is the first request after the wait; the bulk path commits under the same waits) and
   `other_arrow_encodings_store_the_same_table_on_both_paths`. pins: c-4/C-020, C-021, C-022
+  **C-4 fold 3 S3 (2026-10-11):** the idle-timeout pin opens and writes its first
+  batch through `open_row_writer_past_load`, which retries past `Timeout` under
+  suite load (120 s deadline; 180 s on the bulk control); the asserted timeouts
+  and row counts are unchanged.
 - `live_write_relations.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. One
   `Property` row per relation property: the DDL (run twice, for a `_b` twin written by a
   `Bulk` request and an `_r` twin written by a `Row` request), the target, the written

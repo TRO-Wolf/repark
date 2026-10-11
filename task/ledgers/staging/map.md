@@ -188,6 +188,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **Fold 2 (2026-10-10, branch `feat/c-4-routing`):** §13 records the five
   items, the owner ruling accepting the row path's statement granularity with
   the seven re-measured properties, and the nine S3 open rows.
+  **Fold 3 (2026-10-11, branch `feat/c-4-routing`):** §14 records the three
+  items and the S3 batch: the store-assignment gate, the engine text rendering,
+  positional aliasing, and the seven S3 as four fixes and three records.
   `risk_tier: standard`. Branch `feat/c-4-writes`.
 - [c-3-ledger.md](c-3-ledger.md) —
   **C-3, card 1.6 (2026-10-07), in flight:** partitioned parallel Postgres reads and the

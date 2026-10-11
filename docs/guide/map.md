@@ -48,6 +48,8 @@ illustrative. A claim with no verified basis does not go in.
   `df.write.jdbc` appends, the `write.path` bulk/row carriages with the
   once-per-batch trigger rule, and the whole-statement refusal; the grants
   paragraph gains the writer's `INSERT` grant and the `BEGIN READ WRITE` lift.
+  **C-4 fold 3 S3 (2026-10-11):** the row carriage states both statement bounds
+  (up to 256 rows or about 1 MiB per statement).
   pins: c-4/C-013, C-014
 - [maintenance-policy.md](maintenance-policy.md) — `[<profile>.maintenance]` and
   `CALL run_maintenance()` (MAINT-POLICY-1, 2026-09-10): the D-1 policy shape with
