@@ -23,6 +23,10 @@ See [../map.md](../map.md).
   with a second `write`, with a remainder `commit` must flush, and with a full group so that
   `COMMIT` is the first request after the wait; the bulk path commits under the same waits) and
   `other_arrow_encodings_store_the_same_table_on_both_paths`. pins: c-4/C-020, C-021, C-022
+  **C-4 fold 3 S3 (2026-10-11):** the idle-timeout pin opens and writes its first
+  batch through `open_row_writer_past_load`, which retries past `Timeout` under
+  suite load (2 min deadline; 3 min on the bulk control); the asserted timeouts
+  and row counts are unchanged.
 - `live_write_relations.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. One
   `Property` row per relation property: the DDL (run twice, for a `_b` twin written by a
   `Bulk` request and an `_r` twin written by a `Row` request), the target, the written
@@ -33,6 +37,34 @@ See [../map.md](../map.md).
   table of a foreign table), so "the same table" covers what a rule or a trigger wrote.
   The cells: `identity_generated_and_default_columns_agree_or_refuse_on_both_paths`,
   `rules_and_views_take_the_row_path_and_leave_the_same_tables`,
+  `row_triggers_and_disabled_statement_triggers_stay_on_the_bulk_path`,
+  `bulk_and_row_leave_the_same_target_rows_under_a_statement_trigger` (a BEFORE, an AFTER
+  and a transition-table trigger: bulk fires each once, row fires each per statement, the
+  target rows agree; **C-4 fold 2 item 4 (2026-10-10):** the row remainder runs as one
+  statement, so four rows fire each trigger once on both paths),
+  `row_path_sends_full_groups_plus_one_remainder_statement` (600 rows fire BEFORE/AFTER
+  three times with transition sizes 256, 256, 88),
+  `partitions_inheritance_persistence_and_constraints_agree_on_both_paths`,
+  `row_security_and_grants_are_judged_the_same_on_both_paths` (a second role),
+  `a_postgres_fdw_table_takes_the_bulk_path_and_other_wrappers_do_not` (a loopback
+  `postgres_fdw` server plus a `file_fdw` server, both dropped at the end;
+  `CREATE EXTENSION IF NOT EXISTS` leaves the extensions in the disposable database; the
+  `postgres_fdw` twin asserts the same remote rows and remote trigger audits on both paths,
+  the `file_fdw` twin asserts the same `0A000` refusal) and
+  `another_sessions_temporary_table_is_refused_the_same_on_both_paths`.
+  pins: c-4/C-017, C-018, C-019, C-023, C-024
+- `live_write.rs`, `write.rs` — **C-4 fold 1 (2026-10-09):**
+  `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` is now
+  `a_statement_trigger_fires_once_by_bulk_and_per_statement_by_row`: its counting trigger
+  is a statement trigger, so a `Bulk` request fires it once and a `Row` request fires it
+  once per bounded INSERT, and the cell holds each request to its own count (the measure
+  round, 2026-10-10, narrowed the fold-1 same-count rule). The pure pins gain
+  `a_named_identity_or_generated_column_refuses_in_one_class_and_names_the_fix` and
+  `every_fallback_reason_says_why_copy_was_not_used` (no `StatementTrigger` reason; it
+  pins the `fdwname` fact instead). **C-4 fold 2 item 4 (2026-10-10):** the counting cell
+  holds the row path to full groups plus one remainder statement (330 rows run 2, 48, 330
+  and 1 statements across the four option cases; the widest case runs 2).
+  pins: c-4/C-017, C-018, C-023, C-024
   `row_triggers_stay_bulk_and_statement_triggers_take_the_row_path`,
   `partitions_inheritance_persistence_and_constraints_agree_on_both_paths`,
   `row_security_and_grants_are_judged_the_same_on_both_paths` (a second role),

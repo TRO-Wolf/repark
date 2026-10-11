@@ -1,5 +1,9 @@
 """The declared orc-write/xml/jdbc IO refusals and the ``na.replace`` delegation.
 
+The Postgres jdbc writer answers, so the writer arm pins its non-append refusal
+instead of ``NOT_IMPLEMENTED``; the mysql reader arm keeps the ``NOT_IMPLEMENTED``
+refusal for undriven schemes.
+
 pins: io-declared-1/C-001, C-002, C-003, C-004, C-005; io-orc-1/C-010 (the orc read
 arm moved to ``orc_read.py`` when the read side became a real scan)
 """
@@ -15,6 +19,7 @@ from repark.errors import (
     PySparkNotImplementedError,
     PySparkTypeError,
     PySparkValueError,
+    UnsupportedOperationException,
 )
 
 COVERS: list[str] = [
@@ -40,6 +45,22 @@ def _expect_refusal(call: Callable[[], Any], feature: str) -> None:
     raise SystemExit(f"{feature} did not refuse")
 
 
+def _expect_pg_write_mode_refusal(call: Callable[[], Any], mode: str) -> None:
+    """Assert the jdbc writer's non-append refusal naming the registry row."""
+    try:
+        call()
+    except UnsupportedOperationException as error:
+        expected = (
+            f"df.write.jdbc(mode={mode!r}) refuses: "
+            "a Postgres source takes append writes only (registry row "
+            "CONNECT-DECL-pg-write-modes in docs/spark-sql-iceberg-parity.md)"
+        )
+        if str(error) != expected:
+            raise SystemExit(f"jdbc mode refusal {error!r}") from error
+        return
+    raise SystemExit("jdbc non-append mode did not refuse")
+
+
 def _expect_row_tag_missing(call: Callable[[], Any]) -> None:
     """Assert the XML_ROW_TAG_MISSING refusal."""
     try:
@@ -63,7 +84,9 @@ def main() -> None:
         writer = frame.write
         _expect_refusal(lambda: writer.orc("/tmp/unused-io-declared/orc"), "orc")
         _expect_row_tag_missing(lambda: writer.xml("/tmp/unused-io-declared/xml"))
-        _expect_refusal(lambda: writer.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t"), "jdbc")
+        _expect_pg_write_mode_refusal(
+            lambda: writer.jdbc("jdbc:postgresql://127.0.0.1:1/x", "t"), "error"
+        )
         na = frame.na
         replaced = na.replace("a", "z")
         rows = [repr(row) for row in replaced.collect()]

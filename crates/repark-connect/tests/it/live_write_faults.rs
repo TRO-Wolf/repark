@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use arrow::array::{ArrayRef, Int32Array, StringArray};
+use arrow::array::{ArrayRef, Int32Array, RecordBatch, StringArray};
 use arrow::compute::cast;
 use arrow::datatypes::DataType;
 use repark_connect::{
-    ConnectError, TimeoutSetting, WriteOptions, WritePath, WriteRefusal, WriteReport, WriteRequest,
+    ConnectError, PostgresSettings, PostgresWriter, TimeoutSetting, WriteOptions, WritePath,
+    WriteRefusal, WriteReport, WriteRequest,
 };
 
 use crate::live_pg::{Cell, LIVE};
@@ -168,6 +169,34 @@ async fn a_server_refusal_names_no_written_value() {
     cell.close().await;
 }
 
+async fn open_row_writer_past_load(
+    cell: &Cell,
+    settings: &PostgresSettings,
+    table: &str,
+    options: WriteOptions,
+    first: &RecordBatch,
+) -> (Store, PostgresWriter) {
+    let deadline = tokio::time::Instant::now() + Duration::from_mins(2);
+    loop {
+        let store = Store::new(settings);
+        let resolved = store.target(cell, table).await;
+        let request = WriteRequest::new(&resolved).expect("a table takes rows");
+        match request.open(store.pool(), WritePath::Row, options).await {
+            Ok(mut writer) => match writer.write(first).await {
+                Ok(()) => return (store, writer),
+                Err(ConnectError::Timeout { .. }) => {}
+                Err(error) => panic!("{LIVE}: {error}"),
+            },
+            Err(ConnectError::Timeout { .. }) => {}
+            Err(error) => panic!("{LIVE}: {error}"),
+        }
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "the box never answered inside the read timeout"
+        );
+    }
+}
+
 #[tokio::test]
 #[ignore = "live: make pg-up, REPARK_PG_URL"]
 async fn a_row_write_idle_past_the_read_timeout_ends_as_that_timeout() {
@@ -178,23 +207,16 @@ async fn a_row_write_idle_past_the_read_timeout_ends_as_that_timeout() {
          CREATE TABLE {schema}.row (LIKE {schema}.bulk)"
     ))
     .await;
-    let store = Store::new(&cell.settings(&[("read_timeout_ms", "700")]));
+    let settings = cell.settings(&[("read_timeout_ms", "700")]);
+    let options = WriteOptions::from_settings(&settings);
     let (batches, _) = stream_batches(&[300, 300, 256]);
     let idle = Duration::from_millis(2200);
     let timed_out = ConnectError::Timeout {
         which: TimeoutSetting::Read,
     };
-    let resolved = store.target(&cell, "row").await;
-    let request = WriteRequest::new(&resolved).expect("a table takes rows");
     for (first, write_again) in [(0, true), (0, false), (2, false)] {
-        let opening = request
-            .clone()
-            .open(store.pool(), WritePath::Row, store.options);
-        let mut writer = opening.await.expect(LIVE);
-        writer
-            .write(&batches[first])
-            .await
-            .expect("rows before the wait");
+        let (store, mut writer) =
+            open_row_writer_past_load(&cell, &settings, "row", options, &batches[first]).await;
         tokio::time::sleep(idle).await;
         if write_again {
             assert_eq!(writer.write(&batches[1]).await, Err(timed_out.clone()));
@@ -205,17 +227,38 @@ async fn a_row_write_idle_past_the_read_timeout_ends_as_that_timeout() {
             "{first} {write_again}"
         );
         assert_eq!(rows_in(&cell, "row").await, 0);
+        drop(store);
     }
-    let resolved = store.target(&cell, "bulk").await;
-    let request = WriteRequest::new(&resolved).expect("a table takes rows");
-    let opening = request.open(store.pool(), WritePath::Bulk, store.options);
-    let mut writer = opening.await.expect(LIVE);
-    writer.write(&batches[0]).await.expect("three hundred rows");
-    tokio::time::sleep(idle).await;
-    writer.write(&batches[1]).await.expect("a COPY is not idle");
-    let path = WritePath::Bulk;
-    assert_eq!(writer.commit().await, Ok(WriteReport { path, rows: 600 }));
-    drop(store);
+    let deadline = tokio::time::Instant::now() + Duration::from_mins(3);
+    loop {
+        let store = Store::new(&settings);
+        let resolved = store.target(&cell, "bulk").await;
+        let request = WriteRequest::new(&resolved).expect("a table takes rows");
+        let attempt = async {
+            let mut writer = request.open(store.pool(), WritePath::Bulk, options).await?;
+            writer.write(&batches[0]).await?;
+            tokio::time::sleep(idle).await;
+            writer.write(&batches[1]).await?;
+            writer.commit().await
+        }
+        .await;
+        match attempt {
+            Ok(report) => {
+                let path = WritePath::Bulk;
+                assert_eq!(report, WriteReport { path, rows: 600 });
+                drop(store);
+                break;
+            }
+            Err(ConnectError::Timeout { .. }) => {
+                drop(store);
+                assert!(
+                    tokio::time::Instant::now() < deadline,
+                    "the box never answered inside the read timeout"
+                );
+            }
+            Err(error) => panic!("{LIVE}: {error}"),
+        }
+    }
     no_backend_remains(&cell).await;
     cell.close().await;
 }

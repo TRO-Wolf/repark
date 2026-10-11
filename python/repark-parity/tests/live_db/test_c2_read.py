@@ -157,7 +157,6 @@ def test_ddl_and_dml_refuse_through_both_doors(
             spark.sql(statement).collect()
         assert "read-only" in str(excinfo.value), statement
     for statement in (
-        f"INSERT INTO {qualified} (id) VALUES (3)",
         f"UPDATE {qualified} SET i4 = 0",
         f"DELETE FROM {qualified}",
     ):

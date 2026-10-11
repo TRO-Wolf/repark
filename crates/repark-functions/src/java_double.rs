@@ -1,4 +1,3 @@
-mod bigint;
 mod dtoa;
 mod format_float;
 mod parse_float;

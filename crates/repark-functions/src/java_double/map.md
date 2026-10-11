@@ -40,13 +40,11 @@ sets an ALT flag that appends `.` when precision is 0.
   the repo. Corroborated by the corpus test in `tests_corpus.rs` over the recorded
   JDK 17.0.15 fixture (env `REPARK_JDK17_TOSTRING_CORPUS`, skipped when unset) and
   the in-tree tables beside it.
-- `bigint.rs` — the ported `FDBigInteger` magnitude arithmetic (`5^p5·2^p2`
-  construction, normalizing shift, quotient-remainder digit iteration, compare and
-  compare-against-sum), little-endian `u32` limbs, no `unsafe`. The quotient
-  estimate is top-one-over-top-one with a decrement correction; the disparate-size
-  throw is a correct general division instead. The 346-row `5^p` table is a
-  heap-built `LazyLock` static (the stack-array gate); low-word takes share one
-  narrowing helper.
+  **C-4 fold 3 item 2 (2026-10-11):** the scalar engine moved to
+  `repark-common`'s `java_double/` (the Postgres write chokepoint calls the one
+  function); this file keeps the two Arrow array wrappers and re-exports the
+  scalars, and `bigint.rs` moved with the engine. The pins stay here.
+- `format_float.rs` — **JAVA-DOUBLE-FD-1 C-003 (2026-09-15):** the
 - `format_float.rs` — **JAVA-DOUBLE-FD-1 C-003 (2026-09-15):** the
   `__repark_format_float__` UDF. Whole-format single-verb `%[flags][width][.precision]f|F`
   only; exact binary-to-decimal digit generation (limb shift/mask loop) with

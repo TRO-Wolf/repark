@@ -72,6 +72,62 @@ pub(crate) fn deduplicate_source_names(insert: &Insert) -> Option<Insert> {
     Some(rewritten)
 }
 
+pub(crate) fn alias_source_positionally(insert: &Insert) -> Option<Insert> {
+    let mut source = insert.source.as_ref()?.as_ref().clone();
+    if !alias_body_positionally(&mut source.body) {
+        return None;
+    }
+    let mut rewritten = insert.clone();
+    rewritten.source = Some(Box::new(source));
+    Some(rewritten)
+}
+
+fn alias_body_positionally(body: &mut SetExpr) -> bool {
+    match body {
+        SetExpr::Select(select) => alias_select_positionally(select),
+        SetExpr::Query(query) => alias_body_positionally(&mut query.body),
+        SetExpr::SetOperation { left, right, .. } => {
+            let left_changed = alias_body_positionally(left);
+            let right_changed = alias_body_positionally(right);
+            left_changed || right_changed
+        }
+        _ => false,
+    }
+}
+
+fn alias_select_positionally(select: &mut Select) -> bool {
+    let starred = select.projection.iter().any(|item| {
+        matches!(
+            item,
+            SelectItem::Wildcard(_) | SelectItem::QualifiedWildcard(..)
+        )
+    });
+    let mut seen = HashSet::new();
+    let mut changed = false;
+    for (index, item) in select.projection.iter_mut().enumerate() {
+        if let SelectItem::UnnamedExpr(expr) = item {
+            let taken = expr.clone();
+            *item = SelectItem::ExprWithAlias {
+                expr: taken,
+                alias: Ident::new(format!("__repark_col_{}", index + 1)),
+            };
+            changed = true;
+            continue;
+        }
+        let Some(key) = output_key(item) else {
+            continue;
+        };
+        if seen.insert(key) && !(starred && column_named(item)) {
+            continue;
+        }
+        if let SelectItem::ExprWithAlias { alias: current, .. } = item {
+            *current = Ident::new(format!("__repark_col_{}", index + 1));
+            changed = true;
+        }
+    }
+    changed
+}
+
 fn deduplicate_body(body: &mut SetExpr) -> bool {
     match body {
         SetExpr::Select(select) => deduplicate_select(select),
