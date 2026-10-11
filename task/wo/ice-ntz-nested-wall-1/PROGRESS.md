@@ -13,5 +13,15 @@ session wall.
 `1767323045123456` in America/New_York and Asia/Kolkata
 (`evidence/pin-red-step2.txt`). Green on the commit.
 
-**Next:** `store_assignment_cast_sql`, then `update_projection_sql`, then
+**Step 2, store assignment:** `store_assignment_cast_sql` calls the same walk.
+A caller that has a source type passes it. `store_assignment_then_sql` passes
+`None` because it has the SQL text and the target type only. The Spark fold
+passes the probed type for a top-level struct and `None` when the probe does
+not plan. A path longer than one step stays on `nested_leaf_cast_sql`.
+Facade: MERGE UPDATE from a column and UPDATE from a sibling `TIMESTAMP`
+column store the session wall. A wall literal stays `1767323045123456`. A
+field assignment stays the session wall. A nested `TIMESTAMP` leaf stays the
+instant. Green on the installed build, three zones. Red pin follows.
+
+**Next:** red pin for store assignment, then `update_projection_sql`, then
 `insert_timestamp_ns::after_analysis`.

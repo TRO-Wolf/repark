@@ -9,7 +9,14 @@ use super::store_assign::{
 };
 
 #[must_use]
-pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
+pub fn store_assignment_cast_sql(
+    expr: &str,
+    source: Option<&DataType>,
+    target: &DataType,
+) -> String {
+    if let Some(nested) = nested_micro_ntz_wall_sql(expr, source, target) {
+        return nested;
+    }
     match super::ntz_store::store_kernel_sql(expr, target) {
         Some(stored) => stored,
         None => nested_leaf_cast_sql(expr, target),
@@ -372,11 +379,11 @@ mod tests {
             .into(),
         );
         assert_eq!(
-            store_assignment_cast_sql("s.v", &target),
+            store_assignment_cast_sql("s.v", None, &target),
             "arrow_cast((s.v), 'Struct(\"a\": Int32)')"
         );
         assert_eq!(
-            store_assignment_cast_sql("'it''s'", &DataType::Utf8),
+            store_assignment_cast_sql("'it''s'", None, &DataType::Utf8),
             "arrow_cast(('it''s'), 'Utf8')"
         );
     }
@@ -387,15 +394,15 @@ mod tests {
         let nanos = DataType::Timestamp(TimeUnit::Nanosecond, None);
         let zoned_nanos = DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into()));
         assert_eq!(
-            store_assignment_cast_sql("s.v", &micros),
+            store_assignment_cast_sql("s.v", None, &micros),
             "__repark_cast_timestamp_ntz__((s.v))"
         );
         assert_eq!(
-            store_assignment_cast_sql("s.v", &nanos),
+            store_assignment_cast_sql("s.v", None, &nanos),
             "__repark_cast_timestamp_ns__((s.v))"
         );
         assert_eq!(
-            store_assignment_cast_sql("s.v", &zoned_nanos),
+            store_assignment_cast_sql("s.v", None, &zoned_nanos),
             "__repark_cast_timestamptz_ns__((s.v))"
         );
         assert_eq!(
@@ -579,6 +586,28 @@ mod tests {
         assert_eq!(
             nested_micro_ntz_wall_sql("m", Some(&map_source), &map_target),
             None
+        );
+    }
+
+    #[test]
+    fn store_assignment_wraps_an_instant_leaf_and_an_unknown_source_stays_main() {
+        let source = struct_type(&[
+            ("v", instant(TimeUnit::Microsecond)),
+            ("n", DataType::Int32),
+        ]);
+        let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let wrapped = store_assignment_cast_sql("s", Some(&source), &target);
+        assert!(
+            wrapped.contains("__repark_cast_timestamp_ntz__"),
+            "{wrapped}"
+        );
+        assert!(
+            !wrapped.contains("__repark_cast_timestamp_ntz__((s))"),
+            "{wrapped}"
+        );
+        assert_eq!(
+            store_assignment_cast_sql("s", None, &target),
+            super::nested_leaf_cast_sql("s", &target)
         );
     }
 }

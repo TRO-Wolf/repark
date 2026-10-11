@@ -293,6 +293,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   returns, so a microsecond `TIMESTAMP_NTZ` leaf below the top level stores the session
   wall when the supply is an instant. A wall supply is not wrapped. A top-level timestamp
   stays on `store_kernel_sql`. pins: ice-ntz-nested-wall-1/C-003
+- `insert.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `store_assignment_then_sql`
+  passes `None` into `store_assignment_cast_sql` because that caller has the SQL
+  text and the target type only. The LTZ arm of `zone_wrapping_stream_sql` passes
+  the planned source. A `None` source does not wrap a nested microsecond
+  `TIMESTAMP_NTZ` leaf. pins: ice-ntz-nested-wall-1/C-003
 - `insert.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `zone_wrapping_stream_sql` asks
   `ntz_store::store_kernel_sql`, so a `timestamptz_ns` column of a MERGE INSERT goes through
   the zoned kernel and a wall is localised in the session zone, as INSERT localises it.

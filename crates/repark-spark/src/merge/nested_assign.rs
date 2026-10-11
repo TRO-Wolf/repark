@@ -288,7 +288,9 @@ async fn probe_type(
     scope: &AssignmentScope,
     value: &Expr,
 ) -> Option<DataType> {
-    let sql = format!("SELECT ({value}) FROM {} LIMIT 0", scope.probe_from);
+    let mut rendered = value.clone();
+    let pretty = repark_iceberg::write::sql_text::render_for_reparse(&mut rendered);
+    let sql = format!("SELECT ({pretty}) FROM {} LIMIT 0", scope.probe_from);
     let frame = ctx.sql(&sql).await.ok()?;
     frame
         .schema()
@@ -382,15 +384,20 @@ fn leaf_sql(
     let value_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut value);
     match &keyed.value_type {
         Some(source) => value_sql_for(&value_sql, source, target, path, case_sensitive),
-        None => Ok(assignment_cast_sql(&value_sql, target, path)),
+        None => Ok(assignment_cast_sql(&value_sql, None, target, path)),
     }
 }
 
-fn assignment_cast_sql(value_sql: &str, target: &DataType, path: &[String]) -> String {
+fn assignment_cast_sql(
+    value_sql: &str,
+    source: Option<&DataType>,
+    target: &DataType,
+    path: &[String],
+) -> String {
     if path.len() > 1 {
         nested_leaf_cast_sql(value_sql, target)
     } else {
-        store_assignment_cast_sql(value_sql, target)
+        store_assignment_cast_sql(value_sql, source, target)
     }
 }
 
@@ -423,7 +430,7 @@ fn value_sql_for(
         {
             return Err(DataFusionError::Plan(text));
         }
-        return Ok(assignment_cast_sql(value_sql, target, path));
+        return Ok(assignment_cast_sql(value_sql, Some(source), target, path));
     };
     let mut members = Vec::with_capacity(target_fields.len());
     let mut used = HashSet::new();
@@ -458,7 +465,7 @@ fn value_sql_for(
         return Err(render::extra_struct_fields(&extra, path));
     }
     if names_match_exactly(source_fields, target_fields) && !has_required_field(target_fields) {
-        return Ok(assignment_cast_sql(value_sql, target, path));
+        return Ok(assignment_cast_sql(value_sql, Some(source), target, path));
     }
     Ok(format!(
         "CASE WHEN ({value_sql}) IS NULL THEN NULL ELSE named_struct({}) END",

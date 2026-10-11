@@ -138,8 +138,11 @@ fn zone_wrapping_stream_sql(
             projection.push(format!("({wall}) AS {quoted}"));
         } else if instant(index) {
             changed = true;
-            let cast =
-                crate::write::update_cast::store_assignment_cast_sql(&column, field.data_type());
+            let cast = crate::write::update_cast::store_assignment_cast_sql(
+                &column,
+                source,
+                field.data_type(),
+            );
             projection.push(format!("({cast}) AS {quoted}"));
         } else {
             projection.push(format!("{column} AS {quoted}"));
@@ -368,7 +371,7 @@ fn update_assignment_probe_sql(
 
 /// CAST a validated SET expression to the target Arrow type so the rewrite `CASE` unifies.
 pub(super) fn store_assignment_then_sql(expr: &str, target_type: &DataType) -> String {
-    crate::write::update_cast::store_assignment_cast_sql(expr, target_type)
+    crate::write::update_cast::store_assignment_cast_sql(expr, None, target_type)
 }
 
 /// Shared refusal — path label is `INSERT` or `UPDATE SET`; the matrix is not forked.

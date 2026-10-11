@@ -26,6 +26,11 @@ and the star-sentinel rewrite live here instead of in it.
   `nested_leaf_cast_sql`, which is what main did. A nested `timestamptz_ns` leaf therefore
   stores through field assignment what it stores through every other door.
   pins: ice-tstzns-wall-1/C-007
+- `nested_assign.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** a top-level struct
+  assignment passes the probed source type into `store_assignment_cast_sql`. A
+  path longer than one step still takes `nested_leaf_cast_sql` and ignores the
+  source. A probe that does not plan passes `None`.
+  pins: ice-ntz-nested-wall-1/C-003
 - `nested_assign.rs` + [nested_assign/](nested_assign/map.md) — **U8 WRITE-SQL PR2
   (2026-09-25):** nested struct-field assignment for the Spark door's UPDATE and MERGE. It
   lives here because `lib.rs` is at its manifest ceiling and `merge.rs` is near the file-size

@@ -1,10 +1,13 @@
 """ICE-NTZ-NESTED-WALL-1: a nested microsecond ``TIMESTAMP_NTZ`` leaf stores one wall.
 
 The doors wired so far are the ones ``zone_store_frame`` serves (``INSERT … BY NAME``,
-``INSERT OVERWRITE … SELECT``, ``overwritePartitions``, ``insertInto(overwrite=True)``)
-and the MERGE INSERT doors ``zone_wrapping_stream_sql`` serves.
+``INSERT OVERWRITE … SELECT``, ``overwritePartitions``, ``insertInto(overwrite=True)``),
+the MERGE INSERT doors ``zone_wrapping_stream_sql`` serves, and the whole-struct
+assignment doors ``store_assignment_cast_sql`` serves when the caller passes an instant
+source type (MERGE UPDATE from a column, UPDATE from a sibling ``TIMESTAMP`` column).
 An instant stores the session wall. A wall literal stores ``1767323045123456`` in every
-zone. A nested ``TIMESTAMP`` leaf stores the instant.
+zone. A nested ``TIMESTAMP`` leaf stores the instant. A caller with no source type
+passes ``None`` and the expression stays main's.
 
 pins: ice-ntz-nested-wall-1/C-003
 """
@@ -201,5 +204,75 @@ def test_merge_insert_doors_store_the_session_wall(tmp_path: Path, zone: str) ->
         create_nested(spark, control, "TIMESTAMP")
         merge_insert_column(spark, control)
         assert leaf_ticks(spark, control, "st.v") == [WALL_TICK]
+    finally:
+        spark.stop()
+
+
+def merge_update_whole(spark: Any, table: str) -> None:
+    """MERGE UPDATE of the whole struct from the source column."""
+    seed_null(spark, table)
+    spark.sql(
+        f"MERGE INTO {table} t USING ice.ns.src s ON t.id = s.id "
+        "WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.l, 'n', 1)"
+    )
+
+
+def update_from_sibling(spark: Any, table: str) -> None:
+    """UPDATE the whole struct from a ``TIMESTAMP`` column of the same row."""
+    spark.sql(
+        f"CREATE TABLE {table} "
+        "(id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP) "
+        "USING iceberg TBLPROPERTIES ('format-version'='2')"
+    )
+    spark.sql(
+        f"INSERT INTO {table} SELECT 1, "
+        "named_struct('v', CAST(NULL AS TIMESTAMP_NTZ), 'n', 0), 0, l FROM ice.ns.src"
+    )
+    spark.sql(f"UPDATE {table} SET st = named_struct('v', c, 'n', 1) WHERE id >= 0")
+
+
+def update_whole_where(spark: Any, table: str, literal: str) -> None:
+    """UPDATE the whole struct from one literal."""
+    seed_null(spark, table)
+    spark.sql(f"UPDATE {table} SET st = named_struct('v', {literal}, 'n', 1) WHERE id >= 0")
+
+
+@pytest.mark.parametrize("zone", ZONES)
+def test_whole_struct_update_stores_the_session_wall(tmp_path: Path, zone: str) -> None:
+    """Whole-struct assignment stores the session wall of a probed instant."""
+    spark = open_session(zone, tmp_path)
+    try:
+        write_source(spark)
+        expected = SESSION_WALL[zone]
+        merged = "ice.ns.merged"
+        create_nested(spark, merged, "TIMESTAMP_NTZ")
+        merge_update_whole(spark, merged)
+        assert leaf_ticks(spark, merged, "st.v") == [expected], "merge"
+        sibling = "ice.ns.sibling"
+        update_from_sibling(spark, sibling)
+        assert leaf_ticks(spark, sibling, "st.v") == [expected], "sibling"
+        wall = "ice.ns.wall_upd"
+        create_nested(spark, wall, "TIMESTAMP_NTZ")
+        update_whole_where(spark, wall, WALL)
+        assert leaf_ticks(spark, wall, "st.v") == [WALL_TICK], "wall"
+        field = "ice.ns.field"
+        create_nested(spark, field, "TIMESTAMP_NTZ")
+        seed_null(spark, field)
+        spark.sql(
+            f"MERGE INTO {field} t USING ice.ns.src s ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.st.v = s.l"
+        )
+        assert leaf_ticks(spark, field, "st.v") == [expected], "field"
+        control = "ice.ns.ltz"
+        create_nested(spark, control, "TIMESTAMP")
+        spark.sql(
+            f"INSERT INTO {control} VALUES "
+            "(1, named_struct('v', CAST(NULL AS TIMESTAMP), 'n', 0), 0)"
+        )
+        spark.sql(
+            f"MERGE INTO {control} t USING ice.ns.src s ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.l, 'n', 1)"
+        )
+        assert leaf_ticks(spark, control, "st.v") == [WALL_TICK], "control"
     finally:
         spark.stop()
