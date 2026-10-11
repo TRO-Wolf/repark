@@ -1426,6 +1426,98 @@ The two lib suites, clippy, the panic ban, format, the twelve `test_mb_4_*` batt
 the release build, the map sync, the ledger grammar and the comment ban are in the
 hand-back; all ran on the final source.
 
+## Fold 8 — the seventh verify's S1: a mark-only name stays carried — 2026-10-11
+
+The seventh verify (release build of `80fc8601`) held everything fold 7 claimed and
+returned FAIL on one S1 and three S3. The S1: a name whose only `foreachBatch` trace is
+the starting mark is forgotten at its first `toTable` stamp, which replaces the mark
+property with the record. From the second `toTable` commit the name is treated as
+`toTable`-only: 160 of 320 raced trials end with a foreign commit under a `toTable`
+stamp, and a `toTable` restart is silent (37 of 37; after expiry to one, both doors
+silent).
+
+**Ruling R1 (made; not re-opened).** A name is carried when it ever carried a
+`foreachBatch` stamp OR a starting mark. A stamp of the name that carries
+`repark.cdc.starting-head` also means carried: the first stamp over a mark records it,
+and a `toTable`-only name never does. Retention is as D2: once every snapshot that
+carries the name is expired the name is no longer carried. The driver's decision at
+start and the fence's decision at commit use the SAME predicate, so one run never
+refuses what the next accepts.
+
+### Item 1: the S1
+
+**Premise, confirmed before any product edit.** By reading: the key is written only by
+`ClaimedStamp::summary_entries` from `ClaimedStamp::started`, which `ClaimedStamp::on`
+reads from the mark property; the mark is written only on the `foreachBatch` door
+(`mark_the_start` returns early on any other door); and `refuse_stamp_keys` refuses a
+caller-supplied `repark.cdc.*` key, so no forgery path exists. By test: the new pins
+assert the first `toTable` stamp over a mark carries the key and that no stamp of a
+`toTable`-only name does; both assertions are green on the unmodified tree.
+
+**As built.** `carried_by_foreach` answers true when the sink holds the name's mark, or
+any stamp of the name on the main branch is a `foreachBatch` stamp, or any stamp of the
+name carries `repark.cdc.starting-head` (key presence, which fails closed past an
+unparsable value). Four product lines in `lineage.rs`, no new seam: the driver
+(`walk_a_foreach_name`) and the fence (`stray_since`) already call this one function,
+so the ruling's same-predicate half holds by construction. What it reads is unchanged
+in kind: the mark property and the main lineage in already-loaded metadata.
+
+**What fold 8 overturns.** The fold-6 lineage pin's assertion that a mark the table
+door replaced leaves the name unwalked; the edited assertion now expects carried. The
+fold-7 `toTable`-only pin still lands, unchanged.
+
+**Proof.** Three Rust pins: mark only, then one `toTable` stamp, then carried (and
+still carried after a second); a `toTable`-only name with stamps and a foreign commit
+between them not carried; two names on one sink where only the other ran
+`foreachBatch`, this name not carried (the Z9 pin: the other's stamp is a
+`foreachBatch` stamp, which the old shared-sink pin never was). Rust at the fence: the
+mark-only name's SECOND `toTable` stamp over a foreign commit is refused on every arm
+with the existing stray text and the stray stays the head. The facade pin
+(`test_mb_4_streaming_markdeep.py`, the verifier's `markdeep_delete_table_0`
+choreography: a body that raises before any write, a raced `toTable` run, restart on
+each door with and without expiry to one) asserts never a foreign commit under a stamp
+and never a silent restart. Red-first by hand revert of the product file, restored
+byte for byte (sha-verified): exactly the three change pins fail and the Z9 pin
+passes; the facade pin fails 2 of 4 on a pre-fix debug build (both no-expiry restarts
+silent) and passes 4 of 4 on the release build with the fix.
+
+**Race evidence, on the release build** (own script and scratch root, the verifier's
+timing): the delete cell and its insert twin, both restart doors, 60 runs each, 240
+trials. The foreign landed in all 240. Strays under a stamp 0, silent restarts 0; all
+240 restarts end `RecoveryRequiredException`. The raced `toTable` runs split 191
+finished with the foreign above the last stamp and 49 refused at the fence, every one
+with the fence's text.
+
+### Item 2: a pin for a failed predicate read (S3, mutants Z3, Z6, Z7)
+
+One Rust pin, test-only: the offsets property is a starting mark with pending epoch 1.
+The fence refuses the stamped commit with that error (driven directly, as the claim on
+a valid table and the refusal on the corrupt one cannot share one table), the body
+guard refuses too, and nothing lands in either half. A third half lands a corrupt
+stamp summary beside the corrupt mark and asserts the fence still reports the mark:
+with a single corruption the epoch check reports the same mark error, so only the
+second corruption tells the predicate failure apart from an epoch failure. Red under
+each mutant by hand application with sha-verified restores: Z3 at the guard half, Z6
+at the precedence half, Z7 at the guard half. The Z9-equivalent applied to the new
+predicate is red at the item-1 two-names pin.
+
+### Item 3: one class on both doors (S3)
+
+No code change. On the `foreachBatch` door the raced batch ends `RecoveryRequired`
+because the post-body audit converts the landed stray into a typed reason with its
+remedy; the `toTable` door has no audit, and the fence's refusal reaches the binding
+as an untyped catalog error, so mapping it at the one shared mapper would couple the
+mapper to the fence's wording, and typing it at the fence would re-pin every text
+that asserts the shared refusal. Neither is one mapping site with no new seam. The
+restart on each door is the typed exception with both remedies. Recorded in the
+`sink_offsets` map with the reason.
+
+### Fold-8 proof — 2026-10-11
+
+The two lib suites, clippy, the panic ban, format, the thirteen `test_mb_4_*`
+batteries on the release build, the map sync, the ledger grammar and the comment ban
+are in the hand-back; all ran on the final source.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
@@ -1478,4 +1570,6 @@ hand-back; all ran on the final source.
 | C-047 | MBE-8's refusal names only catalogs a streaming sink can live in (Glue, S3 Tables). | Text pins in three places. | **PROVEN** | `error.rs` (the variant's text and its pin), `run_tests.rs`, `test_mb_4_streaming_fold1.py`; the sketch's MBE-8 row amended. pins: mb-4-foreach-eo/C-047 |
 | C-048 | On a `toTable` stamp under a name the `foreachBatch` door carried (a stamp or only the mark on the sink), a stamped commit is refused before it lands when an unstamped snapshot sits between its parent and the batch-start head, on every arm; a `toTable`-only name still lands over a foreign commit. | Fence pins per carried shape; the kept-behaviour pin; the public-door choreography; the race matrix. | **PROVEN** | `sink_offsets_stray_fence_tests.rs::a_table_door_stamp_under_a_foreach_carried_name_is_refused_over_a_stray` and `::a_table_door_stamp_under_a_marked_name_is_refused_over_a_stray` (every arm by three windows, refused with the fence text, the stray the head; exactly these two fail with the product reverted); `every_arm_of_the_table_door_still_lands_over_a_foreign_commit` unchanged and green; `test_mb_4_streaming_door_switch.py` (12 cells: three foreign kinds by two restart doors, remedy-followed exact and expiry-to-one loud; 7 of 12 red on the pre-fix build); 360 raced release trials, 0 strays under a stamp, 0 silent restarts. pins: mb-4-foreach-eo/C-048 |
 | C-049 | A stray that is an overwrite and a stray that is a delete each refuse every arm with the fence's text. | One pin per operation, each red under the appends-only mutant. | **PROVEN** | `sink_offsets_stray_fence_tests.rs::a_stray_overwrite_refuses_every_arm` and `::a_stray_delete_refuses_every_arm`; under mutant Y4 the file reads 6 passed, 2 failed. pins: mb-4-foreach-eo/C-049 |
+| C-050 | A name that carried only the starting mark stays carried after its first `toTable` stamp: the stamp records the starting head, the second `toTable` stamp over a foreign commit is refused on every arm, a `toTable`-only name is still unwalked, and a restart on each door with and without expiry to one is refused by name, never silent. | Predicate pins; the fence pin; the public-door choreography; the race matrix. | **PROVEN** | `sink_offsets_lineage_tests.rs::a_table_stamp_over_the_starting_mark_keeps_the_name_carried` and `::another_name_s_foreach_stamp_does_not_carry_this_name` (the Z9 pin); `sink_offsets_stray_fence_tests.rs::a_second_table_stamp_of_a_marked_name_is_refused_over_a_stray` (every arm, refused with the fence text, the stray the head); exactly the three change pins fail with the product reverted; `test_mb_4_streaming_markdeep.py` (4 cells: restart on each door, with and without expiry to one; 2 of 4 red on the pre-fix build); 240 raced release trials, 0 strays under a stamp, 0 silent restarts. pins: mb-4-foreach-eo/C-050 |
+| C-051 | A sink whose offsets property is a starting mark with a bad pending epoch refuses the stamped commit at the fence with that error and at the body guard too, nothing lands, and beside a second corrupt stamp the fence still reports the mark. | One pin, red under each mutant that swallows the failed predicate read. | **PROVEN** | `sink_offsets_stray_fence_tests.rs::a_corrupt_starting_mark_refuses_the_stamped_commit_at_the_fence_and_the_guard`; red under hand-applied Z3 (guard half), Z6 (precedence half) and Z7 (guard half), each restored sha-verified. pins: mb-4-foreach-eo/C-051 |
 | C-015 | The questions of the fold-2 hand-back are ruled (owner rulings D2 to D5, 2026-10-10: the mark, the exclusive sink kept with a maintenance card, the side-effect contract, the re-verify and timing gate). What stays open is D5 itself: one Opus re-verify of the whole PR, then the quiet-box 200-epoch measurement with `task/wo/microbatch/mb4_lineage_timing.py`, median of 3, at most 1.05 times the no-audit driver. | The re-verify's verdict and the measurement. | **OPEN** | Closes on D5. The coverage attestation is the Critic's and is filed then. |
