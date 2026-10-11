@@ -8776,7 +8776,8 @@ through `core` or the package. pins: eager-budget-1/C-010
   C-001…C-005 pins are the evidence the registry BL-11 FIXED cites.
   pins: bl-11-numeric-binary/C-001, C-002, C-003, C-004, C-005, C-006
 - **FNP-MISC-1 (2026-09-15):** `test_fnp_misc_1.py::test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark` pins `call_function` on #597's six camel-case aliases to the measured Spark 4.1.2 answers (pins: fnp-misc-1/F-4).
-
+  **MB-4-FOREACH-EO fold 6 (2026-10-10):** the MBE-8 pin reads the corrected text, "Use Glue
+  or S3 Tables". pins: mb-4-foreach-eo/C-047
 - [test_java_double_str_1.py](test_java_double_str_1.py) — **JAVA-DOUBLE-STR-1
   (2026-09-15):** Spark-door DOUBLE/FLOAT stringify answers Java
   `Double.toString` / `Float.toString` (registry BL-7 FIXED), measured against

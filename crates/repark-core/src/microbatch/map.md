@@ -269,6 +269,9 @@ pins: mb-3/C-031
   The helpers that build the ending repeat `fence_tests.rs`'s private ones, because that file
   is outside this slice's footprint.
   pins: mb-4/C-114, C-029
+- `run_tests.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10):** the MBE-8 pin reads the corrected
+  text, "Use Glue or S3 Tables" (the two catalogs a streaming sink can live in).
+  pins: mb-4-foreach-eo/C-047
 - `run.rs`, `exactly_once_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10, rulings on the
   fourth verify).**
   - **`Run::refuse_moved_sink` runs on both doors.** `Run::walk_a_foreach_name` asks

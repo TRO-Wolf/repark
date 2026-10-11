@@ -189,6 +189,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   walks a name that ever ran through `foreachBatch` (D2), the expected-parent sketch with
   both conditions answered and not built (D3), the arm named and closed (a stamp is not
   committed over a stray), one batch time on the `foreachBatch` door (C-040..C-044).
+  **Fold 6 (2026-10-10, the fifth verify's S1):** a dated correction of fold 5's claim, the
+  table of every commit arm, the stray rule moved to the one fence every stamped commit
+  passes on every attempt (the row-level arms had committed outside it), a structural gate,
+  the race matrix (4,608 trials, 0 strays under a stamp), MBE-8's text (C-045..C-047).
   `risk_tier: high`.
   Branch `feat/mb-4-foreach-exactly-once`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
