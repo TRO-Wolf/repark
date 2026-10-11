@@ -32,6 +32,88 @@ pub fn nested_leaf_cast_sql(expr: &str, target: &DataType) -> String {
 }
 
 #[must_use]
+pub fn nested_micro_ntz_wall_sql(
+    expr_sql: &str,
+    source: Option<&DataType>,
+    target: &DataType,
+) -> Option<String> {
+    let source = source?;
+    descend(expr_sql, source, target, false)
+}
+
+fn descend(expr_sql: &str, source: &DataType, target: &DataType, below: bool) -> Option<String> {
+    match target {
+        DataType::Timestamp(TimeUnit::Microsecond, None) if below && is_zoned_instant(source) => {
+            super::ntz_store::wall_cast_sql(expr_sql, target)
+        }
+        DataType::Struct(target_fields) => {
+            let DataType::Struct(source_fields) = source else {
+                return None;
+            };
+            rebuild_struct(expr_sql, source_fields, target_fields)
+        }
+        _ => None,
+    }
+}
+
+fn rebuild_struct(
+    expr_sql: &str,
+    source_fields: &Fields,
+    target_fields: &Fields,
+) -> Option<String> {
+    let mut changed = false;
+    let mut members = Vec::with_capacity(target_fields.len());
+    for target_field in target_fields {
+        let source_field = paired_field(source_fields, target_field.name())?;
+        let child = child_sql(expr_sql, source_field.name());
+        let rendered = match descend(
+            &child,
+            source_field.data_type(),
+            target_field.data_type(),
+            true,
+        ) {
+            Some(rewritten) => {
+                changed = true;
+                rewritten
+            }
+            None => child,
+        };
+        members.push(format!("{}, {rendered}", sql_string(target_field.name())));
+    }
+    if !changed {
+        return None;
+    }
+    Some(format!(
+        "CASE WHEN ({expr_sql}) IS NULL THEN NULL ELSE named_struct({}) END",
+        members.join(", ")
+    ))
+}
+
+fn child_sql(expr_sql: &str, name: &str) -> String {
+    let kept = format!("CASE WHEN rand() < 2 THEN ({expr_sql}) ELSE ({expr_sql}) END");
+    format!("get_field(({kept}), {})", sql_string(name))
+}
+
+fn sql_string(text: &str) -> String {
+    format!("'{}'", text.replace('\'', "''"))
+}
+
+fn paired_field<'a>(fields: &'a Fields, name: &str) -> Option<&'a Field> {
+    if let Some(exact) = fields.iter().find(|field| field.name() == name) {
+        return Some(exact.as_ref());
+    }
+    let mut insensitive = fields
+        .iter()
+        .filter(|field| field.name().eq_ignore_ascii_case(name));
+    let first = insensitive.next()?;
+    insensitive.next().is_none().then_some(first.as_ref())
+}
+
+fn is_zoned_instant(source: &DataType) -> bool {
+    matches!(source, DataType::Timestamp(_, Some(_)))
+}
+
+#[must_use]
 pub fn incompatible_update_message(
     table: &str,
     column: &str,
@@ -179,7 +261,8 @@ mod tests {
     use std::sync::Arc;
 
     use super::{
-        incompatible_nested_message, incompatible_update_message, store_assignment_cast_sql,
+        incompatible_nested_message, incompatible_update_message, nested_micro_ntz_wall_sql,
+        store_assignment_cast_sql,
     };
 
     fn map_of(key: DataType, value: DataType) -> DataType {
@@ -368,6 +451,134 @@ mod tests {
         assert!(
             incompatible_update_message("`ice`.`sales`.`t`", "`id`", &list, &DataType::Int64)
                 .is_none()
+        );
+    }
+
+    fn ntz() -> DataType {
+        DataType::Timestamp(TimeUnit::Microsecond, None)
+    }
+
+    fn instant(unit: TimeUnit) -> DataType {
+        DataType::Timestamp(unit, Some(Arc::from("UTC")))
+    }
+
+    fn struct_type(pairs: &[(&str, DataType)]) -> DataType {
+        DataType::Struct(
+            pairs
+                .iter()
+                .map(|(name, data_type)| Field::new(*name, data_type.clone(), true))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn an_instant_leaf_below_a_struct_is_wrapped_and_its_sibling_is_not() {
+        let source = struct_type(&[
+            ("v", instant(TimeUnit::Microsecond)),
+            ("n", DataType::Int32),
+        ]);
+        let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let sql = nested_micro_ntz_wall_sql("`st`", Some(&source), &target).expect("wraps");
+        let kept = "CASE WHEN rand() < 2 THEN (`st`) ELSE (`st`) END";
+        assert_eq!(
+            sql,
+            format!(
+                "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
+                 __repark_cast_timestamp_ntz__((get_field(({kept}), 'v'))), 'n', \
+                 get_field(({kept}), 'n')) END"
+            )
+        );
+    }
+
+    #[test]
+    fn a_wall_string_date_integer_or_unknown_source_wraps_nothing() {
+        let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        for source in [
+            struct_type(&[("v", ntz()), ("n", DataType::Int32)]),
+            struct_type(&[("v", DataType::Utf8), ("n", DataType::Int32)]),
+            struct_type(&[("v", DataType::Date32), ("n", DataType::Int32)]),
+            struct_type(&[("v", DataType::Int64), ("n", DataType::Int32)]),
+        ] {
+            assert_eq!(
+                nested_micro_ntz_wall_sql("`st`", Some(&source), &target),
+                None,
+                "{source}"
+            );
+        }
+        assert_eq!(nested_micro_ntz_wall_sql("`st`", None, &target), None);
+    }
+
+    #[test]
+    fn a_nanosecond_wall_leaf_and_a_nested_timestamp_leaf_wrap_nothing() {
+        let instant_source = struct_type(&[("v", instant(TimeUnit::Microsecond))]);
+        let nanos = struct_type(&[("v", DataType::Timestamp(TimeUnit::Nanosecond, None))]);
+        let zoned = struct_type(&[(
+            "v",
+            DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("+00:00"))),
+        )]);
+        assert_eq!(
+            nested_micro_ntz_wall_sql("`st`", Some(&instant_source), &nanos),
+            None
+        );
+        assert_eq!(
+            nested_micro_ntz_wall_sql("`st`", Some(&instant_source), &zoned),
+            None
+        );
+        assert_eq!(
+            nested_micro_ntz_wall_sql("`v`", Some(&instant(TimeUnit::Nanosecond)), &ntz()),
+            None
+        );
+    }
+
+    #[test]
+    fn a_struct_inside_a_struct_wraps_only_the_inner_instant_leaf() {
+        let inner_source =
+            struct_type(&[("v", instant(TimeUnit::Nanosecond)), ("n", DataType::Int32)]);
+        let source = struct_type(&[("i", inner_source), ("m", DataType::Int32)]);
+        let inner_target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let target = struct_type(&[("i", inner_target), ("m", DataType::Int32)]);
+        let sql = nested_micro_ntz_wall_sql("s", Some(&source), &target).expect("wraps");
+        assert_eq!(
+            sql.matches("__repark_cast_timestamp_ntz__").count(),
+            1,
+            "{sql}"
+        );
+        assert!(sql.contains("'v'"), "{sql}");
+        assert!(sql.contains("'n'"), "{sql}");
+        assert!(sql.contains("'m'"), "{sql}");
+        assert!(
+            !sql.contains("__repark_cast_timestamp_ntz__((get_field((CASE WHEN (s)"),
+            "{sql}"
+        );
+    }
+
+    #[test]
+    fn a_list_or_map_is_left_as_it_is() {
+        let inner = struct_type(&[("v", ntz())]);
+        let source_inner = struct_type(&[("v", instant(TimeUnit::Microsecond))]);
+        let list_target = DataType::List(Arc::new(Field::new("item", inner.clone(), true)));
+        let list_source = DataType::List(Arc::new(Field::new("item", source_inner.clone(), true)));
+        assert_eq!(
+            nested_micro_ntz_wall_sql("a", Some(&list_source), &list_target),
+            None
+        );
+        let entry = |value: DataType| {
+            DataType::Struct(
+                vec![
+                    Field::new("key", DataType::Utf8, false),
+                    Field::new("value", value, true),
+                ]
+                .into(),
+            )
+        };
+        let map_target = DataType::Map(Arc::new(Field::new("entries", entry(inner), false)), false);
+        let map_source = DataType::Map(
+            Arc::new(Field::new("entries", entry(source_inner), false)),
+            false,
+        );
+        assert_eq!(
+            nested_micro_ntz_wall_sql("m", Some(&map_source), &map_target),
+            None
         );
     }
 }

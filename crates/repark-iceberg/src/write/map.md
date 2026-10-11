@@ -567,6 +567,14 @@ repark-core's error map.
   `commit_truncate_to` commits onto a named branch.
   pins: dml-c-truncate/C-001, C-005
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `nested_micro_ntz_wall_sql`
+  rebuilds a struct when a microsecond `TIMESTAMP_NTZ` leaf below the top level is
+  paired with an instant (`Timestamp` with a zone, any unit). That leaf becomes
+  `__repark_cast_timestamp_ntz__`. A `None` source, a wall, a string, a date, an
+  integer, a `timestamp_ns` leaf, a nested `TIMESTAMP` leaf, a list and a map stay
+  the original expression. Step 1 calls it from `ntz_store::zone_store_frame` only
+  (`zone_stores` now hands that function the Arrow type of a struct, list or map).
+  pins: ice-ntz-nested-wall-1/C-003
 - `update_cast.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_cast_sql` is the one
   home of the `arrow_cast((expr), '<type>')` store-assignment cast, with the field ids
   stripped from the type name. MERGE's `insert.rs` and the Spark door's nested-assignment fold

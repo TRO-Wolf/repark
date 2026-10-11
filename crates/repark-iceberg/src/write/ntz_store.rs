@@ -7,10 +7,12 @@ use datafusion::execution::FunctionRegistry;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{Cast, Expr, LogicalPlan};
 use datafusion::prelude::{DataFrame, SessionContext};
+use iceberg::arrow::type_to_arrow_type;
 use iceberg::spec::{PrimitiveType, Type};
 use iceberg::table::Table;
 
-use super::update_cast::incompatible_update_message;
+use super::idents::quote_ident_spark;
+use super::update_cast::{incompatible_update_message, nested_micro_ntz_wall_sql};
 
 pub const NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ntz__";
 pub const NS_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ns__";
@@ -164,7 +166,10 @@ pub fn zone_stores(
                     TimeUnit::Nanosecond,
                     Some(Arc::from("+00:00")),
                 )),
-                _ => None,
+                Type::Struct(_) | Type::List(_) | Type::Map(_) => {
+                    type_to_arrow_type(field.field_type.as_ref()).ok()
+                }
+                Type::Primitive(_) | Type::Variant => None,
             }
         })
         .collect();
@@ -201,41 +206,48 @@ fn zone_store_frame(
         return Ok(frame);
     }
     let mut converted = false;
-    let exprs: Vec<Expr> = frame
-        .schema()
-        .iter()
-        .zip(planned.iter().zip(targets))
-        .map(|((qualifier, field), (source, target))| {
-            let column = Expr::Column(Column::from((qualifier, field.as_ref())));
-            let wall = target
-                .as_ref()
-                .filter(|target| wall_kernel_reads(source, target))
-                .and_then(store_kernel_udf_name)
-                .and_then(|name| ctx.udf(name).ok());
-            let store = match (target, wall) {
-                (_, Some(udf)) => {
-                    let value = match wall_kernel_input(source) {
-                        Some(plain) => {
-                            let plain =
-                                Field::new(field.name(), plain.clone(), field.is_nullable());
-                            Expr::Cast(Cast::new_from_field(Box::new(column), Arc::new(plain)))
-                        }
-                        None => column,
-                    };
-                    Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![value]))
-                }
-                (Some(target), None)
-                    if is_ltz_instant_target(target) && needs_ltz_instant_cast(source) =>
-                {
-                    let instant = Field::new(field.name(), target.clone(), field.is_nullable());
-                    Expr::Cast(Cast::new_from_field(Box::new(column), Arc::new(instant)))
-                }
-                _ => return column,
-            };
+    let mut exprs = Vec::with_capacity(planned.len());
+    for ((qualifier, field), (source, target)) in
+        frame.schema().iter().zip(planned.iter().zip(targets))
+    {
+        let column = Expr::Column(Column::from((qualifier, field.as_ref())));
+        if let Some(sql) = target.as_ref().and_then(|target_type| {
+            nested_micro_ntz_wall_sql(&quote_ident_spark(field.name()), Some(source), target_type)
+        }) {
             converted = true;
-            store.alias(field.name())
-        })
-        .collect();
+            exprs.push(frame.parse_sql_expr(&sql)?.alias(field.name()));
+            continue;
+        }
+        let wall = target
+            .as_ref()
+            .filter(|target| wall_kernel_reads(source, target))
+            .and_then(store_kernel_udf_name)
+            .and_then(|name| ctx.udf(name).ok());
+        let store = match (target, wall) {
+            (_, Some(udf)) => {
+                let value = match wall_kernel_input(source) {
+                    Some(plain) => {
+                        let plain = Field::new(field.name(), plain.clone(), field.is_nullable());
+                        Expr::Cast(Cast::new_from_field(Box::new(column), Arc::new(plain)))
+                    }
+                    None => column,
+                };
+                Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![value]))
+            }
+            (Some(target), None)
+                if is_ltz_instant_target(target) && needs_ltz_instant_cast(source) =>
+            {
+                let instant = Field::new(field.name(), target.clone(), field.is_nullable());
+                Expr::Cast(Cast::new_from_field(Box::new(column), Arc::new(instant)))
+            }
+            _ => {
+                exprs.push(column);
+                continue;
+            }
+        };
+        converted = true;
+        exprs.push(store.alias(field.name()));
+    }
     if !converted {
         return Ok(frame);
     }
