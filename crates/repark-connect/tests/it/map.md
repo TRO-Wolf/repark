@@ -65,6 +65,20 @@ See [../map.md](../map.md).
   holds the row path to full groups plus one remainder statement (330 rows run 2, 48, 330
   and 1 statements across the four option cases; the widest case runs 2).
   pins: c-4/C-017, C-018, C-023, C-024
+  `row_triggers_stay_bulk_and_statement_triggers_take_the_row_path`,
+  `partitions_inheritance_persistence_and_constraints_agree_on_both_paths`,
+  `row_security_and_grants_are_judged_the_same_on_both_paths` (a second role),
+  `a_foreign_table_or_partition_takes_the_row_path` (a loopback `postgres_fdw` server, dropped
+  at the end; `CREATE EXTENSION IF NOT EXISTS` leaves the extension in the disposable
+  database) and `another_sessions_temporary_table_is_refused_the_same_on_both_paths`.
+  pins: c-4/C-017, C-018, C-019
+- `live_write.rs`, `write.rs` — **C-4 fold 1 (2026-10-09):**
+  `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` is now
+  `a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked`: its counting
+  trigger is a statement trigger, so a `Bulk` request on that table now takes rows, and the
+  cell holds both requests to the same statement counts. The pure pins gain
+  `a_named_identity_or_generated_column_refuses_in_one_class_and_names_the_fix` and
+  `every_fallback_reason_says_why_copy_was_not_used`. pins: c-4/C-017, C-018
 - `live_write_faults.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. It shares
   `live_write.rs`'s helpers (now `pub(crate)`); new fault cells live here because
   `live_write.rs` is at the file-size ceiling.

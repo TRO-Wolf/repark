@@ -584,6 +584,21 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **R-17c-4:** the carrier holds `display` (raw echo) + canonical `zone` (extractor reader).
   **R-17c-6:** the in-crate canonicaliser mirrors the core gate (exact-case prefixes,
   zero-seconds to `±HH:MM`) and asserts the same shared table. pins: set-ansi-runtime-1/C-002
+- `current_date.rs` — **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** the owned `current_date`
+  (+ `today` alias) overwrite. DataFusion's builtin folds at plan time from
+  `execution.time_zone`, which RePark never sets (parity doc SET-ANSI-RUNTIME note), so it
+  answered the UTC date; the owned impl folds the query start time through the
+  `SessionTimeZoneConfig` carrier instead (`session_start_days`, zone parse shared with the
+  `CAST AS DATE` sibling, wall clock via the zone-horizon helper). `Stable`, `Date32`, no
+  `return_field_from_args` — the only delta from upstream is the zone the date is read in.
+  One `lib.rs` register line; the DataFrame door builds it via `current_date::current_date()`.
+  The Rust pins went red under the hand revert (C-005).
+  **Fold 1 (2026-10-11):** when the carrier is absent (native door) the fold reads
+  `execution.time_zone` exactly as the builtin does (UTC when unset or unparsable); a
+  present carrier wins, even when set to UTC. The native DataFrame pair agrees with native
+  SQL under `SET TIME ZONE` again. A fixed-instant pin sits thirty minutes either side of
+  local midnight in `Asia/Kolkata` and `America/New_York`, red under a one-hour shift.
+  pins: current-date-session-zone-1/C-002, C-003, C-004, C-005, C-007, C-008
 - `session_names.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the SQL-door
   `current_catalog()` / `current_schema()` / `current_database()` nullary UDFs — one
   `SessionName` impl, non-nullable Utf8, `Stable`. `current_database` shares the

@@ -1055,6 +1055,11 @@ by position on both routes so `SELECT 1, '1'` stores.
 
 ### 14.1 Item 1: the Postgres door applies the engine's store-assignment rule
 
+**Ratified by the owner, 2026-10-11** ("Proceed with recommendations", on the question
+whether the 26 STRING-into-non-string pairs that stored before may now refuse; Spark 4.1.2
+refuses all 26; the INTERVAL into interval carve-out of fold 4 stands). The ruling as it was
+written, provisional at the time:
+
 Ruling (orchestrator, provisional for the owner): the Postgres write door
 applies the engine's ONE store-assignment rule, the same the Iceberg target
 applies (`ansi_store_assignable`, Spark's `Cast.canANSIStoreAssign`). No second

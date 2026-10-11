@@ -297,7 +297,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "current_date" => {
             need(0)?;
-            expr_fn::current_date()
+            repark_functions::current_date::current_date()
         }
         "to_date" => {
             if exprs.len() != 1 && exprs.len() != 2 {
