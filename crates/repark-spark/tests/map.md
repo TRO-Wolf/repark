@@ -104,7 +104,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `UNION` beside an untyped NULL, a `TIMESTAMP` literal, a typed NULL and a DATE keeps the
   nanosecond column's field metadata and takes no tag; no form of `EXPLAIN` over six
   statements prints a mark or the tag.
-  pins: ice-tsns-narrow-refuse-1/C-028, C-029, C-030, C-031, C-032, C-033, C-034
+  pins: ice-tsns-narrow-refuse-1/C-028, C-029, C-030, C-031, C-032, C-033, C-034, C-035, C-036, C-038
 - [timestamp_ns_narrow_refuse.rs](timestamp_ns_narrow_refuse.rs) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
   2026-10-10 built as fold 1):** the Rust door's pins of the narrowed-value refusal. Each

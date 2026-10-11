@@ -3595,6 +3595,26 @@ still open is `isModifiable`.
   nanosecond column and refuses when the mark sits beside the narrowing cast. Ledger:
   `task/ledgers/staging/ice-tsns-narrow-refuse-1-ledger.md`.
 
+- **Fold 2 (2026-10-11), the rule redesigned after a verifier's FAIL.** The refusal is no
+  longer tied to a cast sitting directly on the narrowed value. The store follows each
+  stored column's own lineage through every plan node and refuses when the analyzer
+  narrowed a nanosecond value anywhere on it: inside a list, struct or map coercion, in a
+  function that unifies in its kernel (`array_append(array(ns), ts)`), beside a `DATE`,
+  over an outer reference of a `LATERAL` subquery or a lambda variable, through a round
+  trip by STRING, BIGINT or JSON text, and through `UPDATE … SET u.v = …`. A narrowing the
+  statement wrote stores, also beside a microsecond value
+  (`coalesce(CAST(ns AS TIMESTAMP), ts)`) and over a column of a subquery, view or frame
+  that holds the analyzer's narrowing; a plain nanosecond column stores whatever narrowing
+  sits beside it under `ROLLUP`, `CUBE` or `LATERAL`. A written call forgives only where
+  the stored value equals the call over the nanosecond value, read from the innermost call
+  outwards: beside a `TIMESTAMP_NTZ` sibling the cut truncates toward zero and
+  `CAST(… AS TIMESTAMP)` and `CAST(… AS DATE)` refuse; `to_date` and `date` answer as
+  `CAST(… AS DATE)`. The text names the value in SQL spelling and MERGE names its table.
+  A read shows nothing of it (schema, Parquet field ids, `EXPLAIN`), and a mixed
+  nanosecond and microsecond read plans at 1.02 of main at most. Measured on the final
+  build: of 104,960 cells 23,600 moved into the refusal and none any other way; ledger
+  section 12.
+
 ### ICE-TSNS-SQL-1-R-019 — OPEN (registered 2026-10-10, owner ruling on Q3 of ICE-TSNS-NARROW-REFUSE-1): a `UNION` of a nanosecond branch with `nvl(ns, NULL)` or `ifnull(ns, NULL)`
 
 - **repark** — the cell: `INSERT INTO t (id, v, k) SELECT id, ns AS v, 0 AS k FROM src WHERE

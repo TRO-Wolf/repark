@@ -16,9 +16,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   value measured arm by arm, a typed NULL and a microsecond value beside the nanosecond one
   refuse, `nvl` and `ifnull` to the coercion card with registry row R-019, the cache site
   and its count, the unfiltered `UPDATE`'s cells), the matrix of 104,960 cells on the final
-  source and the fold's mutants, cost and gates. Two clauses are OPEN with two questions (the
-  `UNION` cell of `nvl`, 80 base-error cells that no longer refuse by name). `risk_tier:
-  standard`. Branch `fix/ice-tsns-narrow-refuse-1`.
+  source and the fold's mutants, cost and gates. Section 12 is fold 2 (2026-10-11), after a
+  verifier failed the head with 9 S1, 5 S2 and 3 S3: the guard's rule redesigned before its
+  code (a mark on the stored column's own lineage refuses unless the nearest written call
+  forgives it; no "directly under", no subtree fallback), what the build changed in that
+  sketch, the matrices on the final build (104,960 cells and the verifier's 67,960), the
+  seventeen findings one by one, 83 mutants, the cost against main and the gates. Two
+  clauses stay OPEN on provisional rulings (Q7, Q8) and five questions are listed (V1 to
+  V5). `risk_tier: standard`. Branch `fix/ice-tsns-narrow-refuse-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

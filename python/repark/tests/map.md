@@ -3284,7 +3284,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   table takes the next write; a cast written over a frame column, a view or a subquery that
   holds the narrowing stores as the inline cast does; a read's Arrow schema, the field ids
   of the Parquet it writes and `EXPLAIN VERBOSE` show nothing of the unit.
-  pins: ice-tsns-narrow-refuse-1/C-028, C-029, C-030, C-031, C-032, C-033, C-034
+  pins: ice-tsns-narrow-refuse-1/C-028, C-029, C-030, C-031, C-032, C-033, C-034, C-035, C-037
 - [test_ice_tsns_narrow_refuse_1.py](test_ice_tsns_narrow_refuse_1.py) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
   2026-10-10 built as fold 1):** the facade pins. A test runs one row of the matrix (a zone,

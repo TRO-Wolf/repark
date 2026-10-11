@@ -56,8 +56,8 @@ it differs from sections 2 to 11, section 12 holds.
 | C-023 | Each new rule has a hand mutant that a named pin kills. | §11.8. | **PROVEN** | §11.8. |
 | C-024 | The fold adds no analyzer rule; planning a statement that touches no nanosecond column takes the time it took on the base; INSERT and MERGE are timed against the base, release builds, interleaved, five runs, and the figures recorded as measured. | §11.9. | **PROVEN** | §11.9: the plan's median moves by 0.3%; the writes' medians are 3% to 7% higher on the head, inside one build's own spread of 9% to 14%, which this sample does not separate from the machine. |
 | C-025 | The gates are green on the fold's final source with real exit codes. | §11.10. | **PROVEN** | §11.10. |
-| C-026 | The `UNION` cell of `nvl` and `ifnull` (registry row R-019) keeps storing its cut value, as the ruling on Q3 reads. | Not built: measured, the cell is a nanosecond branch narrowed beside a microsecond one and the ruling on Q5 refuses it (§11.4). | **OPEN** | Q7. |
-| C-027 | The 80 cells that refused by name before the rulings and raise the base's own error after them refuse by name again. | Not built: the guard cannot tell the planner's cast of an `UPDATE`'s `SET` value from a written `CAST(… AS TIMESTAMP)`, which Q1 says stores (§11.5). | **OPEN** | Q8. |
+| C-026 | The `UNION` cell of `nvl` and `ifnull` (registry row R-019) keeps storing its cut value, as the ruling on Q3 reads. | Not built: measured, the cell is a nanosecond branch narrowed beside a microsecond one and the ruling on Q5 refuses it (§11.4). | **OPEN** | Q7. Orchestrator ruling of 2026-10-11, provisional until the owner rules: Q7 stands, the cell refuses. |
+| C-027 | The 80 cells that refused by name before the rulings and raise the base's own error after them refuse by name again. | Not built: the guard cannot tell the planner's cast of an `UPDATE`'s `SET` value from a written `CAST(… AS TIMESTAMP)`, which Q1 says stores (§11.5). | **OPEN** | Q8. Orchestrator ruling of 2026-10-11, provisional until the owner rules: Q8 stands. Measured after fold 2: 65 of the 80 refuse by name again, because the walk follows every argument; 15 keep the base's error (§12.9). |
 | C-028 | Never worse, the two S1s of the verdict: `coalesce(CAST(c AS TIMESTAMP), ts)` and `array(CAST(c AS TIMESTAMP), ts)[0]` store what `CAST(c AS TIMESTAMP)` stores on every door, and a plain nine-digit column stores when a narrowing sits in a `WHERE`, a sibling aggregate or a sibling column under `ROLLUP`, `CUBE` and `LATERAL`. | §12.1 "Written or inserted" and S1; the door pins `a_written_cast_beside_a_microsecond_value_stores_on_every_door` and `a_plain_column_stores_beside_a_narrowing_under_rollup_cube_and_lateral`, red on `45260e44`; the facade pins of the frame writers. | **PROVEN** | §12.8; mutants R1, R11. |
 | C-029 | The mark is placed wherever the analyzer narrows a nanosecond value and nowhere the statement does: in a container cast, in a function that unifies in its kernel, on a zoned value cast to the wire type beside a `DATE`, and with no nanosecond column in the node's inputs (an outer reference, a lambda variable). | §12.1 M1, M2 and the skip test; the unit pins of `null_narrowing/tests.rs`; the door pins of the container, DATE and outer-reference families. | **PROVEN** | §12.8; mutants R13 to R17. |
 | C-030 | The store follows the stored column alone, through every plan node and every argument whatever its type, and a mark on that lineage refuses: a value that leaves through STRING, BIGINT or JSON text refuses (ruling V2), and an `UPDATE` whose `SET` column or value carries a qualifier refuses in both row-level modes. | §12.1 S1 to S3; the unit pins of `narrowed_store/tests.rs`; `a_narrowed_value_that_leaves_the_timestamp_type_and_returns_refuses`, `an_update_through_a_qualified_set_column_refuses_in_both_modes`, `a_narrowed_aggregate_under_grouping_sets_refuses_and_its_plain_sibling_stores`. | **PROVEN** | §12.8; mutants R2 to R6, R9, R10, R23. |
@@ -65,6 +65,10 @@ it differs from sections 2 to 11, section 12 holds.
 | C-032 | A written `CAST(v AS TIMESTAMP)` over a column of a subquery, a temporary view, a common table expression or a frame that holds the analyzer's narrowing stores what the inline cast stores (ruling V1). | §12.1 "Written or inserted", last sentence; `a_written_cast_over_a_column_that_holds_the_narrowing_stores_as_the_inline_cast_does`; the facade pin of the frame doors. | **PROVEN** | §12.8; mutants R20, R21. |
 | C-033 | The refusal names what the statement wrote: the value in SQL spelling with no mark, no Arrow type and no interval debug text, a lambda variable with the array it ranges over, and the table's name on every door, MERGE included. | §12.4; `the_refusal_names_what_the_statement_wrote`; every refusing pin of `timestamp_ns_narrow_rule.rs` asserts the text holds none of `__repark`, `Timestamp(`, `Interval` and the empty table name. | **PROVEN** | §12.8; mutants R24, R26, W8. |
 | C-034 | A read shows nothing of the unit (ruling V3): no tag in a schema, the nanosecond column's `PARQUET:field_id` kept through a `UNION`, no mark in any form of `EXPLAIN`, and no mark in a join condition, a filter or a sort key. | §12.5; `a_read_shows_no_mark_no_tag_and_keeps_its_field_metadata`; the unit pins of the union schema, the mark's field and the unmarked filter; `explain_marks` unit pin; the verifier's `reads.py` and `pq.py` on the final build. | **PROVEN** | §12.8, §12.9; mutants R16, R18, R19, R25. |
+| C-035 | Never worse after the redesign: on the 104,960-cell matrix and on the verifier's suites (shapes, doors, stmts, equality, the int64 limits) every cell that moved moved into the refusal from a cut value, an error or a partial store; no cell that stores nine digits on main moved; no cell of a microsecond target moved; no refused cell left a value on disk; no cell stores a value that differs from the same written call over the nanosecond value. | The matrix and the suites on the final build, main against head (§12.9). | **PROVEN** | §12.9: 104,960 cells, 81,140 identical, 23,600 into the refusal, 220 refused on both; 67,960 suite cells. |
+| C-036 | Each rule of the fold has a hand mutant that a named pin kills; a survivor is pinned or explained. | §12.11. | **PROVEN** | §12.11. |
+| C-037 | The fold costs a write on a table with no nanosecond column, and a read that mixes nanosecond and microsecond branches, at most 1.05 of main. | §12.12: release builds, interleaved, six sets of fifteen per build. | **PROVEN** | §12.12: at most 1.017. |
+| C-038 | The gates are green on the fold's final source with real exit codes. | §12.13. | **PROVEN** | §12.13. |
 
 ## 1. The base, measured before any change (C-001)
 
@@ -648,6 +652,13 @@ written over `coalesce(c, NULL)` and over `c`, and the two stored columns compar
 | `CAST(… AS timestamp_ns)`, `CAST(… AS timestamptz_ns)` | differs: refuses | differs: refuses |
 | `TRY_CAST(… AS TIMESTAMP)` | differs: refuses | differs: refuses |
 
+*Corrected 2026-10-11 (fold 2, §12.2): the cut is not the same for every sibling. Beside an
+untyped NULL, a `TIMESTAMP` NULL or a `TIMESTAMP` value it floors; beside a `TIMESTAMP_NTZ`
+sibling it truncates toward zero, and there `CAST(… AS TIMESTAMP)` and `CAST(… AS DATE)`
+over a naive value differ from the call over the nanosecond value and refuse. The table
+above and the reasons below were measured with an untyped NULL, a `TIMESTAMP` NULL and a
+`TIMESTAMP` literal only.*
+
 Why each refusing arm differs:
 
 - **`date_trunc` over a naive value.** The analyzer's cut reads the naive value as a wall in
@@ -1048,6 +1059,366 @@ No crate edge is added. The mark stays in `repark-functions` (where the unit's f
 put it), the walk in `repark-iceberg`, the doors in `repark-spark`. No microsecond-target cell
 is meant to move; the matrix of step 4 is the proof.
 
+### 12.8 What the build changed in the sketch
+
+The sketch of §12.1 to §12.7 was committed before the code (`87c38ec5`). Building it against
+the matrices moved five of its sentences. Each is recorded here; where §12.1 to §12.6 differ,
+this subsection holds.
+
+- **A written cast is read before coercion only below the root of an expression.** The
+  sketch read every SQL cast of a nanosecond value there. A cast at the root (also under an
+  alias) is left for the session rule, as on main. Converted at the root, a
+  `SELECT DISTINCT id, CAST(c AS TIMESTAMP), 0` that main fails with a DataFusion internal
+  error stored the written value: 40 cells of the 104,960 moved from an error to a store
+  (20 of them of a microsecond target), which the fold's acceptance does not allow. Below
+  the root is the only place the cast needs to be read: there coercion wraps it while it
+  still looks like nanoseconds. A `VALUES` cell's root is untouched for the same reason.
+- **A `UNION` of a zoned branch and a `DATE` branch is marked before coercion.** The sketch
+  marked the wire cast at the root of the branch. With root casts left as main has them, a
+  root wire cast may be a written one, so `tag_union_nulls` marks the zoned branch itself
+  when another branch is a date (`zoned_beside_a_date`). The mark then has no cast on it,
+  which S3 refuses and S4 never forgives.
+- **Two sources only look like nanoseconds, and the old "cast on the mark" test had hidden
+  both.** (1) `TIMESTAMP '…'` and `CAST('…' AS TIMESTAMP)` are, until the session rule reads
+  them, casts to the nanosecond wire type; beside a written cast, coercion casts them to
+  microseconds and M1 marked the literal. (2) A `UNION` keeps the type it was planned with
+  until the second coercion, so a union of three written casts read as nanoseconds from the
+  union above it, and `settle_union_branches` marked its column. Each refused a written
+  value main stores (`coalesce(CAST(c AS TIMESTAMP), TIMESTAMP '…')` in `INSERT … VALUES`;
+  `… UNION ALL … UNION ALL …` of written casts). The verifier's doors suite found both on
+  the fold's second build (72 cells). M1 now skips a source that is a wire cast or a
+  literal, and a union node takes its branches' types before it is settled
+  (`with_branch_types`). Pins: `a_union_of_written_casts_and_a_values_row_with_a_written_cast_store`
+  and the unit pin `a_pending_timestamp_literal_and_a_stale_union_type_are_not_nanoseconds`.
+- **The store's widening cast is not transparent** (S4). `CAST(CAST(coalesce(c, NULL) AS
+  timestamp_ns) AS TIMESTAMP)` refuses: the cast back is a call like any other. The
+  transparent nodes are an alias, a column, a plan boundary, a `CASE` branch, `coalesce` and
+  the analyzer's own cast.
+- **What a read shows (§12.5).** The mark answers its argument's name as well as its field,
+  so a marked plan takes no alias. The tag changes a literal's printed name, so the pass
+  before coercion aliases the expression to its own name; that alias is taken off when the
+  tag is settled. The optimizer removes the written-narrowing function over a value that is
+  already a microsecond instant. `EXPLAIN` erases the marks from the printed logical plans
+  and writes `SAME TEXT AS ABOVE` by DataFusion's own rule. Compared byte for byte with main
+  over 72 statements (36 reads and writes, plain and `VERBOSE`; §12.9): 69 are equal and the
+  three that are not are the kept written cast below.
+- **The mark rides the narrowing kernel where the analyzer's cut is that kernel.** The
+  sketch kept one shape, a mark function under the cut. Measured on the fold's fifth build,
+  that wrapper made the two mixed reads of §12.12 6% slower than main, and no line of the
+  rule was the cost: every type and name lookup above a mark resolved one more function.
+  The session rule now builds one node, the kernel with the mark as its alias; it prints,
+  names and types as the written kernel, the optimizer turns it into the written kernel,
+  and its `Debug` text is unchanged (an internal error of DataFusion prints it). The store
+  reads both shapes; the wrapper remains under a plain cast, a cast to a naive type, a
+  container cast and where there is no cast.
+- **The text (§12.4).** A column of a relation the engine named itself (the frame behind
+  `selectExpr`, `__repark_selx_…`) is printed without that name.
+
+**V1 has one edge, by choice.** A written `CAST(v AS TIMESTAMP)` over a column of a view
+whose plan the analyzer cannot read (a temporary view, a catalog view: the scan's
+`TableType` is not `Base`) is kept as the written-narrowing function whether or not the view
+holds a narrowing, because the analyzer cannot look. It is the identity over a microsecond
+instant and the optimizer removes it, so values, plain `EXPLAIN` and the optimized plan are
+main's; the analyzed-plan rows of `EXPLAIN VERBOSE` print
+`__repark_narrow_timestamp_ns__(tv.ts)` where main prints `tv.ts`. The same function shows
+at the root of an `EXPLAIN VERBOSE INSERT` whose supply holds a narrowing (the planner's
+cast of the column, kept). No mark name is printed in either. Question V4.
+
+**One producer the skip test does not know.** A node with no nanosecond column in its inputs
+is searched for an outer reference, a lambda variable, a cast to a nanosecond type and a
+function whose name holds `_ns` or `nanos`. A function of another name that returns
+nanoseconds from no nanosecond argument, in such a node, beside a microsecond value that
+coercion has already cast (M1), is not marked; beside an untyped NULL it is (the tag does not
+depend on the test). No such function was found in the matrices.
+
+### 12.9 The matrices on the final build
+
+Final product source `d2717be5`, release build (`cargo build --locked --release -p
+repark-python --features extension-module,allocator-mimalloc`). Main is `2c33f289`: the
+verifier's release build of it (`native-main.so`) recorded the 104,960 cells again on
+2026-10-11 and every cell equals the committed fixture, so the fixture is main.
+
+**The 104,960-cell matrix** (64 doors, five zones, two sources, four targets, 41 spellings;
+values read from the Parquet files), main against the final head, by destination:
+
+| Moved | Cells |
+|---|---|
+| Byte-identical to main | 81,140 |
+| A cut value on main, refused now (`cut` 14,808, `cut` with the wall moved 6,922) | 21,730 |
+| An error or a partial store on main, refused now (`error` 1,570, `other` 300) | 1,870 |
+| Refused on main and on the head, text changed (the unfiltered `UPDATE` names the value) | 220 |
+| A cut value on main, the full nanosecond value now | 0 |
+| Moved any other way | 0 |
+| Cells of a microsecond target that moved (60 doors that write the target) | 0 |
+| Refused cells that left a value on disk | 0 |
+
+23,600 cells moved into the refusal, 75 more than fold 1's 23,525: 10 are the zoned value
+beside a `DATE` branch of a `UNION` (`cast_date` on `union_insert`), 65 are cells that raised
+the base's own error at fold 1 and refuse by name again (the `EXPLAIN ANALYZE UPDATE` rows of
+question Q8: 65 of its 80 cells; the other 15 still raise the base's error and store
+nothing). Against fold 1's head, 6,020 refusals changed their text (MERGE names its table)
+and nothing else moved.
+
+**The verifier's suites**, re-run from its directory (`verify1/probe`: `suites.py`,
+`stmts.py`, `reads.py`, `pq.py`) on the final build, against its own results for main:
+
+| Suite | Cells | Identical | Cut on main, refused | Error on main, refused | Never worse broken | Hole (cut, not refused, not written) |
+|---|---|---|---|---|---|---|
+| shapes (167 spellings, `INSERT … SELECT`, five zones) | 6,680 | 4,640 | 1,860 | 180 | 0 | 0 |
+| doors (126 doors, 14 spellings, three zones) | 42,336 | 32,670 | 8,577 | 1,089 | 0 | 0 |
+| stmts (statements and the DataFrame API, two zones) | 6,272 | 4,968 | 1,016 | 288 | 0 | 0 |
+| equality (36 written arms over 8 spellings, five zones) | 5,760 | 3,150 | 2,610 | 0 | 0 | 0 |
+| equality at the int64 limits (1677 and 2262, three zones) | 6,912 | 3,780 | 1,520 | 1,612 | 0 | 0 |
+
+Reading the doors row. Its 8,577 holds 8,433 narrowed spellings, 96 cells of `array(c,
+NULL)[0]` through the eight doors that create the table (the created column is a nanosecond
+one whatever the row's target says, as at fold 1), 36 cells of a plain nanosecond branch of
+a `UNION` narrowed beside a branch that writes a microsecond value (`cast_ts`,
+`coalesce_of_cast_col` and `date_trunc_second` on `union_insert`, ruling Q5, as at fold 1)
+and 12 of a `UNION` main stored in part. The verdict's 1,008 cells of
+`coalesce(CAST(c AS TIMESTAMP), ts)` are identical to main, its 24 of a plain column under
+`ROLLUP` and `LATERAL` are identical, the 192 `update_alias` cells refuse, and no door
+stores a cut value for a narrowing spelling.
+
+Against the verdict's table: shapes had 40 written cells refused and 300 cells stored cut
+that nobody wrote (containers 120, a DATE sibling 40, the round trips 140): all 340 moved,
+the 40 back to main's value and the 300 into the refusal. stmts had 96 full values refused,
+80 written casts over a subquery refused and 64 errors whose text carried a mark: all 240
+are identical to main now. In the equality suites no cell stores a value that differs from
+the same written call over the nanosecond value: 1,870 store what the twin stores and 2,610
+refuse (at the limits 990 and 3,132); the arms the verdict measured differing (the NTZ
+sibling under `CAST AS TIMESTAMP` and `CAST AS DATE`, a cast above an arm that refuses)
+refuse.
+
+Across the suites the head raised 18,878 refusals: none left a value on disk and none
+carries a mark, an Arrow type, an interval's debug text, a generated relation name or an
+empty table name.
+
+**Reads.** `pq.py` (490 queries written to Parquet, read through a temporary view and
+collected): 0 differ from main, schemas and field ids included. `reads.py` (30 reads:
+columns, schema, Arrow schema, rows, `EXPLAIN`, `printSchema`, `explain(True)`, error
+texts) run on the verifier's eight cores: 0 differ once the run's own names are removed
+(temporary directories, generated view names). `EXPLAIN` and `EXPLAIN VERBOSE` of 36
+statements, logical-plan rows compared byte for byte with main: 69 of 72 equal; the three
+that differ are the kept written cast of §12.8 (two over a temporary view's column, one at
+the root of an `INSERT` whose supply holds a narrowing), in `EXPLAIN VERBOSE` only, and none
+prints a mark.
+
+**The facade.** `test_ice_tsns_narrow_refuse_1.py` (228 rows over 64 doors against the
+fixture) and the fold's `test_ice_tsns_narrow_refuse_1_rule.py` (67), with the R-007 and
+R-008 files: 826 passed on the final build.
+
+### 12.10 The verdict's findings, one by one
+
+| # | Sev | Finding | Disposition | Commit | Pin |
+|---|---|---|---|---|---|
+| 1 | S1 | A written SQL `CAST(c AS TIMESTAMP)` beside a microsecond value refuses | Closed: stores, on every door, as main | `03a6a5af`, `73fe665a` | `a_written_cast_beside_a_microsecond_value_stores_on_every_door`, `a_union_of_written_casts_and_a_values_row_with_a_written_cast_store`; facade `…stores_through_the_frame_writers` |
+| 2 | S1 | A plain nine-digit column refuses under ROLLUP, CUBE, LATERAL | Closed: stores nine digits | `03a6a5af` | `a_plain_column_stores_beside_a_narrowing_under_rollup_cube_and_lateral`; unit `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node` |
+| 3 | S1 | `UPDATE … SET u.v = …` stores the cut value | Closed: refuses, both row-level modes | `3c05e806` | `an_update_through_a_qualified_set_column_refuses_in_both_modes` |
+| 4 | S1 | A value narrowed inside a container coercion stores cut | Closed: refuses | `3c05e806` | `a_value_narrowed_inside_a_container_refuses_on_every_door` |
+| 5 | S1 | A zoned value narrowed beside a DATE stores cut | Closed: refuses, the `UNION` branch included | `3c05e806`, `f3565531` | `a_value_narrowed_beside_a_date_refuses_on_every_door` |
+| 6 | S1 | LATERAL beside a typed NULL or a literal, a lambda in `INSERT VALUES` | Closed: refuses | `3c05e806` | `a_value_narrowed_over_an_outer_reference_or_a_lambda_variable_refuses` |
+| 7 | S1 | A naive value beside a `TIMESTAMP_NTZ` sibling under `CAST AS TIMESTAMP`, `CAST AS DATE` stores a differing value | Closed: refuses | `03a6a5af` | `a_written_call_does_not_forgive_a_cut_it_does_not_equal` |
+| 8 | S1 | A written cast above a refusing arm forgives it | Closed: the innermost call decides | `03a6a5af` | the same pin; `the_innermost_written_call_over_a_narrowed_value_decides` |
+| 9 | S1 | A value that passes through STRING, BIGINT or JSON text stores cut | Closed: refuses (V2) | `03a6a5af` | `a_narrowed_value_that_leaves_the_timestamp_type_and_returns_refuses` |
+| 10 | S2 | A written cast over a subquery, view or frame column refuses | Closed: stores as the inline cast (V1); one edge in §12.8 | `3c05e806` | `a_written_cast_over_a_column_that_holds_the_narrowing_stores_as_the_inline_cast_does`; facade `…frame_column…stores` |
+| 11 | S2 | Refusal texts carry marks, Arrow types, interval debug text, `x`, an empty table name | Closed: 0 of 18,878 refusals in the suites | `3c05e806`, `d2717be5` | `the_refusal_names_what_the_statement_wrote`; every refusing pin asserts the text holds no internal name |
+| 12 | S2 | The tag in a read schema, the lost `PARQUET:field_id` | Closed: `pq.py` 0 of 490 differ | `3c05e806` | `a_read_shows_no_mark_no_tag_and_keeps_its_field_metadata`; facade `test_a_read_shows_no_mark_and_keeps_its_schema` |
+| 13 | S2 | `to_date(x)`, `date(x)` refuse where `CAST(x AS DATE)` stores | Closed | `3c05e806` | `to_date_and_date_answer_as_a_date_cast_does` |
+| 14 | S2 | Mutant N12 survives (the subtree fallback) | Closed: the fallback is gone; its replacements R1 to R4 are killed | `03a6a5af` | `a_narrowed_aggregate_under_grouping_sets_refuses_and_its_plain_sibling_stores` and the lineage unit pin |
+| – | S3 | Mark names in `EXPLAIN VERBOSE` and an internal error | Closed: no mark printed; the join error's text is main's (stmts: 64 cells identical) | `3c89b012`, `124fd8e3`, `d2717be5` | the read pins; `explain_marks` unit pins |
+| – | S3 | Planning a mixed read 7 to 11% slower | Closed: 1.002 and 1.017 (§12.12) | `09de15ce` | measured |
+| – | S3 | §11.3 names the wrong cut | Corrected in §12.2 | `87c38ec5` | – |
+
+### 12.11 Mutants
+
+Each mutant is one edit of the product source at `09de15ce`, in a clone of the branch with a
+build directory of its own, run against the named suites until one fails; the file is
+restored and `git status` is clean after each. The list is fold 1's 21 (F1 to F11, W1 to
+W10) re-anchored to the new code, the verifier's 24 (M and N), and 40 fresh ones in the new
+rule (R1 to R40). 84 of 85 are killed; N12 has no anchor because the subtree
+fallback it removed is gone (R1 to R4 are its replacements).
+
+| Mutant | Killed by |
+|---|---|
+| F1 a cast coercion left over a nanosecond value is not marked | `a_cast_coercion_left_over_a_nanosecond_value_is_marked`, `a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked` |
+| F2 a coerced branch is marked as beside an untyped NULL | `a_cast_coercion_left_over_a_nanosecond_value_is_marked`, `a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked` |
+| F3 a cast a function's signature asked for is marked too | `a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked`, `a_cast_coercion_left_over_a_nanosecond_value_is_marked` |
+| F4 a CASE branch coercion narrowed is not marked | `a_cast_coercion_left_over_a_nanosecond_value_is_marked` |
+| F5 a function argument coercion narrowed beside a microsecond value is not marked | `a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked`, `a_cast_coercion_left_over_a_nanosecond_value_is_marked` |
+| F6 a written CAST AS TIMESTAMP over a narrowed value is not kept | `a_written_call_over_a_narrowed_value_stores_what_it_stores_over_the_nanosecond_value` |
+| F7 a cast written through the DataFrame is not read as the statement's | `a_cast_from_nanoseconds_to_an_instant_before_coercion_is_the_statements` |
+| F8 the pass after coercion reads a coerced cast as written | `every_door_refuses_a_value_narrowed_beside_a_typed_null_or_a_microsecond_value` |
+| F9 the root of a branch of a UNION is not marked | `the_session_rule_marks_a_cast_coercion_left_at_the_root_of_a_projection` |
+| F10 a nanosecond branch beside an untyped NULL takes the other mark | `the_nanosecond_branch_beside_a_widened_untyped_null_is_marked_as_beside_a_null` |
+| F11 a UNION branch beside a microsecond branch is not marked | `the_nanosecond_branch_of_a_union_beside_a_microsecond_branch_is_marked`, `the_nanosecond_branch_of_a_union_beside_an_untyped_null_branch_is_marked` |
+| W1 date_trunc forgives a naive value too | `the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut`, `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| W2 a DATE cast forgives a zoned value too | `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| W3 no written call forgives | `the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut`, `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| W4 a written cast to an instant is walked through | `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| W5 a written CAST AS TIMESTAMP is walked through | `the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut`, `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| W6 a UNION names the first narrowed branch | `a_narrowed_value_is_followed_into_a_view_the_scan_holds_and_a_union_branch` |
+| W7 the mark beside a value is read as beside an untyped NULL | `a_narrowed_value_is_followed_into_a_view_the_scan_holds_and_a_union_branch`, `only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_value` |
+| W8 the text does not name the narrowed value | `a_mark_refuses_through_every_argument_that_carries_the_value_and_no_other`, `the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut` |
+| W9 an INSERT plan is read without looking through the conforming cast | `every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_utc` |
+| W10 the conforming cast is never looked through | `only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_value` |
+| M1 an untyped NULL beside a nanosecond branch is not tagged | `a_settled_tag_leaves_no_alias_and_a_null_cast_is_not_read_as_written`, `an_untyped_null_beside_a_nanosecond_branch_is_tagged_and_no_other_null` |
+| M5 the tag is left in the settled node | `a_branch_the_statement_narrowed_and_a_node_with_one_kind_are_not_marked`, `the_nanosecond_branch_beside_a_widened_untyped_null_is_marked_as_beside_a_null` |
+| M6 the session rule does not settle a tag | `a_settled_tag_leaves_no_alias_and_a_null_cast_is_not_read_as_written`, `only_a_node_that_produces_a_column_is_marked_and_a_producer_is_found_without_a_scan` |
+| M9 the optimizer keeps the wrapper | `the_marker_is_its_argument_and_the_optimizer_drops_it` |
+| M10 the DML plan is not guarded | `every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_utc` |
+| M11 EXPLAIN ANALYZE is not looked into | `every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_utc` |
+| M12 PREPARE is not looked into | `every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_utc` |
+| M13 the overwrite doors are not guarded | `every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_utc` |
+| M14 the shared MERGE and UPDATE guard does not ask | `every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_utc` |
+| M16b CREATE TABLE AS is not guarded (the result of the guard is dropped) | `create_table_as_refuses_a_narrowed_value_it_would_type_as_nanoseconds` |
+| M18 the right side of a join is not followed | `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node` |
+| M19 an aggregate is not followed | `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node`, `a_narrowed_value_is_followed_through_the_plan_nodes_between_it_and_the_store` |
+| M21 a scalar subquery is not followed | `every_door_refuses_a_value_narrowed_beside_an_untyped_null_in_utc` |
+| M26 a filter is not followed | `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node`, `a_narrowed_value_is_followed_through_the_plan_nodes_between_it_and_the_store` |
+| M27 a microsecond target is walked too | `only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_value` |
+| N1 a coerced cast over a NULL literal is marked too | `a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked` |
+| N2 the root mark does not look under an alias | `a_cast_coercion_left_over_a_nanosecond_value_is_marked`, `the_session_rule_marks_a_cast_coercion_left_at_the_root_of_a_projection` |
+| N4 a sort is not followed | `a_narrowed_value_is_followed_through_the_plan_nodes_between_it_and_the_store` |
+| N5 a DISTINCT is not followed | `a_narrowed_value_is_followed_through_the_plan_nodes_between_it_and_the_store` |
+| N6 the ELSE branch of a CASE is not followed | `a_mark_refuses_through_every_argument_that_carries_the_value_and_no_other` |
+| N7 the look-through does not read the written-narrowing function as a conforming cast | `only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_value` |
+| N8 a column behind the conforming cast is never walked | `only_a_nanosecond_target_refuses_and_the_text_names_the_column_and_the_value` |
+| N11 only the first branch of a UNION is followed | `a_narrowed_value_is_followed_into_a_view_the_scan_holds_and_a_union_branch`, `a_narrowed_value_is_followed_through_the_plan_nodes_between_it_and_the_store` |
+| N12 the whole-subtree fallback never refuses | no anchor: the code it changed is gone |
+| R1 a grouping-set aggregate reads the grouping id as an aggregate | `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node` |
+| R2 a lateral subquery is not entered | `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node` |
+| R3 an outer reference is not followed | `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node` |
+| R4 the right side of a join has no outer scope | `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node` |
+| R5 a value that leaves through another type is not followed | `a_mark_refuses_through_every_argument_that_carries_the_value_and_no_other`, `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| R6 a mark with no cast on it does not refuse | `a_mark_refuses_through_every_argument_that_carries_the_value_and_no_other` |
+| R7 a naive cut is forgiven as an instant is | `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| R8 a call that is not transparent keeps the call above it | `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value` |
+| R9 the key of a selecting call is followed | `a_mark_refuses_through_every_argument_that_carries_the_value_and_no_other` |
+| R10 a call typed boolean is followed | `a_mark_refuses_through_every_argument_that_carries_the_value_and_no_other` |
+| R11 the SQL cast is not read before coercion | `a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion` |
+| R12 a cast under an alias at the root is read before coercion too | `a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion` |
+| R13 the second mark does not ask for the result type | `a_branch_is_marked_only_when_the_node_loses_the_nanoseconds` |
+| R14 a cast of a container is not a narrowing | `a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked` |
+| R15 a cast of a zoned value to the wire type is not a narrowing | `a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked` |
+| R16 a filter is marked too | `only_a_node_that_produces_a_column_is_marked_and_a_producer_is_found_without_a_scan` |
+| R17 the producer search is skipped | `only_a_node_that_produces_a_column_is_marked_and_a_producer_is_found_without_a_scan` |
+| R18 the union schema keeps the tag | `a_union_schema_loses_the_tag_and_keeps_its_other_metadata` |
+| R19 the mark builds a field of its own | `the_mark_returns_the_field_of_its_argument` |
+| R20 a kept cast stays with no mark below it | `a_written_cast_over_a_microsecond_column_is_kept_only_above_a_mark` |
+| R21 a written cast over a column is not kept | `a_written_cast_over_a_microsecond_column_is_kept_only_above_a_mark` |
+| R22 to_date and date are not a date cast | `to_date_and_date_answer_as_a_date_cast_does` |
+| R23 the UPDATE probe skips a qualified SET column | `an_update_through_a_qualified_set_column_refuses_in_both_modes` |
+| R24 MERGE does not name its table | `the_refusal_names_what_the_statement_wrote` |
+| R25 EXPLAIN prints the marks | `a_read_shows_no_mark_no_tag_and_keeps_its_field_metadata` |
+| R26 the analyzer's cast is printed in the text | `the_refusal_names_what_the_statement_wrote` |
+| R27 the store reads no call as forgiving a zoned value under date_trunc | `a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond_value`, `the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut` |
+| R28 a zoned branch of a UNION beside a DATE branch is not marked | `a_zoned_branch_of_a_union_beside_a_date_branch_is_marked_before_coercion` |
+| R29 the final plan row of EXPLAIN is collapsed too | `a_row_that_repeats_the_row_above_is_collapsed_and_the_final_plan_is_not` |
+| R30 a settled tag leaves its alias | `a_settled_tag_leaves_no_alias_and_a_null_cast_is_not_read_as_written` |
+| R31 the mark prints its own name in a column name | `the_mark_returns_the_field_of_its_argument`, `a_settled_tag_leaves_no_alias_and_a_null_cast_is_not_read_as_written` |
+| R32 the optimizer keeps an idle narrowing | `the_mark_returns_the_field_of_its_argument` |
+| R33 a cast over a pending TIMESTAMP literal is marked | `a_pending_timestamp_literal_and_a_stale_union_type_are_not_nanoseconds` |
+| R34 a union keeps the type it was planned with | `a_pending_timestamp_literal_and_a_stale_union_type_are_not_nanoseconds` |
+| R35 the kernel over a mark drops the mark | `the_narrowing_kernel_over_a_mark_carries_the_mark_and_prints_as_the_written_one`, `a_written_cast_over_a_microsecond_column_is_kept_only_above_a_mark` |
+| R36 the store does not read the mark a kernel carries | `the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut` |
+| R37 the look-through takes a kernel that carries a mark for the planner's cast | `the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut` |
+| R38 a branch that is the kernel is typed by the schema as nanoseconds | `a_branch_is_typed_without_a_lookup_where_its_node_says_the_type`, `only_a_node_that_produces_a_column_is_marked_and_a_producer_is_found_without_a_scan` |
+| R39 the optimizer keeps the kernel that carries a mark | `the_narrowing_kernel_over_a_mark_carries_the_mark_and_prints_as_the_written_one` |
+| R40 a generated relation name is printed in the text | `the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut` |
+
+**N1 survived its first run and has a pin now.** Removing the test that a coerced cast over
+a typed NULL is not a narrowing left every pin green: the fold's own exclusion of a wire
+cast and of a literal covers `CAST(CAST(NULL AS Timestamp(ns)) AS …)`, the only shape the
+pins held. It does not cover the NULL coercion types beside a zoned value
+(`CAST(NULL AS Timestamp(ns, "UTC"))`), which the mutant marks. The unit pin
+`a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked` holds that shape
+since; the mutant was run again and is killed by it.
+
+**Two things the mutant runs taught.** A scratch clone must not share the live tree's build
+directory: cargo names a path package's artifacts by its path inside the workspace, so the
+two trees overwrite each other, and one live unit run of this fold picked up a mutant that
+way (the runs above use a directory of their own, and the live crates were rebuilt). The
+83 mutants ran on `09de15ce`, one commit before the last product change: `d2717be5`
+changed two functions of `timestamp_ns_cast.rs` and one of `narrowed_store/text.rs`. R32,
+R35, the two mutants of that commit (R39, R40) and N1 were run on the final source, and
+every anchor of the 85 resolves on it but N12's.
+
+### 12.12 Cost
+
+Release builds of main `2c33f289` (the verifier's) and of the final product source `d2717be5`, the
+verifier's `probe/timing.py` (a 2,000-row table with no nanosecond column for the three
+writes; planning and reading a 50-branch `UNION ALL` and a 200-arm `CASE`, over microsecond
+columns and over alternating `TIMESTAMP` and `timestamptz_ns` columns). Interleaved main head
+head main, three blocks, so six sets of fifteen statements per build; eight cores outside the
+build set; the figure is the median of the six set medians, in milliseconds.
+
+| Statement | Main | Head | Head over main |
+|---|---|---|---|
+| `INSERT`, no nanosecond column | 9.9 | 10.0 | 1.009 |
+| `MERGE`, no nanosecond column | 46.0 | 46.3 | 1.006 |
+| `MERGE` merge-on-read, no nanosecond column | 44.9 | 44.7 | 0.995 |
+| read, 50-branch union, microseconds | 315.2 | 314.8 | 0.999 |
+| read, 200-arm `CASE`, microseconds | 128.7 | 129.0 | 1.002 |
+| read, 50-branch union, nanoseconds and microseconds | 66.6 | 66.8 | 1.002 |
+| read, 200-arm `CASE`, nanoseconds and microseconds | 93.4 | 94.9 | 1.017 |
+| `EXPLAIN`, union, microseconds | 337.9 | 286.7 | 0.849 |
+| `EXPLAIN`, union, nanoseconds and microseconds | 69.2 | 60.3 | 0.872 |
+
+Every ratio is at or below 1.05. `EXPLAIN` is faster on the head: the door now collects the
+`EXPLAIN` rows itself where main returned a lazy frame. Why that saves a sixth was not
+profiled.
+
+**What was fixed on the way.** With a wrapper function on each narrowed branch (the fold's
+fifth build, the source of `73fe665a` with the branch typing of `09de15ce`) the two mixed
+reads measured 1.059 and 1.061, as steady as the table above. A profile showed none of the
+rule's own functions above 0.1% of the time; the cost was DataFusion resolving one more
+function for every type and name lookup above each mark, in every rule of both analyses.
+Split by phase, the eager analysis took 0.5 and 1.6 ms more and the run after it 3.7 and
+4.7 ms. `09de15ce` puts the mark on the narrowing kernel itself where the analyzer's cut is
+that kernel, so those plans have main's node count.
+
+### 12.13 Gates on the fold
+
+Run 2026-10-11 on the final source `6c2ad4b1` (product code of `d2717be5`), one cargo command
+at a time under the build lock on cores 32-47.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo fmt --all -- --check` | 0 | |
+| `make rust-clippy` | 0 | |
+| `make rust-panic-ban` | 0 | |
+| `cargo test --locked -p repark-functions --lib` | 0 | 934 passed, 1 ignored |
+| `cargo test --locked -p repark-iceberg --lib` | 0 | 1007 passed |
+| `cargo test --locked -p repark-sql --lib` | 0 | 394 passed |
+| `cargo test --locked -p repark-spark --lib` | 0 | 2694 passed, 5 ignored |
+| `cargo test --locked -p repark-core --lib` | 101, then 0 | under the matrix and the mutant builds `microbatch::fence_tests::two_drivers_on_one_sink_land_each_epoch_exactly_once` ran past its time bound (three runs of the suite); the crate has no change in this unit. Run again when the matrix had finished: 1420 passed, 1 ignored |
+| `cargo test --locked -p repark-spark --test timestamp_ns_narrow_rule` | 0 | 15 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_narrow_refuse` | 0 | 16 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_nested_shapes --test timestamp_ns_wall_doors --test timestamptz_ns_wall_doors` | 0 | 6 + 7 + 4 passed |
+| `pytest tests/test_ice_tsns_narrow_refuse_1.py tests/test_ice_tsns_narrow_refuse_1_rule.py tests/test_ice_tstzns_wall_1.py tests/test_ice_tsns_merge_wall_1.py tests/test_ice_tsns_sql_1.py -q -n 8` on the release build of the final source | 0 | 826 passed |
+| the recorder on the final build, 104,960 cells, against main | 0 | §12.9 |
+| the verifier's `suites.py` (shapes, doors, equality, the limits), `stmts.py`, `reads.py`, `pq.py` on the final build | 0 | 23 runs, §12.9 |
+| `python3 comment_ban.py <clone> origin/main HEAD` | 0 | hits=0 |
+| `ruff check .` and `ruff format --check .` | 0 | |
+| `make check-rust-file-size`, `make check-lib-rs`, `make check-crate-dag`, `make check-manifest` | 0 | `instant_ts.rs` 991 lines, `java_double.rs` 990, `timestamp_ns_cast.rs` 980, `null_narrowing.rs` 915, ceiling 1000 |
+| `python3 scripts/sync_map_md.py --check`, `make check-map-md BASE=origin/main`, `make check-ledger-grammar`, `make check-ledgers`, `make check-docs-links`, `make check-docs-compaction`, `make spell-check` | 0 | |
+| `scripts/check_lib_py.py`, `check_python_conventions.py`, `check_docstring_presence.py` | 0 | |
+
+Not run: `make develop` (the facade ran against the release module on `PYTHONPATH`), the
+wide `pytest -k` selection of §11.10, and the Spark measurement of §6. The clone has no
+commit hook installed; the gates above stand in for it.
+
+
+### 12.14 Disk and scratch
+
+Free space before the first build: 356 G of 1.8 T. The fold wrote a release build directory
+(seven incremental builds), seven copies of the native module, a clone for the mutants with
+its own debug build directory, and the matrices' JSON under the lane's scratch directory
+`fold2/`; the build directories, the module copies and the clone were removed at hand-back
+and the measurements (JSON, logs, scripts) kept. The previous session's `target/r017` in
+the clone was left as it was.
+
 ## Q0. The questions put before the rulings (answered 2026-10-10, section 11.1)
 
 - **Q1 (C-009, RULING).** Should `CASE WHEN … THEN CAST(c AS TIMESTAMP) ELSE NULL END` (and
@@ -1114,3 +1485,41 @@ is meant to move; the matrix of step 4 is the proof.
   `UPDATE`'s `SET` value from a written `CAST(… AS TIMESTAMP)`, which Q1 says stores.
   *Lean:* leave them; the base's errors under `EXPLAIN ANALYZE` are a defect of their own
   (out of scope, observed).
+
+## Q. Questions after fold 2
+
+The three orchestrator rulings of the fold are provisional and built; the owner may overturn
+each. Two questions are new.
+
+- **V1 (RULING, provisional, built).** A written `CAST(v AS TIMESTAMP)` over a column whose
+  subquery, view or frame holds the analyzer's narrowing stores, as the inline spelling
+  does. *Premise:* the verdict's S2 (80 cells refused where the inline cast stores).
+  *Built:* §12.1, §12.8; C-032. Overturning it is deleting `Marks::keep_written_cast`'s
+  second arm.
+- **V2 (RULING, provisional, built).** A narrowed value that leaves through STRING, BIGINT
+  or JSON text and returns refuses. *Built:* S2 of §12.1; C-030.
+- **V3 (RULING, provisional, built).** A read is what main reads: no tag, no lost field id,
+  no mark name in `EXPLAIN VERBOSE` or an error text, and planning at most 1.05 of main.
+  *Built:* §12.5, §12.8, §12.12; C-034, C-037.
+- **V4 (RULING).** May a written `CAST(v AS TIMESTAMP)` over a column of a view the
+  analyzer cannot read show in `EXPLAIN VERBOSE` as the narrowing function?
+  *Premise:* §12.8. V1 through a temporary or a catalog view needs the cast kept, and the
+  analyzer cannot see whether that view holds a narrowing, so it keeps the cast over every
+  such view's microsecond column. Values, schemas, plain `EXPLAIN` and the optimized plan
+  are main's; three of 72 compared `EXPLAIN VERBOSE` outputs print
+  `__repark_narrow_timestamp_ns__(tv.ts)` in their analyzed rows where main prints `tv.ts`.
+  The other way is to keep the cast only where the narrowing is visible to the analyzer
+  (a subquery, a common table expression, a frame, an inlined view), and let the cast over
+  a temporary or catalog view's narrowed column refuse. *Lean, taken:* keep it; V1 names
+  views, and no mark name is printed.
+- **V5 (RULING).** Should a written call over a narrowed value store when another call
+  sits between them and the value is still equal?
+  *Premise:* §12.6. `CAST(coalesce(ns, ts) + INTERVAL '0' SECOND AS TIMESTAMP)` stored a cut
+  value on main and refuses now: S4 forgives only through transparent nodes, because it has
+  no proof of equality through an arbitrary call. Ruling 1 read to the letter stores it.
+  *Lean, taken:* refuse; never worse holds and the remedy is to write the cast on the
+  narrowed value itself.
+- **Q7 and Q8** stand as ruled for this fold (C-026, C-027).
+- **A note on the fold's seam rule.** The brief names `repark-sql`, `repark-iceberg` and
+  `repark-spark`; the mark has lived in `repark-functions` since the unit's first commit
+  and the redesign changed it there. No crate edge was added.
