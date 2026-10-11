@@ -1065,6 +1065,13 @@ pins: rp-4-fork-repin/C-005, C-006
   so `UPDATE` with and without a `WHERE` carry the text the unfiltered `UPDATE` carried
   before. The unfiltered `UPDATE` keeps its older lineage test (`Narrowed::refuse`) as well:
   it refused more there than the mark does, and no cell of that door moves.
+  **Fold 2 (2026-10-11).** `update_cast.rs`: the probe read a `SET` column only when its
+  name had one part, so `SET u.v = …` and an alias in the value (`u.c`) skipped every
+  guard and stored the cut value. The narrowed guard now runs for a nanosecond column on a
+  probe over the statement's own table reference (alias included), and a `SET` column
+  qualified by the alias or the table name is that column; the other guards of the probe
+  are as they were. `merge.rs`: a narrowed refusal raised inside MERGE carried the empty
+  table name; the door names the target (`narrowed_store::name_table`).
   pins: ice-tsns-narrow-refuse-1/C-004, C-008
 - `insert_timestamp_ns.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the `UPDATE` conform runs
   for a `timestamptz_ns` target too. R-007 had filtered zoned targets out of it to hold the

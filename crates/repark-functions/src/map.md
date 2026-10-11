@@ -1121,6 +1121,32 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the type-coercion rewriter (`loses_nanoseconds`), holds a coarser timestamp and no
   nanosecond one: `named_struct('f', ns, 'g', ts)` is not marked, and the store can refuse on
   the mark alone.
+  The marks of fold 2, all through `Marks` (one value per plan node, built in
+  `instant_ts.rs` `rewrite_plan`, which now only calls `Marks::of`, `rewrite` and
+  `settle_plan`):
+  - *Where.* `produces_columns` is false for a filter, a join, a sort, a repartition, a
+    limit and a scan: nothing is tagged, marked or read as written there, so their
+    expressions are main's (an error that prints a join key prints main's text).
+  - *The skip test.* `asks` is true when the node's inputs hold nanoseconds, or when the
+    expression holds a producer (`produces_nanoseconds`: an outer reference or a lambda
+    variable typed nanoseconds, a cast or a function named for nanoseconds, a subquery).
+    A literal is not a producer: a nanosecond literal is the wire form of `TIMESTAMP '…'`.
+    A node with a tagged NULL is settled whatever `asks` says.
+  - *M1* (`coerced`, `narrows`): a cast coercion left that takes a nanosecond leaf to a
+    coarser one at any depth of a list, struct or map, or a zoned nanosecond value to the
+    zoneless wire type (what coercion does beside a `DATE`); marked as a branch of a `CASE`,
+    as an argument beside a coarser sibling or beside such a wire cast, and at the root of an
+    expression (not at the root of a `VALUES` cell, where the wire cast is a written one).
+  - *M2* (`settle_branches`, `kind_of`, `loses_nanoseconds`): a branch that holds
+    nanoseconds beside one that holds a coarser timestamp, when the coerced node's type
+    holds no nanoseconds; `array_append(array(ns), ts)` is marked with no cast in the plan.
+  - *V1* (`Marks::keep_written_cast`, `settle_plan`, `plan_holds_mark`): a written
+    `CAST(v AS TIMESTAMP)` over a microsecond instant is kept as the written-narrowing
+    function when a mark is in its subtree; over a column it is kept first and dropped
+    again unless the plan below holds a mark, an inlined view holds one, or a scan is a view
+    whose plan this crate cannot read (`TableType` other than `Base`).
+  - *Schemas.* The mark returns its argument's field, so a column's `PARQUET:field_id`
+    passes through it; `untagged_schema` takes the untyped-NULL tag out of a `UNION` schema.
   The tag never reaches an analyzed plan: `Cast` copies its source field's metadata, so a
   tag left behind would show in a result schema. No rule is added to the analyzer. The store
   reads the marks in `repark-iceberg` `write/narrowed_store.rs`. Eleven unit pins in

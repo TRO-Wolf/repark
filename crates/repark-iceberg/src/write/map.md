@@ -662,6 +662,12 @@ repark-core's error map.
   (beside a `TIMESTAMP_NTZ` sibling, which truncates toward zero), a container cut and a mark
   with no cast on it are never forgiven, and a written call above a call that does not
   forgive changes nothing.
+  `to_date(x)` and `date(x)` are read as a date cast. **The text** (`narrowed_store/text.rs`
+  `sql_text`) names the value as the statement spells it: the marks, the analyzer's own
+  cast and the engine's wrappers are left out, a type is its SQL name, an interval its SQL
+  literal, and a lambda variable is named with the array it ranges over (`x, an element of
+  array(c),`). `name_table` puts a table's name into a refusal raised with the empty name;
+  the Spark MERGE door calls it.
   `refuse_narrowed_ns_columns` is the same over a plan that is already analyzed;
   `refuse_narrowed_ns_inserts` is that for the `Dml` of an `INSERT`, and looks through the
   planner's own cast of a selected column to the target type, which the session rule reads

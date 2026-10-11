@@ -9,12 +9,17 @@ use datafusion::prelude::SessionContext;
 
 use super::negated_null_store::ViewDefinitionPlans;
 
+mod text;
+
 pub const NARROWED_BESIDE_NULL_UDF_NAME: &str = "__repark_narrowed_beside_null__";
 pub const NARROWED_BESIDE_VALUE_UDF_NAME: &str = "__repark_narrowed_beside_value__";
 pub const NARROW_TIMESTAMP_NS_UDF_NAME: &str = "__repark_narrow_timestamp_ns__";
 const DATE_TRUNC_UDF_NAME: &str = "date_trunc";
 const TIMESTAMP_TO_DATE_UDF_NAME: &str = "__repark_timestamp_to_date__";
 const COALESCE_UDF_NAME: &str = "coalesce";
+const DATE_UDF_NAMES: [&str; 2] = ["to_date", "date"];
+const UNNAMED_TABLE: &str = "the table ``: Cannot safely cast";
+const NARROWED: &str = "narrowed from nanoseconds to microseconds";
 const SELECTING_UDF_NAMES: [&str; 7] = [
     "array_element",
     "__repark_array_get__",
@@ -121,8 +126,23 @@ fn conformed(expr: &Expr) -> Option<&Column> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Narrowing {
     pub value: String,
+    pub element_of: Option<String>,
     pub beside_untyped_null: bool,
     pub zoned: bool,
+}
+
+#[must_use]
+pub fn name_table(error: DataFusionError, table: &str) -> DataFusionError {
+    match error {
+        DataFusionError::Plan(text) if text.contains(UNNAMED_TABLE) && text.contains(NARROWED) => {
+            let named = format!("the table {table}: Cannot safely cast");
+            DataFusionError::Plan(text.replacen(UNNAMED_TABLE, &named, 1))
+        }
+        DataFusionError::Context(context, inner) => {
+            DataFusionError::Context(context, Box::new(name_table(*inner, table)))
+        }
+        other => other,
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -150,6 +170,7 @@ struct Scope<'a> {
 struct Walk<'a> {
     views: Option<&'a ViewDefinitionPlans>,
     outer: Option<&'a Scope<'a>>,
+    ranged: Option<&'a Expr>,
     nearest: Call,
 }
 
@@ -186,8 +207,12 @@ pub fn narrowed_refusal(
         ));
     }
     let value = &narrowing.value;
+    let named = match &narrowing.element_of {
+        Some(ranged) => format!("{value}, an element of {ranged},"),
+        None => value.clone(),
+    };
     DataFusionError::Plan(format!(
-        "{head} The value {value} was narrowed from nanoseconds to microseconds before the \
+        "{head} The value {named} was narrowed from nanoseconds to microseconds before the \
          store, to match the microsecond value beside it; write CAST({value} AS TIMESTAMP) if \
          microseconds are intended, or give the value beside it a nanosecond type. SQLSTATE: \
          KD000"
@@ -210,6 +235,7 @@ pub fn column_narrowed(
     let walk = Walk {
         views,
         outer: None,
+        ranged: None,
         nearest: Call::Opaque,
     };
     column_lineage(plan, index, walk)
@@ -377,6 +403,7 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
             let nearest = match name {
                 DATE_TRUNC_UDF_NAME => Call::Trunc,
                 TIMESTAMP_TO_DATE_UDF_NAME => Call::Date,
+                name if DATE_UDF_NAMES.contains(&name) && function.args.len() == 1 => Call::Date,
                 COALESCE_UDF_NAME => walk.nearest,
                 _ => Call::Opaque,
             };
@@ -386,8 +413,17 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
             .find_map(|(_, then)| carried(then))
             .or_else(|| case.else_expr.as_deref().and_then(carried)),
         Expr::HigherOrderFunction(function) => {
+            let ranged = function
+                .args
+                .iter()
+                .find(|argument| !matches!(argument, Expr::Lambda(_)));
+            let within = Walk {
+                ranged,
+                nearest: Call::Opaque,
+                ..walk
+            };
             function.args.iter().find_map(|argument| match argument {
-                Expr::Lambda(lambda) => opaque(&lambda.body),
+                Expr::Lambda(lambda) => expr_lineage(&lambda.body, input, within),
                 value => opaque(value),
             })
         }
@@ -509,8 +545,13 @@ fn found(
     if forgiven {
         return expr_lineage(value, input, walk);
     }
+    let element_of = match value {
+        Expr::LambdaVariable(_) => walk.ranged.map(text::sql_text),
+        _ => None,
+    };
     Some(Narrowing {
-        value: value.human_display().to_string(),
+        value: text::sql_text(value),
+        element_of,
         beside_untyped_null,
         zoned: zoned.unwrap_or(false),
     })

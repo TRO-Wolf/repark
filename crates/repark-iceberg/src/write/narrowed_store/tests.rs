@@ -170,6 +170,19 @@ async fn a_mark_refuses_through_every_argument_that_carries_the_value_and_no_oth
         )
         .otherwise(col("m"))
         .unwrap(),
+        Expr::ScalarFunction(datafusion::logical_expr::expr::ScalarFunction::new_udf(
+            Arc::new(create_udf(
+                "pick",
+                vec![DataType::Boolean, nanos()],
+                nanos(),
+                Volatility::Immutable,
+                Arc::new(|args: &[ColumnarValue]| Ok(args[1].clone())),
+            )),
+            vec![
+                identity("isnotnull", instant(), DataType::Boolean, marked.clone()),
+                col("m"),
+            ],
+        )),
     ];
     for value in passed_by {
         let plan = plan_of(&ctx, value.clone()).await;
@@ -321,6 +334,10 @@ async fn a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond
         ),
         (
             written(cast(cast(narrowed("m"), DataType::Utf8), nanos())),
+            true,
+        ),
+        (
+            written(identity("other", instant(), instant(), narrowed("m"))),
             true,
         ),
         (

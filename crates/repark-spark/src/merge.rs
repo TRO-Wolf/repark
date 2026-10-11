@@ -97,7 +97,17 @@ pub(crate) async fn execute_merge(
     }
     let handle = catalog_handle(catalogs, &catalog_name)?;
     crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, handle, &mut spec).await?;
-    repark_iceberg::write::merge::execute_merge(ctx, handle, &spec).await?;
+    let named = || {
+        let parts = std::iter::once(catalog_name.as_str())
+            .chain(spec.target.namespace().iter().map(String::as_str))
+            .chain(std::iter::once(spec.target.name()));
+        format!("`{}`", parts.collect::<Vec<_>>().join("."))
+    };
+    repark_iceberg::write::merge::execute_merge(ctx, handle, &spec)
+        .await
+        .map_err(|error| {
+            repark_iceberg::write::narrowed_store::name_table(error.into(), &named())
+        })?;
     ctx.read_empty()
 }
 

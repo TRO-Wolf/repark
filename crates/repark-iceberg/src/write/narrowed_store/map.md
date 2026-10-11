@@ -8,6 +8,9 @@ The parent's entry in [../map.md](../map.md) holds the reasons.
 
 ## Contents
 
+- [text.rs](text.rs) — fold 2 (2026-10-11): `sql_text`, the SQL spelling of the narrowed
+  value in the refusal (no mark, no Arrow type or interval debug text). Pinned by the door
+  pin `the_refusal_names_what_the_statement_wrote` in repark-spark.
 - [tests.rs](tests.rs) — five pins over plans built with the DataFrame API; the marks and
   the written-narrowing function are local functions of the shared names:
   - `a_cast_over_a_marked_value_is_followed_through_every_carrying_position_and_no_other`:

@@ -73,7 +73,7 @@ pub(crate) async fn refuse_cast_then_fold_nested(
         case_sensitive: !crate::spark_door_case_insensitive(ctx.state().config().options()),
     };
     if !nested_assign::repeats_a_column(&target.arrow_schema, &scope, &update.assignments) {
-        refuse_incompatible_update_cast(ctx, &target, object_name, update).await?;
+        refuse_incompatible_update_cast(ctx, &target, object_name, update, &scope).await?;
     }
     let Some(assignments) = nested_assign::fold_nested_assignments(
         ctx,
@@ -120,6 +120,7 @@ async fn refuse_incompatible_update_cast(
     target: &UpdateTarget,
     object_name: &ObjectName,
     update: &Update,
+    scope: &AssignmentScope,
 ) -> Result<()> {
     let table_sql = object_name.to_string();
     for assignment in &update.assignments {
@@ -131,10 +132,18 @@ async fn refuse_incompatible_update_cast(
             .iter()
             .filter_map(|part| part.as_ident().map(|ident| ident.value.clone()))
             .collect();
-        if target_parts.len() != 1 {
+        let Some((column, qualifier)) = target_parts.split_last() else {
+            continue;
+        };
+        let same = |left: &String, right: &String| {
+            left == right || (!scope.case_sensitive && left.eq_ignore_ascii_case(right))
+        };
+        let qualified = |known: &Vec<String>| {
+            known.len() == qualifier.len() && known.iter().zip(qualifier).all(|(a, b)| same(a, b))
+        };
+        if !qualifier.is_empty() && !scope.qualifiers.iter().any(qualified) {
             continue;
         }
-        let column = &target_parts[0];
         let mut resolved = None;
         for field in target.arrow_schema.fields() {
             if field.name() == column {
@@ -148,10 +157,22 @@ async fn refuse_incompatible_update_cast(
         let Some(field) = resolved else {
             continue;
         };
-        let probe_sql = format!(
-            "SELECT ({}) FROM {table_sql}",
-            crate::void_type::parenthesize_stacked_minus(&assignment.value)
-        );
+        let value = crate::void_type::parenthesize_stacked_minus(&assignment.value);
+        let nanoseconds = datafusion::arrow::datatypes::TimeUnit::Nanosecond;
+        if matches!(field.data_type(), ArrowDataType::Timestamp(unit, _) if *unit == nanoseconds)
+            && let Ok(aliased) = (ctx.sql(&format!("SELECT ({value}) FROM {}", update.table))).await
+        {
+            let pair = [(column.as_str(), field.data_type())];
+            let named = format!(
+                "`{}`",
+                crate::catalog_ops::name_parts(object_name).join(".")
+            );
+            refuse_narrowed_ns_writes(ctx, &named, aliased.logical_plan(), pair)?;
+        }
+        if !qualifier.is_empty() {
+            continue;
+        }
+        let probe_sql = format!("SELECT ({value}) FROM {table_sql}");
         let Ok(frame) = ctx.sql(&probe_sql).await else {
             return Ok(());
         };
@@ -159,12 +180,6 @@ async fn refuse_incompatible_update_cast(
         refuse_void_writes(ctx, "``", frame.logical_plan(), pair)?;
         let pair = [(column.as_str(), field.data_type())];
         refuse_negated_null_writes(ctx, "``", frame.logical_plan(), pair)?;
-        let pair = [(column.as_str(), field.data_type())];
-        let named = format!(
-            "`{}`",
-            crate::catalog_ops::name_parts(object_name).join(".")
-        );
-        refuse_narrowed_ns_writes(ctx, &named, frame.logical_plan(), pair)?;
         let pair = [(column.as_str(), field.data_type())];
         refuse_ntz_writes(ctx, "``", frame.logical_plan(), pair)?;
         if let Some(literal) = integer_literal_source_type(&assignment.value)

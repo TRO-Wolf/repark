@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::sync::{Arc, LazyLock};
 
@@ -11,7 +12,7 @@ use datafusion::logical_expr::expr::{Cast, ScalarFunction};
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
-    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Union, Values, Volatility,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, TableType, Union, Values, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercionRewriter;
@@ -109,12 +110,7 @@ impl ScalarUDFImpl for NarrowedBeside {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        let value = args.arg_fields.first().ok_or_else(one_argument)?;
-        Ok(Arc::new(Field::new(
-            self.name(),
-            value.data_type().clone(),
-            value.is_nullable(),
-        )))
+        (args.arg_fields.first().map(Arc::clone)).ok_or_else(one_argument)
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -211,20 +207,223 @@ pub(crate) fn before_coercion(expr: Expr, schema: &DFSchema) -> Result<Transform
 
 fn coerced(expr: &Expr, schema: &DFSchema) -> bool {
     matches!(expr, Expr::Cast(cast)
-        if coarser(cast.field.data_type())
-            && !is_narrowing_mark(&cast.expr)
-            && !null_literal(&cast.expr)
-            && holds(&cast.expr, schema, true))
+    if !is_narrowing_mark(&cast.expr)
+        && !null_literal(&cast.expr)
+        && cast.expr.get_type(schema).is_ok_and(|source| {
+            narrows(&source, cast.field.data_type())
+        }))
 }
 
-pub(crate) fn mark_coerced_narrowing(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+fn narrows(source: &DataType, target: &DataType) -> bool {
+    match (source, target) {
+        (DataType::Timestamp(TimeUnit::Nanosecond, zone), DataType::Timestamp(unit, kept)) => {
+            *unit != TimeUnit::Nanosecond || (zone.is_some() && kept.is_none())
+        }
+        (
+            DataType::List(from) | DataType::LargeList(from) | DataType::FixedSizeList(from, _),
+            DataType::List(to) | DataType::LargeList(to) | DataType::FixedSizeList(to, _),
+        )
+        | (DataType::Map(from, _), DataType::Map(to, _)) => {
+            narrows(from.data_type(), to.data_type())
+        }
+        (DataType::Struct(from), DataType::Struct(to)) => from
+            .iter()
+            .zip(to.iter())
+            .any(|(from, to)| narrows(from.data_type(), to.data_type())),
+        _ => false,
+    }
+}
+
+fn to_the_wire_type(expr: &Expr) -> bool {
+    matches!(expr, Expr::Cast(cast) if sql_timestamp(cast.field.data_type()))
+}
+
+pub(crate) struct Marks {
+    scoped: bool,
+    produces: bool,
+    values: bool,
+    kept: Cell<bool>,
+}
+
+impl Marks {
+    pub(crate) fn of(plan: &LogicalPlan, schema: &DFSchema) -> Self {
+        let produces = produces_columns(plan);
+        Self {
+            scoped: produces && holds_nanoseconds(schema),
+            produces,
+            values: matches!(plan, LogicalPlan::Values(_)),
+            kept: Cell::new(false),
+        }
+    }
+
+    pub(crate) fn rewrite(
+        &self,
+        expr: Expr,
+        schema: &DFSchema,
+        cast: &dyn Fn(Expr) -> Transformed<Expr>,
+    ) -> Result<Transformed<Expr>> {
+        if !self.produces {
+            return expr.transform_up(|node| Ok(cast(node)));
+        }
+        let asks = self.scoped || expr.exists(|node| Ok(produces_nanoseconds(node)))?;
+        let settling = |node: Expr| {
+            self.keep_written_cast(node, schema)
+                .transform_data(|node| Ok(cast(node)))?
+                .transform_data(|node| settle_branches(node, schema, asks))
+        };
+        if !asks {
+            return expr.transform_up(settling);
+        }
+        let marking = |node| mark_coerced_branches(node, schema);
+        mark_coerced_narrowing(expr, schema, !self.values)
+            .transform_data(|root| root.transform_down_up(marking, settling))
+    }
+
+    fn keep_written_cast(&self, expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+        let Expr::Cast(cast) = &expr else {
+            return Transformed::no(expr);
+        };
+        if !sql_timestamp(cast.field.data_type()) {
+            return Transformed::no(expr);
+        }
+        let source = cast.expr.get_type(schema);
+        let marked = holds_mark(&cast.expr);
+        let over_a_mark = marked && matches!(source, Ok(DataType::Timestamp(_, _)));
+        let over_a_column = !marked
+            && source.is_ok_and(|found| instant(&found))
+            && (cast.expr)
+                .exists(|node| Ok(matches!(node, Expr::Column(_))))
+                .unwrap_or(false);
+        if !over_a_mark && !over_a_column {
+            return Transformed::no(expr);
+        }
+        if over_a_column {
+            self.kept.set(true);
+        }
+        let Expr::Cast(cast) = expr else {
+            return Transformed::no(expr);
+        };
+        Transformed::yes(crate::timestamp_ns_cast::narrow_timestamp_ns_expr(
+            *cast.expr,
+        ))
+    }
+
+    pub(crate) fn settle_plan(&self, plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+        if !self.kept.get() || plan.inputs().into_iter().any(plan_holds_mark) {
+            return settle_union_branches(plan);
+        }
+        let schema = input_schema(&plan);
+        plan.map_expressions(|expr| expr.transform_up(|node| Ok(drop_kept_cast(node, &schema))))?
+            .map_data(LogicalPlan::recompute_schema)
+    }
+}
+
+fn input_schema(plan: &LogicalPlan) -> DFSchema {
+    let mut schema = DFSchema::empty();
+    for input in plan.inputs() {
+        schema.merge(input.schema());
+    }
+    schema
+}
+
+fn drop_kept_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    let kept = crate::timestamp_ns_cast::is_narrow_timestamp_ns(&expr);
+    match expr {
+        Expr::ScalarFunction(mut function)
+            if kept
+                && function.args.len() == 1
+                && !holds_mark(&function.args[0])
+                && (function.args[0].get_type(schema)).is_ok_and(|found| instant(&found)) =>
+        {
+            Transformed::yes(function.args.remove(0))
+        }
+        other => Transformed::no(other),
+    }
+}
+
+fn holds_mark(expr: &Expr) -> bool {
+    expr.exists(|node| Ok(is_narrowing_mark(node)))
+        .unwrap_or(false)
+}
+
+fn plan_holds_mark(plan: &LogicalPlan) -> bool {
+    plan.exists(|node| {
+        if let LogicalPlan::TableScan(scan) = node {
+            let held = match scan.source.get_logical_plan() {
+                Some(view) => plan_holds_mark(view.as_ref()),
+                None => scan.source.table_type() != TableType::Base,
+            };
+            if held {
+                return Ok(true);
+            }
+        }
+        let mut marked = false;
+        node.apply_expressions(|expr| {
+            marked = holds_mark(expr);
+            Ok(if marked {
+                TreeNodeRecursion::Stop
+            } else {
+                TreeNodeRecursion::Continue
+            })
+        })?;
+        Ok(marked)
+    })
+    .unwrap_or(false)
+}
+
+#[must_use]
+pub fn produces_columns(plan: &LogicalPlan) -> bool {
+    !matches!(
+        plan,
+        LogicalPlan::Filter(_)
+            | LogicalPlan::Join(_)
+            | LogicalPlan::Sort(_)
+            | LogicalPlan::Repartition(_)
+            | LogicalPlan::Limit(_)
+            | LogicalPlan::TableScan(_)
+    )
+}
+
+fn produces_nanoseconds(expr: &Expr) -> bool {
+    match expr {
+        Expr::OuterReferenceColumn(field, _) => nested_nanoseconds(field.data_type()),
+        Expr::LambdaVariable(variable) => {
+            (variable.field.as_ref()).is_some_and(|field| nested_nanoseconds(field.data_type()))
+        }
+        Expr::Cast(cast) => produced(cast.field.data_type()),
+        Expr::TryCast(cast) => produced(cast.field.data_type()),
+        Expr::ScalarFunction(function) => {
+            let name = function.func.name();
+            name.contains("_ns") || name.contains("nanos")
+        }
+        Expr::ScalarSubquery(subquery) => holds_nanoseconds(subquery.subquery.schema()),
+        _ => false,
+    }
+}
+
+fn produced(target: &DataType) -> bool {
+    nested_nanoseconds(target) && !sql_timestamp(target)
+}
+
+pub(crate) fn mark_coerced_narrowing(
+    expr: Expr,
+    schema: &DFSchema,
+    wire: bool,
+) -> Transformed<Expr> {
     match expr {
         Expr::Alias(mut alias) => {
-            let value = mark_coerced_narrowing(*alias.expr, schema);
+            let value = mark_coerced_narrowing(*alias.expr, schema, wire);
             alias.expr = Box::new(value.data);
             Transformed::new_transformed(Expr::Alias(alias), value.transformed)
         }
-        Expr::Cast(cast) if coerced(&Expr::Cast(cast.clone()), schema) => {
+        Expr::Cast(cast) => {
+            let found = Expr::Cast(cast);
+            if !coerced(&found, schema) || (!wire && to_the_wire_type(&found)) {
+                return Transformed::no(found);
+            }
+            let Expr::Cast(cast) = found else {
+                return Transformed::no(found);
+            };
             Transformed::yes(Expr::Cast(Cast::new_from_field(
                 Box::new(marked(*cast.expr, false)),
                 cast.field,
@@ -241,7 +440,8 @@ pub(crate) fn mark_coerced_branches(expr: Expr, schema: &DFSchema) -> Result<Tra
         Expr::ScalarFunction(_) => {
             any_branch(&expr, narrowed)
                 && any_branch(&expr, |branch| {
-                    !narrowed(branch) && holds(branch, schema, false)
+                    (narrowed(branch) && to_the_wire_type(branch))
+                        || (!narrowed(branch) && kind_of(branch, schema) == Kind::Coarser)
                 })
         }
         _ => false,
@@ -249,23 +449,7 @@ pub(crate) fn mark_coerced_branches(expr: Expr, schema: &DFSchema) -> Result<Tra
     if !unified {
         return Ok(Transformed::no(expr));
     }
-    expr.map_children(|branch| Ok(mark_coerced_narrowing(branch, schema)))
-}
-
-pub(crate) fn keep_written_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    let over_a_mark = |target: &DataType, source: &Expr| {
-        matches!(target, DataType::Timestamp(TimeUnit::Nanosecond, None))
-            && matches!(source.get_type(schema), Ok(DataType::Timestamp(_, _)))
-            && source
-                .exists(|node| Ok(is_narrowing_mark(node)))
-                .unwrap_or(false)
-    };
-    match expr {
-        Expr::Cast(cast) if over_a_mark(cast.field.data_type(), &cast.expr) => Transformed::yes(
-            crate::timestamp_ns_cast::narrow_timestamp_ns_expr(*cast.expr),
-        ),
-        other => Transformed::no(other),
-    }
+    expr.map_children(|branch| Ok(mark_coerced_narrowing(branch, schema, true)))
 }
 
 fn tag_untyped_nulls(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
@@ -284,29 +468,49 @@ fn tag_untyped_nulls(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>>
     })
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Kind {
+    Nanoseconds,
+    Coarser,
+    Other,
+}
+
+fn kind_of(branch: &Expr, schema: &DFSchema) -> Kind {
+    match branch.get_type(schema) {
+        Ok(found) if nested_nanoseconds(&found) => {
+            if is_narrowing_mark(branch) {
+                Kind::Other
+            } else {
+                Kind::Nanoseconds
+            }
+        }
+        Ok(found) if nested_coarser(&found) => Kind::Coarser,
+        _ => Kind::Other,
+    }
+}
+
 pub(crate) fn settle_branches(
     expr: Expr,
     schema: &DFSchema,
-    nanoseconds_in_scope: bool,
+    asks: bool,
 ) -> Result<Transformed<Expr>> {
     if !unifies_branches(&expr) {
         return Ok(Transformed::no(expr));
     }
     let tagged = any_branch(&expr, is_tagged_null);
-    let asks = tagged || nanoseconds_in_scope || any_branch(&expr, is_nanosecond_cast);
-    let narrows = asks
-        && any_branch(&expr, |branch| holds(branch, schema, false))
-        && any_branch(&expr, |branch| {
-            !is_narrowing_mark(branch) && holds(branch, schema, true)
-        })
-        && loses_nanoseconds(&expr, schema);
+    if !tagged && !asks {
+        return Ok(Transformed::no(expr));
+    }
+    let holds = |kind: Kind| any_branch(&expr, |branch| kind_of(branch, schema) == kind);
+    let narrows =
+        holds(Kind::Coarser) && holds(Kind::Nanoseconds) && loses_nanoseconds(&expr, schema);
     if !tagged && !narrows {
         return Ok(Transformed::no(expr));
     }
     expr.map_children(|branch| {
         if is_tagged_null(&branch) {
             branch.transform_up(|node| Ok(untagged(node)))
-        } else if narrows && !is_narrowing_mark(&branch) && holds(&branch, schema, true) {
+        } else if narrows && kind_of(&branch, schema) == Kind::Nanoseconds {
             Ok(Transformed::yes(marked(branch, tagged)))
         } else {
             Ok(Transformed::no(branch))
@@ -330,10 +534,6 @@ fn nested_coarser(data_type: &DataType) -> bool {
         | DataType::FixedSizeList(field, _) => nested_coarser(field.data_type()),
         _ => false,
     }
-}
-
-fn is_nanosecond_cast(expr: &Expr) -> bool {
-    crate::timestamp_ns_cast::is_timestamp_ns_cast(expr)
 }
 
 pub(crate) fn tag_union_nulls(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
@@ -461,8 +661,29 @@ pub(crate) fn settle_union_branches(plan: LogicalPlan) -> Result<Transformed<Log
     }
     Ok(Transformed::yes(LogicalPlan::Union(Union {
         inputs,
-        schema: Arc::clone(&union.schema),
+        schema: untagged_schema(&union.schema)?,
     })))
+}
+
+fn untagged_schema(schema: &Arc<DFSchema>) -> Result<Arc<DFSchema>> {
+    let tagged = |field: &Arc<Field>| field.metadata().contains_key(UNTYPED_NULL_TAG);
+    if !schema.fields().iter().any(tagged) {
+        return Ok(Arc::clone(schema));
+    }
+    let fields = schema
+        .iter()
+        .map(|(qualifier, field)| {
+            let mut metadata = field.metadata().clone();
+            metadata.remove(UNTYPED_NULL_TAG);
+            let field = field.as_ref().clone().with_metadata(metadata);
+            (qualifier.cloned(), Arc::new(field))
+        })
+        .collect();
+    let untagged = DFSchema::new_with_metadata(fields, schema.as_arrow().metadata().clone())?;
+    let dependencies = schema.functional_dependencies().clone();
+    Ok(Arc::new(
+        untagged.with_functional_dependencies(dependencies)?,
+    ))
 }
 
 fn quick_type(input: &LogicalPlan, index: usize) -> Option<DataType> {
@@ -579,10 +800,6 @@ fn holds(expr: &Expr, schema: &DFSchema, nanoseconds: bool) -> bool {
         expr.get_type(schema),
         Ok(DataType::Timestamp(unit, _)) if (unit == TimeUnit::Nanosecond) == nanoseconds
     )
-}
-
-fn coarser(data_type: &DataType) -> bool {
-    matches!(data_type, DataType::Timestamp(unit, _) if *unit != TimeUnit::Nanosecond)
 }
 
 fn instant(data_type: &DataType) -> bool {

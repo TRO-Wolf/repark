@@ -71,6 +71,30 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `a_plain_column_stores_beside_a_narrowing_under_rollup_cube_and_lateral`: a plain column
   stores nine digits when a narrowing sits in a `WHERE`, a sibling aggregate or a sibling
   column under `ROLLUP`, `CUBE` and `LATERAL` (red on `45260e44`: refused).
+  The holes of the verdict, each refused by its own statement on the seven doors with a
+  read-back (no value, no new data or metadata file, the next write stores), and no
+  internal name in the text:
+  `a_value_narrowed_inside_a_container_refuses_on_every_door` (six spellings),
+  `a_value_narrowed_beside_a_date_refuses_on_every_door` (a DATE literal, a typed NULL, a
+  column, a `CASE`, a `UNION` branch; both sources),
+  `a_value_narrowed_over_an_outer_reference_or_a_lambda_variable_refuses` (LATERAL beside a
+  typed NULL, a literal, an untyped NULL, a column, and over a narrowed outer column; a
+  lambda in `INSERT … VALUES`),
+  `a_narrowed_value_that_leaves_the_timestamp_type_and_returns_refuses` (STRING, BIGINT,
+  JSON text), `a_written_call_does_not_forgive_a_cut_it_does_not_equal` (a naive value
+  beside a `TIMESTAMP_NTZ` sibling under a written cast and a date cast; a written cast
+  above an arm that refuses; arithmetic between the cast and the value),
+  `an_update_through_a_qualified_set_column_refuses_in_both_modes` (five statements, both
+  row-level modes; a plain qualified update then stores nine digits).
+  What stores: `the_innermost_written_call_over_a_narrowed_value_decides` (eleven arms over
+  four narrowed spellings equal the same arm over the nanosecond value, three zones),
+  `a_written_cast_over_a_column_that_holds_the_narrowing_stores_as_the_inline_cast_does`
+  (a subquery, a temporary view, a common table expression), and
+  `to_date_and_date_answer_as_a_date_cast_does`.
+  `a_narrowed_aggregate_under_grouping_sets_refuses_and_its_plain_sibling_stores` is the pin
+  that needs per-column lineage under `ROLLUP`, `CUBE` and `GROUPING SETS`.
+  `the_refusal_names_what_the_statement_wrote`: the value in SQL spelling, a lambda
+  variable with its array, and the table's name on every door, MERGE included.
 - [timestamp_ns_narrow_refuse.rs](timestamp_ns_narrow_refuse.rs) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
   2026-10-10 built as fold 1):** the Rust door's pins of the narrowed-value refusal. Each

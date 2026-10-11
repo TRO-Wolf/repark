@@ -135,6 +135,7 @@ pub(crate) fn rewrite_float_plan(
     }
     let literals = float_literal_inputs(&plan);
     let name_preserver = NamePreserver::new(&plan);
+    let before_coercion = before_coercion && crate::null_narrowing::produces_columns(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
         let rewritten = expr.transform_up(|node| {

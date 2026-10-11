@@ -34,4 +34,22 @@ holds the reasons.
   - `the_nanosecond_branch_of_a_union_beside_an_untyped_null_branch_is_marked`,
     `the_nanosecond_branch_of_a_union_beside_a_microsecond_branch_is_marked`,
     `a_union_of_one_kind_is_left_alone`.
+  Fold 2 (2026-10-11) added seven:
+  - `a_cast_to_the_sql_timestamp_type_before_coercion_is_the_statements`: the wire cast over
+    a naive and a zoned nanosecond value becomes the written-narrowing function, over a
+    microsecond value and a date it does not; a coercion cast over it is not marked; a
+    `VALUES` cell keeps the cast at its root and the function below it.
+  - `a_cast_coercion_left_inside_a_container_or_to_the_wire_type_is_marked`: a list cast
+    beside a microsecond list, a zoned value cast to the wire type beside a date cast, the
+    root with and without the wire kind; a cast that keeps the nanoseconds, a cast to a
+    string and a lone list cast are not.
+  - `a_branch_is_marked_only_when_the_node_loses_the_nanoseconds`: a function typed a
+    microsecond list is marked with no cast in it; one typed a nanosecond list,
+    `named_struct` and one typed an integer are not.
+  - `only_a_node_that_produces_a_column_is_marked_and_a_producer_is_found_without_a_scan`:
+    a filter and a sort take no mark, a projection does; an outer reference and a lambda
+    variable over an empty relation are marked; a literal is no producer.
+  - `a_union_schema_loses_the_tag_and_keeps_its_other_metadata`.
+  - `a_written_cast_over_a_microsecond_column_is_kept_only_above_a_mark`.
+  - `the_mark_returns_the_field_of_its_argument`.
   pins: ice-tsns-narrow-refuse-1/C-003, C-019, C-020

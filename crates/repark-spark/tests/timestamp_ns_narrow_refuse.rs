@@ -514,7 +514,7 @@ impl Cell<'_> {
             )
         };
         let table = if door.starts_with("merge") {
-            "the table ``:".to_string()
+            format!("the table `ice.ns.{}`:", self.table)
         } else if flags.contains('B') {
             "the table `datafusion.public.".to_string()
         } else if door.starts_with("insert overwrite") || door == "insert by name" {

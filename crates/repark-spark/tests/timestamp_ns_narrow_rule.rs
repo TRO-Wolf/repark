@@ -226,7 +226,11 @@ impl Store<'_> {
                 && refused.contains("SQLSTATE: KD000"),
             "{door}: {query}: {refused}"
         );
-        assert!(!refused.contains("__repark"), "{door}: {query}: {refused}");
+        let internal = ["__repark", "Timestamp(", "Interval", "the table ``"];
+        assert!(
+            !internal.iter().any(|text| refused.contains(text)),
+            "{door}: {query}: {refused}"
+        );
         assert_eq!(
             files_ending(&self.root(), ".parquet"),
             data,
@@ -350,5 +354,439 @@ async fn a_plain_column_stores_beside_a_narrowing_under_rollup_cube_and_lateral(
                 }
             }
         }
+    }
+}
+
+async fn every_door_refuses(zone: &str, queries: &[String]) {
+    let mut matrix = Matrix::open(zone).await;
+    for target in TARGETS {
+        for (door, flags, template) in DOORS {
+            for query in queries {
+                matrix
+                    .store(target)
+                    .refuses(door, flags, template, query)
+                    .await;
+            }
+        }
+    }
+}
+
+fn over_both_sources(spellings: &[&str]) -> Vec<String> {
+    SOURCES
+        .iter()
+        .flat_map(|(source, kind)| {
+            spellings
+                .iter()
+                .map(move |spelling| select(&spelling.replace("{c}", source).replace("{n}", kind)))
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn a_value_narrowed_inside_a_container_refuses_on_every_door() {
+    let queries = over_both_sources(&[
+        "coalesce(array({c}), array(ts))[0]",
+        "array_append(array({c}), ts)[0]",
+        "array_prepend(array({c}), ts)[1]",
+        "array_union(array({c}), array(ts))[0]",
+        "flatten(array(array({c}), array(ts)))[0]",
+        "(CASE WHEN id > 0 THEN array({c}) ELSE array(ts) END)[0]",
+    ]);
+    every_door_refuses(ZONES[1], &queries).await;
+}
+
+#[tokio::test]
+async fn a_value_narrowed_beside_a_date_refuses_on_every_door() {
+    let mut queries = over_both_sources(&[
+        "coalesce({c}, DATE '2001-02-03')",
+        "coalesce({c}, CAST(NULL AS DATE))",
+        "coalesce({c}, d)",
+        "CASE WHEN id > 0 THEN {c} ELSE d END",
+    ]);
+    for (source, _) in SOURCES {
+        queries.push(format!(
+            "SELECT id, {source} AS v FROM ice.ns.src UNION ALL SELECT 100, DATE '2001-02-03'"
+        ));
+    }
+    every_door_refuses(ZONES[2], &queries).await;
+}
+
+#[tokio::test]
+async fn a_value_narrowed_over_an_outer_reference_or_a_lambda_variable_refuses() {
+    let mut queries = Vec::new();
+    for (source, _) in SOURCES {
+        for inner in [
+            "coalesce(o.{c}, CAST(NULL AS TIMESTAMP))",
+            "CASE WHEN o.id > 0 THEN o.{c} ELSE TIMESTAMP '2001-02-03 04:05:06.654321' END",
+            "coalesce(o.{c}, NULL)",
+            "coalesce(o.{c}, o.ts)",
+        ] {
+            queries.push(format!(
+                "SELECT o.id, l.v FROM ice.ns.src o, LATERAL (SELECT {} AS v) l",
+                inner.replace("{c}", source)
+            ));
+        }
+        queries.push(format!(
+            "SELECT o.id, l.v FROM (SELECT id, coalesce({source}, ts) AS w FROM ice.ns.src) o, \
+             LATERAL (SELECT o.w AS v) l"
+        ));
+    }
+    every_door_refuses(ZONES[1], &queries).await;
+    let mut matrix = Matrix::open(ZONES[1]).await;
+    for target in TARGETS {
+        for (literal, sibling) in [
+            (
+                "CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns)",
+                "TIMESTAMP '2001-02-03 04:05:06.654321'",
+            ),
+            (
+                "CAST('2026-01-02 03:04:05.123456789+00:00' AS timestamptz_ns)",
+                "TIMESTAMP '2001-02-03 04:05:06.654321'",
+            ),
+            (
+                "CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns)",
+                "CAST(NULL AS TIMESTAMP)",
+            ),
+        ] {
+            let template = format!(
+                "INSERT INTO {{t}} (id, v) VALUES (1, transform(array({literal}), x -> \
+                 coalesce(x, {sibling}))[0])"
+            );
+            matrix
+                .store(target)
+                .refuses("insert values", "", &template, "")
+                .await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_narrowed_value_that_leaves_the_timestamp_type_and_returns_refuses() {
+    let queries = over_both_sources(&[
+        "CAST(CAST(coalesce({c}, NULL) AS STRING) AS {n})",
+        "CAST(CAST(coalesce({c}, ts) AS STRING) AS {n})",
+        "to_timestamp(CAST(coalesce({c}, ts) AS STRING))",
+        "timestamp_micros(unix_micros(coalesce({c}, ts)))",
+        "timestamp_micros(CAST(unix_micros(coalesce({c}, NULL)) AS BIGINT))",
+        "CAST(concat_ws('', CAST(coalesce({c}, ts) AS STRING)) AS {n})",
+        "CAST(get_json_object(to_json(named_struct('f', coalesce({c}, ts))), '$.f') AS {n})",
+    ]);
+    every_door_refuses(ZONES[1], &queries).await;
+}
+
+#[tokio::test]
+async fn a_written_call_does_not_forgive_a_cut_it_does_not_equal() {
+    let mut queries: Vec<String> = [
+        "CAST(coalesce(ns, ntz) AS TIMESTAMP)",
+        "CAST(coalesce(ns, CAST(NULL AS TIMESTAMP_NTZ)) AS TIMESTAMP)",
+        "CAST(coalesce(ns, ntz) AS DATE)",
+        "CAST(coalesce(ns, CAST(NULL AS TIMESTAMP_NTZ)) AS DATE)",
+        "CAST(CAST(coalesce(ns, ntz) AS TIMESTAMP) AS TIMESTAMP)",
+        "date_trunc('second', CAST(coalesce(ns, ntz) AS TIMESTAMP))",
+        "CAST(date_trunc('second', coalesce(ns, NULL)) AS TIMESTAMP)",
+        "CAST(date_trunc('second', coalesce(ns, ts)) AS DATE)",
+        "CAST(date_trunc('second', coalesce(ns, CAST(NULL AS TIMESTAMP))) AS TIMESTAMP)",
+        "date_trunc('month', CAST(coalesce(tzns, NULL) AS DATE))",
+        "CAST(CAST(coalesce(tzns, ts) AS DATE) AS TIMESTAMP)",
+        "CAST(coalesce(ns, ts) + INTERVAL '0' SECOND AS TIMESTAMP)",
+    ]
+    .iter()
+    .map(|value| select(value))
+    .collect();
+    queries.push(
+        "SELECT id, CAST(v AS DATE) AS v FROM (SELECT id, coalesce(ns, ntz) AS v FROM ice.ns.src) q"
+            .to_string(),
+    );
+    for zone in [ZONES[0], ZONES[1]] {
+        every_door_refuses(zone, &queries).await;
+    }
+}
+
+#[tokio::test]
+async fn the_innermost_written_call_over_a_narrowed_value_decides() {
+    let arms = [
+        ("CAST(date_trunc('second', {x}) AS TIMESTAMP)", "tzns"),
+        ("CAST(date_trunc('second', {x}) AS DATE)", "tzns"),
+        ("date_trunc('day', date_trunc('second', {x}))", "tzns"),
+        ("date_trunc('month', CAST({x} AS DATE))", "ns"),
+        ("CAST(CAST({x} AS DATE) AS TIMESTAMP)", "ns"),
+        ("date_trunc('second', CAST({x} AS TIMESTAMP))", "ns"),
+        ("date_trunc('second', CAST({x} AS TIMESTAMP))", "tzns"),
+        ("CAST(CAST({x} AS TIMESTAMP) AS TIMESTAMP)", "ns"),
+        ("coalesce(CAST({x} AS TIMESTAMP), NULL)", "tzns"),
+        ("CAST({x} AS TIMESTAMP)", "ns"),
+        ("CAST({x} AS TIMESTAMP)", "tzns"),
+    ];
+    let narrowed = [
+        "coalesce({c}, NULL)",
+        "coalesce({c}, ts)",
+        "CASE WHEN id > 0 THEN {c} ELSE TIMESTAMP '2001-02-03 04:05:06.654321' END",
+        "coalesce({c}, CAST(NULL AS TIMESTAMP))",
+    ];
+    let (door, flags, template) = DOORS[0];
+    for zone in ZONES {
+        let mut matrix = Matrix::open(zone).await;
+        for target in TARGETS {
+            for (arm, source) in arms {
+                let twin = select(&arm.replace("{x}", source));
+                let reference = matrix
+                    .store(target)
+                    .stores(door, flags, template, &twin)
+                    .await;
+                for inner in narrowed {
+                    let query = select(&arm.replace("{x}", &inner.replace("{c}", source)));
+                    let stored = matrix
+                        .store(target)
+                        .stores(door, flags, template, &query)
+                        .await;
+                    assert_eq!(stored, reference, "{zone}: {query}");
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn an_update_through_a_qualified_set_column_refuses_in_both_modes() {
+    let session = session(ZONES[1]);
+    let warehouse = catalog(&session).await;
+    let mut count = 0;
+    for target in TARGETS {
+        for (source, kind) in SOURCES {
+            for mode in ["", MOR] {
+                for statement in [
+                    "UPDATE {t} AS u SET u.v = coalesce(u.c, NULL) WHERE u.id >= 0",
+                    "UPDATE {t} SET u.v = coalesce(c, ts) WHERE id >= 0",
+                    "UPDATE {t} AS u SET u.v = coalesce(u.c, CAST(NULL AS TIMESTAMP))",
+                    "UPDATE {t} u SET u.v = greatest(u.c, u.ts) WHERE u.id >= 0",
+                    "UPDATE {t} SET {t}.v = coalesce(c, ts) WHERE id >= 0",
+                ] {
+                    count += 1;
+                    let table = format!("u{count}");
+                    let name = format!("ice.ns.{table}");
+                    run(
+                        &session,
+                        &format!(
+                            "CREATE TABLE {name} (id INT, v {target}, c {kind}, ts TIMESTAMP) \
+                             USING iceberg TBLPROPERTIES ('format-version'='3'{mode})"
+                        ),
+                    )
+                    .await;
+                    run(
+                        &session,
+                        &format!(
+                            "INSERT INTO {name} (id, c, ts) SELECT id, {source}, ts FROM \
+                             ice.ns.src"
+                        ),
+                    )
+                    .await;
+                    let root = warehouse.path().join("ns").join(&table);
+                    let data = files_ending(&root, ".parquet");
+                    let commits = files_ending(&root, ".metadata.json");
+                    let write = statement
+                        .replace("{t}.v", &format!("{table}.v"))
+                        .replace("{t} SET u.v", &format!("{name} AS u SET u.v"))
+                        .replace("{t}", &name);
+                    let refused = attempt(&session, &write).await.expect_err(&write);
+                    assert!(
+                        refused.contains("narrowed from nanoseconds to microseconds")
+                            && refused.contains(&format!("`{name}`"))
+                            && !refused.contains("__repark"),
+                        "{write}: {refused}"
+                    );
+                    assert_eq!(files_ending(&root, ".parquet"), data, "{write}");
+                    assert_eq!(files_ending(&root, ".metadata.json"), commits, "{write}");
+                    let read = format!("SELECT v FROM {name} WHERE v IS NOT NULL ORDER BY id");
+                    assert_eq!(ticks(&session, &read).await, Vec::new(), "{write}");
+                    run(
+                        &session,
+                        &format!("UPDATE {name} AS u SET u.v = u.c WHERE u.id >= 0"),
+                    )
+                    .await;
+                    let stored: Vec<i64> =
+                        ticks(&session, &read).await.into_iter().flatten().collect();
+                    if (kind == "timestamp_ns") == (target == "timestamp_ns") {
+                        let whole: Vec<i64> = MOMENTS.iter().map(|(_, nanos)| *nanos).collect();
+                        assert_eq!(stored, whole, "{write}");
+                    } else {
+                        assert_eq!(stored.len(), MOMENTS.len(), "{write}");
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_written_cast_over_a_column_that_holds_the_narrowing_stores_as_the_inline_cast_does() {
+    let narrowed = ["coalesce({c}, ts)", "coalesce({c}, NULL)"];
+    for zone in [ZONES[1], ZONES[2]] {
+        let mut matrix = Matrix::open(zone).await;
+        for target in TARGETS {
+            for (source, _) in SOURCES {
+                for (door, flags, template) in DOORS {
+                    let twin = select(&format!("CAST({source} AS TIMESTAMP)"));
+                    let reference = matrix
+                        .store(target)
+                        .stores(door, flags, template, &twin)
+                        .await;
+                    for inner in narrowed {
+                        let inner = inner.replace("{c}", source);
+                        run(
+                            &matrix.session,
+                            &format!(
+                                "CREATE OR REPLACE TEMPORARY VIEW narrowed_view AS SELECT id, \
+                                 {inner} AS v FROM ice.ns.src"
+                            ),
+                        )
+                        .await;
+                        for query in [
+                            format!("SELECT id, CAST({inner} AS TIMESTAMP) AS v FROM ice.ns.src"),
+                            format!(
+                                "SELECT id, CAST(v AS TIMESTAMP) AS v FROM (SELECT id, {inner} \
+                                 AS v FROM ice.ns.src) q"
+                            ),
+                            "SELECT id, CAST(v AS TIMESTAMP) AS v FROM narrowed_view".to_string(),
+                            format!(
+                                "WITH q AS (SELECT id, {inner} AS v FROM ice.ns.src) SELECT \
+                                 id, CAST(q.v AS TIMESTAMP) AS v FROM q"
+                            ),
+                        ] {
+                            let stored = matrix
+                                .store(target)
+                                .stores(door, flags, template, &query)
+                                .await;
+                            assert_eq!(stored, reference, "{zone}: {door}: {query}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn to_date_and_date_answer_as_a_date_cast_does() {
+    let (door, flags, template) = DOORS[0];
+    for zone in ZONES {
+        let mut matrix = Matrix::open(zone).await;
+        for target in TARGETS {
+            let twin = select("CAST(ns AS DATE)");
+            let reference = matrix
+                .store(target)
+                .stores(door, flags, template, &twin)
+                .await;
+            for call in ["to_date({x})", "date({x})", "CAST({x} AS DATE)"] {
+                for inner in [
+                    "coalesce(ns, NULL)",
+                    "coalesce(ns, ts)",
+                    "coalesce(ns, CAST(NULL AS TIMESTAMP))",
+                ] {
+                    let query = select(&call.replace("{x}", inner));
+                    let stored = matrix
+                        .store(target)
+                        .stores(door, flags, template, &query)
+                        .await;
+                    assert_eq!(stored, reference, "{zone}: {query}");
+                }
+                for inner in [
+                    "coalesce(tzns, NULL)",
+                    "coalesce(tzns, ts)",
+                    "coalesce(ns, ntz)",
+                ] {
+                    let query = select(&call.replace("{x}", inner));
+                    matrix
+                        .store(target)
+                        .refuses(door, flags, template, &query)
+                        .await;
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_narrowed_aggregate_under_grouping_sets_refuses_and_its_plain_sibling_stores() {
+    let whole: Vec<i64> = MOMENTS.iter().map(|(_, nanos)| *nanos).collect();
+    let mut matrix = Matrix::open(ZONES[1]).await;
+    for (source, kind) in SOURCES {
+        for sets in ["ROLLUP (id)", "CUBE (id)", "GROUPING SETS ((id), ())"] {
+            let inner = format!(
+                "SELECT id, max({source}) AS p, max(coalesce({source}, ts)) AS c FROM \
+                 ice.ns.src GROUP BY {sets} HAVING id IS NOT NULL"
+            );
+            for (door, flags, template) in DOORS {
+                let plain = format!("SELECT id, p AS v FROM ({inner}) g");
+                let stored = matrix
+                    .store(kind)
+                    .stores(door, flags, template, &plain)
+                    .await;
+                assert_eq!(stored, whole, "{door}: {plain}");
+                let narrowed = format!("SELECT id, c AS v FROM ({inner}) g");
+                matrix
+                    .store(kind)
+                    .refuses(door, flags, template, &narrowed)
+                    .await;
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn the_refusal_names_what_the_statement_wrote() {
+    let mut matrix = Matrix::open(ZONES[1]).await;
+    let (door, flags, template) = DOORS[0];
+    for (value, named, remedy) in [
+        (
+            "coalesce(ns, ts)",
+            "The value ice.ns.src.ns was narrowed",
+            "write CAST(ice.ns.src.ns AS TIMESTAMP) if",
+        ),
+        (
+            "coalesce(ns + INTERVAL '1' DAY, ts)",
+            "The value ice.ns.src.ns + INTERVAL '1' DAY was narrowed",
+            "write CAST(ice.ns.src.ns + INTERVAL '1' DAY AS TIMESTAMP) if",
+        ),
+        (
+            "greatest(CAST(coalesce(ns, ntz) AS timestamp_ns), ts)",
+            "The value CAST(coalesce(ice.ns.src.ns, ice.ns.src.ntz) AS timestamp_ns) was narrowed",
+            "AS TIMESTAMP) if",
+        ),
+        (
+            "transform(array(ns), x -> coalesce(x, ts))[0]",
+            "The value x, an element of array(ice.ns.src.ns), was narrowed",
+            "write CAST(x AS TIMESTAMP) if",
+        ),
+        (
+            "coalesce(array(ns), array(ts))[0]",
+            "The value array(ice.ns.src.ns) was narrowed",
+            "give the value beside it a nanosecond type",
+        ),
+        (
+            "coalesce(CAST(tzns AS timestamp_ns), TIMESTAMP '2001-02-03 04:05:06')",
+            "The value CAST(ice.ns.src.tzns AS timestamp_ns) was narrowed",
+            "write CAST(CAST(ice.ns.src.tzns AS timestamp_ns) AS TIMESTAMP) if",
+        ),
+    ] {
+        let refused = matrix
+            .store("timestamp_ns")
+            .refuses(door, flags, template, &select(value))
+            .await;
+        assert!(
+            refused.contains(named) && refused.contains(remedy),
+            "{value}: {refused}"
+        );
+    }
+    for (door, flags, template) in DOORS {
+        let store = matrix.store("timestamptz_ns");
+        let table = store.name();
+        let refused = store
+            .refuses(door, flags, template, &select("coalesce(tzns, ts)"))
+            .await;
+        let bare = table.rsplit('.').next().unwrap_or_default();
+        assert!(
+            refused.contains(&format!("`{table}`")) || refused.contains(&format!("`{bare}`")),
+            "{door}: {refused}"
+        );
     }
 }
