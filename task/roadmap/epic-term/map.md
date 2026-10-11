@@ -101,6 +101,13 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   the slices MB-0…MB-5 with fork asks, harness, identity and acceptance, the parallel waves and merge
   order, the owner decisions O-1…O-10 (all ruled 2026-10-04) and the ordered start sequence
   without dates; §10 the existing-Bronze identity backfill, filed in the owner's wording.
+- [iceberg-streaming-open-decision-2026-10-11.md](iceberg-streaming-open-decision-2026-10-11.md) — **the
+  Iceberg streaming open decision (owner-held, OPEN, filed 2026-10-11):** MB-4 Q1 (the carried-name
+  retention lapse, measured in the eighth verify) with its three options and the Frontier lean, the
+  architecture in plain words, the edge cases catalogued (Spark takeover, vendor errors, stop-fix-
+  restart), seven hardening proposals (stamped maintenance, tag-protected floors, draining stop,
+  source-range identity, lease, doctor and repair, a standing crash matrix) and the owner decisions
+  OD-1…OD-8. The streaming track is paused until the owner closes it; the orchestrator pivots.
 - [cdc-microbatch-north-star-2026-10-05.md](cdc-microbatch-north-star-2026-10-05.md) — **the CDC and
   micro-batch North Star (filed 2026-10-05 at the owner's request):** the standing defaults a sketch
   or executor reaches for when no ruled row answers and the owner is away — the authority order
