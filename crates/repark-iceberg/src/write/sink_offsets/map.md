@@ -85,7 +85,9 @@ directory holds the piece split out of it. The test files of the module stay bes
     before: once every snapshot that carries the name is expired the name is no longer
     carried. Pins: `a_table_stamp_over_the_starting_mark_keeps_the_name_carried`,
     `a_second_table_stamp_of_a_marked_name_is_refused_over_a_stray`,
-    `another_name_s_foreach_stamp_does_not_carry_this_name`.
+    `another_name_s_foreach_stamp_does_not_carry_this_name`,
+    `another_name_s_key_carrying_table_stamp_does_not_carry_this_name`,
+    `a_table_stamp_with_an_unparsable_starting_head_still_carries_the_name`.
     pins: mb-4-foreach-eo/C-050
   - **Why reporting with no floor is not a false positive** (owner ruling D1, measured). The
     walk follows parent pointers from the newest stamp. An expiry removes snapshots from the

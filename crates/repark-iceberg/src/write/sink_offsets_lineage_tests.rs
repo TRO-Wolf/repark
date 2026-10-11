@@ -1,5 +1,5 @@
 use super::*;
-use crate::microbatch::starting_mark::STARTING_HEAD_SUMMARY_KEY;
+use crate::microbatch::starting_mark::{STARTING_HEAD_SUMMARY_KEY, StartingMark};
 use crate::microbatch::stray_remedy::{
     Discard, HEAD_GONE, HEAD_UNRECORDED, INSIDE_A_SNAPSHOT, PREVIOUS_GONE, Restart, SHARED_STRETCH,
     StrayRemedy,
@@ -749,6 +749,79 @@ async fn another_name_s_foreach_stamp_does_not_carry_this_name() {
         }
     }
     assert!(carried_by_foreach(&second, other_query()).expect("their lineage reads"));
+}
+
+#[tokio::test]
+async fn another_name_s_key_carrying_table_stamp_does_not_carry_this_name() {
+    let (_warehouse, catalog, ident) = fixture("two_names_key_table").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let marked = commit_starting_mark(&catalog, &seeded, other_query())
+        .await
+        .expect("the mark");
+    assert!(carried_by_foreach(&marked, other_query()).expect("their mark reads"));
+    assert!(!carried(&marked));
+    let theirs = CommitStamp {
+        record: record_for(other_query(), 0, 7),
+        door: SinkDoor::Table,
+    };
+    let guard = BatchScope::enter(TableUuid::of(&marked), theirs).expect("enter");
+    let files = stage(&marked, &[2]).await;
+    let after_theirs = commit_append_with_summary(&catalog, &marked, files, &scoped(&guard), None)
+        .await
+        .expect("their stamp");
+    drop(guard);
+    let summary = &after_theirs
+        .metadata()
+        .current_snapshot()
+        .expect("head")
+        .summary()
+        .additional_properties;
+    assert!(summary.contains_key(STARTING_HEAD_SUMMARY_KEY));
+    assert!(carried_by_foreach(&after_theirs, other_query()).expect("their lineage reads"));
+    assert!(!carried(&after_theirs));
+    let first = stamped_through(&catalog, &after_theirs, 0, SinkDoor::Table, &[3]).await;
+    let second = stamped_through(&catalog, &first, 1, SinkDoor::Table, &[4]).await;
+    assert!(!carried(&second));
+    assert!(carried_by_foreach(&second, other_query()).expect("their lineage reads"));
+}
+
+#[tokio::test]
+async fn a_table_stamp_with_an_unparsable_starting_head_still_carries_the_name() {
+    let (_warehouse, catalog, ident) = fixture("unparsable_starting_head").await;
+    let seeded = append_plain(&catalog, &ident, &[1]).await;
+    let mut entries = record_for(query(), 0, 7)
+        .summary_entries(SinkDoor::Table)
+        .expect("the stamp entries");
+    entries.push((
+        STARTING_HEAD_SUMMARY_KEY.to_string(),
+        String::from("not-a-head"),
+    ));
+    let summary = HashMap::from_iter(entries);
+    assert!(StartingMark::from_summary(&summary).is_none());
+    let files = stage(&seeded, &[2]).await;
+    let tx = Transaction::new(&seeded);
+    let tx = tx
+        .fast_append()
+        .add_data_files(files)
+        .set_snapshot_properties(summary)
+        .apply(tx)
+        .expect("apply the stamp");
+    let stamped = tx.commit(catalog.as_ref()).await.expect("the stamp lands");
+    let summary = &stamped
+        .metadata()
+        .current_snapshot()
+        .expect("head")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        summary.get(STARTING_HEAD_SUMMARY_KEY).map(String::as_str),
+        Some("not-a-head")
+    );
+    assert_eq!(
+        read_starting_mark(&stamped, query()).expect("the property reads"),
+        None
+    );
+    assert!(carried(&stamped));
 }
 
 fn refusal_text(error: &DataFusionError) -> String {
