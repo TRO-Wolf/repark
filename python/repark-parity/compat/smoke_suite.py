@@ -412,6 +412,7 @@ def test_meta_known_fail_hour_over_time(_compat_provenance: object) -> None:
     """SPARK-52892 hour(time): live Spark 4.1.2 refuses exactly like RePark.
 
     Both raise UNSUPPORTED_TIME_TYPE 0A000, so the old PASS pin was stale.
+    pins: parity-live-infra-2/C-003
     """
     _assert_known_fail_apache(
         _compat_provenance,
@@ -425,6 +426,7 @@ def test_meta_known_fail_minute_over_time(_compat_provenance: object) -> None:
     """SPARK-52893 minute(time): live Spark 4.1.2 refuses exactly like RePark.
 
     Both raise UNSUPPORTED_TIME_TYPE 0A000, so the old PASS pin was stale.
+    pins: parity-live-infra-2/C-003
     """
     _assert_known_fail_apache(
         _compat_provenance,
@@ -438,6 +440,7 @@ def test_meta_known_fail_second_over_time(_compat_provenance: object) -> None:
     """SPARK-52894 second(time): live Spark 4.1.2 refuses exactly like RePark.
 
     Both raise UNSUPPORTED_TIME_TYPE 0A000, so the old PASS pin was stale.
+    pins: parity-live-infra-2/C-003
     """
     _assert_known_fail_apache(
         _compat_provenance,
