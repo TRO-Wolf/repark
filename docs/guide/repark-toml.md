@@ -217,8 +217,8 @@ is accepted and reads unpartitioned. At most 10 000 ranges run in one read; a la
 save mode refuses (`CONNECT-DECL-pg-write-modes`), and `UPDATE`, `DELETE` and
 `MERGE` refuse as not implemented. The `write.path` option picks the carriage:
 `bulk` (the default) streams the rows in one `COPY ... FROM STDIN` statement,
-`row` sends multi-row `INSERT` statements of up to 256 rows each plus one
-remainder statement, as Spark's JDBC writer sends batches. Statement-level
+`row` sends multi-row `INSERT` statements of up to 256 rows or about 1 MiB per
+statement, as Spark's JDBC writer sends batches. Statement-level
 triggers and transition tables therefore see one statement on the bulk path and
 one per batch on the row path; a trigger that limits rows per statement can
 refuse a bulk write and admit the same rows on the row path. A value the column
