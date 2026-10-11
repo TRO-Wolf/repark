@@ -209,6 +209,29 @@ mod tests {
     }
 
     #[test]
+    fn thirty_minutes_either_side_of_local_midnight() {
+        for (zone, instant, expected) in [
+            ("Asia/Kolkata", (2026, 10, 10, 18, 0, 0), (2026, 10, 10)),
+            ("Asia/Kolkata", (2026, 10, 10, 19, 0, 0), (2026, 10, 11)),
+            ("America/New_York", (2026, 10, 11, 3, 30, 0), (2026, 10, 10)),
+            ("America/New_York", (2026, 10, 11, 4, 30, 0), (2026, 10, 11)),
+        ] {
+            let (year, month, day, hour, minute, second) = instant;
+            let start = Utc
+                .with_ymd_and_hms(year, month, day, hour, minute, second)
+                .single()
+                .expect("valid fixed start");
+            let (expected_year, expected_month, expected_day) = expected;
+            let got = session_start_days(&start, zone).expect(zone);
+            assert_eq!(
+                got,
+                days(expected_year, expected_month, expected_day),
+                "{zone} {instant:?}"
+            );
+        }
+    }
+
+    #[test]
     fn unknown_zone_refuses_like_the_cast_sibling() {
         let start = DateTime::from_timestamp(1_700_000_000, 0).expect("valid start");
         let error = session_start_days(&start, "Mars/Olympus").expect_err("unknown zone refuses");
