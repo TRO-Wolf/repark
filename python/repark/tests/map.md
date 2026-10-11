@@ -9977,3 +9977,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here.
   pins: empty-projection-count-1/C-002, C-003, C-004, C-007, C-008, C-009
+- [_spark_python.py](_spark_python.py) — **PARITY-LIVE-INFRA-2 (2026-10-11):**
+  one resolver for the interpreter that runs live-Spark recorder subprocesses.
+  `resolve_live_spark_python` honours `REPARK_SPARKENV_PYTHON` when set, else
+  takes the box lane's `sparkenv/bin/python` when present, else the current
+  interpreter (the nightly runner carries PySpark in the venv through the
+  `record` extra, so the reproduce tests run there instead of failing
+  `FileNotFoundError`). Callers: the six `test_live_oracle_fixture_reproduces`
+  tests and `test_ice_rdf_options_1.py`'s rerun test, which no longer skips
+  when the box lane is absent. No module docstring: the lane's no-comments
+  ruling covers the new file; the contract lives here.
+  pins: parity-live-infra-2/C-001
