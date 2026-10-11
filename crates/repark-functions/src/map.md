@@ -592,7 +592,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST AS DATE` sibling, wall clock via the zone-horizon helper). `Stable`, `Date32`, no
   `return_field_from_args` — the only delta from upstream is the zone the date is read in.
   One `lib.rs` register line; the DataFrame door builds it via `current_date::current_date()`.
-  pins: current-date-session-zone-1/C-002, C-003, C-004
+  The Rust pins went red under the hand revert (C-005).
+  pins: current-date-session-zone-1/C-002, C-003, C-004, C-005
 - `session_names.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the SQL-door
   `current_catalog()` / `current_schema()` / `current_database()` nullary UDFs — one
   `SessionName` impl, non-nullable Utf8, `Stable`. `current_database` shares the

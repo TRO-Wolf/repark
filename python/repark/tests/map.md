@@ -2092,8 +2092,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   filter and the stored Iceberg value assert the zone date, both setting styles, both ANSI
   modes on the SQL leg; the UTC control and the per-query fix hold.
   The pre-existing strict-xfail TZ-9 pin in `test_spark_sql_grammar_1.py` flips to
-  equality in the same change and the registry row reads FIXED.
-  pins: current-date-session-zone-1/C-003, C-004
+  equality in the same change and the registry row reads FIXED. The file re-runs the
+  step-0 matrix cell list (C-001) and its pins went red under the hand revert (C-005).
+  pins: current-date-session-zone-1/C-001, C-003, C-004, C-005
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
