@@ -100,9 +100,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   the ledger each red the wall test at the door they break.
   pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-011
   **Fold 1 (2026-10-09), pins from the verify.**
-  `a_nested_microsecond_ntz_field_keeps_the_split_main_has` holds the control: field
-  assignment stores the session wall, the other four doors the UTC wall (parity row
-  ICE-TSNS-SQL-1-R-011, OPEN).
+  `a_nested_literal_keeps_the_utc_wall_and_field_assignment_stores_the_session_wall`
+  holds the nested microsecond `TIMESTAMP_NTZ` doors: field assignment stores the
+  session wall, and the literal doors keep the UTC wall `1767323045123456` (a wall
+  source is not wrapped). pins: ice-ntz-nested-wall-1/C-003
+  The previous name was `a_nested_microsecond_ntz_field_keeps_the_split_main_has`.
   `an_overflowing_literal_stores_null_without_ansi_as_insert_does` is the 42 cells' shape:
   four far literals and each zone's edge instant through `UPDATE … WHERE` (both row-level
   modes) and `MERGE … INSERT VALUES`.

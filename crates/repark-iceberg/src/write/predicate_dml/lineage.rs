@@ -256,4 +256,46 @@ mod tests {
             "(s) AS `st`"
         );
     }
+
+    #[test]
+    fn the_four_sites_keep_the_sql_the_walk_emitted() {
+        let instant = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
+        let ntz = DataType::Timestamp(TimeUnit::Microsecond, None);
+        let source = DataType::Struct(
+            vec![
+                Field::new("v", instant, true),
+                Field::new("n", DataType::Int32, true),
+            ]
+            .into(),
+        );
+        let target = DataType::Struct(
+            vec![
+                Field::new("v", ntz, true),
+                Field::new("n", DataType::Int32, true),
+            ]
+            .into(),
+        );
+        let kept = "CASE WHEN rand() < 2 THEN (`st`) ELSE (`st`) END";
+        let expected = format!(
+            "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
+             __repark_cast_timestamp_ntz__((get_field(({kept}), 'v'))), 'n', \
+             get_field(({kept}), 'n')) END"
+        );
+        assert_eq!(
+            crate::write::update_cast::nested_micro_ntz_wall_sql("`st`", Some(&source), &target),
+            Some(expected.clone())
+        );
+        assert_eq!(
+            crate::write::update_cast::store_assignment_cast_sql("`st`", Some(&source), &target),
+            expected.clone()
+        );
+        let schema = Arc::new(ArrowSchema::new(vec![Field::new("st", target, true)]));
+        let projection = update_projection_sql(
+            &schema,
+            "t",
+            &[("st".to_string(), "`st`".to_string())],
+            Some(std::slice::from_ref(&source)),
+        );
+        assert!(projection.contains(&expected), "{projection}");
+    }
 }

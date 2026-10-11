@@ -3188,8 +3188,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the MERGE INSERT doors `zone_wrapping_stream_sql` serves (column list,
   `INSERT *`, literal), and the whole-struct doors `store_assignment_cast_sql`
   serves when the caller passes an instant (MERGE UPDATE from a column, UPDATE
-  from a sibling `TIMESTAMP` column) and the identity UPDATE of that sibling
-  column store the session wall of an instant into
+  from a sibling `TIMESTAMP` column), the identity UPDATE of that sibling
+  column, and plain `INSERT … SELECT` plus DataFrame `append` store the
+  session wall of an instant into
   `struct<v: TIMESTAMP_NTZ, n: INT>` in UTC, America/New_York and Asia/Kolkata.
   A wall literal stays `1767323045123456`. A field assignment stays the session
   wall. A nested `TIMESTAMP` leaf stays the instant. Values are `toArrow()` cast

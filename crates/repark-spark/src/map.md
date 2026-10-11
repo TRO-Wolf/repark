@@ -1044,6 +1044,14 @@ pins: rp-4-fork-repin/C-005, C-006
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.
   pins: unresolved-routine-1/C-006
+- `insert_timestamp_ns.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `after_analysis`
+  continues past an empty nanosecond-target list only when
+  `nested_micro_ntz_decision` says the target has a nested microsecond
+  `TIMESTAMP_NTZ` leaf. A selected instant leaf becomes
+  `__repark_cast_timestamp_ntz__` via `wall_cast_udf_name`; every other field
+  is `get_field` of the original expression; the struct is cast with the
+  plan's cast field. A column with no selected leaf is returned unchanged.
+  pins: ice-ntz-nested-wall-1/C-003
 - `insert_timestamp_ns.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the `UPDATE` conform runs
   for a `timestamptz_ns` target too. R-007 had filtered zoned targets out of it to hold the
   type as a control, which is what left `UPDATE t SET v = <column>` with no `WHERE` on the

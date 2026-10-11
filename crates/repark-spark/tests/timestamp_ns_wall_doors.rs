@@ -590,7 +590,7 @@ const NTZ_NESTED_DOORS: [(&str, bool); 6] = [
 ];
 
 #[tokio::test]
-async fn a_nested_microsecond_ntz_field_keeps_the_split_main_has() {
+async fn a_nested_literal_keeps_the_utc_wall_and_field_assignment_stores_the_session_wall() {
     let lit = NESTED_INSTANT;
     for (zone, wall) in NESTED_WALLS {
         let session = session_at(zone);

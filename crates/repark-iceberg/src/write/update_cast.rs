@@ -38,61 +38,154 @@ pub fn nested_leaf_cast_sql(expr: &str, target: &DataType) -> String {
     format!("arrow_cast(({expr}), '{type_name}')")
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NtzDecision {
+    Ineligible,
+    Keep,
+    Rebuild(Vec<NtzMember>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NtzMember {
+    pub target_name: String,
+    pub source_name: String,
+    pub node: NtzNode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NtzNode {
+    Keep,
+    Leaf,
+    Struct(Vec<NtzMember>),
+}
+
+#[must_use]
+pub fn nested_micro_ntz_decision(source: Option<&DataType>, target: &DataType) -> NtzDecision {
+    if !target_has_nested_micro_ntz(target, false) {
+        return NtzDecision::Ineligible;
+    }
+    let Some(source) = source else {
+        return NtzDecision::Keep;
+    };
+    match build_node(source, target, false) {
+        Some(NtzNode::Struct(members)) => NtzDecision::Rebuild(members),
+        _ => NtzDecision::Keep,
+    }
+}
+
+#[must_use]
+pub fn nested_micro_ntz_selected_paths(
+    source: Option<&DataType>,
+    target: &DataType,
+) -> Vec<Vec<String>> {
+    let NtzDecision::Rebuild(members) = nested_micro_ntz_decision(source, target) else {
+        return Vec::new();
+    };
+    let mut paths = Vec::new();
+    collect_paths(&members, &mut Vec::new(), &mut paths);
+    paths
+}
+
+fn collect_paths(members: &[NtzMember], prefix: &mut Vec<String>, out: &mut Vec<Vec<String>>) {
+    for member in members {
+        prefix.push(member.target_name.clone());
+        match &member.node {
+            NtzNode::Leaf => out.push(prefix.clone()),
+            NtzNode::Struct(inner) => collect_paths(inner, prefix, out),
+            NtzNode::Keep => {}
+        }
+        prefix.pop();
+    }
+}
+
+fn target_has_nested_micro_ntz(target: &DataType, below: bool) -> bool {
+    match target {
+        DataType::Timestamp(TimeUnit::Microsecond, None) if below => true,
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| target_has_nested_micro_ntz(field.data_type(), true)),
+        _ => false,
+    }
+}
+
+fn build_node(source: &DataType, target: &DataType, below: bool) -> Option<NtzNode> {
+    if below && is_micro_ntz(target) && is_zoned_instant(source) {
+        return Some(NtzNode::Leaf);
+    }
+    let (DataType::Struct(target_fields), DataType::Struct(source_fields)) = (target, source)
+    else {
+        return None;
+    };
+    let mut changed = false;
+    let mut members = Vec::with_capacity(target_fields.len());
+    for target_field in target_fields {
+        let source_field = paired_field(source_fields, target_field.name())?;
+        let node = match build_node(source_field.data_type(), target_field.data_type(), true) {
+            Some(built @ (NtzNode::Leaf | NtzNode::Struct(_))) => {
+                changed = true;
+                built
+            }
+            _ => NtzNode::Keep,
+        };
+        members.push(NtzMember {
+            target_name: target_field.name().clone(),
+            source_name: source_field.name().clone(),
+            node,
+        });
+    }
+    changed.then_some(NtzNode::Struct(members))
+}
+
+fn is_micro_ntz(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(TimeUnit::Microsecond, None))
+}
+
 #[must_use]
 pub fn nested_micro_ntz_wall_sql(
     expr_sql: &str,
     source: Option<&DataType>,
     target: &DataType,
 ) -> Option<String> {
-    let source = source?;
-    descend(expr_sql, source, target, false)
+    let NtzDecision::Rebuild(members) = nested_micro_ntz_decision(source, target) else {
+        return None;
+    };
+    emit_sql(expr_sql, &NtzNode::Struct(members))
 }
 
-fn descend(expr_sql: &str, source: &DataType, target: &DataType, below: bool) -> Option<String> {
-    match target {
-        DataType::Timestamp(TimeUnit::Microsecond, None) if below && is_zoned_instant(source) => {
-            super::ntz_store::wall_cast_sql(expr_sql, target)
-        }
-        DataType::Struct(target_fields) => {
-            let DataType::Struct(source_fields) = source else {
-                return None;
-            };
-            rebuild_struct(expr_sql, source_fields, target_fields)
-        }
-        _ => None,
-    }
-}
-
-fn rebuild_struct(
-    expr_sql: &str,
-    source_fields: &Fields,
-    target_fields: &Fields,
-) -> Option<String> {
+fn emit_sql(expr_sql: &str, node: &NtzNode) -> Option<String> {
+    let NtzNode::Struct(members) = node else {
+        return None;
+    };
+    let leaf = DataType::Timestamp(TimeUnit::Microsecond, None);
     let mut changed = false;
-    let mut members = Vec::with_capacity(target_fields.len());
-    for target_field in target_fields {
-        let source_field = paired_field(source_fields, target_field.name())?;
-        let child = child_sql(expr_sql, source_field.name());
-        let rendered = match descend(
-            &child,
-            source_field.data_type(),
-            target_field.data_type(),
-            true,
-        ) {
-            Some(rewritten) => {
-                changed = true;
-                rewritten
-            }
-            None => child,
+    let mut parts = Vec::with_capacity(members.len());
+    for member in members {
+        let child = child_sql(expr_sql, &member.source_name);
+        let rendered = match &member.node {
+            NtzNode::Leaf => match super::ntz_store::wall_cast_sql(&child, &leaf) {
+                Some(sql) => {
+                    changed = true;
+                    sql
+                }
+                None => child,
+            },
+            NtzNode::Struct(_) => match emit_sql(&child, &member.node) {
+                Some(sql) => {
+                    changed = true;
+                    sql
+                }
+                None => child,
+            },
+            NtzNode::Keep => child,
         };
-        members.push(format!("{}, {rendered}", sql_string(target_field.name())));
+        parts.push(format!("{}, {rendered}", sql_string(&member.target_name)));
     }
     if !changed {
         return None;
     }
     Some(format!(
         "CASE WHEN ({expr_sql}) IS NULL THEN NULL ELSE named_struct({}) END",
-        members.join(", ")
+        parts.join(", ")
     ))
 }
 
@@ -608,6 +701,29 @@ mod tests {
         assert_eq!(
             store_assignment_cast_sql("s", None, &target),
             super::nested_leaf_cast_sql("s", &target)
+        );
+    }
+
+    #[test]
+    fn the_four_sites_keep_the_sql_the_walk_emitted() {
+        let source = struct_type(&[
+            ("v", instant(TimeUnit::Microsecond)),
+            ("n", DataType::Int32),
+        ]);
+        let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let kept = "CASE WHEN rand() < 2 THEN (`st`) ELSE (`st`) END";
+        let expected = format!(
+            "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
+             __repark_cast_timestamp_ntz__((get_field(({kept}), 'v'))), 'n', \
+             get_field(({kept}), 'n')) END"
+        );
+        assert_eq!(
+            nested_micro_ntz_wall_sql("`st`", Some(&source), &target),
+            Some(expected.clone())
+        );
+        assert_eq!(
+            store_assignment_cast_sql("`st`", Some(&source), &target),
+            expected
         );
     }
 }

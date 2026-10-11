@@ -5,7 +5,9 @@ The doors wired so far are the ones ``zone_store_frame`` serves (``INSERT … BY
 the MERGE INSERT doors ``zone_wrapping_stream_sql`` serves, and the whole-struct
 assignment doors ``store_assignment_cast_sql`` serves when the caller passes an instant
 source type (MERGE UPDATE from a column, UPDATE from a sibling ``TIMESTAMP`` column)
-and the identity UPDATE ``update_projection_sql`` serves for that same sibling column.
+and the identity UPDATE ``update_projection_sql`` serves for that same sibling column,
+and plain ``INSERT … SELECT`` plus DataFrame ``append`` through
+``after_analysis``.
 An instant stores the session wall. A wall literal stores ``1767323045123456`` in every
 zone. A nested ``TIMESTAMP`` leaf stores the instant. A caller with no source type
 passes ``None`` and the expression stays main's.
@@ -304,6 +306,50 @@ def test_identity_update_stores_the_session_wall(tmp_path: Path, zone: str) -> N
             "named_struct('v', CAST(NULL AS TIMESTAMP), 'n', 0), 0, l FROM ice.ns.src"
         )
         spark.sql(f"UPDATE {control} SET st = named_struct('v', c, 'n', 1) WHERE id >= 0")
+        assert leaf_ticks(spark, control, "st.v") == [WALL_TICK], "control"
+    finally:
+        spark.stop()
+
+
+def insert_select_column(spark: Any, table: str) -> None:
+    """``INSERT … SELECT`` of the source column."""
+    spark.sql(f"INSERT INTO {table} SELECT id, named_struct('v', l, 'n', 1), 0 FROM ice.ns.src")
+
+
+def append_column(spark: Any, table: str) -> None:
+    """DataFrame ``append`` of the source column."""
+    frame = spark.sql("SELECT id, named_struct('v', l, 'n', 1) AS st, 0 AS k FROM ice.ns.src")
+    frame.writeTo(table).append()
+
+
+@pytest.mark.parametrize("zone", ZONES)
+def test_insert_analysis_stores_the_session_wall(tmp_path: Path, zone: str) -> None:
+    """Plain INSERT and DataFrame append store the session wall of a column instant."""
+    spark = open_session(zone, tmp_path)
+    try:
+        write_source(spark)
+        expected = SESSION_WALL[zone]
+        selected = "ice.ns.selected"
+        create_nested(spark, selected, "TIMESTAMP_NTZ")
+        insert_select_column(spark, selected)
+        assert leaf_ticks(spark, selected, "st.v") == [expected], "select"
+        appended = "ice.ns.appended"
+        create_nested(spark, appended, "TIMESTAMP_NTZ")
+        append_column(spark, appended)
+        assert leaf_ticks(spark, appended, "st.v") == [expected], "append"
+        literal = "ice.ns.literal"
+        create_nested(spark, literal, "TIMESTAMP_NTZ")
+        spark.sql(f"INSERT INTO {literal} VALUES (1, named_struct('v', {INSTANT}, 'n', 1), 0)")
+        assert leaf_ticks(spark, literal, "st.v") == [WALL_TICK], "literal"
+        wall = "ice.ns.wall_ins"
+        create_nested(spark, wall, "TIMESTAMP_NTZ")
+        spark.sql(f"INSERT INTO {wall} VALUES (1, named_struct('v', {WALL}, 'n', 1), 0)")
+        assert leaf_ticks(spark, wall, "st.v") == [WALL_TICK], "wall"
+        control = "ice.ns.ltz_ins"
+        create_nested(spark, control, "TIMESTAMP")
+        spark.sql(
+            f"INSERT INTO {control} SELECT id, named_struct('v', l, 'n', 1), 0 FROM ice.ns.src"
+        )
         assert leaf_ticks(spark, control, "st.v") == [WALL_TICK], "control"
     finally:
         spark.stop()

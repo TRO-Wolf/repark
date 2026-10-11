@@ -3,14 +3,23 @@ use std::sync::Arc;
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, ExprSchema, Result};
+use datafusion::functions::expr_fn::{get_field, named_struct, random};
+use datafusion::logical_expr::expr::{BinaryExpr, Case, Cast};
 use datafusion::logical_expr::{
-    DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, Values, WriteOp,
+    DmlStatement, Expr, ExprSchemable, LogicalPlan, Operator, Projection, Values, WriteOp, lit,
 };
 use datafusion::sql::sqlparser::ast::{
     DataType as SqlDataType, Expr as SqlExpr, SetExpr, Statement,
 };
 use repark_functions::timestamp_ns_cast::{
     is_temporal_source, timestamp_ns_cast_expr, timestamp_ns_target,
+};
+use repark_functions::timestamp_ntz_cast::{timestamp_ntz_cast_expr, timestamp_ntz_cast_udf};
+use repark_iceberg::write::ntz_store::wall_cast_udf_name;
+#[cfg(test)]
+use repark_iceberg::write::update_cast::nested_micro_ntz_selected_paths;
+use repark_iceberg::write::update_cast::{
+    NtzDecision, NtzMember, NtzNode, nested_micro_ntz_decision,
 };
 
 pub(crate) fn before_analysis(
@@ -66,26 +75,34 @@ pub(crate) fn before_analysis(
 }
 
 pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
-    let Some(targets) = ns_store_targets(&plan) else {
+    let nested = dml_target_has_nested_micro_ntz(&plan);
+    let targets = ns_store_targets(&plan);
+    if targets.is_none() && !nested {
         return Ok(plan);
-    };
+    }
     let LogicalPlan::Dml(dml) = plan else {
         return Ok(plan);
     };
     let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
         return Ok(LogicalPlan::Dml(dml));
     };
+    if projection.expr.len() != dml.target.schema().fields().len() {
+        return Ok(LogicalPlan::Dml(dml));
+    }
     let source_schema = Arc::clone(projection.input.schema());
     let mut exprs = Vec::with_capacity(projection.expr.len());
     let mut changed = false;
+    let ns_targets = targets.unwrap_or_else(|| vec![None; projection.expr.len()]);
     for ((expr, target), field) in projection
         .expr
         .iter()
-        .zip(&targets)
+        .zip(&ns_targets)
         .zip(dml.target.schema().fields())
     {
         let Some(zoned) = *target else {
-            exprs.push(expr.clone());
+            let wrapped = wrap_nested_ntz(expr, field.data_type(), source_schema.as_ref());
+            changed |= &wrapped != expr;
+            exprs.push(wrapped);
             continue;
         };
         if matches!(dml.op, WriteOp::Update) {
@@ -115,6 +132,96 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
     }
     let input = Arc::clone(&projection.input);
     rebuild(dml, exprs, input, changed)
+}
+
+fn dml_target_has_nested_micro_ntz(plan: &LogicalPlan) -> bool {
+    let LogicalPlan::Dml(dml) = plan else {
+        return false;
+    };
+    if !matches!(dml.op, WriteOp::Insert(_) | WriteOp::Update) {
+        return false;
+    }
+    dml.target.schema().fields().iter().any(|field| {
+        !matches!(
+            nested_micro_ntz_decision(None, field.data_type()),
+            NtzDecision::Ineligible
+        )
+    })
+}
+
+#[cfg(test)]
+fn expr_selected_paths(source: Option<&DataType>, target: &DataType) -> Vec<Vec<String>> {
+    nested_micro_ntz_selected_paths(source, target)
+}
+
+fn wrap_nested_ntz(expr: &Expr, target: &DataType, schema: &DFSchema) -> Expr {
+    let (body, alias) = split_alias(expr);
+    let (value, cast_field) = match body {
+        Expr::Cast(cast) => (cast.expr.as_ref(), Some(Arc::clone(&cast.field))),
+        other => (other, None),
+    };
+    let Ok(source) = value.get_type(schema) else {
+        return expr.clone();
+    };
+    let NtzDecision::Rebuild(members) = nested_micro_ntz_decision(Some(&source), target) else {
+        return expr.clone();
+    };
+    let built = emit_struct(value.clone(), &members, target);
+    let casted = match cast_field {
+        Some(field) => Expr::Cast(Cast::new_from_field(Box::new(built), field)),
+        None => Expr::Cast(Cast::new(Box::new(built), target.clone())),
+    };
+    match alias {
+        Some(name) => casted.alias(name),
+        None => casted,
+    }
+}
+
+fn emit_struct(expr: Expr, members: &[NtzMember], target: &DataType) -> Expr {
+    let DataType::Struct(fields) = target else {
+        return expr;
+    };
+    let mut args = Vec::with_capacity(members.len() * 2);
+    for (member, field) in members.iter().zip(fields.iter()) {
+        args.push(Expr::Literal(
+            datafusion::common::ScalarValue::Utf8(Some(member.target_name.clone())),
+            None,
+        ));
+        let child = get_field(kept(expr.clone()), member.source_name.as_str());
+        let built = match &member.node {
+            NtzNode::Leaf => ntz_kernel(child),
+            NtzNode::Struct(inner) => Expr::Cast(Cast::new(
+                Box::new(emit_struct(child, inner, field.data_type())),
+                field.data_type().clone(),
+            )),
+            NtzNode::Keep => child,
+        };
+        args.push(built);
+    }
+    named_struct(args)
+}
+
+fn kept(expr: Expr) -> Expr {
+    let guard = Expr::BinaryExpr(BinaryExpr {
+        left: Box::new(random()),
+        op: Operator::Lt,
+        right: Box::new(lit(2_i32)),
+    });
+    Expr::Case(Case {
+        expr: None,
+        when_then_expr: vec![(Box::new(guard), Box::new(expr.clone()))],
+        else_expr: Some(Box::new(expr)),
+    })
+}
+
+fn ntz_kernel(expr: Expr) -> Expr {
+    let leaf = DataType::Timestamp(TimeUnit::Microsecond, None);
+    match wall_cast_udf_name(&leaf) {
+        Some(name) if name == timestamp_ntz_cast_udf(false).name() => {
+            timestamp_ntz_cast_expr(expr, false)
+        }
+        _ => expr,
+    }
 }
 
 struct Narrowed<'a> {
@@ -347,4 +454,185 @@ fn conform_values_rows(
         schema: Arc::clone(&values.schema),
         values: rows,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
+    use datafusion::common::{DFSchema, TableReference};
+    use datafusion::logical_expr::dml::InsertOp;
+    use datafusion::logical_expr::{
+        EmptyRelation, Expr, ExprSchemable, LogicalPlan, Projection, TableSource, WriteOp, col,
+    };
+
+    use super::{after_analysis, expr_selected_paths, wrap_nested_ntz};
+
+    fn ntz() -> DataType {
+        DataType::Timestamp(TimeUnit::Microsecond, None)
+    }
+
+    fn instant() -> DataType {
+        DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()))
+    }
+
+    fn struct_type(pairs: &[(&str, DataType)]) -> DataType {
+        DataType::Struct(
+            pairs
+                .iter()
+                .map(|(name, data_type)| Field::new(*name, data_type.clone(), true))
+                .collect(),
+        )
+    }
+
+    struct Source(SchemaRef);
+
+    impl TableSource for Source {
+        fn schema(&self) -> SchemaRef {
+            Arc::clone(&self.0)
+        }
+    }
+
+    fn plan_of(
+        target_fields: Vec<Field>,
+        input_fields: Vec<Field>,
+        exprs: Vec<Expr>,
+    ) -> LogicalPlan {
+        let input_schema =
+            Arc::new(DFSchema::try_from(Schema::new(input_fields)).expect("input schema"));
+        let projection = Projection::try_new(
+            exprs,
+            Arc::new(LogicalPlan::EmptyRelation(EmptyRelation {
+                produce_one_row: false,
+                schema: input_schema,
+            })),
+        )
+        .expect("projection");
+        let target = Arc::new(Source(Arc::new(Schema::new(target_fields))));
+        LogicalPlan::Dml(datafusion::logical_expr::dml::DmlStatement::new(
+            TableReference::full("ice", "ns", "t"),
+            target,
+            WriteOp::Insert(InsertOp::Append),
+            Arc::new(LogicalPlan::Projection(projection)),
+        ))
+    }
+
+    #[test]
+    fn both_emitters_select_the_same_paths() {
+        let pairs = [
+            (
+                struct_type(&[("v", instant()), ("n", DataType::Int32)]),
+                struct_type(&[("v", ntz()), ("n", DataType::Int32)]),
+            ),
+            (
+                struct_type(&[("v", ntz()), ("n", DataType::Int32)]),
+                struct_type(&[("v", ntz()), ("n", DataType::Int32)]),
+            ),
+            (
+                struct_type(&[("v", DataType::Utf8)]),
+                struct_type(&[("v", ntz())]),
+            ),
+            (
+                struct_type(&[("v", DataType::Date32)]),
+                struct_type(&[("v", ntz())]),
+            ),
+            (
+                struct_type(&[("v", DataType::Int64)]),
+                struct_type(&[("v", ntz())]),
+            ),
+            (
+                struct_type(&[(
+                    "i",
+                    struct_type(&[("v", instant()), ("n", DataType::Int32)]),
+                )]),
+                struct_type(&[("i", struct_type(&[("v", ntz()), ("n", DataType::Int32)]))]),
+            ),
+            (instant(), ntz()),
+            (
+                DataType::List(Arc::new(Field::new(
+                    "item",
+                    struct_type(&[("v", instant())]),
+                    true,
+                ))),
+                DataType::List(Arc::new(Field::new(
+                    "item",
+                    struct_type(&[("v", ntz())]),
+                    true,
+                ))),
+            ),
+        ];
+        for (source, target) in pairs {
+            assert_eq!(
+                expr_selected_paths(Some(&source), &target),
+                repark_iceberg::write::update_cast::nested_micro_ntz_selected_paths(
+                    Some(&source),
+                    &target
+                ),
+                "{source:?} -> {target:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_target_without_a_nested_micro_ntz_leaf_keeps_the_plan() {
+        let cases = [
+            vec![
+                Field::new("id", DataType::Int32, true),
+                Field::new("v", ntz(), true),
+            ],
+            vec![
+                Field::new("id", DataType::Int32, true),
+                Field::new("st", struct_type(&[("v", instant())]), true),
+            ],
+            vec![
+                Field::new("id", DataType::Int32, true),
+                Field::new(
+                    "st",
+                    struct_type(&[("v", DataType::Timestamp(TimeUnit::Nanosecond, None))]),
+                    true,
+                ),
+            ],
+            vec![
+                Field::new("id", DataType::Int32, true),
+                Field::new("n", DataType::Int32, true),
+            ],
+        ];
+        for fields in cases {
+            let exprs = fields
+                .iter()
+                .map(|field| col(field.name()).alias(field.name()))
+                .collect();
+            let plan = plan_of(fields.clone(), fields, exprs);
+            assert_eq!(after_analysis(plan.clone()).expect("plan"), plan);
+        }
+    }
+
+    #[test]
+    fn an_unselected_leaf_is_the_same_expression() {
+        let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let source = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let schema = Arc::new(
+            DFSchema::try_from(Schema::new(vec![Field::new("st", source, true)])).expect("schema"),
+        );
+        let expr = col("st").alias("st");
+        assert_eq!(wrap_nested_ntz(&expr, &target, schema.as_ref()), expr);
+    }
+
+    #[test]
+    fn an_instant_leaf_becomes_the_ntz_kernel() {
+        let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let source = struct_type(&[("v", instant()), ("n", DataType::Int32)]);
+        let schema = Arc::new(
+            DFSchema::try_from(Schema::new(vec![Field::new("st", source, true)])).expect("schema"),
+        );
+        let expr = col("st")
+            .cast_to(&target, schema.as_ref())
+            .expect("cast")
+            .alias("st");
+        let wrapped = wrap_nested_ntz(&expr, &target, schema.as_ref());
+        let text = wrapped.to_string();
+        assert!(text.contains("__repark_cast_timestamp_ntz__"), "{text}");
+        assert_ne!(wrapped, expr);
+    }
 }

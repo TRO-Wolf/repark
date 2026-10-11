@@ -35,11 +35,11 @@ facade stores the session wall, `1767323045123456` for a wall literal, and
 the instant for a nested `TIMESTAMP`. Those stored values are already the
 fold's, so this call does not move them.
 
-**Halt before `insert_timestamp_ns::after_analysis`.** `ns_store_targets`
-returns `None` unless a top-level field is nanosecond timestamp, and
-`after_analysis` returns the plan there. A nested microsecond
-`TIMESTAMP_NTZ` insert never reaches a call. The projection values are
-logical `Expr`s. The walk takes SQL text, and this repo has no unparser.
-The caller in `spark_ast.rs` has the session. Rendering each `Expr` and
-planning the walk's SQL back is more than the call. No product line of
-that site is written.
+**Step 2, insert analysis:** `after_analysis` asks `nested_micro_ntz_decision`,
+the one type decision the SQL walk now asks too. The four committed sites
+still emit the same SQL (`the_four_sites_keep_the_sql_the_walk_emitted`).
+A selected instant leaf becomes the NTZ kernel. A column with no selected
+leaf is the same expression. A target with no nested microsecond
+`TIMESTAMP_NTZ` leaf keeps the plan. Plain `INSERT … SELECT` and DataFrame
+`append` of a column instant store the session wall. A literal stays
+`1767323045123456`. Red pin follows.
