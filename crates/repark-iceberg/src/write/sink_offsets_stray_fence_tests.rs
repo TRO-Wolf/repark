@@ -323,6 +323,130 @@ async fn a_table_door_stamp_under_a_marked_name_is_refused_over_a_stray() {
     }
 }
 
+async fn land_row_overwrite(
+    memory: &Arc<dyn Catalog>,
+    ident: &TableIdent,
+    extra: &[DataFile],
+    id: i32,
+) {
+    let current = memory.load_table(ident).await.expect("load");
+    let files = stage(&current, &[id]).await;
+    crate::write::merge::commit_on_ref(
+        memory,
+        &current,
+        None,
+        extra.to_vec(),
+        files,
+        &below_the_racers(),
+        None,
+        &[],
+    )
+    .await
+    .expect("the overwrite lands");
+}
+
+async fn land_row_delete(memory: &Arc<dyn Catalog>, ident: &TableIdent, extra: &[DataFile]) {
+    let current = memory.load_table(ident).await.expect("load");
+    crate::write::merge::commit_on_ref(
+        memory,
+        &current,
+        None,
+        extra.to_vec(),
+        Vec::new(),
+        &below_the_racers(),
+        None,
+        &[],
+    )
+    .await
+    .expect("the delete lands");
+}
+
+async fn stray_setup(
+    name: &str,
+) -> (
+    TempDir,
+    Arc<dyn Catalog>,
+    TableIdent,
+    Vec<DataFile>,
+    Vec<DataFile>,
+) {
+    let (_warehouse, memory, ident) = fixture(name).await;
+    let (table, seeded) = seed(&memory, &ident).await;
+    let extra_table = memory.load_table(&ident).await.expect("load");
+    let extra = stage(&extra_table, &[50]).await;
+    commit_append_with_summary(&memory, &extra_table, extra.clone(), &[], None)
+        .await
+        .expect("extra file");
+    drop(table);
+    (_warehouse, memory, ident, seeded, extra)
+}
+
+#[tokio::test]
+async fn a_stray_overwrite_refuses_every_arm() {
+    for arm in ARMS {
+        let name = format!("{}_overwrite_stray", arm_name(arm));
+        let (_warehouse, memory, ident, seeded, extra) = stray_setup(&name).await;
+        assert_eq!(extra.len(), 1, "{arm:?}: one extra file");
+        let table = memory.load_table(&ident).await.expect("reload");
+        let began = table.metadata().current_snapshot_id();
+        let stamp = stamp_for(1, SinkDoor::ForeachBatch);
+        let guard = BatchScope::enter_on(&table, stamp.clone()).expect("enter");
+        land_row_overwrite(&memory, &ident, &extra, 90).await;
+        let loaded = memory.load_table(&ident).await.expect("reload");
+        let refused = run_arm(arm, &memory, &loaded, &seeded, &guard, &stamp, false)
+            .await
+            .expect_err(arm_name(arm));
+        assert!(
+            refused.contains("landed on the sink without a stamp after this batch began")
+                && refused.contains("(overwrite)"),
+            "{arm:?}: {refused}"
+        );
+        drop(guard);
+        let after = memory.load_table(&ident).await.expect("reload");
+        let strays = unstamped_on_main(&after, began);
+        assert_eq!(strays.len(), 1, "{arm:?}: the stray landed");
+        assert!(ours_on_main(&after).is_empty(), "{arm:?}");
+        assert_eq!(
+            after.metadata().current_snapshot_id(),
+            Some(strays[0]),
+            "{arm:?}: the stray is the head"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_stray_delete_refuses_every_arm() {
+    for arm in ARMS {
+        let name = format!("{}_delete_stray", arm_name(arm));
+        let (_warehouse, memory, ident, seeded, extra) = stray_setup(&name).await;
+        assert_eq!(extra.len(), 1, "{arm:?}: one extra file");
+        let table = memory.load_table(&ident).await.expect("reload");
+        let began = table.metadata().current_snapshot_id();
+        let stamp = stamp_for(1, SinkDoor::ForeachBatch);
+        let guard = BatchScope::enter_on(&table, stamp.clone()).expect("enter");
+        land_row_delete(&memory, &ident, &extra).await;
+        let loaded = memory.load_table(&ident).await.expect("reload");
+        let refused = run_arm(arm, &memory, &loaded, &seeded, &guard, &stamp, false)
+            .await
+            .expect_err(arm_name(arm));
+        assert!(
+            refused.contains("landed on the sink without a stamp after this batch began")
+                && refused.contains("(delete)"),
+            "{arm:?}: {refused}"
+        );
+        drop(guard);
+        let after = memory.load_table(&ident).await.expect("reload");
+        let strays = unstamped_on_main(&after, began);
+        assert_eq!(strays.len(), 1, "{arm:?}: the stray landed");
+        assert!(ours_on_main(&after).is_empty(), "{arm:?}");
+        assert_eq!(
+            after.metadata().current_snapshot_id(),
+            Some(strays[0]),
+            "{arm:?}: the stray is the head"
+        );
+    }
+}
+
 #[tokio::test]
 async fn a_stray_buried_under_another_query_s_stamp_still_refuses_every_arm() {
     for arm in ARMS {

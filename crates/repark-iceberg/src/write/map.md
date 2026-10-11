@@ -151,6 +151,10 @@ repark-core's error map.
   refused with the fence's text and the stray stays the head. The fold-6 `toTable` pin, on a
   name that only ran through `toTable`, still lands and is the kept-behaviour proof.
   pins: mb-4-foreach-eo/C-048
+  Fold 7 (2026-10-11, the sixth verify's mutant Y4): one pin where the stray is an
+  overwrite and one where it is a delete, each over every arm, both red under the mutant
+  that sees append strays only.
+  pins: mb-4-foreach-eo/C-049
 - `sink_offsets.rs`, `sink_offsets_lineage_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10,
   rulings on the fourth verify's S1):** the module re-exports `carried_by_foreach`, which
   tells the `toTable` door whether a name is walked. The scope learns the head the driver
