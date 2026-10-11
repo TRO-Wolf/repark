@@ -11,8 +11,8 @@ use crate::catalog_state::CatalogRegistry;
 
 #[cfg(feature = "postgres")]
 use arrow::array::{
-    Array, ArrayRef, AsArray, BinaryArray, BinaryViewArray, LargeBinaryArray, LargeStringArray,
-    RecordBatch, StringArray, StringViewArray, TimestampMicrosecondArray,
+    Array, ArrayRef, AsArray, BinaryArray, BinaryViewArray, LargeBinaryArray, RecordBatch,
+    StringArray, TimestampMicrosecondArray,
 };
 #[cfg(feature = "postgres")]
 use arrow::compute::{CastOptions, cast_with_options};
@@ -24,6 +24,11 @@ use repark_common::{SourceKind, spark_error};
 use repark_connect::postgres::PostgresMapping;
 #[cfg(feature = "postgres")]
 use repark_connect::{PostgresSettings, ResolvedSource};
+#[cfg(feature = "postgres")]
+use repark_iceberg::write::{
+    WRITE_SPARK_CLASS, ansi_store_assignable, normalize_for_assignment,
+    refuse_unless_ansi_store_assignable,
+};
 
 #[derive(Debug, Clone)]
 pub enum PostgresWriteTarget {
@@ -516,6 +521,7 @@ pub(crate) fn shape_batch(
         let array = batch.columns().get(position).ok_or_else(|| {
             DataFusionError::Plan("Column count doesn't match insert query!".to_string())
         })?;
+        refuse_unless_store_assignable(name, array.data_type(), &column.expected, column.mapping)?;
         let cast_to = |target: &DataType| {
             cast_with_options(array, target, &strict_cast_options())
                 .map_err(|_| cast_refusal(name, array, target))
@@ -687,15 +693,6 @@ fn spark_cast_type_name(data_type: &DataType) -> String {
 }
 
 #[cfg(feature = "postgres")]
-fn is_text_source(data_type: &DataType) -> bool {
-    match data_type {
-        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => true,
-        DataType::Dictionary(_, values) => is_text_source(values),
-        _ => false,
-    }
-}
-
-#[cfg(feature = "postgres")]
 fn is_bytes_source(data_type: &DataType) -> bool {
     match data_type {
         DataType::Binary | DataType::LargeBinary | DataType::BinaryView => true,
@@ -734,23 +731,6 @@ fn failing_row(array: &ArrayRef, target: &DataType) -> Option<usize> {
 }
 
 #[cfg(feature = "postgres")]
-fn text_at(array: &ArrayRef, index: usize) -> Option<String> {
-    if array.is_null(index) {
-        return None;
-    }
-    if let Some(values) = array.as_any().downcast_ref::<StringArray>() {
-        return Some(values.value(index).to_string());
-    }
-    if let Some(values) = array.as_any().downcast_ref::<LargeStringArray>() {
-        return Some(values.value(index).to_string());
-    }
-    array
-        .as_any()
-        .downcast_ref::<StringViewArray>()
-        .map(|values| values.value(index).to_string())
-}
-
-#[cfg(feature = "postgres")]
 fn bytes_at(array: &ArrayRef, index: usize) -> Option<Vec<u8>> {
     if array.is_null(index) {
         return None;
@@ -780,18 +760,6 @@ fn cast_overflow(column: &str, from: &str, to: &str) -> DataFusionError {
 }
 
 #[cfg(feature = "postgres")]
-const INVALID_INPUT_VALUE_CHARS: usize = 200;
-
-#[cfg(feature = "postgres")]
-fn capped_text(value: &str) -> String {
-    let mut shown: String = value.chars().take(INVALID_INPUT_VALUE_CHARS).collect();
-    if value.chars().count() > INVALID_INPUT_VALUE_CHARS {
-        shown.push('…');
-    }
-    shown
-}
-
-#[cfg(feature = "postgres")]
 fn cast_invalid_input(column: &str, shown: &str, from: &str, to: &str) -> DataFusionError {
     DataFusionError::Execution(format!(
         "column `{column}`: {}",
@@ -800,23 +768,6 @@ fn cast_invalid_input(column: &str, shown: &str, from: &str, to: &str) -> DataFu
             &[("value", shown), ("fromType", from), ("toType", to)],
         )
     ))
-}
-
-#[cfg(feature = "postgres")]
-fn invalid_string_input(
-    column: &str,
-    value: &str,
-    from: &str,
-    to: &str,
-    target: &DataType,
-) -> DataFusionError {
-    if matches!(target, DataType::Decimal128(..) | DataType::Decimal256(..))
-        && value.parse::<f64>().is_ok()
-    {
-        return cast_overflow(column, from, to);
-    }
-    let escaped = capped_text(value).replace('\'', "''");
-    cast_invalid_input(column, &format!("'{escaped}'"), from, to)
 }
 
 #[cfg(feature = "postgres")]
@@ -834,18 +785,51 @@ fn invalid_bytes_input(column: &str, bytes: &[u8], from: &str, to: &str) -> Data
 }
 
 #[cfg(feature = "postgres")]
+fn refuse_unless_store_assignable(
+    name: &str,
+    source: &DataType,
+    target: &DataType,
+    mapping: PostgresMapping,
+) -> Result<()> {
+    let judged_source = normalize_for_assignment(source);
+    let judged_target = normalize_for_assignment(target);
+    if !ansi_store_assignable(judged_source, judged_target) {
+        return refuse_unless_ansi_store_assignable(
+            "INSERT INTO",
+            WRITE_SPARK_CLASS,
+            name,
+            source,
+            target,
+        );
+    }
+    if mapping == PostgresMapping::ServerText && !is_string_or_null(judged_source) {
+        return Err(server_text_store_refusal(name, source));
+    }
+    Ok(())
+}
+
+#[cfg(feature = "postgres")]
+fn is_string_or_null(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View | DataType::Null
+    )
+}
+
+#[cfg(feature = "postgres")]
+fn server_text_store_refusal(column: &str, source: &DataType) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "INSERT INTO cannot store-assign column `{column}`: source type {source} is not \
+         ANSI-store-assignable to target type interval (Spark {WRITE_SPARK_CLASS}; add an \
+         explicit CAST only if the reinterpretation is intended semantics)"
+    ))
+}
+
+#[cfg(feature = "postgres")]
 fn cast_refusal(name: &str, array: &ArrayRef, target: &DataType) -> DataFusionError {
     let source = array.data_type();
     let from = spark_cast_type_name(source);
     let to = spark_cast_type_name(target);
-    if is_text_source(source) {
-        let decoded = decoded_values(array);
-        if let Some(row) = failing_row(&decoded, target)
-            && let Some(value) = text_at(&decoded, row)
-        {
-            return invalid_string_input(name, &value, &from, &to, target);
-        }
-    }
     if is_bytes_source(source)
         && matches!(
             target,

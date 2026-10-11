@@ -1043,3 +1043,49 @@ all seven; Postgres 16.15, the C-0 container; row-path counts re-measured
 | S3-query-timeout | 2026-10-09 | Already a dated row in §8.5: `query_timeout_ms` ends a bulk write as a whole and never a row write. | Recorded; no new row. |
 | S3-cancel-class | 2026-10-10 | A statement cancelled from outside during a bulk write is reported as the query timeout (`Timeout`, no timeout set; 0 stored; the pool serves the next write). On the row path the cancel finds no running statement and the write commits. | Open: name the outside cancel for what it is. §8.1's dropped-future poison is a different cause. |
 | S3-ansi-missing | 2026-10-10 | On the ANSI door `MERGE`, `DROP` and CTAS into a Postgres source answer as if the source did not exist (`unknown catalog \`pg\``); `PG.schema.t` answers `Insert into not implemented for this table`. `UPDATE` and `INSERT OVERWRITE` name their registry rows. Nothing changes in Postgres. | Open: route or refuse by name on the ANSI door. |
+
+## 14. Fold 3 (2026-10-11): the verifier's one S1, two S2 and seven S3, branch `feat/c-4-routing`
+
+The joint verify (2026-10-11) is FAIL: 1 S1, 2 S2, 7 S3, none a regression
+against the fold-2 head or main, over 32,011,229 value cells with bulk = row =
+plain INSERT byte for byte. Three items plus the S3 batch land here, one commit
+each: (1) below; (2) values into a text column render as the engine's
+`CAST(x AS STRING)` in the session zone; (3) the Postgres INSERT source aliases
+by position on both routes so `SELECT 1, '1'` stores.
+
+### 14.1 Item 1: the Postgres door applies the engine's store-assignment rule
+
+Ruling (orchestrator, provisional for the owner): the Postgres write door
+applies the engine's ONE store-assignment rule, the same the Iceberg target
+applies (`ansi_store_assignable`, Spark's `Cast.canANSIStoreAssign`). No second
+table of allowed pairs. `shape_batch` gates every column before any cast, on all
+three paths, refusing with the Iceberg INSERT refusal's class and text
+(`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`, naming the column, the source
+type and the column type), 0 rows stored. Consequence, accepted by the ruling: a
+STRING source into a non-string column refuses by type whatever the string
+holds, as on the Iceberg target and in Spark; numeric to numeric stays
+assignable and keeps the fold-2 overflow refusal. The fold-2 invalid-input arm
+for malformed STRINGS is deleted with its pins (unreachable: a string source
+now only reaches a string target, whose cast cannot fail); the invalid-input
+arm for malformed BYTES into text stays, as do all overflow pins.
+
+Pairs decided for the Postgres-only column types (Arrow target in brackets):
+string into uuid/json/jsonb/enum/text-like stores (verbatim; uuid syntax is still
+validated client-side, enum labels and json/jsonb text server-side); binary into
+bytea stores; int into uuid renders its text and the client refuses the syntax,
+as before; int into json/jsonb renders its text and the server takes or refuses
+it as JSON text (a bare number is valid JSON and stores), as before; int into
+enum renders its text and the server refuses the label, as before; int and every
+other non-string atomic into interval refuses at the gate
+in the same refusal family, naming the Postgres type; string into bytea refuses
+at the gate (Postgres has no text-to-bytea assignment cast either); domains
+need no decision (discovery resolves them to their base type before the
+chokepoint); char(n)/varchar(n) are text at the chokepoint. Binary into text
+stays assignable per the shared rule although plain INSERT has no such cast:
+accepted divergence, same side as the Iceberg target.
+
+S3-17values (2026-10-11 verdict) is recorded here, not fixed: the seventeen
+refused values plain INSERT stores (`' 12 '` and `'0x10'` into int4, `'1e3'` and
+`'NaN'` into numeric, double NaN/Infinity into numeric, long integers into the
+`Decimal128(38,18)` mapping, Postgres-spelled dates and infinities, string
+booleans) refuse under the engine's rule, as the Iceberg target refuses them.

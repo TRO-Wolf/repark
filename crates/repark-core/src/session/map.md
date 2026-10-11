@@ -88,6 +88,15 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   render as they stand, and the text is Spark's `YYYY-MM-DD HH:MM:SS[.ffffff]` with the
   fraction trimmed and the year padded to four digits, the Iceberg target's answer.
   Timestamp and timestamptz columns keep their placement.
+  **C-4 fold 3 item 1 (2026-10-11):** `shape_batch` gates every column on the
+  engine's store-assignment rule before any cast, calling the rule and the refusal the
+  Iceberg target applies (`repark_iceberg::write::ansi_store_assignable` /
+  `refuse_unless_ansi_store_assignable` with the `CANNOT_SAFELY_CAST` class), so a
+  cross-family source refuses naming the column and both types with 0 rows stored. A
+  string source into a non-string column refuses whatever the string holds; interval
+  (`ServerText`) columns take string sources and null only and name the Postgres type
+  in the same refusal family. The malformed-string invalid-input pins are deleted with
+  their now-unreachable arm; numeric overflow and invalid-bytes refusals stay.
   pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.

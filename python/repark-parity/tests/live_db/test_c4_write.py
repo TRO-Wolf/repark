@@ -422,11 +422,6 @@ UNSTORABLE_CASES: tuple[tuple[str, str, str, str], ...] = (
     ("int2", "40000", "CAST_OVERFLOW_IN_TABLE_INSERT", "ArithmeticException"),
     ("int8", "CAST(1e19 AS DOUBLE)", "CAST_OVERFLOW_IN_TABLE_INSERT", "ArithmeticException"),
     ("int4", "CAST('NaN' AS DOUBLE)", "CAST_OVERFLOW_IN_TABLE_INSERT", "ArithmeticException"),
-    ("int4", "'abc'", "CAST_INVALID_INPUT", "PySparkException"),
-    ("int4", "' 12 '", "CAST_INVALID_INPUT", "PySparkException"),
-    ("date", "'garbage'", "CAST_INVALID_INPUT", "PySparkException"),
-    ("date", "'2024-02-30'", "CAST_INVALID_INPUT", "PySparkException"),
-    ("boolean", "'maybe'", "CAST_INVALID_INPUT", "PySparkException"),
     (
         "numeric(10,2)",
         "123456789012.345BD",
@@ -456,10 +451,7 @@ UNSTORABLE_CASES: tuple[tuple[str, str, str, str], ...] = (
 )
 
 FITTING_CASES: tuple[tuple[str, str, str], ...] = (
-    ("int4", "'12'", "12"),
     ("int4", "CAST(2.7 AS DOUBLE)", "2"),
-    ("boolean", "'yes'", "true"),
-    ("boolean", "1", "true"),
     ("float4", "CAST(1e40 AS DOUBLE)", "Infinity"),
     ("numeric(10,2)", "1.005BD", "1.01"),
     ("numeric(5,0)", "0.5BD", "1"),
@@ -532,6 +524,144 @@ def test_fitting_values_store_on_all_three_paths(
         for door, table in tables.items():
             got = conn.execute(f'SELECT v::text FROM "{schema}".{table}').fetchall()
             assert got == [(want,)], (pg_type, expr, door, got)
+
+
+STORE_ASSIGNMENT_CASES: tuple[tuple[str, str], ...] = (
+    ("date", "20240701"),
+    ("timestamp", "12345"),
+    ("timestamptz", "12345"),
+    ("bytea", "12"),
+    ("int4", "DATE '2024-07-01'"),
+    ("int8", "TIMESTAMP '2024-07-01 12:00:00'"),
+    ("numeric(10,2)", "''"),
+    ("boolean", "2"),
+    ("boolean", "0.5"),
+    ("int4", "true"),
+    ("float8", "true"),
+    ("interval", "12"),
+    ("int4", "'12'"),
+    ("date", "'2024-07-01'"),
+    ("boolean", "'true'"),
+    ("timestamp", "'2024-07-01 12:00:00'"),
+    ("numeric(10,2)", "'1.5'"),
+    ("bytea", "'abc'"),
+)
+
+ASSIGNABLE_STORE_CASES: tuple[tuple[str, str, str], ...] = (
+    ("int2", "7", "7"),
+    ("int2", "CAST(7 AS INT8)", "CAST(7 AS INT8)"),
+    ("int4", "7", "7"),
+    ("int4", "CAST(7 AS INT2)", "CAST(7 AS INT2)"),
+    ("int4", "CAST(7 AS INT8)", "CAST(7 AS INT8)"),
+    ("int8", "7", "7"),
+    ("int8", "CAST(7 AS INT2)", "CAST(7 AS INT2)"),
+    ("int8", "CAST(7 AS INT4)", "CAST(7 AS INT4)"),
+    ("numeric(10,2)", "12", "12"),
+    ("numeric(5,0)", "CAST(12 AS INT8)", "CAST(12 AS INT8)"),
+    ("float8", "CAST(1.5 AS FLOAT)", "CAST(1.5 AS FLOAT)"),
+    ("float4", "CAST(1.5 AS DOUBLE)", "CAST(1.5 AS DOUBLE PRECISION)"),
+    ("boolean", "true", "true"),
+    ("boolean", "false", "false"),
+    ("date", "DATE '2024-07-01'", "DATE '2024-07-01'"),
+    ("date", "DATE '0001-01-01'", "DATE '0001-01-01'"),
+    ("timestamp", "TIMESTAMP_NTZ '2024-07-01 12:00:00'", "TIMESTAMP '2024-07-01 12:00:00'"),
+    ("timestamptz", "TIMESTAMP '2024-07-01 12:00:00+00'", "TIMESTAMPTZ '2024-07-01 12:00:00+00'"),
+    ("text", "12", "12"),
+    ("text", "true", "true"),
+    ("text", "1.50BD", "1.50"),
+    ("text", "DATE '2024-07-01'", "DATE '2024-07-01'"),
+    ("text", "'héllo'", "'héllo'"),
+    ("varchar(10)", "'abc'", "'abc'"),
+    ("char(5)", "'abc'", "'abc'"),
+    ("bytea", "X'41'", "X'41'"),
+    ("uuid", "'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'", "'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'"),
+    ("json", "'{\"k\": 1}'", "'{\"k\": 1}'"),
+    ("jsonb", "'{\"k\": [1, 2]}'", "'{\"k\": [1, 2]}'"),
+    ("interval", "'1 day'", "'1 day'"),
+    ('"{schema}".mood', "'happy'", "'happy'"),
+    ("int4", "NULL", "NULL"),
+    ("boolean", "NULL", "NULL"),
+    ("float8", "NULL", "NULL"),
+    ("numeric(10,2)", "NULL", "NULL"),
+    ("text", "NULL", "NULL"),
+    ("date", "NULL", "NULL"),
+    ("timestamp", "NULL", "NULL"),
+    ("timestamptz", "NULL", "NULL"),
+    ("uuid", "NULL", "NULL"),
+    ("bytea", "NULL", "NULL"),
+    ("interval", "NULL", "NULL"),
+)
+
+
+def test_cross_family_sources_refuse_on_all_three_paths(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """A source the column cannot be assigned from refuses named, stores nothing.
+
+    C-4 fold 3 item 1: the Postgres door applies the engine's store-assignment
+    rule, so an integer into a date column refuses as INSERT and the Iceberg
+    target refuse it, instead of storing a day count. A string source into a
+    non-string column refuses whatever the string holds.
+    """
+    conn, names = pg_live
+    schema = names["schema"]
+    for index, (pg_type, expr) in enumerate(STORE_ASSIGNMENT_CASES):
+        sql_table = f"s{index}_sql"
+        conn.execute(f'CREATE TABLE "{schema}".{sql_table} (id int4, v {pg_type})')
+        with pytest.raises(errors.AnalysisException) as excinfo:
+            spark.sql(f'INSERT INTO pg."{schema}".{sql_table} SELECT 1, {expr}').collect()
+        message = str(excinfo.value)
+        assert "cannot store-assign" in message, (pg_type, expr, message)
+        assert "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST" in message
+        assert "`v`" in message, (pg_type, expr, message)
+        assert _take(spark) is None
+        assert conn.execute(f'SELECT count(*) FROM "{schema}".{sql_table}').fetchone() == (0,)
+        frame = spark.sql(f"SELECT 1 AS id, {expr} AS v")
+        for path, suffix in ((None, "wb"), ("row", "wr")):
+            table = f"s{index}_{suffix}"
+            conn.execute(f'CREATE TABLE "{schema}".{table} (id int4, v {pg_type})')
+            with pytest.raises(errors.AnalysisException) as excinfo:
+                _write_frame(schema, table, frame, path)
+            message = str(excinfo.value)
+            assert "cannot store-assign" in message, (pg_type, expr, path, message)
+            assert "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST" in message
+            assert "`v`" in message, (pg_type, expr, path, message)
+            assert _take(spark) is None
+            assert conn.execute(f'SELECT count(*) FROM "{schema}".{table}').fetchone() == (0,)
+
+
+def test_assignable_pairs_store_bytes_equal_to_plain_insert(
+    spark: ReparkSession, pg_live: tuple[Any, dict[str, str]]
+) -> None:
+    """Every assignable pair stores what one plain INSERT stores, on all three paths.
+
+    C-4 fold 3 item 1: the store-assignment gate refuses cross-family pairs and
+    keeps every pair the rule admits, byte for byte with plain INSERT. Float
+    and timestamp sources into text are pinned against CAST AS STRING in the
+    item 2 test: Spark's text differs from Postgres's rendering there.
+    """
+    conn, names = pg_live
+    schema = names["schema"]
+    conn.execute(f'CREATE TYPE "{schema}".mood AS ENUM (\'happy\', \'sad\')')
+    for index, (pg_type, expr, plain) in enumerate(ASSIGNABLE_STORE_CASES):
+        typed = pg_type.format(schema=schema)
+        tables = {}
+        for door in ("sql", "wb", "wr", "plain"):
+            table = f"a{index}_{door}"
+            conn.execute(f'CREATE TABLE "{schema}".{table} (id int4, v {typed})')
+            tables[door] = table
+        spark.sql(f'INSERT INTO pg."{schema}".{tables["sql"]} SELECT 2, {expr}').collect()
+        assert _take(spark) is not None
+        frame = spark.sql(f"SELECT 2 AS id, {expr} AS v")
+        _write_frame(schema, tables["wb"], frame, None)
+        assert _take(spark) is not None
+        _write_frame(schema, tables["wr"], frame, "row")
+        assert _take(spark) is not None
+        conn.execute(f'INSERT INTO "{schema}".{tables["plain"]} SELECT 2, {plain}')
+        want = conn.execute(f'SELECT v::text FROM "{schema}".{tables["plain"]}').fetchall()
+        for door in ("sql", "wb", "wr"):
+            got = conn.execute(f'SELECT v::text FROM "{schema}".{tables[door]}').fetchall()
+            assert got == want, (typed, expr, door, got, want)
 
 
 ZONE_CASES: tuple[tuple[str, str, str, str], ...] = (

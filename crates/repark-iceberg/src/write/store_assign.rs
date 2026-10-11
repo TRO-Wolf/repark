@@ -9,10 +9,10 @@ use datafusion::error::{DataFusionError, Result};
 pub(crate) const MERGE_SPARK_CLASS: &str = "INCOMPATIBLE_DATA_FOR_TABLE";
 
 /// Spark's sub-class for the plain INSERT / append store-assignment refusals.
-pub(crate) const WRITE_SPARK_CLASS: &str = "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST";
+pub const WRITE_SPARK_CLASS: &str = "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST";
 
 /// Strip wrappers that do not change assignability (dictionary encoding).
-pub(crate) fn normalize_for_assignment(data_type: &DataType) -> &DataType {
+pub fn normalize_for_assignment(data_type: &DataType) -> &DataType {
     match data_type {
         DataType::Dictionary(_, value) => normalize_for_assignment(value),
         other => other,
@@ -20,7 +20,7 @@ pub(crate) fn normalize_for_assignment(data_type: &DataType) -> &DataType {
 }
 
 /// Spark `Cast.canANSIStoreAssign`, translated to Arrow types.
-pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
+pub fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     use DataType::{
         Binary, BinaryView, Boolean, Date32, Date64, LargeBinary, LargeUtf8, Null, Timestamp, Utf8,
         Utf8View,
@@ -128,7 +128,7 @@ pub(crate) fn without_field_metadata(data_type: &DataType) -> DataType {
 /// The shared refusal.
 /// # Errors
 /// Returns `Plan` with the `not ANSI-store-assignable` needle, the column name, and both types.
-pub(crate) fn refuse_unless_ansi_store_assignable(
+pub fn refuse_unless_ansi_store_assignable(
     op: &str,
     spark_class: &str,
     column: &str,

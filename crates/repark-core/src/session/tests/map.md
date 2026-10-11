@@ -41,11 +41,22 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   never refused; the `write.path` option defaults to bulk, takes `row` case-insensitively, and
   refuses anything else as `Configuration` naming both values; the last-report carrier
   records on builder sessions and nowhere else (bare contexts record nowhere).
-  **C-4 fold 2 items 2–3 (2026-10-10):** the `shape_batch` pins: integer, decimal and
-  byte overflows refuse with the overflow class, malformed text with the invalid-input
-  class, each naming the column and capping the value; fitting values and NULLs cast as
-  before; a timestamp into a date or text column takes the session-zone wall while
-  timestamp and timestamptz columns keep their placement. pins: c-4/C-013, C-014
+  pins: c-4/C-013, C-014
+- `write_postgres_shape.rs` — **C-4 fold 3 item 1 (2026-10-11):** split out of
+  `write_postgres.rs` at the pre-connection/`shape_batch` seam when the file passed its
+  ceiling (pure move). It holds the `shape_batch` pins:
+  **C-4 fold 2 items 2–3 (2026-10-10):** integer, decimal and byte overflows refuse
+  with the overflow class, malformed bytes with the invalid-input class, each naming the
+  column; fitting values and NULLs cast as before; a timestamp into a date or text
+  column takes the session-zone wall while timestamp and timestamptz columns keep their
+  placement. **C-4 fold 3 item 1 (2026-10-11):** the store-assignment pins: every
+  cross-family cell (integers into date/timestamp/bytea/interval, temporal into
+  integers, empty string into numeric, numbers and strings across bool/int/float, every
+  string source into a non-string column) refuses with the `CANNOT_SAFELY_CAST` class
+  naming the column and both types; interval columns take strings and null only; untyped
+  NULL stores into every column type; widening and narrowing within range still store.
+  The malformed-string, leftmost-value, capped-value and fitting-string pins are
+  deleted: the gate refuses those pairs before the value arms. pins: c-4/C-013, C-014
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
   argument refuses as `NumberFormat` before any connection. pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned

@@ -143,6 +143,14 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   **C-4 fold 2 item 5 (2026-10-10):**
   `test_repeated_select_expressions_store_positionally` (the three repeated-name
   sources store by position through the facade door).
+  **C-4 fold 3 item 1 (2026-10-11):**
+  `test_cross_family_sources_refuse_on_all_three_paths` (eighteen cross-family and
+  string-source cells refuse with the store-assignment class naming the column, store
+  nothing, record nothing, on the SQL door, the writer default and `write.path=row`)
+  and `test_assignable_pairs_store_bytes_equal_to_plain_insert` (forty-one assignable
+  pairs store what one plain INSERT stores on all three paths, read back as text).
+  The invalid-input string rows and the fitting string/bool-cross rows are deleted:
+  those pairs refuse by type now.
   pins: c-4/C-013, C-014
 - `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
   drops its INSERT case (append INSERT writes now; the write pins live in

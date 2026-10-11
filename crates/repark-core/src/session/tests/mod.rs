@@ -40,3 +40,5 @@ mod text_write_sink_spike;
 mod window_rescan;
 #[cfg(feature = "postgres")]
 mod write_postgres;
+#[cfg(feature = "postgres")]
+mod write_postgres_shape;
