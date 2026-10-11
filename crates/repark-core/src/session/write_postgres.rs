@@ -675,7 +675,7 @@ fn render_spark_strings(
         DataType::Date32 => {
             let days = current.as_primitive::<Date32Type>();
             let mut rendered = Vec::with_capacity(days.len());
-            for day in days.iter() {
+            for day in days {
                 let date = day.map(|value| {
                     DateTime::from_timestamp(i64::from(value) * 86_400, 0).map(|at| at.date_naive())
                 });

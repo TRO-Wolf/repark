@@ -316,6 +316,7 @@ fn assert_store_refusal(
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn cross_family_sources_refuse_with_the_store_assignment_class() {
     let naive = DataType::Timestamp(TimeUnit::Microsecond, None);
     let zoned = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));

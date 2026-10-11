@@ -1162,8 +1162,8 @@ Fixed in this batch (commit `1a8db43a` unless named):
   `a_row_write_idle_past_the_read_timeout_ends_as_that_timeout` failed 3 of 13
   full-suite runs with a `Timeout { which: Read }` at open or the first write.
   The three row iterations now open and write the first batch through
-  `open_row_writer_past_load`, which retries past `Timeout` with a 120 s
-  deadline, and the bulk control retries likewise (180 s). What the pin
+  `open_row_writer_past_load`, which retries past `Timeout` with a 2 min
+  deadline, and the bulk control retries likewise (3 min). What the pin
   asserts is unchanged: after the 2200 ms idle the write-again and the finish
   both answer `Timeout { which: Read }` with 0 rows, and the bulk control
   still commits 600 rows (a COPY is not idle).

@@ -12,6 +12,7 @@ pub(crate) const MERGE_SPARK_CLASS: &str = "INCOMPATIBLE_DATA_FOR_TABLE";
 pub const WRITE_SPARK_CLASS: &str = "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST";
 
 /// Strip wrappers that do not change assignability (dictionary encoding).
+#[must_use]
 pub fn normalize_for_assignment(data_type: &DataType) -> &DataType {
     match data_type {
         DataType::Dictionary(_, value) => normalize_for_assignment(value),
@@ -20,6 +21,7 @@ pub fn normalize_for_assignment(data_type: &DataType) -> &DataType {
 }
 
 /// Spark `Cast.canANSIStoreAssign`, translated to Arrow types.
+#[must_use]
 pub fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     use DataType::{
         Binary, BinaryView, Boolean, Date32, Date64, LargeBinary, LargeUtf8, Null, Timestamp, Utf8,

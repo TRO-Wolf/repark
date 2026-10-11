@@ -176,7 +176,7 @@ async fn open_row_writer_past_load(
     options: WriteOptions,
     first: &RecordBatch,
 ) -> (Store, PostgresWriter) {
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(120);
+    let deadline = tokio::time::Instant::now() + Duration::from_mins(2);
     loop {
         let store = Store::new(settings);
         let resolved = store.target(cell, table).await;
@@ -229,7 +229,7 @@ async fn a_row_write_idle_past_the_read_timeout_ends_as_that_timeout() {
         assert_eq!(rows_in(&cell, "row").await, 0);
         drop(store);
     }
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(180);
+    let deadline = tokio::time::Instant::now() + Duration::from_mins(3);
     loop {
         let store = Store::new(&settings);
         let resolved = store.target(&cell, "bulk").await;
