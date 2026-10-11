@@ -6,10 +6,45 @@ The per-family codecs behind the Postgres type map in [../postgres.rs](../postgr
 2026-10-06; sketch [c-2-design.md](../../../../../task/wo/c-2-design.md) §2.7). Each codec is a
 pure function from one COPY BINARY field (Postgres's `*_send` form) to an Arrow-ready value or a
 typed `CodecError`; `ColumnAppender` in `../postgres.rs` dispatches to them and writes into the
-Arrow builders. No codec allocates per value. See [../map.md](../map.md).
+Arrow builders. No codec allocates per value. Since C-4 step 1 each family also has the
+inverse, from an Arrow value to the field, and `encode.rs` dispatches to those. See [../map.md](../map.md).
 
 ## Contents
 
+- `encode.rs` — **C-4 fold 1 (2026-10-09):** `ColumnEncoder` owns its typed arrays and takes
+  other encodings of the planned type's values. `plain_type` names what came with its
+  encoding removed (`Dictionary` unpacked to its values, `LargeUtf8` and `Utf8View` as `Utf8`,
+  `LargeBinary` and `BinaryView` as `Binary`); the type check is made on that, and Arrow's
+  `cast` runs only when the given array is not already plain. A mismatch still names the
+  type that came, encoding included. The engine hands out `Utf8View` and dictionaries, and a
+  refusal by encoding would be a refusal of values the column can hold. pins: c-4/C-021
+- `encode.rs` — **C-4 step 1 (2026-10-08).** `ColumnEncoder<'a>` (crate-private) is the write
+  direction of `ColumnAppender`: one variant per wire form, each borrowing its typed Arrow
+  array. `new(column, array)` refuses an array whose type is not the planned column's with
+  `ConnectError::ArrowType`; a `timestamptz` column takes a microsecond timestamp with any
+  zone label (the value is the instant) and refuses one with none. `append(row, &mut Vec<u8>)`
+  writes the value's binary wire form with no length word and no allocation of its own; the
+  COPY framer and the row lane both call it, which is why the two paths store the same bytes.
+  `is_null(row)` is asked first. `WriteCarriage` (public) and `PlannedColumn::carriage`,
+  `encode` and `unwritable` live here. A text-carried column (`interval`) appends its text:
+  the row lane binds it as `text`.
+  pins: c-4/C-001, C-003
+- `numeric.rs` — **C-4 step 1:** `encode(i128, DecimalTarget, &mut Vec<u8>)`, the inverse of
+  `decode`. The magnitude splits at the decimal point into twenty base-10000 groups, ten each
+  side (`i128` has at most 39 digits and the scale is at most 38). The fraction is cut from
+  its top digits down and its last partial group is padded on the right, so no intermediate
+  passes `u128`. Leading and trailing zero groups are dropped as `numeric_send` drops them,
+  the weight is nine less the first kept group's index, zero is no digit with weight 0 and a
+  positive sign, and `dscale` is the Arrow scale. pins: c-4/C-002
+- `temporal.rs` — **C-4 step 1:** `date_wire` and `timestamp_wire` shift to the 2000 epoch
+  with checked subtraction and refuse (`WriteValueRefusal`) an overflow and the one result
+  equal to `i32::MIN` / `i64::MIN`, the word Postgres reads as `-infinity`. The server would
+  store that as infinity with no error. `+infinity`'s word cannot be reached by the shift.
+  Every other range is the server's check (`22008`). pins: c-4/C-003
+- `text_like.rs` — **C-4 step 1:** `uuid_wire(&str)` is `uuid_in`'s grammar (`string_to_uuid`):
+  an optional `{`…`}` pair, sixteen pairs of hex digits of either case, an optional `-` after
+  any even-numbered byte but the last, nothing before or after. `JSONB_VERSION` is shared
+  with the encoder, which writes it in front of the text. pins: c-4/C-003
 - `numeric.rs` — `DecimalTarget` (the planned `Decimal128(p,s)`) and its resolution from the
   `atttypmod` (`((p << 16) | (s & 0x7ff)) + 4`, the 11-bit scale sign-extended as PostgreSQL 15
   packs it): no modifier gives `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`); a constrained
