@@ -23,6 +23,10 @@ changed source; clauses C-014 to C-018 carry the rulings and C-019 to C-027 are 
 Sections 2 to 10 describe the unit before the rulings (head `91f4e2f4`); where section 11
 differs, section 11 holds.
 
+**Fold 2 (2026-10-11).** The verifier failed head `45260e44` (9 S1, 5 S2, 3 S3). Section 12 is
+the redesign of the guard's rule, written before its code, and the fold's measurements; where
+it differs from sections 2 to 11, section 12 holds.
+
 ## PROPOSITION LEDGER — ICE-TSNS-NARROW-REFUSE-1 — 2026-10-10
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -881,6 +885,161 @@ untouched and green: `timestamp_ns_nested_shapes` (6 tests) and the R-007 facade
 
 Not re-run for the fold: the 31 mutants of §8 (several of their anchors are gone with the
 code the fold replaced) and the Spark measurement of §6.
+
+## 12. Fold 2 (2026-10-11): the guard's rule, redesigned
+
+The verifier's verdict on head `45260e44` was FAIL: 9 S1, 5 S2, 3 S3. The defect is one rule,
+not nine bugs: the store refused when a cast to a coarser *timestamp* sat directly on a marked
+value, and read a plan node it did not name as "the whole subtree is narrowed". This section
+is the design, written before the code (step 0 of the fold). Sections 2 to 11 describe the unit
+before it; where they differ, this section holds.
+
+### 12.1 The rule
+
+**The mark (analyzer, `repark-functions`).** A mark wraps a nanosecond value, or a list, struct
+or map that holds one, at each place the analyzer narrows it and nowhere else:
+
+- *M1, a cast coercion left.* A `Cast` on a branch of a `CASE`, or on an argument of a function
+  beside a sibling that holds a coarser timestamp, when the cast takes a nanosecond leaf of the
+  source type to a coarser leaf at any depth, or to the zoneless nanosecond wire type the
+  session rule reads as `TIMESTAMP`.
+- *M2, a narrowing about to happen.* After the session rule has rewritten a node's branches: a
+  branch that holds nanoseconds, in a `CASE` or a function with a sibling that holds a coarser
+  timestamp, when the node's result type after coercion holds a coarser timestamp and no
+  nanosecond one. The result type is asked from the type-coercion rewriter itself, not guessed
+  from the siblings, so `named_struct('f', ns, 'g', ts)` and `map(ts, ns)` are not marked and
+  a function that unifies inside its kernel (`array_append(array(ns), ts)`) is.
+- *M3, a `UNION` column.* The nanosecond branch beside a coarser branch or an untyped NULL
+  branch, as in fold 1.
+
+A mark is placed only in a node that produces a column (a projection, an aggregate, a window, a
+`VALUES`, a `UNION` branch). A filter, a join condition and a sort key feed no stored column and
+are left as main has them. The test that skips a node with no nanosecond value no longer trusts
+the node's input schema alone: the expression is searched for a nanosecond producer (an outer
+reference, a lambda variable, a nanosecond literal or cast).
+
+**Written or inserted (the site where the DataFrame door already tells them apart).**
+`before_coercion` runs before the first type coercion, so every cast it sees is the
+statement's. It already turns the DataFrame's `cast("timestamp")` over a nanosecond value into
+the written-narrowing function. It now does the same for the SQL spelling, a cast of a
+nanosecond value to zoneless `Timestamp(ns)`. After it, a cast from nanoseconds to a coarser
+timestamp is the analyzer's by construction, and M1 never meets a written one. A written
+`CAST(v AS TIMESTAMP)` over a value that is already microseconds is a cast the session rule
+drops; it is kept, as the written-narrowing function, when a mark is in its subtree or in the
+plan below the node (ruling V1).
+
+**The store (`repark-iceberg`).** For each top-level nanosecond target column the guard follows
+the lineage of the stored value and nothing else:
+
+- *S1, per stored column, through every plan node.* A projection, an aggregate with or without
+  grouping sets, a window, a `UNION`, a join, a lateral subquery (an outer reference is
+  followed into the plan it names), a `DISTINCT`, a `VALUES`, an unnest, a recursive query, a
+  scan that holds a view. A node the walk has no rule for is followed by column name into its
+  inputs. No node is read as a subtree.
+- *S2, through every argument that can carry the value, whatever its type.* A string, an
+  integer and a JSON text carry it (ruling V2). Not followed: the condition of a `CASE`, an
+  index or key that selects (`a[i]`, `element_at(m, k)`), the filter, ordering and partitioning
+  of an aggregate or a window, and a call whose result is a boolean.
+- *S3, a mark on the lineage refuses.* The guard does not ask what sits on the mark.
+- *S4, unless the nearest written call above it forgives it.* Walking down, the guard remembers
+  the last call it passed and forgets it at any node that is not transparent (transparent: an
+  alias, a column, a plan boundary, a `CASE` branch, `coalesce`, the analyzer's own cast, the
+  store's widening cast). At the mark it reads how the analyzer cut the value from the node on
+  the mark, and the table of §12.2 answers. A call above another call changes nothing: the
+  innermost one decides, which is ruling 1's test (the same expression over the nanosecond
+  value) read from the inside out.
+
+Why there is no "directly under": S3 refuses on the mark alone, so a cast to a list, a function
+that narrows in its kernel and a value that leaves through a string are all the same case.
+What sits on the mark is read only to choose a forgiveness, never to decide whether there is a
+narrowing. Why there is no subtree fallback: S1 gives every node a per-column answer, and the
+default is by column name.
+
+### 12.2 What forgives (ruling 1, measured by the verifier on main, five zones, 18 moments)
+
+| Written call nearest the mark | A zoned value cut to an instant | A naive value cut to an instant | A naive value cut to a naive microsecond value (NTZ sibling) | A container cut, or no cast on the mark |
+|---|---|---|---|---|
+| `CAST(… AS TIMESTAMP)`, `::timestamp`, the DataFrame cast | stores | stores | **refuses** | refuses |
+| `date_trunc(unit, …)` | stores | refuses | refuses | refuses |
+| `CAST(… AS DATE)`, `to_date(…)`, `date(…)` | refuses | stores | **refuses** | refuses |
+| anything else | refuses | refuses | refuses | refuses |
+
+Corrections to §11.3. The analyzer's cut to an instant (beside an untyped NULL, a `TIMESTAMP`
+NULL, a `TIMESTAMP` value) floors: `1969-12-31 23:59:58.999999999` becomes `…58.999999`. Only
+the cut beside a `TIMESTAMP_NTZ` sibling, a plain Arrow cast, truncates toward zero and gives
+`…59.000000`. §11.3 said the cut divides toward zero for every sibling and, from that, called
+`CAST(… AS TIMESTAMP)` and `CAST(… AS DATE)` equal for a naive value whatever the sibling; the
+two bold cells are the verifier's measurement and refuse. `date_trunc` over a naive value cut
+beside an NTZ sibling measured equal; it keeps refusing (one rule per function, as `week` does).
+
+### 12.3 Which sentence closes which finding
+
+| # | Finding (verdict) | Closed by |
+|---|---|---|
+| 1 | S1 never worse: `coalesce(CAST(ns AS TIMESTAMP), ts)` refuses | "Written or inserted": the SQL cast is read before coercion, M1 does not mark over it |
+| 2 | S1 never worse: a plain column refuses under ROLLUP, CUBE, LATERAL | S1: grouping sets and the lateral subquery have a per-column rule; no subtree fallback |
+| 3 | S1 hole: `UPDATE … SET u.v = …` | Not the rule: the `UPDATE` probe matched the `SET` column by its whole name. It matches the last part; the guard is unchanged |
+| 4 | S1 hole: container coercions | M1 "at any depth", M2 "unifies inside its kernel"; S3 |
+| 5 | S1 hole: a zoned value beside a DATE | M1 "or to the zoneless nanosecond wire type": coercion casts the zoned value there and the session rule cut it unmarked |
+| 6 | S1 hole: LATERAL beside a typed NULL or a literal; a lambda in `INSERT VALUES` | The skip test searches the expression (an outer reference, a lambda variable), M2 |
+| 7 | S1 equality: NTZ sibling under `CAST AS TIMESTAMP`, `CAST AS DATE` | §12.2, third column |
+| 8 | S1 equality: a written cast above a refusing arm | S4: the innermost call decides; a call that is not transparent forgets |
+| 9 | S1 hole: STRING, BIGINT, JSON round trip | S2 "whatever its type" (V2) |
+| 10 | S2: a written cast over a subquery, view or frame column | "Written or inserted", last sentence (V1) |
+| 11 | S2: refusal texts | §12.4 |
+| 12 | S2: the tag in a read schema, the lost `PARQUET:field_id` | §12.5 |
+| 13 | S2: `to_date`, `date` | §12.2, third row |
+| 14 | S2: mutant N12 | The fallback is gone; S1's grouping-set and lateral rules each take a pin that holds a plain column stored beside a narrowing |
+| S3 | marker names in `EXPLAIN VERBOSE` and an internal error; planning cost; §11.3 | §12.5; §12.2 |
+
+### 12.4 The text
+
+The value is named as the statement spells it: the expression under the mark, printed with the
+marks and the narrowing function removed, Arrow types and interval debug text replaced by their
+SQL spelling, a lambda variable followed to the array it ranges over. MERGE names its table.
+The remedy is the written cast over that text, or a nanosecond type for the sibling.
+
+### 12.5 What a read can observe
+
+A frame or a view may be written later, and the written and the inserted narrowing differ only
+during analysis, so an analyzed plan has to carry the mark (§2, unchanged). It is kept out of
+what a read shows:
+
+- *Schemas.* The mark returns its argument's field (name, nullability, metadata), so a column's
+  `PARQUET:field_id` survives a `UNION`. The untyped-NULL tag lives between two passes of one
+  analysis; the `UNION` schema is rebuilt without it.
+- *Values, the optimized plan, plain `EXPLAIN`, `explain(True)`.* The optimizer removes the mark
+  (unchanged).
+- *Error text.* No mark is placed in a join condition, a filter or a sort key, so an error that
+  prints one prints main's text.
+- *`EXPLAIN VERBOSE`.* It prints the analyzed plan. The marks are erased from the printed text
+  at the `EXPLAIN` door.
+- *Cost.* A node's branch types are read once and shared by M1 and M2. Measured after the build
+  (§12.7); above 1.05 of main is a finding to fix.
+
+### 12.6 What the rule deliberately does not catch
+
+- A value materialised before the write (`cache()`, `persist()`, an Arrow round trip): Q4, card
+  ICE-TSNS-CACHE-1.
+- A value that reaches the column only through a boolean, a `CASE` condition or a selector.
+- A function with one nanosecond argument and no microsecond sibling that narrows in its kernel
+  (`date_trunc('second', ns)`, `to_timestamp(ns)`): the statement wrote that call.
+- `nvl` and `ifnull`, typed `STRING` (Q3, card ICE-TSNS-COERCION-1); the `UNION` cell refuses
+  (Q7 stands).
+- A created table whose column the query types as microseconds (§11.5, the coercion card).
+- The 80 base-error cells of §11.5 (Q8 stands).
+- A nested nanosecond leaf (R-015 refuses it first).
+
+It catches more than ruling 1 asks in one place, by choice: a written call over a narrowed
+value with any other call between them (`CAST(coalesce(ns, ts) + INTERVAL '0' SECOND AS
+TIMESTAMP)`) refuses although the value may be equal. S4 has no proof of equality through an
+arbitrary call; the cell stored a cut value on main, so never worse holds.
+
+### 12.7 Seams
+
+No crate edge is added. The mark stays in `repark-functions` (where the unit's first commit
+put it), the walk in `repark-iceberg`, the doors in `repark-spark`. No microsecond-target cell
+is meant to move; the matrix of step 4 is the proof.
 
 ## Q0. The questions put before the rulings (answered 2026-10-10, section 11.1)
 
