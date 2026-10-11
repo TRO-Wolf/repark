@@ -1,3 +1,4 @@
+mod encode;
 mod numeric;
 mod temporal;
 mod text_like;
@@ -5,18 +6,18 @@ mod text_like;
 use std::sync::Arc;
 
 use arrow::array::{
-    Array, ArrayRef, AsArray, BinaryBuilder, BooleanBuilder, Date32Builder, Decimal128Builder,
+    Array, ArrayRef, BinaryBuilder, BooleanBuilder, Date32Builder, Decimal128Builder,
     Float32Builder, Float64Builder, Int16Builder, Int32Builder, Int64Builder, StringBuilder,
     TimestampMicrosecondBuilder,
 };
-use arrow::datatypes::{
-    ArrowPrimitiveType, DataType, Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type,
-    TimeUnit,
-};
+use arrow::datatypes::{DataType, Field, TimeUnit};
 
 use self::PostgresMapping as Mapping;
 use crate::error::{ConnectError, ProtocolViolation, Result, UNMAPPED_ROW, ValueRefusal};
 
+#[cfg(feature = "postgres")]
+pub(crate) use encode::ColumnEncoder;
+pub use encode::WriteCarriage;
 pub use numeric::DecimalTarget;
 pub use temporal::{POSTGRES_EPOCH_DAYS, POSTGRES_EPOCH_MICROS, UTC_ZONE_LABEL};
 
@@ -464,48 +465,15 @@ const OFFSET_BYTES: usize = 4;
 impl PostgresTypeRow {
     #[allow(clippy::missing_errors_doc)]
     pub fn encode(&self, array: &dyn Array) -> Result<Vec<WireValue>> {
-        match self.mapping {
-            Mapping::Boolean => {
-                let typed = array
-                    .as_boolean_opt()
-                    .ok_or_else(|| self.mismatch(array, DataType::Boolean))?;
-                Ok(typed
-                    .iter()
-                    .map(|value| value.map(|flag| vec![u8::from(flag)]))
-                    .collect())
-            }
-            Mapping::Int16 => self.encode_primitive::<Int16Type, 2>(array, i16::to_be_bytes),
-            Mapping::Int32 => self.encode_primitive::<Int32Type, 4>(array, i32::to_be_bytes),
-            Mapping::Int64 => self.encode_primitive::<Int64Type, 8>(array, i64::to_be_bytes),
-            Mapping::Float32 => self.encode_primitive::<Float32Type, 4>(array, f32::to_be_bytes),
-            Mapping::Float64 => self.encode_primitive::<Float64Type, 8>(array, f64::to_be_bytes),
-            Mapping::Utf8 => {
-                let typed = array
-                    .as_string_opt::<i32>()
-                    .ok_or_else(|| self.mismatch(array, DataType::Utf8))?;
-                Ok(typed
-                    .iter()
-                    .map(|value| value.map(|text| text.as_bytes().to_vec()))
-                    .collect())
-            }
-            Mapping::Binary => {
-                let typed = array
-                    .as_binary_opt::<i32>()
-                    .ok_or_else(|| self.mismatch(array, DataType::Binary))?;
-                Ok(typed
-                    .iter()
-                    .map(|value| value.map(<[u8]>::to_vec))
-                    .collect())
-            }
-            Mapping::Declared { registry_row } => Err(self.declared(registry_row)),
-            _ => Err(ConnectError::EncodeNotBuilt {
-                postgres_name: self.postgres_name,
-            }),
-        }
+        self.planned()?.encode(array)
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn decode(&self, values: &[Option<&[u8]>]) -> Result<ArrayRef> {
+        self.planned()?.decode(values)
+    }
+
+    fn planned(&self) -> Result<PlannedColumn> {
         if let Mapping::Declared { registry_row } = self.mapping {
             return Err(self.declared(registry_row));
         }
@@ -513,30 +481,7 @@ impl PostgresTypeRow {
             Arc::from(self.postgres_name),
             self.postgres_name,
             self.mapping,
-        )?
-        .decode(values)
-    }
-
-    fn encode_primitive<T: ArrowPrimitiveType, const N: usize>(
-        &self,
-        array: &dyn Array,
-        to_bytes: fn(T::Native) -> [u8; N],
-    ) -> Result<Vec<WireValue>> {
-        let typed = array
-            .as_primitive_opt::<T>()
-            .ok_or_else(|| self.mismatch(array, T::DATA_TYPE))?;
-        Ok(typed
-            .iter()
-            .map(|value| value.map(|native| to_bytes(native).to_vec()))
-            .collect())
-    }
-
-    fn mismatch(&self, array: &dyn Array, expected: DataType) -> ConnectError {
-        ConnectError::ArrowType {
-            postgres_name: self.postgres_name,
-            expected,
-            actual: array.data_type().clone(),
-        }
+        )
     }
 
     fn declared(&self, registry_row: &'static str) -> ConnectError {

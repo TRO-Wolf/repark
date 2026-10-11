@@ -2090,6 +2090,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: perf-dynflatten-1-measure/C-002, C-003
   pins: cutover-schema-1/C-001
   pins: dynflatten-listnull-1/C-004
+- [test_current_date_session_zone_1.py](test_current_date_session_zone_1.py) —
+  **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** `current_date()` answers the session-zone
+  date. The differing zone is computed at run time (+14 / -11, one always differs, no
+  skip): every SQL spelling rooted in `current_date`, the DataFrame pair, the WHERE
+  filter and the stored Iceberg value assert the zone date, both setting styles, both ANSI
+  modes on the SQL leg; the UTC control and the per-query fix hold.
+  The pre-existing strict-xfail TZ-9 pin in `test_spark_sql_grammar_1.py` flips to
+  equality in the same change and the registry row reads FIXED. The file re-runs the
+  step-0 matrix cell list (C-001) and its pins went red under the hand revert (C-005).
+  **Fold 1 (2026-10-11):** the native-door pin sets `SET TIME ZONE` to the runtime-chosen
+  differing zone and asserts SQL `current_date()` plus the DataFrame pair all answer that
+  zone's date, resetting the knob afterwards.
+  pins: current-date-session-zone-1/C-001, C-003, C-004, C-005, C-007
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
@@ -2492,6 +2505,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `current_database` / `current_schema` answer the engine defaults (value, string
   type, non-null); the paren-less spellings stay in `Q14_REFUSING_BARE`.
   pins: ice-catalog-session-1/C-011, C-029.
+  **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** TZ-9 is FIXED — the strict-xfail
+  session-zone pin asserts the converged date and the registry row reads FIXED.
+  pins: current-date-session-zone-1/C-003.
 - [test_unresolved_routine_1.py](test_unresolved_routine_1.py) +
   [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) —
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** every unknown routine refuses with Spark's
@@ -4850,6 +4866,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `docs/examples/io/io_declared_refusals.py`, the fixture and inventory updates are
   C-005, and the named-suite sweep is C-006.
   pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **C-4 step 2 (2026-10-09):** the `write.jdbc` pins follow the real door: mixed-case
+  append reaches the engine config refusal, other valid modes refuse under the
+  pg-write-modes row, a bad `write.path` names both values, properties win the merge,
+  `format("jdbc").save()` requires url/dbtable and follows the writer mode,
+  `format("postgres").save()` keeps `DATA_SOURCE_NOT_FOUND`, and the take-report hook
+  reads nothing on a fresh session. pins: c-4/C-013, C-014
 - [test_registry_16b_1.py](test_registry_16b_1.py) — **REGISTRY-16B-1 (2026-09-15):** the pins behind three
   BACKLOG rows: `conf.unset` of a builder-seeded SQL conf raises on `get` while SQL `RESET` restores the builder
   value (CONF-UNSET-1), `spark.wap.*` stores through `conf.set`, reports modifiable and fails on the SQL `SET`

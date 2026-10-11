@@ -1,10 +1,12 @@
 //! Shared domain types and the crate-wide error type for the repark engine.
 
 pub mod java_case;
+pub mod java_double;
 pub mod names;
 pub mod redaction;
 pub mod source;
 pub mod spark_error;
+pub mod spark_timestamp_text;
 pub mod surfaces;
 pub mod zone_horizon;
 
