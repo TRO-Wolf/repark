@@ -61,6 +61,16 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   NTZ opt-in literals/casts (naive µs, no localization), invalid-value refusal
   naming both tokens, DDL `TIMESTAMP` → Iceberg `timestamp` under NTZ /
   `timestamptz` under LTZ. `to_timestamp` stays LTZ.
+- [timestamp_ns_narrow_rule.rs](timestamp_ns_narrow_rule.rs) —
+  **ICE-TSNS-NARROW-REFUSE-1, fold 2 (2026-10-11, ledger section 12):** the pins of the
+  redesigned rule, each cell its own table, through seven doors (INSERT, INSERT OVERWRITE,
+  MERGE insert, MERGE update in both row-level modes, a temporary view, a subquery).
+  `a_written_cast_beside_a_microsecond_value_stores_on_every_door`: `coalesce(CAST(c AS
+  TIMESTAMP), ts)`, the array, the `CASE` and the DATE sibling store the column `CAST(c AS
+  TIMESTAMP)` stores, three zones, both sources and targets (red on `45260e44`: refused).
+  `a_plain_column_stores_beside_a_narrowing_under_rollup_cube_and_lateral`: a plain column
+  stores nine digits when a narrowing sits in a `WHERE`, a sibling aggregate or a sibling
+  column under `ROLLUP`, `CUBE` and `LATERAL` (red on `45260e44`: refused).
 - [timestamp_ns_narrow_refuse.rs](timestamp_ns_narrow_refuse.rs) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
   2026-10-10 built as fold 1):** the Rust door's pins of the narrowed-value refusal. Each
@@ -95,9 +105,9 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   must refuse and leave no data file.
   `a_call_that_widens_back_over_a_narrowed_value_does_not_make_it_store`: a cast back to
   nanoseconds and a `CASE` around a narrowed value refuse on the 40 doors (`UPDATE … WHERE`
-  keeps main's `Unsupported SQL type` for a cast to a nanosecond type, row R-010; an
-  `UPDATE` from a scalar subquery over a zoned cast into a naive column keeps the base's
-  schema error).
+  keeps main's `Unsupported SQL type` for a cast to a nanosecond type, row R-010; since
+  fold 2 an `UPDATE` from a scalar subquery over a zoned cast into a naive column refuses by
+  name too).
   `a_union_with_an_untyped_null_branch_refuses_and_a_typed_one_stores`: a `UNION ALL` branch
   that is `NULL`, a NULL typed `TIMESTAMP` or a `TIMESTAMP` literal beside the nanosecond
   column refuses in five zones, in either order, and `CAST(NULL AS timestamp_ns)` stores

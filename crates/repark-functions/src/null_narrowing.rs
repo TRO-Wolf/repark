@@ -4,15 +4,17 @@ use std::sync::{Arc, LazyLock};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::metadata::FieldMetadata;
+use datafusion::common::tree_node::TreeNodeRewriter;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, DataFusionError, ExprSchema, Result, ScalarValue};
 use datafusion::logical_expr::expr::{Cast, ScalarFunction};
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
-    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Union, Volatility,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Union, Values, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
+use datafusion::optimizer::analyzer::type_coercion::TypeCoercionRewriter;
 
 pub const NARROWED_BESIDE_NULL_NAME: &str = "__repark_narrowed_beside_null__";
 pub const NARROWED_BESIDE_VALUE_NAME: &str = "__repark_narrowed_beside_value__";
@@ -144,7 +146,8 @@ impl AnalyzerRule for FloatStringifyBeforeCoercion {
             if tagged.transformed {
                 return Ok(tagged);
             }
-            crate::java_double::rewrite_float_plan(tagged.data, ansi, true)
+            crate::java_double::rewrite_float_plan(tagged.data, ansi, true)?
+                .transform_data(keep_values_roots)
         })
         .data()
     }
@@ -154,9 +157,48 @@ impl AnalyzerRule for FloatStringifyBeforeCoercion {
     }
 }
 
+fn keep_values_roots(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let LogicalPlan::Values(values) = plan else {
+        return Ok(Transformed::no(plan));
+    };
+    let written = |cell: &Expr| crate::timestamp_ns_cast::is_narrow_timestamp_ns(peeled(cell));
+    if !values.values.iter().flatten().any(written) {
+        return Ok(Transformed::no(LogicalPlan::Values(values)));
+    }
+    let rows = values
+        .values
+        .into_iter()
+        .map(|row| row.into_iter().map(sql_cast_at_root).collect())
+        .collect();
+    Ok(Transformed::yes(LogicalPlan::Values(Values {
+        schema: values.schema,
+        values: rows,
+    })))
+}
+
+fn sql_cast_at_root(cell: Expr) -> Expr {
+    match cell {
+        Expr::Alias(mut alias) => {
+            alias.expr = Box::new(sql_cast_at_root(*alias.expr));
+            Expr::Alias(alias)
+        }
+        Expr::ScalarFunction(mut function)
+            if function.func.name() == crate::timestamp_ns_cast::NARROW_TIMESTAMP_NS_NAME
+                && function.args.len() == 1 =>
+        {
+            let value = function.args.remove(0);
+            Expr::Cast(Cast::new(
+                Box::new(value),
+                DataType::Timestamp(TimeUnit::Nanosecond, None),
+            ))
+        }
+        other => other,
+    }
+}
+
 pub(crate) fn before_coercion(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     if let Expr::Cast(cast) = &expr
-        && instant(cast.field.data_type())
+        && (instant(cast.field.data_type()) || sql_timestamp(cast.field.data_type()))
         && !is_narrowing_mark(&cast.expr)
         && holds(&cast.expr, schema, true)
     {
@@ -256,7 +298,8 @@ pub(crate) fn settle_branches(
         && any_branch(&expr, |branch| holds(branch, schema, false))
         && any_branch(&expr, |branch| {
             !is_narrowing_mark(branch) && holds(branch, schema, true)
-        });
+        })
+        && loses_nanoseconds(&expr, schema);
     if !tagged && !narrows {
         return Ok(Transformed::no(expr));
     }
@@ -269,6 +312,24 @@ pub(crate) fn settle_branches(
             Ok(Transformed::no(branch))
         }
     })
+}
+
+fn loses_nanoseconds(expr: &Expr, schema: &DFSchema) -> bool {
+    let coerced = TypeCoercionRewriter::new(schema).f_up(expr.clone());
+    let result = coerced.and_then(|node| node.data.get_type(schema));
+    result.is_ok_and(|found| nested_coarser(&found) && !nested_nanoseconds(&found))
+}
+
+fn nested_coarser(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Timestamp(unit, _) => *unit != TimeUnit::Nanosecond,
+        DataType::Struct(fields) => fields.iter().any(|field| nested_coarser(field.data_type())),
+        DataType::Map(field, _)
+        | DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::FixedSizeList(field, _) => nested_coarser(field.data_type()),
+        _ => false,
+    }
 }
 
 fn is_nanosecond_cast(expr: &Expr) -> bool {
@@ -529,6 +590,10 @@ fn instant(data_type: &DataType) -> bool {
         data_type,
         DataType::Timestamp(TimeUnit::Microsecond, Some(_))
     )
+}
+
+fn sql_timestamp(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(TimeUnit::Nanosecond, None))
 }
 
 fn null_literal(expr: &Expr) -> bool {

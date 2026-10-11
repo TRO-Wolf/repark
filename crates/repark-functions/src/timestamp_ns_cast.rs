@@ -412,6 +412,14 @@ static NARROW_TIMESTAMP_NS: LazyLock<Arc<ScalarUDF>> =
     LazyLock::new(|| Arc::new(ScalarUDF::from(NarrowTimestampNs::new())));
 
 #[must_use]
+pub fn is_narrow_timestamp_ns(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function) if function.func.name() == NARROW_TIMESTAMP_NS_NAME
+    )
+}
+
+#[must_use]
 pub fn narrow_timestamp_ns_expr(expr: Expr) -> Expr {
     Expr::ScalarFunction(ScalarFunction::new_udf(
         Arc::clone(&NARROW_TIMESTAMP_NS),

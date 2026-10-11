@@ -643,6 +643,25 @@ repark-core's error map.
   narrowing is anywhere below it. A branch is followed only when its type holds a timestamp,
   a `CASE` through its results and not its conditions, a higher-order function into its
   lambda bodies, a scalar subquery into its plan.
+  **Fold 2 (2026-10-11), the rule redesigned (ledger section 12); where the lines above
+  differ, these hold.** A mark on the lineage of the stored column refuses; the guard no
+  longer asks for a cast to a timestamp directly on it, so a cast to a list, a function that
+  narrows in its kernel and a value that leaves through a string or an integer are one case.
+  Lineage is per stored column through every plan node (`column_lineage`): an aggregate with
+  grouping sets answers by output position (the grouping id has no lineage), a lateral
+  `Subquery` is entered and an outer reference is followed into the plan beside it (`Scope`),
+  an unnest, a recursive query, and any other node by column name into its inputs. No node is
+  read as a subtree; `subtree_narrowed` is gone. Within an expression every argument is
+  followed whatever its type, but a `CASE` condition, the key of a selecting call
+  (`SELECTING_UDF_NAMES`), a comparison, a predicate and a call typed boolean.
+  **What forgives** (`Call`, `Cut`, `found`): the walk remembers the nearest written call it
+  passed and forgets it at any node that is not an alias, a column, a `CASE` branch or
+  `coalesce`; at the mark the node on it says how the value was cut. A written cast to
+  `TIMESTAMP` forgives a cut to an instant; `date_trunc` a zoned value cut to an instant; a
+  date cast a naive value cut to an instant. A naive value cut to a naive microsecond value
+  (beside a `TIMESTAMP_NTZ` sibling, which truncates toward zero), a container cut and a mark
+  with no cast on it are never forgiven, and a written call above a call that does not
+  forgive changes nothing.
   `refuse_narrowed_ns_columns` is the same over a plan that is already analyzed;
   `refuse_narrowed_ns_inserts` is that for the `Dml` of an `INSERT`, and looks through the
   planner's own cast of a selected column to the target type, which the session rule reads

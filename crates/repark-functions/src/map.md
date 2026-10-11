@@ -1111,6 +1111,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
     every tag and marks the nanosecond siblings of a branch that is by then a microsecond
     timestamp: with the beside-a-NULL mark when the node held a tag. `settle_union_branches`
     does the same across the branches of a `UNION`.
+  **Fold 2 (2026-10-11, ledger section 12).** `before_coercion` also reads the SQL spelling:
+  a cast of a nanosecond value to zoneless `Timestamp(ns)`, the wire type of `CAST(x AS
+  TIMESTAMP)`, becomes the written-narrowing function before the first coercion, as the
+  DataFrame cast does, so a cast coercion leaves over it is not marked
+  (`coalesce(CAST(ns AS TIMESTAMP), ts)` stores). A `VALUES` cell keeps the cast at its root
+  (`keep_values_roots`): the cell classifier of `timestamp_ns_cast.rs` reads that shape.
+  `settle_branches` marks a nanosecond sibling only when the node's result type, asked from
+  the type-coercion rewriter (`loses_nanoseconds`), holds a coarser timestamp and no
+  nanosecond one: `named_struct('f', ns, 'g', ts)` is not marked, and the store can refuse on
+  the mark alone.
   The tag never reaches an analyzed plan: `Cast` copies its source field's metadata, so a
   tag left behind would show in a result schema. No rule is added to the analyzer. The store
   reads the marks in `repark-iceberg` `write/narrowed_store.rs`. Eleven unit pins in

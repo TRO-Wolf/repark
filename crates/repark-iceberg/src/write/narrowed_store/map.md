@@ -29,4 +29,18 @@ The parent's entry in [../map.md](../map.md) holds the reasons.
     exact texts, no refusal for a microsecond target, a supply of another width or another
     column; `refuse_narrowed_ns_inserts` looks through the planner's cast on a column and
     `refuse_narrowed_ns_columns` does not.
+  Fold 2 (2026-10-11) replaced the first pin and added one:
+  - `a_mark_refuses_through_every_argument_that_carries_the_value_and_no_other`: a mark
+    refuses under a cast back, either result of a `CASE`, the narrowing function, a string
+    and an integer round trip, with no cast on it, as a list under a list cast, and under
+    arithmetic; a plain column, a `CASE` that only tests the narrowed value or compares it,
+    a cast over an unmarked value, the key of a selecting call and a boolean call do not.
+  - `a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node`: under
+    `ROLLUP` the plain aggregate and the grouping id have no narrowing and the narrowed
+    aggregate has; in a lateral subquery an outer reference is followed to its own column
+    of the plan beside it, and a column that only tests the narrowed one is not.
+  - the written-call pin also holds a naive value cut beside a naive microsecond sibling
+    under a written cast and a date cast (refuses), a call above a call that does not
+    forgive (refuses), a call above one that does (stores), and arithmetic or a string
+    between the call and the mark (refuses).
   pins: ice-tsns-narrow-refuse-1/C-007, C-008, C-019, C-020, C-021

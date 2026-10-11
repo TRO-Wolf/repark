@@ -485,14 +485,8 @@ impl Cell<'_> {
 
     async fn refuses(&self, door: &str, flags: &str, template: &str) {
         let filtered = door.starts_with("update with a where");
-        let zoned_subquery = door == "update from a scalar subquery"
-            && self.spelling.starts_with("CAST(coalesce")
-            && self.source.0 == "tzns"
-            && self.target.0 == "timestamp_ns";
         let unsupported = if filtered && self.spelling.contains("AS {n})") {
             Some("Unsupported SQL type")
-        } else if zoned_subquery {
-            Some("Schema error: No field named")
         } else if filtered && self.spelling.contains("AS TIMESTAMP_NTZ)") {
             Some("[UNSUPPORTED_TIMESTAMP_NTZ]")
         } else {

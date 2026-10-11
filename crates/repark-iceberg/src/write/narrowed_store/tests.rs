@@ -87,10 +87,25 @@ async fn plan_of(ctx: &SessionContext, value: Expr) -> LogicalPlan {
         .into_unoptimized_plan()
 }
 
+fn listed(value: Expr, kind: DataType) -> Expr {
+    let list = |element: DataType| DataType::List(Arc::new(Field::new("item", element, true)));
+    identity("make_array", kind.clone(), list(kind), value)
+}
+
 #[tokio::test]
-async fn a_cast_over_a_marked_value_is_followed_through_every_carrying_position_and_no_other() {
+async fn a_mark_refuses_through_every_argument_that_carries_the_value_and_no_other() {
     let ctx = session();
     let marked = narrowed("m");
+    let bare = identity(NARROWED_BESIDE_VALUE_UDF_NAME, nanos(), nanos(), col("m"));
+    let list = |element: DataType| DataType::List(Arc::new(Field::new("item", element, true)));
+    let first = |value: Expr| {
+        identity(
+            "element_at",
+            list(instant()),
+            instant(),
+            cast(value, list(instant())),
+        )
+    };
     let carried = [
         marked.clone(),
         cast(marked.clone(), nanos()),
@@ -105,33 +120,147 @@ async fn a_cast_over_a_marked_value_is_followed_through_every_carrying_position_
                 NARROW_TIMESTAMP_NS_UDF_NAME,
                 nanos(),
                 instant(),
-                identity(NARROWED_BESIDE_VALUE_UDF_NAME, nanos(), nanos(), col("m")),
+                bare.clone(),
             ),
             col("u"),
         ]),
+        cast(cast(marked.clone(), DataType::Utf8), nanos()),
+        cast(cast(marked.clone(), DataType::Int64), nanos()),
+        bare.clone(),
+        cast(cast(bare.clone(), DataType::Utf8), nanos()),
+        first(identity(
+            NARROWED_BESIDE_VALUE_UDF_NAME,
+            list(nanos()),
+            list(nanos()),
+            listed(col("m"), nanos()),
+        )),
+        marked.clone() + lit(ScalarValue::new_interval_dt(0, 0)),
     ];
     for value in carried {
         let plan = plan_of(&ctx, value.clone()).await;
         assert_eq!(column_narrowed(&plan, 0, None), None, "{value}");
         let found = column_narrowed(&plan, 1, None).unwrap_or_else(|| panic!("{value}"));
-        assert_eq!(found.value, "src.m", "{value}");
+        assert!(found.value.contains("src.m"), "{value}: {}", found.value);
         assert!(!found.zoned, "{value}");
     }
-    let unmarked = identity(NARROWED_BESIDE_NULL_UDF_NAME, nanos(), nanos(), col("m"));
+    let selector = Expr::ScalarFunction(datafusion::logical_expr::expr::ScalarFunction::new_udf(
+        Arc::new(create_udf(
+            "element_at",
+            vec![list(nanos()), instant()],
+            nanos(),
+            Volatility::Immutable,
+            Arc::new(|args: &[ColumnarValue]| Ok(args[0].clone())),
+        )),
+        vec![listed(col("m"), nanos()), marked.clone()],
+    ));
     let passed_by = [
         col("u"),
-        when(marked.clone().is_not_null(), col("u"))
-            .otherwise(col("u"))
+        col("m"),
+        when(marked.clone().is_not_null(), col("m"))
+            .otherwise(col("m"))
             .unwrap(),
-        cast(cast(marked.clone(), DataType::Utf8), nanos()),
+        when(marked.clone().gt(col("u")), col("m"))
+            .otherwise(col("m"))
+            .unwrap(),
         coalesce(vec![cast(col("m"), instant()), absent()]),
-        unmarked.clone(),
-        cast(unmarked, DataType::Utf8),
+        selector,
+        when(
+            identity("isnotnull", instant(), DataType::Boolean, marked.clone()),
+            col("m"),
+        )
+        .otherwise(col("m"))
+        .unwrap(),
     ];
     for value in passed_by {
         let plan = plan_of(&ctx, value.clone()).await;
         assert_eq!(column_narrowed(&plan, 1, None), None, "{value}");
     }
+}
+
+#[tokio::test]
+async fn a_plain_column_beside_a_narrowing_has_its_own_lineage_under_every_plan_node() {
+    let ctx = session();
+    let src = ctx.table("src").await.unwrap();
+    let both = src
+        .clone()
+        .select(vec![
+            col("id"),
+            col("m").alias("plain"),
+            narrowed("m").alias("cut"),
+        ])
+        .unwrap();
+    let rollup = datafusion::logical_expr::Expr::GroupingSet(
+        datafusion::logical_expr::GroupingSet::Rollup(vec![col("id")]),
+    );
+    let grouped = both
+        .clone()
+        .filter(col("cut").is_not_null())
+        .unwrap()
+        .aggregate(
+            vec![rollup],
+            vec![max(col("plain")).alias("p"), max(col("cut")).alias("c")],
+        )
+        .unwrap()
+        .into_unoptimized_plan();
+    assert_eq!(column_narrowed(&grouped, 0, None), None, "{grouped}");
+    assert_eq!(column_narrowed(&grouped, 1, None), None, "{grouped}");
+    assert!(column_narrowed(&grouped, 2, None).is_some(), "{grouped}");
+    let LogicalPlan::Projection(above) = &grouped else {
+        panic!("a projection over the aggregate: {grouped}");
+    };
+    let sets = above.input.as_ref();
+    assert_eq!(sets.schema().fields().len(), 4, "{sets}");
+    assert_eq!(column_narrowed(sets, 0, None), None, "{sets}");
+    assert_eq!(column_narrowed(sets, 1, None), None, "{sets}");
+    assert_eq!(column_narrowed(sets, 2, None), None, "{sets}");
+    assert!(column_narrowed(sets, 3, None).is_some(), "{sets}");
+    let outer = datafusion::logical_expr::LogicalPlanBuilder::from(both.into_unoptimized_plan())
+        .alias("o")
+        .unwrap()
+        .build()
+        .unwrap();
+    let field = |name: &str| {
+        let (_, field) = outer
+            .schema()
+            .qualified_field_with_unqualified_name(name)
+            .unwrap();
+        Arc::clone(field)
+    };
+    let reference = |name: &str| {
+        Expr::OuterReferenceColumn(
+            field(name),
+            datafusion::common::Column::new(Some("o"), name),
+        )
+    };
+    let inner = datafusion::logical_expr::LogicalPlanBuilder::empty(true)
+        .project(vec![
+            reference("plain").alias("p"),
+            reference("cut").alias("c"),
+            when(reference("cut").is_not_null(), reference("plain"))
+                .otherwise(reference("plain"))
+                .unwrap()
+                .alias("k"),
+        ])
+        .unwrap()
+        .build()
+        .unwrap();
+    let lateral = LogicalPlan::Subquery(datafusion::logical_expr::Subquery {
+        subquery: Arc::new(inner),
+        outer_ref_columns: vec![reference("plain"), reference("cut")],
+        spans: datafusion::common::Spans::new(),
+    });
+    let joined = datafusion::logical_expr::LogicalPlanBuilder::from(outer)
+        .cross_join(lateral)
+        .unwrap()
+        .build()
+        .unwrap();
+    let width = joined.schema().fields().len();
+    assert_eq!(width, 6, "{joined}");
+    assert_eq!(column_narrowed(&joined, 1, None), None, "{joined}");
+    assert!(column_narrowed(&joined, 2, None).is_some(), "{joined}");
+    assert_eq!(column_narrowed(&joined, 3, None), None, "{joined}");
+    assert!(column_narrowed(&joined, 4, None).is_some(), "{joined}");
+    assert_eq!(column_narrowed(&joined, 5, None), None, "{joined}");
 }
 
 #[tokio::test]
@@ -146,6 +275,24 @@ async fn a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond
         )
     };
     let written = |value: Expr| identity(NARROW_TIMESTAMP_NS_UDF_NAME, instant(), instant(), value);
+    let naive = DataType::Timestamp(TimeUnit::Microsecond, None);
+    let beside_naive = |column: &str| {
+        let kind = if column == "z" {
+            zoned_nanos()
+        } else {
+            nanos()
+        };
+        let marked = identity(
+            NARROWED_BESIDE_VALUE_UDF_NAME,
+            kind.clone(),
+            kind,
+            col(column),
+        );
+        coalesce(vec![
+            cast(marked, naive.clone()),
+            cast(col("u"), naive.clone()),
+        ])
+    };
     for (value, refuses) in [
         (written(narrowed("m")), false),
         (written(narrowed("z")), false),
@@ -153,18 +300,36 @@ async fn a_written_call_stores_only_where_it_equals_the_call_over_the_nanosecond
         (date_trunc(lit("second"), narrowed("z")), false),
         (date_trunc(lit("second"), narrowed("m")), true),
         (to_date(narrowed("m")), false),
+        (cast(narrowed("m"), DataType::Date32), false),
         (date_trunc(lit("second"), cast(col("m"), instant())), false),
         (to_date(narrowed("z")), true),
         (
             date_trunc(lit("day"), coalesce(vec![narrowed("z"), narrowed("m")])),
             true,
         ),
+        (cast(narrowed("z"), naive.clone()), true),
+        (written(beside_naive("m")), true),
+        (to_date(beside_naive("m")), true),
+        (written(date_trunc(lit("second"), narrowed("m"))), true),
+        (to_date(date_trunc(lit("second"), narrowed("m"))), true),
+        (date_trunc(lit("month"), to_date(narrowed("z"))), true),
+        (written(date_trunc(lit("second"), narrowed("z"))), false),
+        (date_trunc(lit("month"), to_date(narrowed("m"))), false),
         (
-            cast(
-                narrowed("z"),
-                DataType::Timestamp(TimeUnit::Microsecond, None),
-            ),
+            written(narrowed("m") + lit(ScalarValue::new_interval_dt(0, 0))),
             true,
+        ),
+        (
+            written(cast(cast(narrowed("m"), DataType::Utf8), nanos())),
+            true,
+        ),
+        (
+            written(
+                when(col("id").gt(lit(0)), narrowed("m"))
+                    .otherwise(col("u"))
+                    .unwrap(),
+            ),
+            false,
         ),
     ] {
         let plan = plan_of(&ctx, value.clone()).await;
