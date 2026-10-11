@@ -14,14 +14,17 @@ use repark_iceberg::microbatch::offset::{
     TableUuid,
 };
 use repark_iceberg::microbatch::window::WindowLimit;
+use repark_iceberg::write::nested_ns_gate::{NestedWrite, refuse_nested_ns_supply};
 use repark_iceberg::write::sink_offsets::{
-    BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, commit_stamp_only,
-    read_resume_point, resolve_unknown_outcome,
+    BatchScope, BatchScopeGuard, CommitStamp, SCOPE_TOKEN_KEY, ScopeOutcome, SinkMark, Stray,
+    carried_by_foreach, commit_stamp_only, commit_starting_mark, read_resume_point,
+    read_starting_mark, resolve_unknown_outcome, stray_on_main,
 };
 use repark_iceberg::write::{
-    CommitStateUnknownError, SESSION_SNAPSHOT_PREFIX, apply_session_write_key,
-    commit_append_with_summary, concurrency_from_ctx, is_commit_state_unknown,
-    resolve_empty_session_write, stage_overwrite_files_with,
+    CommitStateUnknownError, EncryptedTableRefusal, SESSION_SNAPSHOT_PREFIX,
+    apply_session_write_key, carries_encryption_key, commit_append_with_summary,
+    concurrency_from_ctx, is_commit_state_unknown, resolve_empty_session_write,
+    stage_overwrite_files_with,
 };
 use tokio::time::Instant;
 
@@ -31,6 +34,8 @@ use crate::microbatch::driver::{
 use crate::microbatch::progress::TriggerReport;
 use crate::microbatch::relation::PlanTemplate;
 use crate::time_travel::microbatch_source::{MicroBatchSource, SourceBatch, WeakSessionState};
+
+const MARK_THE_START: &str = "write the starting mark";
 
 #[derive(Clone)]
 pub(crate) enum Door {
@@ -56,11 +61,20 @@ struct Cursor {
     generation: Generation,
     epoch: Epoch,
     from: Option<InputOffset>,
+    baseline: Option<i64>,
+    walked: bool,
 }
 
 enum Wake {
     Tick,
     Stop,
+}
+
+struct BodyRun<'batch> {
+    guard: &'batch BatchScopeGuard,
+    stamp: &'batch CommitStamp,
+    base: &'batch Table,
+    baseline: Option<i64>,
 }
 
 pub(crate) struct Run {
@@ -114,6 +128,12 @@ impl Run {
         let resumed = read_resume_point(&sink, self.shared.id)?;
         self.shared.resumed(resumed.clone());
         let mut cursor = self.resume(resumed.as_ref())?;
+        self.refuse_unwritable_sink(&sink)?;
+        self.walk_a_foreach_name(&sink, &mut cursor)?;
+        let sink = self
+            .mark_the_start(sink, &mut cursor, resumed.is_none())
+            .await?;
+        self.refuse_moved_sink(&sink, &cursor).await?;
         let target = match self.shared.trigger {
             Trigger::AvailableNow => self.available_now_target(&mut cursor).await?,
             Trigger::Once | Trigger::ProcessingTime(_) => None,
@@ -217,7 +237,7 @@ impl Run {
         let deadline = Instant::now() + self.shared.catalog_timeout;
         loop {
             let sink = self.load_sink().await?;
-            match BatchScope::enter(TableUuid::of(&sink), stamp.clone()) {
+            match BatchScope::enter_on(&sink, stamp.clone()) {
                 Ok(guard) => return Ok(Some((sink, guard))),
                 Err(MicroBatchError::SinkBusy { .. }) if Instant::now() < deadline => {
                     let retry = (Instant::now() + self.shared.polling_delay).min(deadline);
@@ -236,6 +256,7 @@ impl Run {
     }
 
     fn resume(&self, record: Option<&SinkRecord>) -> Result<Cursor, MicroBatchError> {
+        let foreach = matches!(self.door, Door::ForeachBatch(_));
         let Some(record) = record else {
             let generation = Generation::new(1).ok_or_else(|| {
                 MicroBatchError::Catalog(String::from("generation 1 is not a valid generation"))
@@ -244,6 +265,8 @@ impl Run {
                 generation,
                 epoch: Epoch::FIRST,
                 from: None,
+                baseline: None,
+                walked: foreach,
             });
         };
         let current = self.source.table_identifier();
@@ -267,6 +290,122 @@ impl Run {
             generation: record.generation,
             epoch: record.epoch.next(),
             from: record.offsets.inputs().first().cloned(),
+            baseline: None,
+            walked: foreach,
+        })
+    }
+
+    fn recovery(&self, epoch: Epoch, reason: RecoveryReason) -> MicroBatchError {
+        MicroBatchError::RecoveryRequired {
+            query: self.shared.id,
+            epoch,
+            durable: self.shared.durable().map(Box::new),
+            reason,
+        }
+    }
+
+    async fn mark_the_start(
+        &self,
+        sink: Table,
+        cursor: &mut Cursor,
+        unstamped: bool,
+    ) -> Result<Table, MicroBatchError> {
+        if !unstamped || !matches!(self.door, Door::ForeachBatch(_)) {
+            return Ok(sink);
+        }
+        self.refuse_replaced_sink(&sink, cursor.epoch)?;
+        if let Some(mark) = read_starting_mark(&sink, self.shared.id)? {
+            cursor.baseline = mark.head.map(SnapshotId::get);
+            return Ok(sink);
+        }
+        cursor.baseline = sink.metadata().current_snapshot_id();
+        let marking = commit_starting_mark(&self.shared.sink.catalog, &sink, self.shared.id);
+        let marked = bounded(self.shared.catalog_timeout, MARK_THE_START, marking).await?;
+        match read_starting_mark(&marked, self.shared.id)? {
+            Some(mark) => cursor.baseline = mark.head.map(SnapshotId::get),
+            None if read_resume_point(&marked, self.shared.id)?.is_none() => {
+                return Err(MicroBatchError::Catalog(format!(
+                    "the starting mark of query {query} did not land on the sink; start the query again",
+                    query = self.shared.id
+                )));
+            }
+            None => {}
+        }
+        Ok(marked)
+    }
+
+    fn refuse_replaced_sink(&self, sink: &Table, epoch: Epoch) -> Result<(), MicroBatchError> {
+        let found = TableUuid::of(sink);
+        if found == self.shared.sink_uuid {
+            return Ok(());
+        }
+        Err(self.recovery(
+            epoch,
+            RecoveryReason::UnstampedSinkChange {
+                what: format!(
+                    "the table under the sink's name was replaced (uuid {was}, now {found})",
+                    was = self.shared.sink_uuid
+                ),
+            },
+        ))
+    }
+
+    fn walk_a_foreach_name(
+        &self,
+        sink: &Table,
+        cursor: &mut Cursor,
+    ) -> Result<(), MicroBatchError> {
+        if matches!(self.door, Door::Table) && carried_by_foreach(sink, self.shared.id)? {
+            let mark = read_starting_mark(sink, self.shared.id)?;
+            cursor.baseline = mark.and_then(|mark| mark.head).map(SnapshotId::get);
+            cursor.walked = true;
+        }
+        Ok(())
+    }
+
+    fn refuse_unwritable_sink(&self, sink: &Table) -> Result<(), MicroBatchError> {
+        match &self.door {
+            Door::Table => {
+                let label = self.shared.sink.quoted();
+                refuse_nested_ns_supply(sink, &label, &NestedWrite::Unreadable)
+                    .map_err(|error| engine_error(&error))
+            }
+            Door::ForeachBatch(_) if carries_encryption_key(sink.metadata().properties()) => {
+                Err(EncryptedTableRefusal::of(sink.identifier()).into())
+            }
+            Door::ForeachBatch(_) => Ok(()),
+        }
+    }
+
+    async fn refuse_moved_sink(
+        &self,
+        sink: &Table,
+        cursor: &Cursor,
+    ) -> Result<(), MicroBatchError> {
+        if !cursor.walked {
+            return Ok(());
+        }
+        if matches!(self.door, Door::ForeachBatch(_)) {
+            self.refuse_replaced_sink(sink, cursor.epoch)?;
+        }
+        match stray_on_main(sink, self.shared.id, cursor.baseline)? {
+            Some(stray) => Err(self.recovery(cursor.epoch, self.stray_reason(&stray).await)),
+            None => Ok(()),
+        }
+    }
+
+    async fn stray_reason(&self, stray: &Stray) -> RecoveryReason {
+        let mut whole = Vec::new();
+        for record in stray.records() {
+            if let Some(position) = self.source.whole_snapshot_end(record).await {
+                whole.push((record.epoch, position));
+            }
+        }
+        stray.reason(&|record| {
+            whole
+                .iter()
+                .find(|(epoch, _)| *epoch == record.epoch)
+                .map(|(_, position)| *position)
         })
     }
 
@@ -331,6 +470,8 @@ impl Run {
                 num_output_rows: None,
             }));
         }
+        self.refuse_unwritable_sink(&sink)?;
+        self.refuse_moved_sink(&sink, cursor).await?;
         let frame = match &self.plan {
             Some(template) => template.bind(&batch)?,
             None => batch.frame,
@@ -344,10 +485,19 @@ impl Run {
                 let appended = self.append(&batch, &stamp, &sink, frame).await;
                 appended.map(|(rows, snapshot)| (Some(rows), snapshot))
             }
-            Door::ForeachBatch(body) => self
-                .foreach_batch(&guard, &stamp, body.as_ref(), frame)
-                .await
-                .map(|snapshot| (None, snapshot)),
+            Door::ForeachBatch(body) => {
+                let scope = BodyRun {
+                    guard: &guard,
+                    stamp: &stamp,
+                    base: &sink,
+                    baseline: cursor.baseline,
+                };
+                let ran = match fixed_at_the_batch_start(frame) {
+                    Ok(frame) => self.foreach_batch(&scope, body.as_ref(), frame).await,
+                    Err(error) => Err(error),
+                };
+                ran.map(|snapshot| (None, snapshot))
+            }
         };
         let add_batch = door_started.elapsed();
         let outcome = guard.outcome();
@@ -358,7 +508,10 @@ impl Run {
                 query: self.shared.id,
                 epoch,
                 durable: self.shared.durable().map(Box::new),
-                reason: RecoveryReason::UnstampedSinkCommit { snapshot },
+                reason: RecoveryReason::UnstampedSinkCommit {
+                    snapshot,
+                    operation: None,
+                },
             });
         }
         self.shared.end_batch(Some(record));
@@ -434,19 +587,43 @@ impl Run {
 
     async fn foreach_batch(
         &self,
-        guard: &BatchScopeGuard,
-        stamp: &CommitStamp,
+        scope: &BodyRun<'_>,
         body: &dyn BatchBody,
         frame: DataFrame,
     ) -> Result<SnapshotId, MicroBatchError> {
+        let (guard, stamp, base) = (scope.guard, scope.stamp, scope.base);
         let epoch = stamp.record.epoch;
-        body.run(frame, epoch)
-            .await
-            .map_err(|error| MicroBatchError::BatchFailed {
-                epoch,
-                cause: mask_value_credentials(&error.to_string()),
-            })?;
+        let mark = SinkMark::of(base);
+        let ran = guard.scope_body(body.run(frame, epoch)).await;
+        let landed = match guard.outcome() {
+            ScopeOutcome::Committed { snapshot } => Some(snapshot),
+            ScopeOutcome::NotCommitted if guard.outcome_unknown() => {
+                Some(self.resolve_unknown(base, stamp, None).await?)
+            }
+            ScopeOutcome::NotCommitted => None,
+        };
         let sink = self.load_sink().await?;
+        if let Some(violation) = mark.violation(&sink) {
+            let reason = match stray_on_main(&sink, self.shared.id, scope.baseline) {
+                Ok(Some(stray)) => self.stray_reason(&stray).await,
+                Ok(None) | Err(_) => violation,
+            };
+            return Err(self.recovery(epoch, reason));
+        }
+        if let Err(error) = ran {
+            if landed.is_some() {
+                self.shared.end_batch(Some(stamp.record.clone()));
+            }
+            return Err(guard
+                .body_refusal()
+                .unwrap_or_else(|| MicroBatchError::BatchFailed {
+                    epoch,
+                    cause: mask_value_credentials(&error.to_string()),
+                }));
+        }
+        if let Some(snapshot) = landed {
+            return Ok(snapshot);
+        }
         let commit =
             commit_stamp_only(&self.shared.sink.catalog, &sink, stamp, Some(guard.token()));
         match tokio::time::timeout(self.shared.catalog_timeout, commit).await {
@@ -515,6 +692,14 @@ pub(crate) fn until_next_trigger(started_at: SystemTime, interval: Duration) -> 
         .map_or(0, |since| since.as_millis());
     let next_ms = started_ms / interval_ms * interval_ms + interval_ms;
     Duration::from_millis(u64::try_from(next_ms - started_ms).unwrap_or(u64::MAX))
+}
+
+fn fixed_at_the_batch_start(frame: DataFrame) -> Result<DataFrame, MicroBatchError> {
+    let (state, plan) = frame.into_parts();
+    let plan = state
+        .optimize(&plan)
+        .map_err(|error| engine_error(&error))?;
+    Ok(DataFrame::new(state, plan))
 }
 
 fn unknown_operation_id(error: &DataFusionError) -> Option<String> {

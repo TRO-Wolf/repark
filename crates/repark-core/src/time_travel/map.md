@@ -43,6 +43,20 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   SQL literals, `Utf8` scalars) resolves through the engine `CAST(... AS TIMESTAMP)` in the
   session zone; the hand parser is gone. pins: ice-tt-resolve-1/C-002
   pins: ice-tt-resolve-1/C-010
+- `microbatch_source.rs`, `microbatch_source_fold2_tests.rs` — **MB-4-FOREACH-EO fold 4
+  (2026-10-10, ruling on the third verify's third S1): a batch runs under the session
+  settings of its moment.** `WeakSessionState::snapshot` cloned the session state without
+  `mark_start_execution`, so the execution properties a plan's functions read at run time
+  were the ones captured when the session was built: `spark.sql.session.timeZone` and ANSI
+  mode set afterwards did not reach a streaming plan (`hour(ts)` answered 5 where the batch
+  write answered 0 under `America/New_York`), and `current_timestamp()` could not be
+  evaluated at all. The snapshot now marks its start, which binds the whole option set and
+  the start time at once; plan-time settings (case sensitivity, the write options a sink
+  commit reads) were already read from the live state and are measured as bound. The defect
+  is on main in this helper; no door on main reaches it (the public streaming doors are this
+  PR's). `whole_snapshot_end` is the boundary probe behind the refusal's new-name remedy.
+  Pin: `a_state_snapshot_carries_the_settings_and_the_start_time_of_its_moment`.
+  pins: mb-4-foreach-eo/C-034
 - `microbatch_source.rs` — **MB-1 round 3 (2026-10-07):** the Session-bound
   source wrapper over the shipped window planner (the sketch's §3.5).
   `SourceOptions::from_options` parses the Spark reader keys (checklist line

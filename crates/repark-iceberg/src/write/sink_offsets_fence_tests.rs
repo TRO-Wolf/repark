@@ -57,6 +57,7 @@ async fn measure(name: &str, fence: Fence, race: bool) -> Measured {
     let claimed = ClaimedStamp {
         stamp: stamp_for(1, SinkDoor::Table),
         base: base.map(SnapshotId::new),
+        started: None,
     };
     let summary: HashMap<String, String> = claimed
         .summary_entries()

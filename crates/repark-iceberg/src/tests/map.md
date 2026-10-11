@@ -103,6 +103,35 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   **C-005 (2026-09-01):** `write_default` fills an omitted column on append
   (red-first vs the old refuse pin), a supplied column is kept, and `initial_default`
   reads into files missing the column. pins: v3-6-v3-types/C-001, C-002, C-005
+- `stamp_fence_gate.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10, ruling on the fifth verify):**
+  the source-scan gate that keeps every stamped commit behind the fence. It reads the product
+  sources of every crate (test files, `tests/` directories and gates excluded) and fails
+  when a file other than the two listed arms (`write/write_options.rs`,
+  `write/merge/snapshot_commit.rs`) names `SiteStamp::claim`; when a listed arm's claims,
+  `stamp.summary(` calls and `.commit(tx, catalog)` calls differ in number; when a file
+  outside the stamp's module uses `summary_entries`, `stamp_transaction`,
+  `AppendFence::install`, `AppendFence::for_starting_mark` or builds a `ClaimedStamp`; and
+  when the stamp's own module (`sink_offsets.rs`, `sink_offsets/append_fence.rs`,
+  `sink_offsets/lineage.rs`) commits a transaction on anything not named `fenced`. A second
+  test feeds the scanner four made-up sources and requires one violation each. A new arm is
+  added by listing its file, which makes the pairing rule apply to it.
+  pins: mb-4-foreach-eo/C-046
+  Fold 7 (2026-10-11, the sixth verify's finding 3): this gate is a tripwire for one
+  honest mistake, a bare `tx.commit(catalog)` in a stamped arm of the fold-5 shape, which
+  its second test proves it catches. It is not the rule's holder: the sixth verify walked
+  around it four ways by reading, plus the demonstrated mutant. `SiteStamp::fenced`
+  returning the bare catalog for a claimed stamp (mutant Y1) keeps the line reading
+  `tx.commit(self.fenced(catalog).as_ref())` and stays green. In the stamp's own files any
+  line with `.commit(` passes when it contains the letters `fenced`, so a variable named
+  `unfenced` passes. `Transaction::commit(tx, ...)` in call form is not matched by
+  `'.commit('`. A listed arm is checked by counts only (claims, stamped summaries,
+  `.commit(tx, catalog)` strings), not by which transaction each commit takes; and
+  `SiteStamp::claim` reached through an import alias or `Self::` is not seen in a new file.
+  The rule itself is held by the behaviour pins: `sink_offsets_stray_fence_tests.rs` (every
+  arm refused over a stray in every window, legal commits landed, carried-name and
+  non-append strays), `sink_offsets_body_scope_tests.rs` (the backstop), and the core
+  microbatch driver pins. Under Y1 thirteen iceberg pins and six core pins fail while both
+  gate tests pass.
 - `enc_1_gate.rs` — **ENC-1 fold 1 (2026-10-09):** the source-scan gate that keeps the two
   chokepoints closed. It reads every Rust source under `crates/`, drops test code
   (`tests/`, `benches/`, `#[cfg(test)]` items and modules, and every module a test module

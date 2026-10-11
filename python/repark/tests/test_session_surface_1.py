@@ -141,20 +141,15 @@ def test_connect_only_refusals(spark: ReparkSession, cell: str, call: Any) -> No
     assert str(raised.value) == expected["message"]
 
 
-def test_read_stream_declared(spark: ReparkSession) -> None:
-    """SES-DECL-readStream — no streaming engine. pins: session-surface-1/C-004"""
-    with pytest.raises(PySparkNotImplementedError) as raised:
-        _ = spark.readStream
-    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
-    assert raised.value.getMessageParameters() == {"feature": "readStream"}
+def test_read_stream_answers_reader(spark: ReparkSession) -> None:
+    """cell readStream_type — a DataStreamReader. pins: mb-4/C-031"""
+    assert type(spark.readStream).__name__ == "DataStreamReader"
 
 
-def test_streams_declared(spark: ReparkSession) -> None:
-    """SES-DECL-streams — no StreamingQueryManager. pins: session-surface-1/C-004"""
-    with pytest.raises(PySparkNotImplementedError) as raised:
-        _ = spark.streams
-    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
-    assert raised.value.getMessageParameters() == {"feature": "streams"}
+def test_streams_answers_manager(spark: ReparkSession) -> None:
+    """cells streams_type, streams_active — a manager, idle active []. pins: mb-4/C-031"""
+    assert type(spark.streams).__name__ == "StreamingQueryManager"
+    assert spark.streams.active == []
 
 
 def test_data_source_declared(spark: ReparkSession) -> None:
@@ -492,19 +487,16 @@ def test_interrupt_operation_non_str(spark: ReparkSession) -> None:
     }
 
 
-def test_declared_properties_raise_under_hasattr(spark: ReparkSession) -> None:
-    """L-003 / R-5 — declared-refusal getters raise through ``hasattr`` too.
+def test_streaming_properties_answer_under_hasattr(spark: ReparkSession) -> None:
+    """L-003 / R-5 — the wired getters answer True; dataSource and client still raise.
 
-    pins: session-surface-1/C-010
+    pins: session-surface-1/C-010, mb-4/C-031
     """
-    for name, feature in (
-        ("readStream", "readStream"),
-        ("streams", "streams"),
-        ("dataSource", "dataSource"),
-    ):
-        with pytest.raises(PySparkNotImplementedError) as raised:
-            hasattr(spark, name)
-        assert raised.value.getMessageParameters() == {"feature": feature}
+    assert hasattr(spark, "readStream") is True
+    assert hasattr(spark, "streams") is True
+    with pytest.raises(PySparkNotImplementedError) as raised:
+        hasattr(spark, "dataSource")
+    assert raised.value.getMessageParameters() == {"feature": "dataSource"}
     with pytest.raises(PySparkRuntimeError):
         hasattr(spark, "client")
 

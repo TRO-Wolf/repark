@@ -1,17 +1,26 @@
 use std::collections::{BTreeMap, HashMap};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use datafusion::arrow::array::{Array, Int64Array, RecordBatch};
+use datafusion::prelude::DataFrame;
+use futures::future::BoxFuture;
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 use iceberg::table::Table;
 use iceberg::{NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use repark_iceberg::microbatch::offset::{EPOCH_KEY, QUERY_ID_KEY};
+use repark_iceberg::microbatch::error::MicroBatchError;
+use repark_iceberg::microbatch::offset::{EPOCH_KEY, Epoch, QUERY_ID_KEY};
+use repark_iceberg::write::{
+    commit_append_with_summary, concurrency_from_ctx, resolve_empty_session_write,
+    stage_overwrite_files_with,
+};
 
 use crate::Session;
 use crate::microbatch::driver::{
-    QueryHandle, SinkSpec, StreamSpec, StreamingQueryManager, Trigger,
+    BatchBody, QueryHandle, SinkSpec, StreamSpec, StreamingQueryManager, Trigger,
 };
+use crate::microbatch::run::engine_error;
 use crate::time_travel::microbatch_source::SourceOptions;
 
 pub(crate) const SOURCE: &str = "ice.sales.orders";
@@ -196,4 +205,105 @@ pub(crate) fn creation(name: &str, location: &str) -> TableCreation {
         .schema(schema)
         .properties(HashMap::new())
         .build()
+}
+
+pub(crate) async fn append_frame(
+    session: &Session,
+    table: &str,
+    frame: DataFrame,
+) -> Result<(), MicroBatchError> {
+    let [catalog_name, namespace, name] = table.split('.').collect::<Vec<_>>()[..] else {
+        return Err(MicroBatchError::Catalog(format!("{table} is not a table")));
+    };
+    let catalog = session
+        .catalogs_snapshot()
+        .guarded_in_batch_body()
+        .get(catalog_name)
+        .cloned()
+        .ok_or_else(|| MicroBatchError::Catalog(format!("no catalog {catalog_name}")))?;
+    let ident = TableIdent::new(NamespaceIdent::new(namespace.to_string()), name.to_string());
+    let target = catalog
+        .load_table(&ident)
+        .await
+        .map_err(|error| MicroBatchError::Catalog(error.to_string()))?;
+    let context = session.context();
+    let (extra, staging) =
+        resolve_empty_session_write(context).map_err(|error| engine_error(&error))?;
+    let stream = frame
+        .execute_stream()
+        .await
+        .map_err(|error| engine_error(&error))?;
+    let files = stage_overwrite_files_with(
+        &target,
+        stream,
+        Vec::new(),
+        concurrency_from_ctx(context),
+        &staging,
+    )
+    .await
+    .map_err(|error| engine_error(&error))?;
+    commit_append_with_summary(&catalog, &target, files, &extra, None)
+        .await
+        .map_err(|error| engine_error(&error))?;
+    Ok(())
+}
+
+pub(crate) struct SinkWriter {
+    session: Session,
+    sink: String,
+    writes: usize,
+    calls: AtomicUsize,
+}
+
+impl SinkWriter {
+    pub(crate) fn new(session: &Session, sink: &str, writes: usize) -> std::sync::Arc<SinkWriter> {
+        std::sync::Arc::new(SinkWriter {
+            session: session.clone(),
+            sink: sink.to_string(),
+            writes,
+            calls: AtomicUsize::new(0),
+        })
+    }
+
+    pub(crate) fn calls(&self) -> usize {
+        self.calls.load(Ordering::SeqCst)
+    }
+
+    pub(crate) fn spec(self: &std::sync::Arc<Self>, source: &SourceOptions) -> StreamSpec {
+        let mut spec = StreamSpec::new(
+            SOURCE,
+            source.clone(),
+            SinkSpec::ForeachBatch {
+                sink: self.sink.clone(),
+                body: std::sync::Arc::clone(self) as std::sync::Arc<dyn BatchBody>,
+            },
+        );
+        spec.trigger = Trigger::AvailableNow;
+        spec
+    }
+}
+
+impl BatchBody for SinkWriter {
+    fn run(&self, frame: DataFrame, _epoch: Epoch) -> BoxFuture<'_, Result<(), MicroBatchError>> {
+        Box::pin(async move {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            for _ in 0..self.writes {
+                append_frame(&self.session, &self.sink, frame.clone()).await?;
+            }
+            Ok(())
+        })
+    }
+}
+
+pub(crate) async fn mark_the_start(fixture: &Fixture, handle: &QueryHandle) {
+    let catalog = fixture
+        .session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("the catalog is visible");
+    let sink = fixture.table("silver").await;
+    repark_iceberg::write::sink_offsets::commit_starting_mark(&catalog, &sink, handle.id())
+        .await
+        .expect("the starting mark commits");
 }

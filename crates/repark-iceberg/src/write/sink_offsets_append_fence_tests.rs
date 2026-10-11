@@ -209,6 +209,7 @@ async fn the_fence_forwards_every_other_catalog_call() {
     let claimed = ClaimedStamp {
         stamp: stamp_for(0, SinkDoor::Table),
         base: table.metadata().current_snapshot_id().map(SnapshotId::new),
+        started: None,
     };
     let direct = AppendFence::install(&memory, &claimed);
     assert_eq!(direct.name(), memory.name());
@@ -472,6 +473,7 @@ async fn a_commit_without_a_base_table_is_checked_against_a_fresh_load() {
     let claimed = ClaimedStamp {
         stamp: stamp_for(3, SinkDoor::Table),
         base,
+        started: None,
     };
     let fence = AppendFence::install(&inner, &claimed);
     let error = fence

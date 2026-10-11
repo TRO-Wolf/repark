@@ -190,13 +190,13 @@ fn capped() -> SourceOptions {
 }
 
 #[tokio::test]
-async fn the_foreach_batch_door_stamps_once_after_the_body() {
+async fn the_foreach_batch_door_stamps_the_body_s_own_commit() {
     let fixture = Fixture::new().await;
     bronze(&fixture).await;
     let body = Body::new(
         &fixture.session,
         Plan {
-            sink_writes: 2,
+            sink_writes: 1,
             ..Plan::default()
         },
     );
@@ -218,22 +218,24 @@ async fn the_foreach_batch_door_stamps_once_after_the_body() {
         assert!(!summary.contains_key(SPARK_QUERY_ID_KEY));
         assert!(!summary.contains_key(SPARK_EPOCH_ID_KEY));
         assert!(!summary.contains_key(SCOPE_TOKEN_KEY));
-        if let Some(epoch) = summary.get(EPOCH_KEY) {
-            kinds.push(format!("stamp {epoch}"));
-        } else {
-            assert!(!summary.contains_key(QUERY_ID_KEY));
-            kinds.push("data".to_string());
-        }
+        assert!(summary.contains_key(QUERY_ID_KEY));
+        kinds.push(format!(
+            "stamp {epoch} with {rows} rows",
+            epoch = summary[EPOCH_KEY],
+            rows = summary["added-records"]
+        ));
         cursor = snapshot
             .parent_snapshot_id()
             .and_then(|parent| metadata.snapshot_by_id(parent));
     }
     kinds.reverse();
+    assert_eq!(kinds, ["stamp 0 with 3 rows", "stamp 1 with 2 rows"]);
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5]);
     assert_eq!(
-        kinds,
-        ["data", "data", "stamp 0", "data", "data", "stamp 1"]
+        handle.durable().map(|record| record.epoch.get()),
+        Some(1),
+        "the offsets property equals the newest stamp"
     );
-    assert_eq!(fixture.ids(SINK).await, [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
     let progress = handle.last_progress().expect("a progress").json();
     assert_eq!(progress["batchId"], 1);
     assert_eq!(progress["sink"]["numOutputRows"], -1);
@@ -247,7 +249,6 @@ async fn a_failed_body_fails_the_query_and_the_restart_replays_its_epoch() {
     let failing = Body::new(
         &fixture.session,
         Plan {
-            sink_writes: 1,
             fail_at: Some(1),
             ..Plan::default()
         },
@@ -287,10 +288,11 @@ async fn a_failed_body_fails_the_query_and_the_restart_replays_its_epoch() {
     assert_eq!(restart.await_termination(None).await, Ok(true));
     assert_eq!(healthy.seen(), [(1, vec![4, 5])]);
     assert_eq!(stamped_epochs(&fixture.table("silver").await), [0, 1]);
+    assert_eq!(fixture.ids(SINK).await, [4, 5]);
 }
 
 #[tokio::test]
-async fn a_body_that_dies_after_its_sink_write_replays_at_least_once() {
+async fn a_body_that_fails_after_its_sink_write_leaves_the_epoch_durable() {
     let fixture = Fixture::new().await;
     bronze(&fixture).await;
     let failing = Body::new(
@@ -304,12 +306,22 @@ async fn a_body_that_dies_after_its_sink_write_replays_at_least_once() {
     );
     let handle = started(
         &fixture,
-        foreach_spec(&failing, Trigger::AvailableNow, &options(&[])),
+        foreach_spec(&failing, Trigger::AvailableNow, &capped()),
     )
     .await;
-    assert!(handle.await_termination(None).await.is_err());
-    assert!(stamped_epochs(&fixture.table("silver").await).is_empty());
-    assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5]);
+    let error = handle
+        .await_termination(None)
+        .await
+        .expect_err("the body raised");
+    assert!(
+        matches!(error.as_ref(), MicroBatchError::BatchFailed { epoch, .. } if epoch.get() == 0),
+        "{error:?}"
+    );
+    let outcome = handle.stop().await;
+    assert!(matches!(outcome, ShutdownOutcome::Failed { .. }));
+    assert_eq!(outcome.durable().map(|record| record.epoch.get()), Some(0));
+    assert_eq!(stamped_epochs(&fixture.table("silver").await), [0]);
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3]);
     let healthy = Body::new(
         &fixture.session,
         Plan {
@@ -319,16 +331,16 @@ async fn a_body_that_dies_after_its_sink_write_replays_at_least_once() {
     );
     let restart = started(
         &fixture,
-        foreach_spec(&healthy, Trigger::AvailableNow, &options(&[])),
+        foreach_spec(&healthy, Trigger::AvailableNow, &capped()),
     )
     .await;
     assert_eq!(restart.await_termination(None).await, Ok(true));
-    assert_eq!(healthy.seen(), [(0, vec![1, 2, 3, 4, 5])]);
-    assert_eq!(stamped_epochs(&fixture.table("silver").await), [0]);
+    assert_eq!(healthy.seen(), [(1, vec![4, 5])]);
+    assert_eq!(stamped_epochs(&fixture.table("silver").await), [0, 1]);
     assert_eq!(
         fixture.ids(SINK).await,
-        [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
-        "foreachBatch is at-least-once across a crash between the body's write and the stamp"
+        [1, 2, 3, 4, 5],
+        "the epoch whose body failed after its sink write is not replayed"
     );
 }
 

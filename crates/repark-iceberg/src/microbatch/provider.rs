@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
+use datafusion::arrow::record_batch::{RecordBatch, RecordBatchOptions};
 use datafusion::catalog::Session;
 use datafusion::datasource::{TableProvider, TableType};
+use datafusion::error::DataFusionError;
 use datafusion::error::Result;
 use datafusion::execution::TaskContext;
 use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
@@ -168,9 +170,20 @@ fn read_batches(
     let schema_for_map = Arc::clone(&schema);
     let mut projection: Option<(SchemaRef, Vec<usize>)> = None;
     let conformed = inner.and_then(move |batch| {
-        futures::future::ready(conform_batch(&batch, &schema_for_map, &mut projection))
+        futures::future::ready(if schema_for_map.fields().is_empty() {
+            zero_column_batch(&batch, &schema_for_map)
+        } else {
+            conform_batch(&batch, &schema_for_map, &mut projection)
+        })
     });
     Ok(Box::pin(RecordBatchStreamAdapter::new(schema, conformed)))
+}
+
+fn zero_column_batch(batch: &RecordBatch, schema: &SchemaRef) -> Result<RecordBatch> {
+    let options = RecordBatchOptions::new().with_row_count(Some(batch.num_rows()));
+    RecordBatch::try_new_with_options(Arc::clone(schema), Vec::new(), &options).map_err(|error| {
+        DataFusionError::Internal(format!("iceberg scan could not rebuild batch: {error}"))
+    })
 }
 
 #[cfg(test)]
@@ -484,57 +497,6 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn provider_refuses_unknown_end_snapshot() {
-        let warehouse = TempDir::new().expect("warehouse");
-        let catalog = crate::memory_catalog(warehouse.path().to_str().expect("utf8"))
-            .await
-            .expect("catalog");
-        catalog
-            .create_namespace(&NamespaceIdent::new("sales".to_string()), HashMap::new())
-            .await
-            .expect("namespace");
-        let ident = TableIdent::new(
-            NamespaceIdent::new("sales".to_string()),
-            "reads".to_string(),
-        );
-        let table = catalog
-            .create_table(
-                ident.namespace(),
-                TableCreation::builder()
-                    .name("reads".to_string())
-                    .schema(id_schema())
-                    .build(),
-            )
-            .await
-            .expect("create table");
-        let start = InputOffset {
-            table: TableUuid::of(&table),
-            table_name: table.identifier().to_string(),
-            snapshot: SnapshotId::new(1),
-            position: FilePosition::new(0),
-        };
-        let end = InputOffset {
-            snapshot: SnapshotId::new(999),
-            ..start.clone()
-        };
-        let plan = WindowPlan {
-            start,
-            end,
-            files: Vec::new(),
-            num_input_rows: 0,
-        };
-        let read_schema = table.metadata().current_schema().clone();
-        let error =
-            MicroBatchTableProvider::try_new(table, &plan, &read_schema).expect_err("must refuse");
-        assert!(
-            error
-                .to_string()
-                .contains("Cannot find the end snapshot: 999"),
-            "unexpected message: {error}"
-        );
-    }
-
     async fn counted_table() -> (TempDir, Table) {
         let warehouse = TempDir::new().expect("warehouse");
         let catalog = crate::memory_catalog(warehouse.path().to_str().expect("utf8"))
@@ -584,6 +546,129 @@ mod tests {
         }
         let table = catalog.load_table(&ident).await.expect("load table");
         (warehouse, table)
+    }
+
+    #[tokio::test]
+    async fn provider_serves_an_empty_projection_with_the_planned_row_count() {
+        let (_warehouse, table) = counted_table().await;
+        let planner = WindowPlanner::new(table.clone(), ReadCaps::default());
+        let from = planner
+            .initial_offset(&StartPosition::Earliest)
+            .await
+            .expect("initial")
+            .expect("some");
+        let plan = planner
+            .next_window(&from, WindowLimit::Unbounded)
+            .await
+            .expect("window")
+            .expect("some");
+        assert_eq!(plan.files.len(), 3);
+        let read_schema = table.metadata().current_schema().clone();
+        let provider = provider_for_plan(table, &plan, &read_schema).expect("provider");
+        let ctx = SessionContext::new();
+        ctx.register_table("counts", Arc::clone(&provider))
+            .expect("register");
+        let batches = ctx
+            .sql("SELECT COUNT(*) AS total FROM counts")
+            .await
+            .expect("sql")
+            .collect()
+            .await
+            .expect("collect");
+        assert_eq!(batches.len(), 1);
+        let total = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::Int64Array>()
+            .expect("Int64")
+            .value(0);
+        assert_eq!(total, 3);
+        let state = ctx.state();
+        let empty: Vec<usize> = Vec::new();
+        let scan = provider
+            .scan(&state, Some(&empty), &[], None)
+            .await
+            .expect("scan");
+        let stream = scan.execute(0, ctx.task_ctx()).expect("execute");
+        let projected: Vec<datafusion::arrow::record_batch::RecordBatch> =
+            futures::TryStreamExt::try_collect(stream)
+                .await
+                .expect("stream");
+        assert!(
+            projected.len() > 1,
+            "one batch per file, got {}",
+            projected.len()
+        );
+        assert!(projected.iter().all(|batch| batch.num_columns() == 0));
+        let rows: usize = projected.iter().map(RecordBatch::num_rows).sum();
+        assert_eq!(rows, 3);
+        let empty_schema: SchemaRef = Arc::new(datafusion::arrow::datatypes::Schema::empty());
+        let one_column = Arc::new(datafusion::arrow::datatypes::Schema::new(vec![
+            datafusion::arrow::datatypes::Field::new(
+                "id",
+                datafusion::arrow::datatypes::DataType::Int32,
+                false,
+            ),
+        ]));
+        let vacant = datafusion::arrow::record_batch::RecordBatch::try_new(
+            one_column,
+            vec![Arc::new(Int32Array::from(Vec::<i32>::new()))],
+        )
+        .expect("vacant");
+        let kept = zero_column_batch(&vacant, &empty_schema).expect("kept");
+        assert_eq!(kept.num_columns(), 0);
+        assert_eq!(kept.num_rows(), 0);
+    }
+
+    #[tokio::test]
+    async fn provider_refuses_unknown_end_snapshot() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = crate::memory_catalog(warehouse.path().to_str().expect("utf8"))
+            .await
+            .expect("catalog");
+        catalog
+            .create_namespace(&NamespaceIdent::new("sales".to_string()), HashMap::new())
+            .await
+            .expect("namespace");
+        let ident = TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "reads".to_string(),
+        );
+        let table = catalog
+            .create_table(
+                ident.namespace(),
+                TableCreation::builder()
+                    .name("reads".to_string())
+                    .schema(id_schema())
+                    .build(),
+            )
+            .await
+            .expect("create table");
+        let start = InputOffset {
+            table: TableUuid::of(&table),
+            table_name: table.identifier().to_string(),
+            snapshot: SnapshotId::new(1),
+            position: FilePosition::new(0),
+        };
+        let end = InputOffset {
+            snapshot: SnapshotId::new(999),
+            ..start.clone()
+        };
+        let plan = WindowPlan {
+            start,
+            end,
+            files: Vec::new(),
+            num_input_rows: 0,
+        };
+        let read_schema = table.metadata().current_schema().clone();
+        let error =
+            MicroBatchTableProvider::try_new(table, &plan, &read_schema).expect_err("must refuse");
+        assert!(
+            error
+                .to_string()
+                .contains("Cannot find the end snapshot: 999"),
+            "unexpected message: {error}"
+        );
     }
 
     #[tokio::test]

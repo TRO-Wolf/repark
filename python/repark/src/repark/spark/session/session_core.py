@@ -1899,15 +1899,7 @@ class ReparkSession:
             _sf._active_session = None
         self._spark_context._mark_stopped()
         self._alive_token["alive"] = False
-        # R-AUTO-MEMCAT: the auto catalog's temp warehouse dies with the session (:memory:).
-        auto_warehouse = self._alive_token.pop("auto_catalog_warehouse", None)
-        if auto_warehouse is not None:
-            with contextlib.suppress(Exception):
-                auto_warehouse.cleanup()
-        artifact_dir = self._alive_token.pop("artifact_dir", None)
-        if artifact_dir is not None:
-            with contextlib.suppress(Exception):
-                _session_surface.cleanup_artifact_dir(artifact_dir)
+        _session_surface.release_session_resources(self)
         self._inner = None
 
     class Builder:

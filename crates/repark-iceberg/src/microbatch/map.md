@@ -67,6 +67,75 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   `Catalog` as a corrupt stamp, not `UnsupportedOffsetFormat`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-024
   pins: mb-2a/C-016
+- `error.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10):** MBE-8's text names the catalogs a
+  streaming sink can live in today, "Use Glue or S3 Tables". It also named "the Postgres
+  catalog or REST"; neither is a sink catalog in this build.
+  pins: mb-4-foreach-eo/C-047
+- `stray_remedy.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10):** three more reasons a rollback
+  is not printed, one per lost bound of the walk: `PREVIOUS_GONE`, `HEAD_GONE`,
+  `HEAD_UNRECORDED`. The text pin runs over all five reasons. `HEAD_GONE` says "no longer
+  on the sink's main branch", not "in the table": after a rollback under a pending mark the
+  head is still in the table (measured).
+  pins: mb-4-foreach-eo/C-040
+- `stray_remedy.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10, owner ruling on the third
+  verify's first two S1):** what a stray refusal tells the operator, as data. `StrayRemedy`
+  holds where the stray sits (`under`: the stamped snapshot above it, or none), how to
+  discard its rows (`Discard::RollBack { to, then }`, `EmptyStart`, or `Unproven(why)`) and
+  how to keep them (`Restart::NewName(position)` or `Unnamed`). Its `Display` is the text:
+  a rollback names the snapshot, a new query name comes with its
+  `repark.cdc.start-after-snapshot-id` position, and a recipe the driver cannot prove is
+  replaced by the reason it is not printed. Fold 3's one constant sentence said "roll back
+  to the newest stamped snapshot, or start under a new name"; the first half is false for a
+  stray under a stamp and the second half re-delivered every stamped batch (16 of 32 rows
+  duplicated in the verify). Three in-file pins hold the three shapes of the text.
+  pins: mb-4-foreach-eo/C-033
+- `error.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10):** `RecoveryReason::StraySinkCommit
+  { snapshot, operation, remedy }` is the reason for an unstamped snapshot on the sink's main
+  branch; it prints the fold-2 sentence, "Its rows are in the sink." and the remedy.
+  `UnstampedSinkCommit` loses the remedy sentence: it remains for a batch that ended without
+  its stamp and for a snapshot the audit finds off the main branch. `UnstampedSinkChange`
+  no longer promises a refused restart or a rollback: it says the change is still in place
+  and that a restart checks only the main branch's snapshots (the third verify's S3).
+  pins: mb-4-foreach-eo/C-033
+- `starting_mark.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10):** the head a query started on
+  outlives the mark. The first stamped commit replaces the mark in the offsets property, so
+  it carries the head as the summary key `repark.cdc.starting-head` (a snapshot id, or
+  `none` for a sink that started empty): `summary_entry` and `from_summary`. This is the
+  lower bound of the walk under a first stamp; without it a row that was in the sink before
+  the query started could not be told from a stray. Still two durable items: the key rides
+  the stamp. In-file pins: only epoch 0 can be pending (the third verify's surviving mutant
+  N2), and the summary round trip.
+  pins: mb-4-foreach-eo/C-032, C-039
+- `window.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10):** `WindowPlanner::ends_snapshot`
+  answers whether an offset has consumed every added file of its snapshot. Only then is
+  `repark.cdc.start-after-snapshot-id` an exact continuation, so only then does a refusal
+  offer a new query name. pins: mb-4-foreach-eo/C-033
+- `starting_mark.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling D2):** the starting
+  mark of a `foreachBatch` query, as the first value of its offsets property:
+  `{"format-version":1,"pending-epoch":0,"starting-head":<snapshot id or null>}`. It is not a
+  third durable item (NS-2): it lives under the offsets key and the first stamped commit
+  replaces it. `StartingMark::from_property` answers none for a value that is not a mark (the
+  offsets record), refuses a pending epoch other than 0 and a missing head as corrupt, and
+  refuses another format version as `UnsupportedOffsetFormat`. A build older than this fold
+  reads a mark as a corrupt offsets record and refuses the query; it does not misread it.
+  pins: mb-4-foreach-eo/C-028
+- `error.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling D3):** the two unstamped
+  reasons name both remedies: roll the sink back to its newest stamped snapshot (to the head
+  the query first started on, if no batch is stamped yet), or start the query under a new
+  name. The text says a restart refuses while an unstamped snapshot sits above the newest
+  stamped batch: a stray below the batch's own stamped commit leaves that batch durable, and
+  the restart resumes after it. `UnstampedSinkCommit` without an operation (the `toTable`
+  door's own check) keeps its text byte for byte.
+  pins: mb-4-foreach-eo/C-030
+- `error.rs` — **MB-4-FOREACH-EO fold 2 (2026-10-09):** `RecoveryReason::UnstampedSinkCommit`
+  gains `operation: Option<String>` (rendered ` (append)` after the snapshot id when known;
+  the text without it is unchanged) and `UnstampedSinkChange { what }` joins it for a change
+  that made no snapshot. MBE-19's text no longer lists `DELETE` without its condition.
+  pins: mb-4-foreach-eo/C-017, C-027
+- `error.rs` — **MB-4-FOREACH-EO (2026-10-09):** `UnstampedSinkWrite { sink, epoch }`
+  (MBE-19), the refusal of a commit to the declared sink that cannot carry the epoch stamp.
+  Its text names the shapes the sink does take inside a `foreachBatch` body.
+  pins: mb-4-foreach-eo/C-006
 - `error.rs` — the sketch's §3.2: `MicroBatchError` with every variant,
   `thiserror`, `#[non_exhaustive]` (NS-15), plus `RecoveryReason`. Fold 1
   adds `OffsetPositionOutOfRange`, and `UnsupportedOffsetFormat.found`
@@ -141,7 +210,14 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   Fold 2 (G2, 2026-10-07): the caller passes the read schema, and the end
   snapshot is only checked to exist. Every task is re-stamped with that
   schema and its top-level field ids.
+  MB-4 round 3c (2026-10-08): `read_batches` serves an empty projection
+  through `zero_column_batch`, which rebuilds the batch with the incoming
+  row count stated explicitly — `RecordBatch::try_new` cannot infer a row
+  count from zero columns, so `count(*)` over a batch frame failed
+  engine-Internal before. Non-empty projections still read through the
+  crate's `conform_batch`, untouched.
   pins: mb-1/C-012, C-015, C-016, C-022, C-033
+  pins: mb-4/C-027
   **EMPTY-PROJECTION-COUNT-1 step 1 (2026-10-09):** the red-first
   `provider_counts_rows_through_an_empty_projection` pin — `COUNT(*)` over a
   three-file window holding an empty file, read through the shared

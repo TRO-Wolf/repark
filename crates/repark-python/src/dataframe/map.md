@@ -95,6 +95,9 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   consumers pass at most one argument); a length-matched vector renames the
   export schema and batches, anything else keeps engine names.
   pins: attr-id-1/C-062
+  **MB-4 round 2b (2026-10-08):** `count`, `show` and `__arrow_c_stream__` call
+  `streaming_errors::refuse_streaming_action` first, so every facade batch action on a
+  streaming frame refuses DM-3 before execution. pins: mb-4/C-023
 - [`tests.rs`](tests.rs) — **STAMP-2-R5P6-2 step 3 (2026-10-07):**
   `name_rule_is_read_once_per_handle_and_children_inherit_their_parents` holds the rule
   cache: a handle starts unread, a frame made before and one made after a

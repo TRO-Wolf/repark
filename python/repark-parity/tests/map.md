@@ -1,5 +1,7 @@
 # map — python/repark-parity/tests
 
+MB-4 fold 1 follow-up (2026-10-09): the CAP-1 mirror follows the shrink-only ratchet `dataframe/core.py` 3461 → 3260 from the S2 UDF commit (the map-bridge execution family moved to `map_bridge.py`); the gate row moved in that commit, the mirror in this one. pins: mb-4/C-039
+MB-4 item 9 (2026-10-09): the CAP-1 mirror follows the shrink-only ratchet `session/session_core.py` 2277 → 2269. The `check_lib_py.py` exception row moved in the same commit; no row raised. pins: mb-4/C-030
 ATTR-ID-1 S3b (2026-10-01): CAP-1 mirror row ratcheted down with the code — `dataframe/core.py` 3921 → 3846 (the filter quoter moves to `column_fields.py`). The `check_lib_py.py` exception row moved in the same commit; no row raised. pins: attr-id-1/C-025
 STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): the CAP-1 mirror follows the shrink-only ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277. pins: string-literal-escape-1/C-011
 
@@ -531,6 +533,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   across it. pins: api-freeze/C-002
 - `test_api_freeze.py` — **API-FREEZE (2026-09-02; release 2026-09-03: the STATUS pointer now names the cut tag, not the waiting gate):** the v1.0 freeze pin. Holds three things
 - `test_api_freeze.py` — **U7 PR1 (2026-09-24):** the frozen-names count pin moves 890 → 891 with the regenerated register (`NumberFormatException` added to `errors.py`). No other pin moves.
+- `test_api_freeze.py` — **MB-4 round 3c (2026-10-08):** the frozen-names count pin moves 891 → 893 with the regenerated register (`RecoveryRequiredException` and `StreamingQueryException` added to `errors.py`). No other pin moves.
   at once: every packet row's `decision` equals its `recommend` (15 YES / 15 YES-except / 5 NO,
   dated 2026-09-02, the owner's rule sentence byte-equal in packet, inventory and
   `docs/release.md`); the checked-in register

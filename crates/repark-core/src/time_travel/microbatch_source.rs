@@ -13,7 +13,9 @@ use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
 use repark_iceberg::microbatch::error::MicroBatchError;
-use repark_iceberg::microbatch::offset::{FilePosition, InputOffset, SnapshotId, TableUuid};
+use repark_iceberg::microbatch::offset::{
+    FilePosition, InputOffset, SinkRecord, SnapshotId, TableUuid,
+};
 use repark_iceberg::microbatch::provider::provider_for_plan;
 use repark_iceberg::microbatch::window::{
     ReadCaps, StartPosition, WindowLimit, WindowPlan, WindowPlanner,
@@ -227,7 +229,11 @@ impl WeakSessionState {
     pub(crate) fn of(context: &SessionContext) -> Self {
         let state = context.state_weak_ref();
         WeakSessionState(Arc::new(move || {
-            state.upgrade().map(|state| state.read().clone())
+            state.upgrade().map(|state| {
+                let mut snapshot = state.read().clone();
+                snapshot.mark_start_execution();
+                snapshot
+            })
         }))
     }
 
@@ -328,6 +334,21 @@ impl MicroBatchSource {
             .named(self.name.clone())
             .initial_offset(&self.start)
             .await
+    }
+
+    pub async fn whole_snapshot_end(&self, record: &SinkRecord) -> Option<SnapshotId> {
+        let [offset] = record.offsets.inputs() else {
+            return None;
+        };
+        if offset.table != self.uuid && offset.table_name != self.ident.to_string() {
+            return None;
+        }
+        let table = self.load().await.ok()?;
+        let planner = WindowPlanner::new(table, self.caps).named(self.name.clone());
+        match planner.ends_snapshot(offset).await {
+            Ok(true) => Some(offset.snapshot),
+            Ok(false) | Err(_) => None,
+        }
     }
 
     #[must_use]

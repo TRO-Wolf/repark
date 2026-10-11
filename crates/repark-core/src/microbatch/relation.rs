@@ -191,6 +191,11 @@ impl PlanTemplate {
     }
 }
 
+#[must_use]
+pub fn is_streaming_frame(frame: &DataFrame) -> bool {
+    streams(frame.logical_plan())
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn check_output_mode(mode: &str) -> Result<(), MicroBatchError> {
     match mode.to_ascii_lowercase().as_str() {

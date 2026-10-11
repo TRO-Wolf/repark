@@ -5,6 +5,7 @@ pub(crate) mod merge_append_series;
 pub(crate) mod output_spec;
 pub(crate) mod overwrite_scope;
 pub(crate) mod session_write_conf;
+mod stamp_fence_gate;
 pub(crate) mod tracing;
 pub(crate) mod v1_ref_writes;
 pub(crate) mod v3_types;

@@ -1217,6 +1217,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - SQL aliases: [sql/map.md](sql/map.md)
 - DataFrame implementation: [dataframe/map.md](dataframe/map.md)
 - Session implementation: [session/map.md](session/map.md)
+- Streaming implementation: [streaming/map.md](streaming/map.md)
 - Tests: [../../../tests/map.md](../../../tests/map.md)
 - Design: [../../../../../docs/design/python-facade.md](../../../../../docs/design/python-facade.md)
 - **FNP-MISC-1 (2026-09-15, on #597):** `functions_byname.py` classifies #597's camel-case aliases against PySpark 4.1.2 `call_function`: `shiftLeft` / `shiftRight` / `shiftRightUnsigned` resolve through Spark's case-insensitive builtin lookup (facade-only routine rows), while `approxCountDistinct` / `toDegrees` / `toRadians` raise `UNRESOLVED_ROUTINE` (non-routine rows).

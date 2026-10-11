@@ -39,5 +39,12 @@ oracle later.
   Surface first against a stub binding, wire-up last.
 - [mb-5-multi-source.md](mb-5-multi-source.md) — **MB-5, grade B:** vector
   offsets, inputs pinned at their end snapshots, the hook for S-2.
+- [mb4_lineage_timing.py](mb4_lineage_timing.py) — **MB-4 fold 3 (2026-10-10, owner ruling
+  D5):** the quiet-box measurement for the lineage-audit gate. `measure <result.json>` times a
+  200-epoch `availableNow` run, three runs each, over a `foreachBatch` body that appends, one
+  that writes nothing, and `toTable` as the control; `compare <no_audit.json> <audited.json>`
+  prints the ratios and exits 1 when a `foreachBatch` ratio is above 1.05. Run `measure` on a
+  build of the commit before the audit (`2877da20`) and on the head, each after `make
+  develop`, with no other build holding the box. It retires when the D5 gate is recorded.
 
 Up: [../map.md](../map.md).

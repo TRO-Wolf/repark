@@ -40,7 +40,14 @@ pins: mb-3/C-031
 ## Contents
 
 - `mod.rs` — `#![forbid(unsafe_code)]` (NS-17) and the module declarations: `pub mod driver;`,
-  `pub mod progress;`, `pub mod relation;`, the private `run`, and the test-only modules. No re-exports: callers use full paths.
+  `pub mod progress;`, `pub mod relation;`, the private `run`, and the test-only modules
+  (`race_tests` joined them in MB-4 items 13 and 14).
+  **MB-4 round 2b (2026-10-08):** re-exports `MicroBatchError` and its direct field types
+  (`RecoveryReason`, the offset ids, `Generation`, `iceberg::spec::Operation`) so the binding
+  names the mapper's input without a `repark-iceberg` edge, following the three
+  `repark_iceberg::write` re-export precedents (`partition_overwrite_mode.rs`,
+  `session/writer_layout.rs`, `error_map.rs`).
+  pins: mb-4/C-022
 - `driver.rs` — the driver's types (`Trigger`, `QueryState`, `ShutdownOutcome`, `BatchBody`,
   `SinkSpec`, `StreamSpec`, `RecordedLocation`), the `StreamingQueryManager` and the
   `QueryHandle`. **The Session seam (sketch §3.5):** `StreamingQueryManager::of` installs the
@@ -116,6 +123,10 @@ pins: mb-3/C-031
     bounds the sink load and the source open and hands the limit to the source
     (`with_catalog_timeout`, fold 2), and `stop` bounds its re-read of the sink after a
     stop timeout, falling back to the durable record it knows. pins: mb-3/C-010
+  **MB-4 round 3 (2026-10-08):** the R-12/OQ-5 private seam for the facade pins:
+  `start_below_catalog_check` is `pub` and no longer `cfg(test)` (the `Skip` arm with it),
+  so the `_native` doors start on the memory catalogs the pins run on; `start` keeps the
+  MBE-8 refusal. pins: mb-4/C-024
 - `run.rs`, ENC-1 fold 1 (2026-10-09): `engine_error` maps the keyed-table refusal to
   `MicroBatchError::EncryptedSinkRefused` (the verifier saw `Catalog("External error: …")`).
   The table sink staged Parquet before the commit refused; the catalog guard now refuses the
@@ -199,6 +210,9 @@ pins: mb-3/C-031
   `RightMark` follow the semi rule). A streaming frame inside a subquery expression refuses
   too (unmeasured). Registry row `MB-3-STATIC-SIDE-1`.
   pins: mb-3/C-015
+  **MB-4 round 2b (2026-10-08):** `is_streaming_frame` exposes the plan predicate over
+  `DataFrame::logical_plan` for the binding's action guard and `isStreaming` door.
+  pins: mb-4/C-023
 - `relation_tests.rs` — the template pins (`#[cfg(test)] #[path]` from `relation.rs`).
   pins: mb-3/C-008
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).
@@ -217,6 +231,210 @@ pins: mb-3/C-031
   needs recovery); and a driver that resumed before another run committed. The restart of the
   refused query continues at the next epoch each time.
   pins: mb-3/C-002, C-030
+- `race_tests.rs` — the two race pins carried from MB-3 (MB-4 items 13 and 14, 2026-10-08).
+  **Item 13, `two_sessions_racing_one_query_land_every_row_exactly_once`:** fifty iterations,
+  each on a fresh warehouse with three source files of two rows. Two sessions over the one
+  memory catalog register the same sink and `queryName` (one `QueryId`, two `RunId`s) on the
+  `toTable` door, and two threads start them off a `std::sync::Barrier`. No commit is injected:
+  both commits are the drivers' own. Each iteration asserts the sink holds ids 1 to 6 once each,
+  epochs 0, 1 and 2 are each stamped once over every retained snapshot and on the main lineage,
+  one run stamped all three, that run drained, and the other driver either drained with
+  nothing to do or ended `Fenced`, or `RecoveryRequired` with a durable record, naming that run.
+  *Why the catalog is slowed.* In one process the sink's `BatchScope` serialises the two
+  drivers, and a driver that enters the scope with a current view of the sink is fenced by the
+  batch's resume-point check in `run.rs` before it writes; measured on the unslowed catalog,
+  none of fifty iterations reached the append fence. `SlowCatalog` wraps each session's catalog
+  and holds every loaded view of the sink for a seeded 0 to 12 ms, which is what a catalog
+  round trip gives a driver in another process: a view that is stale by the time it commits.
+  With it the loser stages its file and is refused at the commit in 46 to 48 of fifty
+  iterations (three runs). The pin counts those iterations, as parquet files under the sink
+  that no snapshot added, and fails under a floor of ten, so it cannot go quiet if the race
+  stops reaching the fence. The seed fixes the pauses and not the scheduler; a failure prints
+  the iteration, the seed, both endings, the sink's rows and the summary history. The door is
+  `toTable` only: the `foreachBatch` body is at-least-once by contract (see the door
+  guarantees above), so "each row once in the sink" is not its promise.
+  pins: mb-4/C-113
+  **Item 14, `a_restart_after_the_fences_recovery_required_ending_refuses_by_name`:** on both
+  doors, drives a query to the ending of `fence_tests.rs`'s
+  `a_fence_refusal_that_needs_recovery_ends_recovery_required` (a foreign commit sets this
+  query's offsets property, with no stamped snapshot, inside the driver's commit refresh), then
+  registers the same sink and `queryName` on a fresh session and manager over the same catalog
+  and starts, twice. The answer is the refusal the sketch names for a property with no stamped
+  snapshot behind it (Q10 and §3.4, `read_resume_point`): `RecoveryRequired` with
+  `StampedSnapshotExpired`, epoch 0 and the property's record as the durable offset, the same
+  on the exception, on the `ShutdownOutcome` and, since the round-4 race-lane Q1 ruling
+  (2026-10-09, `conclude` adopts the reported record when the lifecycle holds none), on
+  `QueryHandle::durable()`. It does not resume: no body runs, the sink
+  keeps no snapshot, no stamp and no row, so nothing is duplicated and nothing is skipped past.
+  The helpers that build the ending repeat `fence_tests.rs`'s private ones, because that file
+  is outside this slice's footprint.
+  pins: mb-4/C-114, C-029
+- `run_tests.rs` — **MB-4-FOREACH-EO fold 6 (2026-10-10):** the MBE-8 pin reads the corrected
+  text, "Use Glue or S3 Tables" (the two catalogs a streaming sink can live in).
+  pins: mb-4-foreach-eo/C-047
+- `run.rs`, `exactly_once_tests.rs` — **MB-4-FOREACH-EO fold 5 (2026-10-10, rulings on the
+  fourth verify).**
+  - **`Run::refuse_moved_sink` runs on both doors.** `Run::walk_a_foreach_name` asks
+    `carried_by_foreach` once, at a `toTable` start: a name that holds a starting mark, or
+    that ever carried a `foreachBatch` stamp still on the main branch, is walked at the
+    start and before every batch and refused exactly as the `foreachBatch` door refuses it
+    (owner ruling D2). Fold 4 walked on the `foreachBatch` door only, so one `toTable` run
+    under the same name stamped over a stray that a process death had hidden, and no later
+    start read that stretch (source 40, sink 44). A name that only ran through `toTable` is
+    unchanged; the sink-replaced check stays a `foreachBatch` rule.
+  - **`Run::enter_scope` enters the scope with `BatchScope::enter_on`**, so the scope holds
+    the head the driver read when the batch began and a `foreachBatch` stamped commit is
+    refused over a stray that landed after it (prevention; the rule is in the iceberg
+    crate's `sink_offsets` maps).
+  - **`fixed_at_the_batch_start`** optimizes the frame once before it goes to the body, with
+    the state the batch was planned under, so `current_timestamp()` and `current_date()`
+    are one value for the whole micro-batch: every action on the frame and the sink write
+    see the same literal. Before, each action folded its own time (`collect()` and the
+    stored row differed inside one body). Spark 4.1.2 measured: one value for two
+    `collect()` calls 1.3 s apart and the write.
+  - Pins: a stray beside the body's stamped commit never ends under the stamp (written
+    before it, the stamped commit is refused and the batch's rows land once; written after
+    it, the stray is the head) and two restarts refuse; a `toTable` start under a
+    `foreachBatch` name refuses twice with the remedy the batch's own ending printed; a name
+    that ran through `foreachBatch` and then `toTable` still refuses a foreign commit on the
+    `toTable` door; a name that only ran through `toTable` takes one as before.
+  pins: mb-4-foreach-eo/C-041, C-043, C-044
+- `run.rs`, `driver.rs`, `exactly_once_tests.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10,
+  rulings on the third verify).**
+  - **`Run::refuse_moved_sink`** asks `stray_on_main` (the walk above and under the newest
+    stamp) at every start and before every body, and `Run::stray_reason` asks the source,
+    for each stamp the remedy would name, whether its offset ends on a snapshot boundary
+    (`MicroBatchSource::whole_snapshot_end`); only then is a new query name printed with a
+    start-after position. The audit after a body, on a violation, prefers the walk's reason
+    over the audit's own, so the batch's ending and every later start print the same text.
+    Loud on every start: a stray under the batch's own stamp no longer lets the restart
+    resume.
+  - **`Run::refuse_unwritable_sink`**, at the start and before every batch: the `toTable`
+    door asks R-007's `refuse_nested_ns_supply` about the sink (`NestedWrite::Unreadable`,
+    the question a DataFrame write asks) and ends with the batch doors' text before a file
+    is staged; the `foreachBatch` door refuses a keyed sink (ENC-1) before the starting mark,
+    with the `toTable` door's text. `TableTarget::quoted` is the label.
+  - Pins: the stray beside the stamped commit refuses two restarts with the remedy as data,
+    above the stamp and under it; a keyed sink refuses the `foreachBatch` door with no mark,
+    no snapshot and no body.
+  pins: mb-4-foreach-eo/C-032, C-033, C-035, C-037
+- `run.rs`, `testing.rs`, `exactly_once_tests.rs`, `fence_tests.rs`, `race_tests.rs`,
+  `reload_tests.rs`, `timeout_tests.rs` — **MB-4-FOREACH-EO fold 3 (2026-10-10, owner ruling
+  D2): the starting mark.**
+  - **`Run::mark_the_start`**, at the start of the trigger loop, on the `foreachBatch` door
+    and only while the query has no stamp. If the sink holds the query's mark, check (a)'s
+    baseline is the head the mark recorded. If it holds none, this is the query's first start
+    (or a query that died before this fold): the baseline is the head found now and the mark
+    is written, one property-only commit bounded by the catalog timeout. Fold 2's epoch-0
+    limit is closed: a stray write between the mark and the first stamp refuses the first
+    restart, naming the snapshot, and no body runs.
+  - **A markless checkpoint** (no stamp, no mark) is treated as fold 2 treated it, from the
+    head found, and gets its mark at that start. Rows a pre-fold run left in the sink are
+    therefore not findings.
+  - **The `toTable` door writes no mark** and reads a `foreachBatch` query's pending mark as
+    nothing durable.
+  - **Pins.** `exactly_once_tests.rs`: the restart at epoch 0 refuses from the mark, twice,
+    with no body run; the mark's exact value on an empty and on a seeded sink, a restart that
+    finds it writing nothing, and the first stamp replacing it; a markless start; two query
+    names on one sink, each with its own mark and stamps; the `toTable` door. The mark is one
+    more commit and one more sink load at a `foreachBatch` query's first start, so the tests
+    that count loads moved: the racer's injection index in `fence_tests.rs` and
+    `race_tests.rs` (3 to 4), the stalls in `timeout_tests.rs` (2 to 3), and the first group in
+    `reload_tests.rs`. Tests that arm a commit fault before start write the mark first
+    (`testing.rs::mark_the_start`), so the fault still meets the body's commit.
+  pins: mb-4-foreach-eo/C-028, C-029
+- `run.rs`, `body_statements.rs`, `exactly_once_tests.rs`, `fence_tests.rs`,
+  `lifecycle_tests.rs`, `timeout_tests.rs`, `race_tests.rs` — **MB-4-FOREACH-EO fold 2
+  (2026-10-09, orchestrator ruling after the re-verify: an invariant on the sink's lineage,
+  checked by the driver, not a list of routes).** The entry below describes fold 1; where
+  the two differ this one holds.
+  - **Check (a), `Run::refuse_moved_sink`**, on the `foreachBatch` door only: at the start of
+    the trigger loop and again on the sink each batch loads, before the body. The table under
+    the sink's name must still be the one the query registered on, and no unstamped snapshot
+    may sit above the query's newest stamp. A query with no stamp yet is measured from the
+    head it found at start (`Cursor::baseline`), so a restart of a query that never committed
+    batch 0 cannot refuse; it replays, and check (b) stops it again if the stray write
+    recurs.
+  - **Check (b), in `Run::foreach_batch`**: a `SinkMark` is taken before the body, and after
+    the body, returned or raised, the sink is loaded once and compared. Any violation ends
+    `RecoveryRequired` before the epoch is recorded durable, and it wins over the body's own
+    error and over a typed refusal. This overturns fold 1's two rules "a failed body is not
+    audited" and "a foreign snapshot beside a stamped epoch is tolerated". The load replaces
+    the one the stamp-only commit made, so a body with no sink write costs the same catalog
+    calls as before and a body with one costs one load more.
+  - **`body_statements.rs`**: `refuse_unstamped_sink_dml` is called from
+    `PreExecute::execute`, the one place a DataFusion-planned statement runs on all three
+    doors. Inside a body scope it finds every `Dml` node the statement will execute (it does
+    not descend into a plain `EXPLAIN`) and refuses `UnstampedSinkWrite` when the target is
+    the sink. That is how `EXPLAIN ANALYZE INSERT`, a bare-dialect `INSERT` and any other
+    statement that reaches the fork's table provider are refused before they land; it does not
+    match on the word `EXPLAIN`.
+  - **Pins.** `exactly_once_tests.rs` is rewritten around one `Shaped` body (a stray write of
+    six kinds, at a chosen epoch, with the body's own append before or after it, or a raise):
+    a stray with no stamped commit; a stray before and after the stamped commit, and what the
+    restart does in each; a failed body audited and two restarts refused with no body run;
+    the epoch-0 limit; rows already in the sink and a seeded restart; a foreign snapshot
+    between runs; a property change beside the stamped commit; the guarded property change;
+    the planned `INSERT` and `EXPLAIN ANALYZE INSERT` refused and a plain `EXPLAIN` passing.
+    `fence_tests.rs` gains `a_writing_body_that_loses_its_epoch_ends_fenced_and_lands_no_row`
+    (the racer's stamp injected at the body's own load and at its commit). The seeded
+    `foreachBatch` race keeps its invariants and loses its floor: the audit's load lets the
+    waiting driver see the winner's commit before it enters, so the loss now mostly lands on
+    the resume check (measured 2 of 50 at a body's staged write), and a floor of zero is no
+    assertion, so the test asserts the per-iteration invariants only. The replaced-sink pins in
+    `lifecycle_tests.rs` and `timeout_tests.rs` read `UnstampedSinkChange`, and no stamp
+    lands on the new table.
+  - **Cost (measured 2026-10-09, 200 epochs, `availableNow`, one file per batch, a memory
+    catalog, medians of three runs on a shared box).** Before the fold and after it, run one
+    after the other: a body that appends to the sink 60.6 s and 61.3 s (+1.1 %); a body that
+    writes nothing 7.8 s and 8.7 s (+10.8 %, over the 5 % line); `toTable`, whose code did
+    not change, 55.8 s and 57.3 s (+2.6 %). The mark's snapshot set was then made lazy and
+    the final build measured alone twenty minutes later: 63.4 s, 6.5 s and 57.2 s. The
+    no-write reading did not reproduce (it is 16 % under the "before" figure) and the
+    writing body read 4.5 % over it, so the box does not resolve a difference under about
+    5 %, and no reading puts the audit above it twice.
+  pins: mb-4-foreach-eo/C-016, C-017, C-018, C-019, C-023, C-025, C-026
+- `run.rs`, `exactly_once_tests.rs`, `foreach_tests.rs`, `race_tests.rs`, `testing.rs` —
+  **MB-4-FOREACH-EO (2026-10-09, owner ruling "FIX IT" on the MB-4 verify's S1):** the
+  `foreachBatch` door is exactly-once on the declared sink. This overturns MB-3 D-2 and
+  C-005 (b), (c), (e): the body's own sink commit carries the stamp, and the trailing
+  `commit_stamp_only` runs only for a body that made no sink commit.
+  - **`Run::foreach_batch`** polls the body inside `BatchScopeGuard::scope_body`, so a commit
+    the body issues on the driver's task claims the batch stamp at the stamped arms of
+    `repark-iceberg` (the design is in
+    [write/sink_offsets/map.md](../../../repark-iceberg/src/write/sink_offsets/map.md)).
+  - **After the body**, in this order. A stamped commit the scope recorded is the batch's
+    commit. A commit whose outcome the guard saw as unknown goes through
+    `resolve_unknown_outcome`, the `toTable` door's rule: found is durable, not found ends
+    `RecoveryRequired(CommitOutcomeUnknown)`. A body that raised fails the query, but an epoch
+    that committed is recorded durable first, so the restart resumes after it and the body is
+    not replayed (skipped entirely, as the sketch's §3.5 step 2 and Flink's committer do). The
+    error is the scope's typed refusal when it has one (`Fenced` from a lost race,
+    `SinkCommittedTwice`, `UnstampedSinkWrite`), else `BatchFailed` with the body's masked
+    text. A body that returned with no stamped commit while an unstamped snapshot landed on
+    the sink above the batch's base ends `RecoveryRequired(UnstampedSinkCommit)` and writes no
+    stamp; otherwise the stamp-only commit runs as before.
+  - **A failed body is not audited for unstamped snapshots.** The check costs a sink load, and
+    a body's own error is the answer the caller needs (MBE-16). A write that slips the scope is
+    caught on the first batch that returns.
+  - **`exactly_once_tests.rs`**: the second write (`SinkCommittedTwice`, the first lands once),
+    the body with no sink write, a sink write from a spawned task with and without the body's
+    own stamped commit, a guarded property change (`UnstampedSinkWrite`, nothing lands), a
+    bare-dialect `INSERT` the guard cannot see (`UnstampedSinkCommit`), the two unknown
+    outcomes over `FaultCatalog`, and the scope ending with the batch.
+  - **`foreach_tests.rs`**: three pins rewritten for the new contract. The stamp pin reads
+    `stamp 0 with 3 rows, stamp 1 with 2 rows` and no trailing snapshot; the failed-body pin
+    fails before any sink write and replays its epoch; the pin that read "replays at least
+    once" is now `a_body_that_fails_after_its_sink_write_leaves_the_epoch_durable`.
+  - **`race_tests.rs`**: `race_once` takes the door, and
+    `two_sessions_racing_foreach_bodies_land_every_row_exactly_once` runs the 50 seeded
+    iterations with a body that appends to the sink. Its floor is 10 iterations that refused a
+    staged write (measured 2026-10-09: 43 of 50).
+  - **`testing.rs`** gains `append_frame` (the body's append, through the registry snapshot
+    the statement funnel builds) and `SinkWriter`, a `BatchBody` that appends N times.
+  - **Mutants (2026-10-09).** Eight hand mutants, eight red; the table is in the
+    MB-4-FOREACH-EO ledger.
+  pins: mb-4-foreach-eo/C-001, C-002, C-004, C-007, C-009, C-010, C-011, C-013
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005

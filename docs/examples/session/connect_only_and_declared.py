@@ -17,8 +17,6 @@ COVERS: list[str] = [
     "SparkSession.registerProgressHandler",
     "SparkSession.removeProgressHandler",
     "SparkSession.clearProgressHandlers",
-    "SparkSession.readStream",
-    "SparkSession.streams",
     "SparkSession.dataSource",
 ]
 
@@ -62,8 +60,6 @@ def main() -> None:
             PySparkRuntimeError,
             "ONLY_SUPPORTED_WITH_SPARK_CONNECT",
         )
-        _expect_refusal(lambda: repark.readStream, PySparkNotImplementedError, "readStream")
-        _expect_refusal(lambda: repark.streams, PySparkNotImplementedError, "streams")
         _expect_refusal(lambda: repark.dataSource, PySparkNotImplementedError, "dataSource")
     finally:
         repark.stop()

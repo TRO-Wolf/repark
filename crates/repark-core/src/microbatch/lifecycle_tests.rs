@@ -778,9 +778,10 @@ async fn a_sink_replaced_under_the_body_ends_recovery_required() {
             MicroBatchError::RecoveryRequired {
                 epoch,
                 durable: None,
-                reason: RecoveryReason::UnstampedSinkCommit { .. },
+                reason: RecoveryReason::UnstampedSinkChange { what },
                 ..
             } if *epoch == Epoch::FIRST
+                && what.starts_with("the table under the sink's name was replaced")
         ),
         "{error:?}"
     );

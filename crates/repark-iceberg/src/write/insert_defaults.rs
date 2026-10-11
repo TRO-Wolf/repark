@@ -420,7 +420,8 @@ fn object_name_target(
     ))
 }
 
-fn table_reference_target(reference: &TableReference) -> Option<(String, TableIdent)> {
+#[must_use]
+pub fn table_reference_target(reference: &TableReference) -> Option<(String, TableIdent)> {
     let namespace = NamespaceIdent::from_vec(vec![reference.schema()?.to_string()]).ok()?;
     Some((
         reference.catalog()?.to_string(),

@@ -275,6 +275,15 @@ impl TableTarget {
         })
     }
 
+    pub(crate) fn quoted(&self) -> String {
+        parse_table_identifier_segments(&self.name)
+            .unwrap_or_else(|_| vec![self.name.clone()])
+            .iter()
+            .map(|part| format!("`{}`", part.replace('`', "``")))
+            .collect::<Vec<_>>()
+            .join(".")
+    }
+
     pub(crate) async fn load(&self) -> Result<Table, MicroBatchError> {
         self.catalog.load_table(&self.ident).await.map_err(|error| {
             MicroBatchError::Catalog(repark_common::redaction::mask_value_credentials(&format!(
@@ -474,7 +483,7 @@ pub(crate) struct QueryShared {
     pub(crate) run_id: RunId,
     pub(crate) name: Option<String>,
     pub(crate) sink: TableTarget,
-    sink_uuid: TableUuid,
+    pub(crate) sink_uuid: TableUuid,
     pub(crate) trigger: Trigger,
     stop_timeout: Option<Duration>,
     pub(crate) polling_delay: Duration,
@@ -600,6 +609,9 @@ impl QueryShared {
                 durable: reported,
                 reason,
             }) => {
+                if lifecycle.durable.is_none() {
+                    lifecycle.durable = reported.as_deref().cloned();
+                }
                 let durable = reported.as_deref().cloned().or(durable);
                 let error = MicroBatchError::RecoveryRequired {
                     query,
@@ -658,7 +670,6 @@ pub(crate) enum Ending {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CatalogCheck {
     Enforce,
-    #[cfg(test)]
     Skip,
 }
 
@@ -751,8 +762,8 @@ impl QueryHandle {
         self.launch(CatalogCheck::Enforce)
     }
 
-    #[cfg(test)]
-    pub(crate) fn start_below_catalog_check(&self) -> Result<(), MicroBatchError> {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn start_below_catalog_check(&self) -> Result<(), MicroBatchError> {
         self.launch(CatalogCheck::Skip)
     }
 
