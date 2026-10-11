@@ -36,6 +36,11 @@ works, so the attribute is gone rather than documented.
   `ntz_store::store_kernel_sql`, so an assigned value whose target is `timestamptz_ns` goes
   through the zoned kernel in both row-level modes. Reason and scope: the `ntz_store.rs` row
   of the parent directory map. pins: ice-tstzns-wall-1/C-003
+- `lineage.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `update_projection_sql`
+  calls `update_cast::nested_micro_ntz_wall_sql` with the source type from one
+  `analyzed_types` of the SET expressions (`assignment_source_types`, before the
+  projection is built). `None` leaves the expression as main's. A wall source
+  is not wrapped. pins: ice-ntz-nested-wall-1/C-003
 - `lineage.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `update_projection_sql` asks
   `ntz_store::wall_cast_sql` for the wrap, so an assigned value whose target is
   `Timestamp(ns, None)` goes through the nanosecond wall kernel as a microsecond one goes

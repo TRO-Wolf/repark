@@ -25,4 +25,13 @@ door and UPDATE from a sibling `TIMESTAMP` column store the session wall. A
 wall literal stays `1767323045123456`. A field assignment stays the session
 wall. A nested `TIMESTAMP` leaf stays the instant.
 
-**Next:** `update_projection_sql`, then `insert_timestamp_ns::after_analysis`.
+**Step 2, identity update:** `update_projection_sql` calls the same walk. One
+`analyzed_types` of the SET expressions, inside `collect_identity_update_rows`,
+supplies the source types. A failed analysis passes `None`, and the expression
+stays main's. Red without the call: the unit test's projection is
+`(s) AS `st`` (`evidence/pin-red-step2-update.txt`). Green with the call.
+The identity facade (sibling column, wall literal, nested `TIMESTAMP`) stores
+the session wall, `1767323045123456`, and the instant. Those stored values are
+already the fold's, so this call does not move them.
+
+**Next:** `insert_timestamp_ns::after_analysis`.

@@ -574,10 +574,13 @@ repark-core's error map.
   integer, a `timestamp_ns` leaf, a nested `TIMESTAMP` leaf, a list and a map stay
   the original expression. `ntz_store::zone_store_frame`,
   `merge/insert.rs` `zone_wrapping_stream_sql` and `store_assignment_cast_sql`
-  call it. `store_assignment_cast_sql` asks the walk first and, on `None`, keeps
-  the kernel or `nested_leaf_cast_sql`. A caller with no source type passes
+  call it, and so does `predicate_dml/lineage.rs` `update_projection_sql`.
+  `store_assignment_cast_sql` asks the walk first and, on `None`, keeps the
+  kernel or `nested_leaf_cast_sql`. A caller with no source type passes
   `None`, and the expression stays main's. `zone_stores` hands the walk the
-  Arrow type of a struct, list or map.
+  Arrow type of a struct, list or map. Identity UPDATE asks `analyzed_types`
+  once for the SET expressions and passes that slice; a failed analysis passes
+  `None`.
   pins: ice-ntz-nested-wall-1/C-003
 - `update_cast.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_cast_sql` is the one
   home of the `arrow_cast((expr), '<type>')` store-assignment cast, with the field ids

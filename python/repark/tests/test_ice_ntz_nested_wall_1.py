@@ -4,7 +4,8 @@ The doors wired so far are the ones ``zone_store_frame`` serves (``INSERT … BY
 ``INSERT OVERWRITE … SELECT``, ``overwritePartitions``, ``insertInto(overwrite=True)``),
 the MERGE INSERT doors ``zone_wrapping_stream_sql`` serves, and the whole-struct
 assignment doors ``store_assignment_cast_sql`` serves when the caller passes an instant
-source type (MERGE UPDATE from a column, UPDATE from a sibling ``TIMESTAMP`` column).
+source type (MERGE UPDATE from a column, UPDATE from a sibling ``TIMESTAMP`` column)
+and the identity UPDATE ``update_projection_sql`` serves for that same sibling column.
 An instant stores the session wall. A wall literal stores ``1767323045123456`` in every
 zone. A nested ``TIMESTAMP`` leaf stores the instant. A caller with no source type
 passes ``None`` and the expression stays main's.
@@ -273,6 +274,36 @@ def test_whole_struct_update_stores_the_session_wall(tmp_path: Path, zone: str) 
             f"MERGE INTO {control} t USING ice.ns.src s ON t.id = s.id "
             "WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.l, 'n', 1)"
         )
+        assert leaf_ticks(spark, control, "st.v") == [WALL_TICK], "control"
+    finally:
+        spark.stop()
+
+
+@pytest.mark.parametrize("zone", ZONES)
+def test_identity_update_stores_the_session_wall(tmp_path: Path, zone: str) -> None:
+    """Identity UPDATE stores the session wall when the SET source is an instant."""
+    spark = open_session(zone, tmp_path)
+    try:
+        write_source(spark)
+        expected = SESSION_WALL[zone]
+        sibling = "ice.ns.sibling"
+        update_from_sibling(spark, sibling)
+        assert leaf_ticks(spark, sibling, "st.v") == [expected], "sibling"
+        wall = "ice.ns.wall_upd"
+        create_nested(spark, wall, "TIMESTAMP_NTZ")
+        update_whole_where(spark, wall, WALL)
+        assert leaf_ticks(spark, wall, "st.v") == [WALL_TICK], "wall"
+        control = "ice.ns.ltz"
+        spark.sql(
+            f"CREATE TABLE {control} "
+            "(id INT, st STRUCT<v: TIMESTAMP, n: INT>, k INT, c TIMESTAMP) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(
+            f"INSERT INTO {control} SELECT 1, "
+            "named_struct('v', CAST(NULL AS TIMESTAMP), 'n', 0), 0, l FROM ice.ns.src"
+        )
+        spark.sql(f"UPDATE {control} SET st = named_struct('v', c, 'n', 1) WHERE id >= 0")
         assert leaf_ticks(spark, control, "st.v") == [WALL_TICK], "control"
     finally:
         spark.stop()
