@@ -460,7 +460,8 @@ fn place_wall(name: &str, array: &ArrayRef, session_zone: &str, display: &str) -
     use crate::session_time_zone::canonical_session_zone_id;
 
     let wall = primitive_of(name, array)?;
-    let localised = localise_at(session_zone, wall).map_err(|error| external(display, error))?;
+    let localised =
+        localise_at(session_zone, wall, name).map_err(|error| external(display, error))?;
     Ok(Arc::new(localised.with_timezone(canonical_session_zone_id(session_zone))) as ArrayRef)
 }
 
@@ -535,7 +536,7 @@ pub(crate) fn shape_batch(
             PostgresMapping::Timestamp if !prefer_timestamp_ntz => match array.data_type() {
                 DataType::Timestamp(TimeUnit::Microsecond, Some(_)) => {
                     let zoned = primitive_of(name, array)?;
-                    let walls = unlocalise(session_zone, zoned)
+                    let walls = unlocalise(session_zone, zoned, name)
                         .map_err(|error| external(display, error))?;
                     Arc::new(walls) as ArrayRef
                 }
@@ -592,7 +593,7 @@ fn wall_clocks(
     let stamps = primitive_of(name, array)?;
     match array.data_type() {
         DataType::Timestamp(TimeUnit::Microsecond, Some(_)) => {
-            unlocalise(session_zone, stamps).map_err(|error| external(display, error))
+            unlocalise(session_zone, stamps, name).map_err(|error| external(display, error))
         }
         _ => Ok(stamps.clone()),
     }

@@ -965,6 +965,20 @@ fn timestamp_and_timestamptz_columns_keep_their_placement() {
 }
 
 #[test]
+fn a_gap_wall_into_a_timestamptz_column_refuses_naming_the_column() {
+    let gap = shape_single_zone(
+        PostgresMapping::Timestamptz,
+        DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+        naive_ts(&[wall_micros("2024-03-10 02:30:00")]),
+        "America/New_York",
+    )
+    .expect_err("a gap wall refuses");
+    let message = gap.to_string();
+    assert!(message.contains("`v`"), "{message}");
+    assert!(!message.contains("``"), "{message}");
+}
+
+#[test]
 fn a_wall_past_the_calendar_refuses_named() {
     let error = shape_single(PostgresMapping::Utf8, DataType::Utf8, naive_ts(&[i64::MAX]))
         .expect_err("an unformattable wall refuses");

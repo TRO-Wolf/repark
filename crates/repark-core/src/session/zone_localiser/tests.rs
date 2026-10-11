@@ -40,7 +40,7 @@ fn zone(id: &str) -> Tz {
 
 fn offset_hours(text: &str, id: &str) -> Option<i64> {
     let at = wall(text);
-    place(at, zone(id), 0)
+    place(at, zone(id), 0, "")
         .ok()
         .map(|instant| (at - instant) / MICROS_PER_HOUR)
 }
@@ -71,7 +71,7 @@ fn a_wall_clock_is_placed_at_the_zone_offset_of_its_date() {
     );
     let winter = wall("2024-01-15 12:00");
     assert_eq!(
-        place(winter, zone("+05:30"), 0).ok(),
+        place(winter, zone("+05:30"), 0, "").ok(),
         Some(winter - 11 * MICROS_PER_HOUR / 2)
     );
 }
@@ -79,8 +79,8 @@ fn a_wall_clock_is_placed_at_the_zone_offset_of_its_date() {
 #[test]
 fn gap_and_overlap_wall_clocks_refuse_naming_the_zone_row() {
     let new_york = zone("America/New_York");
-    let gap = refusal(&place(wall("2024-03-10 02:30"), new_york, 3));
-    let overlap = refusal(&place(wall("2024-11-03 01:30"), new_york, 4));
+    let gap = refusal(&place(wall("2024-03-10 02:30"), new_york, 3, ""));
+    let overlap = refusal(&place(wall("2024-11-03 01:30"), new_york, 4, ""));
     assert_eq!(gap, Some(ValueRefusal::WallClockGap));
     assert_eq!(overlap, Some(ValueRefusal::WallClockOverlap));
     assert_eq!(
@@ -88,13 +88,13 @@ fn gap_and_overlap_wall_clocks_refuse_naming_the_zone_row() {
         "CONNECT-DIV-pg-timestamp-zone"
     );
     let edge = wall("2024-03-10 02:30");
-    assert_eq!(place(edge, zone("UTC"), 0).ok(), Some(edge));
+    assert_eq!(place(edge, zone("UTC"), 0, "").ok(), Some(edge));
 }
 
 #[test]
 fn a_wall_clock_past_2099_is_placed_by_the_final_rule() {
     assert_eq!(
-        place(wall("2100-07-01 12:00"), zone("America/New_York"), 0).ok(),
+        place(wall("2100-07-01 12:00"), zone("America/New_York"), 0, "").ok(),
         Some(4_118_140_800_000_000)
     );
     assert_eq!(
@@ -106,8 +106,8 @@ fn a_wall_clock_past_2099_is_placed_by_the_final_rule() {
         Some(-4)
     );
     let new_york = zone("America/New_York");
-    let gap = refusal(&place(wall("2150-03-08 02:30"), new_york, 0));
-    let overlap = refusal(&place(wall("2150-11-01 01:30"), new_york, 0));
+    let gap = refusal(&place(wall("2150-03-08 02:30"), new_york, 0, ""));
+    let overlap = refusal(&place(wall("2150-11-01 01:30"), new_york, 0, ""));
     assert_eq!(gap, Some(ValueRefusal::WallClockGap));
     assert_eq!(overlap, Some(ValueRefusal::WallClockOverlap));
 }
@@ -157,15 +157,15 @@ fn southern_and_far_future_wall_clocks_keep_their_season() {
 fn the_end_of_the_calendar_refuses_as_out_of_range_never_as_a_gap() {
     let late = wall("262142-12-31 23:00");
     for id in ["-12:00", "America/New_York"] {
-        let refused = refusal(&place(late, zone(id), 0));
+        let refused = refusal(&place(late, zone(id), 0, ""));
         assert_eq!(refused, Some(ValueRefusal::TimestampPastCalendar), "{id}");
     }
     assert_eq!(
-        place(late, zone("+12:00"), 0).ok(),
+        place(late, zone("+12:00"), 0, "").ok(),
         Some(late - 12 * MICROS_PER_HOUR)
     );
     let beyond = wall("262143-01-01 00:00");
-    let refused = refusal(&place(beyond, zone("UTC"), 0));
+    let refused = refusal(&place(beyond, zone("UTC"), 0, ""));
     assert_eq!(refused, Some(ValueRefusal::TimestampPastCalendar));
     assert_eq!(
         ValueRefusal::TimestampPastCalendar.registry_row(),
@@ -186,33 +186,33 @@ fn an_instant_unplaces_to_the_wall_clock_of_its_zone() {
         ("2100-07-01 12:00", "America/New_York"),
         ("2150-01-15 12:00", "Australia/Sydney"),
     ] {
-        let placed = place(wall(text), zone(id), 0).expect("a placeable wall");
+        let placed = place(wall(text), zone(id), 0, "").expect("a placeable wall");
         assert_eq!(
-            unplace(placed, zone(id), 0).ok(),
+            unplace(placed, zone(id), 0, "").ok(),
             Some(wall(text)),
             "{id} {text}"
         );
     }
-    let before = place(wall("2024-11-03 00:30"), new_york, 0).expect("before the fold");
+    let before = place(wall("2024-11-03 00:30"), new_york, 0, "").expect("before the fold");
     let fold_first = before + MICROS_PER_HOUR;
     let fold_second = before + 2 * MICROS_PER_HOUR;
     assert_eq!(
-        unplace(fold_first, new_york, 0).ok(),
+        unplace(fold_first, new_york, 0, "").ok(),
         Some(wall("2024-11-03 01:30"))
     );
     assert_eq!(
-        unplace(fold_first, new_york, 0).ok(),
-        unplace(fold_second, new_york, 0).ok()
+        unplace(fold_first, new_york, 0, "").ok(),
+        unplace(fold_second, new_york, 0, "").ok()
     );
 }
 
 #[test]
 fn unlocalise_keeps_nulls_and_returns_bare_walls() {
     let placed = TimestampMicrosecondArray::from(vec![
-        Some(place(wall("2024-07-15 12:00"), zone("America/New_York"), 0).expect("placed")),
+        Some(place(wall("2024-07-15 12:00"), zone("America/New_York"), 0, "").expect("placed")),
         None,
     ]);
-    let walls = unlocalise("America/New_York", &placed).expect("walls");
+    let walls = unlocalise("America/New_York", &placed, "").expect("walls");
     assert_eq!(walls.value(0), wall("2024-07-15 12:00"));
     assert!(walls.is_null(1));
     assert_eq!(
@@ -223,11 +223,11 @@ fn unlocalise_keeps_nulls_and_returns_bare_walls() {
 
 #[test]
 fn an_instant_past_the_calendar_refuses_as_out_of_range() {
-    let refused = refusal(&unplace(i64::MAX, zone("UTC"), 0));
+    let refused = refusal(&unplace(i64::MAX, zone("UTC"), 0, ""));
     assert_eq!(refused, Some(ValueRefusal::TimestampPastCalendar));
-    let late = place(wall("262142-07-15 12:00"), zone("America/New_York"), 0).expect("placed");
+    let late = place(wall("262142-07-15 12:00"), zone("America/New_York"), 0, "").expect("placed");
     assert_eq!(
-        unplace(late, zone("America/New_York"), 0).ok(),
+        unplace(late, zone("America/New_York"), 0, "").ok(),
         Some(wall("262142-07-15 12:00"))
     );
 }
@@ -239,11 +239,11 @@ fn localise_at_matches_the_shared_localiser_and_keeps_gap_refusals() {
     let shared = localiser("America/New_York")
         .localise(&walls)
         .expect("shared");
-    let direct = localise_at("America/New_York", &walls).expect("direct");
+    let direct = localise_at("America/New_York", &walls, "").expect("direct");
     assert_eq!(direct.value(0), shared.value(0));
     assert!(direct.is_null(1));
     let gap = TimestampMicrosecondArray::from(vec![wall("2024-03-10 02:30")]);
-    let refused = localise_at("America/New_York", &gap).expect_err("a gap refuses");
+    let refused = localise_at("America/New_York", &gap, "").expect_err("a gap refuses");
     assert!(matches!(
         refused,
         ConnectError::UnrepresentableValue {

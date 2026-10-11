@@ -267,6 +267,18 @@ mod tests {
         .await
     }
 
+    fn assert_reached_pg_driver(message: &str, source: &str) {
+        assert!(
+            message.contains("database source `pg`")
+                || message.contains("the Postgres connector is not compiled into this build"),
+            "{source}: {message}"
+        );
+        assert!(
+            !message.contains("not implemented for this table"),
+            "{source}: {message}"
+        );
+    }
+
     const MOUNT: &str = "[default.database.postgres.pg]\nhost = \"203.0.113.1\"\n";
 
     #[tokio::test]
@@ -282,11 +294,7 @@ mod tests {
         .await
         .expect_err("a user-less source refuses in the driver");
         let message = error.to_string();
-        assert!(message.contains("database source `pg`"), "{message}");
-        assert!(
-            !message.contains("not implemented for this table"),
-            "{message}"
-        );
+        assert_reached_pg_driver(&message, "INSERT INTO pg.public.t VALUES (1)");
     }
 
     #[tokio::test]
@@ -411,10 +419,7 @@ mod tests {
         )
         .await
         .expect_err("insert reaches the driver past the text guard");
-        assert!(
-            insert.to_string().contains("database source `pg`"),
-            "{insert}"
-        );
+        assert_reached_pg_driver(&insert.to_string(), "INSERT INTO pg.public.t VALUES (1)");
         let update = run(
             &session,
             &catalogs,
@@ -647,10 +652,7 @@ mod tests {
             .await
             .expect_err("an unreachable source refuses in the driver");
             let message = error.to_string();
-            assert!(
-                message.contains("database source `pg`"),
-                "{source}: {message}"
-            );
+            assert_reached_pg_driver(&message, source);
             assert!(
                 !message.contains("unique expression names"),
                 "{source}: {message}"

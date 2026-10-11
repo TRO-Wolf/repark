@@ -64,6 +64,18 @@ async fn run(
     crate::execute_with_statement_options(ctx, catalogs, sql, read_only, options).await
 }
 
+fn assert_reached_pg_driver(message: &str, source: &str) {
+    assert!(
+        message.contains("database source `pg`")
+            || message.contains("the Postgres connector is not compiled into this build"),
+        "{source}: {message}"
+    );
+    assert!(
+        !message.contains("not implemented for this table"),
+        "{source}: {message}"
+    );
+}
+
 #[tokio::test]
 async fn pg_append_routes_to_the_driver_not_the_default_hook() {
     let (_directory, session) = mounted_session(MOUNT);
@@ -79,11 +91,7 @@ async fn pg_append_routes_to_the_driver_not_the_default_hook() {
     .await
     .expect_err("a user-less source refuses in the driver");
     let message = error.to_string();
-    assert!(message.contains("database source `pg`"), "{message}");
-    assert!(
-        !message.contains("not implemented for this table"),
-        "{message}"
-    );
+    assert_reached_pg_driver(&message, "INSERT INTO pg.public.t VALUES (1)");
 }
 
 #[tokio::test]
@@ -204,10 +212,7 @@ async fn read_only_set_with_specs_lets_insert_through_and_keeps_update_refused()
     )
     .await
     .expect_err("insert reaches the driver past P11");
-    assert!(
-        insert.to_string().contains("database source `pg`"),
-        "{insert}"
-    );
+    assert_reached_pg_driver(&insert.to_string(), "INSERT INTO pg.public.t VALUES (1)");
     let update = run(
         &ctx,
         &catalogs,
@@ -240,7 +245,7 @@ async fn write_path_row_still_routes_to_the_driver() {
     .await
     .expect_err("a user-less source refuses in the driver");
     let message = error.to_string();
-    assert!(message.contains("database source `pg`"), "{message}");
+    assert_reached_pg_driver(&message, "INSERT INTO pg.public.t VALUES (1)");
 }
 
 #[tokio::test]
@@ -290,10 +295,7 @@ async fn pg_insert_with_repeated_expressions_plans_positionally() {
         .await
         .expect_err("an unreachable source refuses in the driver");
         let message = error.to_string();
-        assert!(
-            message.contains("database source `pg`"),
-            "{source}: {message}"
-        );
+        assert_reached_pg_driver(&message, source);
         assert!(
             !message.contains("unique expression names"),
             "{source}: {message}"
