@@ -3,13 +3,15 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, ArrayRef, AsArray, RecordBatch, StringArray};
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::Result;
+use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
 use repark_functions::null_narrowing::{NARROWED_BESIDE_NULL_NAME, NARROWED_BESIDE_VALUE_NAME};
 
 const SAME_TEXT: &str = "SAME TEXT AS ABOVE";
+const FINAL_PLAN: &str = "logical_plan";
 
-pub(crate) async fn without_marks(ctx: &SessionContext, explained: DataFrame) -> Result<DataFrame> {
-    let batches = explained.collect().await?;
+pub(crate) async fn explain(ctx: &SessionContext, plan: LogicalPlan) -> Result<DataFrame> {
+    let batches = ctx.execute_logical_plan(plan).await?.collect().await?;
     let mut shown: Option<String> = None;
     let cleared = batches
         .iter()
@@ -29,11 +31,11 @@ fn clear_batch(batch: &RecordBatch, shown: &mut Option<String>) -> Result<Record
                 return Arc::clone(column);
             }
             let texts = column.as_string::<i32>();
-            let logical = |row: usize| {
-                kinds.as_ref().is_none_or(|kinds| {
-                    kinds.data_type() == &DataType::Utf8
-                        && kinds.as_string::<i32>().value(row).contains("logical_plan")
-                })
+            let kind = |row: usize| match kinds.as_ref() {
+                Some(kinds) if kinds.data_type() == &DataType::Utf8 => {
+                    kinds.as_string::<i32>().value(row)
+                }
+                _ => FINAL_PLAN,
             };
             let cleared: StringArray = (0..texts.len())
                 .map(|row| {
@@ -41,14 +43,15 @@ fn clear_batch(batch: &RecordBatch, shown: &mut Option<String>) -> Result<Record
                         return None;
                     }
                     let text = texts.value(row);
-                    if text == SAME_TEXT || !logical(row) {
+                    if text == SAME_TEXT || !kind(row).contains(FINAL_PLAN) {
                         return Some(text.to_string());
                     }
                     let plain = strip_marks(text);
-                    if shown.as_deref() == Some(plain.as_str()) {
+                    let repeats = shown.as_deref() == Some(plain.as_str());
+                    *shown = Some(plain.clone());
+                    if repeats && kind(row) != FINAL_PLAN {
                         return Some(SAME_TEXT.to_string());
                     }
-                    *shown = Some(plain.clone());
                     Some(plain)
                 })
                 .collect();
@@ -104,5 +107,46 @@ mod tests {
             "Projection: coalesce(CAST(t.c + f(\")\", 1) AS Timestamp(µs, \"UTC\")), t.d) AS v"
         );
         assert_eq!(strip_marks("Projection: t.c"), "Projection: t.c");
+    }
+
+    #[test]
+    fn a_row_that_repeats_the_row_above_is_collapsed_and_the_final_plan_is_not() {
+        let marked = format!("Projection: f({NARROWED_BESIDE_VALUE_NAME}(t.c))");
+        let kinds = StringArray::from(vec![
+            "initial_logical_plan",
+            "logical_plan after a",
+            "logical_plan after b",
+            "logical_plan after c",
+            "logical_plan",
+            "physical_plan",
+        ]);
+        let plans = StringArray::from(vec![
+            "Projection: f(t.c)",
+            marked.as_str(),
+            SAME_TEXT,
+            "Projection: g(t.c)",
+            "Projection: g(t.c)",
+            "ProjectionExec",
+        ]);
+        let batch = RecordBatch::try_from_iter(vec![
+            ("plan_type", Arc::new(kinds) as ArrayRef),
+            ("plan", Arc::new(plans) as ArrayRef),
+        ])
+        .unwrap();
+        let cleared = clear_batch(&batch, &mut None).unwrap();
+        let shown: Vec<&str> = (cleared.column(1).as_string::<i32>().iter())
+            .flatten()
+            .collect();
+        assert_eq!(
+            shown,
+            vec![
+                "Projection: f(t.c)",
+                SAME_TEXT,
+                SAME_TEXT,
+                "Projection: g(t.c)",
+                "Projection: g(t.c)",
+                "ProjectionExec",
+            ]
+        );
     }
 }

@@ -161,6 +161,7 @@ pub(crate) fn before_coercion(expr: Expr, schema: &DFSchema) -> Result<Transform
     if let Expr::Cast(cast) = &expr
         && instant(cast.field.data_type())
         && !is_narrowing_mark(&cast.expr)
+        && !null_literal(&cast.expr)
         && holds(&cast.expr, schema, true)
     {
         return Ok(Transformed::yes(
@@ -222,6 +223,7 @@ pub(crate) struct Marks {
     scoped: bool,
     produces: bool,
     kept: Cell<bool>,
+    untagged: Cell<bool>,
 }
 
 impl Marks {
@@ -231,6 +233,7 @@ impl Marks {
             scoped: produces && holds_nanoseconds(schema),
             produces,
             kept: Cell::new(false),
+            untagged: Cell::new(false),
         }
     }
 
@@ -247,14 +250,25 @@ impl Marks {
         let settling = |node: Expr| {
             self.keep_written_cast(node, schema)
                 .transform_data(|node| Ok(cast(node)))?
-                .transform_data(|node| settle_branches(node, schema, asks))
+                .transform_data(|node| {
+                    if unifies_branches(&node) && any_branch(&node, is_tagged_null) {
+                        self.untagged.set(true);
+                    }
+                    settle_branches(node, schema, asks)
+                })
         };
-        if !asks {
-            return expr.transform_up(settling);
+        self.untagged.set(false);
+        let rewritten = if asks {
+            let marking = |node| mark_coerced_branches(node, schema);
+            mark_coerced_narrowing(expr, schema, false)
+                .transform_data(|root| root.transform_down_up(marking, settling))?
+        } else {
+            expr.transform_up(settling)?
+        };
+        if !self.untagged.get() {
+            return Ok(rewritten);
         }
-        let marking = |node| mark_coerced_branches(node, schema);
-        mark_coerced_narrowing(expr, schema, false)
-            .transform_data(|root| root.transform_down_up(marking, settling))
+        Ok(rewritten.update_data(named_by_itself))
     }
 
     fn keep_written_cast(&self, expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
@@ -293,6 +307,19 @@ impl Marks {
         let schema = input_schema(&plan);
         plan.map_expressions(|expr| expr.transform_up(|node| Ok(drop_kept_cast(node, &schema))))?
             .map_data(LogicalPlan::recompute_schema)
+    }
+}
+
+fn named_by_itself(expr: Expr) -> Expr {
+    match expr {
+        Expr::Alias(alias)
+            if alias.relation.is_none()
+                && alias.metadata.is_none()
+                && alias.expr.schema_name().to_string() == alias.name =>
+        {
+            *alias.expr
+        }
+        other => other,
     }
 }
 

@@ -244,11 +244,10 @@ async fn execute_passthrough_inner(
     if insert_source {
         return ctx.execute_logical_plan(insert_input(&plan)?).await;
     }
-    let explained = matches!(&plan, LogicalPlan::Explain(_));
-    let dataframe = ctx.execute_logical_plan(plan).await?;
-    if explained {
-        return crate::router::explain_marks::without_marks(ctx, dataframe).await;
+    if matches!(&plan, LogicalPlan::Explain(_)) {
+        return crate::router::explain_marks::explain(ctx, plan).await;
     }
+    let dataframe = ctx.execute_logical_plan(plan).await?;
     if !is_eager_command {
         return Ok(dataframe);
     }

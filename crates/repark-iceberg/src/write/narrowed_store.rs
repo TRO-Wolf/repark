@@ -3,8 +3,12 @@ use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema};
 use datafusion::datasource::source_as_provider;
 use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::utils::grouping_set_to_exprlist;
-use datafusion::logical_expr::{Distinct, Expr, ExprSchemable, JoinType, LogicalPlan, Operator};
+use datafusion::logical_expr::{
+    Aggregate, Cast, Distinct, Expr, ExprSchemable, Join, JoinType, LogicalPlan, Operator,
+    TableScan,
+};
 use datafusion::prelude::SessionContext;
 
 use super::negated_null_store::ViewDefinitionPlans;
@@ -268,42 +272,8 @@ fn column_lineage(plan: &LogicalPlan, index: usize, walk: Walk<'_>) -> Option<Na
                 .find(|narrowing| narrowing.beside_untyped_null)
                 .or(Some(first))
         }
-        LogicalPlan::Join(join) => {
-            let left_width = join.left.schema().fields().len();
-            let beside_left = Scope {
-                plan: &join.left,
-                outer: walk.outer,
-            };
-            let right =
-                |index: usize| column_lineage(&join.right, index, walk.within(Some(&beside_left)));
-            match join.join_type {
-                JoinType::Inner | JoinType::Left | JoinType::Right | JoinType::Full => {
-                    if index < left_width {
-                        below(&join.left, index)
-                    } else {
-                        right(index - left_width)
-                    }
-                }
-                JoinType::LeftSemi | JoinType::LeftAnti | JoinType::LeftMark => {
-                    (index < left_width).then(|| below(&join.left, index))?
-                }
-                JoinType::RightSemi | JoinType::RightAnti | JoinType::RightMark => {
-                    (index < join.right.schema().fields().len()).then(|| right(index))?
-                }
-            }
-        }
-        LogicalPlan::Aggregate(aggregate) => {
-            let grouped = grouping_set_to_exprlist(&aggregate.group_expr).ok()?;
-            let grouping_sets = matches!(aggregate.group_expr.as_slice(), [Expr::GroupingSet(_)]);
-            let computed = grouped.len() + usize::from(grouping_sets);
-            if index < grouped.len() {
-                of(grouped[index], &aggregate.input)
-            } else if index < computed {
-                None
-            } else {
-                of(aggregate.aggr_expr.get(index - computed)?, &aggregate.input)
-            }
-        }
+        LogicalPlan::Join(join) => join_lineage(join, index, walk),
+        LogicalPlan::Aggregate(aggregate) => aggregate_lineage(aggregate, index, walk),
         LogicalPlan::Window(window) => {
             let carried = window.input.schema().fields().len();
             if index < carried {
@@ -319,19 +289,7 @@ fn column_lineage(plan: &LogicalPlan, index: usize, walk: Walk<'_>) -> Option<Na
         LogicalPlan::RecursiveQuery(recursive) => {
             below(&recursive.static_term, index).or_else(|| below(&recursive.recursive_term, index))
         }
-        LogicalPlan::TableScan(scan) => {
-            let source_index = match &scan.projection {
-                Some(projection) => projection.get(index).copied()?,
-                None => index,
-            };
-            if let Some(source) = scan.source.get_logical_plan() {
-                return below(&source, source_index);
-            }
-            let source = (walk.views)
-                .zip(source_as_provider(&scan.source).ok())
-                .and_then(|(views, provider)| views.definition_plan(provider.as_ref()))?;
-            below(&source, source_index)
-        }
+        LogicalPlan::TableScan(scan) => scan_lineage(scan, index, walk),
         other => {
             let schema = other.schema();
             if index >= schema.fields().len() {
@@ -346,6 +304,59 @@ fn column_lineage(plan: &LogicalPlan, index: usize, walk: Walk<'_>) -> Option<Na
             })
         }
     }
+}
+
+fn join_lineage(join: &Join, index: usize, walk: Walk<'_>) -> Option<Narrowing> {
+    let left_width = join.left.schema().fields().len();
+    let beside_left = Scope {
+        plan: &join.left,
+        outer: walk.outer,
+    };
+    let left = |index: usize| column_lineage(&join.left, index, walk);
+    let right = |index: usize| column_lineage(&join.right, index, walk.within(Some(&beside_left)));
+    match join.join_type {
+        JoinType::Inner | JoinType::Left | JoinType::Right | JoinType::Full => {
+            if index < left_width {
+                left(index)
+            } else {
+                right(index - left_width)
+            }
+        }
+        JoinType::LeftSemi | JoinType::LeftAnti | JoinType::LeftMark => {
+            (index < left_width).then(|| left(index))?
+        }
+        JoinType::RightSemi | JoinType::RightAnti | JoinType::RightMark => {
+            (index < join.right.schema().fields().len()).then(|| right(index))?
+        }
+    }
+}
+
+fn aggregate_lineage(aggregate: &Aggregate, index: usize, walk: Walk<'_>) -> Option<Narrowing> {
+    let of = |expr: &Expr| expr_lineage(expr, Some(&aggregate.input), walk);
+    let grouped = grouping_set_to_exprlist(&aggregate.group_expr).ok()?;
+    let grouping_sets = matches!(aggregate.group_expr.as_slice(), [Expr::GroupingSet(_)]);
+    let computed = grouped.len() + usize::from(grouping_sets);
+    if index < grouped.len() {
+        of(grouped[index])
+    } else if index < computed {
+        None
+    } else {
+        of(aggregate.aggr_expr.get(index - computed)?)
+    }
+}
+
+fn scan_lineage(scan: &TableScan, index: usize, walk: Walk<'_>) -> Option<Narrowing> {
+    let source_index = match &scan.projection {
+        Some(projection) => projection.get(index).copied()?,
+        None => index,
+    };
+    if let Some(source) = scan.source.get_logical_plan() {
+        return column_lineage(&source, source_index, walk);
+    }
+    let source = (walk.views)
+        .zip(source_as_provider(&scan.source).ok())
+        .and_then(|(views, provider)| views.definition_plan(provider.as_ref()))?;
+    column_lineage(&source, source_index, walk)
 }
 
 fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Option<Narrowing> {
@@ -368,47 +379,9 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
             let outer = enclosing.as_ref().or(walk.outer);
             column_lineage(&subquery.subquery, 0, walk.within(outer))
         }
-        Expr::Cast(cast) => {
-            let target = cast.field.data_type();
-            if let Some(marked) = mark_of(&cast.expr) {
-                return found(marked, cut_of(target), input, walk);
-            }
-            match target {
-                DataType::Timestamp(unit, Some(_)) if *unit != TimeUnit::Nanosecond => {
-                    through(&cast.expr, Call::Timestamp)
-                }
-                DataType::Date32 => through(&cast.expr, Call::Date),
-                _ => opaque(&cast.expr),
-            }
-        }
+        Expr::Cast(cast) => cast_lineage(cast, input, walk),
         Expr::TryCast(cast) => opaque(&cast.expr),
-        Expr::ScalarFunction(function) => {
-            let name = function.func.name();
-            if let Some(marked) = mark_of(expr) {
-                return found(marked, Cut::Other, input, walk);
-            }
-            if name == NARROW_TIMESTAMP_NS_UDF_NAME {
-                let value = function.args.first()?;
-                return match mark_of(value) {
-                    Some(marked) => found(marked, Cut::Instant, input, walk),
-                    None => through(value, Call::Timestamp),
-                };
-            }
-            if SELECTING_UDF_NAMES.contains(&name) {
-                return opaque(function.args.first()?);
-            }
-            if matches!(expr_type(expr, input), Ok(DataType::Boolean)) {
-                return None;
-            }
-            let nearest = match name {
-                DATE_TRUNC_UDF_NAME => Call::Trunc,
-                TIMESTAMP_TO_DATE_UDF_NAME => Call::Date,
-                name if DATE_UDF_NAMES.contains(&name) && function.args.len() == 1 => Call::Date,
-                COALESCE_UDF_NAME => walk.nearest,
-                _ => Call::Opaque,
-            };
-            (function.args.iter()).find_map(|argument| through(argument, nearest))
-        }
+        Expr::ScalarFunction(function) => function_lineage(expr, function, input, walk),
         Expr::Case(case) => (case.when_then_expr.iter())
             .find_map(|(_, then)| carried(then))
             .or_else(|| case.else_expr.as_deref().and_then(carried)),
@@ -466,6 +439,53 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
             walked.ok().and(narrowed)
         }
     }
+}
+
+fn cast_lineage(cast: &Cast, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Option<Narrowing> {
+    let target = cast.field.data_type();
+    if let Some(marked) = mark_of(&cast.expr) {
+        return found(marked, cut_of(target), input, walk);
+    }
+    let nearest = match target {
+        DataType::Timestamp(unit, Some(_)) if *unit != TimeUnit::Nanosecond => Call::Timestamp,
+        DataType::Date32 => Call::Date,
+        _ => Call::Opaque,
+    };
+    expr_lineage(&cast.expr, input, walk.under(nearest))
+}
+
+fn function_lineage(
+    expr: &Expr,
+    function: &ScalarFunction,
+    input: Option<&LogicalPlan>,
+    walk: Walk<'_>,
+) -> Option<Narrowing> {
+    let through = |branch: &Expr, nearest: Call| expr_lineage(branch, input, walk.under(nearest));
+    let name = function.func.name();
+    if let Some(marked) = mark_of(expr) {
+        return found(marked, Cut::Other, input, walk);
+    }
+    if name == NARROW_TIMESTAMP_NS_UDF_NAME {
+        let value = function.args.first()?;
+        return match mark_of(value) {
+            Some(marked) => found(marked, Cut::Instant, input, walk),
+            None => through(value, Call::Timestamp),
+        };
+    }
+    if SELECTING_UDF_NAMES.contains(&name) {
+        return through(function.args.first()?, Call::Opaque);
+    }
+    if matches!(expr_type(expr, input), Ok(DataType::Boolean)) {
+        return None;
+    }
+    let nearest = match name {
+        DATE_TRUNC_UDF_NAME => Call::Trunc,
+        TIMESTAMP_TO_DATE_UDF_NAME => Call::Date,
+        name if DATE_UDF_NAMES.contains(&name) && function.args.len() == 1 => Call::Date,
+        COALESCE_UDF_NAME => walk.nearest,
+        _ => Call::Opaque,
+    };
+    (function.args.iter()).find_map(|argument| through(argument, nearest))
 }
 
 fn outer_lineage(column: &Column, walk: Walk<'_>) -> Option<Narrowing> {

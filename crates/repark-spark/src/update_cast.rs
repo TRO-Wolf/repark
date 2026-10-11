@@ -138,10 +138,10 @@ async fn refuse_incompatible_update_cast(
         let same = |left: &String, right: &String| {
             left == right || (!scope.case_sensitive && left.eq_ignore_ascii_case(right))
         };
-        let qualified = |known: &Vec<String>| {
+        let in_scope = |known: &Vec<String>| {
             known.len() == qualifier.len() && known.iter().zip(qualifier).all(|(a, b)| same(a, b))
         };
-        if !qualifier.is_empty() && !scope.qualifiers.iter().any(qualified) {
+        if !qualifier.is_empty() && !scope.qualifiers.iter().any(in_scope) {
             continue;
         }
         let mut resolved = None;

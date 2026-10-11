@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use datafusion::arrow::datatypes::{DataType, IntervalUnit, TimeUnit};
 use datafusion::common::ScalarValue;
 use datafusion::logical_expr::Expr;
@@ -20,8 +22,7 @@ const INDEXING_UDF_NAMES: [&str; 2] = ["array_element", "__repark_array_get__"];
 pub(super) fn sql_text(expr: &Expr) -> String {
     match expr {
         Expr::Alias(alias) => sql_text(&alias.expr),
-        Expr::Column(column) => column.flat_name(),
-        Expr::OuterReferenceColumn(_, column) => column.flat_name(),
+        Expr::Column(column) | Expr::OuterReferenceColumn(_, column) => column.flat_name(),
         Expr::LambdaVariable(variable) => variable.name.clone(),
         Expr::Literal(value, _) => literal_text(value),
         Expr::Cast(cast) if marked(&cast.expr) => sql_text(&cast.expr),
@@ -68,13 +69,13 @@ pub(super) fn sql_text(expr: &Expr) -> String {
         Expr::Case(case) => {
             let mut text = String::from("CASE");
             if let Some(operand) = &case.expr {
-                text.push_str(&format!(" {}", sql_text(operand)));
+                let _ = write!(text, " {}", sql_text(operand));
             }
             for (when, then) in &case.when_then_expr {
-                text.push_str(&format!(" WHEN {} THEN {}", sql_text(when), sql_text(then)));
+                let _ = write!(text, " WHEN {} THEN {}", sql_text(when), sql_text(then));
             }
             if let Some(otherwise) = &case.else_expr {
-                text.push_str(&format!(" ELSE {}", sql_text(otherwise)));
+                let _ = write!(text, " ELSE {}", sql_text(otherwise));
             }
             text.push_str(" END");
             text

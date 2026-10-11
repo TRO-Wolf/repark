@@ -80,12 +80,14 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
 
 - [explain_marks.rs](explain_marks.rs) — **ICE-TSNS-NARROW-REFUSE-1, fold 2 (2026-10-11):**
   an analyzed plan carries the marks of a narrowed nanosecond value (a frame or a view may
-  be written later), and `EXPLAIN VERBOSE` prints analyzed plans. `without_marks` collects
-  the rows of an `EXPLAIN` that does not run its statement, erases both mark calls from the
-  text of each logical plan row and keeps the argument (`strip_marks`, parentheses counted
-  outside double quotes), and writes `SAME TEXT AS ABOVE` where a row then equals the row
-  shown before it, as main prints it. `spark_ast` calls it for a `LogicalPlan::Explain`;
-  `EXPLAIN ANALYZE` prints physical plans, which hold no mark. One unit pin of the erasure.
+  be written later), and `EXPLAIN VERBOSE` prints analyzed plans. `explain` runs an `EXPLAIN`
+  that does not run its statement, erases both mark calls from the text of each logical
+  plan row and keeps the argument (`strip_marks`, parentheses counted outside double
+  quotes), and writes `SAME TEXT AS ABOVE` where a row then equals the row above it, by
+  DataFusion's own rule (`physical-plan` `explain.rs` `should_show`): the final
+  `logical_plan` row is always printed. `spark_ast` calls it for a `LogicalPlan::Explain`;
+  `EXPLAIN ANALYZE` prints physical plans, which hold no mark. Two unit pins: the erasure,
+  and the rows collapsed.
   pins: ice-tsns-narrow-refuse-1/C-034
 - `nested_ns.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):**
   `refuse_nested_supply` is the one call that hands an `INSERT` (plain, `OVERWRITE`,

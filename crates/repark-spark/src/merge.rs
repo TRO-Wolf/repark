@@ -105,9 +105,7 @@ pub(crate) async fn execute_merge(
     };
     repark_iceberg::write::merge::execute_merge(ctx, handle, &spec)
         .await
-        .map_err(|error| {
-            repark_iceberg::write::narrowed_store::name_table(error.into(), &named())
-        })?;
+        .map_err(|error| repark_iceberg::write::narrowed_store::name_table(error, &named()))?;
     ctx.read_empty()
 }
 

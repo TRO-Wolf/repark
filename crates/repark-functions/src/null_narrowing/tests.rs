@@ -661,6 +661,37 @@ fn a_written_cast_over_a_microsecond_column_is_kept_only_above_a_mark() {
 }
 
 #[test]
+fn a_settled_tag_leaves_no_alias_and_a_null_cast_is_not_read_as_written() {
+    let scan = || table_scan(Some("t"), &arrow(), None).unwrap();
+    let natural = coalesce(vec![col("t.c"), untyped()]);
+    let name = natural.schema_name().to_string();
+    let tagged = before_coercion(natural, &scan().build().unwrap().schema().as_ref().clone())
+        .unwrap()
+        .data;
+    assert!(carries_tag(&tagged));
+    for alias in [name.as_str(), "v"] {
+        let plan = scan()
+            .project(vec![widened(tagged.clone()).alias(alias)])
+            .unwrap()
+            .build()
+            .unwrap();
+        let LogicalPlan::Projection(projection) = session_rule(plan) else {
+            panic!("a projection");
+        };
+        let root = &projection.expr[0];
+        assert_eq!(matches!(root, Expr::Alias(_)), alias == "v", "{root}");
+        assert_eq!(root.schema_name().to_string(), alias);
+        assert_eq!(marks(root).len(), 1, "{root}");
+    }
+    let widened_null = cast(cast(untyped(), nanos()), micros());
+    assert!(
+        !before_coercion(widened_null, &schema())
+            .unwrap()
+            .transformed
+    );
+}
+
+#[test]
 fn the_mark_returns_the_field_of_its_argument() {
     let metadata =
         std::collections::HashMap::from([("PARQUET:field_id".to_string(), "2".to_string())]);

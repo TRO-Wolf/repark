@@ -647,7 +647,9 @@ repark-core's error map.
   differ, these hold.** A mark on the lineage of the stored column refuses; the guard no
   longer asks for a cast to a timestamp directly on it, so a cast to a list, a function that
   narrows in its kernel and a value that leaves through a string or an integer are one case.
-  Lineage is per stored column through every plan node (`column_lineage`): an aggregate with
+  Lineage is per stored column through every plan node (`column_lineage`, with
+  `join_lineage`, `aggregate_lineage`, `scan_lineage`, `cast_lineage` and
+  `function_lineage` for its longer arms): an aggregate with
   grouping sets answers by output position (the grouping id has no lineage), a lateral
   `Subquery` is entered and an outer reference is followed into the plan beside it (`Scope`),
   an unnest, a recursive query, and any other node by column name into its inputs. No node is

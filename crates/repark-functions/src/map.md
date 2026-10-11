@@ -1154,7 +1154,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
     to a plan; `untagged_schema` takes the untyped-NULL tag out of a `UNION` schema. The
     written-narrowing function over a value that is already a microsecond instant is
     removed by the optimizer (`simplify` in `timestamp_ns_cast.rs`), so a cast kept for the
-    store costs a read nothing.
+    store costs a read nothing. The tag changes a literal's printed name, so the pass before
+    coercion aliases the expression to its own name; once the tag is settled that alias is
+    taken off again (`named_by_itself`) and the analyzed plan prints as main's. A cast of a
+    NULL literal to an instant is the session rule's own and is not read as written.
   The tag never reaches an analyzed plan: `Cast` copies its source field's metadata, so a
   tag left behind would show in a result schema. No rule is added to the analyzer. The store
   reads the marks in `repark-iceberg` `write/narrowed_store.rs`. Eleven unit pins in
