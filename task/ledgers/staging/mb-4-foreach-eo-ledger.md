@@ -1346,6 +1346,86 @@ under a `foreachBatch` stamp.
 **Gates** are in the hand-back; all on the final source, the batteries and the matrix on its
 release build.
 
+## Fold 7 — the sixth verify's S1: the toTable door of a foreachBatch name — 2026-10-11
+
+The sixth verify (release build of `4e5a5890`) held everything fold 6 claimed and returned
+FAIL on one S1 and three S3. Owner rulings on the brief (R1 to R3): the fence's stray check
+applies to a `toTable` stamp when the query name ever carried a `foreachBatch` stamp or mark
+(the D2 predicate the walk uses); a foreign writer racing a batch still ends the query with
+the named refusal until an operator follows the printed remedy, no retry; the walk is not
+changed. This fold builds R1 and the two S3 with code or prose owed. The S3 on retry-vs-dead
+is ruled and needs nothing built.
+
+### Item 1: close the toTable door of a foreachBatch name (S1)
+
+**What failed.** `stray_since` answered `None` for any stamp whose door is not `ForeachBatch`,
+so a `toTable` run under a name that ran `foreachBatch` stamped over a foreign commit that
+landed during its batch (274 of 480 raced trials), and after `expire_snapshots` to one
+snapshot both doors restarted with no signal (211 of 211, delivered rows lost in 93).
+
+**As built.** `stray_since` takes the table the fence already holds and runs the check when
+the door is `ForeachBatch` or the name is carried by `foreachBatch` on that table. The fence
+evaluates the same predicate the walk uses (`carried_by_foreach`) on the refreshed table of
+every attempt. What it reads: the starting-mark property and the main-branch lineage in the
+already-loaded metadata. No new seam (the change sits inside `sink_offsets.rs` and its two
+child modules: `breach` takes the table and returns a `Result`), no new catalog round trip,
+no file read. A carried check that errors fails closed as the refusal; on a `toTable`-only
+name the predicate is false and the commit takes exactly the old path. The body-side
+backstop takes the same function; its stamp is always a `foreachBatch` stamp, so the
+short-circuit keeps it free.
+
+**What fold 7 overturns.** The fold-6 map line "on a `toTable` stamp every arm still lands
+over the foreign commit" now reads "on a `toTable`-only name". Nothing else moves: R2 and
+R3 are built as ruled, and the walk is byte-identical.
+
+**Proof.** Two Rust pins over every arm by three windows, once with a `foreachBatch` stamp
+of the name on the sink and once with only the starting mark: every cell is refused with
+the fence's "landed on the sink without a stamp" text and the stray stays the head. The
+kept-behaviour proof is the fold-6 `toTable` pin beside them, which still lands. Red-first
+by stash: with the three product files reverted, exactly the two new pins fail and the
+other four pass; the files were restored byte for byte (sha-verified). The facade pin
+(`test_mb_4_streaming_door_switch.py`, three foreign kinds by two restart doors by the
+remedy and expiry halves, 12 cells) runs the verifier's choreography: the raced `toTable`
+run is refused by name or the restart is, the restart after expiry to one is refused by
+name on each door, and following the printed rollback leaves the source and sink row sets
+equal. On a pre-fix debug build 7 of 12 fail, including silent restarts; on the release
+build with the fix 12 of 12 pass.
+
+**Race evidence, on the release build** (the verifier's three cells for both restart
+doors, 60 runs each, own script and scratch root): 360 trials, the foreign landed in all
+360, 0 strays under a stamp, 0 silent restarts after expiry. All 360 restarts end
+`stamped snapshot expired`. The raced `toTable` runs split 191 refused at the fence and
+169 finished with the foreign landing after the last batch's stamp, each caught loud at
+the restart.
+
+### Item 2: a pin for non-append strays (S3, mutant Y4)
+
+Mutant Y4 (the stray walk sees append strays only) survived the sixth verify. Two Rust
+pins, each over every arm: the stray is an overwrite in one and a delete in the other,
+landed through the engine's row-level arm so the operation is honest. Both are red under
+Y4 and green otherwise; under Y4 the suite reads 6 passed, 2 failed. Found while building:
+the stray must not remove the arm's own files, or the row-level arms fail locally before
+they reach the fence; the strays land against a separate extra file the arms never touch.
+
+### Item 3: say what the gate is (S3, finding 3)
+
+No code change. The `map.md` entry for `tests/stamp_fence_gate.rs` now states the gate is
+a tripwire for one honest mistake, a bare `tx.commit(catalog)` in a stamped arm, which its
+second test proves it catches. It lists the demonstrated walk-around (mutant Y1, which
+keeps the line reading fenced while committing bare) and the four the verifier names by
+reading (a variable named `unfenced` passes the substring check; call-form
+`Transaction::commit` is not matched; arms are checked by counts, not by which transaction
+each commit takes; a claim through an alias or `Self::` is not seen), and it names the
+behaviour pins that hold the rule: the stray-fence pins, the body-scope backstop pin, and
+the core microbatch driver pins. Under Y1 thirteen iceberg pins and six core pins fail
+while both gate tests pass (the verify's count).
+
+### Fold-7 proof — 2026-10-11
+
+The two lib suites, clippy, the panic ban, format, the twelve `test_mb_4_*` batteries on
+the release build, the map sync, the ledger grammar and the comment ban are in the
+hand-back; all ran on the final source.
+
 ## PROPOSITION LEDGER — MB-4-FOREACH-EO — 2026-10-09
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
@@ -1396,4 +1476,6 @@ release build.
 | C-045 | Every commit that can carry a `foreachBatch` stamp reaches the catalog through one fence, on every attempt, retries on a refreshed table included, and is refused there when an unstamped snapshot sits between its parent and the head the driver read when the batch began; this holds for the append arm, both row-level arms and the stamp-only commit. | A deterministic pin per arm with a racer at the commit point; a public-door racer for row-level bodies. | **PROVEN** | `sink_offsets_stray_fence_tests.rs` (four pins over every arm: 15 stray cells refused, 30 legal cells landed, 15 `toTable` cells landed, 5 buried strays refused); `sink_offsets_body_scope_tests.rs::the_guard_checks_a_claimed_sink_commit_for_a_stray_whatever_built_it`; `test_mb_4_streaming_row_level_race.py` (four statements, twelve sinks each), red for `UPDATE` on the fold-5 build. Race matrix on the release build: 4,608 trials over 384 cells, 0 strays under a stamp; 182 death-and-expiry cells, none silent with the true head; the verifier's `racer.py` 90 jobs with 0 under a stamp and `under.py` 39 jobs with no window hit. Mutants M1, M2, M3, M4, M6, M7, M9. pins: mb-4-foreach-eo/C-045 |
 | C-046 | A structural test fails when a commit arm takes a stamp and does not commit through the fence. | A source gate in the manner of ENC-1's, with a mutant. | **PROVEN** | `tests/stamp_fence_gate.rs::every_arm_that_takes_a_stamp_commits_through_the_fence` and `::the_gate_sees_an_arm_that_stamps_its_summary_and_commits_on_the_bare_catalog`. Mutants M1 and M7 turn the gate red on the real sources (a bare commit in the stamp's module; a row-level arm that stamps its summary and commits bare); M5 and M8 turn its self-test red. pins: mb-4-foreach-eo/C-046 |
 | C-047 | MBE-8's refusal names only catalogs a streaming sink can live in (Glue, S3 Tables). | Text pins in three places. | **PROVEN** | `error.rs` (the variant's text and its pin), `run_tests.rs`, `test_mb_4_streaming_fold1.py`; the sketch's MBE-8 row amended. pins: mb-4-foreach-eo/C-047 |
+| C-048 | On a `toTable` stamp under a name the `foreachBatch` door carried (a stamp or only the mark on the sink), a stamped commit is refused before it lands when an unstamped snapshot sits between its parent and the batch-start head, on every arm; a `toTable`-only name still lands over a foreign commit. | Fence pins per carried shape; the kept-behaviour pin; the public-door choreography; the race matrix. | **PROVEN** | `sink_offsets_stray_fence_tests.rs::a_table_door_stamp_under_a_foreach_carried_name_is_refused_over_a_stray` and `::a_table_door_stamp_under_a_marked_name_is_refused_over_a_stray` (every arm by three windows, refused with the fence text, the stray the head; exactly these two fail with the product reverted); `every_arm_of_the_table_door_still_lands_over_a_foreign_commit` unchanged and green; `test_mb_4_streaming_door_switch.py` (12 cells: three foreign kinds by two restart doors, remedy-followed exact and expiry-to-one loud; 7 of 12 red on the pre-fix build); 360 raced release trials, 0 strays under a stamp, 0 silent restarts. pins: mb-4-foreach-eo/C-048 |
+| C-049 | A stray that is an overwrite and a stray that is a delete each refuse every arm with the fence's text. | One pin per operation, each red under the appends-only mutant. | **PROVEN** | `sink_offsets_stray_fence_tests.rs::a_stray_overwrite_refuses_every_arm` and `::a_stray_delete_refuses_every_arm`; under mutant Y4 the file reads 6 passed, 2 failed. pins: mb-4-foreach-eo/C-049 |
 | C-015 | The questions of the fold-2 hand-back are ruled (owner rulings D2 to D5, 2026-10-10: the mark, the exclusive sink kept with a maintenance card, the side-effect contract, the re-verify and timing gate). What stays open is D5 itself: one Opus re-verify of the whole PR, then the quiet-box 200-epoch measurement with `task/wo/microbatch/mb4_lineage_timing.py`, median of 3, at most 1.05 times the no-audit driver. | The re-verify's verdict and the measurement. | **OPEN** | Closes on D5. The coverage attestation is the Critic's and is filed then. |

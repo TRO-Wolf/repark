@@ -100,6 +100,10 @@ directory holds the piece split out of it. The test files of the module stay bes
   twice, and the `toTable` control), `the_fence_refuses_a_stray_that_landed_between_the_claim_and_the_commit`,
   `another_query_s_stamp_since_the_batch_began_does_not_refuse_the_stamped_commit`.
   pins: mb-4-foreach-eo/C-044
+  Fold 7 (2026-10-11, ruling R1): the `toTable` control of that pin runs under a marked
+  name, so it is refused with the same text; the door takes other writers only under a
+  `toTable`-only name, pinned by `sink_offsets_stray_fence_tests.rs`.
+  pins: mb-4-foreach-eo/C-048
 - `lineage.rs` — **MB-4-FOREACH-EO fold 4 (2026-10-10, owner ruling on the third verify's
   first S1): the walk goes under the newest stamp.** `stray_on_main(table, query, baseline)`
   replaces `unstamped_since_stamp`. It reads the main lineage once, in memory, and looks at

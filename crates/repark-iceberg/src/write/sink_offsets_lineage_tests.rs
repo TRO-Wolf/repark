@@ -739,10 +739,19 @@ async fn a_stamped_commit_is_refused_over_a_stray_that_landed_after_the_batch_be
     let table_door = stamp_for(0, SinkDoor::Table);
     let guard = BatchScope::enter_on(&began, table_door).expect("enter");
     let files = stage(&stray, &[4]).await;
-    let landed = commit_append_with_summary(&catalog, &stray, files, &scoped(&guard), None)
+    let refused = commit_append_with_summary(&catalog, &stray, files, &scoped(&guard), None)
         .await
-        .expect("the table door takes other writers");
-    assert_eq!(stamped_snapshots(&landed), 1);
+        .expect_err("a table stamp under a marked name is refused over a stray");
+    let text = refusal_text(&refused);
+    assert!(
+        text.ends_with(&format!(
+            "epoch 0: snapshot {id} (append) landed on the sink without a stamp after this batch began, so the batch's stamped commit is refused before it lands over it",
+            id = head(&stray)
+        )),
+        "{text}"
+    );
+    let after = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(head(&after), head(&stray));
 }
 
 #[tokio::test]

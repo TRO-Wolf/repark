@@ -370,7 +370,7 @@ async fn stray_setup(
     Vec<DataFile>,
     Vec<DataFile>,
 ) {
-    let (_warehouse, memory, ident) = fixture(name).await;
+    let (warehouse, memory, ident) = fixture(name).await;
     let (table, seeded) = seed(&memory, &ident).await;
     let extra_table = memory.load_table(&ident).await.expect("load");
     let extra = stage(&extra_table, &[50]).await;
@@ -378,7 +378,7 @@ async fn stray_setup(
         .await
         .expect("extra file");
     drop(table);
-    (_warehouse, memory, ident, seeded, extra)
+    (warehouse, memory, ident, seeded, extra)
 }
 
 #[tokio::test]

@@ -165,6 +165,10 @@ repark-core's error map.
   the one refusal text, shared with the fence. The rules and the pins are in the child
   directory's map under `lineage.rs` and `append_fence.rs`, fold 5.
   pins: mb-4-foreach-eo/C-040, C-041, C-044
+  Fold 7 (2026-10-11, ruling R1): the `toTable` control of
+  `a_stamped_commit_is_refused_over_a_stray_that_landed_after_the_batch_began` runs under a
+  marked name and is refused with the same text (child map, `append_fence.rs`, fold 7).
+  pins: mb-4-foreach-eo/C-048
 - `write_options.rs`, `sink_offsets.rs`, `merge/snapshot_commit.rs`,
   `sink_offsets_scope_tests.rs`, `sink_offsets_tests.rs` — **MB-4-FOREACH-EO fold 4
   (2026-10-10, ruling on the third verify's first S2): a batch write cannot forge a stamp.**
