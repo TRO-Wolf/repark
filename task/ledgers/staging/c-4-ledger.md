@@ -1075,9 +1075,11 @@ validated client-side, enum labels and json/jsonb text server-side); binary into
 bytea stores; int into uuid renders its text and the client refuses the syntax,
 as before; int into json/jsonb renders its text and the server takes or refuses
 it as JSON text (a bare number is valid JSON and stores), as before; int into
-enum renders its text and the server refuses the label, as before; int and every
-other non-string atomic into interval refuses at the gate
-in the same refusal family, naming the Postgres type; string into bytea refuses
+enum renders its text and the server refuses the label, as before; every
+non-string, non-interval source into interval refuses at the gate (int, float,
+bool, date, timestamp, decimal, binary: the shared rule admits them to Utf8,
+the interval-column gate refuses them naming the Postgres type), while an
+engine INTERVAL into an interval column stores (§15.1); string into bytea refuses
 at the gate (Postgres has no text-to-bytea assignment cast either); domains
 need no decision (discovery resolves them to their base type before the
 chokepoint); char(n)/varchar(n) are text at the chokepoint. Binary into text
@@ -1180,3 +1182,69 @@ Fixed in this batch (commit `1a8db43a` unless named):
 |---|---|---|---|
 | S3-default | 2026-10-11 | `INSERT INTO pg.s.d2 VALUES (1, DEFAULT)` answers `No field named default`; a column left out of the list takes its Postgres default (77). No fix in this batch. | Open: the column's default, or a named refusal. |
 | S3-invalid-class | 2026-10-11 | After item 1 the invalid-input arm fires only for non-UTF8 bytes into text (capped hex echo, pinned by `invalid_bytes_into_text_refuse_naming_the_bytes`); malformed strings refuse at the store-assignment gate instead. The arm still arrives as a generic `PySparkException` with the engine prefix while overflow arrives as `ArithmeticException`. | Open: one named class for both refusals. |
+
+## 15. Fold 4 (2026-10-11): the verifier's S1, S2 and two S3 texts, branch `feat/c-4-routing`
+
+The verify-4 joint verdict (2026-10-11) is FAIL: 1 S1, 1 S2, 3 S3, over
+32,011,421 value cells with bulk = row = plain INSERT byte for byte and the
+store-assignment gate otherwise exactly Spark's (of 588 pairs, the 26 that
+newly refuse are all STRING into a non-string column, every one refused by
+Spark 4.1.2 too). Three items land here, one commit each, plus one oracle
+commit the S2 runs exposed.
+
+### 15.1 Item 1: the INTERVAL carve-out at the Postgres chokepoint
+
+The S1: a typed INTERVAL into an interval column stored at 95c9b7cf and
+refused after fold 3, the one pair in 588 that stored right before and now
+refuses without Spark's rule refusing it. The carve-out lives at the
+Postgres chokepoint only (`refuse_unless_store_assignable`): an engine
+`Interval` source into an interval (`ServerText`) column passes before the
+shared rule and stores through the Arrow cast, exactly as at 95c9b7cf
+(Postgres normalises the Arrow text on read, so `v::text` is byte-equal to
+plain INSERT). The shared rule in `store_assign.rs` is untouched: it serves
+the Iceberg target, and the Iceberg door keeps refusing the pair. Every
+non-interval source into an interval column still refuses (12, 1.5, true at
+the chokepoint pins; `("interval", "12")` live), and an INTERVAL into a
+text column still refuses (row S4-interval-text below). Pins, each red with
+the fix reverted by hand: `write_postgres_interval.rs` at the chokepoint
+(an interval stores as Arrow text, an interval into text refuses) and the
+six engine INTERVAL forms on all three paths live
+(`test_interval_values_store_bytes_equal_to_plain_insert`), plus one
+interval-into-text refusal row in the cross-family pin. §14.1's interval
+line is corrected in place to what is measured.
+
+### 15.2 Item 2: the live file is green
+
+The S2 was two oracle faults in the fold's own pins, not the route: the
+plain-INSERT oracle sent Spark's `X'41'` to a bytea column (a bit string
+there), and the text-rendering oracle used `DATE '10000-01-01'`, which the
+engine cannot evaluate. The bytea oracle now uses Postgres's own spelling
+(`'\x41'::bytea`) and the date cell uses `DATE '9999-12-31'`; what the pins
+assert about the route is unchanged. Running the file exposed the same
+fault one cell later: a `TIMESTAMP_NTZ` year-10000 literal fails to parse,
+and so does year 9999 — the NTZ literal parser caps at the nanosecond
+range (2262 parses, 2300 fails with `INVALID_TYPED_LITERAL`) while the
+zoned TIMESTAMP literal accepts year 10000 — so that cell uses
+`TIMESTAMP_NTZ '2262-01-01 00:00:00'`. Whole file green twice on the
+container: 24 passed in 67.15 s and 24 passed in 65.01 s.
+
+### 15.3 Item 3: the refusal texts
+
+The store-assignment refusal names Arrow types and carries no SQLSTATE, and
+it told an interval column its target was Utf8 (the last half died with
+item 1's carve-out: the pair stores now). The text is built by the shared
+Iceberg builder (`refuse_unless_ansi_store_assignable`), so this fold
+changes nothing there: rows S4-shared-text and S4-no-sqlstate below. The
+gap-wall refusal into a timestamptz column called it Postgres `timestamp`;
+that label is retargeted at the placement arm's own site (`retargeted`,
+mirroring the read path's rewrite in `provider/scan.rs`) and the gap pin
+now names the type. The timestamp arm keeps `timestamp` (correct there);
+the date arm keeps it too (row S4-date-label below).
+
+| id | date | what | the record |
+|---|---|---|---|
+| S4-interval-text | 2026-10-11 | An INTERVAL source into text / varchar / char refuses at the store-assignment gate (the shared rule lacks interval sources; the Iceberg target refuses it too). Spark 4.1.2 stores `INTERVAL '1' DAY`; the previous head stored Arrow's `1 days`. | Open: interval sources in the shared rule, or a Postgres text rendering. Pinned as a refusal at the chokepoint and live. |
+| S4-json-numbers | 2026-10-11 | Numbers and booleans into json / jsonb store their text, which is valid JSON, where a typed plain INSERT refuses (42804). Spark has no json type; into a string column it stores the same text. | Decided in §14.1: stays. Listed because the route stores what a typed plain INSERT refuses. |
+| S4-shared-text | 2026-10-11 | The store-assignment refusal names Arrow types (`Utf8`, `Int32`, `Date32`, `Decimal128(10, 2)`, ...) instead of Spark SQL names or the column's Postgres type. The text is the shared Iceberg builder's, called from the Postgres chokepoint. | Open: renaming it renames the Iceberg door's refusal too; that is a shared-text decision, not this fold's. |
+| S4-no-sqlstate | 2026-10-11 | The store-assignment refusal carries no SQLSTATE and no bracketed error class; Spark answers 42K09 (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`). | Open. |
+| S4-date-label | 2026-10-11 | The gap-wall refusal into a date column still calls it Postgres `timestamp` (same one-site family as the timestamptz label item 3 fixed). | Open: the shape pin file sits at 993 of 1000 lines, so the date pin has no room; the next fold splits the file and retargets the date arm. |
