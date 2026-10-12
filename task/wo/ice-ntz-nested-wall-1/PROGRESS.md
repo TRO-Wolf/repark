@@ -161,10 +161,11 @@ walk sees the source type. Red before: the branch MERGE UPDATE stored
 `spark.wap.branch`. A member name containing `.` or `,` stays at main's UTC
 wall. A matching leaf beside a renamed member stays main's row.
 
-**Round 9, item 4:** the struct-cast refusal text is Arrow's. This unit does
-not build that sentence, so the kernel's output type is what the cast names.
-EXPLAIN of a DML into the leaf still prints main's plan. That is an open
-question for the owner. Neither is changed.
+**Round 9, item 4:** recorded the cast text and EXPLAIN. Round 11 builds both.
+EXPLAIN of a converted append `INSERT` and of a whole-struct `UPDATE` names
+`__repark_cast_nested_ntz__`. A NOT NULL member's cast names the user's source
+type. `INSERT OVERWRITE`, MERGE, `REPLACE WHERE`, `BY NAME`, and
+`EXPLAIN ANALYZE INSERT` stay named holes.
 
 **Round 9, item 5:** head matrix regenerated. Spark 173/264, field 324/324,
 ltz 396/396, top 396/396, raw-error 162/162, UTC-wall cells 22, controls moved
