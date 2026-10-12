@@ -52,4 +52,7 @@ DataFrame `append` store the session wall. A literal stays
 `evidence/summary-head.md`: Spark 173 of 264, field 324 of 324, `ltz_nested`
 396 of 396, `ntz_top` 396 of 396, UTC-wall remainder 22, controls moved 0.
 R-011 is narrowed. C-003 stays open for those 22 and the doors that still
-refuse. C-004 is proven. Gates follow.
+refuse. C-004 is proven. Gates: iceberg lib 1009 passed, spark lib 2696
+passed, the three wall-door tests passed, pytest 569 passed, clippy 0,
+panic-ban 0, fmt 0, map 0, ledger grammar 0, file size 0, comment ban 0,
+maturin 0.
