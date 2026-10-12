@@ -152,6 +152,12 @@ async fn a_plain_value_stores_beside_a_narrowing_it_does_not_pass_through() {
             nanos(),
             vec![col("m"), micros_of(narrowed("m"))],
         ),
+        call(
+            "nullif",
+            vec![nanos(), instant()],
+            nanos(),
+            vec![col("m"), narrowed("m")],
+        ),
     ];
     for value in passed_by {
         let plan = plan_of(&ctx, value.clone()).await;
