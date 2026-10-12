@@ -12,7 +12,7 @@ An instant stores the session wall. A wall literal stores ``1767323045123456`` i
 zone. A nested ``TIMESTAMP`` leaf stores the instant. A caller with no source type
 passes ``None`` and the expression stays main's.
 
-pins: ice-ntz-nested-wall-1/C-003, C-004
+pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 """
 
 from __future__ import annotations
