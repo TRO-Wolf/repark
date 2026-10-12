@@ -460,3 +460,36 @@ the whole struct: `INSERT … SELECT` of `named_struct('v', l, 'x', l2)` stores
 the UTC wall in `v` and NULL in `w`. Pin:
 `test_punctuation_names_and_a_renamed_sibling_stay_at_mains_values`.
 Disposition: named hole.
+
+## 14. Round 10 halt (2026-10-12)
+
+The owner ruled that F6 and F7 are fixed in this unit. F6 does not fit one
+site. `EXPLAIN <dml>` is the router fallthrough to
+`spark_ast::execute_passthrough`. That plans `LogicalPlan::Explain`, whose
+inner plan is the DML. `after_analysis` rewrites only `LogicalPlan::Dml` for
+an Iceberg `INSERT`, so an `EXPLAIN` never receives that rewrite.
+
+The kernel the statement runs is injected on a different path per door:
+
+| Door | Where execution inserts the kernel | What EXPLAIN plans |
+|---|---|---|
+| `INSERT … SELECT` and DataFrame append | `after_analysis` / `wrap_nested_ntz` | `Explain` wrapping the unwrapped DML |
+| `INSERT OVERWRITE`, `BY NAME`, `overwritePartitions` | `zone_stores` on the source frame inside the write | the unwrapped DML |
+| `UPDATE` whole-struct | `refuse_cast_then_fold_nested` before `execute_passthrough` | the unfolded statement |
+| `MERGE` insert and update | `fold_merge_clauses` and `zone_wrapping_stream_sql` inside `execute_merge` | the unfolded statement |
+
+A change only in `after_analysis` would show the kernel for plain `INSERT`
+and would leave the other doors on main's plan. Putting the same rewrite into
+each of those paths is more than one site. No code was changed.
+
+F7's sentence is built in DataFusion, not in this unit:
+`datafusion-physical-expr-54.1.0` `expressions/cast.rs` formats
+`Unsupported CAST from {expr_type} to {cast_type}` from the physical input
+type. After the kernel's `retype`, that input is `Timestamp(us)` with no
+zone. The walk still has the user's source type before the wrap. The smallest
+option that does not reimplement the cast: at the two cast emitters
+(`nested_micro_ntz_wall_sql` and `wrap_nested_ntz`), do not wrap when the
+target struct has a NOT NULL member the arrow cast cannot accept. The
+analyzer's existing cast then fails and names the user's type. The bare
+kernel sites stay wrapped, so the 35 NOT NULL stores stay. Not done, pending
+the F6 ruling.

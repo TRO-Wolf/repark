@@ -174,3 +174,12 @@ wall doors 0, functions lib 0 (928 passed, 1 ignored), clippy 0 after
 collapsing the branch-probe `if`, panic-ban 0, fmt 0, crate-dag 0, map sync 0,
 map-md 0, ledger grammar 0, file size 0, comment ban 0, pytest 0 (583 passed,
 1 skipped), maturin 0.
+
+**Round 10, halt:** F6 is not one site. `EXPLAIN <dml>` is planned by
+`execute_passthrough` as `LogicalPlan::Explain`. The kernel is inserted later,
+on a different path for INSERT (`after_analysis`), overwrite and by-name
+(`zone_stores`), UPDATE (`refuse_cast_then_fold_nested`), and MERGE
+(`fold_merge_clauses` / `zone_wrapping_stream_sql`). No code changed. F7's
+sentence is DataFusion's `Unsupported CAST` in `expressions/cast.rs`. The
+smallest option is to skip the wrap at the two cast emitters when a NOT NULL
+member makes that cast fail, and leave the bare kernel sites as they are.
