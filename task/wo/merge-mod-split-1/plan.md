@@ -53,7 +53,33 @@ Expected: `mod.rs` about 750, `merge_sql.rs` about 310, `copy_on_write.rs` about
 
 ## Proof of a pure move
 
-`prove_move.py` in this directory compares each moved item between `origin/main:mod.rs` and the
-file that holds it at HEAD, after it removes comments, visibility keywords and all whitespace. It
-also counts the items in the old file and across the four files. Its output is committed as
-`proof.txt` with the move.
+Recorded 2026-10-12, against `origin/main` at `572130dd`.
+
+`prove_move.py` compares each item of `origin/main:mod.rs` with the same item in the file that
+holds it now. Before it compares, it removes comments, visibility keywords, whitespace outside
+string literals, and the comma rustfmt adds before a closing delimiter when a widened signature
+wraps (two methods: `insert_sql` and `prior_clauses_do_not_apply_legacy`). String literals are
+compared byte for byte. `use` and `mod` declarations are not items; an `impl` counts once, plus
+each of its methods. Its output is [proof.txt](proof.txt):
+
+- result `PURE MOVE`: all 76 items compare the same, 45 that stay and 31 that moved;
+- 76 items in the base file, 76 across the four files (45 + 24 + 4 + 3); none missing, none new.
+
+Measured line counts:
+
+| File | Lines | Under the 1,000 default by |
+|---|---|---|
+| `mod.rs` | 752 (was 1,569) | 248 |
+| `merge_sql.rs` | 336 | 664 |
+| `copy_on_write.rs` | 245 | 755 |
+| `merge_on_read.rs` | 265 | 735 |
+
+`merge_sql.rs` holds `rewrite_column_with_maps` and its `store_assignment_then_sql` call, so
+the waiting fix has 664 lines of headroom there. `not_matched_by_source.rs` is byte-identical
+(279 lines). The `mod.rs` exception row is removed from both size tables.
+
+What differs from the plan above: `mod.rs` keeps `use insert::store_assignment_then_sql;`,
+because `not_matched_by_source.rs` imports that name through `super::` and is not edited. The
+`#[cfg(test)]` imports `mod.rs` gained are `HashMap`, `StringArray`, `ManifestContentType` and
+`consume_matched_work_batch`; the test batteries reach them through `super::super::*`. No helper
+in `mod.rs` needed wider visibility.

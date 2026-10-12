@@ -1,0 +1,90 @@
+base: origin/main:crates/repark-iceberg/src/write/merge/mod.rs
+compared after removing comments, visibility keywords and whitespace outside literals,
+and the comma rustfmt adds before a closing delimiter when a signature wraps
+use and mod declarations are not items here; an impl counts once, plus its methods
+
+SAME  stays  mod.rs            const FILE_PATH_COL
+SAME  stays  mod.rs            const POS_COL
+SAME  stays  mod.rs            const MATCH_FLAG_PREFIX
+SAME  stays  mod.rs            const OPERATION_ID_PROP
+SAME  stays  mod.rs            fn execute_merge
+SAME  stays  mod.rs            struct MergeTestInstruments
+SAME  stays  mod.rs            macro tokio::task_local
+SAME  stays  mod.rs            fn note_residual_push
+SAME  stays  mod.rs            fn note_residual_push #2
+SAME  stays  mod.rs            fn deregister_merge_scratch
+SAME  stays  mod.rs            const MERGE_MODE_PROP
+SAME  stays  mod.rs            enum MergeMode
+SAME  stays  mod.rs            fn resolve_merge_mode
+SAME  stays  mod.rs            fn reserved_name_guard
+SAME  stays  mod.rs            fn validate_update_columns
+SAME  stays  mod.rs            fn expand_star_clauses
+SAME  stays  mod.rs            fn union_source_schema
+SAME  stays  mod.rs            fn source_column_names
+SAME  stays  mod.rs            fn scratch_schema
+SAME  stays  mod.rs            fn note_logical_target_sql_pass
+SAME  stays  mod.rs            fn note_logical_target_sql_pass #2
+SAME  stays  mod.rs            fn conform_scan_batch
+SAME  stays  mod.rs            fn register_streaming_target
+SAME  stays  mod.rs            struct MergeTarget
+SAME  stays  mod.rs            fn merge_conflict_filter
+SAME  stays  mod.rs            fn plan_and_commit
+SAME  moved  copy_on_write.rs  fn plan_and_commit_cow
+SAME  moved  merge_on_read.rs  fn plan_and_commit_mor
+SAME  stays  mod.rs            fn stream_sql
+SAME  moved  copy_on_write.rs  fn resolve_affected_data_files
+SAME  stays  mod.rs            fn skip_cardinality
+SAME  moved  copy_on_write.rs  fn affected_files
+SAME  moved  copy_on_write.rs  fn fold_discovery_batch_into_affected
+SAME  stays  mod.rs            fn note_discovery_path_alloc
+SAME  stays  mod.rs            fn note_discovery_path_alloc #2
+SAME  moved  merge_on_read.rs  fn matched_work_mor
+SAME  moved  merge_on_read.rs  fn consume_matched_work_batch
+SAME  stays  mod.rs            fn require_non_null_i64
+SAME  moved  merge_sql.rs      struct MergeSql
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::target_from
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::source_from
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::matched
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::applies
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::clause_id_case
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::prior_clauses_do_not_apply
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::prior_clauses_do_not_apply_legacy
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::matched_predicates
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::matched_clause_id_expr
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::update_assignment_lookup
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::rewrite_projection
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::match_discovery_sql
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::mutated
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::matched_work_sql
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::update_applies
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::rewrite_sql_allowlisted
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::rewrite_sql_path_semijoin
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::rewrite_column
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::rewrite_column_with_maps
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::delete_applies
+SAME  moved  merge_sql.rs      fn <impl MergeSql<'_>>::insert_sql
+SAME  moved  merge_sql.rs      impl MergeSql<'_>
+SAME  moved  merge_sql.rs      const NOT_MATCHED_POS_SENTINEL
+SAME  stays  mod.rs            fn cast_one_batch_to_write_schema
+SAME  stays  mod.rs            trait BatchWriter
+SAME  stays  mod.rs            struct ForkBatchWriter
+SAME  stays  mod.rs            fn <impl <W: IcebergWriter> BatchWriter for ForkBatchWriter<W>>::write_batch
+SAME  stays  mod.rs            fn <impl <W: IcebergWriter> BatchWriter for ForkBatchWriter<W>>::finish
+SAME  stays  mod.rs            impl <W: IcebergWriter> BatchWriter for ForkBatchWriter<W>
+SAME  stays  mod.rs            fn write_stream_into
+SAME  stays  mod.rs            fn write_stream_into_parallel
+SAME  stays  mod.rs            fn write_stream_into_parallel_sinks
+SAME  stays  mod.rs            fn named_column
+SAME  stays  mod.rs            fn strict_cast
+SAME  stays  mod.rs            fn sql_literal
+SAME  stays  mod.rs            fn quote_ident
+SAME  stays  mod.rs            fn iceberg_err
+
+items in mod.rs: 45 (45 from the base file)
+items in merge_sql.rs: 24 (24 from the base file)
+items in copy_on_write.rs: 4 (4 from the base file)
+items in merge_on_read.rs: 3 (3 from the base file)
+items in the base file: 76
+items across the split files: 76
+moved items: 31
+result: PURE MOVE
