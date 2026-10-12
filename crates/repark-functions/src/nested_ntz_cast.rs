@@ -62,8 +62,8 @@ fn plan_error(detail: &str) -> DataFusionError {
     DataFusionError::Plan(format!("'{NESTED_NTZ_CAST_NAME}' {detail}"))
 }
 
-fn is_zoned_timestamp(data_type: &DataType) -> bool {
-    matches!(data_type, DataType::Timestamp(_, Some(_)))
+fn is_timestamp(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(_, _))
 }
 
 struct Group {
@@ -147,9 +147,9 @@ fn plan_children(fields: &Fields, paths: &[Vec<String>]) -> Result<Vec<ChildPlan
             )));
         }
         if leaf {
-            if !is_zoned_timestamp(field.data_type()) {
+            if !is_timestamp(field.data_type()) {
                 return Err(plan_error(&format!(
-                    "cannot resolve '{}' to a zoned timestamp",
+                    "cannot resolve '{}' to a timestamp",
                     field.name()
                 )));
             }

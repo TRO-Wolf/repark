@@ -78,3 +78,9 @@ barrier is not put back. See `evidence/pin-red-r8-barrier.txt`. Halted here.
 inside one struct value. A null struct keeps its validity bit. Untouched
 children are the same arrays. Seven unit tests pass, including three zones
 against the existing wall kernel.
+
+**Round 7, emitters:** both emitters call `__repark_cast_nested_ntz__` inside
+main's cast. The `get_field` rebuild, the bind, and `rand()` are gone. The
+facade file is 18 passed. A 20-field volatile struct keeps one draw. `EXPLAIN`
+has no `rand()`. Renamed and case-different members store NULL in the unmatched
+leaf, which is main's cast. Reordered names store each session wall on its name.

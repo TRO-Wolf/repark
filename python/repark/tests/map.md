@@ -3198,8 +3198,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   DataFrame `append`, the same value main stores by copying the column.
   A 20-field struct from one `uuid()` subquery stores that one draw in every
   shared field, on `INSERT … SELECT` and DataFrame `append`, and `EXPLAIN`
-  of that INSERT has no `rand`. Values are `toArrow()` cast to int64, and
-  the null pin reads the struct column itself.
+  of that INSERT has no `rand`. Renamed members keep main's UTC wall.
+  Reordered names, an extra field and a case-different member follow main's
+  struct cast. Values are `toArrow()` cast to int64, and the null pin reads
+  the struct column itself.
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files

@@ -42,21 +42,7 @@ pub fn nested_leaf_cast_sql(expr: &str, target: &DataType) -> String {
 pub enum NtzDecision {
     Ineligible,
     Keep,
-    Rebuild(Vec<NtzMember>),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NtzMember {
-    pub target_name: String,
-    pub source_name: String,
-    pub node: NtzNode,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum NtzNode {
-    Keep,
-    Leaf,
-    Struct(Vec<NtzMember>),
+    Rebuild(Vec<Vec<String>>),
 }
 
 #[must_use]
@@ -67,9 +53,11 @@ pub fn nested_micro_ntz_decision(source: Option<&DataType>, target: &DataType) -
     let Some(source) = source else {
         return NtzDecision::Keep;
     };
-    match build_node(source, target, false) {
-        Some(NtzNode::Struct(members)) => NtzDecision::Rebuild(members),
-        _ => NtzDecision::Keep,
+    let paths = source_paths(source, target, false);
+    if paths.is_empty() {
+        NtzDecision::Keep
+    } else {
+        NtzDecision::Rebuild(paths)
     }
 }
 
@@ -78,24 +66,52 @@ pub fn nested_micro_ntz_selected_paths(
     source: Option<&DataType>,
     target: &DataType,
 ) -> Vec<Vec<String>> {
-    let NtzDecision::Rebuild(members) = nested_micro_ntz_decision(source, target) else {
+    match nested_micro_ntz_decision(source, target) {
+        NtzDecision::Rebuild(paths) => paths,
+        NtzDecision::Ineligible | NtzDecision::Keep => Vec::new(),
+    }
+}
+
+#[must_use]
+pub fn nested_ntz_paths_literal(paths: &[Vec<String>]) -> String {
+    let body = paths
+        .iter()
+        .map(|path| path.join("."))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("'{}'", body.replace('\'', "''"))
+}
+
+fn source_paths(source: &DataType, target: &DataType, below: bool) -> Vec<Vec<String>> {
+    if below && is_micro_ntz(target) && is_zoned_instant(source) {
+        return vec![Vec::new()];
+    }
+    let (DataType::Struct(target_fields), DataType::Struct(source_fields)) = (target, source)
+    else {
         return Vec::new();
     };
     let mut paths = Vec::new();
-    collect_paths(&members, &mut Vec::new(), &mut paths);
+    for target_field in target_fields {
+        let Some(source_field) = paired_field(source_fields, target_field.name()) else {
+            return Vec::new();
+        };
+        if name_breaks_paths(source_field.name()) || name_breaks_paths(target_field.name()) {
+            continue;
+        }
+        for mut path in source_paths(source_field.data_type(), target_field.data_type(), true) {
+            if path.is_empty() {
+                paths.push(vec![source_field.name().to_string()]);
+            } else {
+                path.insert(0, source_field.name().to_string());
+                paths.push(path);
+            }
+        }
+    }
     paths
 }
 
-fn collect_paths(members: &[NtzMember], prefix: &mut Vec<String>, out: &mut Vec<Vec<String>>) {
-    for member in members {
-        prefix.push(member.target_name.clone());
-        match &member.node {
-            NtzNode::Leaf => out.push(prefix.clone()),
-            NtzNode::Struct(inner) => collect_paths(inner, prefix, out),
-            NtzNode::Keep => {}
-        }
-        prefix.pop();
-    }
+fn name_breaks_paths(name: &str) -> bool {
+    name.contains('.') || name.contains(',')
 }
 
 fn target_has_nested_micro_ntz(target: &DataType, below: bool) -> bool {
@@ -108,34 +124,6 @@ fn target_has_nested_micro_ntz(target: &DataType, below: bool) -> bool {
     }
 }
 
-fn build_node(source: &DataType, target: &DataType, below: bool) -> Option<NtzNode> {
-    if below && is_micro_ntz(target) && is_zoned_instant(source) {
-        return Some(NtzNode::Leaf);
-    }
-    let (DataType::Struct(target_fields), DataType::Struct(source_fields)) = (target, source)
-    else {
-        return None;
-    };
-    let mut changed = false;
-    let mut members = Vec::with_capacity(target_fields.len());
-    for target_field in target_fields {
-        let source_field = paired_field(source_fields, target_field.name())?;
-        let node = match build_node(source_field.data_type(), target_field.data_type(), true) {
-            Some(built @ (NtzNode::Leaf | NtzNode::Struct(_))) => {
-                changed = true;
-                built
-            }
-            _ => NtzNode::Keep,
-        };
-        members.push(NtzMember {
-            target_name: target_field.name().clone(),
-            source_name: source_field.name().clone(),
-            node,
-        });
-    }
-    changed.then_some(NtzNode::Struct(members))
-}
-
 fn is_micro_ntz(data_type: &DataType) -> bool {
     matches!(data_type, DataType::Timestamp(TimeUnit::Microsecond, None))
 }
@@ -146,154 +134,15 @@ pub fn nested_micro_ntz_wall_sql(
     source: Option<&DataType>,
     target: &DataType,
 ) -> Option<String> {
-    let NtzDecision::Rebuild(members) = nested_micro_ntz_decision(source, target) else {
+    let NtzDecision::Rebuild(paths) = nested_micro_ntz_decision(source, target) else {
         return None;
     };
-    let plain = plain_column_sql(expr_sql);
-    let bound = if plain { expr_sql } else { "__repark_ntz_src" };
-    let body = emit_sql(bound, &NtzNode::Struct(members))?;
-    if plain {
-        Some(body)
-    } else {
-        Some(format!(
-            "(SELECT {body} FROM (SELECT ({expr_sql}) AS {bound}))"
-        ))
-    }
-}
-
-fn emit_sql(expr_sql: &str, node: &NtzNode) -> Option<String> {
-    let NtzNode::Struct(members) = node else {
-        return None;
-    };
-    let leaf = DataType::Timestamp(TimeUnit::Microsecond, None);
-    let mut changed = false;
-    let mut parts = Vec::with_capacity(members.len());
-    for member in members {
-        let child = child_sql(expr_sql, &member.source_name);
-        let rendered = match &member.node {
-            NtzNode::Leaf => match super::ntz_store::wall_cast_sql(&child, &leaf) {
-                Some(sql) => {
-                    changed = true;
-                    sql
-                }
-                None => child,
-            },
-            NtzNode::Struct(_) => match emit_sql(&child, &member.node) {
-                Some(sql) => {
-                    changed = true;
-                    sql
-                }
-                None => child,
-            },
-            NtzNode::Keep => child,
-        };
-        parts.push(format!("{}, {rendered}", sql_string(&member.target_name)));
-    }
-    if !changed {
-        return None;
-    }
-    Some(format!(
-        "CASE WHEN ({expr_sql}) IS NULL THEN NULL ELSE named_struct({}) END",
-        parts.join(", ")
-    ))
-}
-
-fn child_sql(expr_sql: &str, name: &str) -> String {
-    format!("get_field(({expr_sql}), {})", sql_string(name))
-}
-
-fn plain_column_sql(expr: &str) -> bool {
-    let mut text = expr.trim();
-    while let Some(inner) = strip_wrapping_parens(text) {
-        text = inner.trim();
-    }
-    ident_path(text)
-}
-
-fn strip_wrapping_parens(text: &str) -> Option<&str> {
-    let bytes = text.as_bytes();
-    if bytes.first() != Some(&b'(') || bytes.last() != Some(&b')') {
-        return None;
-    }
-    let mut depth = 0i32;
-    for (index, byte) in bytes.iter().enumerate() {
-        match byte {
-            b'(' => depth += 1,
-            b')' => {
-                depth -= 1;
-                if depth == 0 {
-                    return (index + 1 == bytes.len()).then_some(&text[1..text.len() - 1]);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
-}
-
-fn ident_path(text: &str) -> bool {
-    let mut rest = text;
-    if rest.is_empty() {
-        return false;
-    }
-    loop {
-        let next = if let Some(quoted) = rest.strip_prefix('`') {
-            take_quoted(quoted)
-        } else {
-            take_bare(rest)
-        };
-        let Some(next) = next else {
-            return false;
-        };
-        rest = next;
-        if rest.is_empty() {
-            return true;
-        }
-        let Some(stripped) = rest.strip_prefix('.') else {
-            return false;
-        };
-        rest = stripped;
-        if rest.is_empty() {
-            return false;
-        }
-    }
-}
-
-fn take_quoted(text: &str) -> Option<&str> {
-    let bytes = text.as_bytes();
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] == b'`' {
-            if index + 1 < bytes.len() && bytes[index + 1] == b'`' {
-                index += 2;
-                continue;
-            }
-            return Some(&text[index + 1..]);
-        }
-        index += 1;
-    }
-    None
-}
-
-fn take_bare(text: &str) -> Option<&str> {
-    let mut chars = text.chars();
-    let first = chars.next()?;
-    if !(first.is_ascii_alphabetic() || first == '_') {
-        return None;
-    }
-    let mut len = first.len_utf8();
-    for ch in chars {
-        if ch.is_ascii_alphanumeric() || ch == '_' {
-            len += ch.len_utf8();
-        } else {
-            break;
-        }
-    }
-    Some(&text[len..])
-}
-
-fn sql_string(text: &str) -> String {
-    format!("'{}'", text.replace('\'', "''"))
+    let call = format!(
+        "{}(({expr_sql}), {})",
+        super::ntz_store::NESTED_NTZ_WALL_CAST_UDF_NAME,
+        nested_ntz_paths_literal(&paths)
+    );
+    Some(nested_leaf_cast_sql(&call, target))
 }
 
 fn paired_field<'a>(fields: &'a Fields, name: &str) -> Option<&'a Field> {
@@ -677,13 +526,14 @@ mod tests {
         ]);
         let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
         let sql = nested_micro_ntz_wall_sql("`st`", Some(&source), &target).expect("wraps");
-        assert_eq!(
-            sql,
-            "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
-             __repark_cast_timestamp_ntz__((get_field((`st`), 'v'))), 'n', \
-             get_field((`st`), 'n')) END"
+        assert!(sql.starts_with("arrow_cast(("), "{sql}");
+        assert!(
+            sql.contains("__repark_cast_nested_ntz__((`st`), 'v')"),
+            "{sql}"
         );
         assert!(!sql.contains("rand("), "{sql}");
+        assert!(!sql.contains("get_field"), "{sql}");
+        assert!(!sql.contains("named_struct"), "{sql}");
     }
 
     #[test]
@@ -735,17 +585,13 @@ mod tests {
         let target = struct_type(&[("i", inner_target), ("m", DataType::Int32)]);
         let sql = nested_micro_ntz_wall_sql("s", Some(&source), &target).expect("wraps");
         assert_eq!(
-            sql.matches("__repark_cast_timestamp_ntz__").count(),
+            sql.matches("__repark_cast_nested_ntz__").count(),
             1,
             "{sql}"
         );
-        assert!(sql.contains("'v'"), "{sql}");
-        assert!(sql.contains("'n'"), "{sql}");
-        assert!(sql.contains("'m'"), "{sql}");
-        assert!(
-            !sql.contains("__repark_cast_timestamp_ntz__((get_field((CASE WHEN (s)"),
-            "{sql}"
-        );
+        assert!(sql.contains("'i.v'"), "{sql}");
+        assert!(!sql.contains("get_field"), "{sql}");
+        assert!(!sql.contains("rand("), "{sql}");
     }
 
     #[test]
@@ -786,14 +632,9 @@ mod tests {
         ]);
         let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
         let wrapped = store_assignment_cast_sql("s", Some(&source), &target);
-        assert!(
-            wrapped.contains("__repark_cast_timestamp_ntz__"),
-            "{wrapped}"
-        );
-        assert!(
-            !wrapped.contains("__repark_cast_timestamp_ntz__((s))"),
-            "{wrapped}"
-        );
+        assert!(wrapped.contains("__repark_cast_nested_ntz__"), "{wrapped}");
+        assert!(wrapped.contains("arrow_cast(("), "{wrapped}");
+        assert!(!wrapped.contains("get_field"), "{wrapped}");
         assert_eq!(
             store_assignment_cast_sql("s", None, &target),
             super::nested_leaf_cast_sql("s", &target)
@@ -807,18 +648,16 @@ mod tests {
             ("n", DataType::Int32),
         ]);
         let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
-        let expected = "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
-             __repark_cast_timestamp_ntz__((get_field((`st`), 'v'))), 'n', \
-             get_field((`st`), 'n')) END"
-            .to_string();
-        assert_eq!(
-            nested_micro_ntz_wall_sql("`st`", Some(&source), &target),
-            Some(expected.clone())
-        );
+        let sql = nested_micro_ntz_wall_sql("`st`", Some(&source), &target).expect("wraps");
         assert_eq!(
             store_assignment_cast_sql("`st`", Some(&source), &target),
-            expected
+            sql
         );
+        assert!(
+            sql.contains("__repark_cast_nested_ntz__((`st`), 'v')"),
+            "{sql}"
+        );
+        assert!(sql.starts_with("arrow_cast(("), "{sql}");
     }
 
     #[test]
@@ -838,23 +677,16 @@ mod tests {
         let sql = nested_micro_ntz_wall_sql(expr, Some(&source), &target).expect("wraps");
         assert_eq!(sql.matches(expr).count(), 1, "{sql}");
         assert!(!sql.contains("rand("), "{sql}");
-        assert_eq!(
-            sql.matches("get_field((__repark_ntz_src), 'f00')").count(),
-            1,
+        assert!(!sql.contains("get_field"), "{sql}");
+        assert!(
+            sql.contains("__repark_cast_nested_ntz__(((SELECT st FROM ice.ns.src)), 'v')"),
             "{sql}"
         );
-        assert_eq!(
-            sql.matches("get_field((__repark_ntz_src), 'f18')").count(),
-            1,
-            "{sql}"
-        );
-        assert!(sql.contains("__repark_cast_timestamp_ntz__"), "{sql}");
         let column = nested_micro_ntz_wall_sql("`ice`.`ns`.`src`.`st`", Some(&source), &target)
             .expect("column");
-        assert!(!column.contains("__repark_ntz_src"), "{column}");
         assert!(!column.contains("rand("), "{column}");
         assert!(
-            column.contains("get_field((`ice`.`ns`.`src`.`st`), 'f00')"),
+            column.contains("__repark_cast_nested_ntz__((`ice`.`ns`.`src`.`st`), 'v')"),
             "{column}"
         );
     }

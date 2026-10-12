@@ -275,17 +275,16 @@ mod tests {
             ]
             .into(),
         );
-        let expected = "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
-             __repark_cast_timestamp_ntz__((get_field((`st`), 'v'))), 'n', \
-             get_field((`st`), 'n')) END"
-            .to_string();
-        assert_eq!(
-            crate::write::update_cast::nested_micro_ntz_wall_sql("`st`", Some(&source), &target),
-            Some(expected.clone())
-        );
+        let sql =
+            crate::write::update_cast::nested_micro_ntz_wall_sql("`st`", Some(&source), &target)
+                .expect("wraps");
         assert_eq!(
             crate::write::update_cast::store_assignment_cast_sql("`st`", Some(&source), &target),
-            expected.clone()
+            sql
+        );
+        assert!(
+            sql.contains("__repark_cast_nested_ntz__((`st`), 'v')"),
+            "{sql}"
         );
         let schema = Arc::new(ArrowSchema::new(vec![Field::new("st", target, true)]));
         let projection = update_projection_sql(
@@ -294,6 +293,6 @@ mod tests {
             &[("st".to_string(), "`st`".to_string())],
             Some(std::slice::from_ref(&source)),
         );
-        assert!(projection.contains(&expected), "{projection}");
+        assert!(projection.contains(&sql), "{projection}");
     }
 }

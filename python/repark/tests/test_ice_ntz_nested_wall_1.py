@@ -430,6 +430,72 @@ def test_insert_analysis_stores_the_session_wall(tmp_path: Path, zone: str) -> N
         spark.stop()
 
 
+def session_wall_of(spark: Any, literal: str) -> int:
+    """The existing leaf kernel's session wall for one instant."""
+    arrow = spark.sql(f"SELECT __repark_cast_timestamp_ntz__({literal}) AS v").toArrow()
+    value = arrow.column("v").cast(pa.int64(), safe=False).to_pylist()[0]
+    assert isinstance(value, int)
+    return value
+
+
+def test_positional_members_land_with_mains_cast(tmp_path: Path) -> None:
+    """Renamed, reordered, extra and case-different members follow main's cast.
+
+    A renamed member is not selected, so main's cast stores NULL in that leaf.
+    Reordered names are selected and main's cast puts each session wall on its
+    name. An extra source field is dropped. A case-different name under
+    ``spark.sql.caseSensitive=true`` does not match, so that leaf is NULL.
+    """
+    spark = open_session("America/New_York", tmp_path)
+    try:
+        spark.sql("SET spark.sql.caseSensitive=true")
+        other = "TIMESTAMP '2024-01-01 12:00:00+00:00'"
+        other_wall = session_wall_of(spark, other)
+        instant_wall = session_wall_of(spark, INSTANT)
+
+        renamed = "ice.ns.renamed"
+        spark.sql(
+            f"CREATE TABLE {renamed} (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(f"INSERT INTO {renamed} SELECT 1, named_struct('a', {INSTANT}, 'n', 4)")
+        row = struct_values(spark, renamed)[0]
+        assert row["n"] == 4, row
+        assert row["v"] is None, row
+
+        ordered = "ice.ns.ordered"
+        spark.sql(
+            f"CREATE TABLE {ordered} (id INT, st STRUCT<v: TIMESTAMP_NTZ, w: TIMESTAMP_NTZ>) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(f"INSERT INTO {ordered} SELECT 1, named_struct('w', {other}, 'v', {INSTANT})")
+        assert leaf_ticks(spark, ordered, "st.v") == [instant_wall]
+        assert leaf_ticks(spark, ordered, "st.w") == [other_wall]
+
+        extra = "ice.ns.extra"
+        spark.sql(
+            f"CREATE TABLE {extra} (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(f"INSERT INTO {extra} SELECT 1, named_struct('v', {INSTANT}, 'n', 4, 'extra', 9)")
+        extra_row = struct_values(spark, extra)[0]
+        assert set(extra_row) == {"v", "n"}, extra_row
+        assert extra_row["n"] == 4
+        assert leaf_ticks(spark, extra, "st.v") == [instant_wall]
+
+        cased = "ice.ns.cased"
+        spark.sql(
+            f"CREATE TABLE {cased} (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(f"INSERT INTO {cased} SELECT 1, named_struct('V', {INSTANT}, 'n', 4)")
+        cased_row = struct_values(spark, cased)[0]
+        assert cased_row["n"] == 4, cased_row
+        assert cased_row["v"] is None, cased_row
+    finally:
+        spark.stop()
+
+
 def wide_struct_type() -> str:
     """A 20-field struct: eighteen shared strings, one other string, one NTZ."""
     shared = ", ".join(f"f{index:02d} STRING" for index in range(18))

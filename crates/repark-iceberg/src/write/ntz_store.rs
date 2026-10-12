@@ -15,6 +15,7 @@ use super::idents::quote_ident_spark;
 use super::update_cast::{incompatible_update_message, nested_micro_ntz_wall_sql};
 
 pub const NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ntz__";
+pub const NESTED_NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_nested_ntz__";
 pub const NS_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ns__";
 pub const NS_INSTANT_CAST_UDF_NAME: &str = "__repark_cast_timestamptz_ns__";
 
