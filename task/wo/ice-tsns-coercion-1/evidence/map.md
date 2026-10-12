@@ -38,5 +38,8 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   analysis: the full-sweep mismatch classes (DML store-cast fallback,
   error-quote, head-exceeds-twin, stale fixture text, read field-id metadata)
   with counts, root causes and specimens.
+- [round2-moved-pins.md](round2-moved-pins.md) — slice 1 round 2 moved-pins
+  census: the four brief-named suites pass unchanged (3 + 43 + 487), and the
+  round-1 twelve-statements pin moves to the twin's value, 12/12 verified.
 
 Up: [../map.md](../map.md).

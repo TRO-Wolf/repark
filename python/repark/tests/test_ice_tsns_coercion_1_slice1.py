@@ -64,18 +64,6 @@ def _role_outcome(
     return fixture["outcomes"][slot]
 
 
-def _statement_outcome(
-    fixture: dict[str, Any],
-    zone: str,
-    target: str,
-    source: str,
-    form: str,
-    door: str,
-) -> dict[str, Any]:
-    """Return the recorded statement-role outcome for one cell."""
-    return _role_outcome(fixture, "statement", zone, target, source, form, SIBLING, door)
-
-
 def _pairs_for(
     fixture: dict[str, Any], forms: tuple[str, ...], sibling: str
 ) -> list[tuple[str, str]]:
@@ -158,8 +146,8 @@ def test_microsecond_frame_leaves_the_gate_closed() -> None:
         spark.stop()
 
 
-def test_twelve_statements_equal_the_recorded_statement_role(tmp_path: Path) -> None:
-    """pins: ice-tsns-coercion-1/C-005 — this round changed no stored value or read schema."""
+def test_twelve_statements_equal_the_recorded_twin_role(tmp_path: Path) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — round 2 stores the twin's nanoseconds."""
     fixture = _load_fixture()
     for door, zone in DOOR_ZONE:
         warehouse = tmp_path / ("utc" if zone == "UTC" else "ny")
@@ -173,13 +161,13 @@ def test_twelve_statements_equal_the_recorded_statement_role(tmp_path: Path) -> 
                     outcome = doors.measure(
                         spark, warehouse, target, source, form, SIBLING, "statement", door
                     )
-                    assert outcome == _statement_outcome(
-                        fixture, zone, target, source, form, door
+                    assert outcome == _role_outcome(
+                        fixture, "twin", zone, target, source, form, SIBLING, door
                     ), cell
                     statement = recorder.read_sql(spark, source, form, SIBLING, "statement")
                     read = _normalized_read(recorder.capture(spark, statement))
                     want = _normalized_read(
-                        fixture["reads"][f"{zone}|{source}|{form}|{SIBLING}|statement"]
+                        fixture["reads"][f"{zone}|{source}|{form}|{SIBLING}|twin"]
                     )
                     assert read == want, cell
         finally:
