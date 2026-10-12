@@ -162,6 +162,21 @@ fn leaf_wraps(source: &DataType, target: &DataType) -> bool {
         .is_some_and(|row| row.wrap)
 }
 
+fn members_align(source: &DataType, target: &DataType) -> bool {
+    let (DataType::Struct(target_fields), DataType::Struct(source_fields)) = (target, source)
+    else {
+        return true;
+    };
+    target_fields.len() == source_fields.len()
+        && target_fields
+            .iter()
+            .zip(source_fields.iter())
+            .all(|(target_field, source_field)| {
+                target_field.name() == source_field.name()
+                    && members_align(source_field.data_type(), target_field.data_type())
+            })
+}
+
 fn source_paths(source: &DataType, target: &DataType, below: bool) -> Vec<Vec<String>> {
     if below && leaf_wraps(source, target) {
         return vec![Vec::new()];
@@ -170,11 +185,11 @@ fn source_paths(source: &DataType, target: &DataType, below: bool) -> Vec<Vec<St
     else {
         return Vec::new();
     };
+    if !members_align(source, target) {
+        return Vec::new();
+    }
     let mut paths = Vec::new();
-    for target_field in target_fields {
-        let Some(source_field) = paired_field(source_fields, target_field.name()) else {
-            return Vec::new();
-        };
+    for (target_field, source_field) in target_fields.iter().zip(source_fields.iter()) {
         if name_breaks_paths(source_field.name()) || name_breaks_paths(target_field.name()) {
             continue;
         }
@@ -209,7 +224,7 @@ fn is_micro_ntz(data_type: &DataType) -> bool {
 }
 
 #[must_use]
-pub fn nested_micro_ntz_wall_sql(
+pub fn nested_micro_ntz_kernel_sql(
     expr_sql: &str,
     source: Option<&DataType>,
     target: &DataType,
@@ -217,23 +232,21 @@ pub fn nested_micro_ntz_wall_sql(
     let NtzDecision::Rebuild(paths) = nested_micro_ntz_decision(source, target) else {
         return None;
     };
-    let call = format!(
+    Some(format!(
         "{}(({expr_sql}), {})",
         super::ntz_store::NESTED_NTZ_WALL_CAST_UDF_NAME,
         nested_ntz_paths_literal(&paths)
-    );
-    Some(nested_leaf_cast_sql(&call, target))
+    ))
 }
 
-fn paired_field<'a>(fields: &'a Fields, name: &str) -> Option<&'a Field> {
-    if let Some(exact) = fields.iter().find(|field| field.name() == name) {
-        return Some(exact.as_ref());
-    }
-    let mut insensitive = fields
-        .iter()
-        .filter(|field| field.name().eq_ignore_ascii_case(name));
-    let first = insensitive.next()?;
-    insensitive.next().is_none().then_some(first.as_ref())
+#[must_use]
+pub fn nested_micro_ntz_wall_sql(
+    expr_sql: &str,
+    source: Option<&DataType>,
+    target: &DataType,
+) -> Option<String> {
+    nested_micro_ntz_kernel_sql(expr_sql, source, target)
+        .map(|call| nested_leaf_cast_sql(&call, target))
 }
 
 fn is_zoned_instant(source: &DataType) -> bool {
@@ -388,8 +401,8 @@ mod tests {
     use std::sync::Arc;
 
     use super::{
-        incompatible_nested_message, incompatible_update_message, nested_micro_ntz_wall_sql,
-        store_assignment_cast_sql,
+        incompatible_nested_message, incompatible_update_message, nested_micro_ntz_kernel_sql,
+        nested_micro_ntz_wall_sql, store_assignment_cast_sql,
     };
 
     fn map_of(key: DataType, value: DataType) -> DataType {
@@ -611,6 +624,37 @@ mod tests {
             .find(|row| row.target == LeafKind::ZonedInstant && row.source == LeafKind::MicroNtz)
             .expect("mirror row");
         assert!(!mirror.wrap);
+    }
+
+    #[test]
+    fn a_misaligned_struct_stays_main_and_the_two_sites_can_emit_a_bare_kernel() {
+        let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let cased = struct_type(&[
+            ("V", instant(TimeUnit::Microsecond)),
+            ("n", DataType::Int32),
+        ]);
+        let extra = struct_type(&[
+            ("v", instant(TimeUnit::Microsecond)),
+            ("n", DataType::Int32),
+            ("x", DataType::Int32),
+        ]);
+        let reordered = struct_type(&[
+            ("n", DataType::Int32),
+            ("v", instant(TimeUnit::Microsecond)),
+        ]);
+        for source in [&cased, &extra, &reordered] {
+            assert!(nested_micro_ntz_wall_sql("`st`", Some(source), &target).is_none());
+        }
+        let aligned = struct_type(&[
+            ("v", instant(TimeUnit::Microsecond)),
+            ("n", DataType::Int32),
+        ]);
+        let kernel = nested_micro_ntz_kernel_sql("`st`", Some(&aligned), &target).expect("kernel");
+        assert!(!kernel.contains("arrow_cast"), "{kernel}");
+        assert!(
+            kernel.contains("__repark_cast_nested_ntz__((`st`), 'v')"),
+            "{kernel}"
+        );
     }
 
     #[test]

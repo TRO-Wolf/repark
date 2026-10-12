@@ -578,15 +578,20 @@ repark-core's error map.
   a table of target kind and source kind; only that pair wraps. A `None` source,
   a wall, a string, a date, an integer, a `timestamp_ns` leaf, a nested
   `TIMESTAMP` leaf, a list and a map stay
-  the original expression. `ntz_store::zone_store_frame`,
-  `merge/insert.rs` `zone_wrapping_stream_sql` and `store_assignment_cast_sql`
-  call it, and so does `predicate_dml/lineage.rs` `update_projection_sql`.
+  the original expression. Members pair only when every name matches in order.
+  A case-different, renamed, missing or extra member keeps main's expression.
+  `ntz_store::zone_store_frame` and `merge/insert.rs` `zone_wrapping_stream_sql`
+  emit the bare `__repark_cast_nested_ntz__` call. `store_assignment_cast_sql`
+  and `predicate_dml/lineage.rs` `update_projection_sql` keep main's `arrow_cast`
+  around that call.
   `store_assignment_cast_sql` asks the walk first and, on `None`, keeps the
   kernel or `nested_leaf_cast_sql`. A caller with no source type passes
   `None`, and the expression stays main's. `nested_micro_ntz_decision` is the
   one type decision both emitters ask: which struct leaves are an instant into
-  a microsecond `TIMESTAMP_NTZ` below the top. The SQL is main's `arrow_cast`
-  around one `__repark_cast_nested_ntz__` call. A list or a map is not entered.
+  a microsecond `TIMESTAMP_NTZ` below the top. `nested_micro_ntz_wall_sql`
+  is main's `arrow_cast` around one `__repark_cast_nested_ntz__` call.
+  `nested_micro_ntz_kernel_sql` is that call with no cast. A list or a map
+  is not entered.
   `zone_stores` hands the walk the Arrow type of a struct, list or map.
   Identity UPDATE asks `analyzed_types` once for the SET expressions and passes
   that slice; a failed analysis passes `None`. The expression emitter in

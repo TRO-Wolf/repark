@@ -36,6 +36,7 @@ SESSION_WALL = {
 INSTANT = "TIMESTAMP '2026-01-02 03:04:05.123456+00:00'"
 WALL = "TIMESTAMP_NTZ '2026-01-02 03:04:05.123456'"
 WALL_TICK = 1_767_323_045_123_456
+_V2 = "USING iceberg TBLPROPERTIES ('format-version'='2')"
 
 
 def open_session(zone: str, warehouse: Path) -> Any:
@@ -77,11 +78,7 @@ def stored_rows(spark: Any, table: str) -> list[tuple[int, int | None, int | Non
             continue
         loaded = pq.read_table(file["file_path"], columns=["id", "st"])
         ticks = (
-            loaded.column("st")
-            .combine_chunks()
-            .field("v")
-            .cast(pa.int64(), safe=False)
-            .to_pylist()
+            loaded.column("st").combine_chunks().field("v").cast(pa.int64(), safe=False).to_pylist()
         )
         numbers = loaded.column("st").combine_chunks().field("n").to_pylist()
         rows.extend(zip(loaded.column("id").to_pylist(), ticks, numbers, strict=True))
@@ -479,19 +476,17 @@ def session_wall_of(spark: Any, literal: str) -> int:
 
 
 def test_positional_members_land_with_mains_cast(tmp_path: Path) -> None:
-    """Renamed, reordered, extra and case-different members follow main's cast.
+    """Renamed and case-different members follow main's cast.
 
-    A renamed member is not selected, so main's cast stores NULL in that leaf.
-    Reordered names are selected and main's cast puts each session wall on its
-    name. An extra source field is dropped. A case-different name under
-    ``spark.sql.caseSensitive=true`` does not match, so that leaf is NULL.
+    Reordered exact names do not align, so the insert keeps main's expression
+    and stores each UTC wall on its name.
     """
     spark = open_session("America/New_York", tmp_path)
     try:
         spark.sql("SET spark.sql.caseSensitive=true")
         other = "TIMESTAMP '2024-01-01 12:00:00+00:00'"
-        other_wall = session_wall_of(spark, other)
-        instant_wall = session_wall_of(spark, INSTANT)
+        other_wall = 1_704_110_400_000_000
+        instant_wall = WALL_TICK
 
         renamed = "ice.ns.renamed"
         spark.sql(
@@ -553,12 +548,7 @@ def wide_subquery() -> str:
 
 
 def test_a_volatile_struct_is_evaluated_once(tmp_path: Path) -> None:
-    """A 20-field struct from one volatile subquery keeps one draw.
-
-    ``f00`` equals ``f17`` and differs from ``f18``. ``EXPLAIN`` has no
-    ``rand``. DataFrame ``append`` stores the same coupling. Main stores one
-    draw because it does not rebuild the struct.
-    """
+    """A 20-field struct from one volatile subquery keeps one draw."""
     spark = open_session("America/New_York", tmp_path)
     try:
         write_source(spark)
@@ -603,14 +593,7 @@ def error_line(error: Exception) -> str:
 def test_merge_update_clauses_store_the_session_wall_before_the_none_site(
     tmp_path: Path,
 ) -> None:
-    """Spark MERGE UPDATE stores the session wall before ``store_assignment_then_sql``.
-
-    America/New_York, a ``TIMESTAMP`` column into ``struct<v: TIMESTAMP_NTZ, n: INT>``.
-    ``nested_assign`` probes the source and wraps it. Main's matched cell is the
-    UTC wall ``1767323045123456``. Spark stores ``1767305045123456``. The
-    not-matched-by-source cell is not in the step-0 matrix; Spark's rule for this
-    assignment is the same session wall.
-    """
+    """Spark MERGE UPDATE stores the session wall before ``store_assignment_then_sql``."""
     spark = open_session("America/New_York", tmp_path)
     expected = SESSION_WALL["America/New_York"]
     try:
@@ -643,12 +626,7 @@ def test_merge_update_clauses_store_the_session_wall_before_the_none_site(
 
 
 def test_raw_error_doors_still_raise_mains_error(tmp_path: Path) -> None:
-    """``UPDATE`` with no ``WHERE`` and ``INSERT OVERWRITE … VALUES`` raise main's error.
-
-    UTC, ``ntz_nested``, a ``TIMESTAMP`` literal, copy-on-write. The class and the
-    first line are the step-0 text at ``2c33f289``. Spark stores the session wall
-    on both doors.
-    """
+    """``UPDATE`` with no ``WHERE`` and ``INSERT OVERWRITE … VALUES`` raise main's error."""
     overwrite_line = (
         "datafusion engine error: Arrow error: Invalid argument error: column types "
         'must match schema types, expected Struct("v": Timestamp(ns), "n": Int32) but '
@@ -686,12 +664,7 @@ def test_raw_error_doors_still_raise_mains_error(tmp_path: Path) -> None:
 
 
 def test_a_struct_under_a_list_keeps_the_utc_wall(tmp_path: Path) -> None:
-    """A struct under a list stays the physical instant, which is main's cast.
-
-    The walk does not enter a list. America/New_York stores
-    ``1767323045123456``, not the session wall. A map of structs panics in
-    Arrow's list cast before a store; the walk does not enter a map either.
-    """
+    """A struct under a list stays the physical instant, which is main's cast."""
     spark = open_session("America/New_York", tmp_path)
     try:
         write_source(spark)
@@ -709,12 +682,7 @@ def test_a_struct_under_a_list_keeps_the_utc_wall(tmp_path: Path) -> None:
 
 
 def test_repair_moves_a_main_wall_to_the_session_wall(tmp_path: Path) -> None:
-    """An UPDATE of the leaf repairs a row that holds the UTC wall main wrote.
-
-    The inserted ``TIMESTAMP_NTZ`` literal is ``1767323045123456``. The repair
-    is ``UPDATE t SET st.v = c WHERE id >= 0``, with ``c`` the original instant.
-    The leaf is read back from the Parquet data file.
-    """
+    """An UPDATE of the leaf repairs a row that holds the UTC wall main wrote."""
     spark = open_session("America/New_York", tmp_path)
     try:
         write_source(spark)
@@ -743,14 +711,7 @@ DST_INSTANTS = (
 
 
 def test_dst_instants_store_the_session_wall(tmp_path: Path) -> None:
-    """A gap instant and an overlap instant store the session wall.
-
-    America/New_York spring-forward ``2026-03-08 07:00Z`` and fall-back
-    ``2026-11-01 05:30Z``, and Australia/Lord_Howe spring-forward
-    ``2026-10-03 15:30Z`` and fall-back ``2026-04-04 14:45Z``. The ticks are
-    that civil time encoded as microseconds. The same rule produces Spark's
-    inventory value ``1767305045123456`` for the ordinary New York instant.
-    """
+    """A gap instant and an overlap instant store the session wall."""
     for index, (zone, literal, ticks) in enumerate(DST_INSTANTS):
         spark = open_session(zone, tmp_path / f"z{index}")
         try:
@@ -800,3 +761,117 @@ def test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands(
         ]
     finally:
         spark.stop()
+
+
+def _id_ticks(spark: Any, table: str, path: tuple[str, ...] = ("v",)) -> list[int | None]:
+    files = spark.sql(f"SELECT content, file_path FROM {table}.files").toArrow().to_pylist()
+    pairs: list[tuple[int, int | None]] = []
+    for file in files:
+        if file["content"] != 0:
+            continue
+        loaded = pq.read_table(file["file_path"], columns=["id", "st"])
+        leaf = loaded.column("st").combine_chunks()
+        for name in path:
+            leaf = leaf.field(name)
+        ticks = leaf.cast(pa.int64(), safe=False).to_pylist()
+        pairs.extend(zip(loaded.column("id").to_pylist(), ticks, strict=True))
+    pairs.sort()
+    return [tick for _, tick in pairs]
+
+
+def _ice(spark: Any, name: str, columns: str) -> None:
+    spark.sql(f"CREATE TABLE {name} ({columns}) {_V2}")
+
+
+def test_case_different_members_store_mains_positional_utc_wall(tmp_path: Path) -> None:
+    """Case-different BY NAME and OVERWRITE store main's positional UTC wall."""
+    shapes = (
+        ("named_struct('V', l, 'W', l2)", WALL_TICK, JULY_PHYSICAL),
+        ("named_struct('W', l2, 'V', l)", JULY_PHYSICAL, WALL_TICK),
+        ("named_struct('W', l2, 'v', l)", JULY_PHYSICAL, WALL_TICK),
+    )
+    doors = (
+        "INSERT INTO {t} BY NAME SELECT id, {e} AS st, 0 AS k FROM ice.ns.src",
+        "INSERT OVERWRITE {t} SELECT id, {e} AS st, 0 AS k FROM ice.ns.src",
+    )
+    for zone in ("UTC", "America/New_York"):
+        for sensitive in (False, True):
+            spark = open_session(zone, tmp_path / f"{zone}-{int(sensitive)}")
+            try:
+                spark.sql(f"SET spark.sql.caseSensitive={str(sensitive).lower()}")
+                _ice(spark, "ice.ns.src", "id INT, l TIMESTAMP, l2 TIMESTAMP")
+                spark.sql(f"INSERT INTO ice.ns.src VALUES (1, {INSTANT}, {JULY})")
+                for index, (expr, left, right) in enumerate(shapes):
+                    for door, sql in enumerate(doors):
+                        table = f"ice.ns.c{index}{door}{int(sensitive)}"
+                        cols = "id INT, st STRUCT<v: TIMESTAMP_NTZ, w: TIMESTAMP_NTZ>, k INT"
+                        _ice(spark, table, cols)
+                        spark.sql(sql.format(t=table, e=expr))
+                        found = (leaf_ticks(spark, table, "st.v"), leaf_ticks(spark, table, "st.w"))
+                        assert found == ([left], [right]), (zone, sensitive, expr)
+            finally:
+                spark.stop()
+
+
+def test_not_null_members_store_on_the_bare_kernel_doors(tmp_path: Path) -> None:
+    """Five NOT NULL layouts by seven doors store Spark's wall where the leaf converts."""
+    leaf = "named_struct('v', l, 'n', id)"
+    nested = "named_struct('i', named_struct('v', l, 'n', id), 'm', 5)"
+    ntz = "TIMESTAMP_NTZ"
+    layouts = (
+        (f"STRUCT<v: {ntz} NOT NULL, n: INT NOT NULL>", "srcst", ("v",), leaf),
+        (f"STRUCT<v: {ntz} NOT NULL, n: INT>", "srcst", ("v",), leaf),
+        (f"STRUCT<v: {ntz}, n: INT NOT NULL>", "srcst", ("v",), leaf),
+        (
+            f"STRUCT<i: STRUCT<v: {ntz} NOT NULL, n: INT NOT NULL>, m: INT>",
+            "srcst2",
+            ("i", "v"),
+            nested,
+        ),
+        (f"STRUCT<i: STRUCT<v: {ntz}, n: INT NOT NULL>, m: INT>", "srcst2", ("i", "v"), nested),
+    )
+    expects = (("UTC", [WALL_TICK, JULY_PHYSICAL]), ("America/New_York", [SHIFTED_WALL, JULY_NY]))
+    for zone, expected in expects:
+        spark = open_session(zone, tmp_path / zone)
+        try:
+            _ice(spark, "ice.ns.src", "id INT, l TIMESTAMP")
+            spark.sql(f"INSERT INTO ice.ns.src VALUES (1, {INSTANT}), (2, {JULY})")
+            _ice(spark, "ice.ns.srcst", "id INT, st STRUCT<v: TIMESTAMP, n: INT>, k INT")
+            spark.sql(
+                "INSERT INTO ice.ns.srcst SELECT id, "
+                "named_struct('v', l, 'n', id), 0 FROM ice.ns.src"
+            )
+            inner = "id INT, st STRUCT<i: STRUCT<v: TIMESTAMP, n: INT>, m: INT>, k INT"
+            _ice(spark, "ice.ns.srcst2", inner)
+            spark.sql(
+                "INSERT INTO ice.ns.srcst2 SELECT id, "
+                "named_struct('i', named_struct('v', l, 'n', id), 'm', 5), 0 FROM ice.ns.src"
+            )
+            index = 0
+            for struct, source, path, built in layouts:
+                named = built.replace("l,", "s.l,").replace("id)", "s.id)")
+                using = f"ice.ns.{source}"
+                matched = f"MERGE INTO {{t}} t USING {using} s ON t.id = s.id "
+                statements = [
+                    f"INSERT INTO {{t}} BY NAME SELECT k, st, id FROM {using}",
+                    f"INSERT INTO {{t}} BY NAME SELECT 0 AS k, {built} AS st, id FROM ice.ns.src",
+                    f"INSERT OVERWRITE {{t}} SELECT id, st, k FROM {using}",
+                    matched + "WHEN NOT MATCHED THEN INSERT (id, st, k) VALUES (s.id, s.st, s.k)",
+                    matched + "WHEN NOT MATCHED THEN INSERT *",
+                    (
+                        "MERGE INTO {t} t USING ice.ns.src s ON t.id = s.id WHEN NOT "
+                        f"MATCHED THEN INSERT (id, st, k) VALUES (s.id, {named}, 0)"
+                    ),
+                    None,
+                ]
+                for sql in statements:
+                    index += 1
+                    table = f"ice.ns.n{index}"
+                    _ice(spark, table, f"id INT, st {struct}, k INT")
+                    if sql is None:
+                        spark.table(using).writeTo(table).overwritePartitions()
+                    else:
+                        spark.sql(sql.format(t=table))
+                    assert _id_ticks(spark, table, path) == expected, (zone, index, struct)
+        finally:
+            spark.stop()

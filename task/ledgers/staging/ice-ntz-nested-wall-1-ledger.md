@@ -327,7 +327,7 @@ These review items are settled by that kernel:
 |---|---|---|
 | R8.2 | No `rand()` barrier. One struct value, so a volatile source is drawn once. | `test_a_volatile_struct_is_evaluated_once`: `f00` equals `f17`, differs from `f18`, and `EXPLAIN` has no `rand`. |
 | R8.3 | An untouched child is the original array, not a field rebuilt through a wrapper. | `twenty_fields_pass_the_untouched_children_through`. |
-| R8.5 | The kernel does not rename, reorder, add or drop a member. Main's cast places renamed, reordered, extra and case-different members. | `test_positional_members_land_with_mains_cast`. A missing name stores NULL. |
+| R8.5 | Members pair only when every name matches in order. A case-different, renamed, missing or extra member keeps main's expression. The bare sites then pair by position. | `a_misaligned_struct_stays_main_and_the_two_sites_can_emit_a_bare_kernel`. `test_case_different_members_store_mains_positional_utc_wall`. |
 | R8.7 | The SQL emitter keeps main's `arrow_cast((…), '<target>')` around the kernel. | `an_instant_leaf_below_a_struct_is_wrapped_and_its_sibling_is_not` expects `arrow_cast((`. |
 
 The leaf choice is the nine-row table in `update_cast.rs` `LEAF_ROWS`. Only a
@@ -394,3 +394,30 @@ five hours). The instant row stores `1783149753654321`. The pin
 `test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands`
 holds the wall row. The day the coercion unit lands, that pin goes red and is
 rewritten. Disposition: blocked on the struct coercion unit.
+
+F2 is fixed at the two bare sites. `paired_field` is gone. A case-different
+name is `Keep`, so `INSERT … BY NAME` and `INSERT OVERWRITE … SELECT` use
+main's positional conform. The six statements, each under `caseSensitive` true
+and false, in UTC and America/New_York, store main's rows. No refusal, no NULL
+member, no swapped member. They stay at the UTC wall, a named hole equal to
+main:
+
+| Shape | `v` | `w` |
+|---|---|---|
+| `named_struct('V', l, 'W', l2)` | `1767323045123456` | `1783164153654321` |
+| `named_struct('W', l2, 'V', l)` | `1783164153654321` | `1767323045123456` |
+| `named_struct('W', l2, 'v', l)` | `1783164153654321` | `1767323045123456` |
+
+Pin: `test_case_different_members_store_mains_positional_utc_wall`. Disposition: fixed, and the stored cells are a named hole equal to main.
+
+F3 is fixed at the same two sites. The bare kernel keeps source nullability, and
+main's later conform accepts NOT NULL members. The 35 cells (5 layouts by the
+7 doors `by_name_table`, `by_name_named`, `overwrite_table`,
+`merge_insert_table`, `merge_insert_star`, `merge_insert_named`,
+`df_overwrite_partitions`) store. In UTC the ticks are the physical instants
+`1767323045123456` and `1783164153654321`, which are Spark's and main's. In
+America/New_York the names match, so the leaf is converted to Spark's session
+wall `1767305045123456` and `1783149753654321`. None of these 35 cells stay at
+the UTC wall in America/New_York. Plain `INSERT … SELECT` and DataFrame append
+still go through a cast site. Pin:
+`test_not_null_members_store_on_the_bare_kernel_doors`. Disposition: fixed.

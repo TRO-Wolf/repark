@@ -139,3 +139,11 @@ stores `1767305045123456` in America/New_York. The pin
 `test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands`
 holds that tick and is green on this head. It must change when the coercion
 unit lands. No provenance guard.
+
+**Round 9, item 1:** `zone_store_frame` and `zone_wrapping_stream_sql` emit the
+bare kernel. Members pair only when every name matches in order. Red before
+the wheel: case-different BY NAME refused with `Unsupported CAST`, and a NOT
+NULL member refused the same way. Green after: the six case-different
+statements store main's positional UTC wall, and the 35 NOT NULL cells store.
+In America/New_York a converted leaf is Spark's session wall. None of those
+35 stay at the UTC wall. The six case-different statements do.

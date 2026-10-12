@@ -3235,6 +3235,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   A mixed `CASE` wall row stays `1767305045123456` until the struct coercion
   unit lands
   (`test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands`).
+  Case-different `BY NAME` and `INSERT OVERWRITE` store main's positional UTC
+  wall. The 35 NOT NULL cells store, and a converted leaf in America/New_York
+  is Spark's session wall.
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files

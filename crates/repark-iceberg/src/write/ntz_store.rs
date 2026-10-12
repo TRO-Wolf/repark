@@ -12,7 +12,7 @@ use iceberg::spec::{PrimitiveType, Type};
 use iceberg::table::Table;
 
 use super::idents::quote_ident_spark;
-use super::update_cast::{incompatible_update_message, nested_micro_ntz_wall_sql};
+use super::update_cast::{incompatible_update_message, nested_micro_ntz_kernel_sql};
 
 pub const NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ntz__";
 pub const NESTED_NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_nested_ntz__";
@@ -213,7 +213,7 @@ fn zone_store_frame(
     {
         let column = Expr::Column(Column::from((qualifier, field.as_ref())));
         if let Some(sql) = target.as_ref().and_then(|target_type| {
-            nested_micro_ntz_wall_sql(&quote_ident_spark(field.name()), Some(source), target_type)
+            nested_micro_ntz_kernel_sql(&quote_ident_spark(field.name()), Some(source), target_type)
         }) {
             converted = true;
             exprs.push(frame.parse_sql_expr(&sql)?.alias(field.name()));

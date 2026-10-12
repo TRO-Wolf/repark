@@ -111,7 +111,7 @@ fn zone_wrapping_stream_sql(
     use crate::write::ntz_store::{
         is_ltz_instant_target, needs_ltz_instant_cast, store_kernel_sql as wall_cast_sql,
     };
-    use crate::write::update_cast::nested_micro_ntz_wall_sql;
+    use crate::write::update_cast::nested_micro_ntz_kernel_sql;
     let fields = write_schema.fields();
     let planned = crate::write::ntz_store::analyzed_types(ctx, plan)
         .filter(|types| types.len() == fields.len());
@@ -128,7 +128,7 @@ fn zone_wrapping_stream_sql(
         let quoted = quote_ident(field.name());
         let column = format!("{inner}.{quoted}");
         let source = planned.as_ref().map(|types| &types[index]);
-        if let Some(nested) = nested_micro_ntz_wall_sql(&column, source, field.data_type()) {
+        if let Some(nested) = nested_micro_ntz_kernel_sql(&column, source, field.data_type()) {
             changed = true;
             projection.push(format!("({nested}) AS {quoted}"));
             continue;
