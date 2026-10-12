@@ -104,6 +104,13 @@ the `PARQUET:field_id` shift from the added column, which the retained
 evidence keeps as recorded. Kind 560/560, placement 560/560; no twin was
 adjusted. C-003 PROVEN.
 
+## 6. Slice 1, round 1 (2026-10-12)
+Built: the Spark door's first-`type_coercion` wrapper seat, the gate walk and the two counters; nothing is rewritten.
+Pins: `closed_gate_hands_the_inner_rule_the_plan_it_was_given`, `analyzer_configuration_keeps_the_rule_names_and_count_through_the_wrapper`, `configured_first_coercion_counts_open_analyses_and_ignores_closed_ones`, the 10-case gate truth table, `test_pandas_datetime64_ns_frame_opens_the_gate`, `test_twelve_statements_equal_the_recorded_statement_role`, … (`timestamp_ns_coercion/tests.rs`, `extension/tests.rs`, `test_ice_tsns_coercion_1_slice1.py`).
+Gate-open rate: 12670 opens over 16657 items (460 items opened, 2.8%); 3 opens from one pandas-only item.
+Cost: interleaved head/baseline 0.9776 insert, 0.9848 merge, 1.0080 merge_mor; the first run's over-cap ratios were box noise.
+Next: round 2, untyped NULL sites.
+
 ## Q. Questions
 
 No ruling is requested by this ledger until the summary names a kind mismatch or an

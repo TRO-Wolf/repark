@@ -25,8 +25,14 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   `opened > 0`, plus the full-run totals). The markdown is the check, the
   per-file opens, and which file has a pandas `datetime64[ns]` frame as its
   only nanosecond source.
-- [cost-slice1-round1.md](cost-slice1-round1.md) — slice 1 round 1 cost
-  ratios against [cost-baseline.json](cost-baseline.json). `merge` and
-  `merge_mor` are above 1.05. No product change followed.
+- [cost-slice1-round1.md](cost-slice1-round1.md) — slice 1 round 1 cost.
+  The first run against [cost-baseline.json](cost-baseline.json) put `merge`
+  and `merge_mor` above 1.05 with another lane's build between its sets; the
+  interleaved baseline-vs-head rerun (0.98 to 1.01 on all three statements)
+  does not reproduce the halt, and no product change followed either run.
+- [interleaved-sets.json](interleaved-sets.json) +
+  [interleaved-cost.json](interleaved-cost.json) — the interleaved rerun: ten
+  raw sets (five baseline, five head, per-repeat times and counter snapshots)
+  and the per-statement medians, ratios and pair ranges.
 
 Up: [../map.md](../map.md).
