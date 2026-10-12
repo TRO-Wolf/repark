@@ -67,12 +67,14 @@ def capture(spark: Any, statement: str) -> dict[str, Any]:
         ticks = column.cast(pa.int64()).to_pylist()
     rows: list[dict[str, Any]] = []
     ids = table.column("id").to_pylist() if "id" in table.schema.names else [None] * len(column)
-    values = column.to_pylist()
-    for index, value in enumerate(values):
-        row: dict[str, Any] = {
-            "id": ids[index],
-            "v": None if value is None else str(value),
-        }
+    for index, scalar in enumerate(column):
+        row: dict[str, Any] = {"id": ids[index], "v": None}
+        try:
+            value = scalar.as_py()
+        except OverflowError as error:
+            row["conversion_error"] = f"{type(error).__name__}: {error}"
+        else:
+            row["v"] = None if value is None else str(value)
         if ticks is not None and ticks[index] is not None:
             row["tick"] = ticks[index]
         rows.append(row)

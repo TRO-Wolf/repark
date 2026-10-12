@@ -17,9 +17,9 @@ or `__repark_cast_timestamptz_ns__` written by hand. Spark 4.1.2 is the second o
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The twin of every card spelling is recorded from main 572130dd on every door, five zones. | The twin fixture and its recorder. | **OPEN** | Recorder `_record_ice_tsns_coercion_1_twins.py` committed; fixture pending. |
-| C-002 | Spark 4.1.2's lattice for the temporal set is recorded in both ANSI modes. | The lattice JSON and its recorder. | **OPEN** | Recorder `_record_ice_tsns_coercion_1_spark_lattice.py` committed; lattice JSON pending. |
-| C-003 | Every twin's kind and zone placement matches Spark's analogue. | The comparison table. | **OPEN** | PENDING_SUMMARY |
+| C-001 | The twin of every card spelling is recorded from main 572130dd on every door, five zones. | The twin fixture and its recorder. | **PROVEN** | `python/repark/tests/ice_tsns_coercion_1_twins.json`: 107,520 twin, 107,520 statement and 1,920 plain stored cells, 1,120 reads, 1,680 range cells, 5 zones; recorder `_record_ice_tsns_coercion_1_twins.py`; summary `task/wo/ice-tsns-coercion-1/evidence/twins-summary.md`. |
+| C-002 | Spark 4.1.2's lattice for the temporal set is recorded in both ANSI modes. | The lattice JSON and its recorder. | **PROVEN** | `python/repark/tests/ice_tsns_coercion_1_spark_lattice.json`: 1,540 cells, Spark 4.1.2 read from the live session, both ANSI modes, 5 zones, 0 errors; recorder `_record_ice_tsns_coercion_1_spark_lattice.py`. |
+| C-003 | Every twin's kind and zone placement matches Spark's analogue. | The comparison table. | **OPEN** | Comparison table in `twins-summary.md`: kind 560/560 match; placement matches 336/560; 224 `tzns` non-UTC cells differ by the zone offset because RePark's `tzns` seed is wall+00:00 (zone-fixed) while Spark's `src_ltz` is wall-in-session-zone, and the twin passes `tzns` through unchanged. Open: align seeds (re-record) or rule pass-through placement out of scope. |
 | C-004 | The gate-open rate, the cost baseline and the four censuses are recorded. | Section 9 of the slice brief. | **OPEN** | Recorded in later commits of this slice. |
 | C-005 | Before the first type_coercion, every card site that holds a nanosecond value is wrapped in the existing cast kernels. | Slice 1. | **OPEN** | Not this slice. |
 | C-006 | `nvl` and `ifnull` over the temporal set become `coalesce`, then those kernels apply. | Slice 3. | **OPEN** | Not this slice. SQL `nvl` on main still has no timestamp signature. |
@@ -47,7 +47,25 @@ siblings. The summary `twins-summary.md` lands in step A, written by
 
 ## 2. Kind and placement (C-003)
 
-PENDING_SUMMARY
+Step A recorded 2026-10-12 by Muse Spark (muse-spark-1.3-contributor). Kind
+matches Spark on all 560 card-spelling twin reads. Placement matches on 336:
+every naive read and every `ns`-source zoned read (the kernel places the naive
+wall in the session zone exactly as Spark places `TIMESTAMP_NTZ`). The 224
+`tzns` non-UTC reads differ by the zone offset: the seeds differ by
+construction and the twin passes `tzns` through, so those cells carry no
+coercion signal either way. Two comparison fixes landed with the summary: the
+unit match reads `[ns`/`[us` prefixes so zoned types compare, and epoch
+microseconds floor like `unix_micros`.
+
+The 35 untyped-NULL stored-value mismatches on nanosecond targets are 15
+`union` cells through MERGE doors where statement and twin error identically
+(oracle consistent) and 20 `array` cells on the DataFrame-functions door where
+the twin text fails inside `functions.expr` while the same text plans through
+`spark.sql` and `selectExpr`. Slice 1 wraps programmatically with the kernel's
+declared return type, so neither class moves the design. The sketch's 96 hold:
+192 cells over `coalesce`/`array`/`CASE`/`if`, both sources, all three targets,
+`insert_select`/`insert_values`/`cached_frame_append`/`ctas`, UTC and New York,
+zero differ.
 
 ## 3. Product clauses left open (C-005, C-006, C-007)
 
@@ -58,3 +76,8 @@ lattice rewrite, and the temporal `nvl` rewrite are later slices.
 
 No ruling is requested by this ledger until the summary names a kind mismatch or an
 untyped-NULL stored-value mismatch on a nanosecond target.
+
+Update (2026-10-12, step A): the tripwire fired — the summary names zero kind
+mismatches and 35 untyped-NULL stored-value mismatches — and measurement
+disposes it without a ruling; see §2. No ruling requested. C-003 stays OPEN
+with its seed question above.

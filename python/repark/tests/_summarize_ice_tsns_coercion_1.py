@@ -137,21 +137,19 @@ def read_kind(cell: dict[str, Any]) -> str:
 
 
 def micros_of(tick: int, type_name: str) -> int | None:
-    """Return epoch microseconds, truncating nanoseconds toward zero."""
-    if "[ns]" in type_name:
-        if tick < 0:
-            return -((-tick) // 1000)
+    """Return epoch microseconds, flooring like Spark's ``unix_micros``."""
+    if "[ns" in type_name:
         return tick // 1000
-    if "[us]" in type_name:
+    if "[us" in type_name:
         return tick
     return None
 
 
 def wall_of(tick: int, type_name: str) -> str:
     """Return the UTC wall of a naive timestamp tick."""
-    if "[ns]" in type_name:
+    if "[ns" in type_name:
         scale, digits = 1_000_000_000, 9
-    elif "[us]" in type_name:
+    elif "[us" in type_name:
         scale, digits = 1_000_000, 6
     else:
         return str(tick)

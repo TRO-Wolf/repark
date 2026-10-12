@@ -138,10 +138,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--warehouse", type=Path, required=True)
+    parser.add_argument("--zones", default="")
     args = parser.parse_args()
+    zones = tuple(item for item in args.zones.split(",") if item) or ZONES
     cells: dict[str, Any] = {}
-    for zone in ZONES:
+    version = ""
+    for zone in zones:
         spark = open_spark(zone, str(args.warehouse))
+        version = version or spark.version
         for ansi in ("true", "false"):
             spark.conf.set("spark.sql.ansi.enabled", ansi)
             for source in SOURCES:
@@ -150,7 +154,7 @@ def main() -> None:
                         key = f"{zone}|{ansi}|{source}|{form}|{sibling}"
                         cells[key] = one_cell(spark, statement_sql(form, source, sibling))
         spark.stop()
-    payload = {"spark": "4.1.2", "zones": list(ZONES), "cells": cells}
+    payload = {"spark": version, "zones": list(zones), "cells": cells}
     args.output.write_text(json.dumps(payload, indent=1), encoding="utf-8")
 
 
