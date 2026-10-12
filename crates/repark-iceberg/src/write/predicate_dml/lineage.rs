@@ -235,11 +235,11 @@ mod tests {
             Some(std::slice::from_ref(&instant)),
         );
         assert!(
-            wrapped.contains("__repark_cast_timestamp_ntz__"),
+            wrapped.contains("arrow_cast((__repark_cast_nested_ntz__((s), 'v'))"),
             "{wrapped}"
         );
         assert!(
-            !wrapped.contains("__repark_cast_timestamp_ntz__((s))"),
+            !wrapped.contains("__repark_cast_timestamp_ntz__"),
             "{wrapped}"
         );
         assert_eq!(

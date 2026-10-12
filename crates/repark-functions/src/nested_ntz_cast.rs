@@ -296,7 +296,7 @@ impl ScalarUDFImpl for NestedNtzCast {
             ColumnarValue::Scalar(scalar) if scalar.is_null() => Ok(ColumnarValue::Scalar(
                 ScalarValue::try_new_null(args.return_field.data_type())?,
             )),
-            _ => Err(plan_error("requires a struct")),
+            ColumnarValue::Scalar(_) => Err(plan_error("requires a struct")),
         }
     }
 }

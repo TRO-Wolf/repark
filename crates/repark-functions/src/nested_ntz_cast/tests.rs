@@ -237,9 +237,9 @@ fn a_null_inner_struct_at_depth_two_stays_null() {
 fn twenty_fields_pass_the_untouched_children_through() {
     let mut fields = Vec::new();
     let mut children = Vec::new();
-    for index in 0..19 {
+    for index in 0..19i32 {
         fields.push(Field::new(format!("f{index:02}"), DataType::Int32, true));
-        children.push(Arc::new(Int32Array::from(vec![Some(index as i32)])) as ArrayRef);
+        children.push(Arc::new(Int32Array::from(vec![Some(index)])) as ArrayRef);
     }
     fields.push(Field::new("v", ts_type(), true));
     children.push(zoned(vec![Some(INSTANT)]));
@@ -252,9 +252,9 @@ fn twenty_fields_pass_the_untouched_children_through() {
         panic!("array");
     };
     let struct_array = array.as_struct();
-    for index in 0..19 {
+    for (index, original) in originals.iter().enumerate().take(19) {
         assert!(
-            Arc::ptr_eq(struct_array.column(index), &originals[index]),
+            Arc::ptr_eq(struct_array.column(index), original),
             "f{index:02}"
         );
     }

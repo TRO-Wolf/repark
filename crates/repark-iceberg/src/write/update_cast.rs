@@ -180,9 +180,9 @@ fn source_paths(source: &DataType, target: &DataType, below: bool) -> Vec<Vec<St
         }
         for mut path in source_paths(source_field.data_type(), target_field.data_type(), true) {
             if path.is_empty() {
-                paths.push(vec![source_field.name().to_string()]);
+                paths.push(vec![source_field.name().clone()]);
             } else {
-                path.insert(0, source_field.name().to_string());
+                path.insert(0, source_field.name().clone());
                 paths.push(path);
             }
         }

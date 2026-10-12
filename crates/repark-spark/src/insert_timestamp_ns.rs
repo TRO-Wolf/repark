@@ -446,17 +446,16 @@ mod tests {
         use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
         let mut found = None;
         let _ = expr.apply(|node| {
-            if let Expr::ScalarFunction(func) = node {
-                if func.name() == "__repark_cast_nested_ntz__" {
-                    if let Some(Expr::Literal(value, _)) = func.args.get(1) {
-                        found = match value {
-                            ScalarValue::Utf8(text)
-                            | ScalarValue::LargeUtf8(text)
-                            | ScalarValue::Utf8View(text) => text.clone(),
-                            _ => None,
-                        };
-                    }
-                }
+            if let Expr::ScalarFunction(func) = node
+                && func.name() == "__repark_cast_nested_ntz__"
+                && let Some(Expr::Literal(value, _)) = func.args.get(1)
+            {
+                found = match value {
+                    ScalarValue::Utf8(text)
+                    | ScalarValue::LargeUtf8(text)
+                    | ScalarValue::Utf8View(text) => text.clone(),
+                    _ => None,
+                };
             }
             Ok(TreeNodeRecursion::Continue)
         });

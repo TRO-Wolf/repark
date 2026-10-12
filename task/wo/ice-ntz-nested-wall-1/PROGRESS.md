@@ -130,4 +130,5 @@ wall `1767305045123456`.
 overlap instants in America/New_York and Australia/Lord_Howe store the session
 wall. The head matrix is 173/264 equal to Spark, field 324/324, ltz 396/396,
 top 396/396, raw-error doors 162/162, and 22 UTC-wall cells, each mapped to
-`SET *` or to the R4 literal. R-011 stays narrowed.
+`SET *` or to the R4 literal. R-011 stays narrowed. The identity UPDATE pin
+expects `arrow_cast` of `__repark_cast_nested_ntz__`. Clippy is clean.
