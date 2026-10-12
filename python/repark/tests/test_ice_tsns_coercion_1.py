@@ -73,10 +73,11 @@ def test_spark_lattice_covers_both_ansi_modes() -> None:
     assert lattice["zones"] == list(spellings.ZONES)
     cells = lattice["cells"]
     siblings = list(spellings.SIBLINGS) + list(spellings.RANGE_SIBLINGS)
-    assert len(cells) == 5 * 2 * 2 * 7 * len(siblings)
+    sources = ("ns", "tzns")
+    assert len(cells) == 5 * 2 * len(sources) * 7 * len(siblings)
     for zone in spellings.ZONES:
         for ansi in ("true", "false"):
-            for source in spellings.SOURCES:
+            for source in sources:
                 for form in spellings.FORMS:
                     for sibling in siblings:
                         cell = cells[f"{zone}|{ansi}|{source}|{form}|{sibling}"]
