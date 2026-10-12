@@ -31,10 +31,10 @@ impl QueryPlanner for UnmarkedExplain {
         logical_plan: &LogicalPlan,
         session_state: &SessionState,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        let plain = unsigned(logical_plan)?;
+        let cleared = unsigned(logical_plan)?;
         let planned = self
             .inner
-            .create_physical_plan(plain.as_ref().unwrap_or(logical_plan), session_state)
+            .create_physical_plan(cleared.as_ref().unwrap_or(logical_plan), session_state)
             .await?;
         Ok(unmarked(planned))
     }

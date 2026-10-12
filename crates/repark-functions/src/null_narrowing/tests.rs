@@ -172,12 +172,8 @@ fn a_cast_from_nanoseconds_to_an_instant_before_coercion_is_the_statements() {
     let kept = cast(col("m"), micros());
     assert!(!before_coercion(kept, &schema()).unwrap().transformed);
     let scan = table_scan(Some("t"), &arrow(), None).unwrap();
-    let plain = scan.clone().project(vec![cast(col("c"), micros())]);
-    assert!(
-        unsigned(&plain.unwrap().build().unwrap())
-            .unwrap()
-            .is_none()
-    );
+    let bare = scan.clone().project(vec![cast(col("c"), micros())]);
+    assert!(unsigned(&bare.unwrap().build().unwrap()).unwrap().is_none());
     let plan = scan
         .project(vec![written.clone()])
         .unwrap()

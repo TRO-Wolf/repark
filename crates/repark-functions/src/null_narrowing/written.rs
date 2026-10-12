@@ -85,7 +85,7 @@ pub fn unsigned(plan: &LogicalPlan) -> Result<Option<LogicalPlan>> {
     if !found {
         return Ok(None);
     }
-    let plain = plan.clone().transform_down_with_subqueries(|node| {
+    let cleared = plan.clone().transform_down_with_subqueries(|node| {
         node.map_expressions(|expr| {
             expr.transform_up(|inner| {
                 Ok(if is_signed(&inner) {
@@ -96,7 +96,7 @@ pub fn unsigned(plan: &LogicalPlan) -> Result<Option<LogicalPlan>> {
             })
         })
     })?;
-    Ok(Some(plain.data))
+    Ok(Some(cleared.data))
 }
 
 pub(super) fn is_signed(expr: &Expr) -> bool {
