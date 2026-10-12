@@ -15,5 +15,8 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   and the inspected tests that would not move.
 - [casts.json](casts.json) + [written-casts.md](written-casts.md) — 256
   written-cast positions, resolved or not, with the plan line each.
+- [try-repark.json](try-repark.json) + [try-spark.json](try-spark.json) +
+  [try-cast.md](try-cast.md) — `TRY_CAST` for microsecond, nanosecond and
+  string inputs, RePark and Spark 4.1.2.
 
 Up: [../map.md](../map.md).
