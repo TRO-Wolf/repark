@@ -147,3 +147,10 @@ NULL member refused the same way. Green after: the six case-different
 statements store main's positional UTC wall, and the 35 NOT NULL cells store.
 In America/New_York a converted leaf is Spark's session wall. None of those
 35 stay at the UTC wall. The six case-different statements do.
+
+**Round 9, item 2:** a scalar subquery whose probed type would wrap is emitted
+as main's cast, with no source type, so the kernel does not run. Red before:
+the instant-struct UPDATE returned success and wrote nothing. Green after:
+`PySparkException` and main's first line, and the rows stay. The equal-type
+subquery stays the silent no-op. Registry row ICE-TSNS-SQL-1-R-021 is OPEN,
+measured 2026-10-12.

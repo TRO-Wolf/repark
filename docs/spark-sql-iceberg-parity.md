@@ -3616,6 +3616,22 @@ still open is `isModifiable`.
 - **Rationale** — OPEN, dated 2026-10-11. A later unit sets the mirror row.
   R-011 stays open for `array<struct>` and `map<_, struct>`.
 
+### ICE-TSNS-SQL-1-R-021 — OPEN (measured 2026-10-12): a scalar subquery whose struct type equals the target updates nothing
+
+- **repark** — `UPDATE t SET st = (SELECT st FROM wsrc WHERE id = 1) WHERE id >= 0`,
+  America/New_York, both sides `STRUCT<v: TIMESTAMP_NTZ, n: INT>`. The statement
+  succeeds and the target stays `n = 77` at `1767323045123456`. The source `n`
+  is 1. Main does the same. An instant struct into that NTZ struct is main's
+  `PySparkException` whose first line is `arguments need to have the same data
+  type`; the walk returns the subquery unchanged.
+- **Apache Spark** — stores the source struct. The instant-into-NTZ shape stores
+  the session wall.
+  *(oracle: the verifier's scalar-subquery cell, Spark 4.1.2.)*
+- **Pin** — `test_scalar_subquery_update_raises_mains_type_error` holds the
+  equal-type row at `(1, 1767323045123456, 77)` and the instant-into-NTZ refusal.
+- **Rationale** — OPEN, dated 2026-10-12. The silent no-op is main's. This unit
+  does not fix it.
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers

@@ -6,14 +6,15 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     Assignment, AssignmentTarget, Expr, Ident, MergeAction, MergeClause, MergeInsertExpr,
-    MergeInsertKind, ObjectName, ObjectNamePart, TableFactor,
+    MergeInsertKind, ObjectName, ObjectNamePart, TableFactor, Visit, Visitor,
 };
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::update_cast::{
-    incompatible_update_message, nested_leaf_cast_sql, store_assignment_cast_sql,
+    NtzDecision, incompatible_update_message, nested_leaf_cast_sql, nested_micro_ntz_decision,
+    store_assignment_cast_sql,
 };
 
 mod expand;
@@ -374,6 +375,24 @@ impl Aligner {
     }
 }
 
+fn value_holds_scalar_subquery(expr: &Expr) -> bool {
+    struct Seen(bool);
+    impl Visitor for Seen {
+        type Break = ();
+
+        fn pre_visit_query(
+            &mut self,
+            _query: &datafusion::sql::sqlparser::ast::Query,
+        ) -> std::ops::ControlFlow<Self::Break> {
+            self.0 = true;
+            std::ops::ControlFlow::Break(())
+        }
+    }
+    let mut seen = Seen(false);
+    let _ = expr.visit(&mut seen);
+    seen.0
+}
+
 fn leaf_sql(
     keyed: &Keyed<'_>,
     target: &DataType,
@@ -382,6 +401,18 @@ fn leaf_sql(
 ) -> Result<String> {
     let mut value = Expr::clone(keyed.value);
     let value_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut value);
+    if value_holds_scalar_subquery(keyed.value) {
+        let would_wrap = keyed.value_type.as_ref().is_some_and(|source| {
+            matches!(
+                nested_micro_ntz_decision(Some(source), target),
+                NtzDecision::Rebuild(_)
+            )
+        });
+        if would_wrap {
+            return Ok(assignment_cast_sql(&value_sql, None, target, path));
+        }
+        return Ok(value_sql);
+    }
     match &keyed.value_type {
         Some(source) => value_sql_for(&value_sql, source, target, path, case_sensitive),
         None => Ok(assignment_cast_sql(&value_sql, None, target, path)),

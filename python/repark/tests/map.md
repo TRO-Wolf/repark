@@ -3237,7 +3237,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands`).
   Case-different `BY NAME` and `INSERT OVERWRITE` store main's positional UTC
   wall. The 35 NOT NULL cells store, and a converted leaf in America/New_York
-  is Spark's session wall.
+  is Spark's session wall. A scalar subquery of an instant struct raises main's
+  type error; an equal-type subquery stays main's silent no-op.
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files

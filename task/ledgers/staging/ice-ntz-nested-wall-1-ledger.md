@@ -421,3 +421,16 @@ wall `1767305045123456` and `1783149753654321`. None of these 35 cells stay at
 the UTC wall in America/New_York. Plain `INSERT … SELECT` and DataFrame append
 still go through a cast site. Pin:
 `test_not_null_members_store_on_the_bare_kernel_doors`. Disposition: fixed.
+
+F4 is fixed for the instant-into-NTZ shape. When the assignment value contains a
+scalar subquery and the probed type would wrap, `leaf_sql` emits main's cast
+with no source type, so the kernel does not run. `UPDATE t SET st = (SELECT st
+FROM src WHERE id = 1) WHERE id >= 0`
+raises `PySparkException` and the first line `datafusion engine error: Arrow
+error: Invalid argument error: arguments need to have the same data type`. It
+does not report success with no row changed. Pin:
+`test_scalar_subquery_update_raises_mains_type_error`. The pre-existing silent
+no-op, a subquery whose struct type equals the target, is registry row
+ICE-TSNS-SQL-1-R-021 (OPEN, measured 2026-10-12). The same pin holds that row
+at `(1, 1767323045123456, 77)`. Disposition: fixed for the instant source;
+named hole, equal to main, for the equal-type source.

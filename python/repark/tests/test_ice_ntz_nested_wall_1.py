@@ -875,3 +875,39 @@ def test_not_null_members_store_on_the_bare_kernel_doors(tmp_path: Path) -> None
                     assert _id_ticks(spark, table, path) == expected, (zone, index, struct)
         finally:
             spark.stop()
+
+def test_scalar_subquery_update_raises_mains_type_error(tmp_path: Path) -> None:
+    """Instant-struct scalar subquery raises main's type error; equal types stay a no-op."""
+    line = (
+        "datafusion engine error: Arrow error: Invalid argument error: "
+        "arguments need to have the same data type"
+    )
+    spark = open_session("America/New_York", tmp_path)
+    try:
+        _ice(spark, "ice.ns.src", "id INT, st STRUCT<v: TIMESTAMP, n: INT>, k INT")
+        spark.sql(f"INSERT INTO ice.ns.src VALUES (1, named_struct('v', {INSTANT}, 'n', 1), 0)")
+        create_nested(spark, "ice.ns.t", "TIMESTAMP_NTZ")
+        spark.sql(
+            f"INSERT INTO ice.ns.t VALUES (1, named_struct('v', {WALL}, 'n', 77), 9), "
+            f"(2, named_struct('v', {WALL}, 'n', 78), 9)"
+        )
+        before = stored_rows(spark, "ice.ns.t")
+        with pytest.raises(Exception) as caught:
+            spark.sql(
+                "UPDATE ice.ns.t SET st = (SELECT st FROM ice.ns.src WHERE id = 1) WHERE id >= 0"
+            )
+        assert type(caught.value).__name__ == "PySparkException"
+        assert error_line(caught.value) == line
+        assert stored_rows(spark, "ice.ns.t") == before
+        _ice(spark, "ice.ns.wsrc", "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>")
+        spark.sql(f"INSERT INTO ice.ns.wsrc VALUES (1, named_struct('v', {WALL}, 'n', 1))")
+        create_nested(spark, "ice.ns.w", "TIMESTAMP_NTZ")
+        spark.sql(f"INSERT INTO ice.ns.w VALUES (1, named_struct('v', {WALL}, 'n', 77), 9)")
+        spark.sql(
+            "UPDATE ice.ns.w SET st = (SELECT st FROM ice.ns.wsrc WHERE id = 1) WHERE id >= 0"
+        )
+        assert stored_rows(spark, "ice.ns.w") == [(1, WALL_TICK, 77)]
+    finally:
+        spark.stop()
+
+
