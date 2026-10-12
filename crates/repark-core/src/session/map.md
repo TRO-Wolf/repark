@@ -333,6 +333,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
   unrelated siblings loud. The wrapper preserves DataFusion's rule name and order.
+  **ICE-TSNS-NARROW-REFUSE-1 fold 3 (2026-10-11):** where it installs `StackQueryPlanner`
+  it hands that planner to each extension's `configure_query_planner` and installs what
+  comes back, so an extension can put a planner around the session's.
+  pins: ice-tsns-narrow-refuse-1/C-039
   **PERF-UNPIVOT-1 (2026-09-12):** every core session installs `StackQueryPlanner` and
   registers the marker `stack` UDF. pins: perf-unpivot-1/C-003
   **COLUMN-PARITY-1 critic round (2026-09-14):** every core session also registers the

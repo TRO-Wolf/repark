@@ -9,6 +9,14 @@ holds the reasons.
 
 ## Contents
 
+- [written.rs](written.rs) — fold 3 (2026-10-11): what records that the statement wrote a
+  cast, without changing a plan main builds. `signed` renames the field of a `Cast` or a
+  `TryCast` to `repark.written` (`is_signed` reads it); `wire_cast_source` is the operand
+  of a cast to the wire type the session rule reads as `TIMESTAMP`;
+  `__repark_written_timestamp_cast__` (`written_cast`, `written_cast_udf`,
+  `is_written_cast`) is the identity function that stands where main drops a written cast
+  over a `TIMESTAMP` value; `restored` gives a kept cast at the root of an expression the
+  alias main gives the bare value.
 - [tests.rs](tests.rs) — eleven pins over hand-built expressions and plans, no session:
   - `an_untyped_null_beside_a_nanosecond_branch_is_tagged_and_no_other_null`: `coalesce` in
     either order and a `CASE` are tagged; a NULL beside a microsecond or an integer branch,
@@ -66,4 +74,37 @@ holds the reasons.
     the plan's text.
   - `the_mark_returns_the_field_of_its_argument`: the field, the argument's name, and the
     optimizer drops the written-narrowing function over a microsecond instant only.
+  Fold 3 (2026-10-11) changed four of them:
+  - `a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion`: a `CAST` and
+    a `TRY_CAST` to the wire type over a naive and a zoned nanosecond value are signed, not
+    rewritten; the signed expression prints, names and types as the unsigned one and is not
+    signed twice; a coercion cast over either spelling is not marked, and a zoned value
+    cast to the wire type beside a date cast is marked when the analyzer inserted it and
+    not when the statement wrote it.
+  - `a_written_cast_over_a_microsecond_column_is_kept_only_above_a_mark`: the kept cast is
+    `__repark_written_timestamp_cast__`, not counted as a mark; nothing is kept when the
+    session reads `TIMESTAMP` as `TIMESTAMP_NTZ` or when the operand is still nanoseconds.
+  - `the_mark_returns_the_field_of_its_argument`: the kept cast returns its argument's
+    field and name and the optimizer removes it; the narrowing function is not simplified.
+  - `only_a_node_that_produces_a_column_is_marked_and_a_producer_is_found_without_a_scan`:
+    a scalar subquery that returns nanoseconds is a producer, one that returns
+    microseconds is not, and a coerced cast over the first is marked in a node with no
+    nanosecond column (the verifier's surviving mutant P3).
   pins: ice-tsns-narrow-refuse-1/C-003, C-019, C-020
+
+**Addendum D to fold 3 (2026-10-11, ledger section 13.2).** Before the first coercion a
+cast to an instant type over a nanosecond value that is not a mark's and not a NULL's
+(the planner's conforming cast of an `INSERT`, `UPDATE` or `MERGE` value into a
+microsecond column, and the DataFrame cast) is *signed*, where fold 2 rewrote it to the
+narrowing function. The printed plan of such a write is main's in every `EXPLAIN` form;
+`a_cast_from_nanoseconds_to_an_instant_before_coercion_is_the_statements` pins the sign,
+the unchanged display and that the cast is neither signed twice nor marked.
+The sign is read only while a node is analyzed, by the first mark. `written::unsigned`
+takes it off an expression (the field's name empty again), and the session rule
+(`instant_ts.rs` `rewrite_plan`) calls it on each expression of a node once the marks of
+that node are placed, so the analyzed plan holds main's casts and nothing after analysis
+can read a sign. Left on, the sign made a cast that changes no type survive physical
+planning (DataFusion elides only a cast with the default field): `EXPLAIN ANALYZE INSERT`
+printed a cast main does not (2 of 205 outputs). A plan that
+is analyzed again signs the same casts again: the sign is placed by shape, not by
+history. The same pin reads `unsigned` over an expression with and without a sign.

@@ -1182,6 +1182,24 @@ scalars live under [`try_invert/`](try_invert/map.md).
   tag left behind would show in a result schema. No rule is added to the analyzer. The store
   reads the marks in `repark-iceberg` `write/narrowed_store.rs`. Eleven unit pins in
   `null_narrowing/tests.rs`.
+  **Fold 3 (2026-10-11, ledger section 13): a read is analyzed as on main.** Fold 2 turned
+  a written `CAST(x AS TIMESTAMP)` below the root into the narrowing function before the
+  first coercion, and kept a written cast over a microsecond column as that function. Both
+  changed what coercion typed and what a read printed. Now the plan keeps main's shape:
+  (1) a written cast or `TRY_CAST` to the wire type over a nanosecond value, below the
+  root, is *signed*: its `Cast` field takes the name `repark.written`, which no schema, no
+  printed plan and no result type reads (`Expr::to_field` uses the field's type only,
+  `Display` its type and metadata). The first mark skips a signed cast, and the untyped
+  NULL beside one is not tagged. (2) Where main's session rule drops a written cast (the
+  wire type over a `TIMESTAMP` value, `is_ltz_timestamp`), and a mark sits in its operand,
+  in a scalar subquery of it or in the plan below, the cast is kept as
+  `__repark_written_timestamp_cast__`: an identity function with its argument's field and
+  name, removed by the optimizer and erased from `EXPLAIN` text. A root that main would
+  alias takes main's alias (`written::restored`), and dropping a kept cast restores the
+  name the same way. Under `spark.sql.timestampType=TIMESTAMP_NTZ` nothing is kept (main
+  does not drop the cast there). The narrowing function no longer simplifies itself away
+  over a microsecond value: main never builds that shape. `null_narrowing/written.rs`
+  holds the sign and the kept cast.
   pins: ice-tsns-narrow-refuse-1/C-002, C-003, C-019, C-020
 - `timestamp_ns_cast.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel
   `__repark_cast_timestamptz_ns__` is now the one conversion every write door reaches for a

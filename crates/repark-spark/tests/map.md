@@ -105,6 +105,36 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   nanosecond column's field metadata and takes no tag; no form of `EXPLAIN` over six
   statements prints a mark or the tag.
   pins: ice-tsns-narrow-refuse-1/C-028, C-029, C-030, C-031, C-032, C-033, C-034, C-035, C-036, C-038
+- [timestamp_ns_narrow_lineage.rs](timestamp_ns_narrow_lineage.rs) —
+  **ICE-TSNS-NARROW-REFUSE-1, fold 3 (2026-10-11, ledger section 13):** the pins of the
+  second verdict, over the helpers of `timestamp_ns_narrow_rule.rs` (a refusal also holds
+  no generated name and no engine rendering).
+  `a_written_try_cast_beside_a_microsecond_value_stores_on_every_door` (F1): three
+  spellings, both sources, both targets, seven doors, three zones; microseconds stored.
+  `a_written_cast_inside_a_container_beside_a_microsecond_container_stores`: a written cast
+  inside an array beside a microsecond array stores what the cast alone stores.
+  `a_plain_column_stores_beside_a_narrowing_it_does_not_pass_through` (F2): a plain column
+  read from a map with a narrowed key, `map_values`, a plain column plus an interval
+  computed from a narrowed value store nine digits; the map's value, `map_keys`, the
+  narrowed side of an addition and a round trip through a string or an integer refuse.
+  `a_written_call_stores_through_a_choice_an_element_a_lambda_and_a_subquery` (F7): a
+  written cast, `date_trunc`, a date cast and `to_date` over `if`, `greatest`, `least`, an
+  array element, a lambda, a nested `coalesce` and a scalar subquery store what the call
+  stores over the plain column; each of those without the call refuses.
+  `a_written_cast_changes_no_read` (F4, F6): a cast over a temporary view's column keeps
+  the column's field and main's name, prints no function of the unit and the plan of the
+  read without the cast; a container beside a written cast keeps its nanosecond type; a
+  written cast beside a microsecond value prints main's cast over the narrowing function.
+  `an_explain_frame_is_a_statement_and_prints_no_hidden_function` (F8): the frame's plan
+  is `Explain`; no form of `EXPLAIN` over seven statements prints a mark, the kept cast,
+  the tag or the sign.
+  `a_refusal_names_a_plain_column_and_otherwise_only_the_target` (F5).
+  `a_narrowing_in_a_later_values_row_refuses` (mutant L4) and
+  `a_scalar_subquery_of_nanoseconds_is_narrowed_where_no_column_in_scope_is` (mutant P3).
+  The two older files follow the new texts: `the_refusal_names_what_the_statement_wrote`
+  holds the column-or-target rule, and the branch doors of
+  `timestamp_ns_narrow_refuse.rs` expect the table the statement wrote.
+  pins: ice-tsns-narrow-refuse-1/C-039, C-040, C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-049, C-050
 - [timestamp_ns_narrow_refuse.rs](timestamp_ns_narrow_refuse.rs) —
   **ICE-TSNS-NARROW-REFUSE-1 (2026-10-10, parity row R-017; the owner's rulings of
   2026-10-10 built as fold 1):** the Rust door's pins of the narrowed-value refusal. Each

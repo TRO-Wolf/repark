@@ -23,7 +23,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   sketch, the matrices on the final build (104,960 cells and the verifier's 67,960), the
   seventeen findings one by one, 83 mutants, the cost against main and the gates. Two
   clauses stay OPEN on provisional rulings (Q7, Q8) and five questions are listed (V1 to
-  V5). `risk_tier: standard`. Branch `fix/ice-tsns-narrow-refuse-1`.
+  V5). Section 13 is fold 3 (2026-10-12), after the second verdict (6 S1, 4 S2): reads and
+  `EXPLAIN` are main's again, `TRY_CAST` is written, the walk follows one table of roles,
+  a written call reaches the narrowed value through what hands it on while the zone kind
+  is kept; the findings one by one, the matrices, the acceptance table of the five card
+  spellings by door, mutants, cost, gates and the whole list of what is left as on main
+  (§13.9). Clause C-051 is OPEN on question Q9. `risk_tier: standard`. Branch
+  `fix/ice-tsns-narrow-refuse-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

@@ -687,6 +687,30 @@ repark-core's error map.
   the DataFusion `Dml` plan of `INSERT` and of `UPDATE` with no `WHERE`, the `UPDATE`
   assignment probe by table name, and `CREATE TABLE AS`. A microsecond target is never
   walked. Five unit pins in `narrowed_store/tests.rs`.
+  **Fold 3 (2026-10-11, ledger section 13).** *What carries the value* (ruling V2,
+  narrowed): of a call typed a timestamp or a date that has an argument of such a type,
+  only those arguments are followed (an interval or an integer added to a plain column
+  does not carry a narrowed value into it); arithmetic follows its timestamp side; a value
+  selected from a map follows the map's values and `map_keys` its keys, through
+  `__repark_spark_nonnull__`; a call with no such argument follows every argument, so a
+  value that returns from STRING, BIGINT or JSON text still refuses. *What hands the value
+  on unchanged* (ruling V5, reversed): the written call nearest a mark is also remembered
+  through `if`, `greatest`, `least`, `nvl2`, `nullif`, the element of an array built in
+  place, a lambda body, an aggregate or a window call typed a timestamp, and a cast to a
+  container type; `TRY_CAST` is a written cast. *A mark that cuts nothing*: a mark over a
+  value whose type in the analyzed plan holds no nanoseconds (a `TRY_CAST` to the wire
+  type read as `TIMESTAMP`) is passed through; the narrowing, if any, is inside it and
+  has a mark of its own. *The kept cast* is `__repark_written_timestamp_cast__`.
+  *`UPDATE`* (`refuse_narrowed_ns_updates`): DataFusion puts its conforming cast of a
+  scalar-subquery value at the root of the subquery, over the aggregate, where it reads as
+  a written cast; the door reads that one cast as the planner's, so the statement refuses
+  as it did at fold 2. *The text* names the narrowed value only when it is a column with a
+  plain name of a relation the statement named, and otherwise the target column alone; a
+  generated table name is replaced by the empty name MERGE's own refusals carry, and the
+  branch door puts the statement's own table there (`repark-spark` `write_to_branch.rs`).
+  A marked column is followed to the expression that produces it before it is read as a
+  cut, so the DataFrame union of a `TRY_CAST` frame answers as the SQL union does. Eight
+  unit pins in `narrowed_store/lineage_tests.rs`.
   pins: ice-tsns-narrow-refuse-1/C-004, C-007, C-008, C-019, C-020, C-021
 - `ntz_store.rs`, `update_cast.rs`, `merge/insert.rs`, `predicate_dml/lineage.rs` —
   **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned nanosecond target is named too.

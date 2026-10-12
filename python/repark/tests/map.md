@@ -3271,6 +3271,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   it gives the 47 moved cells of the first fix and no other, the first line of the restated
   count (the ledger's §9.4).
   pins: ice-tsns-merge-wall-1/C-021, C-023
+- [test_ice_tsns_narrow_refuse_1_reads.py](test_ice_tsns_narrow_refuse_1_reads.py),
+  [_record_ice_tsns_narrow_refuse_1_reads.py](_record_ice_tsns_narrow_refuse_1_reads.py) +
+  [ice_tsns_narrow_refuse_1_reads_base.json](ice_tsns_narrow_refuse_1_reads_base.json) —
+  **ICE-TSNS-NARROW-REFUSE-1, fold 3 (2026-10-11, ledger section 13):** a statement that
+  writes nothing answers as main does. The recorder runs 73 statements in one session in
+  America/New_York (a written cast beside the nanosecond value in 28 calls, 20 narrowed
+  values, unions, filters, joins, subqueries, three views, four `INSERT`s that are only
+  explained) and keeps the Arrow schema with its field metadata, the rows and the logical
+  rows of the plain `EXPLAIN`; the fixture was recorded with the release build of main
+  `2c33f289`. Three tests, each in a session of its own: every statement answers as the
+  fixture does, no form of `EXPLAIN` prints a function of the unit, and an `EXPLAIN` frame
+  is a statement frame. The same fold changed two lines of the matrix pins:
+  `test_ice_tsns_narrow_refuse_1.py` no longer counts `TRY_CAST(c AS TIMESTAMP)` among the
+  kept types that refuse beside an untyped NULL branch (it is a written cast and stores the
+  base's value), and `_ice_tsns_narrow_refuse_1_doors.py` compares a refusal on a branch
+  without the table's name, which is the statement's on the head and a generated relation
+  on the base.
+  pins: ice-tsns-narrow-refuse-1/C-040, C-041, C-042, C-045, C-046, C-048
 - [test_ice_tsns_narrow_refuse_1_rule.py](test_ice_tsns_narrow_refuse_1_rule.py) —
   **ICE-TSNS-NARROW-REFUSE-1, fold 2 (2026-10-11, ledger section 12):** the redesigned rule
   through the DataFrame writers, 67 tests in America/New_York over a source that also holds

@@ -78,17 +78,21 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
   (first linked from the `comment_on_table.rs` row above).
 
-- [explain_marks.rs](explain_marks.rs) — **ICE-TSNS-NARROW-REFUSE-1, fold 2 (2026-10-11):**
-  an analyzed plan carries the marks of a narrowed nanosecond value (a frame or a view may
-  be written later), and `EXPLAIN VERBOSE` prints analyzed plans. `explain` runs an `EXPLAIN`
-  that does not run its statement, erases both mark calls from the text of each logical
-  plan row and keeps the argument (`strip_marks`, parentheses counted outside double
-  quotes), and writes `SAME TEXT AS ABOVE` where a row then equals the row above it, by
-  DataFusion's own rule (`physical-plan` `explain.rs` `should_show`): the final
-  `logical_plan` row is always printed. `spark_ast` calls it for a `LogicalPlan::Explain`;
-  `EXPLAIN ANALYZE` prints physical plans, which hold no mark. Two unit pins: the erasure,
-  and the rows collapsed.
-  pins: ice-tsns-narrow-refuse-1/C-034
+- [explain_marks.rs](explain_marks.rs) — **ICE-TSNS-NARROW-REFUSE-1, fold 3 (2026-10-11,
+  ledger section 13):** an analyzed plan carries the marks of a narrowed nanosecond value
+  and the kept written cast (a frame or a view may be written later), and `EXPLAIN VERBOSE`
+  prints analyzed plans. Fold 2 collected the `EXPLAIN` rows at the door and returned them
+  as an in-memory frame, which made an `EXPLAIN` frame an executed table with attribute
+  ids and broke two pins that pass on main. `UnmarkedExplain` is a `QueryPlanner` around
+  the session's planner (`SparkExtension::configure_query_planner`, the hook
+  `repark-core` `SessionExtension` gained for it): when the planned node is an
+  `ExplainExec` whose rows hold one of the three hidden names, it builds the same node
+  with the calls erased from each row's text (`strip_marks`, parentheses counted outside
+  double quotes). The frame is the lazy `Explain` statement main returns, and
+  `SAME TEXT AS ABOVE` is written by DataFusion itself from the cleaned rows. Two unit
+  pins: the erasure, and an `ExplainExec` cleaned, left alone when it holds no name, and
+  another node left alone.
+  pins: ice-tsns-narrow-refuse-1/C-034, C-039, C-041
 - `nested_ns.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):**
   `refuse_nested_supply` is the one call that hands an `INSERT` (plain, `OVERWRITE`,
   `BY NAME`, `REPLACE WHERE`), `UPDATE` or `MERGE` statement and its Iceberg target to

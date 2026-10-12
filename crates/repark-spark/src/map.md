@@ -1072,6 +1072,15 @@ pins: rp-4-fork-repin/C-005, C-006
   qualified by the alias or the table name is that column; the other guards of the probe
   are as they were. `merge.rs`: a narrowed refusal raised inside MERGE carried the empty
   table name; the door names the target (`narrowed_store::name_table`).
+  **Fold 3 (2026-10-11).** `spark_ast.rs` no longer answers an `EXPLAIN` itself (see
+  `router/explain_marks.rs`); `extension.rs` wraps the session's query planner.
+  `insert_timestamp_ns::refuse_narrowed_stores` calls `refuse_narrowed_ns_updates` for an
+  `UPDATE`: the planner's conforming cast at the root of a scalar-subquery value is not a
+  cast the statement wrote. `router.rs` and `write_to_branch.rs` (`name_target`): a write
+  redirected to a branch or a staged snapshot runs against a generated relation; a refusal
+  raised behind the redirect carries the empty table name and the router puts the table
+  the statement wrote there (`ice.ns.t.branch_b1`). The older unfiltered `UPDATE` refusal
+  (`Narrowed::refuse`) does the same.
   pins: ice-tsns-narrow-refuse-1/C-004, C-008
 - `insert_timestamp_ns.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the `UPDATE` conform runs
   for a `timestamptz_ns` target too. R-007 had filtered zoned targets out of it to hold the

@@ -1002,6 +1002,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3):
   `SessionExtension` with three defaulted hooks (`configure` pre-assembly,
   `configure_analyzer_rules` during context assembly, and `register` post-context) at v1's inline
+  (ICE-TSNS-NARROW-REFUSE-1 fold 3, 2026-10-11: a fourth defaulted hook,
+  `configure_query_planner`, hands the session's query planner to the extension, which
+  returns it or a planner around it; `df_guards.rs` calls it where it installs
+  `StackQueryPlanner`. pins: ice-tsns-narrow-refuse-1/C-039)
   registration positions; `NoopSessionExtension` is the
   no-extension baseline. `configure` takes a `SessionBuildConf` — the builder's raw conf map PLUS
   the values `build()` has already resolved from it (today: the session timezone, H-1a split B).

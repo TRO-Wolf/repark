@@ -27,6 +27,13 @@ differs, section 11 holds.
 the redesign of the guard's rule, written before its code, and the fold's measurements; where
 it differs from sections 2 to 11, section 12 holds.
 
+**Fold 3 (2026-10-11 and 12).** The verifier's second verdict failed head `9cee945a` (6 S1,
+4 S2): nothing narrowed by the analyzer was found stored, but statements main stored right
+refused, reads changed and CI was red. Section 13 is the last fold: it removes that, takes
+"what main does" wherever a finding could also be closed by a smarter rule, and lists in
+§13.9 every shape left as on main. Clauses C-039 to C-051 are the fold's; where section 13
+differs from sections 2 to 12, section 13 holds.
+
 ## PROPOSITION LEDGER — ICE-TSNS-NARROW-REFUSE-1 — 2026-10-10
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -69,6 +76,19 @@ it differs from sections 2 to 11, section 12 holds.
 | C-036 | Each rule of the fold has a hand mutant that a named pin kills; a survivor is pinned or explained. | §12.11. | **PROVEN** | §12.11. |
 | C-037 | The fold costs a write on a table with no nanosecond column, and a read that mixes nanosecond and microsecond branches, at most 1.05 of main. | §12.12: release builds, interleaved, six sets of fifteen per build. | **PROVEN** | §12.12: at most 1.017. |
 | C-038 | The gates are green on the fold's final source with real exit codes. | §12.13. | **PROVEN** | §12.13. |
+| C-039 | An `EXPLAIN` of any statement is the lazy statement frame main returns, and the CI checks that were red on `9cee945a` pass (F8). | §13.2; `an_explain_frame_is_a_statement_and_prints_no_hidden_function`; main's two pins. | **PROVEN** | §13.3, §13.8. |
+| C-040 | A statement that writes nothing answers as on main: schema with field metadata, values and plan text (F4, F6; addendum E i). | §13.2; `a_written_cast_changes_no_read`; the facade fixture recorded on main, `test_ice_tsns_narrow_refuse_1_reads.py`. | **PROVEN** | §13.5. |
+| C-041 | No hidden name is printed by any `EXPLAIN` form, and the `EXPLAIN`, `EXPLAIN VERBOSE` and `EXPLAIN ANALYZE` text of an `INSERT`, `MERGE`, `UPDATE` or CTAS is main's (addendum D). | §13.2 "The planner's cast is signed too"; the sign taken off before physical planning; `a_cast_from_nanoseconds_to_an_instant_before_coercion_is_the_statements`. | **PROVEN** | §13.5: 0 of 205 outputs differ from main. |
+| C-042 | A written `TRY_CAST` is a written cast on every door (F1). | §13.2; `a_written_try_cast_beside_a_microsecond_value_stores_on_every_door`. | **PROVEN** | §13.4. |
+| C-043 | The walk follows only what the stored digits pass through, and that is one table of roles (F2, addendum B). | §13.2 "The role table"; the store pins of `narrowed_store/lineage_tests.rs`; `a_plain_column_stores_beside_a_narrowing_it_does_not_pass_through`. | **PROVEN** | §13.4; mutants T1, T4, X6, X7 (§13.6). |
+| C-044 | A written call reaches the narrowed value through what hands it on unchanged, only while the zone kind is kept (F7, addendum C). | §13.2; `a_written_call_stores_through_a_choice_an_element_a_lambda_and_a_subquery`. | **PROVEN** | §13.4: 0 stored values differ from the twin but the 10 of F3. |
+| C-045 | A refusal names a plain column or the target alone and the table the statement wrote; no engine text reaches it (F5). | §13.2 "The text"; `a_refusal_names_a_plain_column_and_otherwise_only_the_target`. | **PROVEN** | §13.3. |
+| C-046 | Never worse: no cell main stored fully is refused, errors or stores differently; no microsecond-target cell moves; no refusal leaves a value (addendum E ii). | §13.4. | **PROVEN** | §13.4. |
+| C-047 | The verdict's surviving mutants L4 and P3 are pinned, and each rule of the fold has a mutant a named pin kills. | §13.6. | **PROVEN** | §13.6. |
+| C-048 | The fold costs at most 1.05 of main on the nine timed statements. | §13.7. | **PROVEN** | §13.7: at most 1.026 on the final build. |
+| C-049 | The gates are green on the fold's final source with real exit codes. | §13.8. | **PROVEN** | §13.8. |
+| C-050 | F3 (a date call over a naive value cut to an instant, in a zone that skipped a day) is left as on main. | Ruling F3: the smaller change. | **PROVEN** | §13.9 item 6. |
+| C-051 | The five card spellings refuse on every write door in five zones (addendum A). | §13.11. | **OPEN** | §13.11: four spellings refuse on 56 of 64 doors; a cached frame stores cut as on main (owner ruling 4), a door that creates its table types it microseconds, and `nvl` is typed STRING (owner ruling 3). Q9. |
 
 ## 1. The base, measured before any change (C-001)
 
@@ -1419,6 +1439,481 @@ its own debug build directory, and the matrices' JSON under the lane's scratch d
 and the measurements (JSON, logs, scripts) kept. The previous session's `target/r017` in
 the clone was left as it was.
 
+## 13. Fold 3 (2026-10-11): the second verdict
+
+The verifier's second verdict on head `9cee945a` was FAIL: 6 S1, 4 S2 (two of the S2 are
+surviving mutants). No analyzer-narrowed value was found stored; what failed was the other
+side of the rule: statements main stored right that the head refused, reads that changed,
+and CI. This fold removes that before it adds anything, and it is the last one: where a
+finding could be closed by a smarter rule or by doing what main does, it does what main
+does and the cell is named in §13.9. Where sections 2 to 12 differ, this section holds.
+
+### 13.1 The rulings of the fold (orchestrator, provisional, built)
+
+- **V2, narrowed.** The walk follows only the arguments the stored value passes through.
+  A narrowed value that feeds a map key, an interval, an integer, a predicate or any other
+  argument the stored nine digits do not come from does not refuse the statement.
+- **V5, reversed for the transparent family.** `if`, `greatest` and `least`, `nvl2`, an
+  element of an array built in place, a lambda, a scalar subquery and every spelling the
+  planner lowers to the expression of `CASE` or `coalesce` hand the value on as `CASE` and
+  `coalesce` do; the decision is taken on the analyzed expression, not on the spelling.
+- **Reads are main's, without exception.** Whatever made a statement that writes nothing
+  differ from main is removed: the `EXPLAIN` door that returned an executed frame, the
+  written cast rewritten before coercion, the kept cast that showed and cost a field id.
+- **`TRY_CAST` written by the user is a written cast.**
+- **F3** (a date cast over a naive value cut to an instant, in a zone that skipped a day):
+  the arm is not equal there; main stores the same differing value, so the smaller change
+  is taken: nothing is built and the case is recorded (§13.9).
+
+The addendum of the same day (items A to E) added: the five card spellings are the
+acceptance and refuse on every write door in five zones (A, §13.11); what the value passes
+through is a table of roles written as data in one place (B); a call hands the written
+call on only where the type coerced inside it and the written cast are of the same zone
+kind, instant or naive (C); the `EXPLAIN` text of a write is main's (D); and what parks
+the unit is a statement that writes nothing and differs from main, or a statement main
+stored fully that the head refuses, errors on or stores differently (E), which makes the
+list of §13.9 the whole list of what is left as on main.
+
+### 13.2 What changed in the source
+
+**An `EXPLAIN` is main's frame again (F8).** Fold 2 ran every `EXPLAIN` at the door to
+erase the marks from its text and returned the rows as an in-memory frame. That frame had
+attribute ids, could be selected from, and broke two pins that pass on main
+(`binding_builds_inert_empty_root_for_never_stamped_plans`,
+`test_statement_frames_bind_without_an_attribute_id`); the third red check, the smoke
+job, only gathers the others. The erasure moved to where the text is made: the session's
+query planner is wrapped (`SessionExtension::configure_query_planner`, a fourth defaulted
+hook of `repark-core`; `repark-spark` `router/explain_marks.rs` `UnmarkedExplain`), and
+when the planned node is an `ExplainExec` whose rows hold a hidden name it is rebuilt with
+the calls erased. The frame is the lazy `Explain` statement main returns;
+`SAME TEXT AS ABOVE` is written by DataFusion from the cleaned rows.
+
+**A read is analyzed as on main (F4, F6).** Two things fold 2 did during analysis changed
+what a read answers, and both are gone:
+
+- *The written cast rewritten before coercion.* Fold 2 turned `CAST(x AS TIMESTAMP)` below
+  the root into the narrowing function before the first type coercion, so coercion typed
+  the node from a microsecond branch where main types it from a nanosecond one
+  (`array_except(array(tzns), array(CAST(tzns AS TIMESTAMP)))` returned another type and
+  other values). The cast now stays as main has it and is *signed*: the `Cast` field takes
+  the name `repark.written`. No schema, printed plan or result type reads that name
+  (`Expr::to_field` uses the field's type, `Display` its type and metadata), so the plan is
+  main's in every observable. The first mark skips a signed cast; that is the only reader.
+- *The kept cast.* Where main's session rule drops a written cast (the wire type over a
+  value that is already a `TIMESTAMP`) fold 2 kept it as the narrowing function, which
+  printed in `EXPLAIN VERBOSE`, lost the column's `PARQUET:field_id` and aliased an
+  aggregate. It is kept as `__repark_written_timestamp_cast__`, an identity function with
+  its argument's field and name, erased from `EXPLAIN` text and removed by the optimizer;
+  a root main would alias takes main's alias. Nothing is kept under
+  `spark.sql.timestampType=TIMESTAMP_NTZ`, where main does not drop the cast (fold 2 kept
+  it there too and returned an instant where main returns a naive value).
+
+A written cast inside a container beside a microsecond container
+(`coalesce(array(CAST(c AS TIMESTAMP)), array(ts))[0]`) is the one shape the first of these
+exposed: with main's types the coercion casts a list that only looks like nanoseconds, and
+the first mark sits on it. The store passes such a mark through (next paragraph).
+
+**A mark that cuts nothing.** A mark over a value whose type in the analyzed plan holds no
+nanoseconds (a `TRY_CAST` to the wire type read as `TIMESTAMP`) is passed through. The
+mark was placed while the value still looked like nanoseconds; if it no longer does, the
+node cuts nothing, and a narrowing inside the value has a mark of its own. This replaces
+no rule of §12: an analyzer cut of a nanosecond value still carries its mark and refuses.
+
+**`TRY_CAST` (F1).** `TRY_CAST(x AS TIMESTAMP)` is signed as `CAST` is, is not read as a
+nanosecond source by the first mark, and at the store is a written call.
+
+**What carries the value (F2).** Of a call typed a timestamp or a date that has an
+argument of such a type, only those arguments are followed, and arithmetic follows its
+timestamp side: `ns + (coalesce(ns, ts) - coalesce(ns, ts))` and
+`ns + make_dt_interval(…, unix_micros(coalesce(ns, ts)))` store nine digits. A value
+selected from a map follows the map's values, `map_keys` its keys:
+`element_at(map(coalesce(ns, ts), ns), coalesce(ns, ts))` stores nine digits. A call with
+no timestamp argument follows every argument, so the round trips of ruling V2 (STRING,
+BIGINT, JSON, `date_format`, `concat`, DOUBLE) still refuse.
+
+**What hands the value on (F7).** The written call nearest a mark is remembered through
+`if`, `greatest`, `least`, `nvl`, `ifnull`, `nvl2` (its second and third argument), `nullif`
+(its first), the element of an array built in place, a lambda body, an aggregate or a
+window call typed a timestamp, and a cast to a container type. The equality these stand
+on: each returns one of its arguments unchanged, or (`greatest`, `least`, `max`, `min`)
+the larger or smaller of them, and the three forgiving calls of §12.2 are monotone, so
+the call over the narrowed value equals the call over the nanosecond value wherever §12.2
+says the plain arm does. A written cast over a scalar subquery whose plan holds a mark is
+kept, so it reaches the store. `CAST(coalesce(coalesce(ns, NULL), ts) AS DATE)` refused
+because the outer mark sat on a value already cut; it is a mark that cuts nothing.
+
+**`UPDATE` reads one cast as the planner's.** DataFusion puts its conforming cast of a
+scalar-subquery value at the root of the subquery, over the aggregate, where it is the
+expression a written cast would be. With aggregates handing the value on, that cast
+forgave `UPDATE t SET v = (SELECT max(coalesce(…)) …)`. `refuse_narrowed_ns_updates`
+reads that one cast as the planner's; the statement refuses as it did at fold 2.
+
+**The text (F5).** The narrowed value is named only when it is a column whose name is a
+plain identifier, of a relation the statement named; every other value is named by the
+target column alone (`The value was narrowed … write a CAST to TIMESTAMP over the
+nanosecond value …`). The SQL rendering of fold 2 is deleted, so no engine text can reach
+a refusal. A write to a branch or a staged snapshot names the table the statement wrote
+(`ice.ns.t.branch_b1`), on the unit's refusal and on the older unfiltered `UPDATE` one.
+
+**The role table (addendum B).** What the stored digits pass through is `ROLES` in
+`repark-iceberg` `write/narrowed_store.rs`: 35 rows of a function name and a role, read by
+one lookup. `coalesce`, `greatest`, `least`, `nvl`, `ifnull`, an array built in place and
+the selecting aggregates and windows (`max`, `min`, `first`, `last`, `first_value`,
+`last_value`, `any_value`) pass the value through every argument; `if` and `nvl2` through
+the arguments after the predicate; `nullif`, `max_by`, `min_by` and `nth_value` through the
+first; `lag` and `lead` through the value and the default; a selection (`element_at`,
+`get_field`, an index) through the part of the container it selects, so a map by its
+values and `map_keys` by its keys. The arms of `CASE`, the branches of a `UNION`, a scalar
+subquery and a lambda result are plan and expression nodes and are followed by the walk
+itself. A name with no row is an opaque call: it follows its timestamp and date arguments
+(arithmetic by position, never the interval) and forgets the written call above it. The
+table is rendered in `write/narrowed_store/map.md`. The two statements of the addendum
+are pinned at the door: `coalesce(ns, ts) + INTERVAL 0 SECOND` refuses and
+`ns + (coalesce(ns, ts) - coalesce(ns, ts))` stores nine digits.
+
+**The zone kind (addendum C).** A written call is remembered through a role only while
+the value keeps its zone kind. A mark that cuts nothing itself but turns an instant into a
+naive value, or back, forgets the written call (`turned`): `CAST(if(c, ns, ntz) AS
+TIMESTAMP)` over a zoned `ns` refuses, the same beside a `TIMESTAMP` sibling stores what
+the twin stores. Probed in Pacific/Apia and Pacific/Kiritimati over 18 moments (§13.4).
+`CASE WHEN c THEN ns END` has no narrowing: it stores nine digits. `nvl` and `ifnull`
+beside an untyped NULL are typed STRING by the function (owner ruling 3, Q3) and are left
+as on main (§13.9).
+
+**The planner's cast is signed too (addendum D).** Fold 2 rewrote, before the first
+coercion, every cast from nanoseconds to an instant type, which is also the planner's
+conforming cast of an `INSERT`, `UPDATE` or `MERGE` value into a microsecond column; 17 of
+205 `EXPLAIN` outputs of writes printed the narrowing function where main prints a cast.
+The cast is now signed and left; the store reads the sign as it reads the function.
+
+### 13.3 The findings one by one
+
+| # | Sev | Finding (second verdict) | Disposition | Commit | Pin |
+|---|---|---|---|---|---|
+| F8 | S1 | CI red: three checks, two pins the `EXPLAIN` door broke | Closed: both pins pass; the third check gathers the others | `fb0730d5` | `an_explain_frame_is_a_statement_and_prints_no_hidden_function`; the two pins of main |
+| F4 | S1 | Four container reads change type and values; a microsecond-target store moves | Closed: 36 of 36 reads equal main, the six cells store main's value | `88af0a50` | `a_written_cast_changes_no_read`; facade `test_a_read_answers_as_the_base_does` |
+| F6 | S2 | A cast over a temporary view loses `PARQUET:field_id`, plain `EXPLAIN` differs | Closed: 274 `EXPLAIN` outputs and schemas equal main but the snapshot id of one `SHOW CREATE TABLE` | `88af0a50` | the same two; `a_written_cast_inside_a_container_beside_a_microsecond_container_stores` |
+| F1 | S1 | A written `TRY_CAST` beside a microsecond value refuses | Closed: stores what main stores | `db9f4204` | `a_written_try_cast_beside_a_microsecond_value_stores_on_every_door` |
+| F2 | S1 | A plain nine-digit value refuses beside a narrowing it does not pass through | Closed: stores nine digits | `bd6a13bb` | `a_plain_column_stores_beside_a_narrowing_it_does_not_pass_through` |
+| F7 | S1 | A written call refuses over `if`, `greatest`, an array element, a lambda, a scalar subquery; 2,410 cells | Closed: 0 of the 2,410 refuse; 0 stored values differ from the twin | `4ce9ea35` | `a_written_call_stores_through_a_choice_an_element_a_lambda_and_a_subquery` |
+| F3 | S1 | A date cast over a naive value cut to an instant differs in Pacific/Apia | Left as on main: the stored value is main's (§13.9) | – | – |
+| F5 | S2 | Refusal texts carry generated names, engine renderings, a remedy nobody can type | Closed for (a) to (e) and (g): 0 of 36,193 texts; (f) is main's writer (§13.9) | `83d510d6` | `a_refusal_names_a_plain_column_and_otherwise_only_the_target`; `the_text_names_a_plain_column_and_no_generated_relation`; the branch doors of `timestamp_ns_narrow_refuse.rs` |
+| M-L4 | S2 | Mutant L4 survives: only the first row of `VALUES` followed | Closed: killed | `d46001d2` | `every_row_of_values_is_followed`; `a_narrowing_in_a_later_values_row_refuses` |
+| A | – | The five card spellings refuse on every write door in five zones | Not met on every door: the four narrowing spellings refuse in five zones on 56 of 64 doors; a cached frame stores cut as on main; §13.11, Q9 | – | §13.11; the door pins of `timestamp_ns_narrow_refuse.rs` and `timestamp_ns_narrow_rule.rs` |
+| B | – | "Passes through" is one table of roles | Built | `18a7c3e2` | the eight store pins of `narrowed_store/lineage_tests.rs`; `a_plain_column_stores_beside_a_narrowing_it_does_not_pass_through`; mutants T1 to T4 (§13.6) |
+| C | – | Transparency needs the same zone kind | Built | `18a7c3e2` | `a_written_call_stores_through_a_choice_an_element_a_lambda_and_a_subquery` (the naive-sibling refusals); `a_written_call_reaches_the_mark_through_what_hands_the_value_on_unchanged` |
+| D | – | The `EXPLAIN` text of a write is main's | Built: 0 of 205 outputs differ from main | `df67302e` | `a_cast_from_nanoseconds_to_an_instant_before_coercion_is_the_statements`; `an_explain_frame_is_a_statement_and_prints_no_hidden_function` |
+| E | – | What parks | §13.4 (no cell main stored fully moved), §13.5 (reads), §13.9 (the list) | – | – |
+| M-P3 | S2 | Mutant P3 survives: a scalar subquery is not a nanosecond producer | Closed: killed | `d46001d2` | the producer unit pin; `a_scalar_subquery_of_nanoseconds_is_narrowed_where_no_column_in_scope_is` |
+
+### 13.4 The matrices on the final build
+
+Final source `5a982455` (the release build is of `ae3a96b8`; the commit after it renames a binding); main is `2c33f289` (the verifier's build and the
+committed fixture).
+
+**The 104,960-cell matrix**, main against the final head:
+
+| Moved | Cells |
+|---|---|
+| Byte-identical to main | 81,110 |
+| A cut value on main, refused now (`cut` 14,788, `cut` with the wall moved 6,902) | 21,690 |
+| An error or a partial store on main, refused now (`error` 1,530, `other` 300) | 1,830 |
+| Refused on main and on the head, text changed | 330 |
+| A cell main stored fully, refused, erroring or stored differently now | 0 |
+| Cells of a microsecond target that moved | 0 |
+| Refused cells that left a value on disk | 0 |
+
+23,520 cells moved into the refusal. Against fold 2's head 80 cells changed what they
+do, all back to what main does: 40 of `TRY_CAST(c AS TIMESTAMP)` in a `UNION` with an
+untyped NULL branch, through SQL and through the DataFrame union, store the cast's value
+again (ruling: `TRY_CAST` is written), and 40 of `EXPLAIN ANALYZE UPDATE` (eight spellings
+of the family, the naive target) raise main's own error again instead of the refusal;
+nothing is stored by them on either build (Q8, §13.9). 560 more refusals changed their
+text only (§13.2 "The text"). The build of `83d510d6`, before the addendum, answers every
+one of the 104,960 cells as the final build does.
+
+**The verifier's suites**, re-run from its scripts on the final build (`verify1`:
+shapes, doors, stmts, equality, the limits; `verify2`: never worse, holes, forgiveness,
+forgiveness at the limits and in six more zones, `VALUES`), 116,200 cells:
+
+| Suite | Cells | Identical to main | Cut or partly cut on main, refused | Error on main, refused | Main stored fully, head does not |
+|---|---|---|---|---|---|
+| shapes (five zones) | 6,680 | 4,660 | 1,860 | 160 | 0 |
+| doors (three zones) | 42,336 | 32,673 | 8,565 | 984 | 0 |
+| stmts (two zones) | 6,272 | 4,968 | 1,016 | 288 | 0 |
+| equality (five zones) | 5,760 | 3,200 | 2,560 | 0 | 0 |
+| equality at the int64 limits (three zones) | 6,912 | 3,840 | 1,500 | 1,572 | 0 |
+| never worse (147 statements, five zones) | 4,410 | 4,390 | 20 | 0 | 0 |
+| holes (263 statements, five zones) | 7,890 | 4,190 | 3,246 | 380 | 0 |
+
+The doors row holds the 96 cells of fold 2's note (a table-creating door labelled
+microsecond that creates a nanosecond column) and 114 refusals whose text alone differs
+from main's; its leak detector, which counted 480 empty table names and 6 generated ones
+on this fold's third build, counts none. The never-worse row's 20 are
+`nvl2(coalesce(c, ts), c, c)`, an analyzer cut main stores. The holes row also holds the
+44 cells the verdict explains (the narrowing is in the table's other nanosecond column)
+and its 30 microsecond-target cells (20 of that kind, 10 a reused `PREPARE` name).
+
+*Forgiveness* (20 written arms over 22 narrowings, inline and through a subquery):
+
+| Suite | Cells | Stores what the twin stores | Stores a value that differs from the twin | Refuses |
+|---|---|---|---|---|
+| five zones | 15,600 | 8,380 | 0 | 6,000 |
+| at the int64 limits, three zones | 18,720 | 4,524 | 0 | 7,200 |
+| Pacific/Apia and five more zones | 1,584 | 830 | 10 (F3, as on main) | 480 |
+
+Of the 6,000 refusals in five zones 2,220 are cells main stored the twin value in. They
+are the arms §12.2 refuses by rule and the verdict did not count: a date call over a zoned
+value (equal in four of the five zones), `date_trunc('week', …)` over a naive value, a
+`TIMESTAMP_NTZ` sibling, and the two container narrowings (`array_append`, a `coalesce` of
+arrays), whose cut truncates toward zero. The verdict's 2,410 cells of F7 are not among
+them: `if`, `greatest`, an array element, a lambda, a nested `coalesce` and a scalar
+subquery now answer exactly as the plain `coalesce` beside a `TIMESTAMP` column does.
+
+**Cells that moved back from the refusal** because of the fold's rulings, fold 2's head
+against the final head: 40 of the 104,960-cell matrix (above), and over the verifier's
+116,200 cells 4,216 store what main stores
+(2,510 of the forgiveness matrix and 1,366 at the limits, 190 of the holes suite's written
+casts over an aggregate, a window, a scalar subquery, an array and `greatest`, 80 of the
+never-worse suite, 70 `TRY_CAST(… AS DATE)`), every one with a stored value equal to
+main's; 1,771 raise main's own error again and store nothing (the limits, a map with a
+duplicate key, `EXPLAIN ANALYZE UPDATE`). No cell moved into the refusal, and none stores
+a value main does not store.
+
+### 13.5 Reads
+
+| Probe | Compared | Differ from main |
+|---|---|---|
+| the verifier's `reads1.sql` (a written cast beside the nanosecond value, 36 reads): schema and values | 36 | 0 |
+| the verifier's `pqv.sql` (field ids in schemas and written Parquet) and `expl.sql` (`EXPLAIN` frames) | 21 | 0 |
+| the verifier's `exv2.py`: `EXPLAIN`, `VERBOSE`, `EXTENDED`, `FORMATTED` of 61 statements, 9 frames, 25 results | 274 | 1 (a snapshot id in `SHOW CREATE TABLE`) |
+| `pq.py` (490 queries written to Parquet and read back) | 490 | 0 |
+| addendum D: `EXPLAIN`, `EXPLAIN VERBOSE` and `EXPLAIN ANALYZE` of `INSERT`, `UPDATE`, `MERGE` and CTAS over 12 values and three targets | 205 | 0 |
+| `reads.py` on eight cores, as main was recorded (on the build of `83d510d6`; not repeated on the final build) | 31 | 0 |
+| the fixture of this fold (`ice_tsns_narrow_refuse_1_reads_base.json`, recorded on main): schema with field metadata, rows, plain `EXPLAIN` of 73 statements | 73 | 0 |
+
+No hidden name (`__repark_narrowed_beside_*`, `__repark_written_timestamp_cast__`,
+`repark.untyped_null`, `repark.written`) is printed by any of them.
+
+### 13.6 Mutants
+
+Each mutant is one edit of the product source of its day in a clone of the branch with a build
+directory of its own, run against the unit suite of its crate; the file is restored and its
+hash compared after each. The verdict's two survivors and fourteen fresh mutants in the
+lines this fold changed, and four swaps of a row of the role table: 18 of 20 killed, each
+at the unit stage; the two survivors are equivalent.
+
+| Mutant | Killed by |
+|---|---|
+| L4 only the first row of `VALUES` is followed (the verdict's survivor) | `every_row_of_values_is_followed` |
+| P3 a scalar subquery is not a nanosecond producer (the verdict's survivor) | `only_a_node_that_produces_a_column_is_marked_and_a_producer_is_found_without_a_scan` |
+| X1 a signed cast is not read as signed | `a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion` |
+| X2 a `TRY_CAST` to the wire type is not a written cast | the same |
+| X3 the kept cast is kept when the session reads `TIMESTAMP` as `TIMESTAMP_NTZ` | `a_written_cast_over_a_microsecond_column_is_kept_only_above_a_mark` |
+| X5 a mark over a value with no nanoseconds still refuses | `a_mark_over_a_value_that_holds_no_nanoseconds_cuts_nothing` |
+| X16 a marked column is not followed to the expression that produces it | the same |
+| X6 every argument of a timestamp call is followed | `a_plain_value_stores_beside_a_narrowing_it_does_not_pass_through` |
+| X7 a value selected from a map follows the keys too | the same |
+| X8 an aggregate forgets the written call above it | `a_written_call_reaches_the_mark_through_what_hands_the_value_on_unchanged`, `an_update_reads_the_cast_at_the_root_of_its_scalar_subquery_as_the_planners` |
+| X9 `UPDATE` reads the cast at the root of a scalar subquery as written | `an_update_reads_the_cast_at_the_root_of_its_scalar_subquery_as_the_planners` |
+| X10 a generated table name is printed | `the_text_names_a_plain_column_and_no_generated_relation` |
+| X11 `EXPLAIN` prints the kept cast | `a_mark_is_erased_from_a_printed_plan_and_its_argument_kept`, `an_explain_plan_prints_no_mark_and_repeats_as_the_engine_does` |
+| X12 `TRY_CAST` is not a written call at the store | `a_written_call_reaches_the_mark_through_what_hands_the_value_on_unchanged` |
+| X13 a column whose name is an engine rendering is printed | `the_text_names_a_plain_column_and_no_generated_relation` |
+| X14 an array built in place forgets the written call | `a_written_call_reaches_the_mark_through_what_hands_the_value_on_unchanged` |
+| T1 a row of the role table is swapped: `map_values` follows the keys (addendum B) | `a_plain_value_stores_beside_a_narrowing_it_does_not_pass_through`, `a_narrowed_value_refuses_through_the_arguments_it_passes_through` |
+| T4 a row of the role table is swapped: `nullif` follows both arguments | `a_plain_value_stores_beside_a_narrowing_it_does_not_pass_through` (the `nullif` row, added for it) |
+| T2 `if` follows its predicate; T3 `lag` follows its offset | survive, equivalent: a call typed a timestamp follows only its timestamp and date arguments, so a predicate or an offset is not followed under either role |
+
+X11 and X13 were edits that did not build or did not find their line on the first run and
+were run again as written here. The door-level rules without a unit mutant (the alias a
+kept cast takes at a root, the table named on a branch) are held by the door pins
+`a_written_cast_changes_no_read` and the branch doors of `timestamp_ns_narrow_refuse.rs`;
+no mutant was run against them. The 85 mutants of §12.11 were not run again.
+
+### 13.7 Cost
+
+Release builds of main `2c33f289` (the verifier's) and of the final source, the verifier's
+`probe/timing.py`, interleaved main head head main, three blocks, six sets of fifteen
+statements per build, eight cores outside the build set, the warehouse on `/dev/shm`; the
+figure is the median of the six set medians, in milliseconds.
+
+| Statement | Main | Head | Head over main |
+|---|---|---|---|
+| `INSERT`, no nanosecond column | 10.0 | 10.1 | 1.018 |
+| `MERGE`, no nanosecond column | 45.9 | 46.6 | 1.014 |
+| `MERGE` merge-on-read, no nanosecond column | 45.1 | 45.6 | 1.011 |
+| read, 50-branch union, microseconds | 314.6 | 316.3 | 1.005 |
+| read, 200-arm `CASE`, microseconds | 128.7 | 132.1 | 1.026 |
+| read, 50-branch union, nanoseconds and microseconds | 66.4 | 66.9 | 1.007 |
+| read, 200-arm `CASE`, nanoseconds and microseconds | 93.4 | 95.2 | 1.019 |
+| `EXPLAIN`, union, microseconds | 337.4 | 339.8 | 1.007 |
+| `EXPLAIN`, union, nanoseconds and microseconds | 69.3 | 69.8 | 1.007 |
+
+Every ratio is at or below 1.05; the largest is 1.026. The run is on the final build;
+the gate's last cargo test ran on other cores during it, and the two slowest head sets of
+every statement are the two that overlapped it. `EXPLAIN` costs what it costs on main
+again (fold 2 measured 0.85: its door collected the rows). The same script on the build of
+`83d510d6`, before the addendum, measured at most 1.024.
+
+### 13.8 Gates on the fold
+
+Run 2026-10-12 on the final source `5a982455`, one cargo command at a time under the build
+lock on cores 32-47. The release build measured in §13.4 to §13.7 is of `ae3a96b8`; the one
+commit after it renames a binding.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo fmt --all -- --check` | 0 | |
+| `make rust-clippy` | 0 | the gate run that started before the rename exited 2 on `similar_names`; run again on the final source, 0 |
+| `make rust-panic-ban` | 0 | |
+| `cargo test --locked -p repark-functions --lib` | 0 | 934 passed, 1 ignored |
+| `cargo test --locked -p repark-iceberg --lib` | 0 | 1015 passed |
+| `cargo test --locked -p repark-sql --lib` | 0 | 394 passed |
+| `cargo test --locked -p repark-spark --lib` | 0 | 2694 passed, 5 ignored |
+| `cargo test --locked -p repark-core --lib` | 0 | 1420 passed, 1 ignored |
+| `cargo test --locked -p repark-python --no-fail-fast` | 0 | 184 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_narrow_lineage` | 0 | 9 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_narrow_rule` | 0 | 15 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_narrow_refuse` | 0 | 16 passed |
+| `cargo test --locked -p repark-spark --test timestamp_ns_nested_shapes --test timestamp_ns_wall_doors --test timestamptz_ns_wall_doors` | 0 | 6 + 7 + 4 passed |
+| the facade files of the unit and its neighbours (`pytest`, the release module on `PYTHONPATH`) | 0 | 842 passed |
+| the recorder on the final build, 104,960 cells, against main | 0 | §13.4 |
+| the verifier's suites on the final build | 0 | §13.4, §13.5 |
+| `python3 comment_ban.py <clone> origin/main HEAD` | 0 | hits=0 |
+| `ruff check .` and `ruff format --check .` | 0 | |
+| `make check-rust-file-size`, `make check-lib-rs`, `make check-crate-dag`, `make check-manifest` | 0 | `null_narrowing/tests.rs` 988 lines, `instant_ts.rs` 993 |
+| `python3 scripts/sync_map_md.py --check`, `make check-map-md BASE=origin/main`, `make check-ledger-grammar`, `make check-ledgers`, `make check-docs-links`, `make check-docs-compaction`, `make spell-check` | 0 | |
+| `scripts/check_lib_py.py`, `check_python_conventions.py`, `check_docstring_presence.py` | 0 | |
+
+Red before green: on `9cee945a` six of the nine pins of `timestamp_ns_narrow_lineage.rs`
+fail (F1, F8, F4/F6, F2, F7, F5) and three pass (L4, P3 and the container pin, which hold
+there at the door).
+
+Not run: `make develop` (the facade ran against the release module on `PYTHONPATH`), the
+whole workspace test, the cluster feature, the dbt adapter and the example coverage (CI
+runs them, §13.10), and the Spark measurement of §6. The clone has no commit hook
+installed; the gates above stand in for it.
+
+### 13.9 What is left as on main
+
+This is the whole list. Each entry is a shape whose stored value, error or text on the
+head is main's although the rule, read to the letter, would have it otherwise. A shape
+that is not here and is not byte-identical to main refuses.
+
+**Stored cut, as on main (an analyzer narrowing the unit does not refuse).**
+
+1. **A cached or persisted frame** (owner ruling 4, §11.6): `df.cache()` or `persist()`
+   of a frame that holds the narrowing, then any write door. The cache replaces the plan
+   with a scan of microseconds before the store reads it. In the matrix this is the door
+   `cached_frame_append`: every one of the five card spellings that narrows stores the cut
+   value there, as on main (§13.11).
+2. **A door that creates its table from the query** (`CREATE TABLE … AS SELECT`,
+   `REPLACE TABLE … AS SELECT`, `createOrReplace`, `saveAsTable` in overwrite mode): the
+   narrowed type is the type of the column the door creates, a microsecond column, so
+   nothing is cut on the way into it. Matrix class `other` on main and on the head.
+3. **`nvl` and `ifnull` of a nanosecond value** (owner ruling 3, Q3; parity row R-019):
+   the function types its result STRING, beside an untyped NULL and beside a microsecond
+   value alike, so the value is a string and the conforming cast back is the planner's
+   string cast; no timestamp coercion narrows it. Most doors raise main's error; the doors
+   that conform a string store main's value (`insert_values` and `branch_update` store
+   nine digits; a `UNION` with a nanosecond branch stores every row cut, R-019). A written
+   call over it (`date_trunc('day', nvl(ns, NULL))`, `date_trunc('second', ifnull(ns,
+   ts))`) stores main's value, which is not the twin's (16 of 816 cells of the zone-kind
+   probe).
+4. **A value that returns through an interval**: `TIMESTAMP '1970-01-01' + (coalesce(ns,
+   ts) - TIMESTAMP '1970-01-01')` stores the cut value. Addendum B: an interval does not
+   pass the value through. A return through STRING, BIGINT, JSON or DOUBLE refuses.
+5. **`nvl2(coalesce(ns, ts), ns, ns)`** and every shape where the narrowed value is only
+   a predicate, a map key selected past, or an integer argument: nine digits are stored,
+   as on main; nothing narrowed reaches the column.
+6. **F3**: `CAST(x AS DATE)`, `to_date(x)` and `date(x)` over a naive value the analyzer
+   cut to an instant store, in Pacific/Apia on 2011-12-30 only, the date after the day the
+   zone skipped, where the call over the nanosecond value stores the 30th. Main stores the
+   same value in the same cell (10 cells of 1,584). In every other zone and moment probed
+   the arm equals its twin. Not built (ruling F3: the smaller change).
+
+**Raises main's own error where a refusal by name would be the rule.**
+
+7. **Q8**: `EXPLAIN ANALYZE UPDATE` and `PREPARE … UPDATE` with a narrowed `SET` value.
+   The planner's cast of the value reads as a written cast (§11.5); with the roles handing
+   the written call on, `if`, `greatest`, `nullif`, an array element and a lambda beside
+   NULL raise main's Arrow type error there and store nothing (40 cells of the matrix more
+   than at fold 2). A plain `UPDATE` refuses.
+8. **A narrowing at the int64 limits and a map built with a duplicate key**: where main
+   raises its own error before the store is reached, the head raises the same error.
+
+**Text, as on main.**
+
+9. `INSERT OVERWRITE`, `INSERT … BY NAME` and `overwritePartitions` name the table
+   `` `ns`.`t` `` where the other doors write `` `ice.ns.t` ``, as every refusal of those
+   doors does on main.
+10. `a.union(b).writeTo(t).append()` whose second frame names the timestamp column
+    differently refuses with "give the NULL beside it". Main's writer registers that
+    frame as a union by name and fills the unmatched column with NULL, so the text is
+    accurate; that the writer does so (18 of 36 rows stored NULL on main) is a defect of
+    the writer, out of scope, reported.
+
+**Not reached by the unit.** The native ANSI door, the Postgres route and the Connect
+door, as in both verdicts.
+
+**The other direction, not "as on main" and not a finding (addendum E):** cells main
+stored cut that the head refuses although the written call over the nanosecond value
+would store the same (the arms of §12.2: 2,220 cells of the verifier's forgiveness
+matrix): a date call over a zoned narrowed value, `date_trunc('week', …)` over a naive
+one, a written call over a value narrowed beside a sibling of the other zone kind or
+inside a container coercion, and a written call with an opaque call between it and the
+narrowed value (`CAST(coalesce(ns, ts) + INTERVAL '0' SECOND AS TIMESTAMP)`).
+
+### 13.10 CI jobs that run the changed code
+
+`Rust lint (fmt + clippy + check)`, `Rust test (workspace)`, `Rust test (cluster
+feature)`, `Repo guards (map.md + workflow parse + crate-DAG + lib.rs)`, `Python`, `code
+changed`, `build debug wheel (profile ci)`, `facade shard 0`, `facade shard 1`, `facade
+shard 2`, `dbt-adapter tests`, `example-coverage execute` and `build + import smoke (debug,
+host)`; `typos` and the wheel workflow read the changed files too. The three that were red
+on `9cee945a` are `Rust test (workspace)`, `facade shard 2` and the smoke job.
+
+### 13.11 The acceptance of addendum A: the five card spellings by door
+
+From the 104,960-cell matrix on the final build: a door counts as refusing in a zone when
+every cell of the spelling refuses there (two nanosecond targets, two sources). The
+figure is the number of the five zones; a class in brackets is what the cells do instead,
+which in every such cell is what main does.
+
+| Door | `coalesce(ns, NULL)` | `nvl(ns, NULL)` | `array(ns, NULL)[0]` | `CASE WHEN … THEN ns ELSE NULL END` | `if(…, ns, NULL)` |
+|---|---|---|---|---|---|
+| each of 56 doors (listed below) | 5 | see below | 5 | 5 | 5 |
+| `df_create_or_replace` | 0 (other) | 0 (other) | 5 | 0 (other) | 0 (other) |
+| `df_save_overwrite` | 0 (other) | 0 (other) | 5 | 0 (other) | 0 (other) |
+| `df_functions_append` | 5 | 0 (skip) | 0 (skip) | 5 | 0 (skip) |
+| `explain_insert` | 0 (nothing) | 0 (error) | 0 (nothing) | 0 (nothing) | 0 (nothing) |
+| `explain_analyze_update` | 0 (error) | 0 (error) | 0 (error) | 0 (error) | 0 (error) |
+| `ctas` | 0 (other) | 0 (other) | 5 | 0 (other) | 0 (other) |
+| `rtas` | 0 (other) | 0 (other) | 5 | 0 (other) | 0 (other) |
+| `cached_frame_append` | 0 (cut, cut+wall) | 0 (error) | 0 (cut, cut+wall) | 0 (cut, cut+wall) | 0 (cut, cut+wall) |
+
+The doors that refuse all four narrowing spellings in five zones: `insert_values`, `insert_select`, `insert_positional`, `insert_by_name`, `insert_overwrite`, `insert_overwrite_dynamic`, `insert_overwrite_static`, `insert_replace_where`, `merge_insert`, `merge_insert_subquery`, `merge_update`, `merge_update_subquery`, `merge_by_source`, `update_where`, `update_nowhere`, `merge_insert_mor`, `merge_update_mor`, `merge_update_subquery_mor`, `merge_by_source_mor`, `update_where_mor`, `update_nowhere_mor`, `df_append`, `df_overwrite`, `df_overwrite_partitions`, `df_save_append`, `df_insert_into`, `df_insert_into_overwrite`, `df_select_expr_append`, `df_merge_into`, `branch_insert`, `branch_merge`, `branch_update`, `wap_insert`, `explain_analyze_insert`, `prepare_execute_insert`, `cte_insert`, `subquery_insert`, `union_insert`, `join_insert`, `aggregate_insert`, `window_insert`, `distinct_insert`, `scalar_subquery_insert`, `frame_view_insert`, `sql_view_insert`, `catalog_view_insert`, `frame_view_merge`, `merge_update_star`, `merge_insert_star`, `update_scalar_subquery`, `insert_reordered`, `sort_limit_insert`, `union_null_insert`, `df_union_null_append`, `lambda_first_insert`, `df_lambda_below_append`.
+
+`nvl(ns, NULL)` refuses in five zones on 1 of 64 doors (`union_insert`); its other cells by class, head (main): error (main error): 1120; other (main other): 80; full (main full): 40; skip (main skip): 20. That spelling is typed STRING by the function (§13.9 item 3).
+
+Read plainly: **a cached frame stores the cut value, as on main**, for every one of the
+spellings that narrows; the four doors that create their table store microseconds in the
+microsecond column they create; `EXPLAIN INSERT` writes nothing; `EXPLAIN ANALYZE UPDATE`
+raises main's error. `skip` is a door that has no spelling of that shape (the DataFrame
+functions door has no `if`, no array index and no `nvl`). Closing any of these needs an owner ruling changed (Q9).
+
+**Cells moved back from the refusal to "stores what main stores"** by the fold's rulings
+and the addendum, fold 2's head against the final head, by family: in the 104,960-cell matrix 40
+(`TRY_CAST` in a `UNION` with an untyped NULL branch); in the verifier's 116,200 cells
+4,216: the forgiveness matrix 2,510 (a written call over `if`, `greatest`, `least`,
+`nvl2`, an array element, a lambda, a nested `coalesce` and a scalar subquery), the same
+at the int64 limits 1,366, the holes suite 190 (a written cast over an aggregate, a
+window, a scalar subquery, an array and `greatest`), the never-worse suite 80 (a plain
+column beside a narrowing it does not pass through), `TRY_CAST(… AS DATE)` 70. Every one
+stores the value main stores. 1,771 more raise main's own error again and store nothing.
+No cell moved into the refusal between fold 2 and the final build.
+
 ## Q0. The questions put before the rulings (answered 2026-10-10, section 11.1)
 
 - **Q1 (C-009, RULING).** Should `CASE WHEN … THEN CAST(c AS TIMESTAMP) ELSE NULL END` (and
@@ -1523,3 +2018,18 @@ each. Two questions are new.
 - **A note on the fold's seam rule.** The brief names `repark-sql`, `repark-iceberg` and
   `repark-spark`; the mark has lived in `repark-functions` since the unit's first commit
   and the redesign changed it there. No crate edge was added.
+
+## Q. Questions after fold 3
+
+- **Q9 (OWNER).** Addendum A asks that the five card spellings refuse on every write door.
+  Three owner rulings and one door family stand against it, and the build kept them:
+  (a) a cached or persisted frame stores the cut value, as on main (ruling 4, §11.6):
+  the door `cached_frame_append`, every narrowing spelling, five zones; (b)
+  `nvl(ns, NULL)` and `ifnull(ns, NULL)` are typed STRING (ruling 3, Q3, parity row R-019)
+  and are not this unit's narrowing; (c) the four doors that create their table from the
+  query type the column microseconds, as on main; (d) `EXPLAIN ANALYZE UPDATE` raises
+  main's error (Q8). *Premise:* §13.11. *Lean:* keep the rulings; (a) can be built only by
+  reading the plan a cache was built from, which ruling 4 declined.
+- **V2 as narrowed, V5 as reversed, "reads are main's", `TRY_CAST`, F3** (RULING,
+  provisional, built): §13.1. Overturning V5's reversal is deleting rows of `ROLES`.
+- **Q7 and Q8** stand as ruled (C-026, C-027); Q8 is wider by 40 cells (§13.9 item 7).

@@ -3614,6 +3614,21 @@ still open is `isModifiable`.
   nanosecond and microsecond read plans at 1.02 of main at most. Measured on the final
   build: of 104,960 cells 23,600 moved into the refusal and none any other way; ledger
   section 12.
+- **Fold 3 (2026-10-12), after the verifier's second FAIL: what main stored right stores
+  again, and a read is main's.** A written `TRY_CAST` is a written cast. The store follows
+  only what the stored digits pass through, by one table of roles (`coalesce`, `CASE` and
+  `if` arms, `nvl2`, `greatest`, `least`, an array element, a struct field, a map's values,
+  the selecting aggregates and windows, a `UNION` branch, a scalar subquery, a lambda
+  result; never an interval, an integer, a predicate or a map key), so a plain nine-digit
+  column stores beside a narrowing it does not pass through. A written call reaches the
+  narrowed value through those roles while the zone kind (instant or naive) is kept.
+  `EXPLAIN` is main's statement frame and main's text, for reads and for writes; schemas,
+  field ids and values of every statement that writes nothing are main's. The refusal
+  names a plain column or the target alone. Left as on main and listed in ledger section
+  13.9: a cached frame, a door that creates its table, `nvl`/`ifnull` beside an untyped
+  NULL (R-019), a return through an interval, `EXPLAIN ANALYZE UPDATE`, and a date call
+  over a cut naive value in a zone that skipped a day. Measured: of 104,960 cells
+  23,520 moved into the refusal and none any other way; ledger section 13.
 
 ### ICE-TSNS-SQL-1-R-019 — OPEN (registered 2026-10-10, owner ruling on Q3 of ICE-TSNS-NARROW-REFUSE-1): a `UNION` of a nanosecond branch with `nvl(ns, NULL)` or `ifnull(ns, NULL)`
 
