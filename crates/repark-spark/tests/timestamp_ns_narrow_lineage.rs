@@ -400,6 +400,62 @@ async fn a_plain_column_stores_beside_a_narrowing_it_does_not_pass_through() {
     }
 }
 
+#[tokio::test]
+async fn a_written_call_stores_through_a_choice_an_element_a_lambda_and_a_subquery() {
+    let overs = [
+        "if(id > 0, {c}, ts)",
+        "greatest({c}, NULL)",
+        "least({c}, NULL)",
+        "array({c}, ts)[0]",
+        "transform(array({c}), x -> coalesce(x, ts))[0]",
+        "coalesce(coalesce({c}, NULL), ts)",
+        "(SELECT max(coalesce(r.{c}, r.ts)) FROM ice.ns.src r WHERE r.id = ice.ns.src.id)",
+    ];
+    let arms = [
+        ("CAST({x} AS TIMESTAMP)", "ns tzns"),
+        ("date_trunc('second', {x})", "tzns"),
+        ("CAST({x} AS DATE)", "ns"),
+        ("to_date({x})", "ns"),
+    ];
+    for zone in ZONES {
+        let mut matrix = Matrix::open(zone).await;
+        for target in TARGETS {
+            for (source, _) in SOURCES {
+                for (arm, sources) in arms {
+                    if !sources.split(' ').any(|named| named == source) {
+                        continue;
+                    }
+                    for (door, flags, template) in [DOORS[0], DOORS[2], DOORS[6]] {
+                        let twin = select(&arm.replace("{x}", source));
+                        let reference = matrix
+                            .store(target)
+                            .stores(door, flags, template, &twin)
+                            .await;
+                        assert_eq!(reference.len(), MOMENTS.len(), "{zone}: {door}: {twin}");
+                        for over in overs {
+                            if over.starts_with("(SELECT") && door != "insert" {
+                                continue;
+                            }
+                            let value = arm.replace("{x}", &over.replace("{c}", source));
+                            let query = select(&value);
+                            let stored = matrix
+                                .store(target)
+                                .stores(door, flags, template, &query)
+                                .await;
+                            assert_eq!(stored, reference, "{zone}: {door}: {query}");
+                            let bare = select(&over.replace("{c}", source));
+                            matrix
+                                .store(target)
+                                .refuses(door, flags, template, &bare)
+                                .await;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 async fn explained(session: &ReparkSession, sql: &str) -> Vec<(String, String)> {
     let batches = session
         .sql(sql)

@@ -400,8 +400,11 @@ fn drop_kept_cast(expr: Expr) -> Transformed<Expr> {
 }
 
 fn holds_mark(expr: &Expr) -> bool {
-    let narrowed = |node: &Expr| {
-        is_narrowing_mark(node) || crate::timestamp_ns_cast::narrowed_beside(node).is_some()
+    let narrowed = |node: &Expr| match node {
+        Expr::ScalarSubquery(subquery) => plan_holds_mark(&subquery.subquery),
+        node => {
+            is_narrowing_mark(node) || crate::timestamp_ns_cast::narrowed_beside(node).is_some()
+        }
     };
     expr.exists(|node| Ok(narrowed(node))).unwrap_or(false)
 }

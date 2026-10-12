@@ -15,7 +15,7 @@ use repark_functions::timestamp_ns_cast::{
     is_temporal_source, timestamp_ns_cast_expr, timestamp_ns_target,
 };
 use repark_iceberg::write::narrowed_store::{
-    refuse_narrowed_ns_columns, refuse_narrowed_ns_inserts,
+    refuse_narrowed_ns_columns, refuse_narrowed_ns_inserts, refuse_narrowed_ns_updates,
 };
 use repark_iceberg::write::negated_null_store::ViewDefinitionPlans;
 
@@ -93,7 +93,7 @@ pub(crate) fn refuse_narrowed_stores(ctx: &SessionContext, plan: &LogicalPlan) -
     if matches!(dml.op, WriteOp::Insert(_)) {
         return refuse_narrowed_ns_inserts(&table, dml.input.as_ref(), targets, views.as_deref());
     }
-    refuse_narrowed_ns_columns(&table, dml.input.as_ref(), targets, views.as_deref())
+    refuse_narrowed_ns_updates(&table, dml.input.as_ref(), targets, views.as_deref())
 }
 
 pub(crate) fn refuse_narrowed_columns(
