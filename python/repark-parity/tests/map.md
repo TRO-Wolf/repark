@@ -1,5 +1,7 @@
 # map — python/repark-parity/tests
 
+MERGE-MOD-SPLIT-1 (owner, 2026-10-12): the CAP-1 mirror drops the retired `repark-iceberg/src/write/merge/mod.rs` row (1569, under the default after the split), and the Rust exception count goes 33 → 32. The `check_rust_file_size.py` row left in the same commit; no row raised.
+
 ATTR-ID-1 S3b (2026-10-01): CAP-1 mirror row ratcheted down with the code — `dataframe/core.py` 3921 → 3846 (the filter quoter moves to `column_fields.py`). The `check_lib_py.py` exception row moved in the same commit; no row raised. pins: attr-id-1/C-025
 STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): the CAP-1 mirror follows the shrink-only ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277. pins: string-literal-escape-1/C-011
 

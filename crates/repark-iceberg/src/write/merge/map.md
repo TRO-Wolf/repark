@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write/merge/
 
+MERGE-MOD-SPLIT-1 (owner, 2026-10-12): `mod.rs` splits at its planned boundary into `merge_sql.rs`, `copy_on_write.rs` and `merge_on_read.rs`; a move with no behaviour change, and `mod.rs` leaves the file-size exception table. An older entry below that names `mod.rs` describes the file as it was on that entry's date; the Contents rows for the three new files say where each item lives now.
+
 ICE-MIXED-CASE-1 (2026-09-17): the MERGE executor carries the door's case-sensitivity flag on the spec (`mod.rs`, `insert.rs`, `not_matched_by_source.rs`); UPDATE SET rejects case-insensitive duplicate targets instead of first-winning. pins: ice-mixed-case-1/C-004
 
 ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the four write-side twin-check sites delegate to the shared `resolve_write_column` helper (`../name_resolution.rs`); `mod.rs` 1782 → 1780. pins: ice-mixed-case-1/C-004
@@ -49,7 +51,49 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `commit_row_delta_kind_on_ref` refuse a target carrying `encryption.key-id` as commit
   backstops; the MERGE doors also check at entry, so these only fire on direct calls.
   pins: enc-1/C-005
-- `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
+- `merge_sql.rs`, `copy_on_write.rs`, `merge_on_read.rs` — **MERGE-MOD-SPLIT-1 (owner,
+  2026-10-12):** the SQL builders and the two execution arms, moved out of `mod.rs` byte for
+  byte. `mod.rs` sat exactly on its 1,569-line exception ceiling, so no fix could add a line to
+  it; ICE-NTZ-NESTED-WALL-1 needs to pass a source type through `store_assignment_then_sql`
+  and its callers. The moved blocks carry no comments (owner ban: relocated code sheds them), so
+  the reasons they held are recorded here.
+  - `merge_sql.rs` — `MergeSql` (the struct, its four fields and its 20 methods) and
+    `NOT_MATCHED_POS_SENTINEL`. It holds `rewrite_column_with_maps`, the one
+    `store_assignment_then_sql` call site in this directory. The struct, its fields and the
+    methods another file calls are `pub(super)`; nothing is wider. Reasons the code relies on:
+    match detection reads the per-execution sentinel column the source subquery adds, so a
+    nullable join key cannot hide a match; a clause predicate that is NULL counts as FALSE
+    (Spark clause semantics); the first applicable clause wins, as one `CASE` over the clause
+    ids; a DELETE row never reaches the rewrite projection; the insert SQL carries the target
+    `_pos` under `__repark_not_matched_pos`, a name chosen so a source column cannot collide.
+  - `copy_on_write.rs` — `plan_and_commit_cow`, `resolve_affected_data_files`,
+    `affected_files`, `fold_discovery_batch_into_affected`. Reasons: match discovery is one
+    grouped join that yields the cardinality check and the mutated files together; the fold
+    keeps one owned path per distinct affected file, not one per matched row (PERF-01); a NULL
+    flag column fails loud because Arrow's `.value` would read it as 0; the rewrite and insert
+    streams feed concurrent file writers; the scratch guard drops the rewrite scratch tables
+    on every exit, and the explicit drop orders that cleanup before the `merge.join` span
+    ends; the manifest walk that resolves the affected files is serial on purpose (measured
+    under a tenth of MERGE wall on a local file system) and its span is the measurement seam.
+    `resolve_affected_data_files` is `pub(crate)` and re-exported from `mod.rs`, because
+    `../predicate_dml/cow_commit.rs` already calls it through `merge::`.
+  - `merge_on_read.rs` — `plan_and_commit_mor`, `matched_work_mor`,
+    `consume_matched_work_batch`. Reasons: data files stay untouched; one INNER JOIN pass
+    yields the cardinality check, the position deletes and the UPDATE rows; flag columns are
+    `CASE` and window outputs and must be non-null; the path map owns one `String` per unique
+    path and the pairs share an `Arc<str>`; the UPDATE projection columns are sliced first and
+    the rows taken after. `consume_matched_work_batch` is `pub(super)` for its unit pins in
+    `tests/merge.rs`.
+  - `mod.rs` keeps plan preparation (`execute_merge`, mode resolution, the guards, star
+    expansion, the scratch target, `MergeTarget`, `plan_and_commit`), the helpers both arms
+    share (`stream_sql`, `skip_cardinality`, `require_non_null_i64`, `strict_cast`,
+    `named_column`), the test instruments and the batch-sink family. It imports `MergeSql`,
+    so `super::MergeSql` resolves as before for `insert.rs`, `not_matched_by_source.rs`,
+    `row_lineage.rs` and the tests; no test file changed.
+  Plan and pure-move proof:
+  [task/wo/merge-mod-split-1/](../../../../../task/wo/merge-mod-split-1/map.md).
+- `mod.rs` — types, `execute_merge`, plan helpers, the batch-sink family; the SQL builders and
+  the copy-on-write and merge-on-read arms live in the three files of the row above.
   **ICE-OCC-SCOPED-1 (2026-09-17):** `MergeTarget` carries the MERGE's `conflict_filter`,
   computed once in `execute_merge` by `merge_conflict_filter`: the target-only conjuncts of the
   `ON` condition (`../conflict_filter.rs` `from_merge_on`), or `AlwaysTrue` whenever a
@@ -446,7 +490,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 
 | Task | Go to |
 |---|---|
-| Change MERGE execute / MoR-CoW arms | `mod.rs` |
+| Change MERGE plan preparation or the mode dispatch | `mod.rs` |
+| Change the copy-on-write arm | `copy_on_write.rs` |
+| Change the merge-on-read arm | `merge_on_read.rs` |
+| Change the SQL a MERGE generates (`MergeSql`, `rewrite_column_with_maps`) | `merge_sql.rs` |
 | Change v3 MERGE `_row_id` carry | `row_lineage.rs` |
 | Change MERGE snapshot commit / `to_branch` | `snapshot_commit.rs` |
 | Change what a concurrent commit must touch to conflict with a DML | `../conflict_filter.rs` (derivation) + `CommitScope` in `snapshot_commit.rs` (threading) |
