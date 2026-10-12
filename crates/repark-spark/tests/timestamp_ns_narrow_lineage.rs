@@ -383,6 +383,7 @@ async fn a_plain_column_stores_beside_a_narrowing_it_does_not_pass_through() {
         "element_at(map(1, coalesce({c}, ts)), 1)",
         "map_keys(map(coalesce({c}, ts), 1))[0]",
         "coalesce({c}, ts) + ({c} - {c})",
+        "coalesce({c}, ts) + INTERVAL 0 SECOND",
         "to_timestamp(CAST(coalesce({c}, ts) AS STRING))",
         "timestamp_micros(unix_micros(coalesce({c}, ts)))",
     ];
@@ -455,6 +456,19 @@ async fn a_written_call_stores_through_a_choice_an_element_a_lambda_and_a_subque
                                 .stores(door, flags, template, &query)
                                 .await;
                             assert_eq!(stored, reference, "{zone}: {door}: {query}");
+                            if arm.starts_with("CAST({x} AS TIMESTAMP") && source == "ns" {
+                                let naive = over.replace(", ts)", ", ntz)").replace("{c}", source);
+                                if naive.contains("ntz")
+                                    && !over.contains("NULL")
+                                    && !over.starts_with("(SELECT")
+                                {
+                                    let query = select(&arm.replace("{x}", &naive));
+                                    matrix
+                                        .store(target)
+                                        .refuses(door, flags, template, &query)
+                                        .await;
+                                }
+                            }
                             let bare = select(&over.replace("{c}", source));
                             matrix
                                 .store(target)

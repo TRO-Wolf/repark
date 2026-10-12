@@ -21,26 +21,63 @@ pub const NARROW_TIMESTAMP_NS_UDF_NAME: &str = "__repark_narrow_timestamp_ns__";
 pub const WRITTEN_CAST_UDF_NAME: &str = "__repark_written_timestamp_cast__";
 const DATE_TRUNC_UDF_NAME: &str = "date_trunc";
 const TIMESTAMP_TO_DATE_UDF_NAME: &str = "__repark_timestamp_to_date__";
-const CHOOSING_UDF_NAMES: [&str; 6] = ["coalesce", "greatest", "least", "if", "nvl", "ifnull"];
-const NVL2_UDF_NAME: &str = "nvl2";
-const NULLIF_UDF_NAME: &str = "nullif";
-const ARRAY_UDF_NAMES: [&str; 2] = ["make_array", "array"];
-const MAP_UDF_NAMES: [&str; 2] = ["map", "map_from_arrays"];
-const WRAPPING_UDF_NAMES: [&str; 2] = ["__repark_spark_nonnull__", "__repark_hof_array_field__"];
-const MAP_KEYS_UDF_NAME: &str = "map_keys";
-const MAP_VALUES_UDF_NAME: &str = "map_values";
 const DATE_UDF_NAMES: [&str; 2] = ["to_date", "date"];
 const UNNAMED_TABLE: &str = "the table ``: Cannot safely cast";
 const NARROWED: &str = "narrowed from nanoseconds to microseconds";
-const SELECTING_UDF_NAMES: [&str; 7] = [
-    "array_element",
-    "__repark_array_get__",
-    "element_at",
-    "try_element_at",
-    "get_field",
-    "get",
-    "map_extract",
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Role {
+    Arms,
+    After(usize),
+    First,
+    Lagged,
+    Element,
+    Wrapped,
+    Keys,
+    Values,
+    Entries,
+}
+
+const ROLES: [(&str, Role); 35] = [
+    ("coalesce", Role::Arms),
+    ("greatest", Role::Arms),
+    ("least", Role::Arms),
+    ("nvl", Role::Arms),
+    ("ifnull", Role::Arms),
+    ("if", Role::After(1)),
+    ("nvl2", Role::After(1)),
+    ("nullif", Role::First),
+    ("make_array", Role::Arms),
+    ("array", Role::Arms),
+    ("array_element", Role::Element),
+    ("__repark_array_get__", Role::Element),
+    ("element_at", Role::Element),
+    ("try_element_at", Role::Element),
+    ("get_field", Role::Element),
+    ("get", Role::Element),
+    ("map_extract", Role::Element),
+    ("__repark_spark_nonnull__", Role::Wrapped),
+    ("__repark_hof_array_field__", Role::Wrapped),
+    ("map_keys", Role::Keys),
+    ("map_values", Role::Values),
+    ("map", Role::Entries),
+    ("map_from_arrays", Role::Entries),
+    ("max", Role::Arms),
+    ("min", Role::Arms),
+    ("first", Role::Arms),
+    ("last", Role::Arms),
+    ("first_value", Role::Arms),
+    ("last_value", Role::Arms),
+    ("any_value", Role::Arms),
+    ("max_by", Role::First),
+    ("min_by", Role::First),
+    ("nth_value", Role::First),
+    ("lag", Role::Lagged),
+    ("lead", Role::Lagged),
 ];
+
+fn role_of(name: &str) -> Option<Role> {
+    (ROLES.iter().find(|(known, _)| *known == name)).map(|(_, role)| *role)
+}
 
 #[allow(clippy::missing_errors_doc)]
 pub fn refuse_narrowed_ns_writes<'a>(
@@ -465,8 +502,15 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
     let carried = |branch: &Expr| expr_lineage(branch, input, walk);
     let whole = walk.of(Part::Whole);
     let opaque = |branch: &Expr| expr_lineage(branch, input, whole.under(Call::Opaque));
-    let chosen =
-        |branch: &Expr| expr_lineage(branch, input, whole.under(chooses(expr, input, walk)));
+    let selected = |name: &str, args: &[Expr]| {
+        let handed = |branch: &Expr| expr_lineage(branch, input, whole);
+        match role_of(name) {
+            Some(Role::Arms) => args.iter().find_map(handed),
+            Some(Role::First) => args.first().and_then(handed),
+            Some(Role::Lagged) => args.iter().step_by(2).find_map(handed),
+            _ => args.iter().find_map(opaque),
+        }
+    };
     match expr {
         Expr::Alias(alias) => carried(&alias.expr),
         Expr::Column(column) => {
@@ -503,8 +547,10 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
                 value => expr_lineage(value, input, whole),
             })
         }
-        Expr::AggregateFunction(aggregate) => aggregate.params.args.iter().find_map(chosen),
-        Expr::WindowFunction(window) => window.params.args.iter().find_map(chosen),
+        Expr::AggregateFunction(aggregate) => {
+            selected(aggregate.func.name(), &aggregate.params.args)
+        }
+        Expr::WindowFunction(window) => selected(window.fun.name(), &window.params.args),
         Expr::BinaryExpr(binary) => {
             if compares(binary.op) {
                 return None;
@@ -546,14 +592,6 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
             });
             walked.ok().and(narrowed)
         }
-    }
-}
-
-fn chooses(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Call {
-    if expr_type(expr, input).is_ok_and(|kind| matches!(kind, DataType::Timestamp(_, _))) {
-        walk.nearest
-    } else {
-        Call::Opaque
     }
 }
 
@@ -637,35 +675,32 @@ fn function_lineage(
     if name == WRITTEN_CAST_UDF_NAME {
         return through(args.first()?, Call::Timestamp);
     }
-    if WRAPPING_UDF_NAMES.contains(&name) {
-        return expr_lineage(args.first()?, input, walk);
-    }
-    if SELECTING_UDF_NAMES.contains(&name) {
-        return expr_lineage(args.first()?, input, walk.of(Part::Values));
-    }
-    if name == MAP_KEYS_UDF_NAME || name == MAP_VALUES_UDF_NAME {
-        let part = if name == MAP_KEYS_UDF_NAME {
-            Part::Keys
-        } else {
-            Part::Values
-        };
-        return expr_lineage(args.first()?, input, walk.under(Call::Opaque).of(part));
-    }
-    if let (true, [keys, values]) = (MAP_UDF_NAMES.contains(&name), args) {
-        return match walk.part {
-            Part::Keys => through(keys, Call::Opaque),
-            Part::Values => through(values, Call::Opaque),
-            Part::Whole => through(keys, Call::Opaque).or_else(|| through(values, Call::Opaque)),
-        };
-    }
-    if ARRAY_UDF_NAMES.contains(&name) {
-        return args.iter().find_map(|value| through(value, walk.nearest));
-    }
-    if name == NULLIF_UDF_NAME {
-        return through(args.first()?, walk.nearest);
-    }
-    if let (NVL2_UDF_NAME, [_, chosen @ ..]) = (name, args) {
-        return chosen.iter().find_map(|value| through(value, walk.nearest));
+    let handed = |value: &Expr| through(value, walk.nearest);
+    match (role_of(name), args) {
+        (Some(Role::Wrapped), [value, ..]) => return expr_lineage(value, input, walk),
+        (Some(Role::Element), [held, ..]) => {
+            return expr_lineage(held, input, walk.of(Part::Values));
+        }
+        (Some(Role::Keys), [held, ..]) => {
+            return expr_lineage(held, input, walk.under(Call::Opaque).of(Part::Keys));
+        }
+        (Some(Role::Values), [held, ..]) => {
+            return expr_lineage(held, input, walk.under(Call::Opaque).of(Part::Values));
+        }
+        (Some(Role::Entries), [keys, values]) => {
+            return match walk.part {
+                Part::Keys => through(keys, Call::Opaque),
+                Part::Values => through(values, Call::Opaque),
+                Part::Whole => {
+                    through(keys, Call::Opaque).or_else(|| through(values, Call::Opaque))
+                }
+            };
+        }
+        (Some(Role::Arms), _) => return args.iter().find_map(handed),
+        (Some(Role::After(skipped)), _) => return args.iter().skip(skipped).find_map(handed),
+        (Some(Role::First), [value, ..]) => return handed(value),
+        (Some(Role::Lagged), _) => return args.iter().step_by(2).find_map(handed),
+        _ => {}
     }
     let kind = expr_type(expr, input);
     if matches!(kind, Ok(DataType::Boolean)) {
@@ -675,7 +710,6 @@ fn function_lineage(
         DATE_TRUNC_UDF_NAME => Call::Trunc,
         TIMESTAMP_TO_DATE_UDF_NAME => Call::Date,
         name if DATE_UDF_NAMES.contains(&name) && args.len() == 1 => Call::Date,
-        name if CHOOSING_UDF_NAMES.contains(&name) => walk.nearest,
         _ => Call::Opaque,
     };
     let point = |value: &Expr| expr_type(value, input).is_ok_and(|kind| dated(&kind));
@@ -776,7 +810,16 @@ fn found(
             | (Call::Date, Cut::Instant, Some(false))
     );
     if idle || forgiven {
-        return expr_lineage(value, input, walk);
+        let turned = matches!(
+            (cut, zoned),
+            (Cut::Naive, Some(true)) | (Cut::Instant, Some(false))
+        );
+        let nearest = if forgiven || !turned {
+            walk.nearest
+        } else {
+            Call::Opaque
+        };
+        return expr_lineage(value, input, walk.under(nearest));
     }
     let (value, element_of) = match value {
         Expr::LambdaVariable(variable) => match walk.ranged.and_then(text::named) {
@@ -819,7 +862,10 @@ fn column_cuts_nothing(plan: &LogicalPlan, index: usize, walk: Walk<'_>) -> bool
                 Some(projection) => projection.get(index).copied(),
                 None => Some(index),
             };
-            let held = scan.source.get_logical_plan().map(|plan| plan.into_owned());
+            let held = scan
+                .source
+                .get_logical_plan()
+                .map(std::borrow::Cow::into_owned);
             let defined = || {
                 (walk.views)
                     .zip(source_as_provider(&scan.source).ok())

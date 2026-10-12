@@ -338,6 +338,16 @@ async fn a_mark_over_a_value_that_holds_no_nanoseconds_cuts_nothing() {
     );
     let idle = plan_of(&ctx, scalar).await;
     assert_eq!(column_narrowed(&idle, 1, None), None);
+    let over = |kind: DataType| {
+        let inner = narrowed_beside_a_value();
+        let mark = identity(NARROWED_BESIDE_VALUE_UDF_NAME, instant(), instant(), inner);
+        stated(cast(cast(mark, kind), instant()))
+    };
+    let same_kind = plan_of(&ctx, over(instant())).await;
+    assert_eq!(column_narrowed(&same_kind, 1, None), None);
+    let naive = DataType::Timestamp(datafusion::arrow::datatypes::TimeUnit::Microsecond, None);
+    let turned = plan_of(&ctx, over(naive)).await;
+    assert!(column_narrowed(&turned, 1, None).is_some());
     let above = |held: Expr| {
         let ctx = &ctx;
         async move {
