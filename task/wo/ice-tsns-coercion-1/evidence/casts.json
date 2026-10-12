@@ -1,0 +1,1803 @@
+{
+ "positions": 64,
+ "calls": [
+  "cast",
+  "colon",
+  "tots",
+  "lit"
+ ],
+ "rows": [
+  {
+   "position": "root~cast",
+   "family": "root",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS"
+  },
+  {
+   "position": "root~colon",
+   "family": "root",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS"
+  },
+  {
+   "position": "root~tots",
+   "family": "root",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, to_timestamp(ice.ns.src.ns) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "root~lit",
+   "family": "root",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "coalesce_ts_first~cast",
+   "family": "coalesce_ts_first",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.ts IS NOT NULL THEN ice.ns.src.ts ELSE CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")) END AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "coalesce_ts_first~colon",
+   "family": "coalesce_ts_first",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.ts IS NOT NULL THEN ice.ns.src.ts ELSE CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")) END AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "coalesce_ts_first~tots",
+   "family": "coalesce_ts_first",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.ts IS NOT NULL THEN ice.ns.src.ts ELSE to_timestamp(ice.ns.src.ns) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "coalesce_ts_first~lit",
+   "family": "coalesce_ts_first",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.ts IS NOT NULL THEN ice.ns.src.ts ELSE TimestampMicrosecond(981191106654321, Some(\"UTC\")) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "coalesce_three~cast",
+   "family": "coalesce_three",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "coalesce_three~colon",
+   "family": "coalesce_three",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "coalesce_three~tots",
+   "family": "coalesce_three",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "coalesce_three~lit",
+   "family": "coalesce_three",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "case_noelse~cast",
+   "family": "case_noelse",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(CASE WHEN ice.ns.src.id > Int32(0) THEN __repark_narrow_timestamp_ns__(ice.ns.src.ns) END AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "case_noelse~colon",
+   "family": "case_noelse",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(CASE WHEN ice.ns.src.id > Int32(0) THEN __repark_narrow_timestamp_ns__(ice.ns.src.ns) END AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "case_noelse~tots",
+   "family": "case_noelse",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.id > Int32(0) THEN to_timestamp(ice.ns.src.ns) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "case_noelse~lit",
+   "family": "case_noelse",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(CASE WHEN ice.ns.src.id > Int32(0) THEN TimestampMicrosecond(981191106654321, Some(\"UTC\")) END AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\"))"
+  },
+  {
+   "position": "case_three~cast",
+   "family": "case_three",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.id < Int32(0) THEN ice.ns.src.ts WHEN ice.ns.src.id > Int32(0) THEN CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")) ELSE"
+  },
+  {
+   "position": "case_three~colon",
+   "family": "case_three",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.id < Int32(0) THEN ice.ns.src.ts WHEN ice.ns.src.id > Int32(0) THEN CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")) ELSE"
+  },
+  {
+   "position": "case_three~tots",
+   "family": "case_three",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.id < Int32(0) THEN ice.ns.src.ts WHEN ice.ns.src.id > Int32(0) THEN to_timestamp(ice.ns.src.ns) ELSE TimestampMicrosecond(981191106654321, Some(\"UTC\")) END AS v,"
+  },
+  {
+   "position": "case_three~lit",
+   "family": "case_three",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.id < Int32(0) THEN ice.ns.src.ts WHEN ice.ns.src.id > Int32(0) THEN TimestampMicrosecond(981191106654321, Some(\"UTC\")) ELSE TimestampMicrosecond(981191106654321,"
+  },
+  {
+   "position": "if_null~cast",
+   "family": "if_null",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(CASE WHEN ice.ns.src.id > Int32(0) THEN __repark_narrow_timestamp_ns__(ice.ns.src.ns) ELSE TimestampMicrosecond(NULL, Some(\"UTC\")) END AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "if_null~colon",
+   "family": "if_null",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(CASE WHEN ice.ns.src.id > Int32(0) THEN __repark_narrow_timestamp_ns__(ice.ns.src.ns) ELSE TimestampMicrosecond(NULL, Some(\"UTC\")) END AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "if_null~tots",
+   "family": "if_null",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN ice.ns.src.id > Int32(0) THEN to_timestamp(ice.ns.src.ns) ELSE TimestampMicrosecond(NULL, Some(\"UTC\")) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "if_null~lit",
+   "family": "if_null",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(CASE WHEN ice.ns.src.id > Int32(0) THEN TimestampMicrosecond(981191106654321, Some(\"UTC\")) ELSE TimestampMicrosecond(NULL, Some(\"UTC\")) END AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0)"
+  },
+  {
+   "position": "nvl2~cast",
+   "family": "nvl2",
+   "call": "cast",
+   "status": "error",
+   "plan_line": "\tnvl2(UserDefined)"
+  },
+  {
+   "position": "nvl2~colon",
+   "family": "nvl2",
+   "call": "colon",
+   "status": "error",
+   "plan_line": "\tnvl2(UserDefined)"
+  },
+  {
+   "position": "nvl2~tots",
+   "family": "nvl2",
+   "call": "tots",
+   "status": "error",
+   "plan_line": "\tnvl2(UserDefined)"
+  },
+  {
+   "position": "nvl2~lit",
+   "family": "nvl2",
+   "call": "lit",
+   "status": "error",
+   "plan_line": "\tnvl2(UserDefined)"
+  },
+  {
+   "position": "nullif~cast",
+   "family": "nullif",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, nullif(CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.src.ts) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "nullif~colon",
+   "family": "nullif",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, nullif(CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.src.ts) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "nullif~tots",
+   "family": "nullif",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, nullif(to_timestamp(ice.ns.src.ns), ice.ns.src.ts) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "nullif~lit",
+   "family": "nullif",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, nullif(TimestampMicrosecond(981191106654321, Some(\"UTC\")), ice.ns.src.ts) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS"
+  },
+  {
+   "position": "least_null~cast",
+   "family": "least_null",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(least(__repark_narrow_timestamp_ns__(ice.ns.src.ns), TimestampMicrosecond(NULL, Some(\"UTC\"))) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\"))"
+  },
+  {
+   "position": "least_null~colon",
+   "family": "least_null",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(least(__repark_narrow_timestamp_ns__(ice.ns.src.ns), TimestampMicrosecond(NULL, Some(\"UTC\"))) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\"))"
+  },
+  {
+   "position": "least_null~tots",
+   "family": "least_null",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, least(to_timestamp(ice.ns.src.ns), TimestampMicrosecond(NULL, Some(\"UTC\"))) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS"
+  },
+  {
+   "position": "least_null~lit",
+   "family": "least_null",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "greatest_lit~cast",
+   "family": "greatest_lit",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(greatest(__repark_narrow_timestamp_ns__(ice.ns.src.ns), TimestampMicrosecond(981191106654321, Some(\"UTC\"))) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "greatest_lit~colon",
+   "family": "greatest_lit",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(greatest(__repark_narrow_timestamp_ns__(ice.ns.src.ns), TimestampMicrosecond(981191106654321, Some(\"UTC\"))) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "greatest_lit~tots",
+   "family": "greatest_lit",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, greatest(to_timestamp(ice.ns.src.ns), TimestampMicrosecond(981191106654321, Some(\"UTC\"))) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "greatest_lit~lit",
+   "family": "greatest_lit",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "element_at~cast",
+   "family": "element_at",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, element_at(array(ice.ns.src.ts, CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\"))), Int64(2)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "element_at~colon",
+   "family": "element_at",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, element_at(array(ice.ns.src.ts, CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\"))), Int64(2)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "element_at~tots",
+   "family": "element_at",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, element_at(array(ice.ns.src.ts, to_timestamp(ice.ns.src.ns)), Int64(2)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "element_at~lit",
+   "family": "element_at",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, element_at(array(ice.ns.src.ts, TimestampMicrosecond(981191106654321, Some(\"UTC\"))), Int64(2)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "array_max~cast",
+   "family": "array_max",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, array_max(CAST(array(CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.src.ts) AS List(Timestamp(\u00b5s, \"UTC\")))) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "array_max~colon",
+   "family": "array_max",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, array_max(CAST(array(CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.src.ts) AS List(Timestamp(\u00b5s, \"UTC\")))) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "array_max~tots",
+   "family": "array_max",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, array_max(CAST(array(to_timestamp(ice.ns.src.ns), ice.ns.src.ts) AS List(Timestamp(\u00b5s, \"UTC\")))) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "array_max~lit",
+   "family": "array_max",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, array_max(CAST(array(TimestampMicrosecond(981191106654321, Some(\"UTC\")), ice.ns.src.ts) AS List(Timestamp(\u00b5s, \"UTC\")))) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "struct~cast",
+   "family": "struct",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(__repark_spark_as__(Utf8(\"named_struct(f, CAST(ns AS TIMESTAMP), 'g', ts).f\"), __repark_narrow_timestamp_ns__(ice.ns.src.ns)) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "struct~colon",
+   "family": "struct",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(__repark_spark_as__(Utf8(\"named_struct(f, (ns)::timestamp, 'g', ts).f\"), __repark_narrow_timestamp_ns__(ice.ns.src.ns)) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "struct~tots",
+   "family": "struct",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_spark_as__(Utf8(\"named_struct(f, to_timestamp(ns), 'g', ts).f\"), to_timestamp(ice.ns.src.ns)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "struct~lit",
+   "family": "struct",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "struct_coalesce~cast",
+   "family": "struct_coalesce",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "struct_coalesce~colon",
+   "family": "struct_coalesce",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "struct_coalesce~tots",
+   "family": "struct_coalesce",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "struct_coalesce~lit",
+   "family": "struct_coalesce",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "map_value~cast",
+   "family": "map_value",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, get_field(__repark_spark_nonnull__(map(List([a, b]), make_array(CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.src.ts))), Utf8(\"a\")) AS v, Int32(0)"
+  },
+  {
+   "position": "map_value~colon",
+   "family": "map_value",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, get_field(__repark_spark_nonnull__(map(List([a, b]), make_array(CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.src.ts))), Utf8(\"a\")) AS v, Int32(0)"
+  },
+  {
+   "position": "map_value~tots",
+   "family": "map_value",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, get_field(__repark_spark_nonnull__(map(List([a, b]), make_array(to_timestamp(ice.ns.src.ns), ice.ns.src.ts))), Utf8(\"a\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS"
+  },
+  {
+   "position": "map_value~lit",
+   "family": "map_value",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, get_field(__repark_spark_nonnull__(map(List([a, b]), make_array(TimestampMicrosecond(981191106654321, Some(\"UTC\")), ice.ns.src.ts))), Utf8(\"a\")) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "lambda_out~cast",
+   "family": "lambda_out",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(transform(__repark_hof_array_field__(array(__repark_narrow_timestamp_ns__(ice.ns.src.ns))), (x) -> CASE WHEN __repark_narrow_timestamp_ns__(x) IS NOT NULL THEN"
+  },
+  {
+   "position": "lambda_out~colon",
+   "family": "lambda_out",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(transform(__repark_hof_array_field__(array(__repark_narrow_timestamp_ns__(ice.ns.src.ns))), (x) -> CASE WHEN __repark_narrow_timestamp_ns__(x) IS NOT NULL THEN"
+  },
+  {
+   "position": "lambda_out~tots",
+   "family": "lambda_out",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(transform(__repark_hof_array_field__(array(to_timestamp(ice.ns.src.ns))), (x) -> CASE WHEN x IS NOT NULL THEN x ELSE ice.ns.src.ts END), Int64(0)) AS v, Int32(0) AS"
+  },
+  {
+   "position": "lambda_out~lit",
+   "family": "lambda_out",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "lambda_in~cast",
+   "family": "lambda_in",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(__repark_array_get__(transform(__repark_hof_array_field__(array(ice.ns.src.ns)), (x) -> __repark_narrow_timestamp_ns__(x)), Int64(0)) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "lambda_in~colon",
+   "family": "lambda_in",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(__repark_array_get__(transform(__repark_hof_array_field__(array(ice.ns.src.ns)), (x) -> __repark_narrow_timestamp_ns__(x)), Int64(0)) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "lambda_in~tots",
+   "family": "lambda_in",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(transform(__repark_hof_array_field__(array(ice.ns.src.ns)), (x) -> to_timestamp(x)), Int64(0)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "lambda_in~lit",
+   "family": "lambda_in",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(__repark_array_get__(transform(__repark_hof_array_field__(array(ice.ns.src.ns)), (x) -> TimestampMicrosecond(981191106654321, Some(\"UTC\"))), Int64(0)) AS Timestamp(\u00b5s, \"UTC\")) AS v,"
+  },
+  {
+   "position": "lambda_in_coalesce~cast",
+   "family": "lambda_in_coalesce",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(transform(__repark_hof_array_field__(array(ice.ns.src.ns)), (x) -> CASE WHEN CAST(__repark_narrow_timestamp_ns__(x) AS Timestamp(\u00b5s, \"UTC\")) IS NOT NULL THEN"
+  },
+  {
+   "position": "lambda_in_coalesce~colon",
+   "family": "lambda_in_coalesce",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(transform(__repark_hof_array_field__(array(ice.ns.src.ns)), (x) -> CASE WHEN CAST(__repark_narrow_timestamp_ns__(x) AS Timestamp(\u00b5s, \"UTC\")) IS NOT NULL THEN"
+  },
+  {
+   "position": "lambda_in_coalesce~tots",
+   "family": "lambda_in_coalesce",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(transform(__repark_hof_array_field__(array(ice.ns.src.ns)), (x) -> CASE WHEN to_timestamp(x) IS NOT NULL THEN to_timestamp(x) ELSE ice.ns.src.ts END), Int64(0)) AS"
+  },
+  {
+   "position": "lambda_in_coalesce~lit",
+   "family": "lambda_in_coalesce",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(transform(__repark_hof_array_field__(array(ice.ns.src.ns)), (x) -> TimestampMicrosecond(981191106654321, Some(\"UTC\"))), Int64(0)) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "filter~cast",
+   "family": "filter",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(CAST(filter(__repark_hof_array_field__(array(CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.src.ts)), (x) -> x IS NOT NULL) AS"
+  },
+  {
+   "position": "filter~colon",
+   "family": "filter",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(CAST(filter(__repark_hof_array_field__(array(CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.src.ts)), (x) -> x IS NOT NULL) AS"
+  },
+  {
+   "position": "filter~tots",
+   "family": "filter",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(CAST(filter(__repark_hof_array_field__(array(to_timestamp(ice.ns.src.ns), ice.ns.src.ts)), (x) -> x IS NOT NULL) AS List(Timestamp(\u00b5s, \"UTC\"))), Int64(0)) AS v,"
+  },
+  {
+   "position": "filter~lit",
+   "family": "filter",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_array_get__(CAST(filter(__repark_hof_array_field__(array(TimestampMicrosecond(981191106654321, Some(\"UTC\")), ice.ns.src.ts)), (x) -> x IS NOT NULL) AS List(Timestamp(\u00b5s,"
+  },
+  {
+   "position": "twice~cast",
+   "family": "twice",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "twice~colon",
+   "family": "twice",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "twice~tots",
+   "family": "twice",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "twice~lit",
+   "family": "twice",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "plus~cast",
+   "family": "plus",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "plus~colon",
+   "family": "plus",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "plus~tots",
+   "family": "plus",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "plus~lit",
+   "family": "plus",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191107654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "agg~cast",
+   "family": "agg",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(max(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "agg~colon",
+   "family": "agg",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(max(ice.ns.src.ns) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "agg~tots",
+   "family": "agg",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, max(to_timestamp(ice.ns.src.ns)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "agg~lit",
+   "family": "agg",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(max(Utf8(\"2001-02-03 04:05:06.654321\")) AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "agg_coalesce_in~cast",
+   "family": "agg_coalesce_in",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, max(coalesce(ice.ns.src.ns,ice.ns.src.ts)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "agg_coalesce_in~colon",
+   "family": "agg_coalesce_in",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, max(coalesce(ice.ns.src.ns,ice.ns.src.ts)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "agg_coalesce_in~tots",
+   "family": "agg_coalesce_in",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, max(coalesce(to_timestamp(ice.ns.src.ns),ice.ns.src.ts)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "agg_coalesce_in~lit",
+   "family": "agg_coalesce_in",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, max(coalesce(Utf8(\"2001-02-03 04:05:06.654321\"),ice.ns.src.ts)) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "agg_coalesce_out~cast",
+   "family": "agg_coalesce_out",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE max(ice.ns.src.ts) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "agg_coalesce_out~colon",
+   "family": "agg_coalesce_out",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE max(ice.ns.src.ts) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "agg_coalesce_out~tots",
+   "family": "agg_coalesce_out",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN max(to_timestamp(ice.ns.src.ns)) IS NOT NULL THEN max(to_timestamp(ice.ns.src.ns)) ELSE max(ice.ns.src.ts) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS"
+  },
+  {
+   "position": "agg_coalesce_out~lit",
+   "family": "agg_coalesce_out",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE max(ice.ns.src.ts) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "agg_first~cast",
+   "family": "agg_first",
+   "call": "cast",
+   "status": "error",
+   "plan_line": "[UNRESOLVED_ROUTINE] Cannot resolve routine `first` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 62"
+  },
+  {
+   "position": "agg_first~colon",
+   "family": "agg_first",
+   "call": "colon",
+   "status": "error",
+   "plan_line": "[UNRESOLVED_ROUTINE] Cannot resolve routine `first` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 62"
+  },
+  {
+   "position": "agg_first~tots",
+   "family": "agg_first",
+   "call": "tots",
+   "status": "error",
+   "plan_line": "[UNRESOLVED_ROUTINE] Cannot resolve routine `first` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 62"
+  },
+  {
+   "position": "agg_first~lit",
+   "family": "agg_first",
+   "call": "lit",
+   "status": "error",
+   "plan_line": "[UNRESOLVED_ROUTINE] Cannot resolve routine `first` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 62"
+  },
+  {
+   "position": "agg_rollup~cast",
+   "family": "agg_rollup",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE min(ice.ns.src.ts) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "agg_rollup~colon",
+   "family": "agg_rollup",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE min(ice.ns.src.ts) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "agg_rollup~tots",
+   "family": "agg_rollup",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN min(to_timestamp(ice.ns.src.ns)) IS NOT NULL THEN min(to_timestamp(ice.ns.src.ns)) ELSE min(ice.ns.src.ts) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS"
+  },
+  {
+   "position": "agg_rollup~lit",
+   "family": "agg_rollup",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE min(ice.ns.src.ts) END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "window_max~cast",
+   "family": "window_max",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "window_max~colon",
+   "family": "window_max",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "window_max~tots",
+   "family": "window_max",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN max(to_timestamp(ice.ns.src.ns)) PARTITION BY [ice.ns.src.id] ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING IS NOT NULL THEN max(to_timestamp(ice.ns.src.ns))"
+  },
+  {
+   "position": "window_max~lit",
+   "family": "window_max",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "window_lag~cast",
+   "family": "window_lag",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(lag(ice.ns.src.ns,Int64(0),ice.ns.src.ts) ORDER BY [ice.ns.src.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "window_lag~colon",
+   "family": "window_lag",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(lag(ice.ns.src.ns,Int64(0),ice.ns.src.ts) ORDER BY [ice.ns.src.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "window_lag~tots",
+   "family": "window_lag",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, lag(to_timestamp(ice.ns.src.ns),Int64(0),ice.ns.src.ts) ORDER BY [ice.ns.src.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "window_lag~lit",
+   "family": "window_lag",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CAST(lag(Utf8(\"2001-02-03 04:05:06.654321\"),Int64(0),ice.ns.src.ts) ORDER BY [ice.ns.src.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW AS Timestamp(\u00b5s, \"UTC\")) AS"
+  },
+  {
+   "position": "window_first~cast",
+   "family": "window_first",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, first_value(coalesce(ice.ns.src.ns,ice.ns.src.ts)) PARTITION BY [ice.ns.src.id] ORDER BY [ice.ns.src.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW AS v, Int32(0)"
+  },
+  {
+   "position": "window_first~colon",
+   "family": "window_first",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, first_value(coalesce(ice.ns.src.ns,ice.ns.src.ts)) PARTITION BY [ice.ns.src.id] ORDER BY [ice.ns.src.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW AS v, Int32(0)"
+  },
+  {
+   "position": "window_first~tots",
+   "family": "window_first",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, first_value(coalesce(to_timestamp(ice.ns.src.ns),ice.ns.src.ts)) PARTITION BY [ice.ns.src.id] ORDER BY [ice.ns.src.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW AS"
+  },
+  {
+   "position": "window_first~lit",
+   "family": "window_first",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, first_value(coalesce(Utf8(\"2001-02-03 04:05:06.654321\"),ice.ns.src.ts)) PARTITION BY [ice.ns.src.id] ORDER BY [ice.ns.src.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT"
+  },
+  {
+   "position": "subq~cast",
+   "family": "subq",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE q.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "subq~colon",
+   "family": "subq",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE q.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "subq~tots",
+   "family": "subq",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, CASE WHEN q.w IS NOT NULL THEN q.w ELSE q.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "subq~lit",
+   "family": "subq",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, CAST(q.w AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "subq_two~cast",
+   "family": "subq_two",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: b.id AS id, CAST(CASE WHEN b.id > Int32(0) THEN CAST(b.w AS Timestamp(\u00b5s, \"UTC\")) ELSE b.ts END AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "subq_two~colon",
+   "family": "subq_two",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: b.id AS id, CAST(CASE WHEN b.id > Int32(0) THEN CAST(b.w AS Timestamp(\u00b5s, \"UTC\")) ELSE b.ts END AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "subq_two~tots",
+   "family": "subq_two",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: b.id AS id, CASE WHEN b.id > Int32(0) THEN b.w ELSE b.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "subq_two~lit",
+   "family": "subq_two",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: b.id AS id, CAST(CASE WHEN b.id > Int32(0) THEN CAST(b.w AS Timestamp(\u00b5s, \"UTC\")) ELSE b.ts END AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "cte~cast",
+   "family": "cte",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, greatest(CAST(q.w AS Timestamp(\u00b5s, \"UTC\")), q.ts) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "cte~colon",
+   "family": "cte",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, greatest(CAST(q.w AS Timestamp(\u00b5s, \"UTC\")), q.ts) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "cte~tots",
+   "family": "cte",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, greatest(q.w, q.ts) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts, __repark_cast_timestamp_ntz__(TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "cte~lit",
+   "family": "cte",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, greatest(CAST(q.w AS Timestamp(\u00b5s, \"UTC\")), q.ts) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "cte_join~cast",
+   "family": "cte_join",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: a.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE a.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "cte_join~colon",
+   "family": "cte_join",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: a.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE a.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "cte_join~tots",
+   "family": "cte_join",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: a.id AS id, CASE WHEN q.w IS NOT NULL THEN q.w ELSE a.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "cte_join~lit",
+   "family": "cte_join",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: a.id AS id, CAST(q.w AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "view~cast",
+   "family": "view",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: rv_c132.id AS id, CASE WHEN rv_c132.w IS NOT NULL THEN rv_c132.w ELSE rv_c132.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "view~colon",
+   "family": "view",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: rv_c133.id AS id, CASE WHEN rv_c133.w IS NOT NULL THEN rv_c133.w ELSE rv_c133.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "view~tots",
+   "family": "view",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: rv_c134.id AS id, CASE WHEN rv_c134.w IS NOT NULL THEN rv_c134.w ELSE rv_c134.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "view~lit",
+   "family": "view",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: rv_c135.id AS id, rv_c135.w AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts, __repark_cast_timestamp_ntz__(TimestampMicrosecond(NULL, None))"
+  },
+  {
+   "position": "union_first~cast",
+   "family": "union_first",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: id AS id, CAST(ice.ns.src.ns AS Timestamp(\u00b5s, \"UTC\")) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_first~colon",
+   "family": "union_first",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: id AS id, CAST(ice.ns.src.ns AS Timestamp(\u00b5s, \"UTC\")) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_first~tots",
+   "family": "union_first",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: id AS id, to_timestamp(ice.ns.src.ns) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_first~lit",
+   "family": "union_first",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: id AS id, CAST(Utf8(\"2001-02-03 04:05:06.654321\") AS Timestamp(\u00b5s, \"UTC\")) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_second~cast",
+   "family": "union_second",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id + Int64(100) AS id, ts AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_second~colon",
+   "family": "union_second",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id + Int64(100) AS id, ts AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_second~tots",
+   "family": "union_second",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id + Int64(100) AS id, ts AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_second~lit",
+   "family": "union_second",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id + Int64(100) AS id, ts AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_null~cast",
+   "family": "union_null",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_null~colon",
+   "family": "union_null",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_null~tots",
+   "family": "union_null",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: id AS id, to_timestamp(ice.ns.src.ns) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_null~lit",
+   "family": "union_null",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: id AS id, __repark_narrow_timestamp_ns__(Utf8(\"2001-02-03 04:05:06.654321\")) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_distinct_sub~cast",
+   "family": "union_distinct_sub",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, CAST(q.w AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_distinct_sub~colon",
+   "family": "union_distinct_sub",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, CAST(q.w AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "union_distinct_sub~tots",
+   "family": "union_distinct_sub",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, q.w AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts, __repark_cast_timestamp_ntz__(TimestampMicrosecond(NULL, None)) AS ntz"
+  },
+  {
+   "position": "union_distinct_sub~lit",
+   "family": "union_distinct_sub",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: q.id AS id, CAST(q.w AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "except~cast",
+   "family": "except",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: left.id AS id, CAST(left.ice.ns.src.ns AS Timestamp(\u00b5s, \"UTC\")) AS v, CAST(left.Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "except~colon",
+   "family": "except",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: left.id AS id, CAST(left.ice.ns.src.ns AS Timestamp(\u00b5s, \"UTC\")) AS v, CAST(left.Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "except~tots",
+   "family": "except",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: left.id AS id, left.to_timestamp(ice.ns.src.ns) AS v, CAST(left.Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "except~lit",
+   "family": "except",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: left.id AS id, CAST(left.Utf8(\"2001-02-03 04:05:06.654321\") AS Timestamp(\u00b5s, \"UTC\")) AS v, CAST(left.Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "scalar~cast",
+   "family": "scalar",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __scalar_sq_1.max(r.ns) IS NOT NULL THEN __scalar_sq_2.max(r.ns) ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "scalar~colon",
+   "family": "scalar",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __scalar_sq_1.max(r.ns) IS NOT NULL THEN __scalar_sq_2.max(r.ns) ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c,"
+  },
+  {
+   "position": "scalar~tots",
+   "family": "scalar",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __scalar_sq_1.max(to_timestamp(r.ns)) IS NOT NULL THEN __scalar_sq_2.max(to_timestamp(r.ns)) ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\"))"
+  },
+  {
+   "position": "scalar~lit",
+   "family": "scalar",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __scalar_sq_1.max(Utf8(\"2001-02-03 04:05:06.654321\")) IS NOT NULL THEN __scalar_sq_2.max(Utf8(\"2001-02-03 04:05:06.654321\")) ELSE ice.ns.src.ts END AS v, Int32(0) AS k,"
+  },
+  {
+   "position": "join_using~cast",
+   "family": "join_using",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: a.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE a.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "join_using~colon",
+   "family": "join_using",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: a.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE a.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "join_using~tots",
+   "family": "join_using",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: a.id AS id, CASE WHEN b.w IS NOT NULL THEN b.w ELSE a.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "join_using~lit",
+   "family": "join_using",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: a.id AS id, CAST(b.w AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "lateral~cast",
+   "family": "lateral",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: o.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE o.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "lateral~colon",
+   "family": "lateral",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: o.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE o.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "lateral~tots",
+   "family": "lateral",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: o.id AS id, CASE WHEN l.w IS NOT NULL THEN l.w ELSE o.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "lateral~lit",
+   "family": "lateral",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: o.id AS id, CAST(l.w AS Timestamp(\u00b5s, \"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "values~cast",
+   "family": "values",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: column1 AS id, column2 AS v, column3 AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts, __repark_cast_timestamp_ntz__(TimestampMicrosecond(NULL, None)) AS ntz"
+  },
+  {
+   "position": "values~colon",
+   "family": "values",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: column1 AS id, column2 AS v, column3 AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts, __repark_cast_timestamp_ntz__(TimestampMicrosecond(NULL, None)) AS ntz"
+  },
+  {
+   "position": "values~tots",
+   "family": "values",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: column1 AS id, column2 AS v, column3 AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts, __repark_cast_timestamp_ntz__(TimestampMicrosecond(NULL, None)) AS ntz"
+  },
+  {
+   "position": "values~lit",
+   "family": "values",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: column1 AS id, column2 AS v, column3 AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts, __repark_cast_timestamp_ntz__(TimestampMicrosecond(NULL, None)) AS ntz"
+  },
+  {
+   "position": "where_plain~cast",
+   "family": "where_plain",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "where_plain~colon",
+   "family": "where_plain",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "where_plain~tots",
+   "family": "where_plain",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "where_plain~lit",
+   "family": "where_plain",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "order_plain~cast",
+   "family": "order_plain",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "order_plain~colon",
+   "family": "order_plain",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "order_plain~tots",
+   "family": "order_plain",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "order_plain~lit",
+   "family": "order_plain",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, CAST(Int64(0) AS Int32) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "sibling_narrow_where~cast",
+   "family": "sibling_narrow_where",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "sibling_narrow_where~colon",
+   "family": "sibling_narrow_where",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "sibling_narrow_where~tots",
+   "family": "sibling_narrow_where",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "sibling_narrow_where~lit",
+   "family": "sibling_narrow_where",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "two_cols~cast",
+   "family": "two_cols",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, ice.ns.src.ns AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "two_cols~colon",
+   "family": "two_cols",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, ice.ns.src.ns AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "two_cols~tots",
+   "family": "two_cols",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, ice.ns.src.ns AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "two_cols~lit",
+   "family": "two_cols",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, ice.ns.src.ns AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "two_cols_swapped~cast",
+   "family": "two_cols_swapped",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, Int32(0) AS k, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "two_cols_swapped~colon",
+   "family": "two_cols_swapped",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, Int32(0) AS k, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "two_cols_swapped~tots",
+   "family": "two_cols_swapped",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, Int32(0) AS k, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS c, TimestampMicrosecond(NULL,"
+  },
+  {
+   "position": "two_cols_swapped~lit",
+   "family": "two_cols_swapped",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, __repark_narrow_timestamp_ns__(ice.ns.src.ns) AS v, Int32(0) AS k, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "by_name~cast",
+   "family": "by_name",
+   "call": "cast",
+   "status": "error",
+   "plan_line": "SQL error: ParserError(\"Expected: SELECT, VALUES, or a subquery in the query body, found: BY at Line: 1, Column: 33\")"
+  },
+  {
+   "position": "by_name~colon",
+   "family": "by_name",
+   "call": "colon",
+   "status": "error",
+   "plan_line": "SQL error: ParserError(\"Expected: SELECT, VALUES, or a subquery in the query body, found: BY at Line: 1, Column: 33\")"
+  },
+  {
+   "position": "by_name~tots",
+   "family": "by_name",
+   "call": "tots",
+   "status": "error",
+   "plan_line": "SQL error: ParserError(\"Expected: SELECT, VALUES, or a subquery in the query body, found: BY at Line: 1, Column: 33\")"
+  },
+  {
+   "position": "by_name~lit",
+   "family": "by_name",
+   "call": "lit",
+   "status": "error",
+   "plan_line": "SQL error: ParserError(\"Expected: SELECT, VALUES, or a subquery in the query body, found: BY at Line: 1, Column: 33\")"
+  },
+  {
+   "position": "overwrite~cast",
+   "family": "overwrite",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, __repark_cast_timestamp_ns__(NULL) AS c, ice.ns.src.ts AS ts,"
+  },
+  {
+   "position": "overwrite~colon",
+   "family": "overwrite",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, __repark_cast_timestamp_ns__(NULL) AS c, ice.ns.src.ts AS ts,"
+  },
+  {
+   "position": "overwrite~tots",
+   "family": "overwrite",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k, __repark_cast_timestamp_ns__(NULL) AS c, ice.ns.src.ts AS ts,"
+  },
+  {
+   "position": "overwrite~lit",
+   "family": "overwrite",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k, __repark_cast_timestamp_ns__(NULL) AS c, ice.ns.src.ts AS ts, __repark_cast_timestamp_ntz__(ice.ns.src.ntz) AS ntz"
+  },
+  {
+   "position": "update~cast",
+   "family": "update",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c200.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.c200.ts END AS v, ice.ns.c200.k AS k, ice.ns.c200.c AS c, ice.ns.c200.ts AS ts,"
+  },
+  {
+   "position": "update~colon",
+   "family": "update",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c201.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.c201.ts END AS v, ice.ns.c201.k AS k, ice.ns.c201.c AS c, ice.ns.c201.ts AS ts,"
+  },
+  {
+   "position": "update~tots",
+   "family": "update",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c202.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.c202.ts END AS v, ice.ns.c202.k AS k, ice.ns.c202.c AS c, ice.ns.c202.ts AS ts,"
+  },
+  {
+   "position": "update~lit",
+   "family": "update",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c203.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, ice.ns.c203.k AS k, ice.ns.c203.c AS c, ice.ns.c203.ts AS ts, __repark_cast_timestamp_ntz__(ice.ns.c203.ntz) AS ntz"
+  },
+  {
+   "position": "update_alias~cast",
+   "family": "update_alias",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: u.id AS id, CASE WHEN u.id > Int32(0) THEN CAST(__repark_narrow_timestamp_ns__(u.c) AS Timestamp(\u00b5s, \"UTC\")) ELSE u.ts END AS v, u.k AS k, u.c AS c, u.ts AS ts, __repark_cast_timestamp_ntz__(u.ntz) AS ntz"
+  },
+  {
+   "position": "update_alias~colon",
+   "family": "update_alias",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: u.id AS id, CASE WHEN u.id > Int32(0) THEN CAST(__repark_narrow_timestamp_ns__(u.c) AS Timestamp(\u00b5s, \"UTC\")) ELSE u.ts END AS v, u.k AS k, u.c AS c, u.ts AS ts, __repark_cast_timestamp_ntz__(u.ntz) AS ntz"
+  },
+  {
+   "position": "update_alias~tots",
+   "family": "update_alias",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: u.id AS id, CASE WHEN u.id > Int32(0) THEN to_timestamp(u.c) ELSE u.ts END AS v, u.k AS k, u.c AS c, u.ts AS ts, __repark_cast_timestamp_ntz__(u.ntz) AS ntz"
+  },
+  {
+   "position": "update_alias~lit",
+   "family": "update_alias",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: u.id AS id, CASE WHEN u.id > Int32(0) THEN TimestampMicrosecond(981191106654321, Some(\"UTC\")) ELSE u.ts END AS v, u.k AS k, u.c AS c, u.ts AS ts, __repark_cast_timestamp_ntz__(u.ntz) AS ntz"
+  },
+  {
+   "position": "update_nowhere~cast",
+   "family": "update_nowhere",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c208.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.c208.ts END AS v, ice.ns.c208.k AS k, ice.ns.c208.c AS c, ice.ns.c208.ts AS ts,"
+  },
+  {
+   "position": "update_nowhere~colon",
+   "family": "update_nowhere",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c209.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.c209.ts END AS v, ice.ns.c209.k AS k, ice.ns.c209.c AS c, ice.ns.c209.ts AS ts,"
+  },
+  {
+   "position": "update_nowhere~tots",
+   "family": "update_nowhere",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c210.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.c210.ts END AS v, ice.ns.c210.k AS k, ice.ns.c210.c AS c, ice.ns.c210.ts AS ts,"
+  },
+  {
+   "position": "update_nowhere~lit",
+   "family": "update_nowhere",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c211.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, ice.ns.c211.k AS k, ice.ns.c211.c AS c, ice.ns.c211.ts AS ts, __repark_cast_timestamp_ntz__(ice.ns.c211.ntz) AS ntz"
+  },
+  {
+   "position": "update~cast",
+   "family": "update",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c212.id AS id, greatest(CAST(__repark_narrow_timestamp_ns__(ice.ns.c212.c) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.c212.ts) AS v, ice.ns.c212.k AS k, ice.ns.c212.c AS c, ice.ns.c212.ts AS ts,"
+  },
+  {
+   "position": "update~colon",
+   "family": "update",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c213.id AS id, greatest(CAST(__repark_narrow_timestamp_ns__(ice.ns.c213.c) AS Timestamp(\u00b5s, \"UTC\")), ice.ns.c213.ts) AS v, ice.ns.c213.k AS k, ice.ns.c213.c AS c, ice.ns.c213.ts AS ts,"
+  },
+  {
+   "position": "update~tots",
+   "family": "update",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c214.id AS id, greatest(to_timestamp(ice.ns.c214.c), ice.ns.c214.ts) AS v, ice.ns.c214.k AS k, ice.ns.c214.c AS c, ice.ns.c214.ts AS ts, __repark_cast_timestamp_ntz__(ice.ns.c214.ntz) AS ntz"
+  },
+  {
+   "position": "update~lit",
+   "family": "update",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c215.id AS id, greatest(TimestampMicrosecond(981191106654321, Some(\"UTC\")), ice.ns.c215.ts) AS v, ice.ns.c215.k AS k, ice.ns.c215.c AS c, ice.ns.c215.ts AS ts,"
+  },
+  {
+   "position": "update_scalar~cast",
+   "family": "update_scalar",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c216.id AS id, __scalar_sq_1.max(r.ns) AS v, ice.ns.c216.k AS k, ice.ns.c216.c AS c, ice.ns.c216.ts AS ts, __repark_cast_timestamp_ntz__(ice.ns.c216.ntz) AS ntz"
+  },
+  {
+   "position": "update_scalar~colon",
+   "family": "update_scalar",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c217.id AS id, __scalar_sq_1.max(r.ns) AS v, ice.ns.c217.k AS k, ice.ns.c217.c AS c, ice.ns.c217.ts AS ts, __repark_cast_timestamp_ntz__(ice.ns.c217.ntz) AS ntz"
+  },
+  {
+   "position": "update_scalar~tots",
+   "family": "update_scalar",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c218.id AS id, __scalar_sq_1.max(to_timestamp(r.ns)) AS v, ice.ns.c218.k AS k, ice.ns.c218.c AS c, ice.ns.c218.ts AS ts, __repark_cast_timestamp_ntz__(ice.ns.c218.ntz) AS ntz"
+  },
+  {
+   "position": "update_scalar~lit",
+   "family": "update_scalar",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.c219.id AS id, __scalar_sq_1.max(Utf8(\"2001-02-03 04:05:06.654321\")) AS v, ice.ns.c219.k AS k, ice.ns.c219.c AS c, ice.ns.c219.ts AS ts, __repark_cast_timestamp_ntz__(ice.ns.c219.ntz) AS ntz"
+  },
+  {
+   "position": "merge_update~cast",
+   "family": "merge_update",
+   "call": "cast",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c220 t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = coalesce(CAST(s.ns AS TIMESTAMP), s.ts)"
+  },
+  {
+   "position": "merge_update~colon",
+   "family": "merge_update",
+   "call": "colon",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c221 t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = coalesce((s.ns)::TIMESTAMP, s.ts)"
+  },
+  {
+   "position": "merge_update~tots",
+   "family": "merge_update",
+   "call": "tots",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c222 t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = coalesce(to_timestamp(s.ns), s.ts)"
+  },
+  {
+   "position": "merge_update~lit",
+   "family": "merge_update",
+   "call": "lit",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c223 t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = coalesce(TIMESTAMP '2001-02-03 04:05:06.654321', s.ts)"
+  },
+  {
+   "position": "merge_update~cast",
+   "family": "merge_update",
+   "call": "cast",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c224 t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.v = CASE WHEN s.id > 0 THEN CAST(s.ns AS TIMESTAMP) ELSE s.ts END"
+  },
+  {
+   "position": "merge_update~colon",
+   "family": "merge_update",
+   "call": "colon",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c225 t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.v = CASE WHEN s.id > 0 THEN (s.ns)::TIMESTAMP ELSE s.ts END"
+  },
+  {
+   "position": "merge_update~tots",
+   "family": "merge_update",
+   "call": "tots",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c226 t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.v = CASE WHEN s.id > 0 THEN to_timestamp(s.ns) ELSE s.ts END"
+  },
+  {
+   "position": "merge_update~lit",
+   "family": "merge_update",
+   "call": "lit",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c227 t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.v = CASE WHEN s.id > 0 THEN TIMESTAMP '2001-02-03 04:05:06.654321' ELSE s.ts END"
+  },
+  {
+   "position": "merge_insert~cast",
+   "family": "merge_insert",
+   "call": "cast",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c228 t USING (SELECT id, CAST(ns AS TIMESTAMP) AS w, ts FROM ice.ns.src) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v, k) VALUES (s.id, coalesce(s.w, s.ts"
+  },
+  {
+   "position": "merge_insert~colon",
+   "family": "merge_insert",
+   "call": "colon",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c229 t USING (SELECT id, (ns)::TIMESTAMP AS w, ts FROM ice.ns.src) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v, k) VALUES (s.id, coalesce(s.w, s.ts), 0)"
+  },
+  {
+   "position": "merge_insert~tots",
+   "family": "merge_insert",
+   "call": "tots",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c230 t USING (SELECT id, to_timestamp(ns) AS w, ts FROM ice.ns.src) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v, k) VALUES (s.id, coalesce(s.w, s.ts), 0)"
+  },
+  {
+   "position": "merge_insert~lit",
+   "family": "merge_insert",
+   "call": "lit",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c231 t USING (SELECT id, TIMESTAMP '2001-02-03 04:05:06.654321' AS w, ts FROM ice.ns.src) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v, k) VALUES (s.id, c"
+  },
+  {
+   "position": "merge_by_source~cast",
+   "family": "merge_by_source",
+   "call": "cast",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c232 t USING (SELECT id + 1000 AS id FROM ice.ns.src) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET v = coalesce(CAST(t.c AS TIMESTAMP), t.ts)"
+  },
+  {
+   "position": "merge_by_source~colon",
+   "family": "merge_by_source",
+   "call": "colon",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c233 t USING (SELECT id + 1000 AS id FROM ice.ns.src) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET v = coalesce((t.c)::TIMESTAMP, t.ts)"
+  },
+  {
+   "position": "merge_by_source~tots",
+   "family": "merge_by_source",
+   "call": "tots",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c234 t USING (SELECT id + 1000 AS id FROM ice.ns.src) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET v = coalesce(to_timestamp(t.c), t.ts)"
+  },
+  {
+   "position": "merge_by_source~lit",
+   "family": "merge_by_source",
+   "call": "lit",
+   "status": "unexplained",
+   "plan_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.c235 t USING (SELECT id + 1000 AS id FROM ice.ns.src) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET v = coalesce(TIMESTAMP '2001-02-03 04:05:06.6543"
+  },
+  {
+   "position": "ctas~cast",
+   "family": "ctas",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, ice.ns.src.ns AS c"
+  },
+  {
+   "position": "ctas~colon",
+   "family": "ctas",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, ice.ns.src.ns AS c"
+  },
+  {
+   "position": "ctas~tots",
+   "family": "ctas",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, ice.ns.src.ns AS c"
+  },
+  {
+   "position": "ctas~lit",
+   "family": "ctas",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, ice.ns.src.ns AS c"
+  },
+  {
+   "position": "df_cast~cast",
+   "family": "df_cast",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k"
+  },
+  {
+   "position": "df_cast~colon",
+   "family": "df_cast",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k"
+  },
+  {
+   "position": "df_cast~tots",
+   "family": "df_cast",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.src.ts END AS v, Int32(0) AS k"
+  },
+  {
+   "position": "df_cast~lit",
+   "family": "df_cast",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: ice.ns.src.id AS id, TimestampMicrosecond(981173106654321, Some(\"UTC\")) AS v, Int32(0) AS k"
+  },
+  {
+   "position": "df_selectexpr~cast",
+   "family": "df_selectexpr",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: datafusion.public.__repark_selx_<id>.id AS id, CASE WHEN datafusion.public.__repark_selx_<id>.id > Int32(0) THEN CAST(__repark_narrow_timestamp_ns__(datafusion.public.__repark_selx_<id>.ns) AS Timestamp(\u00b5s,"
+  },
+  {
+   "position": "df_selectexpr~colon",
+   "family": "df_selectexpr",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: datafusion.public.__repark_selx_<id>.id AS id, CASE WHEN datafusion.public.__repark_selx_<id>.id > Int32(0) THEN CAST(__repark_narrow_timestamp_ns__(datafusion.public.__repark_selx_<id>.ns) AS Timestamp(\u00b5s,"
+  },
+  {
+   "position": "df_selectexpr~tots",
+   "family": "df_selectexpr",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: datafusion.public.__repark_selx_<id>.id AS id, CASE WHEN datafusion.public.__repark_selx_<id>.id > Int32(0) THEN to_timestamp(datafusion.public.__repark_selx_<id>.ns) ELSE"
+  },
+  {
+   "position": "df_selectexpr~lit",
+   "family": "df_selectexpr",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: datafusion.public.__repark_selx_<id>.id AS id, CASE WHEN datafusion.public.__repark_selx_<id>.id > Int32(0) THEN TimestampMicrosecond(981191106654321, Some(\"UTC\")) ELSE"
+  },
+  {
+   "position": "df_union~cast",
+   "family": "df_union",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: datafusion.public.__repark_selx_<id>.id AS id, __repark_narrow_timestamp_ns__(datafusion.public.__repark_selx_<id>.ns) AS v, Int32(0) AS k"
+  },
+  {
+   "position": "df_union~colon",
+   "family": "df_union",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: datafusion.public.__repark_selx_<id>.id AS id, __repark_narrow_timestamp_ns__(datafusion.public.__repark_selx_<id>.ns) AS v, Int32(0) AS k"
+  },
+  {
+   "position": "df_union~tots",
+   "family": "df_union",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: datafusion.public.__repark_selx_<id>.id AS id, to_timestamp(datafusion.public.__repark_selx_<id>.ns) AS v, Int32(0) AS k"
+  },
+  {
+   "position": "df_union~lit",
+   "family": "df_union",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: datafusion.public.__repark_selx_<id>.id AS id, TimestampMicrosecond(981191106654321, Some(\"UTC\")) AS v, Int32(0) AS k"
+  },
+  {
+   "position": "df_view~cast",
+   "family": "df_view",
+   "call": "cast",
+   "status": "resolved",
+   "plan_line": "Projection: fv_c252.id AS id, CASE WHEN fv_c252.w IS NOT NULL THEN fv_c252.w ELSE fv_c252.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "df_view~colon",
+   "family": "df_view",
+   "call": "colon",
+   "status": "resolved",
+   "plan_line": "Projection: fv_c253.id AS id, CASE WHEN fv_c253.w IS NOT NULL THEN fv_c253.w ELSE fv_c253.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "df_view~tots",
+   "family": "df_view",
+   "call": "tots",
+   "status": "resolved",
+   "plan_line": "Projection: fv_c254.id AS id, CASE WHEN fv_c254.w IS NOT NULL THEN fv_c254.w ELSE fv_c254.ts END AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts,"
+  },
+  {
+   "position": "df_view~lit",
+   "family": "df_view",
+   "call": "lit",
+   "status": "resolved",
+   "plan_line": "Projection: fv_c255.id AS id, fv_c255.w AS v, Int32(0) AS k, TimestampMicrosecond(NULL, Some(\"UTC\")) AS c, TimestampMicrosecond(NULL, Some(\"UTC\")) AS ts, __repark_cast_timestamp_ntz__(TimestampMicrosecond(NULL, None))"
+  }
+ ]
+}

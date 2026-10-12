@@ -13,5 +13,7 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   context: the lock was free, the load was decaying, nothing was building.
 - [pins.md](pins.md) — the tests that expect microseconds for a card spelling,
   and the inspected tests that would not move.
+- [casts.json](casts.json) + [written-casts.md](written-casts.md) — 256
+  written-cast positions, resolved or not, with the plan line each.
 
 Up: [../map.md](../map.md).
