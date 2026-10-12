@@ -179,13 +179,12 @@ impl AnalyzerRule for FloatStringifyBeforeCoercion {
 pub(crate) fn before_coercion(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     if let Expr::Cast(cast) = &expr
         && instant(cast.field.data_type())
+        && !is_signed(&expr)
         && !is_narrowing_mark(&cast.expr)
         && !null_literal(&cast.expr)
         && holds(&cast.expr, schema, true)
     {
-        return Ok(Transformed::yes(
-            crate::timestamp_ns_cast::narrow_timestamp_ns_expr((*cast.expr).clone()),
-        ));
+        return Ok(Transformed::yes(signed(expr)));
     }
     let written = |branch: &Expr| {
         !is_signed(branch)

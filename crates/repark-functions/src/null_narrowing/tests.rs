@@ -160,10 +160,14 @@ fn a_cast_from_nanoseconds_to_an_instant_before_coercion_is_the_statements() {
     let written = before_coercion(cast(col("c"), micros()), &schema())
         .unwrap()
         .data;
-    assert_eq!(
-        written,
-        crate::timestamp_ns_cast::narrow_timestamp_ns_expr(col("c"))
+    assert_eq!(written, signed(cast(col("c"), micros())));
+    assert_eq!(written.to_string(), cast(col("c"), micros()).to_string());
+    assert!(
+        !before_coercion(written.clone(), &schema())
+            .unwrap()
+            .transformed
     );
+    assert!(!mark_coerced_narrowing(written.clone(), &schema(), true).transformed);
     assert!(marks(&written).is_empty());
     let kept = cast(col("m"), micros());
     assert!(!before_coercion(kept, &schema()).unwrap().transformed);
