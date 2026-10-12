@@ -336,3 +336,16 @@ One America/New_York cell, a `TIMESTAMP` column into `struct<v: TIMESTAMP_NTZ, n
 | Spark `WHEN NOT MATCHED BY SOURCE THEN UPDATE SET` | `1767305045123456` | not in the step-0 matrix | not in the step-0 matrix; the matched cell's Spark answer is the session wall | The same `nested_assign` fold. Same pin. |
 | ANSI `WHEN MATCHED THEN UPDATE SET` | `1767323045123456` | not in the step-0 matrix | this door is not Spark | This `None` is the only cast. Named hole, equal to the UTC wall main stores on the spark matched cell. Pin `ansi_matched_update_of_a_nested_ntz_keeps_the_utc_wall`. |
 | ANSI `WHEN NOT MATCHED BY SOURCE THEN UPDATE SET` | `1767323045123456` | not in the step-0 matrix | this door is not Spark | Same hole. Pin `ansi_unmatched_source_update_of_a_nested_ntz_keeps_the_utc_wall`. |
+
+## 11. The literal probe (R4, one attempt, not landed)
+
+`probe_type` already plans `SELECT (expr) FROM {probe_from} LIMIT 0` on the
+`SessionContext` the caller holds. That plans a `TIMESTAMP '…+00:00'` inside
+`named_struct` as `Timestamp(Nanosecond, None)`. The Spark rule that types the
+same text as an instant is the token rewrite in `spark_rewrites` on the Spark
+door, before parse. It is not a parameter at the `probe_type` call site.
+Teaching the probe to re-enter that rewrite is a design, so this attempt stops.
+The literal cells stay as on main. A column and a literal of the same instant
+therefore still give two answers on whole-struct `MERGE UPDATE` and on
+`UPDATE … WHERE`: the column stores the session wall and the literal stores
+`1767323045123456`.

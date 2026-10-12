@@ -113,3 +113,7 @@ to main. C-005 stays open.
 `WHEN MATCHED` and `WHEN NOT MATCHED BY SOURCE` clauses store the New York
 session wall because `nested_assign` wraps first. The ANSI door's same two
 clauses store the UTC wall `1767323045123456`. Those two are the hole.
+
+**Round 8, R4:** the literal probe already uses the caller's session. The
+Spark instant rule is a token rewrite before parse, not a parameter at the
+call site. The attempt stops. Literal whole-struct cells stay on the UTC wall.
