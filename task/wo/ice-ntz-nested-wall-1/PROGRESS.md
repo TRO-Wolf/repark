@@ -73,3 +73,8 @@ physical planner does not. `push_down_leaf_projections` fails with
 append and `overwritePartitions`. The SQL bind fails with
 `Physical plan does not support logical expression ScalarSubquery`. The
 barrier is not put back. See `evidence/pin-red-r8-barrier.txt`. Halted here.
+
+**Round 7, kernel:** `__repark_cast_nested_ntz__` rewrites selected zoned leaves
+inside one struct value. A null struct keeps its validity bit. Untouched
+children are the same arrays. Seven unit tests pass, including three zones
+against the existing wall kernel.

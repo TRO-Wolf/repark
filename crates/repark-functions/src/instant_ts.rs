@@ -60,6 +60,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(false),
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(true),
         crate::timestamp_ntz_cast::timestamp_ntz_literal_udf(),
+        crate::nested_ntz_cast::nested_ntz_cast_udf(),
     ]
 }
 

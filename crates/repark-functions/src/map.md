@@ -1182,6 +1182,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `spark.sql.timestampType=TIMESTAMP_NTZ` (`ntz_default`, passed by `instant_ts`) the
   `TIMESTAMP`-keyword forms are walls, since Spark types them `TIMESTAMP_NTZ` there.
   pins: ntz-store-doors-1/C-009
+- `nested_ntz_cast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):**
+  `__repark_cast_nested_ntz__(struct, '<source paths>')` rewrites the listed zoned
+  timestamp leaves to `Timestamp(µs, None)` inside the struct array. Validity,
+  names, order, nullability and metadata stay. Other children are passed through.
+  Registered from `instant_ts::functions()` with `Volatility::Volatile`. A path
+  that does not resolve to a zoned timestamp is a plan error.
+  Tests in [nested_ntz_cast/](nested_ntz_cast/map.md).
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered
