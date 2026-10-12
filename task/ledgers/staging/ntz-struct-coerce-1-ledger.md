@@ -131,10 +131,24 @@ The filtered facade run changed no existing expected value. No pin in that set w
   `Timestamp(ns)` and is not localised. Spark returns a microsecond session instant.
   The ruling's arm matches an `is_ltz_timestamp` target only, and a nanosecond target
   stays on today's plan.
-- `INSERT … VALUES` of a mixed struct was not the measured write. The measured write is
-  `INSERT … SELECT` of the mixed expression, and that projection carries the coercion cast.
+- Corrected 2026-10-12 (Q5): `INSERT … VALUES` of a mixed struct into
+  `STRUCT<v: TIMESTAMP>` moves onto Spark, and so does `INSERT … SELECT` of a
+  plain NTZ struct into an LTZ struct. `UPDATE SET st = c` does not move. The
+  nested NTZ target store moved away on `ef721ee6` alone (S1) and equals Spark
+  on the joined head (round 12 item 3).
 - Compare and join of the mixed struct against the July instant agree with Spark on main,
   because neither the UTC reading nor the session-zone reading equals that instant.
+- S2: with `spark.sql.timestampType=TIMESTAMP_NTZ`, the mixed shapes stay at
+  main's UTC reading (6 cells: `UNION ALL`, `CASE`, `COALESCE` and the DataFrame
+  union, coalesce and when in America/New_York). Spark localises to
+  `1767341045123456`. The top-level twin is also unlocalised on main in this
+  mode. Left as on main.
+- Q3: struct members pair by name. DataFusion's cast pairs the members, so a
+  renamed, reordered or case-different member follows the name; Spark refuses
+  those statements. Accepted as within the unit.
+- Q4: the rule is seated by `SparkExtension`, so the ANSI dialect on a
+  Spark-extended session localises too. Python `repark.sql()` and a session
+  without the extension are unchanged.
 
 ## 7. Head
 
