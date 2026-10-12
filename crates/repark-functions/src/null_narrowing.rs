@@ -21,7 +21,7 @@ use datafusion::optimizer::analyzer::type_coercion::{TypeCoercionRewriter, coerc
 mod written;
 
 pub(crate) use written::restored;
-pub use written::{WRITTEN_CAST_NAME, is_written_cast, written_cast_udf};
+pub use written::{WRITTEN_CAST_NAME, is_written_cast, unsigned, written_cast_udf};
 use written::{is_signed, signed, wire_cast_source, written_cast};
 
 pub const NARROWED_BESIDE_NULL_NAME: &str = "__repark_narrowed_beside_null__";

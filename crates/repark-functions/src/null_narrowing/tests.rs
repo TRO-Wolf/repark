@@ -171,6 +171,21 @@ fn a_cast_from_nanoseconds_to_an_instant_before_coercion_is_the_statements() {
     assert!(marks(&written).is_empty());
     let kept = cast(col("m"), micros());
     assert!(!before_coercion(kept, &schema()).unwrap().transformed);
+    let scan = table_scan(Some("t"), &arrow(), None).unwrap();
+    let plain = scan.clone().project(vec![cast(col("c"), micros())]);
+    assert!(
+        unsigned(&plain.unwrap().build().unwrap())
+            .unwrap()
+            .is_none()
+    );
+    let plan = scan
+        .project(vec![written.clone()])
+        .unwrap()
+        .build()
+        .unwrap();
+    let cleared = unsigned(&plan).unwrap().unwrap();
+    assert_eq!(cleared.expressions(), vec![cast(col("t.c"), micros())]);
+    assert_eq!(cleared.schema(), plan.schema());
 }
 
 #[test]

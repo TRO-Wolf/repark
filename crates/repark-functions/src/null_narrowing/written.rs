@@ -1,9 +1,11 @@
 use std::sync::{Arc, LazyLock};
 
 use datafusion::arrow::datatypes::FieldRef;
+use datafusion::common::Result;
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::logical_expr::expr::{Cast, ScalarFunction, TryCast};
 use datafusion::logical_expr::expr_rewriter::SavedName;
-use datafusion::logical_expr::{Expr, ScalarUDF};
+use datafusion::logical_expr::{Expr, LogicalPlan, ScalarUDF};
 
 use super::{NarrowedBeside, sql_timestamp};
 
@@ -48,19 +50,53 @@ pub(crate) fn restored(expr: Expr, saved: SavedName) -> Expr {
     }
 }
 
-pub(super) fn signed(expr: Expr) -> Expr {
-    let sign = |field: &FieldRef| Arc::new(field.as_ref().clone().with_name(WRITTEN_SIGN));
+fn named(expr: Expr, name: &str) -> Expr {
+    let renamed = |field: &FieldRef| Arc::new(field.as_ref().clone().with_name(name));
     match expr {
         Expr::Cast(cast) => {
-            let field = sign(&cast.field);
+            let field = renamed(&cast.field);
             Expr::Cast(Cast::new_from_field(cast.expr, field))
         }
         Expr::TryCast(cast) => {
-            let field = sign(&cast.field);
+            let field = renamed(&cast.field);
             Expr::TryCast(TryCast::new_from_field(cast.expr, field))
         }
         other => other,
     }
+}
+
+pub(super) fn signed(expr: Expr) -> Expr {
+    named(expr, WRITTEN_SIGN)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn unsigned(plan: &LogicalPlan) -> Result<Option<LogicalPlan>> {
+    let mut found = false;
+    plan.apply_with_subqueries(|node| {
+        node.apply_expressions(|expr| {
+            found = found || expr.exists(|inner| Ok(is_signed(inner)))?;
+            Ok(if found {
+                TreeNodeRecursion::Stop
+            } else {
+                TreeNodeRecursion::Continue
+            })
+        })
+    })?;
+    if !found {
+        return Ok(None);
+    }
+    let plain = plan.clone().transform_down_with_subqueries(|node| {
+        node.map_expressions(|expr| {
+            expr.transform_up(|inner| {
+                Ok(if is_signed(&inner) {
+                    Transformed::yes(named(inner, ""))
+                } else {
+                    Transformed::no(inner)
+                })
+            })
+        })
+    })?;
+    Ok(Some(plain.data))
 }
 
 pub(super) fn is_signed(expr: &Expr) -> bool {
