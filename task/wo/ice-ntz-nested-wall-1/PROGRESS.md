@@ -92,3 +92,8 @@ leaf, which is main's cast. Reordered names store each session wall on its name.
 NTZ leaf only on `INSERT` into `IcebergTableProvider`. A fake table source and
 `UPDATE` keep the plan. The facade file is 18 passed on the release build of
 this gate.
+
+**Round 7, paths pin:** `both_emitters_select_the_same_paths` reads the path
+literal out of the emitted expression and out of the emitted SQL. `v`, `a,b`
+and `i.v` match. A wall, a string, a date, an integer, a top-level timestamp
+and a list emit no path from either side.

@@ -13,8 +13,6 @@ use datafusion::sql::sqlparser::ast::{
 use repark_functions::timestamp_ns_cast::{
     is_temporal_source, timestamp_ns_cast_expr, timestamp_ns_target,
 };
-#[cfg(test)]
-use repark_iceberg::write::update_cast::nested_micro_ntz_selected_paths;
 use repark_iceberg::write::update_cast::{NtzDecision, nested_micro_ntz_decision};
 
 pub(crate) fn before_analysis(
@@ -157,11 +155,6 @@ fn dml_target_has_nested_micro_ntz(plan: &LogicalPlan) -> bool {
             NtzDecision::Ineligible
         )
     })
-}
-
-#[cfg(test)]
-fn expr_selected_paths(source: Option<&DataType>, target: &DataType) -> Vec<Vec<String>> {
-    nested_micro_ntz_selected_paths(source, target)
 }
 
 fn wrap_nested_ntz(expr: &Expr, target: &DataType, schema: &DFSchema) -> Expr {
@@ -446,7 +439,50 @@ mod tests {
         EmptyRelation, Expr, ExprSchemable, LogicalPlan, Projection, TableSource, WriteOp, col,
     };
 
-    use super::{after_analysis, expr_selected_paths, paths_text, wrap_nested_ntz};
+    use super::{after_analysis, paths_text, wrap_nested_ntz};
+
+    fn path_from_expr(expr: &Expr) -> Option<String> {
+        use datafusion::common::ScalarValue;
+        use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+        let mut found = None;
+        let _ = expr.apply(|node| {
+            if let Expr::ScalarFunction(func) = node {
+                if func.name() == "__repark_cast_nested_ntz__" {
+                    if let Some(Expr::Literal(value, _)) = func.args.get(1) {
+                        found = match value {
+                            ScalarValue::Utf8(text)
+                            | ScalarValue::LargeUtf8(text)
+                            | ScalarValue::Utf8View(text) => text.clone(),
+                            _ => None,
+                        };
+                    }
+                }
+            }
+            Ok(TreeNodeRecursion::Continue)
+        });
+        found
+    }
+
+    fn path_from_sql(sql: &str) -> Option<String> {
+        let marker = "__repark_cast_nested_ntz__((";
+        let start = sql.find(marker)? + marker.len();
+        let after = &sql[start..];
+        let lit = after.find(", '")? + 3;
+        let mut body = String::new();
+        let mut chars = after[lit..].chars().peekable();
+        while let Some(ch) = chars.next() {
+            if ch == '\'' {
+                if chars.peek() == Some(&'\'') {
+                    chars.next();
+                    body.push('\'');
+                    continue;
+                }
+                return Some(body);
+            }
+            body.push(ch);
+        }
+        None
+    }
 
     fn ntz() -> DataType {
         DataType::Timestamp(TimeUnit::Microsecond, None)
@@ -499,11 +535,46 @@ mod tests {
 
     #[test]
     fn both_emitters_select_the_same_paths() {
-        let pairs = [
+        let wrapped = [
             (
                 struct_type(&[("v", instant()), ("n", DataType::Int32)]),
                 struct_type(&[("v", ntz()), ("n", DataType::Int32)]),
+                "v",
             ),
+            (
+                struct_type(&[("a", instant()), ("b", instant())]),
+                struct_type(&[("a", ntz()), ("b", ntz())]),
+                "a,b",
+            ),
+            (
+                struct_type(&[(
+                    "i",
+                    struct_type(&[("v", instant()), ("n", DataType::Int32)]),
+                )]),
+                struct_type(&[("i", struct_type(&[("v", ntz()), ("n", DataType::Int32)]))]),
+                "i.v",
+            ),
+        ];
+        for (source, target, expected) in wrapped {
+            let schema = Arc::new(
+                DFSchema::try_from(Schema::new(vec![Field::new("st", source.clone(), true)]))
+                    .expect("schema"),
+            );
+            let expr = col("st")
+                .cast_to(&target, schema.as_ref())
+                .expect("cast")
+                .alias("st");
+            let shown = wrap_nested_ntz(&expr, &target, schema.as_ref());
+            let sql = repark_iceberg::write::update_cast::nested_micro_ntz_wall_sql(
+                "`st`",
+                Some(&source),
+                &target,
+            )
+            .expect("sql");
+            assert_eq!(path_from_expr(&shown).as_deref(), Some(expected), "{shown}");
+            assert_eq!(path_from_sql(&sql).as_deref(), Some(expected), "{sql}");
+        }
+        let kept = [
             (
                 struct_type(&[("v", ntz()), ("n", DataType::Int32)]),
                 struct_type(&[("v", ntz()), ("n", DataType::Int32)]),
@@ -520,13 +591,6 @@ mod tests {
                 struct_type(&[("v", DataType::Int64)]),
                 struct_type(&[("v", ntz())]),
             ),
-            (
-                struct_type(&[(
-                    "i",
-                    struct_type(&[("v", instant()), ("n", DataType::Int32)]),
-                )]),
-                struct_type(&[("i", struct_type(&[("v", ntz()), ("n", DataType::Int32)]))]),
-            ),
             (instant(), ntz()),
             (
                 DataType::List(Arc::new(Field::new(
@@ -541,13 +605,21 @@ mod tests {
                 ))),
             ),
         ];
-        for (source, target) in pairs {
-            assert_eq!(
-                expr_selected_paths(Some(&source), &target),
-                repark_iceberg::write::update_cast::nested_micro_ntz_selected_paths(
+        for (source, target) in kept {
+            let schema = Arc::new(
+                DFSchema::try_from(Schema::new(vec![Field::new("st", source.clone(), true)]))
+                    .expect("schema"),
+            );
+            let expr = col("st").alias("st");
+            let shown = wrap_nested_ntz(&expr, &target, schema.as_ref());
+            assert_eq!(path_from_expr(&shown), None, "{shown}");
+            assert!(
+                repark_iceberg::write::update_cast::nested_micro_ntz_wall_sql(
+                    "`st`",
                     Some(&source),
-                    &target
-                ),
+                    &target,
+                )
+                .is_none(),
                 "{source:?} -> {target:?}"
             );
         }
