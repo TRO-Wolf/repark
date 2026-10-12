@@ -34,5 +34,9 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   [interleaved-cost.json](interleaved-cost.json) — the interleaved rerun: ten
   raw sets (five baseline, five head, per-repeat times and counter snapshots)
   and the per-statement medians, ratios and pair ranges.
+- [round2-pin6-halt.md](round2-pin6-halt.md) — slice 1 round 2 pin-6 halt
+  analysis: the full-sweep mismatch classes (DML store-cast fallback,
+  error-quote, head-exceeds-twin, stale fixture text, read field-id metadata)
+  with counts, root causes and specimens.
 
 Up: [../map.md](../map.md).
