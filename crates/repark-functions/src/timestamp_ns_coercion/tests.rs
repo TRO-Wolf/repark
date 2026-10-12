@@ -2,9 +2,12 @@ use std::sync::{Arc, Mutex};
 
 use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema, TimeUnit};
 use datafusion::common::config::ConfigOptions;
+use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::common::{Result, ScalarValue};
 use datafusion::datasource::{MemTable, provider_as_source};
-use datafusion::logical_expr::{Cast, Expr, LogicalPlan, LogicalPlanBuilder, col, lit};
+use datafusion::logical_expr::{
+    Cast, Expr, LogicalPlan, LogicalPlanBuilder, TableSource, col, lit,
+};
 use datafusion::optimizer::AnalyzerRule;
 
 use super::{
@@ -40,6 +43,47 @@ fn scan_of(fields: Vec<Field>) -> LogicalPlan {
         .expect("scan builds")
         .build()
         .expect("plan builds")
+}
+
+struct RecordingRule {
+    want: Arc<dyn TableSource>,
+    matched: Mutex<bool>,
+}
+
+impl std::fmt::Debug for RecordingRule {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("RecordingRule")
+            .field("matched", &self.matched)
+            .finish_non_exhaustive()
+    }
+}
+
+impl RecordingRule {
+    fn new(want: Arc<dyn TableSource>) -> Self {
+        Self {
+            want,
+            matched: Mutex::new(false),
+        }
+    }
+}
+
+impl AnalyzerRule for RecordingRule {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        let _ = plan.apply_with_subqueries(|node| {
+            if let LogicalPlan::TableScan(scan) = node {
+                *self.matched.lock().expect("test serial lock") =
+                    Arc::ptr_eq(&scan.source, &self.want);
+                return Ok(TreeNodeRecursion::Stop);
+            }
+            Ok(TreeNodeRecursion::Continue)
+        });
+        Ok(plan)
+    }
+
+    fn name(&self) -> &'static str {
+        "recording"
+    }
 }
 
 fn project_of(scan: LogicalPlan, exprs: Vec<Expr>) -> LogicalPlan {
@@ -197,6 +241,31 @@ fn counters_reset_to_zero() {
     reset_counts();
     assert_eq!(gate_open_count(), 0);
     assert_eq!(fallback_count(), 0);
+}
+
+#[test]
+fn closed_gate_hands_the_inner_rule_the_plan_it_was_given() {
+    let _guard = SERIAL.lock().expect("test serial lock");
+    let before_open = gate_open_count();
+    let schema = Arc::new(Schema::new(vec![micro_field()]));
+    let table = MemTable::try_new(schema, vec![Vec::new()]).expect("memory table builds");
+    let source = provider_as_source(Arc::new(table));
+    let want = Arc::clone(&source);
+    let plan = LogicalPlanBuilder::scan("t", source, None)
+        .expect("scan builds")
+        .build()
+        .expect("plan builds");
+    let before = format!("{plan:?}");
+    let inner = Arc::new(RecordingRule::new(want));
+    let held = Arc::clone(&inner);
+    let wrapper = SparkTimestampNsCoercion::new(held);
+    let config = ConfigOptions::new();
+    let out = wrapper
+        .analyze(plan, &config)
+        .expect("closed plan analyzes");
+    assert!(*inner.matched.lock().expect("test serial lock"));
+    assert_eq!(format!("{out:?}"), before);
+    assert_eq!(gate_open_count() - before_open, 0);
 }
 
 #[test]

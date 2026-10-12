@@ -1,5 +1,7 @@
 # map — repark-spark/src
 
+ICE-TSNS-COERCION-1 slice 1 round 1 (2026-10-12): `extension.rs` seats the Spark door's first `type_coercion` wrapper — `configure_analyzer_rules` replaces that element with `repark_functions::timestamp_ns_coercion::SparkTimestampNsCoercion`, which keeps the name and holds DataFusion's rule; closed and (this round) open both delegate on the same plan. `extension/tests.rs` pins the rule names and count unchanged through the wrap and the seat counting open analyses only. pins: ice-tsns-coercion-1/C-005
+
 CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `extension.rs` seats `normalize/join_condition.rs`'s `JoinConditionRefusals` between `spark_integral_literal` and `type_coercion` (one line; `lib.rs` stays at its 156-line ceiling, so the rule lives under `normalize/` with its one `mod` line in `normalize.rs`). `extension/tests.rs` pins the new seat. pins: cross-join-condition-1/C-008
 
 U1-MEM-LAYOUT-1 (2026-09-23): Spark create resolution uses the registered memory warehouse layout root. On a `TempFallbackAllowed` catalog only, an orphan scan refuses a path that holds another table's metadata file or an unreadable one, or whose ancestor walk (`call/map.md`) reaches a `metadata/` directory holding one (the other table of any catalog); and a path that holds another table of the same catalog, lies inside one outside the swept table's own location, or lies inside the swept table's own location when another table shares it. See `tests/map.md` and `call/map.md`. pins: u1-mem-layout-1/C-002, C-011, C-014, C-020, C-025, C-029

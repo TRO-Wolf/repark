@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, Float64Array, Int32Array, Int64Array, RecordBatch};
-use datafusion::arrow::datatypes::{DataType, Field, Schema};
+use datafusion::arrow::datatypes::{DataType, Field, Schema, TimeUnit};
+use datafusion::common::config::ConfigOptions;
+use datafusion::datasource::{MemTable, provider_as_source};
+use datafusion::logical_expr::{LogicalPlan, LogicalPlanBuilder};
 use datafusion::optimizer::Analyzer;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension, SessionTimeZone};
@@ -11,6 +14,7 @@ use repark_functions::cardinality::ReparkSqlConfig;
 use repark_functions::case_sensitive::SPARK_SQL_CASE_SENSITIVE_KEY;
 use repark_functions::merge_schema::SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY;
 use repark_functions::session_time_zone::{SessionTimeZoneConfig, session_time_zone_from_options};
+use repark_functions::timestamp_ns_coercion::{fallback_count, gate_open_count};
 use repark_functions::timestamp_type::{
     SPARK_SQL_TIMESTAMP_TYPE_KEY, SparkTimestampType, SparkTimestampTypeConfig,
     spark_timestamp_type_from_options,
@@ -64,6 +68,75 @@ fn analyzer_configuration_refuses_a_missing_type_coercion_rule() {
         .expect_err("missing insertion point must refuse")
         .to_string();
     assert!(error.contains("type_coercion"));
+}
+
+fn coercion_scan(fields: Vec<Field>) -> LogicalPlan {
+    let schema = Arc::new(Schema::new(fields));
+    let table = MemTable::try_new(schema, vec![Vec::new()]).expect("memory table builds");
+    let source = provider_as_source(Arc::new(table));
+    LogicalPlanBuilder::scan("t", source, None)
+        .expect("scan builds")
+        .build()
+        .expect("plan builds")
+}
+
+#[test]
+fn analyzer_configuration_keeps_the_rule_names_and_count_through_the_wrapper() {
+    let default = Analyzer::new().rules;
+    let prepared = repark_functions::analyzer_rules_with_higher_order_preparation(default.clone())
+        .expect("default analyzer contains type_coercion");
+    let with_literal = crate::spark_literal_typing::insert_literal_rule_before_coercion(prepared)
+        .expect("default analyzer contains type_coercion");
+    let unwrapped =
+        crate::normalize::join_condition::insert_join_condition_rule_before_coercion(with_literal)
+            .expect("default analyzer contains type_coercion");
+    let wrapped = SparkExtension
+        .configure_analyzer_rules(default)
+        .expect("default analyzer contains type_coercion");
+    let before: Vec<String> = unwrapped
+        .iter()
+        .map(|rule| rule.name().to_string())
+        .collect();
+    let after: Vec<String> = wrapped.iter().map(|rule| rule.name().to_string()).collect();
+    assert_eq!(after, before);
+    assert_eq!(
+        after
+            .iter()
+            .filter(|name| name.as_str() == "type_coercion")
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn configured_first_coercion_counts_open_analyses_and_ignores_closed_ones() {
+    let rules = SparkExtension
+        .configure_analyzer_rules(Analyzer::new().rules)
+        .expect("default analyzer contains type_coercion");
+    let coercion = rules
+        .iter()
+        .find(|rule| rule.name() == "type_coercion")
+        .expect("the wrapped first coercion keeps its name");
+    let config = ConfigOptions::new();
+    let open = coercion_scan(vec![Field::new(
+        "ns",
+        DataType::Timestamp(TimeUnit::Nanosecond, None),
+        true,
+    )]);
+    let closed = coercion_scan(vec![Field::new(
+        "ts",
+        DataType::Timestamp(TimeUnit::Microsecond, None),
+        true,
+    )]);
+    let before_open = gate_open_count();
+    let before_fallback = fallback_count();
+    let _ = coercion.analyze(open, &config).expect("open scan analyzes");
+    assert_eq!(gate_open_count() - before_open, 1);
+    let _ = coercion
+        .analyze(closed, &config)
+        .expect("closed scan analyzes");
+    assert_eq!(gate_open_count() - before_open, 1);
+    assert_eq!(fallback_count() - before_fallback, 0);
 }
 
 /// The hook's second argument, spelled once: the resolved zone `build()` hands `configure`.
