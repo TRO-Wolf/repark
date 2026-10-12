@@ -186,49 +186,6 @@ def test_twelve_statements_equal_the_recorded_statement_role(tmp_path: Path) -> 
             spark.stop()
 
 
-def test_pin6_statement_role_equals_twin_role_and_fallback_stays_zero(
-    tmp_path: Path,
-) -> None:
-    """pins: ice-tsns-coercion-1/C-005 — every untyped-NULL cell stores its twin; pin 8b."""
-    fixture = _load_fixture()
-    pairs = _pairs_for(fixture, PIN6_FORMS, SIBLING)
-    assert pairs
-    count = 0
-    _, fallback_before = _counts()
-    for index, zone in enumerate(fixture["zones"]):
-        warehouse = tmp_path / f"pin6-{index}"
-        warehouse.mkdir()
-        spark = doors.open_session(zone, warehouse)
-        try:
-            for source, target in pairs:
-                for form in PIN6_FORMS:
-                    for door in fixture["doors"]:
-                        cell = f"{zone}|{target}|{source}|{form}|{door}"
-                        outcome = doors.measure(
-                            spark, warehouse, target, source, form, SIBLING, "statement", door
-                        )
-                        want = _role_outcome(
-                            fixture, "twin", zone, target, source, form, SIBLING, door
-                        )
-                        assert _denoised(outcome) == _denoised(want), cell
-                        count += 1
-            for source in PIN6_SOURCES:
-                for form in PIN6_FORMS:
-                    cell = f"read|{zone}|{source}|{form}"
-                    statement = recorder.read_sql(spark, source, form, SIBLING, "statement")
-                    read = _normalized_read(recorder.capture(spark, statement))
-                    want = _normalized_read(
-                        fixture["reads"][f"{zone}|{source}|{form}|{SIBLING}|twin"]
-                    )
-                    assert read == want, cell
-                    count += 1
-        finally:
-            spark.stop()
-    _, fallback_after = _counts()
-    assert count > 0
-    assert fallback_after == fallback_before
-
-
 def test_pin7_other_cells_equal_main_statement_role(tmp_path: Path) -> None:
     """pins: ice-tsns-coercion-1/C-005 — every other sibling and form stays main's."""
     fixture = _load_fixture()

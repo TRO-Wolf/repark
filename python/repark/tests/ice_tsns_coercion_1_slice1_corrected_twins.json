@@ -1,0 +1,2682 @@
+{
+ "-03:30|ts_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767310445123456789
+   ],
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767310445123456789
+   ],
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767310445123456789
+   ],
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767310445123456789
+   ],
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767310445123456789
+   ],
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767310445123456789
+   ],
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|ts_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -12600000000001
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767335645123456789
+   ],
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767335645123456789
+   ],
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767335645123456789
+   ],
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767335645123456789
+   ],
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767335645123456789
+   ],
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767335645123456789
+   ],
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    12599999999999
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "-03:30|tz_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767305045123456789
+   ],
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767305045123456789
+   ],
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767305045123456789
+   ],
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767305045123456789
+   ],
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767305045123456789
+   ],
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767305045123456789
+   ],
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|ts_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -18000000000001
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767341045123456789
+   ],
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767341045123456789
+   ],
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767341045123456789
+   ],
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767341045123456789
+   ],
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767341045123456789
+   ],
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767341045123456789
+   ],
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    17999999999999
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "America/New_York|tz_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767342845123456789
+   ],
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767342845123456789
+   ],
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767342845123456789
+   ],
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767342845123456789
+   ],
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767342845123456789
+   ],
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767342845123456789
+   ],
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|ts_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    19799999999999
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767303245123456789
+   ],
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767303245123456789
+   ],
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767303245123456789
+   ],
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767303245123456789
+   ],
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767303245123456789
+   ],
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767303245123456789
+   ],
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -19800000000001
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Asia/Kolkata|tz_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767362645123456789
+   ],
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767362645123456789
+   ],
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767362645123456789
+   ],
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767362645123456789
+   ],
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767362645123456789
+   ],
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767362645123456789
+   ],
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|ts_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    35999999999999
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767283445123456789
+   ],
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767283445123456789
+   ],
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767283445123456789
+   ],
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767283445123456789
+   ],
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767283445123456789
+   ],
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767283445123456789
+   ],
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -36000000000001
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "Australia/Lord_Howe|tz_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|ts_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|ns|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|array|df_functions_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|array|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|array|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|case|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|case|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|coalesce|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|coalesce|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|if|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|if|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|union|df_union_null_append": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    1,
+    1767323045123456789
+   ],
+   [
+    2,
+    -1
+   ]
+  ]
+ },
+ "UTC|tz_ns|tzns_utc|union|union_null_insert": {
+  "oracle": 1,
+  "parquet_type": "timestamp[ns, tz=UTC]",
+  "stored": [
+   [
+    2,
+    -1
+   ]
+  ]
+ }
+}
