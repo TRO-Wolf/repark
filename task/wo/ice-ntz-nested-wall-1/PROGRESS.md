@@ -108,3 +108,8 @@ wrap. Seventeen `update_cast` tests pass.
 `PySparkException` and the step-0 first line, in UTC. Registry row
 ICE-TSNS-SQL-1-R-019 is OPEN. R-011 records them as still an error, equal
 to main. C-005 stays open.
+
+**Round 7, R2 stopped:** `store_assignment_then_sql` still passes `None`.
+Analysing it once needs a session the function does not have, and passing the
+type grows `merge/mod.rs` (exact 1569) and `merge/tests/merge.rs` (exact 1032).
+Halted for a ruling on that shape.

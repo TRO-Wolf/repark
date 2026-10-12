@@ -26,7 +26,7 @@ names the store sites. It changes no product code.
 | C-002 | Spark 4.1.2 with Iceberg 1.11 is measured on every nested door of the inventory. | The Spark probe output. | **PROVEN** | §2. [spark-4.1.2.jsonl](../../wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl). Spark stores the session wall on every door it answers. pins: ice-ntz-nested-wall-1/C-002 |
 | C-003 | Every nested door stores the wall Spark stores, in three zones. | Head probe and the facade pins. | **OPEN** | Q5. Column instants on the wired doors store the session wall. The cells in §8 still store the UTC wall or still refuse. The row R-011 is narrowed, not closed. |
 | C-004 | Controls are identical to main. | Head probe. | **PROVEN** | [summary-head.md](../../wo/ice-ntz-nested-wall-1/evidence/summary-head.md): field-assignment 324 of 324, `ltz_nested` 396 of 396, `ntz_top` 396 of 396, moved 0. pins: ice-ntz-nested-wall-1/C-004 |
-| C-005 | `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` store the session wall. | Head probe against main. | **OPEN** | They still refuse with main's error (`update_whole_nowhere`, `update_col_nowhere`, `insert_overwrite_values`). Not a stored-value change. |
+| C-005 | `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` store the session wall. | Head probe against main. | **OPEN** | They still raise main's error class and first line. Pin `test_raw_error_doors_still_raise_mains_error`. Registry row R-019. Not a stored-value change. |
 
 ## 1. Main, measured before any change (C-001)
 
@@ -289,3 +289,46 @@ Nested `TIMESTAMP_NTZ` values written by `INSERT` before the fix hold the UTC wa
 | Field assignment | session wall | session wall |
 | `INSERT … VALUES` of a literal, MERGE `UPDATE SET *`, whole-struct literal MERGE and `UPDATE … WHERE` | UTC wall | UTC wall |
 | `UPDATE` with no `WHERE`, `INSERT OVERWRITE … VALUES` | refusal | the same refusal |
+
+## 9. The struct kernel (round 7)
+
+The member-by-member rebuild cannot stand. Binding the source once still reaches
+DataFusion 54.1's own leaf extraction: `push_down_leaf_projections` fails with
+`Schema contains duplicate qualified field name ice.ns.src.id` on DataFrame
+append and `overwritePartitions`. The scalar-subquery form fails with
+`Physical plan does not support logical expression ScalarSubquery`. Evidence:
+[pin-red-r8-barrier.txt](../../wo/ice-ntz-nested-wall-1/evidence/pin-red-r8-barrier.txt).
+The round-7 architecture review, section 3, replaces that rebuild with one
+struct kernel. Both emitters call it inside main's `arrow_cast`.
+
+`__repark_cast_nested_ntz__` takes the struct once and rewrites only the
+selected leaves. Validity, names, order, nullability and field metadata stay.
+Other children are the same arrays. The map row is
+`crates/repark-functions/src/map.md` `nested_ntz_cast.rs`.
+
+These review items are settled by that kernel:
+
+| Item | What the kernel settles | Pin |
+|---|---|---|
+| R8.2 | No `rand()` barrier. One struct value, so a volatile source is drawn once. | `test_a_volatile_struct_is_evaluated_once`: `f00` equals `f17`, differs from `f18`, and `EXPLAIN` has no `rand`. |
+| R8.3 | An untouched child is the original array, not a field rebuilt through a wrapper. | `twenty_fields_pass_the_untouched_children_through`. |
+| R8.5 | The kernel does not rename, reorder, add or drop a member. Main's cast places renamed, reordered, extra and case-different members. | `test_positional_members_land_with_mains_cast`. A missing name stores NULL. |
+| R8.7 | The SQL emitter keeps main's `arrow_cast((…), '<target>')` around the kernel. | `an_instant_leaf_below_a_struct_is_wrapped_and_its_sibling_is_not` expects `arrow_cast((`. |
+
+The leaf choice is the nine-row table in `update_cast.rs` `LEAF_ROWS`. Only a
+zoned instant into a microsecond `TIMESTAMP_NTZ` wraps. The mirror row, a
+microsecond `TIMESTAMP_NTZ` into a zoned timestamp, is in the table and does
+not wrap. A later unit sets that row. It is not set here.
+
+## 10. `store_assignment_then_sql` (R2, stopped)
+
+The function is `merge/insert.rs` `store_assignment_then_sql(expr, target)`.
+It passes `None`. Its callers, `rewrite_column_with_maps` and `rewrite_else`,
+hold SQL text and a target type and have no `SessionContext`. The context
+exists in `plan_and_commit_cow` and `plan_and_commit_mor`. One
+`analyzed_types` would be a SELECT of every assignment against the merge join,
+then a map threaded through `rewrite_projection`. `merge/mod.rs` is an exact
+1569-line ceiling and `merge/tests/merge.rs` is an exact 1032-line ceiling, so
+that thread cannot be added without a size exception. The spark door's
+whole-struct column MERGE already stores the session wall while this function
+still passes `None` (`test_whole_struct_update_stores_the_session_wall`).
