@@ -31,6 +31,19 @@ and the star-sentinel rewrite live here instead of in it.
   path longer than one step still takes `nested_leaf_cast_sql` and ignores the
   source. A probe that does not plan passes `None`.
   pins: ice-ntz-nested-wall-1/C-003
+- `nested_assign.rs` — **ICE-NTZ-NESTED-WALL-1 round 15 (2026-10-12):** the nested
+  `TIMESTAMP_NTZ` store decision reads the analyzed type of the value, the type the
+  statement runs with. The plan `ctx.sql` returns is not analyzed: a `CASE` has the type of
+  its first `THEN` branch and a `UNION ALL` source the type of its left input. A mixed value
+  with the wall operand first therefore looked naive, the fold kept main's cast, and the
+  analyzer still localised the wall, so the stored wall moved by the session offset.
+  `nested_assign/probe.rs` returns both types. `Typed.written` is the
+  plan type and still drives the by-name struct checks and their refusals, as on main.
+  `Typed.stored` is the analyzed type and is the only source `store_assignment_cast_sql`
+  sees. When the analysis fails, `stored` is `None` and the assignment takes main's cast.
+  `UPDATE` (`refuse_cast_then_fold_nested`) and `MERGE` (`fold_merge_clauses`) share that one
+  probe, and so does the `INSERT (…) VALUES (…)` rebuild in `expand.rs`.
+  pins: ice-ntz-nested-wall-1/C-003
 - `nested_assign.rs` + [nested_assign/](nested_assign/map.md) — **U8 WRITE-SQL PR2
   (2026-09-25):** nested struct-field assignment for the Spark door's UPDATE and MERGE. It
   lives here because `lib.rs` is at its manifest ceiling and `merge.rs` is near the file-size

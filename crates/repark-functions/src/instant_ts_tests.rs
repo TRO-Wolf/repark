@@ -255,6 +255,7 @@ fn apply(source: DataType, target: DataType) -> (Expr, Expr) {
         &schema,
         "America/New_York",
         crate::timestamp_type::SparkTimestampType::Ltz,
+        true,
     );
     (expr, rewritten.data)
 }
@@ -382,6 +383,7 @@ fn a_top_level_naive_column_still_becomes_to_timestamp() {
         &schema,
         "America/New_York",
         crate::timestamp_type::SparkTimestampType::Ltz,
+        true,
     );
     let text = rewritten.data.to_string();
     assert!(text.contains("to_timestamp"), "{text}");
@@ -463,4 +465,51 @@ async fn case_coalesce_and_union_are_rewritten_and_the_top_level_stays_to_timest
     .await;
     assert!(top.contains("to_timestamp"), "{top}");
     assert!(!top.contains(kernel), "{top}");
+}
+
+#[tokio::test]
+async fn an_update_assignment_cast_keeps_mains_text_and_an_inner_coercion_is_localised() {
+    let ctx = ctx_at("America/New_York");
+    let (zoned, naive) = (relation(true), relation(false));
+    let both = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            zoned.schema().field(0).clone(),
+            zoned.schema().field(1).clone(),
+            naive.schema().field(1).clone().with_name("ns"),
+        ])),
+        vec![
+            Arc::clone(zoned.column(0)),
+            Arc::clone(zoned.column(1)),
+            Arc::clone(naive.column(1)),
+        ],
+    )
+    .expect("batch");
+    ctx.register_batch("b", both).expect("b");
+    let kernel = crate::nested_wall::LOCALIZE_NESTED_NTZ_NAME;
+    let whole = plan_text(&ctx, "UPDATE b SET st = ns").await;
+    assert!(whole.contains("Dml: op=[Update]"), "{whole}");
+    assert!(!whole.contains(kernel), "{whole}");
+    let inner = plan_text(
+        &ctx,
+        "UPDATE b SET st = CASE WHEN id = 1 THEN ns ELSE st END",
+    )
+    .await;
+    assert!(inner.contains(kernel), "{inner}");
+}
+
+#[tokio::test]
+async fn an_analyzed_insert_into_a_struct_wall_keeps_mains_struct_cast() {
+    let ctx = ctx_at("America/New_York");
+    ctx.register_batch("a", relation(false)).expect("a");
+    ctx.register_batch("b", relation(true)).expect("b");
+    let kernel = crate::nested_wall::LOCALIZE_NESTED_NTZ_NAME;
+    let mixed = "SELECT id, st, v FROM a UNION ALL SELECT id, st, v FROM b";
+    let stored = plan_text(&ctx, &format!("INSERT INTO a {mixed}")).await;
+    assert!(stored.contains(kernel), "{stored}");
+    let analyzed = plan_text(&ctx, &format!("EXPLAIN ANALYZE INSERT INTO a {mixed}")).await;
+    assert!(analyzed.contains("Dml: op=[Insert Into]"), "{analyzed}");
+    assert!(!analyzed.contains(kernel), "{analyzed}");
+    assert!(analyzed.contains("to_timestamp"), "{analyzed}");
+    let zoned = plan_text(&ctx, &format!("EXPLAIN ANALYZE INSERT INTO b {mixed}")).await;
+    assert!(zoned.contains(kernel), "{zoned}");
 }

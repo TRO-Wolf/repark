@@ -15,6 +15,13 @@ The ledger is
   `measure` runs the eight nested-NTZ-target write shapes and the six F1
   statements on one engine in one zone. `summarize` merges head, live Spark
   and main rows into the decision table. Decision: continue, 0 halt rows.
+- [wall_first_round15.py](wall_first_round15.py) — the round 15 recorder. `record`
+  runs twelve mixed-struct write shapes with the wall operand first and with the
+  instant operand first, in both write modes, plus the named cells (depth-2 NOT NULL
+  `UPDATE`, a temp view read after a zone change, `EXPLAIN UPDATE` of a zoned struct,
+  `EXPLAIN ANALYZE INSERT` of a mixed union) on one engine in one zone. `merge`
+  writes the facade pin's expected file from the Spark runs and one main run.
+  `compare` counts head cells against main and Spark.
 - [evidence/](evidence/map.md) — the engine outputs, the head probe, the five
   counts, and the disk check from before the build.
 - [PROGRESS.md](PROGRESS.md) — step, commit, next action.

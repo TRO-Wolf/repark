@@ -584,7 +584,7 @@ const NTZ_NESTED_DOORS: [(&str, bool); 6] = [
     ("insert values", false),
     ("insert select", true),
     ("merge set field", true),
-    ("merge set struct", false),
+    ("merge set struct", true),
     ("update set field", true),
     ("merge insert", true),
 ];

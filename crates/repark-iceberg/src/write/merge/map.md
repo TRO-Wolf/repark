@@ -342,6 +342,16 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   text and the target type only. The LTZ arm of `zone_wrapping_stream_sql` passes
   the planned source. A `None` source does not wrap a nested microsecond
   `TIMESTAMP_NTZ` leaf. pins: ice-ntz-nested-wall-1/C-003
+- `mod.rs` — **ICE-NTZ-NESTED-WALL-1 round 15 (2026-10-12):** `expand_star_clauses` is
+  the one place `UPDATE SET *` becomes assignments, and no Spark-door fold sees a star.
+  `source_columns` returns the source's analyzed column types beside its names, and each
+  star assignment goes through `update_cast::nested_micro_ntz_wall_sql` with that type. A
+  source struct that is zoned when the statement runs (a zoned column, or a `UNION ALL` or
+  `CASE` that the analyzer coerces to zoned, with either operand first) stores the session
+  wall in a nested microsecond `TIMESTAMP_NTZ` leaf. Every other column, a source whose
+  analysis fails, and `INSERT *` keep the bare `source.column` text, as on main; the
+  `INSERT *` value is converted later by `zone_wrapping_stream_sql`. Only the Spark door
+  builds `UpdateAll`. pins: ice-ntz-nested-wall-1/C-003
 - `insert.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `zone_wrapping_stream_sql` asks
   `ntz_store::store_kernel_sql`, so a `timestamptz_ns` column of a MERGE INSERT goes through
   the zoned kernel and a wall is localised in the session zone, as INSERT localises it.

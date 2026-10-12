@@ -1,15 +1,25 @@
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema as ArrowSchema};
-use datafusion::prelude::SessionContext;
+use datafusion::arrow::array::{
+    Array, ArrayRef, Int32Array, RecordBatch, StructArray, TimestampMicrosecondArray,
+};
+use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema as ArrowSchema, TimeUnit};
+use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion::sql::sqlparser::ast::{Assignment, AssignmentTarget, Expr, Statement, Value};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 
 use super::{
-    AssignmentScope, Keyed, Step, fold_nested_assignments, leaf_sql, render, repeated_insert_keys,
-    resolve_key, resolve_target, value_sql_for,
+    AssignmentScope, Keyed, Step, Typed, fold_nested_assignments, leaf_sql, probe, render,
+    repeated_insert_keys, resolve_key, resolve_target, value_sql_for,
 };
+
+fn written(source: &DataType) -> Typed<'_> {
+    Typed {
+        written: source,
+        stored: None,
+    }
+}
 
 fn struct_type(fields: Vec<Field>) -> DataType {
     DataType::Struct(Fields::from(fields))
@@ -255,7 +265,7 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("y", DataType::Utf8, true),
     ]);
     assert_eq!(
-        value_sql_for("v", &missing, &target, &path, false)
+        value_sql_for("v", written(&missing), &target, &path, false)
             .unwrap_err()
             .to_string(),
         "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write \
@@ -268,7 +278,7 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("z", DataType::Int64, true),
     ]);
     assert_eq!(
-        value_sql_for("v", &extra, &target, &path, false)
+        value_sql_for("v", written(&extra), &target, &path, false)
             .unwrap_err()
             .to_string(),
         "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write \
@@ -280,7 +290,7 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("y", DataType::Utf8, true),
     ]);
     assert!(
-        value_sql_for("v", &bad_leaf, &target, &path, false)
+        value_sql_for("v", written(&bad_leaf), &target, &path, false)
             .unwrap_err()
             .to_string()
             .contains("Cannot safely cast `st`.`inner`.`x` \"STRING\" to \"INT\"")
@@ -290,7 +300,7 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("x", DataType::Int64, true),
     ]);
     assert_eq!(
-        value_sql_for("v", &reordered, &target, &path, false).unwrap(),
+        value_sql_for("v", written(&reordered), &target, &path, false).unwrap(),
         "arrow_cast((v), 'Struct(\"x\": Int32, \"y\": Utf8)')"
     );
     let recased = struct_type(vec![
@@ -298,13 +308,13 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("Y", DataType::Utf8, true),
     ]);
     assert_eq!(
-        value_sql_for("v", &recased, &target, &path, false).unwrap(),
+        value_sql_for("v", written(&recased), &target, &path, false).unwrap(),
         "CASE WHEN (v) IS NULL THEN NULL ELSE named_struct('x', \
          arrow_cast((get_field((v), 'X')), 'Int32'), 'y', \
          arrow_cast((get_field((v), 'Y')), 'Utf8')) END"
     );
     assert_eq!(
-        value_sql_for("v", &recased, &target, &path, true)
+        value_sql_for("v", written(&recased), &target, &path, true)
             .unwrap_err()
             .to_string(),
         "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write \
@@ -316,7 +326,7 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("y", DataType::Utf8, true),
     ]);
     assert_eq!(
-        value_sql_for("v", &reordered, &required, &path, false).unwrap(),
+        value_sql_for("v", written(&reordered), &required, &path, false).unwrap(),
         "CASE WHEN (v) IS NULL THEN NULL ELSE named_struct('x', \
          arrow_cast((get_field((v), 'x')), 'Int32'), 'y', \
          arrow_cast((get_field((v), 'y')), 'Utf8')) END"
@@ -463,7 +473,7 @@ fn doubled_quotes_rerender_for_the_nested_rebuild() {
     let keyed = Keyed {
         key,
         value: &assigns[0].value,
-        value_type: None,
+        probed: None,
         sql: String::new(),
     };
     let leaf =
@@ -521,4 +531,144 @@ fn repeated_quoted_values_render_doubled_in_the_refusal() {
         repeated_insert_keys(&[Some(key.clone()), Some(key)], &row),
         ["Multiple assignments for 'id': 'it''''s', 'x'"]
     );
+}
+
+fn wall_struct(zone: Option<&str>) -> DataType {
+    struct_type(vec![
+        Field::new(
+            "v",
+            DataType::Timestamp(TimeUnit::Microsecond, zone.map(Into::into)),
+            true,
+        ),
+        Field::new("n", DataType::Int32, true),
+    ])
+}
+
+fn wall_relation(zone: Option<&str>) -> RecordBatch {
+    let stamps = TimestampMicrosecondArray::from(vec![Some(1_767_323_045_123_456_i64)]);
+    let stamps = match zone {
+        Some(zone) => stamps.with_timezone(zone),
+        None => stamps,
+    };
+    let DataType::Struct(members) = wall_struct(zone) else {
+        panic!("expected a struct");
+    };
+    let nested = StructArray::try_new(
+        members,
+        vec![
+            Arc::new(stamps) as ArrayRef,
+            Arc::new(Int32Array::from(vec![7_i32])),
+        ],
+        None,
+    )
+    .expect("struct");
+    RecordBatch::try_new(
+        Arc::new(ArrowSchema::new(vec![
+            Field::new("id", DataType::Int32, false),
+            Field::new("st", nested.data_type().clone(), true),
+        ])),
+        vec![Arc::new(Int32Array::from(vec![1_i32])), Arc::new(nested)],
+    )
+    .expect("batch")
+}
+
+fn coercing_ctx() -> SessionContext {
+    let config = repark_functions::session_time_zone::with_session_time_zone(
+        SessionConfig::new(),
+        "America/New_York",
+    );
+    let ctx = SessionContext::new_with_config(config);
+    repark_functions::register_all(&ctx);
+    for rule in repark_functions::analyzer_rules() {
+        ctx.add_analyzer_rule(rule);
+    }
+    ctx.register_batch("a", wall_relation(None)).expect("a");
+    ctx.register_batch("b", wall_relation(Some("UTC")))
+        .expect("b");
+    ctx
+}
+
+fn value(sql: &str) -> Expr {
+    Parser::new(&DatabricksDialect {})
+        .try_with_sql(sql)
+        .and_then(|mut parser| parser.parse_expr())
+        .expect("value parses")
+}
+
+#[tokio::test]
+async fn a_wall_first_case_and_a_naive_first_union_resolve_to_the_zoned_struct() {
+    let ctx = coercing_ctx();
+    let target = wall_struct(None);
+    let zoned = wall_struct(Some("UTC"));
+    let joined = AssignmentScope {
+        probe_from: "a JOIN b ON a.id = b.id".to_string(),
+        ..scope()
+    };
+    let union = AssignmentScope {
+        probe_from: "(SELECT id, st FROM a UNION ALL SELECT id, st FROM b) s".to_string(),
+        ..scope()
+    };
+    for (scope, text) in [
+        (&joined, "CASE WHEN a.id = 2 THEN a.st ELSE b.st END"),
+        (&joined, "CASE a.id WHEN 2 THEN a.st ELSE b.st END"),
+        (&union, "s.st"),
+    ] {
+        let probed = probe::probe_type(&ctx, scope, &value(text))
+            .await
+            .unwrap_or_else(|| panic!("{text} does not plan"));
+        assert_eq!(probed.written, target, "{text}");
+        assert_eq!(probed.stored.as_ref(), Some(&zoned), "{text}");
+        assert!(
+            probe::stores_through_the_kernel(probed.stored.as_ref(), &target),
+            "{text}"
+        );
+        assert!(
+            !probe::stores_through_the_kernel(Some(&probed.written), &target),
+            "{text}"
+        );
+    }
+    let kept = probe::probe_type(&ctx, &joined, &value("a.st"))
+        .await
+        .expect("a.st plans");
+    assert_eq!(kept.stored.as_ref(), Some(&target));
+    assert!(!probe::stores_through_the_kernel(
+        kept.stored.as_ref(),
+        &target
+    ));
+    assert!(!probe::stores_through_the_kernel(None, &target));
+}
+
+#[tokio::test]
+async fn a_wall_first_case_folds_to_the_store_kernel() {
+    let ctx = coercing_ctx();
+    let schema = ArrowSchema::new(vec![
+        Field::new("id", DataType::Int32, true),
+        Field::new("st", wall_struct(None), true),
+    ]);
+    let scope = AssignmentScope {
+        qualifiers: vec![vec!["a".to_string()]],
+        sql_qualifier: "a".to_string(),
+        column_prefix: None,
+        probe_from: "a JOIN b ON a.id = b.id".to_string(),
+        ..scope()
+    };
+    let kernel = repark_iceberg::write::ntz_store::NESTED_NTZ_WALL_CAST_UDF_NAME;
+    for (text, wraps) in [
+        (
+            "UPDATE a SET st = CASE WHEN a.id = 2 THEN a.st ELSE b.st END",
+            true,
+        ),
+        (
+            "UPDATE a SET st = CASE WHEN a.id = 1 THEN b.st ELSE a.st END",
+            true,
+        ),
+        ("UPDATE a SET st = a.st", false),
+    ] {
+        let folded = fold_nested_assignments(&ctx, &schema, &scope, &assignments(text))
+            .await
+            .unwrap_or_else(|error| panic!("{text}: {error}"))
+            .expect("a struct assignment folds");
+        let rendered = folded[0].value.to_string();
+        assert_eq!(rendered.contains(kernel), wraps, "{text}\n{rendered}");
+    }
 }

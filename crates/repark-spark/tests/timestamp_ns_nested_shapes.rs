@@ -442,7 +442,7 @@ async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
     let _warehouse = catalog(&session).await;
     for (index, (leaf_type, ticks)) in [
         ("timestamptz_ns", 1_767_323_045_123_456_000_i64),
-        ("TIMESTAMP_NTZ", 1_767_323_045_123_456),
+        ("TIMESTAMP_NTZ", 1_767_305_045_123_456),
         ("TIMESTAMP", 1_767_323_045_123_456),
     ]
     .into_iter()

@@ -529,11 +529,14 @@ impl AnalyzerRule for SparkLtzTimestampCast {
         let zone = session_time_zone_from_options(config).to_string();
         let timestamp_type = spark_timestamp_type_from_options(config);
         let empty = DFSchema::empty();
+        let walls = !crate::nested_wall::analyzed_insert_stores_a_struct_wall(&plan);
         let plan = crate::timestamp_ns_cast::widen_mixed_values_timestamps(
             plan,
             &|cell: Expr| {
-                cell.transform_up(|node| Ok(rewrite_cast(node, &empty, &zone, timestamp_type)))
-                    .data()
+                cell.transform_up(|node| {
+                    Ok(rewrite_cast(node, &empty, &zone, timestamp_type, walls))
+                })
+                .data()
             },
             timestamp_type.is_ntz(),
         )?;
@@ -542,7 +545,7 @@ impl AnalyzerRule for SparkLtzTimestampCast {
         } else {
             crate::timestamp_ntz_cast::retarget_dml_store_casts(plan)?
         };
-        plan.transform_up_with_subqueries(|node| rewrite_plan(node, &zone, timestamp_type))
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, &zone, timestamp_type, walls))
             .data()
     }
 
@@ -556,6 +559,7 @@ fn rewrite_plan(
     plan: LogicalPlan,
     zone: &str,
     timestamp_type: SparkTimestampType,
+    localize_struct_walls: bool,
 ) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
@@ -564,13 +568,21 @@ fn rewrite_plan(
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten =
-            expr.transform_up(|node| Ok(rewrite_cast(node, &schema, zone, timestamp_type)))?;
+        let rewritten = expr.transform_up(|node| {
+            Ok(rewrite_cast(
+                node,
+                &schema,
+                zone,
+                timestamp_type,
+                localize_struct_walls,
+            ))
+        })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed
         .map_data(LogicalPlan::recompute_schema)?
-        .map_data(crate::timestamp_ns_cast::conform_values_timestamp_columns)
+        .map_data(crate::timestamp_ns_cast::conform_values_timestamp_columns)?
+        .map_data(crate::nested_wall::keep_update_store_casts)
 }
 
 fn rewrite_cast(
@@ -578,6 +590,7 @@ fn rewrite_cast(
     schema: &DFSchema,
     zone: &str,
     timestamp_type: SparkTimestampType,
+    localize_struct_walls: bool,
 ) -> Transformed<Expr> {
     if timestamp_type.is_ntz() {
         return rewrite_cast_as_ntz(expr, schema);
@@ -597,7 +610,9 @@ fn rewrite_cast(
         if targeting_naive_us && child_is_to_timestamp {
             return Transformed::yes(*cast.expr.clone());
         }
-        if let Some(rewritten) = crate::nested_wall::rewrite_struct_wall_cast(cast, schema) {
+        if localize_struct_walls
+            && let Some(rewritten) = crate::nested_wall::rewrite_struct_wall_cast(cast, schema)
+        {
             return Transformed::yes(rewritten);
         }
         let targeting_timestamp = matches!(cast.field.data_type(), DataType::Timestamp(_, _));

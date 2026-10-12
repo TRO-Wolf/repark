@@ -33,6 +33,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   is returned unchanged. The arm's tests are `instant_ts_tests.rs` (`instant_ts::tests`).
   Round 12 (2026-10-12): a naive microsecond source against a nanosecond, string or date
   target is not selected, and execution refuses a path it has not seen.
+  Round 15 of the joined unit (2026-10-12): two plans keep main's struct cast, because the
+  kernel would be shown or run where no store kernel answers it.
+  `analyzed_insert_stores_a_struct_wall` is true for `EXPLAIN ANALYZE INSERT` into a table
+  that holds a struct with a naive microsecond leaf; `rewrite_cast` then skips the struct arm
+  for that statement, so the write is main's plan. `keep_update_store_casts` runs on each
+  `Dml(Update)` node and takes the kernel back out of an assignment's own cast: the Spark
+  door's fold replaces a whole-struct value with `arrow_cast` text, so the executed UPDATE
+  has no planner cast there, and `EXPLAIN UPDATE` prints main's text. A coercion inside the
+  assigned value keeps its kernel, because that one runs.
   pins: ntz-struct-coerce-1/C-003, C-004
 - `declared_refuse.rs` — FNP-15/16 parse-altitude refusals for Spark function names this
   engine will not build. Spark door and `F.expr` / `filter_sql` call `refuse_in_statement` /

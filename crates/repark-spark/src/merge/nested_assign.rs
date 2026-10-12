@@ -13,11 +13,11 @@ use datafusion::sql::sqlparser::parser::Parser;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::update_cast::{
-    NtzDecision, incompatible_update_message, nested_leaf_cast_sql, nested_micro_ntz_decision,
-    store_assignment_cast_sql,
+    incompatible_update_message, nested_leaf_cast_sql, store_assignment_cast_sql,
 };
 
 mod expand;
+mod probe;
 mod render;
 #[cfg(test)]
 mod tests;
@@ -94,7 +94,7 @@ impl ResolvedKey {
 struct Keyed<'a> {
     key: ResolvedKey,
     value: &'a Expr,
-    value_type: Option<DataType>,
+    probed: Option<probe::Probed>,
     sql: String,
 }
 
@@ -284,22 +284,6 @@ fn pretty_assignment(
     )
 }
 
-async fn probe_type(
-    ctx: &SessionContext,
-    scope: &AssignmentScope,
-    value: &Expr,
-) -> Option<DataType> {
-    let mut rendered = value.clone();
-    let pretty = repark_iceberg::write::sql_text::render_for_reparse(&mut rendered);
-    let sql = format!("SELECT ({pretty}) FROM {} LIMIT 0", scope.probe_from);
-    let frame = ctx.sql(&sql).await.ok()?;
-    frame
-        .schema()
-        .fields()
-        .first()
-        .map(|field| field.data_type().clone())
-}
-
 struct Aligner {
     errors: Vec<String>,
     case_sensitive: bool,
@@ -401,20 +385,24 @@ fn leaf_sql(
 ) -> Result<String> {
     let mut value = Expr::clone(keyed.value);
     let value_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut value);
+    let stored = keyed
+        .probed
+        .as_ref()
+        .and_then(|probed| probed.stored.as_ref());
     if value_holds_scalar_subquery(keyed.value) {
-        let would_wrap = keyed.value_type.as_ref().is_some_and(|source| {
-            matches!(
-                nested_micro_ntz_decision(Some(source), target),
-                NtzDecision::Rebuild(_)
-            )
-        });
-        if would_wrap {
+        if probe::stores_through_the_kernel(stored, target) {
             return Ok(assignment_cast_sql(&value_sql, None, target, path));
         }
         return Ok(value_sql);
     }
-    match &keyed.value_type {
-        Some(source) => value_sql_for(&value_sql, source, target, path, case_sensitive),
+    match &keyed.probed {
+        Some(probed) => {
+            let typed = Typed {
+                written: &probed.written,
+                stored,
+            };
+            value_sql_for(&value_sql, typed, target, path, case_sensitive)
+        }
         None => Ok(assignment_cast_sql(&value_sql, None, target, path)),
     }
 }
@@ -447,13 +435,20 @@ fn names_match_exactly(source: &Fields, target: &Fields) -> bool {
         })
 }
 
+#[derive(Clone, Copy)]
+struct Typed<'a> {
+    written: &'a DataType,
+    stored: Option<&'a DataType>,
+}
+
 fn value_sql_for(
     value_sql: &str,
-    source: &DataType,
+    typed: Typed<'_>,
     target: &DataType,
     path: &[String],
     case_sensitive: bool,
 ) -> Result<String> {
+    let source = typed.written;
     let (DataType::Struct(source_fields), DataType::Struct(target_fields)) = (source, target)
     else {
         if let Some(text) =
@@ -461,7 +456,7 @@ fn value_sql_for(
         {
             return Err(DataFusionError::Plan(text));
         }
-        return Ok(assignment_cast_sql(value_sql, Some(source), target, path));
+        return Ok(assignment_cast_sql(value_sql, typed.stored, target, path));
     };
     let mut members = Vec::with_capacity(target_fields.len());
     let mut used = HashSet::new();
@@ -477,7 +472,10 @@ fn value_sql_for(
         );
         let member = value_sql_for(
             &child_sql,
-            source_field.data_type(),
+            Typed {
+                written: source_field.data_type(),
+                stored: None,
+            },
             target_field.data_type(),
             &child_path,
             case_sensitive,
@@ -496,7 +494,7 @@ fn value_sql_for(
         return Err(render::extra_struct_fields(&extra, path));
     }
     if names_match_exactly(source_fields, target_fields) && !has_required_field(target_fields) {
-        return Ok(assignment_cast_sql(value_sql, Some(source), target, path));
+        return Ok(assignment_cast_sql(value_sql, typed.stored, target, path));
     }
     Ok(format!(
         "CASE WHEN ({value_sql}) IS NULL THEN NULL ELSE named_struct({}) END",
@@ -552,7 +550,7 @@ pub(crate) async fn fold_nested_assignments(
         keyed.push(Keyed {
             key: key.clone(),
             value: &assignment.value,
-            value_type: probe_type(ctx, scope, &assignment.value).await,
+            probed: probe::probe_type(ctx, scope, &assignment.value).await,
             sql: format!("{} = {pretty}", key.sql(scope)),
         });
     }

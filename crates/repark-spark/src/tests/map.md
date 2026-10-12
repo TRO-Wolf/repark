@@ -36,6 +36,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and warehouse objects unchanged; expiry, orphan sweep, rollback, dry-run planning,
   SELECT, CREATE and the lookalike keys run. The step-1 ported probe is the first pin.
   pins: enc-1/C-001, C-002, C-003, C-004, C-005
+- `explain_nested_ntz.rs` — **ICE-NTZ-NESTED-WALL-1 round 15 (2026-10-12):** the EXPLAIN
+  gates over an Iceberg provider (`common.rs` `setup_at_zone`), which the lib suites that plan
+  over a plain `TableSource` cannot reach.
+  `explain_names_the_store_kernel_on_the_converted_iceberg_doors_only`: `EXPLAIN INSERT` of a
+  zoned struct into a nested `TIMESTAMP_NTZ` leaf names `__repark_cast_nested_ntz__`,
+  `EXPLAIN INSERT OVERWRITE` does not, `EXPLAIN UPDATE` from an instant column does,
+  `EXPLAIN UPDATE` from a wall struct keeps the unfolded text, and `EXPLAIN UPDATE` of a
+  zoned struct from a naive one prints main's `CAST` with no localising kernel.
+  pins: ice-ntz-nested-wall-1/C-003
 - `enc_1_fold.rs` — **ENC-1 fold 1 (2026-10-09):** the verifier's writing shapes as
   pins, each on format v2 and v3: explicit branch targets (INSERT, UPDATE, DELETE in
   copy-on-write and merge-on-read), WAP sessions (`spark.wap.branch`, `spark.wap.id`), the

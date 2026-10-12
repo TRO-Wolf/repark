@@ -5,10 +5,10 @@ use arrow::array::timezone::Tz;
 use arrow::array::{Array, ArrayRef, AsArray, StructArray, TimestampMicrosecondBuilder};
 use datafusion::arrow::datatypes::{DataType, FieldRef, Fields, TimeUnit};
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue, exec_err, plan_err};
-use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::logical_expr::expr::{Alias, ScalarFunction};
 use datafusion::logical_expr::{
-    Cast, ColumnarValue, Expr, ExprSchemable, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF,
-    ScalarUDFImpl, Signature, Volatility,
+    Cast, ColumnarValue, DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection,
+    ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility, WriteOp,
 };
 
 use crate::datetime::localize_wall_micros_in_zone;
@@ -356,6 +356,83 @@ pub(crate) fn rewrite_struct_wall_cast(cast: &Cast, schema: &DFSchema) -> Option
         Box::new(call),
         Arc::clone(&cast.field),
     )))
+}
+
+fn holds_a_naive_micros_leaf(data_type: &DataType) -> bool {
+    let DataType::Struct(fields) = data_type else {
+        return false;
+    };
+    fields.iter().any(|field| {
+        is_naive_micros(field.data_type()) || holds_a_naive_micros_leaf(field.data_type())
+    })
+}
+
+pub(crate) fn analyzed_insert_stores_a_struct_wall(plan: &LogicalPlan) -> bool {
+    let LogicalPlan::Analyze(analyze) = plan else {
+        return false;
+    };
+    let LogicalPlan::Dml(dml) = analyze.input.as_ref() else {
+        return false;
+    };
+    matches!(dml.op, WriteOp::Insert(_))
+        && dml
+            .target
+            .schema()
+            .fields()
+            .iter()
+            .any(|field| holds_a_naive_micros_leaf(field.data_type()))
+}
+
+fn without_the_assignment_kernel(expr: &Expr) -> Option<Expr> {
+    let Expr::Alias(alias) = expr else {
+        return None;
+    };
+    let Expr::Cast(cast) = alias.expr.as_ref() else {
+        return None;
+    };
+    let Expr::ScalarFunction(function) = cast.expr.as_ref() else {
+        return None;
+    };
+    if function.func.name() != LOCALIZE_NESTED_NTZ_NAME {
+        return None;
+    }
+    let value = function.args.first()?;
+    Some(Expr::Alias(Alias {
+        expr: Box::new(Expr::Cast(Cast::new_from_field(
+            Box::new(value.clone()),
+            Arc::clone(&cast.field),
+        ))),
+        ..alias.clone()
+    }))
+}
+
+pub(crate) fn keep_update_store_casts(plan: LogicalPlan) -> Result<LogicalPlan> {
+    let LogicalPlan::Dml(dml) = &plan else {
+        return Ok(plan);
+    };
+    if !matches!(dml.op, WriteOp::Update) {
+        return Ok(plan);
+    }
+    let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
+        return Ok(plan);
+    };
+    if !projection
+        .expr
+        .iter()
+        .any(|expr| without_the_assignment_kernel(expr).is_some())
+    {
+        return Ok(plan);
+    }
+    let exprs = projection
+        .expr
+        .iter()
+        .map(|expr| without_the_assignment_kernel(expr).unwrap_or_else(|| expr.clone()))
+        .collect();
+    let input = Projection::try_new(exprs, Arc::clone(&projection.input))?;
+    Ok(LogicalPlan::Dml(DmlStatement {
+        input: Arc::new(LogicalPlan::Projection(input)),
+        ..dml.clone()
+    }))
 }
 
 #[cfg(test)]

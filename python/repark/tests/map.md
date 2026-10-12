@@ -3262,6 +3262,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   America/New_York, store Spark's rows on the joined head. Lives apart because
   the main pin file would pass its line ceiling.
   pins: ice-ntz-nested-wall-1/C-003
+- [test_ice_ntz_nested_wall_1_wall_first.py](test_ice_ntz_nested_wall_1_wall_first.py) —
+  **ICE-NTZ-NESTED-WALL-1 round 15 (2026-10-12):** twelve mixed-struct write shapes
+  (whole-struct `UPDATE` with a searched, built, two-`WHEN` and simple `CASE`, `MERGE UPDATE`
+  with a `CASE`, from a `UNION ALL` source and from a source `CASE`, the two shapes that
+  change no wall, `WHEN NOT MATCHED BY SOURCE`, `UPDATE SET *`, and a second
+  `WHEN NOT MATCHED` clause), each with the wall operand first and with the instant operand
+  first, copy-on-write and merge-on-read, in America/New_York and Australia/Lord_Howe:
+  96 cells, each equal to the rows live Spark stored.
+  `test_named_cells_equal_main` holds the cells a ledger names: the four depth-2 NOT NULL
+  `UPDATE` cells, the wall rows of a temp view read after a zone change, main's
+  `EXPLAIN UPDATE` text for a zoned struct assigned from a naive one, and
+  `EXPLAIN ANALYZE INSERT` of a mixed union. Lives apart because the main pin file is at
+  its line ceiling. pins: ice-ntz-nested-wall-1/C-003
+- [ice_ntz_nested_wall_1_wall_first.json](ice_ntz_nested_wall_1_wall_first.json) —
+  **ICE-NTZ-NESTED-WALL-1 round 15 (2026-10-12):** the statements and the rows the pin
+  above replays. `zones` is live Spark 4.1.2 with Iceberg 1.11.0. `main` is RePark main
+  `2ac03089` in America/New_York, with Spark's rows beside the two zone-change cells.
+  Written by `task/wo/ice-ntz-nested-wall-1/wall_first_round15.py merge`.
+  pins: ice-ntz-nested-wall-1/C-003
 - [ice_ntz_nested_wall_1_explain.json](ice_ntz_nested_wall_1_explain.json) —
   **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** EXPLAIN text recorded on head
   `b6b20b3c` with the EXPLAIN arm absent. The facade compares it after
