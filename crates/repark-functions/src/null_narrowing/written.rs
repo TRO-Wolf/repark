@@ -1,7 +1,7 @@
 use std::sync::{Arc, LazyLock};
 
 use datafusion::arrow::datatypes::FieldRef;
-use datafusion::logical_expr::expr::{Cast, ScalarFunction};
+use datafusion::logical_expr::expr::{Cast, ScalarFunction, TryCast};
 use datafusion::logical_expr::expr_rewriter::SavedName;
 use datafusion::logical_expr::{Expr, ScalarUDF};
 
@@ -55,6 +55,10 @@ pub(super) fn signed(expr: Expr) -> Expr {
             let field = sign(&cast.field);
             Expr::Cast(Cast::new_from_field(cast.expr, field))
         }
+        Expr::TryCast(cast) => {
+            let field = sign(&cast.field);
+            Expr::TryCast(TryCast::new_from_field(cast.expr, field))
+        }
         other => other,
     }
 }
@@ -62,6 +66,7 @@ pub(super) fn signed(expr: Expr) -> Expr {
 pub(super) fn is_signed(expr: &Expr) -> bool {
     match expr {
         Expr::Cast(cast) => cast.field.name() == WRITTEN_SIGN,
+        Expr::TryCast(cast) => cast.field.name() == WRITTEN_SIGN,
         _ => false,
     }
 }
@@ -69,6 +74,7 @@ pub(super) fn is_signed(expr: &Expr) -> bool {
 pub(super) fn wire_cast_source(expr: &Expr) -> Option<&Expr> {
     match expr {
         Expr::Cast(cast) if sql_timestamp(cast.field.data_type()) => Some(&cast.expr),
+        Expr::TryCast(cast) if sql_timestamp(cast.field.data_type()) => Some(&cast.expr),
         _ => None,
     }
 }

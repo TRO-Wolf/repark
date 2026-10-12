@@ -293,6 +293,42 @@ fn select(value: &str) -> String {
 }
 
 #[tokio::test]
+async fn a_written_try_cast_beside_a_microsecond_value_stores_on_every_door() {
+    let spellings = [
+        "coalesce(TRY_CAST({c} AS TIMESTAMP), ts)",
+        "CASE WHEN id > 0 THEN TRY_CAST({c} AS TIMESTAMP) ELSE ts END",
+        "if(id > 0, TRY_CAST({c} AS TIMESTAMP), ts)",
+    ];
+    for zone in ZONES {
+        let mut matrix = Matrix::open(zone).await;
+        for target in TARGETS {
+            for (source, _) in SOURCES {
+                for (door, flags, template) in DOORS {
+                    let first = select(&spellings[0].replace("{c}", source));
+                    let reference = matrix
+                        .store(target)
+                        .stores(door, flags, template, &first)
+                        .await;
+                    assert_eq!(reference.len(), MOMENTS.len(), "{zone}: {door}: {first}");
+                    assert!(
+                        reference.iter().all(|nanos| nanos % 1_000 == 0),
+                        "{zone}: {door}: {first}: {reference:?}"
+                    );
+                    for spelling in &spellings[1..] {
+                        let query = select(&spelling.replace("{c}", source));
+                        let stored = matrix
+                            .store(target)
+                            .stores(door, flags, template, &query)
+                            .await;
+                        assert_eq!(stored, reference, "{zone}: {door}: {query}");
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
 async fn a_written_cast_inside_a_container_beside_a_microsecond_container_stores() {
     let spellings = [
         "coalesce(array(CAST({c} AS TIMESTAMP)), array(ts))[0]",
@@ -453,6 +489,7 @@ async fn an_explain_frame_is_a_statement_and_prints_no_hidden_function() {
         "SELECT id, CAST(coalesce(ns, ts) AS TIMESTAMP) AS v FROM ice.ns.src",
         "SELECT id, CAST(v AS TIMESTAMP) AS v FROM cut_view",
         "SELECT id, CAST(v AS TIMESTAMP) FROM (SELECT id, coalesce(ns, ts) AS v FROM ice.ns.src) q",
+        "SELECT id, coalesce(TRY_CAST(tzns AS TIMESTAMP), ts) AS v FROM ice.ns.src",
         "SELECT id, array_append(array(ns), ts)[0], coalesce(tzns, DATE '2001-02-03') FROM \
          ice.ns.src",
         "INSERT INTO ice.ns.src (id, ns) SELECT id, coalesce(ns, ts) FROM ice.ns.src",

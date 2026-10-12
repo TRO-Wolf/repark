@@ -1,5 +1,5 @@
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema};
 use datafusion::datasource::source_as_provider;
 use datafusion::error::{DataFusionError, Result};
@@ -111,6 +111,13 @@ pub fn refuse_narrowed_ns_inserts<'a>(
         }
     }
     Ok(())
+}
+
+fn peeled(expr: &Expr) -> &Expr {
+    match expr {
+        Expr::Alias(alias) => peeled(&alias.expr),
+        other => other,
+    }
 }
 
 fn conformed(expr: &Expr) -> Option<&Column> {
@@ -378,7 +385,10 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
             column_lineage(&subquery.subquery, 0, walk.within(outer))
         }
         Expr::Cast(cast) => cast_lineage(cast, input, walk),
-        Expr::TryCast(cast) => opaque(&cast.expr),
+        Expr::TryCast(cast) => {
+            let nearest = written_call(cast.field.data_type());
+            expr_lineage(&cast.expr, input, walk.under(nearest))
+        }
         Expr::ScalarFunction(function) => function_lineage(expr, function, input, walk),
         Expr::Case(case) => (case.when_then_expr.iter())
             .find_map(|(_, then)| carried(then))
@@ -580,7 +590,7 @@ fn found(
         Ok(DataType::Timestamp(_, zone)) => Some(zone.is_some()),
         _ => None,
     };
-    let idle = expr_type(value, input).is_ok_and(|kind| !nanoseconds(&kind));
+    let idle = cuts_nothing(value, input, walk);
     let forgiven = matches!(
         (walk.nearest, cut, zoned),
         (Call::Timestamp, Cut::Instant, Some(_))
@@ -600,6 +610,66 @@ fn found(
         beside_untyped_null,
         zoned: zoned.unwrap_or(false),
     })
+}
+
+fn cuts_nothing(value: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> bool {
+    if stated_type(value, input).is_some_and(|kind| !nanoseconds(&kind)) {
+        return true;
+    }
+    let (Expr::Column(column), Some(plan)) = (peeled(value), input) else {
+        return false;
+    };
+    (plan.schema().index_of_column(column).ok())
+        .is_some_and(|index| column_cuts_nothing(plan, index, walk))
+}
+
+fn column_cuts_nothing(plan: &LogicalPlan, index: usize, walk: Walk<'_>) -> bool {
+    let below = |input: &LogicalPlan| column_cuts_nothing(input, index, walk);
+    match plan {
+        LogicalPlan::Projection(projection) => (projection.expr.get(index))
+            .is_some_and(|expr| cuts_nothing(expr, Some(&projection.input), walk)),
+        LogicalPlan::SubqueryAlias(alias) => below(&alias.input),
+        LogicalPlan::Filter(filter) => below(&filter.input),
+        LogicalPlan::Sort(sort) => below(&sort.input),
+        LogicalPlan::Limit(limit) => below(&limit.input),
+        LogicalPlan::Distinct(Distinct::All(input)) => below(input),
+        LogicalPlan::TableScan(scan) => {
+            let source_index = match &scan.projection {
+                Some(projection) => projection.get(index).copied(),
+                None => Some(index),
+            };
+            let held = scan.source.get_logical_plan().map(|plan| plan.into_owned());
+            let defined = || {
+                (walk.views)
+                    .zip(source_as_provider(&scan.source).ok())
+                    .and_then(|(views, provider)| views.definition_plan(provider.as_ref()))
+            };
+            let view = held.or_else(defined);
+            (source_index.zip(view))
+                .is_some_and(|(index, view)| column_cuts_nothing(&view, index, walk))
+        }
+        _ => false,
+    }
+}
+
+fn stated_type(value: &Expr, input: Option<&LogicalPlan>) -> Option<DataType> {
+    let tried = |node: &Expr| {
+        matches!(node, Expr::TryCast(cast)
+            if cast.field.data_type() == &DataType::Timestamp(TimeUnit::Nanosecond, None))
+    };
+    if !value.exists(|node| Ok(tried(node))).unwrap_or(false) {
+        return expr_type(value, input).ok();
+    }
+    let read = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
+    let stated = value.clone().transform_up(|node| {
+        Ok(match node {
+            Expr::TryCast(cast) if tried(&Expr::TryCast(cast.clone())) => {
+                Transformed::yes(Expr::Cast(Cast::new(cast.expr, read.clone())))
+            }
+            other => Transformed::no(other),
+        })
+    });
+    expr_type(&stated.ok()?.data, input).ok()
 }
 
 fn nanoseconds(kind: &DataType) -> bool {

@@ -2,7 +2,7 @@ use datafusion::arrow::datatypes::Schema;
 use datafusion::common::tree_node::TreeNode;
 use datafusion::functions::core::expr_fn::coalesce;
 use datafusion::functions::datetime::expr_fn::date_trunc;
-use datafusion::logical_expr::{col, lit, table_scan, when};
+use datafusion::logical_expr::{TryCast, col, lit, table_scan, when};
 
 use super::*;
 
@@ -32,6 +32,10 @@ fn untyped() -> Expr {
 
 fn cast(expr: Expr, target: DataType) -> Expr {
     Expr::Cast(Cast::new(Box::new(expr), target))
+}
+
+fn try_cast(expr: Expr, target: DataType) -> Expr {
+    Expr::TryCast(TryCast::new(Box::new(expr), target))
 }
 
 fn widened(expr: Expr) -> Expr {
@@ -417,7 +421,7 @@ fn all_marks(plan: &LogicalPlan) -> Vec<String> {
 fn a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion() {
     let schema = wide();
     for source in ["c", "z"] {
-        for spelled in [cast] {
+        for spelled in [cast, try_cast] {
             let below = coalesce(vec![spelled(col(source), nanos()), col("m")]);
             let out = before_coercion(below.clone(), &schema).unwrap().data;
             assert_eq!(
@@ -459,7 +463,7 @@ fn a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion() {
     }
     let beside = coalesce(vec![cast(written(col("c")), micros()), col("m")]);
     assert!(!mark_coerced_branches(beside, &schema).unwrap().transformed);
-    for spelled in [cast] {
+    for spelled in [cast, try_cast] {
         for source in ["c", "z"] {
             let coerced = coalesce(vec![
                 cast(signed(spelled(col(source), nanos())), micros()),

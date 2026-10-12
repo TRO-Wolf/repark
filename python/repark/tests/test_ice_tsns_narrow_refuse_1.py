@@ -43,7 +43,7 @@ REFUSED_MORE = (
     "case_three",
 )
 TYPED_A_STRING = ("nvl", "ifnull", "nvl2")
-NANOSECOND_TYPED = (*doors.KEPT, "try_cast_ts")
+NANOSECOND_TYPED = doors.KEPT
 NARROWED = (*REFUSED_EVERYWHERE, *REFUSED_MORE, *doors.BESIDE_VALUE)
 MATERIALIZED = "cached_frame_append"
 BESIDE_A_PLAIN_BRANCH = "union_insert"
@@ -179,6 +179,8 @@ def test_a_written_narrowing_and_a_kept_type_answer_what_the_base_answers(
 
     A nanosecond type the statement keeps refuses beside an untyped NULL branch; a
     microsecond value the statement wrote makes the plain nanosecond branch beside it refuse.
+    ``TRY_CAST(c AS TIMESTAMP)`` is a cast the statement wrote (fold 3): beside an untyped
+    NULL branch it stores the base's value.
     """
     measured = measure_row(tmp_path, *row)
     refused = sum(hold(row, door, cells) for door, cells in measured.items())
