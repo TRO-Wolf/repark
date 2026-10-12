@@ -32,6 +32,7 @@ mod session_write_postgres;
 mod subquery;
 mod temp_view_names;
 mod text_io;
+mod timestamp_ns_gate;
 mod type_bridge;
 mod unresolved_routine;
 mod writer_layout;
@@ -178,6 +179,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     subquery::register(module)?;
     temp_view_names::register(module)?;
     text_io::register(module)?;
+    timestamp_ns_gate::register(module)?;
     type_bridge::register(module)?;
     writer_layout::register(module)?;
     Ok(())

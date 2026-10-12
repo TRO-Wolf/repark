@@ -284,3 +284,8 @@ others. pins: ipi-19-56-37-schema-evolution-write/C-004, C-012
 errors to Spark's `[UNRESOLVED_ROUTINE]` condition at the binding door, and registers
 the `grouping_id_column` binding for the thin `F.grouping_id` facade.
 pins: fnp-agg-1/C-002, C-004
+**ICE-TSNS-COERCION-1 slice 1 round 1 (2026-10-12):** `timestamp_ns_gate.rs` exposes the
+two coercion counters to Python as the read-only, underscore-prefixed, undocumented
+`_native._tsns_gate_counts()` (gate-open, fallback), so the facade suite can measure the
+gate-open rate with no Python surface change; `lib.rs` grows by its two registration lines.
+pins: ice-tsns-coercion-1/C-005
