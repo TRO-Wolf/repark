@@ -9,6 +9,7 @@ mod insert_arity;
 mod insert_overwrite;
 mod merge;
 mod partitioning;
+mod pg_insert;
 mod properties;
 mod ref_ddl;
 mod refusals;

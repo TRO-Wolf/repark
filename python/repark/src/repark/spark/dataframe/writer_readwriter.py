@@ -356,7 +356,7 @@ class DataFrameWriter:
                 if key.lower() == "path" and value:
                     path = value
                     break
-        if path is None:
+        if path is None and self._format != "jdbc":
             raise AnalysisException("'path' is not specified.")
         writer_layout.refuse_bucketed_action(self, "save")
         if self._format == "iceberg":
@@ -364,7 +364,7 @@ class DataFrameWriter:
         if self._format == "orc":
             writer_layout._refuse_duplicate_output_columns(self._dataframe)
         if self._format not in self._PATH_FORMATS:
-            _io_declared.refuse_writer_save_format(self)
+            return _io_declared.save_or_refuse_writer_format(self)
         if self._format == "text":
             return _writer_text.write_text_path(self, path)
         self._apply_path_write(path, stored_as=self._format.upper())

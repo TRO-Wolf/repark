@@ -25,6 +25,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import _spark_python as spark_python
 import pyarrow.parquet as pq
 import pytest
 
@@ -629,7 +630,7 @@ def test_cz_conf_rdf_writes_gzip(spark: Any) -> None:
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
 def test_live_oracle_fixture_reproduces(tmp_path: Path) -> None:
     """The recorder re-derives the fixture on live Spark. pins: ice-session-write-conf-1/C-032"""
-    sparkenv = Path("/tmp/sparkenv/bin/python")
+    sparkenv = Path(spark_python.resolve_live_spark_python())
     generator = Path(__file__).with_name("_record_ice_session_write_conf_1_oracle.py")
     environ = dict(os.environ)
     environ.setdefault("JAVA_HOME", "/usr/lib/jvm/zulu-17-amd64")

@@ -159,6 +159,10 @@ pub use session_write_conf::{
     session_write_conf_from_options, session_write_conf_is_set, unset_session_write_key,
     with_session_write_conf,
 };
+pub use store_assign::{
+    WRITE_SPARK_CLASS, ansi_store_assignable, normalize_for_assignment,
+    refuse_unless_ansi_store_assignable,
+};
 pub use store_overflow::StoreOverflowCast;
 pub use summary_collision::EngineSummary;
 pub use truncate::{commit_truncate, commit_truncate_to};

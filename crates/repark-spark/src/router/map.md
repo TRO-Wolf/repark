@@ -20,7 +20,10 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   refusal fits: each door runs the house valves first, then refuses a target carrying
   `encryption.key-id`, before the meta-delete door, predicate DML or provider delegation.
   ObjectName-only target extraction (aliases would under-refuse BUG-001).
-  pins: enc-1/C-005
+  **C-4 merge (2026-10-10):** `execute_update` also carries the Postgres upsert check
+  from the deleted `update.rs` after the P11 refusal, so an unpopulated read-only set
+  names the `CONNECT-DECL-pg-write-upsert` row.
+  pins: enc-1/C-005, c-4/C-013
 - `insert_positional.rs` — **U8 WRITE-SQL PR1 (2026-09-24):** `prepare_positional_insert`
   runs after U6's by-name routing check in `execute_insert_routed`. It aliases a later
   projection item whose DataFusion name repeats an earlier one (`__repark_col_<n>`; a cast
@@ -33,6 +36,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   planning; a `SELECT *, CAST(id AS STRING)` no longer leaks DataFusion's `Projections require
   unique expression names`. Its two children are in [insert_positional/](insert_positional/map.md).
   pins: u8-write-sql/C-011, C-023
+  **C-4 fold 3 item 3 (2026-10-11):** `alias_source_positionally`, beside the shared
+  rewrite and used only by the Postgres route: it aliases every UNNAMED projection
+  item by position (two different expressions can share one display name, which no
+  expression-text key can see), keeping the collision rule for named items. The shared
+  Iceberg path is untouched.
   **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** after that rewrite (`rewrite_positional_insert`)
   it runs `void_type::refuse_insert_source_types` on the prepared statement, so every
   positional INSERT door — append, owned append, OVERWRITE and VALUES — refuses a `-NULL`
@@ -93,6 +101,25 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   pins: the erasure, and an `ExplainExec` cleaned, left alone when it holds no name, and
   another node left alone.
   pins: ice-tsns-narrow-refuse-1/C-034, C-039, C-041
+- `pg_insert.rs` — **C-4 step 2 (2026-10-09):** Postgres-target INSERT routing on this door
+  (a router child because `../router.rs` is at its line ceiling and `../lib.rs` at its
+  re-export ceiling). Appends drive the shared `repark_core::write_postgres` sink; overwrite
+  refuses with the `CONNECT-DECL-pg-write-modes` row, REPLACE and UPDATE with the
+  `CONNECT-DECL-pg-write-upsert` row. The `write.path` writer option is read off
+  `StatementWriteOptions::raw` and parsed by the shared core parser (`bulk` default, `row`
+  forces the INSERT path, anything else refuses as `Configuration`/IllegalArgumentException).
+  The write future is heap-boxed at the module boundary (clippy large-futures). Each write
+  records its report on the session carrier. Door pins are
+  [../tests/pg_insert.rs](../tests/pg_insert.rs).
+  **C-4 merge (2026-10-10):** the route runs before the ENC-1 guard in
+  `execute_insert_routed`; the guard still sees every Iceberg target.
+  **C-4 fold 3 item 3 (2026-10-11):** the route calls `alias_source_positionally`,
+  so `SELECT 1, '1'` and its siblings plan instead of colliding on one display
+  name. pins: c-4/C-013
+  **C-4 fold 2 item 5 (2026-10-10):** the source passes through the Iceberg route's
+  `deduplicate_source_names` before planning, so a positional INSERT never depends on
+  the SELECT's output names.
+  pins: c-4/C-013, C-014
 - `nested_ns.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):**
   `refuse_nested_supply` is the one call that hands an `INSERT` (plain, `OVERWRITE`,
   `BY NAME`, `REPLACE WHERE`), `UPDATE` or `MERGE` statement and its Iceberg target to

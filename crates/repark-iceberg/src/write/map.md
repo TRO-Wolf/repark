@@ -36,8 +36,13 @@ repark-core's error map.
   `Error`/`Result`, write/scan concurrency knobs, `writer_props`, the `write_data_files*` +
   `write_partitioned_data_files*` families (bounded-memory stream variants; K concurrent file
   writers, default 4, K=1 serial), `append`, the overwrite stage-then-swap surface, and the
-  snapshot-ref helpers. `store_assign` is declared `pub(crate)` — an internal predicate, never
-  a public surface. **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** declares
+  snapshot-ref helpers. `store_assign` stays declared `pub(crate)`, but the rule and the
+  refusal it owns for every write path (`ansi_store_assignable`,
+  `refuse_unless_ansi_store_assignable`, `normalize_for_assignment`,
+  `WRITE_SPARK_CLASS`) are re-exported here since **C-4 fold 3 item 1 (2026-10-11)**,
+  when the Postgres write door started calling the same rule instead of a second
+  matrix: visibility only, no behaviour change on the Iceberg paths.
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** declares
   `session_write_conf` and re-exports its resolver surface.
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   session write-conf carrier (`SessionWriteView`: session codec/level plus the

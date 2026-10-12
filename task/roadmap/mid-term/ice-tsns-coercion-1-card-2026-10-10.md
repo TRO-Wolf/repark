@@ -73,3 +73,13 @@ refusals of the narrow card turn back into stores.
 - The Spark oracle for each spelling measured live on Spark 4.1.2 before the pin is written.
 - Never worse than main; the controls above byte-identical to main.
 - An Opus verifier on the product pull request.
+- The cached-frame cells measured by the R-017 unit (300 `cached_frame_append` cells, and the
+  420 cells where the cache alone is the cause) are re-run after the coercion lands, and 0 of
+  them store a cut value.
+
+## Absorbs ICE-TSNS-CACHE-1 (owner ruling, 2026-10-11)
+
+`cache()` and `persist()` collect the frame, so the analyzer's narrowing cast is evaluated there
+and the cached column holds a microsecond value with no expression behind it; a plain
+`timestamp_ns` column survives the cache with nine digits. The only lever on main is the coercion
+itself. No separate cache unit will be built.

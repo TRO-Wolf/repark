@@ -185,6 +185,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   spellings through the `dispatch_spark` fall-through (+1 line, 997 of 1000).
   `door_parity_tests.rs` gains the three spellings.
   pins: sql-epoch-constructors-1/C-004, C-008
+  **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** the `current_date` arm rebinds from
+  `datafusion::functions::expr_fn::current_date` to
+  `repark_functions::current_date::current_date`, the owned session-zone UDF the SQL door
+  resolves through `register_all` (line-neutral, 997 of 1000).
+  pins: current-date-session-zone-1/C-002
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,

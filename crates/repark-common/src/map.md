@@ -10,6 +10,21 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
 ## Contents
 - `tests.rs` — unit tests for Error / ErrorClass
 
+- `java_double/` — **C-4 fold 3 item 2 (2026-10-11):** the scalar Java
+  `Double.toString` / `Float.toString` text (`with_java_double_text` /
+  `with_java_float_text` plus the `java_double_text`, `java_float_text` and
+  length helpers), moved here from `repark-functions`' `java_double/` (pure move
+  of the digit engine and `bigint.rs`; the array wrappers stay there) so the
+  Postgres write chokepoint calls the same function the Spark string cast uses.
+  Contents: [java_double/map.md](java_double/map.md).
+
+- `spark_timestamp_text.rs` — **C-4 fold 3 item 2 (2026-10-11):** the tick unit,
+  tick-to-wall and wall-to-text kernels of `CAST(timestamp AS STRING)`
+  (`TickUnit`, `ticks_to_micros`, `wall_clock_from_ticks` over the shared
+  `zone_horizon` wall, `format_spark_timestamp_string` with the ISO date),
+  moved here from `repark-functions`' `timestamp_cast.rs` for the same caller,
+  so no second renderer exists. `repark-functions` delegates to both modules.
+
 - `surfaces.rs` — the dialect-neutral **SQL surface registry** (design
   `docs/design/sql-doors.md` §2 Q13, graft G2): 50 capability IDs (`CTAS`, `MERGE`,
   `TABLE_OPTION_PARTITIONING`, `GUARD_MULTI_STATEMENT`, `SEMANTICS_NULL_ORDERING`, …)

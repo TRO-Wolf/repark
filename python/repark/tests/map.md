@@ -1034,7 +1034,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   prefix, `v3` in the message, winner bytes per writer) and adds stale INSERT OVERWRITE,
   TRUNCATE, ALTER SET TBLPROPERTIES and saveAsTable(overwrite); `writeTo().overwrite`
   refuses declared on stale and fresh handles alike, pinned as the pre-existing refusal.
-  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **PARITY-LIVE-INFRA-2 (2026-10-11):** the 400k race wires the `vn` catalog conf
+  onto its `newSession` side session, which otherwise resolves `vn.ns.conc`
+  against `spark_catalog` (`REQUIRES_SINGLE_PART_NAMESPACE`) whenever another
+  module boots the shared context first — the nightly shape, red since 10-07.
+  Standalone the builder conf masked it (20/20 green either way).
+  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009. pins: parity-live-infra-2/C-004
 - [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) —
   the explicit-run recorder behind the fixture and the oracle JSON above (JVM +
   combined interpreter; invocation in its docstring).
@@ -2085,6 +2090,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: perf-dynflatten-1-measure/C-002, C-003
   pins: cutover-schema-1/C-001
   pins: dynflatten-listnull-1/C-004
+- [test_current_date_session_zone_1.py](test_current_date_session_zone_1.py) —
+  **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** `current_date()` answers the session-zone
+  date. The differing zone is computed at run time (+14 / -11, one always differs, no
+  skip): every SQL spelling rooted in `current_date`, the DataFrame pair, the WHERE
+  filter and the stored Iceberg value assert the zone date, both setting styles, both ANSI
+  modes on the SQL leg; the UTC control and the per-query fix hold.
+  The pre-existing strict-xfail TZ-9 pin in `test_spark_sql_grammar_1.py` flips to
+  equality in the same change and the registry row reads FIXED. The file re-runs the
+  step-0 matrix cell list (C-001) and its pins went red under the hand revert (C-005).
+  **Fold 1 (2026-10-11):** the native-door pin sets `SET TIME ZONE` to the runtime-chosen
+  differing zone and asserts SQL `current_date()` plus the DataFrame pair all answer that
+  zone's date, resetting the knob afterwards.
+  pins: current-date-session-zone-1/C-001, C-003, C-004, C-005, C-007
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
@@ -2487,6 +2505,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `current_database` / `current_schema` answer the engine defaults (value, string
   type, non-null); the paren-less spellings stay in `Q14_REFUSING_BARE`.
   pins: ice-catalog-session-1/C-011, C-029.
+  **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** TZ-9 is FIXED — the strict-xfail
+  session-zone pin asserts the converged date and the registry row reads FIXED.
+  pins: current-date-session-zone-1/C-003.
 - [test_unresolved_routine_1.py](test_unresolved_routine_1.py) +
   [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) —
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** every unknown routine refuses with Spark's
@@ -4946,6 +4967,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `docs/examples/io/io_declared_refusals.py`, the fixture and inventory updates are
   C-005, and the named-suite sweep is C-006.
   pins: io-declared-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **C-4 step 2 (2026-10-09):** the `write.jdbc` pins follow the real door: mixed-case
+  append reaches the engine config refusal, other valid modes refuse under the
+  pg-write-modes row, a bad `write.path` names both values, properties win the merge,
+  `format("jdbc").save()` requires url/dbtable and follows the writer mode,
+  `format("postgres").save()` keeps `DATA_SOURCE_NOT_FOUND`, and the take-report hook
+  reads nothing on a fresh session. pins: c-4/C-013, C-014
 - [test_registry_16b_1.py](test_registry_16b_1.py) — **REGISTRY-16B-1 (2026-09-15):** the pins behind three
   BACKLOG rows: `conf.unset` of a builder-seeded SQL conf raises on `get` while SQL `RESET` restores the builder
   value (CONF-UNSET-1), `spark.wap.*` stores through `conf.set`, reports modifiable and fails on the SQL `SET`
@@ -7721,7 +7748,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_live_fnp8review_r2_multihop_lineage_matches_spark`): join-fed widths
   with immune aggregates, and multi-hop nullability with union branches.
   The held-set re-run (four pin files, live leg, verify, mutations) is C-008.
-  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010
+  **PARITY-LIVE-INFRA-2 (2026-10-11):** the `array(1, NULL, 3)` indexed-transform
+  case pins the Column door at int32 — the engine converged on Spark's measured
+  `list<element: int32>` (banner 4.1.2 UTC, both ANSI settings) and the old
+  int64 pin reded the nightly. Why the Column door was ever pinned int64 is not
+  established: cause open as of 2026-10-11.
+  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010. pins: parity-live-infra-2/C-002
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   FNP-8 pins invalid-return errors for a function, a callable object, and `functools.partial`.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
@@ -10078,3 +10110,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here.
   pins: empty-projection-count-1/C-002, C-003, C-004, C-007, C-008, C-009
+- [_spark_python.py](_spark_python.py) — **PARITY-LIVE-INFRA-2 (2026-10-11):**
+  one resolver for the interpreter that runs live-Spark recorder subprocesses.
+  `resolve_live_spark_python` honours `REPARK_SPARKENV_PYTHON` when set, else
+  takes the box lane's `sparkenv/bin/python` when present, else the current
+  interpreter (the nightly runner carries PySpark in the venv through the
+  `record` extra, so the reproduce tests run there instead of failing
+  `FileNotFoundError`). Callers: the six `test_live_oracle_fixture_reproduces`
+  tests and `test_ice_rdf_options_1.py`'s rerun test, which no longer skips
+  when the box lane is absent. No module docstring: the lane's no-comments
+  ruling covers the new file; the contract lives here.
+  pins: parity-live-infra-2/C-001

@@ -24,6 +24,7 @@ pub(crate) mod explain_marks;
 mod hive_change_column;
 pub(crate) mod insert_positional;
 mod nested_ns;
+mod pg_insert;
 mod table_props_ddl;
 
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
@@ -417,6 +418,11 @@ async fn execute_insert_routed(
     insert: &Insert,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
+    if let Some(frame) =
+        pg_insert::route_postgres_insert(ctx, catalogs, insert, write_options).await?
+    {
+        return Ok(frame);
+    }
     if crate::insert_by_name::evolution::routes_positional_by_name(
         ctx,
         catalogs,
