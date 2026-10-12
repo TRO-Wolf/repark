@@ -106,8 +106,9 @@ def _plain(array: pa.Array, data_type: pa.DataType) -> list[Any]:
             for index in range(data_type.num_fields)
         }
         rows: list[Any] = []
-        for index in range(len(array)):
-            if array.is_null(index):
+        nulls = array.is_null().to_pylist()
+        for index, is_null in enumerate(nulls):
+            if is_null:
                 rows.append(None)
                 continue
             rows.append({name: values[index] for name, values in children.items()})
@@ -269,7 +270,7 @@ def test_mixed_struct_inventory_matches_spark_where_the_arm_applies(
     """Replay the step-0 inventory in UTC, America/New_York and Asia/Kolkata."""
     for zone in ZONES:
         warehouse = tmp_path / zone
-        warehouse.mkdir()
+        warehouse.mkdir(parents=True)
         session = _open(zone, warehouse)
         try:
             _install(session)
