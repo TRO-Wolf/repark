@@ -7,7 +7,9 @@ use datafusion::execution::context::{QueryPlanner, SessionState};
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::explain::ExplainExec;
-use repark_functions::null_narrowing::{NARROWED_BESIDE_NULL_NAME, NARROWED_BESIDE_VALUE_NAME};
+use repark_functions::null_narrowing::{
+    NARROWED_BESIDE_NULL_NAME, NARROWED_BESIDE_VALUE_NAME, WRITTEN_CAST_NAME,
+};
 
 #[derive(Debug)]
 pub(crate) struct UnmarkedExplain {
@@ -54,7 +56,11 @@ fn unmarked(planned: Arc<dyn ExecutionPlan>) -> Arc<dyn ExecutionPlan> {
     Arc::new(ExplainExec::new(explain.schema(), rows, explain.verbose()))
 }
 
-const HIDDEN: [&str; 2] = [NARROWED_BESIDE_NULL_NAME, NARROWED_BESIDE_VALUE_NAME];
+const HIDDEN: [&str; 3] = [
+    NARROWED_BESIDE_NULL_NAME,
+    NARROWED_BESIDE_VALUE_NAME,
+    WRITTEN_CAST_NAME,
+];
 
 fn holds_mark(text: &str) -> bool {
     HIDDEN.iter().any(|name| text.contains(name))
@@ -106,7 +112,7 @@ mod tests {
         let marked = format!(
             "Projection: coalesce(CAST({NARROWED_BESIDE_VALUE_NAME}(t.c + f(\")\", 1)) AS \
              Timestamp(µs, \"UTC\")), {NARROWED_BESIDE_NULL_NAME}(t.d)), \
-             max({NARROWED_BESIDE_VALUE_NAME}(t.e)) AS v"
+             {WRITTEN_CAST_NAME}(max({NARROWED_BESIDE_VALUE_NAME}(t.e))) AS v"
         );
         assert_eq!(
             strip_marks(&marked),
@@ -125,7 +131,7 @@ mod tests {
             analyzer_name: rule.to_string(),
         };
         let marked = format!("Projection: f({NARROWED_BESIDE_VALUE_NAME}(t.c))");
-        let kept = format!("Projection: g({NARROWED_BESIDE_NULL_NAME}(t.c))");
+        let kept = format!("Projection: g({WRITTEN_CAST_NAME}(t.c))");
         let rows = vec![
             StringifiedPlan::new(PlanType::InitialLogicalPlan, "Projection: f(t.c)"),
             StringifiedPlan::new(analyzed("a"), marked),

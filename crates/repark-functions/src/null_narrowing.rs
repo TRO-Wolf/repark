@@ -9,6 +9,7 @@ use datafusion::common::tree_node::TreeNodeRewriter;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, DataFusionError, ExprSchema, Result, ScalarValue};
 use datafusion::logical_expr::expr::{Cast, ScalarFunction};
+use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
@@ -16,6 +17,12 @@ use datafusion::logical_expr::{
 };
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::optimizer::analyzer::type_coercion::{TypeCoercionRewriter, coerce_union_schema};
+
+mod written;
+
+pub(crate) use written::restored;
+pub use written::{WRITTEN_CAST_NAME, is_written_cast, written_cast_udf};
+use written::{is_signed, signed, wire_cast_source, written_cast};
 
 pub const NARROWED_BESIDE_NULL_NAME: &str = "__repark_narrowed_beside_null__";
 pub const NARROWED_BESIDE_VALUE_NAME: &str = "__repark_narrowed_beside_value__";
@@ -181,26 +188,27 @@ pub(crate) fn before_coercion(expr: Expr, schema: &DFSchema) -> Result<Transform
         ));
     }
     let written = |branch: &Expr| {
-        matches!(branch, Expr::Cast(cast)
-            if sql_timestamp(cast.field.data_type())
-                && !is_narrowing_mark(&cast.expr)
-                && holds(&cast.expr, schema, true))
+        !is_signed(branch)
+            && wire_cast_source(branch)
+                .is_some_and(|source| !is_narrowing_mark(source) && holds(source, schema, true))
     };
     if matches!(expr, Expr::Alias(_)) || !any_branch(&expr, written) {
         return tag_untyped_nulls(expr, schema);
     }
-    expr.map_children(|branch| match branch {
-        Expr::Cast(cast) if written(&Expr::Cast(cast.clone())) => Ok(Transformed::yes(
-            crate::timestamp_ns_cast::narrow_timestamp_ns_expr(*cast.expr),
-        )),
-        other => Ok(Transformed::no(other)),
+    expr.map_children(|branch| {
+        Ok(if written(&branch) {
+            Transformed::yes(signed(branch))
+        } else {
+            Transformed::no(branch)
+        })
     })?
     .transform_data(|node| tag_untyped_nulls(node, schema))
 }
 
 fn coerced(expr: &Expr, schema: &DFSchema) -> bool {
     matches!(expr, Expr::Cast(cast)
-    if !is_narrowing_mark(&cast.expr)
+    if !is_signed(expr)
+        && !is_narrowing_mark(&cast.expr)
         && !null_literal(&cast.expr)
         && !to_the_wire_type(&cast.expr)
         && !matches!(cast.expr.as_ref(), Expr::Literal(_, _))
@@ -230,22 +238,24 @@ fn narrows(source: &DataType, target: &DataType) -> bool {
 }
 
 fn to_the_wire_type(expr: &Expr) -> bool {
-    matches!(expr, Expr::Cast(cast) if sql_timestamp(cast.field.data_type()))
+    wire_cast_source(expr).is_some()
 }
 
 pub(crate) struct Marks {
     scoped: bool,
     produces: bool,
+    instants: bool,
     kept: Cell<bool>,
     untagged: Cell<bool>,
 }
 
 impl Marks {
-    pub(crate) fn of(plan: &LogicalPlan, schema: &DFSchema) -> Self {
+    pub(crate) fn of(plan: &LogicalPlan, schema: &DFSchema, instants: bool) -> Self {
         let produces = produces_columns(plan);
         Self {
             scoped: produces && holds_nanoseconds(schema),
             produces,
+            instants,
             kept: Cell::new(false),
             untagged: Cell::new(false),
         }
@@ -289,14 +299,15 @@ impl Marks {
         let Expr::Cast(cast) = &expr else {
             return Transformed::no(expr);
         };
-        if !sql_timestamp(cast.field.data_type()) {
+        let dropped = self.instants
+            && sql_timestamp(cast.field.data_type())
+            && (cast.expr.get_type(schema))
+                .is_ok_and(|found| crate::instant_ts::is_ltz_timestamp(&found));
+        if !dropped {
             return Transformed::no(expr);
         }
-        let source = cast.expr.get_type(schema);
-        let marked = holds_mark(&cast.expr);
-        let over_a_mark = marked && matches!(source, Ok(DataType::Timestamp(_, _)));
-        let over_a_column = !marked
-            && source.is_ok_and(|found| instant(&found))
+        let over_a_mark = holds_mark(&cast.expr);
+        let over_a_column = !over_a_mark
             && (cast.expr)
                 .exists(|node| Ok(matches!(node, Expr::Column(_))))
                 .unwrap_or(false);
@@ -309,18 +320,20 @@ impl Marks {
         let Expr::Cast(cast) = expr else {
             return Transformed::no(expr);
         };
-        Transformed::yes(crate::timestamp_ns_cast::narrow_timestamp_ns_expr(
-            *cast.expr,
-        ))
+        Transformed::yes(written_cast(*cast.expr))
     }
 
     pub(crate) fn settle_plan(&self, plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         if !self.kept.get() || plan.inputs().into_iter().any(plan_holds_mark) {
             return settle_union_branches(with_branch_types(plan)?);
         }
-        let schema = input_schema(&plan);
-        plan.map_expressions(|expr| expr.transform_up(|node| Ok(drop_kept_cast(node, &schema))))?
-            .map_data(LogicalPlan::recompute_schema)
+        let names = NamePreserver::new(&plan);
+        plan.map_expressions(|expr| {
+            let saved = names.save(&expr);
+            let dropped = expr.transform_up(|node| Ok(drop_kept_cast(node)))?;
+            Ok(dropped.update_data(|node| saved.restore(node)))
+        })?
+        .map_data(LogicalPlan::recompute_schema)
     }
 }
 
@@ -374,23 +387,11 @@ fn with_branch_types(plan: LogicalPlan) -> Result<LogicalPlan> {
     }))
 }
 
-fn input_schema(plan: &LogicalPlan) -> DFSchema {
-    let mut schema = DFSchema::empty();
-    for input in plan.inputs() {
-        schema.merge(input.schema());
-    }
-    schema
-}
-
-fn drop_kept_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    let kept = crate::timestamp_ns_cast::is_narrow_timestamp_ns(&expr)
-        && crate::timestamp_ns_cast::narrowed_beside(&expr).is_none();
+fn drop_kept_cast(expr: Expr) -> Transformed<Expr> {
+    let kept = is_written_cast(&expr);
     match expr {
         Expr::ScalarFunction(mut function)
-            if kept
-                && function.args.len() == 1
-                && !holds_mark(&function.args[0])
-                && (function.args[0].get_type(schema)).is_ok_and(|found| instant(&found)) =>
+            if kept && function.args.len() == 1 && !holds_mark(&function.args[0]) =>
         {
             Transformed::yes(function.args.remove(0))
         }
@@ -514,7 +515,9 @@ pub(crate) fn mark_coerced_branches(expr: Expr, schema: &DFSchema) -> Result<Tra
 fn tag_untyped_nulls(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     if !unifies_branches(&expr)
         || !any_branch(&expr, is_untyped_null)
-        || !any_branch(&expr, |branch| holds(branch, schema, true))
+        || !any_branch(&expr, |branch| {
+            !is_signed(branch) && holds(branch, schema, true)
+        })
     {
         return Ok(Transformed::no(expr));
     }

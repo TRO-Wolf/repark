@@ -59,6 +59,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         crate::timestamp_ns_cast::timestamp_ns_cast_udf(true),
         crate::null_narrowing::narrowed_beside_udf(true),
         crate::null_narrowing::narrowed_beside_udf(false),
+        crate::null_narrowing::written_cast_udf(),
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(false),
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(true),
         crate::timestamp_ntz_cast::timestamp_ntz_literal_udf(),
@@ -562,13 +563,13 @@ fn rewrite_plan(
         schema.merge(input.schema());
     }
     let name_preserver = NamePreserver::new(&plan);
-    let marks = crate::null_narrowing::Marks::of(&plan, &schema);
+    let marks = crate::null_narrowing::Marks::of(&plan, &schema, !timestamp_type.is_ntz());
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
         let rewritten = marks.rewrite(expr, &schema, &|node| {
             rewrite_cast(node, &schema, zone, timestamp_type)
         })?;
-        Ok(rewritten.update_data(|node| saved_name.restore(node)))
+        Ok(rewritten.update_data(|node| crate::null_narrowing::restored(node, saved_name)))
     })?;
     transformed
         .map_data(LogicalPlan::recompute_schema)?
@@ -675,7 +676,7 @@ fn is_wall_clock_cast_source(data_type: &DataType) -> bool {
         )
 }
 
-fn is_ltz_timestamp(data_type: &DataType) -> bool {
+pub(crate) fn is_ltz_timestamp(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Timestamp(TimeUnit::Microsecond, Some(zone))

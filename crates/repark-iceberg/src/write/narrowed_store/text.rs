@@ -7,7 +7,7 @@ use datafusion::logical_expr::Expr;
 
 use super::{
     NARROW_TIMESTAMP_NS_UDF_NAME, NARROWED_BESIDE_NULL_UDF_NAME, NARROWED_BESIDE_VALUE_UDF_NAME,
-    TIMESTAMP_TO_DATE_UDF_NAME,
+    TIMESTAMP_TO_DATE_UDF_NAME, WRITTEN_CAST_UDF_NAME,
 };
 
 const GENERATED_PREFIX: &str = "__repark_";
@@ -46,7 +46,9 @@ pub(super) fn sql_text(expr: &Expr) -> String {
                 {
                     first()
                 }
-                NARROW_TIMESTAMP_NS_UDF_NAME => format!("CAST({} AS TIMESTAMP)", first()),
+                NARROW_TIMESTAMP_NS_UDF_NAME | WRITTEN_CAST_UDF_NAME => {
+                    format!("CAST({} AS TIMESTAMP)", first())
+                }
                 NS_CAST_UDF_NAME => format!("CAST({} AS timestamp_ns)", first()),
                 NS_ZONED_CAST_UDF_NAME => format!("CAST({} AS timestamptz_ns)", first()),
                 TIMESTAMP_TO_DATE_UDF_NAME => format!("CAST({} AS DATE)", first()),

@@ -293,6 +293,137 @@ fn select(value: &str) -> String {
 }
 
 #[tokio::test]
+async fn a_written_cast_inside_a_container_beside_a_microsecond_container_stores() {
+    let spellings = [
+        "coalesce(array(CAST({c} AS TIMESTAMP)), array(ts))[0]",
+        "array_append(array(CAST({c} AS TIMESTAMP)), ts)[0]",
+        "(CASE WHEN id > 0 THEN array(CAST({c} AS TIMESTAMP)) ELSE array(ts) END)[0]",
+    ];
+    for zone in [ZONES[0], ZONES[1]] {
+        let mut matrix = Matrix::open(zone).await;
+        for target in TARGETS {
+            for (source, _) in SOURCES {
+                for (door, flags, template) in [DOORS[0], DOORS[2], DOORS[5]] {
+                    let twin = select(&format!("CAST({source} AS TIMESTAMP)"));
+                    let reference = matrix
+                        .store(target)
+                        .stores(door, flags, template, &twin)
+                        .await;
+                    for spelling in spellings {
+                        let query = select(&spelling.replace("{c}", source));
+                        let stored = matrix
+                            .store(target)
+                            .stores(door, flags, template, &query)
+                            .await;
+                        assert_eq!(stored, reference, "{zone}: {door}: {query}");
+                    }
+                }
+            }
+        }
+    }
+}
+
+async fn explained(session: &ReparkSession, sql: &str) -> Vec<(String, String)> {
+    let batches = session
+        .sql(sql)
+        .await
+        .expect(sql)
+        .collect()
+        .await
+        .expect(sql);
+    batches
+        .iter()
+        .flat_map(|batch| {
+            let kinds = batch.column(0).as_string::<i32>();
+            let plans = batch.column(1).as_string::<i32>();
+            (0..batch.num_rows())
+                .map(|row| (kinds.value(row).to_string(), plans.value(row).to_string()))
+                .collect::<Vec<_>>()
+        })
+        .filter(|(kind, _)| !kind.contains("physical"))
+        .collect()
+}
+
+#[tokio::test]
+async fn a_written_cast_changes_no_read() {
+    let session = session(ZONES[1]);
+    let _warehouse = catalog(&session).await;
+    run(
+        &session,
+        "CREATE OR REPLACE TEMPORARY VIEW plain_view AS SELECT id, ts, ntz FROM ice.ns.src",
+    )
+    .await;
+    let field = |sql: &'static str| {
+        let session = &session;
+        async move {
+            let frame = session.sql(sql).await.expect(sql);
+            frame.schema().field(1).clone()
+        }
+    };
+    let column = field("SELECT id, ts AS v FROM plain_view").await;
+    assert!(!column.metadata().is_empty(), "{column:?}");
+    let stated = field("SELECT id, CAST(ts AS TIMESTAMP) AS v FROM plain_view").await;
+    assert_eq!(stated, column);
+    let unnamed = field("SELECT id, CAST(ts AS TIMESTAMP) FROM plain_view").await;
+    assert_eq!(unnamed.name(), "plain_view.ts");
+    assert_eq!(unnamed.metadata(), column.metadata());
+    let list = field(
+        "SELECT id, array_intersect(array(ns), array(CAST(ns AS TIMESTAMP))) AS v FROM \
+         ice.ns.src",
+    )
+    .await;
+    let DataType::List(element) = list.data_type() else {
+        panic!("a list: {list:?}");
+    };
+    assert_eq!(
+        element.data_type(),
+        &DataType::Timestamp(datafusion::arrow::datatypes::TimeUnit::Nanosecond, None)
+    );
+    let optimized = |rows: Vec<(String, String)>| {
+        rows.into_iter()
+            .rfind(|(kind, _)| kind == "logical_plan")
+            .map(|(_, plan)| plan)
+            .expect("an optimized plan")
+    };
+    for (stated, plain) in [
+        (
+            "SELECT max(CAST(ts AS TIMESTAMP)) AS x FROM plain_view GROUP BY id",
+            "SELECT max(ts) AS x FROM plain_view GROUP BY id",
+        ),
+        (
+            "SELECT id, CAST(ts AS TIMESTAMP) AS x FROM plain_view",
+            "SELECT id, ts AS x FROM plain_view",
+        ),
+    ] {
+        for explain in ["EXPLAIN", "EXPLAIN VERBOSE"] {
+            let shown = explained(&session, &format!("{explain} {stated}")).await;
+            assert!(
+                shown.iter().all(|(_, plan)| !plan.contains("__repark_")),
+                "{explain} {stated}: {shown:?}"
+            );
+            assert_eq!(
+                optimized(shown),
+                optimized(explained(&session, &format!("{explain} {plain}")).await),
+                "{explain} {stated}"
+            );
+        }
+    }
+    let beside = optimized(
+        explained(
+            &session,
+            "EXPLAIN SELECT id, coalesce(CAST(ns AS TIMESTAMP), ts) AS x FROM ice.ns.src",
+        )
+        .await,
+    );
+    assert!(
+        beside.contains(
+            "CAST(__repark_narrow_timestamp_ns__(ice.ns.src.ns) AS Timestamp(µs, \"UTC\"))"
+        ),
+        "{beside}"
+    );
+}
+
+#[tokio::test]
 async fn an_explain_frame_is_a_statement_and_prints_no_hidden_function() {
     let session = session(ZONES[1]);
     let _warehouse = catalog(&session).await;
@@ -319,6 +450,9 @@ async fn an_explain_frame_is_a_statement_and_prints_no_hidden_function() {
     ];
     for read in [
         "SELECT id, coalesce(ns, ts) AS v FROM ice.ns.src",
+        "SELECT id, CAST(coalesce(ns, ts) AS TIMESTAMP) AS v FROM ice.ns.src",
+        "SELECT id, CAST(v AS TIMESTAMP) AS v FROM cut_view",
+        "SELECT id, CAST(v AS TIMESTAMP) FROM (SELECT id, coalesce(ns, ts) AS v FROM ice.ns.src) q",
         "SELECT id, array_append(array(ns), ts)[0], coalesce(tzns, DATE '2001-02-03') FROM \
          ice.ns.src",
         "INSERT INTO ice.ns.src (id, ns) SELECT id, coalesce(ns, ts) FROM ice.ns.src",
@@ -343,4 +477,13 @@ async fn an_explain_frame_is_a_statement_and_prints_no_hidden_function() {
             );
         }
     }
+    let kept = explained(
+        &session,
+        "EXPLAIN VERBOSE SELECT id, CAST(v AS TIMESTAMP) AS w FROM cut_view",
+    )
+    .await;
+    assert!(
+        kept.iter().all(|(_, plan)| !plan.contains("__repark_")),
+        "{kept:?}"
+    );
 }

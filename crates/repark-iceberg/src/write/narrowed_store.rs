@@ -18,6 +18,7 @@ mod text;
 pub const NARROWED_BESIDE_NULL_UDF_NAME: &str = "__repark_narrowed_beside_null__";
 pub const NARROWED_BESIDE_VALUE_UDF_NAME: &str = "__repark_narrowed_beside_value__";
 pub const NARROW_TIMESTAMP_NS_UDF_NAME: &str = "__repark_narrow_timestamp_ns__";
+pub const WRITTEN_CAST_UDF_NAME: &str = "__repark_written_timestamp_cast__";
 const DATE_TRUNC_UDF_NAME: &str = "date_trunc";
 const TIMESTAMP_TO_DATE_UDF_NAME: &str = "__repark_timestamp_to_date__";
 const COALESCE_UDF_NAME: &str = "coalesce";
@@ -116,12 +117,7 @@ fn conformed(expr: &Expr) -> Option<&Column> {
     let source = match expr {
         Expr::Alias(alias) => return conformed(&alias.expr),
         Expr::Cast(cast) => cast.expr.as_ref(),
-        Expr::ScalarFunction(function)
-            if function.func.name() == NARROW_TIMESTAMP_NS_UDF_NAME
-                && narrowed_beside(function).is_none() =>
-        {
-            function.args.first()?
-        }
+        Expr::ScalarFunction(function) if written_cast(function) => function.args.first()?,
         _ => return None,
     };
     match source {
@@ -363,9 +359,8 @@ fn scan_lineage(scan: &TableScan, index: usize, walk: Walk<'_>) -> Option<Narrow
 }
 
 fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Option<Narrowing> {
-    let through = |branch: &Expr, nearest: Call| expr_lineage(branch, input, walk.under(nearest));
-    let opaque = |branch: &Expr| through(branch, Call::Opaque);
-    let carried = |branch: &Expr| through(branch, walk.nearest);
+    let carried = |branch: &Expr| expr_lineage(branch, input, walk);
+    let opaque = |branch: &Expr| expr_lineage(branch, input, walk.under(Call::Opaque));
     match expr {
         Expr::Alias(alias) => carried(&alias.expr),
         Expr::Column(column) => {
@@ -444,17 +439,20 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
     }
 }
 
+fn written_call(target: &DataType) -> Call {
+    match target {
+        DataType::Timestamp(unit, Some(_)) if *unit != TimeUnit::Nanosecond => Call::Timestamp,
+        DataType::Date32 => Call::Date,
+        _ => Call::Opaque,
+    }
+}
+
 fn cast_lineage(cast: &Cast, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Option<Narrowing> {
     let target = cast.field.data_type();
     if let Some(marked) = mark_of(&cast.expr) {
         return found(marked, cut_of(target), input, walk);
     }
-    let nearest = match target {
-        DataType::Timestamp(unit, Some(_)) if *unit != TimeUnit::Nanosecond => Call::Timestamp,
-        DataType::Date32 => Call::Date,
-        _ => Call::Opaque,
-    };
-    expr_lineage(&cast.expr, input, walk.under(nearest))
+    expr_lineage(&cast.expr, input, walk.under(written_call(target)))
 }
 
 fn function_lineage(
@@ -465,11 +463,12 @@ fn function_lineage(
 ) -> Option<Narrowing> {
     let through = |branch: &Expr, nearest: Call| expr_lineage(branch, input, walk.under(nearest));
     let name = function.func.name();
+    let args = function.args.as_slice();
     if let Some(marked) = mark_of(expr) {
         return found(marked, Cut::Other, input, walk);
     }
     if name == NARROW_TIMESTAMP_NS_UDF_NAME {
-        let value = function.args.first()?;
+        let value = args.first()?;
         if let Some(beside_untyped_null) = narrowed_beside(function) {
             return found((value, beside_untyped_null), Cut::Instant, input, walk);
         }
@@ -478,20 +477,24 @@ fn function_lineage(
             None => through(value, Call::Timestamp),
         };
     }
-    if SELECTING_UDF_NAMES.contains(&name) {
-        return through(function.args.first()?, Call::Opaque);
+    if name == WRITTEN_CAST_UDF_NAME {
+        return through(args.first()?, Call::Timestamp);
     }
-    if matches!(expr_type(expr, input), Ok(DataType::Boolean)) {
+    if SELECTING_UDF_NAMES.contains(&name) {
+        return through(args.first()?, Call::Opaque);
+    }
+    let kind = expr_type(expr, input);
+    if matches!(kind, Ok(DataType::Boolean)) {
         return None;
     }
     let nearest = match name {
         DATE_TRUNC_UDF_NAME => Call::Trunc,
         TIMESTAMP_TO_DATE_UDF_NAME => Call::Date,
-        name if DATE_UDF_NAMES.contains(&name) && function.args.len() == 1 => Call::Date,
+        name if DATE_UDF_NAMES.contains(&name) && args.len() == 1 => Call::Date,
         COALESCE_UDF_NAME => walk.nearest,
         _ => Call::Opaque,
     };
-    (function.args.iter()).find_map(|argument| through(argument, nearest))
+    args.iter().find_map(|value| through(value, nearest))
 }
 
 fn outer_lineage(column: &Column, walk: Walk<'_>) -> Option<Narrowing> {
@@ -527,6 +530,14 @@ fn compares(operator: Operator) -> bool {
             | Operator::RegexNotMatch
             | Operator::RegexNotIMatch
     )
+}
+
+fn written_cast(function: &ScalarFunction) -> bool {
+    match function.func.name() {
+        WRITTEN_CAST_UDF_NAME => true,
+        NARROW_TIMESTAMP_NS_UDF_NAME => narrowed_beside(function).is_none(),
+        _ => false,
+    }
 }
 
 fn narrowed_beside(kernel: &ScalarFunction) -> Option<bool> {
@@ -565,18 +576,18 @@ fn found(
     input: Option<&LogicalPlan>,
     walk: Walk<'_>,
 ) -> Option<Narrowing> {
-    let source = expr_type(value, input).ok();
-    let zoned = match source {
-        Some(DataType::Timestamp(_, zone)) => Some(zone.is_some()),
+    let zoned = match expr_type(value, input) {
+        Ok(DataType::Timestamp(_, zone)) => Some(zone.is_some()),
         _ => None,
     };
+    let idle = expr_type(value, input).is_ok_and(|kind| !nanoseconds(&kind));
     let forgiven = matches!(
         (walk.nearest, cut, zoned),
         (Call::Timestamp, Cut::Instant, Some(_))
             | (Call::Trunc, Cut::Instant, Some(true))
             | (Call::Date, Cut::Instant, Some(false))
     );
-    if forgiven {
+    if idle || forgiven {
         return expr_lineage(value, input, walk);
     }
     let element_of = match value {
@@ -589,6 +600,18 @@ fn found(
         beside_untyped_null,
         zoned: zoned.unwrap_or(false),
     })
+}
+
+fn nanoseconds(kind: &DataType) -> bool {
+    match kind {
+        DataType::Timestamp(unit, _) => *unit == TimeUnit::Nanosecond,
+        DataType::Struct(fields) => fields.iter().any(|field| nanoseconds(field.data_type())),
+        DataType::Map(field, _)
+        | DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::FixedSizeList(field, _) => nanoseconds(field.data_type()),
+        _ => false,
+    }
 }
 
 fn expr_type(expr: &Expr, input: Option<&LogicalPlan>) -> Result<DataType> {

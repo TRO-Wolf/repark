@@ -1,0 +1,1051 @@
+{
+"commit": "2c33f289",
+"reads": {
+"INSERT INTO ice.ns.micros SELECT id, coalesce(ns, ts) FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Dml: op=[Insert Into] table=[ice.ns.micros]\n  Projection: ice.ns.wide.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS v\n    Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n      TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+]
+},
+"INSERT INTO ice.ns.sink SELECT id, CAST(v AS TIMESTAMP) FROM cut_view": {
+"explain": [
+[
+"logical_plan",
+"Dml: op=[Insert Into] table=[ice.ns.sink]\n  Projection: cut_view.id AS id, cut_view.v AS v\n    SubqueryAlias: cut_view\n      TableScan: ?table? projection=[id, v]"
+]
+]
+},
+"INSERT INTO ice.ns.sink SELECT id, coalesce(CAST(ns AS TIMESTAMP), ts) FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Dml: op=[Insert Into] table=[ice.ns.sink]\n  Projection: ice.ns.wide.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS v\n    Projection: CAST(__repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS Timestamp(\u00b5s, \"UTC\")) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n      TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+]
+},
+"INSERT INTO ice.ns.sink SELECT id, coalesce(ns, ts) FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Dml: op=[Insert Into] table=[ice.ns.sink]\n  Projection: ice.ns.wide.id AS id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS v\n    Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n      TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+]
+},
+"SELECT * FROM (SELECT id, coalesce(ns, ts) FROM {s}) q": {
+"explain": [
+[
+"logical_plan",
+"SubqueryAlias: q\n  Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS coalesce(ice.ns.wide.ns,ice.ns.wide.ts)\n    Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n      TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'coalesce(ice.ns.wide.ns,ice.ns.wide.ts)': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'coalesce(ice.ns.wide.ns,ice.ns.wide.ts)': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'coalesce(ice.ns.wide.ns,ice.ns.wide.ts)': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'coalesce(ice.ns.wide.ns,ice.ns.wide.ts)': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\ncoalesce(ice.ns.wide.ns,ice.ns.wide.ts): timestamp[us, tz=UTC]"
+},
+"SELECT count(*) AS n FROM {s} a JOIN {s} b ON CAST(a.ns AS TIMESTAMP) = b.ns": {
+"explain": [
+[
+"logical_plan",
+"Projection: count(Int64(1)) AS count(*) AS n\n  Aggregate: groupBy=[[]], aggr=[[count(Int64(1))]]\n    Projection:\n      Inner Join: __repark_narrow_timestamp_ns__(a.ns) = __repark_narrow_timestamp_ns__(b.ns)\n        SubqueryAlias: a\n          TableScan: ice.ns.wide projection=[ns]\n        SubqueryAlias: b\n          TableScan: ice.ns.wide projection=[ns]"
+]
+],
+"rows": [
+"{'n': 4}"
+],
+"schema": "n: int64 not null"
+},
+"SELECT id FROM plain_view WHERE CAST(ts AS TIMESTAMP) > TIMESTAMP '2000-01-01'": {
+"explain": [
+[
+"logical_plan",
+"SubqueryAlias: plain_view\n  TableScan: ?table? projection=[id], full_filters=[?table?.ts > TimestampMicrosecond(946702800000000, Some(\"UTC\"))]"
+]
+],
+"rows": [
+"{'id': 1}",
+"{'id': 2}",
+"{'id': 3}",
+"{'id': 4}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'"
+},
+"SELECT id FROM {s} WHERE CAST(ns AS TIMESTAMP) > TIMESTAMP '2000-01-01 00:00:00'": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id\n  Filter: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) > TimestampMicrosecond(946702800000000, Some(\"UTC\"))\n    TableScan: ice.ns.wide projection=[id, ns], partial_filters=[__repark_narrow_timestamp_ns__(ice.ns.wide.ns) > TimestampMicrosecond(946702800000000, Some(\"UTC\"))]"
+]
+],
+"rows": [
+"{'id': 1}",
+"{'id': 2}",
+"{'id': 4}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'"
+},
+"SELECT id FROM {s} WHERE coalesce(ns, ts) > TIMESTAMP '2000-01-01 00:00:00'": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id\n  Filter: CASE WHEN __common_expr_3 IS NOT NULL THEN __common_expr_3 ELSE ice.ns.wide.ts END > TimestampMicrosecond(946702800000000, Some(\"UTC\"))\n    Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_3, ice.ns.wide.id, ice.ns.wide.ts\n      TableScan: ice.ns.wide projection=[id, ns, ts], partial_filters=[CASE WHEN __repark_narrow_timestamp_ns__(ice.ns.wide.ns) IS NOT NULL THEN __repark_narrow_timestamp_ns__(ice.ns.wide.ns) ELSE ice.ns.wide.ts END > TimestampMicrosecond(946702800000000, Some(\"UTC\"))]"
+]
+],
+"rows": [
+"{'id': 1}",
+"{'id': 2}",
+"{'id': 4}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'"
+},
+"SELECT id, CASE WHEN id > 3 THEN CAST(ns AS TIMESTAMP) ELSE ns END AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN ice.ns.wide.id > Int32(3) THEN __repark_narrow_timestamp_ns__(ice.ns.wide.ns) ELSE __repark_narrow_timestamp_ns__(ice.ns.wide.ns) END AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, CASE WHEN id > 3 THEN ns ELSE ts END AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN ice.ns.wide.id > Int32(3) THEN __repark_narrow_timestamp_ns__(ice.ns.wide.ns) ELSE ice.ns.wide.ts END AS v\n  TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, CAST(coalesce(ns, ts) AS STRING) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, __repark_timestamp_to_string__(CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n    TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': '2026-01-02 03:04:05.123456'}",
+"{'id': 2, 'v': '2026-03-08 03:30:00'}",
+"{'id': 3, 'v': '1969-12-31 23:59:59.999999'}",
+"{'id': 4, 'v': '2026-10-04 02:15:00'}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: string"
+},
+"SELECT id, CAST(coalesce(ns, ts) AS TIMESTAMP) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n    TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, CAST(ns AS TIMESTAMP) = ns AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, __repark_narrow_timestamp_ns__(ice.ns.wide.ns) IS NOT NULL OR Boolean(NULL) AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': True}",
+"{'id': 2, 'v': True}",
+"{'id': 3, 'v': True}",
+"{'id': 4, 'v': True}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: bool"
+},
+"SELECT id, CAST(ntz AS TIMESTAMP) AS x FROM plain_view": {
+"explain": [
+[
+"logical_plan",
+"Projection: plain_view.id, to_timestamp(plain_view.ntz) AS x\n  SubqueryAlias: plain_view\n    TableScan: ?table? projection=[id, ntz]"
+]
+],
+"rows": [
+"{'id': 1, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nx: timestamp[us, tz=UTC]"
+},
+"SELECT id, CAST(ts AS TIMESTAMP) AS x FROM (SELECT id, ts FROM {s}) q": {
+"explain": [
+[
+"logical_plan",
+"Projection: q.id, q.ts AS x\n  SubqueryAlias: q\n    TableScan: ice.ns.wide projection=[id, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nx: timestamp[us, tz=UTC]\n  -- field metadata --\n  PARQUET:field_id: '4'"
+},
+"SELECT id, CAST(ts AS TIMESTAMP) AS x FROM frame_view": {
+"explain": [
+[
+"logical_plan",
+"Projection: frame_view.id, frame_view.ts AS x\n  SubqueryAlias: frame_view\n    Projection: ice.ns.wide.id AS id, ice.ns.wide.ts AS ts\n      TableScan: ice.ns.wide projection=[id, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nx: timestamp[us, tz=UTC]\n  -- field metadata --\n  PARQUET:field_id: '4'"
+},
+"SELECT id, CAST(ts AS TIMESTAMP) AS x FROM plain_view": {
+"explain": [
+[
+"logical_plan",
+"Projection: plain_view.id, plain_view.ts AS x\n  SubqueryAlias: plain_view\n    TableScan: ?table? projection=[id, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nx: timestamp[us, tz=UTC]\n  -- field metadata --\n  PARQUET:field_id: '4'"
+},
+"SELECT id, CAST(ts AS TIMESTAMP) FROM cut_view": {
+"explain": [
+[
+"logical_plan",
+"Projection: cut_view.id, cut_view.ts AS cut_view.ts\n  SubqueryAlias: cut_view\n    TableScan: ?table? projection=[id, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'datafusion.public.cut_view.ts': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'datafusion.public.cut_view.ts': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'datafusion.public.cut_view.ts': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'datafusion.public.cut_view.ts': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\ndatafusion.public.cut_view.ts: timestamp[us, tz=UTC]\n  -- field metadata --\n  PARQUET:field_id: '4'"
+},
+"SELECT id, CAST(ts AS TIMESTAMP), CAST(ns AS TIMESTAMP) FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, ice.ns.wide.ts AS ice.ns.wide.ts, __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS ice.ns.wide.ns\n  TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'ice.ns.wide.ts': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC')), 'ice.ns.wide.ns': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'ice.ns.wide.ts': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC')), 'ice.ns.wide.ns': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'ice.ns.wide.ts': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC')), 'ice.ns.wide.ns': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'ice.ns.wide.ts': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC')), 'ice.ns.wide.ns': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nice.ns.wide.ts: timestamp[us, tz=UTC]\n  -- field metadata --\n  PARQUET:field_id: '4'\nice.ns.wide.ns: timestamp[us, tz=UTC]"
+},
+"SELECT id, CAST(tzns AS TIMESTAMP) < tzns AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, __common_expr_1 < __common_expr_1 AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, tzns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': False}",
+"{'id': 2, 'v': False}",
+"{'id': 3, 'v': False}",
+"{'id': 4, 'v': False}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: bool"
+},
+"SELECT id, CAST(v AS TIMESTAMP) AS x FROM (SELECT id, coalesce(ns, ts) AS v FROM {s}) q": {
+"explain": [
+[
+"logical_plan",
+"Projection: q.id, q.v AS x\n  SubqueryAlias: q\n    Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS v\n      Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n        TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'x': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'x': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'x': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'x': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nx: timestamp[us, tz=UTC]"
+},
+"SELECT id, CAST(v AS TIMESTAMP) FROM cut_view": {
+"explain": [
+[
+"logical_plan",
+"Projection: cut_view.id, cut_view.v AS cut_view.v\n  SubqueryAlias: cut_view\n    TableScan: ?table? projection=[id, v]"
+]
+],
+"rows": [
+"{'id': 1, 'datafusion.public.cut_view.v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'datafusion.public.cut_view.v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'datafusion.public.cut_view.v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'datafusion.public.cut_view.v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\ndatafusion.public.cut_view.v: timestamp[us, tz=UTC]"
+},
+"SELECT id, array(CAST(ns AS TIMESTAMP), ns) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, array(__common_expr_1, __common_expr_1) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': [datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC')), datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 2, 'v': [datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC')), datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 3, 'v': [datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC')), datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 4, 'v': [datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC')), datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]"
+},
+"SELECT id, array(ns, ts) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, array(__repark_narrow_timestamp_ns__(ice.ns.wide.ns), ice.ns.wide.ts) AS v\n  TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': [datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC')), datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 2, 'v': [datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC')), datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 3, 'v': [datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC')), datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 4, 'v': [datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC')), datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]"
+},
+"SELECT id, array_contains(array(ns), CAST(ns AS TIMESTAMP)) AS v FROM {s}": {
+"error": "AnalysisException: spark_ltz_timestamp_cast\ncaused by\nError during planning: Execution error: Function 'array_contains' user-defined coercion failed with: Error during planning: [DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_contains(<expr>, <expr>)\" due to data type mismatch: Input to `array_contains` should have been \"ARRAY\" followed by a value with same element type, but it",
+"explain": [
+[
+"error",
+"AnalysisException: spark_ltz_timestamp_cast\ncaused by\nError during planning: Execution error: Function 'array_contains' user-defined coercion failed with: Error during planning: [DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_contains(<expr>, <expr>)\" due to data type mismatch: Input to `array_contains` should have been \"ARRAY\" followed by a value with same element type, but it"
+]
+]
+},
+"SELECT id, array_distinct(array(ns, CAST(ns AS TIMESTAMP))) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, array_distinct(CAST(array(__common_expr_1, __common_expr_1) AS List(Timestamp(ns)))) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': [Timestamp('2026-01-02 08:04:05.123456')]}",
+"{'id': 2, 'v': [Timestamp('2026-03-08 07:30:00')]}",
+"{'id': 3, 'v': [Timestamp('1970-01-01 04:59:59.999999')]}",
+"{'id': 4, 'v': [Timestamp('2026-10-04 06:15:00')]}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: list<item: timestamp[ns]>\n  child 0, item: timestamp[ns]"
+},
+"SELECT id, array_except(array(tzns), array(CAST(tzns AS TIMESTAMP))) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, array_except(CAST(array(ice.ns.wide.tzns) AS List(Timestamp(ns, \"UTC\"))), CAST(array(__repark_narrow_timestamp_ns__(ice.ns.wide.tzns)) AS List(Timestamp(ns, \"UTC\")))) AS v\n  TableScan: ice.ns.wide projection=[id, tzns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': [Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')]}",
+"{'id': 2, 'v': [Timestamp('2026-03-08 02:30:00.000000001+0000', tz='UTC')]}",
+"{'id': 3, 'v': [Timestamp('1969-12-31 23:59:59.999999999+0000', tz='UTC')]}",
+"{'id': 4, 'v': [Timestamp('2026-10-04 02:15:00.000000001+0000', tz='UTC')]}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: list<item: timestamp[ns, tz=UTC]>\n  child 0, item: timestamp[ns, tz=UTC]"
+},
+"SELECT id, array_intersect(array(ns), array(CAST(ns AS TIMESTAMP))) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, array_intersect(CAST(array(ice.ns.wide.ns) AS List(Timestamp(ns))), CAST(array(__repark_narrow_timestamp_ns__(ice.ns.wide.ns)) AS List(Timestamp(ns)))) AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': []}",
+"{'id': 2, 'v': []}",
+"{'id': 3, 'v': []}",
+"{'id': 4, 'v': []}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: list<item: timestamp[ns]>\n  child 0, item: timestamp[ns]"
+},
+"SELECT id, array_position(array(tzns), CAST(tzns AS TIMESTAMP)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, array_position(array(ice.ns.wide.tzns), CAST(__repark_narrow_timestamp_ns__(ice.ns.wide.tzns) AS Timestamp(ns, \"UTC\"))) AS v\n  TableScan: ice.ns.wide projection=[id, tzns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': 0}",
+"{'id': 2, 'v': 0}",
+"{'id': 3, 'v': 0}",
+"{'id': 4, 'v': 0}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: int64"
+},
+"SELECT id, array_remove(array(ns), CAST(ns AS TIMESTAMP)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, array_remove(CAST(CAST(array(ice.ns.wide.ns) AS List(Timestamp(ns))) AS List(Timestamp(\u00b5s, \"UTC\"))), __repark_narrow_timestamp_ns__(ice.ns.wide.ns)) AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': [datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 2, 'v': [datetime.datetime(2026, 3, 8, 2, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 3, 'v': [datetime.datetime(1970, 1, 1, 0, 0, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 4, 'v': [datetime.datetime(2026, 10, 4, 2, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: list<item: timestamp[us, tz=UTC]> not null\n  child 0, item: timestamp[us, tz=UTC]"
+},
+"SELECT id, array_union(array(ns), array(CAST(ns AS TIMESTAMP))) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, array_union(CAST(array(ice.ns.wide.ns) AS List(Timestamp(ns))), CAST(array(__repark_narrow_timestamp_ns__(ice.ns.wide.ns)) AS List(Timestamp(ns)))) AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': [Timestamp('2026-01-02 03:04:05.123456789'), Timestamp('2026-01-02 08:04:05.123456')]}",
+"{'id': 2, 'v': [Timestamp('2026-03-08 02:30:00.000000001'), Timestamp('2026-03-08 07:30:00')]}",
+"{'id': 3, 'v': [Timestamp('1969-12-31 23:59:59.999999999'), Timestamp('1970-01-01 04:59:59.999999')]}",
+"{'id': 4, 'v': [Timestamp('2026-10-04 02:15:00.000000001'), Timestamp('2026-10-04 06:15:00')]}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: list<item: timestamp[ns]>\n  child 0, item: timestamp[ns]"
+},
+"SELECT id, arrays_overlap(array(ns), array(CAST(ns AS TIMESTAMP))) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, arrays_overlap(array(ice.ns.wide.ns), array(__repark_narrow_timestamp_ns__(ice.ns.wide.ns))) AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': False}",
+"{'id': 2, 'v': False}",
+"{'id': 3, 'v': False}",
+"{'id': 4, 'v': False}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: bool"
+},
+"SELECT id, coalesce(CAST(ns AS TIMESTAMP), ns) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE __common_expr_1 END AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(CAST(ns AS TIMESTAMP), ts) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS v\n  Projection: CAST(__repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS Timestamp(\u00b5s, \"UTC\")) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n    TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(CAST(ts AS TIMESTAMP), ts) AS x FROM plain_view": {
+"explain": [
+[
+"logical_plan",
+"Projection: plain_view.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE plain_view.ts END AS x\n  Projection: CAST(plain_view.ts AS Timestamp(\u00b5s, \"UTC\")) AS __common_expr_1, plain_view.id, plain_view.ts\n    SubqueryAlias: plain_view\n      TableScan: ?table? projection=[id, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nx: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(TRY_CAST(ns AS TIMESTAMP), ts) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS v\n  Projection: __repark_narrow_timestamp_ns__(TRY_CAST(ice.ns.wide.ns AS Timestamp(ns))) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n    TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(TRY_CAST(tzns AS TIMESTAMP), ts) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS v\n  Projection: __repark_narrow_timestamp_ns__(TRY_CAST(ice.ns.wide.tzns AS Timestamp(ns))) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n    TableScan: ice.ns.wide projection=[id, tzns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(array(ns), array(ts)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CAST(array(ice.ns.wide.ns) AS List(Timestamp(\u00b5s, \"UTC\"), field: 'element')) AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': [datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 2, 'v': [datetime.datetime(2026, 3, 8, 2, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 3, 'v': [datetime.datetime(1970, 1, 1, 0, 0, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 4, 'v': [datetime.datetime(2026, 10, 4, 2, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(ns, CAST(NULL AS TIMESTAMP)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE TimestampMicrosecond(NULL, Some(\"UTC\")) END AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(ns, CAST(ns AS TIMESTAMP)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE __common_expr_1 END AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(ns, NULL) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE TimestampMicrosecond(NULL, Some(\"UTC\")) END AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(ns, ts) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n    TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(tzns, CAST(NULL AS TIMESTAMP_NTZ)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE to_timestamp(__repark_cast_timestamp_ntz__(NULL)) END AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, tzns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 2, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1969, 12, 31, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 2, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, coalesce(tzns, DATE '2001-02-03') AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE TimestampMicrosecond(981176400000000, Some(\"UTC\")) END AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, tzns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 2, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1969, 12, 31, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 2, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC] not null"
+},
+"SELECT id, date_trunc('second', if(id > 0, tzns, ts)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, date_trunc(Utf8(\"second\"), CASE WHEN ice.ns.wide.id > Int32(0) THEN __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) ELSE ice.ns.wide.ts END) AS v\n  TableScan: ice.ns.wide projection=[id, tzns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 2, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1969, 12, 31, 23, 59, 59, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 2, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, datediff(ns, CAST(ns AS TIMESTAMP)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CAST(__repark_timestamp_to_date__(ice.ns.wide.ns) - __repark_timestamp_to_date__(__repark_narrow_timestamp_ns__(ice.ns.wide.ns)) AS Int32) AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': 0}",
+"{'id': 2, 'v': 0}",
+"{'id': 3, 'v': 0}",
+"{'id': 4, 'v': 0}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: int32"
+},
+"SELECT id, greatest(CAST(tzns AS TIMESTAMP), tzns) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, greatest(__common_expr_1, __common_expr_1) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, tzns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 2, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1969, 12, 31, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 2, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, greatest(ns, ntz) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, greatest(CAST(ice.ns.wide.ns AS Timestamp(\u00b5s)), ice.ns.wide.ntz) AS v\n  TableScan: ice.ns.wide projection=[id, ns, ntz]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 2, 30)}",
+"{'id': 3, 'v': datetime.datetime(2001, 2, 3, 4, 5, 6, 654321)}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 2, 15)}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us]"
+},
+"SELECT id, if(id > 2, tzns, NULL) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN ice.ns.wide.id > Int32(2) THEN __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) ELSE TimestampMicrosecond(NULL, Some(\"UTC\")) END AS v\n  TableScan: ice.ns.wide projection=[id, tzns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': None}",
+"{'id': 2, 'v': None}",
+"{'id': 3, 'v': datetime.datetime(1969, 12, 31, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 2, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, if(id > 3, tzns, CAST(tzns AS TIMESTAMP)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, CASE WHEN ice.ns.wide.id > Int32(3) THEN __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) ELSE __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) END AS v\n  TableScan: ice.ns.wide projection=[id, tzns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 2, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1969, 12, 31, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 2, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, lag(ns, 1, ts) OVER (ORDER BY id) AS v FROM {s}": {
+"error": "UnsupportedOperationException: This feature is not implemented: There is only support Literal types for field at idx: 2 in Window Function",
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, lag(ice.ns.wide.ns,Int64(1),ice.ns.wide.ts) ORDER BY [ice.ns.wide.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW AS v\n  WindowAggr: windowExpr=[[lag(ice.ns.wide.ns, Int32(1), ice.ns.wide.ts) ORDER BY [ice.ns.wide.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW AS lag(ice.ns.wide.ns,Int64(1),ice.ns.wide.ts) ORDER BY [ice.ns.wide.id ASC NULLS LAST] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW]]\n    TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+]
+},
+"SELECT id, least(ns, CAST(ns AS TIMESTAMP)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, least(__common_expr_1, __common_expr_1) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, least(tzns, ts) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, least(__repark_narrow_timestamp_ns__(ice.ns.wide.tzns), ice.ns.wide.ts) AS v\n  TableScan: ice.ns.wide projection=[id, tzns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1969, 12, 31, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, map('a', ns, 'b', ts) AS v FROM {s}": {
+"error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, __repark_spark_nonnull__(map(List([a, b]), make_array(__repark_narrow_timestamp_ns__(ice.ns.wide.ns), ice.ns.wide.ts))) AS v\n  TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+]
+},
+"SELECT id, map(CAST(ns AS TIMESTAMP), 1, ns, 2) AS v FROM {s}": {
+"error": "PySparkException: Execution error: map key must be unique, duplicate key found: 1767341045123456",
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, __repark_spark_nonnull__(map(make_array(__common_expr_1, __common_expr_1), List([1, 2]))) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+]
+},
+"SELECT id, named_struct('f', coalesce(ns, ts)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, __repark_spark_nonnull__(named_struct(Utf8(\"f\"), CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END)) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n    TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': {'f': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}}",
+"{'id': 2, 'v': {'f': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}}",
+"{'id': 3, 'v': {'f': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}}",
+"{'id': 4, 'v': {'f': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: struct<f: timestamp[us, tz=UTC]> not null\n  child 0, f: timestamp[us, tz=UTC]"
+},
+"SELECT id, ns - CAST(ns AS TIMESTAMP) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, __common_expr_1 - __common_expr_1 AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.timedelta(0)}",
+"{'id': 2, 'v': datetime.timedelta(0)}",
+"{'id': 3, 'v': datetime.timedelta(0)}",
+"{'id': 4, 'v': datetime.timedelta(0)}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: duration[us]"
+},
+"SELECT id, ns AS v FROM {s} UNION ALL SELECT 0, NULL": {
+"explain": [
+[
+"logical_plan",
+"Union\n  Projection: ice.ns.wide.id, __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS v\n    TableScan: ice.ns.wide projection=[id, ns]\n  Projection: Int32(0) AS id, TimestampMicrosecond(NULL, Some(\"UTC\")) AS v\n    EmptyRelation: rows=1"
+]
+],
+"rows": [
+"{'id': 0, 'v': None}",
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]\n  -- field metadata --\n  PARQUET:field_id: '2'"
+},
+"SELECT id, ns AS v FROM {s} UNION ALL SELECT id, ts FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Union\n  Projection: ice.ns.wide.id, __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS v\n    TableScan: ice.ns.wide projection=[id, ns]\n  Projection: ice.ns.wide.id, ice.ns.wide.ts AS v\n    TableScan: ice.ns.wide projection=[id, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]\n  -- field metadata --\n  PARQUET:field_id: '4'"
+},
+"SELECT id, ns BETWEEN CAST(ns AS TIMESTAMP) AND ns AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, __repark_narrow_timestamp_ns__(ice.ns.wide.ns) IS NOT NULL OR Boolean(NULL) AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': True}",
+"{'id': 2, 'v': True}",
+"{'id': 3, 'v': True}",
+"{'id': 4, 'v': True}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: bool"
+},
+"SELECT id, ns IN (CAST(ns AS TIMESTAMP)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, __repark_narrow_timestamp_ns__(ice.ns.wide.ns) IS NOT NULL OR Boolean(NULL) AS v\n  TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': True}",
+"{'id': 2, 'v': True}",
+"{'id': 3, 'v': True}",
+"{'id': 4, 'v': True}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: bool"
+},
+"SELECT id, nullif(CAST(tzns AS TIMESTAMP), tzns) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, nullif(__common_expr_1, __common_expr_1) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, tzns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': None}",
+"{'id': 2, 'v': None}",
+"{'id': 3, 'v': None}",
+"{'id': 4, 'v': None}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, nullif(ns, CAST(ns AS TIMESTAMP)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, nullif(__common_expr_1, __common_expr_1) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': None}",
+"{'id': 2, 'v': None}",
+"{'id': 3, 'v': None}",
+"{'id': 4, 'v': None}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, nullif(ns, ts) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, nullif(__repark_narrow_timestamp_ns__(ice.ns.wide.ns), ice.ns.wide.ts) AS v\n  TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+},
+"SELECT id, transform(array(ns), x -> coalesce(x, ts)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, transform(<generated>rray_field__(array(ice.ns.wide.ns)), (x) -> CASE WHEN __repark_narrow_timestamp_ns__(x) IS NOT NULL THEN __repark_narrow_timestamp_ns__(x) ELSE ice.ns.wide.ts END) AS v\n  TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': [datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 2, 'v': [datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 3, 'v': [datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}",
+"{'id': 4, 'v': [datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: list<item: timestamp[us, tz=UTC]> not null\n  child 0, item: timestamp[us, tz=UTC]"
+},
+"SELECT id, typeof(array(CAST(ns AS TIMESTAMP), ns)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, typeof(array(__common_expr_1, __common_expr_1)) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id\n    TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': 'array<timestamp>'}",
+"{'id': 2, 'v': 'array<timestamp>'}",
+"{'id': 3, 'v': 'array<timestamp>'}",
+"{'id': 4, 'v': 'array<timestamp>'}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: string"
+},
+"SELECT id, typeof(coalesce(ns, ts)) AS v FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: ice.ns.wide.id, typeof(CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END) AS v\n  Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.ts\n    TableScan: ice.ns.wide projection=[id, ns, ts]"
+]
+],
+"rows": [
+"{'id': 1, 'v': 'timestamp'}",
+"{'id': 2, 'v': 'timestamp'}",
+"{'id': 3, 'v': 'timestamp'}",
+"{'id': 4, 'v': 'timestamp'}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: string"
+},
+"SELECT id, tzns AS v FROM {s} UNION ALL SELECT 1, DATE '2001-02-03'": {
+"explain": [
+[
+"logical_plan",
+"Union\n  Projection: ice.ns.wide.id, __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) AS v\n    TableScan: ice.ns.wide projection=[id, tzns]\n  Projection: Int32(1) AS id, TimestampMicrosecond(981176400000000, Some(\"UTC\")) AS v\n    EmptyRelation: rows=1"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2001, 2, 3, 5, 0, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 2, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1969, 12, 31, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 2, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]\n  -- field metadata --\n  PARQUET:field_id: '3'"
+},
+"SELECT id, v FROM (SELECT id, CAST(ns AS TIMESTAMP) AS v FROM {s} UNION ALL SELECT id, ns FROM {s}) q": {
+"explain": [
+[
+"logical_plan",
+"SubqueryAlias: q\n  Union\n    Projection: ice.ns.wide.id, __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS v\n      TableScan: ice.ns.wide projection=[id, ns]\n    Projection: ice.ns.wide.id, __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS v\n      TableScan: ice.ns.wide projection=[id, ns]"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]\n  -- field metadata --\n  PARQUET:field_id: '2'"
+},
+"SELECT max(CAST(ts AS TIMESTAMP)) AS x FROM plain_view GROUP BY id": {
+"explain": [
+[
+"logical_plan",
+"Projection: max(plain_view.ts) AS x\n  Aggregate: groupBy=[[plain_view.id]], aggr=[[max(plain_view.ts)]]\n    SubqueryAlias: plain_view\n      TableScan: ?table? projection=[id, ts]"
+]
+],
+"rows": [
+"{'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'x': datetime.datetime(2001, 2, 3, 9, 5, 6, 654321, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "x: timestamp[us, tz=UTC]"
+},
+"SELECT max(coalesce(ns, ts)) AS a, min(CASE WHEN id > 1 THEN tzns ELSE ts END) AS b FROM {s}": {
+"explain": [
+[
+"logical_plan",
+"Projection: max(coalesce(ice.ns.wide.ns,ice.ns.wide.ts)) AS a, min(CASE WHEN ice.ns.wide.id > Int64(1) THEN ice.ns.wide.tzns ELSE ice.ns.wide.ts END) AS b\n  Aggregate: groupBy=[[]], aggr=[[max(CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE ice.ns.wide.ts END) AS max(coalesce(ice.ns.wide.ns,ice.ns.wide.ts)), min(CASE WHEN ice.ns.wide.id > Int32(1) THEN __repark_narrow_timestamp_ns__(ice.ns.wide.tzns) ELSE ice.ns.wide.ts END) AS min(CASE WHEN ice.ns.wide.id > Int64(1) THEN ice.ns.wide.tzns ELSE ice.ns.wide.ts END)]]\n    Projection: __repark_narrow_timestamp_ns__(ice.ns.wide.ns) AS __common_expr_1, ice.ns.wide.id, ice.ns.wide.tzns, ice.ns.wide.ts\n      TableScan: ice.ns.wide projection=[id, ns, tzns, ts]"
+]
+],
+"rows": [
+"{'a': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC')), 'b': datetime.datetime(1969, 12, 31, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "a: timestamp[us, tz=UTC]\nb: timestamp[us, tz=UTC]"
+},
+"SELECT o.id, l.v FROM {s} o, LATERAL (SELECT coalesce(o.ns, CAST(NULL AS TIMESTAMP)) AS v) l": {
+"explain": [
+[
+"logical_plan",
+"Projection: o.id, CASE WHEN __common_expr_1 IS NOT NULL THEN __common_expr_1 ELSE TimestampMicrosecond(NULL, Some(\"UTC\")) END AS v\n  Projection: __repark_narrow_timestamp_ns__(o.ns) AS __common_expr_1, o.id\n    Cross Join:\n      SubqueryAlias: o\n        TableScan: ice.ns.wide projection=[id, ns]\n      SubqueryAlias: l\n        EmptyRelation: rows=1"
+]
+],
+"rows": [
+"{'id': 1, 'v': datetime.datetime(2026, 1, 2, 8, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 2, 'v': datetime.datetime(2026, 3, 8, 7, 30, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 3, 'v': datetime.datetime(1970, 1, 1, 4, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}",
+"{'id': 4, 'v': datetime.datetime(2026, 10, 4, 6, 15, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}"
+],
+"schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nv: timestamp[us, tz=UTC]"
+}
+},
+"zone": "America/New_York"
+}

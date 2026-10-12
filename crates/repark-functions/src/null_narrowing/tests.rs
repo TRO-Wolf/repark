@@ -417,20 +417,33 @@ fn all_marks(plan: &LogicalPlan) -> Vec<String> {
 fn a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion() {
     let schema = wide();
     for source in ["c", "z"] {
-        let below = coalesce(vec![cast(col(source), nanos()), col("m")]);
-        let out = before_coercion(below, &schema).unwrap().data;
-        assert_eq!(
-            out,
-            coalesce(vec![written(col(source)), col("m")]),
-            "{source}"
-        );
-        let beside_null = coalesce(vec![cast(col(source), nanos()), untyped()]);
-        let out = before_coercion(beside_null, &schema).unwrap().data;
-        assert_eq!(
-            out,
-            coalesce(vec![written(col(source)), untyped()]),
-            "{source}"
-        );
+        for spelled in [cast] {
+            let below = coalesce(vec![spelled(col(source), nanos()), col("m")]);
+            let out = before_coercion(below.clone(), &schema).unwrap().data;
+            assert_eq!(
+                out,
+                coalesce(vec![signed(spelled(col(source), nanos())), col("m")]),
+                "{source}"
+            );
+            assert_ne!(out, below, "{source}");
+            assert_eq!(out.to_string(), below.to_string());
+            assert_eq!(
+                out.schema_name().to_string(),
+                below.schema_name().to_string()
+            );
+            assert_eq!(
+                out.to_field(&schema).unwrap(),
+                below.to_field(&schema).unwrap()
+            );
+            assert!(!before_coercion(out, &schema).unwrap().transformed);
+            let beside_null = coalesce(vec![spelled(col(source), nanos()), untyped()]);
+            let out = before_coercion(beside_null, &schema).unwrap().data;
+            assert_eq!(
+                out,
+                coalesce(vec![signed(spelled(col(source), nanos())), untyped()]),
+                "{source}"
+            );
+        }
     }
     for kept in [
         cast(col("c"), nanos()),
@@ -446,6 +459,39 @@ fn a_cast_to_the_sql_timestamp_type_below_the_root_is_read_before_coercion() {
     }
     let beside = coalesce(vec![cast(written(col("c")), micros()), col("m")]);
     assert!(!mark_coerced_branches(beside, &schema).unwrap().transformed);
+    for spelled in [cast] {
+        for source in ["c", "z"] {
+            let coerced = coalesce(vec![
+                cast(signed(spelled(col(source), nanos())), micros()),
+                col("m"),
+            ]);
+            assert!(
+                !mark_coerced_branches(coerced.clone(), &schema)
+                    .unwrap()
+                    .transformed,
+                "{coerced}"
+            );
+            let unsigned = coalesce(vec![
+                cast(spelled(col(source), nanos()), micros()),
+                col("m"),
+            ]);
+            assert!(
+                !mark_coerced_branches(unsigned.clone(), &schema)
+                    .unwrap()
+                    .transformed,
+                "{unsigned}"
+            );
+        }
+    }
+    let wire = |zoned: Expr| coalesce(vec![zoned, cast(col("d"), nanos())]);
+    let inserted = wire(cast(col("z"), nanos()));
+    assert!(
+        mark_coerced_branches(inserted, &schema)
+            .unwrap()
+            .transformed
+    );
+    let stated = wire(signed(cast(col("z"), nanos())));
+    assert!(!mark_coerced_branches(stated, &schema).unwrap().transformed);
 }
 
 #[test]
@@ -669,9 +715,25 @@ fn a_written_cast_over_a_microsecond_column_is_kept_only_above_a_mark() {
         outer.expr[0].clone()
     };
     let kept = above(coalesce(vec![cast(col("c"), micros()), col("m")]));
-    assert_eq!(kept, written(col("v")).alias("w"));
+    assert_eq!(kept, written_cast(col("v")).alias("w"));
+    assert!(is_written_cast(&written_cast(col("v"))));
+    assert!(!holds_mark(&written_cast(col("v"))));
     let dropped = above(col("m"));
     assert_eq!(dropped, col("v").alias("w"));
+    let naive = Marks::of(&scan().build().unwrap(), &schema(), false);
+    let stated = cast(marked(col("m"), false), nanos());
+    assert!(
+        !naive
+            .keep_written_cast(stated.clone(), &schema())
+            .transformed
+    );
+    let instants = Marks::of(&scan().build().unwrap(), &schema(), true);
+    assert_eq!(
+        instants.keep_written_cast(stated, &schema()).data,
+        written_cast(marked(col("m"), false))
+    );
+    let wider = cast(marked(col("c"), false), nanos());
+    assert!(!instants.keep_written_cast(wider, &schema()).transformed);
 }
 
 #[test]
@@ -744,7 +806,7 @@ fn a_pending_timestamp_literal_and_a_stale_union_type_are_not_nanoseconds() {
         inputs: vec![Arc::new(typed), branch()],
         schema: Arc::clone(declared.schema()),
     });
-    let settled = Marks::of(&outer, &DFSchema::empty())
+    let settled = Marks::of(&outer, &DFSchema::empty(), true)
         .settle_plan(outer)
         .unwrap()
         .data;
@@ -863,15 +925,30 @@ fn the_mark_returns_the_field_of_its_argument() {
         let named = marked(coalesce(vec![col("c"), col("m")]), untyped_null);
         assert_eq!(named.schema_name().to_string(), "coalesce(c,m)");
     }
-    let idle = written(col("m"));
-    let Expr::ScalarFunction(function) = &idle else {
-        panic!("a function");
-    };
+    let kept = written_cast_udf()
+        .return_field_from_args(ReturnFieldArgs {
+            arg_fields: &[Arc::clone(&argument)],
+            scalar_arguments: &[None],
+        })
+        .unwrap();
+    assert_eq!(kept, argument);
+    let stated = written_cast(col("m"));
+    assert_eq!(stated.schema_name().to_string(), "m");
     let context = SimplifyContext::builder()
         .with_schema(Arc::new(schema()))
         .build();
-    let simplified = function.func.simplify(vec![col("m")], &context).unwrap();
+    let simplified = written_cast_udf()
+        .simplify(vec![col("m")], &context)
+        .unwrap();
     assert!(matches!(simplified, ExprSimplifyResult::Simplified(expr) if expr == col("m")));
-    let narrowing = function.func.simplify(vec![col("c")], &context).unwrap();
-    assert!(matches!(narrowing, ExprSimplifyResult::Original(_)));
+    let Expr::ScalarFunction(kernel) = written(col("m")) else {
+        panic!("a function");
+    };
+    for value in ["m", "c"] {
+        let narrowing = kernel.func.simplify(vec![col(value)], &context).unwrap();
+        assert!(
+            matches!(narrowing, ExprSimplifyResult::Original(_)),
+            "{value}"
+        );
+    }
 }

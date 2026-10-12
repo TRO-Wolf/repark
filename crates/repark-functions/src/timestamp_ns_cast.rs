@@ -523,14 +523,7 @@ impl ScalarUDFImpl for NarrowTimestampNs {
         }
     }
 
-    fn simplify(&self, mut args: Vec<Expr>, info: &SimplifyContext) -> Result<ExprSimplifyResult> {
-        let narrowed = |value: &Expr| {
-            info.get_data_type(value)
-                .is_ok_and(|kind| kind == narrowed_type())
-        };
-        if args.len() == 1 && narrowed(&args[0]) {
-            return Ok(ExprSimplifyResult::Simplified(args.remove(0)));
-        }
+    fn simplify(&self, args: Vec<Expr>, _info: &SimplifyContext) -> Result<ExprSimplifyResult> {
         if !self.aliases.is_empty() {
             let written = ScalarFunction::new_udf(Arc::clone(&NARROW_TIMESTAMP_NS), args);
             return Ok(ExprSimplifyResult::Simplified(Expr::ScalarFunction(

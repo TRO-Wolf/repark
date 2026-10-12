@@ -18,11 +18,11 @@ use super::{
     refuse_narrowed_ns_inserts, refuse_narrowed_ns_writes,
 };
 
-fn instant() -> DataType {
+pub(super) fn instant() -> DataType {
     DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC")))
 }
 
-fn nanos() -> DataType {
+pub(super) fn nanos() -> DataType {
     DataType::Timestamp(TimeUnit::Nanosecond, None)
 }
 
@@ -30,7 +30,7 @@ fn zoned_nanos() -> DataType {
     DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC")))
 }
 
-fn identity(name: &str, input: DataType, output: DataType, value: Expr) -> Expr {
+pub(super) fn identity(name: &str, input: DataType, output: DataType, value: Expr) -> Expr {
     create_udf(
         name,
         vec![input],
@@ -41,7 +41,7 @@ fn identity(name: &str, input: DataType, output: DataType, value: Expr) -> Expr 
     .call(vec![value])
 }
 
-fn cast(value: Expr, target: DataType) -> Expr {
+pub(super) fn cast(value: Expr, target: DataType) -> Expr {
     Expr::Cast(Cast::new(Box::new(value), target))
 }
 
@@ -52,7 +52,7 @@ fn absent() -> Expr {
     )
 }
 
-fn cut(column: &str, name: &str) -> Expr {
+pub(super) fn cut(column: &str, name: &str) -> Expr {
     let kind = if column == "z" {
         zoned_nanos()
     } else {
@@ -61,11 +61,11 @@ fn cut(column: &str, name: &str) -> Expr {
     cast(identity(name, kind.clone(), kind, col(column)), instant())
 }
 
-fn narrowed(column: &str) -> Expr {
+pub(super) fn narrowed(column: &str) -> Expr {
     coalesce(vec![cut(column, NARROWED_BESIDE_NULL_UDF_NAME), absent()])
 }
 
-fn session() -> SessionContext {
+pub(super) fn session() -> SessionContext {
     let ctx = SessionContext::new();
     let schema = Schema::new(vec![
         Field::new("id", DataType::Int32, true),
@@ -78,7 +78,7 @@ fn session() -> SessionContext {
     ctx
 }
 
-async fn plan_of(ctx: &SessionContext, value: Expr) -> LogicalPlan {
+pub(super) async fn plan_of(ctx: &SessionContext, value: Expr) -> LogicalPlan {
     ctx.table("src")
         .await
         .unwrap()
@@ -87,7 +87,7 @@ async fn plan_of(ctx: &SessionContext, value: Expr) -> LogicalPlan {
         .into_unoptimized_plan()
 }
 
-fn listed(value: Expr, kind: DataType) -> Expr {
+pub(super) fn listed(value: Expr, kind: DataType) -> Expr {
     let list = |element: DataType| DataType::List(Arc::new(Field::new("item", element, true)));
     identity("make_array", kind.clone(), list(kind), value)
 }
