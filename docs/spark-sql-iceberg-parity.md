@@ -3588,6 +3588,30 @@ still open is `isModifiable`.
   defect. This unit does not change the doors. R-011 records them as still an
   error, equal to main. Ledger ICE-NTZ-NESTED-WALL-1 C-005 stays open.
 
+### ICE-TSNS-SQL-1-R-020 — OPEN (measured 2026-10-11): an NTZ wall literal into a nested `TIMESTAMP` leaf stays a wall on most doors
+
+- **repark** — `ltz_nested`, source `ntz_literal`, America/New_York and
+  Asia/Kolkata, 88 step-0 cells. 56 store the bare wall `1767323045123456`
+  (every INSERT and DataFrame door, MERGE INSERT, whole-struct MERGE UPDATE,
+  `UPDATE SET *`, and whole-struct `UPDATE … WHERE`). 16 field-assignment cells
+  store Spark's localized instant (`merge_update_field`,
+  `merge_update_field_literal`, `update_field_where`, `update_field_col_where`,
+  both modes). 16 `UPDATE` with no `WHERE` cells still error. The leaf table's
+  mirror row (zoned target, microsecond `TIMESTAMP_NTZ` source) stays
+  `wrap: false`. A struct inside a struct is reached at depth 2. A struct
+  under a list or a map is not.
+- **Apache Spark** — stores the wall interpreted in the session zone on every
+  door it answers. `insert_select`: America/New_York `1767341045123456`,
+  Asia/Kolkata `1767303245123456`.
+  *(oracle: [spark-4.1.2.jsonl](../task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl).)*
+- **Pin** — `a_struct_inside_a_struct_wraps_only_the_inner_instant_leaf` and
+  `both_emitters_select_the_same_paths` hold depth 2 (`i.v`).
+  `test_a_struct_under_a_list_keeps_the_utc_wall` holds the list hole.
+  `a_list_or_map_is_left_as_it_is` holds that neither emitter enters a list or
+  a map. The mirror wrap row is not added.
+- **Rationale** — OPEN, dated 2026-10-11. A later unit sets the mirror row.
+  R-011 stays open for `array<struct>` and `map<_, struct>`.
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers

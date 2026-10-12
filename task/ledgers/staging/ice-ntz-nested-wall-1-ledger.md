@@ -349,3 +349,13 @@ The literal cells stay as on main. A column and a literal of the same instant
 therefore still give two answers on whole-struct `MERGE UPDATE` and on
 `UPDATE … WHERE`: the column stores the session wall and the literal stores
 `1767323045123456`.
+
+## 12. Depth, the mirror, and list or map (R5)
+
+Depth 2 is pinned on both emitters: `a_struct_inside_a_struct_wraps_only_the_inner_instant_leaf`
+emits `i.v`, and `both_emitters_select_the_same_paths` reads `i.v` from the
+expression and from the SQL. The mirror row in `LEAF_ROWS` stays `wrap: false`.
+Registry row R-020 records the 88 step-0 cells. A struct under a list stores
+the UTC wall (`test_a_struct_under_a_list_keeps_the_utc_wall`). A map of
+structs panics in Arrow's list cast on insert; the walk does not enter it
+(`a_list_or_map_is_left_as_it_is`). R-011 stays open for both.

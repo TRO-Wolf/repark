@@ -3205,7 +3205,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   raise main's error class and first line. A Spark `MERGE` `WHEN MATCHED`
   update and a `WHEN NOT MATCHED BY SOURCE` update of a `TIMESTAMP` column
   store the session wall; `nested_assign` wraps before
-  `store_assignment_then_sql`. Values are `toArrow()` cast to int64, and the
+  `store_assignment_then_sql`. A struct under a list keeps the UTC wall.
+  Values are `toArrow()` cast to int64, and the
   null pin reads the struct column itself.
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**

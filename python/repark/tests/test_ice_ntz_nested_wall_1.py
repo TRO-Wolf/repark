@@ -17,6 +17,7 @@ pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -641,5 +642,28 @@ def test_raw_error_doors_still_raise_mains_error(tmp_path: Path) -> None:
             spark.sql(f"UPDATE ice.ns.upd SET st = named_struct('v', {INSTANT}, 'n', 1)")
         assert type(caught.value).__name__ == "PySparkException"
         assert error_line(caught.value) == update_line
+    finally:
+        spark.stop()
+
+
+def test_a_struct_under_a_list_keeps_the_utc_wall(tmp_path: Path) -> None:
+    """A struct under a list stays the physical instant, which is main's cast.
+
+    The walk does not enter a list. America/New_York stores
+    ``1767323045123456``, not the session wall. A map of structs panics in
+    Arrow's list cast before a store; the walk does not enter a map either.
+    """
+    spark = open_session("America/New_York", tmp_path)
+    try:
+        write_source(spark)
+        spark.sql(
+            "CREATE TABLE ice.ns.arr (id INT, a ARRAY<STRUCT<v: TIMESTAMP_NTZ>>) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql("INSERT INTO ice.ns.arr SELECT 1, array(named_struct('v', l)) FROM ice.ns.src")
+        column = spark.sql("SELECT a AS a FROM ice.ns.arr").toArrow().column("a")
+        assert column.combine_chunks().to_pylist() == [
+            [{"v": datetime(2026, 1, 2, 3, 4, 5, 123456)}]
+        ]
     finally:
         spark.stop()
