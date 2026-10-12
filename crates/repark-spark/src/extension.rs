@@ -114,6 +114,7 @@ impl SessionExtension for SparkExtension {
             crate::normalize::join_condition::insert_join_condition_rule_before_coercion(rules)?;
         repark_functions::timestamp_ns_coercion::SparkTimestampNsCoercion::wrap_first_type_coercion(
             rules,
+            Arc::new(|line: &str| tracing::debug!("{line}")),
         )
     }
 

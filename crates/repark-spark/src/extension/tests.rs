@@ -139,6 +139,22 @@ fn configured_first_coercion_counts_open_analyses_and_ignores_closed_ones() {
     assert_eq!(fallback_count() - before_fallback, 0);
 }
 
+#[test]
+fn configured_wrapper_carries_a_fallback_sink() {
+    let rules = SparkExtension
+        .configure_analyzer_rules(Analyzer::new().rules)
+        .expect("default analyzer contains type_coercion");
+    let coercion = rules
+        .iter()
+        .find(|rule| rule.name() == "type_coercion")
+        .expect("the wrapped first coercion keeps its name");
+    let text = format!("{coercion:?}");
+    assert!(
+        text.contains("has_fallback_sink: true"),
+        "sink missing in {text}"
+    );
+}
+
 /// The hook's second argument, spelled once: the resolved zone `build()` hands `configure`.
 fn build_conf<'a>(
     conf: &'a HashMap<String, String>,

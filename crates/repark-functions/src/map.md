@@ -1461,3 +1461,17 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   the counters move onto the session metrics facade when one exists. `tests.rs` pins the
   truth table, the once-per-analysis count, the reset and the line shape.
   pins: ice-tsns-coercion-1/C-005
+- `timestamp_ns_coercion_sites.rs` —
+  **ICE-TSNS-COERCION-1 slice 1 round 2 (2026-10-12):** the open-gate site rewriter, split
+  out so the parent keeps the wrapper, the gate walk, the fallback check and the sink
+  plumbing. `rewrite_sites` walks every expression of every node: scalar, aggregate and
+  window calls, `CASE` result branches, `UNION` columns (a projection wraps the NULL
+  branch) and `VALUES` rows. A site whose operands are all one-zone `Timestamp(ns, _)` or
+  untyped NULL, with at least one of each, gets each NULL wrapped in the matching cast
+  kernel; the `if` condition arg is skipped, `nvl`/`ifnull` stay main's, comparisons and
+  join keys are never sites. The parent falls back (counter plus sink line) on any written
+  Timestamp cast, live Timestamp literal or reader call (`to_timestamp`,
+  `to_timestamp_ntz`, `to_timestamp_ltz`, `timestamp`), and on any rewrite error. The sink
+  is an `Arc<dyn Fn(&str)>` set by the seat, which owns the only `tracing` call, because
+  `repark-functions` cannot reach a logger without a manifest edit.
+  pins: ice-tsns-coercion-1/C-005

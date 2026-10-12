@@ -62,6 +62,10 @@ function-registry + analyzer-rule installation + the composed
   pre-coercion seat, `join_condition_refusals` between `spark_integral_literal` and
   `type_coercion`, and the filter passes it through.
   pins: cross-join-condition-1/C-008
+  **ICE-TSNS-COERCION-1 slice 1 round 2 (2026-10-12):**
+  `configured_wrapper_carries_a_fallback_sink` pins the seat wiring the `tracing::debug!`
+  fallback sink into the wrapped first `type_coercion` rule.
+  pins: ice-tsns-coercion-1/C-005
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `apply_default_catalog(session, name)`
   (registry and carrier, a no-op once `USE` pinned the current catalog),
   `with_configured_defaults` (the build carrier from `spark.sql.defaultCatalog`),
