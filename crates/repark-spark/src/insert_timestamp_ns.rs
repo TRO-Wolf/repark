@@ -198,7 +198,22 @@ fn emit_struct(expr: Expr, members: &[NtzMember], target: &DataType) -> Expr {
         };
         args.push(built);
     }
-    named_struct(args)
+    guarded_struct(expr, named_struct(args), target)
+}
+
+fn guarded_struct(source: Expr, built: Expr, target: &DataType) -> Expr {
+    let null_struct = Expr::Cast(Cast::new(
+        Box::new(lit(datafusion::common::ScalarValue::Null)),
+        target.clone(),
+    ));
+    Expr::Case(Case {
+        expr: None,
+        when_then_expr: vec![(
+            Box::new(Expr::IsNull(Box::new(source))),
+            Box::new(null_struct),
+        )],
+        else_expr: Some(Box::new(built)),
+    })
 }
 
 fn kept(expr: Expr) -> Expr {
@@ -634,5 +649,39 @@ mod tests {
         let text = wrapped.to_string();
         assert!(text.contains("__repark_cast_timestamp_ntz__"), "{text}");
         assert_ne!(wrapped, expr);
+    }
+
+    #[test]
+    fn a_rebuilt_struct_guards_null_at_every_depth() {
+        let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let source = struct_type(&[("v", instant()), ("n", DataType::Int32)]);
+        let schema = Arc::new(
+            DFSchema::try_from(Schema::new(vec![Field::new("st", source, true)])).expect("schema"),
+        );
+        let expr = col("st")
+            .cast_to(&target, schema.as_ref())
+            .expect("cast")
+            .alias("st");
+        let text = wrap_nested_ntz(&expr, &target, schema.as_ref()).to_string();
+        assert_eq!(text.matches("IS NULL").count(), 1, "{text}");
+
+        let inner = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let target2 = struct_type(&[("i", inner), ("n", DataType::Int32)]);
+        let source2 = struct_type(&[
+            (
+                "i",
+                struct_type(&[("v", instant()), ("n", DataType::Int32)]),
+            ),
+            ("n", DataType::Int32),
+        ]);
+        let schema2 = Arc::new(
+            DFSchema::try_from(Schema::new(vec![Field::new("st", source2, true)])).expect("schema"),
+        );
+        let expr2 = col("st")
+            .cast_to(&target2, schema2.as_ref())
+            .expect("cast")
+            .alias("st");
+        let text2 = wrap_nested_ntz(&expr2, &target2, schema2.as_ref()).to_string();
+        assert_eq!(text2.matches("IS NULL").count(), 2, "{text2}");
     }
 }

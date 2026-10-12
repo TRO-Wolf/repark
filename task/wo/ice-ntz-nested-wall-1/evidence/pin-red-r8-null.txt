@@ -1,0 +1,33 @@
+Red pin for the null-struct guard, on the emitter before the guard (HEAD 3ee63dcb).
+The installed module has no null guard in emit_struct.
+
+Main does not rebuild a struct (origin/main insert_timestamp_ns.rs has no emit_struct),
+so INSERT SELECT and DataFrame append copy a null column and store null.
+The pre-fix emitter stores a non-null struct of null members.
+
+PYTEST_EXIT:1
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________________ test_a_null_struct_stays_null _________________________
+python/repark/tests/test_ice_ntz_nested_wall_1.py:380: in test_a_null_struct_stays_null
+    assert struct_values(spark, selected) == [None], "select null struct"
+E   AssertionError: select null struct
+E   assert [{'v': None, 'n': None}] == [None]
+E
+E     At index 0 diff: {'v': None, 'n': None} != None
+E
+E     Full diff:
+E       [
+E     -     None,
+E     +     {
+E     +         'v': None,
+E     +         'n': None,
+E     +     },
+E       ]
+=========================== short test summary info ============================
+FAILED python/repark/tests/test_ice_ntz_nested_wall_1.py::test_a_null_struct_stays_null
+1 failed in 0.48s
+
+The source rows were null before the copy (those asserts passed). Pytest stopped
+at the first door, INSERT … SELECT of the null struct. Append and the depth-2
+inner null use the same emitter and are pinned on the green run.

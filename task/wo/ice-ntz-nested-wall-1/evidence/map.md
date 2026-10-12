@@ -11,6 +11,8 @@ from `toArrow()` cast to int64.
 - [repark-head.jsonl](repark-head.jsonl) — RePark at the nested-wall head, the
   same cells.
 - [summary-head.md](summary-head.md) — the five counts from `probe.py summary-head`.
+- [pin-red-r8-null.txt](pin-red-r8-null.txt) — the null-struct pin before the guard.
+  `INSERT … SELECT` stored a struct of null members.
 - [df-before.txt](df-before.txt) — free space on the build disk before the run.
 
 Up: [../map.md](../map.md).

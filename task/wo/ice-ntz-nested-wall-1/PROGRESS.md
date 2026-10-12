@@ -56,3 +56,11 @@ refuse. C-004 is proven. Gates: iceberg lib 1009 passed, spark lib 2696
 passed, the three wall-door tests passed, pytest 569 passed, clippy 0,
 panic-ban 0, fmt 0, map 0, ledger grammar 0, file size 0, comment ban 0,
 maturin 0.
+
+**Round 6, R8.1 null struct:** `emit_struct` guards null at every depth, the
+same `CASE WHEN source IS NULL` shape `emit_sql` already had. Red on the
+parent emitter: `INSERT … SELECT` of a null struct stored
+`{'v': None, 'n': None}` (`evidence/pin-red-r8-null.txt`). Main copies the
+column, so the stored value is null. Green on the commit: that door and
+DataFrame `append`, plus a null inner struct at depth 2 on both doors, read
+back as null.

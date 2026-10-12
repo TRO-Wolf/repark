@@ -322,6 +322,81 @@ def append_column(spark: Any, table: str) -> None:
     frame.writeTo(table).append()
 
 
+def struct_values(spark: Any, table: str) -> list[Any]:
+    """Return the ``st`` column as Python values from ``toArrow``."""
+    arrow = spark.sql(f"SELECT st AS v FROM {table}").toArrow()
+    return arrow.column("v").to_pylist()
+
+
+def write_null_sources(spark: Any) -> None:
+    """Write a null struct and a null inner struct at depth 2.
+
+    The source leaves are ``TIMESTAMP``, so this write is not a nested
+    ``TIMESTAMP_NTZ`` store. Main copies these columns unchanged.
+    """
+    spark.sql(
+        "CREATE TABLE ice.ns.null_src (id INT, st STRUCT<v: TIMESTAMP, n: INT>) "
+        "USING iceberg TBLPROPERTIES ('format-version'='2')"
+    )
+    spark.sql("INSERT INTO ice.ns.null_src SELECT 1, CAST(NULL AS STRUCT<v: TIMESTAMP, n: INT>)")
+    spark.sql(
+        "CREATE TABLE ice.ns.null_inner_src ("
+        "id INT, st STRUCT<i: STRUCT<v: TIMESTAMP, n: INT>, n: INT>"
+        ") USING iceberg TBLPROPERTIES ('format-version'='2')"
+    )
+    spark.sql(
+        "INSERT INTO ice.ns.null_inner_src SELECT 1, "
+        "named_struct('i', CAST(NULL AS STRUCT<v: TIMESTAMP, n: INT>), 'n', 7)"
+    )
+
+
+def create_depth2(spark: Any, table: str) -> None:
+    """Create a v2 table whose depth-2 leaf is ``TIMESTAMP_NTZ``."""
+    spark.sql(
+        f"CREATE TABLE {table} ("
+        "id INT, st STRUCT<i: STRUCT<v: TIMESTAMP_NTZ, n: INT>, n: INT>, k INT"
+        ") USING iceberg TBLPROPERTIES ('format-version'='2')"
+    )
+
+
+def test_a_null_struct_stays_null(tmp_path: Path) -> None:
+    """A null struct and a null inner struct read back as null.
+
+    ``INSERT … SELECT`` and DataFrame ``append`` both copy the column. Main
+    stores null. The rebuilt projection must store null at every depth.
+    """
+    spark = open_session("UTC", tmp_path)
+    try:
+        write_null_sources(spark)
+        assert struct_values(spark, "ice.ns.null_src") == [None], "null source"
+        assert struct_values(spark, "ice.ns.null_inner_src") == [{"i": None, "n": 7}], (
+            "inner source"
+        )
+
+        selected = "ice.ns.null_sel"
+        create_nested(spark, selected, "TIMESTAMP_NTZ")
+        spark.sql(f"INSERT INTO {selected} SELECT id, st, 0 FROM ice.ns.null_src")
+        assert struct_values(spark, selected) == [None], "select null struct"
+
+        appended = "ice.ns.null_app"
+        create_nested(spark, appended, "TIMESTAMP_NTZ")
+        spark.sql("SELECT id, st, 0 AS k FROM ice.ns.null_src").writeTo(appended).append()
+        assert struct_values(spark, appended) == [None], "append null struct"
+
+        inner_selected = "ice.ns.inner_sel"
+        create_depth2(spark, inner_selected)
+        spark.sql(f"INSERT INTO {inner_selected} SELECT id, st, 0 FROM ice.ns.null_inner_src")
+        assert struct_values(spark, inner_selected) == [{"i": None, "n": 7}], "select null inner"
+
+        inner_appended = "ice.ns.inner_app"
+        create_depth2(spark, inner_appended)
+        frame = spark.sql("SELECT id, st, 0 AS k FROM ice.ns.null_inner_src")
+        frame.writeTo(inner_appended).append()
+        assert struct_values(spark, inner_appended) == [{"i": None, "n": 7}], "append null inner"
+    finally:
+        spark.stop()
+
+
 @pytest.mark.parametrize("zone", ZONES)
 def test_insert_analysis_stores_the_session_wall(tmp_path: Path, zone: str) -> None:
     """Plain INSERT and DataFrame append store the session wall of a column instant."""
