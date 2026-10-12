@@ -21,6 +21,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
 
 ## Contents
 
+- `nested_wall.rs` — **NTZ-STRUCT-COERCE-1 (2026-10-12):** `__repark_localize_nested_ntz__`
+  takes one struct and a path list, rewrites the selected naive microsecond leaves to
+  `Timestamp(µs, "UTC")` with `localize_wall_micros_in_zone`, and passes every other child
+  through by reference. Volatility is `Stable`, the same declaration as `to_timestamp`.
+  A path that is not in the struct is a plan error. Registered from `instant_ts::functions`.
 - `declared_refuse.rs` — FNP-15/16 parse-altitude refusals for Spark function names this
   engine will not build. Spark door and `F.expr` / `filter_sql` call `refuse_in_statement` /
   `refuse_in_sql`. FNP-15 names are unreachable; FNP-16 sketches (32) are armed as

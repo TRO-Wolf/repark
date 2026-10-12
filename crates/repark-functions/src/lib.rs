@@ -40,6 +40,7 @@ mod java_regex;
 pub mod json;
 pub mod lambda_rebind;
 pub mod merge_schema;
+pub mod nested_wall;
 pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;

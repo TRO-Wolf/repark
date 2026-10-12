@@ -45,6 +45,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         now_udf(),
         current_timestamp_udf(),
         to_timestamp_udf(),
+        crate::nested_wall::localize_nested_ntz_udf(),
         current_timezone_udf(),
         crate::timestamp_ltz_ntz::to_timestamp_ltz_udf(),
         crate::timestamp_ltz_ntz::to_timestamp_ntz_udf(),
