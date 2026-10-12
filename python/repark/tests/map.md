@@ -3196,8 +3196,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   wall. A nested `TIMESTAMP` leaf stays the instant. A null struct, and a null
   inner struct at depth 2, read back as null through `INSERT … SELECT` and
   DataFrame `append`, the same value main stores by copying the column.
-  Values are `toArrow()` cast to int64, and the null pin reads the struct
-  column itself.
+  A 20-field struct from one `uuid()` subquery stores that one draw in every
+  shared field, on `INSERT … SELECT` and DataFrame `append`, and `EXPLAIN`
+  of that INSERT has no `rand`. Values are `toArrow()` cast to int64, and
+  the null pin reads the struct column itself.
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files

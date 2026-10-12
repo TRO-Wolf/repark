@@ -38,8 +38,8 @@ works, so the attribute is gone rather than documented.
   of the parent directory map. pins: ice-tstzns-wall-1/C-003
 - `lineage.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `the_four_sites_keep_the_sql_the_walk_emitted`
   compares the SQL of the walk, `store_assignment_cast_sql`, and
-  `update_projection_sql` with the text those sites emitted before
-  `nested_micro_ntz_decision`. pins: ice-ntz-nested-wall-1/C-003
+  `update_projection_sql`. A column is read in place. The text has no `rand()`.
+  pins: ice-ntz-nested-wall-1/C-003
 - `lineage.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `update_projection_sql`
   calls `update_cast::nested_micro_ntz_wall_sql` with the source type from one
   `analyzed_types` of the SET expressions (`assignment_source_types`, before the

@@ -1,0 +1,21 @@
+Red after removing rand() / random() and binding a non-column source once.
+The barrier is not restored.
+
+Expression emitter, DataFrame append and overwritePartitions:
+
+AnalysisException: Optimizer rule 'push_down_leaf_projections' failed
+caused by
+Schema error: Schema contains duplicate qualified field name ice.ns.src.id
+
+The same rule fails a null-struct append with duplicate field ice.ns.null_src.st.
+INSERT SELECT of a 20-field scalar subquery fails the same rule with an
+ambiguous qualified and unqualified field name on __scalar_sq_1.
+
+SQL walk, whole-struct MERGE UPDATE and identity UPDATE. The source is
+named_struct(...), so the walk emits one scalar subquery:
+
+UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression ScalarSubquery(<subquery>)
+
+Unit tests of the emitted SQL and the logical plan pass: a column has no
+rand() and no bind, and a 20-field non-column is projected once. The physical
+planner rejects that plan.

@@ -149,7 +149,16 @@ pub fn nested_micro_ntz_wall_sql(
     let NtzDecision::Rebuild(members) = nested_micro_ntz_decision(source, target) else {
         return None;
     };
-    emit_sql(expr_sql, &NtzNode::Struct(members))
+    let plain = plain_column_sql(expr_sql);
+    let bound = if plain { expr_sql } else { "__repark_ntz_src" };
+    let body = emit_sql(bound, &NtzNode::Struct(members))?;
+    if plain {
+        Some(body)
+    } else {
+        Some(format!(
+            "(SELECT {body} FROM (SELECT ({expr_sql}) AS {bound}))"
+        ))
+    }
 }
 
 fn emit_sql(expr_sql: &str, node: &NtzNode) -> Option<String> {
@@ -190,8 +199,97 @@ fn emit_sql(expr_sql: &str, node: &NtzNode) -> Option<String> {
 }
 
 fn child_sql(expr_sql: &str, name: &str) -> String {
-    let kept = format!("CASE WHEN rand() < 2 THEN ({expr_sql}) ELSE ({expr_sql}) END");
-    format!("get_field(({kept}), {})", sql_string(name))
+    format!("get_field(({expr_sql}), {})", sql_string(name))
+}
+
+fn plain_column_sql(expr: &str) -> bool {
+    let mut text = expr.trim();
+    while let Some(inner) = strip_wrapping_parens(text) {
+        text = inner.trim();
+    }
+    ident_path(text)
+}
+
+fn strip_wrapping_parens(text: &str) -> Option<&str> {
+    let bytes = text.as_bytes();
+    if bytes.first() != Some(&b'(') || bytes.last() != Some(&b')') {
+        return None;
+    }
+    let mut depth = 0i32;
+    for (index, byte) in bytes.iter().enumerate() {
+        match byte {
+            b'(' => depth += 1,
+            b')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return (index + 1 == bytes.len()).then_some(&text[1..text.len() - 1]);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn ident_path(text: &str) -> bool {
+    let mut rest = text;
+    if rest.is_empty() {
+        return false;
+    }
+    loop {
+        let next = if let Some(quoted) = rest.strip_prefix('`') {
+            take_quoted(quoted)
+        } else {
+            take_bare(rest)
+        };
+        let Some(next) = next else {
+            return false;
+        };
+        rest = next;
+        if rest.is_empty() {
+            return true;
+        }
+        let Some(stripped) = rest.strip_prefix('.') else {
+            return false;
+        };
+        rest = stripped;
+        if rest.is_empty() {
+            return false;
+        }
+    }
+}
+
+fn take_quoted(text: &str) -> Option<&str> {
+    let bytes = text.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'`' {
+            if index + 1 < bytes.len() && bytes[index + 1] == b'`' {
+                index += 2;
+                continue;
+            }
+            return Some(&text[index + 1..]);
+        }
+        index += 1;
+    }
+    None
+}
+
+fn take_bare(text: &str) -> Option<&str> {
+    let mut chars = text.chars();
+    let first = chars.next()?;
+    if !(first.is_ascii_alphabetic() || first == '_') {
+        return None;
+    }
+    let mut len = first.len_utf8();
+    for ch in chars {
+        if ch.is_ascii_alphanumeric() || ch == '_' {
+            len += ch.len_utf8();
+        } else {
+            break;
+        }
+    }
+    Some(&text[len..])
 }
 
 fn sql_string(text: &str) -> String {
@@ -579,15 +677,13 @@ mod tests {
         ]);
         let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
         let sql = nested_micro_ntz_wall_sql("`st`", Some(&source), &target).expect("wraps");
-        let kept = "CASE WHEN rand() < 2 THEN (`st`) ELSE (`st`) END";
         assert_eq!(
             sql,
-            format!(
-                "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
-                 __repark_cast_timestamp_ntz__((get_field(({kept}), 'v'))), 'n', \
-                 get_field(({kept}), 'n')) END"
-            )
+            "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
+             __repark_cast_timestamp_ntz__((get_field((`st`), 'v'))), 'n', \
+             get_field((`st`), 'n')) END"
         );
+        assert!(!sql.contains("rand("), "{sql}");
     }
 
     #[test]
@@ -711,12 +807,10 @@ mod tests {
             ("n", DataType::Int32),
         ]);
         let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
-        let kept = "CASE WHEN rand() < 2 THEN (`st`) ELSE (`st`) END";
-        let expected = format!(
-            "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
-             __repark_cast_timestamp_ntz__((get_field(({kept}), 'v'))), 'n', \
-             get_field(({kept}), 'n')) END"
-        );
+        let expected = "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
+             __repark_cast_timestamp_ntz__((get_field((`st`), 'v'))), 'n', \
+             get_field((`st`), 'n')) END"
+            .to_string();
         assert_eq!(
             nested_micro_ntz_wall_sql("`st`", Some(&source), &target),
             Some(expected.clone())
@@ -724,6 +818,44 @@ mod tests {
         assert_eq!(
             store_assignment_cast_sql("`st`", Some(&source), &target),
             expected
+        );
+    }
+
+    #[test]
+    fn a_scalar_subquery_is_bound_once_and_a_column_is_not() {
+        let mut source_fields = Vec::new();
+        let mut target_fields = Vec::new();
+        for index in 0..19 {
+            let name = format!("f{index:02}");
+            source_fields.push(Field::new(&name, DataType::Int32, true));
+            target_fields.push(Field::new(&name, DataType::Int32, true));
+        }
+        source_fields.push(Field::new("v", instant(TimeUnit::Microsecond), true));
+        target_fields.push(Field::new("v", ntz(), true));
+        let source = DataType::Struct(source_fields.into());
+        let target = DataType::Struct(target_fields.into());
+        let expr = "(SELECT st FROM ice.ns.src)";
+        let sql = nested_micro_ntz_wall_sql(expr, Some(&source), &target).expect("wraps");
+        assert_eq!(sql.matches(expr).count(), 1, "{sql}");
+        assert!(!sql.contains("rand("), "{sql}");
+        assert_eq!(
+            sql.matches("get_field((__repark_ntz_src), 'f00')").count(),
+            1,
+            "{sql}"
+        );
+        assert_eq!(
+            sql.matches("get_field((__repark_ntz_src), 'f18')").count(),
+            1,
+            "{sql}"
+        );
+        assert!(sql.contains("__repark_cast_timestamp_ntz__"), "{sql}");
+        let column = nested_micro_ntz_wall_sql("`ice`.`ns`.`src`.`st`", Some(&source), &target)
+            .expect("column");
+        assert!(!column.contains("__repark_ntz_src"), "{column}");
+        assert!(!column.contains("rand("), "{column}");
+        assert!(
+            column.contains("get_field((`ice`.`ns`.`src`.`st`), 'f00')"),
+            "{column}"
         );
     }
 }

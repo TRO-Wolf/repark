@@ -3,10 +3,10 @@ use std::sync::Arc;
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, ExprSchema, Result};
-use datafusion::functions::expr_fn::{get_field, named_struct, random};
-use datafusion::logical_expr::expr::{BinaryExpr, Case, Cast};
+use datafusion::functions::expr_fn::{get_field, named_struct};
+use datafusion::logical_expr::expr::{Case, Cast};
 use datafusion::logical_expr::{
-    DmlStatement, Expr, ExprSchemable, LogicalPlan, Operator, Projection, Values, WriteOp, lit,
+    DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, Values, WriteOp, lit,
 };
 use datafusion::sql::sqlparser::ast::{
     DataType as SqlDataType, Expr as SqlExpr, SetExpr, Statement,
@@ -92,6 +92,7 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
     let source_schema = Arc::clone(projection.input.schema());
     let mut exprs = Vec::with_capacity(projection.expr.len());
     let mut changed = false;
+    let mut binds = Vec::new();
     let ns_targets = targets.unwrap_or_else(|| vec![None; projection.expr.len()]);
     for ((expr, target), field) in projection
         .expr
@@ -100,7 +101,8 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
         .zip(dml.target.schema().fields())
     {
         let Some(zoned) = *target else {
-            let wrapped = wrap_nested_ntz(expr, field.data_type(), source_schema.as_ref());
+            let wrapped =
+                wrap_nested_ntz(expr, field.data_type(), source_schema.as_ref(), &mut binds);
             changed |= &wrapped != expr;
             exprs.push(wrapped);
             continue;
@@ -130,7 +132,16 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
         ));
         changed = true;
     }
-    let input = Arc::clone(&projection.input);
+    let input = if binds.is_empty() {
+        Arc::clone(&projection.input)
+    } else {
+        changed = true;
+        Arc::new(LogicalPlan::Projection(bound_projection(
+            Arc::clone(&projection.input),
+            &exprs,
+            binds,
+        )?))
+    };
     rebuild(dml, exprs, input, changed)
 }
 
@@ -154,7 +165,12 @@ fn expr_selected_paths(source: Option<&DataType>, target: &DataType) -> Vec<Vec<
     nested_micro_ntz_selected_paths(source, target)
 }
 
-fn wrap_nested_ntz(expr: &Expr, target: &DataType, schema: &DFSchema) -> Expr {
+fn wrap_nested_ntz(
+    expr: &Expr,
+    target: &DataType,
+    schema: &DFSchema,
+    binds: &mut Vec<(String, Expr)>,
+) -> Expr {
     let (body, alias) = split_alias(expr);
     let (value, cast_field) = match body {
         Expr::Cast(cast) => (cast.expr.as_ref(), Some(Arc::clone(&cast.field))),
@@ -166,7 +182,8 @@ fn wrap_nested_ntz(expr: &Expr, target: &DataType, schema: &DFSchema) -> Expr {
     let NtzDecision::Rebuild(members) = nested_micro_ntz_decision(Some(&source), target) else {
         return expr.clone();
     };
-    let built = emit_struct(value.clone(), &members, target);
+    let source_expr = bound_source(value, binds);
+    let built = emit_struct(source_expr, &members, target);
     let casted = match cast_field {
         Some(field) => Expr::Cast(Cast::new_from_field(Box::new(built), field)),
         None => Expr::Cast(Cast::new(Box::new(built), target.clone())),
@@ -187,7 +204,7 @@ fn emit_struct(expr: Expr, members: &[NtzMember], target: &DataType) -> Expr {
             datafusion::common::ScalarValue::Utf8(Some(member.target_name.clone())),
             None,
         ));
-        let child = get_field(kept(expr.clone()), member.source_name.as_str());
+        let child = get_field(expr.clone(), member.source_name.as_str());
         let built = match &member.node {
             NtzNode::Leaf => ntz_kernel(child),
             NtzNode::Struct(inner) => Expr::Cast(Cast::new(
@@ -216,17 +233,62 @@ fn guarded_struct(source: Expr, built: Expr, target: &DataType) -> Expr {
     })
 }
 
-fn kept(expr: Expr) -> Expr {
-    let guard = Expr::BinaryExpr(BinaryExpr {
-        left: Box::new(random()),
-        op: Operator::Lt,
-        right: Box::new(lit(2_i32)),
+fn bound_source(value: &Expr, binds: &mut Vec<(String, Expr)>) -> Expr {
+    if is_plain_column(value) {
+        return value.clone();
+    }
+    let name = format!("__repark_ntz_src_{}", binds.len());
+    binds.push((name.clone(), value.clone()));
+    Expr::Column(datafusion::common::Column::from_name(name))
+}
+
+fn is_plain_column(expr: &Expr) -> bool {
+    match expr {
+        Expr::Column(_) => true,
+        Expr::Alias(alias) => is_plain_column(alias.expr.as_ref()),
+        _ => false,
+    }
+}
+
+fn bound_projection(
+    input: Arc<LogicalPlan>,
+    outer: &[Expr],
+    binds: Vec<(String, Expr)>,
+) -> Result<Projection> {
+    let names: Vec<&str> = binds.iter().map(|(name, _)| name.as_str()).collect();
+    let mut seen = Vec::new();
+    let mut exprs = Vec::new();
+    for expr in outer {
+        for column in referenced_columns(expr) {
+            if column.relation.is_none() && names.contains(&column.name.as_str()) {
+                continue;
+            }
+            let key = (
+                column.relation.as_ref().map(ToString::to_string),
+                column.name.clone(),
+            );
+            if seen.contains(&key) {
+                continue;
+            }
+            seen.push(key);
+            exprs.push(Expr::Column(column));
+        }
+    }
+    for (name, source) in binds {
+        exprs.push(source.alias(name));
+    }
+    Projection::try_new(exprs, input)
+}
+
+fn referenced_columns(expr: &Expr) -> Vec<datafusion::common::Column> {
+    let mut columns = Vec::new();
+    let _ = expr.apply(|node| {
+        if let Expr::Column(column) = node {
+            columns.push(column.clone());
+        }
+        Ok(TreeNodeRecursion::Continue)
     });
-    Expr::Case(Case {
-        expr: None,
-        when_then_expr: vec![(Box::new(guard), Box::new(expr.clone()))],
-        else_expr: Some(Box::new(expr)),
-    })
+    columns
 }
 
 fn ntz_kernel(expr: Expr) -> Expr {
@@ -631,7 +693,10 @@ mod tests {
             DFSchema::try_from(Schema::new(vec![Field::new("st", source, true)])).expect("schema"),
         );
         let expr = col("st").alias("st");
-        assert_eq!(wrap_nested_ntz(&expr, &target, schema.as_ref()), expr);
+        assert_eq!(
+            wrap_nested_ntz(&expr, &target, schema.as_ref(), &mut Vec::new()),
+            expr
+        );
     }
 
     #[test]
@@ -645,10 +710,110 @@ mod tests {
             .cast_to(&target, schema.as_ref())
             .expect("cast")
             .alias("st");
-        let wrapped = wrap_nested_ntz(&expr, &target, schema.as_ref());
+        let wrapped = wrap_nested_ntz(&expr, &target, schema.as_ref(), &mut Vec::new());
         let text = wrapped.to_string();
         assert!(text.contains("__repark_cast_timestamp_ntz__"), "{text}");
+        assert!(!text.contains("random"), "{text}");
         assert_ne!(wrapped, expr);
+    }
+
+    #[test]
+    fn a_non_column_source_is_projected_once() {
+        let mut args = Vec::new();
+        let mut fields = Vec::new();
+        for index in 0..19 {
+            let name = format!("f{index:02}");
+            args.push(datafusion::logical_expr::lit(name.clone()));
+            args.push(datafusion::logical_expr::lit(1_i32));
+            fields.push(Field::new(&name, DataType::Int32, true));
+        }
+        args.push(datafusion::logical_expr::lit("v"));
+        args.push(col("l"));
+        fields.push(Field::new("v", ntz(), true));
+        let target = DataType::Struct(fields.into());
+        let input_fields = vec![
+            Field::new("id", DataType::Int32, true),
+            Field::new("l", instant(), true),
+        ];
+        let schema =
+            Arc::new(DFSchema::try_from(Schema::new(input_fields.clone())).expect("input schema"));
+        let value = datafusion::functions::expr_fn::named_struct(args);
+        let st = value
+            .cast_to(&target, schema.as_ref())
+            .expect("cast")
+            .alias("st");
+        let plan = plan_of(
+            vec![
+                Field::new("id", DataType::Int32, true),
+                Field::new("st", target, true),
+            ],
+            input_fields,
+            vec![col("id").alias("id"), st],
+        );
+        let planned = after_analysis(plan).expect("plan");
+        let LogicalPlan::Dml(dml) = planned else {
+            panic!("dml");
+        };
+        let LogicalPlan::Projection(outer) = dml.input.as_ref() else {
+            panic!("outer");
+        };
+        let LogicalPlan::Projection(inner) = outer.input.as_ref() else {
+            panic!("inner {}", outer.input);
+        };
+        let shown = outer
+            .expr
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(!shown.contains("random"), "{shown}");
+        assert!(!shown.contains("rand("), "{shown}");
+        assert!(shown.contains("__repark_ntz_src_0"), "{shown}");
+        assert!(shown.contains("__repark_cast_timestamp_ntz__"), "{shown}");
+        assert_eq!(shown.matches("__repark_ntz_src_0").count(), 21, "{shown}");
+        let inner_text = inner
+            .expr
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert_eq!(
+            inner_text.matches("__repark_ntz_src_0").count(),
+            1,
+            "{inner_text}"
+        );
+        assert!(!inner_text.contains("random"), "{inner_text}");
+
+        let column_target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let column_source = struct_type(&[("v", instant()), ("n", DataType::Int32)]);
+        let column_fields = vec![Field::new("st", column_source, true)];
+        let column_schema = Arc::new(
+            DFSchema::try_from(Schema::new(column_fields.clone())).expect("column schema"),
+        );
+        let column_expr = col("st")
+            .cast_to(&column_target, column_schema.as_ref())
+            .expect("cast")
+            .alias("st");
+        let column_plan = plan_of(
+            vec![Field::new("st", column_target, true)],
+            column_fields,
+            vec![column_expr],
+        );
+        let column_planned = after_analysis(column_plan).expect("column plan");
+        let LogicalPlan::Dml(column_dml) = column_planned else {
+            panic!("column dml");
+        };
+        let LogicalPlan::Projection(column_outer) = column_dml.input.as_ref() else {
+            panic!("column outer");
+        };
+        assert!(
+            matches!(column_outer.input.as_ref(), LogicalPlan::EmptyRelation(_)),
+            "{}",
+            column_outer.input
+        );
+        let column_text = column_outer.expr[0].to_string();
+        assert!(!column_text.contains("random"), "{column_text}");
+        assert!(!column_text.contains("__repark_ntz_src"), "{column_text}");
     }
 
     #[test]
@@ -662,7 +827,7 @@ mod tests {
             .cast_to(&target, schema.as_ref())
             .expect("cast")
             .alias("st");
-        let text = wrap_nested_ntz(&expr, &target, schema.as_ref()).to_string();
+        let text = wrap_nested_ntz(&expr, &target, schema.as_ref(), &mut Vec::new()).to_string();
         assert_eq!(text.matches("IS NULL").count(), 1, "{text}");
 
         let inner = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
@@ -681,7 +846,8 @@ mod tests {
             .cast_to(&target2, schema2.as_ref())
             .expect("cast")
             .alias("st");
-        let text2 = wrap_nested_ntz(&expr2, &target2, schema2.as_ref()).to_string();
+        let text2 =
+            wrap_nested_ntz(&expr2, &target2, schema2.as_ref(), &mut Vec::new()).to_string();
         assert_eq!(text2.matches("IS NULL").count(), 2, "{text2}");
     }
 }

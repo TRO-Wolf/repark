@@ -428,3 +428,61 @@ def test_insert_analysis_stores_the_session_wall(tmp_path: Path, zone: str) -> N
         assert leaf_ticks(spark, control, "st.v") == [WALL_TICK], "control"
     finally:
         spark.stop()
+
+
+def wide_struct_type() -> str:
+    """A 20-field struct: eighteen shared strings, one other string, one NTZ."""
+    shared = ", ".join(f"f{index:02d} STRING" for index in range(18))
+    return f"STRUCT<{shared}, f18 STRING, v TIMESTAMP_NTZ>"
+
+
+def wide_subquery() -> str:
+    """One subquery whose ``x`` feeds ``f00`` through ``f17``."""
+    shared = ", ".join(f"'f{index:02d}', x" for index in range(18))
+    return (
+        "(SELECT named_struct("
+        f"{shared}, 'f18', y, 'v', l) FROM ("
+        "SELECT uuid() AS x, uuid() AS y, l FROM ice.ns.src))"
+    )
+
+
+def test_a_volatile_struct_is_evaluated_once(tmp_path: Path) -> None:
+    """A 20-field struct from one volatile subquery keeps one draw.
+
+    ``f00`` equals ``f17`` and differs from ``f18``. ``EXPLAIN`` has no
+    ``rand``. DataFrame ``append`` stores the same coupling. Main stores one
+    draw because it does not rebuild the struct.
+    """
+    spark = open_session("America/New_York", tmp_path)
+    try:
+        write_source(spark)
+        kind = wide_struct_type()
+        selected = "ice.ns.wide_sel"
+        spark.sql(
+            f"CREATE TABLE {selected} (id INT, st {kind}) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        statement = f"INSERT INTO {selected} SELECT 1, {wide_subquery()}"
+        explained = spark.sql(f"EXPLAIN {statement}").toArrow().to_pylist()
+        plan = " ".join(str(row) for row in explained).lower()
+        assert "rand(" not in plan, plan
+        assert "random(" not in plan, plan
+        spark.sql(statement)
+        row = struct_values(spark, selected)[0]
+        assert row["f00"] == row["f17"], row
+        assert row["f00"] != row["f18"], row
+        assert leaf_ticks(spark, selected, "st.v") == [SESSION_WALL["America/New_York"]]
+
+        appended = "ice.ns.wide_app"
+        spark.sql(
+            f"CREATE TABLE {appended} (id INT, st {kind}) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        frame = spark.sql(f"SELECT 1 AS id, {wide_subquery()} AS st")
+        frame.writeTo(appended).append()
+        appended_row = struct_values(spark, appended)[0]
+        assert appended_row["f00"] == appended_row["f17"], appended_row
+        assert appended_row["f00"] != appended_row["f18"], appended_row
+        assert leaf_ticks(spark, appended, "st.v") == [SESSION_WALL["America/New_York"]]
+    finally:
+        spark.stop()

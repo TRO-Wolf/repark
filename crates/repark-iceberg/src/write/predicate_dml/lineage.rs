@@ -275,12 +275,10 @@ mod tests {
             ]
             .into(),
         );
-        let kept = "CASE WHEN rand() < 2 THEN (`st`) ELSE (`st`) END";
-        let expected = format!(
-            "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
-             __repark_cast_timestamp_ntz__((get_field(({kept}), 'v'))), 'n', \
-             get_field(({kept}), 'n')) END"
-        );
+        let expected = "CASE WHEN (`st`) IS NULL THEN NULL ELSE named_struct('v', \
+             __repark_cast_timestamp_ntz__((get_field((`st`), 'v'))), 'n', \
+             get_field((`st`), 'n')) END"
+            .to_string();
         assert_eq!(
             crate::write::update_cast::nested_micro_ntz_wall_sql("`st`", Some(&source), &target),
             Some(expected.clone())

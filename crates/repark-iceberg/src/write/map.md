@@ -579,7 +579,10 @@ repark-core's error map.
   kernel or `nested_leaf_cast_sql`. A caller with no source type passes
   `None`, and the expression stays main's. `nested_micro_ntz_decision` is the
   one type decision both emitters ask: which struct leaves are an instant into
-  a microsecond `TIMESTAMP_NTZ` below the top. A list or a map is not entered.
+  a microsecond `TIMESTAMP_NTZ` below the top. A plain column is read in place.
+  Any other source is one inner `SELECT` bound to `__repark_ntz_src`, and the
+  rebuilt fields read that alias. The SQL has no `rand()`. A list or a map is
+  not entered.
   `zone_stores` hands the walk the Arrow type of a struct, list or map.
   Identity UPDATE asks `analyzed_types` once for the SET expressions and passes
   that slice; a failed analysis passes `None`. The expression emitter in

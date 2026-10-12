@@ -64,3 +64,12 @@ parent emitter: `INSERT … SELECT` of a null struct stored
 column, so the stored value is null. Green on the commit: that door and
 DataFrame `append`, plus a null inner struct at depth 2 on both doors, read
 back as null.
+
+**Round 6, R8.2 barrier:** `rand()` and `random()` are gone. A plain column is
+read in place. Any other source is one inner `SELECT` (`__repark_ntz_src`) or
+one inner projection (`__repark_ntz_src_N`). The logical pins pass. The
+physical planner does not. `push_down_leaf_projections` fails with
+`Schema contains duplicate qualified field name ice.ns.src.id` on DataFrame
+append and `overwritePartitions`. The SQL bind fails with
+`Physical plan does not support logical expression ScalarSubquery`. The
+barrier is not put back. See `evidence/pin-red-r8-barrier.txt`. Halted here.
