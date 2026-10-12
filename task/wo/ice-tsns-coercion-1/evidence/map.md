@@ -20,5 +20,10 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   string inputs, RePark and Spark 4.1.2.
 - [lambda.json](lambda.json) + [lambda.md](lambda.md) — whether the lambda
   variable is typed before coercion, with the analyzed plan.
+- [gate-rate.json](gate-rate.json) + [gate-rate.md](gate-rate.md) — slice 1
+  round 1 facade gate-open rate. The JSON is the reduced copy (rows with
+  `opened > 0`, plus the full-run totals). The markdown is the check, the
+  per-file opens, and which file has a pandas `datetime64[ns]` frame as its
+  only nanosecond source.
 
 Up: [../map.md](../map.md).

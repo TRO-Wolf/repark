@@ -5,6 +5,7 @@ No product code. The ledger is
 [ice-tsns-coercion-1-ledger.md](../../ledgers/staging/ice-tsns-coercion-1-ledger.md).
 
 - `PROGRESS.md` (untracked; `.gitignore` keeps it local) — the step, the base hash, and the next action.
-- [evidence/](evidence/map.md) — disk space before the run, and the generated summary.
+- [evidence/](evidence/map.md) — disk space before the run, the generated summary, and the slice 1 round 1 gate-open rate.
+- [gate_rate_plugin.py](gate_rate_plugin.py) — pytest plugin for the slice 1 round 1 rate. It snapshots `_native._tsns_gate_counts()` around every facade item and writes the run JSON. Not product code.
 
 Up: [../map.md](../map.md).

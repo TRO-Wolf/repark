@@ -1,0 +1,2309 @@
+{
+ "items": 16657,
+ "gate_open_total": 12670,
+ "fallback_total": 0,
+ "items_with_opens": 460,
+ "reduced": "deltas keep only rows with opened > 0; items, gate_open_total and fallback_total are the full run",
+ "deltas": [
+  {
+   "nodeid": "tests/test_array_null_1_coercion.py::test_timestamp_ns_unit_rescale_truncates_like_arrow_cast[facade-array_append]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_array_null_1_coercion.py::test_timestamp_ns_unit_rescale_truncates_like_arrow_cast[facade-array_prepend]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_array_null_1_coercion.py::test_timestamp_ns_unit_rescale_truncates_like_arrow_cast[sql-array_append]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_array_null_1_coercion.py::test_timestamp_ns_unit_rescale_truncates_like_arrow_cast[sql-array_prepend]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[pandas_timestamp_unit_from_pandas_ns]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_coercion_1_slice1.py::test_pandas_datetime64_ns_frame_opens_the_gate",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_coercion_1_slice1.py::test_twelve_statements_equal_the_recorded_statement_role",
+   "opened": 90,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-insert_values]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-insert_select]",
+   "opened": 27,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-insert_overwrite]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-insert_replace_where]",
+   "opened": 41,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-merge_insert]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-merge_insert_star]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-merge_insert_literal]",
+   "opened": 115,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-merge_update]",
+   "opened": 41,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-merge_update_star]",
+   "opened": 41,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-merge_update_literal]",
+   "opened": 120,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-update_literal]",
+   "opened": 65,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-update_column]",
+   "opened": 37,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-df_append]",
+   "opened": 47,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-df_overwrite_partitions]",
+   "opened": 67,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-df_overwrite_where]",
+   "opened": 51,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-df_insert_into]",
+   "opened": 37,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-df_insert_into_overwrite]",
+   "opened": 57,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-df_save_append]",
+   "opened": 52,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[UTC-df_arrow]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-insert_values]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-insert_select]",
+   "opened": 27,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-insert_overwrite]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-insert_replace_where]",
+   "opened": 41,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-merge_insert]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-merge_insert_star]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-merge_insert_literal]",
+   "opened": 115,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-merge_update]",
+   "opened": 41,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-merge_update_star]",
+   "opened": 41,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-merge_update_literal]",
+   "opened": 120,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-update_literal]",
+   "opened": 65,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-update_column]",
+   "opened": 37,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-df_append]",
+   "opened": 47,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-df_overwrite_partitions]",
+   "opened": 67,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-df_overwrite_where]",
+   "opened": 51,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-df_insert_into]",
+   "opened": 37,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-df_insert_into_overwrite]",
+   "opened": 57,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-df_save_append]",
+   "opened": 52,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[Asia/Kolkata-df_arrow]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-insert_values]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-insert_select]",
+   "opened": 27,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-insert_overwrite]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-insert_replace_where]",
+   "opened": 41,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-merge_insert]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-merge_insert_star]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-merge_insert_literal]",
+   "opened": 115,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-merge_update]",
+   "opened": 41,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-merge_update_star]",
+   "opened": 41,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-merge_update_literal]",
+   "opened": 120,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-update_literal]",
+   "opened": 65,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-update_column]",
+   "opened": 37,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-df_append]",
+   "opened": 47,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-df_overwrite_partitions]",
+   "opened": 67,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-df_overwrite_where]",
+   "opened": 51,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-df_insert_into]",
+   "opened": 37,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-df_insert_into_overwrite]",
+   "opened": 57,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-df_save_append]",
+   "opened": 52,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_stores_the_session_wall_in_timestamp_ns[America/New_York-df_arrow]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-insert_values]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-insert_select]",
+   "opened": 19,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-insert_overwrite]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-insert_replace_where]",
+   "opened": 24,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-merge_insert]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-merge_insert_star]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-merge_insert_literal]",
+   "opened": 70,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-merge_update]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-merge_update_star]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-merge_update_literal]",
+   "opened": 54,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-update_literal]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-update_column]",
+   "opened": 33,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-df_append]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-df_overwrite_partitions]",
+   "opened": 40,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-df_overwrite_where]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-df_insert_into]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-df_insert_into_overwrite]",
+   "opened": 40,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-df_save_append]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v3-df_arrow]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-insert_values]",
+   "opened": 10,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-insert_select]",
+   "opened": 15,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-insert_overwrite]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-insert_replace_where]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-merge_insert]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-merge_insert_star]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-merge_insert_literal]",
+   "opened": 54,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-merge_update]",
+   "opened": 24,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-merge_update_star]",
+   "opened": 24,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-merge_update_literal]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-update_literal]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-update_column]",
+   "opened": 27,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-df_append]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-df_overwrite_partitions]",
+   "opened": 40,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-df_overwrite_where]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-df_insert_into]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-df_insert_into_overwrite]",
+   "opened": 40,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-df_save_append]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v3-df_arrow]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-insert_values]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-insert_select]",
+   "opened": 19,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-insert_overwrite]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-insert_replace_where]",
+   "opened": 24,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-merge_insert]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-merge_insert_star]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-merge_insert_literal]",
+   "opened": 70,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-merge_update]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-merge_update_star]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-merge_update_literal]",
+   "opened": 54,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-update_literal]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-update_column]",
+   "opened": 15,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-df_append]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-df_overwrite_partitions]",
+   "opened": 40,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-df_overwrite_where]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-df_insert_into]",
+   "opened": 29,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-df_insert_into_overwrite]",
+   "opened": 40,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-df_save_append]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ntz_v2-df_arrow]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-insert_values]",
+   "opened": 10,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-insert_select]",
+   "opened": 15,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-insert_overwrite]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-insert_replace_where]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-merge_insert]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-merge_insert_star]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-merge_insert_literal]",
+   "opened": 54,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-merge_update]",
+   "opened": 24,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-merge_update_star]",
+   "opened": 24,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-merge_update_literal]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-update_literal]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-update_column]",
+   "opened": 13,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-df_append]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-df_overwrite_partitions]",
+   "opened": 40,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-df_overwrite_where]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-df_insert_into]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-df_insert_into_overwrite]",
+   "opened": 40,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-df_save_append]",
+   "opened": 30,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_control_targets_answer_what_main_answered[ltz_v2-df_arrow]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_true_nanosecond_inputs_keep_every_digit[UTC]",
+   "opened": 179,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_true_nanosecond_inputs_keep_every_digit[Asia/Kolkata]",
+   "opened": 179,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_true_nanosecond_inputs_keep_every_digit[America/New_York]",
+   "opened": 179,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_instant_past_2262_refuses_like_insert_under_ansi[insert_select]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_instant_past_2262_refuses_like_insert_under_ansi[insert_overwrite]",
+   "opened": 1,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_instant_past_2262_refuses_like_insert_under_ansi[merge_insert]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_instant_past_2262_refuses_like_insert_under_ansi[merge_update]",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_instant_past_2262_is_null_like_insert_without_ansi[insert_select]",
+   "opened": 5,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_instant_past_2262_is_null_like_insert_without_ansi[insert_overwrite]",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_instant_past_2262_is_null_like_insert_without_ansi[merge_insert]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_instant_past_2262_is_null_like_insert_without_ansi[merge_update]",
+   "opened": 7,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_update_with_no_where_stores_a_literal[instant]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_update_with_no_where_stores_a_literal[null]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors[true-n-df_overwrite_partitions]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors[true-n-df_insert_into_overwrite]",
+   "opened": 1,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors[true-d-df_overwrite_partitions]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors[true-d-df_insert_into_overwrite]",
+   "opened": 1,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors[false-n-df_overwrite_partitions]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors[false-n-df_insert_into_overwrite]",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors[false-d-df_overwrite_partitions]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_wall_source_past_the_range_answers_like_insert_on_the_overwrite_doors[false-d-df_insert_into_overwrite]",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_one_name_differs-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_one_name_differs-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_one_name_differs-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_one_name_differs-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_in_struct-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_in_struct-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_in_struct-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_in_struct-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[large_list-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[large_list-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[large_list-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[large_list-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list_view-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list_view-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list_view-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list_view-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[large_list_view-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[large_list_view-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[large_list_view-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[large_list_view-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[fixed_size_list-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[fixed_size_list-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[fixed_size_list-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[fixed_size_list-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list_of_struct-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list_of_struct-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list_of_struct-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[list_of_struct-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_of_list-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_of_list-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_of_list-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[struct_of_list-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[dictionary_child-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[dictionary_child-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[dictionary_child-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[dictionary_child-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[run_end_encoded_child-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[run_end_encoded_child-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[run_end_encoded_child-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[run_end_encoded_child-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[map_value-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[map_value-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[map_value-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[map_value-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[map_key-df_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[map_key-df_overwrite_partitions]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[map_key-df_save_append]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_nested_timestamp_ns_leaf_is_refused_by_name_and_writes_nothing[map_key-cached_frame]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_branch_or_wap_write_of_a_nested_leaf_is_refused_and_writes_nothing[df_append_branch]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_branch_or_wap_write_of_a_nested_leaf_is_refused_and_writes_nothing[wap_id_df]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_a_branch_or_wap_write_of_a_nested_leaf_is_refused_and_writes_nothing[wap_branch_df]",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-insert_values]",
+   "opened": 16,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-insert_select]",
+   "opened": 16,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-insert_overwrite]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-insert_replace_where]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-merge_insert]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-merge_insert_star]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-merge_insert_literal]",
+   "opened": 60,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-merge_update]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-merge_update_star]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-merge_update_literal]",
+   "opened": 62,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-update_literal]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-update_column]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-df_append]",
+   "opened": 24,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-df_overwrite_partitions]",
+   "opened": 32,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-df_overwrite_where]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-df_insert_into]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-df_insert_into_overwrite]",
+   "opened": 28,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-df_save_append]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[UTC-df_arrow]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-insert_values]",
+   "opened": 16,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-insert_select]",
+   "opened": 16,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-insert_overwrite]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-insert_replace_where]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-merge_insert]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-merge_insert_star]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-merge_insert_literal]",
+   "opened": 60,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-merge_update]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-merge_update_star]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-merge_update_literal]",
+   "opened": 62,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-update_literal]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-update_column]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-df_append]",
+   "opened": 24,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-df_overwrite_partitions]",
+   "opened": 32,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-df_overwrite_where]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-df_insert_into]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-df_insert_into_overwrite]",
+   "opened": 28,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-df_save_append]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[Asia/Kolkata-df_arrow]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-insert_values]",
+   "opened": 16,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-insert_select]",
+   "opened": 16,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-insert_overwrite]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-insert_replace_where]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-merge_insert]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-merge_insert_star]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-merge_insert_literal]",
+   "opened": 60,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-merge_update]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-merge_update_star]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-merge_update_literal]",
+   "opened": 62,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-update_literal]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-update_column]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-df_append]",
+   "opened": 24,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-df_overwrite_partitions]",
+   "opened": 32,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-df_overwrite_where]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-df_insert_into]",
+   "opened": 20,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-df_insert_into_overwrite]",
+   "opened": 28,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-df_save_append]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_every_door_writes_the_digits_below_the_microsecond_into_the_parquet_file[America/New_York-df_arrow]",
+   "opened": 22,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_encoded_instant_source_stores_the_session_wall[run_end_encoded-insert_overwrite]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_encoded_instant_source_stores_the_session_wall[run_end_encoded-insert_by_name]",
+   "opened": 10,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_encoded_instant_source_stores_the_session_wall[run_end_encoded-df_overwrite_partitions]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_encoded_instant_source_stores_the_session_wall[run_end_encoded-df_insert_into_overwrite]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_encoded_instant_source_stores_the_session_wall[dictionary-insert_overwrite]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_encoded_instant_source_stores_the_session_wall[dictionary-insert_by_name]",
+   "opened": 10,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_encoded_instant_source_stores_the_session_wall[dictionary-df_overwrite_partitions]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_merge_wall_1.py::test_an_encoded_instant_source_stores_the_session_wall[dictionary-df_insert_into_overwrite]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamp_ns_keeps_nine_digits[1]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamp_ns_keeps_nine_digits[2]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamp_ns_keeps_nine_digits[3]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamp_ns_keeps_nine_digits[6]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamp_ns_keeps_nine_digits[7]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamp_ns_keeps_nine_digits[8]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamptz_ns_honours_the_offset[1]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamptz_ns_honours_the_offset[2]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamptz_ns_honours_the_offset[3]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamptz_ns_honours_the_offset[6]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamptz_ns_honours_the_offset[7]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_string_as_timestamptz_ns_honours_the_offset[8]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_timestamptz_ns_reads_a_zoneless_string_in_the_session_zone",
+   "opened": 18,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_type_names_are_case_insensitive",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_malformed_string_fails_like_the_timestamp_cast_under_ansi[timestamp_ns]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_malformed_string_fails_like_the_timestamp_cast_under_ansi[timestamptz_ns]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_malformed_string_is_null_like_the_timestamp_cast_without_ansi[timestamp_ns]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_malformed_string_is_null_like_the_timestamp_cast_without_ansi[timestamptz_ns]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_insert_values_writes_every_shape_exactly",
+   "opened": 5,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_insert_values_widens_a_timestamp_literal",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_insert_values_widens_a_string",
+   "opened": 5,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_insert_select_ns_cast_into_a_days_table",
+   "opened": 7,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_insert_select_widens_a_microsecond_column",
+   "opened": 5,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_insert_overwrite_widens_and_keeps_ns",
+   "opened": 8,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_merge_insert_and_update_keep_ns",
+   "opened": 10,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_ctas_carries_ns_casts",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_days_partitions_equal_the_pyiceberg_read_back",
+   "opened": 2,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_hours_partitions_equal_the_spec",
+   "opened": 5,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_ns_column_as_string_is_lossless",
+   "opened": 8,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_ns_cast_as_string_round_trips[1]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_ns_cast_as_string_round_trips[2]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_ns_cast_as_string_round_trips[3]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_ns_cast_as_string_round_trips[6]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_ns_cast_as_string_round_trips[7]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_ns_cast_as_string_round_trips[8]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_predicate_compares_at_nanosecond_precision[ts]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_predicate_compares_at_nanosecond_precision[tz]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_ns_column_as_timestamp_floors_like_the_dataframe_spelling[America/New_York]",
+   "opened": 11,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_cast_ns_column_as_timestamp_floors_like_the_dataframe_spelling[UTC]",
+   "opened": 11,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_timestamp_typed_values_floor_like_insert_select",
+   "opened": 7,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tsns_sql_1.py::test_explain_lowers_ns_casts",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-insert_values]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-insert_select]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-insert_overwrite]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-insert_replace_where]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-merge_insert]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-merge_insert_star]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-merge_insert_literal]",
+   "opened": 114,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-merge_update]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-merge_update_star]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-merge_update_literal]",
+   "opened": 118,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-update_literal]",
+   "opened": 64,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-update_column]",
+   "opened": 35,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-df_append]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-df_overwrite_partitions]",
+   "opened": 58,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-df_overwrite_where]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-df_insert_into]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-df_insert_into_overwrite]",
+   "opened": 50,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-df_save_append]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[UTC-df_arrow]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-insert_values]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-insert_select]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-insert_overwrite]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-insert_replace_where]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-merge_insert]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-merge_insert_star]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-merge_insert_literal]",
+   "opened": 114,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-merge_update]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-merge_update_star]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-merge_update_literal]",
+   "opened": 118,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-update_literal]",
+   "opened": 64,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-update_column]",
+   "opened": 35,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-df_append]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-df_overwrite_partitions]",
+   "opened": 58,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-df_overwrite_where]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-df_insert_into]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-df_insert_into_overwrite]",
+   "opened": 50,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-df_save_append]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[America/New_York-df_arrow]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-insert_values]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-insert_select]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-insert_overwrite]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-insert_replace_where]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-merge_insert]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-merge_insert_star]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-merge_insert_literal]",
+   "opened": 114,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-merge_update]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-merge_update_star]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-merge_update_literal]",
+   "opened": 118,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-update_literal]",
+   "opened": 64,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-update_column]",
+   "opened": 35,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-df_append]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-df_overwrite_partitions]",
+   "opened": 58,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-df_overwrite_where]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-df_insert_into]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-df_insert_into_overwrite]",
+   "opened": 50,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-df_save_append]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kolkata-df_arrow]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-insert_values]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-insert_select]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-insert_overwrite]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-insert_replace_where]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-merge_insert]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-merge_insert_star]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-merge_insert_literal]",
+   "opened": 114,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-merge_update]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-merge_update_star]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-merge_update_literal]",
+   "opened": 118,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-update_literal]",
+   "opened": 64,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-update_column]",
+   "opened": 35,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-df_append]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-df_overwrite_partitions]",
+   "opened": 58,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-df_overwrite_where]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-df_insert_into]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-df_insert_into_overwrite]",
+   "opened": 50,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-df_save_append]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Asia/Kathmandu-df_arrow]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-insert_values]",
+   "opened": 25,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-insert_select]",
+   "opened": 26,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-insert_overwrite]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-insert_replace_where]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-merge_insert]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-merge_insert_star]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-merge_insert_literal]",
+   "opened": 114,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-merge_update]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-merge_update_star]",
+   "opened": 38,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-merge_update_literal]",
+   "opened": 118,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-update_literal]",
+   "opened": 64,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-update_column]",
+   "opened": 35,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-df_append]",
+   "opened": 42,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-df_overwrite_partitions]",
+   "opened": 58,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-df_overwrite_where]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-df_insert_into]",
+   "opened": 34,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-df_insert_into_overwrite]",
+   "opened": 50,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-df_save_append]",
+   "opened": 46,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_every_door_stores_inserts_instant_in_timestamptz_ns[Australia/Lord_Howe-df_arrow]",
+   "opened": 36,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Australia/Lord_Howe-insert_select]",
+   "opened": 10,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Australia/Lord_Howe-insert_overwrite]",
+   "opened": 13,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Australia/Lord_Howe-insert_by_name]",
+   "opened": 11,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Australia/Lord_Howe-merge_insert]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Australia/Lord_Howe-merge_update]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Australia/Lord_Howe-update_no_where]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Australia/Lord_Howe-df_overwrite_partitions]",
+   "opened": 16,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Australia/Lord_Howe-df_insert_into_overwrite]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Asia/Kathmandu-insert_select]",
+   "opened": 10,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Asia/Kathmandu-insert_overwrite]",
+   "opened": 13,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Asia/Kathmandu-insert_by_name]",
+   "opened": 11,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Asia/Kathmandu-merge_insert]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Asia/Kathmandu-merge_update]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Asia/Kathmandu-update_no_where]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Asia/Kathmandu-df_overwrite_partitions]",
+   "opened": 16,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[Asia/Kathmandu-df_insert_into_overwrite]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[America/New_York-insert_select]",
+   "opened": 10,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[America/New_York-insert_overwrite]",
+   "opened": 13,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[America/New_York-insert_by_name]",
+   "opened": 11,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[America/New_York-merge_insert]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[America/New_York-merge_update]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[America/New_York-update_no_where]",
+   "opened": 12,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[America/New_York-df_overwrite_partitions]",
+   "opened": 16,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_gap_or_overlap_wall_of_each_zone_is_localised_as_insert_localises_it[America/New_York-df_insert_into_overwrite]",
+   "opened": 14,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[true--df_overwrite_partitions]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[true--df_insert_into_overwrite]",
+   "opened": 1,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[true--df_append]",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[true- NOT NULL-df_overwrite_partitions]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[true- NOT NULL-df_insert_into_overwrite]",
+   "opened": 1,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[true- NOT NULL-df_append]",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[false--df_overwrite_partitions]",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[false--df_insert_into_overwrite]",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[false--df_append]",
+   "opened": 7,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[false- NOT NULL-df_overwrite_partitions]",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[false- NOT NULL-df_insert_into_overwrite]",
+   "opened": 1,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_ice_tstzns_wall_1.py::test_a_date_past_the_range_never_panics_on_the_dataframe_doors[false- NOT NULL-df_append]",
+   "opened": 4,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_interchange_parity.py::test_create_dataframe_pandas_arrow_dtype_all_null_timestamp_date",
+   "opened": 3,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_interchange_parity.py::test_create_dataframe_pandas_datetime64_ms_stays_timestamp",
+   "opened": 6,
+   "fallback": 0
+  },
+  {
+   "nodeid": "tests/test_v3_create_opt_in.py::test_opt_in_v3_create_timestamp_ns_schema_round_trips",
+   "opened": 3,
+   "fallback": 0
+  }
+ ]
+}
