@@ -632,19 +632,126 @@ def id_tick(row: dict[str, Any] | None) -> str:
     return str(canon_value(chosen.get("v")))
 
 
+def summarize_head(
+    main_path: Path, head_path: Path, spark_path: Path, summary_path: Path
+) -> int:
+    """Write the head comparison. Return 1 when a cell moved away or a control moved."""
+    main_rows = {(_key(row)): row for row in read_jsonl(main_path)}
+    head_rows = {(_key(row)): row for row in read_jsonl(head_path)}
+    spark_rows = {(_key(row)): row for row in read_jsonl(spark_path)}
+    keys = sorted(set(main_rows) | set(head_rows) | set(spark_rows))
+    equal: list[tuple[str, str, str, str]] = []
+    moved: list[tuple[str, str, str, str]] = []
+    away: list[tuple[str, str, str, str]] = []
+    controls_differ: list[tuple[str, str, str, str]] = []
+    missing: list[tuple[str, str, str, str]] = []
+    for key in keys:
+        main_row = main_rows.get(key)
+        head_row = head_rows.get(key)
+        spark_row = spark_rows.get(key)
+        if main_row is None or head_row is None or spark_row is None:
+            missing.append(key)
+            continue
+        main_value = value_key(main_row)
+        head_value = value_key(head_row)
+        spark_value = value_key(spark_row)
+        if head_value == spark_value:
+            equal.append(key)
+        if head_value != main_value:
+            moved.append(key)
+            if head_value != spark_value:
+                away.append(key)
+        if key[0] == "top" and head_value != main_value:
+            controls_differ.append(key)
+    lines = [
+        "# NTZ-STRUCT-COERCE-1 head",
+        "",
+        f"Cells: {len(keys)}. Equal to Spark: {len(equal)}. Moved: {len(moved)}. "
+        f"Moved away from Spark: {len(away)}. Top-level controls that differ from main: "
+        f"{len(controls_differ)}. Missing a side: {len(missing)}.",
+        "",
+        "## Cells that moved",
+        "",
+        "| shape | use | zone | main | head | Spark |",
+        "|---|---|---|---|---|---|",
+    ]
+    for key in moved:
+        level, shape, use, zone = key
+        lines.append(
+            "| {level}/{shape} | {use} | {zone} | {main} | {head} | {spark} |".format(
+                level=level,
+                shape=shape,
+                use=use,
+                zone=zone,
+                main=_side(main_rows.get(key)),
+                head=_side(head_rows.get(key)),
+                spark=_side(spark_rows.get(key)),
+            )
+        )
+    if not moved:
+        lines.append("|  |  |  |  |  |  |")
+    lines.extend(["", "## Cells that moved away from Spark", ""])
+    if away:
+        for key in away:
+            lines.append(f"- {key[0]}/{key[1]} {key[2]} {key[3]}")
+    else:
+        lines.append("None.")
+    lines.extend(["", "## Top-level controls", ""])
+    if controls_differ:
+        for key in controls_differ:
+            lines.append(f"- {key[0]}/{key[1]} {key[2]} {key[3]}")
+    else:
+        lines.append("Every top-level cell is identical to main.")
+    if missing:
+        lines.extend(["", "## Missing", ""])
+        for key in missing:
+            lines.append(f"- {key[0]}/{key[1]} {key[2]} {key[3]}")
+    lines.append("")
+    summary_path.write_text("\n".join(lines), encoding="utf-8")
+    print(
+        f"equal {len(equal)} moved {len(moved)} away {len(away)} "
+        f"controls_differ {len(controls_differ)} missing {len(missing)}"
+    )
+    if away or controls_differ or missing:
+        return 1
+    return 0
+
+
+def _key(row: dict[str, Any]) -> tuple[str, str, str, str]:
+    """Return the inventory key of one cell."""
+    return (row["level"], row["shape"], row["use"], row["zone"])
+
+
+def _side(row: dict[str, Any] | None) -> str:
+    """Return one comparison cell, or MISSING."""
+    if row is None:
+        return "MISSING"
+    return short_cell(row).replace("|", "/")
+
+
 def main() -> int:
     """Dispatch a measurement or the summary."""
     if len(sys.argv) < 3:
-        print("usage: probe.py repark|spark <out.jsonl> | summarize <repark> <spark> <summary>", file=sys.stderr)
+        print(
+            "usage: probe.py repark|spark <out.jsonl> | summarize <repark> <spark> <summary> "
+            "| summarize-head <main> <head> <spark> <summary>",
+            file=sys.stderr,
+        )
         return 2
     command = sys.argv[1]
     try:
+        if command == "summarize-head":
+            return summarize_head(
+                Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4]), Path(sys.argv[5])
+            )
         if command == "summarize":
             summarize(Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4]))
             return 0
         out_path = Path(sys.argv[2])
         if command == "repark":
-            seat_path = Path(sys.argv[3]) if len(sys.argv) > 3 else out_path.with_name("seat-explain.json")
+            seat_path = (
+                Path(sys.argv[3]) if len(sys.argv) > 3 else out_path.with_name("seat-explain.json")
+            )
             run_repark(out_path, seat_path)
             return 0
         if command == "spark":

@@ -16,7 +16,7 @@ read-back stays the microsecond UTC wall ``1767323045123456`` in every zone;
 Spark's write is the localised microsecond tick in America/New_York and
 Asia/Kolkata.
 
-pins: ntz-struct-coerce-1/C-001, C-002, C-003, C-004
+pins: ntz-struct-coerce-1/C-001, C-002, C-003, C-004, C-005
 """
 
 from __future__ import annotations
