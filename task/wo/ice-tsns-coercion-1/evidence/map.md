@@ -41,5 +41,10 @@ Generated tables. Do not edit the summary by hand; regenerate it with
 - [round2-moved-pins.md](round2-moved-pins.md) — slice 1 round 2 moved-pins
   census: the four brief-named suites pass unchanged (3 + 43 + 487), and the
   round-1 twelve-statements pin moves to the twin's value, 12/12 verified.
+- [cost-slice1-round2.md](cost-slice1-round2.md) +
+  [interleaved-sets-round2.json](interleaved-sets-round2.json) +
+  [interleaved-cost-round2.json](interleaved-cost-round2.json) — slice 1 round 2
+  cost: five interleaved baseline-vs-head pairs on insert/merge/merge_mor,
+  ratios 0.98 – 1.01, no halt.
 
 Up: [../map.md](../map.md).
