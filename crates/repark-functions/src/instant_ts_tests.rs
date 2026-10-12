@@ -338,6 +338,22 @@ fn nanosecond_list_and_map_leaves_are_unchanged() {
 }
 
 #[test]
+fn a_naive_microsecond_source_against_a_non_ltz_target_is_not_selected() {
+    for target in [ns_naive(), DataType::Utf8, DataType::Date32] {
+        let (original, rewritten) = apply(
+            struct_type(&[("v", naive_us())]),
+            struct_type(&[("v", target.clone())]),
+        );
+        assert_eq!(rewritten, original, "{target}");
+    }
+    let (_, rewritten) = apply(
+        struct_type(&[("v", naive_us()), ("w", naive_us())]),
+        struct_type(&[("v", DataType::Utf8), ("w", ltz_us())]),
+    );
+    assert_eq!(selected_paths(&rewritten), "w");
+}
+
+#[test]
 fn a_member_name_containing_a_dot_or_a_comma_is_not_selected() {
     for name in ["a.b", "a,b"] {
         let (original, rewritten) = apply(

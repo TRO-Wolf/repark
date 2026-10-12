@@ -454,6 +454,21 @@ mod tests {
         })
     }
 
+    fn invoke_execution(array: StructArray, paths: &str, zone: &str) -> Result<ColumnarValue> {
+        let source = Arc::new(Field::new("st", array.data_type().clone(), true));
+        let paths_field = Arc::new(Field::new("paths", DataType::Utf8, false));
+        localize_nested_ntz_udf().invoke_with_args(ScalarFunctionArgs {
+            args: vec![
+                ColumnarValue::Array(Arc::new(array)),
+                ColumnarValue::Scalar(ScalarValue::Utf8(Some(paths.to_string()))),
+            ],
+            arg_fields: vec![Arc::clone(&source), paths_field],
+            number_rows: 1,
+            return_field: source,
+            config_options: config_at(zone),
+        })
+    }
+
     fn output_struct(value: &ColumnarValue) -> StructArray {
         if let ColumnarValue::Array(array) = value {
             return array.as_struct().clone();
@@ -690,6 +705,40 @@ mod tests {
             error
                 .to_string()
                 .contains("unresolvable nested timestamp path")
+        );
+    }
+
+    #[test]
+    fn execution_refuses_a_path_it_has_not_seen() {
+        let wall = wall_micros(2026, 1, 2, 3, 4, 5, 123_456);
+        let top = struct_array(
+            vec![naive_field("v", true)],
+            vec![stamp_array(&[Some(wall)])],
+            None,
+        );
+        let error = invoke_execution(top, "missing", "UTC").expect_err("top-level missing path");
+        assert!(
+            error
+                .to_string()
+                .contains("unresolvable nested timestamp path"),
+            "{error}"
+        );
+        let nested = struct_array(
+            vec![struct_field("inner", vec![naive_field("v", true)], true)],
+            vec![Arc::new(struct_array(
+                vec![naive_field("v", true)],
+                vec![stamp_array(&[Some(wall)])],
+                None,
+            ))],
+            None,
+        );
+        let error =
+            invoke_execution(nested, "inner.missing", "UTC").expect_err("nested missing path");
+        assert!(
+            error
+                .to_string()
+                .contains("unresolvable nested timestamp path"),
+            "{error}"
         );
     }
 

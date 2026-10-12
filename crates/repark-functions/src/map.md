@@ -31,6 +31,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   leaf lines up with a leaf `is_ltz_timestamp` accepts. Nanosecond leaves, lists, maps, and a
   member name that contains `.` or `,` are not selected, and a struct cast with no such leaf
   is returned unchanged. The arm's tests are `instant_ts_tests.rs` (`instant_ts::tests`).
+  Round 12 (2026-10-12): a naive microsecond source against a nanosecond, string or date
+  target is not selected, and execution refuses a path it has not seen.
   pins: ntz-struct-coerce-1/C-003, C-004
 - `declared_refuse.rs` — FNP-15/16 parse-altitude refusals for Spark function names this
   engine will not build. Spark door and `F.expr` / `filter_sql` call `refuse_in_statement` /
