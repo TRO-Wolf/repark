@@ -1062,7 +1062,9 @@ pins: rp-4-fork-repin/C-005, C-006
   substitutes that plan only when `wrap_nested_ntz` changed an expression on
   an Iceberg append. Overwrite, update, and an unchanged expression keep the
   original plan. `EXPLAIN ANALYZE` is `LogicalPlan::Analyze` and is not
-  descended.
+  descended. `wrap_nested_ntz` returns the caller's expression when a NOT NULL
+  target member is nullable on the source. A source member that is already
+  NOT NULL still wraps.
   pins: ice-ntz-nested-wall-1/C-003
 - `spark_ast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** the
   `DfStatement::Explain` arm, for a non-ANALYZE inner `Update`, runs

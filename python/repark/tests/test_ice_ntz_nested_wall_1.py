@@ -140,11 +140,7 @@ def merge_update_whole(spark: Any, table: str) -> None:
 
 def update_from_sibling(spark: Any, table: str) -> None:
     """UPDATE the whole struct from a ``TIMESTAMP`` column of the same row."""
-    spark.sql(
-        f"CREATE TABLE {table} "
-        "(id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP) "
-        "USING iceberg TBLPROPERTIES ('format-version'='2')"
-    )
+    _ice(spark, table, "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP")
     spark.sql(
         f"INSERT INTO {table} SELECT 1, "
         "named_struct('v', CAST(NULL AS TIMESTAMP_NTZ), 'n', 0), 0, l FROM ice.ns.src"
@@ -214,11 +210,7 @@ def test_identity_update_stores_the_session_wall(tmp_path: Path, zone: str) -> N
         update_whole_where(spark, wall, WALL)
         assert leaf_ticks(spark, wall, "st.v") == [WALL_TICK], "wall"
         control = "ice.ns.ltz"
-        spark.sql(
-            f"CREATE TABLE {control} "
-            "(id INT, st STRUCT<v: TIMESTAMP, n: INT>, k INT, c TIMESTAMP) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, control, "id INT, st STRUCT<v: TIMESTAMP, n: INT>, k INT, c TIMESTAMP")
         spark.sql(
             f"INSERT INTO {control} SELECT 1, "
             "named_struct('v', CAST(NULL AS TIMESTAMP), 'n', 0), 0, l FROM ice.ns.src"
@@ -258,15 +250,12 @@ def write_null_sources(spark: Any) -> None:
     The source leaves are ``TIMESTAMP``, so this write is not a nested
     ``TIMESTAMP_NTZ`` store. Main copies these columns unchanged.
     """
-    spark.sql(
-        "CREATE TABLE ice.ns.null_src (id INT, st STRUCT<v: TIMESTAMP, n: INT>) "
-        "USING iceberg TBLPROPERTIES ('format-version'='2')"
-    )
+    _ice(spark, "ice.ns.null_src", "id INT, st STRUCT<v: TIMESTAMP, n: INT>")
     spark.sql("INSERT INTO ice.ns.null_src SELECT 1, CAST(NULL AS STRUCT<v: TIMESTAMP, n: INT>)")
-    spark.sql(
-        "CREATE TABLE ice.ns.null_inner_src ("
-        "id INT, st STRUCT<i: STRUCT<v: TIMESTAMP, n: INT>, n: INT>"
-        ") USING iceberg TBLPROPERTIES ('format-version'='2')"
+    _ice(
+        spark,
+        "ice.ns.null_inner_src",
+        "id INT, st STRUCT<i: STRUCT<v: TIMESTAMP, n: INT>, n: INT>",
     )
     spark.sql(
         "INSERT INTO ice.ns.null_inner_src SELECT 1, "
@@ -276,10 +265,10 @@ def write_null_sources(spark: Any) -> None:
 
 def create_depth2(spark: Any, table: str) -> None:
     """Create a v2 table whose depth-2 leaf is ``TIMESTAMP_NTZ``."""
-    spark.sql(
-        f"CREATE TABLE {table} ("
-        "id INT, st STRUCT<i: STRUCT<v: TIMESTAMP_NTZ, n: INT>, n: INT>, k INT"
-        ") USING iceberg TBLPROPERTIES ('format-version'='2')"
+    _ice(
+        spark,
+        table,
+        "id INT, st STRUCT<i: STRUCT<v: TIMESTAMP_NTZ, n: INT>, n: INT>, k INT",
     )
 
 
@@ -376,29 +365,20 @@ def test_positional_members_land_with_mains_cast(tmp_path: Path) -> None:
         instant_wall = WALL_TICK
 
         renamed = "ice.ns.renamed"
-        spark.sql(
-            f"CREATE TABLE {renamed} (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, renamed, "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>")
         spark.sql(f"INSERT INTO {renamed} SELECT 1, named_struct('a', {INSTANT}, 'n', 4)")
         row = struct_values(spark, renamed)[0]
         assert row["n"] == 4, row
         assert row["v"] is None, row
 
         ordered = "ice.ns.ordered"
-        spark.sql(
-            f"CREATE TABLE {ordered} (id INT, st STRUCT<v: TIMESTAMP_NTZ, w: TIMESTAMP_NTZ>) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, ordered, "id INT, st STRUCT<v: TIMESTAMP_NTZ, w: TIMESTAMP_NTZ>")
         spark.sql(f"INSERT INTO {ordered} SELECT 1, named_struct('w', {other}, 'v', {INSTANT})")
         assert leaf_ticks(spark, ordered, "st.v") == [instant_wall]
         assert leaf_ticks(spark, ordered, "st.w") == [other_wall]
 
         extra = "ice.ns.extra"
-        spark.sql(
-            f"CREATE TABLE {extra} (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, extra, "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>")
         spark.sql(f"INSERT INTO {extra} SELECT 1, named_struct('v', {INSTANT}, 'n', 4, 'extra', 9)")
         extra_row = struct_values(spark, extra)[0]
         assert set(extra_row) == {"v", "n"}, extra_row
@@ -406,10 +386,7 @@ def test_positional_members_land_with_mains_cast(tmp_path: Path) -> None:
         assert leaf_ticks(spark, extra, "st.v") == [instant_wall]
 
         cased = "ice.ns.cased"
-        spark.sql(
-            f"CREATE TABLE {cased} (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, cased, "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>")
         spark.sql(f"INSERT INTO {cased} SELECT 1, named_struct('V', {INSTANT}, 'n', 4)")
         cased_row = struct_values(spark, cased)[0]
         assert cased_row["n"] == 4, cased_row
@@ -441,10 +418,7 @@ def test_a_volatile_struct_is_evaluated_once(tmp_path: Path) -> None:
         write_source(spark)
         kind = wide_struct_type()
         selected = "ice.ns.wide_sel"
-        spark.sql(
-            f"CREATE TABLE {selected} (id INT, st {kind}) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, selected, f"id INT, st {kind}")
         statement = f"INSERT INTO {selected} SELECT 1, {wide_subquery()}"
         explained = spark.sql(f"EXPLAIN {statement}").toArrow().to_pylist()
         plan = " ".join(str(row) for row in explained).lower()
@@ -457,10 +431,7 @@ def test_a_volatile_struct_is_evaluated_once(tmp_path: Path) -> None:
         assert leaf_ticks(spark, selected, "st.v") == [SESSION_WALL["America/New_York"]]
 
         appended = "ice.ns.wide_app"
-        spark.sql(
-            f"CREATE TABLE {appended} (id INT, st {kind}) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, appended, f"id INT, st {kind}")
         frame = spark.sql(f"SELECT 1 AS id, {wide_subquery()} AS st")
         frame.writeTo(appended).append()
         appended_row = struct_values(spark, appended)[0]
@@ -494,11 +465,7 @@ def test_merge_update_clauses_store_the_session_wall_before_the_none_site(
         )
         assert leaf_ticks(spark, matched, "st.v") == [expected]
         nmbs = "ice.ns.q7_nmbs"
-        spark.sql(
-            f"CREATE TABLE {nmbs} "
-            "(id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, nmbs, "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP")
         spark.sql(
             f"INSERT INTO {nmbs} SELECT 9, "
             f"named_struct('v', CAST(NULL AS TIMESTAMP_NTZ), 'n', 0), 0, {INSTANT}"
@@ -555,10 +522,7 @@ def test_a_struct_under_a_list_keeps_the_utc_wall(tmp_path: Path) -> None:
     spark = open_session("America/New_York", tmp_path)
     try:
         write_source(spark)
-        spark.sql(
-            "CREATE TABLE ice.ns.arr (id INT, a ARRAY<STRUCT<v: TIMESTAMP_NTZ>>) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, "ice.ns.arr", "id INT, a ARRAY<STRUCT<v: TIMESTAMP_NTZ>>")
         spark.sql("INSERT INTO ice.ns.arr SELECT 1, array(named_struct('v', l)) FROM ice.ns.src")
         column = spark.sql("SELECT a AS a FROM ice.ns.arr").toArrow().column("a")
         assert column.combine_chunks().to_pylist() == [
@@ -574,11 +538,7 @@ def test_repair_moves_a_main_wall_to_the_session_wall(tmp_path: Path) -> None:
     try:
         write_source(spark)
         table = "ice.ns.repair"
-        spark.sql(
-            f"CREATE TABLE {table} "
-            "(id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, table, "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP")
         spark.sql(
             f"INSERT INTO {table} SELECT 1, named_struct('v', {WALL}, 'n', 1), 0, l FROM ice.ns.src"
         )
@@ -628,11 +588,7 @@ def test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands(
     """
     spark = open_session("America/New_York", tmp_path)
     try:
-        spark.sql(
-            "CREATE TABLE ice.ns.t "
-            "(id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP) "
-            "USING iceberg TBLPROPERTIES ('format-version'='2')"
-        )
+        _ice(spark, "ice.ns.t", "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP")
         spark.sql(
             "INSERT INTO ice.ns.t VALUES "
             f"(1, named_struct('v', {WALL}, 'n', 1), 0, {JULY}), "
@@ -985,3 +941,47 @@ def test_explain_pins(tmp_path: Path) -> None:
         assert leaf_ticks(spark, "ice.ns.an", "st.v") == [WALL_TICK]
     finally:
         spark.stop()
+
+
+_NOT_NULL_LINE = (
+    "This feature is not implemented: Unsupported CAST from "
+    'Struct("i": Struct("v": Timestamp(µs, "UTC"), "n": Int32), "m": Int32) to '
+    'Struct("i": Struct("v": non-null Timestamp(µs), "n": non-null Int32), "m": Int32)'
+)
+_CASED_LINE = (
+    "This feature is not implemented: Unsupported CAST from "
+    'Struct("V": Timestamp(µs, "UTC"), "W": Timestamp(µs, "UTC")) to '
+    'Struct("v": Timestamp(µs), "w": Timestamp(µs))'
+)
+
+
+def test_not_null_insert_names_the_users_source_type(tmp_path: Path) -> None:
+    """INSERT SELECT into a NOT NULL member names the user's zoned source type."""
+    for zone in ("UTC", "America/New_York"):
+        spark = open_session(zone, tmp_path / zone)
+        try:
+            _ice(spark, "ice.ns.src", "id INT, l TIMESTAMP, l2 TIMESTAMP")
+            spark.sql(f"INSERT INTO ice.ns.src VALUES (1, {INSTANT}, {INSTANT})")
+            _ice(
+                spark,
+                "ice.ns.nn",
+                "id INT, st STRUCT<i: STRUCT<v: TIMESTAMP_NTZ NOT NULL, "
+                "n: INT NOT NULL>, m: INT>, k INT",
+            )
+            _ice(spark, "ice.ns.cs", "id INT, st STRUCT<v: TIMESTAMP_NTZ, w: TIMESTAMP_NTZ>, k INT")
+            with pytest.raises(Exception) as caught:
+                spark.sql(
+                    "INSERT INTO ice.ns.nn SELECT id, "
+                    "named_struct('i', named_struct('v', l, 'n', id), 'm', 5), 0 "
+                    "FROM ice.ns.src"
+                )
+            assert type(caught.value).__name__ == "UnsupportedOperationException"
+            assert error_line(caught.value) == _NOT_NULL_LINE
+            with pytest.raises(Exception) as caught:
+                spark.sql(
+                    "INSERT INTO ice.ns.cs SELECT id, named_struct('V', l, 'W', l2), 0 "
+                    "FROM ice.ns.src"
+                )
+            assert error_line(caught.value) == _CASED_LINE
+        finally:
+            spark.stop()

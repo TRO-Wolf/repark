@@ -216,6 +216,9 @@ fn wrap_nested_ntz(expr: &Expr, target: &DataType, schema: &DFSchema) -> Expr {
     {
         return expr.clone();
     }
+    if repark_iceberg::write::update_cast::arrow_cast_rejects_not_null_member(&source, target) {
+        return expr.clone();
+    }
     let call =
         repark_functions::nested_ntz_cast::nested_ntz_cast_expr(value.clone(), &paths_text(&paths));
     let casted = match cast_field {

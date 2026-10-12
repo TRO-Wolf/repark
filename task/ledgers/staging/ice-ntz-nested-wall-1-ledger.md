@@ -458,10 +458,14 @@ texts were recorded on head `b6b20b3c` with the arm absent. Disposition:
 fixed for append `INSERT` and whole-struct `UPDATE`; named holes for the
 other doors and for `EXPLAIN ANALYZE`.
 
-F7 is not a sentence this unit builds. The refusal text is Arrow's, and the
-cast's input type is the kernel's output (`Timestamp(us)` with no zone) rather
-than the user's source (`Timestamp(us, "UTC")`). The class is unchanged.
-Disposition: recorded.
+F7 skips the wrap at `nested_micro_ntz_wall_sql` and `wrap_nested_ntz` when a
+NOT NULL target member is nullable on the source, so the existing cast names
+the user's type. The bare kernel stays wrapped, and the 35 NOT NULL cells
+still store the values they stored at `4b66decb`. Pin:
+`test_not_null_insert_names_the_users_source_type` holds main's first line in
+UTC and America/New_York, and `test_not_null_members_store_on_the_bare_kernel_doors`
+holds the 35 stores. Disposition: fixed for the cast emitters; the bare
+kernel doors are unchanged.
 
 F8 is two named holes, both equal to main. A member whose name contains `.`
 or `,` is not wrapped: ``a.b`` and ``c,d`` store `1767323045123456`. The

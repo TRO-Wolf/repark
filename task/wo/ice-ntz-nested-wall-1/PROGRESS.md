@@ -191,3 +191,9 @@ did not. `INSERT OVERWRITE`, the three `MERGE` clauses, `REPLACE WHERE`, and
 `BY NAME` stay main (R-022 through R-027). `EXPLAIN ANALYZE INSERT` in
 America/New_York writes `1767323045123456` (R-028) and is not changed.
 Unconverted EXPLAIN text was recorded on `b6b20b3c` with the arm absent.
+
+**Round 11, item 2:** `nested_micro_ntz_wall_sql` and `wrap_nested_ntz` skip
+the wrap when a NOT NULL target member is nullable on the source. The bare
+kernel sites stay wrapped. INSERT SELECT into that member raises main's
+`Unsupported CAST` first line in UTC and America/New_York. The 35 NOT NULL
+cells still store the `4b66decb` ticks.

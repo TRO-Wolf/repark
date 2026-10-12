@@ -240,13 +240,37 @@ pub fn nested_micro_ntz_kernel_sql(
 }
 
 #[must_use]
+pub fn arrow_cast_rejects_not_null_member(source: &DataType, target: &DataType) -> bool {
+    let (DataType::Struct(target_fields), DataType::Struct(source_fields)) = (target, source)
+    else {
+        return false;
+    };
+    if !members_align(source, target) {
+        return false;
+    }
+    target_fields
+        .iter()
+        .zip(source_fields.iter())
+        .any(|(target_field, source_field)| {
+            (source_field.is_nullable() && !target_field.is_nullable())
+                || arrow_cast_rejects_not_null_member(
+                    source_field.data_type(),
+                    target_field.data_type(),
+                )
+        })
+}
+
+#[must_use]
 pub fn nested_micro_ntz_wall_sql(
     expr_sql: &str,
     source: Option<&DataType>,
     target: &DataType,
 ) -> Option<String> {
-    nested_micro_ntz_kernel_sql(expr_sql, source, target)
-        .map(|call| nested_leaf_cast_sql(&call, target))
+    let call = nested_micro_ntz_kernel_sql(expr_sql, source, target)?;
+    if source.is_some_and(|found| arrow_cast_rejects_not_null_member(found, target)) {
+        return None;
+    }
+    Some(nested_leaf_cast_sql(&call, target))
 }
 
 fn is_zoned_instant(source: &DataType) -> bool {
@@ -609,6 +633,40 @@ mod tests {
                 .map(|(name, data_type)| Field::new(*name, data_type.clone(), true))
                 .collect(),
         )
+    }
+
+    #[test]
+    fn a_not_null_member_the_cast_cannot_produce_skips_the_wall_only() {
+        let source = struct_type(&[
+            ("v", instant(TimeUnit::Microsecond)),
+            ("n", DataType::Int32),
+        ]);
+        let target = DataType::Struct(
+            vec![
+                Field::new("v", ntz(), false),
+                Field::new("n", DataType::Int32, true),
+            ]
+            .into(),
+        );
+        assert!(nested_micro_ntz_wall_sql("`st`", Some(&source), &target).is_none());
+        assert!(nested_micro_ntz_kernel_sql("`st`", Some(&source), &target).is_some());
+        let required_source = DataType::Struct(
+            vec![
+                Field::new("v", instant(TimeUnit::Microsecond), false),
+                Field::new("n", DataType::Int32, false),
+            ]
+            .into(),
+        );
+        let required_target = DataType::Struct(
+            vec![
+                Field::new("v", ntz(), false),
+                Field::new("n", DataType::Int32, false),
+            ]
+            .into(),
+        );
+        let sql = nested_micro_ntz_wall_sql("`st`", Some(&required_source), &required_target)
+            .expect("wraps");
+        assert!(sql.contains("__repark_cast_nested_ntz__"), "{sql}");
     }
 
     #[test]

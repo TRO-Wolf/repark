@@ -3241,6 +3241,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   type error; an equal-type subquery stays main's silent no-op. A branch
   `MERGE UPDATE` stores the session wall. Member names that contain `.` or
   `,`, and a matching leaf beside a renamed member, stay at main's values.
+  `test_not_null_insert_names_the_users_source_type` holds main's first line
+  for a NOT NULL INSERT SELECT in UTC and America/New_York.
   `test_explain_pins` shows `__repark_cast_nested_ntz__` on a converted
   `INSERT … SELECT` and a whole-struct `UPDATE`, keeps the recorded main text
   for the unconverted doors, and records `EXPLAIN ANALYZE INSERT` storing the
