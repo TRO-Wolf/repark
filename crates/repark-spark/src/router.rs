@@ -197,7 +197,13 @@ async fn execute_calibrated(
     metadata_column_pins.release(ctx);
     lineage_pins.release(ctx);
     pinned.release(ctx);
-    result
+    match (result, &sql_after_branch) {
+        (Err(error), std::borrow::Cow::Owned(_)) => Err(write_to_branch::name_target(
+            error,
+            sql_after_changes.as_ref(),
+        )),
+        (result, _) => result,
+    }
 }
 
 /// Continue routing after the time-travel rewrite while preserving pinned-view cleanup.

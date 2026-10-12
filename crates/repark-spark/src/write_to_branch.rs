@@ -179,6 +179,16 @@ pub(crate) fn written_targets(sql: &str) -> Vec<Vec<String>> {
         .collect()
 }
 
+pub(crate) fn name_target(error: DataFusionError, sql: &str) -> DataFusionError {
+    match written_targets(sql).first() {
+        Some(parts) => {
+            let named = format!("`{}`", parts.join("."));
+            repark_iceberg::write::narrowed_store::name_table(error, &named)
+        }
+        None => error,
+    }
+}
+
 pub(crate) fn find_write_target_range(tokens: &[Token]) -> Option<(usize, usize)> {
     find_target_span(tokens, 1).map(|span| (span.start, span.end))
 }

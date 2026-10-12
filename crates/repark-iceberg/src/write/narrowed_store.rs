@@ -203,7 +203,7 @@ fn conformed(expr: &Expr) -> Option<&Column> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Narrowing {
-    pub value: String,
+    pub value: Option<String>,
     pub element_of: Option<String>,
     pub beside_untyped_null: bool,
     pub zoned: bool,
@@ -296,6 +296,11 @@ pub fn narrowed_refusal(
     } else {
         ("TIMESTAMP_NS", "timestamp_ns")
     };
+    let table = if text::generated(table.trim_matches('`')) {
+        "``"
+    } else {
+        table
+    };
     let head = format!(
         "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
          the table {table}: Cannot safely cast `{column}` \"TIMESTAMP\" to \"{upper}\"."
@@ -306,7 +311,14 @@ pub fn narrowed_refusal(
              give the NULL beside it the type {lower}. SQLSTATE: KD000"
         ));
     }
-    let value = &narrowing.value;
+    let Some(value) = &narrowing.value else {
+        return DataFusionError::Plan(format!(
+            "{head} The value was narrowed from nanoseconds to microseconds before the store, \
+             to match the microsecond value beside it; write a CAST to TIMESTAMP over the \
+             nanosecond value if microseconds are intended, or give the value beside it a \
+             nanosecond type. SQLSTATE: KD000"
+        ));
+    };
     let named = match &narrowing.element_of {
         Some(ranged) => format!("{value}, an element of {ranged},"),
         None => value.clone(),
@@ -766,12 +778,15 @@ fn found(
     if idle || forgiven {
         return expr_lineage(value, input, walk);
     }
-    let element_of = match value {
-        Expr::LambdaVariable(_) => walk.ranged.map(text::sql_text),
-        _ => None,
+    let (value, element_of) = match value {
+        Expr::LambdaVariable(variable) => match walk.ranged.and_then(text::named) {
+            Some(ranged) => (Some(variable.name.clone()), Some(ranged)),
+            None => (None, None),
+        },
+        other => (text::named(other), None),
     };
     Some(Narrowing {
-        value: text::sql_text(value),
+        value,
         element_of,
         beside_untyped_null,
         zoned: zoned.unwrap_or(false),
@@ -857,5 +872,7 @@ fn expr_type(expr: &Expr, input: Option<&LogicalPlan>) -> Result<DataType> {
     }
 }
 
+#[cfg(test)]
+mod lineage_tests;
 #[cfg(test)]
 mod tests;

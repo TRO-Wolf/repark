@@ -504,7 +504,7 @@ impl Cell<'_> {
         );
         let advice = if NARROWED_BESIDE_A_VALUE.contains(&self.spelling) {
             "was narrowed from nanoseconds to microseconds before the store, to match the \
-             microsecond value beside it; write CAST("
+             microsecond value beside it; write "
                 .to_string()
         } else {
             format!(
@@ -516,7 +516,7 @@ impl Cell<'_> {
         let table = if door.starts_with("merge") {
             format!("the table `ice.ns.{}`:", self.table)
         } else if flags.contains('B') {
-            "the table `datafusion.public.".to_string()
+            format!("the table `ice.ns.{}.branch_b1`:", self.table)
         } else if door.starts_with("insert overwrite") || door == "insert by name" {
             format!("the table `ns`.`{}`:", self.table)
         } else {

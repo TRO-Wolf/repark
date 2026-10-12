@@ -140,7 +140,8 @@ async fn a_mark_refuses_through_every_argument_that_carries_the_value_and_no_oth
         let plan = plan_of(&ctx, value.clone()).await;
         assert_eq!(column_narrowed(&plan, 0, None), None, "{value}");
         let found = column_narrowed(&plan, 1, None).unwrap_or_else(|| panic!("{value}"));
-        assert!(found.value.contains("src.m"), "{value}: {}", found.value);
+        let named = found.value.as_deref();
+        assert!(named.is_none_or(|named| named == "src.m"), "{value}");
         assert!(!found.zoned, "{value}");
     }
     let selector = Expr::ScalarFunction(datafusion::logical_expr::expr::ScalarFunction::new_udf(
@@ -218,7 +219,7 @@ async fn the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut() {
         let narrowed = coalesce(vec![kernel(mark, "m"), col("u")]);
         let plan = plan_of(&ctx, narrowed.clone()).await;
         let found = column_narrowed(&plan, 1, None).expect("the kernel's mark");
-        assert_eq!(found.value, "src.m");
+        assert_eq!(found.value.as_deref(), Some("src.m"));
         let generated = ctx
             .table("src")
             .await
@@ -229,7 +230,7 @@ async fn the_narrowing_kernel_that_carries_a_mark_is_the_analyzers_cut() {
             .unwrap()
             .into_unoptimized_plan();
         let found = column_narrowed(&generated, 1, None).expect("the kernel's mark");
-        assert_eq!(found.value, "m");
+        assert_eq!(found.value.as_deref(), Some("m"));
         assert_eq!(found.beside_untyped_null, untyped_null);
         let written = identity(NARROW_TIMESTAMP_NS_UDF_NAME, instant(), instant(), narrowed);
         let forgiven = plan_of(&ctx, written).await;

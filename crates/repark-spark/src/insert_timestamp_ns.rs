@@ -183,6 +183,11 @@ impl Narrowed<'_> {
         } else {
             ("TIMESTAMP_NS", "timestamp_ns")
         };
+        let table = if table.contains("__repark_") {
+            ""
+        } else {
+            table
+        };
         Err(datafusion::error::DataFusionError::Plan(format!(
             "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
              the table `{table}`: Cannot safely cast `{column}` \"TIMESTAMP\" to \"{upper}\". The \

@@ -801,28 +801,28 @@ async fn the_refusal_names_what_the_statement_wrote() {
         ),
         (
             "coalesce(ns + INTERVAL '1' DAY, ts)",
-            "The value ice.ns.src.ns + INTERVAL '1' DAY was narrowed",
-            "write CAST(ice.ns.src.ns + INTERVAL '1' DAY AS TIMESTAMP) if",
+            "The value was narrowed",
+            "write a CAST to TIMESTAMP over the nanosecond value if",
         ),
         (
             "greatest(CAST(coalesce(ns, ntz) AS timestamp_ns), ts)",
-            "The value CAST(coalesce(ice.ns.src.ns, ice.ns.src.ntz) AS timestamp_ns) was narrowed",
-            "AS TIMESTAMP) if",
+            "The value was narrowed",
+            "write a CAST to TIMESTAMP over the nanosecond value if",
         ),
         (
             "transform(array(ns), x -> coalesce(x, ts))[0]",
-            "The value x, an element of array(ice.ns.src.ns), was narrowed",
-            "write CAST(x AS TIMESTAMP) if",
+            "The value was narrowed",
+            "write a CAST to TIMESTAMP over the nanosecond value if",
         ),
         (
             "coalesce(array(ns), array(ts))[0]",
-            "The value array(ice.ns.src.ns) was narrowed",
-            "give the value beside it a nanosecond type",
+            "The value was narrowed",
+            "write a CAST to TIMESTAMP over the nanosecond value if",
         ),
         (
             "coalesce(CAST(tzns AS timestamp_ns), TIMESTAMP '2001-02-03 04:05:06')",
-            "The value CAST(ice.ns.src.tzns AS timestamp_ns) was narrowed",
-            "write CAST(CAST(ice.ns.src.tzns AS timestamp_ns) AS TIMESTAMP) if",
+            "The value was narrowed",
+            "write a CAST to TIMESTAMP over the nanosecond value if",
         ),
     ] {
         let refused = matrix

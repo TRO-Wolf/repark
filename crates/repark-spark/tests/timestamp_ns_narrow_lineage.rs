@@ -226,7 +226,19 @@ impl Store<'_> {
                 && refused.contains("SQLSTATE: KD000"),
             "{door}: {query}: {refused}"
         );
-        let internal = ["__repark", "Timestamp(", "Interval", "the table ``"];
+        let internal = [
+            "__repark",
+            "_repark_",
+            "Timestamp(",
+            "Interval",
+            "the table ``",
+            "Int64(",
+            "make_array",
+            "ORDER BY [",
+            "RANGE BETWEEN",
+            "FILTER (",
+            "AS BIGINT",
+        ];
         assert!(
             !internal.iter().any(|text| refused.contains(text)),
             "{door}: {query}: {refused}"
@@ -620,4 +632,66 @@ async fn an_explain_frame_is_a_statement_and_prints_no_hidden_function() {
         kept.iter().all(|(_, plan)| !plan.contains("__repark_")),
         "{kept:?}"
     );
+}
+
+#[tokio::test]
+async fn a_refusal_names_a_plain_column_and_otherwise_only_the_target() {
+    let mut matrix = Matrix::open(ZONES[1]).await;
+    let (door, flags, template) = DOORS[0];
+    for (query, named) in [
+        (
+            select("coalesce(ns, ts)"),
+            Some("The value ice.ns.src.ns was narrowed"),
+        ),
+        (
+            "SELECT s.id, coalesce(s.ns, s.ts) AS v FROM ice.ns.src s".to_string(),
+            Some("The value s.ns was narrowed"),
+        ),
+        (select("coalesce(ns + INTERVAL '1' DAY, ts)"), None),
+        (select("coalesce(named_struct('f', ns).f, ts)"), None),
+        (
+            select("coalesce(first_value(ns) OVER (PARTITION BY id ORDER BY id), ts)"),
+            None,
+        ),
+        (select("coalesce(lag(ns) OVER (ORDER BY id), ts)"), None),
+        (select("coalesce(array(ns)[0], ts)"), None),
+        (select("coalesce(element_at(map('a', ns), 'a'), ts)"), None),
+        (
+            select("transform(array(ns), x -> coalesce(x, ts))[0]"),
+            None,
+        ),
+        (select("coalesce(array(ns), array(ts))[0]"), None),
+        (
+            "SELECT id, coalesce(max(ns) FILTER (WHERE id > 0), max(ts)) AS v FROM ice.ns.src \
+             GROUP BY id"
+                .to_string(),
+            None,
+        ),
+    ] {
+        let refused = matrix
+            .store("timestamp_ns")
+            .refuses(door, flags, template, &query)
+            .await;
+        assert!(
+            refused.contains("Cannot safely cast `v`"),
+            "{query}: {refused}"
+        );
+        match named {
+            Some(named) => assert!(
+                refused.contains(named) && refused.contains("write CAST("),
+                "{query}: {refused}"
+            ),
+            None => assert!(
+                refused.contains("The value was narrowed")
+                    && refused.contains("write a CAST to TIMESTAMP over the nanosecond value"),
+                "{query}: {refused}"
+            ),
+        }
+    }
+    let unioned = "SELECT id, ns AS v FROM ice.ns.src UNION ALL SELECT id, ts FROM ice.ns.src";
+    let refused = matrix
+        .store("timestamp_ns")
+        .refuses(door, flags, template, unioned)
+        .await;
+    assert!(!refused.contains("NULL"), "{refused}");
 }

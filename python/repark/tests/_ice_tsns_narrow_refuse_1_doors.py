@@ -224,7 +224,10 @@ _NOISE = re.compile(
 )
 
 
-_SESSION_NAME = re.compile(r"__repark_tt_\d+|\b[pv]_x\d+\b|<X>|Column: \d+")
+_SESSION_NAME = re.compile(
+    r"datafusion\.public\.__repark_tt_\d+|ice\.ns\.<X>\.branch_b1|__repark_tt_\d+"
+    r"|\b[pv]_x\d+\b|<X>|Column: \d+"
+)
 COMPARED = 200
 
 
