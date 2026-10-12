@@ -569,8 +569,8 @@ fn rewrite_plan(
         let rewritten = marks.rewrite(expr, &schema, &|node| {
             rewrite_cast(node, &schema, zone, timestamp_type)
         })?;
-        let plain = rewritten.transform_data(crate::null_narrowing::unsigned)?;
-        Ok(plain.update_data(|node| crate::null_narrowing::restored(node, saved_name)))
+        let cleared = rewritten.transform_data(crate::null_narrowing::unsigned)?;
+        Ok(cleared.update_data(|node| crate::null_narrowing::restored(node, saved_name)))
     })?;
     transformed
         .map_data(LogicalPlan::recompute_schema)?
