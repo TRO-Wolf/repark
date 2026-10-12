@@ -3248,7 +3248,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `INSERT … SELECT` and a whole-struct `UPDATE`, keeps the recorded main text
   for the unconverted doors, and records `EXPLAIN ANALYZE INSERT` storing the
   UTC wall `1767323045123456`. Those texts were recorded on head `b6b20b3c`
-  with the arm absent.
+  with the arm absent. Core-count partition numbers (`RoundRobinBatch`,
+  `Hash`, `input_partitions`) are masked on both sides before comparison.
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 - [ice_ntz_nested_wall_1_helpers.py](ice_ntz_nested_wall_1_helpers.py) —
   **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** session, parquet leaf readers, and

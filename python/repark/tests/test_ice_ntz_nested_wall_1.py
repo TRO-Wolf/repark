@@ -831,9 +831,12 @@ def test_punctuation_names_and_a_renamed_sibling_stay_at_mains_values(tmp_path: 
 
 
 def _mask_plan(text: str) -> str:
-    """Hide snapshot ids and partition counts so two warehouses compare."""
+    """Hide snapshot ids and core-count partition numbers so machines compare."""
     text = re.sub(r"snapshot_id=\d+", "snapshot_id=#", text)
-    return re.sub(r"N=\d+", "N=#", text)
+    text = re.sub(r"N=\d+", "N=#", text)
+    text = re.sub(r"RoundRobinBatch\(\d+\)", "RoundRobinBatch(#)", text)
+    text = re.sub(r"(Hash\(\[[^\]]*\], )\d+\)", r"\1#)", text)
+    return re.sub(r"input_partitions=\d+", "input_partitions=#", text)
 
 
 def _explain_text(spark: Any, sql: str) -> str:
