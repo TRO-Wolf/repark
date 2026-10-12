@@ -569,9 +569,10 @@ repark-core's error map.
   pins: rp-5-fork-repin/C-004
 - `update_cast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `nested_micro_ntz_wall_sql`
   rebuilds a struct when a microsecond `TIMESTAMP_NTZ` leaf below the top level is
-  paired with an instant (`Timestamp` with a zone, any unit). That leaf becomes
-  `__repark_cast_timestamp_ntz__`. A `None` source, a wall, a string, a date, an
-  integer, a `timestamp_ns` leaf, a nested `TIMESTAMP` leaf, a list and a map stay
+  paired with an instant (`Timestamp` with a zone, any unit). The leaf choice is
+  a table of target kind and source kind; only that pair wraps. A `None` source,
+  a wall, a string, a date, an integer, a `timestamp_ns` leaf, a nested
+  `TIMESTAMP` leaf, a list and a map stay
   the original expression. `ntz_store::zone_store_frame`,
   `merge/insert.rs` `zone_wrapping_stream_sql` and `store_assignment_cast_sql`
   call it, and so does `predicate_dml/lineage.rs` `update_projection_sql`.

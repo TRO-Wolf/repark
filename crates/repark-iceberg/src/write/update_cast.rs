@@ -82,8 +82,88 @@ pub fn nested_ntz_paths_literal(paths: &[Vec<String>]) -> String {
     format!("'{}'", body.replace('\'', "''"))
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LeafKind {
+    MicroNtz,
+    ZonedInstant,
+    Other,
+}
+
+struct LeafRow {
+    target: LeafKind,
+    source: LeafKind,
+    wrap: bool,
+}
+
+const LEAF_ROWS: &[LeafRow] = &[
+    LeafRow {
+        target: LeafKind::MicroNtz,
+        source: LeafKind::ZonedInstant,
+        wrap: true,
+    },
+    LeafRow {
+        target: LeafKind::MicroNtz,
+        source: LeafKind::MicroNtz,
+        wrap: false,
+    },
+    LeafRow {
+        target: LeafKind::MicroNtz,
+        source: LeafKind::Other,
+        wrap: false,
+    },
+    LeafRow {
+        target: LeafKind::ZonedInstant,
+        source: LeafKind::MicroNtz,
+        wrap: false,
+    },
+    LeafRow {
+        target: LeafKind::ZonedInstant,
+        source: LeafKind::ZonedInstant,
+        wrap: false,
+    },
+    LeafRow {
+        target: LeafKind::ZonedInstant,
+        source: LeafKind::Other,
+        wrap: false,
+    },
+    LeafRow {
+        target: LeafKind::Other,
+        source: LeafKind::MicroNtz,
+        wrap: false,
+    },
+    LeafRow {
+        target: LeafKind::Other,
+        source: LeafKind::ZonedInstant,
+        wrap: false,
+    },
+    LeafRow {
+        target: LeafKind::Other,
+        source: LeafKind::Other,
+        wrap: false,
+    },
+];
+
+fn leaf_kind(data_type: &DataType) -> LeafKind {
+    if is_micro_ntz(data_type) {
+        LeafKind::MicroNtz
+    } else if is_zoned_instant(data_type) {
+        LeafKind::ZonedInstant
+    } else {
+        LeafKind::Other
+    }
+}
+
+fn leaf_wraps(source: &DataType, target: &DataType) -> bool {
+    let target = leaf_kind(target);
+    let source = leaf_kind(source);
+    LEAF_ROWS
+        .iter()
+        .find(|row| row.target == target && row.source == source)
+        .is_some_and(|row| row.wrap)
+}
+
 fn source_paths(source: &DataType, target: &DataType, below: bool) -> Vec<Vec<String>> {
-    if below && is_micro_ntz(target) && is_zoned_instant(source) {
+    if below && leaf_wraps(source, target) {
         return vec![Vec::new()];
     }
     let (DataType::Struct(target_fields), DataType::Struct(source_fields)) = (target, source)
@@ -516,6 +596,21 @@ mod tests {
                 .map(|(name, data_type)| Field::new(*name, data_type.clone(), true))
                 .collect(),
         )
+    }
+
+    #[test]
+    fn the_leaf_table_wraps_only_a_zoned_instant_into_micro_ntz() {
+        use super::{LEAF_ROWS, LeafKind};
+        assert_eq!(LEAF_ROWS.len(), 9);
+        let wrapping: Vec<_> = LEAF_ROWS.iter().filter(|row| row.wrap).collect();
+        assert_eq!(wrapping.len(), 1);
+        assert_eq!(wrapping[0].target, LeafKind::MicroNtz);
+        assert_eq!(wrapping[0].source, LeafKind::ZonedInstant);
+        let mirror = LEAF_ROWS
+            .iter()
+            .find(|row| row.target == LeafKind::ZonedInstant && row.source == LeafKind::MicroNtz)
+            .expect("mirror row");
+        assert!(!mirror.wrap);
     }
 
     #[test]

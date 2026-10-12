@@ -97,3 +97,8 @@ this gate.
 literal out of the emitted expression and out of the emitted SQL. `v`, `a,b`
 and `i.v` match. A wall, a string, a date, an integer, a top-level timestamp
 and a list emit no path from either side.
+
+**Round 7, leaf table:** the nested leaf choice is nine predicate rows. Only
+a zoned instant into a microsecond `TIMESTAMP_NTZ` wraps. The mirror row, a
+microsecond `TIMESTAMP_NTZ` into a zoned timestamp, is present and does not
+wrap. Seventeen `update_cast` tests pass.
