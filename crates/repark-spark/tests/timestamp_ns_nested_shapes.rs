@@ -503,7 +503,7 @@ async fn an_update_with_no_where_stores_a_nanosecond_value_built_from_an_untyped
     )
     .await;
     let read = "SELECT v FROM ice.ns.u ORDER BY id";
-    let walls_c = vec![Some(TICKS), Some(1_772_937_000_000_001)];
+    let walls_c = vec![Some(TICKS), Some(1_772_937_000_000_000_001)];
     let walls_z = vec![
         Some(1_767_305_045_123_456_789),
         Some(1_772_940_600_000_000_001),
