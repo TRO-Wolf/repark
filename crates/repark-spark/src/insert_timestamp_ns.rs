@@ -737,6 +737,26 @@ mod tests {
     }
 
     #[test]
+    fn a_user_cast_to_another_struct_stays_the_expression() {
+        let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
+        let source = struct_type(&[("v", instant()), ("n", DataType::Int32)]);
+        let other = struct_type(&[("v", DataType::Date32), ("n", DataType::Int32)]);
+        let schema = Arc::new(
+            DFSchema::try_from(Schema::new(vec![Field::new("s", source, true)])).expect("schema"),
+        );
+        let cast = col("s")
+            .cast_to(&other, schema.as_ref())
+            .expect("cast")
+            .alias("st");
+        assert_eq!(wrap_nested_ntz(&cast, &target, schema.as_ref()), cast);
+        let tried = Expr::TryCast(datafusion::logical_expr::expr::TryCast {
+            expr: Box::new(col("s")),
+            field: Arc::new(Field::new("st", other, true)),
+        });
+        assert_eq!(wrap_nested_ntz(&tried, &target, schema.as_ref()), tried);
+    }
+
+    #[test]
     fn the_path_literal_matches_the_sql_emitter() {
         let source = struct_type(&[("v", instant()), ("n", DataType::Int32)]);
         let target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);

@@ -1050,8 +1050,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `TIMESTAMP_NTZ` leaf. A selected instant leaf becomes
   `__repark_cast_nested_ntz__` on the whole struct, inside the plan's cast when
   that cast's type is the target and otherwise inside a cast to the target.
-  The expression has no `get_field` and no `random()`. A column with no
-  selected leaf is returned unchanged.
+  The expression has no `get_field` and no `random()`. A cast is peeled only
+  when its type is the target; a user cast to another struct, including
+  `TRY_CAST`, stays the original expression. A column with no selected leaf
+  is returned unchanged.
   pins: ice-ntz-nested-wall-1/C-003
 - `insert_timestamp_ns.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the `UPDATE` conform runs
   for a `timestamptz_ns` target too. R-007 had filtered zoned targets out of it to hold the

@@ -84,3 +84,6 @@ main's cast. The `get_field` rebuild, the bind, and `rand()` are gone. The
 facade file is 18 passed. A 20-field volatile struct keeps one draw. `EXPLAIN`
 has no `rand()`. Renamed and case-different members store NULL in the unmatched
 leaf, which is main's cast. Reordered names store each session wall on its name.
+
+**Round 7, cast peel:** a user `CAST` to `STRUCT<v: DATE, n: INT>` and a
+`TRY_CAST` stay the original expression. The unit test passes.
