@@ -345,10 +345,10 @@ fn plan_calls_kernel(plan: &LogicalPlan, kernel: &str) -> bool {
     let _ = plan.apply_with_subqueries(|node| {
         let _ = node.apply_expressions(|expr| {
             let _ = expr.apply(|leaf| {
-                if let Expr::ScalarFunction(function) = leaf {
-                    if function.func.name() == kernel {
-                        found = true;
-                    }
+                if let Expr::ScalarFunction(function) = leaf
+                    && function.func.name() == kernel
+                {
+                    found = true;
                 }
                 Ok(TreeNodeRecursion::Continue)
             });
