@@ -1,0 +1,72 @@
+schema: c4m_133176323936
+server: PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+== cell stmt-before-after ==
+stmt-before-after: ready
+insert: ok
+insert stored: 3 rows
+  (1, 'a')
+  (2, 'b')
+  (3, 'c')
+insert audit: 2 rows
+  ('before',)
+  ('after',)
+copy: ok
+copy stored: 3 rows
+  (1, 'a')
+  (2, 'b')
+  (3, 'c')
+copy audit: 2 rows
+  ('before',)
+  ('after',)
+== cell stmt-transition ==
+stmt-transition: ready
+insert: ok
+insert stored: 3 rows
+  (1, 'a')
+  (2, 'b')
+  (3, 'c')
+insert audit: 1 rows
+  (3, '1,2,3')
+copy: ok
+copy stored: 3 rows
+  (1, 'a')
+  (2, 'b')
+  (3, 'c')
+copy audit: 1 rows
+  (3, '1,2,3')
+== cell fdw-postgres ==
+fdw-postgres: ready
+insert: ok
+insert stored: 3 rows
+  (1, 'a', None)
+  (2, 'b', None)
+  (3, 'c', None)
+insert audit: 6 rows
+  ('row', 1)
+  ('stmt', None)
+  ('row', 2)
+  ('stmt', None)
+  ('row', 3)
+  ('stmt', None)
+copy: ok
+copy stored: 3 rows
+  (1, 'a', None)
+  (2, 'b', None)
+  (3, 'c', None)
+copy audit: 6 rows
+  ('row', 1)
+  ('stmt', None)
+  ('row', 2)
+  ('stmt', None)
+  ('row', 3)
+  ('stmt', None)
+-- fdw-postgres constraint violation --
+insert bad: ERROR sqlstate=23514 text=new row for relation "t_far" violates check constraint "t_far_n_check"
+insert bad stored: 0 rows
+copy bad: ERROR sqlstate=23514 text=new row for relation "t_far" violates check constraint "t_far_n_check"
+copy bad stored: 0 rows
+== cell fdw-file ==
+file_fdw available: True
+fdw-file: ready
+insert: ERROR sqlstate=0A000 text=cannot insert into foreign table "t_file"
+copy: ERROR sqlstate=0A000 text=cannot insert into foreign table "t_file"

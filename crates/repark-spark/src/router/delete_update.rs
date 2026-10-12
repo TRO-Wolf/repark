@@ -68,6 +68,9 @@ pub(crate) async fn execute_update(
     if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
         return Err(DataFusionError::Plan(message));
     }
+    if let Some(error) = super::pg_insert::refuse_postgres_update(catalogs, &update.table) {
+        return Err(error);
+    }
     if let Some(name) = object_name {
         crate::view_ddl::execute::refuse_view_write_target(ctx, catalogs, name).await?;
     }

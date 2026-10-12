@@ -584,6 +584,21 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **R-17c-4:** the carrier holds `display` (raw echo) + canonical `zone` (extractor reader).
   **R-17c-6:** the in-crate canonicaliser mirrors the core gate (exact-case prefixes,
   zero-seconds to `±HH:MM`) and asserts the same shared table. pins: set-ansi-runtime-1/C-002
+- `current_date.rs` — **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** the owned `current_date`
+  (+ `today` alias) overwrite. DataFusion's builtin folds at plan time from
+  `execution.time_zone`, which RePark never sets (parity doc SET-ANSI-RUNTIME note), so it
+  answered the UTC date; the owned impl folds the query start time through the
+  `SessionTimeZoneConfig` carrier instead (`session_start_days`, zone parse shared with the
+  `CAST AS DATE` sibling, wall clock via the zone-horizon helper). `Stable`, `Date32`, no
+  `return_field_from_args` — the only delta from upstream is the zone the date is read in.
+  One `lib.rs` register line; the DataFrame door builds it via `current_date::current_date()`.
+  The Rust pins went red under the hand revert (C-005).
+  **Fold 1 (2026-10-11):** when the carrier is absent (native door) the fold reads
+  `execution.time_zone` exactly as the builtin does (UTC when unset or unparsable); a
+  present carrier wins, even when set to UTC. The native DataFrame pair agrees with native
+  SQL under `SET TIME ZONE` again. A fixed-instant pin sits thirty minutes either side of
+  local midnight in `Asia/Kolkata` and `America/New_York`, red under a one-hour shift.
+  pins: current-date-session-zone-1/C-002, C-003, C-004, C-005, C-007, C-008
 - `session_names.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the SQL-door
   `current_catalog()` / `current_schema()` / `current_database()` nullary UDFs — one
   `SessionName` impl, non-nullable Utf8, `Stable`. `current_database` shares the
@@ -885,7 +900,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - **octo C1-Q-004:** `perf_measure_date_format_compile_once` /
   `perf_measure_substring_char_indices` gated on `REPARK_PERF_MEASURE=1` (not default suite tax).
 - **octo C2-Q-001:** `compile_java_pattern` apostrophe/punct edges + unterminated-quote Err pin.
-- `java_double.rs` + `java_double/` — **JAVA-DOUBLE-FD-1 port (2026-09-15):**
+- `java_double.rs` + `java_double/` — **C-4 fold 3 item 2 (2026-10-11):** the scalar
+  digit engine and `bigint.rs` moved to `repark-common`'s `java_double/` so the
+  Postgres write chokepoint calls the one function; `dtoa.rs` keeps the two
+  array wrappers and re-exports the scalars, so every importer is untouched and
+  no second formatter exists. The behaviour pins stay here.
+  **JAVA-DOUBLE-FD-1 port (2026-09-15):**
   `dtoa.rs` (independent JDK 17 `FloatingDecimal` port) + `bigint.rs` (ported
   `FDBigInteger`), `tests_corpus.rs` (byte-equality over
   `REPARK_JDK17_TOSTRING_CORPUS`, green on all 39,427 rows) with full
@@ -1039,7 +1059,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the call also passes
   `timestamp_type.is_ntz()`, so the pass reads a `TIMESTAMP` literal by the session's
   default timestamp type. pins: ntz-store-doors-1/C-009
-- `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
+- `timestamp_cast.rs` — **C-4 fold 3 item 2 (2026-10-11):** the tick, wall-clock and
+  formatting kernels of `__repark_timestamp_to_string__` moved to
+  `repark-common`'s `spark_timestamp_text.rs` so the Postgres write chokepoint calls
+  the one function; this file keeps the UDF shell, the analyzer rewrites and the pins,
+  and re-exports the formatter for `timestamp_ntz_cast.rs`.
+  **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
   `-1` and `-1.25 s` is `-2`; truncation toward zero agrees on every positive instant and every

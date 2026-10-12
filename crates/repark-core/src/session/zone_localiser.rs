@@ -28,7 +28,7 @@ mod placement {
     use arrow::array::TimestampMicrosecondArray;
     use arrow::array::timezone::Tz;
     use chrono::{DateTime, LocalResult};
-    use repark_common::zone_horizon::offsets_at_wall;
+    use repark_common::zone_horizon::{offsets_at_wall, wall_at_instant};
     use repark_connect::{ConnectError, ValueRefusal, WallClockLocaliser};
 
     use super::SessionZoneLocaliser;
@@ -42,26 +42,84 @@ mod placement {
         }
     }
 
-    fn refused(index: usize, reason: ValueRefusal) -> ConnectError {
+    fn refused(column: &str, index: usize, reason: ValueRefusal) -> ConnectError {
         ConnectError::UnrepresentableValue {
-            column: "".into(),
+            column: column.into(),
             postgres_type: "timestamp",
             index,
             reason,
         }
     }
 
-    pub(super) fn place(micros: i64, zone: Tz, index: usize) -> repark_connect::Result<i64> {
-        let past = || refused(index, ValueRefusal::TimestampPastCalendar);
+    pub(crate) fn zone_of(id: &str) -> repark_connect::Result<Tz> {
+        Tz::from_str(&canonical_session_zone_id(id)).map_err(|error| ConnectError::Arrow {
+            message: error.to_string(),
+        })
+    }
+
+    fn convert(
+        array: &TimestampMicrosecondArray,
+        zone: Tz,
+        column: &str,
+        convert: fn(i64, Tz, usize, &str) -> repark_connect::Result<i64>,
+    ) -> repark_connect::Result<TimestampMicrosecondArray> {
+        array
+            .iter()
+            .enumerate()
+            .map(|(index, value)| {
+                value
+                    .map(|micros| convert(micros, zone, index, column))
+                    .transpose()
+            })
+            .collect()
+    }
+
+    pub(crate) fn localise_at(
+        zone_id: &str,
+        wall: &TimestampMicrosecondArray,
+        column: &str,
+    ) -> repark_connect::Result<TimestampMicrosecondArray> {
+        convert(wall, zone_of(zone_id)?, column, place)
+    }
+
+    pub(crate) fn unlocalise(
+        zone_id: &str,
+        zoned: &TimestampMicrosecondArray,
+        column: &str,
+    ) -> repark_connect::Result<TimestampMicrosecondArray> {
+        convert(zoned, zone_of(zone_id)?, column, unplace)
+    }
+
+    pub(super) fn unplace(
+        micros: i64,
+        zone: Tz,
+        index: usize,
+        column: &str,
+    ) -> repark_connect::Result<i64> {
+        let past = || refused(column, index, ValueRefusal::TimestampPastCalendar);
+        let utc = DateTime::from_timestamp_micros(micros)
+            .ok_or_else(past)?
+            .naive_utc();
+        let wall = wall_at_instant(&zone, &utc).ok_or_else(past)?;
+        Ok(wall.and_utc().timestamp_micros())
+    }
+
+    pub(super) fn place(
+        micros: i64,
+        zone: Tz,
+        index: usize,
+        column: &str,
+    ) -> repark_connect::Result<i64> {
+        let past = || refused(column, index, ValueRefusal::TimestampPastCalendar);
         let wall = DateTime::from_timestamp_micros(micros)
             .ok_or_else(past)?
             .naive_utc();
         let offset = match offsets_at_wall(&zone, &wall) {
             LocalResult::Single(offset) => offset,
             LocalResult::Ambiguous(_, _) => {
-                return Err(refused(index, ValueRefusal::WallClockOverlap));
+                return Err(refused(column, index, ValueRefusal::WallClockOverlap));
             }
-            LocalResult::None => return Err(refused(index, ValueRefusal::WallClockGap)),
+            LocalResult::None => return Err(refused(column, index, ValueRefusal::WallClockGap)),
         };
         wall.checked_sub_offset(offset)
             .map(|instant| instant.and_utc().timestamp_micros())
@@ -73,14 +131,7 @@ mod placement {
             &self,
             wall: &TimestampMicrosecondArray,
         ) -> repark_connect::Result<TimestampMicrosecondArray> {
-            let zone =
-                Tz::from_str(&self.canonical_zone()).map_err(|error| ConnectError::Arrow {
-                    message: error.to_string(),
-                })?;
-            wall.iter()
-                .enumerate()
-                .map(|(index, value)| value.map(|micros| place(micros, zone, index)).transpose())
-                .collect()
+            localise_at(&self.canonical_zone(), wall, "")
         }
 
         fn zone_label(&self) -> Arc<str> {
@@ -88,6 +139,9 @@ mod placement {
         }
     }
 }
+
+#[cfg(feature = "postgres")]
+pub(crate) use placement::{localise_at, unlocalise, zone_of};
 
 #[cfg(all(test, feature = "postgres"))]
 mod tests;

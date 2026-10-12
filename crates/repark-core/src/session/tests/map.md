@@ -34,6 +34,42 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `seal_reports_its_limit_and_neither_runs_nor_takes_a_child`
   pin the seal node. The fixture is regenerated from a live Spark recording, never edited by hand.
   pins: offset-nested-sort-1/C-001, C-003, C-004, C-005, C-006, C-008, C-009, C-011
+- `write_postgres.rs` — **C-4 step 2 (2026-10-09):** the pre-connection pins: an unknown
+  mounted source and a non-Postgres mount refuse before any connection; an unknown property
+  refuses as `Config` naming `jdbc` without the password; a refused port refuses as
+  operational (`DataFusion` fold); partition keys and `predicates` on a write are ignored,
+  never refused; the `write.path` option defaults to bulk, takes `row` case-insensitively, and
+  refuses anything else as `Configuration` naming both values; the last-report carrier
+  records on builder sessions and nowhere else (bare contexts record nowhere).
+  pins: c-4/C-013, C-014
+- `write_postgres_shape.rs` — **C-4 fold 3 item 1 (2026-10-11):** split out of
+  `write_postgres.rs` at the pre-connection/`shape_batch` seam when the file passed its
+  ceiling (pure move). It holds the `shape_batch` pins:
+  **C-4 fold 2 items 2–3 (2026-10-10):** integer, decimal and byte overflows refuse
+  with the overflow class, malformed bytes with the invalid-input class, each naming the
+  column; fitting values and NULLs cast as before; a timestamp into a date or text
+  column takes the session-zone wall while timestamp and timestamptz columns keep their
+  placement. **C-4 fold 3 item 1 (2026-10-11):** the store-assignment pins: every
+  cross-family cell (integers into date/timestamp/bytea/interval, temporal into
+  integers, empty string into numeric, numbers and strings across bool/int/float, every
+  string source into a non-string column) refuses with the `CANNOT_SAFELY_CAST` class
+  naming the column and both types; interval columns take strings and null only; untyped
+  NULL stores into every column type; widening and narrowing within range still store.
+  The malformed-string, leftmost-value, capped-value and fitting-string pins are
+  deleted: the gate refuses those pairs before the value arms.
+  **C-4 fold 3 item 2 (2026-10-11):** the text-rendering pins: floats spell Java text
+  (infinities, NaN, 1e7, 1e16, 1e-5, 123456789.125, -0.0, both widths); nanosecond,
+  second and millisecond timestamps render the session-zone wall with up to nine
+  fraction digits; timestamps and dates outside the four-digit years render ISO dates;
+  decimals, bools, ints, strings and binaries render plainly.
+  **C-4 fold 3 S3 (2026-10-11):** a gap wall into a timestamptz column refuses
+  naming the column. **C-4 fold 4 item 3 (2026-10-11):** the gap pin also
+  names the column's Postgres type. pins: c-4/C-013, C-014
+- `write_postgres_interval.rs` — **C-4 fold 4 item 1 (2026-10-11):** the interval
+  carve-out pins at the `shape_batch` chokepoint, in their own module because the
+  shape file sits at its ceiling: an engine `Interval` into an interval column
+  stores as Arrow text, an interval into a text column still refuses with the
+  store-assignment class. pins: c-4/C-013, C-014
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
   argument refuses as `NumberFormat` before any connection. pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned

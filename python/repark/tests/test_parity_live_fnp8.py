@@ -49,7 +49,7 @@ def test_live_fnp8_indexed_transform_arrow_shapes(
             [[1, None, 5]],
             False,
             True,
-            False,
+            True,
             False,
             True,
             True,
