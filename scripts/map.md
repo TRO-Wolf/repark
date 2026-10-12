@@ -1,5 +1,7 @@
 # map — scripts/
 
+MERGE-MOD-SPLIT-1 (owner, 2026-10-12): `check_rust_file_size.py` retires the `repark-iceberg/src/write/merge/mod.rs` row (1569, under the default after the split; the SQL builders and the copy-on-write and merge-on-read arms move verbatim to `merge/merge_sql.rs`, `merge/copy_on_write.rs` and `merge/merge_on_read.rs`), shrink-only, with the CAP-1 mirror.
+
 C-4 step 2 (2026-10-09): `check_rust_file_size.py` retires the `repark-sql/src/guards/tests.rs` row (1207 → 770, under the default; the AnsiDoor harness and its end-to-end pins move verbatim to `guards/ansi_door.rs`), shrink-only.
 
 STAMP-2-R5P6-2 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3462 → 3461 (the H1 join door builds its statement in three lines and hands the route choice to `join_attr_tokens._join_exact_or_sql`), shrink-only, with the CAP-1 mirror. pins: stamp-2-r5p6-2/C-003
