@@ -910,4 +910,80 @@ def test_scalar_subquery_update_raises_mains_type_error(tmp_path: Path) -> None:
     finally:
         spark.stop()
 
+def _new_leaf(root: Path, before: set[Path]) -> list[int | None]:
+    ticks: list[int | None] = []
+    for found in sorted(set(root.rglob("*.parquet")) - before):
+        loaded = pq.read_table(found)
+        if "st" not in loaded.column_names:
+            continue
+        column = loaded.column("st").combine_chunks().field("v")
+        ticks.extend(column.cast(pa.int64(), safe=False).to_pylist())
+    return ticks
 
+
+
+def test_branch_merge_update_stores_the_session_wall(tmp_path: Path) -> None:
+    """Whole-struct MERGE UPDATE into a branch stores the session wall."""
+    spark = open_session("America/New_York", tmp_path)
+    try:
+        write_source(spark)
+        cols = "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP"
+        _ice(spark, "ice.ns.b", cols)
+        spark.sql(
+            "INSERT INTO ice.ns.b SELECT 1, "
+            "named_struct('v', CAST(NULL AS TIMESTAMP_NTZ), 'n', 0), 0, l FROM ice.ns.src"
+        )
+        spark.sql("ALTER TABLE ice.ns.b CREATE BRANCH dev")
+        before = set(tmp_path.rglob("*.parquet"))
+        spark.sql(
+            "MERGE INTO ice.ns.b.branch_dev t USING ice.ns.src s ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.l, 'n', 5)"
+        )
+        assert _new_leaf(tmp_path, before) == [SHIFTED_WALL]
+        spark.sql("ALTER TABLE ice.ns.b CREATE BRANCH wap")
+        spark.sql("SET spark.wap.branch=wap")
+        before = set(tmp_path.rglob("*.parquet"))
+        spark.sql(
+            "MERGE INTO ice.ns.b t USING ice.ns.src s ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.l, 'n', 5)"
+        )
+        assert _new_leaf(tmp_path, before) == [SHIFTED_WALL]
+    finally:
+        spark.stop()
+
+
+
+def test_punctuation_names_and_a_renamed_sibling_stay_at_mains_values(tmp_path: Path) -> None:
+    """Dotted names stay at the UTC wall, and a renamed sibling stays main's row."""
+    spark = open_session("America/New_York", tmp_path)
+    try:
+        write_source(spark)
+        odd = (
+            "id INT, st STRUCT<`a.b`: TIMESTAMP_NTZ, `c,d`: TIMESTAMP_NTZ, v: TIMESTAMP_NTZ>, k INT"
+        )
+        _ice(spark, "ice.ns.odd", odd)
+        spark.sql(
+            "INSERT INTO ice.ns.odd SELECT id, "
+            "named_struct('a.b', l, 'c,d', l, 'v', l), 0 FROM ice.ns.src"
+        )
+        path = next(
+            file["file_path"]
+            for file in spark.sql("SELECT content, file_path FROM ice.ns.odd.files")
+            .toArrow()
+            .to_pylist()
+            if file["content"] == 0
+        )
+        struct = pq.read_table(path, columns=["st"]).column("st").combine_chunks()
+        assert struct.field("a.b").cast(pa.int64(), safe=False).to_pylist() == [WALL_TICK]
+        assert struct.field("c,d").cast(pa.int64(), safe=False).to_pylist() == [WALL_TICK]
+        assert struct.field("v").cast(pa.int64(), safe=False).to_pylist() == [SHIFTED_WALL]
+        _ice(spark, "ice.ns.src2", "id INT, l TIMESTAMP, l2 TIMESTAMP")
+        spark.sql(f"INSERT INTO ice.ns.src2 VALUES (1, {INSTANT}, {JULY})")
+        _ice(spark, "ice.ns.ren", "id INT, st STRUCT<v: TIMESTAMP_NTZ, w: TIMESTAMP_NTZ>, k INT")
+        spark.sql(
+            "INSERT INTO ice.ns.ren SELECT id, named_struct('v', l, 'x', l2), 0 FROM ice.ns.src2"
+        )
+        assert leaf_ticks(spark, "ice.ns.ren", "st.v") == [WALL_TICK]
+        assert leaf_ticks(spark, "ice.ns.ren", "st.w") == [None]
+    finally:
+        spark.stop()

@@ -717,6 +717,28 @@ pub(crate) fn repeats_a_column(
         })
 }
 
+fn probe_table_sql(table: &TableFactor) -> String {
+    let mut rendered = table.clone();
+    if let TableFactor::Table { name, .. } = &mut rendered {
+        if name.0.len() >= 4 {
+            let last = name
+                .0
+                .last()
+                .and_then(ObjectNamePart::as_ident)
+                .map(|ident| ident.value.clone());
+            if last.as_deref().is_some_and(|last| {
+                matches!(
+                    crate::write_to_branch::parse_ref_selector(last),
+                    Some(crate::write_to_branch::RefSelectorKind::Branch(_))
+                )
+            }) {
+                name.0.pop();
+            }
+        }
+    }
+    rendered.to_string()
+}
+
 fn factor_alias(factor: &TableFactor) -> Option<(String, String)> {
     match factor {
         TableFactor::Table { name, alias, .. } => match alias {
@@ -802,7 +824,7 @@ pub(crate) async fn fold_merge_clauses(
         sql_qualifier: target_alias,
         column_prefix: Some(target_rendered),
         value_qualifiers,
-        probe_from: format!("{source} CROSS JOIN {table}"),
+        probe_from: format!("{source} CROSS JOIN {}", probe_table_sql(table)),
         case_sensitive,
     };
     let mut folded = clauses.to_vec();

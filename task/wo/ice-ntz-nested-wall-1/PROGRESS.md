@@ -154,3 +154,9 @@ the instant-struct UPDATE returned success and wrote nothing. Green after:
 `PySparkException` and main's first line, and the rows stay. The equal-type
 subquery stays the silent no-op. Registry row ICE-TSNS-SQL-1-R-021 is OPEN,
 measured 2026-10-12.
+
+**Round 9, item 3:** `probe_table_sql` drops the branch selector so the existing
+walk sees the source type. Red before: the branch MERGE UPDATE stored
+`1767323045123456`. Green after: `1767305045123456`, on `branch_dev` and on
+`spark.wap.branch`. A member name containing `.` or `,` stays at main's UTC
+wall. A matching leaf beside a renamed member stays main's row.

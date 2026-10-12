@@ -434,3 +434,19 @@ no-op, a subquery whose struct type equals the target, is registry row
 ICE-TSNS-SQL-1-R-021 (OPEN, measured 2026-10-12). The same pin holds that row
 at `(1, 1767323045123456, 77)`. Disposition: fixed for the instant source;
 named hole, equal to main, for the equal-type source.
+
+F5 is wired at the existing walk. `fold_merge_clauses` probed
+`catalog.namespace.table.branch_dev`, which does not resolve, so the source
+type was unknown and the walk kept main's expression. `probe_table_sql` drops
+that branch selector and the existing walk emits the kernel. `MERGE INTO
+b.branch_dev` and `spark.wap.branch` store the session wall
+`1767305045123456`. Pin: `test_branch_merge_update_stores_the_session_wall`.
+Disposition: fixed.
+
+F8 is two named holes, both equal to main. A member whose name contains `.`
+or `,` is not wrapped: ``a.b`` and ``c,d`` store `1767323045123456`. The
+sibling `v` is still converted. A matching leaf beside a renamed member keeps
+the whole struct: `INSERT … SELECT` of `named_struct('v', l, 'x', l2)` stores
+the UTC wall in `v` and NULL in `w`. Pin:
+`test_punctuation_names_and_a_renamed_sibling_stay_at_mains_values`.
+Disposition: named hole.
