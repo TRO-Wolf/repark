@@ -582,11 +582,11 @@ async fn untouched_rows_carry_their_nanosecond_ticks() {
 
 const NTZ_NESTED_DOORS: [(&str, bool); 6] = [
     ("insert values", false),
-    ("insert select", false),
+    ("insert select", true),
     ("merge set field", true),
     ("merge set struct", false),
     ("update set field", true),
-    ("merge insert", false),
+    ("merge insert", true),
 ];
 
 #[tokio::test]
