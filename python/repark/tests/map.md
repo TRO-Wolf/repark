@@ -3232,6 +3232,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   result, not a table file. A gap instant and an overlap instant in
   America/New_York and Australia/Lord_Howe store the session wall.
   `UPDATE t SET st.v = c` repairs a leaf that holds main's UTC wall.
+  A mixed `CASE` wall row stays `1767305045123456` until the struct coercion
+  unit lands
+  (`test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands`).
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files

@@ -132,3 +132,10 @@ wall. The head matrix is 173/264 equal to Spark, field 324/324, ltz 396/396,
 top 396/396, raw-error doors 162/162, and 22 UTC-wall cells, each mapped to
 `SET *` or to the R4 literal. R-011 stays narrowed. The identity UPDATE pin
 expects `arrow_cast` of `__repark_cast_nested_ntz__`. Clippy is clean.
+
+**Round 9, F1:** not fixed here. Blocked on the struct coercion unit. The six
+mixed statements are in ledger section 13. The wall row of the first statement
+stores `1767305045123456` in America/New_York. The pin
+`test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands`
+holds that tick and is green on this head. It must change when the coercion
+unit lands. No provenance guard.

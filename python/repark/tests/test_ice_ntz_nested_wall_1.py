@@ -68,6 +68,27 @@ def leaf_ticks(spark: Any, table: str, leaf: str) -> list[int | None]:
     return parquet_leaf(spark, table, column_name, field)
 
 
+def stored_rows(spark: Any, table: str) -> list[tuple[int, int | None, int | None]]:
+    """Return ``(id, st.v microseconds, st.n)`` from Parquet, sorted by id."""
+    files = spark.sql(f"SELECT content, file_path FROM {table}.files").toArrow().to_pylist()
+    rows: list[tuple[int, int | None, int | None]] = []
+    for file in files:
+        if file["content"] != 0:
+            continue
+        loaded = pq.read_table(file["file_path"], columns=["id", "st"])
+        ticks = (
+            loaded.column("st")
+            .combine_chunks()
+            .field("v")
+            .cast(pa.int64(), safe=False)
+            .to_pylist()
+        )
+        numbers = loaded.column("st").combine_chunks().field("n").to_pylist()
+        rows.extend(zip(loaded.column("id").to_pylist(), ticks, numbers, strict=True))
+    rows.sort()
+    return rows
+
+
 def create_nested(spark: Any, table: str, leaf_type: str) -> None:
     """Create a v2 table whose struct leaf is ``leaf_type``."""
     spark.sql(
@@ -739,3 +760,43 @@ def test_dst_instants_store_the_session_wall(tmp_path: Path) -> None:
             assert leaf_ticks(spark, table, "st.v") == [ticks], (zone, literal)
         finally:
             spark.stop()
+
+
+JULY = "TIMESTAMP '2026-07-04 11:22:33.654321+00:00'"
+JULY_PHYSICAL = 1_783_164_153_654_321
+JULY_NY = 1_783_149_753_654_321
+SHIFTED_WALL = 1_767_305_045_123_456
+
+
+def test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands(
+    tmp_path: Path,
+) -> None:
+    """The wall row of the first mixed CASE stays the shifted wall.
+
+    America/New_York. ``UPDATE t SET st = CASE WHEN id = 1 THEN
+    named_struct('v', c, 'n', 100) ELSE st END WHERE id >= 0``. The row that
+    keeps the ``TIMESTAMP_NTZ`` wall stores ``1767305045123456``. That value
+    must change when the struct coercion unit lands. This unit does not move it.
+    """
+    spark = open_session("America/New_York", tmp_path)
+    try:
+        spark.sql(
+            "CREATE TABLE ice.ns.t "
+            "(id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(
+            "INSERT INTO ice.ns.t VALUES "
+            f"(1, named_struct('v', {WALL}, 'n', 1), 0, {JULY}), "
+            f"(2, named_struct('v', {WALL}, 'n', 2), 0, {JULY})"
+        )
+        spark.sql(
+            "UPDATE ice.ns.t SET st = CASE WHEN id = 1 "
+            "THEN named_struct('v', c, 'n', 100) ELSE st END WHERE id >= 0"
+        )
+        assert stored_rows(spark, "ice.ns.t") == [
+            (1, JULY_NY, 100),
+            (2, SHIFTED_WALL, 2),
+        ]
+    finally:
+        spark.stop()

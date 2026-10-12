@@ -374,3 +374,23 @@ Registry row R-020 records the 88 step-0 cells. A struct under a list stores
 the UTC wall (`test_a_struct_under_a_list_keeps_the_utc_wall`). A map of
 structs panics in Arrow's list cast on insert; the walk does not enter it
 (`a_list_or_map_is_left_as_it_is`). R-011 stays open for both.
+
+## 13. Verify 1
+
+F1 is blocked on the struct coercion unit. This PR does not merge before that
+unit. No provenance guard is added. The engine unifies a `TIMESTAMP_NTZ` struct
+with a `TIMESTAMP` struct by reading the wall as UTC. The kernel then localises
+that coerced leaf into the session zone. The six statements, America/New_York:
+
+1. `UPDATE t SET st = CASE WHEN id = 1 THEN named_struct('v', c, 'n', 100) ELSE st END WHERE id >= 0`
+2. `UPDATE u SET st = coalesce(CASE WHEN c IS NOT NULL THEN named_struct('v', c, 'n', 100) END, st) WHERE id >= 0`
+3. `INSERT INTO w SELECT id, st FROM zsrc UNION ALL SELECT id, st FROM nsrc` where `zsrc.st.v` is `TIMESTAMP` and `nsrc.st.v` is `TIMESTAMP_NTZ`
+4. `MERGE INTO m t USING zsrc s ON t.id = s.id OR t.id = s.id + 1 WHEN MATCHED THEN UPDATE SET t.st = CASE WHEN t.id = 1 THEN s.st ELSE t.st END`
+5. `INSERT INTO x SELECT id, CASE WHEN id = 1 THEN st ELSE (SELECT st FROM nsrc) END` from that same union
+6. `INSERT INTO y BY NAME SELECT id, st FROM zsrc UNION ALL SELECT id, st FROM nsrc`
+
+The wall row of statement 1 stores `1767305045123456` (the January wall minus
+five hours). The instant row stores `1783149753654321`. The pin
+`test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands`
+holds the wall row. The day the coercion unit lands, that pin goes red and is
+rewritten. Disposition: blocked on the struct coercion unit.
