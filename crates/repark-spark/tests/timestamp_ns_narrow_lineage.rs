@@ -695,3 +695,63 @@ async fn a_refusal_names_a_plain_column_and_otherwise_only_the_target() {
         .await;
     assert!(!refused.contains("NULL"), "{refused}");
 }
+
+#[tokio::test]
+async fn a_narrowing_in_a_later_values_row_refuses() {
+    let mut matrix = Matrix::open(ZONES[1]).await;
+    let nanos = format!("CAST('{}' AS timestamp_ns)", MOMENTS[0].0);
+    for cut in [
+        format!("coalesce({nanos}, NULL)"),
+        format!("coalesce({nanos}, TIMESTAMP '2001-02-03 04:05:06')"),
+    ] {
+        for rows in [
+            format!("(1, {nanos}), (2, {cut})"),
+            format!("(1, {nanos}), (2, {nanos}), (3, {cut})"),
+        ] {
+            let write = format!("INSERT INTO {{t}} (id, v) VALUES {rows}");
+            matrix
+                .store("timestamp_ns")
+                .refuses("values", "", &write, "")
+                .await;
+        }
+    }
+    let whole = format!("INSERT INTO {{t}} (id, v) VALUES (1, {nanos}), (2, {nanos})");
+    let stored = matrix
+        .store("timestamp_ns")
+        .stores("values", "", &whole, "")
+        .await;
+    assert_eq!(stored, vec![MOMENTS[0].1, MOMENTS[0].1]);
+}
+
+#[tokio::test]
+async fn a_scalar_subquery_of_nanoseconds_is_narrowed_where_no_column_in_scope_is() {
+    let mut matrix = Matrix::open(ZONES[1]).await;
+    let (door, flags, template) = DOORS[0];
+    for (source, kind) in SOURCES {
+        for query in [
+            format!(
+                "SELECT id, coalesce((SELECT max({source}) FROM ice.ns.src), ts) AS v FROM \
+                 (SELECT id, ts FROM ice.ns.src) q"
+            ),
+            format!(
+                "SELECT id, CASE WHEN id > 0 THEN (SELECT max({source}) FROM ice.ns.src) ELSE \
+                 ts END AS v FROM (SELECT id, ts FROM ice.ns.src) q"
+            ),
+        ] {
+            matrix
+                .store(kind)
+                .refuses(door, flags, template, &query)
+                .await;
+        }
+        let whole = format!(
+            "SELECT id, (SELECT max({source}) FROM ice.ns.src) AS v FROM (SELECT id, ts FROM \
+             ice.ns.src) q"
+        );
+        let stored = matrix
+            .store(kind)
+            .stores(door, flags, template, &whole)
+            .await;
+        assert_eq!(stored.len(), MOMENTS.len(), "{whole}");
+        assert!(stored.iter().all(|nanos| nanos % 1_000 != 0), "{stored:?}");
+    }
+}

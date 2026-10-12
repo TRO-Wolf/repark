@@ -670,6 +670,28 @@ fn only_a_node_that_produces_a_column_is_marked_and_a_producer_is_found_without_
     for plain in [col("c"), instant(), cast(col("m"), nanos()), wire, literal] {
         assert!(!produces_nanoseconds(&plain), "{plain}");
     }
+    let scalar = |column: &str| {
+        let inner = table_scan(Some("t"), &arrow(), None)
+            .unwrap()
+            .project(vec![col(column)])
+            .unwrap()
+            .build()
+            .unwrap();
+        Expr::ScalarSubquery(datafusion::logical_expr::Subquery {
+            subquery: Arc::new(inner),
+            outer_ref_columns: Vec::new(),
+            spans: datafusion::common::Spans::new(),
+        })
+    };
+    assert!(produces_nanoseconds(&scalar("c")));
+    assert!(!produces_nanoseconds(&scalar("m")));
+    let narrowed = coalesce(vec![cast(scalar("c"), micros()), instant()]);
+    let alone = datafusion::logical_expr::LogicalPlanBuilder::empty(true)
+        .project(vec![narrowed.alias("v")])
+        .unwrap()
+        .build()
+        .unwrap();
+    assert_eq!(all_marks(&session_rule(alone)).len(), 1);
 }
 
 #[test]
