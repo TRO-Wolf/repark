@@ -476,7 +476,7 @@ async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
     }
 }
 
-const NARROWED_UPDATES: [&str; 4] = [
+const UNTYPED_NULL_UPDATES: [&str; 4] = [
     "CASE WHEN id > 0 THEN {c} ELSE NULL END",
     "CASE WHEN id < 0 THEN NULL ELSE {c} END",
     "if(id > 0, {c}, NULL)",
@@ -484,7 +484,7 @@ const NARROWED_UPDATES: [&str; 4] = [
 ];
 
 #[tokio::test]
-async fn an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds() {
+async fn an_update_with_no_where_stores_a_nanosecond_value_built_from_an_untyped_null() {
     let session = session("America/New_York");
     let _warehouse = catalog(&session).await;
     run(
@@ -502,18 +502,20 @@ async fn an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds() {
           CAST('2026-03-08 07:30:00.000000001+00:00' AS timestamptz_ns))",
     )
     .await;
-    for value in NARROWED_UPDATES {
-        for source in ["c", "z"] {
-            let write = format!("UPDATE ice.ns.u SET v = {}", value.replace("{c}", source));
-            let refused = attempt(&session, &write).await.expect_err(&write);
-            let named = refused.contains("[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]")
-                && refused.contains("Cannot safely cast `v` \"TIMESTAMP\" to \"TIMESTAMP_NS\"")
-                && refused.contains("narrowed from nanoseconds to microseconds");
-            assert!(named, "{write}: {refused}");
-        }
-    }
     let read = "SELECT v FROM ice.ns.u ORDER BY id";
-    assert_eq!(stored(&session, read).await, vec![None, None]);
+    let walls_c = vec![Some(TICKS), Some(1_772_937_000_000_001)];
+    let walls_z = vec![
+        Some(1_767_305_045_123_456_789),
+        Some(1_772_940_600_000_000_001),
+    ];
+    for value in UNTYPED_NULL_UPDATES {
+        let write_c = format!("UPDATE ice.ns.u SET v = {}", value.replace("{c}", "c"));
+        run(&session, &write_c).await;
+        assert_eq!(stored(&session, read).await, walls_c, "{write_c}");
+        let write_z = format!("UPDATE ice.ns.u SET v = {}", value.replace("{c}", "z"));
+        run(&session, &write_z).await;
+        assert_eq!(stored(&session, read).await, walls_z, "{write_z}");
+    }
     for kept in ["CAST(c AS TIMESTAMP)", "date_trunc('second', c)"] {
         run(
             &session,

@@ -116,6 +116,7 @@ Built: the all-or-nothing fallback check, the untyped-NULL site walk and the ker
 Pins: 43 Rust pins (coalesce/array/case/if/union ns+tzns output types, idempotence, fallback triggers, leave-alone sites, never-sites, sink lines, container-cast) plus the seat sink pin; facade: 8,967 remaining cells equal the recorded twin, 258 DML-store-cast cells stay main's with the fallback moved, 220 equal the corrected-twin oracle (all oracle 1, recorded on the baseline module), 155 equal main with the stale `tzns` text replaced, 45 reads equal the twin, the union `tzns_utc` read pins field id 4, 40 plain ns-target cells never fall back.
 Split: 8967 + 258 + 220 + 155 = 9,600; the union read's field id 4 (main and the recorded twin carry 3) goes to the verifier as a named change; the DML store cast stays main's until slice 2 tells it from a written cast.
 Cost: interleaved head/baseline 0.9928 insert, 0.9823 merge, 0.9939 merge_mor; largest pair ratio 1.0061.
+Registry: `docs/spark-sql-iceberg-parity.md` row `ICE-TSNS-SQL-1-R-017` still states the UPDATE-no-WHERE refusal; on this head all eight spellings store their twin's walls, so the row is stale until the close-out slice rewords it.
 Next: slice 2, honest typing.
 
 ## Q. Questions

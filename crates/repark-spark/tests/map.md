@@ -131,12 +131,14 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   give it a bare `NULL` (INSERT forms, sibling UPDATE and MERGE, DELETE), two maintenance
   calls and a time-travel read: all run and the seeded leaf reads back every nanosecond.
   `a_nested_zoned_or_microsecond_leaf_is_not_guarded` is the control.
-  `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` is the top-level pin of
-  `refuse_narrowed_update`: four spellings (the narrowing in the THEN branch, in the ELSE
-  branch, in `if` and in an array element) from a `timestamp_ns` and a `timestamptz_ns`
-  source are refused and store nothing; a plain column, a typed NULL, a zoned source, a
-  literal, a microsecond literal beside an untyped NULL and a narrowing that sits only in a
-  `CASE` condition store; `CAST(c AS TIMESTAMP)` and `date_trunc` with a `WHERE` still store.
+  `an_update_with_no_where_stores_a_nanosecond_value_built_from_an_untyped_null` is the
+  top-level pin of `refuse_narrowed_update` since slice 1 round 2: four spellings (the NULL
+  in the THEN branch, in the ELSE branch, in `if` and in an array element) from a
+  `timestamp_ns` source store the naive walls and from a `timestamptz_ns` source store the
+  zoned walls, each equal to its hand-written kernel twin on the baseline module; a plain
+  column, a typed NULL, a zoned source, a literal, a microsecond literal beside an untyped
+  NULL and a narrowing that sits only in a `CASE` condition store; `CAST(c AS TIMESTAMP)`
+  and `date_trunc` with a `WHERE` still store.
   pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-043, C-047
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
