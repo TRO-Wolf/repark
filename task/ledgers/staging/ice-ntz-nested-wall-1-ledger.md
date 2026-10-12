@@ -25,7 +25,7 @@ names the store sites. It changes no product code.
 | C-001 | Main `2c33f289` is measured before any change and shows the split of the registry row. | The step-0 probe output. | **PROVEN** | §1. [repark-main.jsonl](../../wo/ice-ntz-nested-wall-1/evidence/repark-main.jsonl) and [summary.md](../../wo/ice-ntz-nested-wall-1/evidence/summary.md). Field assignment stores the session wall. The other answering doors store the UTC wall. pins: ice-ntz-nested-wall-1/C-001 |
 | C-002 | Spark 4.1.2 with Iceberg 1.11 is measured on every nested door of the inventory. | The Spark probe output. | **PROVEN** | §2. [spark-4.1.2.jsonl](../../wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl). Spark stores the session wall on every door it answers. pins: ice-ntz-nested-wall-1/C-002 |
 | C-003 | Every nested door stores the wall Spark stores, in three zones. | Head probe and the facade pins. | **OPEN** | Q5. Column instants on the wired doors store the session wall. The cells in §8 still store the UTC wall or still refuse. The row R-011 is narrowed, not closed. |
-| C-004 | Controls are identical to main. | Head probe. | **PROVEN** | [summary-head.md](../../wo/ice-ntz-nested-wall-1/evidence/summary-head.md): field-assignment 324 of 324, `ltz_nested` 396 of 396, `ntz_top` 396 of 396, moved 0. pins: ice-ntz-nested-wall-1/C-004 |
+| C-004 | No control cell is worse than main. | Head probe. | **PROVEN** | [summary-head.md](../../wo/ice-ntz-nested-wall-1/evidence/summary-head.md): field-assignment 324 of 324, `ntz_top` 396 of 396, raw-error 162 of 162 identical to main; `ltz_nested` 382 of 396 with 14 moved, each now equal to Spark (the joined coercion unit localises the naive leaf on the INSERT and DataFrame doors). pins: ice-ntz-nested-wall-1/C-004 |
 | C-005 | `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` store the session wall. | Head probe against main. | **OPEN** | They still raise main's error class and first line. Pin `test_raw_error_doors_still_raise_mains_error`. Registry row R-019. Not a stored-value change. |
 
 ## 1. Main, measured before any change (C-001)
@@ -264,7 +264,12 @@ counted by `probe.py summary-head` into
 
 - ntz_nested instant cells equal to Spark: 173 of 264.
 - field-assignment cells identical to main: 324 of 324.
-- `ltz_nested` identical to main: 396 of 396.
+- `ltz_nested` identical to main: 382 of 396. The 14 moved cells are the
+  INSERT and DataFrame doors in America/New_York and Asia/Kolkata writing a
+  naive leaf into a nested instant target; each now stores Spark's instant
+  (`1767341045123456`, `1767303245123456`) instead of main's wall
+  (`1767323045123456`). They moved with the joined coercion unit, measured
+  2026-10-12 on the round-12 head and unchanged by the item-2 revert.
 - `ntz_top` identical to main: 396 of 396.
 - raw-error doors identical to main: 162 of 162.
 - instant cells still on the UTC wall outside UTC: 22. Each is mapped in

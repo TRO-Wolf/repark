@@ -5,7 +5,7 @@ Ticks are microseconds from `toArrow()` cast to int64.
 
 ntz_nested instant cells equal to Spark: 173 of 264.
 field-assignment cells identical to main: 324 of 324.
-ltz_nested cells identical to main: 396 of 396.
+ltz_nested cells identical to main: 382 of 396.
 ntz_top cells identical to main: 396 of 396.
 instant cells still on the UTC wall outside UTC: 22.
 
@@ -143,4 +143,17 @@ ntz_nested update_whole_where mor UTC ts_column head=ERROR AnalysisException: UP
 
 ## Controls that moved
 
-- none
+ltz_nested df_append cow America/New_York ntz_literal head=1767341045123456 main=1767323045123456
+ltz_nested df_append cow Asia/Kolkata ntz_literal head=1767303245123456 main=1767323045123456
+ltz_nested df_insert_into cow America/New_York ntz_literal head=1767341045123456 main=1767323045123456
+ltz_nested df_insert_into cow Asia/Kolkata ntz_literal head=1767303245123456 main=1767323045123456
+ltz_nested df_overwrite_condition cow America/New_York ntz_literal head=1767341045123456 main=1767323045123456
+ltz_nested df_overwrite_condition cow Asia/Kolkata ntz_literal head=1767303245123456 main=1767323045123456
+ltz_nested df_save_as_table cow America/New_York ntz_literal head=1767341045123456 main=1767323045123456
+ltz_nested df_save_as_table cow Asia/Kolkata ntz_literal head=1767303245123456 main=1767323045123456
+ltz_nested insert_replace_where cow America/New_York ntz_literal head=1767341045123456 main=1767323045123456
+ltz_nested insert_replace_where cow Asia/Kolkata ntz_literal head=1767303245123456 main=1767323045123456
+ltz_nested insert_select cow America/New_York ntz_literal head=1767341045123456 main=1767323045123456
+ltz_nested insert_select cow Asia/Kolkata ntz_literal head=1767303245123456 main=1767323045123456
+ltz_nested insert_values cow America/New_York ntz_literal head=1767341045123456 main=1767323045123456
+ltz_nested insert_values cow Asia/Kolkata ntz_literal head=1767303245123456 main=1767323045123456

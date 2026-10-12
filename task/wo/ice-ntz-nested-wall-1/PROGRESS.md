@@ -198,3 +198,15 @@ the wrap when a NOT NULL target member is nullable on the source. The bare
 kernel sites stay wrapped. INSERT SELECT into that member raises main's
 `Unsupported CAST` first line in UTC and America/New_York. The 35 NOT NULL
 cells still store the `4b66decb` ticks.
+
+**Round 13, item 2 ruling:** no zoned value reaches the
+`store_assignment_then_sql` None site on the ANSI door (measured 2026-10-12:
+probed `TIMESTAMP` sources are naive microseconds, `current_timestamp()` is
+naive, cross-door table sharing is impossible). The probe was reverted. The
+two ANSI rows are correct as on main.
+
+**Round 13, item 3:** head matrix regenerated. Spark 173/264, field 324/324,
+ltz 382/396, top 396/396, UTC-wall remainder 22, raw-error 162/162. The 14
+moved cells are the joined coercion unit's naive-to-instant localisation on
+the INSERT and DataFrame doors; each now equals Spark. 0 cells worse than
+main.
