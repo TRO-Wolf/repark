@@ -564,6 +564,29 @@ fn live_timestamp_literal_falls_back_to_inner() {
 }
 
 #[test]
+fn container_timestamp_cast_does_not_fall_back() {
+    let _guard = SERIAL.lock().expect("test serial lock");
+    let scan = scan_of(vec![ns_field("ns")]);
+    let item = Field::new(
+        "item",
+        DataType::Timestamp(TimeUnit::Microsecond, None),
+        true,
+    );
+    let cast = Expr::Cast(Cast::new(
+        Box::new(col("ns")),
+        DataType::List(Arc::new(item)),
+    ));
+    let plan = project_of(
+        scan,
+        vec![coalesce_call(vec![col("ns"), null_lit()]), cast.alias("w")],
+    );
+    let before_fallback = fallback_count();
+    let out = analyzed(plan);
+    assert_eq!(fallback_count() - before_fallback, 0);
+    assert_kernel_rewrite(&out, TIMESTAMP_NS_CAST_NAME);
+}
+
+#[test]
 fn timestamp_reader_call_falls_back_to_inner() {
     let _guard = SERIAL.lock().expect("test serial lock");
     let scan = scan_of(vec![ns_field("ns")]);

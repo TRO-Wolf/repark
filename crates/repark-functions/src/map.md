@@ -1469,9 +1469,10 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   branch) and `VALUES` rows. A site whose operands are all one-zone `Timestamp(ns, _)` or
   untyped NULL, with at least one of each, gets each NULL wrapped in the matching cast
   kernel; the `if` condition arg is skipped, `nvl`/`ifnull` stay main's, comparisons and
-  join keys are never sites. The parent falls back (counter plus sink line) on any written
-  Timestamp cast, live Timestamp literal or reader call (`to_timestamp`,
-  `to_timestamp_ntz`, `to_timestamp_ltz`, `timestamp`), and on any rewrite error. The sink
+  join keys are never sites. The parent falls back (counter plus sink line) on a top-level
+  Timestamp cast target (a cast to a container of timestamps does not trigger), a live
+  Timestamp literal or a reader call (`to_timestamp`, `to_timestamp_ntz`,
+  `to_timestamp_ltz`, `timestamp`), and on any rewrite error. The sink
   is an `Arc<dyn Fn(&str)>` set by the seat, which owns the only `tracing` call, because
   `repark-functions` cannot reach a logger without a manifest edit.
   pins: ice-tsns-coercion-1/C-005

@@ -197,39 +197,16 @@ fn is_live_timestamp_literal(value: &ScalarValue) -> bool {
     )
 }
 
-fn target_holds_timestamp(data_type: &DataType) -> bool {
-    let mut stack = vec![data_type];
-    while let Some(current) = stack.pop() {
-        match current {
-            DataType::Timestamp(_, _) => return true,
-            DataType::List(field)
-            | DataType::LargeList(field)
-            | DataType::FixedSizeList(field, _)
-            | DataType::Map(field, _) => stack.push(field.data_type()),
-            DataType::Struct(fields) => {
-                for field in fields {
-                    stack.push(field.data_type());
-                }
-            }
-            DataType::Union(fields, _) => {
-                for (_, field) in fields.iter() {
-                    stack.push(field.data_type());
-                }
-            }
-            DataType::Dictionary(_, value) => stack.push(value),
-            DataType::RunEndEncoded(_, values) => stack.push(values.data_type()),
-            _ => {}
-        }
-    }
-    false
+fn is_timestamp_target(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(_, _))
 }
 
 fn trigger_reason(expr: &Expr) -> Option<&'static str> {
     match expr {
-        Expr::Cast(cast) if target_holds_timestamp(cast.field.data_type()) => {
+        Expr::Cast(cast) if is_timestamp_target(cast.field.data_type()) => {
             Some("written Timestamp cast")
         }
-        Expr::TryCast(cast) if target_holds_timestamp(cast.field.data_type()) => {
+        Expr::TryCast(cast) if is_timestamp_target(cast.field.data_type()) => {
             Some("written Timestamp try-cast")
         }
         Expr::Literal(value, _) if is_live_timestamp_literal(value) => {

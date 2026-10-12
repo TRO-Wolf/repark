@@ -22,8 +22,9 @@ rewriter lives in the sibling `../timestamp_ns_coercion_sites.rs`.
   the inner rule the plan it was given (same table-source `Arc`, byte-identical plan).
   Round 2 adds: the `coalesce`/`array`/`CASE`/`if`/`UNION ALL` kernel-wrap pins for `ns`
   and `tzns` (output type, kernel present, no narrow kernel; `array` asserts a list of
-  `ns`), idempotence, one fallback pin per trigger (written cast, try-cast, typed NULL,
-  live literal, `to_timestamp` call), the leave-alone pins (µs, DATE, STRING via a union
+  `ns`), idempotence, one fallback pin per trigger (top-level written cast, try-cast,
+  typed NULL, live literal, `to_timestamp` call; a container-of-timestamps cast target
+  does not trigger), the leave-alone pins (µs, DATE, STRING via a union
   column because `coalesce(ns, string)` fails plan-build coercion, mixed zones, `nvl`) and
   the never-a-site pins (comparison, `IN`, join keys), plus the sink pins (one line per
   fallback, quiet on rewrite and closed gate, the `has_fallback_sink` accessor).
