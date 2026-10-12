@@ -394,7 +394,14 @@ async fn collect_identity_update_rows(
     let assignments = spec.assignments.as_ref().ok_or_else(|| {
         DataFusionError::Internal("identity UPDATE SELECT requires SET assignments".to_string())
     })?;
-    let projections = update_projection_sql(values_schema, &spec.target_alias, assignments);
+    let sources =
+        lineage::assignment_source_types(ctx, target_name, &spec.target_alias, assignments).await;
+    let projections = update_projection_sql(
+        values_schema,
+        &spec.target_alias,
+        assignments,
+        sources.as_deref(),
+    );
     let sql = format!(
         "SELECT {file}, {pos}, {projections} FROM {scratch} AS {alias} WHERE {selection}",
         file = quote_ident(FILE_PATH_COL),

@@ -4,6 +4,20 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-ntz-nested-wall-1-ledger.md](ice-ntz-nested-wall-1-ledger.md) —
+  **ICE-NTZ-NESTED-WALL-1 (2026-10-11), parity row R-011, step 0:** a nested
+  microsecond `TIMESTAMP_NTZ` field stores the session wall on field assignment
+  and the UTC wall on every other answering door. Main `2c33f289` measured
+  first (C-001): 28 session-wall cells, 102 UTC-wall cells. Spark 4.1.2 with
+  Iceberg 1.11 stores the session wall on every door it answers (C-002). The
+  fix and the control pins are the next round (C-003, C-004), both OPEN.
+  `risk_tier: standard`. Branch `fix/ice-ntz-nested-wall-1`.
+- [ntz-struct-coerce-1-ledger.md](ntz-struct-coerce-1-ledger.md) — **NTZ-STRUCT-COERCE-1
+  (2026-10-12):** a struct coerced from a naive wall to an instant localises the wall in
+  the session zone, as the top-level column already does. Step 0 measured main `572130dd`
+  and Spark 4.1.2 (C-001, C-002 OPEN until a pin cites them): 35 of 144 cells differ, all
+  of them struct cells; every top-level control matches Spark. `risk_tier: standard`.
+  Branch `fix/ntz-struct-ltz-coerce-1`.
 - [current-date-session-zone-1-ledger.md](current-date-session-zone-1-ledger.md) —
   **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** `current_date()` answers the session-zone
   date. Step 0 measured on main: 352 compared cells, 104 same-cause diffs in the zones whose

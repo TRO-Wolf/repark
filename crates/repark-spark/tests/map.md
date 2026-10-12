@@ -100,9 +100,15 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   the ledger each red the wall test at the door they break.
   pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-011
   **Fold 1 (2026-10-09), pins from the verify.**
-  `a_nested_microsecond_ntz_field_keeps_the_split_main_has` holds the control: field
-  assignment stores the session wall, the other four doors the UTC wall (parity row
-  ICE-TSNS-SQL-1-R-011, OPEN).
+  `a_nested_literal_keeps_the_utc_wall_and_field_assignment_stores_the_session_wall`
+  holds the six nested doors: `INSERT … SELECT` and MERGE INSERT of the literal
+  store the session wall, field assignment stores the session wall, and
+  `INSERT … VALUES` plus whole-struct MERGE UPDATE of the literal keep the UTC
+  wall `1767323045123456`. pins: ice-ntz-nested-wall-1/C-003
+  Round 15 of ICE-NTZ-NESTED-WALL-1 (2026-10-12): whole-struct MERGE UPDATE of the
+  literal now stores the session wall, Spark's value, because the fold reads the
+  analyzed type of the value. `INSERT … VALUES` of the literal keeps the UTC wall.
+  The previous name was `a_nested_microsecond_ntz_field_keeps_the_split_main_has`.
   `an_overflowing_literal_stores_null_without_ansi_as_insert_does` is the 42 cells' shape:
   four far literals and each zone's edge instant through `UPDATE … WHERE` (both row-level
   modes) and `MERGE … INSERT VALUES`.
@@ -130,7 +136,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   CTAS (not gated) in both row-level modes and runs twelve statements that omit the column or
   give it a bare `NULL` (INSERT forms, sibling UPDATE and MERGE, DELETE), two maintenance
   calls and a time-travel read: all run and the seeded leaf reads back every nanosecond.
-  `a_nested_zoned_or_microsecond_leaf_is_not_guarded` is the control.
+  `a_nested_zoned_or_microsecond_leaf_is_not_guarded` is the control. Round 15 of
+  ICE-NTZ-NESTED-WALL-1 (2026-10-12): its `TIMESTAMP_NTZ` row, a whole-struct
+  `UPDATE … WHERE` of an instant literal in America/New_York, stores the session wall
+  `1767305045123456`, Spark's value in `spark-4.1.2.jsonl` (`update_whole_where`,
+  `ts_literal`); it stored the UTC wall before.
   `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` is the top-level pin of
   `refuse_narrowed_update`: four spellings (the narrowing in the THEN branch, in the ELSE
   branch, in `if` and in an array element) from a `timestamp_ns` and a `timestamptz_ns`

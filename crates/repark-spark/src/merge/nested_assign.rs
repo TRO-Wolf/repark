@@ -6,7 +6,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     Assignment, AssignmentTarget, Expr, Ident, MergeAction, MergeClause, MergeInsertExpr,
-    MergeInsertKind, ObjectName, ObjectNamePart, TableFactor,
+    MergeInsertKind, ObjectName, ObjectNamePart, TableFactor, Visit, Visitor,
 };
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
@@ -17,6 +17,7 @@ use repark_iceberg::write::update_cast::{
 };
 
 mod expand;
+mod probe;
 mod render;
 #[cfg(test)]
 mod tests;
@@ -93,7 +94,7 @@ impl ResolvedKey {
 struct Keyed<'a> {
     key: ResolvedKey,
     value: &'a Expr,
-    value_type: Option<DataType>,
+    probed: Option<probe::Probed>,
     sql: String,
 }
 
@@ -283,20 +284,6 @@ fn pretty_assignment(
     )
 }
 
-async fn probe_type(
-    ctx: &SessionContext,
-    scope: &AssignmentScope,
-    value: &Expr,
-) -> Option<DataType> {
-    let sql = format!("SELECT ({value}) FROM {} LIMIT 0", scope.probe_from);
-    let frame = ctx.sql(&sql).await.ok()?;
-    frame
-        .schema()
-        .fields()
-        .first()
-        .map(|field| field.data_type().clone())
-}
-
 struct Aligner {
     errors: Vec<String>,
     case_sensitive: bool,
@@ -372,6 +359,24 @@ impl Aligner {
     }
 }
 
+fn value_holds_scalar_subquery(expr: &Expr) -> bool {
+    struct Seen(bool);
+    impl Visitor for Seen {
+        type Break = ();
+
+        fn pre_visit_query(
+            &mut self,
+            _query: &datafusion::sql::sqlparser::ast::Query,
+        ) -> std::ops::ControlFlow<Self::Break> {
+            self.0 = true;
+            std::ops::ControlFlow::Break(())
+        }
+    }
+    let mut seen = Seen(false);
+    let _ = expr.visit(&mut seen);
+    seen.0
+}
+
 fn leaf_sql(
     keyed: &Keyed<'_>,
     target: &DataType,
@@ -380,17 +385,38 @@ fn leaf_sql(
 ) -> Result<String> {
     let mut value = Expr::clone(keyed.value);
     let value_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut value);
-    match &keyed.value_type {
-        Some(source) => value_sql_for(&value_sql, source, target, path, case_sensitive),
-        None => Ok(assignment_cast_sql(&value_sql, target, path)),
+    let stored = keyed
+        .probed
+        .as_ref()
+        .and_then(|probed| probed.stored.as_ref());
+    if value_holds_scalar_subquery(keyed.value) {
+        if probe::stores_through_the_kernel(stored, target) {
+            return Ok(assignment_cast_sql(&value_sql, None, target, path));
+        }
+        return Ok(value_sql);
+    }
+    match &keyed.probed {
+        Some(probed) => {
+            let typed = Typed {
+                written: &probed.written,
+                stored,
+            };
+            value_sql_for(&value_sql, typed, target, path, case_sensitive)
+        }
+        None => Ok(assignment_cast_sql(&value_sql, None, target, path)),
     }
 }
 
-fn assignment_cast_sql(value_sql: &str, target: &DataType, path: &[String]) -> String {
+fn assignment_cast_sql(
+    value_sql: &str,
+    source: Option<&DataType>,
+    target: &DataType,
+    path: &[String],
+) -> String {
     if path.len() > 1 {
         nested_leaf_cast_sql(value_sql, target)
     } else {
-        store_assignment_cast_sql(value_sql, target)
+        store_assignment_cast_sql(value_sql, source, target)
     }
 }
 
@@ -409,13 +435,20 @@ fn names_match_exactly(source: &Fields, target: &Fields) -> bool {
         })
 }
 
+#[derive(Clone, Copy)]
+struct Typed<'a> {
+    written: &'a DataType,
+    stored: Option<&'a DataType>,
+}
+
 fn value_sql_for(
     value_sql: &str,
-    source: &DataType,
+    typed: Typed<'_>,
     target: &DataType,
     path: &[String],
     case_sensitive: bool,
 ) -> Result<String> {
+    let source = typed.written;
     let (DataType::Struct(source_fields), DataType::Struct(target_fields)) = (source, target)
     else {
         if let Some(text) =
@@ -423,7 +456,7 @@ fn value_sql_for(
         {
             return Err(DataFusionError::Plan(text));
         }
-        return Ok(assignment_cast_sql(value_sql, target, path));
+        return Ok(assignment_cast_sql(value_sql, typed.stored, target, path));
     };
     let mut members = Vec::with_capacity(target_fields.len());
     let mut used = HashSet::new();
@@ -439,7 +472,10 @@ fn value_sql_for(
         );
         let member = value_sql_for(
             &child_sql,
-            source_field.data_type(),
+            Typed {
+                written: source_field.data_type(),
+                stored: None,
+            },
             target_field.data_type(),
             &child_path,
             case_sensitive,
@@ -458,7 +494,7 @@ fn value_sql_for(
         return Err(render::extra_struct_fields(&extra, path));
     }
     if names_match_exactly(source_fields, target_fields) && !has_required_field(target_fields) {
-        return Ok(assignment_cast_sql(value_sql, target, path));
+        return Ok(assignment_cast_sql(value_sql, typed.stored, target, path));
     }
     Ok(format!(
         "CASE WHEN ({value_sql}) IS NULL THEN NULL ELSE named_struct({}) END",
@@ -514,7 +550,7 @@ pub(crate) async fn fold_nested_assignments(
         keyed.push(Keyed {
             key: key.clone(),
             value: &assignment.value,
-            value_type: probe_type(ctx, scope, &assignment.value).await,
+            probed: probe::probe_type(ctx, scope, &assignment.value).await,
             sql: format!("{} = {pretty}", key.sql(scope)),
         });
     }
@@ -679,6 +715,28 @@ pub(crate) fn repeats_a_column(
         })
 }
 
+fn probe_table_sql(table: &TableFactor) -> String {
+    let mut rendered = table.clone();
+    if let TableFactor::Table { name, .. } = &mut rendered
+        && name.0.len() >= 4
+    {
+        let last = name
+            .0
+            .last()
+            .and_then(ObjectNamePart::as_ident)
+            .map(|ident| ident.value.clone());
+        if last.as_deref().is_some_and(|last| {
+            matches!(
+                crate::write_to_branch::parse_ref_selector(last),
+                Some(crate::write_to_branch::RefSelectorKind::Branch(_))
+            )
+        }) {
+            name.0.pop();
+        }
+    }
+    rendered.to_string()
+}
+
 fn factor_alias(factor: &TableFactor) -> Option<(String, String)> {
     match factor {
         TableFactor::Table { name, alias, .. } => match alias {
@@ -764,7 +822,7 @@ pub(crate) async fn fold_merge_clauses(
         sql_qualifier: target_alias,
         column_prefix: Some(target_rendered),
         value_qualifiers,
-        probe_from: format!("{source} CROSS JOIN {table}"),
+        probe_from: format!("{source} CROSS JOIN {}", probe_table_sql(table)),
         case_sensitive,
     };
     let mut folded = clauses.to_vec();

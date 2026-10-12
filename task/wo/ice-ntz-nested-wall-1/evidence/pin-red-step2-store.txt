@@ -1,0 +1,113 @@
+🍹 Building a mixed python/rust project
+🐍 Found CPython 3.12 at <repo>/.venv/bin/python
+🔗 Found pyo3 bindings with abi3-py3.12 support
+📡 Using build options features from pyproject.toml
+Using Python 3.12.3 environment at: <repo>/.venv
+Checked 10 packages in 7ms
+   Compiling repark-iceberg v1.5.4 (<repo>/crates/repark-iceberg)
+    Building [=======================> ] 606/611: repark-iceberg              
+   Compiling repark-core v1.5.4 (<repo>/crates/repark-core)
+    Building [=======================> ] 606/611: repark-iceberg, repark-core 
+    Building [=======================> ] 607/611: repark-core                 
+   Compiling repark-ta v1.5.4 (<repo>/crates/repark-ta)
+    Building [=======================> ] 607/611: repark-core, repark-ta      
+   Compiling repark-spark v1.5.4 (<repo>/crates/repark-spark)
+    Building [=======================> ] 607/611: repark-core, repark-spark, …
+    Building [=======================> ] 608/611: repark-core, repark-spark   
+    Building [=======================> ] 609/611: repark-spark                
+   Compiling repark-python v1.5.4 (<repo>/crates/repark-python)
+    Building [=======================> ] 610/611: repark-python               
+    Finished `release` profile [optimized] target(s) in 7m 12s
+📦 Built wheel for abi3 Python ≥ 3.12 to <wheel>
+✏️ Setting installed package as editable
+🛠 Installed repark-1.5.4
+MATURIN_EXIT:0
+.FF                                                                      [100%]
+=================================== FAILURES ===================================
+______ test_whole_struct_update_stores_the_session_wall[America/New_York] ______
+
+tmp_path = PosixPath('<pytest-tmp>/pytest-1920/test_whole_struct_update_store1')
+zone = 'America/New_York'
+
+    @pytest.mark.parametrize("zone", ZONES)
+    def test_whole_struct_update_stores_the_session_wall(tmp_path: Path, zone: str) -> None:
+        """Whole-struct assignment stores the session wall of a probed instant."""
+        spark = open_session(zone, tmp_path)
+        try:
+            write_source(spark)
+            expected = SESSION_WALL[zone]
+            merged = "ice.ns.merged"
+            create_nested(spark, merged, "TIMESTAMP_NTZ")
+            merge_update_whole(spark, merged)
+>           assert leaf_ticks(spark, merged, "st.v") == [expected], "merge"
+E           AssertionError: merge
+E           assert [1767323045123456] == [1767305045123456]
+E             
+E             At index 0 diff: 1767323045123456 != 1767305045123456
+E             
+E             Full diff:
+E               [
+E             -     1767305045123456,
+E             ?          ^^
+E             +     1767323045123456,
+E             ?          ^^
+E               ]
+
+python/repark/tests/test_ice_ntz_nested_wall_1.py:250: AssertionError
+________ test_whole_struct_update_stores_the_session_wall[Asia/Kolkata] ________
+
+tmp_path = PosixPath('<pytest-tmp>/pytest-1920/test_whole_struct_update_store2')
+zone = 'Asia/Kolkata'
+
+    @pytest.mark.parametrize("zone", ZONES)
+    def test_whole_struct_update_stores_the_session_wall(tmp_path: Path, zone: str) -> None:
+        """Whole-struct assignment stores the session wall of a probed instant."""
+        spark = open_session(zone, tmp_path)
+        try:
+            write_source(spark)
+            expected = SESSION_WALL[zone]
+            merged = "ice.ns.merged"
+            create_nested(spark, merged, "TIMESTAMP_NTZ")
+            merge_update_whole(spark, merged)
+>           assert leaf_ticks(spark, merged, "st.v") == [expected], "merge"
+E           AssertionError: merge
+E           assert [1767323045123456] == [1767342845123456]
+E             
+E             At index 0 diff: 1767323045123456 != 1767342845123456
+E             
+E             Full diff:
+E               [
+E             -     1767342845123456,
+E             ?          - ^
+E             +     1767323045123456,
+E             ?           ^^
+E               ]
+
+python/repark/tests/test_ice_ntz_nested_wall_1.py:250: AssertionError
+=========================== short test summary info ============================
+FAILED python/repark/tests/test_ice_ntz_nested_wall_1.py::test_whole_struct_update_stores_the_session_wall[America/New_York] - AssertionError: merge
+assert [1767323045123456] == [1767305045123456]
+  
+  At index 0 diff: 1767323045123456 != 1767305045123456
+  
+  Full diff:
+    [
+  -     1767305045123456,
+  ?          ^^
+  +     1767323045123456,
+  ?          ^^
+    ]
+FAILED python/repark/tests/test_ice_ntz_nested_wall_1.py::test_whole_struct_update_stores_the_session_wall[Asia/Kolkata] - AssertionError: merge
+assert [1767323045123456] == [1767342845123456]
+  
+  At index 0 diff: 1767323045123456 != 1767342845123456
+  
+  Full diff:
+    [
+  -     1767342845123456,
+  ?          - ^
+  +     1767323045123456,
+  ?           ^^
+    ]
+2 failed, 1 passed in 1.02s
+PYTEST_EXIT:1

@@ -1,5 +1,6 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::sql::sqlparser::ast::Statement;
 use repark_core::CatalogRegistry;
 
 use crate::{
@@ -87,5 +88,12 @@ pub(crate) async fn execute_update(
     refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, MorDmlKind::Update).await?;
     crate::catalog_ops::refuse_encrypted_write_target(ctx, catalogs, object_name).await?;
     let folded = crate::update_cast::refuse_cast_then_fold_nested(ctx, catalogs, update).await?;
-    spark_ast::execute_passthrough(ctx, catalogs, folded.as_deref().unwrap_or(sql)).await
+    let rendered = match folded {
+        Some(folded) => {
+            let mut statement = Statement::Update(folded);
+            repark_iceberg::write::sql_text::render_for_reparse(&mut statement)
+        }
+        None => sql.to_string(),
+    };
+    spark_ast::execute_passthrough(ctx, catalogs, &rendered).await
 }

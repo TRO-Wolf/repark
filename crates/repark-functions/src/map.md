@@ -21,6 +21,28 @@ scalars live under [`try_invert/`](try_invert/map.md).
 
 ## Contents
 
+- `nested_wall.rs` — **NTZ-STRUCT-COERCE-1 (2026-10-12):** `__repark_localize_nested_ntz__`
+  takes one struct and a path list, rewrites the selected naive microsecond leaves to
+  `Timestamp(µs, "UTC")` with `localize_wall_micros_in_zone`, and passes every other child
+  through by reference. Volatility is `Stable`, the same declaration as `to_timestamp`.
+  A path that is not in the struct is a plan error. Registered from `instant_ts::functions`.
+  `rewrite_struct_wall_cast` is the struct arm of `rewrite_cast` in `instant_ts.rs`: a cast
+  between two structs rewrites to `Cast(kernel(expr, paths), target)` when a naive microsecond
+  leaf lines up with a leaf `is_ltz_timestamp` accepts. Nanosecond leaves, lists, maps, and a
+  member name that contains `.` or `,` are not selected, and a struct cast with no such leaf
+  is returned unchanged. The arm's tests are `instant_ts_tests.rs` (`instant_ts::tests`).
+  Round 12 (2026-10-12): a naive microsecond source against a nanosecond, string or date
+  target is not selected, and execution refuses a path it has not seen.
+  Round 15 of the joined unit (2026-10-12): two plans keep main's struct cast, because the
+  kernel would be shown or run where no store kernel answers it.
+  `analyzed_insert_stores_a_struct_wall` is true for `EXPLAIN ANALYZE INSERT` into a table
+  that holds a struct with a naive microsecond leaf; `rewrite_cast` then skips the struct arm
+  for that statement, so the write is main's plan. `keep_update_store_casts` runs on each
+  `Dml(Update)` node and takes the kernel back out of an assignment's own cast: the Spark
+  door's fold replaces a whole-struct value with `arrow_cast` text, so the executed UPDATE
+  has no planner cast there, and `EXPLAIN UPDATE` prints main's text. A coercion inside the
+  assigned value keeps its kernel, because that one runs.
+  pins: ntz-struct-coerce-1/C-003, C-004
 - `declared_refuse.rs` — FNP-15/16 parse-altitude refusals for Spark function names this
   engine will not build. Spark door and `F.expr` / `filter_sql` call `refuse_in_statement` /
   `refuse_in_sql`. FNP-15 names are unreachable; FNP-16 sketches (32) are armed as
@@ -1207,6 +1229,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `spark.sql.timestampType=TIMESTAMP_NTZ` (`ntz_default`, passed by `instant_ts`) the
   `TIMESTAMP`-keyword forms are walls, since Spark types them `TIMESTAMP_NTZ` there.
   pins: ntz-store-doors-1/C-009
+- `nested_ntz_cast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):**
+  `__repark_cast_nested_ntz__(struct, '<source paths>')` rewrites the listed zoned
+  timestamp leaves to `Timestamp(µs, None)` inside the struct array. Validity,
+  names, order, nullability and metadata stay. Other children are passed through.
+  Registered from `instant_ts::functions()` with `Volatility::Volatile`. A path
+  that does not resolve to a timestamp is a plan error. A zoned leaf becomes
+  the session wall; a naive timestamp leaf is passed through `ntz_single`.
+  Tests in [nested_ntz_cast/](nested_ntz_cast/map.md).
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered

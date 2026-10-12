@@ -1,5 +1,7 @@
 # map — python/repark/tests
 
+NTZ-STRUCT-COERCE-1 (2026-10-12): `test_ntz_struct_coerce_1.py` replays the step-0 mixed-struct inventory (CASE, COALESCE, UNION ALL, and a user-written struct cast, plus the top-level CASE control) in UTC, America/New_York and Asia/Kolkata. The coercion shapes assert Spark 4.1.2's localised microsecond ticks on read, order, group, write, compare and join. The user-written cast asserts main's `timestamp[ns]` residue (`1767323045123456000`); Spark localises that cast and this file does not claim that value. pins: ntz-struct-coerce-1/C-001, C-002, C-003, C-004, C-005
+
 SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08): `sql_epoch_constructors_1_spark_oracle.json` is the 304-cell live Spark 4.1.2 recording (76 inputs × zones `UTC` / `America/New_York` × ANSI off / on) behind `_record_sql_epoch_constructors_1.py`: each of `timestamp_seconds` / `timestamp_millis` / `timestamp_micros` over int, bigint, smallint, tinyint, double, float, decimal, string, boolean, timestamp and NULL inputs, negatives, 2100/1900/9999/0001 values, exact overflow boundaries and bigint extremes, the 22-input decimal-boundary set (MAX/MIN exact, ±half/±1/±1.5 micro, 19- vs 20-digit micros both signs, exact vs inexact, fold 1 2026-10-09), with `unix_micros` values, error class/SQLSTATE/first line and `df.schema` types on the SQL and DataFrame doors, plus `to_timestamp_*` probes (Spark refuses all three as `UNRESOLVED_ROUTINE`). All four zone×ANSI groups are byte-identical; the contract is seconds-requires-NUMERIC (fractional kept, double NaN/Inf→NULL, huge doubles saturate, decimal inexact-within-19-digits refuses `Rounding necessary` even past the bound while `Overflow` needs past-19-digits or exact-out-of-range) while millis/micros require INTEGRAL, every refusal `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` 42K09 and every overflow an unclassified `long overflow`. pins: sql-epoch-constructors-1/C-001, C-009 **Pins (2026-10-08):** `test_sql_epoch_constructors_1.py` replays every cell on both doors — micros value plus Arrow `timestamp[us, tz=UTC]` and facade `timestamp` for answers, exact class/SQLSTATE with the NUMERIC/INTEGRAL kind and Spark's got-type for `DATATYPE_MISMATCH` refusals, Spark's core text with no condition for overflows — pins the native door refusing all three names, and re-derives the fixture from live Spark under `REPARK_PARITY_LIVE=1`. pins: sql-epoch-constructors-1/C-002, C-003, C-004, C-005, C-006, C-007, C-009
 CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09): `test_join_condition_refusals_1.py` pins the refusals through the exception accessors (`getCondition`, `getErrorClass`, `getMessageParameters`, `getSqlState`) instead of the head line: the engine now surfaces the bare bracketed condition with no analyzer-rule header, and the refusal text starts with `[CONDITION]`; `test_refused_join_inside_a_subquery_expression_refuses` pins the refused join nested in an `IN` subquery (kills the m5 plan-descent mutant). pins: cross-join-condition-1/C-008
 
@@ -3203,6 +3205,87 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with the read-back each must produce (`hours(tz)` derived from the spec; the fork
   writes it since RP-28, fork #296 — the fixture's `blocked_on_fork` marker still names
   the closed ask until the recorder re-runs).
+- [test_ice_ntz_nested_wall_1.py](test_ice_ntz_nested_wall_1.py) — **ICE-NTZ-NESTED-WALL-1
+  (2026-10-11):** the doors `zone_store_frame` serves (`INSERT … BY NAME`,
+  `INSERT OVERWRITE … SELECT`, `overwritePartitions`, `insertInto(overwrite=True)`),
+  the MERGE INSERT doors `zone_wrapping_stream_sql` serves (column list,
+  `INSERT *`, literal), and the whole-struct doors `store_assignment_cast_sql`
+  serves when the caller passes an instant (MERGE UPDATE from a column, UPDATE
+  from a sibling `TIMESTAMP` column), the identity UPDATE of that sibling
+  column, and plain `INSERT … SELECT` plus DataFrame `append` store the
+  session wall of an instant into
+  `struct<v: TIMESTAMP_NTZ, n: INT>` in UTC, America/New_York and Asia/Kolkata.
+  A wall literal stays `1767323045123456`. A field assignment stays the session
+  wall. A nested `TIMESTAMP` leaf stays the instant. A null struct, and a null
+  inner struct at depth 2, read back as null through `INSERT … SELECT` and
+  DataFrame `append`, the same value main stores by copying the column.
+  A 20-field struct from one `uuid()` subquery stores that one draw in every
+  shared field, on `INSERT … SELECT` and DataFrame `append`, and `EXPLAIN`
+  of that INSERT has no `rand`. A renamed member and a case-different member
+  store NULL in the unmatched leaf, which is main's cast. Reordered names store
+  each session wall on its name, and an extra field is dropped. `UPDATE` with
+  no `WHERE` and `INSERT OVERWRITE … VALUES` of a `TIMESTAMP` literal still
+  raise main's error class and first line. A Spark `MERGE` `WHEN MATCHED`
+  update and a `WHEN NOT MATCHED BY SOURCE` update of a `TIMESTAMP` column
+  store the session wall; `nested_assign` wraps before
+  `store_assignment_then_sql`. A struct under a list keeps the UTC wall.
+  Stored struct leaves are read from the table's Parquet data files.
+  `session_wall_of` still uses `toArrow()` because that value is a query
+  result, not a table file. A gap instant and an overlap instant in
+  America/New_York and Australia/Lord_Howe store the session wall.
+  `UPDATE t SET st.v = c` repairs a leaf that holds main's UTC wall.
+  A mixed `CASE` wall row stores `1767323045123456` now that the struct
+  coercion unit has landed (`test_mixed_case_wall_row_stores_the_wall`).
+  Case-different `BY NAME` and `INSERT OVERWRITE` store main's positional UTC
+  wall. The 35 NOT NULL cells store, and a converted leaf in America/New_York
+  is Spark's session wall. A scalar subquery of an instant struct raises main's
+  type error; an equal-type subquery stays main's silent no-op. A branch
+  `MERGE UPDATE` stores the session wall. Member names that contain `.` or
+  `,`, and a matching leaf beside a renamed member, stay at main's values.
+  `test_not_null_insert_names_the_users_source_type` holds main's first line
+  for a NOT NULL INSERT SELECT in UTC and America/New_York.
+  `test_explain_pins` shows `__repark_cast_nested_ntz__` on a converted
+  `INSERT … SELECT` and a whole-struct `UPDATE`, keeps the recorded main text
+  for the unconverted doors, and records `EXPLAIN ANALYZE INSERT` storing the
+  UTC wall `1767323045123456`. Those texts were recorded on head `b6b20b3c`
+  with the arm absent. Core-count partition numbers (`RoundRobinBatch`,
+  `Hash`, `input_partitions`) are masked on both sides before comparison.
+  pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
+- [ice_ntz_nested_wall_1_helpers.py](ice_ntz_nested_wall_1_helpers.py) —
+  **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** session, parquet leaf readers, and
+  the by-name and overwrite writers shared with the facade, moved so the
+  facade stays inside its line ceiling.
+  pins: ice-ntz-nested-wall-1/C-003
+- [test_ice_ntz_nested_wall_1_joined.py](test_ice_ntz_nested_wall_1_joined.py) —
+  **ICE-NTZ-NESTED-WALL-1 round 12 (2026-10-12):** the eight nested-NTZ-target
+  write shapes of the coercion verdict's S1, parametrised in
+  America/New_York, store Spark's rows on the joined head. Lives apart because
+  the main pin file would pass its line ceiling.
+  pins: ice-ntz-nested-wall-1/C-003
+- [test_ice_ntz_nested_wall_1_wall_first.py](test_ice_ntz_nested_wall_1_wall_first.py) —
+  **ICE-NTZ-NESTED-WALL-1 round 15 (2026-10-12):** twelve mixed-struct write shapes
+  (whole-struct `UPDATE` with a searched, built, two-`WHEN` and simple `CASE`, `MERGE UPDATE`
+  with a `CASE`, from a `UNION ALL` source and from a source `CASE`, the two shapes that
+  change no wall, `WHEN NOT MATCHED BY SOURCE`, `UPDATE SET *`, and a second
+  `WHEN NOT MATCHED` clause), each with the wall operand first and with the instant operand
+  first, copy-on-write and merge-on-read, in America/New_York and Australia/Lord_Howe:
+  96 cells, each equal to the rows live Spark stored.
+  `test_named_cells_equal_main` holds the cells a ledger names: the four depth-2 NOT NULL
+  `UPDATE` cells, the wall rows of a temp view read after a zone change, main's
+  `EXPLAIN UPDATE` text for a zoned struct assigned from a naive one, and
+  `EXPLAIN ANALYZE INSERT` of a mixed union. Lives apart because the main pin file is at
+  its line ceiling. pins: ice-ntz-nested-wall-1/C-003
+- [ice_ntz_nested_wall_1_wall_first.json](ice_ntz_nested_wall_1_wall_first.json) —
+  **ICE-NTZ-NESTED-WALL-1 round 15 (2026-10-12):** the statements and the rows the pin
+  above replays. `zones` is live Spark 4.1.2 with Iceberg 1.11.0. `main` is RePark main
+  `2ac03089` in America/New_York, with Spark's rows beside the two zone-change cells.
+  Written by `task/wo/ice-ntz-nested-wall-1/wall_first_round15.py merge`.
+  pins: ice-ntz-nested-wall-1/C-003
+- [ice_ntz_nested_wall_1_explain.json](ice_ntz_nested_wall_1_explain.json) —
+  **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** EXPLAIN text recorded on head
+  `b6b20b3c` with the EXPLAIN arm absent. The facade compares it after
+  masking snapshot ids and partition counts.
+  pins: ice-ntz-nested-wall-1/C-003
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files
   with `pyarrow.parquet`, not through SELECT.

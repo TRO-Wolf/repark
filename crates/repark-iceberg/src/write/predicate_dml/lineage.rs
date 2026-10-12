@@ -3,6 +3,7 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, Int64Array, RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::prelude::SessionContext;
 use iceberg::metadata_columns::{
     RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_COL_NAME_ROW_ID,
 };
@@ -75,11 +76,38 @@ pub(super) fn update_values_schema(
     Arc::new(ArrowSchema::new(fields))
 }
 
+pub(super) async fn assignment_source_types(
+    ctx: &SessionContext,
+    scratch: &str,
+    alias: &str,
+    assignments: &[(String, String)],
+) -> Option<Vec<DataType>> {
+    if assignments.is_empty() {
+        return Some(Vec::new());
+    }
+    let listed = assignments
+        .iter()
+        .enumerate()
+        .map(|(index, (_, expr))| format!("({expr}) AS a{index}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let sql = format!(
+        "SELECT {listed} FROM {} AS {}",
+        crate::write::merge::cow_scratch::quote_scratch_name(scratch),
+        quote_ident(alias),
+    );
+    let plan = ctx.state().create_logical_plan(&sql).await.ok()?;
+    let types = crate::write::ntz_store::analyzed_types(ctx, &plan)?;
+    (types.len() == assignments.len()).then_some(types)
+}
+
 pub(super) fn update_projection_sql(
     values_schema: &datafusion::arrow::datatypes::SchemaRef,
     alias: &str,
     assignments: &[(String, String)],
+    sources: Option<&[DataType]>,
 ) -> String {
+    let known = sources.filter(|types| types.len() == assignments.len());
     values_schema
         .fields()
         .iter()
@@ -88,10 +116,19 @@ pub(super) fn update_projection_sql(
             if field.name() == RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER {
                 return format!("CAST(NULL AS BIGINT) AS {quoted}");
             }
-            if let Some((_, expr_sql)) = assignments
+            if let Some((index, (_, expr_sql))) = assignments
                 .iter()
-                .find(|(name, _)| name.eq_ignore_ascii_case(field.name()))
+                .enumerate()
+                .find(|(_, (name, _))| name.eq_ignore_ascii_case(field.name()))
             {
+                let source = known.and_then(|types| types.get(index));
+                if let Some(nested) = crate::write::update_cast::nested_micro_ntz_wall_sql(
+                    expr_sql,
+                    source,
+                    field.data_type(),
+                ) {
+                    return format!("({nested}) AS {quoted}");
+                }
                 match crate::write::ntz_store::store_kernel_sql(expr_sql, field.data_type()) {
                     Some(wall) => format!("({wall}) AS {quoted}"),
                     None => format!("({expr_sql}) AS {quoted}"),
@@ -157,4 +194,105 @@ pub(super) fn push_pairs_from_batch(
         push_identity_pair(pairs, files.value(row), positions.value(row));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, TimeUnit};
+
+    use super::update_projection_sql;
+
+    fn struct_type(fields: Vec<Field>) -> DataType {
+        DataType::Struct(fields.into())
+    }
+
+    #[test]
+    fn an_instant_struct_is_wrapped_and_an_unknown_source_stays_main() {
+        let target = struct_type(vec![
+            Field::new("v", DataType::Timestamp(TimeUnit::Microsecond, None), true),
+            Field::new("n", DataType::Int32, true),
+        ]);
+        let instant = struct_type(vec![
+            Field::new(
+                "v",
+                DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+                true,
+            ),
+            Field::new("n", DataType::Int32, true),
+        ]);
+        let wall = struct_type(vec![
+            Field::new("v", DataType::Timestamp(TimeUnit::Nanosecond, None), true),
+            Field::new("n", DataType::Int32, true),
+        ]);
+        let schema = Arc::new(ArrowSchema::new(vec![Field::new("st", target, true)]));
+        let assignments = vec![("st".to_string(), "s".to_string())];
+        let wrapped = update_projection_sql(
+            &schema,
+            "t",
+            &assignments,
+            Some(std::slice::from_ref(&instant)),
+        );
+        assert!(
+            wrapped.contains("arrow_cast((__repark_cast_nested_ntz__((s), 'v'))"),
+            "{wrapped}"
+        );
+        assert!(
+            !wrapped.contains("__repark_cast_timestamp_ntz__"),
+            "{wrapped}"
+        );
+        assert_eq!(
+            update_projection_sql(&schema, "t", &assignments, None),
+            "(s) AS `st`"
+        );
+        assert_eq!(
+            update_projection_sql(
+                &schema,
+                "t",
+                &assignments,
+                Some(std::slice::from_ref(&wall))
+            ),
+            "(s) AS `st`"
+        );
+    }
+
+    #[test]
+    fn the_four_sites_keep_the_sql_the_walk_emitted() {
+        let instant = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
+        let ntz = DataType::Timestamp(TimeUnit::Microsecond, None);
+        let source = DataType::Struct(
+            vec![
+                Field::new("v", instant, true),
+                Field::new("n", DataType::Int32, true),
+            ]
+            .into(),
+        );
+        let target = DataType::Struct(
+            vec![
+                Field::new("v", ntz, true),
+                Field::new("n", DataType::Int32, true),
+            ]
+            .into(),
+        );
+        let sql =
+            crate::write::update_cast::nested_micro_ntz_wall_sql("`st`", Some(&source), &target)
+                .expect("wraps");
+        assert_eq!(
+            crate::write::update_cast::store_assignment_cast_sql("`st`", Some(&source), &target),
+            sql
+        );
+        assert!(
+            sql.contains("__repark_cast_nested_ntz__((`st`), 'v')"),
+            "{sql}"
+        );
+        let schema = Arc::new(ArrowSchema::new(vec![Field::new("st", target, true)]));
+        let projection = update_projection_sql(
+            &schema,
+            "t",
+            &[("st".to_string(), "`st`".to_string())],
+            Some(std::slice::from_ref(&source)),
+        );
+        assert!(projection.contains(&sql), "{projection}");
+    }
 }

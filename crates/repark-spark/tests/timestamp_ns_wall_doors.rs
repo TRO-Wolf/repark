@@ -582,15 +582,15 @@ async fn untouched_rows_carry_their_nanosecond_ticks() {
 
 const NTZ_NESTED_DOORS: [(&str, bool); 6] = [
     ("insert values", false),
-    ("insert select", false),
+    ("insert select", true),
     ("merge set field", true),
-    ("merge set struct", false),
+    ("merge set struct", true),
     ("update set field", true),
-    ("merge insert", false),
+    ("merge insert", true),
 ];
 
 #[tokio::test]
-async fn a_nested_microsecond_ntz_field_keeps_the_split_main_has() {
+async fn a_nested_literal_keeps_the_utc_wall_and_field_assignment_stores_the_session_wall() {
     let lit = NESTED_INSTANT;
     for (zone, wall) in NESTED_WALLS {
         let session = session_at(zone);

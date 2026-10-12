@@ -1044,6 +1044,44 @@ pins: rp-4-fork-repin/C-005, C-006
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.
   pins: unresolved-routine-1/C-006
+- `insert_timestamp_ns.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `after_analysis`
+  continues past an empty nanosecond-target list only when
+  `nested_micro_ntz_decision` says the target has a nested microsecond
+  `TIMESTAMP_NTZ` leaf. A selected instant leaf becomes
+  `__repark_cast_nested_ntz__` on the whole struct, inside the plan's cast when
+  that cast's type is the target and otherwise inside a cast to the target.
+  The hook runs only for an `INSERT` whose target is an Iceberg provider.
+  `UPDATE` and any other target keep the plan. The expression has no
+  `get_field` and no `random()`. A cast is peeled only
+  when its type is the target; a user cast to another struct, including
+  `TRY_CAST`, stays the original expression. A column with no selected leaf
+  is returned unchanged.
+  pins: ice-ntz-nested-wall-1/C-003
+- `insert_timestamp_ns.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** `after_analysis`
+  descends a non-ANALYZE `LogicalPlan::Explain` to an append `Dml` and
+  substitutes that plan only when `wrap_nested_ntz` changed an expression on
+  an Iceberg append. Overwrite, update, and an unchanged expression keep the
+  original plan. `EXPLAIN ANALYZE` is `LogicalPlan::Analyze` and is not
+  descended. `wrap_nested_ntz` returns the caller's expression when a NOT NULL
+  target member is nullable on the source. A source member that is already
+  NOT NULL still wraps.
+  pins: ice-ntz-nested-wall-1/C-003
+- `spark_ast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** the
+  `DfStatement::Explain` arm, for a non-ANALYZE inner `Update`, runs
+  `refuse_cast_then_fold_nested` and replaces the assignments only when they
+  name `__repark_cast_nested_ntz__` more times than the original. Any error
+  keeps the original statement. The arm does not collect or commit.
+  pins: ice-ntz-nested-wall-1/C-003
+- `spark_ast.rs` — **ICE-NTZ-NESTED-WALL-1 round 12 (2026-10-12):**
+  `fill_insert_defaults_for_dml_target` is the DML-target resolve plus
+  `fill_insert_plan` moved out of `execute_passthrough_inner` unchanged, so the
+  passthrough stays under clippy's 100-line threshold.
+  pins: ice-ntz-nested-wall-1/C-003
+- `update_cast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-12):**
+  `refuse_cast_then_fold_nested` returns the folded `Update`.
+  `explain_update_assignments` swaps assignments only when the folded text
+  names the nested kernel more times than the original.
+  pins: ice-ntz-nested-wall-1/C-003
 - `insert_timestamp_ns.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the `UPDATE` conform runs
   for a `timestamptz_ns` target too. R-007 had filtered zoned targets out of it to hold the
   type as a control, which is what left `UPDATE t SET v = <column>` with no `WHERE` on the

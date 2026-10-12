@@ -1,0 +1,99 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______ test_mixed_struct_inventory_matches_spark_where_the_arm_applies ________
+
+tmp_path = PosixPath('<tmp>/pytest-of-john/pytest-1954/test_mixed_struct_inventory_ma0')
+
+    def test_mixed_struct_inventory_matches_spark_where_the_arm_applies(
+        tmp_path: Path,
+    ) -> None:
+        """Replay the step-0 inventory in UTC, America/New_York and Asia/Kolkata."""
+        for zone in ZONES:
+            warehouse = tmp_path / zone
+            warehouse.mkdir()
+            session = _open(zone, warehouse)
+            try:
+                _install(session)
+                wall = LOCAL[zone]
+                for shape in ("case", "coalesce", "union"):
+>                   _check_coercion(session, shape, wall)
+
+python/repark/tests/test_ntz_struct_coerce_1.py:279: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <repark.spark.session.session_core.ReparkSession object at 0x77a50988d200>
+shape = 'case', wall = 1767323045123456
+
+    def _check_coercion(session: ReparkSession, shape: str, wall: int) -> None:
+        """Assert one coercion shape localises on read, order, group, write, compare and join."""
+        inner = _shape_sql("struct", shape)
+        has_id = shape != "union"
+        ident = "id, " if has_id else ""
+        order_id = " ORDER BY id" if has_id else ""
+        schema, rows = _table(session, f"SELECT {ident}mixed.v AS v FROM ({inner}) s{order_id}")
+        assert str(schema.field("v").type) == "timestamp[us, tz=UTC]", shape
+        if has_id:
+            assert [(row["id"], row["v"]) for row in rows] == [(1, wall), (2, INSTANT)], shape
+        else:
+            assert _sorted([row["v"] for row in rows]) == _sorted([wall, None, INSTANT, INSTANT]), shape
+        _, ordered = _table(session, f"SELECT mixed.v AS v FROM ({inner}) s ORDER BY mixed.v")
+        if has_id:
+            assert [row["v"] for row in ordered] == [wall, INSTANT], shape
+        else:
+            assert [row["v"] for row in ordered] == [None, wall, INSTANT, INSTANT], shape
+        _, grouped = _table(
+            session, f"SELECT mixed AS g, count(*) AS c FROM ({inner}) s GROUP BY mixed"
+        )
+        pairs = _sorted(
+            [(None if row["g"] is None else row["g"]["v"], int(row["c"])) for row in grouped]
+        )
+        if has_id:
+            assert pairs == _sorted([(wall, 1), (INSTANT, 1)]), shape
+        else:
+            assert pairs == _sorted([(wall, 1), (INSTANT, 2), (None, 1)]), shape
+        dest = f"sc.ns.w_{shape}"
+        _exec(session, f"DROP TABLE IF EXISTS {dest}")
+        if has_id:
+            _exec(
+                session,
+                f"CREATE TABLE {dest} (id INT, st STRUCT<v: TIMESTAMP, n: INT>) USING iceberg",
+            )
+            _exec(session, f"INSERT INTO {dest} SELECT id, mixed FROM ({inner}) s")
+            written_schema, written = _table(session, f"SELECT id, st.v AS v FROM {dest} ORDER BY id")
+            assert [(row["id"], row["v"]) for row in written] == [(1, wall), (2, INSTANT)], shape
+        else:
+            _exec(session, f"CREATE TABLE {dest} (st STRUCT<v: TIMESTAMP, n: INT>) USING iceberg")
+            _exec(session, f"INSERT INTO {dest} SELECT mixed FROM ({inner}) s")
+            written_schema, written = _table(session, f"SELECT st.v AS v FROM {dest}")
+            assert _sorted([row["v"] for row in written]) == _sorted([wall, None, INSTANT, INSTANT]), (
+                shape
+            )
+        assert str(written_schema.field("v").type) == "timestamp[us, tz=UTC]", shape
+        same_sql = f"SELECT {ident}(mixed = {FIXED_STRUCT}) AS same FROM ({inner}) s{order_id}"
+        _, compared = _table(session, same_sql)
+        if has_id:
+            assert [(row["id"], row["same"]) for row in compared] == [(1, False), (2, True)], shape
+        else:
+            assert _sorted([row["same"] for row in compared]) == _sorted([False, None, True, True]), (
+                shape
+            )
+        _, joined = _table(
+            session,
+            f"SELECT s.mixed.v AS v, b.id AS bid FROM ({inner}) s "
+            f"JOIN sc.ns.b b ON s.mixed = b.st ORDER BY v, bid",
+        )
+        joined_rows = [(row["v"], row["bid"]) for row in joined]
+        if has_id:
+            assert joined_rows == [(INSTANT, 1), (INSTANT, 2)], shape
+        else:
+            assert joined_rows == [(INSTANT, 1), (INSTANT, 1), (INSTANT, 2), (INSTANT, 2)], shape
+        plan = _plan(session, inner)
+>       assert KERNEL in plan, shape
+E       AssertionError: case
+E       assert '__repark_localize_nested_ntz__' in '== Optimized Logical Plan ==\nSubqueryAlias: datafusion.public.__repark_explain_872e775b54d9497397b46d5049013c41\n  P...  IcebergTableScan projection:[id,st] predicate:[] N=2\n      IcebergTableScan projection:[id,st] predicate:[] N=2\n\n'
+
+python/repark/tests/test_ntz_struct_coerce_1.py:232: AssertionError
+=========================== short test summary info ============================
+FAILED python/repark/tests/test_ntz_struct_coerce_1.py::test_mixed_struct_inventory_matches_spark_where_the_arm_applies - AssertionError: case
+assert '__repark_localize_nested_ntz__' in '== Optimized Logical Plan ==\nSubqueryAlias: datafusion.public.__repark_explain_872e775b54d9497397b46d5049013c41\n  P...  IcebergTableScan projection:[id,st] predicate:[] N=2\n      IcebergTableScan projection:[id,st] predicate:[] N=2\n\n'
+1 failed in 0.39s

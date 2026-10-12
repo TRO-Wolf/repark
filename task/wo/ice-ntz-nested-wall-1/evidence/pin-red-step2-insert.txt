@@ -1,0 +1,104 @@
+🍹 Building a mixed python/rust project
+🐍 Found CPython 3.12 at <repo>/.venv/bin/python
+🔗 Found pyo3 bindings with abi3-py3.12 support
+📡 Using build options features from pyproject.toml
+Using Python 3.12.3 environment at: <repo>/.venv
+Checked 10 packages in 1ms
+   Compiling repark-spark v1.5.4 (<repo>/crates/repark-spark)
+    Building [=======================> ] 609/611: repark-spark                
+   Compiling repark-python v1.5.4 (<repo>/crates/repark-python)
+    Building [=======================> ] 610/611: repark-python               
+    Finished `release` profile [optimized] target(s) in 6m 33s
+📦 Built wheel for abi3 Python ≥ 3.12 to <wheel>
+✏️ Setting installed package as editable
+🛠 Installed repark-1.5.4
+MATURIN_EXIT:0
+.FF                                                                      [100%]
+=================================== FAILURES ===================================
+________ test_insert_analysis_stores_the_session_wall[America/New_York] ________
+
+tmp_path = PosixPath('<pytest-tmp>/pytest-1924/test_insert_analysis_stores_th1')
+zone = 'America/New_York'
+
+    @pytest.mark.parametrize("zone", ZONES)
+    def test_insert_analysis_stores_the_session_wall(tmp_path: Path, zone: str) -> None:
+        """Plain INSERT and DataFrame append store the session wall of a column instant."""
+        spark = open_session(zone, tmp_path)
+        try:
+            write_source(spark)
+            expected = SESSION_WALL[zone]
+            selected = "ice.ns.selected"
+            create_nested(spark, selected, "TIMESTAMP_NTZ")
+            insert_select_column(spark, selected)
+>           assert leaf_ticks(spark, selected, "st.v") == [expected], "select"
+E           AssertionError: select
+E           assert [1767323045123456] == [1767305045123456]
+E             
+E             At index 0 diff: 1767323045123456 != 1767305045123456
+E             
+E             Full diff:
+E               [
+E             -     1767305045123456,
+E             ?          ^^
+E             +     1767323045123456,
+E             ?          ^^
+E               ]
+
+python/repark/tests/test_ice_ntz_nested_wall_1.py:335: AssertionError
+__________ test_insert_analysis_stores_the_session_wall[Asia/Kolkata] __________
+
+tmp_path = PosixPath('<pytest-tmp>/pytest-1924/test_insert_analysis_stores_th2')
+zone = 'Asia/Kolkata'
+
+    @pytest.mark.parametrize("zone", ZONES)
+    def test_insert_analysis_stores_the_session_wall(tmp_path: Path, zone: str) -> None:
+        """Plain INSERT and DataFrame append store the session wall of a column instant."""
+        spark = open_session(zone, tmp_path)
+        try:
+            write_source(spark)
+            expected = SESSION_WALL[zone]
+            selected = "ice.ns.selected"
+            create_nested(spark, selected, "TIMESTAMP_NTZ")
+            insert_select_column(spark, selected)
+>           assert leaf_ticks(spark, selected, "st.v") == [expected], "select"
+E           AssertionError: select
+E           assert [1767323045123456] == [1767342845123456]
+E             
+E             At index 0 diff: 1767323045123456 != 1767342845123456
+E             
+E             Full diff:
+E               [
+E             -     1767342845123456,
+E             ?          - ^
+E             +     1767323045123456,
+E             ?           ^^
+E               ]
+
+python/repark/tests/test_ice_ntz_nested_wall_1.py:335: AssertionError
+=========================== short test summary info ============================
+FAILED python/repark/tests/test_ice_ntz_nested_wall_1.py::test_insert_analysis_stores_the_session_wall[America/New_York] - AssertionError: select
+assert [1767323045123456] == [1767305045123456]
+  
+  At index 0 diff: 1767323045123456 != 1767305045123456
+  
+  Full diff:
+    [
+  -     1767305045123456,
+  ?          ^^
+  +     1767323045123456,
+  ?          ^^
+    ]
+FAILED python/repark/tests/test_ice_ntz_nested_wall_1.py::test_insert_analysis_stores_the_session_wall[Asia/Kolkata] - AssertionError: select
+assert [1767323045123456] == [1767342845123456]
+  
+  At index 0 diff: 1767323045123456 != 1767342845123456
+  
+  Full diff:
+    [
+  -     1767342845123456,
+  ?          - ^
+  +     1767323045123456,
+  ?           ^^
+    ]
+2 failed, 1 passed in 0.45s
+PYTEST_EXIT:1

@@ -3348,30 +3348,35 @@ still open is `isModifiable`.
   `DELETE` statements, not a stored-value defect; out of ICE-TSNS-MERGE-WALL-1's scope.
   Ledger question Q3.
 
-### ICE-TSNS-SQL-1-R-011 — OPEN (measured 2026-10-09): a nested microsecond `TIMESTAMP_NTZ` field stores two walls
+### ICE-TSNS-SQL-1-R-011 — NARROWED (2026-10-11): a nested microsecond `TIMESTAMP_NTZ` leaf stores the session wall, except the literal cells that stay on the UTC wall
 
-- **repark** — the microsecond twin of the nested split R-007's fold 1 closed for
-  `timestamp_ns`, on main `40fc916f` and unchanged at head. Into
-  `struct<v: TIMESTAMP_NTZ, n: INT>` in a session whose zone is not UTC, an instant
-  (`TIMESTAMP`, `timestamptz_ns`) stores its **session** wall through field assignment
-  (`MERGE … UPDATE SET t.st.v = …` from a column or a literal, `UPDATE … SET st.v = …`
-  from a column or a literal: 28 measured cells) and its **UTC** wall through every other
-  door (nested `INSERT … VALUES` / `SELECT` / `BY NAME` / `OVERWRITE` / `REPLACE WHERE`,
-  MERGE INSERT, whole-struct assignment by MERGE or UPDATE, the DataFrame writers: 106
-  cells). `TIMESTAMP '2026-01-02 03:04:05.123456+00:00'` in America/New_York stores
-  `1767305045123456` by `SET t.st.v` and `1767323045123456` by `INSERT`; in Asia/Kolkata
-  `1767342845123456` and `1767323045123456`. A wall source and a UTC session agree on every
-  door (379 cells).
+- **repark** — into `struct<v: TIMESTAMP_NTZ, n: INT>`, a column instant stores the
+  session wall through `INSERT … SELECT`, `INSERT … BY NAME`, `INSERT OVERWRITE … SELECT`,
+  `REPLACE WHERE`, MERGE INSERT, whole-struct MERGE UPDATE of a column, `UPDATE … WHERE`
+  from a sibling column, and the DataFrame writers (`append`, `insertInto`, `saveAsTable`,
+  `overwritePartitions`, `overwrite(condition)`, `insertInto(overwrite=True)`). Field
+  assignment already stored that wall and is unchanged. These literal cells still store
+  `1767323045123456` in every zone, equal to main: `INSERT … VALUES`, MERGE `UPDATE SET *`,
+  whole-struct MERGE UPDATE of a literal, and `UPDATE … WHERE` of a literal.
+  `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` are still an error, equal
+  to main (row R-019). Head re-measure 2026-10-11: 173 of 264 `ntz_nested` instant
+  cells equal Spark; field assignment 324 of 324, `ltz_nested` 396 of 396 and
+  `ntz_top` 396 of 396 identical to main; 22 non-UTC instant cells still hold
+  `1767323045123456`, each mapped in `summary-head.md` to `SET *` or to the
+  untyped literal (R4). R-011 stays narrowed. Head re-measure 2026-10-12 (round 15 of
+  the unit): 193 of 264; MERGE `UPDATE SET *`, whole-struct MERGE UPDATE of a literal
+  and `UPDATE … WHERE` of a literal now store the session wall, because the store
+  decision reads the analyzed type of the value; 2 cells still hold
+  `1767323045123456`, both `INSERT … VALUES` of a literal.
 - **Apache Spark** — a `TIMESTAMP` assigned to a `TIMESTAMP_NTZ` field stores its wall in the
-  session zone on every door. *(oracle: documented — Spark's `TIMESTAMP` to `TIMESTAMP_NTZ`
-  cast rule, the one the top-level column follows since NTZ-STORE-DOORS-1; the nested doors
-  were not measured on Spark by this unit.)*
+  session zone on every door it answers. *(oracle: [spark-4.1.2.jsonl](../task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl).)*
 - **Pin** — `crates/repark-spark/tests/timestamp_ns_wall_doors.rs`
-  `a_nested_microsecond_ntz_field_keeps_the_split_main_has` holds the six nested doors in
-  three zones as they are, so the day this row is fixed the pin goes red and is rewritten.
-- **Rationale** — OPEN, dated 2026-10-09. A microsecond control of ICE-TSNS-MERGE-WALL-1,
-  left alone by ruling. The field-assignment value is the one the rule asks for; nested
-  INSERT has no NTZ conform. Ledger clause C-017, question Q4.
+  `a_nested_literal_keeps_the_utc_wall_and_field_assignment_stores_the_session_wall`
+  holds `INSERT … VALUES` of the literal on the UTC wall, and field assignment and
+  (round 15) whole-struct MERGE UPDATE of the literal on the session wall.
+  The facade `test_ice_ntz_nested_wall_1.py` holds the column doors.
+- **Rationale** — NARROWED, dated 2026-10-11. A source analyzed as a wall is not wrapped.
+  Ledger ICE-NTZ-NESTED-WALL-1 C-003 stays open for the cells in that list.
 
 ### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
 
@@ -3557,6 +3562,226 @@ still open is `isModifiable`.
 - **Rationale** — OPEN, dated 2026-10-09. The statement's own source does not evaluate, so
   no write door is reached and nothing is stored; measured by the nested matrices of
   ICE-TSNS-MERGE-WALL-1 and out of its scope. Ledger clause C-039, question Q10.
+
+### ICE-TSNS-SQL-1-R-019 — OPEN (measured 2026-10-11): `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` still raise main's raw error
+
+- **repark** — on `struct<v: TIMESTAMP_NTZ, n: INT>` and `struct<v: TIMESTAMP, n: INT>`,
+  in UTC, America/New_York and Asia/Kolkata, these step-0 cells still raise the same
+  class and first line as main `2c33f289`. `INSERT OVERWRITE … VALUES` of a
+  `TIMESTAMP` literal (copy-on-write, both schemas, three zones: 6 cells) raises
+  `PySparkException` whose first line is `datafusion engine error: Arrow error:
+  Invalid argument error: column types must match schema types, expected
+  Struct("v": Timestamp(ns), "n": Int32) but found Struct("v": Timestamp(µs, "UTC"),
+  "n": Int32) at column index 1`. The same door from a `TIMESTAMP` column (6 cells)
+  raises `UnsupportedOperationException` `This feature is not implemented: Physical
+  plan does not support logical expression ScalarSubquery(<subquery>)`. `UPDATE`
+  with no `WHERE` (`update_whole_nowhere`, `update_col_nowhere`,
+  `update_field_nowhere`, `update_field_col_nowhere`), both schemas, sources
+  `ts_literal`, `ntz_literal`, and `ts_column` where the statement names a sibling
+  column, copy-on-write, three zones, raises `PySparkException` `arguments need to
+  have the same data type`. The merge-on-read twins raise `PySparkException`
+  `column types must match schema types` with the target field ids and without them
+  on the written struct. `update_whole_nowhere` and `update_field_nowhere` from a
+  `TIMESTAMP` column (no source relation; 2 doors, 2 modes, 2 schemas, 3 zones:
+  24 cells) raise `AnalysisException` `UPDATE operation on table`. The
+  `TIMESTAMP_NTZ` literal on `INSERT OVERWRITE … VALUES` stores the UTC wall, as
+  main does, and is not one of these error cells.
+- **Apache Spark** — stores the session wall on every cell of these doors it
+  answers. America/New_York, `ntz_nested`, `ts_literal`: `1767305045123456` on
+  both `INSERT OVERWRITE … VALUES` and `UPDATE` with no `WHERE`.
+  *(oracle: [spark-4.1.2.jsonl](../task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl).)*
+- **Pin** — `python/repark/tests/test_ice_ntz_nested_wall_1.py`
+  `test_raw_error_doors_still_raise_mains_error` (UTC, `ntz_nested`, the
+  `TIMESTAMP` literal, copy-on-write, both doors).
+- **Rationale** — OPEN, dated 2026-10-11. A struct type-conform hole, not a wall
+  defect. This unit does not change the doors. R-011 records them as still an
+  error, equal to main. Ledger ICE-NTZ-NESTED-WALL-1 C-005 stays open.
+
+### ICE-TSNS-SQL-1-R-020 — OPEN (measured 2026-10-11): an NTZ wall literal into a nested `TIMESTAMP` leaf stays a wall on most doors
+
+- **repark** — `ltz_nested`, source `ntz_literal`, America/New_York and
+  Asia/Kolkata, 88 step-0 cells. 56 store the bare wall `1767323045123456`
+  (every INSERT and DataFrame door, MERGE INSERT, whole-struct MERGE UPDATE,
+  `UPDATE SET *`, and whole-struct `UPDATE … WHERE`). 16 field-assignment cells
+  store Spark's localized instant (`merge_update_field`,
+  `merge_update_field_literal`, `update_field_where`, `update_field_col_where`,
+  both modes). 16 `UPDATE` with no `WHERE` cells still error. The leaf table's
+  mirror row (zoned target, microsecond `TIMESTAMP_NTZ` source) stays
+  `wrap: false`. A struct inside a struct is reached at depth 2. A struct
+  under a list or a map is not.
+- **Apache Spark** — stores the wall interpreted in the session zone on every
+  door it answers. `insert_select`: America/New_York `1767341045123456`,
+  Asia/Kolkata `1767303245123456`.
+  *(oracle: [spark-4.1.2.jsonl](../task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl).)*
+- **Pin** — `a_struct_inside_a_struct_wraps_only_the_inner_instant_leaf` and
+  `both_emitters_select_the_same_paths` hold depth 2 (`i.v`).
+  `test_a_struct_under_a_list_keeps_the_utc_wall` holds the list hole.
+  `a_list_or_map_is_left_as_it_is` holds that neither emitter enters a list or
+  a map. The mirror wrap row is not added.
+- **Rationale** — OPEN, dated 2026-10-11. A later unit sets the mirror row.
+  R-011 stays open for `array<struct>` and `map<_, struct>`.
+
+### ICE-TSNS-SQL-1-R-021 — OPEN (measured 2026-10-12): a scalar subquery whose struct type equals the target updates nothing
+
+- **repark** — `UPDATE t SET st = (SELECT st FROM wsrc WHERE id = 1) WHERE id >= 0`,
+  America/New_York, both sides `STRUCT<v: TIMESTAMP_NTZ, n: INT>`. The statement
+  succeeds and the target stays `n = 77` at `1767323045123456`. The source `n`
+  is 1. Main does the same. An instant struct into that NTZ struct is main's
+  `PySparkException` whose first line is `arguments need to have the same data
+  type`; the walk returns the subquery unchanged.
+- **Apache Spark** — stores the source struct. The instant-into-NTZ shape stores
+  the session wall.
+  *(oracle: the verifier's scalar-subquery cell, Spark 4.1.2.)*
+- **Pin** — `test_scalar_subquery_update_raises_mains_type_error` holds the
+  equal-type row at `(1, 1767323045123456, 77)` and the instant-into-NTZ refusal.
+- **Rationale** — OPEN, dated 2026-10-12. The silent no-op is main's. This unit
+  does not fix it.
+
+### ICE-TSNS-SQL-1-R-022 — OPEN (measured 2026-10-12): `EXPLAIN INSERT OVERWRITE` of a nested instant prints main's plan
+
+- **repark** — `EXPLAIN INSERT OVERWRITE` into `STRUCT<v: TIMESTAMP_NTZ, n: INT>`
+  prints `Dml: op=[Insert Overwrite]` and the planner `CAST`, with no
+  `__repark_cast_nested_ntz__`. The executed overwrite uses the bare kernel,
+  which has a different pairing rule, so the plan is not rewritten.
+- **Apache Spark** — prints its own plan. *(oracle: none for this EXPLAIN text.)*
+- **Pin** — `test_explain_pins` holds the text recorded on head `b6b20b3c` with
+  the EXPLAIN arm absent.
+- **Rationale** — OPEN, dated 2026-10-12. Explaining overwrite would have to run
+  the emptiness probe. This unit keeps main's plan.
+
+### ICE-TSNS-SQL-1-R-023 — OPEN (measured 2026-10-12): `EXPLAIN` of a MERGE update clause keeps main's refusal
+
+- **repark** — `UnsupportedOperationException`, first line
+  `This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.l, 'n', 1)`.
+- **Apache Spark** — plans MERGE. *(oracle: not re-run; the class is DataFusion's.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. DataFusion has no MERGE arm. The fold
+  is not called from EXPLAIN.
+
+### ICE-TSNS-SQL-1-R-024 — OPEN (measured 2026-10-12): `EXPLAIN` of a MERGE insert clause keeps main's refusal
+
+- **repark** — `UnsupportedOperationException`, first line
+  `This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st, k) VALUES (s.id, named_struct('v', s.l, 'n', 1), 0)`.
+- **Apache Spark** — plans MERGE. *(oracle: not re-run.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. Same refusal as R-023.
+
+### ICE-TSNS-SQL-1-R-025 — OPEN (measured 2026-10-12): `EXPLAIN` of MERGE `NOT MATCHED BY SOURCE` keeps main's refusal
+
+- **repark** — `UnsupportedOperationException`, first line
+  `This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET t.k = 0`.
+- **Apache Spark** — plans MERGE. *(oracle: not re-run.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. Same refusal as R-023.
+
+### ICE-TSNS-SQL-1-R-026 — OPEN (measured 2026-10-12): `EXPLAIN INSERT … REPLACE WHERE` keeps main's parse refusal
+
+- **repark** — `ParseException`, first line
+  `SQL error: ParserError("Expected: SELECT, VALUES, or a subquery in the query body, found: REPLACE at Line: 1, Column: 30")`.
+- **Apache Spark** — accepts `REPLACE WHERE`. *(oracle: not re-run.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. The interceptor requires the first word
+  `INSERT`. EXPLAIN never reaches it. The refusal stays.
+
+### ICE-TSNS-SQL-1-R-027 — OPEN (measured 2026-10-12): `EXPLAIN INSERT … BY NAME` keeps main's parse refusal
+
+- **repark** — `ParseException`, first line
+  `SQL error: ParserError("Expected: SELECT, VALUES, or a subquery in the query body, found: BY at Line: 1, Column: 30")`.
+- **Apache Spark** — accepts `BY NAME`. *(oracle: not re-run.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. Same miss as R-026. The refusal stays.
+
+### ICE-TSNS-SQL-1-R-028 — OPEN (measured 2026-10-12): `EXPLAIN ANALYZE INSERT` of an instant stores the UTC wall
+
+- **repark** — America/New_York, `EXPLAIN ANALYZE INSERT INTO … SELECT` of
+  `TIMESTAMP '2026-01-02 03:04:05.123456+00:00'` into
+  `STRUCT<v: TIMESTAMP_NTZ, n: INT>` writes one row at `1767323045123456`,
+  the UTC wall. `EXPLAIN ANALYZE` is excluded from the append descent, so the
+  write runs without `after_analysis`.
+- **Apache Spark** — would store the session wall. *(oracle: not re-run; Spark
+  JVM cannot start.)*
+- **Pin** — `test_explain_pins` holds that tick.
+- **Rationale** — OPEN, dated 2026-10-12. A stored-value hole, not an EXPLAIN
+  text hole. This unit does not change it.
+
+### ICE-TSNS-SQL-1-R-029 — FIXED 2026-10-12 (NTZ-STRUCT-COERCE-1): a struct coerced from a naive wall to an instant localises the wall in the session zone
+
+- **repark** — `CASE`, `COALESCE` and `UNION ALL` of a `STRUCT<v: TIMESTAMP_NTZ>` with a
+  `STRUCT<v: TIMESTAMP>` read the wall as UTC on main `572130dd`, because type coercion
+  inserts `Cast` to `Timestamp(µs, "UTC")` and Arrow localises a naive timestamp in the
+  target zone. That cast is now
+  `Cast(__repark_localize_nested_ntz__(expr, paths), target)`, and the leaf is the
+  session-zone instant on read and on `INSERT … SELECT`. Of 144 cells, 35 differed from
+  Spark; 24 (the coercion shapes in America/New_York and Asia/Kolkata) now equal Spark;
+  0 moved away; every top-level control is identical to main. A user-written
+  `CAST(st AS STRUCT<v: TIMESTAMP, n: INT>)` stays `Timestamp(ns)` (11 cells). Spark
+  localises that cast. The target is not an LTZ microsecond leaf, so the arm does not
+  select it.
+- **Apache Spark** — localises the wall in the session zone for those shapes, including
+  the user-written cast. *(oracle: measured, Spark 4.1.2 with Iceberg 1.11.0,
+  `task/wo/ntz-struct-coerce-1/evidence/spark-4.1.2.jsonl`.)*
+- **Pin** — `python/repark/tests/test_ntz_struct_coerce_1.py`;
+  `crates/repark-functions/src/instant_ts_tests.rs` (`instant_ts::tests`);
+  `crates/repark-functions/src/nested_wall.rs`.
+- **Rationale** — FIXED 2026-10-12. One arm in `rewrite_cast` and one kernel. Ledger
+  `task/ledgers/staging/ntz-struct-coerce-1-ledger.md`.
+
+### ICE-TSNS-SQL-1-R-030 — OPEN (measured 2026-10-12): ANSI DDL `TIMESTAMP(6) WITH TIME ZONE` creates a naive Iceberg `timestamp` column
+
+- **repark** — `CREATE TABLE ice.q7.src (id BIGINT, l TIMESTAMP(6) WITH TIME ZONE)` on
+  the ANSI door creates `l` as Iceberg `timestamp` (naive microseconds). The write
+  schema shows `Timestamp(Microsecond, None)` and reads present a naive wall, so a
+  whole-struct `MERGE UPDATE` over the column keeps the UTC wall. Not a store bug:
+  the source is naive and the UTC wall is the right store.
+- **Expected** — the column holds `timestamptz`, the way the Spark door's `TIMESTAMP`
+  does, and reads present the instant.
+- **Pin** — `crates/repark-sql/tests/ansi_ntz_wall_cast.rs`
+  (`ansi_matched_update_of_a_nested_ntz_keeps_the_utc_wall` and the unmatched-source
+  twin hold the naive-source store).
+- **Rationale** — OPEN 2026-10-12. Observed while ruling round 13 Q1. No fix in this
+  unit; a time-zone-honouring ANSI DDL is its own unit.
+
+### ICE-TSNS-SQL-1-R-031 — OPEN (measured 2026-10-12): a whole-struct `UPDATE … WHERE` into a depth-2 struct with a NOT NULL member keeps the UTC wall
+
+- **repark** — America/New_York, `st STRUCT<i: STRUCT<v: TIMESTAMP_NTZ, n: INT> NOT NULL, m: INT>`
+  and `st STRUCT<i: STRUCT<v: TIMESTAMP_NTZ, n: INT>, m: INT NOT NULL>`, a `TIMESTAMP`
+  column `c` holding `2026-07-04 11:22:33.654321+00:00`.
+  `UPDATE t SET st = named_struct('i', named_struct('v', c, 'n', id), 'm', 5) WHERE id >= 0`
+  and the same value inside `CASE WHEN id = 1 THEN … ELSE st END` store
+  `st.i.v = 1783164153654321`, the UTC wall. Four cells (two layouts, two statements).
+  Main `2ac03089` stores the same tick. By reading `nested_assign.rs` `value_sql_for`: the
+  fold rebuilds a struct that has a NOT NULL member with `named_struct` member by member,
+  and a member below the top level takes main's cast, which reads no source type. Where
+  the NOT NULL member is in the same
+  struct as the leaf, main and this unit both store the session wall.
+- **Apache Spark** — stores the session wall `1783149753654321` in all four cells.
+  *(oracle: measured, Spark 4.1.2 with Iceberg 1.11.0;
+  `python/repark/tests/ice_ntz_nested_wall_1_wall_first.json`, `main.named`, `spark_rows`.)*
+- **Pin** — `python/repark/tests/test_ice_ntz_nested_wall_1_wall_first.py`
+  `test_named_cells_equal_main` (cells `not-null/…`), equal to main.
+- **Rationale** — OPEN, dated 2026-10-12. Named, not wired, by ruling Q5 of the second
+  verification of ICE-NTZ-NESTED-WALL-1. A stored-value hole equal to main.
+
+### ICE-TSNS-SQL-1-R-032 — OPEN (measured 2026-10-12): a temp view over a mixed struct keeps the wall rows after a session-zone change
+
+- **repark** — session America/New_York. A frame over
+  `SELECT id, st FROM a UNION ALL SELECT id + 10, st FROM b` (`a.st.v` is `TIMESTAMP_NTZ`,
+  `b.st.v` is `TIMESTAMP`) is registered with `createOrReplaceTempView`, the session zone
+  is set to Asia/Kolkata, and `INSERT INTO t SELECT id, st FROM <view>` writes a nested
+  `TIMESTAMP_NTZ` leaf. The wall rows store the wall unchanged, `1767323045123456`, as
+  main `2ac03089` does. The same holds for a literal wall struct in a `CASE` (three wall
+  rows in two tables). The instant rows store the Kolkata
+  wall `1783183953654321` (main: the UTC wall `1783164153654321`), which is Spark's.
+  `frame.writeTo(t).append()` after the same change equals Spark.
+- **Apache Spark** — localises the wall in America/New_York, the zone the view was
+  analyzed in, and stores it as the Kolkata wall: `1767360845123456`, a move of
+  10 h 30 min. *(oracle: measured, Spark 4.1.2 with Iceberg 1.11.0;
+  `python/repark/tests/ice_ntz_nested_wall_1_wall_first.json`, `main.named`, `spark_rows`.)*
+- **Pin** — `python/repark/tests/test_ice_ntz_nested_wall_1_wall_first.py`
+  `test_named_cells_equal_main` (cells `zone-switch/…`): the wall rows equal main, the
+  instant rows equal Spark.
+- **Rationale** — OPEN, dated 2026-10-12. Named, not wired, by the ruling on finding F3
+  of the second verification. The cause was not investigated in this unit.
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 

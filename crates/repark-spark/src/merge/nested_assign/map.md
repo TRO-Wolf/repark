@@ -20,6 +20,12 @@ fold moves elsewhere.
   folds an unquoted alias, so its schema cannot tell `ID` from `id`) and refuses Spark's
   `UNRESOLVED_COLUMN.WITH_SUGGESTION` with the suggestions sorted by name, then by the
   case-insensitive edit distance (fix round 5, V-002). pins: u8-write-sql/C-030, C-033
+- `probe.rs` — **ICE-NTZ-NESTED-WALL-1 round 15 (2026-10-12):** the one type probe of the
+  fold. `probe_type` plans `SELECT (<value>) FROM <probe_from> LIMIT 0` and returns
+  `Probed { written, stored }`: the plan's type, and the analyzed type beside it
+  (`repark_iceberg::write::ntz_store::analyzed_types`, a pure analyzer pass that executes
+  nothing). `stored` is `None` when the analysis fails. `stores_through_the_kernel` is the store
+  decision over the analyzed type. pins: ice-ntz-nested-wall-1/C-003
 - `render.rs` — the Spark text of every refusal the fold raises, and Spark's two renderings
   of an assignment. The pretty form (`toPrettySQL`) drops qualifiers and string quotes and
   fills the `Cannot resolve "…"` list. The `.sql` form (qualified column, backticked fields)

@@ -8,7 +8,8 @@ use datafusion::sql::sqlparser::ast::{
 };
 use repark_common::spark_error;
 
-use super::{AssignmentScope, parse_expr, probe_type, render, resolve_target, value_sql_for};
+use super::probe::probe_type;
+use super::{AssignmentScope, Typed, parse_expr, render, resolve_target, value_sql_for};
 
 pub(super) struct StarSource {
     pairs: Vec<(String, String)>,
@@ -199,15 +200,18 @@ pub(super) async fn fold_insert_values(
         else {
             continue;
         };
-        let Some(source) = probe_type(ctx, scope, value).await else {
+        let Some(probed) = probe_type(ctx, scope, value).await else {
             continue;
         };
-        if !needs_rebuild(&source, target.data_type()) {
+        if !needs_rebuild(&probed.written, target.data_type()) {
             continue;
         }
         let rebuilt = value_sql_for(
             &value.to_string(),
-            &source,
+            Typed {
+                written: &probed.written,
+                stored: probed.stored.as_ref(),
+            },
             target.data_type(),
             std::slice::from_ref(&key.column),
             scope.case_sensitive,

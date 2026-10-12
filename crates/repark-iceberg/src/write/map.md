@@ -572,6 +572,33 @@ repark-core's error map.
   `commit_truncate_to` commits onto a named branch.
   pins: dml-c-truncate/C-001, C-005
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `nested_micro_ntz_wall_sql`
+  rebuilds a struct when a microsecond `TIMESTAMP_NTZ` leaf below the top level is
+  paired with an instant (`Timestamp` with a zone, any unit). The leaf choice is
+  a table of target kind and source kind; only that pair wraps. A `None` source,
+  a wall, a string, a date, an integer, a `timestamp_ns` leaf, a nested
+  `TIMESTAMP` leaf, a list and a map stay
+  the original expression. Members pair only when every name matches in order.
+  A case-different, renamed, missing or extra member keeps main's expression.
+  `ntz_store::zone_store_frame` and `merge/insert.rs` `zone_wrapping_stream_sql`
+  emit the bare `__repark_cast_nested_ntz__` call. `store_assignment_cast_sql`
+  and `predicate_dml/lineage.rs` `update_projection_sql` keep main's `arrow_cast`
+  around that call.
+  `store_assignment_cast_sql` asks the walk first and, on `None`, keeps the
+  kernel or `nested_leaf_cast_sql`. A caller with no source type passes
+  `None`, and the expression stays main's. `nested_micro_ntz_decision` is the
+  one type decision both emitters ask: which struct leaves are an instant into
+  a microsecond `TIMESTAMP_NTZ` below the top. `nested_micro_ntz_wall_sql`
+  is main's `arrow_cast` around one `__repark_cast_nested_ntz__` call.
+  It returns no wrap when a NOT NULL target member is nullable on the source.
+  A source member that is already NOT NULL still wraps.
+  `nested_micro_ntz_kernel_sql` is that call with no cast, including then.
+  A list or a map is not entered.
+  `zone_stores` hands the walk the Arrow type of a struct, list or map.
+  Identity UPDATE asks `analyzed_types` once for the SET expressions and passes
+  that slice; a failed analysis passes `None`. The expression emitter in
+  `repark-spark` `insert_timestamp_ns.rs` asks the same decision.
+  pins: ice-ntz-nested-wall-1/C-003
 - `update_cast.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_cast_sql` is the one
   home of the `arrow_cast((expr), '<type>')` store-assignment cast, with the field ids
   stripped from the type name. MERGE's `insert.rs` and the Spark door's nested-assignment fold

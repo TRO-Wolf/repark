@@ -321,7 +321,7 @@ async fn expand_star_clauses<'a>(
         return Ok(Cow::Borrowed(spec));
     }
 
-    let source_names = source_column_names(ctx, spec).await?;
+    let (source_names, stored_types) = source_columns(ctx, spec).await?;
     let source_index = CaseInsensitiveColumnIndex::new(source_names.iter().map(String::as_str));
     let columns: Vec<String> = write_schema
         .fields()
@@ -329,14 +329,18 @@ async fn expand_star_clauses<'a>(
         .map(|field| field.name().clone())
         .collect();
     let mut values_sql: Vec<String> = Vec::with_capacity(columns.len());
+    let mut stored: Vec<Option<&DataType>> = Vec::with_capacity(columns.len());
     let mut missing: Vec<String> = Vec::new();
     for column in &columns {
         match source_index.resolve_scoped(column, spec.case_insensitive) {
-            SourceMatch::Unique(index) => values_sql.push(format!(
-                "{}.{}",
-                spec.source_alias,
-                quote_ident(source_index.source_name(index))
-            )),
+            SourceMatch::Unique(index) => {
+                values_sql.push(format!(
+                    "{}.{}",
+                    spec.source_alias,
+                    quote_ident(source_index.source_name(index))
+                ));
+                stored.push(stored_types.as_ref().and_then(|types| types.get(index)));
+            }
             SourceMatch::Missing => missing.push(column.clone()),
             SourceMatch::Ambiguous(colliding) => {
                 return Err(DataFusionError::Plan(format!(
@@ -363,8 +367,19 @@ async fn expand_star_clauses<'a>(
     // Compute the expansion once; each star clause takes a clone (clauses stay independent).
     let assignments: Vec<(String, String)> = columns
         .iter()
-        .cloned()
-        .zip(values_sql.iter().cloned())
+        .zip(&values_sql)
+        .zip(write_schema.fields().iter().zip(&stored))
+        .map(|((column, value), (field, source))| {
+            let stored_value = crate::write::update_cast::nested_micro_ntz_wall_sql(
+                value,
+                *source,
+                field.data_type(),
+            );
+            (
+                column.clone(),
+                stored_value.unwrap_or_else(|| value.clone()),
+            )
+        })
         .collect();
 
     let mut expanded = spec.clone();
@@ -402,18 +417,24 @@ async fn union_source_schema(
     crate::write::schema_evolution::evolve_merge_schema(catalog, table, incoming).await
 }
 
-async fn source_column_names(ctx: &SessionContext, spec: &MergeSpec) -> Result<Vec<String>> {
+async fn source_columns(
+    ctx: &SessionContext,
+    spec: &MergeSpec,
+) -> Result<(Vec<String>, Option<Vec<DataType>>)> {
     let probe = format!(
         "SELECT * FROM {} AS {} LIMIT 0",
         spec.source_from_sql, spec.source_alias
     );
     let frame = ctx.sql(&probe).await?;
-    Ok(frame
+    let names: Vec<String> = frame
         .schema()
         .fields()
         .iter()
         .map(|field| field.name().clone())
-        .collect())
+        .collect();
+    let stored = crate::write::ntz_store::analyzed_types(ctx, frame.logical_plan())
+        .filter(|types| types.len() == names.len());
+    Ok((names, stored))
 }
 
 /// Scratch-target schema: every target data column, then `_file` (Utf8) and `_pos` (Int64).
