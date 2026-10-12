@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use datafusion::execution::context::QueryPlanner;
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{SessionConfig, SessionContext};
 
@@ -40,6 +41,13 @@ pub trait SessionExtension: Send + Sync {
         rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
     ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
         Ok(rules)
+    }
+
+    fn configure_query_planner(
+        &self,
+        planner: Arc<dyn QueryPlanner + Send + Sync>,
+    ) -> Arc<dyn QueryPlanner + Send + Sync> {
+        planner
     }
 
     /// Register runtime objects on the freshly built [`SessionContext`].

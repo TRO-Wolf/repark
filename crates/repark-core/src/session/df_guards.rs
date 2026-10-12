@@ -74,7 +74,9 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_config(config)
         .with_runtime_env(runtime)
         .with_default_features()
-        .with_query_planner(Arc::new(crate::stack::StackQueryPlanner))
+        .with_query_planner(
+            extension.configure_query_planner(Arc::new(crate::stack::StackQueryPlanner)),
+        )
         .with_optimizer_rules(unnest_safe_optimizer_rules())
         .with_analyzer_rules(analyzer_rules)
         .with_physical_optimizer_rules(skipping_limit::skip_safe_physical_optimizer_rules())

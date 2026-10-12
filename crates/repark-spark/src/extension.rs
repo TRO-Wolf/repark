@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use datafusion::execution::context::QueryPlanner;
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension};
@@ -111,6 +112,13 @@ impl SessionExtension for SparkExtension {
         let rules = repark_functions::analyzer_rules_with_higher_order_preparation(rules)?;
         let rules = crate::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
         crate::normalize::join_condition::insert_join_condition_rule_before_coercion(rules)
+    }
+
+    fn configure_query_planner(
+        &self,
+        planner: Arc<dyn QueryPlanner + Send + Sync>,
+    ) -> Arc<dyn QueryPlanner + Send + Sync> {
+        crate::router::explain_marks::UnmarkedExplain::over(planner)
     }
 
     /// Register Spark functions and analyzer rules, then compose the TA window extension.

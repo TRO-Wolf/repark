@@ -1,69 +1,68 @@
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, ArrayRef, AsArray, RecordBatch, StringArray};
-use datafusion::arrow::datatypes::DataType;
+use async_trait::async_trait;
 use datafusion::common::Result;
+use datafusion::common::display::StringifiedPlan;
+use datafusion::execution::context::{QueryPlanner, SessionState};
 use datafusion::logical_expr::LogicalPlan;
-use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::physical_plan::ExecutionPlan;
+use datafusion::physical_plan::explain::ExplainExec;
 use repark_functions::null_narrowing::{NARROWED_BESIDE_NULL_NAME, NARROWED_BESIDE_VALUE_NAME};
 
-const SAME_TEXT: &str = "SAME TEXT AS ABOVE";
-const FINAL_PLAN: &str = "logical_plan";
-
-pub(crate) async fn explain(ctx: &SessionContext, plan: LogicalPlan) -> Result<DataFrame> {
-    let batches = ctx.execute_logical_plan(plan).await?.collect().await?;
-    let mut shown: Option<String> = None;
-    let cleared = batches
-        .iter()
-        .map(|batch| clear_batch(batch, &mut shown))
-        .collect::<Result<Vec<RecordBatch>>>()?;
-    ctx.read_batches(cleared)
+#[derive(Debug)]
+pub(crate) struct UnmarkedExplain {
+    inner: Arc<dyn QueryPlanner + Send + Sync>,
 }
 
-fn clear_batch(batch: &RecordBatch, shown: &mut Option<String>) -> Result<RecordBatch> {
-    let kinds = batch.column_by_name("plan_type").map(Arc::clone);
-    let columns = batch
-        .columns()
+impl UnmarkedExplain {
+    pub(crate) fn over(
+        inner: Arc<dyn QueryPlanner + Send + Sync>,
+    ) -> Arc<dyn QueryPlanner + Send + Sync> {
+        Arc::new(Self { inner })
+    }
+}
+
+#[async_trait]
+impl QueryPlanner for UnmarkedExplain {
+    async fn create_physical_plan(
+        &self,
+        logical_plan: &LogicalPlan,
+        session_state: &SessionState,
+    ) -> Result<Arc<dyn ExecutionPlan>> {
+        let planned = self
+            .inner
+            .create_physical_plan(logical_plan, session_state)
+            .await?;
+        Ok(unmarked(planned))
+    }
+}
+
+fn unmarked(planned: Arc<dyn ExecutionPlan>) -> Arc<dyn ExecutionPlan> {
+    let Some(explain) = planned.as_ref().downcast_ref::<ExplainExec>() else {
+        return planned;
+    };
+    if !explain
+        .stringified_plans()
         .iter()
-        .zip(batch.schema().fields())
-        .map(|(column, field)| {
-            if field.name() != "plan" || column.data_type() != &DataType::Utf8 {
-                return Arc::clone(column);
-            }
-            let texts = column.as_string::<i32>();
-            let kind = |row: usize| match kinds.as_ref() {
-                Some(kinds) if kinds.data_type() == &DataType::Utf8 => {
-                    kinds.as_string::<i32>().value(row)
-                }
-                _ => FINAL_PLAN,
-            };
-            let cleared: StringArray = (0..texts.len())
-                .map(|row| {
-                    if texts.is_null(row) {
-                        return None;
-                    }
-                    let text = texts.value(row);
-                    if text == SAME_TEXT || !kind(row).contains(FINAL_PLAN) {
-                        return Some(text.to_string());
-                    }
-                    let plain = strip_marks(text);
-                    let repeats = shown.as_deref() == Some(plain.as_str());
-                    *shown = Some(plain.clone());
-                    if repeats && kind(row) != FINAL_PLAN {
-                        return Some(SAME_TEXT.to_string());
-                    }
-                    Some(plain)
-                })
-                .collect();
-            Arc::new(cleared) as ArrayRef
-        })
+        .any(|row| holds_mark(&row.plan))
+    {
+        return planned;
+    }
+    let rows = (explain.stringified_plans().iter())
+        .map(|row| StringifiedPlan::new(row.plan_type.clone(), strip_marks(&row.plan)))
         .collect();
-    Ok(RecordBatch::try_new(batch.schema(), columns)?)
+    Arc::new(ExplainExec::new(explain.schema(), rows, explain.verbose()))
+}
+
+const HIDDEN: [&str; 2] = [NARROWED_BESIDE_NULL_NAME, NARROWED_BESIDE_VALUE_NAME];
+
+fn holds_mark(text: &str) -> bool {
+    HIDDEN.iter().any(|name| text.contains(name))
 }
 
 fn strip_marks(text: &str) -> String {
     let mut plain = text.to_string();
-    for name in [NARROWED_BESIDE_NULL_NAME, NARROWED_BESIDE_VALUE_NAME] {
+    for name in HIDDEN {
         let call = format!("{name}(");
         while let Some(start) = plain.find(&call) {
             let open = start + call.len();
@@ -94,59 +93,80 @@ fn closing(text: &str, open: usize) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
+    use datafusion::arrow::array::AsArray;
+    use datafusion::logical_expr::PlanType;
+    use datafusion::physical_plan::collect;
+    use datafusion::physical_plan::empty::EmptyExec;
+    use datafusion::prelude::SessionContext;
+
     use super::*;
 
     #[test]
     fn a_mark_is_erased_from_a_printed_plan_and_its_argument_kept() {
         let marked = format!(
             "Projection: coalesce(CAST({NARROWED_BESIDE_VALUE_NAME}(t.c + f(\")\", 1)) AS \
-             Timestamp(µs, \"UTC\")), {NARROWED_BESIDE_NULL_NAME}(t.d)) AS v"
+             Timestamp(µs, \"UTC\")), {NARROWED_BESIDE_NULL_NAME}(t.d)), \
+             max({NARROWED_BESIDE_VALUE_NAME}(t.e)) AS v"
         );
         assert_eq!(
             strip_marks(&marked),
-            "Projection: coalesce(CAST(t.c + f(\")\", 1) AS Timestamp(µs, \"UTC\")), t.d) AS v"
+            "Projection: coalesce(CAST(t.c + f(\")\", 1) AS Timestamp(µs, \"UTC\")), t.d), \
+             max(t.e) AS v"
         );
         assert_eq!(strip_marks("Projection: t.c"), "Projection: t.c");
     }
 
-    #[test]
-    fn a_row_that_repeats_the_row_above_is_collapsed_and_the_final_plan_is_not() {
+    #[tokio::test]
+    async fn an_explain_plan_prints_no_mark_and_repeats_as_the_engine_does() {
+        let ctx = SessionContext::new();
+        let explained = ctx.sql("EXPLAIN VERBOSE SELECT 1 AS c").await.unwrap();
+        let schema = Arc::new(explained.schema().as_arrow().clone());
+        let analyzed = |rule: &str| PlanType::AnalyzedLogicalPlan {
+            analyzer_name: rule.to_string(),
+        };
         let marked = format!("Projection: f({NARROWED_BESIDE_VALUE_NAME}(t.c))");
-        let kinds = StringArray::from(vec![
-            "initial_logical_plan",
-            "logical_plan after a",
-            "logical_plan after b",
-            "logical_plan after c",
-            "logical_plan",
-            "physical_plan",
-        ]);
-        let plans = StringArray::from(vec![
-            "Projection: f(t.c)",
-            marked.as_str(),
-            SAME_TEXT,
-            "Projection: g(t.c)",
-            "Projection: g(t.c)",
-            "ProjectionExec",
-        ]);
-        let batch = RecordBatch::try_from_iter(vec![
-            ("plan_type", Arc::new(kinds) as ArrayRef),
-            ("plan", Arc::new(plans) as ArrayRef),
-        ])
-        .unwrap();
-        let cleared = clear_batch(&batch, &mut None).unwrap();
-        let shown: Vec<&str> = (cleared.column(1).as_string::<i32>().iter())
-            .flatten()
+        let kept = format!("Projection: g({NARROWED_BESIDE_NULL_NAME}(t.c))");
+        let rows = vec![
+            StringifiedPlan::new(PlanType::InitialLogicalPlan, "Projection: f(t.c)"),
+            StringifiedPlan::new(analyzed("a"), marked),
+            StringifiedPlan::new(analyzed("b"), kept),
+            StringifiedPlan::new(PlanType::FinalLogicalPlan, "Projection: g(t.c)"),
+        ];
+        let explain: Arc<dyn ExecutionPlan> =
+            Arc::new(ExplainExec::new(Arc::clone(&schema), rows, true));
+        let cleaned = unmarked(Arc::clone(&explain));
+        assert!(!Arc::ptr_eq(&cleaned, &explain));
+        let batches = collect(cleaned, ctx.task_ctx()).await.unwrap();
+        let shown: Vec<String> = batches
+            .iter()
+            .flat_map(|batch| {
+                let plans = batch.column(1).as_string::<i32>();
+                plans
+                    .iter()
+                    .flatten()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            })
             .collect();
         assert_eq!(
             shown,
             vec![
                 "Projection: f(t.c)",
-                SAME_TEXT,
-                SAME_TEXT,
+                "SAME TEXT AS ABOVE",
                 "Projection: g(t.c)",
                 "Projection: g(t.c)",
-                "ProjectionExec",
             ]
         );
+        let plain: Arc<dyn ExecutionPlan> = Arc::new(ExplainExec::new(
+            Arc::clone(&schema),
+            vec![StringifiedPlan::new(
+                PlanType::FinalLogicalPlan,
+                "Projection: t.c",
+            )],
+            false,
+        ));
+        assert!(Arc::ptr_eq(&unmarked(Arc::clone(&plain)), &plain));
+        let other: Arc<dyn ExecutionPlan> = Arc::new(EmptyExec::new(schema));
+        assert!(Arc::ptr_eq(&unmarked(Arc::clone(&other)), &other));
     }
 }
