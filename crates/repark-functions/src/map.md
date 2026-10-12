@@ -1450,3 +1450,14 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   `GROUPING_ID_COLUMN_MISMATCH` in Spark's message shape (R-18a-19).
   `unqualified_name` is file-local until slice (a) lands `max_min_by.rs`.
   pins: fnp-agg-1/C-002, C-003, C-004, C-005
+- `timestamp_ns_coercion.rs` + [`timestamp_ns_coercion/`](timestamp_ns_coercion/map.md) —
+  **ICE-TSNS-COERCION-1 slice 1 round 1 (2026-10-12):** the module behind the Spark door's
+  first-`type_coercion` seat. `SparkTimestampNsCoercion` keeps the name `type_coercion` and
+  holds DataFusion's rule; the gate (`plan_opens_gate`, one borrow walk, no typing) opens on
+  a `Timestamp(ns, _)` leaf at any depth of a scan or empty-relation schema or on a call of
+  either ns cast kernel, never on a written cast or literal; closed and (this round) open
+  both delegate to the inner rule on the same plan. Two process-wide `AtomicU64` counters
+  (gate-open, fallback) with readers and a test reset, plus the `fallback_log_line` builder;
+  the counters move onto the session metrics facade when one exists. `tests.rs` pins the
+  truth table, the once-per-analysis count, the reset and the line shape.
+  pins: ice-tsns-coercion-1/C-005

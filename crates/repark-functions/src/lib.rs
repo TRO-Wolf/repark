@@ -79,6 +79,7 @@ pub mod time_family;
 pub mod timestamp_cast;
 pub mod timestamp_ltz_ntz;
 pub mod timestamp_ns_cast;
+pub mod timestamp_ns_coercion;
 pub mod timestamp_ntz_cast;
 pub mod timestamp_type;
 pub mod try_invert;
