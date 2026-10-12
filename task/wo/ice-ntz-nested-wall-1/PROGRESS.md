@@ -160,3 +160,8 @@ walk sees the source type. Red before: the branch MERGE UPDATE stored
 `1767323045123456`. Green after: `1767305045123456`, on `branch_dev` and on
 `spark.wap.branch`. A member name containing `.` or `,` stays at main's UTC
 wall. A matching leaf beside a renamed member stays main's row.
+
+**Round 9, item 4:** the struct-cast refusal text is Arrow's. This unit does
+not build that sentence, so the kernel's output type is what the cast names.
+EXPLAIN of a DML into the leaf still prints main's plan. That is an open
+question for the owner. Neither is changed.

@@ -443,6 +443,16 @@ b.branch_dev` and `spark.wap.branch` store the session wall
 `1767305045123456`. Pin: `test_branch_merge_update_stores_the_session_wall`.
 Disposition: fixed.
 
+F6 is not changed. EXPLAIN of a DML into a nested `TIMESTAMP_NTZ` leaf prints
+main's plan, not `__repark_cast_nested_ntz__`. Open question for the owner:
+should EXPLAIN show the kernel the write path runs? Disposition: recorded,
+open question for the owner.
+
+F7 is not a sentence this unit builds. The refusal text is Arrow's, and the
+cast's input type is the kernel's output (`Timestamp(us)` with no zone) rather
+than the user's source (`Timestamp(us, "UTC")`). The class is unchanged.
+Disposition: recorded.
+
 F8 is two named holes, both equal to main. A member whose name contains `.`
 or `,` is not wrapped: ``a.b`` and ``c,d`` store `1767323045123456`. The
 sibling `v` is still converted. A matching leaf beside a renamed member keeps
