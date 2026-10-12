@@ -3721,6 +3721,21 @@ still open is `isModifiable`.
 - **Rationale** — FIXED 2026-10-12. One arm in `rewrite_cast` and one kernel. Ledger
   `task/ledgers/staging/ntz-struct-coerce-1-ledger.md`.
 
+### ICE-TSNS-SQL-1-R-030 — OPEN (measured 2026-10-12): ANSI DDL `TIMESTAMP(6) WITH TIME ZONE` creates a naive Iceberg `timestamp` column
+
+- **repark** — `CREATE TABLE ice.q7.src (id BIGINT, l TIMESTAMP(6) WITH TIME ZONE)` on
+  the ANSI door creates `l` as Iceberg `timestamp` (naive microseconds). The write
+  schema shows `Timestamp(Microsecond, None)` and reads present a naive wall, so a
+  whole-struct `MERGE UPDATE` over the column keeps the UTC wall. Not a store bug:
+  the source is naive and the UTC wall is the right store.
+- **Expected** — the column holds `timestamptz`, the way the Spark door's `TIMESTAMP`
+  does, and reads present the instant.
+- **Pin** — `crates/repark-sql/tests/ansi_ntz_wall_cast.rs`
+  (`ansi_matched_update_of_a_nested_ntz_keeps_the_utc_wall` and the unmatched-source
+  twin hold the naive-source store).
+- **Rationale** — OPEN 2026-10-12. Observed while ruling round 13 Q1. No fix in this
+  unit; a time-zone-honouring ANSI DDL is its own unit.
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers
