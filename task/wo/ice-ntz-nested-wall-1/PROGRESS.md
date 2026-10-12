@@ -210,3 +210,14 @@ ltz 382/396, top 396/396, UTC-wall remainder 22, raw-error 162/162. The 14
 moved cells are the joined coercion unit's naive-to-instant localisation on
 the INSERT and DataFrame doors; each now equals Spark. 0 cells worse than
 main.
+
+**Round 15 (2026-10-12), the second verification:** the `UPDATE` and `MERGE`
+folds read the analyzed type of the assigned value, so a `CASE` or `UNION ALL`
+with the wall operand first takes the store kernel; `UPDATE SET *` is guarded
+where the star is expanded. 0 cells worse than main in `mu.py` and `mu2.py`
+(was 24 of 68 in each non-UTC zone). Head matrix regenerated: Spark 193/264,
+field 324/324, ltz 382/396, top 396/396, UTC-wall remainder 2, raw-error
+162/162, 0 worse than main. `EXPLAIN UPDATE` of a zoned struct from a naive one
+and `EXPLAIN ANALYZE INSERT` into a nested wall keep main's plan. Registry
+rows R-031 and R-032 name the depth-2 NOT NULL `UPDATE` cells and the temp
+view after a zone change. Ledger section 15.

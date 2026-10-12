@@ -3,45 +3,20 @@
 Counts are computed by `probe.py summary-head` from the JSONL files.
 Ticks are microseconds from `toArrow()` cast to int64.
 
-ntz_nested instant cells equal to Spark: 173 of 264.
+ntz_nested instant cells equal to Spark: 193 of 264.
 field-assignment cells identical to main: 324 of 324.
 ltz_nested cells identical to main: 382 of 396.
 ntz_top cells identical to main: 396 of 396.
-instant cells still on the UTC wall outside UTC: 22.
+instant cells still on the UTC wall outside UTC: 2.
 
 ## Instant cells still on the UTC wall, by door and source
 
 - insert_values ts_literal: 2. R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_star ts_column: 4. SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_star ts_literal: 4. SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_whole ts_literal: 4. R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_whole_literal ts_literal: 4. R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- update_whole_where ts_literal: 4. R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
 
 ## Each UTC-wall cell
 
 - insert_values cow America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
 - insert_values cow Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_star cow America/New_York ts_column: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_star cow America/New_York ts_literal: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_star cow Asia/Kolkata ts_column: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_star cow Asia/Kolkata ts_literal: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_star mor America/New_York ts_column: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_star mor America/New_York ts_literal: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_star mor Asia/Kolkata ts_column: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_star mor Asia/Kolkata ts_literal: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
-- merge_update_whole cow America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_whole cow Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_whole mor America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_whole mor Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_whole_literal cow America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_whole_literal cow Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_whole_literal mor America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- merge_update_whole_literal mor Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- update_whole_where cow America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- update_whole_where cow Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- update_whole_where mor America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
-- update_whole_where mor Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
 
 raw-error doors identical to main: 162 of 162.
 
@@ -60,22 +35,6 @@ ntz_nested insert_values cow America/New_York ts_literal head=1767323045123456 s
 ntz_nested insert_values cow Asia/Kolkata ts_column head=ERROR UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression ScalarSubquery(<subquery>) spark=ERROR AnalysisException: [UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.SCALAR_SUBQUERY_IN_VALUES] Unsupported subquery expression: Scalar subqueries in the VALUES clause. SQLSTATE: 0A000; line 1 pos 22; / 'InsertIntoStatement RelationV2[id#50, st#51, k#52] ice.ns.t2, false, false, false
 ntz_nested insert_values cow Asia/Kolkata ts_literal head=1767323045123456 spark=1767342845123456
 ntz_nested insert_values cow UTC ts_column head=ERROR UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression ScalarSubquery(<subquery>) spark=ERROR AnalysisException: [UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.SCALAR_SUBQUERY_IN_VALUES] Unsupported subquery expression: Scalar subqueries in the VALUES clause. SQLSTATE: 0A000; line 1 pos 22; / 'InsertIntoStatement RelationV2[id#50, st#51, k#52] ice.ns.t2, false, false, false
-ntz_nested merge_update_star cow America/New_York ts_column head=1767323045123456 spark=1767305045123456
-ntz_nested merge_update_star cow America/New_York ts_literal head=1767323045123456 spark=1767305045123456
-ntz_nested merge_update_star cow Asia/Kolkata ts_column head=1767323045123456 spark=1767342845123456
-ntz_nested merge_update_star cow Asia/Kolkata ts_literal head=1767323045123456 spark=1767342845123456
-ntz_nested merge_update_star mor America/New_York ts_column head=1767323045123456 spark=1767305045123456
-ntz_nested merge_update_star mor America/New_York ts_literal head=1767323045123456 spark=1767305045123456
-ntz_nested merge_update_star mor Asia/Kolkata ts_column head=1767323045123456 spark=1767342845123456
-ntz_nested merge_update_star mor Asia/Kolkata ts_literal head=1767323045123456 spark=1767342845123456
-ntz_nested merge_update_whole cow America/New_York ts_literal head=1767323045123456 spark=1767305045123456
-ntz_nested merge_update_whole cow Asia/Kolkata ts_literal head=1767323045123456 spark=1767342845123456
-ntz_nested merge_update_whole mor America/New_York ts_literal head=1767323045123456 spark=1767305045123456
-ntz_nested merge_update_whole mor Asia/Kolkata ts_literal head=1767323045123456 spark=1767342845123456
-ntz_nested merge_update_whole_literal cow America/New_York ts_literal head=1767323045123456 spark=1767305045123456
-ntz_nested merge_update_whole_literal cow Asia/Kolkata ts_literal head=1767323045123456 spark=1767342845123456
-ntz_nested merge_update_whole_literal mor America/New_York ts_literal head=1767323045123456 spark=1767305045123456
-ntz_nested merge_update_whole_literal mor Asia/Kolkata ts_literal head=1767323045123456 spark=1767342845123456
 ntz_nested update_col_nowhere cow America/New_York ts_column head=ERROR PySparkException: datafusion engine error: Arrow error: Invalid argument error: arguments need to have the same data type spark=1767305045123456
 ntz_nested update_col_nowhere cow America/New_York ts_literal head=ERROR PySparkException: datafusion engine error: Arrow error: Invalid argument error: arguments need to have the same data type spark=1767305045123456
 ntz_nested update_col_nowhere cow Asia/Kolkata ts_column head=ERROR PySparkException: datafusion engine error: Arrow error: Invalid argument error: arguments need to have the same data type spark=1767342845123456
@@ -131,14 +90,10 @@ ntz_nested update_whole_nowhere mor Asia/Kolkata ts_literal head=ERROR PySparkEx
 ntz_nested update_whole_nowhere mor UTC ts_column head=ERROR AnalysisException: UPDATE operation on table 'ice.ns.t65' / caused by spark=1767323045123456
 ntz_nested update_whole_nowhere mor UTC ts_literal head=ERROR PySparkException: datafusion engine error: Arrow error: Invalid argument error: column types must match schema types, expected Struct("v": Timestamp(µs), metadata: {"PARQUET:field_id": "4"}, "n": Int32, metadata: {"PARQUET:field_id": "5"}) but found Struct("v": Timestamp(µs), "n": Int32) at column index 1 spark=1767323045123456
 ntz_nested update_whole_where cow America/New_York ts_column head=ERROR AnalysisException: UPDATE operation on table 'ice.ns.t56' / caused by spark=1767305045123456
-ntz_nested update_whole_where cow America/New_York ts_literal head=1767323045123456 spark=1767305045123456
 ntz_nested update_whole_where cow Asia/Kolkata ts_column head=ERROR AnalysisException: UPDATE operation on table 'ice.ns.t56' / caused by spark=1767342845123456
-ntz_nested update_whole_where cow Asia/Kolkata ts_literal head=1767323045123456 spark=1767342845123456
 ntz_nested update_whole_where cow UTC ts_column head=ERROR AnalysisException: UPDATE operation on table 'ice.ns.t56' / caused by spark=1767323045123456
 ntz_nested update_whole_where mor America/New_York ts_column head=ERROR AnalysisException: UPDATE operation on table 'ice.ns.t59' / caused by spark=1767305045123456
-ntz_nested update_whole_where mor America/New_York ts_literal head=1767323045123456 spark=1767305045123456
 ntz_nested update_whole_where mor Asia/Kolkata ts_column head=ERROR AnalysisException: UPDATE operation on table 'ice.ns.t59' / caused by spark=1767342845123456
-ntz_nested update_whole_where mor Asia/Kolkata ts_literal head=1767323045123456 spark=1767342845123456
 ntz_nested update_whole_where mor UTC ts_column head=ERROR AnalysisException: UPDATE operation on table 'ice.ns.t59' / caused by spark=1767323045123456
 
 ## Controls that moved

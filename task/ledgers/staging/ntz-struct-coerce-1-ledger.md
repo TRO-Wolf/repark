@@ -173,6 +173,32 @@ The same test passes on the arm.
 
 Existing pins in the step-3 `-k` run: none moved.
 
+## 8. Round 15 of the joined unit (2026-10-12)
+
+The second verification of the joined head ruled on four points of this unit.
+The measurements are in the R-011 ledger, section 15.
+
+- The localising kernel in `EXPLAIN SELECT` of a mixed `UNION ALL` and in
+  `EXPLAIN INSERT INTO <zoned struct> SELECT <naive struct>` is accepted. It is the
+  kernel that runs: the read and the `INSERT` both move onto Spark's value.
+- `EXPLAIN UPDATE` of a zoned struct from a naive one printed the kernel and did not
+  run it. It now prints main's text. `UPDATE SET st = c` still does not move: measured
+  2026-10-12 in America/New_York, `UPDATE tl SET st = ns WHERE id >= 0` stores
+  `1767323045123456`, main's value (Spark: `1767341045123456`, registry row R-020).
+  `nested_wall::keep_update_store_casts` takes the kernel back out of the cast the
+  `UPDATE` planner wraps around an assignment; the executed statement carries the
+  fold's `arrow_cast` text there and no planner cast. A coercion inside the assigned
+  value keeps its kernel. A scalar-subquery value still prints the kernel inside the
+  subquery; that statement is refused on main and head alike.
+- `EXPLAIN ANALYZE INSERT` into a table that holds a struct with a naive microsecond
+  leaf keeps main's struct cast (`nested_wall::analyzed_insert_stores_a_struct_wall`),
+  because that door runs no store kernel (registry row R-028). A mixed union there
+  stores main's rows.
+- A naive wall inside a daylight-saving gap that passes through a mixed expression
+  into an NTZ leaf is stored moved forward by the gap, as Spark stores it
+  (America/New_York `2026-03-08 02:30:00` becomes `03:30:00`, measured by the second
+  verification). That is the target.
+
 ## Attestation
 
 ```

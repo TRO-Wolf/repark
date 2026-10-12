@@ -3363,12 +3363,17 @@ still open is `isModifiable`.
   cells equal Spark; field assignment 324 of 324, `ltz_nested` 396 of 396 and
   `ntz_top` 396 of 396 identical to main; 22 non-UTC instant cells still hold
   `1767323045123456`, each mapped in `summary-head.md` to `SET *` or to the
-  untyped literal (R4). R-011 stays narrowed.
+  untyped literal (R4). R-011 stays narrowed. Head re-measure 2026-10-12 (round 15 of
+  the unit): 193 of 264; MERGE `UPDATE SET *`, whole-struct MERGE UPDATE of a literal
+  and `UPDATE … WHERE` of a literal now store the session wall, because the store
+  decision reads the analyzed type of the value; 2 cells still hold
+  `1767323045123456`, both `INSERT … VALUES` of a literal.
 - **Apache Spark** — a `TIMESTAMP` assigned to a `TIMESTAMP_NTZ` field stores its wall in the
   session zone on every door it answers. *(oracle: [spark-4.1.2.jsonl](../task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl).)*
 - **Pin** — `crates/repark-spark/tests/timestamp_ns_wall_doors.rs`
   `a_nested_literal_keeps_the_utc_wall_and_field_assignment_stores_the_session_wall`
-  holds the literal doors on the UTC wall and field assignment on the session wall.
+  holds `INSERT … VALUES` of the literal on the UTC wall, and field assignment and
+  (round 15) whole-struct MERGE UPDATE of the literal on the session wall.
   The facade `test_ice_ntz_nested_wall_1.py` holds the column doors.
 - **Rationale** — NARROWED, dated 2026-10-11. A source analyzed as a wall is not wrapped.
   Ledger ICE-NTZ-NESTED-WALL-1 C-003 stays open for the cells in that list.
@@ -3735,6 +3740,48 @@ still open is `isModifiable`.
   twin hold the naive-source store).
 - **Rationale** — OPEN 2026-10-12. Observed while ruling round 13 Q1. No fix in this
   unit; a time-zone-honouring ANSI DDL is its own unit.
+
+### ICE-TSNS-SQL-1-R-031 — OPEN (measured 2026-10-12): a whole-struct `UPDATE … WHERE` into a depth-2 struct with a NOT NULL member keeps the UTC wall
+
+- **repark** — America/New_York, `st STRUCT<i: STRUCT<v: TIMESTAMP_NTZ, n: INT> NOT NULL, m: INT>`
+  and `st STRUCT<i: STRUCT<v: TIMESTAMP_NTZ, n: INT>, m: INT NOT NULL>`, a `TIMESTAMP`
+  column `c` holding `2026-07-04 11:22:33.654321+00:00`.
+  `UPDATE t SET st = named_struct('i', named_struct('v', c, 'n', id), 'm', 5) WHERE id >= 0`
+  and the same value inside `CASE WHEN id = 1 THEN … ELSE st END` store
+  `st.i.v = 1783164153654321`, the UTC wall. Four cells (two layouts, two statements).
+  Main `2ac03089` stores the same tick. By reading `nested_assign.rs` `value_sql_for`: the
+  fold rebuilds a struct that has a NOT NULL member with `named_struct` member by member,
+  and a member below the top level takes main's cast, which reads no source type. Where
+  the NOT NULL member is in the same
+  struct as the leaf, main and this unit both store the session wall.
+- **Apache Spark** — stores the session wall `1783149753654321` in all four cells.
+  *(oracle: measured, Spark 4.1.2 with Iceberg 1.11.0;
+  `python/repark/tests/ice_ntz_nested_wall_1_wall_first.json`, `main.named`, `spark_rows`.)*
+- **Pin** — `python/repark/tests/test_ice_ntz_nested_wall_1_wall_first.py`
+  `test_named_cells_equal_main` (cells `not-null/…`), equal to main.
+- **Rationale** — OPEN, dated 2026-10-12. Named, not wired, by ruling Q5 of the second
+  verification of ICE-NTZ-NESTED-WALL-1. A stored-value hole equal to main.
+
+### ICE-TSNS-SQL-1-R-032 — OPEN (measured 2026-10-12): a temp view over a mixed struct keeps the wall rows after a session-zone change
+
+- **repark** — session America/New_York. A frame over
+  `SELECT id, st FROM a UNION ALL SELECT id + 10, st FROM b` (`a.st.v` is `TIMESTAMP_NTZ`,
+  `b.st.v` is `TIMESTAMP`) is registered with `createOrReplaceTempView`, the session zone
+  is set to Asia/Kolkata, and `INSERT INTO t SELECT id, st FROM <view>` writes a nested
+  `TIMESTAMP_NTZ` leaf. The wall rows store the wall unchanged, `1767323045123456`, as
+  main `2ac03089` does. The same holds for a literal wall struct in a `CASE` (three wall
+  rows in two tables). The instant rows store the Kolkata
+  wall `1783183953654321` (main: the UTC wall `1783164153654321`), which is Spark's.
+  `frame.writeTo(t).append()` after the same change equals Spark.
+- **Apache Spark** — localises the wall in America/New_York, the zone the view was
+  analyzed in, and stores it as the Kolkata wall: `1767360845123456`, a move of
+  10 h 30 min. *(oracle: measured, Spark 4.1.2 with Iceberg 1.11.0;
+  `python/repark/tests/ice_ntz_nested_wall_1_wall_first.json`, `main.named`, `spark_rows`.)*
+- **Pin** — `python/repark/tests/test_ice_ntz_nested_wall_1_wall_first.py`
+  `test_named_cells_equal_main` (cells `zone-switch/…`): the wall rows equal main, the
+  instant rows equal Spark.
+- **Rationale** — OPEN, dated 2026-10-12. Named, not wired, by the ruling on finding F3
+  of the second verification. The cause was not investigated in this unit.
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 

@@ -297,12 +297,20 @@ Nested `TIMESTAMP_NTZ` values written by `INSERT` before the fix hold the UTC wa
 | MERGE INSERT, `INSERT *`, literal INSERT | UTC wall | session wall, column and literal |
 | MERGE UPDATE of a column, `UPDATE … WHERE` from a sibling column | UTC wall | session wall |
 | Field assignment | session wall | session wall |
-| `INSERT … VALUES` of a literal, MERGE `UPDATE SET *`, whole-struct literal MERGE and `UPDATE … WHERE` | UTC wall | UTC wall |
+| MERGE `UPDATE SET *`, whole-struct MERGE UPDATE of a literal, `UPDATE … WHERE` of a literal (round 15, 2026-10-12) | UTC wall | session wall |
+| `INSERT … VALUES` of a literal | UTC wall | UTC wall |
 | `UPDATE` with no `WHERE`, `INSERT OVERWRITE … VALUES` | refusal | the same refusal |
 
-A column and a literal of the same instant still give two answers on whole-struct
-`MERGE UPDATE` and on `UPDATE … WHERE`. The column stores the session wall. The
-literal stores `1767323045123456` in every zone (R4 did not land).
+Until round 15 a column and a literal of the same instant gave two answers on
+whole-struct `MERGE UPDATE` and on `UPDATE … WHERE`. Measured 2026-10-12 on the
+round 15 head, both store the session wall. `INSERT … VALUES` of a literal still
+stores `1767323045123456` in every zone.
+
+A wall inside a daylight-saving gap moves forward by the gap when it passes
+through a `CASE`, `COALESCE` or `UNION ALL` that mixes it with an instant on its
+way into a `TIMESTAMP_NTZ` field: in America/New_York `2026-03-08 02:30:00`
+is stored as `03:30:00`. Spark stores the same value. Before, the wall was
+stored unchanged.
 
 Repair, for rows that hold that UTC wall: `UPDATE t SET st.v = c WHERE id >= 0`,
 where `c` is a `TIMESTAMP` column holding the original instant. Field assignment
@@ -520,3 +528,216 @@ target struct has a NOT NULL member the arrow cast cannot accept. The
 analyzer's existing cast then fails and names the user's type. The bare
 kernel sites stay wrapped, so the 35 NOT NULL stores stay. Not done, pending
 the F6 ruling.
+
+## 15. Round 15: the second verification (2026-10-12)
+
+The second verification failed the head `877feac5` on one S1 and named four
+smaller findings. This section folds them. The verdict is not in the tree; its
+numbers are quoted where they are compared.
+
+### F1, the wall operand first
+
+Cause, confirmed by measurement before the change. On `877feac5` in
+America/New_York, `UPDATE t SET st = CASE WHEN id = 2 THEN st ELSE
+named_struct('v', c, 'n', 100) END WHERE id >= 0` printed an `EXPLAIN` with
+`__repark_localize_nested_ntz__` and without `__repark_cast_nested_ntz__`, and
+stored the wall row at `1767341045123456` (the wall plus five hours). With the
+two branches in the other order the `EXPLAIN` named both kernels and the wall
+row stored `1767323045123456`. The fold read the type of the plan `ctx.sql`
+returns. That plan is not analyzed: a `CASE` has the type of its first `THEN`
+branch and a `UNION ALL` source the type of its left input. The value looked
+naive, the decision was `Keep`, and main's cast then stored the instant the
+analyzer had localised. The unit test
+`a_wall_first_case_and_a_naive_first_union_resolve_to_the_zoned_struct` holds
+both readings: the plan type is the naive struct and the analyzed type is the
+zoned struct.
+
+Fix. `nested_assign/probe.rs` `probe_type` returns the plan type and the
+analyzed type. The plan type still drives the by-name struct checks and their
+refusals, as on main. The analyzed type is the only source the store decision
+sees. `UPDATE` (`refuse_cast_then_fold_nested`), `MERGE`
+(`fold_merge_clauses`) and the `INSERT (…) VALUES (…)` rebuild call that one
+probe. When the analysis fails, the assignment takes main's cast. The analysis
+is `ntz_store::analyzed_types`, the pass the `INSERT`, `OVERWRITE` and `MERGE
+INSERT` sites already run; it executes nothing.
+
+After the change the same `EXPLAIN` names both kernels and the wall row stores
+`1767323045123456`. The two statements that change no wall (the verdict's G
+and H) leave both rows at `1767323045123456`: the wall is localised and then
+stored in the same zone.
+
+`UPDATE SET *` is not in either fold. Section 10 says `UPDATE SET *` does not
+call `store_assignment_then_sql`; that is wrong. `expand_star_clauses` in
+`repark-iceberg` `write/merge/mod.rs` turns the star into `source.column`
+assignments, and those take main's cast. A star whose source is a mixed
+`UNION ALL` stored the wall row shifted with either side first. The guard is
+at that one place: the star assignment goes through
+`nested_micro_ntz_wall_sql` with the source column's analyzed type. Only the
+Spark door builds a star. `MERGE WITH SCHEMA EVOLUTION … UPDATE SET *` goes
+through the same place: measured in America/New_York, the wall row stays
+`1767323045123456` (main: the same; Spark refuses the statement).
+
+Measured on the round 15 head, against main `2ac03089` and live Spark 4.1.2,
+2026-10-12:
+
+| Probe | Zones | Result |
+|---|---|---|
+| the verdict's eight statements (`s1_repro.py`) | America/New_York, Australia/Lord_Howe, UTC | 24 of 24 equal Spark |
+| the verdict's 68 `MERGE` and `UPDATE` cells (`mu.py`, `mu2.py`) | America/New_York | 0 worse than main (was 24); 50 moved onto Spark, 18 as main |
+| the same | Australia/Lord_Howe | 0 worse than main (was 24); 50 moved onto Spark, 18 as main |
+| the same | UTC | 0 worse than main; 2 moved onto Spark, 66 as main |
+| `wall_first_round15.py`, 12 shapes by 2 operand orders by 2 write modes | each of the three zones | 48 of 48 equal Spark, 0 rows worse than main (before: 24 of 48 and 28 rows worse in each non-UTC zone) |
+| `probe.py`, 1188 cells | UTC, America/New_York, Asia/Kolkata | 0 worse than main; `ntz_nested` 100 moved onto Spark and 296 as main; `ltz_nested` 14 moved and 382 as main; `ntz_top` 396 as main |
+| `join_round12.py` | America/New_York, Australia/Lord_Howe, UTC | 42 of 42 equal Spark; the three head files are byte-equal to the committed ones |
+
+Main and Spark for `probe.py` are the verifier's runs of `2ac03089` and Spark
+4.1.2, which it found equal to the committed evidence cell for cell. Every
+other row was run again on all three engines.
+
+The matrix moved 20 cells more than on `877feac5`, each onto Spark's tick, in
+America/New_York and Asia/Kolkata, both write modes:
+
+| Door | Source | Cells | Why |
+|---|---|---|---|
+| `merge_update_star` | `ts_column`, `ts_literal` | 8 | the star guard above |
+| `merge_update_whole`, `merge_update_whole_literal`, `update_whole_where` | `ts_literal` | 12 | the analyzed type of `named_struct('v', TIMESTAMP '…+00:00', 'n', 1)` is the zoned struct, so the decision wraps it (by reading: the plan type is `Timestamp(ns)` and the analyzer types the literal as an instant) |
+
+[summary-head.md](../../wo/ice-ntz-nested-wall-1/evidence/summary-head.md) is
+regenerated: 193 of 264 `ntz_nested` instant cells equal Spark, and 2 instant
+cells still hold the UTC wall, both `insert_values` `ts_literal`. Section 11
+and the sentence of section 8 that lists 22 cells describe `877feac5`.
+Two integration pins move with it, each onto the tick Spark recorded in
+`spark-4.1.2.jsonl`: `timestamp_ns_wall_doors.rs` `NTZ_NESTED_DOORS` (`merge
+set struct` now stores the session wall) and `timestamp_ns_nested_shapes.rs`
+`a_nested_zoned_or_microsecond_leaf_is_not_guarded` (its `TIMESTAMP_NTZ` row,
+a whole-struct `UPDATE … WHERE` of the literal, `1767305045123456` in
+America/New_York).
+
+Pins. `test_either_operand_order_stores_sparks_rows` replays the 12 shapes in
+both orders and both write modes in America/New_York and Australia/Lord_Howe,
+96 cells, against rows recorded from live Spark
+([ice_ntz_nested_wall_1_wall_first.json](../../../python/repark/tests/ice_ntz_nested_wall_1_wall_first.json)).
+`a_wall_first_case_and_a_naive_first_union_resolve_to_the_zoned_struct` and
+`a_wall_first_case_folds_to_the_store_kernel` hold the decision in Rust.
+
+Mutants, by hand, each restored:
+
+| Mutant | Suite | Result |
+|---|---|---|
+| `probe.rs`: the stored type is the plan type again (the type decision reverted) | `repark-spark --lib` | killed by `a_wall_first_case_and_a_naive_first_union_resolve_to_the_zoned_struct` and `a_wall_first_case_folds_to_the_store_kernel` |
+| the same | release module, the four facade files | killed: `test_either_operand_order_stores_sparks_rows` fails in both zones, 2 failed and 41 passed |
+| `merge/mod.rs`: a star assignment keeps the bare `source.column` text | release module, the four facade files | killed: the same test fails in both zones on `merge-update-star`, both operand orders, 2 failed and 41 passed |
+| `keep_update_store_casts` skips `UPDATE` | `repark-functions --lib`, `repark-spark --lib` | killed by `an_update_assignment_cast_keeps_mains_text_and_an_inner_coercion_is_localised` and by the Rust EXPLAIN pin |
+| `analyzed_insert_stores_a_struct_wall` inverted | `repark-functions --lib` | killed by `an_analyzed_insert_into_a_struct_wall_keeps_mains_struct_cast` |
+| the verdict's E1, E2, E3, E4 (the EXPLAIN INSERT and EXPLAIN UPDATE gates) | `repark-spark --lib` | each killed by `explain_names_the_store_kernel_on_the_converted_iceberg_doors_only` (they survived that suite on `877feac5`) |
+
+### Q4, `EXPLAIN ANALYZE INSERT` of a mixed union
+
+The cause is not F1's. `EXPLAIN ANALYZE` is excluded from the append descent
+(R-028), so the write ran with the localising kernel and without the store
+kernel. It now runs main's plan: `SparkLtzTimestampCast` does not take the
+struct arm when the plan is `Analyze` over an `INSERT` into a table that holds
+a struct with a naive microsecond leaf
+(`nested_wall::analyzed_insert_stores_a_struct_wall`). Measured in
+America/New_York: with the instant side first the wall rows store
+`1767323045123456` and the instant rows `1783164153654321`, main's rows; with
+the wall side first the statement raises main's error, `Internal error: cannot
+convert text Timestamp(µs, "UTC") into byte Timestamp(µs).` R-028 is unchanged
+and still names the instant row. Pins: `test_named_cells_equal_main` (cells
+`explain-analyze-insert/…`) and
+`an_analyzed_insert_into_a_struct_wall_keeps_mains_struct_cast`.
+
+### Q2, a wall in a daylight-saving gap
+
+Spark's moved gap wall is the target. A naive wall inside a gap that passes
+through a mixed `CASE`, `COALESCE` or `UNION ALL` into an NTZ leaf is stored
+moved forward by the gap (America/New_York `2026-03-08 02:30:00` becomes
+`03:30:00`), as Spark stores it and as the top-level twin already did on main.
+The second verification measured it (three walls per door in America/New_York,
+two in Australia/Lord_Howe); it was not run again in this round. The release
+note above carries the line. No code.
+
+### F2, the depth-2 NOT NULL UPDATE cells
+
+Named, not wired. In America/New_York a whole-struct `UPDATE … WHERE` of a
+`TIMESTAMP` column into `STRUCT<i: STRUCT<v: TIMESTAMP_NTZ, n: INT> NOT NULL,
+m: INT>` or into `STRUCT<i: STRUCT<v: TIMESTAMP_NTZ, n: INT>, m: INT NOT
+NULL>`, bare or inside `CASE WHEN id = 1 THEN … ELSE st END`, stores `st.i.v =
+1783164153654321`, the UTC wall, on head and on main. Spark stores
+`1783149753654321`. Four cells. Registry row ICE-TSNS-SQL-1-R-031 (OPEN,
+measured 2026-10-12). Pin: `test_named_cells_equal_main`, cells `not-null/…`.
+
+### F3, the temp view after a zone change
+
+Named, not wired. A temp view over a mixed frame, made in America/New_York
+and inserted after the session zone is set to Asia/Kolkata, stores the wall
+rows unchanged (`1767323045123456`), as main does. Spark stores
+`1767360845123456`. The instant rows store Spark's Kolkata wall
+`1783183953654321`. Three wall rows in two tables. Registry row
+ICE-TSNS-SQL-1-R-032 (OPEN, measured 2026-10-12). Pin:
+`test_named_cells_equal_main`, cells `zone-switch/…`.
+
+### F4, `EXPLAIN UPDATE` of a zoned struct from a naive one
+
+Choice: the `EXPLAIN` is main's text. It is the smaller change. The other
+choice sets the mirror row of `LEAF_ROWS` and moves the R-020 cells of every
+whole-struct door. The kernel was printed because DataFusion's `UPDATE`
+planner casts the assigned value to the column type and the coercion rule
+rewrote that cast. For a whole-struct assignment that cast does not run: the
+fold replaces the value with `arrow_cast` text of the column type, so the
+planner adds no cast. `nested_wall::keep_update_store_casts` runs on each
+`Dml(Update)` node and takes the kernel back out of an assignment's own cast.
+A coercion inside the assigned value keeps its kernel, because that one runs:
+`UPDATE tl SET st = CASE WHEN id = 1 THEN ns ELSE st END WHERE id >= 0` still
+stores Spark's `1767341045123456`.
+
+One text is left. When the assigned value is a scalar subquery
+(`UPDATE tl SET st = (SELECT st FROM n WHERE id = 1) WHERE id >= 0`), type
+coercion puts the cast inside the subquery, and `EXPLAIN` prints the kernel
+there. The statement is refused on main and on head, on `877feac5` as well,
+and stores nothing; the first line of the refusal differs from main's (`UPDATE
+operation on table` against main's `arguments need to have the same data
+type`). Measured 2026-10-12 in America/New_York. Not changed in this round. Measured in
+America/New_York: `EXPLAIN UPDATE tl SET st = named_struct('v', w, 'n', 1)
+WHERE id >= 0` and `… SET st = ns WHERE id >= 0` print main's text, and the
+`UPDATE` stores `1767323045123456`, main's value. The `UPDATE` does not move,
+so R-020 is unchanged. Pins: `test_named_cells_equal_main` (cells
+`explain-update/…`, text recorded on main `2ac03089`),
+`an_update_assignment_cast_keeps_mains_text_and_an_inner_coercion_is_localised`,
+and the last two assertions of the Rust pin below.
+
+### F5, the EXPLAIN gates in Rust
+
+`crates/repark-spark/src/tests/explain_nested_ntz.rs`
+`explain_names_the_store_kernel_on_the_converted_iceberg_doors_only` plans
+over an Iceberg provider with `common.rs` `setup_at_zone`, 72 lines. It kills
+the four gate mutants of the verdict in the `repark-spark` lib suite (table
+above).
+
+### Gates
+
+Run on the round 15 tree, each cargo, maturin and pytest command in the build
+wrapper, 2026-10-12.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo fmt --all -- --check` | 0 | clean |
+| `cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | clean |
+| `make rust-panic-ban` | 0 | clean |
+| `cargo test --locked -p repark-spark --lib` | 0 | 2713 passed, 5 ignored |
+| `cargo test --locked -p repark-iceberg --lib` | 0 | 1013 passed |
+| `cargo test --locked -p repark-functions --lib` | 0 | 946 passed, 1 ignored |
+| `cargo test --locked -p repark-sql --lib` | 0 | 403 passed, 4 ignored |
+| `cargo test --locked --no-fail-fast -p repark-spark --test timestamp_ns_wall_doors --test timestamp_ns_nested_shapes --test timestamptz_ns_wall_doors` | 0 | 7, 6 and 4 passed |
+| `cargo test --locked --no-fail-fast -p repark-sql` | 0 | every target passed, `ansi_ntz_wall_cast` 9 passed |
+| `uvx maturin@1.14.1 develop --release` | 0 | release module installed |
+| `pytest -q` on `test_ice_ntz_nested_wall_1.py`, `test_ice_ntz_nested_wall_1_joined.py`, `test_ntz_struct_coerce_1.py`, `test_ice_ntz_nested_wall_1_wall_first.py` | 0 | 43 passed |
+| `pytest -q python/repark/tests -k "ntz or timestamp or struct or union or coalesce or case_when or merge or update or tsns or explain"` | 0 | 3111 passed, 59 skipped, 10 xfailed, 0 failed |
+| `make check-ledgers`, `check-ledger-grammar`, `check-docs-compaction`, `check-docs-links`, `check-rust-file-size`, `check-lib-py`, `check-python-conventions`, `check-docstring-presence`, `check-manifest`, `check-crate-dag`, `check-lib-rs`, `check-matrix-test-liveness`, `spell-check`, `toml-check` | 0 | clean |
+| `python3 scripts/sync_map_md.py --check`, `ruff check .`, `ruff format --check .` | 0 | clean |
+| the comment gate against `origin/main` | 0 | 0 hits |
+
+The broad facade run, `cargo test -p repark-sql`, the `repark-functions` and
+`repark-sql` lib suites and the three integration targets ran before the last
+formatting pass. That pass changed line breaks in `write/merge/mod.rs` and in
+the new Rust pin and no token; every other row ran after it.
