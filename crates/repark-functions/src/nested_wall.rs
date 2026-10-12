@@ -4,10 +4,11 @@ use std::sync::Arc;
 use arrow::array::timezone::Tz;
 use arrow::array::{Array, ArrayRef, AsArray, StructArray, TimestampMicrosecondBuilder};
 use datafusion::arrow::datatypes::{DataType, FieldRef, Fields, TimeUnit};
-use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err, plan_err};
+use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue, exec_err, plan_err};
+use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
-    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
-    Volatility,
+    Cast, ColumnarValue, Expr, ExprSchemable, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF,
+    ScalarUDFImpl, Signature, Volatility,
 };
 
 use crate::datetime::localize_wall_micros_in_zone;
@@ -294,6 +295,67 @@ fn localize_column(array: &ArrayRef, zone: Tz) -> Result<ArrayRef> {
         }
     }
     Ok(Arc::new(builder.finish().with_timezone("UTC")))
+}
+
+fn child_name_is_addressable(name: &str) -> bool {
+    !name.contains('.') && !name.contains(',')
+}
+
+fn collect_wall_paths(source: &Fields, target: &Fields, prefix: &str) -> Vec<String> {
+    let mut paths = Vec::new();
+    for source_field in source {
+        if !child_name_is_addressable(source_field.name()) {
+            continue;
+        }
+        let Some(target_field) = target
+            .iter()
+            .find(|field| field.name() == source_field.name())
+        else {
+            continue;
+        };
+        let path = if prefix.is_empty() {
+            source_field.name().clone()
+        } else {
+            format!("{prefix}.{}", source_field.name())
+        };
+        match (source_field.data_type(), target_field.data_type()) {
+            (DataType::Struct(source_children), DataType::Struct(target_children)) => {
+                paths.extend(collect_wall_paths(source_children, target_children, &path));
+            }
+            (source_type, target_type)
+                if is_naive_micros(source_type)
+                    && crate::instant_ts::is_ltz_timestamp(target_type) =>
+            {
+                paths.push(path);
+            }
+            _ => {}
+        }
+    }
+    paths
+}
+
+pub(crate) fn rewrite_struct_wall_cast(cast: &Cast, schema: &DFSchema) -> Option<Expr> {
+    let DataType::Struct(target) = cast.field.data_type() else {
+        return None;
+    };
+    let DataType::Struct(source) = cast.expr.get_type(schema).ok()? else {
+        return None;
+    };
+    let paths = collect_wall_paths(&source, target, "");
+    if paths.is_empty() {
+        return None;
+    }
+    let call = Expr::ScalarFunction(ScalarFunction::new_udf(
+        localize_nested_ntz_udf(),
+        vec![
+            (*cast.expr).clone(),
+            Expr::Literal(ScalarValue::Utf8(Some(paths.join(","))), None),
+        ],
+    ));
+    Some(Expr::Cast(Cast::new_from_field(
+        Box::new(call),
+        Arc::clone(&cast.field),
+    )))
 }
 
 #[cfg(test)]
