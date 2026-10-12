@@ -73,8 +73,8 @@ def open_session(zone: str, warehouse: Path) -> Any:
     spark.sql("CREATE NAMESPACE ice.ns")
     spark.sql(
         f"CREATE TABLE {SRC} ("
-        "id INT, ns timestamp_ns, tzns timestamptz_ns, ts TIMESTAMP, "
-        "ntz TIMESTAMP_NTZ, far TIMESTAMP"
+        "id INT, ns timestamp_ns, tzns timestamptz_ns, tzns_utc timestamptz_ns, "
+        "ts TIMESTAMP, ntz TIMESTAMP_NTZ, far TIMESTAMP"
         ") USING iceberg TBLPROPERTIES ('format-version' = '3')"
     )
     for index, moment in enumerate(MOMENTS):
@@ -82,6 +82,7 @@ def open_session(zone: str, warehouse: Path) -> Any:
         spark.sql(
             f"INSERT INTO {SRC} SELECT {index + 1}, "
             f"CAST('{moment}' AS timestamp_ns), "
+            f"CAST('{moment}' AS timestamptz_ns), "
             f"CAST('{moment}+00:00' AS timestamptz_ns), "
             f"TIMESTAMP '{us}', CAST(TIMESTAMP '{us}' AS TIMESTAMP_NTZ), "
             "TIMESTAMP '9999-12-31 00:00:00'"
@@ -91,7 +92,7 @@ def open_session(zone: str, warehouse: Path) -> Any:
 
 def source_schema(spark: Any) -> dict[str, str]:
     """Return the Arrow type name of each source column on row 1."""
-    table = spark.sql(f"SELECT ns, tzns, ts, ntz, far FROM {SRC} WHERE id = 1").toArrow()
+    table = spark.sql(f"SELECT ns, tzns, tzns_utc, ts, ntz, far FROM {SRC} WHERE id = 1").toArrow()
     return {name: str(table.schema.field(name).type) for name in table.schema.names}
 
 
@@ -813,7 +814,7 @@ def run_df_lambda_below_append(cell: Cell) -> None:
         ).writeTo(cell.table).append()
         return
     below = cell.spark.sql(
-        f"SELECT id, ns, tzns, ts, ntz, far, transform(array(id), x -> x) AS a FROM {SRC}"
+        f"SELECT id, ns, tzns, tzns_utc, ts, ntz, far, transform(array(id), x -> x) AS a FROM {SRC}"
     )
     value = cell.value_sql(cell.source, "id")
     below.selectExpr("id", f"{value} AS v", "0 AS k").writeTo(cell.table).append()

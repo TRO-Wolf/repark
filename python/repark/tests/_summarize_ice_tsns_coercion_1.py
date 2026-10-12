@@ -223,9 +223,12 @@ def kind_rows(fixture: dict[str, Any], lattice: dict[str, Any]) -> list[dict[str
     found: list[dict[str, Any]] = []
     reads = fixture.get("reads", {})
     cells = lattice.get("cells", {})
+    lattice_sources = {key.split("|")[2] for key in cells}
     for key, ours in reads.items():
         zone, source, form, sibling, role = key.split("|")
         if role != "twin" or sibling not in CARD_SIBLINGS:
+            continue
+        if source not in lattice_sources:
             continue
         spark = cells.get(f"{zone}|{ansi}|{source}|{form}|{sibling}")
         if spark is None:
@@ -351,6 +354,7 @@ def build_summary(fixture: dict[str, Any], lattice: dict[str, Any]) -> str:
         f"{len(ns_value_differ)} differ in stored value or Parquet type",
         f"- Twin reads whose kind differs from Spark: {len(kind_bad)}",
         f"- Twin reads whose zone placement differs from Spark: {len(place_bad)}",
+        f"- Twin reads compared with Spark: {len(kinds)}",
         "",
         "## Counts by sibling and door",
         "",

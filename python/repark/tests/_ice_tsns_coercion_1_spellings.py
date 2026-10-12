@@ -25,7 +25,7 @@ US_MOMENTS = (
     "2026-01-02 03:04:05.123456",
     "1969-12-31 23:59:59.999999",
 )
-SOURCES = {"ns": "timestamp_ns", "tzns": "timestamptz_ns"}
+SOURCES = {"ns": "timestamp_ns", "tzns": "timestamptz_ns", "tzns_utc": "timestamptz_ns"}
 TARGETS = {"ts_ns": "timestamp_ns", "tz_ns": "timestamptz_ns", "ltz": "TIMESTAMP"}
 NANOSECOND_TARGETS = ("ts_ns", "tz_ns")
 FORMS = ("coalesce", "array", "case", "if", "nvl", "ifnull", "union")
@@ -143,7 +143,7 @@ ROLES = ("statement", "twin")
 
 def result_zoned(source: str, sibling: str) -> bool:
     """Return whether the site result is zoned for this source and sibling."""
-    return source == "tzns" or sibling in ZONED_SIBLINGS
+    return source in ("tzns", "tzns_utc") or sibling in ZONED_SIBLINGS
 
 
 def kernel_name(zoned: bool) -> str:
@@ -167,6 +167,8 @@ def moment_literal(source: str, index: int) -> str:
     moment = MOMENTS[index]
     if source == "ns":
         return f"CAST('{moment}' AS timestamp_ns)"
+    if source == "tzns":
+        return f"CAST('{moment}' AS timestamptz_ns)"
     return f"CAST('{moment}+00:00' AS timestamptz_ns)"
 
 

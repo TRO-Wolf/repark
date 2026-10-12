@@ -3304,6 +3304,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [_ice_tsns_coercion_1_spellings.py](_ice_tsns_coercion_1_spellings.py) —
   **ICE-TSNS-COERCION-1 slice 0:** the seven spellings, eight siblings, three range
   siblings, five zones and the kernel wrapper. `nvl` and `ifnull` twins are `coalesce`.
+  `tzns` is the wall in the session zone, the same instant as Spark's `src_ltz`;
+  `tzns_utc` keeps the zone-fixed wall+00:00 seed behind the stored matrix.
 - [_record_ice_tsns_coercion_1_twins.py](_record_ice_tsns_coercion_1_twins.py) +
   [ice_tsns_coercion_1_twins.json](ice_tsns_coercion_1_twins.json) —
   **ICE-TSNS-COERCION-1 slice 0:** the recorder and the fixture. `--shard-zone` and
@@ -3321,6 +3323,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-TSNS-COERCION-1 slice 0:** writes the twin summary from the fixture and the lattice.
   Untyped-NULL equality ignores error text and compares stored ticks, Parquet type and skip.
   Zoned placement compares floor microseconds, as Spark's `unix_micros` floors.
+  Reads whose source has no lattice cells are not compared.
 - [_record_ice_tsns_coercion_1_casts.py](_record_ice_tsns_coercion_1_casts.py) —
   **ICE-TSNS-COERCION-1 slice 0:** the 64-position written-cast census. A position is
   unresolved when the plan still holds `Timestamp(ns)` or a nanosecond literal.
