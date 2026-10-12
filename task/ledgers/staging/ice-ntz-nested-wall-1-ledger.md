@@ -339,7 +339,7 @@ not wrap. A later unit sets that row. It is not set here.
 
 | File | Function | Callers | Reason | Follow-up |
 |---|---|---|---|---|
-| `merge/insert.rs` | `store_assignment_then_sql` | `merge/mod.rs` `rewrite_column_with_maps`; `not_matched_by_source.rs` `rewrite_else` | The type needs a session the SQL builders do not hold. Passing it grows `merge/mod.rs` (exact 1569) and `merge/tests/merge.rs` (exact 1032). | Split `merge/mod.rs` at a cohesive boundary, then pass the type. |
+| `merge/insert.rs` | `store_assignment_then_sql` | `merge/merge_sql.rs` `rewrite_column_with_maps`; `not_matched_by_source.rs` `rewrite_else` | No zoned value reaches this site; measured 2026-10-12. | None. Round 13 built the probe after the split and measured it neutral: the ANSI source is naive, Spark values arrive pre-wrapped, literals probe naive. The probe was reverted. |
 
 The function passes `None`. `MERGE INSERT` does not reach it (`zone_wrapping_stream_sql` passes `analyzed_types`). `UPDATE SET *` is `UpdateAll` and does not call it. Identity `UPDATE` uses `update_projection_sql`.
 
@@ -349,8 +349,8 @@ One America/New_York cell, a `TIMESTAMP` column into `struct<v: TIMESTAMP_NTZ, n
 |---|---|---|---|---|
 | Spark `WHEN MATCHED THEN UPDATE SET` | `1767305045123456` | `1767323045123456` (`merge_update_whole`, `ts_column`, copy-on-write) | `1767305045123456` | `nested_assign` probes the source and calls `store_assignment_cast_sql` before this function sees the text. Pin `test_merge_update_clauses_store_the_session_wall_before_the_none_site`. |
 | Spark `WHEN NOT MATCHED BY SOURCE THEN UPDATE SET` | `1767305045123456` | not in the step-0 matrix | not in the step-0 matrix; the matched cell's Spark answer is the session wall | The same `nested_assign` fold. Same pin. |
-| ANSI `WHEN MATCHED THEN UPDATE SET` | `1767323045123456` | not in the step-0 matrix | this door is not Spark | This `None` is the only cast. Named hole, equal to the UTC wall main stores on the spark matched cell. Pin `ansi_matched_update_of_a_nested_ntz_keeps_the_utc_wall`. |
-| ANSI `WHEN NOT MATCHED BY SOURCE THEN UPDATE SET` | `1767323045123456` | not in the step-0 matrix | this door is not Spark | Same hole. Pin `ansi_unmatched_source_update_of_a_nested_ntz_keeps_the_utc_wall`. |
+| ANSI `WHEN MATCHED THEN UPDATE SET` | `1767323045123456` | not in the step-0 matrix | this door is not Spark | Correct as on main: the ANSI source is naive. ANSI DDL `TIMESTAMP(6) WITH TIME ZONE` creates a naive Iceberg `timestamp` column, so the UTC wall is the right store; measured 2026-10-12. Pin `ansi_matched_update_of_a_nested_ntz_keeps_the_utc_wall`. |
+| ANSI `WHEN NOT MATCHED BY SOURCE THEN UPDATE SET` | `1767323045123456` | not in the step-0 matrix | this door is not Spark | Same: correct as on main, naive source. Pin `ansi_unmatched_source_update_of_a_nested_ntz_keeps_the_utc_wall`. |
 
 ## 11. The literal probe (R4, one attempt, not landed)
 

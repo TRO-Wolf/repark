@@ -230,13 +230,13 @@ async fn nested_leaf(session: &ReparkSession, table: &str) -> i64 {
     column.value(0)
 }
 
-async fn ansi_nested_door() -> (ReparkSession, TempDir) {
+async fn ansi_nested_door_in(zone: &str) -> (ReparkSession, TempDir) {
     let warehouse_dir = TempDir::new().expect("warehouse tempdir");
     let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
     let dialect: Arc<dyn SqlDialect> = Arc::new(AnsiDialect);
     let session = ReparkSession::builder()
         .with_sql_dialect(dialect)
-        .config("spark.sql.session.timeZone", "America/New_York")
+        .config("spark.sql.session.timeZone", zone)
         .build()
         .expect("session must build");
     session
@@ -261,6 +261,10 @@ async fn ansi_nested_door() -> (ReparkSession, TempDir) {
         .await
         .expect("source insert collect");
     (session, warehouse_dir)
+}
+
+async fn ansi_nested_door() -> (ReparkSession, TempDir) {
+    ansi_nested_door_in("America/New_York").await
 }
 
 #[tokio::test]
@@ -290,7 +294,7 @@ async fn ansi_matched_update_of_a_nested_ntz_keeps_the_utc_wall() {
     assert_eq!(
         nested_leaf(&session, "ice.q7.matched").await,
         1_767_323_045_123_456,
-        "ANSI WHEN MATCHED reaches store_assignment_then_sql with no source type"
+        "ANSI WHEN MATCHED keeps the UTC wall for a naive source"
     );
 }
 
@@ -327,6 +331,147 @@ async fn ansi_unmatched_source_update_of_a_nested_ntz_keeps_the_utc_wall() {
     assert_eq!(
         nested_leaf(&session, "ice.q7.nmbs").await,
         1_767_323_045_123_456,
-        "ANSI WHEN NOT MATCHED BY SOURCE reaches store_assignment_then_sql with no source type"
+        "ANSI WHEN NOT MATCHED BY SOURCE keeps the UTC wall for a naive source"
+    );
+}
+
+#[tokio::test]
+async fn ansi_matched_update_with_a_wall_source_keeps_the_wall() {
+    let (session, _warehouse) = ansi_nested_door().await;
+    session
+        .sql("CREATE TABLE ice.q7.wallsrc (id BIGINT, st STRUCT<v TIMESTAMP(6), n INT>, k BIGINT)")
+        .await
+        .expect("target");
+    session
+        .sql("INSERT INTO ice.q7.wallsrc (id, st, k) VALUES (1, NULL, 0)")
+        .await
+        .expect("seed")
+        .collect()
+        .await
+        .expect("seed collect");
+    session
+        .sql(
+            "MERGE INTO ice.q7.wallsrc AS t USING ice.q7.src AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET st = named_struct('v', TIMESTAMP '2026-01-02 \
+             03:04:05.123456', 'n', 1)",
+        )
+        .await
+        .expect("merge")
+        .collect()
+        .await
+        .expect("merge collect");
+    assert_eq!(
+        nested_leaf(&session, "ice.q7.wallsrc").await,
+        1_767_323_045_123_456,
+        "a wall source into a nested NTZ leaf keeps the wall"
+    );
+}
+
+#[tokio::test]
+async fn ansi_matched_update_in_utc_stores_the_utc_wall() {
+    let (session, _warehouse) = ansi_nested_door_in("UTC").await;
+    session
+        .sql("CREATE TABLE ice.q7.utc (id BIGINT, st STRUCT<v TIMESTAMP(6), n INT>, k BIGINT)")
+        .await
+        .expect("target");
+    session
+        .sql("INSERT INTO ice.q7.utc (id, st, k) VALUES (1, NULL, 0)")
+        .await
+        .expect("seed")
+        .collect()
+        .await
+        .expect("seed collect");
+    session
+        .sql(
+            "MERGE INTO ice.q7.utc AS t USING ice.q7.src AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET st = named_struct('v', s.l, 'n', 1)",
+        )
+        .await
+        .expect("merge")
+        .collect()
+        .await
+        .expect("merge collect");
+    assert_eq!(
+        nested_leaf(&session, "ice.q7.utc").await,
+        1_767_323_045_123_456,
+        "the UTC session wall of the instant is the UTC wall"
+    );
+}
+
+async fn top_key(session: &ReparkSession, table: &str) -> i64 {
+    let batches = session
+        .sql(&format!("SELECT k FROM {table}"))
+        .await
+        .expect("key read")
+        .collect()
+        .await
+        .expect("collect");
+    let column = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("Int64 key");
+    column.value(0)
+}
+
+#[tokio::test]
+async fn ansi_matched_update_of_a_top_level_column_is_unchanged() {
+    let (session, _warehouse) = ansi_nested_door().await;
+    session
+        .sql("CREATE TABLE ice.q7.top (id BIGINT, st STRUCT<v TIMESTAMP(6), n INT>, k BIGINT)")
+        .await
+        .expect("target");
+    session
+        .sql("INSERT INTO ice.q7.top (id, st, k) VALUES (1, NULL, 0)")
+        .await
+        .expect("seed")
+        .collect()
+        .await
+        .expect("seed collect");
+    session
+        .sql(
+            "MERGE INTO ice.q7.top AS t USING ice.q7.src AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET k = s.id",
+        )
+        .await
+        .expect("merge")
+        .collect()
+        .await
+        .expect("merge collect");
+    assert_eq!(
+        top_key(&session, "ice.q7.top").await,
+        1,
+        "a top-level assignment keeps its value"
+    );
+}
+
+#[tokio::test]
+async fn ansi_matched_update_of_a_plain_table_stores_its_value() {
+    let (session, _warehouse) = ansi_nested_door().await;
+    session
+        .sql("CREATE TABLE ice.q7.plain (id BIGINT, k BIGINT)")
+        .await
+        .expect("target");
+    session
+        .sql("INSERT INTO ice.q7.plain (id, k) VALUES (1, 0)")
+        .await
+        .expect("seed")
+        .collect()
+        .await
+        .expect("seed collect");
+    session
+        .sql(
+            "MERGE INTO ice.q7.plain AS t USING ice.q7.src AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET k = s.id",
+        )
+        .await
+        .expect("merge")
+        .collect()
+        .await
+        .expect("merge collect");
+    assert_eq!(
+        top_key(&session, "ice.q7.plain").await,
+        1,
+        "a table without a nested NTZ leaf stores its value"
     );
 }
