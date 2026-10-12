@@ -3234,9 +3234,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   result, not a table file. A gap instant and an overlap instant in
   America/New_York and Australia/Lord_Howe store the session wall.
   `UPDATE t SET st.v = c` repairs a leaf that holds main's UTC wall.
-  A mixed `CASE` wall row stays `1767305045123456` until the struct coercion
-  unit lands
-  (`test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands`).
+  A mixed `CASE` wall row stores `1767323045123456` now that the struct
+  coercion unit has landed (`test_mixed_case_wall_row_stores_the_wall`).
   Case-different `BY NAME` and `INSERT OVERWRITE` store main's positional UTC
   wall. The 35 NOT NULL cells store, and a converted leaf in America/New_York
   is Spark's session wall. A scalar subquery of an instant struct raises main's
@@ -3255,6 +3254,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** session, parquet leaf readers, and
   the by-name and overwrite writers shared with the facade, moved so the
   facade stays inside its line ceiling.
+  pins: ice-ntz-nested-wall-1/C-003
+- [test_ice_ntz_nested_wall_1_joined.py](test_ice_ntz_nested_wall_1_joined.py) —
+  **ICE-NTZ-NESTED-WALL-1 round 12 (2026-10-12):** the eight nested-NTZ-target
+  write shapes of the coercion verdict's S1, parametrised in
+  America/New_York, store Spark's rows on the joined head. Lives apart because
+  the main pin file would pass its line ceiling.
   pins: ice-ntz-nested-wall-1/C-003
 - [ice_ntz_nested_wall_1_explain.json](ice_ntz_nested_wall_1_explain.json) —
   **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** EXPLAIN text recorded on head

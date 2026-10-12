@@ -576,15 +576,13 @@ JULY_NY = 1_783_149_753_654_321
 SHIFTED_WALL = 1_767_305_045_123_456
 
 
-def test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands(
-    tmp_path: Path,
-) -> None:
-    """The wall row of the first mixed CASE stays the shifted wall.
+def test_mixed_case_wall_row_stores_the_wall(tmp_path: Path) -> None:
+    """The wall row of the first mixed CASE stores the wall.
 
     America/New_York. ``UPDATE t SET st = CASE WHEN id = 1 THEN
     named_struct('v', c, 'n', 100) ELSE st END WHERE id >= 0``. The row that
-    keeps the ``TIMESTAMP_NTZ`` wall stores ``1767305045123456``. That value
-    must change when the struct coercion unit lands. This unit does not move it.
+    keeps the ``TIMESTAMP_NTZ`` wall stores ``1767323045123456`` now that the
+    struct coercion unit has landed. The instant row stores the session wall.
     """
     spark = open_session("America/New_York", tmp_path)
     try:
@@ -600,7 +598,7 @@ def test_mixed_case_wall_row_stays_1767305045123456_until_coercion_unit_lands(
         )
         assert stored_rows(spark, "ice.ns.t") == [
             (1, JULY_NY, 100),
-            (2, SHIFTED_WALL, 2),
+            (2, WALL_TICK, 2),
         ]
     finally:
         spark.stop()

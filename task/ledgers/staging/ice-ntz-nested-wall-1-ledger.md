@@ -395,6 +395,14 @@ five hours). The instant row stores `1783149753654321`. The pin
 holds the wall row. The day the coercion unit lands, that pin goes red and is
 rewritten. Disposition: blocked on the struct coercion unit.
 
+Round 12 (2026-10-12): the coercion unit landed on this head. The pin went
+red (wall row `1767323045123456`) and is rewritten as
+`test_mixed_case_wall_row_stores_the_wall`. The eight-shape joined pin
+`test_joined_write_shapes_store_the_wall_rows` holds the S1 wall rows in
+America/New_York. Both pins were red on `ef721ee6` alone per the coercion
+verdict's recorded cells and are green on this head; no file-level revert can
+show that red, so the verdict's cells are the red evidence.
+
 F2 is fixed at the two bare sites. `paired_field` is gone. A case-different
 name is `Keep`, so `INSERT … BY NAME` and `INSERT OVERWRITE … SELECT` use
 main's positional conform. The six statements, each under `caseSensitive` true
