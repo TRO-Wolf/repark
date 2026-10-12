@@ -111,6 +111,13 @@ Gate-open rate: 12670 opens over 16657 items (460 items opened, 2.8%); 3 opens f
 Cost: interleaved head/baseline 0.9776 insert, 0.9848 merge, 1.0080 merge_mor; the first run's over-cap ratios were box noise.
 Next: round 2, untyped NULL sites.
 
+## 7. Slice 1, round 2 (2026-10-12)
+Built: the all-or-nothing fallback check, the untyped-NULL site walk and the kernel rewrite on the open-gate path; the fallback sink logs at the seat via `tracing::debug!`; the fallback cast check matches a top-level `Timestamp` target only.
+Pins: 43 Rust pins (coalesce/array/case/if/union ns+tzns output types, idempotence, fallback triggers, leave-alone sites, never-sites, sink lines, container-cast) plus the seat sink pin; facade: 8,967 remaining cells equal the recorded twin, 258 DML-store-cast cells stay main's with the fallback moved, 220 equal the corrected-twin oracle (all oracle 1, recorded on the baseline module), 155 equal main with the stale `tzns` text replaced, 45 reads equal the twin, the union `tzns_utc` read pins field id 4, 40 plain ns-target cells never fall back.
+Split: 8967 + 258 + 220 + 155 = 9,600; the union read's field id 4 (main and the recorded twin carry 3) goes to the verifier as a named change; the DML store cast stays main's until slice 2 tells it from a written cast.
+Cost: interleaved head/baseline 0.9928 insert, 0.9823 merge, 0.9939 merge_mor; largest pair ratio 1.0061.
+Next: slice 2, honest typing.
+
 ## Q. Questions
 
 No ruling is requested by this ledger until the summary names a kind mismatch or an
