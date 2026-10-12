@@ -8,5 +8,8 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   the plain column, where the kind differs from Spark, and the range cells.
 - [gate.md](gate.md) — why the gate-open rate is uncountable from public `EXPLAIN`,
   the missing hook, and the pandas `datetime64[ns]` source lines.
+- [cost-baseline.json](cost-baseline.json) + [cost-baseline.md](cost-baseline.md) —
+  the timer output (three sets of fifteen, medians per statement) and its run
+  context: the lock was free, the load was decaying, nothing was building.
 
 Up: [../map.md](../map.md).
