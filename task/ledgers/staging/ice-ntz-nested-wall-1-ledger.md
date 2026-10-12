@@ -266,7 +266,12 @@ counted by `probe.py summary-head` into
 - field-assignment cells identical to main: 324 of 324.
 - `ltz_nested` identical to main: 396 of 396.
 - `ntz_top` identical to main: 396 of 396.
-- instant cells still on the UTC wall outside UTC: 22.
+- raw-error doors identical to main: 162 of 162.
+- instant cells still on the UTC wall outside UTC: 22. Each is mapped in
+  [summary-head.md](../../wo/ice-ntz-nested-wall-1/evidence/summary-head.md):
+  `merge_update_star` is `SET *` (`UpdateAll` copies the struct); the other
+  14 are R4 literals. The head matrix reads `toArrow()` because `probe.py`
+  `read_leaf` casts the query result. The facade pins read Parquet.
 
 Those 22, by door and source: `insert_values` `ts_literal` 2;
 `merge_update_star` `ts_column` 4; `merge_update_star` `ts_literal` 4;

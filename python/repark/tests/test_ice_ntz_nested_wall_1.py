@@ -63,10 +63,9 @@ def parquet_leaf(spark: Any, table: str, column: str, field: str) -> list[int | 
 
 
 def leaf_ticks(spark: Any, table: str, leaf: str) -> list[int | None]:
-    """Return the stored microseconds of ``leaf``, from ``toArrow`` cast to int64."""
-    arrow = spark.sql(f"SELECT {leaf} AS v FROM {table}").toArrow()
-    column = arrow.column("v").combine_chunks()
-    return column.cast(pa.int64(), safe=False).to_pylist()
+    """Return the stored microseconds of ``st.v`` or ``st.w`` from the Parquet files."""
+    column_name, _, field = leaf.partition(".")
+    return parquet_leaf(spark, table, column_name, field)
 
 
 def create_nested(spark: Any, table: str, leaf_type: str) -> None:
@@ -337,9 +336,15 @@ def append_column(spark: Any, table: str) -> None:
 
 
 def struct_values(spark: Any, table: str) -> list[Any]:
-    """Return the ``st`` column as Python values from ``toArrow``."""
-    arrow = spark.sql(f"SELECT st AS v FROM {table}").toArrow()
-    return arrow.column("v").to_pylist()
+    """Return the ``st`` column from the table's Parquet data files."""
+    files = spark.sql(f"SELECT content, file_path FROM {table}.files").toArrow().to_pylist()
+    values: list[Any] = []
+    for file in files:
+        if file["content"] != 0:
+            continue
+        column = pq.read_table(file["file_path"], columns=["st"]).column("st")
+        values.extend(column.to_pylist())
+    return values
 
 
 def write_null_sources(spark: Any) -> None:
@@ -706,3 +711,31 @@ def test_repair_moves_a_main_wall_to_the_session_wall(tmp_path: Path) -> None:
         assert parquet_leaf(spark, table, "st", "v") == [SESSION_WALL["America/New_York"]]
     finally:
         spark.stop()
+
+
+DST_INSTANTS = (
+    ("America/New_York", "TIMESTAMP '2026-03-08 07:00:00+00:00'", 1_772_938_800_000_000),
+    ("America/New_York", "TIMESTAMP '2026-11-01 05:30:00+00:00'", 1_793_496_600_000_000),
+    ("Australia/Lord_Howe", "TIMESTAMP '2026-10-03 15:30:00+00:00'", 1_791_081_000_000_000),
+    ("Australia/Lord_Howe", "TIMESTAMP '2026-04-04 14:45:00+00:00'", 1_775_353_500_000_000),
+)
+
+
+def test_dst_instants_store_the_session_wall(tmp_path: Path) -> None:
+    """A gap instant and an overlap instant store the session wall.
+
+    America/New_York spring-forward ``2026-03-08 07:00Z`` and fall-back
+    ``2026-11-01 05:30Z``, and Australia/Lord_Howe spring-forward
+    ``2026-10-03 15:30Z`` and fall-back ``2026-04-04 14:45Z``. The ticks are
+    that civil time encoded as microseconds. The same rule produces Spark's
+    inventory value ``1767305045123456`` for the ordinary New York instant.
+    """
+    for index, (zone, literal, ticks) in enumerate(DST_INSTANTS):
+        spark = open_session(zone, tmp_path / f"z{index}")
+        try:
+            table = "ice.ns.dst"
+            create_nested(spark, table, "TIMESTAMP_NTZ")
+            spark.sql(f"INSERT INTO {table} SELECT 1, named_struct('v', {literal}, 'n', 1), 0")
+            assert leaf_ticks(spark, table, "st.v") == [ticks], (zone, literal)
+        finally:
+            spark.stop()

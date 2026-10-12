@@ -618,6 +618,33 @@ FIELD_DOORS = (
     "update_field_col_nowhere",
 )
 INSTANT_SOURCES = ("ts_literal", "ts_column")
+RAW_ERROR_DOORS = (
+    "insert_overwrite_values",
+    "update_whole_nowhere",
+    "update_col_nowhere",
+    "update_field_nowhere",
+    "update_field_col_nowhere",
+)
+
+
+def utc_wall_cause(door: str, source: str) -> str:
+    """Return the named cause of a non-UTC instant cell that still holds the UTC wall."""
+    if door == "merge_update_star":
+        return (
+            "SET * is UpdateAll and does not call the nested walk, so the source "
+            "struct is copied and a zoned leaf keeps the physical instant"
+        )
+    if source == "ts_literal" and door in {
+        "insert_values",
+        "merge_update_whole",
+        "merge_update_whole_literal",
+        "update_whole_where",
+    }:
+        return (
+            "R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a "
+            "naive timestamp, so the leaf is not wrapped"
+        )
+    return "UNMAPPED"
 
 
 def command_summary_head(arguments: argparse.Namespace) -> None:
@@ -666,9 +693,36 @@ def command_summary_head(arguments: argparse.Namespace) -> None:
     ]
     if utc_wall:
         for (door, source), count in sorted(utc_wall.items()):
-            lines.append(f"- {door} {source}: {count}")
+            lines.append(f"- {door} {source}: {count}. {utc_wall_cause(door, source)}")
     else:
         lines.append("- none")
+    lines.extend(["", "## Each UTC-wall cell", ""])
+    unmapped = 0
+    for key, cell in sorted(head.items()):
+        schema, door, mode, zone, source = key
+        if schema != "ntz_nested" or source not in INSTANT_SOURCES or zone == "UTC":
+            continue
+        if "error_class" in cell or cell.get("ticks_us") != [INSTANT_US]:
+            continue
+        cause = utc_wall_cause(door, source)
+        if cause == "UNMAPPED":
+            unmapped += 1
+        lines.append(f"- {door} {mode} {zone} {source}: {cause}")
+    if unmapped:
+        lines.append(f"UNMAPPED cells: {unmapped}")
+    raw_equal, raw_total, raw_moved = compare_group(
+        head,
+        main,
+        lambda key: key[0] in {"ntz_nested", "ltz_nested"} and key[1] in RAW_ERROR_DOORS,
+    )
+    lines.extend(
+        [
+            "",
+            f"raw-error doors identical to main: {raw_equal} of {raw_total}.",
+            "",
+        ]
+    )
+    lines.extend(raw_moved or ["- none moved"])
     lines.extend(["", "## Cells that differ from Spark", ""])
     lines.extend(spark_differ or ["- none"])
     lines.extend(["", "## Controls that moved", ""])

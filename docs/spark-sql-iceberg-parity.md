@@ -3359,7 +3359,11 @@ still open is `isModifiable`.
   `1767323045123456` in every zone, equal to main: `INSERT … VALUES`, MERGE `UPDATE SET *`,
   whole-struct MERGE UPDATE of a literal, and `UPDATE … WHERE` of a literal.
   `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` are still an error, equal
-  to main (row R-019).
+  to main (row R-019). Head re-measure 2026-10-11: 173 of 264 `ntz_nested` instant
+  cells equal Spark; field assignment 324 of 324, `ltz_nested` 396 of 396 and
+  `ntz_top` 396 of 396 identical to main; 22 non-UTC instant cells still hold
+  `1767323045123456`, each mapped in `summary-head.md` to `SET *` or to the
+  untyped literal (R4). R-011 stays narrowed.
 - **Apache Spark** — a `TIMESTAMP` assigned to a `TIMESTAMP_NTZ` field stores its wall in the
   session zone on every door it answers. *(oracle: [spark-4.1.2.jsonl](../task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl).)*
 - **Pin** — `crates/repark-spark/tests/timestamp_ns_wall_doors.rs`

@@ -125,3 +125,9 @@ map insert panics in Arrow before a store. The mirror row stays false.
 **Round 8, R6:** the repair `UPDATE t SET st.v = c WHERE id >= 0` moves a
 Parquet leaf from main's UTC wall `1767323045123456` to the New York session
 wall `1767305045123456`.
+
+**Round 8, R7:** the facade reads stored leaves from Parquet. DST gap and
+overlap instants in America/New_York and Australia/Lord_Howe store the session
+wall. The head matrix is 173/264 equal to Spark, field 324/324, ltz 396/396,
+top 396/396, raw-error doors 162/162, and 22 UTC-wall cells, each mapped to
+`SET *` or to the R4 literal. R-011 stays narrowed.

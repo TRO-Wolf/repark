@@ -3206,8 +3206,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   update and a `WHEN NOT MATCHED BY SOURCE` update of a `TIMESTAMP` column
   store the session wall; `nested_assign` wraps before
   `store_assignment_then_sql`. A struct under a list keeps the UTC wall.
-  Values are `toArrow()` cast to int64, and the
-  null pin reads the struct column itself.
+  Stored struct leaves are read from the table's Parquet data files.
+  `session_wall_of` still uses `toArrow()` because that value is a query
+  result, not a table file. A gap instant and an overlap instant in
+  America/New_York and Australia/Lord_Howe store the session wall.
+  `UPDATE t SET st.v = c` repairs a leaf that holds main's UTC wall.
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files

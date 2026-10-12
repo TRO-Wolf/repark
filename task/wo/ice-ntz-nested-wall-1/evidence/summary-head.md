@@ -11,12 +11,41 @@ instant cells still on the UTC wall outside UTC: 22.
 
 ## Instant cells still on the UTC wall, by door and source
 
-- insert_values ts_literal: 2
-- merge_update_star ts_column: 4
-- merge_update_star ts_literal: 4
-- merge_update_whole ts_literal: 4
-- merge_update_whole_literal ts_literal: 4
-- update_whole_where ts_literal: 4
+- insert_values ts_literal: 2. R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_star ts_column: 4. SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_star ts_literal: 4. SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_whole ts_literal: 4. R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_whole_literal ts_literal: 4. R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- update_whole_where ts_literal: 4. R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+
+## Each UTC-wall cell
+
+- insert_values cow America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- insert_values cow Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_star cow America/New_York ts_column: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_star cow America/New_York ts_literal: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_star cow Asia/Kolkata ts_column: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_star cow Asia/Kolkata ts_literal: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_star mor America/New_York ts_column: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_star mor America/New_York ts_literal: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_star mor Asia/Kolkata ts_column: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_star mor Asia/Kolkata ts_literal: SET * is UpdateAll and does not call the nested walk, so the source struct is copied and a zoned leaf keeps the physical instant
+- merge_update_whole cow America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_whole cow Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_whole mor America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_whole mor Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_whole_literal cow America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_whole_literal cow Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_whole_literal mor America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- merge_update_whole_literal mor Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- update_whole_where cow America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- update_whole_where cow Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- update_whole_where mor America/New_York ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+- update_whole_where mor Asia/Kolkata ts_literal: R4 literal: TIMESTAMP '…+00:00' inside named_struct is planned as a naive timestamp, so the leaf is not wrapped
+
+raw-error doors identical to main: 162 of 162.
+
+- none moved
 
 ## Cells that differ from Spark
 
