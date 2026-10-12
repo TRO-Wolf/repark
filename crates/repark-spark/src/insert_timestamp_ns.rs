@@ -70,7 +70,7 @@ pub(crate) fn before_analysis(
 }
 
 pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
-    let nested = dml_target_has_nested_micro_ntz(&plan);
+    let nested = iceberg_insert(&plan) && dml_target_has_nested_micro_ntz(&plan);
     let targets = ns_store_targets(&plan);
     if targets.is_none() && !nested {
         return Ok(plan);
@@ -129,11 +129,26 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
     rebuild(dml, exprs, input, changed)
 }
 
+fn iceberg_insert(plan: &LogicalPlan) -> bool {
+    let LogicalPlan::Dml(dml) = plan else {
+        return false;
+    };
+    if !matches!(dml.op, WriteOp::Insert(_)) {
+        return false;
+    }
+    let Ok(provider) = datafusion::datasource::source_as_provider(&dml.target) else {
+        return false;
+    };
+    (provider.as_ref() as &dyn std::any::Any)
+        .downcast_ref::<iceberg_datafusion::IcebergTableProvider>()
+        .is_some()
+}
+
 fn dml_target_has_nested_micro_ntz(plan: &LogicalPlan) -> bool {
     let LogicalPlan::Dml(dml) = plan else {
         return false;
     };
-    if !matches!(dml.op, WriteOp::Insert(_) | WriteOp::Update) {
+    if !matches!(dml.op, WriteOp::Insert(_)) {
         return false;
     }
     dml.target.schema().fields().iter().any(|field| {
@@ -628,32 +643,7 @@ mod tests {
             .cast_to(&target, schema.as_ref())
             .expect("cast")
             .alias("st");
-        let plan = plan_of(
-            vec![
-                Field::new("id", DataType::Int32, true),
-                Field::new("st", target, true),
-            ],
-            input_fields,
-            vec![col("id").alias("id"), st],
-        );
-        let planned = after_analysis(plan).expect("plan");
-        let LogicalPlan::Dml(dml) = planned else {
-            panic!("dml");
-        };
-        let LogicalPlan::Projection(outer) = dml.input.as_ref() else {
-            panic!("outer");
-        };
-        assert!(
-            matches!(outer.input.as_ref(), LogicalPlan::EmptyRelation(_)),
-            "{}",
-            outer.input
-        );
-        let shown = outer
-            .expr
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join("\n");
+        let shown = wrap_nested_ntz(&st, &target, schema.as_ref()).to_string();
         assert!(!shown.contains("random"), "{shown}");
         assert!(!shown.contains("rand("), "{shown}");
         assert!(!shown.contains("get_field"), "{shown}");
@@ -663,6 +653,23 @@ mod tests {
             "{shown}"
         );
         assert_eq!(shown.matches("named_struct").count(), 1, "{shown}");
+        let plan = plan_of(
+            vec![
+                Field::new("id", DataType::Int32, true),
+                Field::new("st", target, true),
+            ],
+            input_fields,
+            vec![col("id").alias("id"), st],
+        );
+        assert_eq!(after_analysis(plan.clone()).expect("plan"), plan);
+        let LogicalPlan::Dml(dml) = plan else {
+            panic!("dml");
+        };
+        let update = LogicalPlan::Dml(datafusion::logical_expr::dml::DmlStatement {
+            op: WriteOp::Update,
+            ..dml
+        });
+        assert_eq!(after_analysis(update.clone()).expect("update"), update);
 
         let column_target = struct_type(&[("v", ntz()), ("n", DataType::Int32)]);
         let column_source = struct_type(&[("v", instant()), ("n", DataType::Int32)]);
@@ -675,25 +682,22 @@ mod tests {
             .expect("cast")
             .alias("st");
         let column_plan = plan_of(
-            vec![Field::new("st", column_target, true)],
+            vec![Field::new("st", column_target.clone(), true)],
             column_fields,
-            vec![column_expr],
+            vec![column_expr.clone()],
         );
-        let column_planned = after_analysis(column_plan).expect("column plan");
-        let LogicalPlan::Dml(column_dml) = column_planned else {
-            panic!("column dml");
-        };
-        let LogicalPlan::Projection(column_outer) = column_dml.input.as_ref() else {
-            panic!("column outer");
-        };
+        assert_eq!(
+            after_analysis(column_plan.clone()).expect("column plan"),
+            column_plan
+        );
+        let column_text =
+            wrap_nested_ntz(&column_expr, &column_target, column_schema.as_ref()).to_string();
         assert!(
-            matches!(column_outer.input.as_ref(), LogicalPlan::EmptyRelation(_)),
-            "{}",
-            column_outer.input
+            column_text.contains("__repark_cast_nested_ntz__"),
+            "{column_text}"
         );
-        let column_text = column_outer.expr[0].to_string();
         assert!(!column_text.contains("random"), "{column_text}");
-        assert!(!column_text.contains("__repark_ntz_src"), "{column_text}");
+        assert!(!column_text.contains("rand("), "{column_text}");
     }
 
     #[test]

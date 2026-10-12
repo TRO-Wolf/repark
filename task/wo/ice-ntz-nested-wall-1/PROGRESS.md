@@ -87,3 +87,8 @@ leaf, which is main's cast. Reordered names store each session wall on its name.
 
 **Round 7, cast peel:** a user `CAST` to `STRUCT<v: DATE, n: INT>` and a
 `TRY_CAST` stay the original expression. The unit test passes.
+
+**Round 7, Iceberg insert hook:** `after_analysis` wraps a nested microsecond
+NTZ leaf only on `INSERT` into `IcebergTableProvider`. A fake table source and
+`UPDATE` keep the plan. The facade file is 18 passed on the release build of
+this gate.
