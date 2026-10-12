@@ -2,10 +2,10 @@ use std::sync::{Arc, LazyLock};
 
 use datafusion::arrow::datatypes::FieldRef;
 use datafusion::common::Result;
-use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::logical_expr::expr::{Cast, ScalarFunction, TryCast};
 use datafusion::logical_expr::expr_rewriter::SavedName;
-use datafusion::logical_expr::{Expr, LogicalPlan, ScalarUDF};
+use datafusion::logical_expr::{Expr, ScalarUDF};
 
 use super::{NarrowedBeside, sql_timestamp};
 
@@ -69,34 +69,17 @@ pub(super) fn signed(expr: Expr) -> Expr {
     named(expr, WRITTEN_SIGN)
 }
 
-#[allow(clippy::missing_errors_doc)]
-pub fn unsigned(plan: &LogicalPlan) -> Result<Option<LogicalPlan>> {
-    let mut found = false;
-    plan.apply_with_subqueries(|node| {
-        node.apply_expressions(|expr| {
-            found = found || expr.exists(|inner| Ok(is_signed(inner)))?;
-            Ok(if found {
-                TreeNodeRecursion::Stop
-            } else {
-                TreeNodeRecursion::Continue
-            })
-        })
-    })?;
-    if !found {
-        return Ok(None);
+pub(crate) fn unsigned(expr: Expr) -> Result<Transformed<Expr>> {
+    if !expr.exists(|inner| Ok(is_signed(inner)))? {
+        return Ok(Transformed::no(expr));
     }
-    let cleared = plan.clone().transform_down_with_subqueries(|node| {
-        node.map_expressions(|expr| {
-            expr.transform_up(|inner| {
-                Ok(if is_signed(&inner) {
-                    Transformed::yes(named(inner, ""))
-                } else {
-                    Transformed::no(inner)
-                })
-            })
+    expr.transform_up(|inner| {
+        Ok(if is_signed(&inner) {
+            Transformed::yes(named(inner, ""))
+        } else {
+            Transformed::no(inner)
         })
-    })?;
-    Ok(Some(cleared.data))
+    })
 }
 
 pub(super) fn is_signed(expr: &Expr) -> bool {

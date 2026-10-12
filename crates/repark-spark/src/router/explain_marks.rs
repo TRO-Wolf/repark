@@ -8,7 +8,7 @@ use datafusion::logical_expr::LogicalPlan;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::explain::ExplainExec;
 use repark_functions::null_narrowing::{
-    NARROWED_BESIDE_NULL_NAME, NARROWED_BESIDE_VALUE_NAME, WRITTEN_CAST_NAME, unsigned,
+    NARROWED_BESIDE_NULL_NAME, NARROWED_BESIDE_VALUE_NAME, WRITTEN_CAST_NAME,
 };
 
 #[derive(Debug)]
@@ -31,10 +31,9 @@ impl QueryPlanner for UnmarkedExplain {
         logical_plan: &LogicalPlan,
         session_state: &SessionState,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        let cleared = unsigned(logical_plan)?;
         let planned = self
             .inner
-            .create_physical_plan(cleared.as_ref().unwrap_or(logical_plan), session_state)
+            .create_physical_plan(logical_plan, session_state)
             .await?;
         Ok(unmarked(planned))
     }
