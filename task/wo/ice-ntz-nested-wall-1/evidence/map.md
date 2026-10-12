@@ -16,5 +16,18 @@ from `toArrow()` cast to int64.
 - [pin-red-r8-barrier.txt](pin-red-r8-barrier.txt) — the planner errors after
   the `rand()` barrier was removed.
 - [df-before.txt](df-before.txt) — free space on the build disk before the run.
+- [join_round12_head_ny.json](join_round12_head_ny.json),
+  [join_round12_head_lh.json](join_round12_head_lh.json),
+  [join_round12_head_utc.json](join_round12_head_utc.json) — the joined head,
+  14 cells in each zone, all answering.
+- [join_round12_spark_ny.json](join_round12_spark_ny.json),
+  [join_round12_spark_lh.json](join_round12_spark_lh.json),
+  [join_round12_spark_utc.json](join_round12_spark_utc.json) — live Spark
+  4.1.2 with Iceberg 1.11, the same 14 cells.
+- [join_round12_main.json](join_round12_main.json) — main's rows, taken from
+  the two verify1 verdicts' recorded outputs.
+- [join_round12_combined.json](join_round12_combined.json) and
+  [join_round12_summary.md](join_round12_summary.md) — the merged comparison
+  and the decision table: 180 rows, 0 halt rows, 0 named holes.
 
 Up: [../map.md](../map.md).

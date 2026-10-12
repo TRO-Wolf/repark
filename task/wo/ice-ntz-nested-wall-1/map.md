@@ -11,6 +11,10 @@ The ledger is
   counts and maps each remaining UTC-wall cell to `SET *` or to the untyped
   literal. The warehouse, the output path and Spark's ivy directory come from
   arguments or the environment.
+- [join_round12.py](join_round12.py) — the round 12 joined-head recorder.
+  `measure` runs the eight nested-NTZ-target write shapes and the six F1
+  statements on one engine in one zone. `summarize` merges head, live Spark
+  and main rows into the decision table. Decision: continue, 0 halt rows.
 - [evidence/](evidence/map.md) — the engine outputs, the head probe, the five
   counts, and the disk check from before the build.
 - [PROGRESS.md](PROGRESS.md) — step, commit, next action.
