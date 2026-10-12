@@ -114,6 +114,11 @@ holds behavior observed from outside the crate.
   UPDATE and INSERT of a naive wall into a `TIMESTAMP(6) WITH TIME ZONE` column at the
   UTC reading, green before and after the store-cast change.
   pins: ntz-store-doors-1/C-003
+  **ICE-NTZ-NESTED-WALL-1 (2026-10-11):** `ansi_matched_update_of_a_nested_ntz_keeps_the_utc_wall`
+  and `ansi_unmatched_source_update_of_a_nested_ntz_keeps_the_utc_wall` store
+  `1767323045123456` in America/New_York. The ANSI door does not fold the
+  assignment, so `store_assignment_then_sql` passes `None` and the physical
+  instant stays. pins: ice-ntz-nested-wall-1/C-003
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session

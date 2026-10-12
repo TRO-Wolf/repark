@@ -320,15 +320,19 @@ zoned instant into a microsecond `TIMESTAMP_NTZ` wraps. The mirror row, a
 microsecond `TIMESTAMP_NTZ` into a zoned timestamp, is in the table and does
 not wrap. A later unit sets that row. It is not set here.
 
-## 10. `store_assignment_then_sql` (R2, stopped)
+## 10. None site: `store_assignment_then_sql`
 
-The function is `merge/insert.rs` `store_assignment_then_sql(expr, target)`.
-It passes `None`. Its callers, `rewrite_column_with_maps` and `rewrite_else`,
-hold SQL text and a target type and have no `SessionContext`. The context
-exists in `plan_and_commit_cow` and `plan_and_commit_mor`. One
-`analyzed_types` would be a SELECT of every assignment against the merge join,
-then a map threaded through `rewrite_projection`. `merge/mod.rs` is an exact
-1569-line ceiling and `merge/tests/merge.rs` is an exact 1032-line ceiling, so
-that thread cannot be added without a size exception. The spark door's
-whole-struct column MERGE already stores the session wall while this function
-still passes `None` (`test_whole_struct_update_stores_the_session_wall`).
+| File | Function | Callers | Reason | Follow-up |
+|---|---|---|---|---|
+| `merge/insert.rs` | `store_assignment_then_sql` | `merge/mod.rs` `rewrite_column_with_maps`; `not_matched_by_source.rs` `rewrite_else` | The type needs a session the SQL builders do not hold. Passing it grows `merge/mod.rs` (exact 1569) and `merge/tests/merge.rs` (exact 1032). | Split `merge/mod.rs` at a cohesive boundary, then pass the type. |
+
+The function passes `None`. `MERGE INSERT` does not reach it (`zone_wrapping_stream_sql` passes `analyzed_types`). `UPDATE SET *` is `UpdateAll` and does not call it. Identity `UPDATE` uses `update_projection_sql`.
+
+One America/New_York cell, a `TIMESTAMP` column into `struct<v: TIMESTAMP_NTZ, n: INT>`. Session wall `1767305045123456`. UTC wall `1767323045123456`.
+
+| Door and clause | Head | Main | Spark | What converts |
+|---|---|---|---|---|
+| Spark `WHEN MATCHED THEN UPDATE SET` | `1767305045123456` | `1767323045123456` (`merge_update_whole`, `ts_column`, copy-on-write) | `1767305045123456` | `nested_assign` probes the source and calls `store_assignment_cast_sql` before this function sees the text. Pin `test_merge_update_clauses_store_the_session_wall_before_the_none_site`. |
+| Spark `WHEN NOT MATCHED BY SOURCE THEN UPDATE SET` | `1767305045123456` | not in the step-0 matrix | not in the step-0 matrix; the matched cell's Spark answer is the session wall | The same `nested_assign` fold. Same pin. |
+| ANSI `WHEN MATCHED THEN UPDATE SET` | `1767323045123456` | not in the step-0 matrix | this door is not Spark | This `None` is the only cast. Named hole, equal to the UTC wall main stores on the spark matched cell. Pin `ansi_matched_update_of_a_nested_ntz_keeps_the_utc_wall`. |
+| ANSI `WHEN NOT MATCHED BY SOURCE THEN UPDATE SET` | `1767323045123456` | not in the step-0 matrix | this door is not Spark | Same hole. Pin `ansi_unmatched_source_update_of_a_nested_ntz_keeps_the_utc_wall`. |

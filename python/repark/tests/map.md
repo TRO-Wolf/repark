@@ -3202,8 +3202,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   store NULL in the unmatched leaf, which is main's cast. Reordered names store
   each session wall on its name, and an extra field is dropped. `UPDATE` with
   no `WHERE` and `INSERT OVERWRITE … VALUES` of a `TIMESTAMP` literal still
-  raise main's error class and first line. Values are `toArrow()` cast to
-  int64, and the null pin reads the struct column itself.
+  raise main's error class and first line. A Spark `MERGE` `WHEN MATCHED`
+  update and a `WHEN NOT MATCHED BY SOURCE` update of a `TIMESTAMP` column
+  store the session wall; `nested_assign` wraps before
+  `store_assignment_then_sql`. Values are `toArrow()` cast to int64, and the
+  null pin reads the struct column itself.
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files

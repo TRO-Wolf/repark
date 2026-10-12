@@ -560,6 +560,48 @@ def error_line(error: Exception) -> str:
     return text[0] if text else ""
 
 
+def test_merge_update_clauses_store_the_session_wall_before_the_none_site(
+    tmp_path: Path,
+) -> None:
+    """Spark MERGE UPDATE stores the session wall before ``store_assignment_then_sql``.
+
+    America/New_York, a ``TIMESTAMP`` column into ``struct<v: TIMESTAMP_NTZ, n: INT>``.
+    ``nested_assign`` probes the source and wraps it. Main's matched cell is the
+    UTC wall ``1767323045123456``. Spark stores ``1767305045123456``. The
+    not-matched-by-source cell is not in the step-0 matrix; Spark's rule for this
+    assignment is the same session wall.
+    """
+    spark = open_session("America/New_York", tmp_path)
+    expected = SESSION_WALL["America/New_York"]
+    try:
+        write_source(spark)
+        matched = "ice.ns.q7_matched"
+        create_nested(spark, matched, "TIMESTAMP_NTZ")
+        seed_null(spark, matched)
+        spark.sql(
+            f"MERGE INTO {matched} t USING ice.ns.src s ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.l, 'n', 1)"
+        )
+        assert leaf_ticks(spark, matched, "st.v") == [expected]
+        nmbs = "ice.ns.q7_nmbs"
+        spark.sql(
+            f"CREATE TABLE {nmbs} "
+            "(id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(
+            f"INSERT INTO {nmbs} SELECT 9, "
+            f"named_struct('v', CAST(NULL AS TIMESTAMP_NTZ), 'n', 0), 0, {INSTANT}"
+        )
+        spark.sql(
+            f"MERGE INTO {nmbs} t USING ice.ns.src s ON t.id = s.id "
+            "WHEN NOT MATCHED BY SOURCE THEN UPDATE SET t.st = named_struct('v', t.c, 'n', 1)"
+        )
+        assert leaf_ticks(spark, nmbs, "st.v") == [expected]
+    finally:
+        spark.stop()
+
+
 def test_raw_error_doors_still_raise_mains_error(tmp_path: Path) -> None:
     """``UPDATE`` with no ``WHERE`` and ``INSERT OVERWRITE … VALUES`` raise main's error.
 
