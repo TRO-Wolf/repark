@@ -22,6 +22,10 @@ pub const WRITTEN_CAST_UDF_NAME: &str = "__repark_written_timestamp_cast__";
 const DATE_TRUNC_UDF_NAME: &str = "date_trunc";
 const TIMESTAMP_TO_DATE_UDF_NAME: &str = "__repark_timestamp_to_date__";
 const COALESCE_UDF_NAME: &str = "coalesce";
+const MAP_UDF_NAMES: [&str; 2] = ["map", "map_from_arrays"];
+const WRAPPING_UDF_NAMES: [&str; 2] = ["__repark_spark_nonnull__", "__repark_hof_array_field__"];
+const MAP_KEYS_UDF_NAME: &str = "map_keys";
+const MAP_VALUES_UDF_NAME: &str = "map_values";
 const DATE_UDF_NAMES: [&str; 2] = ["to_date", "date"];
 const UNNAMED_TABLE: &str = "the table ``: Cannot safely cast";
 const NARROWED: &str = "narrowed from nanoseconds to microseconds";
@@ -170,6 +174,13 @@ enum Cut {
     Other,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Part {
+    Whole,
+    Keys,
+    Values,
+}
+
 #[derive(Clone, Copy)]
 struct Scope<'a> {
     plan: &'a LogicalPlan,
@@ -182,11 +193,16 @@ struct Walk<'a> {
     outer: Option<&'a Scope<'a>>,
     ranged: Option<&'a Expr>,
     nearest: Call,
+    part: Part,
 }
 
 impl<'a> Walk<'a> {
     fn under(self, nearest: Call) -> Self {
         Self { nearest, ..self }
+    }
+
+    fn of(self, part: Part) -> Self {
+        Self { part, ..self }
     }
 
     fn within(self, outer: Option<&'a Scope<'a>>) -> Self {
@@ -247,6 +263,7 @@ pub fn column_narrowed(
         outer: None,
         ranged: None,
         nearest: Call::Opaque,
+        part: Part::Whole,
     };
     column_lineage(plan, index, walk)
 }
@@ -367,7 +384,8 @@ fn scan_lineage(scan: &TableScan, index: usize, walk: Walk<'_>) -> Option<Narrow
 
 fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Option<Narrowing> {
     let carried = |branch: &Expr| expr_lineage(branch, input, walk);
-    let opaque = |branch: &Expr| expr_lineage(branch, input, walk.under(Call::Opaque));
+    let whole = walk.of(Part::Whole);
+    let opaque = |branch: &Expr| expr_lineage(branch, input, whole.under(Call::Opaque));
     match expr {
         Expr::Alias(alias) => carried(&alias.expr),
         Expr::Column(column) => {
@@ -401,7 +419,7 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
             let within = Walk {
                 ranged,
                 nearest: Call::Opaque,
-                ..walk
+                ..whole
             };
             function.args.iter().find_map(|argument| match argument {
                 Expr::Lambda(lambda) => expr_lineage(&lambda.body, input, within),
@@ -414,7 +432,12 @@ fn expr_lineage(expr: &Expr, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Opt
             if compares(binary.op) {
                 return None;
             }
-            opaque(&binary.left).or_else(|| opaque(&binary.right))
+            let point = |side: &Expr| expr_type(side, input).is_ok_and(|kind| dated(&kind));
+            match (point(&binary.left), point(&binary.right)) {
+                (true, false) => opaque(&binary.left),
+                (false, true) => opaque(&binary.right),
+                _ => opaque(&binary.left).or_else(|| opaque(&binary.right)),
+            }
         }
         Expr::Negative(value) => opaque(value),
         Expr::Unnest(unnest) => opaque(&unnest.expr),
@@ -457,12 +480,41 @@ fn written_call(target: &DataType) -> Call {
     }
 }
 
+fn dated(kind: &DataType) -> bool {
+    matches!(
+        kind,
+        DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64
+    )
+}
+
 fn cast_lineage(cast: &Cast, input: Option<&LogicalPlan>, walk: Walk<'_>) -> Option<Narrowing> {
     let target = cast.field.data_type();
     if let Some(marked) = mark_of(&cast.expr) {
+        let source = expr_type(marked.0, input).ok();
+        if source.is_some_and(|source| part_kept(&source, target, walk.part)) {
+            return expr_lineage(marked.0, input, walk);
+        }
         return found(marked, cut_of(target), input, walk);
     }
     expr_lineage(&cast.expr, input, walk.under(written_call(target)))
+}
+
+fn part_kept(source: &DataType, target: &DataType, part: Part) -> bool {
+    let (DataType::Map(from, _), DataType::Map(to, _)) = (source, target) else {
+        return false;
+    };
+    let (DataType::Struct(from), DataType::Struct(to)) = (from.data_type(), to.data_type()) else {
+        return false;
+    };
+    let index = match part {
+        Part::Whole => return false,
+        Part::Keys => 0,
+        Part::Values => 1,
+    };
+    match (from.get(index), to.get(index)) {
+        (Some(from), Some(to)) => from.data_type() == to.data_type(),
+        _ => false,
+    }
 }
 
 fn function_lineage(
@@ -471,7 +523,8 @@ fn function_lineage(
     input: Option<&LogicalPlan>,
     walk: Walk<'_>,
 ) -> Option<Narrowing> {
-    let through = |branch: &Expr, nearest: Call| expr_lineage(branch, input, walk.under(nearest));
+    let whole = walk.of(Part::Whole);
+    let through = |branch: &Expr, nearest: Call| expr_lineage(branch, input, whole.under(nearest));
     let name = function.func.name();
     let args = function.args.as_slice();
     if let Some(marked) = mark_of(expr) {
@@ -490,8 +543,30 @@ fn function_lineage(
     if name == WRITTEN_CAST_UDF_NAME {
         return through(args.first()?, Call::Timestamp);
     }
+    if WRAPPING_UDF_NAMES.contains(&name) {
+        return expr_lineage(args.first()?, input, walk);
+    }
     if SELECTING_UDF_NAMES.contains(&name) {
-        return through(args.first()?, Call::Opaque);
+        return expr_lineage(
+            args.first()?,
+            input,
+            walk.under(Call::Opaque).of(Part::Values),
+        );
+    }
+    if name == MAP_KEYS_UDF_NAME || name == MAP_VALUES_UDF_NAME {
+        let part = if name == MAP_KEYS_UDF_NAME {
+            Part::Keys
+        } else {
+            Part::Values
+        };
+        return expr_lineage(args.first()?, input, walk.under(Call::Opaque).of(part));
+    }
+    if let (true, [keys, values]) = (MAP_UDF_NAMES.contains(&name), args) {
+        return match walk.part {
+            Part::Keys => through(keys, Call::Opaque),
+            Part::Values => through(values, Call::Opaque),
+            Part::Whole => through(keys, Call::Opaque).or_else(|| through(values, Call::Opaque)),
+        };
     }
     let kind = expr_type(expr, input);
     if matches!(kind, Ok(DataType::Boolean)) {
@@ -504,7 +579,11 @@ fn function_lineage(
         COALESCE_UDF_NAME => walk.nearest,
         _ => Call::Opaque,
     };
-    args.iter().find_map(|value| through(value, nearest))
+    let point = |value: &Expr| expr_type(value, input).is_ok_and(|kind| dated(&kind));
+    let passes = kind.is_ok_and(|kind| dated(&kind)) && args.iter().any(point);
+    args.iter()
+        .filter(|value| !passes || point(value))
+        .find_map(|value| through(value, nearest))
 }
 
 fn outer_lineage(column: &Column, walk: Walk<'_>) -> Option<Narrowing> {

@@ -359,6 +359,47 @@ async fn a_written_cast_inside_a_container_beside_a_microsecond_container_stores
     }
 }
 
+#[tokio::test]
+async fn a_plain_column_stores_beside_a_narrowing_it_does_not_pass_through() {
+    let whole_spellings = [
+        "element_at(map(coalesce({c}, ts), {c}), coalesce({c}, ts))",
+        "map_values(map(coalesce({c}, ts), {c}))[0]",
+        "{c} + (coalesce({c}, ts) - coalesce({c}, ts))",
+        "{c} + make_dt_interval(0, 0, 0, 0 * unix_micros(coalesce({c}, ts)))",
+    ];
+    let cut_spellings = [
+        "element_at(map(1, coalesce({c}, ts)), 1)",
+        "map_keys(map(coalesce({c}, ts), 1))[0]",
+        "coalesce({c}, ts) + ({c} - {c})",
+        "to_timestamp(CAST(coalesce({c}, ts) AS STRING))",
+        "timestamp_micros(unix_micros(coalesce({c}, ts)))",
+    ];
+    let whole: Vec<i64> = MOMENTS.iter().map(|(_, nanos)| *nanos).collect();
+    for zone in [ZONES[0], ZONES[1]] {
+        let mut matrix = Matrix::open(zone).await;
+        for (source, kind) in SOURCES {
+            for (door, flags, template) in DOORS {
+                for spelling in whole_spellings {
+                    let query = select(&spelling.replace("{c}", source));
+                    let stored = matrix
+                        .store(kind)
+                        .stores(door, flags, template, &query)
+                        .await;
+                    assert_eq!(stored, whole, "{zone}: {door}: {query}");
+                }
+            }
+            let (door, flags, template) = DOORS[0];
+            for spelling in cut_spellings {
+                let query = select(&spelling.replace("{c}", source));
+                matrix
+                    .store(kind)
+                    .refuses(door, flags, template, &query)
+                    .await;
+            }
+        }
+    }
+}
+
 async fn explained(session: &ReparkSession, sql: &str) -> Vec<(String, String)> {
     let batches = session
         .sql(sql)
