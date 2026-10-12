@@ -24,5 +24,6 @@ them.
 - [attr-view-semantics-1/](attr-view-semantics-1/) — **ATTR-VIEW-SEMANTICS-1, grade B (owner, 2026-10-05):** SQL temp views and SQL aliases mint attribute ids, and a foreign column raises `MISSING_ATTRIBUTES` (items a–c). An Opus design sketch comes first, then Muse slices. They land on main right after the ATTR-ID-1 stack merges, with a release note. The probe, the matrix and the three engine outputs sit beside the order.
 - [attr-id-1/](attr-id-1/) — the ATTR-ID-1 orders (design sketch, S0…S4, the resumes and fixes), moved out of `/tmp` on 2026-10-01 with local paths and session links scrubbed; the design order is the grade-B template.
 - [microbatch/](microbatch/) — the micro-batch packet (docs only, 2026-10-05): the decisions, the MB-0 cell list, the design-sketch order and the slice orders. Every order on the track carries the North Star briefing (owner, 2026-10-05); the design sketches add its §7 eight-line checklist.
+- [ice-tsns-coercion-1/](ice-tsns-coercion-1/map.md) — **ICE-TSNS-COERCION-1 slice 0 (2026-10-12):** the twin and Spark-lattice measurement for parity row R-017. No product code. The summary, the progress note and the evidence sit in the directory.
 
 Up: [../map.md](../map.md).

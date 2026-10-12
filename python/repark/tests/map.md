@@ -3292,6 +3292,62 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   it gives the 47 moved cells of the first fix and no other, the first line of the restated
   count (the ledger's §9.4).
   pins: ice-tsns-merge-wall-1/C-021, C-023
+- [test_ice_tsns_coercion_1.py](test_ice_tsns_coercion_1.py) —
+  **ICE-TSNS-COERCION-1 slice 0 (2026-10-12):** the fixture covers every door, zone,
+  spelling and sibling recorded from main `572130dd`, the Spark 4.1.2 lattice covers both
+  ANSI modes, and the committed summary matches `_summarize_ice_tsns_coercion_1.py`.
+  pins: ice-tsns-coercion-1/C-001, C-002
+- [_ice_tsns_coercion_1_doors.py](_ice_tsns_coercion_1_doors.py) —
+  **ICE-TSNS-COERCION-1 slice 0:** the 64 write doors. A `UNION ALL` spelling is planned as
+  `max(v) GROUP BY id` because a scalar subquery does not plan. Stored values are the
+  Parquet int64 ticks.
+- [_ice_tsns_coercion_1_spellings.py](_ice_tsns_coercion_1_spellings.py) —
+  **ICE-TSNS-COERCION-1 slice 0:** the seven spellings, eight siblings, three range
+  siblings, five zones and the kernel wrapper. `nvl` and `ifnull` twins are `coalesce`.
+  `tzns` is the wall in the session zone, the same instant as Spark's `src_ltz`;
+  `tzns_utc` keeps the zone-fixed wall+00:00 seed behind the stored matrix.
+- [_record_ice_tsns_coercion_1_twins.py](_record_ice_tsns_coercion_1_twins.py) +
+  [ice_tsns_coercion_1_twins.json](ice_tsns_coercion_1_twins.json) —
+  **ICE-TSNS-COERCION-1 slice 0:** the recorder and the fixture. `--shard-zone` and
+  `--shard-target` run one zone and target; a zone that starts with a dash is bound with
+  `=`. Reads and range cells are in the same fixture. A value Python cannot convert stays
+  a per-row `conversion_error` beside its tick.
+  pins: ice-tsns-coercion-1/C-001, C-003
+- [_record_ice_tsns_coercion_1_spark_lattice.py](_record_ice_tsns_coercion_1_spark_lattice.py) +
+  [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) —
+  **ICE-TSNS-COERCION-1 slice 0:** Spark 4.1.2, five zones, both ANSI modes. `timestamp_ns`
+  is `TIMESTAMP_NTZ` and `timestamptz_ns` is `TIMESTAMP`. `--zones` records a subset; the
+  Spark version is read from the live session, not assumed.
+  pins: ice-tsns-coercion-1/C-002
+- [_summarize_ice_tsns_coercion_1.py](_summarize_ice_tsns_coercion_1.py) —
+  **ICE-TSNS-COERCION-1 slice 0:** writes the twin summary from the fixture and the lattice.
+  Untyped-NULL equality ignores error text and compares stored ticks, Parquet type and skip.
+  Zoned placement compares floor microseconds, as Spark's `unix_micros` floors.
+  Reads whose source has no lattice cells are not compared.
+  pins: ice-tsns-coercion-1/C-003
+- [_record_ice_tsns_coercion_1_casts.py](_record_ice_tsns_coercion_1_casts.py) —
+  **ICE-TSNS-COERCION-1 slice 0:** the 64-position written-cast census. A position is
+  unresolved when the plan still holds `Timestamp(ns)` or a nanosecond literal.
+  pins: ice-tsns-coercion-1/C-004
+- [_record_ice_tsns_coercion_1_gate.py](_record_ice_tsns_coercion_1_gate.py) —
+  **ICE-TSNS-COERCION-1 slice 0:** why `EXPLAIN` text cannot carry the gate-open rate, and
+  the pandas `datetime64[ns]` source count.
+  pins: ice-tsns-coercion-1/C-004
+- [_record_ice_tsns_coercion_1_lambda.py](_record_ice_tsns_coercion_1_lambda.py) —
+  **ICE-TSNS-COERCION-1 slice 0:** the analyzed plan of a lambda over nanosecond values.
+  pins: ice-tsns-coercion-1/C-004
+- [_record_ice_tsns_coercion_1_pins.py](_record_ice_tsns_coercion_1_pins.py) —
+  **ICE-TSNS-COERCION-1 slice 0:** the census of tests that expect microseconds for a card
+  spelling.
+  pins: ice-tsns-coercion-1/C-004
+- [_record_ice_tsns_coercion_1_try_cast.py](_record_ice_tsns_coercion_1_try_cast.py) —
+  **ICE-TSNS-COERCION-1 slice 0:** `TRY_CAST` for microsecond, nanosecond and string inputs,
+  RePark and Spark.
+  pins: ice-tsns-coercion-1/C-004
+- [_time_ice_tsns_coercion_1.py](_time_ice_tsns_coercion_1.py) —
+  **ICE-TSNS-COERCION-1 slice 0:** the cost-baseline timer, three sets of fifteen on the
+  installed module.
+  pins: ice-tsns-coercion-1/C-004
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
