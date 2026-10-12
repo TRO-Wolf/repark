@@ -18,5 +18,7 @@ Generated tables. Do not edit the summary by hand; regenerate it with
 - [try-repark.json](try-repark.json) + [try-spark.json](try-spark.json) +
   [try-cast.md](try-cast.md) — `TRY_CAST` for microsecond, nanosecond and
   string inputs, RePark and Spark 4.1.2.
+- [lambda.json](lambda.json) + [lambda.md](lambda.md) — whether the lambda
+  variable is typed before coercion, with the analyzed plan.
 
 Up: [../map.md](../map.md).

@@ -20,7 +20,7 @@ or `__repark_cast_timestamptz_ns__` written by hand. Spark 4.1.2 is the second o
 | C-001 | The twin of every card spelling is recorded from main 572130dd on every door, five zones. | The twin fixture and its recorder. | **PROVEN** | `python/repark/tests/ice_tsns_coercion_1_twins.json`: 107,520 twin, 107,520 statement and 1,920 plain stored cells, 1,120 reads, 1,680 range cells, 5 zones; recorder `_record_ice_tsns_coercion_1_twins.py`; summary `task/wo/ice-tsns-coercion-1/evidence/twins-summary.md`. |
 | C-002 | Spark 4.1.2's lattice for the temporal set is recorded in both ANSI modes. | The lattice JSON and its recorder. | **PROVEN** | `python/repark/tests/ice_tsns_coercion_1_spark_lattice.json`: 1,540 cells, Spark 4.1.2 read from the live session, both ANSI modes, 5 zones, 0 errors; recorder `_record_ice_tsns_coercion_1_spark_lattice.py`. |
 | C-003 | Every twin's kind and zone placement matches Spark's analogue. | The comparison table. | **OPEN** | Comparison table in `twins-summary.md`: kind 560/560 match; placement matches 336/560; 224 `tzns` non-UTC cells differ by the zone offset because RePark's `tzns` seed is wall+00:00 (zone-fixed) while Spark's `src_ltz` is wall-in-session-zone, and the twin passes `tzns` through unchanged. Open: align seeds (re-record) or rule pass-through placement out of scope. |
-| C-004 | The gate-open rate, the cost baseline and the four censuses are recorded. | Section 9 of the slice brief. | **OPEN** | Recorded in later commits of this slice. |
+| C-004 | The gate-open rate, the cost baseline and the four censuses are recorded. | Section 9 of the slice brief. | **PROVEN** | `task/wo/ice-tsns-coercion-1/evidence/`: `gate.md` (rate uncountable from public `EXPLAIN`; hook named), `cost-baseline.json` + `cost-baseline.md`, `pins.md`, `casts.json` + `written-casts.md`, `try-repark.json` + `try-spark.json` + `try-cast.md`, `lambda.json` + `lambda.md`. |
 | C-005 | Before the first type_coercion, every card site that holds a nanosecond value is wrapped in the existing cast kernels. | Slice 1. | **OPEN** | Not this slice. |
 | C-006 | `nvl` and `ifnull` over the temporal set become `coalesce`, then those kernels apply. | Slice 3. | **OPEN** | Not this slice. SQL `nvl` on main still has no timestamp signature. |
 | C-007 | A written `CAST`, `::timestamp`, `to_timestamp` or `TIMESTAMP` literal is unchanged by the card. | Slice 2. | **OPEN** | Not this slice. |
@@ -71,6 +71,18 @@ zero differ.
 
 Nothing in `crates/*/src/` or `python/repark/src/` changes in this slice. The gate, the
 lattice rewrite, and the temporal `nvl` rewrite are later slices.
+
+## 4. Step B (C-004)
+
+Recorded 2026-10-12 by Muse Spark. Item 1: the rate is uncountable — no
+`EXPLAIN` text, plain or `VERBOSE`, prints leaf field types — so `gate.md`
+names the missing hook (analyzed leaf schemas, or one analyzer counter on
+`Timestamp(Nanosecond, _)`) and counts 19 pandas `datetime64[ns]` source
+lines. Item 2: the baseline ran with the cargo lock free and no build up
+(load decaying 5.7 to 5.6); set medians agree to <2% except `merge_mor`.
+Items 3 to 6 re-ran byte-identical except `lambda.json`, whose physical plan
+carries the machine's `RoundRobinBatch` fanout (26 here, 8 before); the
+logical plan and the markdown match.
 
 ## Q. Questions
 

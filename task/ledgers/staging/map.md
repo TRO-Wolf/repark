@@ -28,9 +28,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ice-tsns-coercion-1-ledger.md](ice-tsns-coercion-1-ledger.md) —
   **ICE-TSNS-COERCION-1 (2026-10-12), parity row R-017, slice 0:** measurement only on main
   `572130dd`. The twin of every card spelling is recorded on 64 doors in five zones (C-001),
-  and Spark 4.1.2's lattice in both ANSI modes (C-002). Kind and zone placement against
-  Spark (C-003) and the gate, cost and censuses (C-004) stay with the summary. The gate,
-  the temporal `nvl` rewrite and written casts stay OPEN (C-005..C-007). No product code.
+  and Spark 4.1.2's lattice in both ANSI modes (C-002). Kind matches Spark and
+  placement is compared (C-003 stays OPEN on the seed question); the gate rate,
+  cost and censuses (C-004) are recorded. The gate, the temporal `nvl` rewrite
+  and written casts stay OPEN (C-005..C-007). No product code.
   `risk_tier: standard`. Branch `test/ice-tsns-coercion-1-slice-0`.
 - [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /

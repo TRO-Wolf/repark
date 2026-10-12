@@ -3324,20 +3324,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [_record_ice_tsns_coercion_1_casts.py](_record_ice_tsns_coercion_1_casts.py) —
   **ICE-TSNS-COERCION-1 slice 0:** the 64-position written-cast census. A position is
   unresolved when the plan still holds `Timestamp(ns)` or a nanosecond literal.
+  pins: ice-tsns-coercion-1/C-004
 - [_record_ice_tsns_coercion_1_gate.py](_record_ice_tsns_coercion_1_gate.py) —
   **ICE-TSNS-COERCION-1 slice 0:** why `EXPLAIN` text cannot carry the gate-open rate, and
   the pandas `datetime64[ns]` source count.
+  pins: ice-tsns-coercion-1/C-004
 - [_record_ice_tsns_coercion_1_lambda.py](_record_ice_tsns_coercion_1_lambda.py) —
   **ICE-TSNS-COERCION-1 slice 0:** the analyzed plan of a lambda over nanosecond values.
+  pins: ice-tsns-coercion-1/C-004
 - [_record_ice_tsns_coercion_1_pins.py](_record_ice_tsns_coercion_1_pins.py) —
   **ICE-TSNS-COERCION-1 slice 0:** the census of tests that expect microseconds for a card
   spelling.
+  pins: ice-tsns-coercion-1/C-004
 - [_record_ice_tsns_coercion_1_try_cast.py](_record_ice_tsns_coercion_1_try_cast.py) —
   **ICE-TSNS-COERCION-1 slice 0:** `TRY_CAST` for microsecond, nanosecond and string inputs,
   RePark and Spark.
+  pins: ice-tsns-coercion-1/C-004
 - [_time_ice_tsns_coercion_1.py](_time_ice_tsns_coercion_1.py) —
   **ICE-TSNS-COERCION-1 slice 0:** the cost-baseline timer, three sets of fifteen on the
   installed module.
+  pins: ice-tsns-coercion-1/C-004
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
