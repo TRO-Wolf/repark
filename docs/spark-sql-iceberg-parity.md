@@ -3358,7 +3358,8 @@ still open is `isModifiable`.
   assignment already stored that wall and is unchanged. These literal cells still store
   `1767323045123456` in every zone, equal to main: `INSERT … VALUES`, MERGE `UPDATE SET *`,
   whole-struct MERGE UPDATE of a literal, and `UPDATE … WHERE` of a literal.
-  `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` still refuse as main refuses.
+  `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` are still an error, equal
+  to main (row R-019).
 - **Apache Spark** — a `TIMESTAMP` assigned to a `TIMESTAMP_NTZ` field stores its wall in the
   session zone on every door it answers. *(oracle: [spark-4.1.2.jsonl](../task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl).)*
 - **Pin** — `crates/repark-spark/tests/timestamp_ns_wall_doors.rs`
@@ -3552,6 +3553,40 @@ still open is `isModifiable`.
 - **Rationale** — OPEN, dated 2026-10-09. The statement's own source does not evaluate, so
   no write door is reached and nothing is stored; measured by the nested matrices of
   ICE-TSNS-MERGE-WALL-1 and out of its scope. Ledger clause C-039, question Q10.
+
+### ICE-TSNS-SQL-1-R-019 — OPEN (measured 2026-10-11): `UPDATE` with no `WHERE` and `INSERT OVERWRITE … VALUES` still raise main's raw error
+
+- **repark** — on `struct<v: TIMESTAMP_NTZ, n: INT>` and `struct<v: TIMESTAMP, n: INT>`,
+  in UTC, America/New_York and Asia/Kolkata, these step-0 cells still raise the same
+  class and first line as main `2c33f289`. `INSERT OVERWRITE … VALUES` of a
+  `TIMESTAMP` literal (copy-on-write, both schemas, three zones: 6 cells) raises
+  `PySparkException` whose first line is `datafusion engine error: Arrow error:
+  Invalid argument error: column types must match schema types, expected
+  Struct("v": Timestamp(ns), "n": Int32) but found Struct("v": Timestamp(µs, "UTC"),
+  "n": Int32) at column index 1`. The same door from a `TIMESTAMP` column (6 cells)
+  raises `UnsupportedOperationException` `This feature is not implemented: Physical
+  plan does not support logical expression ScalarSubquery(<subquery>)`. `UPDATE`
+  with no `WHERE` (`update_whole_nowhere`, `update_col_nowhere`,
+  `update_field_nowhere`, `update_field_col_nowhere`), both schemas, sources
+  `ts_literal`, `ntz_literal`, and `ts_column` where the statement names a sibling
+  column, copy-on-write, three zones, raises `PySparkException` `arguments need to
+  have the same data type`. The merge-on-read twins raise `PySparkException`
+  `column types must match schema types` with the target field ids and without them
+  on the written struct. `update_whole_nowhere` and `update_field_nowhere` from a
+  `TIMESTAMP` column (no source relation; 2 doors, 2 modes, 2 schemas, 3 zones:
+  24 cells) raise `AnalysisException` `UPDATE operation on table`. The
+  `TIMESTAMP_NTZ` literal on `INSERT OVERWRITE … VALUES` stores the UTC wall, as
+  main does, and is not one of these error cells.
+- **Apache Spark** — stores the session wall on every cell of these doors it
+  answers. America/New_York, `ntz_nested`, `ts_literal`: `1767305045123456` on
+  both `INSERT OVERWRITE … VALUES` and `UPDATE` with no `WHERE`.
+  *(oracle: [spark-4.1.2.jsonl](../task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl).)*
+- **Pin** — `python/repark/tests/test_ice_ntz_nested_wall_1.py`
+  `test_raw_error_doors_still_raise_mains_error` (UTC, `ntz_nested`, the
+  `TIMESTAMP` literal, copy-on-write, both doors).
+- **Rationale** — OPEN, dated 2026-10-11. A struct type-conform hole, not a wall
+  defect. This unit does not change the doors. R-011 records them as still an
+  error, equal to main. Ledger ICE-NTZ-NESTED-WALL-1 C-005 stays open.
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 

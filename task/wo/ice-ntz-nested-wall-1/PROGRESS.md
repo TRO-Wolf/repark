@@ -102,3 +102,9 @@ and a list emit no path from either side.
 a zoned instant into a microsecond `TIMESTAMP_NTZ` wraps. The mirror row, a
 microsecond `TIMESTAMP_NTZ` into a zoned timestamp, is present and does not
 wrap. Seventeen `update_cast` tests pass.
+
+**Round 7, raw-error doors:** `UPDATE` with no `WHERE` and
+`INSERT OVERWRITE … VALUES` of a `TIMESTAMP` literal still raise main's
+`PySparkException` and the step-0 first line, in UTC. Registry row
+ICE-TSNS-SQL-1-R-019 is OPEN. R-011 records them as still an error, equal
+to main. C-005 stays open.

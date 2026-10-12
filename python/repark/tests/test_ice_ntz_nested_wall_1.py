@@ -552,3 +552,52 @@ def test_a_volatile_struct_is_evaluated_once(tmp_path: Path) -> None:
         assert leaf_ticks(spark, appended, "st.v") == [SESSION_WALL["America/New_York"]]
     finally:
         spark.stop()
+
+
+def error_line(error: Exception) -> str:
+    """Return the first non-empty line of ``error``, as the step-0 probe does."""
+    text = [line.strip() for line in str(error).splitlines() if line.strip()]
+    return text[0] if text else ""
+
+
+def test_raw_error_doors_still_raise_mains_error(tmp_path: Path) -> None:
+    """``UPDATE`` with no ``WHERE`` and ``INSERT OVERWRITE … VALUES`` raise main's error.
+
+    UTC, ``ntz_nested``, a ``TIMESTAMP`` literal, copy-on-write. The class and the
+    first line are the step-0 text at ``2c33f289``. Spark stores the session wall
+    on both doors.
+    """
+    overwrite_line = (
+        "datafusion engine error: Arrow error: Invalid argument error: column types "
+        'must match schema types, expected Struct("v": Timestamp(ns), "n": Int32) but '
+        'found Struct("v": Timestamp(\u00b5s, "UTC"), "n": Int32) at column index 1'
+    )
+    update_line = (
+        "datafusion engine error: Arrow error: Invalid argument error: "
+        "arguments need to have the same data type"
+    )
+    spark = open_session("UTC", tmp_path)
+    try:
+        create_nested(spark, "ice.ns.over", "TIMESTAMP_NTZ")
+        spark.sql(
+            "INSERT INTO ice.ns.over (id, st, k) VALUES "
+            "(1, named_struct('v', CAST(NULL AS TIMESTAMP_NTZ), 'n', 0), 0)"
+        )
+        with pytest.raises(Exception) as caught:
+            spark.sql(
+                f"INSERT OVERWRITE ice.ns.over VALUES (1, named_struct('v', {INSTANT}, 'n', 1), 0)"
+            )
+        assert type(caught.value).__name__ == "PySparkException"
+        assert error_line(caught.value) == overwrite_line
+
+        create_nested(spark, "ice.ns.upd", "TIMESTAMP_NTZ")
+        spark.sql(
+            "INSERT INTO ice.ns.upd (id, st, k) VALUES "
+            "(1, named_struct('v', CAST(NULL AS TIMESTAMP_NTZ), 'n', 0), 0)"
+        )
+        with pytest.raises(Exception) as caught:
+            spark.sql(f"UPDATE ice.ns.upd SET st = named_struct('v', {INSTANT}, 'n', 1)")
+        assert type(caught.value).__name__ == "PySparkException"
+        assert error_line(caught.value) == update_line
+    finally:
+        spark.stop()
