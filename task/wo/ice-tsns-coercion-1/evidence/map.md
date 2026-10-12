@@ -11,5 +11,7 @@ Generated tables. Do not edit the summary by hand; regenerate it with
 - [cost-baseline.json](cost-baseline.json) + [cost-baseline.md](cost-baseline.md) —
   the timer output (three sets of fifteen, medians per statement) and its run
   context: the lock was free, the load was decaying, nothing was building.
+- [pins.md](pins.md) — the tests that expect microseconds for a card spelling,
+  and the inspected tests that would not move.
 
 Up: [../map.md](../map.md).
