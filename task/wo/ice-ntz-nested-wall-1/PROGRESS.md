@@ -121,3 +121,7 @@ call site. The attempt stops. Literal whole-struct cells stay on the UTC wall.
 **Round 8, R5:** registry row R-020 records 88 NTZ-literal cells into a nested
 `TIMESTAMP`. Depth 2 is pinned. A struct under a list keeps the UTC wall. A
 map insert panics in Arrow before a store. The mirror row stays false.
+
+**Round 8, R6:** the repair `UPDATE t SET st.v = c WHERE id >= 0` moves a
+Parquet leaf from main's UTC wall `1767323045123456` to the New York session
+wall `1767305045123456`.

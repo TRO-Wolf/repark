@@ -290,6 +290,16 @@ Nested `TIMESTAMP_NTZ` values written by `INSERT` before the fix hold the UTC wa
 | `INSERT … VALUES` of a literal, MERGE `UPDATE SET *`, whole-struct literal MERGE and `UPDATE … WHERE` | UTC wall | UTC wall |
 | `UPDATE` with no `WHERE`, `INSERT OVERWRITE … VALUES` | refusal | the same refusal |
 
+A column and a literal of the same instant still give two answers on whole-struct
+`MERGE UPDATE` and on `UPDATE … WHERE`. The column stores the session wall. The
+literal stores `1767323045123456` in every zone (R4 did not land).
+
+Repair, for rows that hold that UTC wall: `UPDATE t SET st.v = c WHERE id >= 0`,
+where `c` is a `TIMESTAMP` column holding the original instant. Field assignment
+stores the session wall. Proved by `test_repair_moves_a_main_wall_to_the_session_wall`:
+the Parquet leaf moves from `1767323045123456` to `1767305045123456` in
+America/New_York, which is Spark's value for that instant.
+
 ## 9. The struct kernel (round 7)
 
 The member-by-member rebuild cannot stand. Binding the source once still reaches

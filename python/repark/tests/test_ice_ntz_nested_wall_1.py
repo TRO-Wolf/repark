@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from repark import ReparkSession
@@ -47,6 +48,18 @@ def open_session(zone: str, warehouse: Path) -> Any:
     spark.register_memory_catalog("ice", str(warehouse))
     spark.sql("CREATE NAMESPACE ice.ns")
     return spark
+
+
+def parquet_leaf(spark: Any, table: str, column: str, field: str) -> list[int | None]:
+    """Return one struct field's microseconds from the table's Parquet data files."""
+    files = spark.sql(f"SELECT content, file_path FROM {table}.files").toArrow().to_pylist()
+    ticks: list[int | None] = []
+    for file in files:
+        if file["content"] != 0:
+            continue
+        stored = pq.read_table(file["file_path"], columns=[column]).column(column)
+        ticks.extend(stored.combine_chunks().field(field).cast(pa.int64(), safe=False).to_pylist())
+    return ticks
 
 
 def leaf_ticks(spark: Any, table: str, leaf: str) -> list[int | None]:
@@ -665,5 +678,31 @@ def test_a_struct_under_a_list_keeps_the_utc_wall(tmp_path: Path) -> None:
         assert column.combine_chunks().to_pylist() == [
             [{"v": datetime(2026, 1, 2, 3, 4, 5, 123456)}]
         ]
+    finally:
+        spark.stop()
+
+
+def test_repair_moves_a_main_wall_to_the_session_wall(tmp_path: Path) -> None:
+    """An UPDATE of the leaf repairs a row that holds the UTC wall main wrote.
+
+    The inserted ``TIMESTAMP_NTZ`` literal is ``1767323045123456``. The repair
+    is ``UPDATE t SET st.v = c WHERE id >= 0``, with ``c`` the original instant.
+    The leaf is read back from the Parquet data file.
+    """
+    spark = open_session("America/New_York", tmp_path)
+    try:
+        write_source(spark)
+        table = "ice.ns.repair"
+        spark.sql(
+            f"CREATE TABLE {table} "
+            "(id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP) "
+            "USING iceberg TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(
+            f"INSERT INTO {table} SELECT 1, named_struct('v', {WALL}, 'n', 1), 0, l FROM ice.ns.src"
+        )
+        assert parquet_leaf(spark, table, "st", "v") == [WALL_TICK]
+        spark.sql(f"UPDATE {table} SET st.v = c WHERE id >= 0")
+        assert parquet_leaf(spark, table, "st", "v") == [SESSION_WALL["America/New_York"]]
     finally:
         spark.stop()
