@@ -25,5 +25,8 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   `opened > 0`, plus the full-run totals). The markdown is the check, the
   per-file opens, and which file has a pandas `datetime64[ns]` frame as its
   only nanosecond source.
+- [cost-slice1-round1.md](cost-slice1-round1.md) — slice 1 round 1 cost
+  ratios against [cost-baseline.json](cost-baseline.json). `merge` and
+  `merge_mor` are above 1.05. No product change followed.
 
 Up: [../map.md](../map.md).
