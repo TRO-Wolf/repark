@@ -39,6 +39,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-013, Q1), a NULL into a required column is Arrow's text (C-014, Q2), the unfiltered
   `UPDATE`'s overflow class (C-015, Q3). `risk_tier: standard`. Branch
   `fix/ice-tstzns-wall-1`.
+- [ice-tsns-coercion-1-ledger.md](ice-tsns-coercion-1-ledger.md) —
+  **ICE-TSNS-COERCION-1 (2026-10-12), parity row R-017, slice 0:** measurement only on main
+  `572130dd`. The twin of every card spelling is recorded on 64 doors in five zones (C-001),
+  and Spark 4.1.2's lattice in both ANSI modes (C-002). Kind and placement match
+  Spark 560/560 on aligned seeds (C-003); the gate rate, cost and censuses
+  (C-004) are recorded. The gate, the temporal `nvl` rewrite and written casts
+  stay OPEN (C-005..C-007). No product code.
+  `risk_tier: standard`. Branch `test/ice-tsns-coercion-1-slice-0`.
 - [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
   `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
