@@ -141,6 +141,30 @@ fn under_analyze(plan: &LogicalPlan) -> &LogicalPlan {
     }
 }
 
+async fn fill_insert_defaults_for_dml_target(
+    catalogs: &CatalogRegistry,
+    plan: LogicalPlan,
+    insert_columns: Option<Vec<String>>,
+    preloaded: Option<Box<iceberg::table::Table>>,
+) -> Result<LogicalPlan> {
+    let target = insert_defaults::dml_target(under_analyze(&plan))
+        .and_then(|(name, ident)| catalogs.get(&name).map(|catalog| (catalog, ident)));
+    match target {
+        Some((catalog, ident)) => {
+            repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await?;
+            Box::pin(insert_defaults::fill_insert_plan(
+                catalog,
+                &ident,
+                insert_columns.as_deref(),
+                plan,
+                preloaded.map(|table| *table),
+            ))
+            .await
+        }
+        None => Ok(plan),
+    }
+}
+
 async fn execute_passthrough_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -228,22 +252,8 @@ async fn execute_passthrough_inner(
     // Eager analysis exposes Spark-adjusted types to Arrow export and CTAS schema derivation.
     let plan = repark_functions::analyze_eagerly(&state, plan)?;
     let plan = conform_insert_narrowed_ints(ctx, plan).await?;
-    let target = insert_defaults::dml_target(under_analyze(&plan))
-        .and_then(|(name, ident)| catalogs.get(&name).map(|catalog| (catalog, ident)));
-    let plan = match target {
-        Some((catalog, ident)) => {
-            repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await?;
-            Box::pin(insert_defaults::fill_insert_plan(
-                catalog,
-                &ident,
-                insert_columns.as_deref(),
-                plan,
-                preloaded.map(|table| *table),
-            ))
-            .await?
-        }
-        None => plan,
-    };
+    let plan =
+        fill_insert_defaults_for_dml_target(catalogs, plan, insert_columns, preloaded).await?;
     let plan = crate::insert_timestamp_ns::after_analysis(plan)?;
     if insert_source {
         return ctx.execute_logical_plan(insert_input(&plan)?).await;

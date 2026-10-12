@@ -1072,6 +1072,11 @@ pins: rp-4-fork-repin/C-005, C-006
   name `__repark_cast_nested_ntz__` more times than the original. Any error
   keeps the original statement. The arm does not collect or commit.
   pins: ice-ntz-nested-wall-1/C-003
+- `spark_ast.rs` — **ICE-NTZ-NESTED-WALL-1 round 12 (2026-10-12):**
+  `fill_insert_defaults_for_dml_target` is the DML-target resolve plus
+  `fill_insert_plan` moved out of `execute_passthrough_inner` unchanged, so the
+  passthrough stays under clippy's 100-line threshold.
+  pins: ice-ntz-nested-wall-1/C-003
 - `update_cast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-12):**
   `refuse_cast_then_fold_nested` returns the folded `Update`.
   `explain_update_assignments` swaps assignments only when the folded text
