@@ -17,7 +17,7 @@ import os
 import sys
 import tempfile
 import traceback
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -36,9 +36,9 @@ def epoch_micros(value: datetime) -> int:
     A naive value is read as a UTC wall, which is the tick a naive timestamp
     stores. An aware value is converted to UTC first.
     """
-    aware = value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
-    utc = aware.astimezone(timezone.utc)
-    delta = utc - datetime(1970, 1, 1, tzinfo=timezone.utc)
+    aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+    utc = aware.astimezone(UTC)
+    delta = utc - datetime(1970, 1, 1, tzinfo=UTC)
     return delta.days * 86_400 * 1_000_000 + delta.seconds * 1_000_000 + delta.microseconds
 
 
@@ -55,7 +55,7 @@ def wall_as_utc_micros() -> int:
 
 def instant_micros() -> int:
     """Return the inventory instant, in microseconds."""
-    return epoch_micros(datetime(2026, 7, 4, 11, 22, 33, 654321, tzinfo=timezone.utc))
+    return epoch_micros(datetime(2026, 7, 4, 11, 22, 33, 654321, tzinfo=UTC))
 
 
 def redact(text: str) -> str:
@@ -72,7 +72,8 @@ def redact(text: str) -> str:
 
 def error_record(exc: BaseException) -> tuple[str, str]:
     """Return an error class and the redacted first line."""
-    message = redact(str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__)
+    raw = str(exc).strip()
+    message = redact(raw.splitlines()[0] if raw else exc.__class__.__name__)
     if len(message) > 400:
         message = message[:400]
     bracket = ""
@@ -113,13 +114,10 @@ def shape_sql(level: str, shape: str, names: dict[str, str]) -> str:
         )
     if level == "struct" and shape == "union":
         return (
-            f"SELECT st AS mixed FROM {names['a']} "
-            f"UNION ALL SELECT st AS mixed FROM {names['b']}"
+            f"SELECT st AS mixed FROM {names['a']} UNION ALL SELECT st AS mixed FROM {names['b']}"
         )
     if level == "struct" and shape == "cast":
-        return (
-            f"SELECT id, CAST(st AS STRUCT<v: TIMESTAMP, n: INT>) AS mixed FROM {names['a']}"
-        )
+        return f"SELECT id, CAST(st AS STRUCT<v: TIMESTAMP, n: INT>) AS mixed FROM {names['a']}"
     if level == "top" and shape == "case":
         return (
             f"SELECT a.id AS id, CASE WHEN a.id = 2 THEN b.v ELSE a.v END AS mixed "
@@ -132,8 +130,7 @@ def shape_sql(level: str, shape: str, names: dict[str, str]) -> str:
         )
     if level == "top" and shape == "union":
         return (
-            f"SELECT v AS mixed FROM {names['at']} "
-            f"UNION ALL SELECT v AS mixed FROM {names['bt']}"
+            f"SELECT v AS mixed FROM {names['at']} UNION ALL SELECT v AS mixed FROM {names['bt']}"
         )
     return f"SELECT id, CAST(v AS TIMESTAMP) AS mixed FROM {names['at']}"
 
@@ -174,9 +171,7 @@ def use_sql(level: str, shape: str, use: str, names: dict[str, str], dest: str) 
     value_type = "STRUCT<v: TIMESTAMP, n: INT>" if level == "struct" else "TIMESTAMP"
     value_name = "st" if level == "struct" else "v"
     if has_id(shape):
-        create = (
-            f"CREATE TABLE {dest} (id INT, {value_name} {value_type}) USING iceberg"
-        )
+        create = f"CREATE TABLE {dest} (id INT, {value_name} {value_type}) USING iceberg"
         insert = f"INSERT INTO {dest} SELECT id, mixed FROM ({inner}) s"
         read_col = "st.v" if level == "struct" else "v"
         read = f"SELECT id, {read_col} AS v FROM {dest} ORDER BY id"
@@ -228,12 +223,14 @@ def arrow_rows(table: Any) -> tuple[str, list[dict[str, Any]]]:
         field = table.schema.field(name)
         if pa.types.is_timestamp(field.type):
             columns[name] = [
-                None if item is None else int(item)
-                for item in array.cast(pa.int64()).to_pylist()
+                None if item is None else int(item) for item in array.cast(pa.int64()).to_pylist()
             ]
         elif pa.types.is_struct(field.type) and field.type.get_field_index("v") >= 0:
             child = array.field("v")
-            ticks = child.cast(pa.int64()).to_pylist() if pa.types.is_timestamp(child.type) else None
+            if pa.types.is_timestamp(child.type):
+                ticks = child.cast(pa.int64()).to_pylist()
+            else:
+                ticks = None
             structs = array.to_pylist()
             packed: list[Any] = []
             for index, item in enumerate(structs):
@@ -257,7 +254,9 @@ def arrow_rows(table: Any) -> tuple[str, list[dict[str, Any]]]:
 def spark_rows(frame: Any, naive_zone: str) -> tuple[str, list[dict[str, Any]]]:
     """Return the Spark type string and rows whose ticks are UTC instants."""
     schema = frame.schema
-    type_text = ", ".join(f"{field.name}:{field.dataType.simpleString()}" for field in schema.fields)
+    type_text = ", ".join(
+        f"{field.name}:{field.dataType.simpleString()}" for field in schema.fields
+    )
     rows: list[dict[str, Any]] = []
     for collected in frame.collect():
         mapped = collected.asDict(recursive=True)
@@ -525,9 +524,7 @@ def canon_value(value: Any) -> Any:
         return value["tick"]
     if isinstance(value, dict) and "v_tick" in value:
         reduced = {
-            key: canon_value(item)
-            for key, item in value.items()
-            if key not in ("v", "v_tick")
+            key: canon_value(item) for key, item in value.items() if key not in ("v", "v_tick")
         }
         reduced["v"] = value["v_tick"]
         return reduced
@@ -561,7 +558,8 @@ def short_cell(row: dict[str, Any]) -> str:
 def summarize(repark_path: Path, spark_path: Path, summary_path: Path) -> None:
     """Write the comparison table and the wall-leaf reading."""
     repark = {
-        (row["level"], row["shape"], row["use"], row["zone"]): row for row in read_jsonl(repark_path)
+        (row["level"], row["shape"], row["use"], row["zone"]): row
+        for row in read_jsonl(repark_path)
     }
     spark = {
         (row["level"], row["shape"], row["use"], row["zone"]): row for row in read_jsonl(spark_path)
@@ -600,12 +598,19 @@ def summarize(repark_path: Path, spark_path: Path, summary_path: Path) -> None:
     lines.append("|---|---|---|---|---|")
     for zone in ZONES:
         localized = localized_wall_micros(zone)
-        struct_tick = tick_from(repark.get(("struct", "case", "read", zone)), spark.get(("struct", "case", "read", zone)))
-        top_tick = tick_from(repark.get(("top", "case", "read", zone)), spark.get(("top", "case", "read", zone)))
-        cast_tick = tick_from(repark.get(("struct", "cast", "read", zone)), spark.get(("struct", "cast", "read", zone)))
-        lines.append(
-            f"| {zone} | {localized} | {struct_tick} | {top_tick} | {cast_tick} |"
+        struct_tick = tick_from(
+            repark.get(("struct", "case", "read", zone)),
+            spark.get(("struct", "case", "read", zone)),
         )
+        top_tick = tick_from(
+            repark.get(("top", "case", "read", zone)),
+            spark.get(("top", "case", "read", zone)),
+        )
+        cast_tick = tick_from(
+            repark.get(("struct", "cast", "read", zone)),
+            spark.get(("struct", "cast", "read", zone)),
+        )
+        lines.append(f"| {zone} | {localized} | {struct_tick} | {top_tick} | {cast_tick} |")
     lines.append("")
     summary_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"differing {differs} of {len(keys)}")
@@ -632,9 +637,7 @@ def id_tick(row: dict[str, Any] | None) -> str:
     return str(canon_value(chosen.get("v")))
 
 
-def summarize_head(
-    main_path: Path, head_path: Path, spark_path: Path, summary_path: Path
-) -> int:
+def summarize_head(main_path: Path, head_path: Path, spark_path: Path, summary_path: Path) -> int:
     """Write the head comparison. Return 1 when a cell moved away or a control moved."""
     main_rows = {(_key(row)): row for row in read_jsonl(main_path)}
     head_rows = {(_key(row)): row for row in read_jsonl(head_path)}
@@ -678,15 +681,8 @@ def summarize_head(
     for key in moved:
         level, shape, use, zone = key
         lines.append(
-            "| {level}/{shape} | {use} | {zone} | {main} | {head} | {spark} |".format(
-                level=level,
-                shape=shape,
-                use=use,
-                zone=zone,
-                main=_side(main_rows.get(key)),
-                head=_side(head_rows.get(key)),
-                spark=_side(spark_rows.get(key)),
-            )
+            f"| {level}/{shape} | {use} | {zone} | {_side(main_rows.get(key))} | "
+            f"{_side(head_rows.get(key))} | {_side(spark_rows.get(key))} |"
         )
     if not moved:
         lines.append("|  |  |  |  |  |  |")
