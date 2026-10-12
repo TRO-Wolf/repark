@@ -53,6 +53,12 @@ jobs:
             --extra numpy --extra pandas --extra polars --extra ml-ext \
             --no-install-package repark
           (cd python/repark && uvx maturin@1.14.1 develop)
+      - name: Runner attribution
+        run: |
+          java -version
+          echo "ImageOS=$ImageOS ImageVersion=$ImageVersion"
+          uv run --locked --no-sync python --version
+          uv pip freeze
       # REPARK_PARITY_LIVE and the JVM arm the live oracle; SPARK_LOCAL_IP keeps its local driver
       # deterministic.
       - name: facade suite + live oracle tier (REPARK_PARITY_LIVE=1)
