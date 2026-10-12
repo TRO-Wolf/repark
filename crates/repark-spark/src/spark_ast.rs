@@ -191,6 +191,11 @@ async fn execute_passthrough_inner(
         DfStatement::Explain(explain) => {
             if let DfStatement::Statement(inner) = explain.statement.as_mut() {
                 crate::keyword_lower::lower_timestamp_ns_casts(inner.as_mut());
+                if !explain.analyze
+                    && let Statement::Update(update) = inner.as_mut()
+                {
+                    crate::update_cast::explain_update_assignments(ctx, catalogs, update).await;
+                }
             }
         }
         DfStatement::Reset(ResetStatement::Variable(name)) => {

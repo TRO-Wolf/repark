@@ -3,6 +3,7 @@ use std::sync::Arc;
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, ExprSchema, Result};
+use datafusion::logical_expr::dml::InsertOp;
 use datafusion::logical_expr::expr::Cast;
 use datafusion::logical_expr::{
     DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, Values, WriteOp,
@@ -68,6 +69,14 @@ pub(crate) fn before_analysis(
 }
 
 pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
+    if let LogicalPlan::Explain(explain) = &plan {
+        if let Some(inner) = rewritten_append_explain(explain.plan.as_ref()) {
+            let mut explain = explain.clone();
+            explain.plan = Arc::new(inner);
+            return Ok(LogicalPlan::Explain(explain));
+        }
+        return Ok(plan);
+    }
     let nested = iceberg_insert(&plan) && dml_target_has_nested_micro_ntz(&plan);
     let targets = ns_store_targets(&plan);
     if targets.is_none() && !nested {
@@ -125,6 +134,37 @@ pub(crate) fn after_analysis(plan: LogicalPlan) -> Result<LogicalPlan> {
     }
     let input = Arc::clone(&projection.input);
     rebuild(dml, exprs, input, changed)
+}
+
+fn rewritten_append_explain(plan: &LogicalPlan) -> Option<LogicalPlan> {
+    let LogicalPlan::Dml(dml) = plan else {
+        return None;
+    };
+    if !matches!(dml.op, WriteOp::Insert(InsertOp::Append)) || !iceberg_insert(plan) {
+        return None;
+    }
+    let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
+        return None;
+    };
+    if projection.expr.len() != dml.target.schema().fields().len() {
+        return None;
+    }
+    let schema = projection.input.schema();
+    let mut exprs = Vec::with_capacity(projection.expr.len());
+    let mut changed = false;
+    for (expr, field) in projection.expr.iter().zip(dml.target.schema().fields()) {
+        let wrapped = wrap_nested_ntz(expr, field.data_type(), schema.as_ref());
+        changed |= &wrapped != expr;
+        exprs.push(wrapped);
+    }
+    if !changed {
+        return None;
+    }
+    let conformed = Projection::try_new(exprs, Arc::clone(&projection.input)).ok()?;
+    Some(LogicalPlan::Dml(DmlStatement {
+        input: Arc::new(LogicalPlan::Projection(conformed)),
+        ..dml.clone()
+    }))
 }
 
 fn iceberg_insert(plan: &LogicalPlan) -> bool {
@@ -508,6 +548,19 @@ mod tests {
         }
     }
 
+    fn explain_plan(plan: LogicalPlan) -> LogicalPlan {
+        let schema = DFSchema::try_from(LogicalPlan::explain_schema().as_ref().clone())
+            .expect("explain schema");
+        LogicalPlan::Explain(datafusion::logical_expr::Explain {
+            verbose: false,
+            explain_format: datafusion::logical_expr::ExplainFormat::Indent,
+            plan: Arc::new(plan),
+            stringified_plans: vec![],
+            schema: Arc::new(schema),
+            logical_optimization_succeeded: false,
+        })
+    }
+
     fn plan_of(
         target_fields: Vec<Field>,
         input_fields: Vec<Field>,
@@ -733,9 +786,24 @@ mod tests {
             vec![col("id").alias("id"), st],
         );
         assert_eq!(after_analysis(plan.clone()).expect("plan"), plan);
+        let explained = explain_plan(plan.clone());
+        assert_eq!(
+            after_analysis(explained.clone()).expect("explain"),
+            explained
+        );
         let LogicalPlan::Dml(dml) = plan else {
             panic!("dml");
         };
+        let overwrite = explain_plan(LogicalPlan::Dml(
+            datafusion::logical_expr::dml::DmlStatement {
+                op: WriteOp::Insert(InsertOp::Overwrite),
+                ..dml.clone()
+            },
+        ));
+        assert_eq!(
+            after_analysis(overwrite.clone()).expect("overwrite explain"),
+            overwrite
+        );
         let update = LogicalPlan::Dml(datafusion::logical_expr::dml::DmlStatement {
             op: WriteOp::Update,
             ..dml

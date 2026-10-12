@@ -23,7 +23,10 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   **C-4 merge (2026-10-10):** `execute_update` also carries the Postgres upsert check
   from the deleted `update.rs` after the P11 refusal, so an unpopulated read-only set
   names the `CONNECT-DECL-pg-write-upsert` row.
-  pins: enc-1/C-005, c-4/C-013
+  **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** `execute_update` renders the folded
+  `Update` that `refuse_cast_then_fold_nested` now returns, the same SQL the
+  previous string return planned.
+  pins: enc-1/C-005, c-4/C-013, ice-ntz-nested-wall-1/C-003
 - `insert_positional.rs` — **U8 WRITE-SQL PR1 (2026-09-24):** `prepare_positional_insert`
   runs after U6's by-name routing check in `execute_insert_routed`. It aliases a later
   projection item whose DataFusion name repeats an earlier one (`__repark_col_<n>`; a cast

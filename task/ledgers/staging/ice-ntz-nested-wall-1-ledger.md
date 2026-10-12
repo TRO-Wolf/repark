@@ -443,10 +443,20 @@ b.branch_dev` and `spark.wap.branch` store the session wall
 `1767305045123456`. Pin: `test_branch_merge_update_stores_the_session_wall`.
 Disposition: fixed.
 
-F6 is not changed. EXPLAIN of a DML into a nested `TIMESTAMP_NTZ` leaf prints
-main's plan, not `__repark_cast_nested_ntz__`. Open question for the owner:
-should EXPLAIN show the kernel the write path runs? Disposition: recorded,
-open question for the owner.
+F6 is option (b), the two doors whose rewrite is side-effect free.
+`after_analysis` descends a non-ANALYZE `LogicalPlan::Explain` to an append
+`Dml` and substitutes only when `wrap_nested_ntz` changed an expression. The
+`DfStatement::Explain` arm runs `refuse_cast_then_fold_nested` on an inner
+`Update` and replaces assignments only when they name
+`__repark_cast_nested_ntz__` more times than the original. Any other
+statement, and any error from the fold, keeps the original value. `EXPLAIN`
+of `INSERT OVERWRITE`, of the three `MERGE` clauses, of `REPLACE WHERE`, and
+of `BY NAME` stays main (ICE-TSNS-SQL-1-R-022 through R-027). `EXPLAIN
+ANALYZE INSERT` of an instant in America/New_York writes one row at the UTC
+wall `1767323045123456` (R-028). Pin: `test_explain_pins`. The unconverted
+texts were recorded on head `b6b20b3c` with the arm absent. Disposition:
+fixed for append `INSERT` and whole-struct `UPDATE`; named holes for the
+other doors and for `EXPLAIN ANALYZE`.
 
 F7 is not a sentence this unit builds. The refusal text is Arrow's, and the
 cast's input type is the kernel's output (`Timestamp(us)` with no zone) rather

@@ -1057,6 +1057,24 @@ pins: rp-4-fork-repin/C-005, C-006
   `TRY_CAST`, stays the original expression. A column with no selected leaf
   is returned unchanged.
   pins: ice-ntz-nested-wall-1/C-003
+- `insert_timestamp_ns.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** `after_analysis`
+  descends a non-ANALYZE `LogicalPlan::Explain` to an append `Dml` and
+  substitutes that plan only when `wrap_nested_ntz` changed an expression on
+  an Iceberg append. Overwrite, update, and an unchanged expression keep the
+  original plan. `EXPLAIN ANALYZE` is `LogicalPlan::Analyze` and is not
+  descended.
+  pins: ice-ntz-nested-wall-1/C-003
+- `spark_ast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** the
+  `DfStatement::Explain` arm, for a non-ANALYZE inner `Update`, runs
+  `refuse_cast_then_fold_nested` and replaces the assignments only when they
+  name `__repark_cast_nested_ntz__` more times than the original. Any error
+  keeps the original statement. The arm does not collect or commit.
+  pins: ice-ntz-nested-wall-1/C-003
+- `update_cast.rs` — **ICE-NTZ-NESTED-WALL-1 (2026-10-12):**
+  `refuse_cast_then_fold_nested` returns the folded `Update`.
+  `explain_update_assignments` swaps assignments only when the folded text
+  names the nested kernel more times than the original.
+  pins: ice-ntz-nested-wall-1/C-003
 - `insert_timestamp_ns.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the `UPDATE` conform runs
   for a `timestamptz_ns` target too. R-007 had filtered zoned targets out of it to hold the
   type as a control, which is what left `UPDATE t SET v = <column>` with no `WHERE` on the

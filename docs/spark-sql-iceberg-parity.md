@@ -3632,6 +3632,73 @@ still open is `isModifiable`.
 - **Rationale** — OPEN, dated 2026-10-12. The silent no-op is main's. This unit
   does not fix it.
 
+### ICE-TSNS-SQL-1-R-022 — OPEN (measured 2026-10-12): `EXPLAIN INSERT OVERWRITE` of a nested instant prints main's plan
+
+- **repark** — `EXPLAIN INSERT OVERWRITE` into `STRUCT<v: TIMESTAMP_NTZ, n: INT>`
+  prints `Dml: op=[Insert Overwrite]` and the planner `CAST`, with no
+  `__repark_cast_nested_ntz__`. The executed overwrite uses the bare kernel,
+  which has a different pairing rule, so the plan is not rewritten.
+- **Apache Spark** — prints its own plan. *(oracle: none for this EXPLAIN text.)*
+- **Pin** — `test_explain_pins` holds the text recorded on head `b6b20b3c` with
+  the EXPLAIN arm absent.
+- **Rationale** — OPEN, dated 2026-10-12. Explaining overwrite would have to run
+  the emptiness probe. This unit keeps main's plan.
+
+### ICE-TSNS-SQL-1-R-023 — OPEN (measured 2026-10-12): `EXPLAIN` of a MERGE update clause keeps main's refusal
+
+- **repark** — `UnsupportedOperationException`, first line
+  `This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('v', s.l, 'n', 1)`.
+- **Apache Spark** — plans MERGE. *(oracle: not re-run; the class is DataFusion's.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. DataFusion has no MERGE arm. The fold
+  is not called from EXPLAIN.
+
+### ICE-TSNS-SQL-1-R-024 — OPEN (measured 2026-10-12): `EXPLAIN` of a MERGE insert clause keeps main's refusal
+
+- **repark** — `UnsupportedOperationException`, first line
+  `This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st, k) VALUES (s.id, named_struct('v', s.l, 'n', 1), 0)`.
+- **Apache Spark** — plans MERGE. *(oracle: not re-run.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. Same refusal as R-023.
+
+### ICE-TSNS-SQL-1-R-025 — OPEN (measured 2026-10-12): `EXPLAIN` of MERGE `NOT MATCHED BY SOURCE` keeps main's refusal
+
+- **repark** — `UnsupportedOperationException`, first line
+  `This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET t.k = 0`.
+- **Apache Spark** — plans MERGE. *(oracle: not re-run.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. Same refusal as R-023.
+
+### ICE-TSNS-SQL-1-R-026 — OPEN (measured 2026-10-12): `EXPLAIN INSERT … REPLACE WHERE` keeps main's parse refusal
+
+- **repark** — `ParseException`, first line
+  `SQL error: ParserError("Expected: SELECT, VALUES, or a subquery in the query body, found: REPLACE at Line: 1, Column: 30")`.
+- **Apache Spark** — accepts `REPLACE WHERE`. *(oracle: not re-run.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. The interceptor requires the first word
+  `INSERT`. EXPLAIN never reaches it. The refusal stays.
+
+### ICE-TSNS-SQL-1-R-027 — OPEN (measured 2026-10-12): `EXPLAIN INSERT … BY NAME` keeps main's parse refusal
+
+- **repark** — `ParseException`, first line
+  `SQL error: ParserError("Expected: SELECT, VALUES, or a subquery in the query body, found: BY at Line: 1, Column: 30")`.
+- **Apache Spark** — accepts `BY NAME`. *(oracle: not re-run.)*
+- **Pin** — `test_explain_pins`.
+- **Rationale** — OPEN, dated 2026-10-12. Same miss as R-026. The refusal stays.
+
+### ICE-TSNS-SQL-1-R-028 — OPEN (measured 2026-10-12): `EXPLAIN ANALYZE INSERT` of an instant stores the UTC wall
+
+- **repark** — America/New_York, `EXPLAIN ANALYZE INSERT INTO … SELECT` of
+  `TIMESTAMP '2026-01-02 03:04:05.123456+00:00'` into
+  `STRUCT<v: TIMESTAMP_NTZ, n: INT>` writes one row at `1767323045123456`,
+  the UTC wall. `EXPLAIN ANALYZE` is excluded from the append descent, so the
+  write runs without `after_analysis`.
+- **Apache Spark** — would store the session wall. *(oracle: not re-run; Spark
+  JVM cannot start.)*
+- **Pin** — `test_explain_pins` holds that tick.
+- **Rationale** — OPEN, dated 2026-10-12. A stored-value hole, not an EXPLAIN
+  text hole. This unit does not change it.
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers

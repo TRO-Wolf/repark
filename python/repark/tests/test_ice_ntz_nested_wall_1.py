@@ -1,22 +1,12 @@
 """ICE-NTZ-NESTED-WALL-1: a nested microsecond ``TIMESTAMP_NTZ`` leaf stores one wall.
 
-The doors wired so far are the ones ``zone_store_frame`` serves (``INSERT … BY NAME``,
-``INSERT OVERWRITE … SELECT``, ``overwritePartitions``, ``insertInto(overwrite=True)``),
-the MERGE INSERT doors ``zone_wrapping_stream_sql`` serves, and the whole-struct
-assignment doors ``store_assignment_cast_sql`` serves when the caller passes an instant
-source type (MERGE UPDATE from a column, UPDATE from a sibling ``TIMESTAMP`` column)
-and the identity UPDATE ``update_projection_sql`` serves for that same sibling column,
-and plain ``INSERT … SELECT`` plus DataFrame ``append`` through
-``after_analysis``.
-An instant stores the session wall. A wall literal stores ``1767323045123456`` in every
-zone. A nested ``TIMESTAMP`` leaf stores the instant. A caller with no source type
-passes ``None`` and the expression stays main's.
-
 pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
 """
 
 from __future__ import annotations
 
+import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -24,129 +14,26 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
-
-from repark import ReparkSession
-
-ZONES = ("UTC", "America/New_York", "Asia/Kolkata")
-SESSION_WALL = {
-    "UTC": 1_767_323_045_123_456,
-    "America/New_York": 1_767_305_045_123_456,
-    "Asia/Kolkata": 1_767_342_845_123_456,
-}
-INSTANT = "TIMESTAMP '2026-01-02 03:04:05.123456+00:00'"
-WALL = "TIMESTAMP_NTZ '2026-01-02 03:04:05.123456'"
-WALL_TICK = 1_767_323_045_123_456
-_V2 = "USING iceberg TBLPROPERTIES ('format-version'='2')"
-
-
-def open_session(zone: str, warehouse: Path) -> Any:
-    """Open one session in ``zone`` with a private memory catalog."""
-    spark = (
-        ReparkSession.builder.appName("ice-ntz-nested-wall-1")
-        .config("spark.sql.session.timeZone", zone)
-        .getOrCreate()
-    )
-    spark.register_memory_catalog("ice", str(warehouse))
-    spark.sql("CREATE NAMESPACE ice.ns")
-    return spark
-
-
-def parquet_leaf(spark: Any, table: str, column: str, field: str) -> list[int | None]:
-    """Return one struct field's microseconds from the table's Parquet data files."""
-    files = spark.sql(f"SELECT content, file_path FROM {table}.files").toArrow().to_pylist()
-    ticks: list[int | None] = []
-    for file in files:
-        if file["content"] != 0:
-            continue
-        stored = pq.read_table(file["file_path"], columns=[column]).column(column)
-        ticks.extend(stored.combine_chunks().field(field).cast(pa.int64(), safe=False).to_pylist())
-    return ticks
-
-
-def leaf_ticks(spark: Any, table: str, leaf: str) -> list[int | None]:
-    """Return the stored microseconds of ``st.v`` or ``st.w`` from the Parquet files."""
-    column_name, _, field = leaf.partition(".")
-    return parquet_leaf(spark, table, column_name, field)
-
-
-def stored_rows(spark: Any, table: str) -> list[tuple[int, int | None, int | None]]:
-    """Return ``(id, st.v microseconds, st.n)`` from Parquet, sorted by id."""
-    files = spark.sql(f"SELECT content, file_path FROM {table}.files").toArrow().to_pylist()
-    rows: list[tuple[int, int | None, int | None]] = []
-    for file in files:
-        if file["content"] != 0:
-            continue
-        loaded = pq.read_table(file["file_path"], columns=["id", "st"])
-        ticks = (
-            loaded.column("st").combine_chunks().field("v").cast(pa.int64(), safe=False).to_pylist()
-        )
-        numbers = loaded.column("st").combine_chunks().field("n").to_pylist()
-        rows.extend(zip(loaded.column("id").to_pylist(), ticks, numbers, strict=True))
-    rows.sort()
-    return rows
-
-
-def create_nested(spark: Any, table: str, leaf_type: str) -> None:
-    """Create a v2 table whose struct leaf is ``leaf_type``."""
-    spark.sql(
-        f"CREATE TABLE {table} (id INT, st STRUCT<v: {leaf_type}, n: INT>, k INT) "
-        "USING iceberg TBLPROPERTIES ('format-version'='2')"
-    )
-
-
-def write_source(spark: Any) -> None:
-    """Write the instant into ``ice.ns.src.l``."""
-    spark.sql(
-        "CREATE TABLE ice.ns.src (id INT, l TIMESTAMP) USING iceberg "
-        "TBLPROPERTIES ('format-version'='2')"
-    )
-    spark.sql(f"INSERT INTO ice.ns.src VALUES (1, {INSTANT})")
-
-
-def by_name_from_column(spark: Any, table: str) -> None:
-    """``INSERT … BY NAME`` of the source column."""
-    spark.sql(
-        f"INSERT INTO {table} BY NAME SELECT 0 AS k, named_struct('v', l, 'n', 1) AS st, id "
-        "FROM ice.ns.src"
-    )
-
-
-def by_name_literal(spark: Any, table: str, literal: str) -> None:
-    """``INSERT … BY NAME`` of one literal."""
-    spark.sql(
-        f"INSERT INTO {table} BY NAME SELECT 0 AS k, named_struct('v', {literal}, 'n', 1) AS st, "
-        "1 AS id"
-    )
-
-
-def seed_null(spark: Any, table: str) -> None:
-    """Write one null struct so an overwrite has a row to replace."""
-    spark.sql(
-        f"INSERT INTO {table} VALUES (1, named_struct('v', CAST(NULL AS TIMESTAMP_NTZ), 'n', 0), 0)"
-    )
-
-
-def overwrite_select(spark: Any, table: str) -> None:
-    """``INSERT OVERWRITE … SELECT`` of the source column."""
-    seed_null(spark, table)
-    spark.sql(
-        f"INSERT OVERWRITE {table} SELECT id, named_struct('v', l, 'n', 1) AS st, 0 AS k "
-        "FROM ice.ns.src"
-    )
-
-
-def overwrite_partitions(spark: Any, table: str) -> None:
-    """DataFrame ``overwritePartitions`` of the source column."""
-    seed_null(spark, table)
-    frame = spark.sql("SELECT id, named_struct('v', l, 'n', 1) AS st, 0 AS k FROM ice.ns.src")
-    frame.writeTo(table).overwritePartitions()
-
-
-def insert_into_overwrite(spark: Any, table: str) -> None:
-    """DataFrame ``insertInto(overwrite=True)`` of the source column."""
-    seed_null(spark, table)
-    frame = spark.sql("SELECT id, named_struct('v', l, 'n', 1) AS st, 0 AS k FROM ice.ns.src")
-    frame.write.insertInto(table, overwrite=True)
+from ice_ntz_nested_wall_1_helpers import (
+    _V2,
+    INSTANT,
+    SESSION_WALL,
+    WALL,
+    WALL_TICK,
+    ZONES,
+    by_name_from_column,
+    by_name_literal,
+    create_nested,
+    insert_into_overwrite,
+    leaf_ticks,
+    open_session,
+    overwrite_partitions,
+    overwrite_select,
+    parquet_leaf,
+    seed_null,
+    stored_rows,
+    write_source,
+)
 
 
 @pytest.mark.parametrize("zone", ZONES)
@@ -876,6 +763,7 @@ def test_not_null_members_store_on_the_bare_kernel_doors(tmp_path: Path) -> None
         finally:
             spark.stop()
 
+
 def test_scalar_subquery_update_raises_mains_type_error(tmp_path: Path) -> None:
     """Instant-struct scalar subquery raises main's type error; equal types stay a no-op."""
     line = (
@@ -910,6 +798,7 @@ def test_scalar_subquery_update_raises_mains_type_error(tmp_path: Path) -> None:
     finally:
         spark.stop()
 
+
 def _new_leaf(root: Path, before: set[Path]) -> list[int | None]:
     ticks: list[int | None] = []
     for found in sorted(set(root.rglob("*.parquet")) - before):
@@ -919,7 +808,6 @@ def _new_leaf(root: Path, before: set[Path]) -> list[int | None]:
         column = loaded.column("st").combine_chunks().field("v")
         ticks.extend(column.cast(pa.int64(), safe=False).to_pylist())
     return ticks
-
 
 
 def test_branch_merge_update_stores_the_session_wall(tmp_path: Path) -> None:
@@ -950,7 +838,6 @@ def test_branch_merge_update_stores_the_session_wall(tmp_path: Path) -> None:
         assert _new_leaf(tmp_path, before) == [SHIFTED_WALL]
     finally:
         spark.stop()
-
 
 
 def test_punctuation_names_and_a_renamed_sibling_stay_at_mains_values(tmp_path: Path) -> None:
@@ -985,5 +872,116 @@ def test_punctuation_names_and_a_renamed_sibling_stay_at_mains_values(tmp_path: 
         )
         assert leaf_ticks(spark, "ice.ns.ren", "st.v") == [WALL_TICK]
         assert leaf_ticks(spark, "ice.ns.ren", "st.w") == [None]
+    finally:
+        spark.stop()
+
+
+def _mask_plan(text: str) -> str:
+    """Hide snapshot ids and partition counts so two warehouses compare."""
+    text = re.sub(r"snapshot_id=\d+", "snapshot_id=#", text)
+    return re.sub(r"N=\d+", "N=#", text)
+
+
+def _explain_text(spark: Any, sql: str) -> str:
+    """Return EXPLAIN text, or the error class and its first line."""
+    try:
+        rows = spark.sql(sql).toArrow().to_pylist()
+    except Exception as error:
+        return f"{type(error).__name__}: {error_line(error)}"
+    return "\n".join(str(row) for row in rows)
+
+
+def _explain_setup(spark: Any) -> None:
+    """Build the tables the recorded EXPLAIN texts were planned against."""
+    _ice(spark, "ice.ns.src", "id INT, l TIMESTAMP")
+    spark.sql(f"INSERT INTO ice.ns.src VALUES (1, {INSTANT})")
+    _ice(spark, "ice.ns.t", "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT")
+    spark.sql(f"INSERT INTO ice.ns.t VALUES (1, named_struct('v', {WALL}, 'n', 77), 9)")
+    _ice(spark, "ice.ns.sib", "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT, c TIMESTAMP")
+    spark.sql(
+        "INSERT INTO ice.ns.sib SELECT 1, "
+        "named_struct('v', CAST(NULL AS TIMESTAMP_NTZ), 'n', 0), 0, l FROM ice.ns.src"
+    )
+    _ice(spark, "ice.ns.wallsrc", "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT")
+    spark.sql(f"INSERT INTO ice.ns.wallsrc VALUES (1, named_struct('v', {WALL}, 'n', 1), 0)")
+    _ice(spark, "ice.ns.flat", "id INT, n INT")
+    spark.sql("INSERT INTO ice.ns.flat VALUES (1, 2)")
+    spark.sql(f"CREATE TABLE ice.ns.ns (id INT, ts timestamp_ns) {_V2.replace('2', '3')}")
+    _ice(spark, "ice.ns.srcst", "id INT, st STRUCT<v: TIMESTAMP, n: INT>, k INT")
+    spark.sql("INSERT INTO ice.ns.srcst SELECT id, named_struct('v', l, 'n', 1), 0 FROM ice.ns.src")
+
+
+def _marks(spark: Any, table: str) -> tuple[Any, Any, Any]:
+    """Snapshot id, metadata files, and rows. An EXPLAIN must leave all three."""
+    snap = spark.sql(f"SELECT snapshot_id FROM {table}.snapshots").toArrow().to_pylist()
+    meta = spark.sql(f"SELECT file FROM {table}.metadata_log_entries").toArrow().to_pylist()
+    rows = spark.sql(f"SELECT * FROM {table}").toArrow().to_pylist()
+    return snap, meta, rows
+
+
+def test_explain_pins(tmp_path: Path) -> None:
+    """Five EXPLAIN pins. Unconverted text was recorded with the arm absent."""
+    recorded = json.loads(
+        Path(__file__).with_name("ice_ntz_nested_wall_1_explain.json").read_text()
+    )
+    spark = open_session("America/New_York", tmp_path)
+    try:
+        _explain_setup(spark)
+        for item in recorded["plans"]:
+            got = _mask_plan(_explain_text(spark, item["sql"]))
+            assert got == _mask_plan(item["text"]), item["name"]
+        kernel_sql = (
+            "EXPLAIN INSERT INTO ice.ns.t SELECT id, st, k FROM ice.ns.srcst",
+            "EXPLAIN UPDATE ice.ns.sib SET st = named_struct('v', c, 'n', 1)",
+        )
+        for sql in kernel_sql:
+            text = _explain_text(spark, sql)
+            assert "__repark_cast_nested_ntz__" in text, text
+            assert "'v'" in text or 'Utf8("v")' in text, text
+        before = (_marks(spark, "ice.ns.t"), _marks(spark, "ice.ns.sib"))
+        raised = (
+            "EXPLAIN INSERT INTO ice.ns.t SELECT id, "
+            "named_struct('v', l, 'n', assert_true(false)), 0 FROM ice.ns.src"
+        )
+        assert _explain_text(spark, raised).startswith("{'plan_type'")
+        updated = "EXPLAIN UPDATE ice.ns.sib SET st = named_struct('v', c, 'n', assert_true(false))"
+        assert _explain_text(spark, updated).startswith("{'plan_type'")
+        assert (_marks(spark, "ice.ns.t"), _marks(spark, "ice.ns.sib")) == before
+        _ice(spark, "ice.ns.leafsrc", "id INT, l TIMESTAMP, w TIMESTAMP_NTZ, i INT")
+        spark.sql(f"INSERT INTO ice.ns.leafsrc VALUES (1, {INSTANT}, {WALL}, 4)")
+        session = SESSION_WALL["America/New_York"]
+        kinds = (("TIMESTAMP_NTZ", "l"), ("TIMESTAMP_NTZ", "w"), ("TIMESTAMP_NTZ", "i"))
+        kinds += (("TIMESTAMP", "l"), ("TIMESTAMP", "w"), ("TIMESTAMP", "i"))
+        kinds += (("INT", "l"), ("INT", "w"), ("INT", "i"))
+        for index, (target, expr) in enumerate(kinds):
+            table = f"ice.ns.p{index}"
+            _ice(spark, table, f"id INT, st STRUCT<v: {target}, n: INT>, k INT")
+            statement = (
+                f"INSERT INTO {table} SELECT id, named_struct('v', {expr}, 'n', 1), 0 "
+                "FROM ice.ns.leafsrc"
+            )
+            shown = "__repark_cast_nested_ntz__" in _explain_text(spark, f"EXPLAIN {statement}")
+            try:
+                spark.sql(statement)
+                stored = leaf_ticks(spark, table, "st.v") == [session]
+            except Exception:
+                stored = False
+            assert shown == stored, (target, expr, shown, stored)
+        cased = (
+            "EXPLAIN INSERT INTO ice.ns.t SELECT id, named_struct('V', l, 'n', 1), 0 "
+            "FROM ice.ns.src"
+        )
+        assert "__repark_cast_nested_ntz__" not in _explain_text(spark, cased)
+        sub = (
+            "EXPLAIN UPDATE ice.ns.t SET st = (SELECT st FROM ice.ns.wallsrc WHERE id = 1) "
+            "WHERE id >= 0"
+        )
+        assert "__repark_cast_nested_ntz__" not in _explain_text(spark, sub)
+        _ice(spark, "ice.ns.an", "id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT")
+        spark.sql(
+            "EXPLAIN ANALYZE INSERT INTO ice.ns.an SELECT id, "
+            "named_struct('v', l, 'n', 1), 0 FROM ice.ns.src"
+        ).toArrow()
+        assert leaf_ticks(spark, "ice.ns.an", "st.v") == [WALL_TICK]
     finally:
         spark.stop()

@@ -183,3 +183,11 @@ on a different path for INSERT (`after_analysis`), overwrite and by-name
 sentence is DataFusion's `Unsupported CAST` in `expressions/cast.rs`. The
 smallest option is to skip the wrap at the two cast emitters when a NOT NULL
 member makes that cast fail, and leave the bare kernel sites as they are.
+
+**Round 11, item 1:** EXPLAIN of a converted append `INSERT` and of a
+whole-struct `UPDATE` names `__repark_cast_nested_ntz__`. The substitute
+happens only when that rewrite's own output carries a kernel call the input
+did not. `INSERT OVERWRITE`, the three `MERGE` clauses, `REPLACE WHERE`, and
+`BY NAME` stay main (R-022 through R-027). `EXPLAIN ANALYZE INSERT` in
+America/New_York writes `1767323045123456` (R-028) and is not changed.
+Unconverted EXPLAIN text was recorded on `b6b20b3c` with the arm absent.

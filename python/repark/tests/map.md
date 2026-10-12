@@ -3241,7 +3241,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   type error; an equal-type subquery stays main's silent no-op. A branch
   `MERGE UPDATE` stores the session wall. Member names that contain `.` or
   `,`, and a matching leaf beside a renamed member, stay at main's values.
+  `test_explain_pins` shows `__repark_cast_nested_ntz__` on a converted
+  `INSERT … SELECT` and a whole-struct `UPDATE`, keeps the recorded main text
+  for the unconverted doors, and records `EXPLAIN ANALYZE INSERT` storing the
+  UTC wall `1767323045123456`. Those texts were recorded on head `b6b20b3c`
+  with the arm absent.
   pins: ice-ntz-nested-wall-1/C-001, C-002, C-003, C-004
+- [ice_ntz_nested_wall_1_helpers.py](ice_ntz_nested_wall_1_helpers.py) —
+  **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** session, parquet leaf readers, and
+  the by-name and overwrite writers shared with the facade, moved so the
+  facade stays inside its line ceiling.
+  pins: ice-ntz-nested-wall-1/C-003
+- [ice_ntz_nested_wall_1_explain.json](ice_ntz_nested_wall_1_explain.json) —
+  **ICE-NTZ-NESTED-WALL-1 (2026-10-12):** EXPLAIN text recorded on head
+  `b6b20b3c` with the EXPLAIN arm absent. The facade compares it after
+  masking snapshot ids and partition counts.
+  pins: ice-ntz-nested-wall-1/C-003
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   the zoned mirror of the file below, 133 tests, every value read from the Parquet data files
   with `pyarrow.parquet`, not through SELECT.

@@ -2,7 +2,7 @@ use datafusion::arrow::datatypes::{DataType as ArrowDataType, Schema as ArrowSch
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    AssignmentTarget, Expr, ObjectName, Statement, TableFactor, UnaryOperator, Update, Value,
+    AssignmentTarget, Expr, ObjectName, TableFactor, UnaryOperator, Update, Value,
 };
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
@@ -41,11 +41,35 @@ async fn load_update_target(
     Some(UpdateTarget { arrow_schema })
 }
 
+pub(crate) fn nested_kernel_mentions(
+    assignments: &[datafusion::sql::sqlparser::ast::Assignment],
+) -> usize {
+    let name = repark_iceberg::write::ntz_store::NESTED_NTZ_WALL_CAST_UDF_NAME;
+    assignments
+        .iter()
+        .map(|assignment| assignment.to_string().matches(name).count())
+        .sum()
+}
+
+pub(crate) async fn explain_update_assignments(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    update: &mut Update,
+) {
+    let before = nested_kernel_mentions(&update.assignments);
+    let Ok(Some(folded)) = refuse_cast_then_fold_nested(ctx, catalogs, update).await else {
+        return;
+    };
+    if nested_kernel_mentions(&folded.assignments) > before {
+        update.assignments = folded.assignments;
+    }
+}
+
 pub(crate) async fn refuse_cast_then_fold_nested(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     update: &Update,
-) -> Result<Option<String>> {
+) -> Result<Option<Update>> {
     let Some(object_name) = crate::object_name_from_table_with_joins(&update.table) else {
         return Ok(None);
     };
@@ -86,10 +110,7 @@ pub(crate) async fn refuse_cast_then_fold_nested(
     };
     let mut folded = update.clone();
     folded.assignments = assignments;
-    let mut rendered = Statement::Update(folded);
-    Ok(Some(repark_iceberg::write::sql_text::render_for_reparse(
-        &mut rendered,
-    )))
+    Ok(Some(folded))
 }
 
 fn integer_literal_source_type(value: &Expr) -> Option<ArrowDataType> {
