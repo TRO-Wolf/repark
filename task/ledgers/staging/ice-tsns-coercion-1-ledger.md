@@ -6,7 +6,8 @@ or `__repark_cast_timestamptz_ns__` written by hand. Spark 4.1.2 is the second o
 `timestamp_ns` stands where `TIMESTAMP_NTZ` stands, and `timestamptz_ns` where `TIMESTAMP` stands.
 
 **Date:** 2026-10-12 · **Branch:** `test/ice-tsns-coercion-1-slice-0` · **Base:** `572130dd` ·
-**Model:** Grok 4.7 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Model:** recorders drafted by Grok 4.7, completed and recorded by Muse Spark
+(muse-spark-1.3-contributor) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Order:** the owner's ruling of 2026-10-10 on parity row R-017, card
@@ -19,7 +20,7 @@ or `__repark_cast_timestamptz_ns__` written by hand. Spark 4.1.2 is the second o
 |---|---|---|---|---|
 | C-001 | The twin of every card spelling is recorded from main 572130dd on every door, five zones. | The twin fixture and its recorder. | **PROVEN** | `python/repark/tests/ice_tsns_coercion_1_twins.json`: 107,520 twin, 107,520 statement and 1,920 plain stored cells, 1,120 reads, 1,680 range cells, 5 zones; recorder `_record_ice_tsns_coercion_1_twins.py`; summary `task/wo/ice-tsns-coercion-1/evidence/twins-summary.md`. |
 | C-002 | Spark 4.1.2's lattice for the temporal set is recorded in both ANSI modes. | The lattice JSON and its recorder. | **PROVEN** | `python/repark/tests/ice_tsns_coercion_1_spark_lattice.json`: 1,540 cells, Spark 4.1.2 read from the live session, both ANSI modes, 5 zones, 0 errors; recorder `_record_ice_tsns_coercion_1_spark_lattice.py`. |
-| C-003 | Every twin's kind and zone placement matches Spark's analogue. | The comparison table. | **OPEN** | Comparison table in `twins-summary.md`: kind 560/560 match; placement matches 336/560; 224 `tzns` non-UTC cells differ by the zone offset because RePark's `tzns` seed is wall+00:00 (zone-fixed) while Spark's `src_ltz` is wall-in-session-zone, and the twin passes `tzns` through unchanged. Open: align seeds (re-record) or rule pass-through placement out of scope. |
+| C-003 | Every twin's kind and zone placement matches Spark's analogue. | The comparison table. | **PROVEN** | Comparison table in `twins-summary.md`: kind 560/560, placement 560/560 over `ns` and aligned `tzns` reads; fixture `python/repark/tests/ice_tsns_coercion_1_twins.json`. The 2026-10-12 re-record aligned the `tzns` seed to Spark's `src_ltz` instant per zone and kept the zone-fixed seed as `tzns_utc`. |
 | C-004 | The gate-open rate, the cost baseline and the four censuses are recorded. | Section 9 of the slice brief. | **PROVEN** | `task/wo/ice-tsns-coercion-1/evidence/`: `gate.md` (rate uncountable from public `EXPLAIN`; hook named), `cost-baseline.json` + `cost-baseline.md`, `pins.md`, `casts.json` + `written-casts.md`, `try-repark.json` + `try-spark.json` + `try-cast.md`, `lambda.json` + `lambda.md`. |
 | C-005 | Before the first type_coercion, every card site that holds a nanosecond value is wrapped in the existing cast kernels. | Slice 1. | **OPEN** | Not this slice. |
 | C-006 | `nvl` and `ifnull` over the temporal set become `coalesce`, then those kernels apply. | Slice 3. | **OPEN** | Not this slice. SQL `nvl` on main still has no timestamp signature. |
@@ -84,6 +85,25 @@ Items 3 to 6 re-ran byte-identical except `lambda.json`, whose physical plan
 carries the machine's `RoundRobinBatch` fanout (26 here, 8 before); the
 logical plan and the markdown match.
 
+Ruling of 2026-10-12 on Q1 (C-004): the rate is not counted in slice 0.
+Slice 1's first product change is one analyzer counter in the session
+metrics facade, incremented when a leaf relation has a
+`Timestamp(Nanosecond, _)` field at any depth; the rate is measured with it
+before any site is wrapped.
+
+## 5. Q2 re-record (C-003)
+
+Ruling of 2026-10-12 on Q2: Spark as the second oracle stands, so the seeds
+were aligned instead of ruled out. The `tzns` source now holds the wall
+interpreted in the session zone — the same instant as Spark's `src_ltz` in
+each zone — and the zone-fixed wall+00:00 seed stays as `tzns_utc` behind
+the untouched stored matrix. Only the reads were re-recorded: 560 new
+`tzns` reads and 420 range cells merged beside the renamed evidence. The
+fresh `tzns_utc` and `ns` reads reproduce the renamed cells exactly except
+the `PARQUET:field_id` shift from the added column, which the retained
+evidence keeps as recorded. Kind 560/560, placement 560/560; no twin was
+adjusted. C-003 PROVEN.
+
 ## Q. Questions
 
 No ruling is requested by this ledger until the summary names a kind mismatch or an
@@ -93,3 +113,5 @@ Update (2026-10-12, step A): the tripwire fired — the summary names zero kind
 mismatches and 35 untyped-NULL stored-value mismatches — and measurement
 disposes it without a ruling; see §2. No ruling requested. C-003 stays OPEN
 with its seed question above.
+
+Update (2026-10-12, Q2 re-record): C-003 PROVEN, see §5. No ruling requested.

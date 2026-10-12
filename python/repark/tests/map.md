@@ -3312,7 +3312,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `--shard-target` run one zone and target; a zone that starts with a dash is bound with
   `=`. Reads and range cells are in the same fixture. A value Python cannot convert stays
   a per-row `conversion_error` beside its tick.
-  pins: ice-tsns-coercion-1/C-001
+  pins: ice-tsns-coercion-1/C-001, C-003
 - [_record_ice_tsns_coercion_1_spark_lattice.py](_record_ice_tsns_coercion_1_spark_lattice.py) +
   [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) —
   **ICE-TSNS-COERCION-1 slice 0:** Spark 4.1.2, five zones, both ANSI modes. `timestamp_ns`
@@ -3324,6 +3324,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Untyped-NULL equality ignores error text and compares stored ticks, Parquet type and skip.
   Zoned placement compares floor microseconds, as Spark's `unix_micros` floors.
   Reads whose source has no lattice cells are not compared.
+  pins: ice-tsns-coercion-1/C-003
 - [_record_ice_tsns_coercion_1_casts.py](_record_ice_tsns_coercion_1_casts.py) —
   **ICE-TSNS-COERCION-1 slice 0:** the 64-position written-cast census. A position is
   unresolved when the plan still holds `Timestamp(ns)` or a nanosecond literal.
