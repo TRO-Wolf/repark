@@ -165,3 +165,12 @@ wall. A matching leaf beside a renamed member stays main's row.
 not build that sentence, so the kernel's output type is what the cast names.
 EXPLAIN of a DML into the leaf still prints main's plan. That is an open
 question for the owner. Neither is changed.
+
+**Round 9, item 5:** head matrix regenerated. Spark 173/264, field 324/324,
+ltz 396/396, top 396/396, raw-error 162/162, UTC-wall cells 22, controls moved
+0. Every UTC-wall cell is mapped to `SET *` or the R4 literal. Gates, each
+unpiped: iceberg lib 0 (1012 passed), spark lib 0 (2710 passed, 5 ignored),
+wall doors 0, functions lib 0 (928 passed, 1 ignored), clippy 0 after
+collapsing the branch-probe `if`, panic-ban 0, fmt 0, crate-dag 0, map sync 0,
+map-md 0, ledger grammar 0, file size 0, comment ban 0, pytest 0 (583 passed,
+1 skipped), maturin 0.

@@ -719,21 +719,21 @@ pub(crate) fn repeats_a_column(
 
 fn probe_table_sql(table: &TableFactor) -> String {
     let mut rendered = table.clone();
-    if let TableFactor::Table { name, .. } = &mut rendered {
-        if name.0.len() >= 4 {
-            let last = name
-                .0
-                .last()
-                .and_then(ObjectNamePart::as_ident)
-                .map(|ident| ident.value.clone());
-            if last.as_deref().is_some_and(|last| {
-                matches!(
-                    crate::write_to_branch::parse_ref_selector(last),
-                    Some(crate::write_to_branch::RefSelectorKind::Branch(_))
-                )
-            }) {
-                name.0.pop();
-            }
+    if let TableFactor::Table { name, .. } = &mut rendered
+        && name.0.len() >= 4
+    {
+        let last = name
+            .0
+            .last()
+            .and_then(ObjectNamePart::as_ident)
+            .map(|ident| ident.value.clone());
+        if last.as_deref().is_some_and(|last| {
+            matches!(
+                crate::write_to_branch::parse_ref_selector(last),
+                Some(crate::write_to_branch::RefSelectorKind::Branch(_))
+            )
+        }) {
+            name.0.pop();
         }
     }
     rendered.to_string()
