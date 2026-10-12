@@ -3699,6 +3699,28 @@ still open is `isModifiable`.
 - **Rationale** — OPEN, dated 2026-10-12. A stored-value hole, not an EXPLAIN
   text hole. This unit does not change it.
 
+### ICE-TSNS-SQL-1-R-029 — FIXED 2026-10-12 (NTZ-STRUCT-COERCE-1): a struct coerced from a naive wall to an instant localises the wall in the session zone
+
+- **repark** — `CASE`, `COALESCE` and `UNION ALL` of a `STRUCT<v: TIMESTAMP_NTZ>` with a
+  `STRUCT<v: TIMESTAMP>` read the wall as UTC on main `572130dd`, because type coercion
+  inserts `Cast` to `Timestamp(µs, "UTC")` and Arrow localises a naive timestamp in the
+  target zone. That cast is now
+  `Cast(__repark_localize_nested_ntz__(expr, paths), target)`, and the leaf is the
+  session-zone instant on read and on `INSERT … SELECT`. Of 144 cells, 35 differed from
+  Spark; 24 (the coercion shapes in America/New_York and Asia/Kolkata) now equal Spark;
+  0 moved away; every top-level control is identical to main. A user-written
+  `CAST(st AS STRUCT<v: TIMESTAMP, n: INT>)` stays `Timestamp(ns)` (11 cells). Spark
+  localises that cast. The target is not an LTZ microsecond leaf, so the arm does not
+  select it.
+- **Apache Spark** — localises the wall in the session zone for those shapes, including
+  the user-written cast. *(oracle: measured, Spark 4.1.2 with Iceberg 1.11.0,
+  `task/wo/ntz-struct-coerce-1/evidence/spark-4.1.2.jsonl`.)*
+- **Pin** — `python/repark/tests/test_ntz_struct_coerce_1.py`;
+  `crates/repark-functions/src/instant_ts_tests.rs` (`instant_ts::tests`);
+  `crates/repark-functions/src/nested_wall.rs`.
+- **Rationale** — FIXED 2026-10-12. One arm in `rewrite_cast` and one kernel. Ledger
+  `task/ledgers/staging/ntz-struct-coerce-1-ledger.md`.
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers
