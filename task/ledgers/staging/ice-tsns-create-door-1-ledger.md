@@ -26,7 +26,7 @@ nothing of it is touched).
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | Main's answers are recorded by a committed recorder before any product edit: the 12-door matrix with no ask and with a written cast, the census pass 3 cells, 12 statements with no nanosecond output, and the v2 refusal texts, in UTC and America/New_York. | The fixture and its recorder. | **PROVEN** | `python/repark/tests/ice_tsns_create_door_1_main.json`, 200 cells recorded on `f3f98823`; §1. |
-| C-002 | A cast kernel carries its origin: the registry's kernel is written, a kernel built by engine code is inserted; both share a name and are not equal. | Slice 1. | **OPEN** | |
+| C-002 | A cast kernel carries its origin: the registry's kernel is written, a kernel built by engine code is inserted; both share a name and are not equal. No behaviour changes. | Five pins in `crates/repark-functions/src/timestamp_ns_cast/tests.rs`; the three crates' suites with no expectation edited. | **PROVEN** | §2. |
 | C-003 | `asked_nanosecond_columns` answers one flag per output column by the origins rule. | Slice 2. | **OPEN** | |
 | C-004 | `repark.sql.allowImplicitTimestampNanos` is a session setting, default off. | Slice 2. | **OPEN** | |
 | C-005 | A query's Arrow schema becomes Iceberg columns only through `nanosecond_door`; a new nanosecond column that is not asked is refused there with one text. | Slice 3. | **OPEN** | |
@@ -71,3 +71,26 @@ the same in every cell.
 Each cell holds the error (class, condition, text), whether the table's files are the same as
 before the statement, and the table's format version, Iceberg types (metadata JSON), Arrow
 types and int64 rows.
+
+## 2. The mark (C-002)
+
+`SparkTimestampNsCast` holds `origin: CastOrigin { Written, Inserted }`.
+`timestamp_ns_cast_udf(zoned, origin)` takes it as a required argument; the registry sites
+(`repark-functions` `instant_ts.rs::functions`, the ANSI door's `dialect.rs`) pass `Written`,
+and `timestamp_ns_cast_expr(expr, zoned)` keeps its signature and builds `Inserted`. `name()`
+is unchanged. `PartialEq` and `Hash` include the origin. `is_written_timestamp_ns_cast`
+downcasts the function's implementation; no SQL text is read.
+
+The work order writes the downcast as `func.inner().as_any()`. DataFusion 54.1's
+`ScalarUDFImpl` has no `as_any`; the same downcast is `func.inner().downcast_ref::<T>()`, an
+inherent method of `dyn ScalarUDFImpl`. It holds: `the_registered_kernel_is_written`.
+
+Pins: `the_registered_kernel_is_written`, `a_kernel_built_by_engine_code_is_inserted`,
+`written_and_inserted_kernels_share_a_name_and_are_not_equal`,
+`a_written_cast_stays_written_through_two_analyses` (a `SELECT` planned through a session
+holding the registry and every analyzer rule of the crate, `analyze_eagerly` twice),
+`explain_text_is_unchanged_by_origin`. Two test sessions of `repark-spark` that register the
+kernels by hand now pass `Written`, as the product registry does.
+
+Gate: `cargo test --locked -p repark-functions -p repark-spark -p repark-sql` exit 0, no
+expectation edited.

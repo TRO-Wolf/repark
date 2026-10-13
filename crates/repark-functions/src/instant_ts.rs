@@ -26,6 +26,7 @@ use crate::spark_string_timestamp::{
     StringCastFailure, cast_columnar_strings_to_ltz, is_string_type, rewrite_string_try_cast,
     spark_string_literal,
 };
+use crate::timestamp_ns_cast::CastOrigin;
 use crate::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 
 /// Spark's default `TIMESTAMP` / LTZ Arrow type — µs with a UTC annotation.
@@ -55,8 +56,8 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         crate::time_family::time_trunc_udf(),
         crate::time_family::current_time_udf(),
         crate::time_family::type_of_udf(),
-        crate::timestamp_ns_cast::timestamp_ns_cast_udf(false),
-        crate::timestamp_ns_cast::timestamp_ns_cast_udf(true),
+        crate::timestamp_ns_cast::timestamp_ns_cast_udf(false, CastOrigin::Written),
+        crate::timestamp_ns_cast::timestamp_ns_cast_udf(true, CastOrigin::Written),
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(false),
         crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(true),
         crate::timestamp_ntz_cast::timestamp_ntz_literal_udf(),

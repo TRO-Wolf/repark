@@ -167,6 +167,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `dialect.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the two nanosecond cast kernels
+  are registered with `CastOrigin::Written`: a kernel reached through this door's parser is
+  a cast the user wrote.
+  pins: ice-tsns-create-door-1/C-002
 - `dialect.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `on_session_built` registers the zoned
   nanosecond kernel (`__repark_cast_timestamptz_ns__`) beside the naive one. The shared MERGE
   and UPDATE sites now emit it for a `timestamptz_ns` target; without the registration this

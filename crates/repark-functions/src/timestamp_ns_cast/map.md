@@ -38,6 +38,16 @@ pins: ice-tstzns-wall-1/C-005, C-008
   never converted by the wall kernel (control; parity row ICE-TSNS-SQL-1-R-008).
 
 pins: ice-tsns-merge-wall-1/C-018, C-031
+**ICE-TSNS-CREATE-DOOR-1 (2026-10-13): the origin mark.**
+
+- **The mark.** The parent's kernel holds `origin: CastOrigin`. A kernel that arrives through
+  the parser is `Written`; a kernel built by `timestamp_ns_cast_expr` is `Inserted`. The
+  parser cannot reach `Inserted` and engine code cannot reach `Written` without naming it in
+  a diff.
+- `tests.rs` (ICE-TSNS-CREATE-DOOR-1 additions) — the registered kernel is written; a kernel
+  built by engine code is inserted; the two share a name and are not equal; a written cast
+  stays written through two analyses; the plan text does not show the origin.
+  pins: ice-tsns-create-door-1/C-002
 - `tests.rs` — the module's `#[cfg(test)]` suite: nine fraction digits from strings, an explicit
   offset versus the session zone, malformed strings under ANSI on and off, exact microsecond
   widening, an instant into a naive target as the session wall, a wall into a zoned target

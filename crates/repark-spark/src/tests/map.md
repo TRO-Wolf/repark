@@ -127,6 +127,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   only `super::common::*` and `super::session_write_conf` paths are used — so it is dropped
   for `unused_imports` (repark#733 `Rust lint`).
   pins: ice-session-write-conf-1/C-064
+- `session_write_conf.rs`, `v3_timestamp_ns_door.rs` — **ICE-TSNS-CREATE-DOOR-1
+  (2026-10-13):** the test sessions register the nanosecond cast kernels as the product
+  registry does, with `CastOrigin::Written`. No expectation changed.
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `an_owned_plain_update_resolves_a_mixed_case_set_target` and
   `..._a_wrong_case_quoted_set_target` hold the owned plain-UPDATE route to Spark's
