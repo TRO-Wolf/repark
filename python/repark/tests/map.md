@@ -3417,6 +3417,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   verify stage's catalogue re-run and the append doors are in
   `task/wo/ice-tsns-frame-door-1/evidence/fold-1.md`.
   pins: ice-tsns-frame-door-1/C-017, C-018, C-019, C-020, C-021, C-023
+  **Follow-up 3 (2026-10-13), after the second verify passed:** 254 tests.
+  `test_the_extremes_under_a_declared_timestamp_are_floored_first` declares `c timestamp`
+  over the naive and the New York-aware int64 extremes and the polars int64-minimum column;
+  it is the pin that fails on the mutant that skips the floor under a declared zoned
+  `timestamp` (8 of its 10 cells). pins: ice-tsns-frame-door-1/C-020
 - [_time_ice_tsns_frame_door_1.py](_time_ice_tsns_frame_door_1.py) —
   **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** the cost timer: median milliseconds of
   `createDataFrame` + `count()` over a one-million-row pandas frame with no nanosecond

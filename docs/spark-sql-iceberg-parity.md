@@ -3575,7 +3575,10 @@ still open is `isModifiable`.
   wall in the driver machine's zone: its own question, not this row).
   `schema="c timestamp_ntz"` over a naive nanosecond column answers Spark's microseconds;
   before, it raised `ArrowInvalid … would lose data`. `schema="c timestamp"` over a
-  nanosecond column answers what main answered. A table created from such a frame (CTAS
+  nanosecond column answers what main answered where main answered; where main raised (the
+  int64 extremes of a naive column in a session that is not UTC, the lowest value of a
+  New York-aware column, a polars column holding the int64 minimum: `OverflowError`,
+  `OutOfBoundsDatetime`, `NaTType does not support astimezone`) it answers the floor. A table created from such a frame (CTAS
   from a temp view, `writeTo().create()`, `saveAsTable`) holds a `timestamp` /
   `timestamptz` column; before, it held `timestamp_ns` / `timestamptz_ns` on format v3 and
   refused with `Invalid schema for v2:` below it.
@@ -3601,18 +3604,24 @@ still open is `isModifiable`.
   `python/repark/tests/ice_tsns_frame_door_1_spark.json`, 90 cells.)*
   **Spark-side disclosure, not pinned:** where Spark's own conversion loses the instant
   the facade keeps the true floor. An aware instant in the **driver machine's** repeated
-  hour is stored an hour off (`2026-11-01 05:30:00.000000001Z`, New York-aware, no schema:
-  Spark `1793514600000000`, floor `1793511000000000`); the int64 extremes of an aware
+  hour can be stored an hour early or late; which pass moves depends on the other values in
+  the column and on the schema, not only on the driver zone (one recorded frame:
+  `2026-11-01 05:30:00.000000001Z`, first pass, no schema, Spark `1793514600000000`, floor
+  `1793511000000000`; another: the first pass right and `06:30:00.000000001Z`, second pass,
+  Spark `1793511000000000`, floor `1793514600000000`, under no schema and `c timestamp`);
+  the int64 extremes of an aware
   column wrap (`pd.Timestamp.min`: Spark `9223368674854775`, floor `-9223372036854776`) and
   of a naive column raise; an 1883 local-mean-time instant is 238 seconds off.
-- **Pin** — `python/repark/tests/test_ice_tsns_frame_door_1.py` (244 tests, two session
+- **Pin** — `python/repark/tests/test_ice_tsns_frame_door_1.py` (254 tests, two session
   zones, Arrow type and int64 values); `test_boundary_shapes_parity.py` row
   `pandas_timestamp_unit_from_pandas_ns`, now a disclosure like its microsecond twin.
 - **Rationale** — FIXED 2026-10-13 by the owner's ruling of that day (parity, fixed at the
   frame door). One step, `_floor_nanosecond_timestamp_column`, called once in
   `_normalize_frame_arrow_column`, the function every pandas and polars column passes,
   after the dictionary decode and only when no type or a timestamp type is declared: an
-  integer floor of the ticks, Arrow kernels on whole columns. Cost: about 16 ms per million
+  integer floor of the ticks, Arrow kernels on whole columns. Under a declared
+  `c timestamp` a naive column is still read row by row in Python afterwards, as on main.
+  Cost: about 16 ms per million
   rows per nanosecond column, naive or aware; a frame with none is unchanged. Ledger
   `task/ledgers/completed/ice-tsns-frame-door-1-ledger.md`.
 

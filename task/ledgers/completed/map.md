@@ -664,7 +664,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   **Fold 1 (2026-10-13), after an independent verify failed `c4efd79f`:** the floor is on the
   int64 ticks, never through local time (C-017); a categorical of nanoseconds is covered
   (C-018); a declared non-timestamp type keeps main's answer (C-019); 24 of 25 mutants
-  killed and one equivalent (C-020); the verifier's catalogue re-run with no cell where
+  killed and one equivalent (C-020, reworded by follow-up 3 to the mutants it lists); the verifier's catalogue re-run with no cell where
   main answered and the unit raises (C-021); cost at most 16.7 ms per million rows, naive
   or aware (C-022); Spark-side disclosures, the named move's surfaces and the append doors
   recorded (C-023). `risk_tier: standard`. Branch

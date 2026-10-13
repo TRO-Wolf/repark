@@ -122,6 +122,19 @@ MICROSECOND_LABELS = {
 }
 TRANSITION_ZONES = tuple(recorder.TRANSITION_INSTANTS)
 EXTREME_MICROS = list(recorder.EXTREME_MICROS)
+INT64_MINIMUM = -(2**63)
+DECLARED_TIMESTAMP_EXTREMES: dict[str, dict[str, list[Any]]] = {
+    "UTC": {
+        "naive_extremes": [-9223372036854776, 9223372036854775],
+        "new_york_extremes": [-9223372036854776, 9223372036854775],
+        "int64_minimum": [-9223372036854776, None, -9223372036854775],
+    },
+    "America/New_York": {
+        "naive_extremes": [-9223354274854776, 9223386436854775],
+        "new_york_extremes": [-9223372036854776, 9223372036854775],
+        "int64_minimum": [-9223354274854776, None, -9223354274854775],
+    },
+}
 MAIN_NESTED: dict[str, dict[str, Any]] = {
     "list_ns": {
         "arrow": "list<item: timestamp[ns, tz=UTC]>",
@@ -418,6 +431,42 @@ def test_the_int64_minimum_floors_without_wrapping(spark: Any) -> None:
         "arrow": "timestamp[us]",
         "nullable": True,
         "values": [lowest // 1_000, None, (lowest + 808) // 1_000],
+    }
+
+
+def extreme_frame(kind: str, engine: str) -> Any:
+    """Return the naive extremes, the New York-aware extremes or the int64-minimum column."""
+    polars = pytest.importorskip("polars")
+    if kind == "int64_minimum":
+        ticks = pa.array([INT64_MINIMUM, None, INT64_MINIMUM + 808], pa.timestamp("ns"))
+        return polars.from_arrow(pa.table({"c": ticks}))
+    frames = recorder.sources()
+    frame = frames["pd_naive_ns_extremes"]
+    if kind == "new_york_extremes":
+        aware = frames["pd_utc_ns_extremes"]["c"].dt.tz_convert("America/New_York")
+        frame = pd.DataFrame({"c": aware})
+    return polars.from_pandas(frame) if engine == "polars" else frame
+
+
+@pytest.mark.parametrize(
+    ("kind", "engine"),
+    [
+        ("naive_extremes", "pandas"),
+        ("naive_extremes", "polars"),
+        ("new_york_extremes", "pandas"),
+        ("new_york_extremes", "polars"),
+        ("int64_minimum", "polars"),
+    ],
+)
+def test_the_extremes_under_a_declared_timestamp_are_floored_first(
+    spark: Any, kind: str, engine: str
+) -> None:
+    """``schema="c timestamp"`` over the int64 extremes answers the floor, read in the session."""
+    got = answer(spark, extreme_frame(kind, engine), "c timestamp")
+    assert got == {
+        "arrow": "timestamp[us, tz=UTC]",
+        "nullable": True,
+        "values": DECLARED_TIMESTAMP_EXTREMES[zone_of(spark)][kind],
     }
 
 

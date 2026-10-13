@@ -42,7 +42,7 @@ the keep-nanoseconds switch (the create-door order).
 | C-017 | Fold 1: the floor is computed on the int64 ticks and never through local time. It answers in every repeated and skipped hour and for every int64 nanosecond value, the lowest 807 and `pd.Timestamp.min` / `.max` among them. | `test_instants_around_a_zone_transition_floor_on_the_ticks` (36), `test_the_lowest_and_highest_nanoseconds_floor` (16), `test_the_int64_minimum_floors_without_wrapping` (2). | **PROVEN** | §12.1. All 54 red on `c4efd79f` (`Local time is ambiguous`; `would lose data: 9223372036854775616`), green on the fold. Verifier findings F-01, F-02. |
 | C-018 | Fold 1: a pandas categorical of nanosecond timestamps enters as microseconds. | `test_a_categorical_of_nanoseconds_arrives_as_microseconds` (12). | **PROVEN** | §12.2. The step runs after the dictionary decode. The naive categorical under `c timestamp_ntz` equals Spark's cell. F-04. |
 | C-019 | Fold 1: under a declared type that is not a timestamp kind a nanosecond column answers what main answers. | `test_a_declared_type_that_is_not_a_timestamp_keeps_main` (36): `c bigint`, `c string`, `c date` over six sources. | **PROVEN** | §12.3. Main's cells recorded on `8c51fbc4`; 20 of the 36 were red on `c4efd79f`. F-05. |
-| C-020 | Fold 1: every non-equivalent mutant, the executor's and the verifier's, is killed. | Each mutant run against the pin file. | **PROVEN** | §12.5: 25 variants, 24 killed, 1 equivalent. The verifier's survivor (the UTC relabel only for New York) fails 12 tests: Tokyo and `+05:30` under a declared `timestamp`, London and Lord Howe at their transitions. F-07. |
+| C-020 | Fold 1: each mutant listed in §12.5 and §13.1 is killed by the pin file or shown equivalent. No claim is made for mutants not listed. | Each listed mutant run against the pin file. | **PROVEN** | §12.5: the executor's 25 variants, 24 killed, 1 equivalent; the first verifier's survivor (the UTC relabel only for New York) fails 12 tests (F-07). §13.1: the second verifier ran 34 at `36382b62`, 31 killed, 2 equivalent, and 1 survived, so this row's earlier wording ("every non-equivalent mutant is killed") was wrong at that head; follow-up 3's pin fails 8 times on that survivor. |
 | C-021 | Fold 1: on the verifier's catalogue no cell that answered on main errors on the fold, and the only no-nanosecond cells that differ from main are the 12 of the named move. | The verify stage's recorder run on the fold, against its recording of main. | **PROVEN** | §12.6 and `task/wo/ice-tsns-frame-door-1/evidence/fold-1.md`: 1388 cells; 0 main-answered and fold-raises (87 at `c4efd79f`); 12 of 520 no-nanosecond cells differ, the named move; 0 of 204 declared non-timestamp cells differ. |
 | C-022 | Fold 1: the cost gate holds for a naive and for an aware nanosecond column. | Five interleaved sets. | **PROVEN** | §12.7 and `evidence/cost.md`: no nanosecond column 1.011 of main; per million rows at most 16.71 ms naive, 16.61 ms UTC, 15.80 ms New York; ceiling 25. F-03. |
 | C-023 | Fold 1: the ledger and row R-019 name the Spark-side disclosures, every surface of the named move, and the append doors. | The text. | **PROVEN** | §12.4, §12.8, §12.9 and row `ICE-TSNS-SQL-1-R-019`. F-06, F-08, F-09. |
@@ -195,8 +195,9 @@ microseconds, as Spark does.
 
 ## 11. Coverage attestation
 
-Filed by the executor from the runs recorded in this ledger and re-attested after fold 1. An
-independent verify stage failed `c4efd79f` (§12); it has not yet run on the fold.
+**The executor's own attestation**, filed from the runs recorded in this ledger and
+re-attested after fold 1. It is not an independent verdict; the two independent verdicts are
+in §11.1.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -242,6 +243,54 @@ COVERAGE_ATTESTATION:
   reattested: [AT-1, AT-2, AT-3, AT-6, AT-7, AT-8, AT-10]
   complete: true
 ```
+
+### 11.1 Independent verification: re-attestation after remediation
+
+The ledger grammar admits one `COVERAGE_ATTESTATION` block per ledger, and it carries the
+`reattested` list above. The two independent verdicts are recorded here in prose; neither
+verifier wrote this ledger.
+
+**Verifier 1 (a fresh Opus 5.5 session, high effort): FAIL on `c4efd79f`.** Ten findings,
+and their closure in fold 1 as the second verifier judged it:
+
+| Finding | What | Closure |
+|---|---|---|
+| F-01 (S1) | an aware nanosecond instant in a repeated hour raised; main answered | CLOSED: the floor is on the ticks (C-017) |
+| F-02 | the lowest 807 nanoseconds raised; main answered | CLOSED: the same kernel (C-017) |
+| F-03 | an aware column cost four times the ceiling | CLOSED: 14.7 to 16.9 ms per million rows (C-022) |
+| F-04 | a categorical of nanoseconds was still carried | CLOSED: the step runs after the decode (C-018) |
+| F-05 | declared `bigint` and `string` changed value from main | CLOSED: main's path under a non-timestamp type (C-019) |
+| F-06 | where Spark is lossy the unit differs from Spark | CLOSED by ruling: the true floor stays, disclosed (§12.4) |
+| F-07 | a mutant survived (the relabel only for New York) | CLOSED: it fails 12 tests (C-020) |
+| F-08 | the named move also shows in `toPandas` and `show` | CLOSED: §12.8 and row R-019 |
+| F-09 | appends into `timestamp_ns` store microsecond precision | CLOSED: §12.9, row R-019, the release note |
+| F-10 | the re-seated tests no longer pass through `createDataFrame` | not in the fold's scope; recorded in §12.11 |
+
+**Verifier 2 (a fresh Opus 5.5 session, high effort): PASS on `36382b62`.** Its stage counts:
+
+- 0 of 1388 catalogue cells where main answered and head raises (87 at `c4efd79f`).
+- 12 of 520 no-nanosecond cells differ from main, all the named move.
+- 0 of 2288 cells under a declared non-timestamp type over nanoseconds differ from main
+  (values, error text, Arrow schema, `df.schema`, both `explain` texts), and 0 of the
+  catalogue's 204.
+- 336,624 stored values checked against Python's floor over every 1880 to 2037 transition of
+  New York, Lord Howe and Kolkata: 0 off the floor, 0 with a wrong type or label; the kernel
+  alone on 8,640,405 values: 0 wrong.
+- 34 mutants: 31 killed, 2 equivalent (the step widened to a declared `date`; the relabel
+  also recasting a UTC column), 1 survivor that is not equivalent (V2-01), closed by §13.1.
+- Cost, five interleaved sets: no nanosecond column 1.01 of main for two microsecond
+  columns; a nanosecond column 14.7 to 16.9 ms per million rows, naive, UTC, New York and
+  polars; ceiling 25.
+- Four findings, V2-01 (S3), V2-02 (S3), V2-03 and V2-04 (S4): §13.
+
+**What verifier 2 did not reach:** it did not re-run the whole facade suite (the pin file,
+the four re-seated files and its probes only); it did not record Spark on the Lord Howe and
+Kolkata transition frames (Spark was recorded on the first verifier's catalogue only).
+
+**After the verified head:** §13 (follow-up 3) is tests and documents only, written after
+`36382b62`. No line under `python/repark/src/` changed, so the verified product code is the
+shipped product code. The pin of §13.1 and the text of §13 have not been independently
+verified.
 
 ## 12. Fold 1 (2026-10-13), after an independent verify failed `c4efd79f`
 
@@ -293,16 +342,31 @@ of the instant, which is also main's answer under `c timestamp`. No pin compares
 to Spark; they are recorded in the oracle file as Spark's answers and disclosed here and in
 the parity row.
 
-| Cells (Spark 4.1.2, driver zone EST/EDT, recorded live) | Floor, the unit's answer | Spark |
+Corrected by follow-up 3 (§13.2): the first table named one pass per schema, which was true
+of one frame only.
+
+In the driver machine's repeated hour Spark stores an aware instant up to one hour early or
+late. Which pass it moves depends on the **other values in the column** and on the schema, as
+well as on the driver zone. Two frames, both New York-aware, both recorded live on Spark
+4.1.2 with driver zone EST/EDT, in both sessions:
+
+| Frame | Instant | Floor, the unit's answer | Spark, no schema | Spark, `c timestamp` |
+|---|---|---|---|---|
+| the oracle's `pd_ny_ns_transitions` (5 rows) | `05:30:00.000000001Z`, first pass | `1793511000000000` | `1793514600000000`, one hour late | right |
+| the same | `06:30:00.000000001Z`, second pass | `1793514600000000` | right | `1793511000000000`, one hour early |
+| the second verify's frame (8 rows and a NULL; a UTC-aware twin answers the same) | `05:30:00.000000001Z`, first pass | `1793511000000000` | right | right |
+| the same | `06:30:00.000000001Z`, second pass | `1793514600000000` | `1793511000000000`, one hour early | `1793511000000000`, one hour early |
+| the same | `06:00:00.000000001Z`, second pass | `1793512800000000` | `1793509200000000`, one hour early | `1793509200000000`, one hour early |
+
+Dates are 2026-11-01. So no rule of the form "Spark loses the first pass" holds for every
+frame; the class is "an aware instant in the driver zone's repeated hour". The other lossy
+cells:
+
+| Cells | Floor, the unit's answer | Spark |
 |---|---|---|
-| New York-aware `2026-11-01 05:30:00.000000001Z`, the first pass of the repeated hour, no schema | `1793511000000000` | `1793514600000000`, one hour late, equal to its answer for 06:30Z |
-| New York-aware `2026-11-01 06:30:00.000000001Z`, the second pass, `c timestamp` | `1793514600000000` | `1793511000000000`, one hour early |
 | UTC-aware int64 extremes (`pd.Timestamp.min`, `.max`), no schema and `c timestamp` | `-9223372036854776`, `9223372036854775` | `9223368674854775`, `9223368436854775`: wrapped and an hour off |
 | naive int64 extremes | the same floor, `timestamp[us]` | raises (`OverflowError`, `OutOfBoundsDatetime`, or `nonexistent time`) |
-| `1883-11-18 17:00:00.000000001Z`, local mean time (measured by the verify stage) | `-2717650800000000` | `-2717650562000000` |
-
-The lossy hour is the **driver machine's** repeated hour, so the cells depend on where Spark
-runs.
+| `1883-11-18 17:00:00.000000001Z`, local mean time (both verify stages) | `-2717650800000000` | `-2717650562000000`, 238 seconds off |
 
 ### 12.5 Ruling 5: mutants (C-020)
 
@@ -375,3 +439,55 @@ gate over the branch: 0 hits.
 - The 231 wall-door tests no longer pass through `createDataFrame` (the re-seat of §4), so
   the pandas `ArrowDtype` coverage of nested, run-end and dictionary layouts they gave by
   accident is gone; the verify stage compared all 540 seat calls and found no weakening.
+
+## 13. Follow-up 3 (2026-10-13), after the second verify passed `36382b62`
+
+Tests and documents only. No product change.
+
+### 13.1 V2-01: the pin for the surviving mutant (C-020)
+
+The second verifier's mutant `R7h` keeps the floor only under no schema and a declared
+`timestamp_ntz`, skipping it under a declared zoned `timestamp`. It passed all 244 pins and
+is not equivalent: 12 catalogue answers become main's errors again. The extremes test declared
+`c timestamp` only over the UTC-aware source, where main's row loop already answered.
+
+`test_the_extremes_under_a_declared_timestamp_are_floored_first` declares `c timestamp` over
+the naive int64 extremes (pandas and polars), the New York-aware extremes (pandas and polars)
+and the polars int64-minimum column, in both sessions, and expects head's answers:
+`timestamp[us, tz=UTC]`; `[-9223372036854776, 9223372036854775]` for an aware column and for a
+naive one in a UTC session; `[-9223354274854776, 9223386436854775]` for a naive one in a New
+York session, which is the floored wall read in New York (local mean time, `-04:56:02`, in
+1677 and `-04:00` in 2262), checked against `zoneinfo`. The pin file is 254 tests: 254 passed
+on head; with `R7h` applied 8 of the 10 new tests fail and no other; restored, 254 passed. The
+two that pass on the mutant are the naive extremes in a UTC session, where main answered too.
+
+### 13.2 V2-03: the repeated-hour disclosure (C-023)
+
+§12.4's table and row R-019 are rewritten. The earlier text said Spark stores the first pass
+an hour late under no schema and the second an hour early under `c timestamp`; that was one
+frame's result. On the second verifier's frame Spark is right for the first pass and an hour
+early for the second under both schemas.
+
+### 13.3 V2-04: declared `c timestamp` where main raised (C-006)
+
+C-006 holds for its 14 matrix cells. Row R-019 said a declared `c timestamp` over nanoseconds
+"answers what main answered"; it now says "where main answered". Where main raised, head
+answers the floor. The second verifier's 12 catalogue cells:
+
+| Frame | Sessions | Main | Head |
+|---|---|---|---|
+| New York-aware lowest value (`-9223372036854775807`) | UTC and New York, default and `TIMESTAMP_NTZ` default (4) | `OutOfBoundsDatetime` | `-9223372036854776` |
+| polars int64 minimum | UTC and New York, default and `TIMESTAMP_NTZ` default (4) | `NaTType does not support astimezone` / `utcoffset` | `-9223372036854776`, read in the session zone when naive |
+| naive int64 maximum; naive extremes with the epoch; `pd.Timestamp.min` and `.max`; polars naive extremes | New York, default (4) | `OverflowError: Python int too large to convert to C long` | the floored wall read in New York |
+
+Its wider probe found more cells of the same class and no other class.
+
+### 13.4 What stays open
+
+- **V2-02: rows are still read in Python under a declared `c timestamp`** for a naive
+  nanosecond column, and for every nanosecond column in a session whose default is
+  `TIMESTAMP_NTZ`, as on main: the pre-existing `to_pylist` loops in
+  `_localize_naive_timestamp_column`. The floor step reads no row. Not changed by this unit;
+  the second verifier measured about 4.7 s per million rows there on head and more on main.
+- The Lord Howe and Kolkata transition frames have no Spark recording.
+- §2 still describes the first kernel and seat; §12 supersedes it.
