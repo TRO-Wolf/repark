@@ -252,6 +252,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   exactly, and each `_meta` step asserts the recorded spec/sort/identifier triples
   from the table's metadata file (prefix legs compare after `DataInvalid => `).
   pins: casesens-1/C-013, C-014, C-015, C-016
+  **CASESENS-1-S5-FLAKE (2026-10-13):** `_assert_meta` picks the latest file by
+  the integer version in its name (`_metadata_version`), not `st_mtime`.
   **Verifier fold (2026-09-28):** `test_cast_of_a_column_keeps_the_written_child_name`
   (VC-3: cast/try_cast keep the child name on createDataFrame and Iceberg frames),
   `test_describe_resolves_display_names_under_case_insensitive` and
