@@ -27,5 +27,6 @@ them.
 - [ice-tsns-coercion-1/](ice-tsns-coercion-1/map.md) — **ICE-TSNS-COERCION-1 slice 0 (2026-10-12):** the twin and Spark-lattice measurement for parity row R-017. No product code. The summary, the progress note and the evidence sit in the directory.
 - [ice-tsns-frame-door-1/](ice-tsns-frame-door-1/map.md) — **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** the cost evidence of the frame door (pandas and polars nanosecond timestamps enter as microseconds).
 - [ice-ntz-nested-wall-1/](ice-ntz-nested-wall-1/map.md) — the design note for the nested TIMESTAMP_NTZ store kernel (parked 2026-10-12).
+- [ice-tsns-type-planner-1/](ice-tsns-type-planner-1/map.md) — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the Fable 5.1 sketch that fixes parity row R-017 by the SQL type name (docs only, no product code); closes unmerged #1027 and #1042.
 
 Up: [../map.md](../map.md).

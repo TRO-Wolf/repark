@@ -1,0 +1,180 @@
+<title>Iceberg Production Plan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a reading column; each phase is a numbered section with a unit table; one dependency table and one decisions table close it. Glacial-teal identity shared with the re-ratings. */
+:root{
+  --ground:#F2F5F7; --panel:#FFFFFF; --ink:#1A2430; --ink-soft:#55616D; --line:#D5DEE3;
+  --accent:#0E6C88; --accent-soft:#DCEBF1; --accent-ink:#FFFFFF;
+  --good:#2A7A4B; --good-soft:#DDEFE3; --bad:#B0372A; --bad-soft:#F5DCD8;
+  --warn:#9A6A12; --warn-soft:#F7EBD2; --hold:#5A6470; --hold-soft:#E4E8EC;
+  --display:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;
+  --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono","SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#0E1418; --panel:#141C22; --ink:#E4EAEF; --ink-soft:#9AA6B1; --line:#263139;
+  --accent:#4DB1CF; --accent-soft:#163541; --accent-ink:#0B1519;
+  --good:#63C48A; --good-soft:#163425; --bad:#EE7A6C; --bad-soft:#3E1D19;
+  --warn:#E2B55A; --warn-soft:#3A2E14; --hold:#9AA6B1; --hold-soft:#232D35; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ground:#0E1418; --panel:#141C22; --ink:#E4EAEF; --ink-soft:#9AA6B1; --line:#263139;
+  --accent:#4DB1CF; --accent-soft:#163541; --accent-ink:#0B1519;
+  --good:#63C48A; --good-soft:#163425; --bad:#EE7A6C; --bad-soft:#3E1D19;
+  --warn:#E2B55A; --warn-soft:#3A2E14; --hold:#9AA6B1; --hold-soft:#232D35; color-scheme:dark}
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1060px;margin:0 auto;padding-block:28px 56px;padding-inline:16px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,5vw,40px);line-height:1.1;margin:6px 0 10px;text-wrap:balance}
+h2{font-family:var(--display);font-weight:600;font-size:22px;margin:40px 0 8px;text-wrap:balance;display:flex;gap:12px;align-items:baseline}
+h2 .ph{font-family:var(--mono);font-size:13px;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:3px;font-weight:500}
+h3{font-family:var(--display);font-weight:500;font-size:17px;margin:18px 0 6px}
+p{max-width:70ch;margin:0 0 12px}
+.lede{font-size:17px;max-width:72ch}
+.rule{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--accent);padding:14px 18px;margin:18px 0;max-width:80ch}
+.rule p{margin:0 0 6px}
+.tbl{overflow-x:auto;border:1px solid var(--line);background:var(--panel);margin:10px 0 18px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:760px}
+th,td{text-align:left;vertical-align:top;padding:9px 11px;border-bottom:1px solid var(--line)}
+th{font-family:var(--display);font-weight:600;font-size:13px;background:var(--accent-soft);color:var(--ink)}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+code{font-family:var(--mono);font-size:.92em;background:var(--hold-soft);padding:0 4px;border-radius:3px}
+ul,ol{max-width:74ch;padding-left:22px} li{margin-bottom:6px}
+.tag{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:1px 7px;border-radius:3px;white-space:nowrap}
+.A{background:var(--bad-soft);color:var(--bad)} .B{background:var(--warn-soft);color:var(--warn)} .C{background:var(--good-soft);color:var(--good)} .O{background:var(--hold-soft);color:var(--hold)}
+.foot{font-family:var(--mono);font-size:12px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:14px;margin-top:40px}
+</style>
+<div class="wrap">
+<div class="eyebrow">RePark · Iceberg v2 and v3 · from the 2026-10-13 re-rating to a PRODUCTION claim · plan for the owner's adopt</div>
+<h1>Iceberg Production Plan</h1>
+<p class="lede">Seven phases, twenty-three units, in the order their dependencies allow. Each unit names what it earns against the twelve attributes in <code>docs/production-grade.md</code> (PR #1044), its grade and tier, its pins, its verifier scope and its exit. Nothing here opens a lane until the owner adopts the phase; the owner's numeric gates are not relaxed anywhere in this page.</p>
+
+<div class="rule">
+<p><b>Three rules carried through every phase.</b></p>
+<p>1. Floor before fix. Where a silent wrong value is reachable today, the first unit is a named refusal; the real fix follows on its own card and may be slower. A refusal with a hint is production grade inside the envelope; a wrong value never is.</p>
+<p>2. Measure before design. Every unit starts with a step 0 that records main's answers for its cells on the live oracle where Spark can answer, and as a committed fixture where it cannot. A unit without a step-0 record does not get a verifier.</p>
+<p>3. One seam, one owner. A finding that a verifier reaches through a new spelling of the same plan shape is a seam problem, not a fold problem. Three verifier rounds against the same finding class send the unit to an architecture sketch, never to a fourth fold.</p>
+</div>
+
+<h2><span class="ph">Phase 0</span> Declare and freeze</h2>
+<p>Cheap, docs only, no verifier. Makes the tree say what is true today so every later unit moves a label that exists.</p>
+<div class="tbl"><table>
+<thead><tr><th>Unit</th><th>What</th><th>Tier</th><th>Exit</th><th>Earns</th></tr></thead>
+<tbody>
+<tr><td class="n">0.1</td><td>Tag v1.5.5 from main once #1047's array rule is merged or explicitly deferred (owner decision D1 below). Release note carries the native-door Spark-unreadability line and the R-017 known issue.</td><td><span class="tag C">C clerk</span></td><td>Tag pushed, PyPI wheels live, five platforms</td><td>Compatibility and delivery</td></tr>
+<tr><td class="n">0.2</td><td>Registry truth-up on main: R-017 gains a dated park record (both designs, seven rounds, future home ICE-TSNS-READ-COERCION-1); R-011 gains its park date; the two rows read as disclosures, not as "measured 10-09" with no outcome.</td><td><span class="tag C">C clerk</span></td><td>Rows dated; registry gates green</td><td>Documentation</td></tr>
+<tr><td class="n">0.3</td><td>STATUS.md per-capability maturity section, the unit #1044 defers: one row per capability from the re-rating table, each citing the tests that hold it, plus the dated list of exercised workloads (the eleven daily acceptance legs).</td><td><span class="tag C">C clerk</span></td><td>Section lands after #1044 merges; the 09-14 and 09-18 records point at it</td><td>Documentation; retires two stale homes of the grade</td></tr>
+<tr><td class="n">0.4</td><td>Guide: the nanosecond section opens with the sentence that Spark 4.1.2 with Iceberg 1.11 refuses any table carrying <code>timestamp_ns</code> or <code>timestamptz_ns</code>; the re-rating page is filed under <code>docs/artifacts/</code>.</td><td><span class="tag C">C clerk</span></td><td>Same PR as 0.2</td><td>Documentation</td></tr>
+<tr><td class="n">0.5</td><td>ENC-1-RESIDUE-1: the six items get an owner call each (accept as declared, or close). Item 3, ref-only commits publishing rows staged before the key, is the one that can leak plaintext and should close.</td><td><span class="tag O">owner</span></td><td>Card status moves from "unscheduled" to dated rulings</td><td>Security; predictable failure</td></tr>
+</tbody></table></div>
+
+<h2><span class="ph">Phase 1</span> Boundary and security findings PA-01 to PA-04</h2>
+<p>All four reproduce from the 2026-10-11 appendix and the code at each cited line is unchanged on main. They are small and independent; they block the Security attribute for every Iceberg capability at once, which is why they come before the Iceberg-specific work.</p>
+<div class="tbl"><table>
+<thead><tr><th>Unit</th><th>What</th><th>Grade, tier</th><th>Pins and verifier</th><th>Exit</th></tr></thead>
+<tbody>
+<tr><td class="n">1.1 PA-01</td><td>dbt session mismatch error names only safe identifiers and the changed key names; <code>_connection_keys</code> and the debug path go through the redaction policy.</td><td><span class="tag B">B</span> Muse xhigh</td><td>Sentinel secrets in both property dicts and in a source URL never appear in any raised text or debug display; mismatch still refuses. No Opus verifier (Python, S1 but mechanical).</td><td>Executed repro from the appendix refuses cleanly</td></tr>
+<tr><td class="n">1.2 PA-04</td><td>Checked prefix comparison in both policy helpers; non-ASCII paths classify normally.</td><td><span class="tag B">B</span> Muse xhigh</td><td>Boundary bytes 5, 7, 9; <code>file://localhost</code>; both doors; named policy error and opt-in success asserted, not "panic caught".</td><td>Zero panics across the fuzzed path set</td></tr>
+<tr><td class="n">1.3 PA-02</td><td>The local-file guard checks every write an executing carrier can run: EXPLAIN ANALYZE, PREPARE/EXECUTE, nested write carriers; plain EXPLAIN unchanged. Decide and document the policy of the Python <code>repark.sql()</code> ANSI entry point.</td><td><span class="tag B">B</span> Muse xhigh, one scoped Opus 5.5 verifier shared with 1.4</td><td>Refusal before any side effect, both doors, default and opt-in; the appendix's wrapped COPY cell writes nothing.</td><td>Both doors refuse; no file created</td></tr>
+<tr><td class="n">1.4 PA-03</td><td>Containment resolves the nearest existing ancestor and refuses an indeterminate destination; the symlink threat model is written down.</td><td><span class="tag B">B</span> Muse xhigh, same verifier as 1.3</td><td>Missing one and several parents; symlink inside and outside the warehouse; both doors.</td><td>Appendix symlink cell refuses</td></tr>
+</tbody></table></div>
+
+<h2><span class="ph">Phase 2</span> Silent values reachable on format v2</h2>
+<p>These three are the rows that hold v2 below PRODUCTION on their own. Each gets its floor first.</p>
+<div class="tbl"><table>
+<thead><tr><th>Unit</th><th>What</th><th>Grade, tier</th><th>Pins and verifier</th><th>Exit</th></tr></thead>
+<tbody>
+<tr><td class="n">2.1 carriers floor</td><td>WRITE-BODY-CARRIERS-1 step 1: EXPLAIN ANALYZE over a write and PREPARE/EXECUTE of a write refuse by name with a hint on both doors, until step 2 routes them through the store doors. Plain EXPLAIN keeps answering.</td><td><span class="tag B">B</span> Muse xhigh</td><td>The twenty measured cells of the card plus TIMESTAMP, NTZ and DATE sources; assert no files and no snapshot on refusal.</td><td>No carrier stores a different instant than the bare statement</td></tr>
+<tr><td class="n">2.2 carriers route</td><td>Step 2: the carriers execute through the same conform and refusal path as INSERT; the refusal of 2.1 comes out in the same change.</td><td><span class="tag B">B</span> Muse xhigh, scoped Opus 5.5 verifier</td><td>Same cells now store the bare statement's ticks; registry row flips to FIXED.</td><td>Byte-identical stores across carrier and bare</td></tr>
+<tr><td class="n">2.3 struct pairing sketch</td><td>R-016: an Opus 5.5 high design sketch that halts before code. The target is one conform function at the shared write boundary that applies Spark's per-door rule (position for the INSERT family and insertInto(overwrite); name, case-insensitive, for BY NAME, MERGE, UPDATE, writeTo and overwritePartitions) and refuses a missing or extra field everywhere with Spark's error classes.</td><td><span class="tag A">A</span> Opus 5.5 high</td><td>The sketch names the one boundary every door passes through; if two doors bypass it, the sketch halts and says so.</td><td>Owner adopts the sketch</td></tr>
+<tr><td class="n">2.4 struct pairing build</td><td>Implement 2.3. Step 0 re-records the 80 live cells (eight spellings, ten doors) on today's Spark as the fixture; every leaf type, distinguishable values per field, renamed, swapped, recased, missing and extra.</td><td><span class="tag A">A</span> Opus 5.5 high executor, Opus 5.5 high verifier</td><td>80 of 80 EQUAL or EQUAL-on-error; mutants on each door's rule die; cost within the owner's 1.05 gate on the write set.</td><td>Struct writes move EXPERIMENTAL to H-N on both formats</td></tr>
+<tr><td class="n">2.5 nested NTZ</td><td>R-011 (parked #1037): owner decision D3. Floor option: refuse a leaf assignment into a nested TIMESTAMP_NTZ in a non-UTC session by name; whole-struct writes keep storing. Fix option: un-park #1037 for one scoped verifier.</td><td><span class="tag B">B</span> Muse xhigh (floor) or <span class="tag A">A</span> Opus (fix)</td><td>The six nested routes in three zones from the existing Rust pin, flipped from "holds the split" to "refuses or agrees".</td><td>No route stores two walls for one instant</td></tr>
+</tbody></table></div>
+
+<h2><span class="ph">Phase 3</span> Data-integrity and compatibility evidence</h2>
+<p>Everything here already works as far as anyone knows. The attribute asks for evidence that it works under failure, and that evidence is offline only today.</p>
+<div class="tbl"><table>
+<thead><tr><th>Unit</th><th>What</th><th>Grade, tier</th><th>Pins and verifier</th><th>Exit</th></tr></thead>
+<tbody>
+<tr><td class="n">3.1 kill mid-write</td><td>A subprocess harness runs INSERT, INSERT OVERWRITE, MERGE copy-on-write and MERGE merge-on-read against a memory-catalog and a Hadoop table, SIGKILLs the process at three points (during staging, after staging before commit, during the metadata swap), then reads the table back.</td><td><span class="tag B">B</span> Muse xhigh</td><td>Every row of the last committed snapshot present, no partial snapshot visible, orphan files counted and named in the assertion; both doors.</td><td>Twelve kill cells green and repeatable 10 of 10</td></tr>
+<tr><td class="n">3.2 unknown-outcome drill</td><td>One live drill on scratch Glue through the commit fault seam (Q-23a-A): the catalog loses the response after the commit lands, and once before it lands. The caller sees <code>CommitStateUnknownException</code> with an <code>operation_id</code> and the table is reconcilable by reload.</td><td><span class="tag B">B</span> Muse xhigh, owner-run credentials</td><td>Two cells recorded with run id; the inventory row 8 retry rule (MERGE and CTAS IF NOT EXISTS only) demonstrated against them.</td><td>The K3 row reads "drilled live" with a date</td></tr>
+<tr><td class="n">3.3 cross-release pin</td><td>A table the published 1.5.1 wheel wrote (v2 CoW, v2 MoR, v3 DV) is read, appended, merged and compacted by the current build; a current-build table is read by the 1.5.1 wheel. Fixtures committed once, regenerated only by a release unit.</td><td><span class="tag C">C</span> clerk</td><td>Row counts, checksums and metadata table rows equal; the pin runs in the smoke job.</td><td>Compatibility attribute has a named test</td></tr>
+<tr><td class="n">3.4 INSERT storm</td><td>ICE-OCC-SCOPED-1-INSERT-STORM stays BACKLOG; the envelope states the default retry budget and the single-writer rule, and the guide shows how to raise <code>commit.retry.num-retries</code> per table.</td><td><span class="tag C">C</span> clerk</td><td>Guide text plus one pin that the property is honoured.</td><td>Limit stated rather than discovered</td></tr>
+</tbody></table></div>
+
+<h2><span class="ph">Phase 4</span> Cross-reader evidence on AWS</h2>
+<div class="tbl"><table>
+<thead><tr><th>Unit</th><th>What</th><th>Grade, tier</th><th>Pins and verifier</th><th>Exit</th></tr></thead>
+<tbody>
+<tr><td class="n">4.1 Spark reads RePark on Glue and S3 Tables</td><td>A job in <code>aws-acceptance.yml</code> that runs after the silver and gold legs, provisions the same PySpark 4.1.2 and Iceberg 1.11.0 runtime the live-parity job already has, and reads every table the acceptance run wrote: <code>count(*)</code>, a per-column checksum, and <code>EXCEPT</code> against the RePark answer recorded in the leg.</td><td><span class="tag C">C</span> clerk for the workflow, <span class="tag B">B</span> Muse for the comparison harness</td><td>Zero rows in either direction of the EXCEPT on v2 CoW, v2 MoR and v3 DV tables; a v3 table with a nanosecond column is expected to refuse on the Spark side and that refusal is the pin.</td><td>Inventory check 4, Spark half, green with a run id</td></tr>
+<tr><td class="n">4.2 Trino</td><td>Stays parked behind the 1.8 qualification by the owner's word. Not on this plan's critical path.</td><td><span class="tag O">owner</span></td><td>—</td><td>—</td></tr>
+</tbody></table></div>
+
+<h2><span class="ph">Phase 5</span> Resource envelope</h2>
+<p>The production-grade page asks for a declared bound. Today the bound is the measured sizes. This phase states it or measures it.</p>
+<div class="tbl"><table>
+<thead><tr><th>Unit</th><th>What</th><th>Grade, tier</th><th>Pins and verifier</th><th>Exit</th></tr></thead>
+<tbody>
+<tr><td class="n">5.1 measure</td><td>PP-01 ordered write, PP-02 MoR MERGE and the un-pooled scan at 1×, 2× and 4× the pool budget on the MW-7 bed, release build, RSS sampled outside the pool. Three runs, medians.</td><td><span class="tag B">B</span> Muse xhigh</td><td>A committed table of peak RSS per shape per multiple under <code>docs/perf/</code>.</td><td>The envelope can quote a number</td></tr>
+<tr><td class="n">5.2 bound or refuse</td><td>Where 5.1 shows growth past the pool: spill the ordered-write sort through the pool, budget the MoR matched set, and refuse a changelog materialization above a stated size (PA-11). Where it does not: state the measured ceiling in the guide.</td><td><span class="tag A">A</span> Opus 5.5 high sketch, Muse build</td><td>Torture runs at 2× and 4× pass or refuse by name; never OOM-kill.</td><td>Resource discipline attribute</td></tr>
+<tr><td class="n">5.3 memory detection</td><td>PA-10: locate the process cgroup, walk ancestor limits, handle cgroup v1, require an explicit budget where detection cannot be trusted.</td><td><span class="tag B">B</span> Muse xhigh</td><td>Fixture tests for membership and ancestors; one constrained-process integration test.</td><td>No pool budget above the real allowance</td></tr>
+</tbody></table></div>
+
+<h2><span class="ph">Phase 6</span> Nanosecond columns, format v3</h2>
+<p>This is a separate track because its blocker is a type-system seam, not a list of spellings. Seven verifier rounds across two designs (#1027 refusal, three rounds, parked 2026-10-12; #1042 widening, four rounds, parked 2026-10-13) each found a new plan shape through which the narrowing reaches a store: a UNION branch, the cache, a correlated subquery, an alias-less INSERT … SELECT item, a written cast in a WHERE. The cause is one sentence in the registry: the planner's untyped NULL is cast to <code>Timestamp(ns)</code>, the session rule reads that cast as SQL TIMESTAMP at microseconds, and the nanosecond argument is narrowed to match. Any fix that walks the plan to find "analyzer-inserted" casts is chasing an open set.</p>
+<div class="tbl"><table>
+<thead><tr><th>Unit</th><th>What</th><th>Grade, tier</th><th>Pins and verifier</th><th>Exit</th></tr></thead>
+<tbody>
+<tr><td class="n">6.1 floors in flight</td><td>#1048 create door refuses an unasked nanosecond column (fold running). #1047 ships the array rule only: the round-0 refusal at <code>applyInPandas</code> with the H-3 over-refusals removed (empty, all-NaT, tick 0 and −1 arrays store as main does). The fold-1 declared-type walk over every pandas container spelling becomes its own card, NS-NESTED-PANDAS-1, S0 on main.</td><td><span class="tag B">B</span> Muse xhigh, one fresh scoped Opus verifier on stages A, C and D only</td><td>Stage A 12 cells refuse; stage C 120 cells equal main; stage D 45 cells equal main.</td><td>Both merge; v1.5.5 tags</td></tr>
+<tr><td class="n">6.2 R-009 floor</td><td>One narrowing kernel for every door that stores a nanosecond source into a microsecond or NTZ column, floor semantics by the owner's Q-21c-8 ruling, pre-epoch cells included.</td><td><span class="tag B">B</span> Muse xhigh</td><td>36 cells per format version, −1 ns stores −1 µs on every door.</td><td>R-009 FIXED</td></tr>
+<tr><td class="n">6.3 R-010, R-012, R-013, R-018</td><td>Loud gaps: lower the cast spellings in UPDATE and DELETE; the unfiltered UPDATE out-of-range text; the ANSI door's by-name kernel registration; the two VALUES spellings that fail before any store. None stores a wrong value; they refuse or error. One Muse unit, four rows.</td><td><span class="tag B">B</span> Muse xhigh</td><td>Each row's measured cells, errors replaced by stores or by Spark's own error class.</td><td>Four rows FIXED</td></tr>
+<tr><td class="n">6.4 architecture sketch</td><td>R-017 and ICE-TSNS-READ-COERCION-1 as one question: how does the planner tell a user-written SQL TIMESTAMP from a nanosecond value so that coercion of (ns, NULL) yields ns by construction? Three candidates to weigh, with a halt on each: (a) a RePark planner type for the nanosecond family that DataFusion coercion preserves, which meets the datafusion#26178 class of physical-versus-logical metadata bugs; (b) custom type coercion for the timestamp lattice registered through the session's analyzer rules so the narrowing is never inserted, leaving the session rule alone; (c) an upstream DataFusion change to <code>type_union_resolution</code> for timestamp units, with a RePark patch until it lands. The sketch halts before code and names the pins that would prove each candidate closed over the 9,600-cell census and the seven rounds' repros.</td><td><span class="tag A">A</span> Fable High, architecture only (major-blocker escalation rule)</td><td>The sketch is adopted or refused by the owner; no fold on #1027 or #1042 either way.</td><td>One seam chosen</td></tr>
+<tr><td class="n">6.5 build</td><td>Implement the adopted candidate. Step 0 replays the 9,600-cell census, the 117 reads, the 90 consumer cells and the seven rounds' repros on main as the fixture. #1027 and #1042 close, unmerged, with pointers.</td><td><span class="tag A">A</span> Opus 5.5 high executor, Opus 5.5 high verifier; park after one failed round</td><td>Census 9,600 of 9,600 by design, not by assignment: each cell's expected category is derived from the design's rule, not written by the fold; mutants on the rule die; cost within 1.05.</td><td>R-017 FIXED; the nanosecond family moves EXPERIMENTAL to H-N</td></tr>
+<tr><td class="n">6.6 second engine</td><td>R-002 stays DECLARED until a Spark runtime reads the type; track the Iceberg Java issue and re-measure on each Iceberg runtime bump in the parity job. The label cannot reach PRODUCTION without an oracle, and the plan says so.</td><td><span class="tag C">C</span> clerk</td><td>A dated sentence in the guide and the registry row.</td><td>Honest limit stated</td></tr>
+</tbody></table></div>
+
+<h2><span class="ph">Phase 7</span> Declare, row by row</h2>
+<p>Labels move only in STATUS.md, only with the citing tests, only after the unit that earns them merges. The order the labels can move:</p>
+<ol>
+<li>Reads on v2 and v3: PRODUCTION once 5.1 states the measured ceiling (no code needed).</li>
+<li>Catalogs on Glue and S3 Tables: PRODUCTION after 4.1 and 3.2.</li>
+<li>Append, CTAS, INSERT OVERWRITE on top-level common types: PRODUCTION after 2.1, 2.2, 3.1, 3.3 and phase 1.</li>
+<li>MERGE, UPDATE, DELETE: PRODUCTION after the same plus 5.2.</li>
+<li>Struct-column writes: H-N after 2.4, PRODUCTION after 2.5 and one release of exposure.</li>
+<li>Maintenance CALLs: H-N stays until MANIFEST-2/3 close or are declared; PRODUCTION needs a dated ruling on them.</li>
+<li>dbt gold: PRODUCTION after 1.1 and 4.1.</li>
+<li>Nanosecond columns: H-N after 6.1 to 6.5; PRODUCTION only with a second engine (6.6).</li>
+<li>Format v2 as a whole: PRODUCTION when rows 1 to 4 and 7 carry the label; format v3 core: the same rows measured on v3 tables, which the acceptance legs already do.</li>
+</ol>
+
+<h2>Order and dependencies</h2>
+<div class="tbl"><table>
+<thead><tr><th>Week</th><th>Runs</th><th>Waits on</th><th>Lanes (cap 4, Muse until Wed 08:00 then standing tiers)</th></tr></thead>
+<tbody>
+<tr><td class="n">1 · 10-14 to 10-18</td><td>0.1 to 0.5; 1.1, 1.2; 2.1; 6.1; 6.2</td><td>0.1 waits on D1; 0.3 waits on #1044</td><td>Two Muse lanes (1.x and 2.1), one Muse lane 6.x, docs clerk outside the cap. Zero Opus executors; one scoped Opus verifier on 1.3 and 1.4 when they land.</td></tr>
+<tr><td class="n">2 · 10-19 to 10-25</td><td>1.3, 1.4; 2.2; 2.3 sketch; 3.1; 3.3; 6.3</td><td>2.2 waits on 2.1 merged; 2.3 is the week's one Opus lane</td><td>Three Muse lanes, one Opus sketch lane.</td></tr>
+<tr><td class="n">3 · 10-26 to 11-01</td><td>2.4 build; 3.2 drill; 4.1; 5.1; 6.4 sketch</td><td>2.4 waits on D2 (sketch adopt); 3.2 needs owner credentials; 6.4 is architecture, Fable High, no build</td><td>One Opus executor (2.4), two Muse lanes, the sketch.</td></tr>
+<tr><td class="n">4 · 11-02 to 11-08</td><td>2.5 by D3; 5.2 sketch and 5.3; 6.5 if D4 adopts; 3.4</td><td>6.5 waits on D4; 5.2 waits on 5.1 numbers</td><td>One Opus executor (6.5 or 5.2), two Muse lanes.</td></tr>
+<tr><td class="n">5 · 11-09 onward</td><td>Phase 7 label moves as units merge; v1.5.6 or v1.6.0 carries the first PRODUCTION rows</td><td>Every row's citing tests green in CI and the live gates</td><td>Clerk only.</td></tr>
+</tbody></table></div>
+
+<h2>Owner decisions this plan needs</h2>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>Decision</th><th>My lean</th></tr></thead>
+<tbody>
+<tr><td class="n">D1</td><td>#1047: ship only the array rule with a fresh scoped verifier, then tag v1.5.5; or defer the array rule to 1.5.6 and tag now.</td><td>Ship the array rule first. It is an S0 silent value on main and the floor exists; tagging without it ships a known 1000× store.</td></tr>
+<tr><td class="n">D2</td><td>Adopt the R-016 struct-pairing sketch (2.3) as the week-2 Opus lane.</td><td>Yes; it is the widest silent-value row on both formats.</td></tr>
+<tr><td class="n">D3</td><td>R-011: floor (refuse the leaf assignment in non-UTC sessions) or un-park #1037 for one verifier.</td><td>Floor now, fix later; the park stands.</td></tr>
+<tr><td class="n">D4</td><td>Allow the R-017 architecture sketch (6.4) on Fable High under the major-blocker rule, with #1027 and #1042 closed unmerged.</td><td>Yes; seven rounds at one seam is the definition of a major blocker.</td></tr>
+<tr><td class="n">D5</td><td>ENC-1-RESIDUE-1 items 1 to 6: accept or close, each.</td><td>Close item 3; accept 1, 2, 4, 5 as declared; item 6 needs a Glue cell before a call.</td></tr>
+<tr><td class="n">D6</td><td>Trino cross-read stays behind 1.8.</td><td>Yes; Spark is the reader the acceptance legs can prove this month.</td></tr>
+</tbody></table></div>
+
+<h2>What this plan does not do</h2>
+<ul>
+<li>It does not relax any numeric gate (1.05 write cost, 1.20 PERF-1 carve-out, the lane cap, the Muse-until-Wednesday ruling).</li>
+<li>It does not un-park #1037, #1038, #1027 or #1042; each needs the owner's word.</li>
+<li>It does not touch the streaming track (OD-1 to OD-8 owner-held).</li>
+<li>It does not promise PRODUCTION on nanosecond columns; without a second engine that label is unreachable and the plan says so in 6.6.</li>
+</ul>
+<div class="foot">main f8f1d252 · re-rating of 2026-10-13 · definition PR #1044 · author: Fable 5.1, orchestrator-side plan for the owner's adopt · nothing in this page starts a lane</div>
+</div>
