@@ -816,3 +816,13 @@ declines it (a dated ruling in the intake, then the archive).
   R-013, R-018(1) measured against the head; R-009 stays its own unit). Supersedes the parked
   ICE-TSNS-NARROW-REFUSE-1 (#1027) and ICE-TSNS-COERCION-1 (#1042). Sequence: this docs PR,
   step 0 on Muse xhigh, one Opus 5.5 high executor, CI green, one scoped Opus 5.5 high verifier.
+- [ns-array-floor-1-card-2026-10-13.md](ns-array-floor-1-card-2026-10-13.md) — **card
+  NS-ARRAY-FLOOR-1 (2026-10-13, open, target v1.5.6):** floor a nanosecond datetime array
+  to microseconds under `array<timestamp>` and refuse it under `array<timestamp_ntz>`, as
+  Spark 4.1.2 measured (parity row R-020). A redesign that replaces draft PR #1047, whose
+  integer rule refused a correct microsecond integer and whose hint then stored a wrong
+  value. Driven by the dtype, never by integer comparison; integer cells stay as main.
+- [ns-nested-pandas-1-card-2026-10-13.md](ns-nested-pandas-1-card-2026-10-13.md) — **card
+  NS-NESTED-PANDAS-1 (2026-10-13, open, unscheduled, severity S0 on main):** nanosecond
+  values inside struct and map fields returned from `applyInPandas` (parity row R-020).
+  Cells from the #1047 verdict and ledger; the array door itself is NS-ARRAY-FLOOR-1.
