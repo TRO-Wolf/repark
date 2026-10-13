@@ -162,6 +162,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `create_physical_plan`); an intervening filter between two live windows stacks two
   (`sql_intervening_filter_between_windows_stacks_window_agg_exec`). Ledger:
   [../../../task/ta1-sql-fusion-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-15-ta1-sql-fusion-ledger.md).
+- [ice_tsns_type_planner_1_p5.rs](ice_tsns_type_planner_1_p5.rs) —
+  **ICE-TSNS-TYPE-PLANNER-1 step 0 (2026-10-13):** the P5 enumeration walks every
+  registered scalar, aggregate and window function of the Spark-door session over
+  the six probe inputs and prints one `name | inputs | return` line per return
+  that is, or contains, a nanosecond timestamp. Asserts only that the walk ran.
+  Output committed under
+  [../../../task/wo/ice-tsns-type-planner-1/evidence/p5-ns-returns.txt](../../../task/wo/ice-tsns-type-planner-1/evidence/p5-ns-returns.txt).
 
 ## I want to...
 

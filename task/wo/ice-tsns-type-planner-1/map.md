@@ -6,5 +6,7 @@ source; no product code. Closes unmerged #1027 (ICE-TSNS-NARROW-REFUSE-1) and
 #1042 (ICE-TSNS-COERCION-1).
 
 - [sketch.md](sketch.md) — the sketch, filed byte for byte (2026-10-13).
+- [evidence/map.md](evidence/map.md) — step 0 measurement outputs (P5 walk,
+  H2 and H3 probes, reader types), recorded on main, never edited by hand.
 
 Up: [../map.md](../map.md).
