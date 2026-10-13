@@ -105,6 +105,7 @@ mod partition_append;
 mod partition_overwrite;
 mod partitioned_ctas;
 mod partitioned_merge;
+mod pg_insert;
 mod plan_partitioning;
 mod property_display_redaction;
 mod purge;

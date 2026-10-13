@@ -24,6 +24,9 @@ pub(crate) async fn execute_insert_overwrite(
     cx: &EngineContext<'_>,
     insert: &Insert,
 ) -> Result<DataFrame> {
+    if let Some(frame) = crate::pg_insert::route_postgres_insert(cx, insert).await? {
+        return Ok(frame);
+    }
     match &insert.partitioned {
         Some(partition_exprs) => execute_partition_overwrite(cx, insert, partition_exprs).await,
         None => Err(crate::refusals::insert_overwrite(&insert.table.to_string())),

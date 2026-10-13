@@ -1,11 +1,15 @@
 //! `MERGE INTO` executor with copy-on-write and merge-on-read arms.
 
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+#[cfg(test)]
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use datafusion::arrow::array::{Array, ArrayRef, Int64Array, RecordBatch, StringArray};
+#[cfg(test)]
+use datafusion::arrow::array::StringArray;
+use datafusion::arrow::array::{Array, ArrayRef, Int64Array, RecordBatch};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
 #[cfg(test)]
 pub(super) use datafusion::arrow::datatypes::Field;
@@ -23,7 +27,9 @@ use datafusion::prelude::SessionContext;
 use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt, TryStreamExt};
 use iceberg::expr::Predicate;
-use iceberg::spec::{DataFile, FormatVersion, ManifestContentType};
+#[cfg(test)]
+use iceberg::spec::ManifestContentType;
+use iceberg::spec::{DataFile, FormatVersion};
 use iceberg::table::Table;
 
 use iceberg::Catalog;
@@ -32,14 +38,16 @@ use iceberg::TableIdent;
 use iceberg::writer::IcebergWriter;
 
 use repark_common::spark_error;
-use tracing::Instrument;
 use uuid::Uuid;
 
 mod abort;
+mod copy_on_write;
 pub(crate) mod cow_scratch;
 mod dv_close;
 mod file_sink;
 mod insert;
+mod merge_on_read;
+mod merge_sql;
 mod not_matched_by_source;
 pub(crate) mod row_lineage;
 pub(super) mod session_staging;
@@ -47,13 +55,17 @@ mod snapshot_commit;
 pub(crate) mod spec;
 pub(crate) mod target_scan;
 
+use copy_on_write::plan_and_commit_cow;
+pub(super) use copy_on_write::resolve_affected_data_files;
 pub use file_sink::{
     write_data_files, write_data_files_from_stream, write_data_files_from_stream_with_concurrency,
     write_data_files_with_concurrency,
 };
-use insert::{
-    insert_stream_checked, store_assignment_then_sql, table_projection, update_stream_checked,
-};
+use insert::store_assignment_then_sql;
+#[cfg(test)]
+use merge_on_read::consume_matched_work_batch;
+use merge_on_read::plan_and_commit_mor;
+use merge_sql::MergeSql;
 pub use not_matched_by_source::{NotMatchedBySourceAction, NotMatchedBySourceClause};
 pub use spec::{InsertAction, InsertClause, MatchedAction, MatchedClause, MergeSpec};
 pub(crate) use target_scan::{
@@ -64,14 +76,12 @@ pub(crate) use target_scan::{
 use crate::catalog::uuid_presentation::{convert_uuid_column, presented_arrow_schema};
 #[cfg(test)]
 use crate::write::concurrency::WriteConcurrency;
-use crate::write::concurrency::concurrency_from_ctx;
 use crate::write::conflict_filter::from_merge_on;
 pub(crate) use crate::write::name_resolution::{
     CaseInsensitiveColumnIndex, SourceMatch, dedup_key, resolve_write_column,
 };
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::file_scoped_rewrite_from_ctx;
-use crate::write::session_write_conf::resolve_empty_session_write;
 
 /// The reserved `_file` metadata column the core scan projects.
 pub(super) const FILE_PATH_COL: &str = "_file";
@@ -495,193 +505,6 @@ async fn plan_and_commit(
     }
 }
 
-async fn plan_and_commit_cow(
-    ctx: &SessionContext,
-    catalog: &Arc<dyn Catalog>,
-    spec: &MergeSpec,
-    target: &MergeTarget<'_>,
-    sql: &MergeSql<'_>,
-) -> Result<()> {
-    let MergeTarget {
-        table,
-        write_schema,
-        snapshot_id,
-        partitions: _,
-        conflict_filter: _,
-    } = *target;
-    let (affected, new_files, snapshot_extra) = async {
-        let affected = if not_matched_by_source::is_present(spec) {
-            if !spec.matched.is_empty() {
-                let _ = affected_files(ctx, sql, skip_cardinality(spec)).await?;
-            }
-            not_matched_by_source::all_current_data_file_paths(table).await?
-        } else if spec.matched.is_empty() {
-            Vec::new()
-        } else {
-            affected_files(ctx, sql, skip_cardinality(spec)).await?
-        };
-        // R-MERGE-STREAM-OUT: pipe rewrite and insert SQL streams into concurrent file writers.
-        let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
-            Vec::new();
-        // Scratches to drop on every exit of this block (file-scoped target and/or path table).
-        let mut rewrite_scratches = cow_scratch::MergeScratchGuard::new(ctx);
-        if !affected.is_empty() {
-            let rewrite_scratch = cow_scratch::maybe_register_file_scoped_rewrite_target(
-                ctx,
-                table,
-                snapshot_id,
-                write_schema,
-                &affected,
-            )?;
-            let rewrite_sql = if let Some(ref rewrite_name) = rewrite_scratch {
-                rewrite_scratches.push(rewrite_name.clone());
-                sql.rewrite_sql_allowlisted(rewrite_name, write_schema)
-            } else {
-                let path_table = cow_scratch::register_affected_paths_table(ctx, &affected)?;
-                rewrite_scratches.push(path_table.clone());
-                sql.rewrite_sql_path_semijoin(sql.target_name, &path_table, write_schema)
-            };
-            let rewrite_stream =
-                update_stream_checked(ctx, sql, &rewrite_sql, write_schema).await?;
-            streams.push(Box::pin(rewrite_stream));
-        }
-        for index in 0..spec.not_matched.len() {
-            let insert_sql = sql.insert_sql(index, table, write_schema)?;
-            streams.push(Box::pin(
-                insert_stream_checked(ctx, &insert_sql, write_schema).await?,
-            ));
-        }
-        let concurrency = concurrency_from_ctx(ctx);
-        let (snapshot_extra, staging) = resolve_empty_session_write(ctx)?;
-        let chained = futures::stream::iter(streams).flatten();
-        let write_result = session_staging::write_new_data_files_from_stream_with(
-            table,
-            write_schema,
-            chained,
-            concurrency,
-            &staging,
-        )
-        .await;
-        // Explicit drop before Ok so cleanup is ordered before the join span ends.
-        drop(rewrite_scratches);
-        Ok::<_, DataFusionError>((affected, write_result?, snapshot_extra))
-    }
-    .instrument(tracing::info_span!("merge.join"))
-    .await?;
-
-    let file_count = new_files.len() as u64;
-    let affected_entries = resolve_affected_data_files(table, snapshot_id, &affected).await?;
-    // write_data span wraps only the file count after streaming write.
-    tracing::info_span!("merge.write_data", files = file_count).in_scope(|| ());
-    commit_on_ref(
-        catalog,
-        table,
-        snapshot_id,
-        affected_entries,
-        new_files,
-        &target.conflict_filter,
-        spec.commit_branch.as_deref(),
-        &snapshot_extra,
-    )
-    .instrument(tracing::info_span!("merge.commit", files = file_count))
-    .await
-}
-
-/// The merge-on-read arm (Group T): data files are left COMPLETELY untouched.
-async fn plan_and_commit_mor(
-    ctx: &SessionContext,
-    catalog: &Arc<dyn Catalog>,
-    spec: &MergeSpec,
-    target: &MergeTarget<'_>,
-    sql: &MergeSql<'_>,
-) -> Result<()> {
-    let MergeTarget {
-        table,
-        write_schema,
-        snapshot_id,
-        partitions,
-        conflict_filter,
-    } = target;
-    let (table, write_schema, snapshot_id) = (*table, *write_schema, *snapshot_id);
-    // R-MERGE-ONEPASS Stage B (MoR): one INNER JOIN yields cardinality, deletes, and UPDATE values.
-    let (pairs, data_files, snapshot_extra, staging) = async {
-        let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
-            Vec::new();
-        let mut pairs = if spec.matched.is_empty() {
-            Vec::new()
-        } else {
-            let (pairs, update_batches) = matched_work_mor(
-                ctx,
-                sql,
-                write_schema,
-                skip_cardinality(spec),
-                &sql.matched_work_sql(write_schema),
-            )
-            .await?;
-            if !update_batches.is_empty() {
-                streams.push(Box::pin(futures::stream::iter(
-                    update_batches.into_iter().map(Ok),
-                )));
-            }
-            pairs
-        };
-        if not_matched_by_source::is_present(spec) {
-            let (nmbs_pairs, nmbs_updates) = matched_work_mor(
-                ctx,
-                sql,
-                write_schema,
-                true,
-                &not_matched_by_source::mor_work_sql(sql, write_schema),
-            )
-            .await?;
-            pairs.extend(nmbs_pairs);
-            if !nmbs_updates.is_empty() {
-                streams.push(Box::pin(futures::stream::iter(
-                    nmbs_updates.into_iter().map(Ok),
-                )));
-            }
-        }
-        for index in 0..spec.not_matched.len() {
-            let insert_sql = sql.insert_sql(index, table, write_schema)?;
-            streams.push(Box::pin(
-                insert_stream_checked(ctx, &insert_sql, write_schema).await?,
-            ));
-        }
-        let concurrency = concurrency_from_ctx(ctx);
-        let (snapshot_extra, staging) = resolve_empty_session_write(ctx)?;
-        let chained = futures::stream::iter(streams).flatten();
-        let data_files = session_staging::write_new_data_files_from_stream_with(
-            table,
-            write_schema,
-            chained,
-            concurrency,
-            &staging,
-        )
-        .await?;
-        Ok::<_, DataFusionError>((pairs, data_files, snapshot_extra, staging))
-    }
-    .instrument(tracing::info_span!("merge.join"))
-    .await?;
-
-    let file_count = data_files.len() as u64;
-    let concurrency = concurrency_from_ctx(ctx);
-    tracing::info_span!("merge.write_data", files = file_count).in_scope(|| ());
-    commit_row_delta_on_ref_with_partitions(
-        catalog,
-        table,
-        snapshot_id,
-        pairs,
-        data_files,
-        concurrency,
-        conflict_filter,
-        spec.commit_branch.as_deref(),
-        drain_partition_sink(partitions),
-        &snapshot_extra,
-        &staging,
-    )
-    .await
-}
-
 /// Stream a SQL query as `RecordBatch` results (no full collect).
 async fn stream_sql(
     ctx: &SessionContext,
@@ -690,64 +513,6 @@ async fn stream_sql(
     note_logical_target_sql_pass();
     let dataframe = ctx.sql(sql).await?;
     dataframe.execute_stream().await
-}
-
-/// Resolve affected `_file` paths to [`DataFile`] entries by walking the pinned snapshot.
-pub(super) async fn resolve_affected_data_files(
-    table: &Table,
-    snapshot_id: Option<i64>,
-    affected: &[String],
-) -> Result<Vec<DataFile>> {
-    // Span is the P2a hour-0 measurement seam for scout #6 (manifest walk share of MERGE wall).
-    async {
-        if affected.is_empty() {
-            return Ok(Vec::new());
-        }
-        let metadata = table.metadata();
-        let snapshot = match snapshot_id {
-            Some(id) => metadata.snapshot_by_id(id),
-            None => metadata.current_snapshot(),
-        }
-        .ok_or_else(|| {
-            DataFusionError::Internal(
-                "affected files exist but the table has no snapshot".to_string(),
-            )
-        })?;
-        let manifest_list = snapshot
-            .load_manifest_list(table.file_io(), metadata)
-            .await
-            .map_err(iceberg_err)?;
-        let wanted: HashSet<&str> = affected.iter().map(String::as_str).collect();
-        let mut files = Vec::with_capacity(affected.len());
-        // Serial walk retained: P2a hour-0 local-fs attributes were well under 10% of MERGE wall.
-        for manifest_file in manifest_list.entries() {
-            if manifest_file.content != ManifestContentType::Data {
-                continue;
-            }
-            let manifest = manifest_file
-                .load_manifest(table.file_io())
-                .await
-                .map_err(iceberg_err)?;
-            for entry in manifest.entries() {
-                if entry.is_alive() && wanted.contains(entry.data_file().file_path()) {
-                    files.push(entry.data_file().clone());
-                }
-            }
-        }
-        if files.len() != wanted.len() {
-            return Err(DataFusionError::Internal(format!(
-                "resolved {} of {} affected data files in the pinned snapshot's manifests",
-                files.len(),
-                wanted.len()
-            )));
-        }
-        Ok(files)
-    }
-    .instrument(tracing::info_span!(
-        "merge.resolve_affected",
-        affected = affected.len()
-    ))
-    .await
 }
 
 /// Spark `isCardinalityCheckNeeded`: skip only a lone unconditional MATCHED DELETE.
@@ -760,89 +525,6 @@ fn skip_cardinality(spec: &MergeSpec) -> bool {
             action: MatchedAction::Delete,
         }]
     )
-}
-
-/// R-MERGE-ONEPASS Stage A: stream match discovery and fold to distinct affected `_file` paths.
-async fn affected_files(
-    ctx: &SessionContext,
-    sql: &MergeSql<'_>,
-    skip_cardinality: bool,
-) -> Result<Vec<String>> {
-    let mut stream = stream_sql(ctx, &sql.match_discovery_sql()).await?;
-    // Single owned `String` per distinct path (HashSet only; collect at end).
-    let mut seen: HashSet<String> = HashSet::new();
-    while let Some(batch_result) = stream.next().await {
-        let batch = batch_result?;
-        fold_discovery_batch_into_affected(&batch, &mut seen, skip_cardinality)?;
-    }
-    Ok(seen.into_iter().collect())
-}
-
-/// Process one Stage A discovery batch: cardinality check + distinct mutated `_file` paths.
-fn fold_discovery_batch_into_affected(
-    batch: &RecordBatch,
-    seen: &mut HashSet<String>,
-    skip_cardinality: bool,
-) -> Result<()> {
-    if batch.num_columns() < 4 {
-        return Err(DataFusionError::Internal(format!(
-            "match-discovery batch has {} columns; expected >= 4",
-            batch.num_columns()
-        )));
-    }
-    let files_col = cast_with_options(batch.column(0), &DataType::Utf8, &strict_cast())?;
-    let paths = files_col
-        .as_any()
-        .downcast_ref::<StringArray>()
-        .ok_or_else(|| {
-            DataFusionError::Internal("match-discovery `_file` is not a string array".into())
-        })?;
-    let positions = cast_with_options(batch.column(1), &DataType::Int64, &strict_cast())?;
-    let ordinals = positions
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| {
-            DataFusionError::Internal("match-discovery `_pos` is not an Int64 array".into())
-        })?;
-    let counts = cast_with_options(batch.column(2), &DataType::Int64, &strict_cast())?;
-    let match_counts = counts
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| {
-            DataFusionError::Internal("match-discovery match_count is not Int64".into())
-        })?;
-    let mutated = cast_with_options(batch.column(3), &DataType::Int64, &strict_cast())?;
-    let is_mutated = mutated
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| {
-            DataFusionError::Internal("match-discovery is_mutated is not Int64".into())
-        })?;
-    for row in 0..batch.num_rows() {
-        if paths.is_null(row) || ordinals.is_null(row) {
-            return Err(DataFusionError::Internal(
-                "match-discovery row has a NULL `_file`/`_pos` row identity".to_string(),
-            ));
-        }
-        // Same fail-loud null flags as Stage B.
-        let match_count = require_non_null_i64(match_counts, row, "match_count")?;
-        let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
-        if match_count > 1 && !skip_cardinality {
-            return Err(DataFusionError::Plan(spark_error::message(
-                spark_error::MERGE_CARDINALITY_VIOLATION,
-                &[],
-            )));
-        }
-        if is_mutated_flag == 1 {
-            let path_str = paths.value(row);
-            if !seen.contains(path_str) {
-                // PERF-01: one owned path String per distinct affected file (not per matched row).
-                note_discovery_path_alloc();
-                seen.insert(path_str.to_string());
-            }
-        }
-    }
-    Ok(())
 }
 
 /// Test-only: count path `String` allocations retained by COW Stage A discovery (PERF-01).
@@ -858,162 +540,6 @@ fn note_discovery_path_alloc() {
 #[cfg(not(test))]
 fn note_discovery_path_alloc() {}
 
-/// R-MERGE-ONEPASS Stage B (`MoR`): one INNER JOIN pass for cardinality + pos-deletes + UPDATE
-async fn matched_work_mor(
-    ctx: &SessionContext,
-    sql: &MergeSql<'_>,
-    write_schema: &SchemaRef,
-    skip_cardinality: bool,
-    work_sql: &str,
-) -> Result<(
-    Vec<crate::write::position_delete::PositionDeletePair>,
-    Vec<RecordBatch>,
-)> {
-    let mut stream = update_stream_checked(ctx, sql, work_sql, write_schema).await?;
-    let mut path_intern: HashMap<String, usize> = HashMap::new();
-    let mut unique_paths: Vec<std::sync::Arc<str>> = Vec::new();
-    let mut seen_pair: HashSet<(usize, i64)> = HashSet::new();
-    let mut pair_indices: Vec<(usize, i64)> = Vec::new();
-    let mut update_batches = Vec::new();
-    let data_field_count = write_schema.fields().len();
-
-    while let Some(batch_result) = stream.next().await {
-        let batch = batch_result?;
-        consume_matched_work_batch(
-            &batch,
-            write_schema,
-            data_field_count,
-            &mut path_intern,
-            &mut unique_paths,
-            &mut seen_pair,
-            &mut pair_indices,
-            &mut update_batches,
-            skip_cardinality,
-        )?;
-    }
-    let pairs = pair_indices
-        .into_iter()
-        .map(|(path_index, pos)| (std::sync::Arc::clone(&unique_paths[path_index]), pos))
-        .collect();
-    Ok((pairs, update_batches))
-}
-
-/// Process one Stage B `matched_work` batch: cardinality, intern, pos-deletes, and UPDATE slices.
-#[allow(clippy::too_many_arguments)]
-fn consume_matched_work_batch(
-    batch: &RecordBatch,
-    write_schema: &SchemaRef,
-    data_field_count: usize,
-    path_intern: &mut HashMap<String, usize>,
-    unique_paths: &mut Vec<std::sync::Arc<str>>,
-    seen_pair: &mut HashSet<(usize, i64)>,
-    pair_indices: &mut Vec<(usize, i64)>,
-    update_batches: &mut Vec<RecordBatch>,
-    skip_cardinality: bool,
-) -> Result<()> {
-    if batch.num_columns() < 5 + data_field_count {
-        return Err(DataFusionError::Internal(format!(
-            "matched_work batch has {} columns; expected >= {}",
-            batch.num_columns(),
-            5 + data_field_count
-        )));
-    }
-    let projected_field_count = batch.num_columns() - 5;
-    let files = cast_with_options(batch.column(0), &DataType::Utf8, &strict_cast())?;
-    let paths = files
-        .as_any()
-        .downcast_ref::<StringArray>()
-        .ok_or_else(|| {
-            DataFusionError::Internal("matched_work `_file` is not a string array".into())
-        })?;
-    let positions = cast_with_options(batch.column(1), &DataType::Int64, &strict_cast())?;
-    let ordinals = positions
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| DataFusionError::Internal("matched_work `_pos` is not Int64".into()))?;
-    let counts = cast_with_options(batch.column(2), &DataType::Int64, &strict_cast())?;
-    let match_counts = counts
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| DataFusionError::Internal("matched_work match_count is not Int64".into()))?;
-    let mutated = cast_with_options(batch.column(3), &DataType::Int64, &strict_cast())?;
-    let is_mutated = mutated
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| DataFusionError::Internal("matched_work is_mutated is not Int64".into()))?;
-    let updated = cast_with_options(batch.column(4), &DataType::Int64, &strict_cast())?;
-    let is_update = updated
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| DataFusionError::Internal("matched_work is_update is not Int64".into()))?;
-
-    let mut update_indices: Vec<u32> = Vec::new();
-    for row in 0..batch.num_rows() {
-        if paths.is_null(row) || ordinals.is_null(row) {
-            return Err(DataFusionError::Internal(
-                "matched_work row has a NULL `_file`/`_pos` row identity".to_string(),
-            ));
-        }
-        // Flag columns are CASE/window outputs and must be non-null.
-        let match_count = require_non_null_i64(match_counts, row, "match_count")?;
-        let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
-        let is_update_flag = require_non_null_i64(is_update, row, "is_update")?;
-        if match_count > 1 && !skip_cardinality {
-            return Err(DataFusionError::Plan(spark_error::message(
-                spark_error::MERGE_CARDINALITY_VIOLATION,
-                &[],
-            )));
-        }
-        let path_str = paths.value(row);
-        let path_index = if let Some(&index) = path_intern.get(path_str) {
-            index
-        } else {
-            let index = unique_paths.len();
-            let path_arc: std::sync::Arc<str> = std::sync::Arc::from(path_str);
-            unique_paths.push(std::sync::Arc::clone(&path_arc));
-            // HashMap key is owned String once per unique path; pair paths share Arc.
-            path_intern.insert(path_str.to_string(), index);
-            index
-        };
-        let pos = ordinals.value(row);
-        if is_mutated_flag == 1 && seen_pair.insert((path_index, pos)) {
-            pair_indices.push((path_index, pos));
-        }
-        if is_update_flag == 1 {
-            update_indices.push(u32::try_from(row).map_err(|_| {
-                DataFusionError::Internal("matched_work row index exceeds u32".into())
-            })?);
-        }
-    }
-    if !update_indices.is_empty() {
-        // Slice UPDATE projection columns first, then take rows.
-        let data_fields: Vec<datafusion::arrow::datatypes::Field> = (0..projected_field_count)
-            .map(|index| {
-                if index < data_field_count {
-                    let source = write_schema.field(index);
-                    datafusion::arrow::datatypes::Field::new(
-                        source.name(),
-                        batch.column(5 + index).data_type().clone(),
-                        source.is_nullable(),
-                    )
-                } else {
-                    batch.schema().field(5 + index).as_ref().clone()
-                }
-            })
-            .collect();
-        let data_columns: Vec<ArrayRef> = (0..projected_field_count)
-            .map(|index| batch.column(5 + index).clone())
-            .collect();
-        let data_batch =
-            RecordBatch::try_new(Arc::new(ArrowSchema::new(data_fields)), data_columns)?;
-        let indices = datafusion::arrow::array::UInt32Array::from(update_indices);
-        let taken = datafusion::arrow::compute::take_record_batch(&data_batch, &indices)
-            .map_err(|error| DataFusionError::ArrowError(Box::new(error), None))?;
-        update_batches.push(taken);
-    }
-    Ok(())
-}
-
 /// Fail loud when a Stage A/B Int64 flag column is null (Arrow `.value` would silently yield 0).
 fn require_non_null_i64(array: &Int64Array, row: usize, label: &str) -> Result<i64> {
     if array.is_null(row) {
@@ -1023,349 +549,6 @@ fn require_non_null_i64(array: &Int64Array, row: usize, label: &str) -> Result<i
     }
     Ok(array.value(row))
 }
-
-/// Builds the SQL the merge runs.
-struct MergeSql<'a> {
-    spec: &'a MergeSpec,
-    target_name: &'a str,
-    /// The per-execution match-sentinel column name (UUID-suffixed — see `MATCH_FLAG_PREFIX`).
-    match_flag: &'a str,
-    carry_lineage: bool,
-}
-
-impl MergeSql<'_> {
-    /// `FROM` fragment for the scratch target, aliased as the statement's target alias.
-    fn target_from(&self) -> String {
-        // Engine UUID names today; still route through quote_ident.
-        format!(
-            "{} AS {}",
-            cow_scratch::quote_scratch_name(self.target_name),
-            self.spec.target_alias
-        )
-    }
-
-    /// `FROM` fragment for the source, wrapped to add the always-TRUE match sentinel.
-    fn source_from(&self) -> String {
-        format!(
-            "(SELECT *, TRUE AS {} FROM {} AS __repark_src_inner) AS {}",
-            self.match_flag, self.spec.source_from_sql, self.spec.source_alias
-        )
-    }
-
-    /// Match detection after the LEFT JOIN — sentinel-based, immune to nullable join keys.
-    fn matched(&self) -> String {
-        format!("{}.{} IS NOT NULL", self.spec.source_alias, self.match_flag)
-    }
-
-    /// A clause predicate as a 2-valued applies-test: NULL ⇒ FALSE (Spark clause semantics).
-    fn applies(predicate_sql: Option<&str>) -> String {
-        predicate_sql.map_or_else(|| "TRUE".to_string(), |p| format!("COALESCE(({p}), FALSE)"))
-    }
-
-    /// First-match clause id over an ordered predicate list — O CASE, not O AND-chains.
-    fn clause_id_case(predicates: &[Option<&str>]) -> String {
-        if predicates.is_empty() {
-            return "CAST(NULL AS BIGINT)".to_string();
-        }
-        let branches: Vec<String> = predicates
-            .iter()
-            .enumerate()
-            .map(|(index, predicate)| format!("WHEN {} THEN {index}", Self::applies(*predicate)))
-            .collect();
-        format!("CASE {} END", branches.join(" "))
-    }
-
-    /// First-match-wins residual: no earlier clause applies.
-    #[cfg(test)]
-    fn prior_clauses_do_not_apply(predicates: &[Option<&str>], index: usize) -> String {
-        if index == 0 {
-            return "TRUE".to_string();
-        }
-        let clause_id = Self::clause_id_case(predicates);
-        format!("(({clause_id}) IS NULL OR ({clause_id}) >= {index})")
-    }
-
-    /// Pre-#18 O AND-chain of `NOT applies`.
-    #[cfg(test)]
-    fn prior_clauses_do_not_apply_legacy(predicates: &[Option<&str>], index: usize) -> String {
-        let negations: Vec<String> = predicates[..index]
-            .iter()
-            .map(|predicate| format!("NOT {}", Self::applies(*predicate)))
-            .collect();
-        if negations.is_empty() {
-            "TRUE".to_string()
-        } else {
-            negations.join(" AND ")
-        }
-    }
-
-    /// The matched-clause predicates in declaration order (for first-match `clause_id`).
-    fn matched_predicates(&self) -> Vec<Option<&str>> {
-        self.spec
-            .matched
-            .iter()
-            .map(|clause| clause.predicate_sql.as_deref())
-            .collect()
-    }
-
-    /// Matched-side first-match clause id: `NULL` when unmatched or no WHEN MATCHED clause applies.
-    fn matched_clause_id_expr(&self) -> String {
-        let predicates = self.matched_predicates();
-        if predicates.is_empty() {
-            return "CAST(NULL AS BIGINT)".to_string();
-        }
-        let mut branches = Vec::with_capacity(predicates.len() + 1);
-        branches.push(format!("WHEN NOT ({}) THEN NULL", self.matched()));
-        for (index, predicate) in predicates.iter().enumerate() {
-            branches.push(format!("WHEN {} THEN {index}", Self::applies(*predicate)));
-        }
-        format!("CASE {} END", branches.join(" "))
-    }
-
-    /// Per-clause case-insensitive assignment maps (column lower → SQL expr) for UPDATE clauses.
-    fn update_assignment_lookup(&self) -> Vec<Option<HashMap<String, &str>>> {
-        self.spec
-            .matched
-            .iter()
-            .map(|clause| match &clause.action {
-                MatchedAction::Update { assignments } => {
-                    let mut map = HashMap::with_capacity(assignments.len());
-                    for (name, expr) in assignments {
-                        map.insert(name.to_ascii_lowercase(), expr.as_str());
-                    }
-                    Some(map)
-                }
-                MatchedAction::UpdateAll | MatchedAction::Delete => None,
-            })
-            .collect()
-    }
-
-    /// Projection list for rewrite / `matched_work` / `updated_rows` — assignment maps built once.
-    fn rewrite_projection(&self, write_schema: &ArrowSchema) -> String {
-        let maps = self.update_assignment_lookup();
-        let user = write_schema
-            .fields()
-            .iter()
-            .map(|field| {
-                self.rewrite_column_with_maps(&maps, field.name(), Some(field.data_type()))
-            })
-            .collect::<Vec<_>>()
-            .join(", ");
-        row_lineage::maybe_append_lineage_projection(self, user)
-    }
-
-    /// R-MERGE-ONEPASS Stage A: one grouped join pass — `match_count` + `is_mutated`.
-    fn match_discovery_sql(&self) -> String {
-        let ta = &self.spec.target_alias;
-        format!(
-            "SELECT {ta}.{FILE_PATH_COL}, {ta}.{POS_COL}, \
-             count(*) AS match_count, \
-             MAX(CASE WHEN ({mutated}) THEN 1 ELSE 0 END) AS is_mutated \
-             FROM {source} JOIN {target} ON {on} \
-             GROUP BY {ta}.{FILE_PATH_COL}, {ta}.{POS_COL}",
-            target = self.target_from(),
-            source = self.source_from(),
-            on = self.spec.on_sql,
-            mutated = self.mutated(),
-        )
-    }
-
-    /// The disjunction "some WHEN MATCHED clause mutates this row".
-    pub(super) fn mutated(&self) -> String {
-        self.spec
-            .matched
-            .iter()
-            .map(|clause| Self::applies(clause.predicate_sql.as_deref()))
-            .collect::<Vec<_>>()
-            .join(" OR ")
-    }
-
-    /// Stage B merge-on-read: one INNER JOIN producing identity + match flags + UPDATE projection.
-    fn matched_work_sql(&self, write_schema: &ArrowSchema) -> String {
-        let ta = &self.spec.target_alias;
-        let projection = self.rewrite_projection(write_schema);
-        format!(
-            "SELECT {ta}.{FILE_PATH_COL}, {ta}.{POS_COL}, \
-             count(*) OVER (PARTITION BY {ta}.{FILE_PATH_COL}, {ta}.{POS_COL}) \
-               AS match_count, \
-             CASE WHEN ({mutated}) THEN 1 ELSE 0 END AS is_mutated, \
-             CASE WHEN ({updated}) THEN 1 ELSE 0 END AS is_update, \
-             {projection} \
-             FROM {source} JOIN {target} ON {on}",
-            target = self.target_from(),
-            source = self.source_from(),
-            on = self.spec.on_sql,
-            mutated = self.mutated(),
-            updated = self.update_applies(),
-        )
-    }
-
-    /// True when the row's FIRST applicable clause is an UPDATE.
-    pub(super) fn update_applies(&self) -> String {
-        let update_ids: Vec<String> = self
-            .spec
-            .matched
-            .iter()
-            .enumerate()
-            .filter(|(_, clause)| matches!(clause.action, MatchedAction::Update { .. }))
-            .map(|(index, _)| index.to_string())
-            .collect();
-        if update_ids.is_empty() {
-            "FALSE".to_string()
-        } else if update_ids.len() == 1 {
-            format!(
-                "COALESCE(({}) = {}, FALSE)",
-                self.matched_clause_id_expr(),
-                update_ids[0]
-            )
-        } else {
-            format!(
-                "COALESCE(({}) IN ({}), FALSE)",
-                self.matched_clause_id_expr(),
-                update_ids.join(", ")
-            )
-        }
-    }
-
-    /// Rewrite SQL against a file-scoped target whose task allowlist already restricts `_file`.
-    fn rewrite_sql_allowlisted(
-        &self,
-        target_table_name: &str,
-        write_schema: &ArrowSchema,
-    ) -> String {
-        let ta = &self.spec.target_alias;
-        let projection = self.rewrite_projection(write_schema);
-        let deleted = self.delete_applies();
-        let quoted_target = cow_scratch::quote_scratch_name(target_table_name);
-        format!(
-            "SELECT {projection} FROM {quoted_target} AS {ta} LEFT JOIN {source} ON {on} \
-             WHERE NOT ({deleted})",
-            source = self.source_from(),
-            on = self.spec.on_sql,
-        )
-    }
-
-    /// Rewrite SQL against the full snapshot target, semi-joined to a registered path `MemTable`.
-    fn rewrite_sql_path_semijoin(
-        &self,
-        target_table_name: &str,
-        path_table_name: &str,
-        write_schema: &ArrowSchema,
-    ) -> String {
-        let ta = &self.spec.target_alias;
-        let projection = self.rewrite_projection(write_schema);
-        let deleted = self.delete_applies();
-        let quoted_target = cow_scratch::quote_scratch_name(target_table_name);
-        let quoted_paths = cow_scratch::quote_scratch_name(path_table_name);
-        format!(
-            "SELECT {projection} FROM {quoted_target} AS {ta} \
-             INNER JOIN {quoted_paths} AS __repark_aff \
-               ON {ta}.{FILE_PATH_COL} = __repark_aff.{path_col} \
-             LEFT JOIN {source} ON {on} \
-             WHERE NOT ({deleted})",
-            source = self.source_from(),
-            on = self.spec.on_sql,
-            path_col = cow_scratch::AFFECTED_PATHS_COL,
-        )
-    }
-
-    /// The `CASE` projecting one output column through the ordered UPDATE clauses (unit pins).
-    #[cfg(test)]
-    fn rewrite_column(&self, column: &str) -> String {
-        let maps = self.update_assignment_lookup();
-        self.rewrite_column_with_maps(&maps, column, None)
-    }
-
-    /// Like [`Self::rewrite_column`] but reuses a pre-built assignment lookup (scout #18).
-    fn rewrite_column_with_maps(
-        &self,
-        maps: &[Option<HashMap<String, &str>>],
-        column: &str,
-        store_type: Option<&DataType>,
-    ) -> String {
-        let ta = &self.spec.target_alias;
-        let quoted = quote_ident(column);
-        let original = format!("{ta}.{quoted}");
-        let key = column.to_ascii_lowercase();
-        // DELETE rows never reach this projection.
-        let branches: Vec<String> = maps
-            .iter()
-            .enumerate()
-            .filter_map(|(index, map_opt)| {
-                let expr = map_opt.as_ref()?.get(&key)?;
-                let then_expr = match store_type {
-                    Some(data_type) => store_assignment_then_sql(expr, data_type),
-                    None => (*expr).to_string(),
-                };
-                Some(format!("WHEN {index} THEN ({then_expr})"))
-            })
-            .collect();
-        let else_expr = not_matched_by_source::rewrite_else(self, column, &original, store_type);
-        if branches.is_empty() {
-            format!("{else_expr} AS {quoted}")
-        } else {
-            format!(
-                "CASE ({clause_id}) {} ELSE {else_expr} END AS {quoted}",
-                branches.join(" "),
-                clause_id = self.matched_clause_id_expr(),
-            )
-        }
-    }
-
-    /// True when the row's first applicable clause is a DELETE.
-    pub(super) fn delete_applies(&self) -> String {
-        let delete_ids: Vec<String> = self
-            .spec
-            .matched
-            .iter()
-            .enumerate()
-            .filter(|(_, clause)| matches!(clause.action, MatchedAction::Delete))
-            .map(|(index, _)| index.to_string())
-            .collect();
-        let matched_delete = if delete_ids.is_empty() {
-            "FALSE".to_string()
-        } else if delete_ids.len() == 1 {
-            format!(
-                "COALESCE(({}) = {}, FALSE)",
-                self.matched_clause_id_expr(),
-                delete_ids[0]
-            )
-        } else {
-            format!(
-                "COALESCE(({}) IN ({}), FALSE)",
-                self.matched_clause_id_expr(),
-                delete_ids.join(", ")
-            )
-        };
-        not_matched_by_source::combined_delete_applies(&matched_delete, self)
-    }
-
-    /// The rows insert clause `index` adds: source rows with no target match.
-    fn insert_sql(&self, index: usize, table: &Table, schema: &ArrowSchema) -> Result<String> {
-        let clause = &self.spec.not_matched[index];
-        let projection = table_projection(clause, table, schema, self.spec.case_insensitive)?;
-        let predicates: Vec<Option<&str>> = self
-            .spec
-            .not_matched
-            .iter()
-            .map(|c| c.predicate_sql.as_deref())
-            .collect();
-        let clause_id = Self::clause_id_case(&predicates);
-        Ok(format!(
-            "SELECT {projection} FROM (SELECT {sa}.*, {ta}.{POS_COL} AS {NOT_MATCHED_POS_SENTINEL} \
-             FROM {source} LEFT JOIN {target} ON {on}) AS {sa} \
-             WHERE {NOT_MATCHED_POS_SENTINEL} IS NULL AND ({clause_id}) = {index}",
-            source = self.source_from(),
-            target = self.target_from(),
-            on = self.spec.on_sql,
-            ta = self.spec.target_alias,
-            sa = self.spec.source_alias,
-        ))
-    }
-}
-
-/// Sentinel alias carrying target `_pos` through source-only insert, named to avoid collisions.
-const NOT_MATCHED_POS_SENTINEL: &str = "__repark_not_matched_pos";
 
 /// Cast one batch onto the Iceberg write schema (strict casts, field order by name).
 pub(super) fn cast_one_batch_to_write_schema(

@@ -1,0 +1,24 @@
+{
+ "engine": "repark",
+ "zone": "America/New_York",
+ "cells": {
+  "microsecond": {
+   "type": "timestamp[ns]",
+   "value": "2026-01-02 08:04:05.123456",
+   "tick": 1767341045123456000,
+   "plan": "Projection: TRY_CAST(ice.ns.src.ts AS Timestamp(ns)) AS v Filter: ice.ns.src.id = Int32(1) TableScan: ice.ns.src projection=[id, ts], partial_filters=[ice.ns.src.id = Int32(1)]"
+  },
+  "nanosecond": {
+   "type": "timestamp[ns]",
+   "value": "2026-01-02 03:04:05.123456789",
+   "tick": 1767323045123456789,
+   "plan": "Projection: TRY_CAST(ice.ns.src.ns AS Timestamp(ns)) AS v Filter: ice.ns.src.id = Int32(1) TableScan: ice.ns.src projection=[id, ns], partial_filters=[ice.ns.src.id = Int32(1)]"
+  },
+  "string": {
+   "type": "timestamp[us, tz=UTC]",
+   "value": "2026-01-02 08:04:05.123456+00:00",
+   "tick": 1767341045123456,
+   "plan": "Projection: TimestampMicrosecond(1767341045123456, Some(\"UTC\")) AS v EmptyRelation: rows=1"
+  }
+ }
+}

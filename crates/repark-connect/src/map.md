@@ -6,6 +6,86 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
+- `pool.rs`, `write.rs` — **C-4 fold 1 (2026-10-09), the verifier's S3s:**
+  `PgConnection::closing_sqlstate(wait)` answers the SQLSTATE of the error that ended the
+  connection, or `None`. The connection task polls the driver's connection by reference,
+  fills a `watch` cell with the outcome and only then drops the connection. The driver
+  closes its request channel inside that last poll, so a caller can see `Disconnected` a
+  moment before the cell is filled; the method waits for the cell, at most `wait`. The
+  writer's `settled` uses it: `Disconnected` with `25P03` behind it is
+  `Timeout { which: Read }` (the server's idle-in-transaction timer, which fires while no
+  request is pending). At `COMMIT` that case is a definite failure, not `CommitUnknown`.
+  `write_error` cuts a class `22` server message at its first `:` or `"` and appends
+  `repark_common::redaction::REDACTED`, so a refused value is not echoed. The read path
+  calls neither. pins: c-4/C-020
+- `write.rs`, `error.rs`, `lib.rs` — **C-4 fold 1 (2026-10-09), the verifier's three S1:**
+  `open` calls `write/target.rs`'s `route` after `BEGIN_WRITE` and before either lane, so
+  the path a writer takes depends on the relation as well as on the column types.
+  `PostgresWriter::fallback()` answers the `RowFallback` reason when a `Bulk` request took
+  rows, and `None` otherwise. `WriteRequest::path` is unchanged: it still answers from the
+  column types alone, with no connection, and so can say `Bulk` for a write `open` routes to
+  rows. `asked` no longer rewrites every `42501` into a missing `INSERT` grant: the grant is
+  read at `open`, and a later `42501` keeps the server's SQLSTATE and text (a policy, a
+  sequence). `WriteRefusal` gains `IdentityAlways { column }` and `GeneratedColumn { column }`
+  (`Analysis` class) and is no longer `Copy`. `lib.rs` re-exports `RowFallback` and
+  `TARGET_FACTS`. pins: c-4/C-017, C-018, C-019
+- `write.rs`, `error.rs` — **C-4 fold 1 (2026-10-09), the verifier's S2:** `write` sets the
+  kept error to `WriteRefused { Interrupted }` before its lane runs and replaces it with the
+  lane's result after, so a `write` future dropped at an `.await` (a timeout, a `select!`)
+  leaves the writer poisoned. Without the mark a later `commit` stored a prefix of the
+  cancelled batch on the bulk path and a group twice on the row path. pins: c-4/C-016
+- `write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`: the write core's root
+  ([c-4-ledger.md](../../../task/ledgers/staging/c-4-ledger.md) §1). No door calls it yet.
+  - **`WriteRequest`** is built from a `ResolvedSource` (C-2's `discover`, unchanged) and
+    refuses a query target (`WriteRefused { QueryTarget }`). `columns(&[index])` names the
+    written columns in the order the batches carry them (`None` past the relation, as
+    `ScanRequest::project` answers). `copy_statement()` and `insert_statement(rows)` render the
+    two statements: identifiers through `PgIdent`, no value in the text, and the cast
+    `::pg_catalog.text::pg_catalog.interval` on a text-carried column only. A bulk-carried
+    parameter has no cast, so the server infers the column's own type (a domain or an enum
+    included) and the type modifier applies as an assignment does. An explicit cast to
+    `varchar(5)` would truncate silently where COPY refuses.
+  - **`WritePath { Bulk, Row }`** is what a door asks for. `WriteRequest::path(requested)` is
+    the selector's answer before any connection: `Bulk` only when it was asked and every
+    written column's `carriage()` is `CopyBinary`. COPY is per table, so one text-carried
+    column moves the whole write to rows.
+  - **`open(pool, path, options)`** checks out one connection, runs `BEGIN_WRITE`
+    (`BEGIN READ WRITE`: the session stays `default_transaction_read_only=on`, and only this
+    transaction lifts it), opens the lane and answers a **`PostgresWriter`**. `write(&batch)`
+    feeds it; `commit()` ends the lane, runs `COMMIT`, returns the connection through
+    `release_clean` and answers `WriteReport { path, rows }` with the server's row count.
+    Dropping the writer anywhere else is the rollback: the lease's drop cancels and closes.
+  - **Poisoning.** The first error from `write` is kept and every later `write` and `commit`
+    answers it. Without it, a `commit` after a refused value would end the COPY cleanly and
+    store the rows sent before the refusal.
+  - **`CommitUnknown`.** `Disconnected` or the client's read timeout while waiting for the
+    answer to `COMMIT` becomes `ConnectError::CommitUnknown { relation }`; a server error
+    answering `COMMIT` (a deferred constraint) stays that server error. A server-side
+    `25P03` reads as the same timeout and is also reported unknown, which errs on the side of
+    making the caller look.
+  - **`asked`** is C-2's `request` with one change: SQLSTATE `42501` names `Privilege::Insert`.
+    **`encoders`** binds a batch to the planned columns (count, then each Arrow type) for both
+    lanes.
+  - **`WriteOptions`**: `read_timeout`, `copy_chunk_bytes` (`DEFAULT_COPY_CHUNK_BYTES`, 1 MiB)
+    and `rows_per_insert` (`DEFAULT_ROWS_PER_INSERT`, 256). No settings key maps onto the two
+    sizes yet (CC-3: a key arrives with the unit that reads it).
+  pins: c-4/C-005, C-010, C-011
+- `write/` — [write/map.md](write/map.md): `postgres_copy.rs` (the COPY stream and its lane)
+  and `row.rs` (the INSERT lane).
+- `error.rs`, `discover.rs` — **C-4 step 1 (2026-10-08):** `UnwritableValue { column,
+  postgres_type, index, reason: WriteValueRefusal }` (`DateOutOfRange`, `TimestampOutOfRange`,
+  `UuidSyntax`; it carries the row and never the value; `DataFusion` class),
+  `WriteRefused { refusal: WriteRefusal }` (`QueryTarget` and `NoColumns` fold to `Config`,
+  `ColumnCount` to `Analysis`), and under `postgres` `CommitUnknown { relation }`, which folds
+  to `repark_common::Error::CommitStateUnknown`. `EncodeNotBuilt` is retired: C-4 built what
+  it announced. `Privilege` gains `Insert`, and `PermissionDenied`'s message says "writing to"
+  for it and "reading" for the other two, whose text is unchanged.
+  pins: c-4/C-001, C-005, C-010
+- `lib.rs` — **C-4 step 1 (2026-10-08):** `mod write;` under `postgres`, and the re-exports
+  `WriteRequest`, `WritePath`, `WriteOptions`, `WriteReport`, `PostgresWriter`,
+  `CopyBinaryEncoder`, `CopyChunks`, `BEGIN_WRITE`, `DEFAULT_COPY_CHUNK_BYTES`,
+  `DEFAULT_ROWS_PER_INSERT`, `MAX_INSERT_PARAMS`; without the feature, `WriteRefusal` and
+  `WriteValueRefusal`. `postgres::WriteCarriage` rides the `postgres` module re-export.
 - `partition.rs` — **C-3 fold 1 (2026-10-08), the verifier's S2 on the count:**
   `numPartitions` is Spark's 32-bit `Int` (`C3-N07`: `3000000000` is `NumberFormatException`):
   `PartitionOptions.num_partitions` is an `i32`, `with_props` parses the text as one and
@@ -98,7 +178,8 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `ArrowType`, `WireLength`, `InvalidUtf8`) keep their names, fields and message text, so the
   registry rows only rename the type. C-2a adds `UnmappedType` (a column outside the map, at
   resolution), `UnrepresentableValue` (a value its Arrow type cannot hold, with the
-  `ValueRefusal` reason enum whose `registry_row()` names the row), `EncodeNotBuilt`,
+  `ValueRefusal` reason enum whose `registry_row()` names the row), `EncodeNotBuilt`
+  (retired by C-4 step 1, 2026-10-08),
   `Protocol` (with the `ProtocolViolation` enum: a malformed COPY stream), `Disconnected` (the
   stream ended before its trailer) and `Arrow` (a batch Arrow would not build). Reasons are
   enums, never strings a caller matches. The fold into `repark_common::Error` is by class:

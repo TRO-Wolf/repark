@@ -8,6 +8,7 @@ import re
 import subprocess
 from pathlib import Path
 
+import _spark_python as spark_python
 import pytest
 
 from repark import ReparkSession
@@ -593,9 +594,7 @@ def test_live_oracle_still_matches_spark(tmp_path: Path) -> None:
     """Live tier re-runs the generator and asserts the fixture is still Spark's answer."""
     if os.environ.get("REPARK_PARITY_LIVE") != "1":
         pytest.skip("REPARK_PARITY_LIVE unset")
-    sparkenv = Path(os.environ.get("REPARK_SPARKENV_PYTHON", "/tmp/sparkenv/bin/python"))
-    if not sparkenv.exists():
-        pytest.skip(f"sparkenv interpreter missing: {sparkenv}")
+    sparkenv = Path(spark_python.resolve_live_spark_python())
     warehouse = tmp_path / "wh"
     rerun = tmp_path / "rerun.json"
     proc = subprocess.run(

@@ -130,10 +130,18 @@ pub enum ConnectError {
     },
 
     #[error(
-        "encoding Arrow values as Postgres `{postgres_name}` is not built: the write path (C-4) \
-         adds it"
+        "column `{column}` (Postgres `{postgres_type}`) at row {index} holds {reason}, which \
+         the Postgres type cannot take"
     )]
-    EncodeNotBuilt { postgres_name: &'static str },
+    UnwritableValue {
+        column: Arc<str>,
+        postgres_type: &'static str,
+        index: usize,
+        reason: WriteValueRefusal,
+    },
+
+    #[error("a write to a Postgres source refuses: {refusal}")]
+    WriteRefused { refusal: WriteRefusal },
 
     #[error("malformed COPY BINARY stream: {violation}")]
     Protocol { violation: ProtocolViolation },
@@ -183,7 +191,10 @@ pub enum ConnectError {
     Server { sqlstate: String, message: String },
 
     #[cfg(feature = "postgres")]
-    #[error("the Postgres role lacks the {privilege} privilege that reading {relation} needs")]
+    #[error(
+        "the Postgres role lacks the {privilege} privilege that {} {relation} needs",
+        privilege.action()
+    )]
     PermissionDenied {
         relation: QualifiedRelation,
         privilege: Privilege,
@@ -198,6 +209,73 @@ pub enum ConnectError {
         "Postgres server_version_num {server_version_num} < 140000: declared, {SERVER_VERSION_ROW}"
     )]
     DeclaredServerVersion { server_version_num: i32 },
+
+    #[cfg(feature = "postgres")]
+    #[error(
+        "the wait for COMMIT of the write to {relation} ended without an answer: its rows are \
+         stored or absent as a whole; read the table before any retry"
+    )]
+    CommitUnknown { relation: QualifiedRelation },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WriteValueRefusal {
+    DateOutOfRange,
+    TimestampOutOfRange,
+    UuidSyntax,
+}
+
+impl fmt::Display for WriteValueRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            WriteValueRefusal::DateOutOfRange => {
+                "a date before the 32-bit day count since 2000-01-01"
+            }
+            WriteValueRefusal::TimestampOutOfRange => {
+                "a timestamp before microseconds since 2000-01-01 in 64 bits"
+            }
+            WriteValueRefusal::UuidSyntax => "a text that is not a uuid",
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WriteRefusal {
+    QueryTarget,
+    NoColumns,
+    ColumnCount { expected: usize, actual: usize },
+    Interrupted,
+    IdentityAlways { column: String },
+    GeneratedColumn { column: String },
+}
+
+impl fmt::Display for WriteRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WriteRefusal::QueryTarget => f.write_str(
+                "the target is a query; only a table, a view or a foreign table takes rows",
+            ),
+            WriteRefusal::NoColumns => f.write_str("the write names no column"),
+            WriteRefusal::ColumnCount { expected, actual } => write!(
+                f,
+                "the write names {expected} columns and a batch carries {actual}"
+            ),
+            WriteRefusal::Interrupted => f.write_str(
+                "an earlier call was dropped before it finished, so the writer takes no more \
+                 rows and commits nothing; drop it and write again",
+            ),
+            WriteRefusal::IdentityAlways { column } => write!(
+                f,
+                "column `{column}` is a GENERATED ALWAYS identity, which takes no written \
+                 value; leave it out of the write and the server assigns it"
+            ),
+            WriteRefusal::GeneratedColumn { column } => write!(
+                f,
+                "column `{column}` is a generated column, which takes no written value; leave \
+                 it out of the write and the server computes it"
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -285,8 +363,16 @@ impl From<ConnectError> for Error {
             | ConnectError::DeclaredSetting { .. }
             | ConnectError::Declared { .. }
             | ConnectError::UnmappedType { .. }
-            | ConnectError::UnrepresentableValue { .. }
-            | ConnectError::EncodeNotBuilt { .. } => Error::NotImplemented(error.to_string()),
+            | ConnectError::UnrepresentableValue { .. } => Error::NotImplemented(error.to_string()),
+            ConnectError::WriteRefused { ref refusal } => match refusal {
+                WriteRefusal::QueryTarget | WriteRefusal::NoColumns => {
+                    Error::Config(error.to_string())
+                }
+                WriteRefusal::ColumnCount { .. }
+                | WriteRefusal::IdentityAlways { .. }
+                | WriteRefusal::GeneratedColumn { .. } => Error::Analysis(error.to_string()),
+                WriteRefusal::Interrupted => Error::DataFusion(error.to_string()),
+            },
             #[cfg(feature = "postgres")]
             ConnectError::DeclaredServerVersion { .. } => Error::NotImplemented(error.to_string()),
             ConnectError::ArrowType { .. }
@@ -295,6 +381,7 @@ impl From<ConnectError> for Error {
             | ConnectError::Protocol { .. }
             | ConnectError::Disconnected
             | ConnectError::FieldBuffer
+            | ConnectError::UnwritableValue { .. }
             | ConnectError::Arrow { .. } => Error::DataFusion(error.to_string()),
             #[cfg(feature = "postgres")]
             ConnectError::TlsRequired
@@ -306,6 +393,11 @@ impl From<ConnectError> for Error {
             | ConnectError::Server { .. }
             | ConnectError::PermissionDenied { .. }
             | ConnectError::RelationNotFound { .. } => Error::DataFusion(error.to_string()),
+            #[cfg(feature = "postgres")]
+            ConnectError::CommitUnknown { .. } => Error::CommitStateUnknown {
+                message: error.to_string(),
+                operation_id: None,
+            },
         }
     }
 }

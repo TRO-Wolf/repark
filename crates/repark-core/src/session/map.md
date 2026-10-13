@@ -58,7 +58,76 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   falls past chrono's calendar refuses `TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`).
   H-TZ did not fire. `session.rs` holds 1000 lines: its two new `mod` lines are paid for by two
   shed comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
+  **C-4 fold 3 item 2 (2026-10-11):** `zone_of` is `pub(crate)` so the text renderer
+  parses the session zone through the same canonicalisation.
+  **C-4 fold 3 S3 (2026-10-11):** `localise_at`, `unlocalise`, `place` and
+  `unplace` take the column name and carry it into the `UnrepresentableValue`
+  refusal; the read-path `localise` keeps the empty name (it has no column).
   pins: c-2/C-098, C-108, C-109, C-110, C-111
+- `write_postgres.rs` — **C-4 step 2 (2026-10-09):** `execute_postgres_write` is the one
+  Postgres sink driver both SQL doors and the `df.write.jdbc` binding call. It builds a
+  fresh pool from mounted specs (`ReparkToml` door) or URL properties (`ReadPostgres` door,
+  partition keys lifted and ignored), discovers, resolves the listed columns, checks the
+  frame width (short: Spark `INSERT_COLUMN_ARITY_MISMATCH`; wide: DataFusion's count text),
+  casts each batch to the encoder's Arrow types with the timestamp clock rules of
+  `zone_localiser.rs` (unplace at the session zone, forward-place for `timestamptz`), and
+  commits. Connect failures travel as
+  `External` with the `database source` context, so the Python classes match the read door.
+  `parse_write_path_option` parses the `write.path` writer option for both doors and the
+  binding: absent means bulk, `row` forces the INSERT path, anything else refuses as
+  `Configuration` (the binding raises `IllegalArgumentException`) naming both values.
+  `LastPostgresWriteReport` is the session carrier for the last write report, installed by
+  the builder: both doors record through `record_postgres_write_report` and the binding
+  reads it back with `take_postgres_write_report`. Fold 1 (2026-10-09): the report carries
+  the open write's taken path and the fallback sentence (`RowFallback`'s Display) read off
+  the writer after `open`, and batches pass encoder-accepted encodings (view, large,
+  dictionary forms) through uncast while real type changes still cast.
+  **C-4 fold 2 item 2 (2026-10-10):** the batch casts run strict (`safe: false`), so a
+  value the column cannot take refuses the statement instead of storing NULL. A failed
+  cast names the registry class (`CAST_OVERFLOW_IN_TABLE_INSERT` for overflow, with the
+  backquoted column; `CAST_INVALID_INPUT` for malformed text or bytes, with the offending
+  value found by bisection, capped, and the column up front) and never a raw Arrow string.
+  `shape_batch` takes `prefer_timestamp_ntz` instead of the whole settings.
+  **C-4 fold 2 item 3 (2026-10-10):** a timestamp into a date or text (`Utf8`) column
+  renders in the session zone: zoned instants unplace to the zone wall first, naive walls
+  render as they stand, and the text is Spark's `YYYY-MM-DD HH:MM:SS[.ffffff]` with the
+  fraction trimmed and the year padded to four digits, the Iceberg target's answer.
+  Timestamp and timestamptz columns keep their placement.
+  **C-4 fold 3 item 1 (2026-10-11):** `shape_batch` gates every column on the
+  engine's store-assignment rule before any cast, calling the rule and the refusal the
+  Iceberg target applies (`repark_iceberg::write::ansi_store_assignable` /
+  `refuse_unless_ansi_store_assignable` with the `CANNOT_SAFELY_CAST` class), so a
+  cross-family source refuses naming the column and both types with 0 rows stored. A
+  string source into a non-string column refuses whatever the string holds; interval
+  (`ServerText`) columns take string sources and null only and name the Postgres type
+  in the same refusal family. The malformed-string invalid-input pins are deleted with
+  their now-unreachable arm; numeric overflow and invalid-bytes refusals stay.
+  **C-4 fold 3 item 2 (2026-10-11):** values into a text column render as the engine's
+  `CAST(x AS STRING)` in the session zone: floats through the shared Java digit engine,
+  timestamps of every unit through the shared wall clock and Spark wall formatter,
+  dates through the shared ISO date, everything else through the Arrow cast the engine
+  itself uses for those types. Fold 2's own timestamp text renderer is deleted. The
+  rendering is uniform on both doors, as fold 2's session-zone rendering was; the ANSI
+  door's own CAST keeps Arrow text there. Unformattable walls still refuse instead of
+  storing NULL. Only `Utf8`-mapped columns render this way; uuid/json/interval columns
+  keep the Arrow cast.
+  **C-4 fold 3 S3 (2026-10-11):** the three placement call sites pass the column
+  name, so a gap wall into timestamptz refuses naming the column.
+  **C-4 fold 4 item 1 (2026-10-11):** the store-assignment gate carries a
+  Postgres-only carve-out: an engine `Interval` source into an interval
+  (`ServerText`) column passes and stores through the Arrow cast, as before the
+  gate; every non-interval source into an interval column still refuses, and an
+  interval into a text column still refuses. The shared Iceberg rule is
+  untouched.
+  **C-4 fold 4 item 3 (2026-10-11):** the gap-wall refusal into a
+  timestamptz column names the real column type: the placement arm retargets
+  the localiser's `timestamp` label at its own site, as the read path does
+  (`retargeted`, mirroring `repark_connect::provider::scan`). The date arm
+  keeps the `timestamp` label (ledger §15: the shape file sits at its
+  ceiling, so the date pin has no room yet). The store-assignment refusal
+  text is the shared Iceberg builder, so it stays byte-identical here
+  (ledger §15).
+  pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
   pins: ice-views-1/C-018

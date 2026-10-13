@@ -1,0 +1,9 @@
+{
+ "zone": "America/New_York",
+ "statement": "SELECT transform(array(ns), x -> coalesce(x, NULL)) AS v FROM ice.ns.src WHERE id = 1",
+ "result_type": "list<item: timestamp[us, tz=UTC]>",
+ "plans": {
+  "logical_plan": "Projection: transform(__repark_hof_array_field__(array(ice.ns.src.ns)), (x) -> CASE WHEN __repark_narrow_timestamp_ns__(x) IS NOT NULL THEN __repark_narrow_timestamp_ns__(x) ELSE TimestampMicrosecond(NULL, Some(\"UTC\")) END) AS v\n  Filter: ice.ns.src.id = Int32(1)\n    TableScan: ice.ns.src projection=[id, ns], partial_filters=[ice.ns.src.id = Int32(1)]",
+  "physical_plan": "ProjectionExec: expr=[transform(__repark_hof_array_field__(array(ns@0)), (x) -> CASE WHEN __repark_narrow_timestamp_ns__(x@2) IS NOT NULL THEN __repark_narrow_timestamp_ns__(x@2) END) as v]\n  FilterExec: id@0 = 1, projection=[ns@1]\n    RepartitionExec: partitioning=RoundRobinBatch(26), input_partitions=1\n      IcebergTableScan projection:[id,ns] predicate:[id = 1] N=1\n"
+ }
+}

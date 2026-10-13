@@ -1,0 +1,20 @@
+{
+ "engine": "spark",
+ "spark": "4.1.2",
+ "zone": "America/New_York",
+ "note": "Spark has no nanosecond type; the nanosecond input is TIMESTAMP_NTZ.",
+ "cells": {
+  "microsecond": {
+   "type": "timestamp",
+   "value": "2026-01-02 03:04:05.123456"
+  },
+  "nanosecond": {
+   "type": "timestamp",
+   "value": "2026-01-02 03:04:05.123456"
+  },
+  "string": {
+   "type": "timestamp",
+   "value": "2026-01-02 03:04:05.123456"
+  }
+ }
+}

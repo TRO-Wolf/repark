@@ -88,12 +88,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract writer preparation from transaction commit assembly; "
         "partitioned file writing now lives in partitioned_files.rs.",
     ),
-    "crates/repark-iceberg/src/write/merge/mod.rs": (
-        1569,
-        "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
-        "Split plan preparation from COW and MOR execution modules; "
-        "unpartitioned file writing now lives in merge/file_sink.rs.",
-    ),
     "crates/repark-iceberg/src/write/merge/tests/merge.rs": (
         1032,
         "General MERGE behavior cases remain in one file-backed module.",
@@ -173,11 +167,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         1225,
         "Window RANGE validation and rewrite behavior share one module.",
         "Split frame validation from expression lowering.",
-    ),
-    "crates/repark-sql/src/guards/tests.rs": (
-        1207,
-        "ANSI guard refusal cases share one file-backed module.",
-        "Split guards by statement or expression family.",
     ),
     "crates/repark-sql/src/tests.rs": (
         1513,

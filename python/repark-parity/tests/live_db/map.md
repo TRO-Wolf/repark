@@ -118,6 +118,64 @@ that carry one random tag; all three drop on exit. The five cdc S0 pins are
   host, a missing relation, a refused `NaN`, a lock timeout, a pool timeout and a `read.jdbc`
   URL with a password; neither password nor any URL form appears on stdout or stderr.
   pins: c-2/C-107
+- `test_c4_write.py` — **C-4 step 2 (2026-10-09):** Postgres INSERT routing on the Spark
+  door and the writer, fourteen cells: rows land through VALUES and SELECT with an empty-frame
+  return; every declared type round-trips byte-identical through the read path (`nu` by
+  value: the door writes the Arrow scale, the seed carries dscale 1); reordered lists write
+  by name and unlisted columns default; a duplicate key stores nothing and records nothing;
+  a DST-zone session writes read timestamps back as their wall clocks; a view and an
+  INSERT-rule target take the row path and say why on both doors; a named GENERATED ALWAYS
+  identity column refuses with the core text on both doors; default and `write.path=row`
+  writer writes agree byte for byte; a write-only role names the missing SELECT privilege
+  and an unmapped column names its row even when unnamed (the two owner questions);
+  non-append modes name the modes row and UPDATE names the upsert row while REPLACE parses
+  nowhere here and MERGE/CTAS keep the pg-ddl text.
+  **C-4 fold 2 item 2 (2026-10-10):** `test_unstorable_values_refuse_on_all_three_paths`
+  (fifteen unstorable cells refuse named with the column on the SQL door, the writer
+  default and `write.path=row`, store nothing, record nothing) and
+  `test_fitting_values_store_on_all_three_paths` (eight fitting cells store identically
+  on all three paths).
+  **C-4 fold 2 item 3 (2026-10-10):**
+  `test_timestamps_into_date_and_text_columns_follow_the_session_zone` (the zone wall in
+  UTC, New York and Kolkata on all three paths, with fraction trimming and NTZ arms) and
+  `test_timestamp_columns_keep_their_zone_placement` (timestamp/timestamptz columns
+  unmoved in New York).
+  **C-4 fold 2 item 5 (2026-10-10):**
+  `test_repeated_select_expressions_store_positionally` (the three repeated-name
+  sources store by position through the facade door).
+  **C-4 fold 3 item 1 (2026-10-11):**
+  `test_cross_family_sources_refuse_on_all_three_paths` (eighteen cross-family and
+  string-source cells refuse with the store-assignment class naming the column, store
+  nothing, record nothing, on the SQL door, the writer default and `write.path=row`)
+  and `test_assignable_pairs_store_bytes_equal_to_plain_insert` (forty-one assignable
+  pairs store what one plain INSERT stores on all three paths, read back as text).
+  The invalid-input string rows and the fitting string/bool-cross rows are deleted:
+  those pairs refuse by type now.
+  **C-4 fold 3 item 2 (2026-10-11):**
+  `test_text_columns_store_cast_as_string_on_all_three_paths` (thirty-three
+  expressions — floats and doubles, decimals, dates, timestamps in three units,
+  booleans, binary — store what the engine's own `CAST(x AS STRING)` gives in UTC
+  and America/New_York, on the SQL door, the writer default and `write.path=row`).
+  **C-4 fold 3 item 3 (2026-10-11):**
+  `test_positionally_aliased_expressions_store_by_position` (the four
+  same-display-name sources store by position through the SQL door).
+  **C-4 fold 4 item 1 (2026-10-11):**
+  `test_interval_values_store_bytes_equal_to_plain_insert` (the six engine
+  INTERVAL forms store what one plain INSERT stores on all three paths, read
+  back as text) and one more refusal row (an INTERVAL into a text column
+  refuses with the store-assignment class).
+  **C-4 fold 4 item 2 (2026-10-11):** two oracle faults fixed, coverage
+  unchanged: the bytea oracle plain-INSERT uses Postgres's own bytea spelling
+  (Spark's `X'41'` is a bit string there), and the text-rendering oracle uses
+  `DATE '9999-12-31'` (the engine cannot evaluate year 10000). The same run
+  exposed the same fault one cell later: a `TIMESTAMP_NTZ` year-10000 literal
+  fails to parse, and so does year 9999 — the NTZ literal parser caps at the
+  nanosecond range (2262 parses, 2300 fails) — so that cell uses
+  `TIMESTAMP_NTZ '2262-01-01 00:00:00'`.
+  pins: c-4/C-013, C-014
+- `test_c2_read.py` — **C-4 step 2 (2026-10-09):** `test_ddl_and_dml_refuse_through_both_doors`
+  drops its INSERT case (append INSERT writes now; the write pins live in
+  `test_c4_write.py`); UPDATE and DELETE keep refusing. pins: c-4/C-013
 
 ## Pointers
 
