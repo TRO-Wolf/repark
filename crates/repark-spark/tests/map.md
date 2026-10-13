@@ -169,6 +169,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   that is, or contains, a nanosecond timestamp. Asserts only that the walk ran.
   Output committed under
   [../../../task/wo/ice-tsns-type-planner-1/evidence/p5-ns-returns.txt](../../../task/wo/ice-tsns-type-planner-1/evidence/p5-ns-returns.txt).
+  pins: ice-tsns-type-planner-1/C-001, C-003
 - [ice_tsns_type_planner_1_h3.rs](ice_tsns_type_planner_1_h3.rs) —
   **ICE-TSNS-TYPE-PLANNER-1 step 0 (2026-10-13):** the H3 coercion walk runs
   `coalesce`, `UNION ALL`, `array`/`make_array`, `CASE`, `=` and an equi-join
@@ -178,6 +179,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   types after coercion for `=` and the join). Asserts only that all 192 cells
   printed. Output committed under
   [../../../task/wo/ice-tsns-type-planner-1/evidence/h3-coercion-lattice.txt](../../../task/wo/ice-tsns-type-planner-1/evidence/h3-coercion-lattice.txt).
+  pins: ice-tsns-type-planner-1/C-002, C-004
 
 ## I want to...
 

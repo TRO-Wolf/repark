@@ -2406,3 +2406,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixed) (C-004). `risk_tier: standard`. Branch
   `test/parity-live-infra-2`.
   pins: parity-live-infra-2/C-001, C-002, C-003, C-004
+- [ice-tsns-type-planner-1-ledger.md](ice-tsns-type-planner-1-ledger.md) —
+  **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13), parity row R-017, step 0:**
+  measurement only on main `be011012`. The P5 function walk (C-001), the H3
+  coercion lattice on a plain and on the Spark-door session (C-002), the H2
+  marker-planner probe with its eight spelling outcomes (C-003), and the H4
+  reader table with the P1-to-P15 producer table (C-004) are committed as
+  evidence; step 1 waits on the H1-to-H3 ruling (C-005).
+  `risk_tier: standard`. Branch `fix/ice-tsns-type-planner-1`.
+  pins: ice-tsns-type-planner-1/C-001, C-002, C-003, C-004
