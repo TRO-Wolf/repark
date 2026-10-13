@@ -114,9 +114,29 @@ Next: round 2, untyped NULL sites.
 ## 7. Slice 1, round 2 (2026-10-12)
 Built: the all-or-nothing fallback check, the untyped-NULL site walk and the kernel rewrite on the open-gate path; the fallback sink logs at the seat via `tracing::debug!`; the fallback cast check matches a top-level `Timestamp` target only.
 Pins: 43 Rust pins (coalesce/array/case/if/union ns+tzns output types, idempotence, fallback triggers, leave-alone sites, never-sites, sink lines, container-cast) plus the seat sink pin; facade: 8,967 remaining cells equal the recorded twin, 258 DML-store-cast cells stay main's with the fallback moved, 220 equal the corrected-twin oracle (all oracle 1, recorded on the baseline module), 155 equal main with the stale `tzns` text replaced, 45 reads equal the twin, the union `tzns_utc` read pins field id 4, 40 plain ns-target cells never fall back.
-Split: 8967 + 258 + 220 + 155 = 9,600; the union read's field id 4 (main and the recorded twin carry 3) goes to the verifier as a named change; the DML store cast stays main's until slice 2 tells it from a written cast.
+Split: 8967 + 258 + 220 + 155 = 9,600; the union read pins field id 4 (live main reads 4, the recorded twin's 3 is stale); the DML store cast stays main's until slice 2 tells it from a written cast.
 Cost: interleaved head/baseline 0.9928 insert, 0.9823 merge, 0.9939 merge_mor; largest pair ratio 1.0061.
 Registry: `docs/spark-sql-iceberg-parity.md` row `ICE-TSNS-SQL-1-R-017` still states the UPDATE-no-WHERE refusal; on this head all eight spellings store their twin's walls, so the row is stale until the close-out slice rewords it.
+Next: slice 2, honest typing.
+
+## 8. Slice 1, fold 1 (2026-10-12)
+Built: the per-node `TypeCoercionRewriter` ask before any NULL wrap (union columns ask
+`coerce_union`), and the retry on the original plan with one fallback when the inner
+rule rejects a rewrite. No allow-list or deny-list of function names.
+Pins: 11 new Rust pins (each twelve-shape class matches main's rule alone, the retry,
+four surviving-mutant pins) with the 43 round-2 pins unmoved; 152 facade cells (15 SQL
+plus 4 DataFrame shapes, ns/tzns, UTC/America-New-York, ANSI on/off) equal the
+baseline-recorded oracle.
+What was wrong: every function argument counted as a site operand, so a NULL in a
+non-timestamp position was wrapped whenever another argument was one nanosecond type;
+twelve shapes errored or changed answer. Fixed by construction, not a function list.
+Corrections: the union read's field id is 4 on live main in all five zones (the
+recorded twin's 3 is stale); 70 of the 258 carve-out cells target `tz_ns`, 188 `ltz`;
+written `TIMESTAMP_NTZ` and nanosecond casts reach the wrapper as kernel calls and
+never trip the fallback, which sees only surviving `Cast`/`TryCast` nodes.
+Open: the fallback counter over-counts analyses the wrapper runs twice (verdict
+finding 3; due before slice 2); whether Spark can read a table created from a
+rewritten read (verdict Q2; the owner is deciding).
 Next: slice 2, honest typing.
 
 ## Q. Questions
