@@ -1114,6 +1114,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- `timestamp_ns_cast.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** the module also
+  exports `asked_nanosecond_columns_in(state, plan, views)`, the entry the SQL doors call
+  (no second analysis when no output column holds a nanosecond timestamp), and `ViewPlans`,
+  the seat's resolver from a scan to a view's plan. The walk's fold-1 rules are in the
+  child directory's `map.md`.
+  pins: ice-tsns-create-door-1/C-014, C-016
 - `timestamp_ns_cast.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** a cast kernel carries
   where it came from. `CastOrigin` is `Written` (the user wrote the cast: the parser lowers
   `CAST(x AS timestamp_ns)` to a call by name, and the name resolves to the registry's kernel)
