@@ -3564,7 +3564,7 @@ still open is `isModifiable`.
 ### ICE-TSNS-SQL-1-R-019 — FIXED 2026-10-13 (ICE-TSNS-FRAME-DOOR-1): a pandas or polars nanosecond timestamp column enters as microseconds
 
 - **repark** — pandas / polars `datetime64[ns]` enters as microseconds, floored, as Spark
-  4.1.2 does (measured 2026-10-13); before 1.5.6 the facade carried nanoseconds. Nested
+  4.1.2 does (measured 2026-10-13); before 1.5.5 the facade carried nanoseconds. Nested
   `ArrowDtype` nanoseconds are still carried (Spark refuses those frames). The floor is
   toward negative infinity on the int64 ticks, Spark's: `-1 ns` is `-1 µs`, `-1001 ns` is
   `-2 µs`. It never goes through local time, so it answers in every repeated and skipped
@@ -3586,7 +3586,7 @@ still open is `isModifiable`.
   stores microsecond precision (`writeTo().append()`, `insertInto`, `INSERT … SELECT` from
   a temp view, `saveAsTable` in append mode; no error, no warning); before, all nine digits
   were stored. Keeping them is the create-door card's session setting.
-  **Also moved (orchestrator ruling, provisional, 2026-10-13):** `schema="c timestamp"`
+  **Also moved (owner ruling, 2026-10-13):** `schema="c timestamp"`
   over an aware **microsecond** column whose zone is not UTC answers
   `timestamp[us, tz=UTC]`, Spark's type, with the same instants; before, it kept the source
   label (`timestamp[us, tz=America/New_York]`). Visible on the Arrow type (so the schema
@@ -3596,7 +3596,8 @@ still open is `isModifiable`.
   **Not changed:** under a declared type that is not a timestamp (`c bigint`, `c string`,
   `c date`) a nanosecond column answers what main answered: the nanosecond integer, nine
   digits, the day. pandas `datetime64[ms]` / `[s]` stay `timestamp[ms]` / `[s]` (Spark:
-  microseconds). `schema="c timestamp_ntz"` over an **aware** column answers the UTC wall
+  microseconds). That is recorded, not built: one inventory cell, no lane
+  (owner, 2026-10-13). `schema="c timestamp_ntz"` over an **aware** column answers the UTC wall
   where Spark refuses (`FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME`); a nanosecond column there
   raised `ArrowInvalid` before and now answers as the microsecond column always did.
 - **Apache Spark** — `timestamp[us, tz=UTC]`, nullable, floored, no warning, for every unit

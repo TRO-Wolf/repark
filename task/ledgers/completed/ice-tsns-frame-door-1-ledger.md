@@ -114,6 +114,14 @@ door a nanosecond frame built through pandas.
 
 ## 5. Rulings (orchestrator, provisional, 2026-10-13)
 
+**Owner, 2026-10-13 (adopted after both verdicts):** the unit is accepted as built. The UTC
+relabel of a declared `c timestamp` over a non-UTC aware microsecond column is the owner's
+ruling now, not provisional. The ceiling of 25 ms per million rows per nanosecond column is
+adopted for this row only. The unit ships in 1.5.5. pandas `datetime64[ms]` / `[s]` entering as
+milliseconds and seconds where Spark gives microseconds is recorded as one inventory cell, with
+no lane. The other rulings below keep the wording they were made under.
+
+
 The owner sees each in the pull request and may flip it.
 
 - **Q1.** For `schema="c timestamp"` over a New York-aware nanosecond column main and Spark
