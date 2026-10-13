@@ -3429,6 +3429,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `--declared-repeats`, with one under a declared `timestamp` schema. One JSON object per
   process; the recorded sets are in `task/wo/ice-tsns-frame-door-1/evidence/`.
   pins: ice-tsns-frame-door-1/C-013, C-022
+- [_record_ice_tsns_create_door_1_main.py](_record_ice_tsns_create_door_1_main.py) +
+  [ice_tsns_create_door_1_main.json](ice_tsns_create_door_1_main.json) —
+  **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the create-door matrix and the recorder of what a
+  build answers in it; the fixture is main `f3f98823`, recorded before any product edit. Four
+  sections, each in a UTC and an America/New_York session, every cell in a fresh session and
+  warehouse with the v3 opt-in on: `matrix` (12 create and schema-evolving doors, the columns
+  `c timestamp_ns` and `cz timestamptz_ns`, from the plain column and from a written cast);
+  `pass3` (the census's third pass: the plain columns, a capsule-registered Arrow view and a
+  written cast of a string through 7 doors); `plain` (12 statements over a microsecond table,
+  four of them refusals); `v2` (19 doors below format v3). A cell holds the error (class,
+  condition, text with the warehouse path masked), whether the table's files are unchanged,
+  and the table's format version, Iceberg types from the metadata JSON, Arrow types and int64
+  rows. No cell uses pandas or polars: nanosecond sources are a v3 table and the Arrow stream
+  seam. The door functions (`prepare_door`, `run_door`, `measure`) are imported by the pins,
+  so both sides run the same statements. Run it against a build:
+  `python _record_ice_tsns_create_door_1_main.py <commit> [--output <path>]`.
+  pins: ice-tsns-create-door-1/C-001
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and

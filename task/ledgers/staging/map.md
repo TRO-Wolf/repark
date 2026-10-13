@@ -33,6 +33,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-004) are recorded. The gate, the temporal `nvl` rewrite and written casts
   stay OPEN (C-005..C-007). No product code.
   `risk_tier: standard`. Branch `test/ice-tsns-coercion-1-slice-0`.
+- [ice-tsns-create-door-1-ledger.md](ice-tsns-create-door-1-ledger.md) —
+  **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** a new `timestamp_ns` / `timestamptz_ns` column is
+  created only when the statement asks (DDL naming the type, a written `CAST`, the session
+  setting `repark.sql.allowImplicitTimestampNanos`); otherwise one door under every create
+  and schema-evolving seat refuses with a text that names both opt-ins. Main's answers
+  recorded before any product edit (C-001). `risk_tier: standard`. Branch
+  `fix/ice-tsns-create-door-1`.
 - [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
   `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
