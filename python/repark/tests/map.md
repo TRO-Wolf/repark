@@ -17,6 +17,11 @@ are not the value oracle: main typed the naive site as a zoned microsecond colum
 toward zero, so its lists differ from the twin in America/New_York and before 1970.
 `mapInArrow` with a declared `timestamp` over the naive `ns` site stays refused (kind
 mismatch, the microsecond rule) and is pinned as that refusal. pins: ice-tsns-coercion-1/C-005
+`test_microsecond_sequence_forms_equal_live_spark` replays the 48 cells of
+`ice_tsns_coercion_1_slice1_fold2_spark.json` — twelve `sequence` forms over `ntz` and `ts`
+in both zones, recorded on live Spark 4.1.2 by
+`_record_ice_tsns_coercion_1_slice1_fold2_spark.py` (`typeof` plus microsecond ticks) — and
+asserts kind, unit and ticks. pins: ice-tsns-coercion-1/C-005
 
 ICE-TSNS-COERCION-1 slice 1 fold 1 (2026-10-12): `test_ice_tsns_coercion_1_slice1_fold1.py`
 pins the twelve verifier shapes plus the struct probes — 15 SQL shapes and 4 DataFrame

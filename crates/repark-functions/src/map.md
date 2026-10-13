@@ -1003,6 +1003,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   closed-form counts reserve up front at native width with a scalar fast path. The int/date/
   timestamp row kernels live in `spark_sequence/rows.rs` (file-size split, move-only).
   pins: door-converge-2/C-007, C-009
+  **ICE-TSNS-COERCION-1 slice 1 fold 2 (2026-10-13):** the timestamp arm builds its list in
+  the unit and zone of the declared element (the first argument's type) instead of always
+  `Timestamp(µs, UTC)`, so `TIMESTAMP_NTZ`, nanosecond, millisecond and second inputs answer
+  where the list assembly refused them; detail and pins in
+  [`spark_sequence/map.md`](spark_sequence/map.md). pins: ice-tsns-coercion-1/C-005
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,

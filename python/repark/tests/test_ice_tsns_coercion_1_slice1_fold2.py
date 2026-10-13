@@ -6,12 +6,19 @@ pins: ice-tsns-coercion-1/C-005
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
+import _ice_tsns_coercion_1_doors as doors
 import _record_ice_tsns_coercion_1_slice1_fold2 as fold2
+import _record_ice_tsns_coercion_1_slice1_fold2_spark as fold2_spark
+import pyarrow as pa
+import pyarrow.compute as pc
 import pytest
+from _ice_tsns_coercion_1_spellings import SRC
 
 EXPECTED_FOLD2_CELLS = 68
+EXPECTED_SPARK_CELLS = 48
 TWINS = {"ns": "ntz", "tzns": "ts"}
 KIND_REFUSED = {
     "py|ns|map_in_arrow_ltz": (
@@ -105,3 +112,34 @@ def test_nanosecond_cells_equal_the_microsecond_twin(
         if _as_microseconds(measured[cell]) != measured[_twin_cell(cell)]:
             differing.append(cell)
     assert differing == []
+
+
+def _arrow_kind(table: Any) -> str:
+    """Return the Spark name of a ``sequence`` column's Arrow type."""
+    zoned = "tz=" in str(table.schema.field("v").type)
+    return "array<timestamp>" if zoned else "array<timestamp_ntz>"
+
+
+def test_microsecond_sequence_forms_equal_live_spark(tmp_path: Path) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — NTZ and LTZ lists equal Spark 4.1.2."""
+    recorded = json.loads(fold2_spark.OUT.read_text())
+    assert len(recorded) == EXPECTED_SPARK_CELLS
+    for zone_index, zone in enumerate(fold2_spark.ZONES):
+        warehouse = tmp_path / f"spark-{zone_index}"
+        warehouse.mkdir()
+        spark = doors.open_session(zone, warehouse)
+        try:
+            for source in fold2_spark.SOURCES:
+                for form, template in fold2_spark.FORMS:
+                    cell = f"{zone}|{source}|{form}"
+                    expression = template.format(c=source)
+                    table = spark.sql(fold2_spark.statement(expression, SRC)).toArrow()
+                    column = table.column("v").combine_chunks()
+                    answer = {
+                        "type": _arrow_kind(table),
+                        "values": pc.cast(column, pa.list_(pa.int64())).to_pylist(),
+                    }
+                    assert answer == recorded[cell], cell
+                    assert str(column.type.value_type.unit) == "us", cell
+        finally:
+            spark.stop()

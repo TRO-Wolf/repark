@@ -3,14 +3,14 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{
     Array, ArrayRef, Date32Array, Int8Array, Int16Array, Int32Array, Int64Array,
-    IntervalMonthDayNanoArray, ListArray, TimestampMicrosecondArray,
+    IntervalMonthDayNanoArray, ListArray,
 };
 use datafusion::common::ScalarValue;
 
 use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
-    DataType, Field, FieldRef, IntervalMonthDayNano, IntervalUnit, TimeUnit,
+    DataType, Field, FieldRef, Int64Type, IntervalMonthDayNano, IntervalUnit, TimeUnit,
 };
 use datafusion::common::{DataFusionError, Result, exec_err};
 use datafusion::logical_expr::{
@@ -19,6 +19,8 @@ use datafusion::logical_expr::{
 };
 
 mod rows;
+#[cfg(test)]
+mod timestamp_tests;
 
 #[must_use]
 pub fn sequence_udf() -> Arc<ScalarUDF> {
@@ -274,11 +276,11 @@ fn scalar_interval(value: &ColumnarValue) -> Result<Option<IntervalMonthDayNano>
     }
 }
 
-fn scalar_micros(value: &ColumnarValue) -> Result<Option<i64>> {
+fn scalar_ticks(value: &ColumnarValue, unit: TimeUnit) -> Result<Option<i64>> {
     match value {
         ColumnarValue::Scalar(ScalarValue::Null) => Ok(None),
         ColumnarValue::Scalar(scalar) => {
-            let single = as_micros(&scalar.to_array_of_size(1)?)?;
+            let single = as_ticks(&scalar.to_array_of_size(1)?, unit)?;
             Ok(if single.is_null(0) {
                 None
             } else {
@@ -347,8 +349,9 @@ fn scalar_dates(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarVa
 }
 
 fn scalar_timestamps(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarValue> {
-    let start = scalar_micros(&args[0])?;
-    let stop = scalar_micros(&args[1])?;
+    let unit = element_unit(element)?;
+    let start = scalar_ticks(&args[0], unit)?;
+    let stop = scalar_ticks(&args[1], unit)?;
     let stride = if args.len() > 2 {
         Some(scalar_interval(&args[2])?)
     } else {
@@ -358,23 +361,23 @@ fn scalar_timestamps(element: &FieldRef, args: &[ColumnarValue]) -> Result<Colum
         let explicit = match stride {
             None => None,
             Some(None) => {
-                let shaped = shape_timestamps(Vec::new());
+                let shaped = shape_timestamps(element, Vec::new())?;
                 return finish_one(element, shaped, false);
             }
             Some(Some(given)) => Some(given),
         };
-        match rows::timestamp_row(start, stop, explicit)? {
+        match rows::timestamp_ticks(start, stop, explicit, unit)? {
             None => {
-                let shaped = shape_timestamps(Vec::new());
+                let shaped = shape_timestamps(element, Vec::new())?;
                 finish_one(element, shaped, false)
             }
             Some(pieces) => {
-                let shaped = shape_timestamps(pieces);
+                let shaped = shape_timestamps(element, pieces)?;
                 finish_one(element, shaped, true)
             }
         }
     } else {
-        let shaped = shape_timestamps(Vec::new());
+        let shaped = shape_timestamps(element, Vec::new())?;
         finish_one(element, shaped, false)
     }
 }
@@ -416,8 +419,15 @@ fn shape_dates(values: Vec<i32>) -> ArrayRef {
     Arc::new(Date32Array::from(values))
 }
 
-fn shape_timestamps(values: Vec<i64>) -> ArrayRef {
-    Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC"))
+fn shape_timestamps(element: &FieldRef, values: Vec<i64>) -> Result<ArrayRef> {
+    Ok(cast(&Int64Array::from(values), element.data_type())?)
+}
+
+fn element_unit(element: &FieldRef) -> Result<TimeUnit> {
+    match element.data_type() {
+        DataType::Timestamp(unit, _) => Ok(*unit),
+        other => exec_err!("sequence cannot build {other} elements"),
+    }
 }
 
 fn invoke_ints(arrays: &[ArrayRef], row_count: usize, element: &FieldRef) -> Result<ColumnarValue> {
@@ -508,8 +518,9 @@ fn invoke_timestamps(
     offsets.push(0);
     let mut validity: Vec<bool> = Vec::with_capacity(row_count);
     let mut any_null = false;
-    let starts = as_micros(&arrays[0])?;
-    let stops = as_micros(&arrays[1])?;
+    let unit = element_unit(element)?;
+    let starts = as_ticks(&arrays[0], unit)?;
+    let stops = as_ticks(&arrays[1], unit)?;
     let strides = if arrays.len() > 2 {
         Some(as_interval(&arrays[2])?)
     } else {
@@ -523,7 +534,7 @@ fn invoke_timestamps(
             any_null = true;
         } else {
             let interval = strides.as_ref().map(|strides| strides.value(row));
-            match rows::timestamp_row(starts.value(row), stops.value(row), interval) {
+            match rows::timestamp_ticks(starts.value(row), stops.value(row), interval, unit) {
                 Err(error) => return Err(error),
                 Ok(None) => {
                     validity.push(false);
@@ -537,7 +548,7 @@ fn invoke_timestamps(
         }
         offsets.push(fit_i32(values.len())?);
     }
-    let shaped = shape_timestamps(values);
+    let shaped = shape_timestamps(element, values)?;
     finish_list(element, offsets, validity, any_null, shaped)
 }
 
@@ -566,22 +577,37 @@ fn as_date_days(array: &ArrayRef) -> Result<Date32Array> {
     downcast_primitive(&cast(array.as_ref(), &DataType::Date32)?, "date")
 }
 
-fn microsecond_utc() -> DataType {
-    DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()))
+fn ticks_per_second(unit: TimeUnit) -> i64 {
+    match unit {
+        TimeUnit::Second => 1,
+        TimeUnit::Millisecond => 1_000,
+        TimeUnit::Microsecond => 1_000_000,
+        TimeUnit::Nanosecond => 1_000_000_000,
+    }
 }
 
-fn as_micros(array: &ArrayRef) -> Result<TimestampMicrosecondArray> {
-    if array.data_type() == &microsecond_utc() {
-        return downcast_primitive(array, "timestamp");
-    }
-    match array.data_type() {
-        DataType::Timestamp(_, _) => {
-            downcast_primitive(&cast(array.as_ref(), &microsecond_utc())?, "timestamp")
-        }
-        _ => Err(DataFusionError::Execution(
+fn as_ticks(array: &ArrayRef, unit: TimeUnit) -> Result<Int64Array> {
+    let DataType::Timestamp(given, _) = array.data_type() else {
+        return Err(DataFusionError::Execution(
             "sequence timestamp arm needs timestamp values".to_owned(),
-        )),
+        ));
+    };
+    let raw: Int64Array =
+        downcast_primitive(&cast(array.as_ref(), &DataType::Int64)?, "timestamp")?;
+    let have = ticks_per_second(*given);
+    let want = ticks_per_second(unit);
+    if have == want {
+        return Ok(raw);
     }
+    if have > want {
+        let divisor = have / want;
+        return Ok(raw.unary::<_, Int64Type>(|tick| tick.div_euclid(divisor)));
+    }
+    let factor = want / have;
+    raw.try_unary::<_, Int64Type, DataFusionError>(|tick| {
+        tick.checked_mul(factor)
+            .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))
+    })
 }
 
 fn as_interval(array: &ArrayRef) -> Result<IntervalMonthDayNanoArray> {
