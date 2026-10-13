@@ -51,5 +51,18 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   [interleaved-cost-fold1.json](interleaved-cost-fold1.json) — slice 1 fold 1
   cost: five interleaved baseline-vs-head pairs on insert/merge/merge_mor,
   median ratios 1.0067 / 1.0063 / 0.9929, no halt.
+- [cost-slice1-fold2.md](cost-slice1-fold2.md) +
+  [interleaved-sets-fold2.json](interleaved-sets-fold2.json) +
+  [interleaved-cost-fold2.json](interleaved-cost-fold2.json) — slice 1 fold 2
+  cost: eight interleaved main-vs-head sets; gated median ratios 0.9946 / 1.0005 /
+  1.0089 on insert/merge/merge_mor, no halt; ungated `nest8` 1.85 and `union200`
+  1.13 (recorded, not gated).
+- [cells-fold2.md](cells-fold2.md) + [cells-fold2.json](cells-fold2.json) — slice 1
+  fold 2 re-run of the second verifier's `sequence` and UDF probes on head and main:
+  113 of the 117 refused cells answer, the four that do not, and the 43 cells main
+  refuses that answer now.
+- [mutants-fold2.md](mutants-fold2.md) — slice 1 fold 2 red/green proof for the
+  re-pinned mutants m4, m5, m7 and the ask-skipped mutant, with the reason the ruled
+  `coalesce(ns, µs, NULL)` form alone cannot kill m4.
 
 Up: [../map.md](../map.md).

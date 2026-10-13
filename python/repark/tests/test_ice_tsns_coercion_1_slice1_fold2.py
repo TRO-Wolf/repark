@@ -119,6 +119,38 @@ def test_nanosecond_cells_equal_the_microsecond_twin(
     assert differing == []
 
 
+def _differs_from_main_by_rule(cell: str) -> bool:
+    """True where main's own narrowing, not the consumer, set main's ticks.
+
+    Notes:
+        In America/New_York main read the naive ``ns`` site as a zoned wall. In UTC main's
+        DataFrame-door site and its Python doors cut ``-1 ns`` toward zero to ``0``.
+    """
+    zone, door, source, shape = cell.split("|")
+    if zone == "America/New_York":
+        return source == "ns"
+    return door == "py" or shape == "frame"
+
+
+def test_ticks_differ_from_main_only_where_main_narrowed_the_site(
+    measured: dict[str, dict[str, Any]],
+) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — 39 cells hold main's ticks, 26 the twin's."""
+    oracle = _load_oracle()
+    equal = []
+    differing = []
+    for cell, recorded in sorted(oracle.items()):
+        outcome = _as_microseconds(measured[cell])
+        if "error" in recorded or "error" in outcome:
+            continue
+        ours = [column["values"] for column in outcome["columns"]]
+        theirs = [column["values"] for column in recorded["columns"]]
+        (equal if ours == theirs else differing).append(cell)
+    assert [cell for cell in equal if _differs_from_main_by_rule(cell)] == []
+    assert [cell for cell in differing if not _differs_from_main_by_rule(cell)] == []
+    assert (len(equal), len(differing)) == (39, 26)
+
+
 def _arrow_kind(table: Any) -> str:
     """Return the Spark name of a ``sequence`` column's Arrow type."""
     zoned = "tz=" in str(table.schema.field("v").type)

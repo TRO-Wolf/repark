@@ -1,0 +1,53 @@
+{
+ "main_answered_head_errors": [
+  {
+   "cell": "udf_foreach_batch_like|ns",
+   "config": "America_New_York-ansitrue",
+   "error": "Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+   "suite": "m_udf"
+  },
+  {
+   "cell": "udf_map_in_arrow_ddl_ltz|ns",
+   "config": "America_New_York-ansitrue",
+   "error": "mapInArrow schema mismatch on field 'v': expected type timestamp[us, tz=UTC] (timestamp), got timestamp[ns]",
+   "suite": "m_udf"
+  },
+  {
+   "cell": "udf_foreach_batch_like|ns",
+   "config": "UTC-ansifalse",
+   "error": "Casting from timestamp[ns] to timestamp[us] would lose data: -1",
+   "suite": "m_udf"
+  },
+  {
+   "cell": "udf_map_in_arrow_ddl_ltz|ns",
+   "config": "UTC-ansifalse",
+   "error": "mapInArrow schema mismatch on field 'v': expected type timestamp[us, tz=UTC] (timestamp), got timestamp[ns]",
+   "suite": "m_udf"
+  }
+ ],
+ "main_errors_head_answers": {
+  "seq_df_explode": 1,
+  "seq_plain": 6,
+  "seq_plain_step": 6,
+  "seq_plain_typeof": 6,
+  "seq_site_array_elem": 6,
+  "seq_site_coalesce_stop": 6,
+  "seq_us_plain": 6,
+  "udf_map_in_arrow_ddl": 2,
+  "udf_map_in_arrow_plain": 4
+ },
+ "main_errors_head_answers_total": 43,
+ "moved_from_error_to_answer": {
+  "h_retry": 16,
+  "i_cons": 8,
+  "j_seq": 71,
+  "m_udf": 18
+ },
+ "moved_total": 113,
+ "probe_statement_cells": {
+  "h_retry": 16,
+  "i_cons": 8,
+  "j_seq": 114,
+  "m_udf": 160
+ }
+}

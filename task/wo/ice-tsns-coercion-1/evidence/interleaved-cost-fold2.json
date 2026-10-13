@@ -1,0 +1,192 @@
+{
+ "sets": 8,
+ "repeats": 15,
+ "order": "odd sets main then head, even sets head then main",
+ "statements": {
+  "insert": {
+   "gated": true,
+   "main_set_medians_ms": [
+    20.6,
+    21.69,
+    20.94,
+    21.32,
+    20.6,
+    20.72,
+    21.19,
+    21.14
+   ],
+   "head_set_medians_ms": [
+    20.79,
+    20.78,
+    20.92,
+    20.79,
+    21.13,
+    20.81,
+    20.95,
+    20.93
+   ],
+   "pair_ratios": [
+    1.0092,
+    0.958,
+    0.999,
+    0.9751,
+    1.0257,
+    1.0043,
+    0.9887,
+    0.9901
+   ],
+   "median_pair_ratio": 0.9946,
+   "ratio_of_medians": 0.9917,
+   "max_pair_ratio": 1.0257,
+   "min_pair_ratio": 0.958
+  },
+  "merge": {
+   "gated": true,
+   "main_set_medians_ms": [
+    65.52,
+    66.38,
+    66.19,
+    66.17,
+    65.31,
+    67.64,
+    65.81,
+    65.89
+   ],
+   "head_set_medians_ms": [
+    67.27,
+    66.49,
+    65.49,
+    65.96,
+    65.56,
+    65.35,
+    65.76,
+    67.28
+   ],
+   "pair_ratios": [
+    1.0267,
+    1.0017,
+    0.9894,
+    0.9968,
+    1.0038,
+    0.9661,
+    0.9992,
+    1.0211
+   ],
+   "median_pair_ratio": 1.0005,
+   "ratio_of_medians": 0.9974,
+   "max_pair_ratio": 1.0267,
+   "min_pair_ratio": 0.9661
+  },
+  "merge_mor": {
+   "gated": true,
+   "main_set_medians_ms": [
+    70.03,
+    70.84,
+    71.36,
+    71.31,
+    69.55,
+    72.91,
+    71.19,
+    70.9
+   ],
+   "head_set_medians_ms": [
+    72.54,
+    76.17,
+    71.29,
+    71.72,
+    70.39,
+    70.35,
+    70.44,
+    73.32
+   ],
+   "pair_ratios": [
+    1.0358,
+    1.0752,
+    0.999,
+    1.0057,
+    1.0121,
+    0.9649,
+    0.9895,
+    1.0341
+   ],
+   "median_pair_ratio": 1.0089,
+   "ratio_of_medians": 1.0065,
+   "max_pair_ratio": 1.0752,
+   "min_pair_ratio": 0.9649
+  },
+  "nest8": {
+   "gated": false,
+   "main_set_medians_ms": [
+    27.0,
+    27.01,
+    27.08,
+    26.98,
+    26.95,
+    26.84,
+    26.88,
+    27.3
+   ],
+   "head_set_medians_ms": [
+    49.62,
+    49.72,
+    49.96,
+    49.95,
+    49.9,
+    50.71,
+    50.66,
+    49.88
+   ],
+   "pair_ratios": [
+    1.8378,
+    1.8408,
+    1.8449,
+    1.8514,
+    1.8516,
+    1.8893,
+    1.8847,
+    1.8271
+   ],
+   "median_pair_ratio": 1.8481,
+   "ratio_of_medians": 1.8498,
+   "max_pair_ratio": 1.8893,
+   "min_pair_ratio": 1.8271
+  },
+  "union200": {
+   "gated": false,
+   "main_set_medians_ms": [
+    191.32,
+    191.17,
+    192.96,
+    192.21,
+    191.71,
+    192.01,
+    191.21,
+    193.05
+   ],
+   "head_set_medians_ms": [
+    215.82,
+    215.95,
+    216.04,
+    215.33,
+    214.9,
+    215.99,
+    215.42,
+    217.63
+   ],
+   "pair_ratios": [
+    1.1281,
+    1.1296,
+    1.1196,
+    1.1203,
+    1.121,
+    1.1249,
+    1.1266,
+    1.1273
+   ],
+   "median_pair_ratio": 1.1258,
+   "ratio_of_medians": 1.1252,
+   "max_pair_ratio": 1.1296,
+   "min_pair_ratio": 1.1196
+  }
+ }
+}

@@ -6,6 +6,11 @@ session, the same source tables, the same INSERT and MERGE texts. Only the
 timed set is trimmed to the statements the follow-up names. Each invocation
 runs one set under one Python and writes one JSON file with the per-repeat
 times, the set medians, and the gate-counter snapshots around the set.
+
+Slice 1 fold 2 adds two ungated open-gate statements over the nanosecond
+source, named only on request through ``--statements``: ``nest8`` (a
+``coalesce(…, NULL)`` nested eight deep) and ``union200`` (one nanosecond
+branch and 200 NULL branches under ``UNION ALL``).
 """
 
 from __future__ import annotations
@@ -22,6 +27,29 @@ from typing import Any
 from repark import ReparkSession, _native
 
 NAMES = ("insert", "merge", "merge_mor")
+NEST_DEPTH = 8
+UNION_BRANCHES = 200
+
+
+def nested_statement(depth: int) -> str:
+    """Return a ``coalesce(…, NULL)`` nested ``depth`` deep over the nanosecond source."""
+    expression = "n"
+    for _ in range(depth):
+        expression = f"coalesce({expression}, NULL)"
+    return f"SELECT id, {expression} AS v FROM ice.ns.nsrc"
+
+
+def null_branch_union(branches: int) -> str:
+    """Return one nanosecond branch and ``branches`` NULL branches under ``UNION ALL``."""
+    listed = ["SELECT id, n AS v FROM ice.ns.nsrc WHERE id = 0"]
+    listed.extend(f"SELECT {index}, NULL" for index in range(branches))
+    return " UNION ALL ".join(listed)
+
+
+UNGATED = {
+    "nest8": nested_statement(NEST_DEPTH),
+    "union200": null_branch_union(UNION_BRANCHES),
+}
 
 
 def _load_timer() -> types.ModuleType:
@@ -115,6 +143,9 @@ def _run_repeats(
             times["merge"].append(timer.timed(spark, merge.format(t=f"ice.ns.m{index}")))
         if "merge_mor" in names:
             times["merge_mor"].append(timer.timed(spark, merge.format(t=f"ice.ns.r{index}")))
+        for name, statement in UNGATED.items():
+            if name in names:
+                times[name].append(timer.timed(spark, statement))
     return times
 
 
@@ -178,7 +209,7 @@ def main() -> None:
         payload = run_around(timer, args.around)
     else:
         names = [name for name in args.statements.split(",") if name]
-        unknown = [name for name in names if name not in NAMES]
+        unknown = [name for name in names if name not in NAMES and name not in UNGATED]
         if unknown:
             raise RuntimeError(f"unknown statements: {','.join(unknown)}")
         payload = run_set(timer, names, args.repeats)

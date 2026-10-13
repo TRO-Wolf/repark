@@ -29,6 +29,10 @@ layers), `test_map_in_arrow_refuses_a_nanosecond_column_of_another_kind` (each r
 the microsecond column's refusal), `test_pandas_doors_floor_nanoseconds_to_the_declared_microseconds`
 and `test_apply_in_pandas_refuses_a_naive_nanosecond_column_under_a_zoned_type`.
 pins: ice-tsns-coercion-1/C-005
+`test_ticks_differ_from_main_only_where_main_narrowed_the_site` states how the 65 answered
+cells relate to main's ticks: 39 equal, 26 differ, and the 26 are exactly the cells of one
+rule (source `ns` in America/New_York; in UTC the DataFrame-door `frame` shape and the
+Python doors, where main cut `-1 ns` toward zero). pins: ice-tsns-coercion-1/C-005
 
 ICE-TSNS-COERCION-1 slice 1 fold 1 (2026-10-12): `test_ice_tsns_coercion_1_slice1_fold1.py`
 pins the twelve verifier shapes plus the struct probes — 15 SQL shapes and 4 DataFrame
