@@ -124,7 +124,8 @@ Built: the per-node `TypeCoercionRewriter` ask before any NULL wrap (union colum
 `coerce_union`), and the retry on the original plan with one fallback when the inner
 rule rejects a rewrite. No allow-list or deny-list of function names.
 Pins: 11 new Rust pins (each twelve-shape class matches main's rule alone, the retry,
-four surviving-mutant pins) with the 43 round-2 pins unmoved; 152 facade cells (15 SQL
+four pins aimed at the surviving mutants, of which only the union pin killed its mutant;
+corrected 2026-10-13, see section 9) with the 43 round-2 pins unmoved; 152 facade cells (15 SQL
 plus 4 DataFrame shapes, ns/tzns, UTC/America-New-York, ANSI on/off) equal the
 baseline-recorded oracle.
 What was wrong: every function argument counted as a site operand, so a NULL in a

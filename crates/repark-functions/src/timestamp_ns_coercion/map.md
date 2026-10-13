@@ -42,9 +42,32 @@ schema and wrap a NULL branch only when it equals the gate's target. A rejected 
 retries on the original plan with one fallback and the `rewrite was rejected` line. New
 pins: each of the twelve shapes' classes matches main's rule alone (`from_utc_timestamp`,
 `string_agg`, `lag`, struct UNION, struct CASE, `struct(ns, NULL)` keeping a void second
-field), the retry pin, and the four surviving-mutant pins (NULL beside a microsecond
-sibling, beside mixed zones, as a CASE WHEN condition, union kernel on the NULL branch
-only). pins: ice-tsns-coercion-1/C-005
+field), the retry pin, and four pins aimed at the first verifier's surviving mutants (NULL
+beside a microsecond sibling, beside mixed zones, as a CASE WHEN condition, union kernel on
+the NULL branch only). Of those four only the union pin killed its mutant; fold 2 re-pinned
+the other three. pins: ice-tsns-coercion-1/C-005
+
+**Slice 1 fold 2 (2026-10-13), the three re-pins.** Each was shown red on its mutant and
+green after the restore (mutant diffs: the second verifier's `m4`, `m5`, `m7`).
+- `null_beside_a_microsecond_sibling_is_not_wrapped` (m4, a microsecond operand classed as
+  a nanosecond one): `coalesce(ns, µs, NULL)` and `coalesce(µs, NULL)` equal main's rule
+  alone and hold no kernel, and so does a call whose signature takes two nanosecond
+  timestamps over `(µs, NULL)`. Only the last form kills m4: DataFusion's common type of
+  `ns` and `µs` is `µs`, so under `coalesce`, `array`, `greatest`, `if` and `CASE` the ask
+  never answers the site target and the mutant changes no plan. A fixed nanosecond
+  signature makes the ask answer `Timestamp(ns)` for the NULL, and then only the operand
+  class keeps the NULL unwrapped.
+- `null_beside_mixed_ns_and_tzns_follows_the_mixed_rule` (m5, mixed zones treated as one
+  type): both operand orders, main's rule alone, neither kernel. The order
+  `(tzns, ns, NULL)` is the one that kills m5; with `ns` first the mutant's target is the
+  naive type, the ask answers the zoned one, and nothing is wrapped.
+- `null_case_when_condition_is_not_a_site` (m7): `CASE WHEN NULL THEN ns ELSE NULL END`
+  keeps the WHEN operand a NULL literal and the THEN operand the column, and wraps only the
+  ELSE branch.
+- `aggregate_with_a_non_timestamp_null_argument_matches_main` now calls
+  `string_agg(ns, NULL)` and `string_agg(tzns, NULL)` and asserts no kernel; it dies on the
+  ask-skipped mutant (`n1`), which the old string-column form survived.
+pins: ice-tsns-coercion-1/C-005
 
 ## Pointers
 

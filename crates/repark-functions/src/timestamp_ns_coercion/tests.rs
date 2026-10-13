@@ -799,9 +799,29 @@ fn scalar_with_a_non_timestamp_null_argument_matches_main() {
 
 #[test]
 fn aggregate_with_a_non_timestamp_null_argument_matches_main() {
-    let scan = scan_of(vec![ns_field("ns"), Field::new("s", DataType::Utf8, true)]);
-    let plan = project_of(scan, vec![string_agg_call(vec![col("s"), null_lit()])]);
-    assert_matches_main(plan);
+    let scan = scan_of(vec![ns_field("ns"), tzns_field("tzns")]);
+    for column in ["ns", "tzns"] {
+        let call = string_agg_call(vec![col(column), null_lit()]);
+        let plan = project_of(scan.clone(), vec![call.alias("v")]);
+        assert_matches_main(plan.clone());
+        assert_no_kernel(&analyzed(plan));
+    }
+}
+
+fn assert_no_kernel(out: &LogicalPlan) {
+    for kernel in [TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME] {
+        assert!(!plan_calls_kernel(out, kernel), "{kernel} in {out:?}");
+    }
+}
+
+fn main_rule_wrapped(plan: LogicalPlan) -> LogicalPlan {
+    let _guard = SERIAL.lock().expect("test serial lock");
+    let wrapper = SparkTimestampNsCoercion::new(Arc::new(
+        datafusion::optimizer::analyzer::type_coercion::TypeCoercion::new(),
+    ));
+    wrapper
+        .analyze(plan, &ConfigOptions::new())
+        .expect("plan analyzes")
 }
 
 #[test]
@@ -899,29 +919,61 @@ fn rejected_rewrite_retries_on_the_original_plan() {
 #[test]
 fn null_beside_a_microsecond_sibling_is_not_wrapped() {
     let scan = scan_of(vec![micro_field(), ns_field("ns")]);
-    let plan = project_of(scan, vec![coalesce_call(vec![col("ts"), null_lit()])]);
-    assert_matches_main(plan);
+    let nanosecond = DataType::Timestamp(TimeUnit::Nanosecond, None);
+    let fixed = datafusion::logical_expr::create_udf(
+        "takes_two_nanosecond_timestamps",
+        vec![nanosecond.clone(), nanosecond.clone()],
+        nanosecond,
+        datafusion::logical_expr::Volatility::Immutable,
+        Arc::new(|_| Err(DataFusionError::Plan("never invoked".to_string()))),
+    );
+    for call in [
+        coalesce_call(vec![col("ns"), col("ts"), null_lit()]),
+        coalesce_call(vec![col("ts"), null_lit()]),
+        call_of(Arc::new(fixed), vec![col("ts"), null_lit()]),
+    ] {
+        let plan = project_of(scan.clone(), vec![call.alias("v")]);
+        assert_matches_main(plan.clone());
+        assert_no_kernel(&main_rule_wrapped(plan));
+    }
 }
 
 #[test]
 fn null_beside_mixed_ns_and_tzns_follows_the_mixed_rule() {
     let scan = scan_of(vec![ns_field("ns"), tzns_field("tzns")]);
-    let plan = project_of(
-        scan,
-        vec![coalesce_call(vec![col("ns"), col("tzns"), null_lit()])],
-    );
-    assert_matches_main(plan);
+    for operands in [
+        vec![col("ns"), col("tzns"), null_lit()],
+        vec![col("tzns"), col("ns"), null_lit()],
+    ] {
+        let plan = project_of(scan.clone(), vec![coalesce_call(operands).alias("v")]);
+        assert_matches_main(plan.clone());
+        assert_no_kernel(&main_rule_wrapped(plan));
+    }
 }
 
 #[test]
 fn null_case_when_condition_is_not_a_site() {
+    let _guard = SERIAL.lock().expect("test serial lock");
     let scan = scan_of(vec![ns_field("ns")]);
     let case = Expr::Case(Case {
         expr: None,
         when_then_expr: vec![(Box::new(null_lit()), Box::new(col("ns")))],
-        else_expr: Some(Box::new(col("ns"))),
+        else_expr: Some(Box::new(null_lit())),
     });
-    assert_matches_main(project_of(scan, vec![case.alias("v")]));
+    let out = analyzed(project_of(scan, vec![case.alias("v")]));
+    let LogicalPlan::Projection(projection) = &out else {
+        panic!("expected a projection, got {out:?}");
+    };
+    let Expr::Case(case) = projection.expr[0].clone().unalias() else {
+        panic!("expected a case, got {:?}", projection.expr[0]);
+    };
+    let (when, then) = &case.when_then_expr[0];
+    assert_eq!(**when, null_lit());
+    assert!(matches!(**then, Expr::Column(_)), "{then:?}");
+    let Some(Expr::ScalarFunction(otherwise)) = case.else_expr.as_deref() else {
+        panic!("expected a kernel call, got {:?}", case.else_expr);
+    };
+    assert_eq!(otherwise.func.name(), TIMESTAMP_NS_CAST_NAME);
 }
 
 #[test]
