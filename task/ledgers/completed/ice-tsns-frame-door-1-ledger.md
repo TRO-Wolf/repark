@@ -38,7 +38,7 @@ the keep-nanoseconds switch (the create-door order).
 | C-013 | The cost gate holds as re-based: a frame with no nanosecond column within 1.05 of main; a nanosecond column costs at most 25 ms per million rows. | Five interleaved sets. | **PROVEN** | `task/wo/ice-tsns-frame-door-1/evidence/cost.md`: ratio 1.009; 17.1 ms per million rows per nanosecond column (largest set 17.39). Ruling Q3 (§5). |
 | C-014 | The work order's six mutants and the Q1 mutant are killed by the pin file. | Each mutant run against `test_ice_tsns_frame_door_1.py`. | **PROVEN** | §6: nine variants, nine killed. |
 | C-015 | The gates of the work order pass. | Real exit codes. | **PROVEN** | §7. |
-| C-016 | The parity registry carries the dated row and the ledger carries the release-note sentence. | Slice 3. | **OPEN** | Not this slice: is row `ICE-TSNS-SQL-1-R-019` in `docs/spark-sql-iceberg-parity.md`? |
+| C-016 | The parity registry carries the dated row and the ledger carries the release-note sentence. | Slice 3. | **PROVEN** | Row `ICE-TSNS-SQL-1-R-019` in `docs/spark-sql-iceberg-parity.md`, FIXED 2026-10-13; §10. |
 
 ## 1. The oracle (C-001)
 
@@ -176,3 +176,62 @@ microsecond table (C-009); 2 declared-`timestamp` aware microsecond cells in typ
   `to_pylist` on main; the declared-`timestamp` path costs seconds per million rows.
 - A value a nanosecond pandas frame appends into an existing `timestamp_ns` column is now cut
   to microseconds; keeping it is the create-door order's session setting.
+
+## 10. Registry row and release note (C-016)
+
+Parity row `ICE-TSNS-SQL-1-R-019`, the next free number of the family on this base, dated
+2026-10-13. It names the two declared-`timestamp` cells that moved in type label under ruling
+Q1 and what did not change.
+
+**Release note (1.5.6):** `createDataFrame` now turns pandas nanosecond timestamps into
+microseconds, as Spark does.
+
+## 11. Coverage attestation
+
+Filed by the executor from the runs recorded above. No independent Critic has run on this
+unit; the orchestrator's verify stage re-attests.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ice-tsns-frame-door-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every behaviour clause has a pin that is red on main's source (66 of the first 136 tests failed there) and green on head; the unchanged, untouched and nested pins are green on both by design.
+      artifacts: [python/repark/tests/test_ice_tsns_frame_door_1.py, task/ledgers/completed/ice-tsns-frame-door-1-ledger.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Values one, 1001 and 999999999999 nanoseconds before the epoch, a NULL cell, a column with no NULL, a naive, a UTC and a New York column, numpy-backed and ArrowDtype-backed, pandas and polars, each in two session zones.
+      artifacts: [python/repark/tests/test_ice_tsns_frame_door_1.py, python/repark/tests/ice_tsns_frame_door_1_spark.json]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The declared timestamp_ntz path that raised ArrowInvalid now answers and is pinned to Spark; nested nanosecond frames keep main's carried answer; no warning is raised, checked with warnings turned into errors.
+      artifacts: [python/repark/tests/test_ice_tsns_frame_door_1.py]
+    - id: AT-4
+      status: N/A
+      justification: The step is a pure function of one Arrow column; no session, cache or shared state is read or written.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret, path or deserialization; Arrow compute kernels on an in-memory column.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Wrong-value risk is the floor direction and the zone label. The pre-epoch pin and mutant m2 hold the direction; the twin pin's type assertion and mutants m4a, m4b and m7 hold the label on the no-schema and the declared paths; nine untouched column kinds equal main's recorded cells.
+      artifacts: [python/repark/tests/test_ice_tsns_frame_door_1.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Five interleaved cost sets. A frame with no nanosecond column is 1.009 of main; a nanosecond column costs 17.1 ms per million rows under a 25 ms ceiling; no row loop is added.
+      artifacts: [task/wo/ice-tsns-frame-door-1/evidence/cost.md, python/repark/tests/_time_ice_tsns_frame_door_1.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: pyarrow 25.0.1 cast(safe=False) truncates toward zero, measured; the step uses floor_temporal and a safe cast, so a kernel that stops flooring fails the cast instead of storing a wrong value. No manifest or lock change.
+      artifacts: [python/repark/src/repark/spark/session/create_dataframe_arrow.py]
+    - id: AT-9
+      status: N/A
+      justification: The unit adds no error path and no message; one former raw ArrowInvalid becomes an answer.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Nine mutants, nine killed, each by the pin the work order names. The whole facade suite ran after the last source change; its one failure reproduces on main's source.
+      artifacts: [python/repark/tests/test_ice_tsns_frame_door_1.py, task/ledgers/completed/ice-tsns-frame-door-1-ledger.md]
+  reattested: []
+  complete: true
+```
