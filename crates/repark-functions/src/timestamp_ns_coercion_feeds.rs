@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, Result};
-use datafusion::logical_expr::{DmlStatement, Expr, LogicalPlan, Projection, WriteOp};
+use datafusion::logical_expr::{DmlStatement, Expr, Filter, LogicalPlan, Projection, WriteOp};
 
 use crate::timestamp_ns_cast::{is_timestamp_ns_cast, timestamp_ns_target};
 use crate::timestamp_ns_coercion_sites::{feed_subtree_holds_site, rewrite_feed_root};
@@ -20,7 +20,244 @@ fn rewritten(plan: LogicalPlan) -> FeedOutcome {
 
 #[allow(clippy::missing_errors_doc)]
 pub fn rewrite_feeds(plan: LogicalPlan) -> Result<FeedOutcome> {
-    dml_position_feeds(plan)
+    let backup = plan.clone();
+    match dml_position_feeds(plan)? {
+        FeedOutcome::Unchanged => kernel_argument_feeds(backup),
+        FeedOutcome::Rewritten(rewritten) => match kernel_argument_feeds((*rewritten).clone())? {
+            FeedOutcome::Unchanged => Ok(FeedOutcome::Rewritten(rewritten)),
+            other => Ok(other),
+        },
+        refused @ FeedOutcome::Refused(_) => Ok(refused),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn kernel_argument_feeds(plan: LogicalPlan) -> Result<FeedOutcome> {
+    kernel_pass(plan)
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn kernel_pass(node: LogicalPlan) -> Result<FeedOutcome> {
+    match node {
+        LogicalPlan::Projection(projection) => {
+            let (exprs, input, outcome) = kernel_exprs(projection.expr.clone(), &projection.input)?;
+            if matches!(outcome, KernelOutcome::Refused(_)) {
+                return Ok(outcome.into_feed());
+            }
+            let child = kernel_pass(input.as_ref().clone())?;
+            match child {
+                FeedOutcome::Refused(_) => Ok(child),
+                FeedOutcome::Rewritten(next) => {
+                    let rebuilt = Projection::try_new(exprs, Arc::new(*next))?;
+                    Ok(rewritten(LogicalPlan::Projection(rebuilt)))
+                }
+                FeedOutcome::Unchanged => {
+                    if matches!(outcome, KernelOutcome::Changed) {
+                        let rebuilt = Projection::try_new(exprs, input)?;
+                        Ok(rewritten(LogicalPlan::Projection(rebuilt)))
+                    } else {
+                        Ok(FeedOutcome::Unchanged)
+                    }
+                }
+            }
+        }
+        LogicalPlan::Filter(filter) => {
+            let (exprs, input, outcome) =
+                kernel_exprs(vec![filter.predicate.clone()], &filter.input)?;
+            if matches!(outcome, KernelOutcome::Refused(_)) {
+                return Ok(outcome.into_feed());
+            }
+            let child = kernel_pass(input.as_ref().clone())?;
+            match child {
+                FeedOutcome::Refused(_) => Ok(child),
+                FeedOutcome::Rewritten(next) => {
+                    let Some(predicate) = exprs.into_iter().next() else {
+                        return Ok(FeedOutcome::Unchanged);
+                    };
+                    let rebuilt = Filter::try_new(predicate, Arc::new(*next))?;
+                    Ok(rewritten(LogicalPlan::recompute_schema(
+                        LogicalPlan::Filter(rebuilt),
+                    )?))
+                }
+                FeedOutcome::Unchanged => {
+                    if matches!(outcome, KernelOutcome::Changed) {
+                        let Some(predicate) = exprs.into_iter().next() else {
+                            return Ok(FeedOutcome::Unchanged);
+                        };
+                        let rebuilt = Filter::try_new(predicate, input)?;
+                        Ok(rewritten(LogicalPlan::recompute_schema(
+                            LogicalPlan::Filter(rebuilt),
+                        )?))
+                    } else {
+                        Ok(FeedOutcome::Unchanged)
+                    }
+                }
+            }
+        }
+        LogicalPlan::Sort(mut holder) => {
+            let child = kernel_pass(holder.input.as_ref().clone())?;
+            match child {
+                FeedOutcome::Rewritten(next) => {
+                    holder.input = Arc::new(*next);
+                    Ok(rewritten(LogicalPlan::recompute_schema(
+                        LogicalPlan::Sort(holder),
+                    )?))
+                }
+                other => Ok(other),
+            }
+        }
+        LogicalPlan::Limit(mut holder) => {
+            let child = kernel_pass(holder.input.as_ref().clone())?;
+            match child {
+                FeedOutcome::Rewritten(next) => {
+                    holder.input = Arc::new(*next);
+                    Ok(rewritten(LogicalPlan::recompute_schema(
+                        LogicalPlan::Limit(holder),
+                    )?))
+                }
+                other => Ok(other),
+            }
+        }
+        LogicalPlan::SubqueryAlias(mut holder) => {
+            let child = kernel_pass(holder.input.as_ref().clone())?;
+            match child {
+                FeedOutcome::Rewritten(next) => {
+                    holder.input = Arc::new(*next);
+                    Ok(rewritten(LogicalPlan::recompute_schema(
+                        LogicalPlan::SubqueryAlias(holder),
+                    )?))
+                }
+                other => Ok(other),
+            }
+        }
+        LogicalPlan::Dml(dml) => match kernel_pass(dml.input.as_ref().clone())? {
+            FeedOutcome::Rewritten(next) => Ok(rewritten(retarget_dml_input(&dml, *next))),
+            other => Ok(other),
+        },
+        _ => Ok(FeedOutcome::Unchanged),
+    }
+}
+
+fn retarget_dml_input(dml: &DmlStatement, input: LogicalPlan) -> LogicalPlan {
+    LogicalPlan::Dml(DmlStatement {
+        input: Arc::new(input),
+        ..dml.clone()
+    })
+}
+
+enum KernelOutcome {
+    Same,
+    Changed,
+    Refused(&'static str),
+}
+
+impl KernelOutcome {
+    fn into_feed(self) -> FeedOutcome {
+        match self {
+            Self::Refused(reason) => FeedOutcome::Refused(reason),
+            _ => FeedOutcome::Unchanged,
+        }
+    }
+}
+
+enum KernelExprOutcome {
+    Same,
+    Changed,
+    Refused(&'static str),
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn kernel_exprs(
+    exprs: Vec<Expr>,
+    input: &Arc<LogicalPlan>,
+) -> Result<(Vec<Expr>, Arc<LogicalPlan>, KernelOutcome)> {
+    let mut schema = DFSchema::empty();
+    schema.merge(input.schema());
+    let mut current = input.as_ref().clone();
+    let mut changed = false;
+    let mut owned = exprs;
+    for index in 0..owned.len() {
+        let (next, item) = rewrite_expr_kernels(&owned[index], &owned, &schema, &mut current)?;
+        owned[index] = next;
+        match item {
+            KernelExprOutcome::Same => {}
+            KernelExprOutcome::Changed => changed = true,
+            KernelExprOutcome::Refused(reason) => {
+                return Ok((owned, Arc::new(current), KernelOutcome::Refused(reason)));
+            }
+        }
+    }
+    let outcome = if changed || current != *input.as_ref() {
+        KernelOutcome::Changed
+    } else {
+        KernelOutcome::Same
+    };
+    Ok((owned, Arc::new(current), outcome))
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn rewrite_expr_kernels(
+    expr: &Expr,
+    host: &[Expr],
+    schema: &DFSchema,
+    input: &mut LogicalPlan,
+) -> Result<(Expr, KernelExprOutcome)> {
+    let mut refused: Option<&'static str> = None;
+    let out = expr.clone().transform_down(|node| {
+        if refused.is_some() {
+            return Ok(Transformed::no(node));
+        }
+        if !is_timestamp_ns_cast(&node) {
+            return Ok(Transformed::no(node));
+        }
+        let Expr::ScalarFunction(mut function) = node else {
+            return Ok(Transformed::no(node));
+        };
+        let Some(arg) = function.args.first().cloned() else {
+            return Ok(Transformed::no(Expr::ScalarFunction(function)));
+        };
+        let start = peel_root(&arg).clone();
+        if let Expr::Column(column) = &start {
+            if count_reads(host, column.name.as_str()) != 1 {
+                return Ok(Transformed::no(Expr::ScalarFunction(function)));
+            }
+            match descend(input.clone(), column)? {
+                FeedOutcome::Rewritten(next) => {
+                    *input = *next;
+                }
+                FeedOutcome::Refused(reason) => {
+                    refused = Some(reason);
+                }
+                FeedOutcome::Unchanged => {}
+            }
+            return Ok(Transformed::no(Expr::ScalarFunction(function)));
+        }
+        if matches!(start, Expr::Cast(_) | Expr::TryCast(_)) {
+            return Ok(Transformed::no(Expr::ScalarFunction(function)));
+        }
+        match rewrite_root_in_place(&start, schema) {
+            RootOutcome::Miss => Ok(Transformed::no(Expr::ScalarFunction(function))),
+            RootOutcome::Refused(reason) => {
+                refused = Some(reason);
+                Ok(Transformed::no(Expr::ScalarFunction(function)))
+            }
+            RootOutcome::Rewritten(root) => {
+                function.args[0] = match &arg {
+                    Expr::Alias(alias) => root.alias(alias.name.clone()),
+                    _ => root,
+                };
+                Ok(Transformed::yes(Expr::ScalarFunction(function)))
+            }
+        }
+    })?;
+    if let Some(reason) = refused {
+        return Ok((expr.clone(), KernelExprOutcome::Refused(reason)));
+    }
+    if out.transformed {
+        Ok((out.data, KernelExprOutcome::Changed))
+    } else {
+        Ok((out.data, KernelExprOutcome::Same))
+    }
 }
 
 #[allow(clippy::missing_errors_doc)]

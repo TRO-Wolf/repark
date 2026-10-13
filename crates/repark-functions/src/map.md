@@ -1499,5 +1499,9 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   column is read once, and a non-reading `Filter`/`Sort`/`Limit`, and stops on every
   other plan node. Only a scalar/`CASE` root the operand ask confirms is rewritten, and
   a feed whose subtree still holds a site is refused with one fallback. `FeedOutcome`
-  reports `Unchanged`, `Rewritten` or `Refused`.
+  reports `Unchanged`, `Rewritten` or `Refused`. Anchor (a) is the next commit: the
+  single argument of either store-kernel call starts the same walk from its host
+  `Projection` or `Filter` (other hosts are not visited, so `UNION` branches stay
+  main's); a site that is the direct operand of a written nanosecond cast keeps its
+  digits.
   pins: ice-tsns-coercion-1/C-005

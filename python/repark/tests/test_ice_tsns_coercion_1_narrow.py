@@ -105,6 +105,27 @@ def test_registry_sweep_no_site_function_refuses_nanoseconds(tmp_path: Path) -> 
     assert refused == []
 
 
+def test_written_cast_to_ns_keeps_digits_and_equals_twin(tmp_path: Path) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — the one named read exception keeps nine digits."""
+    warehouse = tmp_path / "written-cast"
+    warehouse.mkdir()
+    spark = _open("UTC", warehouse)
+    try:
+        table = spark.sql(
+            "SELECT CAST(coalesce(ns, NULL) AS timestamp_ns) AS v FROM ice.ns.src ORDER BY id"
+        ).toArrow()
+        twin = spark.sql(
+            "SELECT __repark_cast_timestamp_ns__(coalesce(ns, NULL)) AS v "
+            "FROM ice.ns.src ORDER BY id"
+        ).toArrow()
+        assert str(table.schema.types[0]) == str(twin.schema.types[0])
+        assert table.column(0).to_pylist() == twin.column(0).to_pylist()
+        ticks = table.column(0).cast(pa.int64()).to_pylist()
+        assert any(tick is not None and tick % 1000 != 0 for tick in ticks)
+    finally:
+        spark.stop()
+
+
 def test_explain_of_reads_equals_main(tmp_path: Path) -> None:
     """pins: ice-tsns-coercion-1/C-005 — read plans carry no store kernel."""
     warehouse = tmp_path / "explain"
@@ -113,8 +134,9 @@ def test_explain_of_reads_equals_main(tmp_path: Path) -> None:
     try:
         for sql in EXPLAIN_READS:
             for mode in ("", "VERBOSE"):
-                text = spark.sql(f"EXPLAIN {mode} {sql}" if mode else f"EXPLAIN {sql}").toPandas().iloc[:, 0].str.cat(sep="\n")
-                assert "__repark_cast_timestamp_ns__" not in text, sql
-                assert "__repark_cast_timestamptz_ns__" not in text, sql
+                shown = f"EXPLAIN {mode} {sql}" if mode else f"EXPLAIN {sql}"
+                frame = spark.sql(shown).toPandas().iloc[:, 0].str.cat(sep="\n")
+                assert "__repark_cast_timestamp_ns__" not in frame, sql
+                assert "__repark_cast_timestamptz_ns__" not in frame, sql
     finally:
         spark.stop()

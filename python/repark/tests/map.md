@@ -45,7 +45,8 @@ ICE-TSNS-COERCION-1 slice 1 narrow fold (2026-10-13): `test_ice_tsns_coercion_1_
 pins the narrowed rewrite from the facade — read Arrow types and ticks equal main
 (`timestamp[us]`), frames and CTAS columns equal main (`TimestampType`), the 9,600-cell
 narrow census is main-or-twin only, the registry sweep refuses nothing main answers,
-and 12 read EXPLAINs carry no store kernel. pins: ice-tsns-coercion-1/C-005
+12 read EXPLAINs carry no store kernel, and the written-cast-to-nanoseconds read keeps
+its digits and equals the twin. pins: ice-tsns-coercion-1/C-005
 
 ICE-TSNS-COERCION-1 slice 1 fold 1 (2026-10-12): `test_ice_tsns_coercion_1_slice1_fold1.py`
 pins the twelve verifier shapes plus the struct probes — 15 SQL shapes and 4 DataFrame

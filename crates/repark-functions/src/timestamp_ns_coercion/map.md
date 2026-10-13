@@ -83,8 +83,11 @@ rewrites only through `../timestamp_ns_coercion_feeds.rs` with anchor (b); the U
 and the sites file keeps the operand ask with the scalar/`CASE` root rewrite. An open
 gate with no feed hands the inner rule the plan it was given with both counters
 untouched; the trigger scan runs only for a rewritten feed, so a fallback is counted
-only for a refused feed. `feed_tests.rs` pins the walk table. Anchor (a) follows as its
-own commit. pins: ice-tsns-coercion-1/C-005
+only for a refused feed. `feed_tests.rs` pins the walk table. Anchor (a) is its own
+commit on top: the kernel argument starts the same walk from its host projection, so
+MERGE and `UPDATE … WHERE` doors keep nine digits and the one named read exception (a
+site under a written nanosecond cast) keeps its digits with its type unchanged.
+pins: ice-tsns-coercion-1/C-005
 
 ## Pointers
 
