@@ -293,3 +293,15 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 
 - **DO run the named Makefile Rust gates.** `make rust-clippy` permits test-only unwrap and
   expect calls; raw all-targets Clippy is not this unit's lint gate.
+
+## 2026-10-12 — proportionality: failed remediation cycles against one finding
+
+- **DO count failed remediation cycles against one finding.** A cycle has failed when a fresh
+  verifier reproduces the same class of finding on the folded head, whichever statement
+  shows it. After the second failed cycle, stop folding path by path: bring the owner three
+  options (redesign with a design note, narrow the PR, park) with the spend so far. A third
+  fold on the same finding needs the owner's word.
+- **DON'T answer a finding class with a longer list of spellings.** Three verifiers failed
+  one PR (ICE-NTZ-NESTED-WALL-1) on one class, a read side and a store side that decide
+  separately on every path nobody enumerated; each fold closed the named paths and the next
+  verifier found new ones. Guard at the one chokepoint or stop.
