@@ -9,6 +9,26 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
 
 ## Contents
 
+- `nanosecond_ask.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the native door's adapter
+  between the session and `repark_iceberg::write::nanosecond_door`, the same body as the
+  Spark door's: `NanosecondAsk::every()` when `repark.sql.allowImplicitTimestampNanos` is
+  on, else the flags of `asked_nanosecond_columns` over the eagerly analyzed plan. `ask_of`
+  answers `every()` for column DDL, which has no query. This door's remedies say the
+  nanosecond cast cannot be written here (`CAST(x AS timestamp_ns)` is `Unsupported SQL
+  type`) and the microsecond spelling is `TIMESTAMP(6)` for both kinds
+  (`TIMESTAMP(6) WITH TIME ZONE` parses but stores a naive `timestamp`, measured), so the
+  refusal raised here names the session setting and `CAST(<expression> AS TIMESTAMP(6))`
+  only. `repark-sql` does not name
+  `repark-spark`, so the body is repeated here.
+  pins: ice-tsns-create-door-1/C-005
+- `nanosecond_ask.rs`, fold 1 (2026-10-13): this door's remedies are whole sentences in
+  its own spellings: the setting in the session's configuration, read when the session is
+  built; `CAST(<expression> AS TIMESTAMP(6))`; `WITH (format_version = 3)` on a create or a
+  replace; `ALTER TABLE … SET PROPERTIES (format_version = 3)` for an existing table.
+  `NativeAsk::table_schema` builds the door's request, the `Target` among it (the requested
+  version, else the replaced table's). Column DDL passes the door with every column asked,
+  so a named nanosecond type below v3 is refused there with the create sentence.
+  pins: ice-tsns-create-door-1/C-012
 - `nested_type.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the ANSI door's
   structural nested-type mapping, a child module of `../create_table.rs`:
   `needs_structural_mapping` (a `MAP` anywhere, or a struct-field option),

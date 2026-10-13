@@ -676,6 +676,70 @@ repark-core's error map.
   The nested conform of folds 1 and 2 (`holds_nested_ns_wall`, `nested_wall_conform_sql`, the
   pairing words) is removed from every site here; the sites are main's again for a nested
   column. pins: ice-tsns-merge-wall-1/C-044
+- `nanosecond_door.rs`, `nanosecond_door_tests.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1
+  (2026-10-13), after a verify failed `53ced116`. Where this row and the one below differ,
+  this one holds.** Both refusals are built here from what the seat passes, so a text cannot
+  name a remedy its seat cannot write. `Remedies` (carried on the `NanosecondAsk`) holds:
+  whether the dialect can write the nanosecond cast; the sentence that turns the setting on
+  on that door; a whole microsecond spelling for a naive and for a zoned column, either of
+  which may be `None`; and that door's sentence for a v3 table on a create, on a replace
+  and on an existing table. `NewColumns::target` says which of those applies:
+  `Target::FormatV3`, or the table would be created, replaced or evolved below v3. For each
+  new nanosecond field: not asked → `[TIMESTAMP_NANOS_NOT_REQUESTED]`, and when the target
+  is below v3 the text adds that a nanosecond column also needs a v3 table and the seat's
+  way to one (the cast or the setting alone would only reach the next refusal); asked and
+  the target below v3 → `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]` with that same sentence,
+  raised here before the fork's check. **An evolving seat checks only the columns it would
+  add:** `added_columns_schema` skips a field whose name the table already holds, whatever
+  its type, so a type change falls through to `evolve_schema`'s own
+  `Cannot change column type`; `new_table_schema` still treats a kept name with another type
+  as new, because a replace does replace it. Pins added: both refusals on each target kind,
+  a seat with no cast and no zoned spelling, the evolving rule, and a nanosecond field two
+  and three levels down (array of struct, struct of struct, struct of array of struct, map
+  value struct, map of map, array of array), which is the pin the verify's surviving mutant
+  (the nested walk stops at depth one) dies on.
+  pins: ice-tsns-create-door-1/C-012, C-013, C-015
+- `nanosecond_door.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the one door through which
+  a query's Arrow schema becomes Iceberg columns. `new_table_schema` (CTAS, RTAS, both SQL
+  doors) and `added_columns_schema` (`mergeSchema` append, `MERGE WITH SCHEMA EVOLUTION`)
+  replace `void_store::arrow_schema_to_iceberg_with_unknown` and
+  `schema_evolution::incoming_schema`, which are now crate-private and called only from this
+  module. Both take a `NewColumns` request, and a request cannot be built without a
+  `NanosecondAsk`: a future create door that derives a schema from a query has one function
+  to call and has to say what was asked. **The check**, per top-level field whose Arrow type
+  holds `Timestamp(ns, _)` at any depth: *kept* (the `existing` schema holds a top-level
+  column of the same name under the session case rule and the same Iceberg type, compared by
+  shape and never by field id) passes; else *asked* (`NanosecondAsk::every()`, or the flag at
+  that field's index) passes; else the statement is refused with
+  `[TIMESTAMP_NANOS_NOT_REQUESTED]`, a `DataFusionError::Plan` built here and nowhere else.
+  The first refused column in schema order is named; for a nested field the type named is
+  the first nanosecond type found depth-first. **The text never names a remedy the door that
+  raised it cannot write** (ruling Q3, provisional): a `NanosecondAsk` carries its seat's
+  `Remedies` as data (whether the dialect can write `CAST(… AS timestamp_ns)`, and its
+  microsecond spellings for a naive and a zoned column), and this module, still the one
+  place that builds the text, prints the cast clause only when the seat can write it. The
+  session-setting remedy always appears. A missing flag is `false`. A schema with no
+  nanosecond type returns exactly what the old function returned, errors included. The format
+  version is not read here: an unasked column on a v2 table is refused here before the
+  fork's v2 check runs. `existing` is the table being replaced or evolved, `None` for a
+  create. `NanosecondAsk` holds no plan logic: `repark-iceberg` cannot name `repark-functions`,
+  so each SQL door computes the flags (`repark-spark/src/nanosecond_ask.rs`,
+  `repark-sql/src/create_table/nanosecond_ask.rs`) and MERGE receives the function through
+  `MergeSpec::nanosecond_ask`. No doc comment on the new items (the owner's no-comments
+  ruling); this row is their description.
+  pins: ice-tsns-create-door-1/C-005
+- `nanosecond_door_tests.rs` — the door's `#[cfg(test)]` child (`#[path]`): the exact
+  refusal text for both types and two forms, an asked column, `every`, a kept column under
+  both case rules, a kept name with another type, nested fields (list, struct, a kept nested
+  column whose field ids differ), equality with the old conversion for a schema with no
+  nanosecond type and for a conversion error, the first refused column in schema order, and the text of a seat that cannot write the cast.
+  pins: ice-tsns-create-door-1/C-005
+- `void_store.rs`, `schema_evolution.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):**
+  `arrow_schema_to_iceberg_with_unknown` and `incoming_schema` are `pub(crate)`; outside
+  callers go through `nanosecond_door.rs`.
+- `position_delete.rs`, `sink_offsets_isolation_tests.rs` — **ICE-TSNS-CREATE-DOOR-1
+  (2026-10-13):** their test `MergeSpec` literals carry the new `nanosecond_ask` field, a
+  function that asks for nothing (`nanosecond_door::asks_nothing`, `#[cfg(test)]`).
 - `nested_ns_gate.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** the one function
   that decides whether a write is refused for a nested `timestamp_ns` leaf,
   `refuse_nested_ns_supply(table, label, write)`. It reads the **target** table's type only:

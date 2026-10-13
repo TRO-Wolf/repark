@@ -90,6 +90,7 @@ mod metadata_tables;
 mod metadata_tables_asof;
 mod namespace_ddl;
 mod nan_pushdown;
+mod nanosecond_create_door;
 mod nested_assign;
 mod nested_assign_oracle;
 mod nested_column_ddl;

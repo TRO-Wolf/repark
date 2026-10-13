@@ -513,6 +513,21 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
 
 ## IPI-19 + IPI-56 (2026-09-20) — the MERGE evolution flag
 
+- `mod.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** `union_source_schema` passes
+  the door its target: `Target::EvolvedBelowV3` when the table is below format v3, so a
+  refusal names the upgrade of the existing table. A source column whose name the target
+  already holds is not checked by the door at all; a type change is `evolve_merge_schema`'s
+  to answer, as on main.
+  pins: ice-tsns-create-door-1/C-012, C-013
+- `spec.rs`, `mod.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** `MergeSpec` gains
+  `nanosecond_ask: fn(&SessionContext, &LogicalPlan) -> Result<NanosecondAsk>`, set by each
+  SQL door. `union_source_schema` calls it on its own probe plan
+  (`SELECT * FROM <source> AS <alias> LIMIT 0`), so the flags and the probe's fields share one
+  index space, and passes the probe's schema through `nanosecond_door::added_columns_schema`
+  with the target's current schema as `existing`: a source column the target already holds
+  as that nanosecond type is kept, a new nanosecond column needs a written cast or the
+  session setting. The form in the refusal is `MERGE WITH SCHEMA EVOLUTION`.
+  pins: ice-tsns-create-door-1/C-005, C-006
 - `spec.rs` — `MergeSpec` and its clause types, moved here from `mod.rs` (which
   sits on an exact size baseline) with the new `schema_evolution` flag. When the
   flag is set `execute_merge` unions the source schema into the table first and

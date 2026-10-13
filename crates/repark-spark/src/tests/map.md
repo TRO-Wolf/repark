@@ -127,6 +127,31 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   only `super::common::*` and `super::session_write_conf` paths are used — so it is dropped
   for `unused_imports` (repark#733 `Rust lint`).
   pins: ice-session-write-conf-1/C-064
+- `nanosecond_create_door.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** the texts
+  are the seat-specific ones. Added: below v3 the unasked text also names the seat's way to
+  a v3 table (a create and a replace); an asked column below v3 answers the create, replace
+  or upgrade sentence by seat, `ADD COLUMN` names the table property, no existing table is
+  told to be created, and the named upgrade then lets the MERGE run;
+  `an_evolving_seat_checks_only_the_columns_it_would_add`;
+  `a_plain_timestamp_in_a_merge_source_is_refused_and_the_named_spellings_work`. Where this
+  row and the one below differ, this one holds.
+  pins: ice-tsns-create-door-1/C-012, C-013, C-017
+- `nanosecond_create_door.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the Spark door's
+  pins over a memory catalog with the v3 opt-in on, five SQL doors (CTAS, `CREATE OR
+  REPLACE … AS`, `REPLACE TABLE … AS`, a `mergeSchema` positional INSERT into a
+  `write.spark.accept-any-schema` table, `MERGE WITH SCHEMA EVOLUTION`) over `c timestamp_ns`
+  and `cz timestamptz_ns`: the plain column is refused with the exact text, the table's
+  schema and the warehouse's object count unchanged; a written cast, and the plain column
+  with the setting on, create the column with all nine digits; a column the replaced or
+  evolved table already holds (matched case-insensitively) passes, and the same name with
+  the other nanosecond type is new; a microsecond source is never refused; `format-version`
+  3 alone is not an ask and the unasked column gets the same text on a v2 target; DDL and
+  `ADD COLUMN` naming the type create it. Below format v3 a written cast, column DDL and
+  `ADD COLUMN` naming the type answer `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]`, exact text.
+  pins: ice-tsns-create-door-1/C-005, C-006, C-008
+- `session_write_conf.rs`, `v3_timestamp_ns_door.rs` — **ICE-TSNS-CREATE-DOOR-1
+  (2026-10-13):** the test sessions register the nanosecond cast kernels as the product
+  registry does, with `CastOrigin::Written`. No expectation changed.
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `an_owned_plain_update_resolves_a_mixed_case_set_target` and
   `..._a_wrong_case_quoted_set_target` hold the owned plain-UPDATE route to Spark's

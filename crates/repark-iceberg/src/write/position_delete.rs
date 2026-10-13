@@ -846,6 +846,7 @@ mod tests {
                 commit_branch: None,
                 case_insensitive: true,
                 schema_evolution: false,
+                nanosecond_ask: crate::write::nanosecond_door::asks_nothing,
             },
         )
         .await

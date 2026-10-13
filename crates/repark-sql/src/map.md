@@ -167,6 +167,24 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `schema_ddl.rs`, `create_table.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):**
+  `schema_ddl::iceberg_err` names this door's table property (`format_version = 3`) for a
+  nanosecond type below v3 that did not pass the create door (`ADD COLUMN`); the seat in
+  `execute_create_table` passes the requested format version so the door knows its target.
+  pins: ice-tsns-create-door-1/C-012
+- `create_table.rs`, `merge.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the native seat.
+  `execute_create_table` derives the Iceberg schema through
+  `repark_iceberg::write::new_table_schema`: a CTAS passes the ask of its analyzed query,
+  column DDL passes `NanosecondAsk::every()` (the type is named, and
+  `refuse_nanosecond_timestamp_columns` already guards an unnamed `TIMESTAMP(9)`).
+  `replacement_if_existed` now only loads the replaced table, one statement earlier, so its
+  schema is the door's `existing`. Names are compared exactly on this door. `merge.rs` sets
+  `MergeSpec::nanosecond_ask`.
+  pins: ice-tsns-create-door-1/C-005, C-006
+- `dialect.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the two nanosecond cast kernels
+  are registered with `CastOrigin::Written`: a kernel reached through this door's parser is
+  a cast the user wrote.
+  pins: ice-tsns-create-door-1/C-002
 - `dialect.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `on_session_built` registers the zoned
   nanosecond kernel (`__repark_cast_timestamptz_ns__`) beside the naive one. The shared MERGE
   and UPDATE sites now emit it for a `timestamptz_ns` target; without the registration this
@@ -314,6 +332,12 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `with_partitioning_array` tail the same way and sheds a comment plus its doc line
   (ceiling 1513).
   pins: ice-error-conditions-1/C-011
+- `schema_ddl.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13, ruling Q4):** `iceberg_err` folds
+  through `repark_iceberg::catalog::iceberg_to_datafusion` instead of building
+  `DataFusionError::External` itself, so a nanosecond type below format v3 gets the same
+  refusal on this door as on the Spark door. Every other error keeps its value: the crate's
+  suite passes with no expectation edited.
+  pins: ice-tsns-create-door-1/C-008
 - `schema_ddl.rs` — `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, `DROP TABLE`, plus the
   shared catalog-handle / name-parts / identifier-hygiene helpers.
   `IF NOT EXISTS` runs the same location-conflict predicate as the Spark door

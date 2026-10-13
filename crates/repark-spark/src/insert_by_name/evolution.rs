@@ -8,6 +8,7 @@ use iceberg::spec::NestedFieldRef;
 use iceberg::table::Table;
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::{NanosecondAsk, NewColumns, Target};
 
 use crate::catalog_ops::{namespace_schema_name, reregister};
 use crate::write_options::StatementWriteOptions;
@@ -15,6 +16,7 @@ use crate::write_options::StatementWriteOptions;
 pub(super) struct SourceUnion {
     names: Vec<String>,
     added: Vec<String>,
+    case_sensitive: bool,
 }
 
 pub(super) fn columns_to_add(
@@ -62,6 +64,7 @@ pub(super) fn columns_to_add(
             .map(|(name, field)| field.map_or_else(|| name.display.clone(), |f| f.name.clone()))
             .collect(),
         added: added.iter().map(|name| name.display.clone()).collect(),
+        case_sensitive,
     }))
 }
 
@@ -193,17 +196,33 @@ pub(super) async fn evolve_before_write(
 ) -> Result<Table> {
     let probe = format!("{source_sql} LIMIT 0");
     let frame = crate::spark_ast::execute_passthrough(ctx, catalogs, &probe).await?;
-    let arrow = union_input_schema(frame.schema().as_arrow(), union)?;
-    let incoming = repark_iceberg::write::incoming_schema(&arrow)?;
+    let asked = crate::ctas::nanosecond_ask::asked_columns(ctx, frame.logical_plan())?;
+    let (arrow, ask) = union_input_schema(frame.schema().as_arrow(), union, asked)?;
+    let incoming = repark_iceberg::write::added_columns_schema(&NewColumns {
+        arrow: &arrow,
+        ask: &ask,
+        existing: Some(table.metadata().current_schema()),
+        form: "mergeSchema append",
+        case_sensitive: union.case_sensitive,
+        target: Target::of(
+            table.metadata().format_version() >= iceberg::spec::FormatVersion::V3,
+            Target::EvolvedBelowV3,
+        ),
+    })?;
     let evolved = repark_iceberg::write::evolve_schema(catalog, table, incoming).await?;
     let namespace = namespace_schema_name(table.identifier().namespace());
     reregister(ctx, Arc::clone(catalog), catalog_name, &namespace).await?;
     Ok(evolved)
 }
 
-fn union_input_schema(arrow: &ArrowSchema, union: &SourceUnion) -> Result<ArrowSchema> {
+fn union_input_schema(
+    arrow: &ArrowSchema,
+    union: &SourceUnion,
+    asked: Option<Vec<bool>>,
+) -> Result<(ArrowSchema, NanosecondAsk)> {
     let mut fields: Vec<Arc<Field>> = Vec::with_capacity(arrow.fields().len());
-    for (field, name) in arrow.fields().iter().zip(&union.names) {
+    let mut kept_flags: Vec<bool> = Vec::with_capacity(arrow.fields().len());
+    for (index, (field, name)) in arrow.fields().iter().zip(&union.names).enumerate() {
         if field.data_type() == &DataType::Null {
             if union.added.contains(name) {
                 return Err(DataFusionError::Plan(format!(
@@ -214,6 +233,12 @@ fn union_input_schema(arrow: &ArrowSchema, union: &SourceUnion) -> Result<ArrowS
             continue;
         }
         fields.push(Arc::new(field.as_ref().clone().with_name(name.clone())));
+        kept_flags.push(
+            asked
+                .as_ref()
+                .is_some_and(|flags| flags.get(index) == Some(&true)),
+        );
     }
-    Ok(ArrowSchema::new(fields))
+    let ask = crate::ctas::nanosecond_ask::ask_of(asked.map(|_| kept_flags));
+    Ok((ArrowSchema::new(fields), ask))
 }

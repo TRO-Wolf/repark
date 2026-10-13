@@ -37,26 +37,53 @@ pub const NARROW_TIMESTAMP_NS_NAME: &str = "__repark_narrow_timestamp_ns__";
 const NANOS_PER_MICRO: i64 = 1_000;
 const NANOS_PER_DAY: i64 = 86_400 * 1_000_000_000;
 
-static TIMESTAMP_NS_CAST: LazyLock<Arc<ScalarUDF>> =
-    LazyLock::new(|| Arc::new(ScalarUDF::from(SparkTimestampNsCast::new(false))));
-static TIMESTAMPTZ_NS_CAST: LazyLock<Arc<ScalarUDF>> =
-    LazyLock::new(|| Arc::new(ScalarUDF::from(SparkTimestampNsCast::new(true))));
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CastOrigin {
+    Written,
+    Inserted,
+}
+
+static WRITTEN_TIMESTAMP_NS_CAST: LazyLock<Arc<ScalarUDF>> =
+    LazyLock::new(|| kernel(false, CastOrigin::Written));
+static WRITTEN_TIMESTAMPTZ_NS_CAST: LazyLock<Arc<ScalarUDF>> =
+    LazyLock::new(|| kernel(true, CastOrigin::Written));
+static INSERTED_TIMESTAMP_NS_CAST: LazyLock<Arc<ScalarUDF>> =
+    LazyLock::new(|| kernel(false, CastOrigin::Inserted));
+static INSERTED_TIMESTAMPTZ_NS_CAST: LazyLock<Arc<ScalarUDF>> =
+    LazyLock::new(|| kernel(true, CastOrigin::Inserted));
+
+fn kernel(zoned: bool, origin: CastOrigin) -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkTimestampNsCast::new(zoned, origin)))
+}
 
 #[must_use]
-pub fn timestamp_ns_cast_udf(zoned: bool) -> Arc<ScalarUDF> {
-    if zoned {
-        Arc::clone(&TIMESTAMPTZ_NS_CAST)
-    } else {
-        Arc::clone(&TIMESTAMP_NS_CAST)
-    }
+pub fn timestamp_ns_cast_udf(zoned: bool, origin: CastOrigin) -> Arc<ScalarUDF> {
+    Arc::clone(match (zoned, origin) {
+        (false, CastOrigin::Written) => &WRITTEN_TIMESTAMP_NS_CAST,
+        (true, CastOrigin::Written) => &WRITTEN_TIMESTAMPTZ_NS_CAST,
+        (false, CastOrigin::Inserted) => &INSERTED_TIMESTAMP_NS_CAST,
+        (true, CastOrigin::Inserted) => &INSERTED_TIMESTAMPTZ_NS_CAST,
+    })
 }
 
 #[must_use]
 pub fn timestamp_ns_cast_expr(expr: Expr, zoned: bool) -> Expr {
     Expr::ScalarFunction(ScalarFunction::new_udf(
-        timestamp_ns_cast_udf(zoned),
+        timestamp_ns_cast_udf(zoned, CastOrigin::Inserted),
         vec![expr],
     ))
+}
+
+#[must_use]
+pub fn is_written_timestamp_ns_cast(expr: &Expr) -> bool {
+    let Expr::ScalarFunction(function) = expr else {
+        return false;
+    };
+    function
+        .func
+        .inner()
+        .downcast_ref::<SparkTimestampNsCast>()
+        .is_some_and(|kernel| kernel.origin == CastOrigin::Written)
 }
 
 #[must_use]
@@ -110,13 +137,15 @@ const fn target_name(zoned: bool) -> &'static str {
 #[derive(Debug)]
 struct SparkTimestampNsCast {
     zoned: bool,
+    origin: CastOrigin,
     signature: Signature,
 }
 
 impl SparkTimestampNsCast {
-    fn new(zoned: bool) -> Self {
+    fn new(zoned: bool, origin: CastOrigin) -> Self {
         Self {
             zoned,
+            origin,
             signature: Signature::any(1, Volatility::Volatile),
         }
     }
@@ -145,7 +174,7 @@ impl SparkTimestampNsCast {
 
 impl PartialEq for SparkTimestampNsCast {
     fn eq(&self, other: &Self) -> bool {
-        self.zoned == other.zoned
+        self.zoned == other.zoned && self.origin == other.origin
     }
 }
 
@@ -154,6 +183,7 @@ impl Eq for SparkTimestampNsCast {}
 impl Hash for SparkTimestampNsCast {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name().hash(state);
+        self.origin.hash(state);
     }
 }
 
@@ -904,7 +934,12 @@ fn values_cell_needs_rewrite(cell: &Expr) -> bool {
         && interesting
 }
 
+mod asked;
 mod values_evidence;
 
+pub use asked::{ViewPlans, asked_nanosecond_columns, asked_nanosecond_columns_in};
+
+#[cfg(test)]
+mod asked_tests;
 #[cfg(test)]
 mod tests;

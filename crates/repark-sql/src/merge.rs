@@ -109,6 +109,7 @@ fn lower(
             commit_branch: None,
             case_insensitive: false,
             schema_evolution: false,
+            nanosecond_ask: crate::create_table::nanosecond_ask::nanosecond_ask,
         },
     ))
 }

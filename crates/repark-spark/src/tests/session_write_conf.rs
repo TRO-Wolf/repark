@@ -387,9 +387,12 @@ async fn a_session_conf_keeps_the_values_list_typing() {
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     for zoned in [false, true] {
         ctx.register_udf(
-            repark_functions::timestamp_ns_cast::timestamp_ns_cast_udf(zoned)
-                .as_ref()
-                .clone(),
+            repark_functions::timestamp_ns_cast::timestamp_ns_cast_udf(
+                zoned,
+                repark_functions::timestamp_ns_cast::CastOrigin::Written,
+            )
+            .as_ref()
+            .clone(),
         );
     }
     run(

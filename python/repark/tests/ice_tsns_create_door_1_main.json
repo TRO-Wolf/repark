@@ -1,0 +1,5568 @@
+{
+ "matrix": {
+  "America/New_York|create_or_replace|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|create_or_replace|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|create_or_replace|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|create_or_replace|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|ctas|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|ctas|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|ctas|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|ctas|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|merge_schema_evolution|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|merge_schema_evolution|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|merge_schema_evolution|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|merge_schema_evolution|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|replace|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|replace|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|replace|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|replace|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_create|cz|cast": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for cz: timestamptz_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|save_create|cz|none": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for cz: timestamptz_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|save_create|c|cast": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|save_create|c|none": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|save_merge_schema|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_overwrite_schema|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_overwrite_schema|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_overwrite_schema|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_overwrite_schema|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_overwrite|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_overwrite|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_overwrite|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_overwrite|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_create_or_replace|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_create_or_replace|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_create_or_replace|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_create_or_replace|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_create|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_create|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_create|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_create|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_replace|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_replace|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_replace|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_replace|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|create_or_replace|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|create_or_replace|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|create_or_replace|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|create_or_replace|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|ctas|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|ctas|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|ctas|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|ctas|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|replace|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|replace|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|replace|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|replace|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_create|cz|cast": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for cz: timestamptz_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|save_create|cz|none": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for cz: timestamptz_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|save_create|c|cast": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|save_create|c|none": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|save_merge_schema|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_overwrite_schema|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_overwrite_schema|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_overwrite_schema|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_overwrite_schema|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_overwrite|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_overwrite|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_overwrite|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_overwrite|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_create_or_replace|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_create_or_replace|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_create_or_replace|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_create_or_replace|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_create|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_create|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_create|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_create|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_replace|cz|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_replace|cz|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_replace|c|cast": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_replace|c|none": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  }
+ },
+ "pass3": {
+  "America/New_York|sarrow|create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|sarrow|ctas": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|sarrow|replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|sarrow|temp_view": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|sarrow|write_to_create": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|sarrow|write_to_create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|sarrow|write_to_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scast|create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scast|ctas": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scast|replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scast|temp_view": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scast|write_to_create": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scast|write_to_create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scast|write_to_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scol|create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scol|ctas": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scol|replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scol|temp_view": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scol|write_to_create": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scol|write_to_create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|scol|write_to_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|sarrow|create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|sarrow|ctas": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|sarrow|replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|sarrow|temp_view": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|sarrow|write_to_create": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|sarrow|write_to_create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|sarrow|write_to_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scast|create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scast|ctas": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scast|replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scast|temp_view": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scast|write_to_create": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scast|write_to_create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scast|write_to_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789
+     ],
+     [
+      1767323045123456789
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scol|create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scol|ctas": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scol|replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scol|temp_view": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scol|write_to_create": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scol|write_to_create_or_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|scol|write_to_replace": {
+   "table": {
+    "arrow": [
+     "timestamp[ns]",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1767323045123456789,
+      null
+     ],
+     [
+      1767323045123456789,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "c",
+      "timestamp_ns"
+     ],
+     [
+      "cz",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  }
+ },
+ "plain": {
+  "America/New_York|create_or_replace": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|ctas": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|error_exists": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "text": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `ice`.`ns`.`plain_error_exists` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "America/New_York|error_replace_missing": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "text": "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`ns`.`plain_error_replace_missing` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|error_too_many_columns": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS",
+    "text": "Error during planning: [INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `ice`.`ns`.`plain_error_too_many_columns`, the reason is too many data columns:\nTable columns: `id`.\nData columns: `id`, `c`. SQLSTATE: 21S01"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "America/New_York|error_unresolved_column": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "text": "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `absent` cannot be resolved. Did you mean one of the following? [`id`, `c`, `cz`]. SQLSTATE: 42703"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|merge_schema_evolution": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_append": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_create": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_overwrite": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_create": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|create_or_replace": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|ctas": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|error_exists": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "text": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `ice`.`ns`.`plain_error_exists` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "UTC|error_replace_missing": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "text": "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`ns`.`plain_error_replace_missing` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|error_too_many_columns": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS",
+    "text": "Error during planning: [INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `ice`.`ns`.`plain_error_too_many_columns`, the reason is too many data columns:\nTable columns: `id`.\nData columns: `id`, `c`. SQLSTATE: 21S01"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "UTC|error_unresolved_column": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "text": "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `absent` cannot be resolved. Did you mean one of the following? [`id`, `c`, `cz`]. SQLSTATE: 42703"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|merge_schema_evolution": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|save_append": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|save_create": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|save_overwrite": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_create": {
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1767323045123456,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  }
+ },
+ "recorded_at_commit": "f3f98823a5",
+ "seed": "2026-01-02 03:04:05.123456789",
+ "typechange": {
+  "America/New_York|merge_schema_evolution|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|merge_schema_evolution|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|merge_schema_evolution|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  }
+ },
+ "v2": {
+  "America/New_York|addcol_v2base": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c2: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "America/New_York|cache": {
+   "error": {
+    "class": "UnsupportedOperationException",
+    "condition": null,
+    "text": "This feature is not implemented: Unsupported SQL statement: CACHE TABLE ice.ns.v2_cache AS SELECT c FROM ice.ns.seed"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|cast_ns": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|cor": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|ctas_plain": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|ddl": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|evolving": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "America/New_York|evolving_cast": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "America/New_York|like": {
+   "error": {
+    "class": "UnsupportedOperationException",
+    "condition": null,
+    "text": "This feature is not implemented: CREATE TABLE \u2026 LIKE / CLONE is not supported yet"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|mergeschema": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS",
+    "text": "Error during planning: [INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `ice`.`ns`.`v2_pre_mergeschema`, the reason is too many data columns:\nTable columns: `id`, `c`.\nData columns: `id`, `c`, `c2`. SQLSTATE: 21S01"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  },
+  "America/New_York|overwriteschema": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3\n- Invalid type for c2: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  },
+  "America/New_York|replace_missing": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "text": "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`ns`.`v2_replace_missing` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|saveastable": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|saveoverwrite": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  },
+  "America/New_York|savepath": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": null,
+    "text": "DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'|'text'); use saveAsTable for Iceberg tables"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|tempview": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|wtoappendmerge": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS",
+    "text": "Error during planning: [INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `ice`.`ns`.`v2_pre_wtoappendmerge`, the reason is too many data columns:\nTable columns: `id`, `c`.\nData columns: `id`, `c`, `c2`. SQLSTATE: 21S01"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  },
+  "America/New_York|wtocreate": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "America/New_York|wtoreplace": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  },
+  "UTC|addcol_v2base": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c2: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "UTC|cache": {
+   "error": {
+    "class": "UnsupportedOperationException",
+    "condition": null,
+    "text": "This feature is not implemented: Unsupported SQL statement: CACHE TABLE ice.ns.v2_cache AS SELECT c FROM ice.ns.seed"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|cast_ns": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|cor": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|ctas_plain": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|ddl": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|evolving": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "UTC|evolving_cast": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32"
+    ],
+    "format_version": 2,
+    "rows": [
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ]
+    ]
+   }
+  },
+  "UTC|like": {
+   "error": {
+    "class": "UnsupportedOperationException",
+    "condition": null,
+    "text": "This feature is not implemented: CREATE TABLE \u2026 LIKE / CLONE is not supported yet"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|mergeschema": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS",
+    "text": "Error during planning: [INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `ice`.`ns`.`v2_pre_mergeschema`, the reason is too many data columns:\nTable columns: `id`, `c`.\nData columns: `id`, `c`, `c2`. SQLSTATE: 21S01"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  },
+  "UTC|overwriteschema": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3\n- Invalid type for c2: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  },
+  "UTC|replace_missing": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "text": "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`ns`.`v2_replace_missing` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|saveastable": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|saveoverwrite": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  },
+  "UTC|savepath": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": null,
+    "text": "DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'|'text'); use saveAsTable for Iceberg tables"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|tempview": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|wtoappendmerge": {
+   "error": {
+    "class": "AnalysisException",
+    "condition": "INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS",
+    "text": "Error during planning: [INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `ice`.`ns`.`v2_pre_wtoappendmerge`, the reason is too many data columns:\nTable columns: `id`, `c`.\nData columns: `id`, `c`, `c2`. SQLSTATE: 21S01"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  },
+  "UTC|wtocreate": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": null
+  },
+  "UTC|wtoreplace": {
+   "error": {
+    "class": "PySparkException",
+    "condition": null,
+    "text": "DataInvalid => Invalid schema for v2:\n- Invalid type for c: timestamp_ns is not supported until v3"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us, tz=UTC]"
+    ],
+    "format_version": 2,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz"
+     ]
+    ]
+   }
+  }
+ }
+}

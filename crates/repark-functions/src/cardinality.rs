@@ -36,6 +36,10 @@ pub const ALLOW_CREATE_FORMAT_VERSION_3_KEY: &str = "repark.sql.allowCreateForma
 /// Underscore alias for [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`].
 pub const ALLOW_CREATE_FORMAT_VERSION_3_KEY_ALT: &str = "repark.sql.allow_create_format_version_3";
 
+pub const ALLOW_IMPLICIT_TIMESTAMP_NANOS_KEY: &str = "repark.sql.allowImplicitTimestampNanos";
+pub const ALLOW_IMPLICIT_TIMESTAMP_NANOS_KEY_ALT: &str =
+    "repark.sql.allow_implicit_timestamp_nanos";
+
 /// Validated session knobs for plan-time SQL safety ceilings / gates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ReparkSqlSettings {
@@ -45,6 +49,7 @@ pub struct ReparkSqlSettings {
     pub allow_local_filesystem_ddl: bool,
     /// When true, CREATE/CTAS may request Iceberg format v3.
     pub allow_create_format_version_3: bool,
+    pub allow_implicit_timestamp_nanos: bool,
 }
 
 impl Default for ReparkSqlSettings {
@@ -53,6 +58,7 @@ impl Default for ReparkSqlSettings {
             max_array_elements: DEFAULT_MAX_ARRAY_ELEMENTS,
             allow_local_filesystem_ddl: false,
             allow_create_format_version_3: false,
+            allow_implicit_timestamp_nanos: false,
         }
     }
 }
@@ -100,6 +106,15 @@ impl ReparkSqlSettings {
             ))),
         }
     }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn parse_allow_implicit_timestamp_nanos(raw: &str) -> Result<bool> {
+        Self::parse_allow_create_format_version_3(raw).map_err(|_| {
+            DataFusionError::Plan(format!(
+                "config `{ALLOW_IMPLICIT_TIMESTAMP_NANOS_KEY}` must be true or false (got {raw:?})"
+            ))
+        })
+    }
 }
 
 /// Pull SQL safety knobs from a builder conf map.
@@ -132,10 +147,18 @@ where
         Some(raw) => ReparkSqlSettings::parse_allow_create_format_version_3(raw)?,
         None => false,
     };
+    let allow_implicit_timestamp_nanos = match config
+        .get(ALLOW_IMPLICIT_TIMESTAMP_NANOS_KEY)
+        .or_else(|| config.get(ALLOW_IMPLICIT_TIMESTAMP_NANOS_KEY_ALT))
+    {
+        Some(raw) => ReparkSqlSettings::parse_allow_implicit_timestamp_nanos(raw)?,
+        None => false,
+    };
     Ok(ReparkSqlSettings {
         max_array_elements,
         allow_local_filesystem_ddl,
         allow_create_format_version_3,
+        allow_implicit_timestamp_nanos,
     })
 }
 
@@ -148,6 +171,7 @@ extensions_options! {
         pub allow_local_filesystem_ddl: bool, default = false
         /// When true, CREATE/CTAS may request Iceberg format v3.
         pub allow_create_format_version_3: bool, default = false
+        pub allow_implicit_timestamp_nanos: bool, default = false
     }
 }
 
@@ -162,6 +186,7 @@ pub fn with_repark_sql_config(config: SessionConfig, settings: ReparkSqlSettings
         max_array_elements: settings.max_array_elements,
         allow_local_filesystem_ddl: settings.allow_local_filesystem_ddl,
         allow_create_format_version_3: settings.allow_create_format_version_3,
+        allow_implicit_timestamp_nanos: settings.allow_implicit_timestamp_nanos,
     })
 }
 
@@ -179,6 +204,7 @@ pub fn repark_sql_settings_from_options(options: &ConfigOptions) -> ReparkSqlSet
             },
             allow_local_filesystem_ddl: extension.allow_local_filesystem_ddl,
             allow_create_format_version_3: extension.allow_create_format_version_3,
+            allow_implicit_timestamp_nanos: extension.allow_implicit_timestamp_nanos,
         })
         .unwrap_or_default()
 }
@@ -748,6 +774,32 @@ mod tests {
             err.contains(ALLOW_CREATE_FORMAT_VERSION_3_KEY) && err.contains("notabool"),
             "unparsable opt-in must fail loud naming the conf: {err}"
         );
+    }
+
+    #[test]
+    fn implicit_timestamp_nanos_is_off_unless_either_key_turns_it_on() {
+        let settings_of = |key: &str, raw: &str| {
+            let map = std::collections::HashMap::from([(key.to_string(), raw.to_string())]);
+            repark_sql_settings_from_config_map(&map)
+        };
+        assert!(!ReparkSqlSettings::default().allow_implicit_timestamp_nanos);
+        for key in [
+            ALLOW_IMPLICIT_TIMESTAMP_NANOS_KEY,
+            ALLOW_IMPLICIT_TIMESTAMP_NANOS_KEY_ALT,
+        ] {
+            let on = settings_of(key, "TRUE").unwrap();
+            assert!(on.allow_implicit_timestamp_nanos && !on.allow_create_format_version_3);
+            assert!(
+                !settings_of(key, "false")
+                    .unwrap()
+                    .allow_implicit_timestamp_nanos
+            );
+            let error = settings_of(key, "maybe").unwrap_err().to_string();
+            assert!(
+                error.contains(ALLOW_IMPLICIT_TIMESTAMP_NANOS_KEY),
+                "{error}"
+            );
+        }
     }
 
     #[tokio::test]

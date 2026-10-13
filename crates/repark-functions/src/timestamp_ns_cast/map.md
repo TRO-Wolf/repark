@@ -38,6 +38,57 @@ pins: ice-tstzns-wall-1/C-005, C-008
   never converted by the wall kernel (control; parity row ICE-TSNS-SQL-1-R-008).
 
 pins: ice-tsns-merge-wall-1/C-018, C-031
+**ICE-TSNS-CREATE-DOOR-1 (2026-10-13): the origin mark and the walk.**
+
+- **The mark.** The parent's kernel holds `origin: CastOrigin`. A kernel that arrives through
+  the parser is `Written`; a kernel built by `timestamp_ns_cast_expr` is `Inserted`. The
+  parser cannot reach `Inserted` and engine code cannot reach `Written` without naming it in
+  a diff.
+- `asked.rs` — `asked_nanosecond_columns(plan)` returns one flag per output column of an
+  analyzed plan: true when the column's type holds a nanosecond timestamp, it has at least
+  one nanosecond origin, and every origin is a written kernel. A column whose type holds no
+  nanosecond timestamp is `false` and is never walked. Origins, by type flow: an expression
+  whose type holds no nanosecond is no origin and is not descended (so a `CASE` condition
+  over nanoseconds does not count); a written kernel is an asked origin and the walk stops
+  there; an inserted kernel is not an origin and the walk goes into its argument (a
+  microsecond or NULL argument gives nothing); `Alias` is transparent; a `Column` is the same
+  column of the input plan; any other nanosecond-typed expression is the union of its
+  children's origins, and unasked when it has none (it made nanoseconds itself: a literal, an
+  Arrow cast). Plan nodes followed: `Projection`, `Aggregate` (with a grouping set:
+  unasked), `Window`, `SubqueryAlias`, `Filter`, `Sort`, `Limit`, `Distinct::All`,
+  `Repartition`, `Union` (every branch), `Values` (every cell), `Join` (inner, left, right,
+  full: the side that holds the index; any other join type is unasked). Every other node,
+  `TableScan` first among them, is unasked; the plan `match` names every variant, so a new
+  DataFusion node does not compile until it is placed. The walk stops and answers unasked
+  below 1,024 levels, so a plan of any depth cannot overflow the stack. A wrong answer in
+  the unasked direction is a refusal with a remedy, never a silently created column.
+- `asked.rs`, fold 1 (2026-10-13, after a verify failed `53ced116`): **a view is followed
+  into its plan.** A `TableScan` whose source carries a logical plan (DataFusion's
+  `ViewTable`), or for which the seat's resolver answers one, is walked at the scan's
+  projected column. The resolver (`ViewPlans`, a function from a scan to a plan) is how a
+  door names its own view providers: the Spark door's SQL `CREATE TEMP VIEW` is a
+  re-planning provider that `repark-functions` cannot name, and the Spark seat answers its
+  definition plan. Any other scan is unasked as before, so a cached frame or a registered
+  Arrow table still hides what was written before it. Each view followed costs 32 of the
+  1,024 levels, and the scan arm is its own function, so a view that names itself through
+  the resolver ends unasked without overflowing the stack. **Semi and anti joins** are followed
+  on the side whose columns they keep, in the `Join` arm; `EXCEPT` and `INTERSECT` plan as
+  such joins, so they are followed too. Mark joins are unasked. An expression whose type
+  cannot be computed is unasked, not an error. `asked_nanosecond_columns_in(state, plan)`
+  is what the SQL doors call: when no output column's type holds a nanosecond timestamp it
+  answers all-false **without analyzing the plan** (the second analysis was 18 percent of a
+  200-column create); otherwise it analyzes eagerly and walks. Not followed, by ruling
+  (each needs its own case): grouping sets, a scalar subquery, a lambda body, and a window
+  function's `ORDER BY` / `PARTITION BY` expressions, which count as origins.
+  pins: ice-tsns-create-door-1/C-014, C-016
+- `asked_tests.rs` — the walk's `#[cfg(test)]` suite, plans built with the DataFusion builders
+  over an in-memory table holding `ns`, `tzns` and `us` columns: the fifteen cases the work
+  order names, the nodes that keep their input columns, and the depth bound.
+  pins: ice-tsns-create-door-1/C-003
+- `tests.rs` (ICE-TSNS-CREATE-DOOR-1 additions) — the registered kernel is written; a kernel
+  built by engine code is inserted; the two share a name and are not equal; a written cast
+  stays written through two analyses; the plan text does not show the origin.
+  pins: ice-tsns-create-door-1/C-002
 - `tests.rs` — the module's `#[cfg(test)]` suite: nine fraction digits from strings, an explicit
   offset versus the session zone, malformed strings under ANSI on and off, exact microsecond
   widening, an instant into a naive target as the session wall, a wall into a zoned target

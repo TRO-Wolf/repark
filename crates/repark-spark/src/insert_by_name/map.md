@@ -50,6 +50,17 @@ plus the two commits.
 
 ## IPI-19 + IPI-37 (2026-09-20) — the schema-evolving by-name append
 
+- `evolution.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** the seat passes
+  `Target::EvolvedBelowV3` when the table is below format v3, so the refusal names the
+  `ALTER TABLE … SET TBLPROPERTIES` upgrade and never a create.
+  pins: ice-tsns-create-door-1/C-012
+- `evolution.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** `evolve_before_write` computes
+  the asked flags on its probe frame's plan and passes the union schema through
+  `nanosecond_door::added_columns_schema` with the table's current schema as `existing` and
+  the form `mergeSchema append`. `union_input_schema` drops void fields and renames, so it
+  filters the flags in the same loop and returns the `NanosecondAsk` beside the schema.
+  `SourceUnion` carries the statement's case rule for the kept test.
+  pins: ice-tsns-create-door-1/C-005, C-006
 - `evolution.rs` — `columns_to_add` applies the `write.spark.accept-any-schema`
   gate and the merge-schema flag to the source columns the table does not have,
   returning the names to add (empty means the existing refusal arms answer).

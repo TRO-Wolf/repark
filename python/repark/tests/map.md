@@ -3231,6 +3231,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   main's recorded cells. The file below no longer holds `timestamptz_ns` as a control; its
   microsecond controls are unchanged.
   pins: ice-tstzns-wall-1/C-002, C-003, C-004, C-005, C-006, C-012
+- `test_ice_tsns_merge_wall_1.py` — **ICE-TSNS-CREATE-DOOR-1
+  (2026-10-13, ruling Q7):** in `test_control_targets_answer_what_main_answered`, four cells
+  (the `ntz_v2` and `ltz_v2` targets, door `update_column`, sources `ns` and `tzns`) expect
+  the `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]` refusal, class `AnalysisException`, exact text.
+  That door creates its table by DDL with a sibling column of the source type, so on a v2
+  target the DDL is refused; main answered `Invalid type for c: … is not supported until v3`
+  as a `PySparkException`. `ice_tsns_merge_wall_1_main.json` stays main's record: the test
+  asserts the fixture still holds main's text and then expects the new one. Parity row
+  `ICE-TSNS-SQL-1-R-022`. Fold 1: column DDL does not pass the create door, so the text ends
+  with the Spark door's table-property sentence.
+  pins: ice-tsns-create-door-1/C-008
 - [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-MERGE-WALL-1
   fold 1 (2026-10-09), the pin budget:** the module is cut from 464 tests to 179. Kept: the 57
   `timestamp_ns` door tests in all three zones, and the control doors in **one** zone,
@@ -3431,6 +3442,101 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `--declared-repeats`, with one under a declared `timestamp` schema. One JSON object per
   process; the recorded sets are in `task/wo/ice-tsns-frame-door-1/evidence/`.
   pins: ice-tsns-frame-door-1/C-013, C-022
+- [_record_ice_tsns_create_door_1_main.py](_record_ice_tsns_create_door_1_main.py) +
+  [ice_tsns_create_door_1_main.json](ice_tsns_create_door_1_main.json) —
+  **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the create-door matrix and the recorder of what a
+  build answers in it; the fixture is main `f3f98823`, recorded before any product edit. Four
+  sections, each in a UTC and an America/New_York session, every cell in a fresh session and
+  warehouse with the v3 opt-in on: `matrix` (12 create and schema-evolving doors, the columns
+  `c timestamp_ns` and `cz timestamptz_ns`, from the plain column and from a written cast);
+  `pass3` (the census's third pass: the plain columns, a capsule-registered Arrow view and a
+  written cast of a string through 7 doors); `plain` (12 statements over a microsecond table,
+  four of them refusals); `v2` (19 doors below format v3). A cell holds the error (class,
+  condition, text with the warehouse path masked), whether the table's files are unchanged,
+  and the table's format version, Iceberg types from the metadata JSON, Arrow types and int64
+  rows. No cell uses pandas or polars: nanosecond sources are a v3 table and the Arrow stream
+  seam. The door functions (`prepare_door`, `run_door`, `measure`) are imported by the pins,
+  so both sides run the same statements. Run it against a build:
+  `python _record_ice_tsns_create_door_1_main.py <commit> [--output <path>]`.
+  **Fold 1:** a fifth section, `typechange`, 18 cells recorded on main's module: the three
+  evolving doors over a table whose `c` is `TIMESTAMP_NTZ`, `timestamptz_ns` or
+  `timestamp_ns` and a source giving `c` the other kind plus one new column. Main answers
+  `Cannot change column type` in all 18. The four older sections re-recorded identical.
+  pins: ice-tsns-create-door-1/C-001, C-013
+- [test_ice_tsns_create_door_1_fold_1.py](test_ice_tsns_create_door_1_fold_1.py) —
+  **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13), after a verify failed `53ced116`:** 127
+  tests, all red on that head's module. `test_every_remedy_a_refusal_names_works_when_followed`
+  is the verify's hint stage kept as a pin: 13 seats (the 12 doors and a SQL temp view) by
+  two columns by a v3 and a below-v3 target, 50 cells. Each cell pins the exact unasked
+  text, then follows what the text names: the microsecond spelling stores microseconds; the
+  cast and the session built with the setting store nanoseconds on a v3 target; below v3
+  both answer the exact format-version refusal, and each way to a v3 table that refusal
+  names (`TBLPROPERTIES` in SQL, `writeTo(...).tableProperty`, the `ALTER TABLE` upgrade) is
+  followed with the cast and with the setting and stores nanoseconds; an existing table is
+  never told to be created. Further pins: a run-time `conf.set` / `SET` is still ignored and
+  the text names the builder; on the three evolving doors a source column whose name the
+  table holds under another type equals main's 18 recorded cells (`Cannot change column
+  type`); a cast in a SQL temp view, a view of a view, `EXCEPT`, `INTERSECT` and a semi or
+  anti join is an ask; grouping sets, a scalar subquery, a lambda and a window ordered by a
+  plain column are refused and pass with the cast outermost; a cast before `cache`,
+  `persist` or `localCheckpoint` is hidden and one after it is an ask; a nanosecond field
+  two and three levels down is refused on a create and on both evolving seats (36 cells);
+  four plain `TIMESTAMP` spellings in a schema-evolving MERGE source are refused and the
+  hint's own spelling stores microseconds.
+  pins: ice-tsns-create-door-1/C-012, C-013, C-014, C-015, C-017
+- [_ice_tsns_create_door_1_texts.py](_ice_tsns_create_door_1_texts.py) —
+  **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** the Spark door's exact refusal texts by
+  seat, shared by both pin files: the setting sentence, the three ways to a v3 table, the
+  table-property sentence, the microsecond spellings (MERGE's among them),
+  `not_requested(form, name, nano, below)` and `requires_v3(name, nano, remedy)`.
+  pins: ice-tsns-create-door-1/C-012
+- [test_ice_tsns_create_door_1.py](test_ice_tsns_create_door_1.py) —
+  **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the facade pins of the create door, each cell in a
+  fresh session and warehouse, UTC and America/New_York, on the Arrow path and the Iceberg
+  metadata JSON (never `show` or DESCRIBE). The matrix is 12 doors by two columns
+  (`c timestamp_ns`, `cz timestamptz_ns`) by three asks: SQL CTAS, `CREATE OR REPLACE … AS`,
+  `REPLACE TABLE … AS`, `writeTo().create()`, `.createOrReplace()`, `.replace()`,
+  `saveAsTable` create, `mode("overwrite").saveAsTable` with and without `overwriteSchema`,
+  `mergeSchema` `saveAsTable` append and `writeTo().append()` on a
+  `write.spark.accept-any-schema` table, `MERGE WITH SCHEMA EVOLUTION`. **No ask:** the
+  exact `[TIMESTAMP_NANOS_NOT_REQUESTED]` text with the door's form, class
+  `AnalysisException`, the table's files the same as before the statement and its schema
+  what the door started from. **A written cast** (`CAST` in SQL, `selectExpr` for frames):
+  main's recorded table, all nine digits. **The session setting on:** the table the written
+  cast makes. `saveAsTable` create has no v3 spelling: unasked it gets the same refusal,
+  asked it is refused for the format version. Further pins: the census's third pass (28
+  unasked cells refuse naming `c`, 14 written-cast twins equal main);
+  12 statements over a microsecond table equal main's recorded cells exactly; a column the
+  replaced or evolved table already holds passes on nine doors, and a kept name with the
+  other nanosecond type or a new name is refused; DDL and `ADD COLUMN` naming the type create
+  it; a cached frame hides its written cast and is refused, a pandas frame makes a
+  microsecond table; `format-version` 3 alone is not an ask; an aggregate, a subquery, a
+  union, `VALUES` and `::` over written casts are asked, and one table-column origin (a union
+  branch, a `coalesce` argument, an array or struct element, a window, a join side) makes
+  the column unasked. `test_main_created_the_column_without_an_ask` holds the fixture to
+  what it is: main made the nanosecond column in 44 unasked matrix cells and all 42 census
+  cells. Red on main `f3f98823` before any product edit: 86 failed, 160 passed.
+  **Below format v3 (slice 4):** 19 doors in two zones. Nine unasked doors answer the
+  not-requested refusal (the door runs before the fork's version check); a written cast,
+  column DDL, `ADD COLUMN` and a cast through `mergeSchema` append answer
+  `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]` with the exact text; `LIKE`, `CACHE TABLE`, a
+  `REPLACE` of a missing table, `save(path)` and the two arity refusals keep main's text.
+  The table's state equals main's in every cell. The `saveAsTable` create cells of the
+  matrix pin the same text. The parity rows are `ICE-TSNS-SQL-1-R-021` and `R-022`.
+  **Fold 1:** the texts are the seat-specific ones of `_ice_tsns_create_door_1_texts.py`;
+  below v3 an unasked door also names its way to a v3 table, a cast in CTAS names the create
+  sentence, `ADD COLUMN` and column DDL name the table property, the evolving cast names
+  the upgrade.
+  pins: ice-tsns-create-door-1/C-005, C-006, C-007, C-008, C-009
+- [_time_ice_tsns_create_door_1.py](_time_ice_tsns_create_door_1.py) —
+  **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the cost timer: median milliseconds, after one
+  warm run, of a CTAS, a `mode("overwrite").saveAsTable` and a `MERGE WITH SCHEMA EVOLUTION`
+  over a one-million-row microsecond table, and (fold 1, in place of an `EXPLAIN` that never
+  reached the door) of a 200-column CTAS with no nanosecond column. One
+  JSON object per process; it times whatever `repark` the interpreter imports, so main is
+  measured by putting a copy of the package holding main's native module first on
+  `PYTHONPATH`. The recorded sets are in `task/wo/ice-tsns-create-door-1/evidence/`.
+  pins: ice-tsns-create-door-1/C-010
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and

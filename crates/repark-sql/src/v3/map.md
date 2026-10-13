@@ -7,6 +7,30 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
 ## Contents
 
 - `mod.rs` — thin index.
+- `nanosecond_door.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** the native door's
+  pins, moved out of `create.rs` (whose `Door` and `door_with_config` are now visible to this
+  sibling; the row below describes tests that live here now). Two tests follow every remedy
+  a native refusal names and assert it works: an unasked column on a v3 create, on a
+  default-version create and on a replace of a v2 table (the setting, `TIMESTAMP(6)`,
+  `WITH (format_version = 3)`, the `SET PROPERTIES` upgrade), for `ts` and `tz`; and a named
+  type below v3 through column DDL, `ADD COLUMN` and a CTAS of the kernel. Kept and retyped
+  RTAS; a `TIMESTAMP` literal, `now()` and the plain column refused at v3;
+  `plain_timestamp_in_native_add_column_and_nested_ddl_still_stores_nanoseconds_as_main`,
+  the named exception the owner holds (verifier finding F2).
+  pins: ice-tsns-create-door-1/C-011, C-012, C-018
+- `create.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the native door's row.
+  `native_ctas_of_a_written_nanosecond_cast_passes_the_door` (the cast kernel called by
+  name, the only spelling this door's parser reaches) and
+  `native_ctas_of_an_unasked_nanosecond_column_is_refused_and_a_kept_one_passes` (the plain
+  column of a `timestamp_ns` table, on a v3 and on a default target; an RTAS over a
+  microsecond column of that name is refused, an RTAS over a kept `timestamp_ns` column
+  passes), with this door's exact text. On this door a plain `TIMESTAMP` expression is Arrow
+  nanoseconds, so `native_ctas_of_a_plain_timestamp_expression_at_v3_is_refused_and_six_digits_pass`
+  holds the move from main: a `TIMESTAMP '…'` literal and `now()` are refused at format
+  version 3, and `CAST(… AS TIMESTAMP(6))` creates a `timestamp` column.
+  `native_ddl_naming_a_nanosecond_type_below_v3_names_the_format_remedy` is this door's
+  row for the below-v3 refusal.
+  pins: ice-tsns-create-door-1/C-005, C-006, C-008, C-011
 - `create.rs` (zoned) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   `update_and_merge_into_timestamptz_ns_store_the_instant` runs
   `AnsiDialect::on_session_built`, then an `UPDATE`, a MERGE update and a MERGE insert of a

@@ -652,6 +652,25 @@ else. The next pickup's `make ledger-archive` files everything here under
   No product change.
   `risk_tier: standard`. Branch `test/ice-spark-table-1`.
   pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ice-tsns-create-door-1-ledger.md](ice-tsns-create-door-1-ledger.md) —
+  **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** a new `timestamp_ns` / `timestamptz_ns` column is
+  created only when the statement asks (DDL naming the type, a written `CAST`, the session
+  setting `repark.sql.allowImplicitTimestampNanos`); otherwise one door under every create
+  and schema-evolving seat refuses with a text that names both opt-ins. Main's answers
+  recorded before any product edit (C-001); the origin mark, the walk and the setting
+  (C-002..C-004); the door, its cells on both SQL doors and the unchanged statements
+  (C-005..C-007); the native door's own text and what moves there (C-011); the below-v3 refusal on both doors (C-008); parity rows
+  `ICE-TSNS-SQL-1-R-021` and `R-022` and the release-note sentence (C-009); cost, mutants
+  and gates (C-010). Three pre-existing tests moved under rulings Q2 and Q7.
+  **Fold 1 (2026-10-13), after an independent verify failed `53ced116`:** every remedy a
+  refusal names works on the seat that raised it, by construction and followed in a pin
+  (C-012); an evolving seat checks only the columns it would add (C-013); a cast in a SQL
+  temp view and through set operations and semi joins is an ask, the shapes not followed are
+  disclosed (C-014); the nested walk is pinned to depth three (C-015); a 200-column CTAS is
+  0.993 of main (C-016); MERGE-source and native-door cells are listed for the owner (C-017,
+  C-018).
+  `risk_tier: standard`. Branch
+  `fix/ice-tsns-create-door-1`.
 - [ice-tsns-frame-door-1-ledger.md](ice-tsns-frame-door-1-ledger.md) —
   **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** a pandas or polars nanosecond timestamp column
   enters as microseconds, floored, as Spark 4.1.2 does. The live Spark oracle (C-001); the

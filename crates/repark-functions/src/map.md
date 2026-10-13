@@ -616,6 +616,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `LocalSource` distinguishes instants from wall clocks at invoke; `date_trunc`/`date_format` use
   `invoke_local_micros`, while `trunc`/`add_months` use `invoke_local_dates`. Overlaps prefer the
   source instant's offset; gaps use the bounded `offset_before_gap` resolver.
+- `cardinality.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the session setting
+  `repark.sql.allowImplicitTimestampNanos` (alias
+  `repark.sql.allow_implicit_timestamp_nanos`), a fourth field of `ReparkSqlSettings` and
+  `ReparkSqlConfig`, default `false`, parsed as its sibling `allowCreateFormatVersion3` is
+  and fixed when the session is built. On, a create or schema-evolving door may take a
+  nanosecond column from the query's type without a written cast. The new items carry no
+  doc comment (the owner's no-comments ruling); this row is their description.
+  pins: ice-tsns-create-door-1/C-004
 - `cardinality.rs` — r24 SB1 SEC-01 ceilings + SEC-02 conf extension (const
   CAST / arithmetic / abs / coalesce / greatest / least / nullif / CASE /
   arrow_cast / utf8→int / float math / log*/exp/sqrt / bitwise / trivial scalar-subquery fold; depth-bounded).
@@ -1106,6 +1114,26 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- `timestamp_ns_cast.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** the module also
+  exports `asked_nanosecond_columns_in(state, plan, views)`, the entry the SQL doors call
+  (no second analysis when no output column holds a nanosecond timestamp), and `ViewPlans`,
+  the seat's resolver from a scan to a view's plan. The walk's fold-1 rules are in the
+  child directory's `map.md`.
+  pins: ice-tsns-create-door-1/C-014, C-016
+- `timestamp_ns_cast.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** a cast kernel carries
+  where it came from. `CastOrigin` is `Written` (the user wrote the cast: the parser lowers
+  `CAST(x AS timestamp_ns)` to a call by name, and the name resolves to the registry's kernel)
+  or `Inserted` (engine code built it with `timestamp_ns_cast_expr`).
+  `timestamp_ns_cast_udf(zoned, origin)` takes the origin as a required argument, so a new
+  call site has to say which it is; the registry sites (`instant_ts.rs::functions`, the ANSI
+  door's `dialect.rs`) pass `Written`. Both origins share one name, so `EXPLAIN`, the
+  by-name test `is_timestamp_ns_cast` and stored SQL text do not change; `PartialEq` and
+  `Hash` include the origin, so common-subexpression elimination cannot fold a written call
+  into an inserted one. `is_written_timestamp_ns_cast` downcasts the function's
+  implementation (`ScalarUDF::inner().downcast_ref`); no SQL text is read. The child module
+  `asked` (`timestamp_ns_cast/asked.rs`) answers which output columns of a plan the user
+  asked to be nanoseconds.
+  pins: ice-tsns-create-door-1/C-002, C-003
 - `timestamp_ns_cast.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel
   `__repark_cast_timestamptz_ns__` is now the one conversion every write door reaches for a
   top-level `timestamptz_ns` column, as the naive kernel is for `timestamp_ns`. Its return

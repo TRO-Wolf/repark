@@ -135,7 +135,7 @@ fn out_of_range_widening_overflows_loud_under_ansi() {
 
 #[test]
 fn non_temporal_sources_refuse_at_planning() {
-    let error = SparkTimestampNsCast::new(false)
+    let error = SparkTimestampNsCast::new(false, CastOrigin::Written)
         .return_type(&[DataType::Int64])
         .unwrap_err()
         .to_string();
@@ -281,7 +281,7 @@ fn the_return_field_is_nullable_where_an_overflow_answers_null() {
     let instant = DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC")));
     let nullable = |zoned: bool, source: DataType| {
         let field = Arc::new(Field::new("x", source, false));
-        timestamp_ns_cast_udf(zoned)
+        timestamp_ns_cast_udf(zoned, CastOrigin::Written)
             .return_field_from_args(ReturnFieldArgs {
                 arg_fields: &[field],
                 scalar_arguments: &[None],
@@ -309,4 +309,97 @@ fn the_return_field_is_nullable_where_an_overflow_answers_null() {
         DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC")))
     ));
     assert!(nullable(true, DataType::Utf8));
+}
+
+fn kernel_call(udf: Arc<ScalarUDF>) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(udf, vec![lit("2026-01-02")]))
+}
+
+fn registered_kernel(name: &str) -> Arc<ScalarUDF> {
+    crate::instant_ts::functions()
+        .into_iter()
+        .find(|function| function.name() == name)
+        .unwrap()
+}
+
+#[test]
+fn the_registered_kernel_is_written() {
+    for name in [TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME] {
+        assert!(is_written_timestamp_ns_cast(&kernel_call(
+            registered_kernel(name)
+        )));
+    }
+    assert!(!is_written_timestamp_ns_cast(&lit("2026-01-02")));
+}
+
+#[test]
+fn a_kernel_built_by_engine_code_is_inserted() {
+    for zoned in [false, true] {
+        let built = timestamp_ns_cast_expr(lit("2026-01-02"), zoned);
+        assert!(is_timestamp_ns_cast(&built));
+        assert!(!is_written_timestamp_ns_cast(&built));
+    }
+}
+
+#[test]
+fn written_and_inserted_kernels_share_a_name_and_are_not_equal() {
+    for zoned in [false, true] {
+        let written = timestamp_ns_cast_udf(zoned, CastOrigin::Written);
+        let inserted = timestamp_ns_cast_udf(zoned, CastOrigin::Inserted);
+        assert_eq!(written.name(), inserted.name());
+        assert_ne!(written, inserted);
+        assert_ne!(kernel_call(Arc::clone(&written)), kernel_call(inserted));
+        assert_eq!(written, timestamp_ns_cast_udf(zoned, CastOrigin::Written));
+    }
+}
+
+#[test]
+fn explain_text_is_unchanged_by_origin() {
+    for zoned in [false, true] {
+        let written = kernel_call(timestamp_ns_cast_udf(zoned, CastOrigin::Written));
+        let inserted = kernel_call(timestamp_ns_cast_udf(zoned, CastOrigin::Inserted));
+        assert_eq!(written.to_string(), inserted.to_string());
+        assert_eq!(
+            written.schema_name().to_string(),
+            inserted.schema_name().to_string()
+        );
+        let plan = |expr: Expr| {
+            LogicalPlanBuilder::empty(true)
+                .project(vec![expr])
+                .unwrap()
+                .build()
+                .unwrap()
+                .display_indent()
+                .to_string()
+        };
+        assert_eq!(plan(written), plan(inserted));
+    }
+}
+
+#[tokio::test]
+async fn a_written_cast_stays_written_through_two_analyses() {
+    let ctx = datafusion::prelude::SessionContext::new();
+    for function in crate::instant_ts::functions() {
+        ctx.register_udf(function.as_ref().clone());
+    }
+    for rule in crate::analyzer_rules() {
+        ctx.add_analyzer_rule(rule);
+    }
+    let plan = ctx
+        .sql(&format!(
+            "SELECT {TIMESTAMP_NS_CAST_NAME}('2026-01-02') AS a, \
+             {TIMESTAMPTZ_NS_CAST_NAME}('2026-01-02') AS b"
+        ))
+        .await
+        .unwrap()
+        .into_unoptimized_plan();
+    let once = crate::analyze_eagerly(&ctx.state(), plan).unwrap();
+    let twice = crate::analyze_eagerly(&ctx.state(), once).unwrap();
+    let LogicalPlan::Projection(projection) = &twice else {
+        panic!("a projection stays a projection: {twice}");
+    };
+    assert_eq!(projection.expr.len(), 2);
+    for expr in &projection.expr {
+        assert!(is_written_timestamp_ns_cast(&expr.clone().unalias()));
+    }
 }

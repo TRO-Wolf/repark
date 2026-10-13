@@ -826,6 +826,31 @@ pins: rp-4-fork-repin/C-005, C-006
   parity, oracle-pinned in `python/repark/tests/branch_ops_1_truth.json`).
   Details: [call/map.md](call/map.md).
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
+- `catalog_ops.rs`, `ctas.rs`, `merge.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):**
+  `catalog_ops::iceberg_err` names this door's table property for a nanosecond type below
+  v3 that did not pass the create door (column DDL, `ADD COLUMN`):
+  `table property 'format-version' = '3'`, true for a new and for an existing table.
+  `execute_ctas` passes the door its `Target`; `merge.rs` sets the MERGE seat's own ask
+  (`merge_nanosecond_ask`).
+  pins: ice-tsns-create-door-1/C-012
+- `ctas/nanosecond_ask.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** (a child of `ctas.rs`,
+  because the crate root is at its module-line ceiling) the Spark door's adapter
+  between the session and `repark_iceberg::write::nanosecond_door`. `asked_columns(ctx,
+  plan)` is `None` when `repark.sql.allowImplicitTimestampNanos` is on, else the flags of
+  `repark_functions::timestamp_ns_cast::asked_nanosecond_columns` over the eagerly analyzed
+  plan; `nanosecond_ask` turns that into a `NanosecondAsk` carrying this door's remedies
+  (the cast can be written here; microseconds are `TIMESTAMP_NTZ` and `TIMESTAMP`). The flags form exists because
+  the `mergeSchema` seat drops and renames fields before it asks. `format-version` 3 alone
+  is not an ask (owner question Q1, provisional): the condition reads the setting only.
+  pins: ice-tsns-create-door-1/C-005, C-006
+- `ctas.rs`, `merge.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** `execute_ctas` derives the
+  Iceberg schema through `new_table_schema` with the ask of the analyzed query and, for a
+  replace, the replaced table's schema (loaded one statement earlier than before; nothing
+  else is reordered). The form is `RTAS` when the statement says `OR REPLACE` or `REPLACE`,
+  else `CTAS`. Every DataFrame create (`writeTo().create / createOrReplace / replace`,
+  `saveAsTable` create and overwrite) runs through this seat. `merge.rs` sets
+  `MergeSpec::nanosecond_ask`.
+  pins: ice-tsns-create-door-1/C-005, C-006
 - `ctas.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** a replace loads the existing table
   before the schema is built and the fork's `begin_replace` re-keys the query's fresh-id
   schema by name against the table's current schema (Java's RTAS); the staging reuses the

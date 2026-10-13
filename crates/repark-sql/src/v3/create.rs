@@ -11,17 +11,17 @@ use tempfile::TempDir;
 
 use crate::execute;
 
-struct Door {
-    ctx: SessionContext,
+pub(super) struct Door {
+    pub(super) ctx: SessionContext,
     catalogs: CatalogRegistry,
     catalog: Arc<dyn Catalog>,
-    warehouse: String,
+    pub(super) warehouse: String,
     _warehouse_dir: TempDir,
 }
 
 impl Door {
     /// Model: Grok 4.6 xHigh
-    async fn sql(
+    pub(super) async fn sql(
         &self,
         sql: &str,
     ) -> datafusion::error::Result<Vec<datafusion::arrow::record_batch::RecordBatch>> {
@@ -35,14 +35,14 @@ impl Door {
     }
 
     /// Model: Grok 4.6 xHigh
-    async fn ok(&self, sql: &str) {
+    pub(super) async fn ok(&self, sql: &str) {
         self.sql(sql)
             .await
             .unwrap_or_else(|err| panic!("`{sql}` must succeed: {err}"));
     }
 
     /// Model: Grok 4.6 xHigh
-    async fn err(&self, sql: &str) -> String {
+    pub(super) async fn err(&self, sql: &str) -> String {
         match self.sql(sql).await {
             Ok(_) => panic!("`{sql}` must fail"),
             Err(err) => err.to_string(),
@@ -50,7 +50,7 @@ impl Door {
     }
 
     /// Model: Grok 4.6 xHigh
-    async fn table(&self, namespace: &str, table: &str) -> iceberg::table::Table {
+    pub(super) async fn table(&self, namespace: &str, table: &str) -> iceberg::table::Table {
         self.catalog
             .load_table(&TableIdent::new(
                 NamespaceIdent::new(namespace.to_string()),
@@ -61,7 +61,7 @@ impl Door {
     }
 
     /// Model: Grok 4.6 xHigh
-    async fn table_exists(&self, namespace: &str, table: &str) -> bool {
+    pub(super) async fn table_exists(&self, namespace: &str, table: &str) -> bool {
         self.catalog
             .table_exists(&TableIdent::new(
                 NamespaceIdent::new(namespace.to_string()),
@@ -73,7 +73,7 @@ impl Door {
 }
 
 /// Model: Grok 4.6 xHigh
-async fn door_with_config(config: SessionConfig) -> Door {
+pub(super) async fn door_with_config(config: SessionConfig) -> Door {
     let warehouse_dir = TempDir::new().expect("warehouse tempdir");
     let warehouse = warehouse_dir
         .path()

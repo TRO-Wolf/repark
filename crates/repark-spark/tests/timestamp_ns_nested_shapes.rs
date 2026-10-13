@@ -391,8 +391,8 @@ async fn a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows()
             &session,
             &format!(
                 "CREATE TABLE ice.ns.t USING iceberg TBLPROPERTIES ('format-version'='3'\
-                 {properties}) AS SELECT id, named_struct('v', ns, 'n', 1) AS st, 0 AS k \
-                 FROM ice.ns.src"
+                 {properties}) AS SELECT id, named_struct('v', CAST(ns AS timestamp_ns), 'n', 1) AS st, \
+                 0 AS k FROM ice.ns.src"
             ),
         )
         .await;

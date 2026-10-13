@@ -251,7 +251,10 @@ pub(crate) fn reject_path_escape_ident(segment: &str, kind: &str) -> Result<()> 
 
 /// Fold an iceberg error into the engine's one error type.
 pub(crate) fn iceberg_err(err: iceberg::Error) -> DataFusionError {
-    DataFusionError::External(Box::new(err))
+    repark_iceberg::catalog::iceberg_to_datafusion_naming(
+        err,
+        "The table must be format version 3: table property format_version = 3.",
+    )
 }
 
 #[cfg(test)]

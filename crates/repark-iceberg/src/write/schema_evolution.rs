@@ -22,8 +22,7 @@ pub fn accepts_any_schema(table: &Table) -> bool {
         .is_some_and(|raw| raw.trim().eq_ignore_ascii_case("true"))
 }
 
-#[allow(clippy::missing_errors_doc)]
-pub fn incoming_schema(arrow: &ArrowSchema) -> Result<Schema> {
+pub(crate) fn incoming_schema(arrow: &ArrowSchema) -> Result<Schema> {
     arrow_schema_to_schema_auto_assign_ids(arrow).map_err(iceberg_err)
 }
 
