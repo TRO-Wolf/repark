@@ -3472,7 +3472,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the column unasked. `test_main_created_the_column_without_an_ask` holds the fixture to
   what it is: main made the nanosecond column in 44 unasked matrix cells and all 42 census
   cells. Red on main `f3f98823` before any product edit: 86 failed, 160 passed.
-  pins: ice-tsns-create-door-1/C-005, C-006, C-007
+  **Below format v3 (slice 4):** 19 doors in two zones. Nine unasked doors answer the
+  not-requested refusal (the door runs before the fork's version check); a written cast,
+  column DDL, `ADD COLUMN` and a cast through `mergeSchema` append answer
+  `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]` with the exact text; `LIKE`, `CACHE TABLE`, a
+  `REPLACE` of a missing table, `save(path)` and the two arity refusals keep main's text.
+  The table's state equals main's in every cell. The `saveAsTable` create cells of the
+  matrix pin the same text.
+  pins: ice-tsns-create-door-1/C-005, C-006, C-007, C-008
+- [_time_ice_tsns_create_door_1.py](_time_ice_tsns_create_door_1.py) —
+  **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the cost timer: median milliseconds, after one
+  warm run, of a CTAS, a `mode("overwrite").saveAsTable` and a `MERGE WITH SCHEMA EVOLUTION`
+  over a one-million-row microsecond table, and of `EXPLAIN` over a 200-column query. One
+  JSON object per process; it times whatever `repark` the interpreter imports, so main is
+  measured by putting a copy of the package holding main's native module first on
+  `PYTHONPATH`. The recorded sets are in `task/wo/ice-tsns-create-door-1/evidence/`.
+  pins: ice-tsns-create-door-1/C-010
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and

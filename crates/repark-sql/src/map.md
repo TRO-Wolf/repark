@@ -327,6 +327,12 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `with_partitioning_array` tail the same way and sheds a comment plus its doc line
   (ceiling 1513).
   pins: ice-error-conditions-1/C-011
+- `schema_ddl.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13, ruling Q4):** `iceberg_err` folds
+  through `repark_iceberg::catalog::iceberg_to_datafusion` instead of building
+  `DataFusionError::External` itself, so a nanosecond type below format v3 gets the same
+  refusal on this door as on the Spark door. Every other error keeps its value: the crate's
+  suite passes with no expectation edited.
+  pins: ice-tsns-create-door-1/C-008
 - `schema_ddl.rs` — `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, `DROP TABLE`, plus the
   shared catalog-handle / name-parts / identifier-hygiene helpers.
   `IF NOT EXISTS` runs the same location-conflict predicate as the Spark door

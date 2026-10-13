@@ -137,8 +137,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   evolved table already holds (matched case-insensitively) passes, and the same name with
   the other nanosecond type is new; a microsecond source is never refused; `format-version`
   3 alone is not an ask and the unasked column gets the same text on a v2 target; DDL and
-  `ADD COLUMN` naming the type create it.
-  pins: ice-tsns-create-door-1/C-005, C-006
+  `ADD COLUMN` naming the type create it. Below format v3 a written cast, column DDL and
+  `ADD COLUMN` naming the type answer `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]`, exact text.
+  pins: ice-tsns-create-door-1/C-005, C-006, C-008
 - `session_write_conf.rs`, `v3_timestamp_ns_door.rs` — **ICE-TSNS-CREATE-DOOR-1
   (2026-10-13):** the test sessions register the nanosecond cast kernels as the product
   registry does, with `CastOrigin::Written`. No expectation changed.

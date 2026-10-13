@@ -882,3 +882,17 @@ async fn native_ctas_of_a_plain_timestamp_expression_at_v3_is_refused_and_six_di
         &Type::Primitive(PrimitiveType::Timestamp)
     );
 }
+
+#[tokio::test]
+async fn native_ddl_naming_a_nanosecond_type_below_v3_names_the_format_remedy() {
+    let door = door_with_session_v3_opt_in().await;
+    assert_eq!(
+        door.err("CREATE TABLE ice.sales.below (id INT, ts timestamp_ns)")
+            .await,
+        "Error during planning: [TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] Invalid type for ts: \
+         timestamp_ns is not supported until v3. Create the table with TBLPROPERTIES \
+         ('format-version'='3') (writeTo: tableProperty) and \
+         `repark.sql.allowCreateFormatVersion3` = true."
+    );
+    assert!(!door.table_exists("sales", "below").await);
+}

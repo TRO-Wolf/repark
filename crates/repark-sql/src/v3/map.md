@@ -17,7 +17,9 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   nanoseconds, so `native_ctas_of_a_plain_timestamp_expression_at_v3_is_refused_and_six_digits_pass`
   holds the move from main: a `TIMESTAMP '…'` literal and `now()` are refused at format
   version 3, and `CAST(… AS TIMESTAMP(6))` creates a `timestamp` column.
-  pins: ice-tsns-create-door-1/C-005, C-006, C-011
+  `native_ddl_naming_a_nanosecond_type_below_v3_names_the_format_remedy` is this door's
+  row for the below-v3 refusal.
+  pins: ice-tsns-create-door-1/C-005, C-006, C-008, C-011
 - `create.rs` (zoned) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   `update_and_merge_into_timestamptz_ns_store_the_instant` runs
   `AnsiDialect::on_session_built`, then an `UPDATE`, a MERGE update and a MERGE insert of a

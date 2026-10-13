@@ -17,6 +17,24 @@ NOT_REQUESTED = (
     "`repark.sql.allowImplicitTimestampNanos` = true on the session. For microseconds write "
     "CAST(<expression> AS {micro})."
 )
+BELOW_V3 = (
+    "Error during planning: [TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] Invalid type for {name}: {nano} "
+    "is not supported until v3. Create the table with TBLPROPERTIES ('format-version'='3') "
+    "(writeTo: tableProperty) and `repark.sql.allowCreateFormatVersion3` = true."
+)
+V2_UNASKED_FORMS = {
+    "ctas_plain": "CTAS",
+    "cor": "RTAS",
+    "tempview": "CTAS",
+    "wtocreate": "CTAS",
+    "saveastable": "CTAS",
+    "wtoreplace": "RTAS",
+    "saveoverwrite": "RTAS",
+    "overwriteschema": "RTAS",
+    "evolving": "mergeSchema append",
+}
+V2_NAMED = {"cast_ns": "c", "ddl": "c", "addcol_v2base": "c2", "evolving_cast": "c"}
+V2_UNMOVED = ("like", "cache", "replace_missing", "savepath", "mergeschema", "wtoappendmerge")
 NANO_ICEBERG = ("timestamp_ns", "timestamptz_ns")
 EMPTY_REPLACED = {
     "format_version": 3,
@@ -55,12 +73,20 @@ def holds_nanoseconds(cell: dict[str, Any]) -> bool:
     return table is not None and any(kind in NANO_ICEBERG for _, kind in table["schema"])
 
 
+def below_v3_error(name: str, nano: str) -> dict[str, Any]:
+    """Return the refusal of a nanosecond type the statement asked for on a format v2 table."""
+    return {
+        "class": "AnalysisException",
+        "condition": "TIMESTAMP_NANOS_REQUIRES_FORMAT_V3",
+        "text": BELOW_V3.format(name=name, nano=nano),
+    }
+
+
 def below_v3(cell: dict[str, Any], column: str) -> None:
     """Assert a cell is the refusal of a nanosecond type on a format v2 table."""
     assert cell["table"] is None
     assert cell["files_unchanged"] is True
-    wanted = f"Invalid type for {column}: {doors.NANO_TYPES[column]} is not supported until v3"
-    assert wanted in cell["error"]["text"]
+    assert cell["error"] == below_v3_error(column, doors.NANO_TYPES[column])
 
 
 def test_main_created_the_column_without_an_ask() -> None:
@@ -327,3 +353,28 @@ def test_a_column_with_a_table_origin_is_not_asked(shape: str) -> None:
     cell = doors.in_session("UTC", False, shapes_cell, UNASKED_SHAPES[shape])
     assert cell["error"] == not_requested("CTAS", "c")
     assert cell["table"] is None
+
+
+def test_the_v2_doors_are_partitioned() -> None:
+    """Every recorded v2 door is unasked, named below v3, or keeps main's own refusal."""
+    assert sorted([*V2_UNASKED_FORMS, *V2_NAMED, *V2_UNMOVED]) == sorted(doors.V2_DOORS)
+    for zone in doors.ZONES:
+        for door in [*V2_UNASKED_FORMS, *V2_NAMED]:
+            text = MAIN["v2"][f"{zone}|{door}"]["error"]["text"]
+            assert text.startswith("DataInvalid => Invalid schema for v2:"), (zone, door)
+
+
+@pytest.mark.parametrize("door", doors.V2_DOORS)
+@pytest.mark.parametrize("zone", doors.ZONES)
+def test_a_nanosecond_type_below_format_v3(zone: str, door: str) -> None:
+    """Unasked it is not requested, asked or named it needs v3, and other refusals are main's."""
+    cell = doors.in_session(zone, False, doors.v2_cell, door)
+    main = MAIN["v2"][f"{zone}|{door}"]
+    assert cell["files_unchanged"] is True
+    assert cell["table"] == main["table"]
+    if door in V2_UNASKED_FORMS:
+        assert cell["error"] == not_requested(V2_UNASKED_FORMS[door], "c")
+    elif door in V2_NAMED:
+        assert cell["error"] == below_v3_error(V2_NAMED[door], "timestamp_ns")
+    else:
+        assert cell["error"] == main["error"]

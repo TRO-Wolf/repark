@@ -288,3 +288,52 @@ async fn ddl_and_add_column_naming_the_type_still_create_it() {
         ])
     );
 }
+
+#[tokio::test]
+async fn a_nanosecond_type_the_statement_asks_for_below_v3_names_the_format_remedy() {
+    let below = |name: &str, nano: &str| {
+        format!(
+            "Error during planning: [TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] Invalid type for \
+             {name}: {nano} is not supported until v3. Create the table with TBLPROPERTIES \
+             ('format-version'='3') (writeTo: tableProperty) and \
+             `repark.sql.allowCreateFormatVersion3` = true."
+        )
+    };
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = door(&warehouse, false).await;
+    let cast = select("cz", true);
+    for (sql, name, nano) in [
+        (
+            format!("CREATE TABLE ice.sales.t USING iceberg AS {cast}"),
+            "cz",
+            "timestamptz_ns",
+        ),
+        (
+            "CREATE TABLE ice.sales.t (id INT, c timestamp_ns) USING iceberg".to_string(),
+            "c",
+            "timestamp_ns",
+        ),
+    ] {
+        assert_eq!(
+            outcome(&ctx, &catalogs, &sql).await,
+            Err(below(name, nano)),
+            "{sql}"
+        );
+        assert_eq!(stored_types(&catalogs).await, None);
+    }
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id INT) USING iceberg",
+    )
+    .await;
+    assert_eq!(
+        outcome(
+            &ctx,
+            &catalogs,
+            "ALTER TABLE ice.sales.t ADD COLUMN c2 timestamp_ns"
+        )
+        .await,
+        Err(below("c2", "timestamp_ns"))
+    );
+}

@@ -32,7 +32,7 @@ nothing of it is touched).
 | C-005 | A query's Arrow schema becomes Iceberg columns only through `nanosecond_door`: the two old conversions are crate-private and all four outside callers pass a `NanosecondAsk`. A new nanosecond column that is not asked and not kept is refused there, by one function that builds the text. | `nanosecond_door_tests.rs` (9 tests); the crate no longer exports the old functions. | **PROVEN** | §5. Mutants m8, m9 killed. |
 | C-006 | Every create and evolution door refuses an unasked nanosecond column with the exact text and leaves the table's files as they were; a written cast, and the plain column with the session setting on, create what main created; a column the replaced or evolved table already holds passes. | `test_ice_tsns_create_door_1.py` (246 tests), `crates/repark-spark/src/tests/nanosecond_create_door.rs` (6), two native-door tests in `crates/repark-sql/src/v3/create.rs`. | **PROVEN** | §6. 86 of the facade pins were red on main `f3f98823`. Mutants m10, m11 killed. |
 | C-007 | A statement with no nanosecond output answers what main answered: 12 statements in two zones, cell for cell, and no other test of the four Rust crates or the facade suite changed its answer. | `test_statements_with_no_nanosecond_output_equal_main` (24); the suites. | **PROVEN** | §6, §7. One pre-existing test was re-seated (ruling Q2). |
-| C-008 | A nanosecond type below format v3 is refused with one text that names the remedy. | Slice 4. | **OPEN** | |
+| C-008 | A nanosecond type the statement asked for, kept or named, below format v3, is refused with one text that names the remedy, on both SQL doors; every other Iceberg error keeps its value. | `builders_tests.rs` (2), `test_a_nanosecond_type_below_format_v3` (38), one row per SQL door. | **PROVEN** | §9. |
 | C-009 | The parity registry carries the dated rows and this ledger the release-note sentence. | Slice 6. | **OPEN** | |
 | C-010 | The cost gate holds at 1.05 and the work order's gates pass. | Real ratios and exit codes. | **OPEN** | |
 | C-011 | On the native door a refusal names only remedies that door can write, and the move from main on that door is recorded for the owner. | `native_ctas_of_an_unasked_nanosecond_column_is_refused_and_a_kept_one_passes`, `native_ctas_of_a_plain_timestamp_expression_at_v3_is_refused_and_six_digits_pass`, `the_text_names_only_the_remedies_the_seat_can_write`. | **PROVEN** | §4 Q3, §8. Owner to accept or flip. |
@@ -249,3 +249,28 @@ Measured through `repark-sql` on this unit's source, v3 opt-in on.
 - A kept column passes on a native RTAS; column DDL naming the type creates it.
 - Open card, not filed here: a native spelling for the nanosecond cast, so the native door has
   a per-column ask.
+
+## 9. Below format v3 (C-008)
+
+One seat, `crates/repark-iceberg/src/catalog/builders.rs::iceberg_to_datafusion`: an
+`iceberg::Error` of kind `DataInvalid` whose message starts `Invalid schema for v` and whose
+every detail line names `timestamp_ns` or `timestamptz_ns` in the type position becomes
+the text below. Every fork message measured for a
+nanosecond type below v3 starts `Invalid schema for v2:`.
+
+``[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] {detail lines joined by "; "}. Create the table with TBLPROPERTIES ('format-version'='3') (writeTo: tableProperty) and `repark.sql.allowCreateFormatVersion3` = true.``
+
+The native door did not pass that seat (`schema_ddl::iceberg_err` built the error itself);
+ruling Q4 routes it through. Proof that every other native error keeps its value: the four
+crates' suites, 5,325 passed and 0 failed, no expectation edited.
+
+The v2 doors, 19 in two zones (ruling Q6; the work order's "15" is 16 in the census evidence):
+
+| Doors | Answer |
+|---|---|
+| `ctas_plain`, `cor`, `tempview`, `wtocreate`, `saveastable`, `wtoreplace`, `saveoverwrite`, `overwriteschema`, `evolving` (9) | refusal 1: the door runs before the fork's version check |
+| `cast_ns`, `ddl`, `addcol_v2base`, `evolving_cast` (4) | refusal 2, exact text |
+| `like`, `cache`, `replace_missing`, `savepath`, `mergeschema`, `wtoappendmerge` (6) | main's own text, byte for byte |
+
+In every cell the table's files are unchanged and its state equals main's. Main answered
+`DataInvalid => Invalid schema for v2:` in the first 13.

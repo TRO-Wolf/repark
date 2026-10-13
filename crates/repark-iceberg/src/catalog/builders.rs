@@ -203,5 +203,34 @@ pub(crate) fn clone_props<S: BuildHasher>(
 
 /// Fold an iceberg error into a DataFusion error so the session carries one engine error type.
 pub fn iceberg_to_datafusion(err: iceberg::Error) -> DataFusionError {
-    DataFusionError::External(Box::new(err))
+    match nanoseconds_below_v3(&err) {
+        Some(details) => DataFusionError::Plan(format!(
+            "[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] {details}. Create the table with TBLPROPERTIES \
+             ('format-version'='3') (writeTo: tableProperty) and \
+             `repark.sql.allowCreateFormatVersion3` = true."
+        )),
+        None => DataFusionError::External(Box::new(err)),
+    }
 }
+
+fn nanoseconds_below_v3(err: &iceberg::Error) -> Option<String> {
+    if err.kind() != iceberg::ErrorKind::DataInvalid
+        || !err.message().starts_with("Invalid schema for v")
+    {
+        return None;
+    }
+    let details: Vec<&str> = err
+        .message()
+        .lines()
+        .filter_map(|line| line.strip_prefix("- "))
+        .collect();
+    let names_nanoseconds = |line: &&str| {
+        line.contains(": timestamp_ns is not supported until v")
+            || line.contains(": timestamptz_ns is not supported until v")
+    };
+    (!details.is_empty() && details.iter().all(names_nanoseconds)).then(|| details.join("; "))
+}
+
+#[cfg(test)]
+#[path = "builders_tests.rs"]
+mod tests;
