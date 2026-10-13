@@ -19,13 +19,17 @@ DECLARED = "a timestamp, b timestamp"
 
 
 def frames(rows: int) -> dict[str, pd.DataFrame]:
-    """Return the frame with one nanosecond column and its twin with none."""
+    """Return the frame with no nanosecond column and its naive, UTC and New York twins with one."""
     nanos = np.arange(rows, dtype="int64") * STEP_NANOS + SEED_NANOS
     micros = pd.Series(nanos // 1_000).astype("datetime64[us]")
+    naive = pd.Series(nanos).astype("datetime64[ns]")
+    aware = naive.dt.tz_localize("UTC")
     return {
         "no_nanosecond_column": pd.DataFrame({"a": micros, "b": micros}),
-        "one_nanosecond_column": pd.DataFrame(
-            {"a": micros, "b": pd.Series(nanos).astype("datetime64[ns]")}
+        "one_nanosecond_column": pd.DataFrame({"a": micros, "b": naive}),
+        "one_utc_nanosecond_column": pd.DataFrame({"a": micros, "b": aware}),
+        "one_new_york_nanosecond_column": pd.DataFrame(
+            {"a": micros, "b": aware.dt.tz_convert("America/New_York")}
         ),
     }
 
@@ -50,7 +54,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--rows", type=int, default=1_000_000)
     parser.add_argument("--repeats", type=int, default=7)
-    parser.add_argument("--declared-repeats", type=int, default=3)
+    parser.add_argument("--declared-repeats", type=int, default=0)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     spark = (
@@ -62,9 +66,10 @@ def main() -> None:
     result: dict[str, Any] = {"rows": args.rows}
     for name, frame in made.items():
         result[name] = median_milliseconds(spark, frame, None, args.repeats)
-    result["one_nanosecond_column_declared_timestamp"] = median_milliseconds(
-        spark, made["one_nanosecond_column"], DECLARED, args.declared_repeats
-    )
+    if args.declared_repeats > 0:
+        result["one_nanosecond_column_declared_timestamp"] = median_milliseconds(
+            spark, made["one_nanosecond_column"], DECLARED, args.declared_repeats
+        )
     spark.stop()
     text = json.dumps(result)
     if args.output is not None:

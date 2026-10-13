@@ -3402,12 +3402,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   instant: Spark reads a naive wall in the driver machine's zone. The parity row is
   `ICE-TSNS-SQL-1-R-019`.
   pins: ice-tsns-frame-door-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012, C-014, C-015, C-016
+  **Fold 1 (2026-10-13), after a verify failed `c4efd79f`:** 244 tests. Added:
+  `test_instants_around_a_zone_transition_floor_on_the_ticks` (both passes of the repeated
+  hour, a whole-microsecond value and both sides of the skipped hour in New York, London and
+  Lord Howe; pandas and polars; three schemas; the expectation is the int64 floor, which is
+  main's answer under `c timestamp`); `test_the_lowest_and_highest_nanoseconds_floor` and
+  `test_the_int64_minimum_floors_without_wrapping`;
+  `test_a_categorical_of_nanoseconds_arrives_as_microseconds` (equal to the plain column;
+  the naive one under `c timestamp_ntz` equal to Spark);
+  `test_a_declared_type_that_is_not_a_timestamp_keeps_main` (`c bigint`, `c string`,
+  `c date` over six sources, main's cells recorded on `8c51fbc4`). The aware-microsecond pin
+  runs over New York, Asia/Tokyo and `+05:30`. No pin compares the cells where Spark itself
+  is lossy (the driver zone's repeated hour, the int64 extremes). The mutant table, the
+  verify stage's catalogue re-run and the append doors are in
+  `task/wo/ice-tsns-frame-door-1/evidence/fold-1.md`.
+  pins: ice-tsns-frame-door-1/C-017, C-018, C-019, C-020, C-021, C-023
 - [_time_ice_tsns_frame_door_1.py](_time_ice_tsns_frame_door_1.py) —
   **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** the cost timer: median milliseconds of
   `createDataFrame` + `count()` over a one-million-row pandas frame with no nanosecond
-  column, with one, and with one under a declared `timestamp` schema. One JSON object per
+  column, with one naive, one UTC and one New York nanosecond column (fold 1), and, with
+  `--declared-repeats`, with one under a declared `timestamp` schema. One JSON object per
   process; the recorded sets are in `task/wo/ice-tsns-frame-door-1/evidence/`.
-  pins: ice-tsns-frame-door-1/C-013
+  pins: ice-tsns-frame-door-1/C-013, C-022
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and

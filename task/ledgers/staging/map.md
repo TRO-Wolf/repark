@@ -745,21 +745,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-004) are recorded. The gate, the temporal `nvl` rewrite and written casts
   stay OPEN (C-005..C-007). No product code.
   `risk_tier: standard`. Branch `test/ice-tsns-coercion-1-slice-0`.
-- [ice-tsns-frame-door-1-ledger.md](ice-tsns-frame-door-1-ledger.md) —
-  **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** a pandas or polars nanosecond timestamp column
-  enters as microseconds, floored, as Spark 4.1.2 does. The live Spark oracle (C-001); the
-  floor step at the one seat and its pins: the microsecond twin, Spark's instants, the
-  pre-epoch floor, declared `timestamp_ntz`, declared `timestamp` unchanged, untouched and
-  nested columns, no warning, the create doors, polars (C-002..C-010); 235 tests re-seated
-  off pandas with no expectation changed (C-011); a declared `timestamp` over an aware
-  microsecond column answers UTC (C-012); cost, mutants, gates (C-013..C-015). Parity row
-  `ICE-TSNS-SQL-1-R-019` and the release-note sentence (C-016).
-  **Fold 1 (2026-10-13), after an independent verify failed `c4efd79f`:** the floor is on the
-  int64 ticks, never through local time (C-017); a categorical of nanoseconds is covered
-  (C-018); a declared non-timestamp type keeps main's answer (C-019). Mutants, the
-  verifier's catalogue, cost and the record gaps are OPEN until the fold's last step
-  (C-020..C-023). `risk_tier: standard`. Branch
-  `fix/ice-tsns-frame-door-1`.
 - [ice-tsns-merge-wall-1-ledger.md](ice-tsns-merge-wall-1-ledger.md) —
   **ICE-TSNS-MERGE-WALL-1 (2026-10-09), readiness finding R-007:** every write door stores
   the same nanosecond wall. Step 0: the review's test red on main (C-001), Spark 4.1.2 with

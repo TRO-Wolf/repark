@@ -3566,7 +3566,10 @@ still open is `isModifiable`.
 - **repark** — pandas / polars `datetime64[ns]` enters as microseconds, floored, as Spark
   4.1.2 does (measured 2026-10-13); before 1.5.6 the facade carried nanoseconds. Nested
   `ArrowDtype` nanoseconds are still carried (Spark refuses those frames). The floor is
-  Spark's: `-1 ns` is `-1 µs`, `-1001 ns` is `-2 µs`. The column is nullable and no warning
+  toward negative infinity on the int64 ticks, Spark's: `-1 ns` is `-1 µs`, `-1001 ns` is
+  `-2 µs`. It never goes through local time, so it answers in every repeated and skipped
+  hour and for every int64 value, `pd.Timestamp.min` and `.max` among them. A pandas
+  categorical of nanosecond timestamps is covered. The column is nullable and no warning
   is raised. Under no schema a naive column stays `timestamp[us]` and an aware column keeps
   its pandas zone label, as main's microsecond path does (Spark prints UTC and reads a naive
   wall in the driver machine's zone: its own question, not this row).
@@ -3576,27 +3579,41 @@ still open is `isModifiable`.
   from a temp view, `writeTo().create()`, `saveAsTable`) holds a `timestamp` /
   `timestamptz` column; before, it held `timestamp_ns` / `timestamptz_ns` on format v3 and
   refused with `Invalid schema for v2:` below it.
-  **Also moved, type label only (orchestrator ruling, provisional, 2026-10-13):**
-  `schema="c timestamp"` over an aware **microsecond** column whose zone is not UTC answers
+  **Appends:** a pandas or polars nanosecond frame appended to a `timestamp_ns` column now
+  stores microsecond precision (`writeTo().append()`, `insertInto`, `INSERT … SELECT` from
+  a temp view, `saveAsTable` in append mode; no error, no warning); before, all nine digits
+  were stored. Keeping them is the create-door card's session setting.
+  **Also moved (orchestrator ruling, provisional, 2026-10-13):** `schema="c timestamp"`
+  over an aware **microsecond** column whose zone is not UTC answers
   `timestamp[us, tz=UTC]`, Spark's type, with the same instants; before, it kept the source
-  label (`timestamp[us, tz=America/New_York]`).
-  **Not changed:** pandas `datetime64[ms]` / `[s]` stay `timestamp[ms]` / `[s]` (Spark:
+  label (`timestamp[us, tz=America/New_York]`). Visible on the Arrow type (so the schema
+  string and IPC bytes), the `toPandas()` dtype (`datetime64[us, UTC]`) and the `show()`
+  text (`…+00:00` where it printed `…-05:00`); `df.schema`, `collect()` and `explain` are
+  unchanged.
+  **Not changed:** under a declared type that is not a timestamp (`c bigint`, `c string`,
+  `c date`) a nanosecond column answers what main answered: the nanosecond integer, nine
+  digits, the day. pandas `datetime64[ms]` / `[s]` stay `timestamp[ms]` / `[s]` (Spark:
   microseconds). `schema="c timestamp_ntz"` over an **aware** column answers the UTC wall
   where Spark refuses (`FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME`); a nanosecond column there
-  raised `ArrowInvalid` before and now answers as the microsecond column always did. A
-  nanosecond pandas frame appended into an existing `timestamp_ns` column now stores
-  microsecond values; keeping the digits is the create-door card's session setting.
+  raised `ArrowInvalid` before and now answers as the microsecond column always did.
 - **Apache Spark** — `timestamp[us, tz=UTC]`, nullable, floored, no warning, for every unit
   and zone. *(oracle: recorded live, Spark 4.1.2 with pandas 3.0.6 and pyarrow 25.0.1 —
-  `python/repark/tests/ice_tsns_frame_door_1_spark.json`, 48 cells.)*
-- **Pin** — `python/repark/tests/test_ice_tsns_frame_door_1.py` (138 tests, two session
+  `python/repark/tests/ice_tsns_frame_door_1_spark.json`, 90 cells.)*
+  **Spark-side disclosure, not pinned:** where Spark's own conversion loses the instant
+  the facade keeps the true floor. An aware instant in the **driver machine's** repeated
+  hour is stored an hour off (`2026-11-01 05:30:00.000000001Z`, New York-aware, no schema:
+  Spark `1793514600000000`, floor `1793511000000000`); the int64 extremes of an aware
+  column wrap (`pd.Timestamp.min`: Spark `9223368674854775`, floor `-9223372036854776`) and
+  of a naive column raise; an 1883 local-mean-time instant is 238 seconds off.
+- **Pin** — `python/repark/tests/test_ice_tsns_frame_door_1.py` (244 tests, two session
   zones, Arrow type and int64 values); `test_boundary_shapes_parity.py` row
   `pandas_timestamp_unit_from_pandas_ns`, now a disclosure like its microsecond twin.
 - **Rationale** — FIXED 2026-10-13 by the owner's ruling of that day (parity, fixed at the
-  frame door). One step, `_floor_nanosecond_timestamp_column`, first in
-  `_normalize_frame_arrow_column`, the function every pandas and polars column passes:
-  `floor_temporal` then a safe cast, Arrow kernels on whole columns. Cost: about 17 ms per
-  million rows per nanosecond column; a frame with none is unchanged. Ledger
+  frame door). One step, `_floor_nanosecond_timestamp_column`, called once in
+  `_normalize_frame_arrow_column`, the function every pandas and polars column passes,
+  after the dictionary decode and only when no type or a timestamp type is declared: an
+  integer floor of the ticks, Arrow kernels on whole columns. Cost: about 16 ms per million
+  rows per nanosecond column, naive or aware; a frame with none is unchanged. Ledger
   `task/ledgers/completed/ice-tsns-frame-door-1-ledger.md`.
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
