@@ -1,0 +1,3290 @@
+{
+ "America/New_York|false|df|ns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|df|ns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|df|ns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|df|ns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|df|tzns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|df|tzns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|df|tzns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767341045123456789,
+     17999999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|df|tzns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "2026-01-02 03:04:05.1234567891969-12-31 23:59:59.999999999"
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|from_utc_where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|lag_default": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|lead": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|nth_value": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|struct": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "struct<c0: timestamp[ns], c1: null>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|struct_case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: int32>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|struct_json": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "{\"c0\":\"2026-01-01T22:04:05.123-05:00\",\"c1\":null}",
+     "{\"c0\":\"1969-12-31T19:00:00.000-05:00\",\"c1\":null}"
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|struct_typeof": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "struct<c0:timestamp_ntz,c1:void>",
+     "struct<c0:timestamp_ntz,c1:void>"
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|to_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|union_int": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: int32>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     },
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": 5
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|ns|union_str": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: string>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": "x"
+     },
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": "x"
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|from_utc_where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767341045123456789,
+     17999999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|lag_default": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767341045123456789,
+     17999999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|lead": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767341045123456789,
+     17999999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|nth_value": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "2026-01-02 03:04:05.1234567891969-12-31 23:59:59.999999999"
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|struct": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: null>",
+    "values": [
+     {
+      "c0": 1767341045123456789,
+      "c1": null
+     },
+     {
+      "c0": 17999999999999,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|struct_case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: int32>",
+    "values": [
+     {
+      "c0": 1767341045123456789,
+      "c1": 5
+     },
+     {
+      "c0": 17999999999999,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|struct_json": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "{\"c0\":\"2026-01-02T03:04:05.123-05:00\",\"c1\":null}",
+     "{\"c0\":\"1969-12-31T23:59:59.999-05:00\",\"c1\":null}"
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|struct_typeof": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "struct<c0:timestamp,c1:void>",
+     "struct<c0:timestamp,c1:void>"
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|to_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|union_int": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: int32>",
+    "values": [
+     {
+      "c0": 17999999999999,
+      "c1": null
+     },
+     {
+      "c0": 1767341045123456789,
+      "c1": null
+     },
+     {
+      "c0": 17999999999999,
+      "c1": 5
+     },
+     {
+      "c0": 1767341045123456789,
+      "c1": 5
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|false|sql|tzns|union_str": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: string>",
+    "values": [
+     {
+      "c0": 17999999999999,
+      "c1": "x"
+     },
+     {
+      "c0": 1767341045123456789,
+      "c1": null
+     },
+     {
+      "c0": 17999999999999,
+      "c1": null
+     },
+     {
+      "c0": 1767341045123456789,
+      "c1": "x"
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|df|ns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|df|ns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|df|ns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|df|ns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|df|tzns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|df|tzns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|df|tzns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767341045123456789,
+     17999999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|df|tzns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "2026-01-02 03:04:05.1234567891969-12-31 23:59:59.999999999"
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|from_utc_where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|lag_default": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|lead": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|nth_value": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|struct": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "struct<c0: timestamp[ns], c1: null>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|struct_case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: int32>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|struct_json": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "{\"c0\":\"2026-01-01T22:04:05.123-05:00\",\"c1\":null}",
+     "{\"c0\":\"1969-12-31T19:00:00.000-05:00\",\"c1\":null}"
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|struct_typeof": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "struct<c0:timestamp_ntz,c1:void>",
+     "struct<c0:timestamp_ntz,c1:void>"
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|to_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|union_int": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: int32>",
+    "values": [
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": 5
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|ns|union_str": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: string>",
+    "values": [
+     {
+      "c0": -1,
+      "c1": "x"
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": "x"
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|from_utc_where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767341045123456789,
+     17999999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|lag_default": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767341045123456789,
+     17999999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|lead": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767341045123456789,
+     17999999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|nth_value": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|struct": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: null>",
+    "values": [
+     {
+      "c0": 1767341045123456789,
+      "c1": null
+     },
+     {
+      "c0": 17999999999999,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|struct_case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: int32>",
+    "values": [
+     {
+      "c0": 1767341045123456789,
+      "c1": 5
+     },
+     {
+      "c0": 17999999999999,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|struct_json": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "{\"c0\":\"2026-01-02T03:04:05.123-05:00\",\"c1\":null}",
+     "{\"c0\":\"1969-12-31T23:59:59.999-05:00\",\"c1\":null}"
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|struct_typeof": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "struct<c0:timestamp,c1:void>",
+     "struct<c0:timestamp,c1:void>"
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|to_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|union_int": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: int32>",
+    "values": [
+     {
+      "c0": 1767341045123456789,
+      "c1": null
+     },
+     {
+      "c0": 17999999999999,
+      "c1": null
+     },
+     {
+      "c0": 1767341045123456789,
+      "c1": 5
+     },
+     {
+      "c0": 17999999999999,
+      "c1": 5
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|true|sql|tzns|union_str": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: string>",
+    "values": [
+     {
+      "c0": 17999999999999,
+      "c1": null
+     },
+     {
+      "c0": 1767341045123456789,
+      "c1": null
+     },
+     {
+      "c0": 17999999999999,
+      "c1": "x"
+     },
+     {
+      "c0": 1767341045123456789,
+      "c1": "x"
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|false|df|ns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|false|df|ns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|false|df|ns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|false|df|ns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "UTC|false|df|tzns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|false|df|tzns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|false|df|tzns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|false|df|tzns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|from_utc_where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|lag_default": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|lead": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|nth_value": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|struct": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "struct<c0: timestamp[ns], c1: null>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|struct_case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: int32>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|struct_json": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "{\"c0\":\"2026-01-02T03:04:05.123Z\",\"c1\":null}",
+     "{\"c0\":\"1970-01-01T00:00:00.000Z\",\"c1\":null}"
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|struct_typeof": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "struct<c0:timestamp_ntz,c1:void>",
+     "struct<c0:timestamp_ntz,c1:void>"
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|to_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|union_int": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: int32>",
+    "values": [
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": 5
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|ns|union_str": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: string>",
+    "values": [
+     {
+      "c0": -1,
+      "c1": "x"
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": "x"
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|from_utc_where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|lag_default": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|lead": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|nth_value": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|struct": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: null>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|struct_case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: int32>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|struct_json": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "{\"c0\":\"2026-01-02T03:04:05.123Z\",\"c1\":null}",
+     "{\"c0\":\"1970-01-01T00:00:00.000Z\",\"c1\":null}"
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|struct_typeof": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "struct<c0:timestamp,c1:void>",
+     "struct<c0:timestamp,c1:void>"
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|to_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|union_int": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: int32>",
+    "values": [
+     {
+      "c0": -1,
+      "c1": 5
+     },
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|false|sql|tzns|union_str": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: string>",
+    "values": [
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": "x"
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": "x"
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|true|df|ns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|true|df|ns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|true|df|ns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|true|df|ns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "UTC|true|df|tzns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|true|df|tzns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|true|df|tzns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|true|df|tzns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|from_utc_where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|lag_default": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|lead": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|nth_value": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "2026-01-02 03:04:05.1234567891969-12-31 23:59:59.999999999"
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|struct": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "struct<c0: timestamp[ns], c1: null>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|struct_case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: int32>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|struct_json": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "{\"c0\":\"2026-01-02T03:04:05.123Z\",\"c1\":null}",
+     "{\"c0\":\"1970-01-01T00:00:00.000Z\",\"c1\":null}"
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|struct_typeof": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "struct<c0:timestamp_ntz,c1:void>",
+     "struct<c0:timestamp_ntz,c1:void>"
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|to_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|union_int": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: int32>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": 5
+     },
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|ns|union_str": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns], c1: string>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": "x"
+     },
+     {
+      "c0": -1,
+      "c1": "x"
+     },
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|convert_timezone": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|from_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|from_utc_where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|lag": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|lag_default": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|lead": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     1767323045123456789,
+     -1
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|nth_value": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[ns, tz=UTC]",
+    "values": [
+     null,
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|string_agg": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "large_string",
+    "values": [
+     "1969-12-31 23:59:59.9999999992026-01-02 03:04:05.123456789"
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|struct": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: null>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|struct_case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: int32>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|struct_json": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "{\"c0\":\"2026-01-02T03:04:05.123Z\",\"c1\":null}",
+     "{\"c0\":\"1970-01-01T00:00:00.000Z\",\"c1\":null}"
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|struct_typeof": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "string",
+    "values": [
+     "struct<c0:timestamp,c1:void>",
+     "struct<c0:timestamp,c1:void>"
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|to_utc_is_null": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": false,
+    "type": "bool",
+    "values": [
+     true,
+     true
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|union_int": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: int32>",
+    "values": [
+     {
+      "c0": -1,
+      "c1": 5
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": 5
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ },
+ "UTC|true|sql|tzns|union_str": {
+  "columns": [
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "struct<c0: timestamp[ns, tz=UTC], c1: string>",
+    "values": [
+     {
+      "c0": 1767323045123456789,
+      "c1": "x"
+     },
+     {
+      "c0": -1,
+      "c1": null
+     },
+     {
+      "c0": -1,
+      "c1": "x"
+     },
+     {
+      "c0": 1767323045123456789,
+      "c1": null
+     }
+    ]
+   }
+  ]
+ }
+}
