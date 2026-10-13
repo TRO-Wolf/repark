@@ -1,0 +1,5234 @@
+[
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "PandasUDFType"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "PandasUDFType"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "PythonUDFColumn"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "PythonUDFColumn"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "UserDefinedFunction"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "UserDefinedFunction"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "UserDefinedTableFunction"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "UserDefinedTableFunction"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "abs"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "abs"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "acos"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "acos"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "acosh"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "acosh"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "add_months"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "add_months"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "aggregate"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "aggregate"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "approxCountDistinct"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "approxCountDistinct"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "approx_count_distinct"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "approx_count_distinct"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "approx_percentile"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "approx_percentile"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_agg"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_agg"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_append"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_append"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_compact"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_compact"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_contains"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_contains"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_distinct"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_distinct"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_except"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_except"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_insert"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_insert"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_intersect"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_intersect"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_join"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_join"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_max"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_max"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_min"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_min"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_position"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_position"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_prepend"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_prepend"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_remove"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_remove"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_repeat"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_repeat"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_size"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_size"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_sort"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "array_sort"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_union"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "array_union"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "arrays_overlap"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "arrays_overlap"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "arrays_zip"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "arrays_zip"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "arrow_udf"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "arrow_udf"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "arrow_udtf"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "arrow_udtf"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asc"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asc"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asc_nulls_first"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asc_nulls_first"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asc_nulls_last"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asc_nulls_last"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ascii"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ascii"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asin"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asin"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asinh"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "asinh"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "assert_true"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "assert_true"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "atan"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "atan"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "atan2"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "atan2"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "atanh"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "atanh"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "avg"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "avg"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "base64"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "base64"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bin"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bin"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_and"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_and"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_count"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_count"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_get"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_get"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_length"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_length"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_or"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_or"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_xor"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bit_xor"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_and_agg"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_and_agg"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_bit_position"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_bit_position"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_bucket_number"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_bucket_number"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_construct_agg"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_construct_agg"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_count"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_count"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_or_agg"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitmap_or_agg"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitwiseNOT"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitwiseNOT"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitwise_not"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bitwise_not"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bool_and"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bool_and"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bool_or"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bool_or"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "broadcast"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "broadcast"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bround"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bround"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "btrim"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "btrim"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bucket"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "bucket"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "call_function"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "call_function"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "call_udf"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "call_udf"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cardinality"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cardinality"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cbrt"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cbrt"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ceil"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ceil"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ceiling"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ceiling"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "char"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "char"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "char_length"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "char_length"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "character_length"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "character_length"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "chr"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "chr"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "coalesce"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "coalesce"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "col"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "col"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "collect_list"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "collect_list"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "collect_set"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "collect_set"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "column"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "column"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "concat"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "concat"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "concat_ws"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "concat_ws"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "contains"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "contains"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "conv"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "conv"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "convert_timezone"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "convert_timezone"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "corr"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "corr"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cos"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cos"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cosh"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cosh"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cot"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cot"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "count"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "count"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "countDistinct"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "countDistinct"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "count_distinct"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "count_distinct"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "count_if"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "count_if"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "covar_pop"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "covar_pop"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "covar_samp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "covar_samp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "crc32"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "crc32"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "create_map"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "create_map"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "csc"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "csc"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cume_dist"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "cume_dist"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "curdate"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "curdate"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "currentDate"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "currentDate"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "currentTimestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "currentTimestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_catalog"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_catalog"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_database"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_database"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_date"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_date"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_schema"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_schema"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_time"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_time"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_timestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_timestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_timezone"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_timezone"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_user"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "current_user"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_add"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_add"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_diff"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_diff"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_format"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_format"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_from_unix_date"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_from_unix_date"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_part"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_part"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_sub"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "date_sub"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "date_trunc"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "date_trunc"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dateadd"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dateadd"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "datediff"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "datediff"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "datepart"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "datepart"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "day"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "day"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dayname"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dayname"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dayofmonth"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dayofmonth"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dayofweek"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dayofweek"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dayofyear"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dayofyear"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "days"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "days"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "decode"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "decode"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "degrees"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "degrees"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dense_rank"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "dense_rank"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "desc"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "desc"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "desc_nulls_first"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "desc_nulls_first"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "desc_nulls_last"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "desc_nulls_last"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "e"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "e"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "element_at"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "element_at"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "elt"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "elt"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "encode"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "encode"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "endswith"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "endswith"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "equal_null"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "equal_null"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "every"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "every"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "exists"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "exists"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "exp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "exp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "explode"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "explode"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "explode_outer"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "explode_outer"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "expm1"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "expm1"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "expr"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "expr"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "extract"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "extract"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "factorial"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "factorial"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "filter"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "filter"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "find_in_set"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "find_in_set"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "first"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "first"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "first_value"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "first_value"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "flatten"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "flatten"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "floor"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "floor"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "forall"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "forall"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "format_number"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "format_number"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "format_string"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "format_string"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "from_csv"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "from_csv"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "from_json"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "from_json"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "from_unixtime"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "from_unixtime"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "from_utc_timestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "from_utc_timestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "from_xml"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "from_xml"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "get"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "get"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "get_json_object"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "get_json_object"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "getbit"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "getbit"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "greatest"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "greatest"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "grouping"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "grouping"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "grouping_id"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "grouping_id"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hash"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hash"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hex"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hex"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hour"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hour"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hours"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hours"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hypot"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "hypot"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ifnull"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ifnull"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ilike"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ilike"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "initcap"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "initcap"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "inline"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "inline"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "inline_outer"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "inline_outer"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "input_file_name"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "input_file_name"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "instr"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "instr"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "is_valid_utf8"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "is_valid_utf8"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "isnan"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "isnan"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "isnotnull"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "isnotnull"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "isnull"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "isnull"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "json_array_length"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "json_array_length"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "json_object_keys"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "json_object_keys"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "json_tuple"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "json_tuple"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "kurtosis"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "kurtosis"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lag"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lag"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "last"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "last"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "last_day"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "last_day"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "last_value"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "last_value"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lcase"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lcase"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lead"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lead"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "least"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "least"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "left"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "left"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "length"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "length"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "levenshtein"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "levenshtein"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "like"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "like"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "listagg"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "listagg"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lit"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lit"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ln"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ln"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "localtimestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "localtimestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "locate"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "locate"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "log"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "log"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "log10"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "log10"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "log1p"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "log1p"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "log2"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "log2"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lower"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lower"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lpad"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "lpad"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ltrim"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ltrim"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_date"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_date"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_dt_interval"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_dt_interval"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_interval"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_interval"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_time"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_time"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "make_timestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_timestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "make_timestamp_ltz"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_timestamp_ltz"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "make_timestamp_ntz"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_timestamp_ntz"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_valid_utf8"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_valid_utf8"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_ym_interval"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "make_ym_interval"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_concat"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_concat"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_contains_key"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_contains_key"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_entries"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_entries"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_filter"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_filter"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_from_arrays"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_from_arrays"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_from_entries"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_from_entries"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_keys"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_keys"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_values"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_values"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_zip_with"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "map_zip_with"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "mask"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "mask"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "max"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "max"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "md5"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "md5"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "mean"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "mean"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "median"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "median"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "min"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "min"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "minute"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "minute"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "mode"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "mode"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "monotonically_increasing_id"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "monotonically_increasing_id"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "month"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "month"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "monthname"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "monthname"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "months"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "months"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "months_between"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "months_between"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "named_struct"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "named_struct"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nanvl"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nanvl"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "negate"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "negate"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "negative"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "negative"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "next_day"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "next_day"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "now"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "now"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nth_value"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nth_value"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ntile"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ntile"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "nullif"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "nullif"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nullifzero"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nullifzero"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nvl"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nvl"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nvl2"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "nvl2"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "octet_length"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "octet_length"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "overlay"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "overlay"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "pandas_udf"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "pandas_udf"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "parse_url"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "parse_url"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "percent_rank"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "percent_rank"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "percentile_approx"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "percentile_approx"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "pi"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "pi"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "pmod"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "pmod"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "posexplode"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "posexplode"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "posexplode_outer"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "posexplode_outer"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "position"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "position"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "positive"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "positive"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "pow"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "pow"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "power"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "power"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "printf"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "printf"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "quarter"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "quarter"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "quote"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "quote"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "radians"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "radians"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "raise_error"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "raise_error"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rand"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rand"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "randn"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "randn"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "random"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "random"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "randstr"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "randstr"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rank"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rank"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "reduce"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "reduce"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_count"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_count"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_extract"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_extract"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_extract_all"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_extract_all"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_instr"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_instr"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_like"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_like"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_replace"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_replace"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_substr"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regexp_substr"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_avgx"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_avgx"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_avgy"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_avgy"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_count"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_count"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_intercept"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_intercept"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_r2"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_r2"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_slope"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_slope"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_sxx"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_sxx"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_sxy"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_sxy"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_syy"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "regr_syy"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "repeat"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "repeat"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "replace"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "replace"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "reverse"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "reverse"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "right"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "right"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rint"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rint"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rlike"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rlike"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "round"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "round"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "row_number"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "row_number"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rpad"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rpad"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rtrim"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "rtrim"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "schema_of_csv"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "schema_of_csv"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "schema_of_json"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "schema_of_json"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "schema_of_xml"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "schema_of_xml"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sec"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sec"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "second"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "second"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sentences"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sentences"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sequence"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sequence"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "session_user"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "session_user"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "session_window"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "session_window"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sha"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sha"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sha1"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sha1"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sha2"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sha2"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftLeft"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftLeft"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftRight"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftRight"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftRightUnsigned"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftRightUnsigned"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftleft"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftleft"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftright"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftright"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftrightunsigned"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shiftrightunsigned"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shuffle"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "shuffle"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sign"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sign"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "signum"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "signum"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sin"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sin"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sinh"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sinh"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "size"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "size"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "skewness"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "skewness"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "slice"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "slice"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "some"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "some"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sort_array"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "sort_array"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "soundex"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "soundex"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "spark_partition_id"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "spark_partition_id"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "split"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "split"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "split_part"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "split_part"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sqrt"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sqrt"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "stack"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "stack"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "startswith"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "startswith"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "std"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "std"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "stddev"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "stddev"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "stddev_pop"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "stddev_pop"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "stddev_samp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "stddev_samp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "str_to_map"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "str_to_map"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "string_agg"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "string_agg"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "struct"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "struct"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "substr"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "substr"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "substring"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "substring"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "substring_index"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "substring_index"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sum"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "sum"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "tan"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "tan"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "tanh"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "tanh"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "time_diff"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "time_diff"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "time_trunc"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "time_trunc"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_add"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_add"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_diff"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_diff"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_micros"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_micros"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_millis"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_millis"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_seconds"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "timestamp_seconds"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "toDegrees"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "toDegrees"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "toRadians"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "toRadians"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_binary"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_binary"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_char"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_char"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "to_date"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "to_date"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_json"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_json"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_number"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_number"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_time"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_time"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "to_timestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "to_timestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "to_timestamp_ltz"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "to_timestamp_ltz"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "to_timestamp_ntz"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "to_timestamp_ntz"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_unix_timestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_unix_timestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "to_utc_timestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_utc_timestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_varchar"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "to_varchar"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "transform"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "transform"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "transform_keys"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "transform_keys"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "transform_values"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "transform_values"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "translate"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "translate"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "trim"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "trim"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "trunc"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "trunc"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_add"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_add"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_avg"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_avg"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_divide"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_divide"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_element_at"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_element_at"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_make_interval"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_make_interval"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "try_make_timestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_make_timestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "try_make_timestamp_ltz"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_make_timestamp_ltz"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "try_make_timestamp_ntz"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_make_timestamp_ntz"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_mod"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_mod"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_multiply"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_multiply"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_parse_url"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_parse_url"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_subtract"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_subtract"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_sum"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_sum"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_to_binary"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_to_binary"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "try_to_date"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "try_to_date"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_to_number"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_to_number"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_to_time"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_to_time"
+ },
+ {
+  "form": "first",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "try_to_timestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": true,
+  "main_answered": true,
+  "name": "try_to_timestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_url_decode"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_url_decode"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_validate_utf8"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "try_validate_utf8"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "typeof"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "typeof"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ucase"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "ucase"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "udf"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "udf"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "udtf"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "udtf"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unbase64"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unbase64"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unhex"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unhex"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "uniform"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "uniform"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_date"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_date"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_micros"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_micros"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_millis"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_millis"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_seconds"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_seconds"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_timestamp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "unix_timestamp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "upper"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "upper"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "url_decode"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "url_decode"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "url_encode"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "url_encode"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "user"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "user"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "uuid"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "uuid"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "validate_utf8"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "validate_utf8"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "var_pop"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "var_pop"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "var_samp"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "var_samp"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "variance"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "variance"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "version"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "version"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "weekday"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "weekday"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "weekofyear"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "weekofyear"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "when"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "when"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "width_bucket"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "width_bucket"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "window"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "window"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "window_time"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "window_time"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "xxhash64"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "xxhash64"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "year"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "year"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "years"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "years"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "zeroifnull"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "zeroifnull"
+ },
+ {
+  "form": "first",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "zip_with"
+ },
+ {
+  "form": "second",
+  "head_answered": false,
+  "main_answered": false,
+  "name": "zip_with"
+ }
+]

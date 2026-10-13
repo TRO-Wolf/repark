@@ -46,7 +46,13 @@ pins the narrowed rewrite from the facade — read Arrow types and ticks equal m
 (`timestamp[us]`), frames and CTAS columns equal main (`TimestampType`), the 9,600-cell
 narrow census is main-or-twin only, the registry sweep refuses nothing main answers,
 12 read EXPLAINs carry no store kernel, and the written-cast-to-nanoseconds read keeps
-its digits and equals the twin. pins: ice-tsns-coercion-1/C-005
+its digits and equals the twin. `_record_ice_tsns_coercion_1_narrow_census.py` measures
+the full pin-6 space on the head against the slice-0 roles (statement with the live
+text, twin; main-first) into `ice_tsns_coercion_1_narrow_census.json` (8,320 main,
+1,280 twin, 0 neither).
+`_record_ice_tsns_coercion_1_narrow_sweep.py` runs every catalog function over an ns
+site on two modules into `ice_tsns_coercion_1_narrow_sweep.json` (872 cells, nothing
+refuses where main answers). pins: ice-tsns-coercion-1/C-005
 
 ICE-TSNS-COERCION-1 slice 1 fold 1 (2026-10-12): `test_ice_tsns_coercion_1_slice1_fold1.py`
 pins the twelve verifier shapes plus the struct probes — 15 SQL shapes and 4 DataFrame
