@@ -465,9 +465,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `applyInPandas` (grouped and cogrouped) reconcile output with the declared schema. Where the
   declared type is a microsecond timestamp and the yielded column is the same kind in
   nanoseconds (same zone label, at any list depth) the column is floored to microseconds —
-  `floor_temporal`, then a safe cast, so `-1 ns` stores `-1 µs`; list layers are rebuilt from
-  their own offsets with a null offset per null list (pyarrow refuses a mask on a sliced
-  list). A different zone label or kind is the same loud mismatch a microsecond column gets.
+  an integer floor of the int64 ticks toward negative infinity (truncating divide, minus one
+  where the remainder is negative), viewed as the declared type with its zone label, so
+  `-1 ns` stores `-1 µs`; list layers are rebuilt from their own offsets with a null offset
+  per null list (pyarrow refuses a mask on a sliced list). Follow-up 1 (2026-10-13) replaced
+  the first form, `floor_temporal` then a safe cast: on a zoned column that kernel goes
+  through local time, raises `Local time is ambiguous` in a fall-back hour, fails or wraps
+  on the lowest ticks of the int64 range, and cost 111 ms per million rows on an
+  America/New_York column against 15 for the integer floor (naive: 15 both). A different zone label or kind is the same loud mismatch a microsecond column gets.
   `core.py`'s bridge loop keeps the returned batch on the line that called the check.
   `grouped_arrow._pandas_result_to_arrow_batches` used to stop a lossy
   `timestamp[ns] → timestamp[us…]` pandas conversion with its own error; that one case now

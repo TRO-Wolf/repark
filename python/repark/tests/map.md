@@ -33,6 +33,13 @@ pins: ice-tsns-coercion-1/C-005
 cells relate to main's ticks: 39 equal, 26 differ, and the 26 are exactly the cells of one
 rule (source `ns` in America/New_York; in UTC the DataFrame-door `frame` shape and the
 Python doors, where main cut `-1 ns` toward zero). pins: ice-tsns-coercion-1/C-005
+Follow-up 1 pins: `test_shared_check_floors_integer_ticks_and_keeps_the_zone_label` calls the
+shared check directly (naive, UTC and America/New_York labels; a fall-back and a
+spring-forward instant, the lowest and highest int64 ticks, a list layer) and asserts ticks
+and the returned type; `test_doors_floor_daylight_saving_and_range_edge_instants` sends the
+same instants through all three doors in an America/New_York session. Both were red on the
+`floor_temporal` form; the truncating-divide and dropped-label mutants each fail them.
+pins: ice-tsns-coercion-1/C-005
 
 ICE-TSNS-COERCION-1 slice 1 fold 1 (2026-10-12): `test_ice_tsns_coercion_1_slice1_fold1.py`
 pins the twelve verifier shapes plus the struct probes — 15 SQL shapes and 4 DataFrame

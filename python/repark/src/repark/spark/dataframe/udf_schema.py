@@ -57,8 +57,10 @@ def _floor_to_declared_microseconds(column: Any, want: Any) -> Any:
     """Floor a nanosecond-twin column to the declared microsecond type.
 
     Notes:
-        The floor runs on the innermost values. Each list layer is rebuilt from its own
-        offsets, with a null offset where the list is null.
+        The floor is integer arithmetic on the int64 ticks, toward negative infinity. It
+        never reads local time. The result is viewed as the declared type, zone label
+        included. Each list layer is rebuilt from its own offsets, with a null offset
+        where the list is null.
     """
     import pyarrow as pa
     import pyarrow.compute as pc
@@ -68,7 +70,10 @@ def _floor_to_declared_microseconds(column: Any, want: Any) -> Any:
     while not pa.types.is_timestamp(target):
         layers.append((values, target))
         values, target = values.values, target.value_type
-    floored = pc.floor_temporal(values, 1, "microsecond").cast(target)
+    nanoseconds = values.cast(pa.int64())
+    quotient = pc.divide(nanoseconds, 1000)
+    remainder = pc.subtract(nanoseconds, pc.multiply(quotient, 1000))
+    floored = pc.subtract(quotient, pc.less(remainder, 0).cast(pa.int64())).view(target)
     for layer, layer_type in reversed(layers):
         offsets = layer.offsets
         if layer.null_count:
