@@ -3348,6 +3348,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-TSNS-COERCION-1 slice 0:** the cost-baseline timer, three sets of fifteen on the
   installed module.
   pins: ice-tsns-coercion-1/C-004
+- [_record_ice_tsns_frame_door_1.py](_record_ice_tsns_frame_door_1.py) +
+  [ice_tsns_frame_door_1_spark.json](ice_tsns_frame_door_1_spark.json) —
+  **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** the recorder and what Spark 4.1.2 (pandas 3.0.6,
+  pyarrow 25.0.1) answers for `createDataFrame` of a pandas nanosecond timestamp frame: seven
+  sources (naive, UTC, New York, naive and UTC before the epoch, a naive `ArrowDtype`, a UTC
+  column with no NULL) in two session zones under no schema, `c timestamp` and
+  `c timestamp_ntz`, 42 cells. Each cell holds the Spark type, the Arrow type, nullability,
+  the int64 microseconds and every warning, or the first line of the refusal. Every value is
+  floored (`-1 ns` is `-1 µs`, `-1001 ns` is `-2 µs`), every answer is nullable, no cell
+  warns. Spark reads a naive wall in the zone of the driver machine, recorded as
+  `driver_zone`: naive cells under no schema and `c timestamp` are that machine's answer and
+  no pin compares them. Run it under an interpreter that has `pyspark==4.1.2` and pandas
+  (`--output <path>`); it opens one session per zone over a warehouse of its own under the
+  system temporary directory. `sources()` is imported by the pins, so both sides build the
+  same frames.
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
