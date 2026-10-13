@@ -1,5 +1,8 @@
 # Card ICE-TSNS-NARROW-REFUSE-1: a narrowing the analyzer inserted refuses by name; a narrowing the user wrote stores
 
+**Status 2026-10-13 (owner):** PARKED — PR #1027 closed unmerged, superseded by
+[ICE-TSNS-TYPE-PLANNER-1](ice-tsns-type-planner-1-card-2026-10-13.md).
+
 **Date:** 2026-10-10. **Filed by:** the v1.5.4 docs lane (Claude Haiku 5.5), from the owner's ruling of 2026-10-10 on parity row R-017.
 
 **Status:** open. Target v1.5.5. One Opus unit.

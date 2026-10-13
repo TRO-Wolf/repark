@@ -1,5 +1,8 @@
 # Card ICE-TSNS-COERCION-1: nanosecond-aware type coercion keeps nanoseconds beside an untyped NULL
 
+**Status 2026-10-13 (owner):** PARKED — PR #1042 closed unmerged, superseded by
+[ICE-TSNS-TYPE-PLANNER-1](ice-tsns-type-planner-1-card-2026-10-13.md).
+
 **Date:** 2026-10-10. **Filed by:** the v1.5.4 docs lane (Claude Haiku 5.5), from the owner's ruling of 2026-10-10 on parity row R-017.
 
 **Status:** open. No release assigned.

@@ -810,3 +810,9 @@ declines it (a dated ruling in the intake, then the archive).
   `UInt64 is not supported`. Measures Spark 4.1.2 on the CTAS shape before the refusal lands. `EXPLAIN ANALYZE <write>`
   and `PREPARE` / `EXECUTE` run the write body, documented with no parity claim. Records 36 of 48 top-level
   `EXPLAIN ANALYZE INSERT` nanosecond cells failing with a DataFusion internal error.
+- [ice-tsns-type-planner-1-card-2026-10-13.md](ice-tsns-type-planner-1-card-2026-10-13.md) — **card
+  ICE-TSNS-TYPE-PLANNER-1 (2026-10-13, open, target v1.5.6, grade A):** the SQL type name
+  decides the unit, so a nanosecond cast means nanoseconds (parity row R-017 primary; R-010,
+  R-013, R-018(1) measured against the head; R-009 stays its own unit). Supersedes the parked
+  ICE-TSNS-NARROW-REFUSE-1 (#1027) and ICE-TSNS-COERCION-1 (#1042). Sequence: this docs PR,
+  step 0 on Muse xhigh, one Opus 5.5 high executor, CI green, one scoped Opus 5.5 high verifier.
