@@ -95,7 +95,10 @@ def _pandas_result_to_arrow_batches(
         KeyError,
     ) as error:
         error_text = str(error)
-        if (
+        lossy_timestamp = (
+            "Casting from timestamp[ns" in error_text and "to timestamp[us" in error_text
+        )
+        if not lossy_timestamp and (
             "Conversion failed" in error_text
             or "not in range" in error_text
             or "Could not convert" in error_text

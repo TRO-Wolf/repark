@@ -22,6 +22,13 @@ mismatch, the microsecond rule) and is pinned as that refusal. pins: ice-tsns-co
 in both zones, recorded on live Spark 4.1.2 by
 `_record_ice_tsns_coercion_1_slice1_fold2_spark.py` (`typeof` plus microsecond ticks) — and
 asserts kind, unit and ticks. pins: ice-tsns-coercion-1/C-005
+Door pins in the same file: `test_map_in_arrow_floors_nanoseconds_to_the_declared_microseconds`
+(`-1 ns → -1 µs`, `-1001 ns → -2 µs`, nulls kept, naive and zoned),
+`test_map_in_arrow_floors_nanoseconds_inside_lists` (null lists, a sliced batch, two list
+layers), `test_map_in_arrow_refuses_a_nanosecond_column_of_another_kind` (each refusal equals
+the microsecond column's refusal), `test_pandas_doors_floor_nanoseconds_to_the_declared_microseconds`
+and `test_apply_in_pandas_refuses_a_naive_nanosecond_column_under_a_zoned_type`.
+pins: ice-tsns-coercion-1/C-005
 
 ICE-TSNS-COERCION-1 slice 1 fold 1 (2026-10-12): `test_ice_tsns_coercion_1_slice1_fold1.py`
 pins the twelve verifier shapes plus the struct probes — 15 SQL shapes and 4 DataFrame

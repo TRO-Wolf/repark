@@ -460,6 +460,23 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `udf_schema.py` owns mapInArrow schema coercion and batch validation (DFCORE-1, moved from
   `core.py`). Arrow widths match the session `createDataFrame` path, so `SMALLINT` / `TINYINT`
   / `FLOAT` stay narrow. pins: dfcore-1/C-006
+  **ICE-TSNS-COERCION-1 slice 1 fold 2 (2026-10-13):** `_validate_map_in_arrow_batch` now
+  returns the batch it checked. It is the one place `mapInArrow`, `mapInPandas` and
+  `applyInPandas` (grouped and cogrouped) reconcile output with the declared schema. Where the
+  declared type is a microsecond timestamp and the yielded column is the same kind in
+  nanoseconds (same zone label, at any list depth) the column is floored to microseconds —
+  `floor_temporal`, then a safe cast, so `-1 ns` stores `-1 µs`; list layers are rebuilt from
+  their own offsets with a null offset per null list (pyarrow refuses a mask on a sliced
+  list). A different zone label or kind is the same loud mismatch a microsecond column gets.
+  `core.py`'s bridge loop keeps the returned batch on the line that called the check.
+  `grouped_arrow._pandas_result_to_arrow_batches` used to stop a lossy
+  `timestamp[ns] → timestamp[us…]` pandas conversion with its own error; that one case now
+  takes the function's existing schema-less conversion so the column reaches the shared
+  floor. Its zone rule therefore becomes the shared one: a naive nanosecond column with
+  sub-microsecond digits under a declared zoned `timestamp` is refused with the bridge's
+  mismatch text (before: `failed converting pandas output … would lose data`).
+  `createDataFrame(pandas, schema)` is not this door (ICE-TSNS-FRAME-DOOR-1).
+  pins: ice-tsns-coercion-1/C-005
 - `grouped_udf.py` owns contiguous-group assembly for the applyInPandas bridge (DFCORE-1,
   moved from `core.py`). The key-missing sentinel marks "no group seen yet" in the single-pass
   boundary scan; it is never a real key. An empty returned frame with no columns is an empty

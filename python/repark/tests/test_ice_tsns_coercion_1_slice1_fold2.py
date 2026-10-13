@@ -5,17 +5,22 @@ pins: ice-tsns-coercion-1/C-005
 
 from __future__ import annotations
 
+import functools
 import json
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import _ice_tsns_coercion_1_doors as doors
 import _record_ice_tsns_coercion_1_slice1_fold2 as fold2
 import _record_ice_tsns_coercion_1_slice1_fold2_spark as fold2_spark
+import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 from _ice_tsns_coercion_1_spellings import SRC
+
+from repark.errors import PySparkException
 
 EXPECTED_FOLD2_CELLS = 68
 EXPECTED_SPARK_CELLS = 48
@@ -143,3 +148,158 @@ def test_microsecond_sequence_forms_equal_live_spark(tmp_path: Path) -> None:
                     assert str(column.type.value_type.unit) == "us", cell
         finally:
             spark.stop()
+
+
+FINE = 1767323045123456789
+NANOSECOND_TICKS = [FINE, -1, -1000, -1001, None]
+FLOORED_TICKS = [FINE // 1000, -1, -1, -2, None]
+
+
+def _replace_batches(batches: Iterator[Any], *, table: pa.Table) -> Iterator[Any]:
+    """Drain the input and yield ``table`` instead."""
+    for _ in batches:
+        pass
+    yield from table.to_batches()
+
+
+def _replace_frames(frames: Iterator[Any], *, frame: pd.DataFrame) -> Iterator[Any]:
+    """Drain the input and yield ``frame`` instead."""
+    for _ in frames:
+        pass
+    yield frame
+
+
+def _replace_group(group: pd.DataFrame, *, frame: pd.DataFrame) -> pd.DataFrame:
+    """Return ``frame`` for the one group."""
+    assert len(group) == 1
+    return frame
+
+
+def _through_map_in_arrow(spark: Any, column: pa.Array, declared: str) -> pa.Table:
+    """Return what ``mapInArrow`` stores for one yielded column."""
+    table = pa.table({"v": column})
+    parent = spark.sql("SELECT 1 AS id")
+    return parent.mapInArrow(functools.partial(_replace_batches, table=table), declared).toArrow()
+
+
+def _ticks(table: pa.Table) -> list[Any]:
+    """Return column ``v`` as raw ticks."""
+    return pc.cast(table.column("v").combine_chunks(), pa.int64()).to_pylist()
+
+
+def _nanosecond_frame(zone: str | None) -> pd.DataFrame:
+    """Return a pandas frame holding the nanosecond ticks in ``zone``."""
+    column = pa.array(NANOSECOND_TICKS, pa.timestamp("ns", zone))
+    return pa.table({"v": column}).to_pandas()
+
+
+def test_map_in_arrow_floors_nanoseconds_to_the_declared_microseconds(tmp_path: Path) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — floor, never toward zero, nulls kept."""
+    spark = doors.open_session("UTC", tmp_path)
+    try:
+        for zone, declared in ((None, "v timestamp_ntz"), ("UTC", "v timestamp")):
+            column = pa.array(NANOSECOND_TICKS, pa.timestamp("ns", zone))
+            stored = _through_map_in_arrow(spark, column, declared)
+            assert stored.schema.field("v").type == pa.timestamp("us", zone), declared
+            assert _ticks(stored) == FLOORED_TICKS, declared
+            exact = pa.array(FLOORED_TICKS, pa.timestamp("us", zone))
+            assert _ticks(_through_map_in_arrow(spark, exact, declared)) == FLOORED_TICKS
+    finally:
+        spark.stop()
+
+
+def test_map_in_arrow_floors_nanoseconds_inside_lists(tmp_path: Path) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — list layers, null lists and slices survive."""
+    spark = doors.open_session("UTC", tmp_path)
+    rows = [[FINE, None], None, [-1], [], [-1001, -1000]]
+    floored = [[FINE // 1000, None], None, [-1], [], [-2, -1]]
+    try:
+        column = pa.array(rows, pa.list_(pa.timestamp("ns")))
+        stored = _through_map_in_arrow(spark, column, "v array<timestamp_ntz>")
+        values = stored.column("v").combine_chunks()
+        assert values.type.value_type == pa.timestamp("us")
+        assert pc.cast(values, pa.list_(pa.int64())).to_pylist() == floored
+        sliced = _through_map_in_arrow(spark, column.slice(1), "v array<timestamp_ntz>")
+        values = sliced.column("v").combine_chunks()
+        assert pc.cast(values, pa.list_(pa.int64())).to_pylist() == floored[1:]
+        nested = pa.array([rows, None, [[-1]]], pa.list_(pa.list_(pa.timestamp("ns", "UTC"))))
+        stored = _through_map_in_arrow(spark, nested, "v array<array<timestamp>>")
+        values = stored.column("v").combine_chunks()
+        assert values.type.value_type.value_type == pa.timestamp("us", "UTC")
+        assert pc.cast(values, pa.list_(pa.list_(pa.int64()))).to_pylist() == [
+            floored,
+            None,
+            [[-1]],
+        ]
+    finally:
+        spark.stop()
+
+
+def test_map_in_arrow_refuses_a_nanosecond_column_of_another_kind(tmp_path: Path) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — the zone label rule is the microsecond rule."""
+    spark = doors.open_session("UTC", tmp_path)
+    cases = (
+        (None, "v timestamp", "timestamp[us, tz=UTC] (timestamp), got timestamp[ns]"),
+        ("UTC", "v timestamp_ntz", "timestamp[us] (timestamp_ntz), got timestamp[ns, tz=UTC]"),
+        (
+            "America/New_York",
+            "v timestamp",
+            "timestamp[us, tz=UTC] (timestamp), got timestamp[ns, tz=America/New_York]",
+        ),
+        (None, "v date", "date32[day] (date), got timestamp[ns]"),
+    )
+    try:
+        for zone, declared, text in cases:
+            column = pa.array(NANOSECOND_TICKS, pa.timestamp("ns", zone))
+            with pytest.raises(PySparkException) as caught:
+                _through_map_in_arrow(spark, column, declared)
+            expected = f"mapInArrow schema mismatch on field 'v': expected type {text}"
+            assert expected in str(caught.value), declared
+            twin = pa.array(FLOORED_TICKS, pa.timestamp("us", zone))
+            with pytest.raises(PySparkException) as caught:
+                _through_map_in_arrow(spark, twin, declared)
+            assert expected.replace("[ns", "[us") in str(caught.value), declared
+    finally:
+        spark.stop()
+
+
+def test_pandas_doors_floor_nanoseconds_to_the_declared_microseconds(tmp_path: Path) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — mapInPandas and applyInPandas share the floor."""
+    spark = doors.open_session("UTC", tmp_path)
+    parent = spark.sql("SELECT 1 AS id")
+    try:
+        for zone, declared in ((None, "v timestamp_ntz"), ("UTC", "v timestamp")):
+            frame = _nanosecond_frame(zone)
+            assert str(frame["v"].dtype).startswith("datetime64[ns"), declared
+            mapped = parent.mapInPandas(
+                functools.partial(_replace_frames, frame=frame), declared
+            ).toArrow()
+            assert mapped.schema.field("v").type == pa.timestamp("us", zone), declared
+            assert _ticks(mapped) == FLOORED_TICKS, declared
+            applied = (
+                parent.groupBy("id")
+                .applyInPandas(functools.partial(_replace_group, frame=frame), declared)
+                .toArrow()
+            )
+            assert applied.schema.field("v").type == pa.timestamp("us", zone), declared
+            assert _ticks(applied) == FLOORED_TICKS, declared
+    finally:
+        spark.stop()
+
+
+def test_apply_in_pandas_refuses_a_naive_nanosecond_column_under_a_zoned_type(
+    tmp_path: Path,
+) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — a kind mismatch reaches the shared refusal."""
+    spark = doors.open_session("UTC", tmp_path)
+    grouped = spark.sql("SELECT 1 AS id").groupBy("id")
+    naive = functools.partial(_replace_group, frame=_nanosecond_frame(None))
+    try:
+        with pytest.raises(PySparkException) as caught:
+            grouped.applyInPandas(naive, "v timestamp").toArrow()
+        assert (
+            "mapInArrow schema mismatch on field 'v': expected type "
+            "timestamp[us, tz=UTC] (timestamp), got timestamp[ns]"
+        ) in str(caught.value)
+    finally:
+        spark.stop()
