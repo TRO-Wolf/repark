@@ -1,0 +1,1674 @@
+{
+ "America/New_York|df|ns|frame": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      0
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|df|ns|frame_explode": {
+  "error": "Execution error: requirement failed: Illegal sequence boundaries: 1970-01-01 04:59:59.999999 to 1970-01-01 00:00:00.999999 by 1000000000 nanos"
+ },
+ "America/New_York|df|tzns|frame": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|df|tzns|frame_explode": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     1,
+     2,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767341045123456,
+     1767341046123456,
+     17999999999,
+     18000999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|ns|apply_in_pandas": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|ns|map_in_arrow": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|ns|map_in_arrow_array": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<item: timestamp[us, tz=UTC]>",
+    "values": [
+     [
+      1767323045123456,
+      null
+     ],
+     [
+      0,
+      null
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|ns|map_in_arrow_ltz": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|ns|map_in_pandas": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|tzns|apply_in_pandas": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767341045123456,
+     17999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|tzns|map_in_arrow": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767341045123456,
+     17999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|tzns|map_in_arrow_array": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<item: timestamp[us, tz=UTC]>",
+    "values": [
+     [
+      1767341045123456,
+      null
+     ],
+     [
+      17999999999,
+      null
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|tzns|map_in_arrow_ltz": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767341045123456,
+     17999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|py|tzns|map_in_pandas": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767341045123456,
+     17999999999
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|both": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     {
+      "count": 18001,
+      "first": 1767341045123456,
+      "last": 1767323045123456,
+      "step": -1000000
+     },
+     {
+      "count": 18000,
+      "first": 17999999999,
+      "last": 999999,
+      "step": -1000000
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|coalesce": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     {
+      "count": 18001,
+      "first": 1767341045123456,
+      "last": 1767323045123456,
+      "step": -1000000
+     },
+     {
+      "count": 18000,
+      "first": 17999999999,
+      "last": 999999,
+      "step": -1000000
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|greatest": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     {
+      "count": 18001,
+      "first": 1767341045123456,
+      "last": 1767323045123456,
+      "step": -1000000
+     },
+     {
+      "count": 18000,
+      "first": 17999999999,
+      "last": 999999,
+      "step": -1000000
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|if": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     {
+      "count": 18001,
+      "first": 1767341045123456,
+      "last": 1767323045123456,
+      "step": -1000000
+     },
+     {
+      "count": 18000,
+      "first": 17999999999,
+      "last": 999999,
+      "step": -1000000
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|nullif": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     {
+      "count": 18001,
+      "first": 1767341045123456,
+      "last": 1767323045123456,
+      "step": -1000000
+     },
+     {
+      "count": 18000,
+      "first": 17999999999,
+      "last": 999999,
+      "step": -1000000
+     }
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|size": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     18001,
+     18000
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|step": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456,
+      1767341046123456,
+      1767341047123456
+     ],
+     [
+      17999999999,
+      18000999999,
+      18001999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|union": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2,
+     9
+    ]
+   },
+   {
+    "name": "r",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ],
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|ns|where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": []
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|both": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|coalesce": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|greatest": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|if": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|nullif": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|size": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     1
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|step": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456,
+      1767341046123456,
+      1767341047123456
+     ],
+     [
+      17999999999,
+      18000999999,
+      18001999999
+     ]
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|union": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2,
+     9
+    ]
+   },
+   {
+    "name": "r",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767341045123456
+     ],
+     [
+      17999999999
+     ],
+     null
+    ]
+   }
+  ]
+ },
+ "America/New_York|sql|tzns|where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "UTC|df|ns|frame": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      0
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|df|ns|frame_explode": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     1,
+     2,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     1767323046123456,
+     -1,
+     999999
+    ]
+   }
+  ]
+ },
+ "UTC|df|tzns|frame": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      0
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|df|tzns|frame_explode": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     1,
+     2,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     1767323046123456,
+     -1,
+     999999
+    ]
+   }
+  ]
+ },
+ "UTC|py|ns|apply_in_pandas": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "UTC|py|ns|map_in_arrow": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "UTC|py|ns|map_in_arrow_array": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<item: timestamp[us, tz=UTC]>",
+    "values": [
+     [
+      1767323045123456,
+      null
+     ],
+     [
+      0,
+      null
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|py|ns|map_in_arrow_ltz": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "UTC|py|ns|map_in_pandas": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "UTC|py|tzns|apply_in_pandas": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "UTC|py|tzns|map_in_arrow": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "UTC|py|tzns|map_in_arrow_array": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<item: timestamp[us, tz=UTC]>",
+    "values": [
+     [
+      1767323045123456,
+      null
+     ],
+     [
+      0,
+      null
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|py|tzns|map_in_arrow_ltz": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "UTC|py|tzns|map_in_pandas": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "timestamp[us, tz=UTC]",
+    "values": [
+     1767323045123456,
+     0
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|both": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|coalesce": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|greatest": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|if": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|nullif": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|size": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     1
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|step": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456,
+      1767323046123456,
+      1767323047123456
+     ],
+     [
+      -1,
+      999999,
+      1999999
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|union": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2,
+     9
+    ]
+   },
+   {
+    "name": "r",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ],
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|sql|ns|where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|both": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|case": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|coalesce": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|greatest": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|if": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|nullif": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|size": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     1
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|step": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   },
+   {
+    "name": "v",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456,
+      1767323046123456,
+      1767323047123456
+     ],
+     [
+      -1,
+      999999,
+      1999999
+     ]
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|union": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2,
+     9
+    ]
+   },
+   {
+    "name": "r",
+    "nullable": true,
+    "type": "list<element: timestamp[us, tz=UTC] not null>",
+    "values": [
+     [
+      1767323045123456
+     ],
+     [
+      -1
+     ],
+     null
+    ]
+   }
+  ]
+ },
+ "UTC|sql|tzns|where": {
+  "columns": [
+   {
+    "name": "id",
+    "nullable": true,
+    "type": "int32",
+    "values": [
+     1,
+     2
+    ]
+   }
+  ]
+ }
+}

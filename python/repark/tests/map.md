@@ -4,6 +4,20 @@ ICE-TSNS-COERCION-1 slice 1 round 1 (2026-10-12): `test_ice_tsns_coercion_1_slic
 
 ICE-TSNS-COERCION-1 slice 1 round 2 (2026-10-12): the rewrite pins live in the sibling `test_ice_tsns_coercion_1_slice1_round2.py` (the first file holds the round-1 gate pins plus `test_pin7_other_cells_equal_main_statement_role`; its superseded pin-6 test is deleted and its twelve-statements pin now asserts the twin role). The sibling pins the ruled split of the 9,600 untyped-NULL cells — 8,967 remaining cells equal the recorded twin, 258 DML-store-cast cells stay main's with the fallback moved, 220 cells equal the corrected-twin oracle in `ice_tsns_coercion_1_slice1_corrected_twins.json` (recorded on the baseline module by `_record_ice_tsns_coercion_1_slice1_corrected.py`, all 220 oracle 1), 155 cells equal main's recorded statement role with the stale `tzns` column text replaced, 45 reads equal the recorded twin, the union `tzns_utc` read pins rows/type/nullability plus field id 4 (live main reads 4; the recorded twin's 3 is stale), and 40 plain ns-target cells never fall back. Pin 6 halted first: 633 measure and 5 read mismatches in six root-caused classes, see `task/wo/ice-tsns-coercion-1/evidence/round2-pin6-halt.md`. pins: ice-tsns-coercion-1/C-005
 
+ICE-TSNS-COERCION-1 slice 1 fold 2 (2026-10-13): `test_ice_tsns_coercion_1_slice1_fold2.py`
+holds the consumers that refused a nanosecond site — ten SQL and two DataFrame `sequence`
+shapes plus five Python-door shapes (`mapInArrow` own schema, array, declared `timestamp`;
+`mapInPandas`; `applyInPandas`) over sources `ns` and `tzns` in zones UTC and
+America/New_York (68 cells). `ice_tsns_coercion_1_slice1_fold2.json` is main's answer per
+cell, recorded on the baseline module by `_record_ice_tsns_coercion_1_slice1_fold2.py`
+(exact ticks; a list over 16 elements is stored as count, ends and step). Two pins: every
+cell main answers is answered, and every nanosecond cell floored to microseconds equals the
+same cell over the microsecond twin column (`ntz` for `ns`, `ts` for `tzns`). Main's ticks
+are not the value oracle: main typed the naive site as a zoned microsecond column and cut
+toward zero, so its lists differ from the twin in America/New_York and before 1970.
+`mapInArrow` with a declared `timestamp` over the naive `ns` site stays refused (kind
+mismatch, the microsecond rule) and is pinned as that refusal. pins: ice-tsns-coercion-1/C-005
+
 ICE-TSNS-COERCION-1 slice 1 fold 1 (2026-10-12): `test_ice_tsns_coercion_1_slice1_fold1.py`
 pins the twelve verifier shapes plus the struct probes — 15 SQL shapes and 4 DataFrame
 shapes over sources `ns` and `tzns`, zones UTC and America/New_York, ANSI on and off
