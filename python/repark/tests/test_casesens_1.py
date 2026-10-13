@@ -618,10 +618,15 @@ def _assert_ddl_refusal(session: ReparkSession, key: str) -> None:
         raise AssertionError(f"{key} answered instead of refusing")
 
 
+def _metadata_version(item: Path) -> int:
+    """Return the integer version parsed from a metadata file name."""
+    return int(item.name.removeprefix("v").split(".")[0].split("-")[0])
+
+
 def _assert_meta(warehouse: Path, table: str, meta_key: str) -> None:
     """Replay one _meta step from the table's latest metadata file (S5)."""
     base = warehouse / "sc" / "ns" / table / "metadata"
-    files = sorted(base.glob("*.metadata.json"), key=lambda item: item.stat().st_mtime_ns)
+    files = sorted(base.glob("*.metadata.json"), key=_metadata_version)
     meta = json.loads(files[-1].read_text(encoding="utf-8"))
     spec = next(
         entry for entry in meta["partition-specs"] if entry["spec-id"] == meta["default-spec-id"]
