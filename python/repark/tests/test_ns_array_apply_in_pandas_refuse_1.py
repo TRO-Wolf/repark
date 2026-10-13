@@ -321,6 +321,11 @@ def _arrow_frame(pdf: pd.DataFrame, cells: list[Any], arrow_type: Any) -> pd.Dat
     return pd.DataFrame({"id": [key] * len(series), "v": series})
 
 
+def _arrow_cogroup_frame(left: pd.DataFrame, right: pd.DataFrame, cells: list[Any], arrow_type: Any) -> pd.DataFrame:
+    """Return one row per cell holding the given ArrowDtype cells for the cogroup key."""
+    return _arrow_frame(left, cells, arrow_type)
+
+
 def _run_user_case(spark: Any, cells: list[Any], declared: str, cogrouped: bool) -> Any:
     """Run one user-built column case through the named door."""
     base = spark.createDataFrame(pd.DataFrame({"id": [1, 2]}), "id int")
@@ -484,7 +489,7 @@ def test_h3_arrowdtype_ns_lists_answer(tmp_path: Path, cells: list[Any], arrow_t
         if cogrouped:
             result = (
                 grouped.cogroup(grouped)
-                .applyInPandas(partial(_arrow_frame, cells=cells, arrow_type=arrow_type), schema)
+                .applyInPandas(partial(_arrow_cogroup_frame, cells=cells, arrow_type=arrow_type), schema)
                 .toArrow()
             )
         else:
@@ -512,7 +517,7 @@ def test_h3_arrowdtype_submicrosecond_keeps_refusal(tmp_path: Path, cogrouped: b
         with pytest.raises(PySparkException) as caught:
             if cogrouped:
                 grouped.cogroup(grouped).applyInPandas(
-                    partial(_arrow_frame, cells=cells, arrow_type=arrow_type), schema
+                    partial(_arrow_cogroup_frame, cells=cells, arrow_type=arrow_type), schema
                 ).toArrow()
             else:
                 grouped.applyInPandas(
@@ -527,7 +532,7 @@ def test_h3_arrowdtype_struct_bare_ns_answers(tmp_path: Path, cogrouped: bool) -
     with _source_session(tmp_path) as spark:
         base = spark.createDataFrame(pd.DataFrame({"id": [1, 2]}), "id int")
         schema = "id int, v struct<a:array<timestamp_ntz>,b:timestamp_ntz>"
-        cells = [{"a": [1767323045123456], "b": 1767323045123456}]
+        cells = [{"a": [1767323045123456], "b": 1767323045123456000}]
         arrow_type = pa.struct(
             [("a", pa.list_(pa.timestamp("us"))), ("b", pa.timestamp("ns"))]
         )
@@ -535,7 +540,7 @@ def test_h3_arrowdtype_struct_bare_ns_answers(tmp_path: Path, cogrouped: bool) -
         if cogrouped:
             result = (
                 grouped.cogroup(grouped)
-                .applyInPandas(partial(_arrow_frame, cells=cells, arrow_type=arrow_type), schema)
+                .applyInPandas(partial(_arrow_cogroup_frame, cells=cells, arrow_type=arrow_type), schema)
                 .toArrow()
             )
         else:

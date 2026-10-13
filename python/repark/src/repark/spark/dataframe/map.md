@@ -511,6 +511,17 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   with the microsecond-cast hint; microsecond, empty, all-null and top-level timestamp
   columns keep their answers, and `mapInPandas`/`mapInArrow` are untouched.
   pins: ns-array-apply-in-pandas-refuse-1/C-001, C-002, C-003, C-004, C-005
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 fold 1 (2026-10-13):** the check is narrowed to what
+  can store a wrong value. Only object-dtype columns are scanned, so `ArrowDtype` columns
+  keep main's conversion or refusal byte-identical. The scan walks the declared type and
+  the value together: only a one-dimensional numpy `datetime64[ns]` array holding a real
+  (non-NaT) value decides, under the declared timestamp it belongs to (struct fields and
+  map values guide the descent, so a nanosecond array under a date field is not refused);
+  microsecond, millisecond, empty, null, NaT and every scalar lead decides nothing and the
+  scan goes on. Two-dimensional arrays, Arrow-backed cells and bare-timestamp positions
+  pass through to main's own errors. Scalar-led Python lists skip in O(1) for the cost
+  targets. Which cell kinds are dtype-decided and which are walked lives in the ledger.
+  pins: ns-array-apply-in-pandas-refuse-1/C-011, C-012, C-014, C-015
 - `grouped_pivot.py` — **ATTR-ID-1 SJ-5 (2026-10-03):** the twelve `_pivot_*`
   module helpers, moved here from `joins_columns.py` unchanged (pure move at
   the size ceiling, behind same-named imports in `joins_columns.py` and

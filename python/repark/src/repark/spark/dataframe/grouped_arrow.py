@@ -91,76 +91,90 @@ def _declared_holds_list_timestamp(arrow_type: Any) -> bool:
     return False
 
 
-def _arrow_holds_nanosecond_in_list(arrow_type: Any) -> bool:
-    """True when a timestamp[ns] sits inside a list at any depth of the Arrow type."""
-    import pyarrow as pa
+def _is_scalar_list_lead(value: Any) -> bool:
+    """True when a list cell opens with a scalar that cannot hold a nanosecond array."""
+    import datetime
 
-    types = pa.types
-    if types.is_timestamp(arrow_type):
-        return arrow_type.unit == "ns"
-    if (
-        types.is_list(arrow_type)
-        or types.is_large_list(arrow_type)
-        or types.is_fixed_size_list(arrow_type)
-    ):
-        return _arrow_holds_nanosecond_in_list(arrow_type.value_type)
-    if types.is_struct(arrow_type):
-        return any(
-            _arrow_holds_nanosecond_in_list(arrow_type[index].type)
-            for index in range(arrow_type.num_fields)
-        )
-    if types.is_map(arrow_type):
-        return _arrow_holds_nanosecond_in_list(arrow_type.item_type)
-    return False
+    import numpy as np
+    import pandas as pd
+
+    return (
+        isinstance(value, (str, bytes, datetime.datetime, datetime.date, np.generic))
+        or value is pd.NaT
+    )
 
 
-def _nanosecond_unit_of(value: Any) -> str | bool | None:
-    """Name the nanosecond unit of datetime data, False when dated but not ns."""
+def _list_elements_refuse(element_declared: Any, value: Any) -> bool:
+    """True when one list position holds a refusing nanosecond array."""
     import numpy as np
     import pandas as pd
     import pyarrow as pa
 
+    types = pa.types
     if value is None or value is pd.NA or value is pd.NaT:
-        return None
+        return False
     if isinstance(value, float) and value != value:
-        return None
+        return False
+    if isinstance(value, np.ma.MaskedArray):
+        return _list_elements_refuse(element_declared, value.compressed())
     if isinstance(value, np.ndarray):
-        if value.dtype.kind == "M":
-            return "datetime64[ns]" if np.datetime_data(value.dtype)[0] == "ns" else False
-        if value.dtype != object:
-            return None
-        for element in value.flat:
-            decision = _nanosecond_unit_of(element)
-            if decision is not None:
-                return decision
-        return None
-    if isinstance(value, dict):
-        for element in value.values():
-            decision = _nanosecond_unit_of(element)
-            if decision is not None:
-                return decision
-        return None
-    if isinstance(value, (list, tuple, pd.Series)):
-        for element in value:
-            decision = _nanosecond_unit_of(element)
-            if decision is not None:
-                return decision
-        return None
-    if isinstance(value, (pa.Array, pa.ChunkedArray, pa.Scalar)):
-        if _arrow_holds_nanosecond_in_list(value.type):
-            return "timestamp[ns]"
-        return None
-    return None
+        if value.dtype.kind != "M":
+            if value.dtype != object:
+                return False
+            return any(_list_value_refuses(element_declared, element) for element in value.flat)
+        if not types.is_timestamp(element_declared):
+            return False
+        if value.ndim != 1 or np.datetime_data(value.dtype)[0] != "ns":
+            return False
+        return bool((value == value).any())
+    if isinstance(value, (list, tuple)):
+        if len(value) == 0 or _is_scalar_list_lead(value[0]):
+            return False
+        return any(_list_value_refuses(element_declared, element) for element in value)
+    return False
 
 
-def _series_nanosecond_unit(series: Any) -> str | None:
-    """Decide the column from its own dtype when the dtype alone settles it."""
-    import pandas as pd
+def _list_value_refuses(declared: Any, value: Any) -> bool:
+    """True when a declared list-nested position holds a refusing nanosecond array."""
+    import pyarrow as pa
 
-    dtype = series.dtype
-    if isinstance(dtype, pd.ArrowDtype) and _arrow_holds_nanosecond_in_list(dtype.pyarrow_dtype):
-        return "timestamp[ns]"
-    return None
+    types = pa.types
+    if (
+        types.is_list(declared)
+        or types.is_large_list(declared)
+        or types.is_fixed_size_list(declared)
+    ):
+        return _list_elements_refuse(declared.value_type, value)
+    if types.is_struct(declared):
+        if isinstance(value, dict):
+            return any(
+                _list_value_refuses(declared[index].type, value[declared[index].name])
+                for index in range(declared.num_fields)
+                if _declared_holds_list_timestamp(declared[index].type)
+                and declared[index].name in value
+            )
+        if isinstance(value, (list, tuple)):
+            return any(
+                _list_value_refuses(declared[index].type, value[index])
+                for index in range(min(declared.num_fields, len(value)))
+                if _declared_holds_list_timestamp(declared[index].type)
+            )
+        return False
+    if types.is_map(declared):
+        item_type = declared.item_type
+        if not _declared_holds_list_timestamp(item_type):
+            return False
+        if isinstance(value, dict):
+            return any(_list_value_refuses(item_type, element) for element in value.values())
+        if isinstance(value, (list, tuple)):
+            return any(
+                _list_value_refuses(item_type, element[1])
+                if isinstance(element, (list, tuple)) and len(element) == 2
+                else _list_value_refuses(item_type, element)
+                for element in value
+            )
+        return False
+    return False
 
 
 def _refuse_nanosecond_array_result(
@@ -174,19 +188,17 @@ def _refuse_nanosecond_array_result(
             continue
         if not _declared_holds_list_timestamp(field.type):
             continue
-        decision: str | bool | None = _series_nanosecond_unit(out_pdf[field.name])
-        if decision is None:
-            for cell in out_pdf[field.name]:
-                decision = _nanosecond_unit_of(cell)
-                if decision is not None:
-                    break
-        if isinstance(decision, str):
-            raise PySparkTypeError(
-                f"{api_name} refuses column '{field.name}' of declared type {field.type}: "
-                f"the pandas result holds nanosecond datetimes ({decision}) inside a list, "
-                "which would store wrong values. Cast the elements to microseconds in the "
-                'function (for example .astype("datetime64[us]")) before returning.'
-            )
+        series = out_pdf[field.name]
+        if series.dtype != object:
+            continue
+        for cell in series.to_numpy():
+            if _list_value_refuses(field.type, cell):
+                raise PySparkTypeError(
+                    f"{api_name} refuses column '{field.name}' of declared type {field.type}: "
+                    "the pandas result holds nanosecond datetimes (datetime64[ns]) inside a list, "
+                    "which would store wrong values. Cast the elements to microseconds in the "
+                    'function (for example .astype("datetime64[us]")) before returning.'
+                )
 
 
 def _pandas_result_to_arrow_batches(
