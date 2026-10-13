@@ -654,11 +654,22 @@ ROWS: list[ShapeRow] = [
                 ],
             },
         ),
-        None,
-        "createDataFrame from pandas datetime64[ns] then toPandas: both engines export "
-        "datetime64[ns] (inbound-ns twin of pandas_timestamp_unit_from_pandas_us). "
-        "Ingest-always-us would red this equality (L-002). Values carry microseconds; "
-        "the unit lives on str(dtype).",
+        _pandas_shape(
+            [("id", "int64"), ("ts", "datetime64[us]")],
+            [("id", ["int", "int"]), ("ts", ["Timestamp", "Timestamp"])],
+            {
+                "id": [1, 2],
+                "ts": [
+                    dt.datetime(2024, 1, 15, 12, 30, 0, 123456),
+                    dt.datetime(2020, 6, 1, 0, 0, 0, 654321),
+                ],
+            },
+        ),
+        "createDataFrame from pandas datetime64[ns] then toPandas: Spark exports "
+        "datetime64[ns]; repark takes the column in as microseconds (ICE-TSNS-FRAME-DOOR-1) "
+        "and preserves datetime64[us], the class of pandas_timestamp_unit_from_pandas_us. "
+        "Values carry microseconds and match. "
+        f"Flipped by {FIX_G10}.",
     ),
 ]
 
