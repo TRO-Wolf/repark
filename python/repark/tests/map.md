@@ -3368,7 +3368,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pyarrow 25.0.1) answers for `createDataFrame` of a pandas nanosecond timestamp frame: seven
   sources (naive, UTC, New York, naive and UTC before the epoch, a naive `ArrowDtype`, a UTC
   column with no NULL) and one New York microsecond column, in two session zones under no
-  schema, `c timestamp` and `c timestamp_ntz`, 48 cells. Each cell holds the Spark type, the Arrow type, nullability,
+  schema, `c timestamp` and `c timestamp_ntz`. **Fold 1 (2026-10-13):** seven more sources,
+  90 cells in all: Tokyo and `+05:30` microsecond columns, a naive and a UTC categorical of
+  nanoseconds, New York instants around both 2026 transitions, and the lowest and highest
+  nanoseconds, naive and UTC. The last three are recorded as Spark's own answers and no pin
+  compares them: Spark moves an instant in the driver zone's repeated hour by an hour, wraps
+  the extremes when aware and raises when naive. `transition_frame` builds the same instants
+  for New York, London and Lord Howe. Each cell holds the Spark type, the Arrow type, nullability,
   the int64 microseconds and every warning, or the first line of the refusal. Every value is
   floored (`-1 ns` is `-1 µs`, `-1001 ns` is `-2 µs`), every answer is nullable, no cell
   warns. Spark reads a naive wall in the zone of the driver machine, recorded as

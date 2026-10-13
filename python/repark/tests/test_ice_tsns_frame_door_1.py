@@ -69,6 +69,59 @@ MAIN_DECLARED_TIMESTAMP: dict[str, dict[str, list[Any]]] = {
         "pd_utc_ns_notnull": [1767323045123456],
     },
 }
+MAIN_DECLARED_OTHER: dict[str, dict[str, dict[str, Any]]] = {
+    "pd_naive_ns": {
+        "c bigint": {"arrow": "int64", "values": [1767323045123456789, None]},
+        "c string": {"arrow": "string", "values": ["2026-01-02 03:04:05.123456789", None]},
+        "c date": {"arrow": "date32[day]", "values": [20455, None]},
+    },
+    "pd_utc_ns": {
+        "c bigint": {"arrow": "int64", "values": [1767323045123456789, None]},
+        "c string": {"arrow": "string", "values": ["2026-01-02 03:04:05.123456789Z", None]},
+        "c date": {"arrow": "date32[day]", "values": [20455, None]},
+    },
+    "pd_ny_ns": {
+        "c bigint": {"arrow": "int64", "values": [1767323045123456789, None]},
+        "c string": {"arrow": "string", "values": ["2026-01-01 22:04:05.123456789-0500", None]},
+        "c date": {"arrow": "date32[day]", "values": [20454, None]},
+    },
+    "pd_naive_ns_pre_epoch": {
+        "c bigint": {"arrow": "int64", "values": [-1, -1001, -999999999999]},
+        "c string": {
+            "arrow": "string",
+            "values": [
+                "1969-12-31 23:59:59.999999999",
+                "1969-12-31 23:59:59.999998999",
+                "1969-12-31 23:43:20.000000001",
+            ],
+        },
+        "c date": {"arrow": "date32[day]", "values": [-1, -1, -1]},
+    },
+    "pd_utc_ns_pre_epoch": {
+        "c bigint": {"arrow": "int64", "values": [-1, -1001, -999999999999]},
+        "c string": {
+            "arrow": "string",
+            "values": [
+                "1969-12-31 23:59:59.999999999Z",
+                "1969-12-31 23:59:59.999998999Z",
+                "1969-12-31 23:43:20.000000001Z",
+            ],
+        },
+        "c date": {"arrow": "date32[day]", "values": [-1, -1, -1]},
+    },
+    "pd_category_ns": {
+        "c bigint": {"arrow": "int64", "values": [1767323045123456789, None]},
+        "c string": {"arrow": "string", "values": ["2026-01-02 03:04:05.123456789", None]},
+        "c date": {"arrow": "date32[day]", "values": [20455, None]},
+    },
+}
+MICROSECOND_LABELS = {
+    "pd_ny_us": "America/New_York",
+    "pd_tokyo_us": "Asia/Tokyo",
+    "pd_offset_us": "+05:30",
+}
+TRANSITION_ZONES = tuple(recorder.TRANSITION_INSTANTS)
+EXTREME_MICROS = list(recorder.EXTREME_MICROS)
 MAIN_NESTED: dict[str, dict[str, Any]] = {
     "list_ns": {
         "arrow": "list<item: timestamp[ns, tz=UTC]>",
@@ -294,7 +347,7 @@ def test_declared_timestamp_over_nanoseconds_is_unchanged(spark: Any, source: st
 def test_declared_timestamp_over_an_aware_microsecond_column_answers_utc(
     spark: Any, source: str
 ) -> None:
-    """``schema="c timestamp"`` over a New York microsecond column answers Spark's UTC type."""
+    """``schema="c timestamp"`` over an aware microsecond column answers Spark's UTC type."""
     oracle = SPARK[recorder.cell_key(zone_of(spark), source, "c timestamp")]
     frame = recorder.sources()[source]
     assert oracle["arrow"] == "timestamp[us, tz=UTC]"
@@ -304,9 +357,104 @@ def test_declared_timestamp_over_an_aware_microsecond_column_answers_utc(
         "values": oracle["ints"],
     }
     assert answer(spark, frame) == {
-        "arrow": "timestamp[us, tz=America/New_York]",
+        "arrow": f"timestamp[us, tz={MICROSECOND_LABELS[source]}]",
         "nullable": True,
         "values": oracle["ints"],
+    }
+
+
+@pytest.mark.parametrize("schema", SCHEMAS, ids=["none", "timestamp", "timestamp_ntz"])
+@pytest.mark.parametrize("engine", ["pandas", "polars"])
+@pytest.mark.parametrize("zone", TRANSITION_ZONES)
+def test_instants_around_a_zone_transition_floor_on_the_ticks(
+    spark: Any, zone: str, engine: str, schema: str | None
+) -> None:
+    """An aware instant in a repeated or skipped hour floors as its ticks floor."""
+    frame: Any = recorder.transition_frame(zone)
+    if engine == "polars":
+        frame = pytest.importorskip("polars").from_pandas(frame)
+    arrow_type = {
+        None: f"timestamp[us, tz={zone}]",
+        "c timestamp": "timestamp[us, tz=UTC]",
+        "c timestamp_ntz": "timestamp[us]",
+    }[schema]
+    values = [nanos // 1_000 for nanos in recorder.transition_nanos(zone)]
+    assert answer(spark, frame, schema) == {"arrow": arrow_type, "nullable": True, "values": values}
+
+
+@pytest.mark.parametrize("engine", ["pandas", "polars"])
+@pytest.mark.parametrize(
+    ("source", "schema", "arrow_type"),
+    [
+        ("pd_naive_ns_extremes", None, "timestamp[us]"),
+        ("pd_utc_ns_extremes", None, "timestamp[us, tz=UTC]"),
+        ("pd_utc_ns_extremes", "c timestamp", "timestamp[us, tz=UTC]"),
+        ("pd_naive_ns_extremes", "c timestamp_ntz", "timestamp[us]"),
+    ],
+)
+def test_the_lowest_and_highest_nanoseconds_floor(
+    spark: Any, source: str, schema: str | None, arrow_type: str, engine: str
+) -> None:
+    """``pd.Timestamp.min`` and ``.max`` floor to microseconds and never wrap or refuse."""
+    frame: Any = recorder.sources()[source]
+    assert list(frame["c"].astype("int64")) == list(recorder.EXTREME_NANOS)
+    if engine == "polars":
+        frame = pytest.importorskip("polars").from_pandas(frame)
+    assert answer(spark, frame, schema) == {
+        "arrow": arrow_type,
+        "nullable": True,
+        "values": EXTREME_MICROS,
+    }
+
+
+def test_the_int64_minimum_floors_without_wrapping(spark: Any) -> None:
+    """A polars column that holds the int64 minimum as a value floors below it, with its NULL."""
+    polars = pytest.importorskip("polars")
+    lowest = -(2**63)
+    table = pa.table({"c": pa.array([lowest, None, lowest + 808], pa.timestamp("ns"))})
+    frame = polars.from_arrow(table)
+    assert frame["c"].null_count() == 1
+    assert answer(spark, frame) == {
+        "arrow": "timestamp[us]",
+        "nullable": True,
+        "values": [lowest // 1_000, None, (lowest + 808) // 1_000],
+    }
+
+
+@pytest.mark.parametrize("schema", SCHEMAS, ids=["none", "timestamp", "timestamp_ntz"])
+@pytest.mark.parametrize(
+    ("source", "plain"),
+    [("pd_category_ns", "pd_naive_ns"), ("pd_category_utc_ns", "pd_utc_ns")],
+)
+def test_a_categorical_of_nanoseconds_arrives_as_microseconds(
+    spark: Any, source: str, plain: str, schema: str | None
+) -> None:
+    """A pandas categorical of nanosecond timestamps answers what the plain column answers."""
+    frames = recorder.sources()
+    assert str(frames[source]["c"].dtype) == "category"
+    got = answer(spark, frames[source], schema)
+    assert got == answer(spark, frames[plain], schema)
+    assert got["arrow"].startswith("timestamp[us")
+    oracle = SPARK[recorder.cell_key(zone_of(spark), source, schema)]
+    if source == "pd_category_ns" and schema == "c timestamp_ntz":
+        assert got == {
+            "arrow": oracle["arrow"],
+            "nullable": oracle["nullable"],
+            "values": oracle["ints"],
+        }
+
+
+@pytest.mark.parametrize("schema", ["c bigint", "c string", "c date"])
+@pytest.mark.parametrize("source", tuple(MAIN_DECLARED_OTHER))
+def test_a_declared_type_that_is_not_a_timestamp_keeps_main(
+    spark: Any, source: str, schema: str
+) -> None:
+    """A nanosecond column under a declared non-timestamp type answers what main answers."""
+    main = MAIN_DECLARED_OTHER[source][schema]
+    assert answer(spark, recorder.sources()[source], schema) == {
+        "arrow": main["arrow"],
+        "nullable": True,
+        "values": main["values"],
     }
 
 

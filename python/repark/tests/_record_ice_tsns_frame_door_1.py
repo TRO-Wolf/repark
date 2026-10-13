@@ -23,14 +23,55 @@ PRE_EPOCH_NANOS = (-1, -1001, -999_999_999_999)
 PRE_EPOCH_MICROS = (-1, -2, -1_000_000_000)
 AWARE_SOURCES = ("pd_utc_ns", "pd_ny_ns", "pd_utc_ns_pre_epoch", "pd_utc_ns_notnull")
 NAIVE_SOURCES = ("pd_naive_ns", "pd_naive_ns_pre_epoch", "pd_arrowdtype_ns")
-MICROSECOND_SOURCES = ("pd_ny_us",)
+MICROSECOND_SOURCES = ("pd_ny_us", "pd_tokyo_us", "pd_offset_us")
+CATEGORY_SOURCES = ("pd_category_ns", "pd_category_utc_ns")
+DISCLOSURE_SOURCES = ("pd_ny_ns_transitions", "pd_utc_ns_extremes", "pd_naive_ns_extremes")
+EXTREME_NANOS = (-9_223_372_036_854_775_807, 9_223_372_036_854_775_807)
+EXTREME_MICROS = (-9_223_372_036_854_776, 9_223_372_036_854_775)
+TRANSITION_INSTANTS = {
+    "America/New_York": (
+        "2026-11-01 05:30:00.000000001",
+        "2026-11-01 06:30:00.000000001",
+        "2026-11-01 05:30:00.000001000",
+        "2026-03-08 06:59:59.999999999",
+        "2026-03-08 07:00:00.000000001",
+    ),
+    "Europe/London": (
+        "2026-10-25 00:30:00.000000001",
+        "2026-10-25 01:30:00.000000001",
+        "2026-10-25 00:30:00.000001000",
+        "2026-03-29 00:59:59.999999999",
+        "2026-03-29 01:00:00.000000001",
+    ),
+    "Australia/Lord_Howe": (
+        "2026-04-04 14:45:00.000000001",
+        "2026-04-04 15:15:00.000000001",
+        "2026-04-04 14:45:00.000001000",
+        "2026-10-03 15:29:59.999999999",
+        "2026-10-03 15:30:00.000000001",
+    ),
+}
+
+
+def transition_frame(zone: str) -> pd.DataFrame:
+    """Return the nanosecond instants around both transitions of ``zone``, aware in ``zone``."""
+    instants = pd.Series(pd.to_datetime(list(TRANSITION_INSTANTS[zone]), format="ISO8601"))
+    return pd.DataFrame(
+        {"c": instants.astype("datetime64[ns]").dt.tz_localize("UTC").dt.tz_convert(zone)}
+    )
+
+
+def transition_nanos(zone: str) -> list[int]:
+    """Return the int64 nanoseconds of the instants of ``transition_frame(zone)``."""
+    return [int(value) for value in transition_frame(zone)["c"].astype("int64")]
 
 
 def sources() -> dict[str, pd.DataFrame]:
-    """Return every nanosecond pandas frame of the matrix, keyed by its cell name."""
+    """Return every pandas frame of the matrix, keyed by its cell name."""
     naive = pd.Series(pd.to_datetime([SEED, None])).astype("datetime64[ns]")
     aware = naive.dt.tz_localize("UTC")
     pre_epoch = pd.Series(np.array(PRE_EPOCH_NANOS, dtype="int64")).astype("datetime64[ns]")
+    extremes = pd.Series(np.array(EXTREME_NANOS, dtype="int64")).astype("datetime64[ns]")
     arrow_naive = pa.timestamp("ns")
     return {
         "pd_naive_ns": pd.DataFrame({"c": naive}),
@@ -50,6 +91,17 @@ def sources() -> dict[str, pd.DataFrame]:
         "pd_ny_us": pd.DataFrame(
             {"c": aware.dt.floor("us").astype(pd.DatetimeTZDtype("us", "America/New_York"))}
         ),
+        "pd_tokyo_us": pd.DataFrame(
+            {"c": aware.dt.floor("us").astype(pd.DatetimeTZDtype("us", "Asia/Tokyo"))}
+        ),
+        "pd_offset_us": pd.DataFrame(
+            {"c": aware.dt.floor("us").astype(pd.DatetimeTZDtype("us", "+05:30"))}
+        ),
+        "pd_category_ns": pd.DataFrame({"c": naive.astype("category")}),
+        "pd_category_utc_ns": pd.DataFrame({"c": aware.astype("category")}),
+        "pd_ny_ns_transitions": transition_frame("America/New_York"),
+        "pd_utc_ns_extremes": pd.DataFrame({"c": extremes.dt.tz_localize("UTC")}),
+        "pd_naive_ns_extremes": pd.DataFrame({"c": extremes}),
     }
 
 
