@@ -2416,3 +2416,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   green, three mutants red then restored. `risk_tier: standard`. Branch
   `fix/ns-array-apply-in-pandas-refuse-1`.
   pins: ns-array-apply-in-pandas-refuse-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  **Fold 1 (2026-10-13), after an independent verify failed `b8f50345`:** a cell that
+  decided nothing ended the scan (H-1), a nanosecond timestamp inside a struct or map reached
+  the function as an integer and was stored as microseconds (H-2), and answers main stores
+  right were refused (H-3). The fold has two rules, raised only after pyarrow's own
+  conversion has succeeded: a `datetime64[ns]` array with a tick that differs from its
+  microsecond floor, at any list position the declared type holds, in every container
+  spelling pyarrow accepts; and an integer equal to a nanosecond tick of the group frame at
+  a declared timestamp position, the floor of a tick left out. 399 cells against main
+  `f3f98823`'s recorded answers (133 and 60 refusals, 206 equal to main), 53 mutants, the
+  verify stages re-run, five cost sets, and the open list (the `pandas_udf` doors, other
+  units, what the door cannot know) in the ledger's Fold 1 section.
+  pins: ns-array-apply-in-pandas-refuse-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020

@@ -3659,10 +3659,10 @@ still open is `isModifiable`.
   `pd.Timestamp` or `datetime`, top-level nanosecond columns, non-timestamp lists.
 - **Apache Spark** — cannot write the type. *(oracle: none — the nanosecond types do not
   convert; the floor on the int64 ticks is the rule the other doors follow, R-019.)*
-- **Pin** — `python/repark/tests/test_ns_array_apply_in_pandas_refuse_1.py`: 393 cells,
+- **Pin** — `python/repark/tests/test_ns_array_apply_in_pandas_refuse_1.py`: 399 cells,
   each against main `f3f98823`'s recorded answer
-  (`ns_array_apply_in_pandas_refuse_1_main.json`): 133 array refusals, 56 integer refusals,
-  204 cells equal to main in type, ticks, error class and text.
+  (`ns_array_apply_in_pandas_refuse_1_main.json`): 133 array refusals, 60 integer refusals,
+  206 cells equal to main in type, ticks, error class and text.
 - **Rationale** — OPEN, dated 2026-10-13, severity S0. Interim refusal by the owner's ruling
   of that day: a wrong stored value with no error. Ledger
   `task/ledgers/staging/ns-array-apply-in-pandas-refuse-1-ledger.md`, section Fold 1.
@@ -3680,7 +3680,8 @@ still open is `isModifiable`.
   - an integer the function derived from a tick (`tick + 1`), a tick that is the microsecond
     floor of another tick of its group returned without that other tick, and an integer
     equal to a tick of another group: the door cannot tell them from a function-made
-    microsecond tick;
+    microsecond tick; an Arrow-typed nested column of integers the function builds from the
+    ticks (`ArrowDtype` `struct<t: int64>`) is cast by pyarrow and not read by the door;
   - the SQL spelling `map('k', <column>)` fails in the engine with
     `map requires key and value lists to have the same length`; `create_map` answers.
 

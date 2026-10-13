@@ -10163,13 +10163,13 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
 - [test_ns_array_apply_in_pandas_refuse_1.py](test_ns_array_apply_in_pandas_refuse_1.py) —
   **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (2026-10-13), fold 1:** the pins of the interim refusal
   at the `applyInPandas` door, one test per cell of the matrix in
-  `_ns_array_apply_in_pandas_refuse_1_cases.py` (393 cells: grouped and cogrouped, a UTC and an
+  `_ns_array_apply_in_pandas_refuse_1_cases.py` (399 cells: grouped and cogrouped, a UTC and an
   America/New_York session, the right side of a cogroup, and the facade's GROUPED_AGG and
   ordered-window routes, which keep main's answers).
   `test_nanosecond_array_under_a_timestamp_list_refuses` (133 cells) and
-  `test_nanosecond_tick_as_an_integer_under_a_timestamp_refuses` (56 cells) compare the whole
+  `test_nanosecond_tick_as_an_integer_under_a_timestamp_refuses` (60 cells) compare the whole
   refusal text, with the declared Arrow type main stored under.
-  `test_main_answer_stands` (204 cells) compares type, int64 ticks and, for an error, class,
+  `test_main_answer_stands` (206 cells) compares type, int64 ticks and, for an error, class,
   cause class and text with the cause's own text cut, against main's recorded cell.
   `test_main_stored_a_value_where_the_door_now_refuses` holds that no refused cell was an
   error on main, and `test_the_fixture_holds_main_for_every_cell` that the fixture is
@@ -10177,14 +10177,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   in words: each hint stores the floor (`.astype("datetime64[us]")` for an array,
   `value // 1000` for an integer), `0` and `-1` nanoseconds are their own floors, `1` and
   `-2` nanoseconds are stored wrong by main, and three of the open cells hold main's ticks.
-  594 tests. The round-0 tests are replaced: every one of their shapes is a cell of the
+  604 tests. The round-0 tests are replaced: every one of their shapes is a cell of the
   matrix. No module docstring: the no-comments ruling covers the file; the contract lives
   here.
   pins: ns-array-apply-in-pandas-refuse-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-  pins: ns-array-apply-in-pandas-refuse-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017
+  pins: ns-array-apply-in-pandas-refuse-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-019, C-020
 - [_ns_array_apply_in_pandas_refuse_1_cases.py](_ns_array_apply_in_pandas_refuse_1_cases.py) —
   **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 fold 1 (2026-10-13):** the case matrix the recorder and
-  the pins share, so both sides build the same frames: 194 cases. A case is a name, an
+  the pins share, so both sides build the same frames: 197 cases. A case is a name, an
   expectation (`array`: refused by the array rule; `integer`: refused because the result
   returns a nanosecond tick of the group frame as an integer; `main`: answers what main
   answers) and a runner. `USER_CASES` build their own result cells over a two-row frame with
@@ -10194,7 +10194,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   that keeps its type (chosen ticks, `large_list`, `fixed_size_list` and `list_view`
   layouts); `GROUPED_AGG_CASES` and `WINDOW_CASES` run the facade's own two routes through
   the same bridge (a GROUPED_AGG pandas UDF, an ordered-window pandas UDF), which answer as
-  main. A name that starts with `open_` (eight cases) is a cell the door cannot judge or does
+  main. A name that starts with `open_` (nine cases) is a cell the door cannot judge or does
   not own: it holds main's stored ticks for a later unit. `answer` returns the Arrow type and
   int64 ticks of the value column (the distinct rows when there are more than 40), or the
   error class, the cause class and the text with the cause's own text replaced by `{cause}`,

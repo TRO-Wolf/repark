@@ -262,12 +262,13 @@ def _column_can_hold_integers(plan: tuple[Any, ...], series: Any) -> bool:
 def _column_returns_nanosecond_tick(
     plan: tuple[Any, ...],
     series: Any,
+    stored: Any,
     nanosecond_ticks: frozenset[int],
 ) -> bool:
     """True when a result column returns a nanosecond tick of the frame as an integer."""
     if series.dtype == object:
         return _cells_store_wrong(plan, series.to_numpy().tolist(), nanosecond_ticks)
-    return bool(series.isin(nanosecond_ticks).any())
+    return not nanosecond_ticks.isdisjoint(stored.drop_null().to_pylist())
 
 
 def _type_holds_nanoseconds(arrow_type: Any) -> bool:
@@ -392,7 +393,7 @@ def _nanosecond_integer_refusal(
         if not pc.any(pc.is_in(stored, value_set=ticks, skip_nulls=True)).as_py():
             continue
         if _column_returns_nanosecond_tick(
-            integer_plan, series, _unambiguous_nanosecond_ticks(ticks)
+            integer_plan, series, stored, _unambiguous_nanosecond_ticks(ticks)
         ):
             return (
                 f"{api_name} refuses column '{field.name}' of declared type {field.type}: "

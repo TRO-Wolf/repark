@@ -159,6 +159,20 @@ def ticks_as_integer_column(pdf: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({"id": pdf["id"], "v": [cell["t"] for cell in pdf["v"]]})
 
 
+def ticks_as_typed_integer_column(pdf: pd.DataFrame, dtype: str) -> pd.DataFrame:
+    """Return the struct ticks as an integer column of a pandas extension dtype."""
+    ticks = pd.Series([cell["t"] for cell in pdf["v"]], dtype=dtype)
+    return pd.DataFrame({"id": pdf["id"].to_numpy(), "v": ticks})
+
+
+def ticks_as_arrow_integer_structs(pdf: pd.DataFrame) -> pd.DataFrame:
+    """Return the struct ticks as an Arrow-typed struct column of integers."""
+    arrow_type = pa.struct([("t", pa.int64())])
+    cells = pa.array([{"t": cell["t"]} for cell in pdf["v"]], arrow_type)
+    values = pd.Series(cells, dtype=pd.ArrowDtype(arrow_type))
+    return pd.DataFrame({"id": pdf["id"].to_numpy(), "v": values})
+
+
 def ticks_as_object_column(pdf: pd.DataFrame) -> pd.DataFrame:
     """Return the struct ticks as an object column."""
     return pd.DataFrame({"id": pdf["id"], "v": object_series([cell["t"] for cell in pdf["v"]])})
@@ -621,6 +635,20 @@ TABLE_CASES = (
         "id int, v timestamp",
     ),
     table_case(
+        "table_struct_ns_nullable_integer_column",
+        INTEGER,
+        "named_struct('t', ns)",
+        partial(ticks_as_typed_integer_column, dtype="Int64"),
+        "id int, v timestamp_ntz",
+    ),
+    table_case(
+        "table_struct_ns_arrow_integer_column",
+        INTEGER,
+        "named_struct('t', ns)",
+        partial(ticks_as_typed_integer_column, dtype="int64[pyarrow]"),
+        "id int, v timestamp_ntz",
+    ),
+    table_case(
         "table_struct_ns_object_column",
         INTEGER,
         "named_struct('t', ns)",
@@ -707,6 +735,12 @@ TABLE_CASES = (
         "SELECT id, named_struct('t', ns) AS v FROM {source} WHERE id = 2",
     ),
     table_case("open_table_struct_ns_plus_one", MAIN, "named_struct('t', ns)", add_one_tick),
+    table_case(
+        "open_table_struct_ns_as_arrow_integer_structs",
+        MAIN,
+        "named_struct('t', ns)",
+        ticks_as_arrow_integer_structs,
+    ),
     table_case(
         "table_top_level_ns_floor_divided",
         MAIN,

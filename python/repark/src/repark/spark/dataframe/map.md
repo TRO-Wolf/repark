@@ -520,10 +520,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `(name, value)` pairs, a map position a dict's items or entries of key and value. A
   `datetime64[ns]` array with a tick that differs from its microsecond floor refuses; `0`,
   `-1`, NaT, an empty array and every other cell decide nothing and the walk goes on, so no
-  cell hides a later one. The walk runs before the conversion, while the cells are in the
-  cache of the thread that made them (pyarrow converts object columns on pool threads), and
-  never reads the elements of a container whose declared elements are scalars. A container
-  that raises when read decides nothing.
+  cell hides a later one. The walk runs before the conversion (pyarrow converts the columns
+  of a larger frame on a thread pool, and a first pass over the cells after it measured four
+  times dearer), and never reads the elements of a container whose declared elements are
+  scalars. A container that raises when read decides nothing.
   *The nanosecond tick returned as an integer.* `to_pandas` gives a `timestamp[ns]` that is a
   direct struct field, map key or map value to the function as a Python integer, and
   `from_pandas` takes an integer under a timestamp as a tick of the declared unit.
@@ -532,8 +532,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   integer the function took from them with `.astype("int64")` is known as well), looks them
   up in the stored result's timestamp leaves with an Arrow set lookup, and only on a hit
   walks the pandas result: a Python `int` equal to one of those ticks at a declared timestamp
-  position refuses, nested or top-level (an integer column included). Only an object or an
-  integer column is looked up; a frame with no nanosecond timestamp costs a schema walk. A
+  position refuses, nested or top-level (an integer column included, confirmed from the
+  stored ticks). Only an object or a top-level integer column is looked up, never an
+  Arrow-typed nested one; a frame with no nanosecond timestamp costs a schema walk. A
   tick that is the microsecond floor of one of the ticks is left out, so `value // 1000`
   always passes. An integer the function derived another way (`tick + 1`) is not known to
   the door.
