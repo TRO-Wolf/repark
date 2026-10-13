@@ -1,7 +1,9 @@
 # Contributing to RePark
 
-RePark is **source-open, contribution-gated** while the engine is pre-alpha and nothing is
-released. Current state — what is delivered, what is deferred, and release state — is
+RePark is **source-open, contribution-gated**: the engine has shipped releases since
+2026-09-03 (current release in [STATUS.md](STATUS.md)), and external code contributions are
+still gated by the maintainer-side process below.
+Current state — what is delivered, what is deferred, and release state — is
 [STATUS.md](STATUS.md); it is the source of truth, and this file does not restate it.
 
 ## What is welcome now
@@ -16,10 +18,10 @@ released. Current state — what is delivered, what is deferred, and release sta
 
 **External code pull requests are not accepted yet.** Work here runs under a strict internal
 process (see below); unsolicited PRs will be closed with thanks. The port that stood this
-repository up is complete, so the gate is no longer the port — it is the pre-alpha state itself:
-no API is stable and no release is tagged. The policy is revisited by the maintainer on the way to
-the first tagged release; [STATUS.md](STATUS.md) "Current milestone" is where that path is
-recorded.
+repository up is complete and releases are tagged, so the gate is the process itself: every
+change lands through the maintainer's lane-and-verifier pipeline, which has no seat for
+external branches yet. The maintainer revisits the policy as that process matures;
+[STATUS.md](STATUS.md) "Current milestone" records the current state.
 
 ## Maintainer-side process (for context)
 
