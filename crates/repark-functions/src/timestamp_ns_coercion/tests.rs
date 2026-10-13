@@ -13,6 +13,7 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 use datafusion_spark::function::array::spark_array::SparkArray;
 
+use super::dml_feeds::{dml_feed, dml_feed_with_trigger, dml_input_of, dml_of};
 use super::{
     SparkTimestampNsCoercion, fallback_count, fallback_log_line, gate_open_count, plan_opens_gate,
     reset_counts,
@@ -218,11 +219,7 @@ fn open_analysis_increments_the_gate_open_counter_once() {
     let _guard = SERIAL.lock().expect("test serial lock");
     let before_open = gate_open_count();
     let before_fallback = fallback_count();
-    let plan = scan_of(vec![Field::new(
-        "ns",
-        DataType::Timestamp(TimeUnit::Nanosecond, None),
-        true,
-    )]);
+    let plan = dml_feed(coalesce_call(vec![col("ns"), null_lit()]), ns_field("v"));
     let wrapper = SparkTimestampNsCoercion::new(Arc::new(PassThroughRule));
     let config = ConfigOptions::new();
     let _ = wrapper.analyze(plan, &config).expect("open plan analyzes");
@@ -441,117 +438,113 @@ fn union_of(left: LogicalPlan, right: LogicalPlan) -> LogicalPlan {
 #[test]
 fn coalesce_ns_null_rewrites_the_null_with_the_kernel() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
-    let plan = project_of(scan, vec![coalesce_call(vec![col("ns"), null_lit()])]);
+    let plan = dml_feed(coalesce_call(vec![col("ns"), null_lit()]), ns_field("v"));
     let out = analyzed(plan);
-    assert_ns_output(&out, None);
+    assert_ns_output(dml_input_of(&out), None);
     assert_kernel_rewrite(&out, TIMESTAMP_NS_CAST_NAME);
 }
 
 #[test]
 fn coalesce_tzns_null_rewrites_the_null_with_the_kernel() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![tzns_field("tzns")]);
-    let plan = project_of(scan, vec![coalesce_call(vec![col("tzns"), null_lit()])]);
+    let plan = dml_feed(
+        coalesce_call(vec![col("tzns"), null_lit()]),
+        tzns_field("v"),
+    );
     let out = analyzed(plan);
-    assert_ns_output(&out, Some(Arc::from("UTC")));
+    assert_ns_output(dml_input_of(&out), Some(Arc::from("UTC")));
     assert_kernel_rewrite(&out, TIMESTAMPTZ_NS_CAST_NAME);
 }
 
 #[test]
 fn array_ns_null_rewrites_the_null_with_the_kernel() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
-    let plan = project_of(scan, vec![array_call(vec![col("ns"), null_lit()])]);
+    let plan = dml_feed(array_call(vec![col("ns"), null_lit()]), ns_field("v"));
     let out = analyzed(plan);
-    assert_list_ns_output(&out, None);
+    assert_list_ns_output(dml_input_of(&out), None);
     assert_kernel_rewrite(&out, TIMESTAMP_NS_CAST_NAME);
 }
 
 #[test]
 fn array_tzns_null_rewrites_the_null_with_the_kernel() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![tzns_field("tzns")]);
-    let plan = project_of(scan, vec![array_call(vec![col("tzns"), null_lit()])]);
+    let plan = dml_feed(array_call(vec![col("tzns"), null_lit()]), tzns_field("v"));
     let out = analyzed(plan);
-    assert_list_ns_output(&out, Some(Arc::from("UTC")));
+    assert_list_ns_output(dml_input_of(&out), Some(Arc::from("UTC")));
     assert_kernel_rewrite(&out, TIMESTAMPTZ_NS_CAST_NAME);
 }
 
 #[test]
 fn case_ns_null_rewrites_the_null_with_the_kernel() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
-    let plan = project_of(scan, vec![case_call("ns")]);
+    let plan = dml_feed(case_call("ns"), ns_field("v"));
     let out = analyzed(plan);
-    assert_ns_output(&out, None);
+    assert_ns_output(dml_input_of(&out), None);
     assert_kernel_rewrite(&out, TIMESTAMP_NS_CAST_NAME);
 }
 
 #[test]
 fn case_tzns_null_rewrites_the_null_with_the_kernel() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![tzns_field("tzns")]);
-    let plan = project_of(scan, vec![case_call("tzns")]);
+    let plan = dml_feed(case_call("tzns"), tzns_field("v"));
     let out = analyzed(plan);
-    assert_ns_output(&out, Some(Arc::from("UTC")));
+    assert_ns_output(dml_input_of(&out), Some(Arc::from("UTC")));
     assert_kernel_rewrite(&out, TIMESTAMPTZ_NS_CAST_NAME);
 }
 
 #[test]
 fn if_ns_null_rewrites_the_null_with_the_kernel() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
-    let plan = project_of(scan, vec![if_call(vec![lit(true), col("ns"), null_lit()])]);
+    let plan = dml_feed(
+        if_call(vec![lit(true), col("ns"), null_lit()]),
+        ns_field("v"),
+    );
     let out = analyzed(plan);
-    assert_ns_output(&out, None);
+    assert_ns_output(dml_input_of(&out), None);
     assert_kernel_rewrite(&out, TIMESTAMP_NS_CAST_NAME);
 }
 
 #[test]
 fn if_tzns_null_rewrites_the_null_with_the_kernel() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![tzns_field("tzns")]);
-    let plan = project_of(
-        scan,
-        vec![if_call(vec![lit(true), col("tzns"), null_lit()])],
+    let plan = dml_feed(
+        if_call(vec![lit(true), col("tzns"), null_lit()]),
+        tzns_field("v"),
     );
     let out = analyzed(plan);
-    assert_ns_output(&out, Some(Arc::from("UTC")));
+    assert_ns_output(dml_input_of(&out), Some(Arc::from("UTC")));
     assert_kernel_rewrite(&out, TIMESTAMPTZ_NS_CAST_NAME);
 }
 
 #[test]
-fn union_ns_null_branch_rewrites_the_null_with_the_kernel() {
-    let _guard = SERIAL.lock().expect("test serial lock");
+fn union_ns_null_branch_matches_main() {
     let valued = project_of(scan_of(vec![ns_field("v")]), vec![col("v")]);
     let nulls = project_of(scan_of(vec![micro_field()]), vec![null_lit().alias("v")]);
-    let out = analyzed(union_of(valued, nulls));
-    assert_ns_output(&out, None);
-    assert_kernel_rewrite(&out, TIMESTAMP_NS_CAST_NAME);
+    let plan = union_of(valued, nulls);
+    assert_matches_main(plan.clone());
+    assert_no_kernel(&main_rule_wrapped(plan));
 }
 
 #[test]
-fn union_tzns_null_branch_rewrites_the_null_with_the_kernel() {
-    let _guard = SERIAL.lock().expect("test serial lock");
+fn union_tzns_null_branch_matches_main() {
     let valued = project_of(scan_of(vec![tzns_field("v")]), vec![col("v")]);
     let nulls = project_of(scan_of(vec![micro_field()]), vec![null_lit().alias("v")]);
-    let out = analyzed(union_of(valued, nulls));
-    assert_ns_output(&out, Some(Arc::from("UTC")));
-    assert_kernel_rewrite(&out, TIMESTAMPTZ_NS_CAST_NAME);
+    let plan = union_of(valued, nulls);
+    assert_matches_main(plan.clone());
+    assert_no_kernel(&main_rule_wrapped(plan));
 }
 
 #[test]
-fn rewrite_is_idempotent_and_moves_only_the_gate_counter() {
+fn rewrite_is_idempotent_and_reanalysis_counts_nothing() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
-    let plan = project_of(scan, vec![coalesce_call(vec![col("ns"), null_lit()])]);
+    let plan = dml_feed(coalesce_call(vec![col("ns"), null_lit()]), ns_field("v"));
     let once = analyzed(plan);
+    assert_kernel_rewrite(&once, TIMESTAMP_NS_CAST_NAME);
     let before_open = gate_open_count();
     let before_fallback = fallback_count();
     let twice = analyzed(once.clone());
     assert_eq!(format!("{twice:?}"), format!("{once:?}"));
-    assert_eq!(gate_open_count() - before_open, 1);
+    assert_eq!(gate_open_count() - before_open, 0);
     assert_eq!(fallback_count() - before_fallback, 0);
 }
 
@@ -568,42 +561,38 @@ fn assert_falls_back(plan: LogicalPlan) {
 #[test]
 fn written_timestamp_cast_falls_back_to_inner() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
     let cast = Expr::Cast(Cast::new(
         Box::new(col("ns")),
         DataType::Timestamp(TimeUnit::Microsecond, None),
     ));
-    assert_falls_back(project_of(scan, vec![cast.alias("v")]));
+    assert_falls_back(dml_feed_with_trigger(cast.alias("w")));
 }
 
 #[test]
 fn written_timestamp_trycast_falls_back_to_inner() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
     let cast = Expr::TryCast(TryCast::new(
         Box::new(col("ns")),
         DataType::Timestamp(TimeUnit::Microsecond, None),
     ));
-    assert_falls_back(project_of(scan, vec![cast.alias("v")]));
+    assert_falls_back(dml_feed_with_trigger(cast.alias("w")));
 }
 
 #[test]
 fn typed_null_cast_falls_back_to_inner() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
     let cast = Expr::Cast(Cast::new(
         Box::new(null_lit()),
         DataType::Timestamp(TimeUnit::Microsecond, None),
     ));
-    assert_falls_back(project_of(scan, vec![col("ns"), cast.alias("v")]));
+    assert_falls_back(dml_feed_with_trigger(cast.alias("w")));
 }
 
 #[test]
 fn live_timestamp_literal_falls_back_to_inner() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
     let literal = lit(ScalarValue::TimestampMicrosecond(Some(1), None));
-    assert_falls_back(project_of(scan, vec![col("ns"), literal.alias("v")]));
+    assert_falls_back(dml_feed_with_trigger(literal.alias("w")));
 }
 
 #[test]
@@ -615,13 +604,12 @@ fn container_timestamp_cast_does_not_fall_back() {
         DataType::Timestamp(TimeUnit::Microsecond, None),
         true,
     );
-    let cast = Expr::Cast(Cast::new(
-        Box::new(col("ns")),
-        DataType::List(Arc::new(item)),
-    ));
-    let plan = project_of(
-        scan,
+    let listed = DataType::List(Arc::new(item));
+    let cast = Expr::Cast(Cast::new(Box::new(col("ns")), listed.clone()));
+    let plan = dml_of(
+        vec![ns_field("v"), Field::new("w", listed, true)],
         vec![coalesce_call(vec![col("ns"), null_lit()]), cast.alias("w")],
+        scan,
     );
     let before_fallback = fallback_count();
     let out = analyzed(plan);
@@ -632,12 +620,11 @@ fn container_timestamp_cast_does_not_fall_back() {
 #[test]
 fn timestamp_reader_call_falls_back_to_inner() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
     let call = call_of(
         crate::instant_ts::to_timestamp_udf(),
         vec![lit("2026-01-02 03:04:05")],
     );
-    assert_falls_back(project_of(scan, vec![col("ns"), call.alias("v")]));
+    assert_falls_back(dml_feed_with_trigger(call.alias("w")));
 }
 
 fn assert_left_alone(plan: LogicalPlan) {
@@ -745,9 +732,8 @@ fn fallback_sink_receives_one_line_per_fallback() {
     let wrapper = SparkTimestampNsCoercion::new(Arc::new(PassThroughRule)).with_fallback_sink(sink);
     let config = ConfigOptions::new();
     for _ in 0..2 {
-        let scan = scan_of(vec![ns_field("ns")]);
         let literal = lit(ScalarValue::TimestampMicrosecond(Some(1), None));
-        let plan = project_of(scan, vec![col("ns"), literal.alias("v")]);
+        let plan = dml_feed_with_trigger(literal.alias("w"));
         let _ = wrapper.analyze(plan, &config).expect("plan analyzes");
     }
     let lines = lines.lock().expect("test serial lock");
@@ -761,8 +747,7 @@ fn fallback_sink_stays_quiet_on_rewrite_and_closed_gate() {
     let (sink, lines) = recording_sink();
     let wrapper = SparkTimestampNsCoercion::new(Arc::new(PassThroughRule)).with_fallback_sink(sink);
     let config = ConfigOptions::new();
-    let open = scan_of(vec![ns_field("ns")]);
-    let rewritten = project_of(open, vec![coalesce_call(vec![col("ns"), null_lit()])]);
+    let rewritten = dml_feed(coalesce_call(vec![col("ns"), null_lit()]), ns_field("v"));
     let _ = wrapper
         .analyze(rewritten, &config)
         .expect("open plan analyzes");
@@ -901,8 +886,7 @@ fn rejected_rewrite_retries_on_the_original_plan() {
     let wrapper =
         SparkTimestampNsCoercion::new(Arc::new(FailOnKernelRule)).with_fallback_sink(sink);
     let config = ConfigOptions::new();
-    let scan = scan_of(vec![ns_field("ns")]);
-    let plan = project_of(scan, vec![coalesce_call(vec![col("ns"), null_lit()])]);
+    let plan = dml_feed(coalesce_call(vec![col("ns"), null_lit()]), ns_field("v"));
     let before_open = gate_open_count();
     let before_fallback = fallback_count();
     let out = wrapper
@@ -954,15 +938,15 @@ fn null_beside_mixed_ns_and_tzns_follows_the_mixed_rule() {
 #[test]
 fn null_case_when_condition_is_not_a_site() {
     let _guard = SERIAL.lock().expect("test serial lock");
-    let scan = scan_of(vec![ns_field("ns")]);
     let case = Expr::Case(Case {
         expr: None,
         when_then_expr: vec![(Box::new(null_lit()), Box::new(col("ns")))],
         else_expr: Some(Box::new(null_lit())),
     });
-    let out = analyzed(project_of(scan, vec![case.alias("v")]));
-    let LogicalPlan::Projection(projection) = &out else {
-        panic!("expected a projection, got {out:?}");
+    let out = analyzed(dml_feed(case.alias("v"), ns_field("v")));
+    let projection = match dml_input_of(&out) {
+        LogicalPlan::Projection(projection) => projection,
+        other => panic!("expected a projection, got {other:?}"),
     };
     let Expr::Case(case) = projection.expr[0].clone().unalias() else {
         panic!("expected a case, got {:?}", projection.expr[0]);
@@ -977,15 +961,10 @@ fn null_case_when_condition_is_not_a_site() {
 }
 
 #[test]
-fn union_kernel_lands_on_the_null_branch_only() {
-    let _guard = SERIAL.lock().expect("test serial lock");
+fn union_branches_hold_no_kernel_and_match_main() {
     let valued = project_of(scan_of(vec![ns_field("v")]), vec![col("v")]);
     let nulls = project_of(scan_of(vec![micro_field()]), vec![null_lit().alias("v")]);
-    let out = analyzed(union_of(valued, nulls));
-    let LogicalPlan::Union(union) = &out else {
-        panic!("expected a union, got {out:?}");
-    };
-    assert_eq!(union.inputs.len(), 2);
-    assert!(!plan_calls_kernel(&union.inputs[0], TIMESTAMP_NS_CAST_NAME));
-    assert!(plan_calls_kernel(&union.inputs[1], TIMESTAMP_NS_CAST_NAME));
+    let plan = union_of(valued, nulls);
+    assert_matches_main(plan.clone());
+    assert_no_kernel(&main_rule_wrapped(plan));
 }

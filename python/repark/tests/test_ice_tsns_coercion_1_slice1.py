@@ -13,6 +13,7 @@ from typing import Any
 import _ice_tsns_coercion_1_doors as doors
 import _record_ice_tsns_coercion_1_twins as recorder
 import pandas as pd
+import pyarrow as pa
 
 from repark import ReparkSession, _native
 
@@ -105,7 +106,7 @@ def _open_session() -> Any:
     return ReparkSession.builder.appName("ice-tsns-coercion-1-slice1").getOrCreate()
 
 
-def test_pandas_datetime64_ns_frame_opens_the_gate() -> None:
+def test_pandas_datetime64_ns_frame_scans_as_ns() -> None:
     """pins: ice-tsns-coercion-1/C-005 — a datetime64[ns] frame scans as Timestamp(ns)."""
     pdf = pd.DataFrame(
         {
@@ -123,9 +124,10 @@ def test_pandas_datetime64_ns_frame_opens_the_gate() -> None:
     try:
         spark.createDataFrame(pdf).createOrReplaceTempView("v_ns_frame")
         before_open, before_fallback = _counts()
-        spark.sql("SELECT t FROM v_ns_frame").toArrow()
+        table = spark.sql("SELECT t FROM v_ns_frame").toArrow()
         opened, fallback = _counts()
-        assert opened - before_open >= 1
+        assert table.schema.types[0] == pa.timestamp("ns")
+        assert opened == before_open
         assert fallback == before_fallback
     finally:
         spark.stop()
@@ -147,7 +149,7 @@ def test_microsecond_frame_leaves_the_gate_closed() -> None:
 
 
 def test_twelve_statements_equal_the_recorded_twin_role(tmp_path: Path) -> None:
-    """pins: ice-tsns-coercion-1/C-005 — round 2 stores the twin's nanoseconds."""
+    """pins: ice-tsns-coercion-1/C-005 — kept feeds store the twin, the rest main's."""
     fixture = _load_fixture()
     for door, zone in DOOR_ZONE:
         warehouse = tmp_path / ("utc" if zone == "UTC" else "ny")
@@ -158,16 +160,21 @@ def test_twelve_statements_equal_the_recorded_twin_role(tmp_path: Path) -> None:
                 for source in SOURCES:
                     target = TARGET_FOR[source]
                     cell = f"{zone}|{target}|{source}|{form}|{door}"
+                    role = (
+                        "twin"
+                        if door == "insert_select" and form in ("coalesce", "case")
+                        else "statement"
+                    )
                     outcome = doors.measure(
                         spark, warehouse, target, source, form, SIBLING, "statement", door
                     )
                     assert outcome == _role_outcome(
-                        fixture, "twin", zone, target, source, form, SIBLING, door
+                        fixture, role, zone, target, source, form, SIBLING, door
                     ), cell
                     statement = recorder.read_sql(spark, source, form, SIBLING, "statement")
                     read = _normalized_read(recorder.capture(spark, statement))
                     want = _normalized_read(
-                        fixture["reads"][f"{zone}|{source}|{form}|{SIBLING}|twin"]
+                        fixture["reads"][f"{zone}|{source}|{form}|{SIBLING}|statement"]
                     )
                     assert read == want, cell
         finally:

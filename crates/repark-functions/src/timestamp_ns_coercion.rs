@@ -278,6 +278,8 @@ impl AnalyzerRule for SparkTimestampNsCoercion {
 }
 
 #[cfg(test)]
+mod dml_feeds;
+#[cfg(test)]
 mod feed_tests;
 #[cfg(test)]
 mod tests;

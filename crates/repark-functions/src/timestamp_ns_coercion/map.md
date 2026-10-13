@@ -87,6 +87,12 @@ only for a refused feed. `feed_tests.rs` pins the walk table. Anchor (a) is its 
 commit on top: the kernel argument starts the same walk from its host projection, so
 MERGE and `UPDATE … WHERE` doors keep nine digits and the one named read exception (a
 site under a written nanosecond cast) keeps its digits with its type unchanged.
+Re-home (2026-10-13, R6/R7): the 54 `tests.rs` pins keep their bodies through the
+`dml_feeds.rs` `Dml` position builders — site pins assert the kernel on the `Dml` input,
+UNION/`VALUES` pins flip to main's rule alone, fallback pins pair each trigger with a
+feed, and the idempotence pin asserts a re-analysis counts nothing; the facade
+carve-out, corrected-twin and remaining-twin pins are deleted, reads flip to the
+statement role. `dml_feeds.rs` is the split seam: `tests.rs` passed its file ceiling.
 pins: ice-tsns-coercion-1/C-005
 
 ## Pointers
