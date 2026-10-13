@@ -103,11 +103,11 @@ def _cogrouped_pandas_batches(
             left_table = empty_left
         else:
             left_table = grouped_udf._apply_in_pandas_table_from_segments(left_segments)
+        left_pdf = left_table.to_pandas()
         if right_segments is None:
             right_table = empty_right
         else:
             right_table = grouped_udf._apply_in_pandas_table_from_segments(right_segments)
-        left_pdf = left_table.to_pandas()
         right_pdf = right_table.to_pandas()
         if keyed:
             out_pdf = grouped_arrow._call_grouped_user_func(

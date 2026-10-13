@@ -558,8 +558,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   silently (R-1; registry `GROUPED-COGROUP-1`). pins: grouped-surface-1/C-004, C-005
   **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 fold 1 (2026-10-13):** the pandas path keeps both
   group tables and hands them, with the scan plans compiled once, to
-  `grouped_arrow._pandas_result_to_arrow_batches`, so a nanosecond tick either side handed
-  to the function as an integer is known at the conversion point.
+  `grouped_arrow._pandas_result_to_arrow_batches`, so a nanosecond tick of either side is
+  known at the conversion point. The order of main's steps is kept: the left table, its
+  pandas frame, the right table, its pandas frame.
   pins: ns-array-apply-in-pandas-refuse-1/C-014
 - `udf_projection.py` owns the scalar pandas and classic UDF select rewrites (DFCORE-2,
   moved from `core.py`). Windowed GROUPED_AGG markers never enter the scalar bridge; they
