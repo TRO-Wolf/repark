@@ -31,6 +31,14 @@ rewriter lives in the sibling `../timestamp_ns_coercion_sites.rs`.
   fallback, quiet on rewrite and closed gate, the `has_fallback_sink` accessor).
   pins: ice-tsns-coercion-1/C-005
 
+Narrow fold (2026-10-13): `feed_tests.rs` pins the feed rule — a read site is left to
+main, an open gate without a feed hands the inner rule the plan it was given, a `Dml`
+position feed and a kernel-argument feed are rewritten, feeds behind alias/subquery,
+bare projection, sort and filter are rewritten, reading filters/sorts, double reads
+and every other plan node stop the walk, a consumer at the feed root is left to main,
+a site left inside a rewritten root refuses once, a microsecond target and a raw
+planner cast are not anchors. pins: ice-tsns-coercion-1/C-005
+
 Fold 1 (2026-10-12) asks DataFusion before it wraps a NULL: each candidate node is run
 through `TypeCoercionRewriter` on a clone, and an untyped NULL is wrapped only when the
 answer brings it to the site's `Timestamp(ns, _)` together with the nanosecond operand,
