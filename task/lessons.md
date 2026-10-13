@@ -305,3 +305,20 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   one PR (ICE-NTZ-NESTED-WALL-1) on one class, a read side and a store side that decide
   separately on every path nobody enumerated; each fold closed the named paths and the next
   verifier found new ones. Guard at the one chokepoint or stop.
+
+## 2026-10-13 — parked rounds: provisional anchors, round counts, integers, census cells
+
+- **DO ship every provisional anchor with a revert-alone-stays-green test.** A provisional
+  decision without a proven rollback is not provisional. Case: #1042's kernel anchor;
+  reverting its commit alone left 2 red tests.
+- **DO count verifier rounds against the finding class, not the PR.** The proportionality
+  rule counts failed remediation cycles against one finding. Case: R-017 took seven rounds
+  across two PRs (#1027 verify 1–3, #1042 verify-slice1, slice1b, slice1c, verify-narrow).
+- **DO refuse at sketch a guard that infers a unit from a value's magnitude or equality.**
+  An integer cannot carry a unit. Case: #1047's integer rule refused a correct microsecond
+  integer equal to a nanosecond frame tick, and its hint then stored a wrong value.
+- **DON'T let the fold assign a census cell's expected category.** A census cell's expected
+  category is derived by the harness from the design's rule, never assigned by the fold.
+  Case: #1042's 120 cells whose ledger category differed from what the doors stored.
+- **DO paste the test count for a claimed clean revert.** A fold that claims a clean revert
+  commits the revert on a throwaway branch and pastes the test count.
