@@ -3372,6 +3372,9 @@ still open is `isModifiable`.
 - **Rationale** — OPEN, dated 2026-10-09. A microsecond control of ICE-TSNS-MERGE-WALL-1,
   left alone by ruling. The field-assignment value is the one the rule asks for; nested
   INSERT has no NTZ conform. Ledger clause C-017, question Q4.
+- **Status 2026-10-12 (owner):** narrowing deferred, design in
+  [task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md](../task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md). PRs #1037 and #1038
+  are parked as drafts; no further fold round is planned on them.
 
 ### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
 

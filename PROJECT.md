@@ -32,10 +32,15 @@ the dialect layers are thin translators.
   north star (owner-set 2026-08-23) is full production-grade Iceberg format-v3 support** —
   deletion vectors, row lineage, the v3 types — defined, with the acceptance gate that decides
   the v1.0 tag, in
-  [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md).
-  The release-by-release path from v0.6 through 3.0 (owner-set 2026-08-29; v0.7–v0.10
-  shifted to 1.1–1.4 when v1.0.0 cut at the north-star gate on 2026-09-03) lives in
+  [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
+  — **reached 2026-09-03**. The release-by-release path from v0.6 through 3.0 (owner-set
+  2026-08-29; v0.7–v0.10 shifted to 1.1–1.4 when v1.0.0 cut at the north-star gate) lives in
   [task/roadmap/epic-term/release-roadmap-2026-08-29.md](task/roadmap/epic-term/release-roadmap-2026-08-29.md).
+  Each active release line names one primary outcome — see "Primary outcome by release line".
+  **Future goal (owner-set 2026-10-12, unscheduled): the fastest known query engine on S3
+  Tables** — defined as a measurable claim in
+  [task/roadmap/epic-term/s3-tables-fastest-north-star-2026-10-12.md](task/roadmap/epic-term/s3-tables-fastest-north-star-2026-10-12.md);
+  no lane runs on it until the owner schedules it.
 - Single binary / single `pip install` — no JVM, no cluster, no daemon; cold start under a second.
 - Predictable memory via spill-to-disk by default. (*The "never OOM on data larger than RAM"
   claim is measured, not assumed: DataFusion's operator spill coverage is partial, so the honest
@@ -54,18 +59,96 @@ the dialect layers are thin translators.
   gated on a recorded benchmark baseline (measure first, then implement). `unsafe` stays
   workspace-forbidden; a per-module exception is a last rung reached only on flamegraph
   evidence that safe restructuring cannot match, and carries Miri + fuzz gates of its own.
-- Long-term ease of maintenance: strict testing contract, mechanical gates, one owned fork.
+- Long-term ease of maintenance: strict testing contract, mechanical gates, one owned fork. The
+  process serves the product: a gate earns its place by the defect class it catches.
+
+## Primary outcome by release line
+
+One organising outcome per active line, owner-set, pointing at the card that defines its
+acceptance; a line may carry several acceptance checks, but one outcome.
+
+- **1.5.x** — one-to-one Spark–Iceberg parity on the Spark door over the inventory in
+  [task/roadmap/mid-term/ice-parity-inventory-2026-09-19.md](task/roadmap/mid-term/ice-parity-inventory-2026-09-19.md).
+- **1.6** — Postgres connectivity (`repark-connect`) as a chartered seam; no Trino connector.
+- **1.7** — micro-batch CDC from bronze to silver, with the durability, recovery and replay
+  guarantees defined in
+  [task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md](task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md).
+- **1.8** — the inference readers (smart CSV, Excel, JSON) as their own crate, `repark-io`; the
+  crate layout in
+  [task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md](task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md)
+  is the means, not the outcome.
+
+## Priority order when goals collide
+
+Inside one unit the higher goal wins and the loser is named, dated and pointed at a card — never
+traded silently:
+
+1. **Data safety.** Persisted-data semantics change only with compatibility tests against data
+   the shipped engine wrote, an explicit assessment of existing rows, and a documented, tested
+   repair, migration or recovery procedure, including its limits.
+2. **Correctness against the oracle.** The Spark door answers as live Spark does; the native door
+   as its own contract says. Measured, never inferred from reviewer consensus.
+3. **The performance ceiling.** A unit that moves a reference workload past the ceiling its card
+   sets does not merge (see "Performance posture").
+4. **Parity completeness.** A divergence that cannot close inside 1–3 becomes a dated registry
+   row; that is the honest outcome, not a failure.
+5. **Surface breadth.** New names and features come last.
+
+## What production-grade means
+
+A capability claims production-grade only with evidence scoped to what it touches:
+
+- measured on the AWS tier (Glue, S3 Tables) wherever it touches a catalog or object store;
+- its failure modes named — what a failed commit leaves behind, which errors raise, which paths
+  refuse cleanly;
+- no silent degradation — a path the engine cannot handle refuses by name; a skipped, quarantined
+  or degraded path is a user-visible contract, never only a log line;
+- every known divergence a dated row in the registry,
+  [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md);
+- a committed baseline for its reference workload (next section);
+- for CDC, the guarantees the CDC north-star card defines: crash recovery, durability of
+  acknowledged data, replay, bounded resources, observable progress.
+
+## Performance posture
+
+Performance is advanced, not only defended. Each load-bearing surface has a reference workload;
+its baseline is committed under the index [docs/perf/map.md](docs/perf/map.md) and its acceptance
+target lives in the approved performance card, never here. Regression ceilings are set per card
+by the owner, measured by the protocol recorded with that card's evidence, and a measured
+trade-off is accepted only by a dated owner carve-out. Ceilings are floors of discipline, not the
+goal.
+
+| Surface | Reference workload |
+|---|---|
+| Iceberg scan | a full scan measured against the equivalent Parquet scan; statistics folds only where the spec makes them exact, the scan path kept |
+| Iceberg DML on Glue | INSERT, MERGE, UPDATE on a Glue table, metadata round trips per statement counted |
+| Analytics | grouped aggregation and windows at 1e6–1e7 rows against DuckDB on the same data |
+| TA serving | many-symbol windows, wide multi-indicator SELECT, last-row serving against `polars_talib` |
+| dbt-repark | the reference dbt project end to end |
 
 ## Differentiators
 
-The reasons someone picks this over DuckDB or Polars; everything else is table stakes.
+The reasons someone picks this over DuckDB or Polars; everything else is table stakes. Each one
+names its evidence; a differentiator without a pointer is aspirational and says so.
 
-- Deepest Iceberg support of any single-node engine, including V3 features.
-- A native TA (technical-analysis) function library, bit-exact and fast, built in Rust.
-- Aggressive, intelligent schema inference and a CSV reader that handles real-world mess.
-- First-class Excel read/write.
-- ML that trains directly off Iceberg tables out-of-core, no extraction step (2.x on the release roadmap).
-- The PySpark facade: migrate existing pipelines without rewrites.
+- Deepest Iceberg support of any single-node engine, including V3 features — evidence: coverage
+  of the parity inventory ([STATUS.md](STATUS.md) counts, the registry
+  [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md)); "deepest" against other
+  engines is unmeasured.
+- A native TA (technical-analysis) function library, bit-exact and fast, built in Rust — evidence:
+  [crates/repark-ta/benches/map.md](crates/repark-ta/benches/map.md) and the TA rows of
+  [docs/perf/map.md](docs/perf/map.md).
+- Aggressive, intelligent schema inference and a CSV reader that handles real-world mess —
+  evidence: the measured torture run
+  [docs/perf/torture-1-2026-09-11.md](docs/perf/torture-1-2026-09-11.md) against
+  [docs/design/torture-suite.md](docs/design/torture-suite.md).
+- First-class Excel read/write — aspirational: `repark-io` arrives on the 1.8 layout.
+- ML that trains directly off Iceberg tables out-of-core, no extraction step — aspirational: 2.x
+  on the release roadmap.
+- The PySpark facade: migrate existing pipelines without rewrites — evidence: the facade suite
+  and the 1.5.x parity outcome above.
+- The fastest known query engine on S3 Tables — a future goal, unscheduled: no AWS measurement
+  is recorded on main today.
 
 ## Non-negotiable invariants (do not undo)
 
@@ -73,7 +156,9 @@ The reasons someone picks this over DuckDB or Polars; everything else is table s
   `TRO-Wolf/iceberg-rust` fork is a **sibling sub-project we own** (1:1 Java `iceberg-core`
   parity), a **separate repo, never vendored**; the engine-agnostic table-format work lives in the
   fork. `[patch.crates-io]` + rev-pin is the wiring (from phase 1). See
-  [docs/adr/0001-own-iceberg-fork.md](docs/adr/0001-own-iceberg-fork.md).
+  [docs/adr/0001-own-iceberg-fork.md](docs/adr/0001-own-iceberg-fork.md). Ownership carries
+  the sync obligations in [docs/fork-sync.md](docs/fork-sync.md): pin bumps only by their own PR,
+  upstream drift tracked against its thresholds.
 - **Two honest SQL doors, no blended parser** —
   [docs/adr/0002-two-sql-doors.md](docs/adr/0002-two-sql-doors.md).
 - **Server-prep disciplines from day one** (everything-through-Session, bindings-as-thin-adapter) —
@@ -90,27 +175,31 @@ The reasons someone picks this over DuckDB or Polars; everything else is table s
   tool adapters ([CLAUDE.md](CLAUDE.md), [.agents/](.agents/map.md)) carry no authoritative facts and
   cannot drift.
 
-## Target architecture (crate skeleton — the port's destination)
+## Target architecture
 
-```
-crates/
-  repark-core        lazy-frame IR, planning, optimizer hooks, Session, execution config and spill, silver/
-  repark-io          smart CSV, Excel, JSON — the inference readers
-  repark-iceberg     catalogs (Glue, S3 Tables, REST) + DML + maintenance; adapter over the owned fork
-  repark-connect     Postgres, MSSQL connectivity
-  repark-cdc         native snapshot + CDC capture into Bronze
-  repark-crawler     bounded discovery runs; proposes Bronze and Silver specifications
-  repark-sql         ANSI SQL front end (native dialect)
-  repark-spark-dialect  the Spark SQL grammar, below the door
-  repark-spark       Spark semantics: the router and the DDL / DML / inspect / procedure families
-  repark-ml          Arrow→DMatrix handoff, out-of-core training
-  repark-python      PyO3: thin adapter over the internal engine API
-python/repark        native lazy API + repark.sql()
-python/repark/spark  near-drop-in PySpark facade
-dbt-repark           dbt adapter, separate Python package (modeled on dbt-duckdb)
-```
+The crate DAG, its declared edge kinds and the crate destination through 1.8 live in
+[ARCHITECTURE.md](ARCHITECTURE.md) and
+[task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md](task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md);
+this file does not restate them. The shape that must not be undone: tiered crates with no
+door-to-door edge, bindings reaching inward only, two Python surfaces (`python/repark` native,
+`python/repark/spark` facade) over one engine, `dbt-repark` as a separate package embedding the
+engine in the dbt process, v1 crates re-homed rather than rewritten, and DataFusion as the engine
+under everything.
 
-v1 crates re-home rather than rewrite. DataFusion remains the engine under everything.
+## Not now, and why
+
+Declined or deferred on purpose; each line is dated so it is not re-litigated by inference.
+
+- **Distributed single-query execution** — behind the `ExecutionBackend` seam; no query has
+  outgrown one box (standing).
+- **Server mode** (Arrow Flight SQL) — an adapter later; the server-prep disciplines keep it
+  cheap (standing).
+- **Continuous streaming** — micro-batch only, bronze→silver (1.7); the open decisions are
+  owner-held (2026-10-11).
+- **A Trino connector** — struck from the 1.6 charter (2026-10-01).
+- **PyIceberg, Sail** — own-the-stack (standing).
+- **External code contributions** — issues welcome, patches gated; revisited at the second-user
+  review (see "Year one").
 
 ## Distributed posture
 
@@ -126,6 +215,12 @@ Priorities serve **the operator's production data-engineering workloads (Airflow
 dbt)**. Load-bearing surfaces, in order: (1) the SQL engine with Iceberg DML, (2) **dbt-repark**
 (engine embedded in the dbt process — dbt-duckdb precedent), (3) the lazy DataFrame API for Airflow
 tasks. The PySpark facade's year-one job: migrate existing pipelines without rewrites.
+
+**The second-user review.** Year one optimises for one known workload, which is why its
+requirements are true and its baselines are real. The first external workload running in
+production against the engine triggers a review — of opening external patches, of the
+additive-only freeze on native-door names, of ML 2.x funding — each a separate decision, none
+automatic. Until then the native door is not widened for hypothetical users.
 
 ## Validation & documentation roadmap (owner-set, 2026-08-16)
 
@@ -162,7 +257,9 @@ artifacts (docs / datasets / test suites) AND as runnable Jupyter notebooks.
 4. **Cross-engine function validation.** Systematic comparison-and-validation batteries for
    the full `pyspark.sql.functions` surface (extending the existing parity harness), plus
    equivalent comparisons against polars and DuckDB function behavior where surfaces
-   overlap — three oracles, one function matrix.
+   overlap — three oracles, one function matrix. Native-door tests follow RePark's declared
+   contract, with Trino and DuckDB differential checks where their semantics match the surface
+   under test; Spark parity does not test the native door.
 
 ## Current state
 
