@@ -16,5 +16,10 @@ re-record it with the test or probe named beside it.
   timestamp types on a plain session and on the Spark-door session. Recorded
   with `cargo test -p repark-spark --test ice_tsns_type_planner_1_h3 --
   --nocapture`.
+- [h4-reader-types.md](h4-reader-types.md) — the H4 reader table: the Arrow
+  type of a timestamp column from CSV (plain and inferred), JSON, Parquet
+  (`us`, `ns`, zoned `ns`), Iceberg v2 and Iceberg v3 (`timestamp_ns`,
+  `timestamptz_ns`), plus the unmeasured Postgres leg with its reason.
+  Recorded with the release module of main.
 
 Up: [../map.md](../map.md).
