@@ -616,6 +616,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `LocalSource` distinguishes instants from wall clocks at invoke; `date_trunc`/`date_format` use
   `invoke_local_micros`, while `trunc`/`add_months` use `invoke_local_dates`. Overlaps prefer the
   source instant's offset; gaps use the bounded `offset_before_gap` resolver.
+- `cardinality.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the session setting
+  `repark.sql.allowImplicitTimestampNanos` (alias
+  `repark.sql.allow_implicit_timestamp_nanos`), a fourth field of `ReparkSqlSettings` and
+  `ReparkSqlConfig`, default `false`, parsed as its sibling `allowCreateFormatVersion3` is
+  and fixed when the session is built. On, a create or schema-evolving door may take a
+  nanosecond column from the query's type without a written cast. The new items carry no
+  doc comment (the owner's no-comments ruling); this row is their description.
+  pins: ice-tsns-create-door-1/C-004
 - `cardinality.rs` — r24 SB1 SEC-01 ceilings + SEC-02 conf extension (const
   CAST / arithmetic / abs / coalesce / greatest / least / nullif / CASE /
   arrow_cast / utf8→int / float math / log*/exp/sqrt / bitwise / trivial scalar-subquery fold; depth-bounded).
@@ -1116,9 +1124,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   by-name test `is_timestamp_ns_cast` and stored SQL text do not change; `PartialEq` and
   `Hash` include the origin, so common-subexpression elimination cannot fold a written call
   into an inserted one. `is_written_timestamp_ns_cast` downcasts the function's
-  implementation (`ScalarUDF::inner().downcast_ref`); no SQL text is read. Pins in
-  `timestamp_ns_cast/tests.rs`.
-  pins: ice-tsns-create-door-1/C-002
+  implementation (`ScalarUDF::inner().downcast_ref`); no SQL text is read. The child module
+  `asked` (`timestamp_ns_cast/asked.rs`) answers which output columns of a plan the user
+  asked to be nanoseconds.
+  pins: ice-tsns-create-door-1/C-002, C-003
 - `timestamp_ns_cast.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel
   `__repark_cast_timestamptz_ns__` is now the one conversion every write door reaches for a
   top-level `timestamptz_ns` column, as the naive kernel is for `timestamp_ns`. Its return

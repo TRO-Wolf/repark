@@ -934,7 +934,12 @@ fn values_cell_needs_rewrite(cell: &Expr) -> bool {
         && interesting
 }
 
+mod asked;
 mod values_evidence;
 
+pub use asked::asked_nanosecond_columns;
+
+#[cfg(test)]
+mod asked_tests;
 #[cfg(test)]
 mod tests;

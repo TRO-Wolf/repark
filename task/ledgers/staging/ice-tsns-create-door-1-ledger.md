@@ -27,8 +27,8 @@ nothing of it is touched).
 |---|---|---|---|---|
 | C-001 | Main's answers are recorded by a committed recorder before any product edit: the 12-door matrix with no ask and with a written cast, the census pass 3 cells, 12 statements with no nanosecond output, and the v2 refusal texts, in UTC and America/New_York. | The fixture and its recorder. | **PROVEN** | `python/repark/tests/ice_tsns_create_door_1_main.json`, 200 cells recorded on `f3f98823`; §1. |
 | C-002 | A cast kernel carries its origin: the registry's kernel is written, a kernel built by engine code is inserted; both share a name and are not equal. No behaviour changes. | Five pins in `crates/repark-functions/src/timestamp_ns_cast/tests.rs`; the three crates' suites with no expectation edited. | **PROVEN** | §2. |
-| C-003 | `asked_nanosecond_columns` answers one flag per output column by the origins rule. | Slice 2. | **OPEN** | |
-| C-004 | `repark.sql.allowImplicitTimestampNanos` is a session setting, default off. | Slice 2. | **OPEN** | |
+| C-003 | `asked_nanosecond_columns` answers one flag per output column of a plan: true when the column has at least one nanosecond origin and every origin is a written kernel. | `crates/repark-functions/src/timestamp_ns_cast/asked_tests.rs`, 17 tests. | **PROVEN** | §3. Mutants m1 to m7 killed. |
+| C-004 | `repark.sql.allowImplicitTimestampNanos` (alias `repark.sql.allow_implicit_timestamp_nanos`) is a session setting, default off, parsed as `allowCreateFormatVersion3` is; a bad value is a config error naming the key. | `implicit_timestamp_nanos_is_off_unless_either_key_turns_it_on` in `cardinality.rs`. | **PROVEN** | §3. Nothing reads it before slice 3. |
 | C-005 | A query's Arrow schema becomes Iceberg columns only through `nanosecond_door`; a new nanosecond column that is not asked is refused there with one text. | Slice 3. | **OPEN** | |
 | C-006 | Every create and evolution door refuses an unasked nanosecond column and leaves the table as it was; a written cast and the setting create what main created. | Slice 3. | **OPEN** | |
 | C-007 | A statement with no nanosecond output answers what main answered. | Slice 3. | **OPEN** | |
@@ -94,3 +94,38 @@ kernels by hand now pass `Written`, as the product registry does.
 
 Gate: `cargo test --locked -p repark-functions -p repark-spark -p repark-sql` exit 0, no
 expectation edited.
+
+## 3. The walk and the setting (C-003, C-004)
+
+`crates/repark-functions/src/timestamp_ns_cast/asked.rs`. The rule, the nodes followed and the
+default are in that directory's `map.md`. Three points the work order does not spell out:
+
+- **Every plan variant is named.** The plan `match` has no wildcard arm: the nodes that are
+  not followed are listed and answer unasked, so a DataFusion upgrade that adds a node does
+  not compile until the node is placed. The expression `match` keeps a default arm, which is
+  the rule itself (the union of the children's origins, unasked when there is none).
+- **A depth bound.** The walk answers unasked below 1,024 levels of plan and expression
+  (`a_plan_deeper_than_the_walk_follows_is_not_asked`). A refusal with a remedy is the safe
+  direction; an unbounded recursion on a user-shaped plan is not.
+- **A column whose type holds no nanosecond timestamp is never walked**, so a statement with
+  no nanosecond output pays one pass over its output types.
+
+Tests: the fifteen the work order names, plus `nodes_that_keep_their_input_columns_keep_the_ask`
+(`Filter`, `Sort`, `Limit`, `Distinct`, `Repartition`, `SubqueryAlias`, `Projection` in one
+chain) and the depth bound.
+
+Mutants, each run with `cargo test -p repark-functions --lib timestamp_ns_cast`:
+
+| # | Mutant | Killed by |
+|---|---|---|
+| m1 | the registry registers `Inserted` | `the_registered_kernel_is_written`, `a_written_cast_stays_written_through_two_analyses` |
+| m2 | `timestamp_ns_cast_expr` builds `Written` | `an_inserted_kernel_over_a_table_column_is_not_asked`, `an_inserted_kernel_over_a_microsecond_value_is_no_origin`, `a_kernel_built_by_engine_code_is_inserted` |
+| m3 | `PartialEq` ignores `origin` | `written_and_inserted_kernels_share_a_name_and_are_not_equal` |
+| m4 | the unfollowed plan arm answers asked | 9 tests, `a_table_column_is_not_asked` and `an_unknown_plan_node_is_not_asked` among them |
+| m5 | asked wins over unasked when origins are combined | `a_union_with_one_table_column_branch_is_not_asked` and 3 more |
+| m6 | an inserted kernel counts as an asked origin | `an_inserted_kernel_over_a_table_column_is_not_asked`, `an_inserted_kernel_over_a_microsecond_value_is_no_origin` |
+| m7 | expressions with no nanosecond type are descended | `a_condition_over_nanoseconds_is_not_an_origin` and 2 more |
+
+The setting is a fourth field of `ReparkSqlSettings` and `ReparkSqlConfig`. It accepts what
+its sibling accepts (`true`, `false`, `1`, `0`, `yes`, `no`, any case), through the sibling's
+parser, and its own error names its own key.
