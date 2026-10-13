@@ -193,7 +193,7 @@ fn open_gate_without_a_feed_hands_the_inner_rule_the_plan_it_was_given() {
     let before_open = gate_open_count();
     let before_fallback = fallback_count();
     let out = wrapper.analyze(plan, &config).expect("plan analyzes");
-    assert!(inner.matched.lock().expect("test serial lock").clone());
+    assert!(*inner.matched.lock().expect("test serial lock"));
     assert_eq!(format!("{out:?}"), before);
     assert_eq!(gate_open_count() - before_open, 0);
     assert_eq!(fallback_count() - before_fallback, 0);
@@ -331,41 +331,74 @@ fn column_read_twice_stops_the_walk() {
     assert!(matches!(out, FeedOutcome::Unchanged));
 }
 
-#[test]
-fn every_other_plan_node_stops_the_walk() {
-    let left = project_of(scan_of(vec![ns_field("ns")]), vec![col("ns").alias("v")]);
-    let right = project_of(scan_of(vec![ns_field("ns")]), vec![col("ns").alias("v")]);
-    let joined = LogicalPlanBuilder::from(left)
-        .join(
-            right,
-            datafusion::logical_expr::JoinType::Inner,
-            (vec!["v"], vec!["v"]),
-            None,
-        )
-        .expect("join builds")
-        .build()
-        .expect("plan builds");
-    let input = project_of(joined, vec![col("v")]);
+fn site_named(scan: LogicalPlan) -> LogicalPlan {
+    project_of(
+        scan,
+        vec![coalesce_call(vec![col("ns"), null_lit()]).alias("v")],
+    )
+}
+
+fn assert_walk_stops(blocked: LogicalPlan) {
+    let input = project_of(blocked, vec![col("v")]);
     let plan = dml_insert(vec![ns_field("v")], input);
     assert!(matches!(
         rewrite_feeds(plan).expect("feed walk runs"),
         FeedOutcome::Unchanged
     ));
+}
+
+#[test]
+fn every_other_plan_node_stops_the_walk() {
+    let left = project_of(scan_of(vec![ns_field("ns")]), vec![col("ns").alias("v")]);
+    let right = project_of(
+        scan_of(vec![
+            Field::new("id", DataType::Int64, true),
+            ns_field("ns"),
+        ]),
+        vec![col("id"), col("ns").alias("w")],
+    );
+    let joined = LogicalPlanBuilder::from(left)
+        .join(
+            right,
+            datafusion::logical_expr::JoinType::Inner,
+            (vec!["v"], vec!["w"]),
+            None,
+        )
+        .expect("join builds")
+        .build()
+        .expect("plan builds");
+    assert_walk_stops(joined);
     let scan = scan_of(vec![
         Field::new("id", DataType::Int64, true),
         ns_field("ns"),
     ]);
-    let grouped = LogicalPlanBuilder::from(scan)
-        .aggregate(vec![col("id")], Vec::<Expr>::new())
+    let grouped = LogicalPlanBuilder::from(site_named(scan))
+        .aggregate(vec![col("v")], Vec::<Expr>::new())
         .expect("aggregate builds")
         .build()
         .expect("plan builds");
-    let input = project_of(grouped, vec![col("id").alias("v")]);
-    let plan = dml_insert(vec![Field::new("v", DataType::Int64, true)], input);
-    assert!(matches!(
-        rewrite_feeds(plan).expect("feed walk runs"),
-        FeedOutcome::Unchanged
-    ));
+    assert_walk_stops(grouped);
+    let scan = scan_of(vec![
+        Field::new("id", DataType::Int64, true),
+        ns_field("ns"),
+    ]);
+    let windowed = LogicalPlanBuilder::window_plan(
+        site_named(scan),
+        vec![datafusion::functions_window::expr_fn::lag(
+            col("v"),
+            None,
+            None,
+        )],
+    )
+    .expect("window builds");
+    assert_walk_stops(windowed);
+    let scan = scan_of(vec![ns_field("ns")]);
+    let distinct = LogicalPlanBuilder::from(site_named(scan))
+        .distinct()
+        .expect("distinct builds")
+        .build()
+        .expect("plan builds");
+    assert_walk_stops(distinct);
     let valued = project_of(scan_of(vec![ns_field("v")]), vec![col("v")]);
     let nulls = project_of(scan_of(vec![micro_field()]), vec![null_lit().alias("v")]);
     let union = LogicalPlanBuilder::from(valued)
@@ -373,7 +406,12 @@ fn every_other_plan_node_stops_the_walk() {
         .expect("union builds")
         .build()
         .expect("plan builds");
-    let input = project_of(union, vec![col("v")]);
+    assert_walk_stops(union);
+    let null_branch = LogicalPlanBuilder::values(vec![vec![null_lit()]])
+        .expect("values build")
+        .build()
+        .expect("plan builds");
+    let input = project_of(null_branch, vec![col("column1").alias("v")]);
     let plan = dml_insert(vec![ns_field("v")], input);
     assert!(matches!(
         rewrite_feeds(plan).expect("feed walk runs"),

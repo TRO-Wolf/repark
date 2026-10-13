@@ -9,6 +9,7 @@ use datafusion::logical_expr::{Expr, LogicalPlan};
 use datafusion::optimizer::AnalyzerRule;
 
 use crate::timestamp_ns_cast::is_timestamp_ns_cast;
+use crate::timestamp_ns_coercion_feeds::FeedOutcome;
 
 static GATE_OPEN_COUNT: AtomicU64 = AtomicU64::new(0);
 static FALLBACK_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -250,17 +251,23 @@ impl AnalyzerRule for SparkTimestampNsCoercion {
         if !plan_opens_gate(&plan) {
             return self.inner.analyze(plan, config);
         }
-        GATE_OPEN_COUNT.fetch_add(1, Ordering::Relaxed);
-        if let Some(reason) = fallback_reason(&plan) {
-            return self.fallback(plan, config, reason);
-        }
         let backup = plan.clone();
-        match crate::timestamp_ns_coercion_sites::rewrite_sites(plan) {
-            Ok(Some(rewritten)) => match self.inner.analyze(rewritten, config) {
-                Ok(done) => Ok(done),
-                Err(_) => self.fallback(backup, config, "rewrite was rejected"),
-            },
-            Ok(None) => self.inner.analyze(backup, config),
+        match crate::timestamp_ns_coercion_feeds::rewrite_feeds(plan) {
+            Ok(FeedOutcome::Unchanged) => self.inner.analyze(backup, config),
+            Ok(FeedOutcome::Refused(reason)) => {
+                GATE_OPEN_COUNT.fetch_add(1, Ordering::Relaxed);
+                self.fallback(backup, config, reason)
+            }
+            Ok(FeedOutcome::Rewritten(rewritten)) => {
+                GATE_OPEN_COUNT.fetch_add(1, Ordering::Relaxed);
+                if let Some(reason) = fallback_reason(&rewritten) {
+                    return self.fallback(backup, config, reason);
+                }
+                match self.inner.analyze(*rewritten, config) {
+                    Ok(done) => Ok(done),
+                    Err(_) => self.fallback(backup, config, "rewrite was rejected"),
+                }
+            }
             Err(error) => self.fallback(backup, config, &error.to_string()),
         }
     }

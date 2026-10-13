@@ -1484,4 +1484,20 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   node, brings it to the site's `Timestamp(ns, _)`; union columns ask `coerce_union`;
   a rewrite the inner rule rejects retries on the original plan with the
   `rewrite was rejected` line.
+  Narrow fold (2026-10-13): the wrapper rewrites only through `timestamp_ns_coercion_feeds`
+  (anchor (b), the `Dml` nanosecond position); an open gate with no feed hands the inner
+  rule the plan it was given with both counters untouched, and the trigger scan runs only
+  for a rewritten feed. `timestamp_ns_coercion_sites.rs` keeps the operand ask and the
+  scalar/`CASE` root rewrite (`rewrite_feed_root`, `feed_subtree_holds_site`); the UNION,
+  `VALUES`, aggregate and window arms are deleted.
+  pins: ice-tsns-coercion-1/C-005
+- `timestamp_ns_coercion_feeds.rs` —
+  **ICE-TSNS-COERCION-1 slice 1 narrow fold (2026-10-13):** the feed walk behind the
+  wrapper. `ns_positions` is the `Dml(Insert|Update)` nanosecond-target position set;
+  each anchor peels `Alias` and one store-kernel call (a raw planner `Cast` is never an
+  anchor) and `descend` crosses only `SubqueryAlias`, a bare-column `Projection` whose
+  column is read once, and a non-reading `Filter`/`Sort`/`Limit`, and stops on every
+  other plan node. Only a scalar/`CASE` root the operand ask confirms is rewritten, and
+  a feed whose subtree still holds a site is refused with one fallback. `FeedOutcome`
+  reports `Unchanged`, `Rewritten` or `Refused`.
   pins: ice-tsns-coercion-1/C-005

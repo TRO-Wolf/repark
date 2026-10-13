@@ -77,6 +77,15 @@ green after the restore (mutant diffs: the second verifier's `m4`, `m5`, `m7`).
   ask-skipped mutant (`n1`), which the old string-column form survived.
 pins: ice-tsns-coercion-1/C-005
 
+**Slice 1 narrow fold (2026-10-13).** The wrapper (`../timestamp_ns_coercion.rs`)
+rewrites only through `../timestamp_ns_coercion_feeds.rs` with anchor (b); the UNION,
+`VALUES`, aggregate and window arms of `../timestamp_ns_coercion_sites.rs` are deleted
+and the sites file keeps the operand ask with the scalar/`CASE` root rewrite. An open
+gate with no feed hands the inner rule the plan it was given with both counters
+untouched; the trigger scan runs only for a rewritten feed, so a fallback is counted
+only for a refused feed. `feed_tests.rs` pins the walk table. Anchor (a) follows as its
+own commit. pins: ice-tsns-coercion-1/C-005
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

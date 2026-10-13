@@ -80,6 +80,7 @@ pub mod timestamp_cast;
 pub mod timestamp_ltz_ntz;
 pub mod timestamp_ns_cast;
 pub mod timestamp_ns_coercion;
+pub mod timestamp_ns_coercion_feeds;
 pub mod timestamp_ns_coercion_sites;
 pub mod timestamp_ntz_cast;
 pub mod timestamp_type;
