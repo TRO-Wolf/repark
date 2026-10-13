@@ -64,5 +64,7 @@ Generated tables. Do not edit the summary by hand; regenerate it with
 - [mutants-fold2.md](mutants-fold2.md) — slice 1 fold 2 red/green proof for the
   re-pinned mutants m4, m5, m7 and the ask-skipped mutant, with the reason the ruled
   `coalesce(ns, µs, NULL)` form alone cannot kill m4.
+- [door-floor-fold2.md](door-floor-fold2.md) — slice 1 fold 2 follow-up 1: the two
+  mutants of the door's integer floor and its cost per million rows before and after.
 
 Up: [../map.md](../map.md).

@@ -158,7 +158,8 @@ Built: `spark_sequence.rs` brings both bounds to the declared element's unit and
 `rows::timestamp_ticks` walks per unit, so `TIMESTAMP_NTZ`, nanosecond, millisecond and
 second inputs answer; `udf_schema._validate_map_in_arrow_batch` returns the batch and
 floors a nanosecond timestamp (any list depth, same zone label) to the declared
-microseconds with `floor_temporal` and a safe cast; `applyInPandas` routes its one lossy
+microseconds (first with `floor_temporal` and a safe cast; replaced in follow-up 1 below
+by an integer floor of the ticks); `applyInPandas` routes its one lossy
 `timestamp[ns] → timestamp[us…]` conversion to that check instead of refusing first.
 Stored for a sub-microsecond start: `sequence` keeps the digits, every element is
 `start + i × step` (`…05.123456789` by one second gives `…06.123456789`), the step stays
@@ -197,10 +198,7 @@ microsecond twin once floored; 39 equal main's ticks and 26 do not, exactly wher
 own narrowing set the value (15: the naive `ns` site read as a wall in America/New_York;
 11: `-1 ns` cut toward zero to `0` in UTC on main's DataFrame-door site and Python doors).
 Still refused, 4 cells: 2 `createDataFrame(pandas, schema)` over `ns` — closed by
-ICE-TSNS-FRAME-DOOR-1; re-measure after it merges; 2 `mapInArrow(…, 'v timestamp')` over
-the naive `ns` site — a kind mismatch under ruling 3's zone label rule, refused the same
-way for a naive microsecond column on main and head, answered on main only because main
-typed the naive site as zoned. The second pair needs a ruling.
+ICE-TSNS-FRAME-DOOR-1; re-measure after it merges; and the 2 cells under the next heading.
 Changed text: a naive nanosecond pandas column with sub-microsecond digits under a declared
 zoned `timestamp` in `applyInPandas` was refused with `failed converting pandas output …
 would lose data` and is now refused with the shared `mapInArrow schema mismatch` text.
@@ -208,8 +206,8 @@ Cost: eight interleaved sets, head over main, same build profile: 0.9946 insert,
 merge, 1.0089 merge_mor (median pair ratio; one merge_mor pair of eight read 1.0752, one
 0.9649). Ungated, ruling 6: 1.85 on an eight-deep nested `coalesce(…, NULL)` and 1.13 on a
 200-branch NULL-branch UNION; accepted for this fold, no optimisation.
-Open: the fallback counter's over-count on re-analysis (due before slice 2); the two
-`mapInArrow` declared-`timestamp` cells above; whether Spark can read a table created
+Open: the fallback counter's over-count on re-analysis (due before slice 2); the owner's
+answer on the two cells of section 9a; whether Spark can read a table created
 from a rewritten read (the owner is deciding); calendar steps of a zoned `sequence` run on
 the UTC wall, as before this fold (equal to Spark in the 48 recorded cells, none of which
 crosses a DST change).
@@ -217,6 +215,61 @@ Evidence: [cells](../../wo/ice-tsns-coercion-1/evidence/cells-fold2.md),
 [mutants](../../wo/ice-tsns-coercion-1/evidence/mutants-fold2.md),
 [cost](../../wo/ice-tsns-coercion-1/evidence/cost-slice1-fold2.md).
 Next: slice 2, honest typing.
+
+### 9a. Main answered, head refuses, owner to accept or reject (2 cells)
+A named change, left refused by ruling (orchestrator, provisional, 2026-10-13, on Q2).
+Statement (DataFrame door, source `ns`, the verifier's `m_udf` case
+`udf_map_in_arrow_ddl_ltz`, configurations America/New_York ANSI on and UTC ANSI off):
+`T.select('id', F.coalesce(F.col('ns'), F.lit(None)).alias('v')).mapInArrow(lambda it: it, 'id int, v timestamp')`
+with `T = spark.table('ice.ns.src')`.
+Main's answer, the same in both zones: `struct<id:int,v:timestamp>`, Arrow
+`timestamp[us, tz=UTC]`, ticks `1767323045123456` and `0` — the wall `2026-01-02
+03:04:05.123456` stored as that UTC instant whatever the session zone, and `-1 ns` cut
+toward zero.
+Head's text: `mapInArrow schema mismatch on field 'v': expected type timestamp[us, tz=UTC]
+(timestamp), got timestamp[ns]`.
+Why: main typed the naive site as a zoned microsecond column, a wall as an instant. On
+head the site is a naive nanosecond column and the declared type is zoned; the door floors
+a unit, never a kind. The explicit twin on main (the kernel written in place of the NULL)
+refuses with the same text as head, and a naive microsecond column under a declared
+`timestamp` is refused the same way on both. The `tzns` half of the same case answers.
+Pinned: `KIND_REFUSED` in `test_cells_main_answered_still_answer` and the first row of
+`test_map_in_arrow_refuses_a_nanosecond_column_of_another_kind`.
+
+### 9b. Follow-up 1 (2026-10-13)
+Rulings (orchestrator, provisional, 2026-10-13): Q1 accepted — the facade file's relation
+to main is (a) answered where main answers, (b) equal to the microsecond twin, (c) the
+26-cell split by one rule per group, as stated under "Value oracle" above; Q2 leave
+refused as the named change of 9a; Q3 keep the `applyInPandas` route, side effect recorded
+under "Changed text" above; Q4 accepted (the fixed-signature m4 form).
+Correction (orchestrator): ruling 3 named `floor_temporal`, and that was wrong. On a zoned
+column the kernel goes through local time: it raises `Local time is ambiguous` for an
+instant in a fall-back hour, fails on the lowest ticks of the int64 range, and is slow.
+Measured here on the fold's first form: the door's declared `timestamp` carries the label
+`UTC`, so no door statement reached an ambiguous hour, but the lowest int64 tick did fail
+through the door (`would lose data: 9223372036854775616` — the kernel had wrapped), and the
+shared check called with an America/New_York label raised the ambiguity error.
+Built: the floor in `udf_schema._floor_to_declared_microseconds` is integer arithmetic on
+the int64 ticks — truncating divide by 1000, minus one where the remainder is negative —
+viewed as the declared type with its zone label; whole-column kernels, nulls stay null,
+any list depth as before.
+Pins: `test_shared_check_floors_integer_ticks_and_keeps_the_zone_label` (naive, UTC and
+America/New_York labels; fall-back `2025-11-02 06:10:00.123456789Z`, spring-forward
+`2025-03-09 07:00:00.000000789Z`, lowest and highest int64 ticks, a list layer; ticks and
+returned type) and `test_doors_floor_daylight_saving_and_range_edge_instants` (the same
+instants through `mapInArrow`, `mapInPandas`, `applyInPandas` in an America/New_York
+session, naive and zoned; the lowest tick through `mapInArrow` only, because pandas reads
+that tick as `NaT`). Both red on the first form, green now; `-1 ns → -1 µs` stays pinned.
+Mutants: truncating divide in place of the floor fails 7 of the file's 11 tests; zone label
+dropped fails 5; restored, 11 pass.
+Cost of the floor per million rows (`_floor_to_declared_microseconds`, median of 15, one
+June 2025 month of random ticks): naive 15.2 ms before and 15.3 after; America/New_York
+111.1 ms before and 15.3 after. No gate.
+Re-measure after the change (the verifier's probes, head against main): unchanged — 113
+of 117 answer, the same 4 refused, none newly refused, 43 that main refuses answer.
+One helper later: the frame door (ICE-TSNS-FRAME-DOOR-1, PR #1045, unmerged) holds the
+same floor in `create_dataframe_arrow.py`; the two become one helper in the first unit that
+follows both merges. Nothing was merged or copied from that branch.
 
 ## Q. Questions
 

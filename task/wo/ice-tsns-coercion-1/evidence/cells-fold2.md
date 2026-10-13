@@ -21,7 +21,7 @@ are still refused:
 | Cell | Configurations | Why |
 |---|---|---|
 | `udf_foreach_batch_like`, `ns` — `createDataFrame(pandas, schema)` | America/New_York ANSI on; UTC ANSI off | Closed by ICE-TSNS-FRAME-DOOR-1 (draft PR #1045); re-measure after it merges. Not fixed here (ruling 4). |
-| `udf_map_in_arrow_ddl_ltz`, `ns` — `mapInArrow(…, 'id int, v timestamp')` over the naive site | America/New_York ANSI on; UTC ANSI off | Kind mismatch: the site is a naive nanosecond column and the declared type is the zoned `timestamp`. The door refuses a naive microsecond column the same way on main and on head. Main answered only because it typed the naive site as a zoned microsecond column. Open question for the orchestrator. |
+| `udf_map_in_arrow_ddl_ltz`, `ns` — `mapInArrow(…, 'id int, v timestamp')` over the naive site | America/New_York ANSI on; UTC ANSI off | Kind mismatch: the site is a naive nanosecond column and the declared type is the zoned `timestamp`. The door refuses a naive microsecond column the same way on main and on head. Main answered only because it typed the naive site as a zoned microsecond column. Left refused by ruling as a named change for the owner (ledger section 9a). |
 
 No cell that the fold-1 head answered is refused now. 43 cells that main refuses are
 answered now: the plain forms `sequence(ns, ns)`, `sequence(ns, ns + INTERVAL …, INTERVAL …)`,
@@ -39,3 +39,7 @@ the cells where main's own narrowing set the value — 15 where main read the na
 site as a wall in America/New_York (the `sequence` lists there run 18,001 elements from the
 shifted start down to the unshifted stop), and 11 in UTC where main's DataFrame-door site
 or Python door cut `-1 ns` toward zero to `0` instead of flooring to `-1 µs`.
+
+Follow-up 1 (2026-10-13): the same probes were run again after the door's floor became
+integer arithmetic on the ticks. The counts are unchanged: 113 answer, the same four are
+refused, none is newly refused, 43 that main refuses answer.
