@@ -501,27 +501,45 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   through `_secrets.scrub_user_failure` and raise after the handler. pins: source-url-redact-1/C-076
   **ATTR-ID-1 SJ-5 (2026-10-03):** the pandas terminals funnel the raw group
   keys instead of the rebound ones.
-  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (2026-10-13):** `_pandas_result_to_arrow_batches`
-  (shared by grouped and cogrouped `applyInPandas`) refuses before the schema is applied
-  when a declared list-nested timestamp column holds nanosecond datetimes: the declared
-  type walk covers any list depth plus struct fields and map values, the data decision
-  comes from the column dtype (numpy `datetime64[ns]` arrays, `ArrowDtype` lists of
-  `timestamp[ns]`) with a first-decisive-cell scan of that one object column only.
-  The refusal is `PySparkTypeError` naming the column, the declared type and the unit,
-  with the microsecond-cast hint; microsecond, empty, all-null and top-level timestamp
-  columns keep their answers, and `mapInPandas`/`mapInArrow` are untouched.
-  pins: ns-array-apply-in-pandas-refuse-1/C-001, C-002, C-003, C-004, C-005
-  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 fold 1 (2026-10-13):** the check is narrowed to what
-  can store a wrong value. Only object-dtype columns are scanned, so `ArrowDtype` columns
-  keep main's conversion or refusal byte-identical. The scan walks the declared type and
-  the value together: only a one-dimensional numpy `datetime64[ns]` array holding a real
-  (non-NaT) value decides, under the declared timestamp it belongs to (struct fields and
-  map values guide the descent, so a nanosecond array under a date field is not refused);
-  microsecond, millisecond, empty, null, NaT and every scalar lead decides nothing and the
-  scan goes on. Two-dimensional arrays, Arrow-backed cells and bare-timestamp positions
-  pass through to main's own errors. Scalar-led Python lists skip in O(1) for the cost
-  targets. Which cell kinds are dtype-decided and which are walked lives in the ledger.
-  pins: ns-array-apply-in-pandas-refuse-1/C-011, C-012, C-014, C-015
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (2026-10-13, fold 1):** `_pandas_result_to_arrow_batches`
+  is the one place a pandas result becomes Arrow for grouped and cogrouped `applyInPandas`.
+  It refuses a result that would store a nanosecond tick as a microsecond timestamp, in two
+  cases, and only after `from_pandas` under the declared schema has succeeded, so every error
+  pyarrow raises keeps main's class and text. Interim, by the owner's ruling: no conversion.
+  The facade's own two callbacks through the same bridge are not `applyInPandas` functions:
+  the GROUPED_AGG pandas UDF (`_grouped_agg_pandas`) and the ordered-window pandas UDF
+  (`_apply_ordered_window_pandas_udf`, which passes every source column through pandas even
+  when the query does not select it). `_is_facade_callback` gives them no scan plan, so those
+  routes answer exactly as main, wrong values included (R-020's open list).
+  *The array.* pyarrow appends a numpy `datetime64` array at a declared list-of-timestamps
+  position tick by tick, whatever its unit. `_nanosecond_array_refusal` walks each object
+  column whose declared type holds a list of microsecond timestamps, level by level along
+  that type (`_timestamp_scan_plan` compiles it once per stream), reading every container as
+  pyarrow reads it: a list position takes a numpy array or any sequence, a struct position a
+  dict by name (text or bytes), a tuple by position or any other sequence as
+  `(name, value)` pairs, a map position a dict's items or entries of key and value. A
+  `datetime64[ns]` array with a tick that differs from its microsecond floor refuses; `0`,
+  `-1`, NaT, an empty array and every other cell decide nothing and the walk goes on, so no
+  cell hides a later one. The walk runs before the conversion, while the cells are in the
+  cache of the thread that made them (pyarrow converts object columns on pool threads), and
+  never reads the elements of a container whose declared elements are scalars. A container
+  that raises when read decides nothing.
+  *The handed integer.* `to_pandas` gives a `timestamp[ns]` that is a direct struct field,
+  map key or map value to the function as a Python integer, and `from_pandas` takes an
+  integer under a timestamp as a tick of the declared unit. `_handed_integer_refusal` reads
+  those ticks from the Arrow group tables (both sides of a cogroup), looks them up in the
+  stored result's timestamp leaves with an Arrow set lookup, and only on a hit walks the
+  pandas result: a Python `int` equal to a handed tick at a declared timestamp position
+  refuses, nested or top-level (an integer column included). A handed tick that is the
+  microsecond floor of a handed tick is left out, so `value // 1000` always passes. An
+  integer the function derived is not known to the door.
+  Both refusals are `PySparkTypeError` naming the column, the declared Arrow type and the
+  unit, each with its hint (`.astype("datetime64[us]")`, `value // 1000`). `ArrowDtype`
+  columns are never read: pyarrow casts them safely or refuses them itself. `mapInPandas`,
+  `mapInArrow`, `applyInArrow` and the scalar `pandas_udf` do not pass here. Registry row
+  `ICE-TSNS-SQL-1-R-020`.
+  pins: ns-array-apply-in-pandas-refuse-1/C-001, C-002, C-003, C-004, C-005, C-011, C-012
+  pins: ns-array-apply-in-pandas-refuse-1/C-013, C-014, C-015, C-016, C-017
 - `grouped_pivot.py` — **ATTR-ID-1 SJ-5 (2026-10-03):** the twelve `_pivot_*`
   module helpers, moved here from `joins_columns.py` unchanged (pure move at
   the size ceiling, behind same-named imports in `joins_columns.py` and
@@ -534,6 +552,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (Spark's shape). Key-count mismatch raises Spark's `requirement failed` text;
   `cogroup(DataFrame)` is refused at the call with `NOT_EXPECTED_TYPE` where Spark accepts
   silently (R-1; registry `GROUPED-COGROUP-1`). pins: grouped-surface-1/C-004, C-005
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 fold 1 (2026-10-13):** the pandas path keeps both
+  group tables and hands them, with the scan plans compiled once, to
+  `grouped_arrow._pandas_result_to_arrow_batches`, so a nanosecond tick either side handed
+  to the function as an integer is known at the conversion point.
+  pins: ns-array-apply-in-pandas-refuse-1/C-014
 - `udf_projection.py` owns the scalar pandas and classic UDF select rewrites (DFCORE-2,
   moved from `core.py`). Windowed GROUPED_AGG markers never enter the scalar bridge; they
   route to `udf_window_projection.py`. Partition-transform inputs are refused (they project

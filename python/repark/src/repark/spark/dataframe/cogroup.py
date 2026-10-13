@@ -91,6 +91,7 @@ def _cogrouped_pandas_batches(
 
     empty_left = pa.Table.from_batches([], schema=left_arrow_schema)
     empty_right = pa.Table.from_batches([], schema=right_arrow_schema)
+    scan_plans = grouped_arrow._timestamp_scan_plans(expected_arrow)
     pairs = _iter_cogrouped_pairs(
         input_batches,
         left_key_names=left_key_names,
@@ -99,13 +100,15 @@ def _cogrouped_pandas_batches(
     )
     for key, left_segments, right_segments in pairs:
         if left_segments is None:
-            left_pdf = empty_left.to_pandas()
+            left_table = empty_left
         else:
-            left_pdf = grouped_udf._apply_in_pandas_table_from_segments(left_segments).to_pandas()
+            left_table = grouped_udf._apply_in_pandas_table_from_segments(left_segments)
         if right_segments is None:
-            right_pdf = empty_right.to_pandas()
+            right_table = empty_right
         else:
-            right_pdf = grouped_udf._apply_in_pandas_table_from_segments(right_segments).to_pandas()
+            right_table = grouped_udf._apply_in_pandas_table_from_segments(right_segments)
+        left_pdf = left_table.to_pandas()
+        right_pdf = right_table.to_pandas()
         if keyed:
             out_pdf = grouped_arrow._call_grouped_user_func(
                 user_func, "applyInPandas", key, left_pdf, right_pdf
@@ -125,7 +128,11 @@ def _cogrouped_pandas_batches(
             )
         grouped_udf._validate_apply_in_pandas_result_columns(out_pdf, expected_names)
         yield from grouped_arrow._pandas_result_to_arrow_batches(
-            out_pdf, expected_arrow, api_name="applyInPandas"
+            out_pdf,
+            expected_arrow,
+            api_name="applyInPandas",
+            scan_plans=scan_plans,
+            group_tables=(left_table, right_table),
         )
 
 

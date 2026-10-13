@@ -15,6 +15,7 @@ import pyarrow as pa
 
 from repark import functions as F  # noqa: N812
 from repark.spark.functions import PandasUDFType, pandas_udf
+from repark.spark.window import Window
 
 NS = 1767323045123456789
 NS2 = 1767323045000000001
@@ -39,6 +40,7 @@ GROUPED = "grouped"
 COGROUPED = "cogrouped"
 COGROUPED_RIGHT = "cogrouped_right"
 GROUPED_AGG = "grouped_agg"
+ORDERED_WINDOW = "ordered_window"
 OTHER_ZONE = "America/New_York"
 LARGE_RESULT_ROWS = 40
 ARRAY = "array"
@@ -199,6 +201,11 @@ def count_cells(series: pd.Series) -> int:
     return len(series)
 
 
+def mean_of(series: pd.Series) -> float:
+    """Return the mean of a window frame."""
+    return float(series.mean())
+
+
 def apply_to_left(left: pd.DataFrame, right: pd.DataFrame, function: Any) -> pd.DataFrame:
     """Apply a grouped function to the left cogroup frame."""
     return function(left)
@@ -293,6 +300,14 @@ def run_grouped_agg_case(
     return frame.groupBy("id").agg(aggregate("v").alias("v")).toArrow()
 
 
+def run_window_case(spark: Any, door: str, query: Any, selected: tuple[str, ...]) -> pa.Table:
+    """Run an ordered-window pandas UDF, which passes every source column through the door."""
+    frame = source_frame(spark, query)
+    mean = pandas_udf(mean_of, "double", PandasUDFType.GROUPED_AGG)
+    window = Window.partitionBy("id").orderBy("id")
+    return frame.select(*selected, mean("id").over(window).alias("m")).toArrow()
+
+
 def user_case(name: str, expect: str, declared: str, cells: Any) -> tuple[str, str, Any]:
     """Return a case whose function returns the same cells for every group."""
     cells_of = partial(fixed_cells, cells=cells)
@@ -342,6 +357,12 @@ def grouped_agg_case(
     query = SELECT_VALUE.format(expression=expression, source="{source}")
     runner = partial(run_grouped_agg_case, query=query, function=function, returns=returns)
     return (name, expect, runner)
+
+
+def window_case(name: str, expression: str, selected: tuple[str, ...]) -> tuple[str, str, Any]:
+    """Return an ordered-window case, answered as on main, over one source expression."""
+    query = SELECT_VALUE.format(expression=expression, source="{source}")
+    return (name, MAIN, partial(run_window_case, query=query, selected=selected))
 
 
 USER_CASES = (
@@ -644,10 +665,14 @@ FRAME_CASES = (
 )
 
 GROUPED_AGG_CASES = (
-    grouped_agg_case("grouped_agg_array_ns", ARRAY, "array(ns)", first_cell, NTZ),
+    grouped_agg_case("open_grouped_agg_array_ns", MAIN, "array(ns)", first_cell, NTZ),
     grouped_agg_case("grouped_agg_array_us", MAIN, "array(n)", first_cell, NTZ),
     grouped_agg_case(
-        "grouped_agg_struct_ns_tick", INTEGER, "named_struct('t', ns)", first_tick, "timestamp_ntz"
+        "open_grouped_agg_struct_ns_tick",
+        MAIN,
+        "named_struct('t', ns)",
+        first_tick,
+        "timestamp_ntz",
     ),
     grouped_agg_case(
         "grouped_agg_struct_ns_tick_as_bigint", MAIN, "named_struct('t', ns)", first_tick, "bigint"
@@ -655,6 +680,14 @@ GROUPED_AGG_CASES = (
     grouped_agg_case(
         "grouped_agg_struct_ns_count", MAIN, "named_struct('t', ns)", count_cells, "bigint"
     ),
+)
+
+WINDOW_CASES = (
+    window_case("window_array_ns_not_selected", "array(ns)", ("id",)),
+    window_case("open_window_array_ns_selected", "array(ns)", ("id", "v")),
+    window_case("window_struct_ns_not_selected", "named_struct('t', ns)", ("id",)),
+    window_case("open_window_struct_ns_selected", "named_struct('t', ns)", ("id", "v")),
+    window_case("window_array_us_selected", "array(n)", ("id", "v")),
 )
 
 RIGHT_SIDE_CASES = ("table_struct_ns", "table_array_struct_ns", "table_array_ns")
@@ -667,8 +700,9 @@ OTHER_ZONE_CASES = (
     "table_struct_tzns_floor_divided",
 )
 DOOR_CASES = (*USER_CASES, *TABLE_CASES, *FRAME_CASES)
-RUNNERS = {name: runner for name, _expect, runner in (*DOOR_CASES, *GROUPED_AGG_CASES)}
-EXPECTED = {name: expect for name, expect, _runner in (*DOOR_CASES, *GROUPED_AGG_CASES)}
+FACADE_CASES = (*GROUPED_AGG_CASES, *WINDOW_CASES)
+RUNNERS = {name: runner for name, _expect, runner in (*DOOR_CASES, *FACADE_CASES)}
+EXPECTED = {name: expect for name, expect, _runner in (*DOOR_CASES, *FACADE_CASES)}
 
 
 def cell_keys() -> list[str]:
@@ -676,6 +710,7 @@ def cell_keys() -> list[str]:
     keys = [f"{name}|{door}|UTC" for name, _, _ in DOOR_CASES for door in (GROUPED, COGROUPED)]
     keys.extend(f"{name}|{COGROUPED_RIGHT}|UTC" for name in RIGHT_SIDE_CASES)
     keys.extend(f"{name}|{GROUPED_AGG}|UTC" for name, _, _ in GROUPED_AGG_CASES)
+    keys.extend(f"{name}|{ORDERED_WINDOW}|UTC" for name, _, _ in WINDOW_CASES)
     keys.extend(
         f"{name}|{door}|{OTHER_ZONE}" for name in OTHER_ZONE_CASES for door in (GROUPED, COGROUPED)
     )
@@ -700,7 +735,7 @@ def integer_type(arrow_type: pa.DataType) -> pa.DataType:
 def describe(table: pa.Table) -> dict[str, Any]:
     """Return the Arrow type and the integer ticks a result stores in its value column."""
     ordered = table.sort_by("id")
-    name = ordered.column_names[-1]
+    name = "v" if "v" in ordered.column_names else ordered.column_names[-1]
     column = ordered.column(name).combine_chunks()
     values = json.loads(json.dumps(column.cast(integer_type(column.type)).to_pylist()))
     cell: dict[str, Any] = {"type": str(column.type), "rows": ordered.num_rows}

@@ -153,15 +153,18 @@ All three fail grounds reproduce on `b8f50345`: 18 mixed-unit cells store
 `1767323045123456789` (H-1); `array<struct<t>>`, `array<map<string, t>>`, `struct<t>` and
 `map<string, t>` identity over `ice.ns.src` store it (H-2); empty, all-NaT and epoch
 nanosecond arrays and the `ArrowDtype` shapes main stores right are refused (H-3). Of this
-fold's 545 pins, 127 are red on `b8f50345` and 79 on `b1c5ae1b`, where H-1 is closed: 43
-cells of 20 handed-integer cases (H-2); 18 cells of nine container spellings pyarrow accepts
+fold's 548 pins, 129 are red on `b8f50345` and 81 on `b1c5ae1b`, where H-1 is closed: 42
+cells of 19 handed-integer cases (H-2); 18 cells of nine container spellings pyarrow accepts
 and the walk did not read (a struct as a list of `(name, value)` pairs or with bytes keys, a
 map as entry dicts, as entry pair lists, as an object array of tuples, a map key that is an
-array, a deque, a `dict_values` view, a pandas Series of arrays); and 18 cells of nine cases
-main answers: the tick `0` and `-1` arrays main stores right, and a byte-swapped array, a
+array, a deque, a `dict_values` view, a pandas Series of arrays); and 21 cells of twelve
+cases main answers: the tick `0` and `-1` arrays main stores right; a byte-swapped array, a
 struct given as a positional list, a map entry given as a list, a string cell beside a
-nanosecond array and a duplicated label, which main refuses with its own text. On main 171
-are red and the 191 equals-main cells are green: the fixture is main's.
+nanosecond array and a duplicated label, which main refuses with its own text; and three
+cells of the facade's own routes (below). On main 169 are red and the 198 equals-main cells
+are green: the fixture is main's. (The pin commit `1f408a5c` held 545 pins, 79 red on its
+own source; the fix commit moved two GROUPED_AGG cells to equals-main and added five
+ordered-window cells, for the reason F1.2 gives.)
 
 Three mechanisms, each measured:
 
@@ -219,6 +222,16 @@ tick that is the microsecond floor of a handed tick (itself included: `0`, `-1`)
 out. So the floor of every handed tick always passes: an integer the function made with
 `value // 1000` is stored as main stores it.
 
+**The facade's own callbacks are not this door.** The GROUPED_AGG pandas UDF and the
+ordered-window pandas UDF run through `GroupedData.applyInPandas` with the facade's own
+callbacks (`_grouped_agg_pandas`, `_apply_ordered_window_pandas_udf`). The ordered-window
+callback passes every source column of the frame through pandas, also when the query does
+not select it: `select("id", mean("id").over(w))` over a frame that only holds an
+`array(ns)` column answers `1.0 … 8.0` on main, and `b8f50345` refused it. So the two
+callbacks get no scan plan and those routes answer exactly as main, where main is right and
+where it is wrong (the selected column, the GROUPED_AGG result). They are `pandas_udf` doors:
+a separate card, F1.7.
+
 **Not chosen.** (a) Refusing every group frame that holds a nanosecond timestamp in a struct
 or map: it refuses functions main answers right (the column dropped, the integers
 floor-divided, turned into `pd.Timestamp`, returned as `bigint`). (b)
@@ -253,7 +266,7 @@ The round-0 test functions are gone; each of their shapes is a cell of the matri
 
 ### F1.7 Open: what the door cannot know, and what this unit does not touch
 
-Each is stored on the head exactly as on main. The first three are cells of the matrix whose
+Each is stored on the head exactly as on main. Seven of them are cells of the matrix whose
 name starts with `open_`, so a later unit turns them.
 
 - **An integer derived from a handed tick.** `{'t': tick + 1}` over `named_struct('t', ns)`
@@ -267,17 +280,22 @@ name starts with `open_`, so a later unit turns them.
 - **numpy `datetime64[ms]`, `[s]`, `[D]` arrays under `array<timestamp>`** are stored as raw
   ticks (`1767323045123` for a millisecond array, `open_ms_stored_as_raw_ticks`): the same
   unit-blind copy, another unit, not this unit's.
-- **Scalar `pandas_udf` over a nanosecond array** stores `1767323045123456789` as
-  microseconds on main and on the head: another door, a separate card.
+- **`pandas_udf` over nanosecond data, three routes.** The scalar `pandas_udf` over a
+  nanosecond array stores `1767323045123456789` as microseconds on main and on the head.
+  So do the two routes the facade runs through this bridge: a GROUPED_AGG pandas UDF that
+  returns a nanosecond array or a handed integer (`open_grouped_agg_array_ns`,
+  `open_grouped_agg_struct_ns_tick`), and an ordered-window pandas UDF over a frame with a
+  nanosecond array or struct column the query selects (`open_window_array_ns_selected`,
+  `open_window_struct_ns_selected`). Other doors, one separate card.
 
 ## PROPOSITION LEDGER — NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 FOLD 1 — 2026-10-13
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-011 | H-1: a nanosecond array that stores a wrong tick refuses wherever it sits; a cell that decides nothing never ends the scan, across the rows of a column, across groups and inside one nested cell, on both doors. | The mixed-unit cells of `test_nanosecond_array_under_a_timestamp_list_refuses`, red before the fix. | OPEN | Pins committed red first; does every mixed-unit cell refuse with the fix? |
-| C-012 | H-3: nothing main stores right is refused: empty, all-NaT and floor-equal (`0`, `-1`) nanosecond arrays, `ArrowDtype` columns, microsecond data, non-timestamp lists, top-level columns answer main's type and ticks. | `test_main_answer_stands` against main's recorded fixture. | OPEN | Fixture recorded on `f3f98823`; do all 191 cells equal it with the fix? |
+| C-012 | H-3: nothing main stores right is refused: empty, all-NaT and floor-equal (`0`, `-1`) nanosecond arrays, `ArrowDtype` columns, microsecond data, non-timestamp lists, top-level columns answer main's type and ticks. | `test_main_answer_stands` against main's recorded fixture. | OPEN | Fixture recorded on `f3f98823`; do all 198 cells equal it with the fix? |
 | C-013 | L-1: where main refuses, main's class and text stand; the door raises only after the conversion under the declared schema has succeeded. | The error cells of `test_main_answer_stands` (class, cause class, text with the cause cut). | OPEN | Does a cell the scan flags and pyarrow refuses (a zero-dimensional array, a string cell beside a nanosecond array) keep main's error? |
-| C-014 | H-2: an integer the group frame carried for a nanosecond timestamp in a struct or map refuses at every declared timestamp position: struct field, map key and value, list element, top-level object and integer column; grouped, cogrouped (either side), naive and zoned. | `test_handed_nanosecond_integer_under_a_timestamp_refuses`, red before the fix. | OPEN | Do all 43 cells refuse with the fix? |
+| C-014 | H-2: an integer the group frame carried for a nanosecond timestamp in a struct or map refuses at every declared timestamp position: struct field, map key and value, list element, top-level object and integer column; grouped, cogrouped (either side), naive and zoned. | `test_handed_nanosecond_integer_under_a_timestamp_refuses`, red before the fix. | OPEN | Do all 42 cells refuse with the fix? |
 | C-015 | An integer the function made passes as on main: the microsecond floor of every handed tick (the hint), a `pd.Timestamp`, the column dropped, a `bigint` target, a real timestamp whose tick equals a handed one. | The `table_struct_ns_*`, `frame_*` and `grouped_agg_*` cells of `test_main_answer_stands`. | OPEN | Does the floor of a handed tick pass when it equals another handed tick? |
 | C-016 | M-1, M-2, L-2: the walk reads every container spelling pyarrow accepts at a declared list, struct or map position, at any depth, map keys included. | The container cells of the array test; mutants in F1.5. | OPEN | Which mutants die? |
-| C-017 | `mapInPandas`, `mapInArrow`, `applyInArrow`, scalar `pandas_udf` and `udf` answer as main; the GROUPED_AGG pandas UDF, which the facade runs through `GroupedData.applyInPandas`, follows this door. | The verify stage D probes re-run on both sides; the `grouped_agg_*` cells. | OPEN | Is any other door's answer moved? |
+| C-017 | `mapInPandas`, `mapInArrow`, `applyInArrow`, scalar `pandas_udf` and `udf` answer as main, and so do the GROUPED_AGG and ordered-window pandas UDFs, which the facade runs through the same bridge. | The verify stage D probes re-run on both sides; the `grouped_agg` and `ordered_window` cells of `test_main_answer_stands`. | OPEN | Is any other door's answer moved? |
