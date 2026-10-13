@@ -83,16 +83,29 @@ Ledger: [current-date-session-zone-1-ledger.md](../../ledgers/staging/current-da
   censuses (`2ac03089`); the ten tests the nightly live run fails on (`26d8f33a`); the
   coercion-gate clerk round (`8e451f51`); the CASESENS metadata-by-version fix (`f8f1d252`);
   the cluster-status monotone-walk pin (`2c33f289`); the Iceberg streaming open decision,
-  owner-held (`07be1dc9`); the R-011 park record (`8c51fbc4`); production-readiness and
+  owner-held (`07be1dc9`); the R-011 park record (`8c51fbc4`); the R-017 park record, row
+  R-020 and the type-planner card (`be011012`); production-readiness and
   performance audits (`6fe92e12`); the cluster-feature tests in CI (`ba71b593`).
 
 ## Known, not in this release
 
-- The read-side dropped digits beside an untyped NULL (card
-  [ice-tsns-coercion-1-card-2026-10-10.md](ice-tsns-coercion-1-card-2026-10-10.md), in review).
+The registry is [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md).
+
+- **ICE-TSNS-SQL-1-R-017, parked 2026-10-13:** a nanosecond value beside an untyped NULL is
+  typed as microseconds, so a read drops the digits below a microsecond. Two designs were
+  closed unmerged (#1027, #1042); the row's dated park record lists them. Next step: card
+  [ice-tsns-type-planner-1-card-2026-10-13.md](ice-tsns-type-planner-1-card-2026-10-13.md)
+  (1.5.6).
+- **ICE-TSNS-SQL-1-R-011, parked:** a nested microsecond `TIMESTAMP_NTZ` field stores two
+  walls (card [ice-ntz-nested-wall-1-card-2026-10-10.md](ice-ntz-nested-wall-1-card-2026-10-10.md)).
 - The create door (1.5.6).
-- `applyInPandas` storing nanosecond integers as microseconds for nanosecond arrays and
-  nested nanosecond fields (card NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1, in review). OWNER-DECISION-PENDING
+- **ICE-TSNS-SQL-1-R-020, unit reinterpretation:** `applyInPandas` copies the ticks of a
+  nanosecond datetime array into an `array<timestamp>` or `array<timestamp_ntz>` column and
+  reads them as microseconds, so the stored instant is wrong, not rounded. Spark 4.1.2
+  floors the array under `array<timestamp>` and refuses it under `array<timestamp_ntz>`.
+  Card [ns-array-floor-1-card-2026-10-13.md](ns-array-floor-1-card-2026-10-13.md) (1.5.6);
+  the struct and map cases are card
+  [ns-nested-pandas-1-card-2026-10-13.md](ns-nested-pandas-1-card-2026-10-13.md), unscheduled.
 
 ## Matrix
 
