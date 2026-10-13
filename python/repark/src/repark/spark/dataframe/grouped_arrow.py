@@ -14,6 +14,7 @@ from types import MethodType
 from typing import TYPE_CHECKING, Any, NoReturn
 
 import repark.spark.dataframe.grouped_udf as grouped_udf
+import repark.spark.dataframe.udf_bridge as udf_bridge
 from repark.errors import (
     AnalysisException,
     PySparkException,
@@ -69,11 +70,348 @@ def _call_grouped_user_func(user_func: Callable[..., Any], api_name: str, *args:
     ) from failure
 
 
+_SCALAR_POSITION = "timestamp"
+_LIST_POSITION = "list"
+_MAP_POSITION = "map"
+_STRUCT_POSITION = "struct"
+_SCALAR_PLAN: tuple[Any, ...] = (_SCALAR_POSITION,)
+_NO_TICKS: frozenset[int] = frozenset()
+_NOT_A_TIME_TICK = -(2**63)
+_FACADE_CALLBACKS = (
+    grouped_udf._grouped_agg_pandas,
+    udf_bridge._apply_ordered_window_pandas_udf,
+)
+
+
+def _is_facade_callback(user_func: Any) -> bool:
+    """True for the facade's own pandas UDF callbacks, which keep main's conversion."""
+    return getattr(user_func, "func", None) in _FACADE_CALLBACKS
+
+
+def _is_list_type(arrow_type: Any) -> bool:
+    """True for every Arrow list layout."""
+    import pyarrow as pa
+
+    types = pa.types
+    return (
+        types.is_list(arrow_type)
+        or types.is_large_list(arrow_type)
+        or types.is_fixed_size_list(arrow_type)
+        or types.is_list_view(arrow_type)
+        or types.is_large_list_view(arrow_type)
+    )
+
+
+def _struct_scan_plan(
+    named_types: list[tuple[str, Any]],
+    integers: bool,
+) -> tuple[Any, ...] | None:
+    """Compile the fields of a declared struct that the result scan visits."""
+    fields = []
+    for index, (name, arrow_type) in enumerate(named_types):
+        plan = _timestamp_scan_plan(arrow_type, integers)
+        if plan is not None:
+            fields.append((index, name, name.encode(), plan))
+    return (_STRUCT_POSITION, tuple(fields)) if fields else None
+
+
+def _timestamp_scan_plan(arrow_type: Any, integers: bool) -> tuple[Any, ...] | None:
+    """Compile the positions of a declared type where a nanosecond tick can be stored coarser."""
+    import pyarrow as pa
+
+    types = pa.types
+    if types.is_timestamp(arrow_type):
+        return _SCALAR_PLAN if integers and arrow_type.unit == "us" else None
+    if types.is_struct(arrow_type):
+        return _struct_scan_plan([(field.name, field.type) for field in arrow_type], integers)
+    if types.is_map(arrow_type):
+        entries = _struct_scan_plan(
+            [
+                (arrow_type.key_field.name, arrow_type.key_type),
+                (arrow_type.item_field.name, arrow_type.item_type),
+            ],
+            integers,
+        )
+        return None if entries is None else (_MAP_POSITION, entries, False)
+    if _is_list_type(arrow_type):
+        value_type = arrow_type.value_type
+        timestamps = types.is_timestamp(value_type) and value_type.unit == "us"
+        elements = _timestamp_scan_plan(value_type, integers)
+        if elements is None and not timestamps:
+            return None
+        return (_LIST_POSITION, elements, timestamps)
+    return None
+
+
+def _timestamp_scan_plans(expected_arrow: Any) -> tuple[tuple[Any, Any, Any], ...]:
+    """Compile the array plan and the integer plan of every declared field holding a timestamp."""
+    plans = []
+    for field in expected_arrow:
+        integer_plan = _timestamp_scan_plan(field.type, True)
+        if integer_plan is not None:
+            plans.append((field, _timestamp_scan_plan(field.type, False), integer_plan))
+    return tuple(plans)
+
+
+def _nanosecond_ticks_differ_from_floor(values: Any) -> bool:
+    """True when a raw nanosecond tick differs from its microsecond floor, NaT left out."""
+    import numpy as np
+
+    ticks = np.asarray(values).astype("int64")
+    return bool(((ticks != ticks // 1000) & (ticks != _NOT_A_TIME_TICK)).any())
+
+
+def _read_sequence(value: Any) -> list[Any] | None:
+    """Return the elements of a cell container, or None when it cannot be read."""
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    if value is None or isinstance(value, (str, bytes, bytearray)):
+        return None
+    try:
+        return list(value)
+    except Exception:
+        return None
+
+
+def _struct_field_values(
+    cells: list[Any],
+    index: int,
+    name: str,
+    encoded_name: bytes,
+) -> list[Any]:
+    """Return the values of one struct field over some struct cells, read as pyarrow reads them."""
+    values = []
+    for cell in cells:
+        if isinstance(cell, dict):
+            value = dict.get(cell, name)
+            if value is None:
+                value = dict.get(cell, encoded_name)
+        elif isinstance(cell, tuple):
+            value = cell[index] if index < len(cell) else None
+        else:
+            items = _read_sequence(cell)
+            pair = items[index] if items is not None and index < len(items) else None
+            value = pair[1] if isinstance(pair, tuple) and len(pair) == 2 else None
+        if value is not None:
+            values.append(value)
+    return values
+
+
+def _list_cells_store_wrong(
+    plan: tuple[Any, ...],
+    cells: Any,
+    nanosecond_ticks: frozenset[int],
+) -> bool:
+    """True when a list or map cell stores a nanosecond tick as a coarser timestamp."""
+    import numpy as np
+
+    position, element_plan, timestamps = plan
+    array_type = np.ndarray
+    nanosecond_dtype = np.dtype("datetime64[ns]")
+    cleared_dtype = None
+    elements: list[Any] = []
+    for cell in cells:
+        if isinstance(cell, array_type):
+            dtype = cell.dtype
+            if dtype is cleared_dtype:
+                continue
+            kind = dtype.kind
+            if kind == "O":
+                if element_plan is not None:
+                    elements.extend(cell.tolist())
+            elif dtype != nanosecond_dtype:
+                cleared_dtype = dtype
+            elif timestamps and _nanosecond_ticks_differ_from_floor(cell):
+                return True
+        elif element_plan is not None:
+            if isinstance(cell, (list, tuple)):
+                elements.extend(cell)
+            elif position == _MAP_POSITION and isinstance(cell, dict):
+                elements.extend(dict.items(cell))
+            else:
+                elements.extend(_read_sequence(cell) or ())
+    return bool(elements) and _cells_store_wrong(element_plan, elements, nanosecond_ticks)
+
+
+def _cells_store_wrong(plan: tuple[Any, ...], cells: Any, nanosecond_ticks: frozenset[int]) -> bool:
+    """True when a value at one declared position stores a nanosecond tick as a coarser one."""
+    position = plan[0]
+    if position == _SCALAR_POSITION:
+        return any(type(cell) is int and cell in nanosecond_ticks for cell in cells)
+    if position == _STRUCT_POSITION:
+        return any(
+            _cells_store_wrong(
+                field_plan,
+                _struct_field_values(cells, index, name, encoded_name),
+                nanosecond_ticks,
+            )
+            for index, name, encoded_name, field_plan in plan[1]
+        )
+    return _list_cells_store_wrong(plan, cells, nanosecond_ticks)
+
+
+def _column_can_hold_integers(plan: tuple[Any, ...], series: Any) -> bool:
+    """True when a result column can hold a Python integer under a declared timestamp."""
+    import pandas as pd
+
+    return series.dtype == object or (
+        plan[0] == _SCALAR_POSITION and pd.api.types.is_integer_dtype(series.dtype)
+    )
+
+
+def _column_returns_nanosecond_tick(
+    plan: tuple[Any, ...],
+    series: Any,
+    stored: Any,
+    nanosecond_ticks: frozenset[int],
+) -> bool:
+    """True when a result column returns a nanosecond tick of the frame as an integer."""
+    if series.dtype == object:
+        return _cells_store_wrong(plan, series.to_numpy().tolist(), nanosecond_ticks)
+    return not nanosecond_ticks.isdisjoint(stored.drop_null().to_pylist())
+
+
+def _type_holds_nanoseconds(arrow_type: Any) -> bool:
+    """True when an Arrow type holds a nanosecond timestamp at any depth."""
+    import pyarrow as pa
+
+    types = pa.types
+    if types.is_timestamp(arrow_type):
+        return arrow_type.unit == "ns"
+    if not types.is_nested(arrow_type):
+        return False
+    if types.is_struct(arrow_type):
+        return any(_type_holds_nanoseconds(field.type) for field in arrow_type)
+    if types.is_map(arrow_type):
+        return _type_holds_nanoseconds(arrow_type.key_type) or _type_holds_nanoseconds(
+            arrow_type.item_type
+        )
+    return _is_list_type(arrow_type) and _type_holds_nanoseconds(arrow_type.value_type)
+
+
+def _collect_timestamp_leaves(array: Any, nanosecond_only: bool, leaves: list[Any]) -> None:
+    """Append the timestamp leaves of an Arrow array, or only its nanosecond ones."""
+    import pyarrow as pa
+
+    types = pa.types
+    arrow_type = array.type
+    if types.is_timestamp(arrow_type):
+        if not nanosecond_only or arrow_type.unit == "ns":
+            leaves.append(array)
+    elif types.is_struct(arrow_type):
+        for child in array.flatten():
+            _collect_timestamp_leaves(child, nanosecond_only, leaves)
+    elif types.is_map(arrow_type):
+        offsets = array.offsets
+        start = offsets[0].as_py()
+        length = offsets[len(offsets) - 1].as_py() - start
+        _collect_timestamp_leaves(array.keys.slice(start, length), nanosecond_only, leaves)
+        _collect_timestamp_leaves(array.items.slice(start, length), nanosecond_only, leaves)
+    elif _is_list_type(arrow_type):
+        _collect_timestamp_leaves(array.flatten(), nanosecond_only, leaves)
+
+
+def _timestamp_leaf_ticks(chunks: Any, nanosecond_only: bool) -> Any:
+    """Return the int64 ticks of the timestamp leaves of some Arrow arrays, chunked."""
+    import pyarrow as pa
+
+    leaves: list[Any] = []
+    for chunk in chunks:
+        _collect_timestamp_leaves(chunk, nanosecond_only, leaves)
+    return pa.chunked_array([leaf.cast(pa.int64()) for leaf in leaves], type=pa.int64())
+
+
+def _group_nanosecond_ticks(group_tables: tuple[Any, ...]) -> Any:
+    """Return the ticks of every nanosecond timestamp the group frames hold, chunked."""
+    chunks = [
+        chunk
+        for table in group_tables
+        for index, arrow_type in enumerate(table.schema.types)
+        if _type_holds_nanoseconds(arrow_type)
+        for chunk in table.column(index).chunks
+    ]
+    return _timestamp_leaf_ticks(chunks, True)
+
+
+def _unambiguous_nanosecond_ticks(ticks: Any) -> frozenset[int]:
+    """Return the nanosecond ticks that are no microsecond floor of one of them."""
+    import numpy as np
+    import pyarrow.compute as pc
+
+    values = pc.drop_null(ticks).to_numpy()
+    return frozenset(np.setdiff1d(values, values // 1000).tolist())
+
+
+def _nanosecond_array_refusal(
+    out_pdf: Any,
+    scan_plans: tuple[tuple[Any, Any, Any], ...],
+    api_name: str,
+) -> str | None:
+    """Return the refusal text when a result cell is a nanosecond array under a coarser list."""
+    for field, array_plan, _integer_plan in scan_plans:
+        if array_plan is None or field.name not in out_pdf.columns:
+            continue
+        series = out_pdf[field.name]
+        if (
+            series.ndim == 1
+            and series.dtype == object
+            and _cells_store_wrong(array_plan, series.to_numpy().tolist(), _NO_TICKS)
+        ):
+            return (
+                f"{api_name} refuses column '{field.name}' of declared type {field.type}: "
+                "the pandas result holds nanosecond datetimes (datetime64[ns]) inside a list, "
+                "which would store wrong values. Cast the elements to microseconds in the "
+                'function (for example .astype("datetime64[us]")) before returning.'
+            )
+    return None
+
+
+def _nanosecond_integer_refusal(
+    out_pdf: Any,
+    out_table: Any,
+    scan_plans: tuple[tuple[Any, Any, Any], ...],
+    api_name: str,
+    group_tables: tuple[Any, ...],
+) -> str | None:
+    """Return the refusal text when a result stores a nanosecond tick of the frame as an integer."""
+    import pyarrow.compute as pc
+
+    if not scan_plans or not any(
+        _type_holds_nanoseconds(arrow_type)
+        for table in group_tables
+        for arrow_type in table.schema.types
+    ):
+        return None
+    ticks = None
+    for field, _array_plan, integer_plan in scan_plans:
+        series = out_pdf[field.name]
+        if not _column_can_hold_integers(integer_plan, series):
+            continue
+        if ticks is None:
+            ticks = _group_nanosecond_ticks(group_tables)
+        stored = _timestamp_leaf_ticks(out_table.column(field.name).chunks, False)
+        if not pc.any(pc.is_in(stored, value_set=ticks, skip_nulls=True)).as_py():
+            continue
+        if _column_returns_nanosecond_tick(
+            integer_plan, series, stored, _unambiguous_nanosecond_ticks(ticks)
+        ):
+            return (
+                f"{api_name} refuses column '{field.name}' of declared type {field.type}: "
+                "the pandas result holds an integer equal to a nanosecond timestamp "
+                "(timestamp[ns]) of the group frame, which would store wrong values. pandas "
+                "carries such a timestamp inside a struct or map as an integer. Convert it to "
+                "microseconds in the function (for example value // 1000) before returning."
+            )
+    return None
+
+
 def _pandas_result_to_arrow_batches(
     out_pdf: Any,
     expected_arrow: Any,
     *,
     api_name: str,
+    scan_plans: tuple[tuple[Any, Any, Any], ...],
+    group_tables: tuple[Any, ...],
 ) -> Iterator[Any]:
     """Convert a validated pandas result into Arrow batches for the bridge."""
     import pyarrow as pa
@@ -84,6 +422,7 @@ def _pandas_result_to_arrow_batches(
             schema=expected_arrow,
         )
         return
+    refusal = _nanosecond_array_refusal(out_pdf, scan_plans, api_name)
     try:
         out_table = pa.Table.from_pandas(out_pdf, schema=expected_arrow, preserve_index=False)
     except (
@@ -109,6 +448,12 @@ def _pandas_result_to_arrow_batches(
             raise PySparkException(
                 f"{api_name} failed converting pandas output to Arrow: {error}"
             ) from error
+    else:
+        refusal = refusal or _nanosecond_integer_refusal(
+            out_pdf, out_table, scan_plans, api_name, group_tables
+        )
+        if refusal is not None:
+            raise PySparkTypeError(refusal)
     output_batches = out_table.to_batches()
     if not output_batches:
         yield pa.RecordBatch.from_arrays(
@@ -130,6 +475,7 @@ def _apply_in_pandas_arrow_batches(
     """Run an applyInPandas callback for each streamed Arrow group."""
     import pandas as pd
 
+    scan_plans = () if _is_facade_callback(user_func) else _timestamp_scan_plans(expected_arrow)
     for group_table in grouped_udf._iter_apply_in_pandas_group_tables(input_batches, key_names):
         pdf = group_table.to_pandas()
         out_pdf = _call_grouped_user_func(user_func, "applyInPandas", pdf)
@@ -144,7 +490,11 @@ def _apply_in_pandas_arrow_batches(
             )
         grouped_udf._validate_apply_in_pandas_result_columns(out_pdf, expected_names)
         yield from _pandas_result_to_arrow_batches(
-            out_pdf, expected_arrow, api_name="applyInPandas"
+            out_pdf,
+            expected_arrow,
+            api_name="applyInPandas",
+            scan_plans=scan_plans,
+            group_tables=(group_table,),
         )
 
 

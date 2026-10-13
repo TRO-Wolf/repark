@@ -3626,6 +3626,65 @@ still open is `isModifiable`.
   rows per nanosecond column, naive or aware; a frame with none is unchanged. Ledger
   `task/ledgers/completed/ice-tsns-frame-door-1-ledger.md`.
 
+### ICE-TSNS-SQL-1-R-020 — OPEN (measured 2026-10-13): `applyInPandas` stores a nanosecond tick as a microsecond timestamp; the interim fix refuses
+
+- **repark** — grouped and cogrouped `applyInPandas` convert the pandas result with
+  `pa.Table.from_pandas(out_pdf, schema=…)`. On main two shapes store a nanosecond tick
+  under a declared microsecond timestamp, with no error.
+  **(a) The array.** At a declared list-of-timestamps position pyarrow appends a numpy
+  `datetime64` array tick by tick, whatever its unit: `array(ns)` over `ice.ns.src` answers
+  element ticks `1767323045123456789` and `-1` where the floors are `1767323045123456` and
+  `-1` (naive; the zoned twin likewise).
+  **(b) The integer.** `to_pandas` gives a `timestamp[ns]` that is a direct struct field, map
+  key or map value to the function as a Python integer (`{'t': 1767323045123456789}`), and
+  `from_pandas` takes an integer under a timestamp as a tick of the declared unit: identity
+  over `named_struct('t', ns)`, `create_map(lit('k'), ns)`, `array(named_struct('t', ns))`
+  and `array(create_map(…))` stores `1767323045123456789` as microseconds.
+  Since NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (fold 1) the door raises `PySparkTypeError` naming
+  the column, the declared Arrow type and the unit, only after pyarrow's own conversion has
+  succeeded, so every error main raised keeps its class and text:
+  - a numpy `datetime64[ns]` array that holds a tick different from its microsecond floor,
+    at a list-of-timestamps position of an object column, at any depth, under struct fields,
+    map keys and map values, in every container spelling pyarrow accepts, wherever it sits in
+    the column or the cell (hint: `.astype("datetime64[us]")`);
+  - a Python integer equal to a nanosecond tick of the group frame, at any declared
+    timestamp position: a struct field, a map key or value, a list element, a top-level
+    object cell or an integer column (hint: `value // 1000`). The ticks are read from the
+    Arrow group tables, both sides of a cogroup, so an integer the function itself took from
+    a nanosecond array or column (`.astype("int64")`) is known too.
+  **Not refused, as on main:** an empty or all-NaT nanosecond array and the ticks `0` and
+  `-1` (each its own floor: main stores them right; `1 ns` it stores as `1 µs`); the
+  microsecond floor of every tick, so the integer hint always passes; `ArrowDtype` columns
+  (pyarrow casts them safely or refuses them itself); microsecond data, lists of
+  `pd.Timestamp` or `datetime`, top-level nanosecond columns, non-timestamp lists.
+- **Apache Spark** — cannot write the type. *(oracle: none — the nanosecond types do not
+  convert; the floor on the int64 ticks is the rule the other doors follow, R-019.)*
+- **Pin** — `python/repark/tests/test_ns_array_apply_in_pandas_refuse_1.py`: 399 cells,
+  each against main `f3f98823`'s recorded answer
+  (`ns_array_apply_in_pandas_refuse_1_main.json`): 133 array refusals, 60 integer refusals,
+  206 cells equal to main in type, ticks, error class and text.
+- **Rationale** — OPEN, dated 2026-10-13, severity S0. Interim refusal by the owner's ruling
+  of that day: a wrong stored value with no error. Ledger
+  `task/ledgers/staging/ns-array-apply-in-pandas-refuse-1-ledger.md`, section Fold 1.
+  **Still open, each stored on the head exactly as on main:**
+  - the conversion proper (the floor, like the other doors): future work;
+  - the `pandas_udf` doors: the scalar `pandas_udf` over a nanosecond array stores
+    `1767323045123456789` as microseconds, and so do the two routes the facade runs through
+    the same bridge with its own callbacks, which this unit leaves as main: a GROUPED_AGG
+    pandas UDF that returns a nanosecond array or such an integer, and an ordered-window
+    pandas UDF over a frame with a nanosecond array or struct column the query selects (that
+    route passes every source column through pandas; when the query does not select the
+    column main is right, and stays right);
+  - numpy `datetime64[ms]`, `[s]` and `[D]` arrays under `array<timestamp>` are stored as raw
+    ticks (`1767323045123`, `1767323045`, `20455`): the same unit-blind copy, other units;
+  - an integer the function derived from a tick (`tick + 1`), a tick that is the microsecond
+    floor of another tick of its group returned without that other tick, and an integer
+    equal to a tick of another group: the door cannot tell them from a function-made
+    microsecond tick; an Arrow-typed nested column of integers the function builds from the
+    ticks (`ArrowDtype` `struct<t: int64>`) is cast by pyarrow and not read by the door;
+  - the SQL spelling `map('k', <column>)` fails in the engine with
+    `map requires key and value lists to have the same length`; `create_map` answers.
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers

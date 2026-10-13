@@ -10161,3 +10161,65 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   when the box lane is absent. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here.
   pins: parity-live-infra-2/C-001
+
+- [test_ns_array_apply_in_pandas_refuse_1.py](test_ns_array_apply_in_pandas_refuse_1.py) —
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (2026-10-13), fold 1:** the pins of the interim refusal
+  at the `applyInPandas` door, one test per cell of the matrix in
+  `_ns_array_apply_in_pandas_refuse_1_cases.py` (399 cells: grouped and cogrouped, a UTC and an
+  America/New_York session, the right side of a cogroup, and the facade's GROUPED_AGG and
+  ordered-window routes, which keep main's answers).
+  `test_nanosecond_array_under_a_timestamp_list_refuses` (133 cells) and
+  `test_nanosecond_tick_as_an_integer_under_a_timestamp_refuses` (60 cells) compare the whole
+  refusal text, with the declared Arrow type main stored under.
+  `test_main_answer_stands` (206 cells) compares type, int64 ticks and, for an error, class,
+  cause class and text with the cause's own text cut, against main's recorded cell.
+  `test_main_stored_a_value_where_the_door_now_refuses` holds that no refused cell was an
+  error on main, and `test_the_fixture_holds_main_for_every_cell` that the fixture is
+  `f3f98823`'s and names exactly the cells of the matrix. Five more tests state fixture facts
+  in words: each hint stores the floor (`.astype("datetime64[us]")` for an array,
+  `value // 1000` for an integer), `0` and `-1` nanoseconds are their own floors, `1` and
+  `-2` nanoseconds are stored wrong by main, and three of the open cells hold main's ticks.
+  604 tests. The round-0 tests are replaced: every one of their shapes is a cell of the
+  matrix. No module docstring: the no-comments ruling covers the file; the contract lives
+  here.
+  pins: ns-array-apply-in-pandas-refuse-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  pins: ns-array-apply-in-pandas-refuse-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-019, C-020
+- [_ns_array_apply_in_pandas_refuse_1_cases.py](_ns_array_apply_in_pandas_refuse_1_cases.py) —
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 fold 1 (2026-10-13):** the case matrix the recorder and
+  the pins share, so both sides build the same frames: 197 cases. A case is a name, an
+  expectation (`array`: refused by the array rule; `integer`: refused because the result
+  returns a nanosecond tick of the group frame as an integer; `main`: answers what main
+  answers) and a runner. `USER_CASES` build their own result cells over a two-row frame with
+  no nanosecond input; `TABLE_CASES` run a function over an expression of the nanosecond
+  source table `ice.ns.src` (SQL, or `create_map` built with the DataFrame functions, because
+  the SQL `map('k', ns)` spelling fails in the engine); `FRAME_CASES` run over an Arrow column
+  that keeps its type (chosen ticks, `large_list`, `fixed_size_list` and `list_view`
+  layouts); `GROUPED_AGG_CASES` and `WINDOW_CASES` run the facade's own two routes through
+  the same bridge (a GROUPED_AGG pandas UDF, an ordered-window pandas UDF), which answer as
+  main. A name that starts with `open_` (nine cases) is a cell the door cannot judge or does
+  not own: it holds main's stored ticks for a later unit. `answer` returns the Arrow type and
+  int64 ticks of the value column (the distinct rows when there are more than 40), or the
+  error class, the cause class and the text with the cause's own text replaced by `{cause}`,
+  so a pyarrow wording change does not move a cell. No module docstring: the no-comments
+  ruling covers the file; the contract lives here.
+  pins: ns-array-apply-in-pandas-refuse-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017
+- [_record_ns_array_apply_in_pandas_refuse_1_main.py](_record_ns_array_apply_in_pandas_refuse_1_main.py) +
+  [ns_array_apply_in_pandas_refuse_1_main.json](ns_array_apply_in_pandas_refuse_1_main.json) —
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 fold 1 (2026-10-13):** the recorder and what main
+  `f3f98823` answers in every cell of the matrix (pandas 3.0.5, numpy 2.5.1, pyarrow 25.0.1),
+  one cell per line. Run it with a build of main's Python source first on the module path:
+  `python _record_ns_array_apply_in_pandas_refuse_1_main.py <commit>` (`--output <path>` to
+  measure a build without touching the fixture); it opens one session over a fresh warehouse
+  per cell and prints the path of the `repark` package it measured. No expectation in the
+  pins comes from the head. No module docstring: the no-comments ruling covers the file.
+  pins: ns-array-apply-in-pandas-refuse-1/C-012, C-013, C-015
+- [_time_ns_array_apply_in_pandas_refuse_1.py](_time_ns_array_apply_in_pandas_refuse_1.py) —
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 fold 1 (2026-10-13):** the cost timer. One process
+  prints one JSON object: the seconds of a grouped `applyInPandas` to its Arrow result over
+  ten shapes of one million rows in 1,000 groups (no list column; numpy microsecond cells;
+  Python lists of datetimes; empty lists; a struct of microsecond lists; a nanosecond struct
+  floor-divided, and dropped; a nanosecond column floored with pandas; four top-level
+  timestamp columns) and 50,000 groups of four rows. Run it on main's source and on the head
+  in turn; the recorded sets are in the ledger's Fold 1 section. No module docstring: the
+  no-comments ruling covers the file.
+  pins: ns-array-apply-in-pandas-refuse-1/C-018
