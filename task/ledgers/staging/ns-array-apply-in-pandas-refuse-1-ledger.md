@@ -132,3 +132,152 @@ COVERAGE_ATTESTATION:
   reattested: []
   complete: true
 ```
+
+## Fold 1 (2026-10-13), after an independent verify failed `b8f50345`
+
+**Model (fold 1):** Claude Opus 5.5 (executor). The verdict named three fail grounds: a
+nanosecond array behind a cell that decides nothing is still stored wrong (H-1), a nanosecond
+timestamp inside a struct or map is still stored wrong (H-2), and answers main stores right
+are refused (H-3). Two commits by the first executor sit on the failed head (`b3d63d8e`, pins;
+`b1c5ae1b`, a narrowed scan). This fold measured them like the failed head, kept the idea of a
+walk guided by the declared type, and replaced the pins and the scan by new commits. The
+clause ids continue the table above; C-001 to C-010 keep their verdicts and F1.6 names the
+cells that pin them now.
+
+### F1.1 Measured before the design
+
+Main is `f3f98823`; pandas 3.0.5, numpy 2.5.1, pyarrow 25.0.1; every probe printed the path
+of the `repark` package it ran.
+
+All three fail grounds reproduce on `b8f50345`: 18 mixed-unit cells store
+`1767323045123456789` (H-1); `array<struct<t>>`, `array<map<string, t>>`, `struct<t>` and
+`map<string, t>` identity over `ice.ns.src` store it (H-2); empty, all-NaT and epoch
+nanosecond arrays and the `ArrowDtype` shapes main stores right are refused (H-3). Of this
+fold's 545 pins, 127 are red on `b8f50345` and 79 on `b1c5ae1b`, where H-1 is closed: 43
+cells of 20 handed-integer cases (H-2); 18 cells of nine container spellings pyarrow accepts
+and the walk did not read (a struct as a list of `(name, value)` pairs or with bytes keys, a
+map as entry dicts, as entry pair lists, as an object array of tuples, a map key that is an
+array, a deque, a `dict_values` view, a pandas Series of arrays); and 18 cells of nine cases
+main answers: the tick `0` and `-1` arrays main stores right, and a byte-swapped array, a
+struct given as a positional list, a map entry given as a list, a string cell beside a
+nanosecond array and a duplicated label, which main refuses with its own text. On main 171
+are red and the 191 equals-main cells are green: the fixture is main's.
+
+Three mechanisms, each measured:
+
+1. **The result side.** `pa.Table.from_pandas(…, schema=…)` reads an object cell with
+   pyarrow's Python converter. At a declared list position whose value type is a timestamp, a
+   numpy `datetime64` array of any unit is appended tick by tick: no unit conversion, no
+   error. pyarrow itself refuses a two-dimensional, a zero-dimensional or a byte-swapped
+   array, a list of `np.datetime64` scalars and an Arrow array cell. A pandas Series, a
+   `DatetimeIndex` and a list of `pd.Timestamp` are read value by value and floored.
+2. **The input side.** `Table.to_pandas()` gives a `timestamp[ns]` that is a direct field of
+   a struct, or a direct key or value of a map, to the function as a Python `int`
+   (`{'t': 1767323045123456789}`, `[('k', 1767323045123456789)]`); a `timestamp[us]` there
+   is a `datetime`. No `to_pandas` option changes that (`timestamp_as_object`,
+   `coerce_temporal_nanoseconds` and `maps_as_pydicts` measured) except
+   `types_mapper=ArrowDtype`, which changes the column's dtype and every cell the function
+   reads. A list of nanosecond timestamps keeps its unit at any depth: a numpy
+   `datetime64[ns]` array. On the way back `from_pandas` takes a Python `int` under a
+   declared timestamp as a tick of the declared unit, at a top-level position too (an
+   `int64`, `Int64` or `int64[pyarrow]` column, or an object column of integers).
+3. **The right value.** The registry's rule is the floor on the int64 ticks (R-019: `-1 ns`
+   is `-1 µs`). A raw nanosecond tick `t` stored as microseconds is right only when
+   `t == t // 1000`: `0` and `-1`. Main stores `1 ns` as `1 µs` (the floor is `0`) and
+   `-2 ns` as `-2 µs` (the floor is `-1`); a test of magnitude does not see those.
+
+### F1.2 The design
+
+One chokepoint, `_pandas_result_to_arrow_batches`, as before. Two rules, both decided from
+the data, neither from a list of statement shapes.
+
+**When the door refuses.** Only after `from_pandas` under the declared schema has succeeded.
+Where pyarrow raises, main's class and text stand by construction. The schema-less retry
+branch is untouched: its types are inferred, so the bridge's schema check refuses a
+nanosecond list itself.
+
+**Rule 1, the array.** For every declared field that holds a list of microsecond timestamps
+at any depth, the object column is walked level by level along the declared type, each
+container read as pyarrow reads it. A list position takes a numpy array or any other
+sequence. A struct position takes a dict by field name (text or bytes), a tuple by position,
+any other sequence as `(name, value)` pairs. A map position takes a dict's items or a
+sequence of entries, each entry a struct of key and value. At a list-of-timestamps position a
+numpy array of dtype `datetime64[ns]` refuses when one of its ticks differs from that tick's
+microsecond floor, NaT left out. Every other cell decides nothing and the walk goes on to the
+end of the column, so a microsecond, millisecond, empty, NaT or null cell hides nothing. The
+walk never reads the elements of a container whose declared elements are scalars. A container
+that raises when it is read decides nothing; pyarrow reads it next, as on main.
+
+**Rule 2, the handed integer.** Per group the door reads, from the Arrow group table (both
+tables of a cogroup), the nanosecond ticks that `to_pandas` hands out as integers: every
+`timestamp[ns]` that is a direct struct field, map key or map value, at any depth. When the
+stored result holds one of them under a declared timestamp (an Arrow set lookup, no row
+loop), the pandas result is walked as in rule 1 and a Python `int` equal to a handed tick at
+a declared timestamp position refuses: a struct field, a map key or value, a list element, a
+top-level object cell, or a value of an integer column under a top-level timestamp. A handed
+tick that is the microsecond floor of a handed tick (itself included: `0`, `-1`) is left
+out. So the floor of every handed tick always passes: an integer the function made with
+`value // 1000` is stored as main stores it.
+
+**Not chosen.** (a) Refusing every group frame that holds a nanosecond timestamp in a struct
+or map: it refuses functions main answers right (the column dropped, the integers
+floor-divided, turned into `pd.Timestamp`, returned as `bigint`). (b)
+`types_mapper=ArrowDtype` for those columns: it changes what the function reads
+(`{'t': Timestamp}` for `{'t': int}`), so a function that returns the integers as `bigint`
+changes its answer. (c) Flooring at the input: that is the conversion, future work by the
+owner's ruling.
+
+**What the door cannot know.** An integer the function derived from a handed tick
+(`tick + 1`), and a handed tick that equals the microsecond floor of another handed tick of
+the same group, returned unchanged without that other tick. Both are stored as on main; F1.7
+records them.
+
+### F1.6 Where the earlier clauses are pinned now
+
+The round-0 test functions are gone; each of their shapes is a cell of the matrix
+(`python/repark/tests/_ns_array_apply_in_pandas_refuse_1_cases.py`), named `case|door|zone`.
+
+- **C-001, C-002:** `table_array_ns`, `table_array_ns_built`, `table_array_tzns`, each
+  `grouped` and `cogrouped`.
+- **C-003:** `ns`, `ns_zoned`, each `grouped` and `cogrouped`.
+- **C-004:** `table_nested_array_ns`, `table_struct_array_ns`.
+- **C-005:** `table_literal_timestamp_array`, `table_array_us`,
+  `table_array_ns_cast_in_function` (the hint: every floor).
+- **C-006:** `table_top_level_ns`, `table_top_level_tzns` (class, cause class and text).
+- **C-007:** `table_empty_array`, `table_null_array`, and beyond the two shapes round 0
+  probed: `empty_ns`, `nat_ns`, `table_array_ns_filtered_empty`,
+  `table_array_ns_sliced_empty`, `table_array_ns_null_element`.
+- **C-008:** `table_nested_array_cast_ns`, `table_struct_array_cast_ns`,
+  `table_nested_array_us`, `table_struct_array_us`.
+- **C-009, C-010:** the neighbour run and the mutant runs of this fold, F1.4 and F1.5.
+
+### F1.7 Open: what the door cannot know, and what this unit does not touch
+
+Each is stored on the head exactly as on main. The first three are cells of the matrix whose
+name starts with `open_`, so a later unit turns them.
+
+- **An integer derived from a handed tick.** `{'t': tick + 1}` over `named_struct('t', ns)`
+  stores `1767323045123456790` as microseconds (`open_table_struct_ns_plus_one`). The door
+  sees an integer it did not hand out.
+- **A handed tick that is the floor of another handed tick, returned alone.** One group
+  holds the ticks `1767323045123456789` and `1767323045123456` (its floor); a function that
+  returns only the second row unchanged stores `1767323045123456` as microseconds
+  (`open_frame_floor_tick_row_only`). The same integer is what `value // 1000` of the first
+  tick returns, so the door lets it through.
+- **numpy `datetime64[ms]`, `[s]`, `[D]` arrays under `array<timestamp>`** are stored as raw
+  ticks (`1767323045123` for a millisecond array, `open_ms_stored_as_raw_ticks`): the same
+  unit-blind copy, another unit, not this unit's.
+- **Scalar `pandas_udf` over a nanosecond array** stores `1767323045123456789` as
+  microseconds on main and on the head: another door, a separate card.
+
+## PROPOSITION LEDGER — NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 FOLD 1 — 2026-10-13
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-011 | H-1: a nanosecond array that stores a wrong tick refuses wherever it sits; a cell that decides nothing never ends the scan, across the rows of a column, across groups and inside one nested cell, on both doors. | The mixed-unit cells of `test_nanosecond_array_under_a_timestamp_list_refuses`, red before the fix. | OPEN | Pins committed red first; does every mixed-unit cell refuse with the fix? |
+| C-012 | H-3: nothing main stores right is refused: empty, all-NaT and floor-equal (`0`, `-1`) nanosecond arrays, `ArrowDtype` columns, microsecond data, non-timestamp lists, top-level columns answer main's type and ticks. | `test_main_answer_stands` against main's recorded fixture. | OPEN | Fixture recorded on `f3f98823`; do all 191 cells equal it with the fix? |
+| C-013 | L-1: where main refuses, main's class and text stand; the door raises only after the conversion under the declared schema has succeeded. | The error cells of `test_main_answer_stands` (class, cause class, text with the cause cut). | OPEN | Does a cell the scan flags and pyarrow refuses (a zero-dimensional array, a string cell beside a nanosecond array) keep main's error? |
+| C-014 | H-2: an integer the group frame carried for a nanosecond timestamp in a struct or map refuses at every declared timestamp position: struct field, map key and value, list element, top-level object and integer column; grouped, cogrouped (either side), naive and zoned. | `test_handed_nanosecond_integer_under_a_timestamp_refuses`, red before the fix. | OPEN | Do all 43 cells refuse with the fix? |
+| C-015 | An integer the function made passes as on main: the microsecond floor of every handed tick (the hint), a `pd.Timestamp`, the column dropped, a `bigint` target, a real timestamp whose tick equals a handed one. | The `table_struct_ns_*`, `frame_*` and `grouped_agg_*` cells of `test_main_answer_stands`. | OPEN | Does the floor of a handed tick pass when it equals another handed tick? |
+| C-016 | M-1, M-2, L-2: the walk reads every container spelling pyarrow accepts at a declared list, struct or map position, at any depth, map keys included. | The container cells of the array test; mutants in F1.5. | OPEN | Which mutants die? |
+| C-017 | `mapInPandas`, `mapInArrow`, `applyInArrow`, scalar `pandas_udf` and `udf` answer as main; the GROUPED_AGG pandas UDF, which the facade runs through `GroupedData.applyInPandas`, follows this door. | The verify stage D probes re-run on both sides; the `grouped_agg_*` cells. | OPEN | Is any other door's answer moved? |
