@@ -169,6 +169,15 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   that is, or contains, a nanosecond timestamp. Asserts only that the walk ran.
   Output committed under
   [../../../task/wo/ice-tsns-type-planner-1/evidence/p5-ns-returns.txt](../../../task/wo/ice-tsns-type-planner-1/evidence/p5-ns-returns.txt).
+- [ice_tsns_type_planner_1_h3.rs](ice_tsns_type_planner_1_h3.rs) —
+  **ICE-TSNS-TYPE-PLANNER-1 step 0 (2026-10-13):** the H3 coercion walk runs
+  `coalesce`, `UNION ALL`, `array`/`make_array`, `CASE`, `=` and an equi-join
+  over every ordered pair of microsecond/naive and nanosecond/zoned timestamp
+  columns, on a plain DataFusion session and on the Spark-door session, and
+  prints one `session | op | left | right | result` line per cell (operand
+  types after coercion for `=` and the join). Asserts only that all 192 cells
+  printed. Output committed under
+  [../../../task/wo/ice-tsns-type-planner-1/evidence/h3-coercion-lattice.txt](../../../task/wo/ice-tsns-type-planner-1/evidence/h3-coercion-lattice.txt).
 
 ## I want to...
 

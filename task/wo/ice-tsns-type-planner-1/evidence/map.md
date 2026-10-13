@@ -11,5 +11,10 @@ re-record it with the test or probe named beside it.
 - [h2-probe.md](h2-probe.md) — the H2 probe diff (fenced), the eight spelling
   outcomes from the probe-branch release module, and the probe branch commit
   sha. The probe branch itself is never merged.
+- [h3-coercion-lattice.txt](h3-coercion-lattice.txt) — the H3 walk's printed
+  lines: 192 `session | op | left | right | result` cells over the four
+  timestamp types on a plain session and on the Spark-door session. Recorded
+  with `cargo test -p repark-spark --test ice_tsns_type_planner_1_h3 --
+  --nocapture`.
 
 Up: [../map.md](../map.md).
