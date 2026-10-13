@@ -2407,7 +2407,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `test/parity-live-infra-2`.
   pins: parity-live-infra-2/C-001, C-002, C-003, C-004
 - [ns-array-apply-in-pandas-refuse-1-ledger.md](ns-array-apply-in-pandas-refuse-1-ledger.md) —
-  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (2026-10-13), parity row R-019:** grouped and
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (2026-10-13), parity row R-020:** grouped and
   cogrouped `applyInPandas` stored a nanosecond array unconverted into
   `list<timestamp[us]>` (ticks `1767323045123456789` for `1767323045123456`, S0); the
   interim fix refuses at the shared pandas-to-Arrow conversion with a `PySparkTypeError`

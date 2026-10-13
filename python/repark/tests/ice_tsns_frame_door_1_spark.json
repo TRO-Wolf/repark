@@ -1,0 +1,846 @@
+{
+ "spark": "4.1.2",
+ "pandas": "3.0.6",
+ "pyarrow": "25.0.1",
+ "driver_zone": "EST/EDT",
+ "zones": [
+  "UTC",
+  "America/New_York"
+ ],
+ "cells": {
+  "UTC|pd_naive_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_naive_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_naive_ns|c timestamp_ntz": {
+   "simple": "timestamp_ntz",
+   "arrow": "timestamp[us]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_ny_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_ny_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_ny_ns|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-01 22:04:05.123456789-0500', tz='America/New_York') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_naive_ns_pre_epoch|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    17999999999,
+    17999999998,
+    17000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_naive_ns_pre_epoch|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    -1,
+    -2,
+    -1000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_naive_ns_pre_epoch|c timestamp_ntz": {
+   "simple": "timestamp_ntz",
+   "arrow": "timestamp[us]",
+   "nullable": true,
+   "ints": [
+    -1,
+    -2,
+    -1000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns_pre_epoch|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    -1,
+    -2,
+    -1000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns_pre_epoch|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    -1,
+    -2,
+    -1000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns_pre_epoch|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('1969-12-31 23:59:59.999999999+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_arrowdtype_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_arrowdtype_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_arrowdtype_ns|c timestamp_ntz": {
+   "simple": "timestamp_ntz",
+   "arrow": "timestamp[us]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns_notnull|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns_notnull|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns_notnull|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_ny_us|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_ny_us|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_ny_us|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-01 22:04:05.123456-0500', tz='America/New_York') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_tokyo_us|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_tokyo_us|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_tokyo_us|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 12:04:05.123456+0900', tz='Asia/Tokyo') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_offset_us|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_offset_us|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_offset_us|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 08:34:05.123456+0530', tz='UTC+05:30') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_category_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_category_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_category_ns|c timestamp_ntz": {
+   "simple": "timestamp_ntz",
+   "arrow": "timestamp[us]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_category_utc_ns|none": {
+   "simple": "struct<__module__:string>",
+   "arrow": "struct<__module__: string>",
+   "nullable": true,
+   "status": "error",
+   "error": "ArrowNotImplementedError: Unsupported cast from struct<__module__: string> to int64 using function cast_int64",
+   "warnings": []
+  },
+  "UTC|pd_category_utc_ns|c timestamp": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_category_utc_ns|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_ny_ns_transitions|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1793514600000000,
+    1793514600000000,
+    1793514600000001,
+    1772953199999999,
+    1772953200000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_ny_ns_transitions|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1793511000000000,
+    1793511000000000,
+    1793511000000001,
+    1772953199999999,
+    1772953200000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_ny_ns_transitions|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-11-01 01:30:00.000000001-0400', tz='America/New_York') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns_extremes|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    9223368674854775,
+    9223368436854775
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns_extremes|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    9223368674854775,
+    9223368436854775
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_utc_ns_extremes|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('1677-09-21 00:12:43.145224193+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "UTC|pd_naive_ns_extremes|none": {
+   "status": "error",
+   "error": "OverflowError: Overflow when converting between datetime64 units",
+   "warnings": []
+  },
+  "UTC|pd_naive_ns_extremes|c timestamp": {
+   "status": "error",
+   "error": "OutOfBoundsDatetime: Converting 2262-04-11 18:51:14 overflows past 2262-04-11 23:47:16.854775807",
+   "warnings": []
+  },
+  "UTC|pd_naive_ns_extremes|c timestamp_ntz": {
+   "status": "error",
+   "error": "OverflowError: Overflow when converting between datetime64 units",
+   "warnings": []
+  },
+  "America/New_York|pd_naive_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_naive_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_naive_ns|c timestamp_ntz": {
+   "simple": "timestamp_ntz",
+   "arrow": "timestamp[us]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_ns|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-01 22:04:05.123456789-0500', tz='America/New_York') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_naive_ns_pre_epoch|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    17999999999,
+    17999999998,
+    17000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_naive_ns_pre_epoch|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    17999999999,
+    17999999998,
+    17000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_naive_ns_pre_epoch|c timestamp_ntz": {
+   "simple": "timestamp_ntz",
+   "arrow": "timestamp[us]",
+   "nullable": true,
+   "ints": [
+    -1,
+    -2,
+    -1000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns_pre_epoch|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    -1,
+    -2,
+    -1000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns_pre_epoch|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    -1,
+    -2,
+    -1000000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns_pre_epoch|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('1969-12-31 23:59:59.999999999+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_arrowdtype_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_arrowdtype_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_arrowdtype_ns|c timestamp_ntz": {
+   "simple": "timestamp_ntz",
+   "arrow": "timestamp[us]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns_notnull|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns_notnull|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns_notnull|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_us|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_us|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_us|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-01 22:04:05.123456-0500', tz='America/New_York') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_tokyo_us|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_tokyo_us|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_tokyo_us|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 12:04:05.123456+0900', tz='Asia/Tokyo') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_offset_us|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_offset_us|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_offset_us|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 08:34:05.123456+0530', tz='UTC+05:30') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_category_ns|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_category_ns|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767341045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_category_ns|c timestamp_ntz": {
+   "simple": "timestamp_ntz",
+   "arrow": "timestamp[us]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_category_utc_ns|none": {
+   "simple": "struct<__module__:string>",
+   "arrow": "struct<__module__: string>",
+   "nullable": true,
+   "status": "error",
+   "error": "ArrowNotImplementedError: Unsupported cast from struct<__module__: string> to int64 using function cast_int64",
+   "warnings": []
+  },
+  "America/New_York|pd_category_utc_ns|c timestamp": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_category_utc_ns|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_ns_transitions|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1793514600000000,
+    1793514600000000,
+    1793514600000001,
+    1772953199999999,
+    1772953200000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_ns_transitions|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1793511000000000,
+    1793511000000000,
+    1793511000000001,
+    1772953199999999,
+    1772953200000000
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_ns_transitions|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-11-01 01:30:00.000000001-0400', tz='America/New_York') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns_extremes|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    9223368674854775,
+    9223368436854775
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns_extremes|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    9223368674854775,
+    9223368436854775
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_utc_ns_extremes|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('1677-09-21 00:12:43.145224193+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_naive_ns_extremes|none": {
+   "status": "error",
+   "error": "OverflowError: Overflow when converting between datetime64 units",
+   "warnings": []
+  },
+  "America/New_York|pd_naive_ns_extremes|c timestamp": {
+   "status": "error",
+   "error": "ValueError: 2262-04-11 23:47:16.854775807 is a nonexistent time due to daylight savings time. Try using the 'nonexistent' argument.",
+   "warnings": []
+  },
+  "America/New_York|pd_naive_ns_extremes|c timestamp_ntz": {
+   "status": "error",
+   "error": "OverflowError: Overflow when converting between datetime64 units",
+   "warnings": []
+  }
+ }
+}

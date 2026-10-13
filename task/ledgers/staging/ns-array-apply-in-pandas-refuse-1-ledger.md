@@ -60,8 +60,8 @@ cells of that one object column only.
 New file 15 passed; `-k` selection 251 passed 8 environment-skipped; `make py-lint
 py-format-check check-lib-py check-python-conventions check-docstring-presence
 check-ledger-grammar check-docs-links spell-check`; `python3 scripts/sync_map_md.py --check`;
-comment gate 0 hits before every commit. Parity row R-019 is the next free ICE-TSNS-SQL-1 id
-on this base; open branches may claim the same number.
+comment gate 0 hits before every commit. Parity row R-020 (written as R-019 on the first base; renumbered at the merge of main, where
+ICE-TSNS-FRAME-DOOR-1 holds R-019).
 
 ```yaml
 FINDING:
@@ -71,7 +71,7 @@ FINDING:
   clause: [C-001, C-002]
   claim: applyInPandas stores nanosecond array ticks unconverted into list timestamp us with no error
   evidence: test_ns_array_apply_in_pandas_refuse_1.py and base flat ticks 1767323045123456789 then -1
-  disposition: REMEDIATED (interim refusal pinned by the same tests; the floor is future work under R-019)
+  disposition: REMEDIATED (interim refusal pinned by the same tests; the floor is future work under R-020)
 ```
 
 ```yaml

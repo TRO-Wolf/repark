@@ -53,6 +53,27 @@ def _arrow_null_sql_to_type(null_sql: str) -> Any:
     return _sql_type_to_arrow(type_sql)
 
 
+def _floor_nanosecond_timestamp_column(column: Any) -> Any:
+    """Return a nanosecond timestamp ``column`` at microseconds, floored as Spark floors."""
+
+    import pyarrow as pa
+
+    import pyarrow.compute as pc
+
+    if not pa.types.is_timestamp(column.type) or column.type.unit != "ns":
+        return column
+
+    ticks = column.cast(pa.int64())
+
+    quotient = pc.divide(ticks, 1000)
+
+    below = pc.less(ticks, pc.multiply(quotient, 1000))
+
+    floored = pc.subtract(quotient, below.cast(pa.int64()))
+
+    return floored.cast(pa.timestamp("us", tz=column.type.tz))
+
+
 def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> Any:
     """Spark-parity Arrow column normalize after native pandas/polars export (P2a).
 
@@ -106,9 +127,12 @@ def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> An
     if pa.types.is_decimal(column.type):
         _validate_decimal_column_envelope(column)
 
-    if engine_type is not None:
-        target = _sql_type_to_arrow(engine_type)
+    target = None if engine_type is None else _sql_type_to_arrow(engine_type)
 
+    if target is None or pa.types.is_timestamp(target):
+        column = _floor_nanosecond_timestamp_column(column)
+
+    if target is not None:
         if pa.types.is_timestamp(target) and target.tz is not None:
             return _localize_naive_timestamp_column(column)
 
@@ -168,7 +192,10 @@ def _localize_naive_timestamp_column(column: Any) -> Any:
         return pa.array(values, type=pa.timestamp("us"))
 
     if column.type.tz is not None and column.type.unit == "us":
-        return column
+        if column.type.tz == "UTC":
+            return column
+
+        return column.cast(pa.timestamp("us", tz="UTC"))
 
     values: list[Any] = []
     for cell in column.to_pylist():
