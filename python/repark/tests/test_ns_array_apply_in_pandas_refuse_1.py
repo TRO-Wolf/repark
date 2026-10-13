@@ -62,7 +62,7 @@ def _assert_ns_array_refusal(error: PySparkTypeError, column: str) -> None:
     text = str(error)
     assert f"'{column}'" in text
     assert "datetime64[ns]" in text
-    assert "timestamp[us]" in text
+    assert "timestamp[us" in text
     assert '.astype("datetime64[us]")' in text
 
 

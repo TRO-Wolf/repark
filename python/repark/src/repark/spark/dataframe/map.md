@@ -501,6 +501,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   through `_secrets.scrub_user_failure` and raise after the handler. pins: source-url-redact-1/C-076
   **ATTR-ID-1 SJ-5 (2026-10-03):** the pandas terminals funnel the raw group
   keys instead of the rebound ones.
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (2026-10-13):** `_pandas_result_to_arrow_batches`
+  (shared by grouped and cogrouped `applyInPandas`) refuses before the schema is applied
+  when a declared list-nested timestamp column holds nanosecond datetimes: the declared
+  type walk covers any list depth plus struct fields and map values, the data decision
+  comes from the column dtype (numpy `datetime64[ns]` arrays, `ArrowDtype` lists of
+  `timestamp[ns]`) with a first-decisive-cell scan of that one object column only.
+  The refusal is `PySparkTypeError` naming the column, the declared type and the unit,
+  with the microsecond-cast hint; microsecond, empty, all-null and top-level timestamp
+  columns keep their answers, and `mapInPandas`/`mapInArrow` are untouched.
+  pins: ns-array-apply-in-pandas-refuse-1/C-001, C-002, C-003, C-004, C-005
 - `grouped_pivot.py` — **ATTR-ID-1 SJ-5 (2026-10-03):** the twelve `_pivot_*`
   module helpers, moved here from `joins_columns.py` unchanged (pure move at
   the size ceiling, behind same-named imports in `joins_columns.py` and
