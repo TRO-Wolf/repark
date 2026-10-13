@@ -92,7 +92,7 @@ pub use illegal_argument::{
     IllegalArgumentMarker, NumberFormatMarker, illegal_argument_error, number_format_error,
 };
 pub use nanosecond_door::{
-    NanosecondAsk, NewColumns, Remedies, added_columns_schema, new_table_schema,
+    NanosecondAsk, NewColumns, Remedies, Target, added_columns_schema, new_table_schema,
 };
 pub use schema_evolution::{
     ACCEPT_ANY_SCHEMA_PROP, accepts_any_schema, evolve_merge_schema, evolve_schema,

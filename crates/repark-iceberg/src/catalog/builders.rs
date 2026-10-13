@@ -203,11 +203,13 @@ pub(crate) fn clone_props<S: BuildHasher>(
 
 /// Fold an iceberg error into a DataFusion error so the session carries one engine error type.
 pub fn iceberg_to_datafusion(err: iceberg::Error) -> DataFusionError {
+    iceberg_to_datafusion_naming(err, "The table must be format version 3.")
+}
+
+pub fn iceberg_to_datafusion_naming(err: iceberg::Error, remedy: &str) -> DataFusionError {
     match nanoseconds_below_v3(&err) {
         Some(details) => DataFusionError::Plan(format!(
-            "[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] {details}. Create the table with TBLPROPERTIES \
-             ('format-version'='3') (writeTo: tableProperty) and \
-             `repark.sql.allowCreateFormatVersion3` = true."
+            "[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] {details}. {remedy}"
         )),
         None => DataFusionError::External(Box::new(err)),
     }

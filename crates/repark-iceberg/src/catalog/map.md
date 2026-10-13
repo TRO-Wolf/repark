@@ -40,6 +40,14 @@ Source comments retain only API and safety contracts; implementation narration i
   rest of that v1 file (P11 refusals, namespace resolution, O(1) reregister helpers) ports with
   the SQL layer in phase 2. No direct tests here — v1 coverage is session-level and ports in
   PR-C.
+- `builders.rs`, `builders_tests.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** this
+  function has no seat, so it no longer names a spelled remedy. `iceberg_to_datafusion`
+  answers the fork's detail lines and `The table must be format version 3.`;
+  `iceberg_to_datafusion_naming(err, remedy)` lets a caller that knows its door supply the
+  last sentence (each SQL door's `iceberg_err` names its own table-property spelling).
+  Statements that pass the create door are refused there, with the seat's remedy, before
+  the fork's check is reached. Where this row and the one below differ, this one holds.
+  pins: ice-tsns-create-door-1/C-012
 - `builders.rs`, `builders_tests.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):**
   `iceberg_to_datafusion`, the one function both SQL doors fold an Iceberg error through, now
   recognises one error: kind `DataInvalid`, a message starting `Invalid schema for v`, and

@@ -91,6 +91,8 @@ V2_DOORS = (
     "evolving",
     "evolving_cast",
 )
+TYPECHANGE_DOORS = ("save_merge_schema", "write_to_append_merge_schema", "merge_schema_evolution")
+TYPECHANGES = (("TIMESTAMP_NTZ", "c"), ("timestamptz_ns", "c"), ("timestamp_ns", "cz AS c"))
 VIEW_NAMES = itertools.count()
 
 
@@ -365,6 +367,18 @@ def v2_cell(spark: Any, warehouse: Path, door: str) -> dict[str, Any]:
     return measure(spark, warehouse, table, actions[door])
 
 
+def typechange_cell(
+    spark: Any, warehouse: Path, door: str, held: str, source: str
+) -> dict[str, Any]:
+    """Evolve a table whose column ``c`` is ``held`` from a source giving ``c`` another type."""
+    table = "ice.ns.typechange"
+    table_properties = EVOLVING if door in EVOLVED else V3
+    spark.sql(f"CREATE TABLE {table} (id INT, c {held}) USING iceberg {table_properties}")
+    select = f"SELECT id, {source}, 7 AS extra FROM {SEED}"
+    frame = spark.sql(select)
+    return measure(spark, warehouse, table, lambda: run_door(spark, door, table, select, frame))
+
+
 def in_session(
     zone: str, setting: bool, cell: Callable[..., dict[str, Any]], *arguments: str
 ) -> dict[str, Any]:
@@ -380,7 +394,13 @@ def in_session(
 
 def record() -> dict[str, dict[str, Any]]:
     """Measure every section of the fixture on the installed build."""
-    sections: dict[str, dict[str, Any]] = {"matrix": {}, "pass3": {}, "plain": {}, "v2": {}}
+    sections: dict[str, dict[str, Any]] = {
+        "matrix": {},
+        "pass3": {},
+        "plain": {},
+        "v2": {},
+        "typechange": {},
+    }
     for zone in ZONES:
         for door, column, ask in itertools.product(DOORS, COLUMNS, ("none", "cast")):
             key = f"{zone}|{door}|{column}|{ask}"
@@ -392,6 +412,11 @@ def record() -> dict[str, dict[str, Any]]:
             sections["plain"][f"{zone}|{name}"] = in_session(zone, False, plain_cell, name)
         for door in V2_DOORS:
             sections["v2"][f"{zone}|{door}"] = in_session(zone, False, v2_cell, door)
+        for door, (held, source) in itertools.product(TYPECHANGE_DOORS, TYPECHANGES):
+            key = f"{zone}|{door}|{held}|{source}"
+            sections["typechange"][key] = in_session(
+                zone, False, typechange_cell, door, held, source
+            )
     return sections
 
 

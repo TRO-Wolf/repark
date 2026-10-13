@@ -127,6 +127,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   only `super::common::*` and `super::session_write_conf` paths are used — so it is dropped
   for `unused_imports` (repark#733 `Rust lint`).
   pins: ice-session-write-conf-1/C-064
+- `nanosecond_create_door.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** the texts
+  are the seat-specific ones. Added: below v3 the unasked text also names the seat's way to
+  a v3 table (a create and a replace); an asked column below v3 answers the create, replace
+  or upgrade sentence by seat, `ADD COLUMN` names the table property, no existing table is
+  told to be created, and the named upgrade then lets the MERGE run;
+  `an_evolving_seat_checks_only_the_columns_it_would_add`;
+  `a_plain_timestamp_in_a_merge_source_is_refused_and_the_named_spellings_work`. Where this
+  row and the one below differ, this one holds.
+  pins: ice-tsns-create-door-1/C-012, C-013, C-017
 - `nanosecond_create_door.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the Spark door's
   pins over a memory catalog with the v3 opt-in on, five SQL doors (CTAS, `CREATE OR
   REPLACE … AS`, `REPLACE TABLE … AS`, a `mergeSchema` positional INSERT into a

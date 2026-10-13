@@ -36,6 +36,13 @@ nothing of it is touched).
 | C-009 | The parity registry carries the dated rows and this ledger the release-note sentence. | Rows `ICE-TSNS-SQL-1-R-021` and `R-022` in `docs/spark-sql-iceberg-parity.md`; §11. | **PROVEN** | Both FIXED 2026-10-13; R-021 carries "Changed from main, owner ruling 2026-10-13" and the native door's move for the owner. |
 | C-010 | The cost gate holds at 1.05 and the work order's gates pass. | Real ratios and exit codes. | **PROVEN** | §10, §13. Whole facade suite 17,022 passed, 0 failed; four Rust crates 5,325 passed, 0 failed. |
 | C-011 | On the native door a refusal names only remedies that door can write, and the move from main on that door is recorded for the owner. | `native_ctas_of_an_unasked_nanosecond_column_is_refused_and_a_kept_one_passes`, `native_ctas_of_a_plain_timestamp_expression_at_v3_is_refused_and_six_digits_pass`, `the_text_names_only_the_remedies_the_seat_can_write`. | **PROVEN** | §4 Q3, §8. Owner to accept or flip. |
+| C-012 | Fold 1: every remedy a refusal names works on the seat that raised it, by construction: each seat passes its remedies and its target, one function prints them, and a pin follows each named remedy on every seat for both refusals. | `test_every_remedy_a_refusal_names_works_when_followed` (50 cells, 13 Spark seats); `every_remedy_an_unasked_refusal_names_works_when_followed` and `every_remedy_a_named_type_below_v3_names_works_when_followed` (native); door unit pins. | **PROVEN** | §16.1. Findings F1, F3, F7, F8. |
+| C-013 | Fold 1: an evolving seat checks only the columns it would add; a source column whose name the table holds under another type answers what main answered. | `test_an_evolving_seat_answers_a_same_name_column_of_another_type_as_main_did` (18 cells against main's recording); `an_evolving_seat_checks_only_the_columns_it_would_add`; a door unit pin. | **PROVEN** | §16.2. Finding F5. |
+| C-014 | Fold 1: a cast written in a SQL temp view, and through EXCEPT, INTERSECT and a semi or anti join, is an ask; the shapes not followed are refused, pinned, and pass with the cast outermost. | `test_a_written_cast_is_followed_through_views_set_operations_and_semi_joins` (7), `test_a_written_cast_that_is_not_followed_is_refused_and_works_written_outermost` (5), the cache pins (3); walk unit pins. | **PROVEN** | §16.3. Findings F6 (closed), F9 (part built, part disclosed for the owner). |
+| C-015 | Fold 1: a nanosecond field two and three levels down is refused, and the verify's surviving mutant (the nested walk stops at depth one) is killed. | `a_nanosecond_field_two_and_three_levels_down_is_checked` (Rust, 7 shapes); `test_a_nanosecond_field_two_and_three_levels_down_is_refused` (36 cells). | **PROVEN** | §16.4. |
+| C-016 | Fold 1: a 200-column CTAS with no nanosecond column costs at most 1.05 of main, and the cost set's wide statement reaches the door. | Five interleaved sets. | **PROVEN** | §16.5: 0.993, from 1.181. Finding F10. |
+| C-017 | Fold 1: a plain `TIMESTAMP` in a schema-evolving MERGE source is refused, the cells are recorded for the owner, and the hint on that seat names only spellings that store microseconds there. | `test_a_plain_timestamp_in_a_schema_evolving_merge_source_is_refused` (4); `a_plain_timestamp_in_a_merge_source_is_refused_and_the_named_spellings_work`. | **PROVEN** | §16.6. Finding F4, disclosed: owner to accept or flip. |
+| C-018 | Fold 1: native `ALTER TABLE ADD COLUMN` and nested native DDL written as plain `TIMESTAMP` answer as main (a named exception the owner holds). | `plain_timestamp_in_native_add_column_and_nested_ddl_still_stores_nanoseconds_as_main`. | **PROVEN** | §16.7. Finding F2, disclosed: no behaviour change. |
 
 ## 1. Main's recorded answers (C-001)
 
@@ -352,10 +359,170 @@ another open unit.
   `format_version = 3`, the plain column of a `timestamp_ns` table, a `TIMESTAMP '…'`
   literal and `now()`, are refused where main created `timestamp_ns`; the class is every
   native v3 CTAS whose output holds a plain `TIMESTAMP` expression (§8).
+- **Owner to accept or flip, MERGE (fold 1, §16.6):** four measured cells, a plain
+  `TIMESTAMP` literal or cast in a `MERGE WITH SCHEMA EVOLUTION` source that the evolution
+  would add, are refused where main added a naive `timestamp_ns` column.
+- **Owner to accept or flip, the native door (fold 1, §16.7):** the verify measured 20 native
+  v3 cells of the class above; native `ADD COLUMN` and nested native DDL written as plain
+  `TIMESTAMP` are a named exception that still equals main.
+- **Back to main's answer in fold 1 (§16.2, §16.3):** a type change on an evolving seat; a
+  cast written in a SQL temp view; EXCEPT, INTERSECT, semi and anti joins over cast columns.
+- **Still refused where main created (fold 1, §16.3, for the owner):** a written cast under
+  grouping sets, in a scalar subquery, in a lambda body, in a window ordered or partitioned
+  by a plain nanosecond column, or before `cache` / `persist` / `localCheckpoint`.
 - **Unchanged:** a written cast, the setting, a kept column, DDL naming the type, and every
   statement with no nanosecond output.
 
-## 15. Coverage attestation
+## 16. Fold 1 (2026-10-13), after an independent verify failed `53ced116`
+
+The verify found ten findings and one surviving mutant. Each finding folded was reproduced
+first: the fold's facade pin file ran on the module of the failed head and all of its 125
+tests of that moment failed. The fixes are at the construction point. **Where a section above
+quotes a refusal text or says the door does not read the format version, this section holds:**
+both texts changed, and the door now takes its target's format version from the seat.
+Rulings are the orchestrator's; the items marked for the owner are provisional.
+
+| Finding | Status | Pin that proves it |
+|---|---|---|
+| F1 native below-v3 text named Spark spellings | CLOSED | `every_remedy_a_named_type_below_v3_names_works_when_followed` |
+| F2 native `ADD COLUMN` / nested DDL plain `TIMESTAMP` store nanoseconds | DISCLOSED, unchanged, equal to main (owner holds the native door) | `plain_timestamp_in_native_add_column_and_nested_ddl_still_stores_nanoseconds_as_main` |
+| F3 the setting remedy failed through `conf.set` / `SET` | CLOSED by wording; run-time set not built | `test_the_setting_is_read_when_the_session_is_built_and_the_hint_says_so` |
+| F4 MERGE source: the zoned microsecond remedy failed; plain `TIMESTAMP` cells not listed | hint CLOSED; refusal DISCLOSED for the owner | `test_a_plain_timestamp_in_a_schema_evolving_merge_source_is_refused` |
+| F5 evolving seats refused a type change as an unasked column | CLOSED | `test_an_evolving_seat_answers_a_same_name_column_of_another_type_as_main_did` |
+| F6 a cast in a SQL temp view was refused | CLOSED | `test_a_written_cast_is_followed_through_views_set_operations_and_semi_joins` |
+| F7 `saveAsTable` create named remedies that end in the next refusal | CLOSED | `test_every_remedy_a_refusal_names_works_when_followed[save_create-*]` |
+| F8 an existing table was told to be created | CLOSED | the same test, replace and evolve seats |
+| F9 written casts the walk does not follow | set operations and semi / anti joins CLOSED; the rest DISCLOSED for the owner | `test_a_written_cast_that_is_not_followed_is_refused_and_works_written_outermost` |
+| F10 a 200-column CTAS cost 1.18 of main | CLOSED | §16.5 |
+| mutant: the nested walk stops at depth one | KILLED | `a_nanosecond_field_two_and_three_levels_down_is_checked` |
+
+### 16.1 Hints by construction (C-012; F1, F3, F7, F8)
+
+A `NanosecondAsk` carries its seat's `Remedies`: whether the dialect can write the nanosecond
+cast, the sentence that turns the setting on, a whole microsecond spelling for a naive and for
+a zoned column (either may be absent), and that door's sentence for a v3 table on a create, on
+a replace and on an existing table. `NewColumns::target` says whether the table is, or would
+be, format v3, and if not which of the three it is. `nanosecond_door.rs` prints both refusals
+from those and nothing else.
+
+- **Unasked** (`TIMESTAMP_NANOS_NOT_REQUESTED`): the cast (Spark door only), the setting, the
+  microsecond spelling. When the target is below v3 the text adds `A nanosecond column also
+  needs a format version 3 table.` and the seat's way to one, because the cast or the setting
+  alone would only reach the next refusal (F7).
+- **Asked, below v3** (`TIMESTAMP_NANOS_REQUIRES_FORMAT_V3`): raised by the door, before the
+  fork's check, with that same sentence. A create names SQL `TBLPROPERTIES` and
+  `writeTo(...).tableProperty` and says `saveAsTable` cannot set the format version; a replace
+  names those on the replace, or the `ALTER TABLE` upgrade; an evolving seat names the upgrade
+  only. No existing table is told to be created (F8).
+- **Seats outside the door** (column DDL on the Spark door, `ADD COLUMN` on both): the fork's
+  error is folded by a function that has no seat, so it names no spelled statement, only that
+  the table must be format version 3; each door's own `iceberg_err` adds its table-property
+  spelling (`'format-version' = '3'`; `format_version = 3`), which is true for a new and for
+  an existing table (F1, F8).
+- **The setting** (F3): the text says `build the session with … = true
+  (ReparkSession.builder.config; the key is read once, when the session is built)`. A run-time
+  `spark.conf.set` or SQL `SET` of the key is accepted and ignored, pinned as it behaves. Main
+  does the same for the sibling key `repark.sql.allowCreateFormatVersion3`. Making a run-time
+  set of either key refuse loudly is a later card; no run-time `SET` is built here.
+- **The native door** names `WITH (format_version = 3)`, `ALTER TABLE … SET PROPERTIES
+  (format_version = 3)` and `CAST(<expression> AS TIMESTAMP(6))`, each followed in a pin.
+
+The pin: 13 Spark seats by two columns by a v3 and a below-v3 target, 50 cells (`saveAsTable`
+create has no v3 target). Each pins the exact text, then follows the microsecond spelling, the
+cast and the session built with the setting; below v3 it pins the exact format-version refusal
+for the cast and for the setting, then follows each way to a v3 table the text names, with the
+cast and with the setting, and reads the stored Iceberg type.
+
+### 16.2 Evolving seats (C-013; F5; ruling: yes)
+
+`added_columns_schema` skips a field whose name the table already holds, whatever its type:
+the evolution would not add it, and `evolve_schema` answers main's `Cannot change column
+type`. `new_table_schema` still treats a kept name with another type as new, since a replace
+does replace the column. 18 cells recorded on main's module (three doors, three held and
+source pairs, two zones) equal the unit's, error text and table state.
+
+### 16.3 What the walk follows (C-014; F6 closed, F9 provisional for the owner)
+
+- **Views.** A scan whose source carries a plan is walked into it. The Spark door's SQL
+  `CREATE TEMP VIEW` is its own re-planning provider, so the Spark seat gives the walk a
+  resolver that answers the view's definition plan. A view of a view is followed; each view
+  costs 32 of the walk's 1,024 levels.
+- **Semi and anti joins**, in the `Join` arm, on the side whose rows they keep. `EXCEPT` and
+  `INTERSECT` plan as such joins, so their left branch is followed and their right branch,
+  which contributes no value, is not an origin.
+- **Not built, each needs its own case (owner to flip):** `GROUP BY ROLLUP` / `CUBE` /
+  `GROUPING SETS`, a scalar subquery's inner cast, a lambda body, a window function whose
+  `ORDER BY` or `PARTITION BY` is a plain nanosecond column. Each is refused and pinned, and
+  the same statement with the cast on the outermost select creates the column (pinned).
+- **`cache`, `persist`, `localCheckpoint`** replace the plan with stored rows: a cast written
+  before them is hidden, one written after them is an ask (pinned, in the registry row).
+
+One limit of the resolver, recorded and not pinned: the definition plan is the view's text as
+planned when the view was created. The view re-plans the same text at scan time, so a cast its
+author wrote stays written; a temp view that reads another temp view later replaced by one
+with a different plan is judged by the plan of the day it was defined.
+
+### 16.4 The nested walk (C-015)
+
+The verify's mutant made the door look one level into a list, struct or map and no further;
+all 5,077 Rust tests passed on it. `a_nanosecond_field_two_and_three_levels_down_is_checked`
+(array of struct, struct of struct, struct of array of struct, map value struct, map of map,
+array of array, and a zoned leaf three levels down) fails on that mutant, run here. The facade
+pins the same six shapes on a create and on both evolving seats, 36 cells.
+
+### 16.5 Cost (C-016; F10)
+
+`task/wo/ice-tsns-create-door-1/evidence/cost.md`. The seat ran a second eager analysis of the
+plan on every create. `asked_nanosecond_columns_in` now answers all-false from the output
+types when none holds a nanosecond timestamp, and analyzes only otherwise. Five interleaved
+sets, ratios of medians: CTAS 0.989, `mode("overwrite").saveAsTable` 1.039,
+`MERGE WITH SCHEMA EVOLUTION` 0.988, the 200-column CTAS **0.993** (the verify measured 1.181
+on the failed head; per set 0.993, 1.001, 0.982, 0.989, 0.995). The cost set's fourth
+statement is that CTAS; the `EXPLAIN` it replaces never reached the door.
+
+### 16.6 Owner to accept or flip: MERGE sources (C-017; F4)
+
+Inside a `MERGE WITH SCHEMA EVOLUTION` source a plain `TIMESTAMP` is Arrow nanoseconds: the
+probe plans the source text without the Spark door's microsecond typing. That is main's
+behaviour; main then silently added a naive `timestamp_ns` column. The door now refuses.
+**Four measured cells move:** a source column written as `TIMESTAMP '2026-01-02 03:04:05'`,
+`CAST('2026-01-02 03:04:05' AS TIMESTAMP)`, `CAST(c AS TIMESTAMP)`, `CAST(cz AS TIMESTAMP)`.
+The same expressions through a DataFrame or a CTAS are microseconds and are not refused.
+The hint on that seat names `CAST(<expression> AS TIMESTAMP_NTZ)` for a naive column and
+`to_timestamp(<expression>)` for a zoned one; both are followed in pins and store
+microseconds (`CAST(… AS TIMESTAMP)` does not, there). Future card, one line: type the MERGE
+source through the Spark door so `TIMESTAMP` in it is microseconds.
+
+### 16.7 Owner to accept or flip: the native door (C-018; F2, and §8)
+
+- **Named exception, unchanged and equal to main:** at format version 3, native
+  `ALTER TABLE … ADD COLUMN ts TIMESTAMP` stores `timestamp_ns`, and so do nested native
+  column definitions (`a ARRAY<TIMESTAMP>`, `st STRUCT<v TIMESTAMP>`), with no ask. A
+  top-level `ts TIMESTAMP` in native `CREATE TABLE` is refused by the older guard. Pinned as
+  it is; the owner holds the native door.
+- **Refused now, created on main (§8):** the verify measured 20 native cells at
+  `format_version = 3` (a `TIMESTAMP` literal, `now()`, `current_timestamp`, a cast to
+  `TIMESTAMP`, `to_timestamp`, `date_trunc`, the plain column of a nanosecond table, nested
+  forms of them, and a `CREATE OR REPLACE` whose kept column differs in case or type).
+
+### 16.8 The verify's probes, re-run on the fold
+
+Its hint probe: every seat's named remedies are followed as before; the SQL temp view cells
+create; no below-v3 text on an existing table says `Create the table`. Its three door and ask
+probes, 439 cells: against its own run on the failed head, 15 cells change kind and no other.
+Six create as on main (the SQL temp view, a view of a view, EXCEPT, INTERSECT, a semi and an
+anti join); nine answer main's type-change error again. No cell that answers on main raises a
+different error on the fold.
+
+### 16.9 Gates on the fold
+
+`cargo test --locked --no-fail-fast` over the four crates: 5,332 passed, 0 failed.
+`make rust-clippy`, `make rust-panic-ban`, `cargo fmt --check`, the file-size, crate-root and
+DAG checks: exit 0. The three pin files: 765 passed. The whole facade suite: 17,147
+passed, 0 failed. Mutants: the verify's survivor killed; m1 to m11 unchanged in what they
+test.
+
+## 17. Coverage attestation
 
 **The executor's own attestation**, filed from the runs recorded in this ledger. It is not an
 independent verdict.
@@ -396,11 +563,12 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/catalog/builders_tests.rs, crates/repark-functions/src/timestamp_ns_cast/tests.rs]
     - id: AT-9
       status: ATTACKED
-      evidence: Both refusal texts are pinned exactly on each SQL door, with class and condition. The native door's text names only remedies that parse there, measured. Refusals for other reasons keep main's text byte for byte.
+      evidence: Both refusal texts are pinned exactly on each SQL door, with class and condition. After fold 1 a pin follows every remedy a text names, on every seat of both doors and for both refusals, and reads the stored type. Refusals for other reasons keep main's text byte for byte.
       artifacts: [crates/repark-sql/src/v3/create.rs, crates/repark-spark/src/tests/nanosecond_create_door.rs, python/repark/tests/test_ice_tsns_create_door_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Eleven mutants, thirteen variants, all killed. The whole facade suite and the four Rust crates ran on the final head with 0 failed. Three pre-existing tests moved and are listed with their rulings.
+      evidence: Eleven mutants, thirteen variants, all killed, and after fold 1 the independent verify's surviving mutant too. The whole facade suite and the four Rust crates ran on the fold with 0 failed. Three pre-existing tests moved and are listed with their rulings. The verify's ten findings are each closed or disclosed in section 16.
       artifacts: [task/ledgers/completed/ice-tsns-create-door-1-ledger.md, python/repark/tests/test_ice_tsns_merge_wall_1.py]
+  reattested: [AT-2, AT-6, AT-7, AT-9, AT-10]
   complete: true
 ```

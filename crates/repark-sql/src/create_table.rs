@@ -124,11 +124,10 @@ pub(crate) async fn execute_create_table(
         arrow_schema.as_ref()
     };
     let existing = replacement_if_existed(&target, existed).await?;
-    let replaced = existing
-        .as_ref()
-        .map(|table| table.metadata().current_schema().as_ref());
     let ask = nanosecond_ask::ask_of(cx.ctx, query.as_ref())?;
-    let iceberg_schema = ask.table_schema(ctas_schema, replaced, create.or_replace)?;
+    let version = properties.format_version.as_deref();
+    let iceberg_schema =
+        ask.table_schema(ctas_schema, existing.as_ref(), version, create.or_replace)?;
     let partition_spec = build_partition_spec(&iceberg_schema, &properties.partitioning)?;
     let format_version =
         iceberg_create_format_version(cx.ctx, properties.format_version.as_deref())?;

@@ -676,6 +676,29 @@ repark-core's error map.
   The nested conform of folds 1 and 2 (`holds_nested_ns_wall`, `nested_wall_conform_sql`, the
   pairing words) is removed from every site here; the sites are main's again for a nested
   column. pins: ice-tsns-merge-wall-1/C-044
+- `nanosecond_door.rs`, `nanosecond_door_tests.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1
+  (2026-10-13), after a verify failed `53ced116`. Where this row and the one below differ,
+  this one holds.** Both refusals are built here from what the seat passes, so a text cannot
+  name a remedy its seat cannot write. `Remedies` (carried on the `NanosecondAsk`) holds:
+  whether the dialect can write the nanosecond cast; the sentence that turns the setting on
+  on that door; a whole microsecond spelling for a naive and for a zoned column, either of
+  which may be `None`; and that door's sentence for a v3 table on a create, on a replace
+  and on an existing table. `NewColumns::target` says which of those applies:
+  `Target::FormatV3`, or the table would be created, replaced or evolved below v3. For each
+  new nanosecond field: not asked → `[TIMESTAMP_NANOS_NOT_REQUESTED]`, and when the target
+  is below v3 the text adds that a nanosecond column also needs a v3 table and the seat's
+  way to one (the cast or the setting alone would only reach the next refusal); asked and
+  the target below v3 → `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]` with that same sentence,
+  raised here before the fork's check. **An evolving seat checks only the columns it would
+  add:** `added_columns_schema` skips a field whose name the table already holds, whatever
+  its type, so a type change falls through to `evolve_schema`'s own
+  `Cannot change column type`; `new_table_schema` still treats a kept name with another type
+  as new, because a replace does replace it. Pins added: both refusals on each target kind,
+  a seat with no cast and no zoned spelling, the evolving rule, and a nanosecond field two
+  and three levels down (array of struct, struct of struct, struct of array of struct, map
+  value struct, map of map, array of array), which is the pin the verify's surviving mutant
+  (the nested walk stops at depth one) dies on.
+  pins: ice-tsns-create-door-1/C-012, C-013, C-015
 - `nanosecond_door.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the one door through which
   a query's Arrow schema becomes Iceberg columns. `new_table_schema` (CTAS, RTAS, both SQL
   doors) and `added_columns_schema` (`mergeSchema` append, `MERGE WITH SCHEMA EVOLUTION`)

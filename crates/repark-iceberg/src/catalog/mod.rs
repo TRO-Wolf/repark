@@ -35,8 +35,8 @@ pub use provider::{
 };
 // Engine-side adapter for session `refresh_catalog_provider`, hoisted from v1 catalog_ops.
 pub use builders::{
-    glue_catalog, glue_catalog_counted, iceberg_to_datafusion, memory_catalog,
-    memory_catalog_cached, memory_catalog_cached_with_props, s3tables_catalog,
+    glue_catalog, glue_catalog_counted, iceberg_to_datafusion, iceberg_to_datafusion_naming,
+    memory_catalog, memory_catalog_cached, memory_catalog_cached_with_props, s3tables_catalog,
     s3tables_catalog_counted,
 };
 pub use caches::{

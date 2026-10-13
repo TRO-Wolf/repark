@@ -826,6 +826,13 @@ pins: rp-4-fork-repin/C-005, C-006
   parity, oracle-pinned in `python/repark/tests/branch_ops_1_truth.json`).
   Details: [call/map.md](call/map.md).
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
+- `catalog_ops.rs`, `ctas.rs`, `merge.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):**
+  `catalog_ops::iceberg_err` names this door's table property for a nanosecond type below
+  v3 that did not pass the create door (column DDL, `ADD COLUMN`):
+  `table property 'format-version' = '3'`, true for a new and for an existing table.
+  `execute_ctas` passes the door its `Target`; `merge.rs` sets the MERGE seat's own ask
+  (`merge_nanosecond_ask`).
+  pins: ice-tsns-create-door-1/C-012
 - `ctas/nanosecond_ask.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** (a child of `ctas.rs`,
   because the crate root is at its module-line ceiling) the Spark door's adapter
   between the session and `repark_iceberg::write::nanosecond_door`. `asked_columns(ctx,

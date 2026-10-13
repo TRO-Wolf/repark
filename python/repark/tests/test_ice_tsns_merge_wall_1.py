@@ -55,9 +55,8 @@ BELOW_V3_ON_MAIN = {
 }
 BELOW_V3 = {
     source: (
-        f"Error during planning: [TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] {text[2:]}. Create the "
-        "table with TBLPROPERTIES ('format-version'='3') (writeTo: tableProperty) and "
-        "`repark.sql.allowCreateFormatVersion3` = true."
+        f"Error during planning: [TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] {text[2:]}. The table must "
+        "be format version 3: table property 'format-version' = '3'."
     )
     for source, text in BELOW_V3_ON_MAIN.items()
 }

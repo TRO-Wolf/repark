@@ -167,6 +167,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `schema_ddl.rs`, `create_table.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):**
+  `schema_ddl::iceberg_err` names this door's table property (`format_version = 3`) for a
+  nanosecond type below v3 that did not pass the create door (`ADD COLUMN`); the seat in
+  `execute_create_table` passes the requested format version so the door knows its target.
+  pins: ice-tsns-create-door-1/C-012
 - `create_table.rs`, `merge.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the native seat.
   `execute_create_table` derives the Iceberg schema through
   `repark_iceberg::write::new_table_schema`: a CTAS passes the ask of its analyzed query,

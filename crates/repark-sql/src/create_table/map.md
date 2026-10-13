@@ -21,6 +21,14 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
   only. `repark-sql` does not name
   `repark-spark`, so the body is repeated here.
   pins: ice-tsns-create-door-1/C-005
+- `nanosecond_ask.rs`, fold 1 (2026-10-13): this door's remedies are whole sentences in
+  its own spellings: the setting in the session's configuration, read when the session is
+  built; `CAST(<expression> AS TIMESTAMP(6))`; `WITH (format_version = 3)` on a create or a
+  replace; `ALTER TABLE … SET PROPERTIES (format_version = 3)` for an existing table.
+  `NativeAsk::table_schema` builds the door's request, the `Target` among it (the requested
+  version, else the replaced table's). Column DDL passes the door with every column asked,
+  so a named nanosecond type below v3 is refused there with the create sentence.
+  pins: ice-tsns-create-door-1/C-012
 - `nested_type.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the ANSI door's
   structural nested-type mapping, a child module of `../create_table.rs`:
   `needs_structural_mapping` (a `MAP` anywhere, or a struct-field option),

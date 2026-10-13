@@ -4413,6 +4413,530 @@
  },
  "recorded_at_commit": "f3f98823a5",
  "seed": "2026-01-02 03:04:05.123456789",
+ "typechange": {
+  "America/New_York|merge_schema_evolution|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|merge_schema_evolution|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|merge_schema_evolution|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|save_merge_schema|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "America/New_York|write_to_append_merge_schema|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|merge_schema_evolution|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|save_merge_schema|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|TIMESTAMP_NTZ|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[us]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|timestamp_ns|cz AS c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamp_ns -> timestamptz_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamp_ns"
+     ]
+    ]
+   }
+  },
+  "UTC|write_to_append_merge_schema|timestamptz_ns|c": {
+   "error": {
+    "class": "IllegalArgumentException",
+    "condition": null,
+    "text": "Cannot change column type: c: timestamptz_ns -> timestamp_ns"
+   },
+   "files_unchanged": true,
+   "table": {
+    "arrow": [
+     "int32",
+     "timestamp[ns, tz=UTC]"
+    ],
+    "format_version": 3,
+    "rows": [
+     [],
+     []
+    ],
+    "schema": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "c",
+      "timestamptz_ns"
+     ]
+    ]
+   }
+  }
+ },
  "v2": {
   "America/New_York|addcol_v2base": {
    "error": {

@@ -2,18 +2,18 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use datafusion::common::{DFSchema, ScalarValue};
-use datafusion::datasource::{MemTable, provider_as_source};
+use datafusion::datasource::{MemTable, ViewTable, provider_as_source};
 use datafusion::functions::expr_fn::coalesce;
 use datafusion::functions_aggregate::expr_fn::max;
 use datafusion::functions_aggregate::min_max::max_udaf;
 use datafusion::functions_nested::expr_fn::make_array;
 use datafusion::logical_expr::expr::{GroupingSet, ScalarFunction, WindowFunction};
 use datafusion::logical_expr::{
-    Cast, EmptyRelation, Expr, JoinType, LogicalPlan, LogicalPlanBuilder, Partitioning,
+    Cast, EmptyRelation, Expr, JoinType, LogicalPlan, LogicalPlanBuilder, Partitioning, TableScan,
     WindowFunctionDefinition, col, lit, when,
 };
 
-use super::asked::asked_nanosecond_columns;
+use super::asked::{asked_nanosecond_columns, asked_nanosecond_columns_in};
 use super::{CastOrigin, timestamp_ns_cast_expr, timestamp_ns_cast_udf};
 
 fn nanos(zone: Option<&str>) -> DataType {
@@ -50,7 +50,7 @@ fn projected(exprs: Vec<Expr>) -> LogicalPlan {
 }
 
 fn asked(plan: &LogicalPlan) -> Vec<bool> {
-    asked_nanosecond_columns(plan).unwrap()
+    asked_nanosecond_columns(plan, &|_| None).unwrap()
 }
 
 fn cast_column() -> LogicalPlanBuilder {
@@ -210,7 +210,81 @@ fn a_join_side_is_followed() {
         .unwrap()
         .build()
         .unwrap();
-    assert_eq!(asked(&semi), vec![false, false]);
+    assert_eq!(asked(&semi), vec![false, true]);
+    for (kind, expected) in [
+        (JoinType::LeftAnti, vec![false, true]),
+        (JoinType::RightSemi, vec![false; 4]),
+        (JoinType::RightAnti, vec![false; 4]),
+        (JoinType::LeftMark, vec![false; 3]),
+    ] {
+        let joined = cast_column()
+            .join(right(), kind, (vec!["id"], vec!["r.id"]), None)
+            .unwrap()
+            .build()
+            .unwrap();
+        assert_eq!(asked(&joined), expected, "{kind:?}");
+    }
+    let kept_right = LogicalPlanBuilder::from(right())
+        .join(
+            cast_column().build().unwrap(),
+            JoinType::RightSemi,
+            (vec!["r.id"], vec!["t.id"]),
+            None,
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+    assert_eq!(asked(&kept_right), vec![false, true]);
+}
+
+#[test]
+fn a_view_is_followed_into_its_plan_and_any_other_scan_is_not() {
+    let view = |plan: LogicalPlan, projection: Option<Vec<usize>>| {
+        let source = provider_as_source(Arc::new(ViewTable::new(plan, None)));
+        LogicalPlanBuilder::scan("v", source, projection)
+            .unwrap()
+            .build()
+            .unwrap()
+    };
+    let written_view = cast_column().build().unwrap();
+    assert_eq!(asked(&view(written_view.clone(), None)), vec![false, true]);
+    assert_eq!(
+        asked(&view(written_view.clone(), Some(vec![1]))),
+        vec![true]
+    );
+    assert_eq!(
+        asked(&view(written_view.clone(), Some(vec![1, 0]))),
+        vec![true, false]
+    );
+    let view_of_view = view(view(written_view, None), Some(vec![1]));
+    assert_eq!(asked(&view_of_view), vec![true]);
+    let plain_view = view(table().build().unwrap(), Some(vec![1, 2]));
+    assert_eq!(asked(&plain_view), vec![false, false]);
+    let opaque = table().project(vec![col("id"), col("ns")]).unwrap();
+    let opaque = opaque.build().unwrap();
+    let resolved = cast_column().build().unwrap();
+    let through_the_seat =
+        |scan: &TableScan| (scan.table_name.table() == "t").then(|| resolved.clone());
+    assert_eq!(asked(&opaque), vec![false, false]);
+    assert_eq!(
+        asked_nanosecond_columns(&opaque, &through_the_seat).unwrap(),
+        vec![false, true]
+    );
+}
+
+#[test]
+fn a_plan_with_no_nanosecond_column_is_answered_without_analysis() {
+    let state = datafusion::prelude::SessionContext::new().state();
+    let plain = projected(vec![col("us"), col("id")]);
+    assert_eq!(
+        asked_nanosecond_columns_in(&state, &plain, &|_| None).unwrap(),
+        vec![false, false]
+    );
+    let written = cast_column().build().unwrap();
+    assert_eq!(
+        asked_nanosecond_columns_in(&state, &written, &|_| None).unwrap(),
+        vec![false, true]
+    );
 }
 
 #[test]

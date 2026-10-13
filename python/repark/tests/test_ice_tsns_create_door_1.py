@@ -6,34 +6,28 @@ import json
 from pathlib import Path
 from typing import Any
 
+import _ice_tsns_create_door_1_texts as texts
 import _record_ice_tsns_create_door_1_main as doors
 import pytest
 
 MAIN: dict[str, dict[str, Any]] = json.loads(doors.FIXTURE.read_text(encoding="utf-8"))
-NOT_REQUESTED = (
-    "Error during planning: [TIMESTAMP_NANOS_NOT_REQUESTED] {form} would create column "
-    "`{name}` as {nano}, a type Spark cannot read, and the statement does not ask for it. "
-    "Ask with CAST(<expression> AS {nano}) on the column (SQL or selectExpr), or set "
-    "`repark.sql.allowImplicitTimestampNanos` = true on the session. For microseconds write "
-    "CAST(<expression> AS {micro})."
-)
-BELOW_V3 = (
-    "Error during planning: [TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] Invalid type for {name}: {nano} "
-    "is not supported until v3. Create the table with TBLPROPERTIES ('format-version'='3') "
-    "(writeTo: tableProperty) and `repark.sql.allowCreateFormatVersion3` = true."
-)
-V2_UNASKED_FORMS = {
-    "ctas_plain": "CTAS",
-    "cor": "RTAS",
-    "tempview": "CTAS",
-    "wtocreate": "CTAS",
-    "saveastable": "CTAS",
-    "wtoreplace": "RTAS",
-    "saveoverwrite": "RTAS",
-    "overwriteschema": "RTAS",
-    "evolving": "mergeSchema append",
+V2_UNASKED = {
+    "ctas_plain": ("CTAS", texts.CREATE_V3),
+    "cor": ("RTAS", texts.CREATE_V3),
+    "tempview": ("CTAS", texts.CREATE_V3),
+    "wtocreate": ("CTAS", texts.CREATE_V3),
+    "saveastable": ("CTAS", texts.CREATE_V3),
+    "wtoreplace": ("RTAS", texts.REPLACE_V3),
+    "saveoverwrite": ("RTAS", texts.REPLACE_V3),
+    "overwriteschema": ("RTAS", texts.REPLACE_V3),
+    "evolving": ("mergeSchema append", texts.UPGRADE_V3),
 }
-V2_NAMED = {"cast_ns": "c", "ddl": "c", "addcol_v2base": "c2", "evolving_cast": "c"}
+V2_NAMED = {
+    "cast_ns": ("c", texts.CREATE_V3),
+    "ddl": ("c", texts.PROPERTY),
+    "addcol_v2base": ("c2", texts.PROPERTY),
+    "evolving_cast": ("c", texts.UPGRADE_V3),
+}
 V2_UNMOVED = ("like", "cache", "replace_missing", "savepath", "mergeschema", "wtoappendmerge")
 NANO_ICEBERG = ("timestamp_ns", "timestamptz_ns")
 EMPTY_REPLACED = {
@@ -47,15 +41,8 @@ SEED_ROWS = [[1, 2], [doors.SEED_NANOS, None]]
 
 
 def not_requested(form: str, column: str) -> dict[str, Any]:
-    """Return the refusal of an unasked nanosecond ``column`` through ``form``."""
-    text = NOT_REQUESTED.format(
-        form=form, name=column, nano=doors.NANO_TYPES[column], micro=doors.MICRO_TYPES[column]
-    )
-    return {
-        "class": "AnalysisException",
-        "condition": "TIMESTAMP_NANOS_NOT_REQUESTED",
-        "text": text,
-    }
+    """Return the refusal of an unasked nanosecond ``column`` through ``form`` on a v3 target."""
+    return texts.not_requested(form, column)
 
 
 def prepared(door: str) -> dict[str, Any] | None:
@@ -73,20 +60,11 @@ def holds_nanoseconds(cell: dict[str, Any]) -> bool:
     return table is not None and any(kind in NANO_ICEBERG for _, kind in table["schema"])
 
 
-def below_v3_error(name: str, nano: str) -> dict[str, Any]:
-    """Return the refusal of a nanosecond type the statement asked for on a format v2 table."""
-    return {
-        "class": "AnalysisException",
-        "condition": "TIMESTAMP_NANOS_REQUIRES_FORMAT_V3",
-        "text": BELOW_V3.format(name=name, nano=nano),
-    }
-
-
 def below_v3(cell: dict[str, Any], column: str) -> None:
-    """Assert a cell is the refusal of a nanosecond type on a format v2 table."""
+    """Assert a cell is the refusal of an asked nanosecond type by ``saveAsTable`` create."""
     assert cell["table"] is None
     assert cell["files_unchanged"] is True
-    assert cell["error"] == below_v3_error(column, doors.NANO_TYPES[column])
+    assert cell["error"] == texts.requires_v3(column, doors.NANO_TYPES[column], texts.CREATE_V3)
 
 
 def test_main_created_the_column_without_an_ask() -> None:
@@ -112,7 +90,8 @@ def test_an_unasked_nanosecond_column_is_refused_on_every_door(
 ) -> None:
     """The plain column of a nanosecond table creates nothing and leaves the table as it was."""
     cell = doors.in_session(zone, False, doors.matrix_cell, door, column, "none")
-    assert cell["error"] == not_requested(doors.FORMS[door], column)
+    below = texts.CREATE_V3 if door == "save_create" else None
+    assert cell["error"] == texts.not_requested(doors.FORMS[door], column, below=below)
     assert cell["files_unchanged"] is True
     assert cell["table"] == prepared(door)
 
@@ -357,9 +336,9 @@ def test_a_column_with_a_table_origin_is_not_asked(shape: str) -> None:
 
 def test_the_v2_doors_are_partitioned() -> None:
     """Every recorded v2 door is unasked, named below v3, or keeps main's own refusal."""
-    assert sorted([*V2_UNASKED_FORMS, *V2_NAMED, *V2_UNMOVED]) == sorted(doors.V2_DOORS)
+    assert sorted([*V2_UNASKED, *V2_NAMED, *V2_UNMOVED]) == sorted(doors.V2_DOORS)
     for zone in doors.ZONES:
-        for door in [*V2_UNASKED_FORMS, *V2_NAMED]:
+        for door in [*V2_UNASKED, *V2_NAMED]:
             text = MAIN["v2"][f"{zone}|{door}"]["error"]["text"]
             assert text.startswith("DataInvalid => Invalid schema for v2:"), (zone, door)
 
@@ -372,9 +351,11 @@ def test_a_nanosecond_type_below_format_v3(zone: str, door: str) -> None:
     main = MAIN["v2"][f"{zone}|{door}"]
     assert cell["files_unchanged"] is True
     assert cell["table"] == main["table"]
-    if door in V2_UNASKED_FORMS:
-        assert cell["error"] == not_requested(V2_UNASKED_FORMS[door], "c")
+    if door in V2_UNASKED:
+        form, remedy = V2_UNASKED[door]
+        assert cell["error"] == texts.not_requested(form, "c", below=remedy)
     elif door in V2_NAMED:
-        assert cell["error"] == below_v3_error(V2_NAMED[door], "timestamp_ns")
+        name, remedy = V2_NAMED[door]
+        assert cell["error"] == texts.requires_v3(name, "timestamp_ns", remedy)
     else:
         assert cell["error"] == main["error"]

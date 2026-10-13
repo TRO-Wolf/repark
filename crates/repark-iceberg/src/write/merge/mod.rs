@@ -405,6 +405,10 @@ async fn union_source_schema(
         existing: Some(table.metadata().current_schema()),
         form: "MERGE WITH SCHEMA EVOLUTION",
         case_sensitive: !spec.case_insensitive,
+        target: crate::write::Target::of(
+            table.metadata().format_version() >= FormatVersion::V3,
+            crate::write::Target::EvolvedBelowV3,
+        ),
     })?;
     crate::write::schema_evolution::evolve_merge_schema(catalog, table, incoming).await
 }

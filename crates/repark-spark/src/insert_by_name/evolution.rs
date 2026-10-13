@@ -8,7 +8,7 @@ use iceberg::spec::NestedFieldRef;
 use iceberg::table::Table;
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
-use repark_iceberg::write::{NanosecondAsk, NewColumns};
+use repark_iceberg::write::{NanosecondAsk, NewColumns, Target};
 
 use crate::catalog_ops::{namespace_schema_name, reregister};
 use crate::write_options::StatementWriteOptions;
@@ -204,6 +204,10 @@ pub(super) async fn evolve_before_write(
         existing: Some(table.metadata().current_schema()),
         form: "mergeSchema append",
         case_sensitive: union.case_sensitive,
+        target: Target::of(
+            table.metadata().format_version() >= iceberg::spec::FormatVersion::V3,
+            Target::EvolvedBelowV3,
+        ),
     })?;
     let evolved = repark_iceberg::write::evolve_schema(catalog, table, incoming).await?;
     let namespace = namespace_schema_name(table.identifier().namespace());

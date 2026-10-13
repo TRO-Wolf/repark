@@ -937,7 +937,7 @@ fn values_cell_needs_rewrite(cell: &Expr) -> bool {
 mod asked;
 mod values_evidence;
 
-pub use asked::asked_nanosecond_columns;
+pub use asked::{ViewPlans, asked_nanosecond_columns, asked_nanosecond_columns_in};
 
 #[cfg(test)]
 mod asked_tests;

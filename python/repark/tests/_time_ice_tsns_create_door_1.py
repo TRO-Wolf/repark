@@ -55,17 +55,20 @@ def run_merge_evolution(spark: Any) -> None:
     )
 
 
-def run_explain_wide(spark: Any) -> None:
-    """EXPLAIN of a 200-column query over the source, no nanosecond column in it."""
+def run_ctas_wide(spark: Any) -> None:
+    """CREATE TABLE … AS over a 200-column query of the source, no nanosecond column in it."""
     columns = ", ".join(f"id + {index} AS c{index}" for index in range(200))
-    spark.sql(f"EXPLAIN SELECT {columns}, t FROM {SOURCE}").collect()
+    spark.sql(
+        f"CREATE TABLE ice.ns.t{next(NAMES)} USING iceberg {V3} AS "
+        f"SELECT {columns}, t FROM {SOURCE} LIMIT 1000"
+    )
 
 
 STATEMENTS: dict[str, Callable[[Any], None]] = {
     "ctas": run_ctas,
     "save_overwrite": run_save_overwrite,
     "merge_schema_evolution": run_merge_evolution,
-    "explain_200_columns": run_explain_wide,
+    "ctas_200_columns": run_ctas_wide,
 }
 
 

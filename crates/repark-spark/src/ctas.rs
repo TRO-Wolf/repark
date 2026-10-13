@@ -244,6 +244,7 @@ pub(crate) async fn execute_ctas(
             .map(|table| table.metadata().current_schema().as_ref()),
         form: if ctas.or_replace { "RTAS" } else { "CTAS" },
         case_sensitive: !crate::spark_door_case_insensitive(ctx.state().config().options()),
+        target: nanosecond_ask::target(ctas.format_version.as_deref(), existing.as_ref()),
     })?;
     let partition_spec = build_partition_spec(
         &iceberg_schema,

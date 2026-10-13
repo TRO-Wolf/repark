@@ -7,6 +7,17 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
 ## Contents
 
 - `mod.rs` — thin index.
+- `nanosecond_door.rs` — **ICE-TSNS-CREATE-DOOR-1 fold 1 (2026-10-13):** the native door's
+  pins, moved out of `create.rs` (whose `Door` and `door_with_config` are now visible to this
+  sibling; the row below describes tests that live here now). Two tests follow every remedy
+  a native refusal names and assert it works: an unasked column on a v3 create, on a
+  default-version create and on a replace of a v2 table (the setting, `TIMESTAMP(6)`,
+  `WITH (format_version = 3)`, the `SET PROPERTIES` upgrade), for `ts` and `tz`; and a named
+  type below v3 through column DDL, `ADD COLUMN` and a CTAS of the kernel. Kept and retyped
+  RTAS; a `TIMESTAMP` literal, `now()` and the plain column refused at v3;
+  `plain_timestamp_in_native_add_column_and_nested_ddl_still_stores_nanoseconds_as_main`,
+  the named exception the owner holds (verifier finding F2).
+  pins: ice-tsns-create-door-1/C-011, C-012, C-018
 - `create.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the native door's row.
   `native_ctas_of_a_written_nanosecond_cast_passes_the_door` (the cast kernel called by
   name, the only spelling this door's parser reaches) and
