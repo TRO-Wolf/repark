@@ -21,6 +21,7 @@ import pytest
 from _ice_tsns_coercion_1_spellings import SRC
 
 from repark.errors import PySparkException
+from repark.spark.dataframe import udf_schema
 
 EXPECTED_FOLD2_CELLS = 68
 EXPECTED_SPARK_CELLS = 48
@@ -333,5 +334,63 @@ def test_apply_in_pandas_refuses_a_naive_nanosecond_column_under_a_zoned_type(
             "mapInArrow schema mismatch on field 'v': expected type "
             "timestamp[us, tz=UTC] (timestamp), got timestamp[ns]"
         ) in str(caught.value)
+    finally:
+        spark.stop()
+
+
+FALL_BACK = 1762063800123456789
+SPRING_FORWARD = 1741503600000000789
+LOWEST = -(2**63)
+HIGHEST = 2**63 - 1
+EDGE_TICKS = [FALL_BACK, SPRING_FORWARD, LOWEST + 1, HIGHEST, -1, None]
+EDGE_FLOORED = [FALL_BACK // 1000, SPRING_FORWARD // 1000, (LOWEST + 1) // 1000, HIGHEST // 1000]
+EDGE_FLOORED += [-1, None]
+
+
+def _checked(column: pa.Array, want: pa.DataType) -> pa.Array:
+    """Return ``column`` after the shared check against a one-field declared schema."""
+    batch = pa.RecordBatch.from_arrays([column], names=["v"])
+    expected = pa.schema([pa.field("v", want)])
+    declared = udf_schema._coerce_map_in_arrow_schema("v timestamp")[0]
+    return udf_schema._validate_map_in_arrow_batch(batch, expected, declared).column(0)
+
+
+def test_shared_check_floors_integer_ticks_and_keeps_the_zone_label() -> None:
+    """pins: ice-tsns-coercion-1/C-005 — no local time, full int64 range, label kept."""
+    ticks = [LOWEST, *EDGE_TICKS]
+    floored = [LOWEST // 1000, *EDGE_FLOORED]
+    for zone in (None, "UTC", "America/New_York"):
+        want = pa.timestamp("us", zone)
+        out = _checked(pa.array(ticks, pa.timestamp("ns", zone)), want)
+        assert out.type == want, zone
+        assert pc.cast(out, pa.int64()).to_pylist() == floored, zone
+        listed = pa.array([ticks, None, [-1001]], pa.list_(pa.timestamp("ns", zone)))
+        out = _checked(listed, pa.list_(want))
+        assert out.type.value_type == want, zone
+        assert pc.cast(out, pa.list_(pa.int64())).to_pylist() == [floored, None, [-2]], zone
+
+
+def test_doors_floor_daylight_saving_and_range_edge_instants(tmp_path: Path) -> None:
+    """pins: ice-tsns-coercion-1/C-005 — fall-back, spring-forward and int64 edges."""
+    spark = doors.open_session("America/New_York", tmp_path)
+    parent = spark.sql("SELECT 1 AS id")
+    try:
+        for zone, declared in ((None, "v timestamp_ntz"), ("UTC", "v timestamp")):
+            column = pa.array(EDGE_TICKS, pa.timestamp("ns", zone))
+            frame = pa.table({"v": column}).to_pandas()
+            answers = {
+                "mapInArrow": _through_map_in_arrow(spark, column, declared),
+                "mapInPandas": parent.mapInPandas(
+                    functools.partial(_replace_frames, frame=frame), declared
+                ).toArrow(),
+                "applyInPandas": parent.groupBy("id")
+                .applyInPandas(functools.partial(_replace_group, frame=frame), declared)
+                .toArrow(),
+            }
+            for door, stored in answers.items():
+                assert stored.schema.field("v").type == pa.timestamp("us", zone), door
+                assert _ticks(stored) == EDGE_FLOORED, (door, declared)
+            lowest = pa.array([LOWEST], pa.timestamp("ns", zone))
+            assert _ticks(_through_map_in_arrow(spark, lowest, declared)) == [LOWEST // 1000]
     finally:
         spark.stop()
