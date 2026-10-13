@@ -33,8 +33,8 @@ nothing of it is touched).
 | C-006 | Every create and evolution door refuses an unasked nanosecond column with the exact text and leaves the table's files as they were; a written cast, and the plain column with the session setting on, create what main created; a column the replaced or evolved table already holds passes. | `test_ice_tsns_create_door_1.py` (246 tests), `crates/repark-spark/src/tests/nanosecond_create_door.rs` (6), two native-door tests in `crates/repark-sql/src/v3/create.rs`. | **PROVEN** | §6. 86 of the facade pins were red on main `f3f98823`. Mutants m10, m11 killed. |
 | C-007 | A statement with no nanosecond output answers what main answered: 12 statements in two zones, cell for cell, and no other test of the four Rust crates or the facade suite changed its answer. | `test_statements_with_no_nanosecond_output_equal_main` (24); the suites. | **PROVEN** | §6, §7. One pre-existing test was re-seated (ruling Q2). |
 | C-008 | A nanosecond type the statement asked for, kept or named, below format v3, is refused with one text that names the remedy, on both SQL doors; every other Iceberg error keeps its value. | `builders_tests.rs` (2), `test_a_nanosecond_type_below_format_v3` (38), one row per SQL door. | **PROVEN** | §9. |
-| C-009 | The parity registry carries the dated rows and this ledger the release-note sentence. | Slice 6. | **OPEN** | |
-| C-010 | The cost gate holds at 1.05 and the work order's gates pass. | Real ratios and exit codes. | **OPEN** | |
+| C-009 | The parity registry carries the dated rows and this ledger the release-note sentence. | Rows `ICE-TSNS-SQL-1-R-021` and `R-022` in `docs/spark-sql-iceberg-parity.md`; §11. | **PROVEN** | Both FIXED 2026-10-13; R-021 carries "Changed from main, owner ruling 2026-10-13" and the native door's move for the owner. |
+| C-010 | The cost gate holds at 1.05 and the work order's gates pass. | Real ratios and exit codes. | **PROVEN** | §10, §13. Whole facade suite 17,022 passed, 0 failed; four Rust crates 5,325 passed, 0 failed. |
 | C-011 | On the native door a refusal names only remedies that door can write, and the move from main on that door is recorded for the owner. | `native_ctas_of_an_unasked_nanosecond_column_is_refused_and_a_kept_one_passes`, `native_ctas_of_a_plain_timestamp_expression_at_v3_is_refused_and_six_digits_pass`, `the_text_names_only_the_remedies_the_seat_can_write`. | **PROVEN** | §4 Q3, §8. Owner to accept or flip. |
 
 ## 1. Main's recorded answers (C-001)
@@ -274,3 +274,133 @@ The v2 doors, 19 in two zones (ruling Q6; the work order's "15" is 16 in the cen
 
 In every cell the table's files are unchanged and its state equals main's. Main answered
 `DataInvalid => Invalid schema for v2:` in the first 13.
+
+## 10. Cost (C-010)
+
+`task/wo/ice-tsns-create-door-1/evidence/cost.md`: five interleaved sets, main's module then
+head's, sixteen cores, the build lock held. Ratio of the medians, head over main: CTAS over a
+1,000,000-row microsecond table 1.002; `mode("overwrite").saveAsTable` 1.019;
+`MERGE WITH SCHEMA EVOLUTION` adding a microsecond column 1.005; `EXPLAIN` of a 200-column
+query 0.966. The gate is 1.05. Single sets of the two 60 ms statements move by up to 8 percent
+either way.
+
+## 11. Registry and release note (C-009)
+
+Rows `ICE-TSNS-SQL-1-R-021` (the create door; "Changed from main, owner ruling 2026-10-13";
+the native door's move under "owner to accept or flip (question Q3)") and
+`ICE-TSNS-SQL-1-R-022` (the below-v3 text).
+
+**Release note (1.5.6):** RePark no longer creates a `timestamp_ns` / `timestamptz_ns` column
+unless you ask: name the type in DDL, write `CAST(… AS timestamp_ns)` on the column, or set
+`repark.sql.allowImplicitTimestampNanos`. Statements that relied on the old behaviour stop
+with an error that names the options that work on the door that raised it; nothing is
+narrowed silently.
+
+**Not built.** Slice 5 of the work order (the session setting at the pandas door) is skipped:
+owner question Q4 is not answered yes. The ICE-TSNS-COERCION-1 slice 1 module
+(`timestamp_ns_coercion*`) is not on this base; nothing of it is touched, and its fixture
+doors that create a nanosecond column from a rewritten read will need the setting or a
+written cast when it lands on top of this unit.
+
+## 12. Moved pre-existing tests
+
+Three pre-existing tests moved; none was re-recorded.
+
+| Test | On main | Now | Ruling |
+|---|---|---|---|
+| `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs` `a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows` | its seeding CTAS of `named_struct('v', ns, 'n', 1)` creates the table | the seed writes the cast, `named_struct('v', CAST(ns AS timestamp_ns), 'n', 1)`; assertions unchanged | Q2 |
+| `python/repark/tests/test_ice_tsns_merge_wall_1.py` `test_control_targets_answer_what_main_answered[ntz_v2-update_column]` | sources `ns`, `tzns`: `PySparkException`, `- Invalid type for c: … is not supported until v3` | `AnalysisException`, `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] …`, exact text | Q7 |
+| the same, `[ltz_v2-update_column]` | the same | the same | Q7 |
+
+The two facade tests failed on the slice 4 head and were handed back, not re-pinned. That
+door creates its control table by DDL with a sibling column of the source type, so on a v2
+target the DDL is refused, on main and now. **Ruling Q7 (orchestrator, provisional,
+2026-10-13):** `ice_tsns_merge_wall_1_main.json` stays main's record, untouched; the test
+asserts the fixture still holds main's text for those four cells and expects the new refusal.
+
+**Ruling Q8 (orchestrator, provisional, 2026-10-13):** the cost gate is the ratio of the
+five-set medians; every set is in `evidence/cost.json`.
+
+**Registry numbers.** The two rows are `ICE-TSNS-SQL-1-R-021` and `R-022`; `R-020` is held by
+another open unit.
+
+## 13. Gates on the final head
+
+| Gate | Result |
+|---|---|
+| `cargo fmt --check` | exit 0 |
+| `make rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-manifest` | each exit 0 |
+| `cargo test --locked --no-fail-fast -p repark-functions -p repark-iceberg -p repark-spark -p repark-sql` | 5,325 passed, 0 failed |
+| `make py-lint py-format-check check-lib-py check-python-conventions check-docstring-presence toml-check spell-check` | each exit 0 |
+| `make check-ledgers check-ledger-grammar check-docs-links check-docs-compaction` | each exit 0 |
+| `scripts/check_map_md.sh --base f3f98823`, `scripts/sync_map_md.py --check` | exit 0 |
+| the facade pin file | 285 passed |
+| the whole facade suite, `pytest -n 8 python/repark/tests` | 17,022 passed, 0 failed |
+| cost, four ratios of medians | 1.002, 1.019, 1.005, 0.966 |
+| mutants m1 to m11 | all killed |
+
+## 14. Cells that move against main
+
+- **Refused now, created a nanosecond column on main (owner ruling 1):** the plain column of
+  a nanosecond source on a v3 target through 11 doors, 44 matrix cells and 28 census cells
+  (§6); the same through a nested element, a union branch, a `coalesce` argument, a window,
+  a join side, and a cached frame.
+- **Text and class only, refused before and now:** below format v3, 9 unasked doors answer
+  `TIMESTAMP_NANOS_NOT_REQUESTED` and 4 that ask or name the type answer
+  `TIMESTAMP_NANOS_REQUIRES_FORMAT_V3`, where main answered `Invalid schema for v2:` (§9).
+- **Owner to accept or flip (Q3), the native door:** three measured cells at
+  `format_version = 3`, the plain column of a `timestamp_ns` table, a `TIMESTAMP '…'`
+  literal and `now()`, are refused where main created `timestamp_ns`; the class is every
+  native v3 CTAS whose output holds a plain `TIMESTAMP` expression (§8).
+- **Unchanged:** a written cast, the setting, a kept column, DDL naming the type, and every
+  statement with no nanosecond output.
+
+## 15. Coverage attestation
+
+**The executor's own attestation**, filed from the runs recorded in this ledger. It is not an
+independent verdict.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ice-tsns-create-door-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every behaviour clause has a pin that was red before its change. The facade pin file ran on main's module before any product edit, 86 failed and 160 passed, and is 285 passed on the head. Main's answers are a committed fixture recorded on f3f98823.
+      artifacts: [python/repark/tests/test_ice_tsns_create_door_1.py, python/repark/tests/ice_tsns_create_door_1_main.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Naive and zoned columns, two session zones, NULL rows, nested list and struct fields, a kept nested column with other field ids, a missing flag, a plan deeper than the walk follows, grouping sets, semi joins, VALUES with an inserted NULL, a cached frame, a pandas frame, format v2 and v3 targets.
+      artifacts: [crates/repark-functions/src/timestamp_ns_cast/asked_tests.rs, crates/repark-iceberg/src/write/nanosecond_door_tests.rs, python/repark/tests/test_ice_tsns_create_door_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: A refusal leaves the table as it was. The facade cells compare every file under the table directory before and after, the Rust cells the stored schema and the warehouse object count, on all twelve doors and below v3.
+      artifacts: [python/repark/tests/test_ice_tsns_create_door_1.py, crates/repark-spark/src/tests/nanosecond_create_door.rs]
+    - id: AT-4
+      status: N/A
+      justification: The door is a pure function of a schema, an ask and the existing schema; the setting is read from the session fixed at build. No shared mutable state is added.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret, path or deserialization. The setting widens what a statement may create inside a table the user can already write.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The wrong-result risks are a silently created column and a refused asked column. Unasked cells refuse on every door, asked cells equal main's table to nine digits, 24 statements with no nanosecond output equal main cell for cell, and the walk's unsure answer is always a refusal.
+      artifacts: [python/repark/tests/test_ice_tsns_create_door_1.py, crates/repark-functions/src/timestamp_ns_cast/asked.rs]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Five interleaved cost sets. Ratios of medians are 1.002, 1.019, 1.005 and 0.966 against a 1.05 gate. A column with no nanosecond type is never walked and the walk is bounded at 1,024 levels.
+      artifacts: [task/wo/ice-tsns-create-door-1/evidence/cost.md, python/repark/tests/_time_ice_tsns_create_door_1.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: The below-v3 mapping reads the owned fork's message and matches the type position only. Seven other errors pass unchanged in unit pins and the four crates pass with no expectation edited after the native door was routed through the seat. DataFusion 54.1's downcast is pinned. No manifest or lock change.
+      artifacts: [crates/repark-iceberg/src/catalog/builders_tests.rs, crates/repark-functions/src/timestamp_ns_cast/tests.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Both refusal texts are pinned exactly on each SQL door, with class and condition. The native door's text names only remedies that parse there, measured. Refusals for other reasons keep main's text byte for byte.
+      artifacts: [crates/repark-sql/src/v3/create.rs, crates/repark-spark/src/tests/nanosecond_create_door.rs, python/repark/tests/test_ice_tsns_create_door_1.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Eleven mutants, thirteen variants, all killed. The whole facade suite and the four Rust crates ran on the final head with 0 failed. Three pre-existing tests moved and are listed with their rulings.
+      artifacts: [task/ledgers/completed/ice-tsns-create-door-1-ledger.md, python/repark/tests/test_ice_tsns_merge_wall_1.py]
+  complete: true
+```

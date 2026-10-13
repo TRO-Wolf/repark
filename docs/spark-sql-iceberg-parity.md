@@ -3561,6 +3561,77 @@ still open is `isModifiable`.
   no write door is reached and nothing is stored; measured by the nested matrices of
   ICE-TSNS-MERGE-WALL-1 and out of its scope. Ledger clause C-039, question Q10.
 
+### ICE-TSNS-SQL-1-R-021 — FIXED 2026-10-13 (ICE-TSNS-CREATE-DOOR-1): a new `timestamp_ns` / `timestamptz_ns` column is created only when the statement asks
+
+- **repark** — a new table or an added column takes `timestamp_ns` / `timestamptz_ns` only
+  when the statement asks: DDL or `ADD COLUMN` naming the type, a written
+  `CAST(… AS timestamp_ns)` on the column (SQL or `selectExpr`), or the session setting
+  `repark.sql.allowImplicitTimestampNanos` = true (alias
+  `repark.sql.allow_implicit_timestamp_nanos`; fixed when the session is built).
+  `format-version` 3 alone is not asking. A column the replaced or evolved table already
+  holds, same name and same nanosecond type, is kept and needs no ask.
+  **Changed from main, owner ruling 2026-10-13:** plain-column CTAS / RTAS / `writeTo`
+  create and schema-evolving append / MERGE over a nanosecond source on a v3 table created
+  the column silently; they now raise `TIMESTAMP_NANOS_NOT_REQUESTED`, an
+  `AnalysisException` that names the column, its type and both opt-ins, and write nothing.
+  Measured on main `f3f98823` and on this unit, UTC and America/New_York, the plain column
+  of a v3 nanosecond table and a registered Arrow nanosecond view: SQL CTAS,
+  `CREATE OR REPLACE … AS`, `REPLACE TABLE … AS`, CTAS over a temp view,
+  `writeTo().create()`, `.createOrReplace()`, `.replace()`, `mode("overwrite").saveAsTable`
+  with and without `overwriteSchema`, `mergeSchema` `saveAsTable` append and
+  `writeTo().append()` on a `write.spark.accept-any-schema` table, and
+  `MERGE WITH SCHEMA EVOLUTION`: 44 matrix cells and 28 census cells created the column on
+  main and all refuse now. The same statements with the cast written, or with the setting
+  on, create exactly the table main created, all nine digits. A statement with no
+  nanosecond output is unchanged.
+  **What counts as a written cast.** Every nanosecond origin of the column is a cast the
+  user wrote: `max(CAST(…))`, a cast in a subquery under `SELECT *`, a `UNION ALL` of
+  casts, `VALUES (CAST(…)), (NULL)` and `x::timestamp_ns` are asked. One origin that is a
+  table column makes the column unasked: a union branch, a `coalesce` argument, an array or
+  struct element, a window, a join side. A cached frame hides the cast written before the
+  cache and is refused. `col.cast("timestamp_ns")`, `F.expr` and `TRY_CAST` do not support
+  the type, so the DataFrame spelling is `selectExpr`.
+  **`saveAsTable` create** has no v3 spelling: unasked it gets this refusal, asked it is
+  refused for the format version (row R-022).
+  **The native (ANSI) door, owner to accept or flip (question Q3).** That door's parser
+  cannot write the nanosecond cast (`CAST(x AS timestamp_ns)` is `Unsupported SQL type`),
+  so the refusal raised there names only what works there: the session setting, and
+  `CAST(<expression> AS TIMESTAMP(6))` for microseconds. On that door a plain `TIMESTAMP`
+  expression is Arrow nanoseconds, so at `format_version = 3` a CTAS whose output holds any
+  plain `TIMESTAMP` expression is now refused where main created a `timestamp_ns` column.
+  Measured: `CREATE TABLE t WITH (format_version = 3) AS SELECT ts FROM <timestamp_ns
+  table>`, `… AS SELECT TIMESTAMP '2026-01-02 03:04:05' AS ts`, `… AS SELECT now() AS ts`.
+  At the default format version main already refused them. The ask there is the session
+  setting; the microsecond form is `CAST(… AS TIMESTAMP(6))`.
+- **Spark 4.1.2 + Iceberg 1.11.0** — cannot name the type (`UNSUPPORTED_DATATYPE`) and
+  cannot open a table that holds it (`Cannot convert unsupported type to Spark:
+  timestamp_ns`); for the same plain-column statements it creates a microsecond table.
+  RePark does not narrow silently: it stops and names the options.
+- **Pins** — `python/repark/tests/test_ice_tsns_create_door_1.py`,
+  `crates/repark-spark/src/tests/nanosecond_create_door.rs`,
+  `crates/repark-sql/src/v3/create.rs`,
+  `crates/repark-iceberg/src/write/nanosecond_door_tests.rs`,
+  `crates/repark-functions/src/timestamp_ns_cast/asked_tests.rs`.
+
+### ICE-TSNS-SQL-1-R-022 — FIXED 2026-10-13 (ICE-TSNS-CREATE-DOOR-1): a nanosecond type below format v3 names its remedy
+
+- **repark** — a statement that asks for `timestamp_ns` / `timestamptz_ns` on a table below
+  format v3 (a written cast in CTAS, column DDL, `ADD COLUMN`, a cast through a
+  `mergeSchema` append) raises `TIMESTAMP_NANOS_REQUIRES_FORMAT_V3`, an
+  `AnalysisException`: the column and type, then the remedy
+  (`TBLPROPERTIES ('format-version'='3')`, `writeTo`'s `tableProperty`, and
+  `repark.sql.allowCreateFormatVersion3` = true). **Changed from main in text and class
+  only:** main answered `DataInvalid => Invalid schema for v2:` as a `PySparkException`;
+  the statement was refused then and is refused now, and nothing is written. Both SQL doors
+  print the same text. An unasked nanosecond column below v3 gets row R-021's refusal
+  instead, because that check runs first. Refusals for other reasons (`LIKE`, `CACHE TABLE`,
+  a `REPLACE` of a missing table, `save(path)`, a column-count mismatch) keep their text.
+- **Spark 4.1.2 + Iceberg 1.11.0** — `UNSUPPORTED_DATATYPE` for the type name at any format
+  version.
+- **Pins** — `test_a_nanosecond_type_below_format_v3` (19 doors, two zones),
+  `crates/repark-iceberg/src/catalog/builders_tests.rs`, one row per SQL door in
+  `nanosecond_create_door.rs` and `v3/create.rs`.
+
 ### ICE-TSNS-SQL-1-R-019 — FIXED 2026-10-13 (ICE-TSNS-FRAME-DOOR-1): a pandas or polars nanosecond timestamp column enters as microseconds
 
 - **repark** — pandas / polars `datetime64[ns]` enters as microseconds, floored, as Spark

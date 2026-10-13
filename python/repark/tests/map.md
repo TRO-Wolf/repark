@@ -3229,6 +3229,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   main's recorded cells. The file below no longer holds `timestamptz_ns` as a control; its
   microsecond controls are unchanged.
   pins: ice-tstzns-wall-1/C-002, C-003, C-004, C-005, C-006, C-012
+- `test_ice_tsns_merge_wall_1.py` — **ICE-TSNS-CREATE-DOOR-1
+  (2026-10-13, ruling Q7):** in `test_control_targets_answer_what_main_answered`, four cells
+  (the `ntz_v2` and `ltz_v2` targets, door `update_column`, sources `ns` and `tzns`) expect
+  the `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]` refusal, class `AnalysisException`, exact text.
+  That door creates its table by DDL with a sibling column of the source type, so on a v2
+  target the DDL is refused; main answered `Invalid type for c: … is not supported until v3`
+  as a `PySparkException`. `ice_tsns_merge_wall_1_main.json` stays main's record: the test
+  asserts the fixture still holds main's text and then expects the new one. Parity row
+  `ICE-TSNS-SQL-1-R-022`.
+  pins: ice-tsns-create-door-1/C-008
 - [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-MERGE-WALL-1
   fold 1 (2026-10-09), the pin budget:** the module is cut from 464 tests to 179. Kept: the 57
   `timestamp_ns` door tests in all three zones, and the control doors in **one** zone,
@@ -3478,8 +3488,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]` with the exact text; `LIKE`, `CACHE TABLE`, a
   `REPLACE` of a missing table, `save(path)` and the two arity refusals keep main's text.
   The table's state equals main's in every cell. The `saveAsTable` create cells of the
-  matrix pin the same text.
-  pins: ice-tsns-create-door-1/C-005, C-006, C-007, C-008
+  matrix pin the same text. The parity rows are `ICE-TSNS-SQL-1-R-021` and `R-022`.
+  pins: ice-tsns-create-door-1/C-005, C-006, C-007, C-008, C-009
 - [_time_ice_tsns_create_door_1.py](_time_ice_tsns_create_door_1.py) —
   **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the cost timer: median milliseconds, after one
   warm run, of a CTAS, a `mode("overwrite").saveAsTable` and a `MERGE WITH SCHEMA EVOLUTION`

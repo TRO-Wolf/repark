@@ -49,6 +49,18 @@ INSTANT_WRONG_DOORS = (
 UNFILTERED_UPDATE_SOURCES = ("l", "n", "tzns")
 CONTROL_TARGETS = tuple(target for target in doors.TARGETS if target not in ("ts_ns", "tz_ns"))
 CONTROL_ZONE = doors.CONTROL_ZONE
+BELOW_V3_ON_MAIN = {
+    "ns": "- Invalid type for c: timestamp_ns is not supported until v3",
+    "tzns": "- Invalid type for c: timestamptz_ns is not supported until v3",
+}
+BELOW_V3 = {
+    source: (
+        f"Error during planning: [TIMESTAMP_NANOS_REQUIRES_FORMAT_V3] {text[2:]}. Create the "
+        "table with TBLPROPERTIES ('format-version'='3') (writeTo: tableProperty) and "
+        "`repark.sql.allowCreateFormatVersion3` = true."
+    )
+    for source, text in BELOW_V3_ON_MAIN.items()
+}
 
 
 def main_cell(zone: str, target: str, door: str, part: str) -> dict[str, Any]:
@@ -70,6 +82,11 @@ def main_was_wrong(zone: str, door: str, source: str) -> bool:
     if zone == "UTC" or source not in INSTANT_SOURCES:
         return False
     return door in INSTANT_WRONG_DOORS or (door == "update_literal" and source == "l")
+
+
+def names_nanoseconds_below_v3(target: str, door: str, source: str) -> bool:
+    """Return whether the cell's DDL names a nanosecond sibling column on a format v2 table."""
+    return target.endswith("_v2") and door == "update_column" and source in BELOW_V3
 
 
 def main_refused_an_answer(door: str, source: str) -> bool:
@@ -131,6 +148,9 @@ def test_control_targets_answer_what_main_answered(tmp_path: Path, target: str, 
     cells = measured(tmp_path, CONTROL_ZONE, target, door)
     for source in doors.SOURCES:
         recorded = main_cell(CONTROL_ZONE, target, door, source)
+        if names_nanoseconds_below_v3(target, door, source):
+            assert recorded == {"error": "PySparkException", "message": BELOW_V3_ON_MAIN[source]}
+            recorded = {"error": "AnalysisException", "message": BELOW_V3[source]}
         assert cells[source] == recorded, (target, door, source)
 
 
