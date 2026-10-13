@@ -524,15 +524,19 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   cache of the thread that made them (pyarrow converts object columns on pool threads), and
   never reads the elements of a container whose declared elements are scalars. A container
   that raises when read decides nothing.
-  *The handed integer.* `to_pandas` gives a `timestamp[ns]` that is a direct struct field,
-  map key or map value to the function as a Python integer, and `from_pandas` takes an
-  integer under a timestamp as a tick of the declared unit. `_handed_integer_refusal` reads
-  those ticks from the Arrow group tables (both sides of a cogroup), looks them up in the
-  stored result's timestamp leaves with an Arrow set lookup, and only on a hit walks the
-  pandas result: a Python `int` equal to a handed tick at a declared timestamp position
-  refuses, nested or top-level (an integer column included). A handed tick that is the
-  microsecond floor of a handed tick is left out, so `value // 1000` always passes. An
-  integer the function derived is not known to the door.
+  *The nanosecond tick returned as an integer.* `to_pandas` gives a `timestamp[ns]` that is a
+  direct struct field, map key or map value to the function as a Python integer, and
+  `from_pandas` takes an integer under a timestamp as a tick of the declared unit.
+  `_nanosecond_integer_refusal` reads the ticks of every nanosecond timestamp of the Arrow
+  group tables (both sides of a cogroup; top-level columns and list elements too, so an
+  integer the function took from them with `.astype("int64")` is known as well), looks them
+  up in the stored result's timestamp leaves with an Arrow set lookup, and only on a hit
+  walks the pandas result: a Python `int` equal to one of those ticks at a declared timestamp
+  position refuses, nested or top-level (an integer column included). Only an object or an
+  integer column is looked up; a frame with no nanosecond timestamp costs a schema walk. A
+  tick that is the microsecond floor of one of the ticks is left out, so `value // 1000`
+  always passes. An integer the function derived another way (`tick + 1`) is not known to
+  the door.
   Both refusals are `PySparkTypeError` naming the column, the declared Arrow type and the
   unit, each with its hint (`.astype("datetime64[us]")`, `value // 1000`). `ArrowDtype`
   columns are never read: pyarrow casts them safely or refuses them itself. `mapInPandas`,

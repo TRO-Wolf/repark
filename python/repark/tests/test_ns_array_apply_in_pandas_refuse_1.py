@@ -25,9 +25,9 @@ ARRAY_REFUSAL = (
 )
 INTEGER_REFUSAL = (
     "applyInPandas refuses column 'v' of declared type {declared}: the pandas result holds an "
-    "integer that the group frame carried for a nanosecond timestamp (timestamp[ns]) inside a "
-    "struct or map, which would store wrong values. Convert it to microseconds in the function "
-    "(for example value // 1000) before returning."
+    "integer equal to a nanosecond timestamp (timestamp[ns]) of the group frame, which would "
+    "store wrong values. pandas carries such a timestamp inside a struct or map as an integer. "
+    "Convert it to microseconds in the function (for example value // 1000) before returning."
 )
 FLOORS = [tick // 1000 for tick in doors.NANOS]
 
@@ -60,8 +60,8 @@ def test_nanosecond_array_under_a_timestamp_list_refuses(tmp_path: Path, key: st
 
 
 @pytest.mark.parametrize("key", INTEGER_KEYS)
-def test_handed_nanosecond_integer_under_a_timestamp_refuses(tmp_path: Path, key: str) -> None:
-    """An integer the group frame carried for a nanosecond timestamp refuses with the hint."""
+def test_nanosecond_tick_as_an_integer_under_a_timestamp_refuses(tmp_path: Path, key: str) -> None:
+    """An integer equal to a nanosecond timestamp of the group frame refuses with the hint."""
     cell, error = cases.answer_in_fresh_session(tmp_path, key)
     assert type(error) is PySparkTypeError, cell
     assert str(error) == INTEGER_REFUSAL.format(declared=MAIN_CELLS[key]["type"])

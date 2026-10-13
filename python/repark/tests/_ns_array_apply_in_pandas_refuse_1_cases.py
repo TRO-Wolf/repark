@@ -180,6 +180,35 @@ def later_timestamps(pdf: pd.DataFrame) -> pd.DataFrame:
     return pdf.assign(v=object_series(cells))
 
 
+def floor_first_row_only(pdf: pd.DataFrame) -> pd.DataFrame:
+    """Floor-divide the first struct tick and return the others unchanged."""
+    cells = [{"t": cell["t"]} for cell in pdf["v"]]
+    cells[0] = {"t": cells[0]["t"] // 1000}
+    return pdf.assign(v=object_series(cells))
+
+
+def arrays_as_integer_lists(pdf: pd.DataFrame) -> pd.DataFrame:
+    """Return the ticks of every nanosecond array as a Python list of integers."""
+    cells = [cell.astype("int64").tolist() for cell in pdf["v"]]
+    return pdf.assign(v=object_series(cells))
+
+
+def column_as_integers(pdf: pd.DataFrame) -> pd.DataFrame:
+    """Return the ticks of a nanosecond column as an integer column."""
+    return pd.DataFrame({"id": pdf["id"], "v": pdf["v"].astype("int64")})
+
+
+def column_floor_divided(pdf: pd.DataFrame) -> pd.DataFrame:
+    """Return the microsecond floors of a nanosecond column as an integer column."""
+    return pd.DataFrame({"id": pdf["id"], "v": pdf["v"].astype("int64") // 1000})
+
+
+def other_group_tick(pdf: pd.DataFrame) -> pd.DataFrame:
+    """Return, as a function-made integer, the tick the other group's map holds."""
+    tick = NS2 if int(pdf["id"].iloc[0]) == 1 else NS
+    return pdf.assign(v=object_series([[("k", tick)]]))
+
+
 def keep_floor_tick_rows(pdf: pd.DataFrame) -> pd.DataFrame:
     """Keep the rows whose tick is the microsecond floor of the other tick."""
     kept = [index for index, cell in enumerate(pdf["v"]) if cell["t"] == NS // 1000]
@@ -340,13 +369,22 @@ def table_case(
     return (name, expect, partial(run_table_case, query=query, function=function, schema=schema))
 
 
-def frame_case(name: str, expect: str, ticks: list[int], function: Any) -> tuple[str, str, Any]:
-    """Return a case over one group of a struct column holding the given nanosecond ticks."""
-    values = pa.StructArray.from_arrays([pa.array(ticks, pa.timestamp("ns"))], names=["t"])
-    table = pa.table({"id": pa.array([1] * len(ticks), pa.int32()), "v": values})
-    runner = partial(
-        run_frame_case, table=table, function=function, schema="id int, v struct<t:timestamp_ntz>"
-    )
+def struct_ticks(ticks: list[int]) -> pa.Array:
+    """Return a struct column whose one field holds the given nanosecond ticks."""
+    return pa.StructArray.from_arrays([pa.array(ticks, pa.timestamp("ns"))], names=["t"])
+
+
+def frame_case(
+    name: str,
+    expect: str,
+    values: pa.Array,
+    function: Any,
+    declared: str = "struct<t:timestamp_ntz>",
+    keys: list[int] | None = None,
+) -> tuple[str, str, Any]:
+    """Return a case over an Arrow column that keeps its type, one group unless keys are given."""
+    table = pa.table({"id": pa.array(keys or [1] * len(values), pa.int32()), "v": values})
+    runner = partial(run_frame_case, table=table, function=function, schema=f"id int, v {declared}")
     return (name, expect, runner)
 
 
@@ -407,6 +445,7 @@ USER_CASES = (
     user_case("struct_tuple_ns", ARRAY, STRUCT, [(NS_ARRAY,)]),
     user_case("struct_pairs_ns", ARRAY, STRUCT, [[("a", NS_ARRAY)]]),
     user_case("struct_bytes_key_ns", ARRAY, STRUCT, [{b"a": NS_ARRAY}]),
+    user_case("struct_us_row_then_ns_row", ARRAY, STRUCT, [{"a": US_ARRAY}, {"a": NS_ARRAY}]),
     user_case(
         "struct_us_then_ns",
         ARRAY,
@@ -596,6 +635,21 @@ TABLE_CASES = (
         "id int, v array<timestamp_ntz>",
     ),
     table_case("table_map_ns_as_dicts", INTEGER, partial(map_of_value, "ns"), maps_as_dicts),
+    table_case("table_array_ns_as_integer_lists", INTEGER, "array(ns)", arrays_as_integer_lists),
+    table_case(
+        "table_top_level_ns_as_integer_column",
+        INTEGER,
+        "ns",
+        column_as_integers,
+        "id int, v timestamp_ntz",
+    ),
+    table_case(
+        "table_top_level_tzns_as_integer_column",
+        INTEGER,
+        "tzns",
+        column_as_integers,
+        "id int, v timestamp",
+    ),
     table_case("table_array_us", MAIN, "array(n)"),
     table_case("table_array_ltz", MAIN, "array(l)"),
     table_case("table_nested_array_us", MAIN, "array(array(n))"),
@@ -653,15 +707,80 @@ TABLE_CASES = (
         "SELECT id, named_struct('t', ns) AS v FROM {source} WHERE id = 2",
     ),
     table_case("open_table_struct_ns_plus_one", MAIN, "named_struct('t', ns)", add_one_tick),
+    table_case(
+        "table_top_level_ns_floor_divided",
+        MAIN,
+        "ns",
+        column_floor_divided,
+        "id int, v timestamp_ntz",
+    ),
+    table_case("table_top_level_ns_as_bigint", MAIN, "ns", column_as_integers, "id int, v bigint"),
     table_case("table_top_level_ns", MAIN, "ns"),
     table_case("table_top_level_tzns", MAIN, "tzns"),
 )
 
+STRUCT_NS = pa.struct([("t", pa.timestamp("ns"))])
+ARRAY_OF_STRUCT = "array<struct<t:timestamp_ntz>>"
 FRAME_CASES = (
-    frame_case("frame_tick_and_its_floor", INTEGER, [NS, NS // 1000], identity),
-    frame_case("frame_tick_and_its_floor_floor_divided", MAIN, [NS, NS // 1000], floor_divide),
-    frame_case("open_frame_floor_tick_row_only", MAIN, [NS, NS // 1000], keep_floor_tick_rows),
-    frame_case("frame_timestamp_equal_to_a_handed_tick", MAIN, [5_000_000], later_timestamps),
+    frame_case("frame_tick_and_its_floor", INTEGER, struct_ticks([NS, NS // 1000]), identity),
+    frame_case(
+        "frame_tick_and_its_floor_floor_divided",
+        MAIN,
+        struct_ticks([NS, NS // 1000]),
+        floor_divide,
+    ),
+    frame_case(
+        "open_frame_floor_tick_row_only", MAIN, struct_ticks([NS, NS // 1000]), keep_floor_tick_rows
+    ),
+    frame_case(
+        "frame_timestamp_equal_to_a_frame_tick", MAIN, struct_ticks([5_000_000]), later_timestamps
+    ),
+    frame_case(
+        "frame_made_integer_then_frame_tick", INTEGER, struct_ticks([NS, NS2]), floor_first_row_only
+    ),
+    frame_case(
+        "open_frame_tick_of_another_group",
+        MAIN,
+        pa.array([[("k", NS)], [("k", NS2)]], pa.map_(pa.string(), pa.timestamp("ns"))),
+        other_group_tick,
+        "map<string,timestamp_ntz>",
+        [1, 2],
+    ),
+    frame_case(
+        "frame_large_list_struct_ns",
+        INTEGER,
+        pa.array([[{"t": NS}]], pa.large_list(STRUCT_NS)),
+        identity,
+        ARRAY_OF_STRUCT,
+    ),
+    frame_case(
+        "frame_fixed_size_list_struct_ns",
+        INTEGER,
+        pa.array([[{"t": NS}]], pa.list_(STRUCT_NS, 1)),
+        identity,
+        ARRAY_OF_STRUCT,
+    ),
+    frame_case(
+        "frame_list_view_struct_ns",
+        INTEGER,
+        pa.array([[{"t": NS}]], pa.list_view(STRUCT_NS)),
+        identity,
+        ARRAY_OF_STRUCT,
+    ),
+    frame_case(
+        "frame_large_list_ns",
+        ARRAY,
+        pa.array([[NS, NS2]], pa.large_list(pa.timestamp("ns"))),
+        identity,
+        NTZ,
+    ),
+    frame_case(
+        "frame_fixed_size_list_ns",
+        ARRAY,
+        pa.array([[NS, NS2]], pa.list_(pa.timestamp("ns"), 2)),
+        identity,
+        NTZ,
+    ),
 )
 
 GROUPED_AGG_CASES = (

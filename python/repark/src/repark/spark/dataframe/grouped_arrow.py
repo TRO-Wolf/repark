@@ -200,7 +200,7 @@ def _struct_field_values(
 def _list_cells_store_wrong(
     plan: tuple[Any, ...],
     cells: Any,
-    handed_ticks: frozenset[int],
+    nanosecond_ticks: frozenset[int],
 ) -> bool:
     """True when a list or map cell stores a nanosecond tick as a coarser timestamp."""
     import numpy as np
@@ -230,120 +230,115 @@ def _list_cells_store_wrong(
                 elements.extend(dict.items(cell))
             else:
                 elements.extend(_read_sequence(cell) or ())
-    return bool(elements) and _cells_store_wrong(element_plan, elements, handed_ticks)
+    return bool(elements) and _cells_store_wrong(element_plan, elements, nanosecond_ticks)
 
 
-def _cells_store_wrong(plan: tuple[Any, ...], cells: Any, handed_ticks: frozenset[int]) -> bool:
+def _cells_store_wrong(plan: tuple[Any, ...], cells: Any, nanosecond_ticks: frozenset[int]) -> bool:
     """True when a value at one declared position stores a nanosecond tick as a coarser one."""
     position = plan[0]
     if position == _SCALAR_POSITION:
-        return any(type(cell) is int and cell in handed_ticks for cell in cells)
+        return any(type(cell) is int and cell in nanosecond_ticks for cell in cells)
     if position == _STRUCT_POSITION:
         return any(
             _cells_store_wrong(
                 field_plan,
                 _struct_field_values(cells, index, name, encoded_name),
-                handed_ticks,
+                nanosecond_ticks,
             )
             for index, name, encoded_name, field_plan in plan[1]
         )
-    return _list_cells_store_wrong(plan, cells, handed_ticks)
+    return _list_cells_store_wrong(plan, cells, nanosecond_ticks)
 
 
-def _column_returns_handed_tick(
-    plan: tuple[Any, ...],
-    series: Any,
-    handed_ticks: frozenset[int],
-) -> bool:
-    """True when a result column returns a handed-out nanosecond integer under a timestamp."""
+def _column_can_hold_integers(plan: tuple[Any, ...], series: Any) -> bool:
+    """True when a result column can hold a Python integer under a declared timestamp."""
     import pandas as pd
 
-    if series.dtype == object:
-        return _cells_store_wrong(plan, series.to_numpy().tolist(), handed_ticks)
-    return (
-        plan[0] == _SCALAR_POSITION
-        and pd.api.types.is_integer_dtype(series.dtype)
-        and bool(series.isin(handed_ticks).any())
+    return series.dtype == object or (
+        plan[0] == _SCALAR_POSITION and pd.api.types.is_integer_dtype(series.dtype)
     )
 
 
-def _type_hands_integers(arrow_type: Any, in_struct_or_map: bool) -> bool:
-    """True when ``to_pandas`` hands a nanosecond timestamp of this type out as an integer."""
+def _column_returns_nanosecond_tick(
+    plan: tuple[Any, ...],
+    series: Any,
+    nanosecond_ticks: frozenset[int],
+) -> bool:
+    """True when a result column returns a nanosecond tick of the frame as an integer."""
+    if series.dtype == object:
+        return _cells_store_wrong(plan, series.to_numpy().tolist(), nanosecond_ticks)
+    return bool(series.isin(nanosecond_ticks).any())
+
+
+def _type_holds_nanoseconds(arrow_type: Any) -> bool:
+    """True when an Arrow type holds a nanosecond timestamp at any depth."""
     import pyarrow as pa
 
     types = pa.types
     if types.is_timestamp(arrow_type):
-        return in_struct_or_map and arrow_type.unit == "ns"
+        return arrow_type.unit == "ns"
+    if not types.is_nested(arrow_type):
+        return False
     if types.is_struct(arrow_type):
-        return any(_type_hands_integers(field.type, True) for field in arrow_type)
+        return any(_type_holds_nanoseconds(field.type) for field in arrow_type)
     if types.is_map(arrow_type):
-        return _type_hands_integers(arrow_type.key_type, True) or _type_hands_integers(
-            arrow_type.item_type, True
+        return _type_holds_nanoseconds(arrow_type.key_type) or _type_holds_nanoseconds(
+            arrow_type.item_type
         )
-    if _is_list_type(arrow_type):
-        return _type_hands_integers(arrow_type.value_type, False)
-    return False
+    return _is_list_type(arrow_type) and _type_holds_nanoseconds(arrow_type.value_type)
 
 
-def _collect_timestamp_leaves(
-    array: Any,
-    in_struct_or_map: bool,
-    handed_only: bool,
-    leaves: list[Any],
-) -> None:
-    """Append the timestamp leaves of an array, or only those pandas receives as integers."""
+def _collect_timestamp_leaves(array: Any, nanosecond_only: bool, leaves: list[Any]) -> None:
+    """Append the timestamp leaves of an Arrow array, or only its nanosecond ones."""
     import pyarrow as pa
 
     types = pa.types
     arrow_type = array.type
     if types.is_timestamp(arrow_type):
-        if not handed_only or (in_struct_or_map and arrow_type.unit == "ns"):
+        if not nanosecond_only or arrow_type.unit == "ns":
             leaves.append(array)
     elif types.is_struct(arrow_type):
         for child in array.flatten():
-            _collect_timestamp_leaves(child, True, handed_only, leaves)
+            _collect_timestamp_leaves(child, nanosecond_only, leaves)
     elif types.is_map(arrow_type):
         offsets = array.offsets
         start = offsets[0].as_py()
         length = offsets[len(offsets) - 1].as_py() - start
-        _collect_timestamp_leaves(array.keys.slice(start, length), True, handed_only, leaves)
-        _collect_timestamp_leaves(array.items.slice(start, length), True, handed_only, leaves)
+        _collect_timestamp_leaves(array.keys.slice(start, length), nanosecond_only, leaves)
+        _collect_timestamp_leaves(array.items.slice(start, length), nanosecond_only, leaves)
     elif _is_list_type(arrow_type):
-        _collect_timestamp_leaves(array.flatten(), False, handed_only, leaves)
+        _collect_timestamp_leaves(array.flatten(), nanosecond_only, leaves)
 
 
-def _timestamp_leaf_ticks(chunks: Any, handed_only: bool) -> Any:
+def _timestamp_leaf_ticks(chunks: Any, nanosecond_only: bool) -> Any:
     """Return the int64 ticks of the timestamp leaves of some Arrow arrays, chunked."""
     import pyarrow as pa
 
     leaves: list[Any] = []
     for chunk in chunks:
-        _collect_timestamp_leaves(chunk, False, handed_only, leaves)
+        _collect_timestamp_leaves(chunk, nanosecond_only, leaves)
     return pa.chunked_array([leaf.cast(pa.int64()) for leaf in leaves], type=pa.int64())
 
 
-def _handed_integer_ticks(group_tables: tuple[Any, ...]) -> Any:
-    """Return the nanosecond ticks the group frames hand to pandas as integers, chunked."""
-    import pyarrow as pa
-
-    types = pa.types
+def _group_nanosecond_ticks(group_tables: tuple[Any, ...]) -> Any:
+    """Return the ticks of every nanosecond timestamp the group frames hold, chunked."""
     chunks = [
         chunk
         for table in group_tables
         for index, arrow_type in enumerate(table.schema.types)
-        if types.is_nested(arrow_type) and _type_hands_integers(arrow_type, False)
+        if _type_holds_nanoseconds(arrow_type)
         for chunk in table.column(index).chunks
     ]
     return _timestamp_leaf_ticks(chunks, True)
 
 
-def _unambiguous_handed_ticks(handed: Any) -> frozenset[int]:
-    """Return the handed-out ticks that are no microsecond floor of a handed-out tick."""
+def _unambiguous_nanosecond_ticks(ticks: Any) -> frozenset[int]:
+    """Return the nanosecond ticks that are no microsecond floor of one of them."""
     import numpy as np
     import pyarrow.compute as pc
 
-    ticks = pc.drop_null(handed).to_numpy()
-    return frozenset(np.setdiff1d(ticks, ticks // 1000).tolist())
+    values = pc.drop_null(ticks).to_numpy()
+    return frozenset(np.setdiff1d(values, values // 1000).tolist())
 
 
 def _nanosecond_array_refusal(
@@ -370,34 +365,41 @@ def _nanosecond_array_refusal(
     return None
 
 
-def _handed_integer_refusal(
+def _nanosecond_integer_refusal(
     out_pdf: Any,
     out_table: Any,
     scan_plans: tuple[tuple[Any, Any, Any], ...],
     api_name: str,
     group_tables: tuple[Any, ...],
 ) -> str | None:
-    """Return the refusal text when a result stores a handed-out nanosecond integer."""
+    """Return the refusal text when a result stores a nanosecond tick of the frame as an integer."""
     import pyarrow.compute as pc
 
-    if not scan_plans:
+    if not scan_plans or not any(
+        _type_holds_nanoseconds(arrow_type)
+        for table in group_tables
+        for arrow_type in table.schema.types
+    ):
         return None
-    handed = _handed_integer_ticks(group_tables)
-    if handed.null_count == len(handed):
-        return None
+    ticks = None
     for field, _array_plan, integer_plan in scan_plans:
-        stored = _timestamp_leaf_ticks(out_table.column(field.name).chunks, False)
-        if not pc.any(pc.is_in(stored, value_set=handed, skip_nulls=True)).as_py():
+        series = out_pdf[field.name]
+        if not _column_can_hold_integers(integer_plan, series):
             continue
-        if _column_returns_handed_tick(
-            integer_plan, out_pdf[field.name], _unambiguous_handed_ticks(handed)
+        if ticks is None:
+            ticks = _group_nanosecond_ticks(group_tables)
+        stored = _timestamp_leaf_ticks(out_table.column(field.name).chunks, False)
+        if not pc.any(pc.is_in(stored, value_set=ticks, skip_nulls=True)).as_py():
+            continue
+        if _column_returns_nanosecond_tick(
+            integer_plan, series, _unambiguous_nanosecond_ticks(ticks)
         ):
             return (
                 f"{api_name} refuses column '{field.name}' of declared type {field.type}: "
-                "the pandas result holds an integer that the group frame carried for a "
-                "nanosecond timestamp (timestamp[ns]) inside a struct or map, which would "
-                "store wrong values. Convert it to microseconds in the function (for example "
-                "value // 1000) before returning."
+                "the pandas result holds an integer equal to a nanosecond timestamp "
+                "(timestamp[ns]) of the group frame, which would store wrong values. pandas "
+                "carries such a timestamp inside a struct or map as an integer. Convert it to "
+                "microseconds in the function (for example value // 1000) before returning."
             )
     return None
 
@@ -446,7 +448,7 @@ def _pandas_result_to_arrow_batches(
                 f"{api_name} failed converting pandas output to Arrow: {error}"
             ) from error
     else:
-        refusal = refusal or _handed_integer_refusal(
+        refusal = refusal or _nanosecond_integer_refusal(
             out_pdf, out_table, scan_plans, api_name, group_tables
         )
         if refusal is not None:
