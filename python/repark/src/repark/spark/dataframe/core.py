@@ -481,7 +481,7 @@ class DataFrame:
                         "mapInArrow user function must yield pyarrow.RecordBatch; "
                         f"got {type(item).__name__}"
                     )
-                item = _validate_map_in_arrow_batch(item, expected_arrow, declared_schema)
+                _validate_map_in_arrow_batch(item, expected_arrow, declared_schema)
                 aligned = item.cast(expected_arrow)
                 if max_output_rows is not None:
                     remaining = max_output_rows - rows_kept

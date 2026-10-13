@@ -1,6 +1,4 @@
-use std::cmp::Ordering;
-
-use datafusion::arrow::datatypes::{IntervalMonthDayNano, TimeUnit};
+use datafusion::arrow::datatypes::IntervalMonthDayNano;
 use datafusion::common::{DataFusionError, Result};
 
 use crate::cardinality::{
@@ -204,92 +202,19 @@ fn collect_dates(start: i32, stop: i32, stride: &IntervalMonthDayNano) -> Result
     Ok(values)
 }
 
-fn out_of_range() -> DataFusionError {
-    DataFusionError::Execution("sequence timestamp out of range".to_owned())
-}
-
-pub(crate) fn timestamp_ticks(
+pub(crate) fn timestamp_row(
     start: i64,
     stop: i64,
-    stride: Option<IntervalMonthDayNano>,
-    unit: TimeUnit,
-) -> Result<Option<Vec<i64>>> {
-    match unit {
-        TimeUnit::Microsecond => timestamp_span(start, stop, stop.cmp(&start), stride),
-        TimeUnit::Nanosecond => nanosecond_span(start, stop, stride),
-        TimeUnit::Millisecond => coarse_span(start, stop, stride, 1_000),
-        TimeUnit::Second => coarse_span(start, stop, stride, 1_000_000),
-    }
-}
-
-fn nanosecond_span(
-    start: i64,
-    stop: i64,
-    stride: Option<IntervalMonthDayNano>,
-) -> Result<Option<Vec<i64>>> {
-    let whole = start.div_euclid(1_000);
-    let rest = start.rem_euclid(1_000);
-    let reach = stop.checked_sub(rest).ok_or_else(out_of_range)?;
-    let bound = if stop >= start {
-        reach.div_euclid(1_000)
-    } else {
-        reach.div_euclid(1_000) + i64::from(reach.rem_euclid(1_000) != 0)
-    };
-    let Some(pieces) = timestamp_span(whole, bound, stop.cmp(&start), stride)? else {
-        return Ok(None);
-    };
-    let mut values = Vec::with_capacity(pieces.len());
-    for micros in pieces {
-        values.push(
-            micros
-                .checked_mul(1_000)
-                .and_then(|nanos| nanos.checked_add(rest))
-                .ok_or_else(out_of_range)?,
-        );
-    }
-    Ok(Some(values))
-}
-
-fn coarse_span(
-    start: i64,
-    stop: i64,
-    stride: Option<IntervalMonthDayNano>,
-    micros_per_tick: i64,
-) -> Result<Option<Vec<i64>>> {
-    let first = start
-        .checked_mul(micros_per_tick)
-        .ok_or_else(out_of_range)?;
-    let last = stop.checked_mul(micros_per_tick).ok_or_else(out_of_range)?;
-    let Some(pieces) = timestamp_span(first, last, stop.cmp(&start), stride)? else {
-        return Ok(None);
-    };
-    let mut values = Vec::with_capacity(pieces.len());
-    for micros in pieces {
-        if micros % micros_per_tick != 0 {
-            return Err(DataFusionError::Execution(format!(
-                "sequence timestamp step is finer than the element unit: {} is not a whole tick",
-                format_micros(micros)?
-            )));
-        }
-        values.push(micros / micros_per_tick);
-    }
-    Ok(Some(values))
-}
-
-fn timestamp_span(
-    start: i64,
-    stop: i64,
-    direction: Ordering,
     stride: Option<IntervalMonthDayNano>,
 ) -> Result<Option<Vec<i64>>> {
     match stride {
         None => {
-            let default = if direction == Ordering::Less {
-                IntervalMonthDayNano::new(0, 0, -1_000_000_000)
-            } else {
+            let default = if stop >= start {
                 IntervalMonthDayNano::new(0, 0, 1_000_000_000)
+            } else {
+                IntervalMonthDayNano::new(0, 0, -1_000_000_000)
             };
-            Ok(Some(collect_timestamps(start, stop, direction, &default)?))
+            Ok(Some(collect_timestamps(start, stop, &default)?))
         }
         Some(interval) => {
             if interval.months == 0 && interval.days == 0 && interval.nanoseconds == 0 {
@@ -305,7 +230,7 @@ fn timestamp_span(
                     format_interval(&interval)
                 )));
             }
-            if direction == Ordering::Equal {
+            if start == stop {
                 return Ok(Some(vec![start]));
             }
             let sign = if interval.months != 0 {
@@ -315,11 +240,7 @@ fn timestamp_span(
             } else {
                 interval.nanoseconds.signum()
             };
-            let want = if direction == Ordering::Greater {
-                1
-            } else {
-                -1
-            };
+            let want = if stop > start { 1 } else { -1 };
             if sign != want {
                 return Err(boundary_error(
                     &format_micros(start)?,
@@ -327,7 +248,7 @@ fn timestamp_span(
                     &format_interval(&interval),
                 ));
             }
-            Ok(Some(collect_timestamps(start, stop, direction, &interval)?))
+            Ok(Some(collect_timestamps(start, stop, &interval)?))
         }
     }
 }
@@ -366,12 +287,7 @@ fn sequence_cardinality_from_micros(first: i64, last: i64, stride: i64) -> Optio
     u64::try_from(span).ok()?.checked_add(1)
 }
 
-fn collect_timestamps(
-    start: i64,
-    stop: i64,
-    direction: Ordering,
-    stride: &IntervalMonthDayNano,
-) -> Result<Vec<i64>> {
+fn collect_timestamps(start: i64, stop: i64, stride: &IntervalMonthDayNano) -> Result<Vec<i64>> {
     if stride.months == 0 {
         let step_micros = i64::from(stride.days)
             .checked_mul(86_400_000_000)
@@ -394,7 +310,7 @@ fn collect_timestamps(
             return Ok(values);
         }
     }
-    let ascending = direction == Ordering::Greater;
+    let ascending = stop > start;
     let mut values = Vec::new();
     let mut previous: Option<i64> = None;
     let mut index: i32 = 0;

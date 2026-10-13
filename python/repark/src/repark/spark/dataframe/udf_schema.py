@@ -36,64 +36,12 @@ def _coerce_map_in_arrow_schema(schema: Any) -> tuple[StructType, Any]:
     return struct_type_from_arrow(arrow_schema), arrow_schema
 
 
-def _nanosecond_twin_of(got: Any, want: Any) -> bool:
-    """True when ``got`` is ``want`` with nanosecond timestamps, at any list depth."""
-    import pyarrow as pa
-
-    while (pa.types.is_list(got) and pa.types.is_list(want)) or (
-        pa.types.is_large_list(got) and pa.types.is_large_list(want)
-    ):
-        got, want = got.value_type, want.value_type
-    return (
-        pa.types.is_timestamp(got)
-        and pa.types.is_timestamp(want)
-        and got.unit == "ns"
-        and want.unit == "us"
-        and got.tz == want.tz
-    )
-
-
-def _floor_to_declared_microseconds(column: Any, want: Any) -> Any:
-    """Floor a nanosecond-twin column to the declared microsecond type.
-
-    Notes:
-        The floor is integer arithmetic on the int64 ticks, toward negative infinity. It
-        never reads local time. The result is viewed as the declared type, zone label
-        included. Each list layer is rebuilt from its own offsets, with a null offset
-        where the list is null.
-    """
-    import pyarrow as pa
-    import pyarrow.compute as pc
-
-    layers: list[tuple[Any, Any]] = []
-    values, target = column, want
-    while not pa.types.is_timestamp(target):
-        layers.append((values, target))
-        values, target = values.values, target.value_type
-    nanoseconds = values.cast(pa.int64())
-    quotient = pc.divide(nanoseconds, 1000)
-    remainder = pc.subtract(nanoseconds, pc.multiply(quotient, 1000))
-    floored = pc.subtract(quotient, pc.less(remainder, 0).cast(pa.int64())).view(target)
-    for layer, layer_type in reversed(layers):
-        offsets = layer.offsets
-        if layer.null_count:
-            absent = pa.concat_arrays([layer.is_null(), pa.array([False])])
-            offsets = pc.if_else(absent, pa.scalar(None, offsets.type), offsets)
-        floored = type(layer).from_arrays(offsets, floored, type=layer_type)
-    return floored
-
-
 def _validate_map_in_arrow_batch(
     batch: Any,
     expected: Any,
     declared: StructType,
-) -> Any:
-    """Return a yielded RecordBatch reconciled with the declared mapInArrow schema.
-
-    Notes:
-        A nanosecond timestamp column whose declared type is the same timestamp kind in
-        microseconds is floored to microseconds. Any other type difference fails loud.
-    """
+) -> None:
+    """Loud schema mismatch for a yielded RecordBatch vs declared mapInArrow schema."""
     import pyarrow as pa
 
     if not isinstance(batch, pa.RecordBatch):
@@ -106,20 +54,11 @@ def _validate_map_in_arrow_batch(
             "mapInArrow schema mismatch: field names "
             f"expected {list(expected.names)}, got {got.names}"
         )
-    floored: dict[int, Any] = {}
     for index, (want_field, got_field) in enumerate(zip(expected, got, strict=True)):
-        if want_field.type == got_field.type:
-            continue
-        if _nanosecond_twin_of(got_field.type, want_field.type):
-            floored[index] = _floor_to_declared_microseconds(batch.column(index), want_field.type)
-            continue
-        declared_field = declared.fields[index]
-        raise PySparkException(
-            "mapInArrow schema mismatch on field "
-            f"{want_field.name!r}: expected type {want_field.type} "
-            f"({declared_field.dataType.simpleString()}), got {got_field.type}"
-        )
-    if not floored:
-        return batch
-    columns = [floored.get(index, column) for index, column in enumerate(batch.columns)]
-    return pa.RecordBatch.from_arrays(columns, names=got.names)
+        if want_field.type != got_field.type:
+            declared_field = declared.fields[index]
+            raise PySparkException(
+                "mapInArrow schema mismatch on field "
+                f"{want_field.name!r}: expected type {want_field.type} "
+                f"({declared_field.dataType.simpleString()}), got {got_field.type}"
+            )
