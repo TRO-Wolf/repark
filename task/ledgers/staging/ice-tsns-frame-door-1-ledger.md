@@ -39,6 +39,13 @@ the keep-nanoseconds switch (the create-door order).
 | C-014 | The work order's six mutants and the Q1 mutant are killed by the pin file. | Each mutant run against `test_ice_tsns_frame_door_1.py`. | **PROVEN** | §6: nine variants, nine killed. |
 | C-015 | The gates of the work order pass. | Real exit codes. | **PROVEN** | §7. |
 | C-016 | The parity registry carries the dated row and the ledger carries the release-note sentence. | Slice 3. | **PROVEN** | Row `ICE-TSNS-SQL-1-R-019` in `docs/spark-sql-iceberg-parity.md`, FIXED 2026-10-13; §10. |
+| C-017 | Fold 1: the floor is computed on the int64 ticks and never through local time. It answers in every repeated and skipped hour and for every int64 nanosecond value, the lowest 807 and `pd.Timestamp.min` / `.max` among them. | `test_instants_around_a_zone_transition_floor_on_the_ticks` (36), `test_the_lowest_and_highest_nanoseconds_floor` (16), `test_the_int64_minimum_floors_without_wrapping` (2). | **PROVEN** | §12.1. All 54 red on `c4efd79f` (`Local time is ambiguous`; `would lose data: 9223372036854775616`), green on the fold. Verifier findings F-01, F-02. |
+| C-018 | Fold 1: a pandas categorical of nanosecond timestamps enters as microseconds. | `test_a_categorical_of_nanoseconds_arrives_as_microseconds` (12). | **PROVEN** | §12.2. The step runs after the dictionary decode. The naive categorical under `c timestamp_ntz` equals Spark's cell. F-04. |
+| C-019 | Fold 1: under a declared type that is not a timestamp kind a nanosecond column answers what main answers. | `test_a_declared_type_that_is_not_a_timestamp_keeps_main` (36): `c bigint`, `c string`, `c date` over six sources. | **PROVEN** | §12.3. Main's cells recorded on `8c51fbc4`; 20 of the 36 were red on `c4efd79f`. F-05. |
+| C-020 | Fold 1: every non-equivalent mutant, the executor's and the verifier's, is killed. | Step 3 of the fold. | **OPEN** | Does a declared `timestamp` over a second and third non-UTC zone kill the verifier's survivor? |
+| C-021 | Fold 1: on the verifier's catalogue no cell that answered on main errors on the fold, and the only no-nanosecond cells that differ from main are the 12 of the named move. | Step 3 of the fold. | **OPEN** | What does the catalogue re-run report? |
+| C-022 | Fold 1: the cost gate holds for a naive and for an aware nanosecond column. | Step 3 of the fold. | **OPEN** | Is each at most 25 ms per million rows? |
+| C-023 | Fold 1: the ledger and row R-019 name the Spark-side disclosures, every surface of the named move, and the append doors. | Step 3 of the fold. | **OPEN** | Are they written? |
 
 ## 1. The oracle (C-001)
 
@@ -235,3 +242,44 @@ COVERAGE_ATTESTATION:
   reattested: []
   complete: true
 ```
+
+## 12. Fold 1 (2026-10-13), after an independent verify failed `c4efd79f`
+
+The verify stage found two classes of cell where main answered and the unit raised (F-01, F-02),
+an aware-column cost four times the ceiling (F-03), a categorical still carried (F-04), a silent value
+change under declared `bigint` and `string` (F-05), and four record gaps (F-06 to F-09). Each
+of F-01, F-02, F-04 and F-05 was reproduced on `c4efd79f` before any change. The rulings below
+are the orchestrator's, provisional, 2026-10-13; the owner sees each in the pull request.
+
+### 12.1 Ruling 1: the floor is on the ticks (C-017)
+
+`pyarrow.compute.floor_temporal` on a zoned column converts to local time and back. It raised
+`Local time is ambiguous` for any instant in a repeated hour (New York, London, Lord Howe and
+every zone with a backward transition) under all three schemas, pandas and polars, and it
+wrapped int64 for the lowest 807 nanoseconds, where the safe cast then refused. Main answered
+all of these. This amends ruling F-3 of the work order, which named `floor_temporal`.
+
+The step now casts the column to its int64 ticks, divides by 1000 (Arrow truncates), subtracts
+one where the ticks are below the quotient times 1000, and views the result as `timestamp[us]`
+with the zone label re-attached. Whole-column Arrow kernels, nulls stay null, no row loop. No
+intermediate overflows: the product's magnitude never exceeds the ticks', and the lowest
+quotient minus one is far inside int64. Checked at `-2**63`, `-2**63 + 1`, `-2**63 + 808`,
+`-1001`, `-1000`, `-999`, `-1`, `0`, `1`, `999`, `1000`, `2**63 - 1` and NULL against Python's
+floor division.
+
+### 12.2 Ruling 2: after the dictionary decode (C-018)
+
+One call, placed where the column is finally a nanosecond timestamp: after the dictionary
+decode, the infinity refusal and the decimal envelope, none of which a timestamp column
+enters. This amends ruling F-1 ("first step"). Spark's default path infers a struct for an
+**aware** categorical, so only the naive categorical has a Spark cell; the aware one is pinned
+to the plain aware column's answer.
+
+### 12.3 Ruling 3: a declared non-timestamp type keeps main's answer (C-019)
+
+The floor applies when no type is declared or the declared Arrow type is a timestamp
+(`timestamp`, `timestamp_ntz`). Under any other declared type the column takes main's path
+unchanged. The declared type is resolved at the point main resolved it, so no other step is
+re-ordered. Main's cells, the same in both sessions: `c bigint` the nanosecond integer
+(`1767323045123456789`, `[-1, -1001, -999999999999]`); `c string` nine digits
+(`2026-01-02 03:04:05.123456789`, with `Z` or `-0500` for an aware column); `c date` the day.

@@ -63,7 +63,13 @@ def _floor_nanosecond_timestamp_column(column: Any) -> Any:
     if not pa.types.is_timestamp(column.type) or column.type.unit != "ns":
         return column
 
-    floored = pc.floor_temporal(column, unit="microsecond")
+    ticks = column.cast(pa.int64())
+
+    quotient = pc.divide(ticks, 1000)
+
+    below = pc.less(ticks, pc.multiply(quotient, 1000))
+
+    floored = pc.subtract(quotient, below.cast(pa.int64()))
 
     return floored.cast(pa.timestamp("us", tz=column.type.tz))
 
@@ -99,8 +105,6 @@ def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> An
 
     import pyarrow.compute as pc
 
-    column = _floor_nanosecond_timestamp_column(column)
-
     # ChunkedArray has no dictionary_decode; cast to value type instead.
 
     if pa.types.is_dictionary(column.type):
@@ -123,9 +127,12 @@ def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> An
     if pa.types.is_decimal(column.type):
         _validate_decimal_column_envelope(column)
 
-    if engine_type is not None:
-        target = _sql_type_to_arrow(engine_type)
+    target = None if engine_type is None else _sql_type_to_arrow(engine_type)
 
+    if target is None or pa.types.is_timestamp(target):
+        column = _floor_nanosecond_timestamp_column(column)
+
+    if target is not None:
         if pa.types.is_timestamp(target) and target.tz is not None:
             return _localize_naive_timestamp_column(column)
 

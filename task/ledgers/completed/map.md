@@ -652,16 +652,6 @@ else. The next pickup's `make ledger-archive` files everything here under
   No product change.
   `risk_tier: standard`. Branch `test/ice-spark-table-1`.
   pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
-- [ice-tsns-frame-door-1-ledger.md](ice-tsns-frame-door-1-ledger.md) —
-  **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** a pandas or polars nanosecond timestamp column
-  enters as microseconds, floored, as Spark 4.1.2 does. The live Spark oracle (C-001); the
-  floor step at the one seat and its pins: the microsecond twin, Spark's instants, the
-  pre-epoch floor, declared `timestamp_ntz`, declared `timestamp` unchanged, untouched and
-  nested columns, no warning, the create doors, polars (C-002..C-010); 235 tests re-seated
-  off pandas with no expectation changed (C-011); a declared `timestamp` over an aware
-  microsecond column answers UTC (C-012); cost, mutants, gates (C-013..C-015). Parity row
-  `ICE-TSNS-SQL-1-R-019` and the release-note sentence (C-016). `risk_tier: standard`. Branch
-  `fix/ice-tsns-frame-door-1`.
 - [io-bucket-cluster-1-ledger.md](io-bucket-cluster-1-ledger.md) —
   **IO-BUCKET-CLUSTER-1 step 1 (2026-09-14), in flight:** `DataFrameWriter.bucketBy` /
   `sortBy` / `clusterBy` and `DataFrameWriterV2.clusterBy` bind on the writers with

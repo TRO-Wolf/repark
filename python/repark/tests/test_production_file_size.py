@@ -230,7 +230,7 @@ EXPECTED_SYMBOL_HASHES = {
         "8e31e7a9fbde9c3a49ae7ee75a850a3970ba6f293c6c79b75229a6d2dc08d4b6"
     ),
     "_normalize_frame_arrow_column": (
-        "32f6b8426d8bc41e5853971621e57dd1e65fae8ee0c7a78fd4f44c282bc31f46"
+        "a8848fffa4bb8df6f468e6fd4767ba2637ea75c8cbec64bbef724f8d74f41f1a"
     ),
     "_normalize_nested_sql_type_aliases": (
         "d93a752be5747cda438db978e3100680dd19fd17ed00a16dd9a7b3d1a1742904"

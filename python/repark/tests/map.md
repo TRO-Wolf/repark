@@ -2442,7 +2442,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_normalize_frame_arrow_column` (it calls the nanosecond floor first) and
   `_localize_naive_timestamp_column` (its aware-microsecond shortcut relabels to UTC) move:
   both bodies changed on purpose, the "current-main behavior change" the pin's docstring
-  admits. pins: ice-tsns-frame-door-1/C-011
+  admits. Fold 1 moves the first hash again (the floor is called after the dictionary decode,
+  under the declared-type test). pins: ice-tsns-frame-door-1/C-011
 - `test_production_file_size.py` — **C-3 fold 1 (2026-10-08):** the `_parse_jdbc_int_option`
   body hash moves: C-3 changed its behaviour on purpose (a bound that is not an integer raises
   `NumberFormatException`, Spark's measured class and a subclass of the old one, and an

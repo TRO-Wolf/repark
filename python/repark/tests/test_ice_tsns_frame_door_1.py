@@ -1,7 +1,7 @@
 """ICE-TSNS-FRAME-DOOR-1: a pandas or polars nanosecond timestamp column enters as microseconds.
 
 pins: ice-tsns-frame-door-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-pins: ice-tsns-frame-door-1/C-012, C-014
+pins: ice-tsns-frame-door-1/C-012, C-014, C-017, C-018, C-019, C-020
 """
 
 from __future__ import annotations
