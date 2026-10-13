@@ -13,7 +13,7 @@ use iceberg::transaction::{
     ApplyTransactionAction, StagedTableMode, StagedTableTransaction, Transaction,
 };
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
-use repark_iceberg::write::void_store::arrow_schema_to_iceberg_with_unknown;
+use repark_iceberg::write::NewColumns;
 
 use repark_common::names::{column_already_exists, folded_duplicate};
 use repark_core::{CatalogRegistry, LocationPolicy};
@@ -27,6 +27,8 @@ use crate::normalize::{
     create_clauses::CreateClauses, property_value,
 };
 use crate::spark_ast;
+
+pub(crate) mod nanosecond_ask;
 
 /// A `CREATE TABLE … AS SELECT` resolved to a three-part `catalog.namespace.table` target.
 pub(crate) struct Ctas {
@@ -224,8 +226,6 @@ pub(crate) async fn execute_ctas(
     repark_core::refuse_iceberg_create_of_tightened_schema(arrow_schema.as_ref())
         .map_err(|error| DataFusionError::Plan(error.to_string()))?;
     let derived_schema = repark_core::relax_schema_to_nullable(arrow_schema.as_ref());
-    let iceberg_schema =
-        arrow_schema_to_iceberg_with_unknown(&derived_schema).map_err(iceberg_err)?;
     let existing = match mode {
         CtasMode::Replace => Some(
             catalog
@@ -235,6 +235,16 @@ pub(crate) async fn execute_ctas(
         ),
         _ => None,
     };
+    let ask = crate::ctas::nanosecond_ask::nanosecond_ask(ctx, query.logical_plan())?;
+    let iceberg_schema = repark_iceberg::write::new_table_schema(&NewColumns {
+        arrow: &derived_schema,
+        ask: &ask,
+        existing: existing
+            .as_ref()
+            .map(|table| table.metadata().current_schema().as_ref()),
+        form: if ctas.or_replace { "RTAS" } else { "CTAS" },
+        case_sensitive: !crate::spark_door_case_insensitive(ctx.state().config().options()),
+    })?;
     let partition_spec = build_partition_spec(
         &iceberg_schema,
         &ctas.partition_fields,

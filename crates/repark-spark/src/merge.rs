@@ -177,6 +177,7 @@ fn lower(
         commit_branch,
         case_insensitive: true,
         schema_evolution: false,
+        nanosecond_ask: crate::ctas::nanosecond_ask::nanosecond_ask,
     };
     Ok((catalog, spec))
 }

@@ -3446,6 +3446,33 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   so both sides run the same statements. Run it against a build:
   `python _record_ice_tsns_create_door_1_main.py <commit> [--output <path>]`.
   pins: ice-tsns-create-door-1/C-001
+- [test_ice_tsns_create_door_1.py](test_ice_tsns_create_door_1.py) —
+  **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the facade pins of the create door, each cell in a
+  fresh session and warehouse, UTC and America/New_York, on the Arrow path and the Iceberg
+  metadata JSON (never `show` or DESCRIBE). The matrix is 12 doors by two columns
+  (`c timestamp_ns`, `cz timestamptz_ns`) by three asks: SQL CTAS, `CREATE OR REPLACE … AS`,
+  `REPLACE TABLE … AS`, `writeTo().create()`, `.createOrReplace()`, `.replace()`,
+  `saveAsTable` create, `mode("overwrite").saveAsTable` with and without `overwriteSchema`,
+  `mergeSchema` `saveAsTable` append and `writeTo().append()` on a
+  `write.spark.accept-any-schema` table, `MERGE WITH SCHEMA EVOLUTION`. **No ask:** the
+  exact `[TIMESTAMP_NANOS_NOT_REQUESTED]` text with the door's form, class
+  `AnalysisException`, the table's files the same as before the statement and its schema
+  what the door started from. **A written cast** (`CAST` in SQL, `selectExpr` for frames):
+  main's recorded table, all nine digits. **The session setting on:** the table the written
+  cast makes. `saveAsTable` create has no v3 spelling: unasked it gets the same refusal,
+  asked it is refused for the format version. Further pins: the census's third pass (28
+  unasked cells refuse naming `c`, 14 written-cast twins equal main);
+  12 statements over a microsecond table equal main's recorded cells exactly; a column the
+  replaced or evolved table already holds passes on nine doors, and a kept name with the
+  other nanosecond type or a new name is refused; DDL and `ADD COLUMN` naming the type create
+  it; a cached frame hides its written cast and is refused, a pandas frame makes a
+  microsecond table; `format-version` 3 alone is not an ask; an aggregate, a subquery, a
+  union, `VALUES` and `::` over written casts are asked, and one table-column origin (a union
+  branch, a `coalesce` argument, an array or struct element, a window, a join side) makes
+  the column unasked. `test_main_created_the_column_without_an_ask` holds the fixture to
+  what it is: main made the nanosecond column in 44 unasked matrix cells and all 42 census
+  cells. Red on main `f3f98823` before any product edit: 86 failed, 160 passed.
+  pins: ice-tsns-create-door-1/C-005, C-006, C-007
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and

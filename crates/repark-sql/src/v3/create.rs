@@ -793,3 +793,92 @@ async fn ansi_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live()
     );
     assert!(surviving_ids(&door, "partsc").await.is_empty());
 }
+
+#[tokio::test]
+async fn native_ctas_of_a_written_nanosecond_cast_passes_the_door() {
+    use iceberg::spec::{PrimitiveType, Type};
+    use repark_core::SqlDialect;
+
+    let door = door_with_session_v3_opt_in().await;
+    crate::AnsiDialect.on_session_built(&door.ctx);
+    door.ok("CREATE TABLE ice.sales.asked WITH (format_version = 3) AS \
+         SELECT __repark_cast_timestamp_ns__('2026-01-02 03:04:05.123456789') AS ts")
+        .await;
+    let nanos = Type::Primitive(PrimitiveType::TimestampNs);
+    let first_type = |table: iceberg::table::Table| {
+        table.metadata().current_schema().as_struct().fields()[0]
+            .field_type
+            .as_ref()
+            .clone()
+    };
+    assert_eq!(first_type(door.table("sales", "asked").await), nanos);
+}
+
+#[tokio::test]
+async fn native_ctas_of_an_unasked_nanosecond_column_is_refused_and_a_kept_one_passes() {
+    use iceberg::spec::{PrimitiveType, Type};
+
+    let door = door_with_session_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.tsns (ts timestamp_ns) WITH (format_version = 3)")
+        .await;
+    let refusal = |form: &str| {
+        format!(
+            "Error during planning: [TIMESTAMP_NANOS_NOT_REQUESTED] {form} would create column \
+             `ts` as timestamp_ns, a type Spark cannot read, and the statement does not ask for \
+             it. Set `repark.sql.allowImplicitTimestampNanos` = true on the session. For \
+             microseconds write CAST(<expression> AS TIMESTAMP(6))."
+        )
+    };
+    for properties in ["WITH (format_version = 3) ", ""] {
+        let sql =
+            format!("CREATE TABLE ice.sales.plain {properties}AS SELECT ts FROM ice.sales.tsns");
+        assert_eq!(door.err(&sql).await, refusal("CTAS"));
+        assert!(!door.table_exists("sales", "plain").await);
+    }
+    door.ok("CREATE TABLE ice.sales.other (ts TIMESTAMP(6)) WITH (format_version = 3)")
+        .await;
+    let replace = "CREATE OR REPLACE TABLE ice.sales.{} AS SELECT ts FROM ice.sales.tsns";
+    assert_eq!(
+        door.err(&replace.replace("{}", "other")).await,
+        refusal("RTAS")
+    );
+    door.ok("CREATE TABLE ice.sales.kept (ts timestamp_ns) WITH (format_version = 3)")
+        .await;
+    door.ok(&replace.replace("{}", "kept")).await;
+    let kept = door.table("sales", "kept").await;
+    assert_eq!(
+        kept.metadata().current_schema().as_struct().fields()[0]
+            .field_type
+            .as_ref(),
+        &Type::Primitive(PrimitiveType::TimestampNs)
+    );
+}
+
+#[tokio::test]
+async fn native_ctas_of_a_plain_timestamp_expression_at_v3_is_refused_and_six_digits_pass() {
+    use iceberg::spec::{PrimitiveType, Type};
+
+    let door = door_with_session_v3_opt_in().await;
+    let text = "Error during planning: [TIMESTAMP_NANOS_NOT_REQUESTED] CTAS would create column \
+                `ts` as timestamp_ns, a type Spark cannot read, and the statement does not ask \
+                for it. Set `repark.sql.allowImplicitTimestampNanos` = true on the session. For \
+                microseconds write CAST(<expression> AS TIMESTAMP(6)).";
+    for select in [
+        "SELECT TIMESTAMP '2026-01-02 03:04:05' AS ts",
+        "SELECT now() AS ts",
+    ] {
+        let sql = format!("CREATE TABLE ice.sales.plain WITH (format_version = 3) AS {select}");
+        assert_eq!(door.err(&sql).await, text, "{sql}");
+        assert!(!door.table_exists("sales", "plain").await);
+    }
+    door.ok("CREATE TABLE ice.sales.six WITH (format_version = 3) AS \
+         SELECT CAST(TIMESTAMP '2026-01-02 03:04:05' AS TIMESTAMP(6)) AS ts")
+        .await;
+    let six = door.table("sales", "six").await;
+    assert_eq!(
+        six.metadata().current_schema().as_struct().fields()[0]
+            .field_type
+            .as_ref(),
+        &Type::Primitive(PrimitiveType::Timestamp)
+    );
+}

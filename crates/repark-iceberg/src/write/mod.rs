@@ -30,6 +30,7 @@ pub mod insert_gate;
 pub mod merge;
 pub mod meta_delete;
 mod name_resolution;
+pub mod nanosecond_door;
 pub mod negated_null_store;
 pub mod nested_column;
 pub mod nested_ns_gate;
@@ -90,8 +91,11 @@ pub use encryption::{
 pub use illegal_argument::{
     IllegalArgumentMarker, NumberFormatMarker, illegal_argument_error, number_format_error,
 };
+pub use nanosecond_door::{
+    NanosecondAsk, NewColumns, Remedies, added_columns_schema, new_table_schema,
+};
 pub use schema_evolution::{
-    ACCEPT_ANY_SCHEMA_PROP, accepts_any_schema, evolve_merge_schema, evolve_schema, incoming_schema,
+    ACCEPT_ANY_SCHEMA_PROP, accepts_any_schema, evolve_merge_schema, evolve_schema,
 };
 pub use snapshot_refs::{
     SnapshotRefKind, SnapshotRefRetention, create_branch_on_empty_table,

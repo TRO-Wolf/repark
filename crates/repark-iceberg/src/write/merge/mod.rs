@@ -397,8 +397,15 @@ async fn union_source_schema(
         "SELECT * FROM {} AS {} LIMIT 0",
         spec.source_from_sql, spec.source_alias
     );
-    let arrow = ctx.sql(&probe).await?.schema().as_arrow().clone();
-    let incoming = crate::write::schema_evolution::incoming_schema(&arrow)?;
+    let frame = ctx.sql(&probe).await?;
+    let ask = (spec.nanosecond_ask)(ctx, frame.logical_plan())?;
+    let incoming = crate::write::added_columns_schema(&crate::write::NewColumns {
+        arrow: frame.schema().as_arrow(),
+        ask: &ask,
+        existing: Some(table.metadata().current_schema()),
+        form: "MERGE WITH SCHEMA EVOLUTION",
+        case_sensitive: !spec.case_insensitive,
+    })?;
     crate::write::schema_evolution::evolve_merge_schema(catalog, table, incoming).await
 }
 

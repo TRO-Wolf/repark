@@ -7,6 +7,17 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
 ## Contents
 
 - `mod.rs` — thin index.
+- `create.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the native door's row.
+  `native_ctas_of_a_written_nanosecond_cast_passes_the_door` (the cast kernel called by
+  name, the only spelling this door's parser reaches) and
+  `native_ctas_of_an_unasked_nanosecond_column_is_refused_and_a_kept_one_passes` (the plain
+  column of a `timestamp_ns` table, on a v3 and on a default target; an RTAS over a
+  microsecond column of that name is refused, an RTAS over a kept `timestamp_ns` column
+  passes), with this door's exact text. On this door a plain `TIMESTAMP` expression is Arrow
+  nanoseconds, so `native_ctas_of_a_plain_timestamp_expression_at_v3_is_refused_and_six_digits_pass`
+  holds the move from main: a `TIMESTAMP '…'` literal and `now()` are refused at format
+  version 3, and `CAST(… AS TIMESTAMP(6))` creates a `timestamp` column.
+  pins: ice-tsns-create-door-1/C-005, C-006, C-011
 - `create.rs` (zoned) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   `update_and_merge_into_timestamptz_ns_store_the_instant` runs
   `AnsiDialect::on_session_built`, then an `UPDATE`, a MERGE update and a MERGE insert of a

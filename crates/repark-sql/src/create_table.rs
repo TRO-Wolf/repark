@@ -18,7 +18,6 @@ use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use repark_common::spark_error;
 use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use repark_functions::cardinality::repark_sql_settings_from_options;
-use repark_iceberg::write::void_store::arrow_schema_to_iceberg_with_unknown;
 
 use crate::partitioning::build_partition_spec;
 use crate::properties::{TableProperties, parse_with_options};
@@ -124,9 +123,12 @@ pub(crate) async fn execute_create_table(
     } else {
         arrow_schema.as_ref()
     };
-    let iceberg_schema = arrow_schema_to_iceberg_with_unknown(ctas_schema).map_err(iceberg_err)?;
-    let (iceberg_schema, existing) =
-        replacement_if_existed(&target, existed, iceberg_schema).await?;
+    let existing = replacement_if_existed(&target, existed).await?;
+    let replaced = existing
+        .as_ref()
+        .map(|table| table.metadata().current_schema().as_ref());
+    let ask = nanosecond_ask::ask_of(cx.ctx, query.as_ref())?;
+    let iceberg_schema = ask.table_schema(ctas_schema, replaced, create.or_replace)?;
     let partition_spec = build_partition_spec(&iceberg_schema, &properties.partitioning)?;
     let format_version =
         iceberg_create_format_version(cx.ctx, properties.format_version.as_deref())?;
@@ -185,20 +187,16 @@ fn refuse_keyed_ctas(
     }
 }
 
-async fn replacement_if_existed(
-    target: &CreateTarget,
-    existed: bool,
-    schema: iceberg::spec::Schema,
-) -> Result<(iceberg::spec::Schema, Option<Table>)> {
+async fn replacement_if_existed(target: &CreateTarget, existed: bool) -> Result<Option<Table>> {
     if !existed {
-        return Ok((schema, None));
+        return Ok(None);
     }
     let existing = target
         .catalog
         .load_table(&target.ident())
         .await
         .map_err(iceberg_err)?;
-    Ok((schema, Some(existing)))
+    Ok(Some(existing))
 }
 
 /// Model: Grok 4.6 xHigh
@@ -977,6 +975,7 @@ fn iceberg_v3_named_primitive(
     }
 }
 
+pub(crate) mod nanosecond_ask;
 mod nested_type;
 pub(crate) use nested_type::{nested_type_parse_error, rewrite_nested_create_types};
 

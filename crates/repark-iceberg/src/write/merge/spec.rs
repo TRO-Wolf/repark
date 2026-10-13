@@ -1,5 +1,9 @@
+use datafusion::error::Result;
+use datafusion::logical_expr::LogicalPlan;
+use datafusion::prelude::SessionContext;
 use iceberg::TableIdent;
 
+use crate::write::NanosecondAsk;
 use crate::write::merge::not_matched_by_source::{
     NotMatchedBySourceAction, NotMatchedBySourceClause,
 };
@@ -17,6 +21,7 @@ pub struct MergeSpec {
     pub commit_branch: Option<String>,
     pub case_insensitive: bool,
     pub schema_evolution: bool,
+    pub nanosecond_ask: fn(&SessionContext, &LogicalPlan) -> Result<NanosecondAsk>,
 }
 
 impl MergeSpec {

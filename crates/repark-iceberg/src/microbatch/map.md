@@ -288,3 +288,6 @@ the first live caller.
 First check: `cargo test -p repark-iceberg --lib microbatch`. A stamp that
 refuses names its key; compare the bytes against the Q6 shapes quoted in
 `offset.rs`'s round-trip pins.
+
+**ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the `MergeSpec` literal in `crash_tests.rs` carries
+the new `nanosecond_ask` field, a function that asks for nothing. No expectation changed.

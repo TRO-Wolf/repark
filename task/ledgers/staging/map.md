@@ -38,7 +38,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   created only when the statement asks (DDL naming the type, a written `CAST`, the session
   setting `repark.sql.allowImplicitTimestampNanos`); otherwise one door under every create
   and schema-evolving seat refuses with a text that names both opt-ins. Main's answers
-  recorded before any product edit (C-001). `risk_tier: standard`. Branch
+  recorded before any product edit (C-001); the origin mark, the walk and the setting
+  (C-002..C-004); the door, its cells on both SQL doors and the unchanged statements
+  (C-005..C-007); the native door's own text and what moves there (C-011). `risk_tier: standard`. Branch
   `fix/ice-tsns-create-door-1`.
 - [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /

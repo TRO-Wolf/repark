@@ -167,6 +167,15 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `create_table.rs`, `merge.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the native seat.
+  `execute_create_table` derives the Iceberg schema through
+  `repark_iceberg::write::new_table_schema`: a CTAS passes the ask of its analyzed query,
+  column DDL passes `NanosecondAsk::every()` (the type is named, and
+  `refuse_nanosecond_timestamp_columns` already guards an unnamed `TIMESTAMP(9)`).
+  `replacement_if_existed` now only loads the replaced table, one statement earlier, so its
+  schema is the door's `existing`. Names are compared exactly on this door. `merge.rs` sets
+  `MergeSpec::nanosecond_ask`.
+  pins: ice-tsns-create-door-1/C-005, C-006
 - `dialect.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the two nanosecond cast kernels
   are registered with `CastOrigin::Written`: a kernel reached through this door's parser is
   a cast the user wrote.

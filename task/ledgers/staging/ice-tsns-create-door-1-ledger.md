@@ -29,12 +29,13 @@ nothing of it is touched).
 | C-002 | A cast kernel carries its origin: the registry's kernel is written, a kernel built by engine code is inserted; both share a name and are not equal. No behaviour changes. | Five pins in `crates/repark-functions/src/timestamp_ns_cast/tests.rs`; the three crates' suites with no expectation edited. | **PROVEN** | §2. |
 | C-003 | `asked_nanosecond_columns` answers one flag per output column of a plan: true when the column has at least one nanosecond origin and every origin is a written kernel. | `crates/repark-functions/src/timestamp_ns_cast/asked_tests.rs`, 17 tests. | **PROVEN** | §3. Mutants m1 to m7 killed. |
 | C-004 | `repark.sql.allowImplicitTimestampNanos` (alias `repark.sql.allow_implicit_timestamp_nanos`) is a session setting, default off, parsed as `allowCreateFormatVersion3` is; a bad value is a config error naming the key. | `implicit_timestamp_nanos_is_off_unless_either_key_turns_it_on` in `cardinality.rs`. | **PROVEN** | §3. Nothing reads it before slice 3. |
-| C-005 | A query's Arrow schema becomes Iceberg columns only through `nanosecond_door`; a new nanosecond column that is not asked is refused there with one text. | Slice 3. | **OPEN** | |
-| C-006 | Every create and evolution door refuses an unasked nanosecond column and leaves the table as it was; a written cast and the setting create what main created. | Slice 3. | **OPEN** | |
-| C-007 | A statement with no nanosecond output answers what main answered. | Slice 3. | **OPEN** | |
+| C-005 | A query's Arrow schema becomes Iceberg columns only through `nanosecond_door`: the two old conversions are crate-private and all four outside callers pass a `NanosecondAsk`. A new nanosecond column that is not asked and not kept is refused there, by one function that builds the text. | `nanosecond_door_tests.rs` (9 tests); the crate no longer exports the old functions. | **PROVEN** | §5. Mutants m8, m9 killed. |
+| C-006 | Every create and evolution door refuses an unasked nanosecond column with the exact text and leaves the table's files as they were; a written cast, and the plain column with the session setting on, create what main created; a column the replaced or evolved table already holds passes. | `test_ice_tsns_create_door_1.py` (246 tests), `crates/repark-spark/src/tests/nanosecond_create_door.rs` (6), two native-door tests in `crates/repark-sql/src/v3/create.rs`. | **PROVEN** | §6. 86 of the facade pins were red on main `f3f98823`. Mutants m10, m11 killed. |
+| C-007 | A statement with no nanosecond output answers what main answered: 12 statements in two zones, cell for cell, and no other test of the four Rust crates or the facade suite changed its answer. | `test_statements_with_no_nanosecond_output_equal_main` (24); the suites. | **PROVEN** | §6, §7. One pre-existing test was re-seated (ruling Q2). |
 | C-008 | A nanosecond type below format v3 is refused with one text that names the remedy. | Slice 4. | **OPEN** | |
 | C-009 | The parity registry carries the dated rows and this ledger the release-note sentence. | Slice 6. | **OPEN** | |
 | C-010 | The cost gate holds at 1.05 and the work order's gates pass. | Real ratios and exit codes. | **OPEN** | |
+| C-011 | On the native door a refusal names only remedies that door can write, and the move from main on that door is recorded for the owner. | `native_ctas_of_an_unasked_nanosecond_column_is_refused_and_a_kept_one_passes`, `native_ctas_of_a_plain_timestamp_expression_at_v3_is_refused_and_six_digits_pass`, `the_text_names_only_the_remedies_the_seat_can_write`. | **PROVEN** | §4 Q3, §8. Owner to accept or flip. |
 
 ## 1. Main's recorded answers (C-001)
 
@@ -129,3 +130,122 @@ Mutants, each run with `cargo test -p repark-functions --lib timestamp_ns_cast`:
 The setting is a fourth field of `ReparkSqlSettings` and `ReparkSqlConfig`. It accepts what
 its sibling accepts (`true`, `false`, `1`, `0`, `yes`, `no`, any case), through the sibling's
 parser, and its own error names its own key.
+
+## 4. Rulings (orchestrator, provisional, 2026-10-13)
+
+The executor halted before slice 3 with six questions. The orchestrator ruled; every ruling
+below is provisional until the owner adopts it.
+
+- **Q1.** `MergeSpec` gains a required field, and four test files outside the work order's
+  list build a `MergeSpec` literal (`sink_offsets_isolation_tests.rs`,
+  `merge/tests/helpers.rs`, `merge/tests/occ_scoped.rs`, `microbatch/crash_tests.rs`). Ruling:
+  one `nanosecond_ask` line in each, no expectation changed.
+- **Q2.** One pre-existing test moved:
+  `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`
+  `a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows` seeded its table with
+  `CREATE TABLE … AS SELECT id, named_struct('v', ns, 'n', 1) AS st, …`, an unasked nested
+  nanosecond column, which the door refuses. Ruling: the seed writes the cast,
+  `named_struct('v', CAST(ns AS timestamp_ns), 'n', 1)`; the assertions are unchanged. It is
+  the only pre-existing test that moved in the four Rust crates (5,319 tests before the unit's
+  own) and the facade suite.
+- **Q3 (an owner question; this is the answer the build uses).** A hint never names a remedy
+  that does not work on the door that raised it. The text is still built in one place; the
+  seat says, as data, whether its dialect can write the nanosecond cast and how it spells
+  microseconds. The Spark door's text is the work order's, unchanged. The native door's text
+  drops the cast clause and names `TIMESTAMP(6)`. No native `CAST(… AS timestamp_ns)` spelling
+  is added, and the kernel's internal name is not documented as an ask. §8 lists what moves on
+  the native door for the owner to accept or flip.
+- **Q4.** Refusal 2 reaches the native door: `repark-sql` `schema_ddl::iceberg_err` passes
+  `repark_iceberg::catalog::iceberg_to_datafusion` (slice 4).
+- **Q5.** The native seat compares a kept column's name exactly (`case_sensitive: true`).
+- **Q6.** The work order counts 15 v2 doors; the census evidence file holds 16. Slice 4 pins
+  19: those 16 on native sources, column DDL naming the type, and a `mergeSchema` append into a
+  v2 `accept-any-schema` table, unasked and with a written cast.
+
+## 5. The door (C-005)
+
+`crates/repark-iceberg/src/write/nanosecond_door.rs`: `new_table_schema` and
+`added_columns_schema` take a `NewColumns` request (the Arrow schema, a `NanosecondAsk`, the
+schema of the table being replaced or evolved, the form word, the case rule).
+`arrow_schema_to_iceberg_with_unknown` and `incoming_schema` are `pub(crate)`; the four outside
+callers the work order names were the only ones, and each now goes through the door: the Spark
+CTAS seat, the native create seat, the `mergeSchema` append seat and MERGE's
+`union_source_schema`. The check, the kept rule and the text are in the directory's `map.md`.
+
+- **Kept is compared by shape.** A nested column converted from Arrow gets fresh field ids, so
+  equality of Iceberg types would never hold for a kept struct or list. Names and primitive
+  types are compared at every depth; field ids, nullability and docs are not.
+- **MERGE.** `MergeSpec::nanosecond_ask` is a function each SQL door sets; `repark-iceberg`
+  does not name `repark-functions`.
+- **The evolution seat** needs the flags before it builds the ask, because it drops void
+  fields: the Spark adapter exposes `asked_columns` (the flags, `None` under the setting)
+  beside `nanosecond_ask`.
+- **The native seat** builds its request in the child module: `execute_create_table` was at
+  clippy's line limit.
+
+Mutants, `cargo test -p repark-iceberg --lib nanosecond_door` and
+`-p repark-spark --lib nanosecond_create_door`:
+
+| # | Mutant | Killed by |
+|---|---|---|
+| m8 | the kept test ignores the type | `a_kept_name_with_another_type_is_new`, `a_nested_nanosecond_field_is_checked` |
+| m9 | the door does not look inside a list | `a_nested_nanosecond_field_is_checked` |
+| m10 | the setting is read as always off; as always on | `a_written_cast_or_the_setting_creates_the_column_on_every_sql_door`; `an_unasked_nanosecond_column_is_refused_on_every_sql_door` and 2 more |
+| m11 | the `mergeSchema` seat passes every; the MERGE seat passes every | `an_unasked_nanosecond_column_is_refused_on_every_sql_door`, both |
+
+## 6. The cells (C-006, C-007)
+
+Facade, `test_ice_tsns_create_door_1.py`, every cell in a fresh session and warehouse. Before
+any product edit the file ran on main's module: 86 failed, 160 passed.
+
+| Cells | Count | Answer |
+|---|---|---|
+| 12 doors, `c` and `cz`, 2 zones, no ask | 48 | refusal 1, exact text with the door's form; the table's files unchanged |
+| the same with a written cast | 48 | 44 equal main's table, nine digits; the 4 `saveAsTable` create cells are refused for format v2 |
+| the same, plain column, setting on | 48 | 44 equal the written cast's table; 4 refused for format v2 |
+| census pass 3 | 42 | 28 unasked refuse naming `c`; 14 written-cast twins equal main |
+| statements with no nanosecond output | 24 | equal main, cell for cell |
+| a kept column, 9 doors, 2 zones | 18 | pass, all nine digits |
+| a kept name with the other type; a new name | 2 | refusal 1 |
+| DDL and `ADD COLUMN` naming the type | 2 | created |
+| a cached frame; a pandas frame | 1 | refused; a microsecond table |
+| `format-version` 3 alone | 1 | not an ask |
+| asked shapes; unasked shapes | 5; 6 | created; refused |
+
+The form word: `CTAS` for `CREATE TABLE … AS`, `writeTo().create()` and `saveAsTable` create;
+`RTAS` for `CREATE OR REPLACE`, `REPLACE TABLE`, `createOrReplace`, `replace` and
+`mode("overwrite").saveAsTable`; `mergeSchema append`; `MERGE WITH SCHEMA EVOLUTION`.
+
+Rust, Spark door (`nanosecond_create_door.rs`): five SQL doors by two columns refuse with the
+text, the stored schema and the warehouse's object count unchanged; the cast and the setting
+create; kept passes case-insensitively.
+
+## 7. Suites on the slice 3 source
+
+`cargo test --locked --no-fail-fast -p repark-functions -p repark-iceberg -p repark-spark
+-p repark-sql`: 5,321 passed, 0 failed, 10 ignored, with the Q2 re-seat. Before the re-seat it
+was 5,318 passed and that one test failed. The whole facade suite on the slice 3 patch as
+first built: 16,983 passed, 0 failed.
+
+## 8. The native door: owner to accept or flip (Q3)
+
+Measured through `repark-sql` on this unit's source, v3 opt-in on.
+
+- The native parser cannot write the nanosecond cast: `CAST(x AS timestamp_ns)` answers
+  `Unsupported SQL type timestamp_ns`. `CAST(x AS TIMESTAMP_NTZ)` answers
+  `Unsupported SQL type TIMESTAMP_NTZ`. `CAST(x AS TIMESTAMP(6))` works and stores Iceberg
+  `timestamp`. `CAST(x AS TIMESTAMP(6) WITH TIME ZONE)` parses and also stores a naive
+  `timestamp`, so it is not offered as the zoned spelling: both kinds name `TIMESTAMP(6)`.
+- On that door a plain `TIMESTAMP` expression is Arrow nanoseconds (DataFusion's default).
+  So at `format_version = 3` these three statements, which created a `timestamp_ns` column on
+  main, are now refused: `CREATE TABLE t WITH (format_version = 3) AS SELECT ts FROM
+  <a timestamp_ns table>`, `… AS SELECT TIMESTAMP '2026-01-02 03:04:05' AS ts`,
+  `… AS SELECT now() AS ts`. **Three measured native cells move**, and the class is every
+  native v3 CTAS whose output holds a plain `TIMESTAMP` expression. At the default format
+  version main already refused all three (`Invalid schema for v2:`); the text changes.
+- The ask on the native door is the session setting. The microsecond form is
+  `CAST(… AS TIMESTAMP(6))`. The refusal raised there says exactly that:
+  ``[TIMESTAMP_NANOS_NOT_REQUESTED] CTAS would create column `ts` as timestamp_ns, a type Spark cannot read, and the statement does not ask for it. Set `repark.sql.allowImplicitTimestampNanos` = true on the session. For microseconds write CAST(<expression> AS TIMESTAMP(6)).``
+- A kept column passes on a native RTAS; column DDL naming the type creates it.
+- Open card, not filed here: a native spelling for the nanosecond cast, so the native door has
+  a per-column ask.

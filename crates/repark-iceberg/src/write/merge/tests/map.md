@@ -210,3 +210,7 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 ## Pointers
 
 - Up: [../map.md](../map.md)
+
+**ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the `MergeSpec` literals in `helpers.rs` and
+`occ_scoped.rs` carry the new `nanosecond_ask` field, a function that asks for nothing. No
+expectation changed.

@@ -127,6 +127,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   only `super::common::*` and `super::session_write_conf` paths are used — so it is dropped
   for `unused_imports` (repark#733 `Rust lint`).
   pins: ice-session-write-conf-1/C-064
+- `nanosecond_create_door.rs` — **ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** the Spark door's
+  pins over a memory catalog with the v3 opt-in on, five SQL doors (CTAS, `CREATE OR
+  REPLACE … AS`, `REPLACE TABLE … AS`, a `mergeSchema` positional INSERT into a
+  `write.spark.accept-any-schema` table, `MERGE WITH SCHEMA EVOLUTION`) over `c timestamp_ns`
+  and `cz timestamptz_ns`: the plain column is refused with the exact text, the table's
+  schema and the warehouse's object count unchanged; a written cast, and the plain column
+  with the setting on, create the column with all nine digits; a column the replaced or
+  evolved table already holds (matched case-insensitively) passes, and the same name with
+  the other nanosecond type is new; a microsecond source is never refused; `format-version`
+  3 alone is not an ask and the unasked column gets the same text on a v2 target; DDL and
+  `ADD COLUMN` naming the type create it.
+  pins: ice-tsns-create-door-1/C-005, C-006
 - `session_write_conf.rs`, `v3_timestamp_ns_door.rs` — **ICE-TSNS-CREATE-DOOR-1
   (2026-10-13):** the test sessions register the nanosecond cast kernels as the product
   registry does, with `CastOrigin::Written`. No expectation changed.

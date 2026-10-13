@@ -45,8 +45,7 @@ pub fn refuse_void_writes<'a>(
     Ok(())
 }
 
-#[allow(clippy::missing_errors_doc)]
-pub fn arrow_schema_to_iceberg_with_unknown(arrow: &ArrowSchema) -> iceberg::Result<Schema> {
+pub(crate) fn arrow_schema_to_iceberg_with_unknown(arrow: &ArrowSchema) -> iceberg::Result<Schema> {
     let is_void = |field: &Arc<datafusion::arrow::datatypes::Field>| {
         matches!(field.data_type(), DataType::Null)
     };

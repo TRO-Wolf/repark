@@ -514,6 +514,7 @@ fn merge_window_into(sink: &TableIdent) -> MergeSpec {
         commit_branch: None,
         case_insensitive: false,
         schema_evolution: false,
+        nanosecond_ask: crate::write::nanosecond_door::asks_nothing,
     }
 }
 

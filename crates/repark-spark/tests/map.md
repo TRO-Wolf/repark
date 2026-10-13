@@ -201,3 +201,9 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   collapses the count to 1).
 - Week-53 assertion is ISO-week semantics (2021-01-01 → ISO week 53 of 2020) — a failure there
   is the date shim regressing, not the fixture.
+
+**ICE-TSNS-CREATE-DOOR-1 (2026-10-13):** `timestamp_ns_nested_shapes.rs`
+`a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows` seeds its table with
+a written cast inside the struct (`named_struct('v', CAST(ns AS timestamp_ns), 'n', 1)`): the
+plain column there is an unasked nested nanosecond column, which the create door now
+refuses. The assertions are unchanged (ruling Q2).

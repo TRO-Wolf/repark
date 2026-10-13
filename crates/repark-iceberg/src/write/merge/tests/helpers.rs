@@ -14,6 +14,7 @@ pub(super) fn spec(matched: Vec<MatchedClause>, not_matched: Vec<InsertClause>) 
         commit_branch: None,
         case_insensitive: true,
         schema_evolution: false,
+        nanosecond_ask: crate::write::nanosecond_door::asks_nothing,
     }
 }
 
