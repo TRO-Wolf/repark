@@ -142,6 +142,82 @@ Cost: interleaved head/baseline 1.0067 insert, 1.0063 merge, 0.9929 merge_mor;
 largest pair ratio 1.0231.
 Next: slice 2, honest typing.
 
+## 9. Slice 1, fold 2 (2026-10-13)
+Finding: the second verifier's G-1 — a rewritten site keeps nanoseconds where main's
+coercion narrowed it to microseconds, and 117 probe cells main answers were refused at
+execution (95 `sequence`, 22 pandas/Arrow door), past the wrapper's retry.
+Rulings (orchestrator, provisional, 2026-10-13): (1) it parks as written and the fix is at
+the consumers, with no function list, no consumer sniffing and no un-wrapping in the
+wrapper; (2) `sequence` builds its list in the unit and zone of its input; (3) the Python
+output doors floor a same-kind nanosecond column to the declared microseconds at their one
+shared check; (4) `createDataFrame(pandas, schema)` is left to ICE-TSNS-FRAME-DOOR-1;
+(5) m4, m5, m7 are re-pinned and the aggregate pin gets a nanosecond first argument;
+(6) nested-site and NULL-branch-UNION cost is accepted for this fold, measured, not gated;
+(7) the fallback counter's over-count stays open.
+Built: `spark_sequence.rs` brings both bounds to the declared element's unit and
+`rows::timestamp_ticks` walks per unit, so `TIMESTAMP_NTZ`, nanosecond, millisecond and
+second inputs answer; `udf_schema._validate_map_in_arrow_batch` returns the batch and
+floors a nanosecond timestamp (any list depth, same zone label) to the declared
+microseconds with `floor_temporal` and a safe cast; `applyInPandas` routes its one lossy
+`timestamp[ns] → timestamp[us…]` conversion to that check instead of refusing first.
+Stored for a sub-microsecond start: `sequence` keeps the digits, every element is
+`start + i × step` (`…05.123456789` by one second gives `…06.123456789`), the step stays
+microsecond-exact, and a stop that is short of an element by one nanosecond drops it.
+Pins, Rust (`spark_sequence/timestamp_tests.rs`):
+`microsecond_forms_keep_their_zone_and_match_spark`,
+`nanosecond_forms_equal_the_microsecond_twin`,
+`nanosecond_start_keeps_its_sub_microsecond_digits`,
+`nanosecond_gap_under_a_microsecond_keeps_the_step_sign_rule`,
+`mixed_units_follow_the_first_argument`, `second_and_millisecond_inputs_keep_their_unit`,
+`scalar_nanosecond_bounds_build_a_nanosecond_list`,
+`null_bound_answers_a_null_list_in_the_input_unit`; the six older `sequence` pins and the
+18 facade `sequence` tests keep their answers.
+Pins, facade (`test_ice_tsns_coercion_1_slice1_fold2.py`):
+`test_cells_main_answered_still_answer`, `test_nanosecond_cells_equal_the_microsecond_twin`,
+`test_ticks_differ_from_main_only_where_main_narrowed_the_site`,
+`test_microsecond_sequence_forms_equal_live_spark` (48 cells, Spark 4.1.2, NTZ and LTZ,
+UTC and America/New_York, all equal),
+`test_map_in_arrow_floors_nanoseconds_to_the_declared_microseconds`,
+`test_map_in_arrow_floors_nanoseconds_inside_lists`,
+`test_map_in_arrow_refuses_a_nanosecond_column_of_another_kind`,
+`test_pandas_doors_floor_nanoseconds_to_the_declared_microseconds`,
+`test_apply_in_pandas_refuses_a_naive_nanosecond_column_under_a_zoned_type`.
+Pins, mutants (`timestamp_ns_coercion/tests.rs`): m4, m5, m7 and the ask-skipped mutant
+each red on the mutant and green after the restore. Section 8's "four surviving-mutant
+pins" was wrong: of those four only the union pin (m8) killed its mutant. The ruled m4
+form `coalesce(ns, µs, NULL)` cannot kill m4 — DataFusion's common type of `ns` and `µs`
+is `µs`, so the ask never answers the site target — and the pin adds a call with a fixed
+two-nanosecond-timestamp signature, which does.
+Cells moved: 113 of 117 (95 of 95 `sequence`, 18 of 22 door), re-measured with the
+verifier's probes on head and main; none that fold 1 answered is refused; 43 cells main
+refuses answer now (plain nanosecond and `TIMESTAMP_NTZ` `sequence` forms, `mapInArrow`
+over a plain nanosecond column with its own schema).
+Value oracle: main's ticks are not it. Of the 68 facade cells 65 answer; all 68 equal the
+microsecond twin once floored; 39 equal main's ticks and 26 do not, exactly where main's
+own narrowing set the value (15: the naive `ns` site read as a wall in America/New_York;
+11: `-1 ns` cut toward zero to `0` in UTC on main's DataFrame-door site and Python doors).
+Still refused, 4 cells: 2 `createDataFrame(pandas, schema)` over `ns` — closed by
+ICE-TSNS-FRAME-DOOR-1; re-measure after it merges; 2 `mapInArrow(…, 'v timestamp')` over
+the naive `ns` site — a kind mismatch under ruling 3's zone label rule, refused the same
+way for a naive microsecond column on main and head, answered on main only because main
+typed the naive site as zoned. The second pair needs a ruling.
+Changed text: a naive nanosecond pandas column with sub-microsecond digits under a declared
+zoned `timestamp` in `applyInPandas` was refused with `failed converting pandas output …
+would lose data` and is now refused with the shared `mapInArrow schema mismatch` text.
+Cost: eight interleaved sets, head over main, same build profile: 0.9946 insert, 1.0005
+merge, 1.0089 merge_mor (median pair ratio; one merge_mor pair of eight read 1.0752, one
+0.9649). Ungated, ruling 6: 1.85 on an eight-deep nested `coalesce(…, NULL)` and 1.13 on a
+200-branch NULL-branch UNION; accepted for this fold, no optimisation.
+Open: the fallback counter's over-count on re-analysis (due before slice 2); the two
+`mapInArrow` declared-`timestamp` cells above; whether Spark can read a table created
+from a rewritten read (the owner is deciding); calendar steps of a zoned `sequence` run on
+the UTC wall, as before this fold (equal to Spark in the 48 recorded cells, none of which
+crosses a DST change).
+Evidence: [cells](../../wo/ice-tsns-coercion-1/evidence/cells-fold2.md),
+[mutants](../../wo/ice-tsns-coercion-1/evidence/mutants-fold2.md),
+[cost](../../wo/ice-tsns-coercion-1/evidence/cost-slice1-fold2.md).
+Next: slice 2, honest typing.
+
 ## Q. Questions
 
 No ruling is requested by this ledger until the summary names a kind mismatch or an
