@@ -148,14 +148,16 @@ def write_control(spark: Any) -> None:
         "CREATE TABLE ice.ns.ctl (id INT, ts timestamp_ns, tz timestamptz_ns) USING iceberg "
         f"PARTITIONED BY (days(ts)) {V3}"
     ).collect()
-    frame = pd.DataFrame(
+    walls = pd.to_datetime(texts, format="ISO8601")
+    table = pa.table(
         {
-            "id": pd.array(ids, dtype="int32"),
-            "ts": pd.to_datetime(texts, format="ISO8601"),
-            "tz": pd.to_datetime(texts, format="ISO8601").tz_localize("UTC"),
+            "id": pa.array(ids, pa.int32()),
+            "ts": pa.Array.from_pandas(walls).cast(pa.timestamp("ns")),
+            "tz": pa.Array.from_pandas(walls.tz_localize("UTC")).cast(pa.timestamp("ns", tz="UTC")),
         }
     )
-    spark.createDataFrame(frame).writeTo("ice.ns.ctl").append()
+    spark._ensure_alive().register_arrow_stream_as_temp_view("ctl_seed", table)
+    spark.table("ctl_seed").writeTo("ice.ns.ctl").append()
 
 
 def test_fixture_control_agrees_with_the_literals() -> None:

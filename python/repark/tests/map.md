@@ -2438,6 +2438,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_jdbc_keyword_door_incomplete_set_refuses_in_sparks_sentence` and
   `test_jdbc_keyword_door_num_partitions_text_refuses_as_the_format_door_does` (a count past
   32 bits as str and as int, on both doors). pins: c-3/C-006
+- `test_production_file_size.py` — **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** the body hashes of
+  `_normalize_frame_arrow_column` (it calls the nanosecond floor first) and
+  `_localize_naive_timestamp_column` (its aware-microsecond shortcut relabels to UTC) move:
+  both bodies changed on purpose, the "current-main behavior change" the pin's docstring
+  admits. pins: ice-tsns-frame-door-1/C-011
 - `test_production_file_size.py` — **C-3 fold 1 (2026-10-08):** the `_parse_jdbc_int_option`
   body hash moves: C-3 changed its behaviour on purpose (a bound that is not an integer raises
   `NumberFormatException`, Spark's measured class and a subclass of the old one, and an
@@ -3185,6 +3190,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   floored to µs, in UTC and New York; a nine-digit `TIMESTAMP` value in `VALUES` stores what
   `INSERT … SELECT` stores; `EXPLAIN` lowers ns casts.
   pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** `write_control` seeds the control table from an
+  Arrow table through `register_arrow_stream_as_temp_view`, not from a pandas frame (a
+  pandas nanosecond column now enters as microseconds). The values and the oracle are
+  unchanged. pins: ice-tsns-frame-door-1/C-011
 - [test_ice_typed_partition_refusals.py](test_ice_typed_partition_refusals.py) — **WO U5 PR3
   verifier fixes (2026-09-25):** D-X-PARTITIONED-COLDEF refusals beside
   `test_ice_ddl_alter_2.py` (kept under the 1000-line cap).
@@ -3278,6 +3287,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `TIMESTAMP_NTZ '…'` literal refuses (a wall next to the epoch) is spelled
   `to_timestamp_ntz('…')`.
   pins: ice-tsns-merge-wall-1/C-002
+  **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** `frame_of` no longer goes through pandas, whose
+  nanosecond columns now enter as microseconds: it registers the Arrow table with
+  `register_arrow_stream_as_temp_view` under a fresh name and returns `spark.table(name)`,
+  so the 231 door tests of the two wall modules still feed a nanosecond frame. No
+  expectation and no fixture changed. pins: ice-tsns-frame-door-1/C-011
 - [_record_ice_tsns_merge_wall_1_main.py](_record_ice_tsns_merge_wall_1_main.py) +
   [ice_tsns_merge_wall_1_main.json](ice_tsns_merge_wall_1_main.json) —
   **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the recorder and what main `40fc916f` stores in each
@@ -3353,8 +3367,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** the recorder and what Spark 4.1.2 (pandas 3.0.6,
   pyarrow 25.0.1) answers for `createDataFrame` of a pandas nanosecond timestamp frame: seven
   sources (naive, UTC, New York, naive and UTC before the epoch, a naive `ArrowDtype`, a UTC
-  column with no NULL) in two session zones under no schema, `c timestamp` and
-  `c timestamp_ntz`, 42 cells. Each cell holds the Spark type, the Arrow type, nullability,
+  column with no NULL) and one New York microsecond column, in two session zones under no
+  schema, `c timestamp` and `c timestamp_ntz`, 48 cells. Each cell holds the Spark type, the Arrow type, nullability,
   the int64 microseconds and every warning, or the first line of the refusal. Every value is
   floored (`-1 ns` is `-1 µs`, `-1001 ns` is `-2 µs`), every answer is nullable, no cell
   warns. Spark reads a naive wall in the zone of the driver machine, recorded as
@@ -3363,6 +3377,30 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`--output <path>`); it opens one session per zone over a warehouse of its own under the
   system temporary directory. `sources()` is imported by the pins, so both sides build the
   same frames.
+  pins: ice-tsns-frame-door-1/C-001
+- [test_ice_tsns_frame_door_1.py](test_ice_tsns_frame_door_1.py) —
+  **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** 138 tests, each on the Arrow path (`to_arrow`,
+  type and int64 values) in a UTC and an America/New_York session. A nanosecond column
+  equals the same column floored to microseconds by pandas, under no schema, `c timestamp`
+  and `c timestamp_ntz` (the twin); aware instants and nullability equal the Spark oracle;
+  `-1`, `-1001` and `-999999999999` ns floor to `-1`, `-2`, `-1000000000` µs; a declared
+  `timestamp_ntz` over a naive nanosecond column equals Spark's cell (main raised
+  `ArrowInvalid`); a declared `timestamp` equals main's 14 recorded cells; a declared
+  `timestamp` over a New York microsecond column answers Spark's `timestamp[us, tz=UTC]`
+  and keeps the New York label under no schema; nine kinds of column that are not nanosecond
+  timestamps and two nested nanosecond layouts equal main's recorded cells; no warning;
+  CTAS, `writeTo().create()` and `saveAsTable` make `timestamp` / `timestamptz` columns
+  (metadata JSON); polars `Datetime("ns")`, naive and UTC. Main's cells are literal tables
+  recorded on `8c51fbc4` before the source edit. Naive cells are never compared to Spark's
+  instant: Spark reads a naive wall in the driver machine's zone. The parity row is
+  `ICE-TSNS-SQL-1-R-019`.
+  pins: ice-tsns-frame-door-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012, C-014, C-015, C-016
+- [_time_ice_tsns_frame_door_1.py](_time_ice_tsns_frame_door_1.py) —
+  **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** the cost timer: median milliseconds of
+  `createDataFrame` + `count()` over a one-million-row pandas frame with no nanosecond
+  column, with one, and with one under a declared `timestamp` schema. One JSON object per
+  process; the recorded sets are in `task/wo/ice-tsns-frame-door-1/evidence/`.
+  pins: ice-tsns-frame-door-1/C-013
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — **ICE-TSNS-SQL-1
   (2026-09-17):** the two-process recorder. `write --warehouse W` under the repo venv writes the
   control and the SQL-door tables with RePark; `record --warehouse W [--output F]` and
@@ -7018,11 +7056,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   count); `*struct_*` both directions; `*binary_*` both directions; `*array_*` ≥2 **and**
   the item-vs-element ingest disclosure; `*pandas_timestamp_unit_*` **and** the inbound
   us disclosure (ns equality cannot satisfy); inbound glob `*_from_pandas_*` matches
-  every inbound row. Value AND dtype/shape AND (Arrow surface) nullability. 6 equalities
+  every inbound row. Value AND dtype/shape AND (Arrow surface) nullability. 5 equalities
   (binary bytes both directions, array ndarray cells, ArrowDtype list field name, inbound
-  object-dict→struct, inbound datetime64[ns]) and 4 disclosures (map toPandas dict vs
+  object-dict→struct) and 5 disclosures (map toPandas dict vs
   list-of-pairs; struct Long mixed `10`/`20.0` vs int 20; inbound object-list `element`
-  vs `item`; inbound datetime64[us] → pandas ns vs us). Map pair order is
+  vs `item`; inbound datetime64[us] → pandas ns vs us; inbound datetime64[ns] → pandas ns
+  vs us, re-recorded live 2026-10-13 by ICE-TSNS-FRAME-DOOR-1: the column now enters as
+  microseconds, pins: ice-tsns-frame-door-1/C-011). Map pair order is
   order-insensitive (X-5 key-sort). CONVERGED/regression classifier arms committed.
   Census cohorts NOT extended (A11). Ledger: `task/y6-boundary-shapes-ledger.md`.
 - `_record_boundary_shapes_goldens.py` — the **record driver** for the G10 corpus (NOT a

@@ -23,6 +23,7 @@ PRE_EPOCH_NANOS = (-1, -1001, -999_999_999_999)
 PRE_EPOCH_MICROS = (-1, -2, -1_000_000_000)
 AWARE_SOURCES = ("pd_utc_ns", "pd_ny_ns", "pd_utc_ns_pre_epoch", "pd_utc_ns_notnull")
 NAIVE_SOURCES = ("pd_naive_ns", "pd_naive_ns_pre_epoch", "pd_arrowdtype_ns")
+MICROSECOND_SOURCES = ("pd_ny_us",)
 
 
 def sources() -> dict[str, pd.DataFrame]:
@@ -46,6 +47,9 @@ def sources() -> dict[str, pd.DataFrame]:
             }
         ),
         "pd_utc_ns_notnull": pd.DataFrame({"c": aware[:1]}),
+        "pd_ny_us": pd.DataFrame(
+            {"c": aware.dt.floor("us").astype(pd.DatetimeTZDtype("us", "America/New_York"))}
+        ),
     }
 
 

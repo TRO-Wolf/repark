@@ -53,6 +53,21 @@ def _arrow_null_sql_to_type(null_sql: str) -> Any:
     return _sql_type_to_arrow(type_sql)
 
 
+def _floor_nanosecond_timestamp_column(column: Any) -> Any:
+    """Return a nanosecond timestamp ``column`` at microseconds, floored as Spark floors."""
+
+    import pyarrow as pa
+
+    import pyarrow.compute as pc
+
+    if not pa.types.is_timestamp(column.type) or column.type.unit != "ns":
+        return column
+
+    floored = pc.floor_temporal(column, unit="microsecond")
+
+    return floored.cast(pa.timestamp("us", tz=column.type.tz))
+
+
 def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> Any:
     """Spark-parity Arrow column normalize after native pandas/polars export (P2a).
 
@@ -83,6 +98,8 @@ def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> An
     import pyarrow as pa
 
     import pyarrow.compute as pc
+
+    column = _floor_nanosecond_timestamp_column(column)
 
     # ChunkedArray has no dictionary_decode; cast to value type instead.
 
@@ -168,7 +185,10 @@ def _localize_naive_timestamp_column(column: Any) -> Any:
         return pa.array(values, type=pa.timestamp("us"))
 
     if column.type.tz is not None and column.type.unit == "us":
-        return column
+        if column.type.tz == "UTC":
+            return column
+
+        return column.cast(pa.timestamp("us", tz="UTC"))
 
     values: list[Any] = []
     for cell in column.to_pylist():

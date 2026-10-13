@@ -205,7 +205,7 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_late_catalog_names": ("dba968dc0a61a68278a051774cfc56e4611402dcd2b30b6e9599b901425f06af"),
     "_localize_naive_timestamp_column": (
-        "84ce679d83169827568652608a507066a679387cebb9e52b054ccef0eea1b4fc"
+        "2d0b4b394d47e797c40718e96da4de6d7085488770d255264a8c9f86f5f93dd5"
     ),
     "_looks_like_datafusion_conf_key": (
         "e0cbe8882612065d791dc390a747eaf69ce80d865aab3f6764527791aeb145c4"
@@ -230,7 +230,7 @@ EXPECTED_SYMBOL_HASHES = {
         "8e31e7a9fbde9c3a49ae7ee75a850a3970ba6f293c6c79b75229a6d2dc08d4b6"
     ),
     "_normalize_frame_arrow_column": (
-        "a3cccd45734740561e2f181b4b5bf8ac2439e0a68bd2330a8b3f87b2422a6ff0"
+        "32f6b8426d8bc41e5853971621e57dd1e65fae8ee0c7a78fd4f44c282bc31f46"
     ),
     "_normalize_nested_sql_type_aliases": (
         "d93a752be5747cda438db978e3100680dd19fd17ed00a16dd9a7b3d1a1742904"

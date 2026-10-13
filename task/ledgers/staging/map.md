@@ -25,6 +25,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-013, Q1), a NULL into a required column is Arrow's text (C-014, Q2), the unfiltered
   `UPDATE`'s overflow class (C-015, Q3). `risk_tier: standard`. Branch
   `fix/ice-tstzns-wall-1`.
+- [ice-tsns-frame-door-1-ledger.md](ice-tsns-frame-door-1-ledger.md) —
+  **ICE-TSNS-FRAME-DOOR-1 (2026-10-13):** a pandas or polars nanosecond timestamp column
+  enters as microseconds, floored, as Spark 4.1.2 does. The live Spark oracle (C-001); the
+  floor step at the one seat and its pins: the microsecond twin, Spark's instants, the
+  pre-epoch floor, declared `timestamp_ntz`, declared `timestamp` unchanged, untouched and
+  nested columns, no warning, the create doors, polars (C-002..C-010); 235 tests re-seated
+  off pandas with no expectation changed (C-011); a declared `timestamp` over an aware
+  microsecond column answers UTC (C-012); cost, mutants, gates (C-013..C-015). The registry
+  row is OPEN until the last slice (C-016). `risk_tier: standard`. Branch
+  `fix/ice-tsns-frame-door-1`.
 - [ice-tsns-coercion-1-ledger.md](ice-tsns-coercion-1-ledger.md) —
   **ICE-TSNS-COERCION-1 (2026-10-12), parity row R-017, slice 0:** measurement only on main
   `572130dd`. The twin of every card spelling is recorded on 64 doors in five zones (C-001),

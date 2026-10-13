@@ -218,6 +218,33 @@
    "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
    "warnings": []
   },
+  "UTC|pd_ny_us|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_ny_us|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "UTC|pd_ny_us|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-01 22:04:05.123456-0500', tz='America/New_York') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
   "America/New_York|pd_naive_ns|none": {
    "simple": "timestamp",
    "arrow": "timestamp[us, tz=UTC]",
@@ -426,6 +453,33 @@
   "America/New_York|pd_utc_ns_notnull|c timestamp_ntz": {
    "status": "error",
    "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC') in type <class 'pandas.Timestamp'>.",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_us|none": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_us|c timestamp": {
+   "simple": "timestamp",
+   "arrow": "timestamp[us, tz=UTC]",
+   "nullable": true,
+   "ints": [
+    1767323045123456,
+    null
+   ],
+   "status": "ok",
+   "warnings": []
+  },
+  "America/New_York|pd_ny_us|c timestamp_ntz": {
+   "status": "error",
+   "error": "PySparkTypeError: [FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME] field c: TimestampNTZType() can not accept object Timestamp('2026-01-01 22:04:05.123456-0500', tz='America/New_York') in type <class 'pandas.Timestamp'>.",
    "warnings": []
   }
  }
