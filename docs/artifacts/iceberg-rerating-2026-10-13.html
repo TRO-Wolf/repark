@@ -1,0 +1,127 @@
+<title>Iceberg Re-Rating 2026-10-13</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column, a verdict band, then dense evidence tables in overflow boxes. Glacial-teal identity carried from the 2026-09-18 re-rating. */
+:root{
+  --ground:#F2F5F7; --panel:#FFFFFF; --ink:#1A2430; --ink-soft:#55616D; --line:#D5DEE3;
+  --accent:#0E6C88; --accent-soft:#DCEBF1; --accent-ink:#FFFFFF;
+  --good:#2A7A4B; --good-soft:#DDEFE3; --bad:#B0372A; --bad-soft:#F5DCD8;
+  --warn:#9A6A12; --warn-soft:#F7EBD2; --hold:#5A6470; --hold-soft:#E4E8EC; --bar:#9CC5D4;
+  --display:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;
+  --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono","SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#0E1418; --panel:#141C22; --ink:#E4EAEF; --ink-soft:#9AA6B1; --line:#263139;
+  --accent:#4DB1CF; --accent-soft:#163541; --accent-ink:#0B1519;
+  --good:#63C48A; --good-soft:#163425; --bad:#EE7A6C; --bad-soft:#3E1D19;
+  --warn:#E2B55A; --warn-soft:#3A2E14; --hold:#9AA6B1; --hold-soft:#232D35; --bar:#2B5F70; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ground:#0E1418; --panel:#141C22; --ink:#E4EAEF; --ink-soft:#9AA6B1; --line:#263139;
+  --accent:#4DB1CF; --accent-soft:#163541; --accent-ink:#0B1519;
+  --good:#63C48A; --good-soft:#163425; --bad:#EE7A6C; --bad-soft:#3E1D19;
+  --warn:#E2B55A; --warn-soft:#3A2E14; --hold:#9AA6B1; --hold-soft:#232D35; --bar:#2B5F70; color-scheme:dark}
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding-block:28px 56px;padding-inline:16px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,5vw,40px);line-height:1.1;margin:6px 0 10px;text-wrap:balance}
+h2{font-family:var(--display);font-weight:600;font-size:22px;margin:40px 0 10px;text-wrap:balance}
+h3{font-family:var(--display);font-weight:500;font-size:17px;margin:22px 0 6px}
+p{max-width:68ch;margin:0 0 12px}
+.lede{font-size:17px;max-width:70ch}
+.verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:22px 0 8px}
+.card{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--accent);padding:16px 18px;min-width:0}
+.card .k{font-family:var(--mono);font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em}
+.card .g{font-family:var(--display);font-size:24px;font-weight:600;margin:4px 0 6px}
+.card p{font-size:14px;margin:0}
+.grade{display:inline-block;font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:3px;white-space:nowrap;font-weight:500}
+.PROD{background:var(--good-soft);color:var(--good)} .HN{background:var(--accent-soft);color:var(--accent)}
+.EXP{background:var(--warn-soft);color:var(--warn)} .DECL{background:var(--hold-soft);color:var(--hold)} .MISS{background:var(--bad-soft);color:var(--bad)}
+.tbl{overflow-x:auto;border:1px solid var(--line);background:var(--panel);margin:10px 0 18px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:720px}
+th,td{text-align:left;vertical-align:top;padding:9px 11px;border-bottom:1px solid var(--line)}
+th{font-family:var(--display);font-weight:600;font-size:13px;background:var(--accent-soft);color:var(--ink)}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+code{font-family:var(--mono);font-size:.92em;background:var(--hold-soft);padding:0 4px;border-radius:3px}
+ul{max-width:72ch;padding-left:20px} li{margin-bottom:6px}
+.legend{font-size:13px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 16px}
+.moved{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0}
+.moved div{background:var(--panel);border:1px solid var(--line);padding:12px 14px;min-width:0}
+.moved .num{font-family:var(--display);font-size:26px;font-weight:600;color:var(--accent);line-height:1}
+.moved .cap{font-size:13px;color:var(--ink-soft);margin-top:4px}
+.foot{font-family:var(--mono);font-size:12px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:14px;margin-top:40px}
+a{color:var(--accent)}
+</style>
+<div class="wrap">
+<div class="eyebrow">RePark · Iceberg format v2 and v3 · read-only review of main f8f1d252, 2026-10-13 evening</div>
+<h1>Iceberg Re-Rating 2026-10-13</h1>
+<p class="lede">The last measured rating (2026-09-18, main #703) graded both formats HARDENED-NARROW. This review re-reads the tree, the registry, today's live runs and the two 2026-10-11 audits against the production-grade definition in PR #1044. Nothing was built or run beyond read-only git and GitHub queries; every measurement cited carries its date and its source.</p>
+
+<div class="verdict">
+  <div class="card"><div class="k">Format v2</div><div class="g">HARDENED-NARROW <span class="grade HN">held</span></div><p>PRODUCTION only for the three workloads the daily AWS acceptance exercises: silver CTAS plus idempotent MERGE on Glue v2 copy-on-write, gold dbt run twice, and the weekly maintenance CALLs, under one writer per table. Everything wider is held by silent-value rows reachable on v2 and by four unfixed boundary findings.</p></div>
+  <div class="card"><div class="k">Format v3, core</div><div class="g">HARDENED-NARROW <span class="grade HN">held</span></div><p>Deletion vectors, row lineage, write defaults, in-place upgrade, maintenance, refs and both live legs are green on today's main. The v3 core carries the same residuals as v2 and a dated DECLARED set.</p></div>
+  <div class="card" style="border-left-color:var(--warn)"><div class="k">Format v3, nanosecond columns</div><div class="g">EXPERIMENTAL <span class="grade EXP">down from H-N</span></div><p>Ten OPEN rows measured 2026-10-09, two of them silent value loss, three failed verifier rounds on the coercion fix, and no second engine can read a table with a nanosecond column. The create door now refuses unasked nanosecond columns (PR #1048, draft).</p></div>
+  <div class="card" style="border-left-color:var(--warn)"><div class="k">Struct-column writes, both formats</div><div class="g">EXPERIMENTAL <span class="grade EXP">new</span></div><p>R-016: which source field feeds which target field depends on the door, and three doors differ from Spark in kind. A renamed field stores NULL and keeps the row. No pin exists. This is older and wider than the nanosecond work.</p></div>
+</div>
+<div class="legend"><span class="grade PROD">PROD</span> contract written, failure paths tested, live evidence at the current pin · <span class="grade HN">H-N</span> correct inside a named envelope, evidence gaps outside it · <span class="grade EXP">EXP</span> silent wrong values or no oracle · <span class="grade DECL">DECL</span> refused by a dated row · <span class="grade MISS">MISS</span> silent and unregistered</div>
+
+<h2>What moved since 2026-09-18</h2>
+<div class="moved">
+  <div><div class="num">0 → 2</div><div class="cap">consecutive green live-parity runs after five red mornings (10-12 at 572130dd, 10-13 at 8c51fbc4)</div></div>
+  <div><div class="num">11 / 11</div><div class="cap">AWS acceptance legs green today, v3 DV legs and replace-twice and gold-twice included (run 38372882741)</div></div>
+  <div><div class="num">111</div><div class="cap">Iceberg registry rows FIXED; 10 OPEN, 8 DECLARED, 3 BACKLOG</div></div>
+  <div><div class="num">0</div><div class="cap">fork commits ahead of the pin 076d5f98; fork main and the pin are the same revision</div></div>
+  <div><div class="num">7,433</div><div class="cap">Rust workspace tests green on 2026-10-12, PA-15 included</div></div>
+  <div><div class="num">4</div><div class="cap">S1 boundary findings from the 10-11 audit still unchanged on main (PA-01 to PA-04)</div></div>
+</div>
+<p>The live-parity recovery is a pin repair, not a product change: the int64 column-door pin now expects int32 as both engines answer, the <code>hour</code>/<code>minute</code>/<code>second</code> PASS pins were demoted to declared refusals, and the fixture interpreter no longer depends on a path only this box has. That is the right fix, and it means the matrix count did not improve.</p>
+
+<h2>Rating by capability</h2>
+<div class="tbl"><table>
+<thead><tr><th>Capability</th><th>v2</th><th>v3</th><th>What holds it there</th><th>Dated evidence</th></tr></thead>
+<tbody>
+<tr><td>Reads: scans with position deletes, equality deletes, DVs; metadata tables; time travel</td><td><span class="grade PROD">PROD</span></td><td><span class="grade PROD">PROD</span></td><td>Correct and Spark-equal at every measured size. The scan takes no memory-pool reservation, so the envelope is the measured sizes, not a stated bound.</td><td class="n">09-18 re-rating (unchanged rows); TORTURE-1 1e6 rows; SCALE-v3 1e7×50; live leg green 10-13</td></tr>
+<tr><td>Append, CTAS, INSERT OVERWRITE, writeTo on top-level common types</td><td><span class="grade HN">H-N</span></td><td><span class="grade HN">H-N</span></td><td>WRITE-BODY-CARRIERS-1: EXPLAIN ANALYZE and PREPARE/EXECUTE store a different instant than the bare statement (card open, no target). R-009 truncation versus floor on overwrite doors. Ordered writes materialize the whole input (PP-01).</td><td class="n">PA-05 fresh repro 10-11; card measured 10-10; PP-01 source 10-11</td></tr>
+<tr><td>MERGE, UPDATE, DELETE, copy-on-write and merge-on-read</td><td><span class="grade HN">H-N</span></td><td><span class="grade HN">H-N</span></td><td>Scoped OCC fixed and Spark-equal; MoR MERGE retains all matched work until the stream ends (PP-02); carriers as above.</td><td class="n">ICE-OCC-SCOPED-1 FIXED 09-17/18; PP-02 source 10-11</td></tr>
+<tr><td>Struct columns on any write door</td><td><span class="grade EXP">EXP</span></td><td><span class="grade EXP">EXP</span></td><td>R-016 pairing by name or position differs from Spark by door; renamed field stores NULL silently; no pin. R-011 nested microsecond NTZ stores two walls (parked). Nested nanosecond leaves refuse (R-015).</td><td class="n">80 live cells 10-09; R-011 parked 10-12</td></tr>
+<tr><td>Schema and partition evolution</td><td><span class="grade HN">H-N</span></td><td><span class="grade HN">H-N</span></td><td>Promotion reads, MERGE after ADD COLUMN, nested adds all fixed. Nested struct defaults DECLARED; sort-order transform terms refuse.</td><td class="n">09-18 re-rating 64/64 DML shapes; ICE-V3-WRITE-DEFAULT-1-NESTED DECLARED 09-17</td></tr>
+<tr><td>Maintenance CALLs (rewrite data files, position deletes, manifests, expire, orphans)</td><td><span class="grade HN">H-N</span></td><td><span class="grade HN">H-N</span></td><td>Options map and sort accepted; MANIFEST-2/3 residuals; orphan removal on S3 Tables refuses loud and names the service's own maintenance.</td><td class="n">RDF-SORT-1 FIXED 09-20; V3 maintenance leg green 10-13</td></tr>
+<tr><td>Concurrency and commit safety</td><td><span class="grade HN">H-N</span></td><td><span class="grade HN">H-N</span></td><td>Typed conflicts, no lost commit on Hadoop since RP-26. Ambiguous commit typed but never drilled live. 16-writer INSERT storm commits 5 to 10 under the default retry budget (Spark 7 to 15).</td><td class="n">ICE-COMMIT-UNKNOWN-1 pinned offline; INSERT-STORM BACKLOG re-measured 09-19</td></tr>
+<tr><td>Catalogs: Glue and S3 Tables</td><td><span class="grade HN">H-N</span></td><td><span class="grade HN">H-N</span></td><td>Daily acceptance green. No cross-reader leg: the acceptance file makes zero Spark calls, so Spark reading a RePark-written Glue or S3 Tables snapshot is still unmeasured; Trino is parked behind 1.8. Inventory check 4 stays unmet.</td><td class="n">aws-acceptance 10-13; inventory §check 4 (owner 09-14)</td></tr>
+<tr><td>Nanosecond timestamps (timestamp_ns, timestamptz_ns)</td><td>n/a</td><td><span class="grade EXP">EXP</span></td><td>R-009, R-010, R-012, R-013, R-016, R-017, R-018, R-001, R-002 OPEN; R-017 drops digits beside an untyped NULL on answering routes; applyInPandas over a nanosecond array stored raw nanoseconds as microseconds (refusal in PR #1047). Spark 4.1.2 with Iceberg 1.11 refuses any table carrying the type.</td><td class="n">rows measured 10-09; verifier 3 on #1042 failed 10-13; R-007/R-008/R-019 FIXED 10-09/10/13</td></tr>
+<tr><td>v3 types: geometry, geography, shredded variant, multi-argument transforms, v4 upgrade</td><td>n/a</td><td><span class="grade DECL">DECL</span></td><td>Dated rows with pins; variant has a 1.6 card.</td><td class="n">V3-GEO-1, V3-VARIANT-SHRED-1, V3-MULTIARG-1, V3-UPGRADE-V4-1</td></tr>
+<tr><td>Table encryption keys</td><td><span class="grade DECL">DECL</span></td><td><span class="grade DECL">DECL</span></td><td>First write on a keyed table refuses (ENC-1 FIXED 10-09). Six residue items await an owner call, among them ref-only commits publishing rows staged before the key was added.</td><td class="n">ENC-1-RESIDUE-1 card 10-09, unscheduled</td></tr>
+<tr><td>dbt gold on Glue</td><td><span class="grade HN">H-N</span></td><td>n/a</td><td>Replace twice and gold twice green daily. PA-01: a profile mismatch error prints both profiles' raw configuration, secrets included.</td><td class="n">gold leg green 10-13; PA-01 executed 10-11, source unchanged 10-13</td></tr>
+</tbody></table></div>
+
+<h2>What keeps v2 from PRODUCTION</h2>
+<p>Under the PR #1044 definition a capability is assessed on its own and strength in one attribute does not offset weakness in another. Five things hold the v2 label where it is, in cost-of-failure order.</p>
+<ul>
+<li><b>Silent wrong values reachable on v2.</b> Struct field pairing (R-016), the write carriers (WRITE-BODY-CARRIERS-1) and the nested NTZ wall split (R-011, parked). A parked row is not a declared refusal; the production-grade page lists silent fallbacks as disqualifying however well the rest is tested.</li>
+<li><b>Four unfixed boundary findings.</b> PA-01 credential disclosure in dbt, PA-02 local-file policy bypass through EXPLAIN ANALYZE COPY, PA-03 symlink escape through a missing parent, PA-04 non-ASCII path panic. The code at each cited line is unchanged on today's main. These are small and independently reproducible.</li>
+<li><b>Data-integrity evidence is offline only.</b> The ambiguous-commit path has pinned Rust tests and no live drill; there is no process-kill test on an Iceberg write (only the microbatch crash tests); there is no cross-release pin that reads and writes a table the 1.5.1 wheel produced.</li>
+<li><b>No cross-reader evidence on AWS.</b> The owner named Spark and Trino as the production readers on 2026-09-14. Spark reads RePark writes equal on local catalogs; on Glue and S3 Tables it has never been run.</li>
+<li><b>Resource bound unstated.</b> The scan, the ordered-write sort and the MoR MERGE retain state outside the pool, and memory detection misses nested cgroups (PA-10). Magnitudes are unmeasured; the envelope must state a size until they are.</li>
+</ul>
+
+<h2>Why v3 splits in two</h2>
+<p>The twenty north-star rows are green or dated DECLARED, and the two live v3 legs passed this morning. That core deserves the same label as v2. The nanosecond family is different in kind: Spark 4.1.2 with Iceberg 1.11 refuses to open any table with a <code>timestamp_ns</code> or <code>timestamptz_ns</code> column, so every such table RePark writes has no oracle and no second reader. Three verifier rounds on the coercion fix each found a new set of spellings that drop digits. The owner's 2026-10-13 rulings narrow that fix to store-column feeders, refuse unasked nanosecond columns at the create door, and refuse the nanosecond array at applyInPandas. Until those three land and R-009 floors on every door, the honest label for a nanosecond column is EXPERIMENTAL and the guide's nanosecond section should open with the Spark-unreadability sentence.</p>
+
+<h2>Recommended path to a PRODUCTION claim on v2</h2>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>Unit</th><th>Grade and tier</th><th>Earns</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td>PA-01 to PA-04 as four narrow units, both SQL doors where implicated</td><td>B, Muse xhigh, one scoped Opus verifier on the Rust pair</td><td>Security attribute; closes the only executed disclosure</td></tr>
+<tr><td class="n">2</td><td>WRITE-BODY-CARRIERS-1: refuse EXPLAIN ANALYZE writes and PREPARE/EXECUTE writes by name until routed through the store doors</td><td>B, Muse xhigh</td><td>Removes a silent instant shift on both formats</td></tr>
+<tr><td class="n">3</td><td>R-016: pin the 80-cell matrix, implement Spark's per-door pairing at the shared write boundary, refuse a missing or extra field everywhere</td><td>A, Opus 5.5 high sketch then build</td><td>Lifts struct writes from EXPERIMENTAL</td></tr>
+<tr><td class="n">4</td><td>Spark cross-read leg in aws-acceptance: count, checksum and EXCEPT over the silver and gold tables RePark wrote on Glue and S3 Tables</td><td>C, clerk; runner needs the live Spark the parity job already has</td><td>Inventory check 4, Spark half</td></tr>
+<tr><td class="n">5</td><td>One live unknown-outcome drill through the Glue commit fault seam, plus a kill-mid-write pin on INSERT and MERGE</td><td>B, Muse xhigh</td><td>Data-integrity attribute with live evidence</td></tr>
+<tr><td class="n">6</td><td>Cross-release pin: a table the 1.5.1 wheel wrote is read, appended and merged by the current build; a current-build table read by 1.5.1</td><td>C, clerk</td><td>Compatibility attribute</td></tr>
+<tr><td class="n">7</td><td>Per-capability maturity labels in STATUS.md, the unit PR #1044 defers, seeded from the table above</td><td>C, clerk, docs only</td><td>Documentation attribute; retires the 09-14 and 09-18 records as the grade's home</td></tr>
+</tbody></table></div>
+<p>R-011 stays parked by the owner's 2026-10-12 word; it needs either a dated refusal or a disclosure row before the label moves, and this review does not un-park it. Trino stays behind 1.8. The nanosecond family follows the three 2026-10-13 rulings and is not on this list.</p>
+
+<h2>Method and limits</h2>
+<p>Read-only: <code>git show</code> and <code>git grep</code> against <code>origin/main</code> at f8f1d252, the fork clone at the pin, the registry's 625 headings classified by their status word, PR #1044's definition page, both 2026-10-11 audits, and the GitHub run and job records for the last five live-parity and AWS acceptance runs. No probe was executed in this session; executed evidence is the 2026-10-11 audit's and the 2026-09-18 re-rating's, each cited with its date. One rater, no critic. The registry's 23 Iceberg rows with no status word in their first six lines were read by hand where they mattered (DML-3/4, the dbt rows, MOR-2, V3-COV-7) and none changes a grade.</p>
+<div class="foot">main f8f1d252 · repark 1.5.4 plus post-tag fixes · fork pin 076d5f98 = fork main · PySpark 4.1.2 + iceberg-spark-runtime 1.11.0 · baseline: re-rating of 2026-09-18 at #703 · definition: PR #1044 docs/production-grade.md · rater: Fable 5.1, orchestrator-side review</div>
+</div>

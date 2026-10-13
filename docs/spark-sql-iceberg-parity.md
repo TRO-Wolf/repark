@@ -3348,7 +3348,7 @@ still open is `isModifiable`.
   `DELETE` statements, not a stored-value defect; out of ICE-TSNS-MERGE-WALL-1's scope.
   Ledger question Q3.
 
-### ICE-TSNS-SQL-1-R-011 — OPEN (measured 2026-10-09): a nested microsecond `TIMESTAMP_NTZ` field stores two walls
+### ICE-TSNS-SQL-1-R-011 — OPEN, PARKED 2026-10-12 (measured 2026-10-09): a nested microsecond `TIMESTAMP_NTZ` field stores two walls
 
 - **repark** — the microsecond twin of the nested split R-007's fold 1 closed for
   `timestamp_ns`, on main `40fc916f` and unchanged at head. Into
@@ -3501,7 +3501,7 @@ still open is `isModifiable`.
   name) and `overwritePartitions` (Arrow's rule, Spark by name). Ledger clause C-037,
   question Q8.
 
-### ICE-TSNS-SQL-1-R-017 — OPEN (measured 2026-10-09): a nanosecond value beside an untyped NULL is typed as microseconds
+### ICE-TSNS-SQL-1-R-017 — OPEN, PARKED 2026-10-13 (measured 2026-10-09): a nanosecond value beside an untyped NULL is typed as microseconds
 
 - **repark** — `coalesce(ns, NULL)`, `nvl(ns, NULL)`, `array(ns, NULL)`,
   `CASE WHEN … THEN ns ELSE NULL END` and `if(…, ns, NULL)` over a `timestamp_ns` or
@@ -3540,6 +3540,136 @@ still open is `isModifiable`.
   are not refused, because the same test would refuse a written `CAST(ns AS TIMESTAMP)` and
   `date_trunc('second', ns)`, which store on main. Ledger clauses C-038 and C-043, question
   Q9.
+- **Status 2026-10-13 (owner):** PARKED — PRs #1027 (ICE-TSNS-NARROW-REFUSE-1) and #1042
+  (ICE-TSNS-COERCION-1) closed unmerged after seven FAIL verifier rounds. Next step:
+  [ICE-TSNS-TYPE-PLANNER-1](../task/roadmap/mid-term/ice-tsns-type-planner-1-card-2026-10-13.md).
+  Park record, dated 2026-10-13. Two designs were tried: #1027 walked the plan with marker
+  functions; #1042 rewrote the NULL feeds, then narrowed to store-column feeders. The rounds,
+  each FAIL with its date and head, from its `verdict.json`: #1027 verify 1 (2026-10-10,
+  `45260e44`), verify 2 (2026-10-11, `9cee945a`), verify 3 (2026-10-12, `63917a73`); #1042
+  verify-slice1 (2026-10-12, `7453745d`), verify-slice1b (2026-10-13, `7ddfe0dc`),
+  verify-slice1c (2026-10-13, `1cc6379b`), verify-narrow (2026-10-13, `13923125`). One line
+  per parking finding (statement shape; main; the branch):
+  - Verify 1: `coalesce(CAST(ns AS TIMESTAMP), ts)` into a nanosecond target — main stores
+    the written cast's microseconds; head refuses.
+  - Verify 1: `max(ns)` stored while `coalesce(ns, ts)` sits in a WHERE or sibling column
+    under ROLLUP, CUBE or LATERAL — main stores nine digits; head refuses.
+  - Verify 1: `UPDATE … AS u SET u.v = coalesce(u.c, NULL)` — main and head store the cut
+    value (hole the refusal does not reach).
+  - Verify 1: `coalesce(array(ns), array(ts))[0]`, `array_append` / `array_prepend` /
+    `array_union` / `flatten` over mixed arrays, `CASE` over arrays — main and head store cut.
+  - Verify 1: `coalesce(tzns, DATE …)` and UNION with a DATE branch — main and head store cut
+    for the zoned source (the naive source refuses).
+  - Verify 1: LATERAL `coalesce(o.ns, typed NULL or literal)` and a lambda
+    `coalesce(x, TIMESTAMP literal)` in `VALUES` — main and head store cut.
+  - Verify 1: `CAST(coalesce(ns, TIMESTAMP_NTZ sibling) AS TIMESTAMP or DATE)` — main and
+    head store a value differing from the cast over plain `ns` (truncates toward zero).
+  - Verify 1: a written cast over `date_trunc('second', coalesce(ns, NULL))` — main and head
+    store a value differing from the expression over plain `ns`.
+  - Verify 1: a narrowed value through a STRING, integer or JSON round trip — main and head
+    store six digits.
+  - Verify 1: `CAST(v AS TIMESTAMP)` over a subquery, view or frame column holding the
+    narrowing — main stores; head refuses.
+  - Verify 1: refusal texts name `__repark_narrow_*` markers and prescribe the cast the
+    statement already holds.
+  - Verify 1: reads changed — a `repark.untyped_null` tag in a UNION Arrow schema, and
+    Parquet from a narrowed UNION loses `PARQUET:field_id` (values equal).
+  - Verify 1: `to_date(x)` / `date(x)` over a naive narrowed value — main stores; head
+    refuses while `CAST(x AS DATE)` stores.
+  - Verify 1: marker names visible in `EXPLAIN VERBOSE` and in an internal join-key error.
+  - Verify 1: reads mixing nanosecond and microsecond branches plan 7 to 11 % slower.
+  - Verify 1: the ledger says the cut truncates toward zero; measured, it floors beside a
+    NULL or TIMESTAMP sibling and truncates only beside an NTZ sibling.
+  - Verify 1: mutant — the whole-subtree fallback is removable with every pin green.
+  - Verify 2: `coalesce(TRY_CAST(ns AS TIMESTAMP), ts)` — main stores the written value;
+    head refuses.
+  - Verify 2: `element_at(map(coalesce(ns, ts), ns), …)`, `ns + (coalesce − coalesce)`,
+    interval from an integer of a narrowing — main stores nine digits; head refuses.
+  - Verify 2: `CAST(coalesce(ns, NULL) AS DATE)` in a skipped-day zone — main and head store
+    a date differing from `CAST(ns AS DATE)`.
+  - Verify 2: `array_except` / `array_intersect` over an `ns` array and a written-cast array
+    — read type and values differ from main; a microsecond-target INSERT stores values where
+    main stores NULLs.
+  - Verify 2: a written cast, `date_trunc` or DATE call over a narrowed value behind `if()`,
+    `greatest()`, an array element, a lambda or a scalar subquery — main stores the twin
+    value (2,410 cells); head refuses.
+  - Verify 2: refusal texts carry generated relation and column names and engine debug text.
+  - Verify 2: `CAST(ts AS TIMESTAMP)` over a temp view's microsecond column drops
+    `PARQUET:field_id` and changes plain `EXPLAIN` (values equal).
+  - Verify 2: CI red on the pushed head (3 check-runs); the EXPLAIN door breaks two pins
+    green on main.
+  - Verify 2: mutant — only the first `VALUES` row is followed, pins green.
+  - Verify 2: mutant — a scalar subquery is not a nanosecond producer, pins green.
+  - Verify 3: a 3-or-more-branch `UNION ALL` holding a nanosecond column — a NULL first
+    branch nulls the next branch's rows on head; main answers; the microsecond and
+    STRING INSERT statements store NULL.
+  - Verify 3: a written `TRY_CAST(c AS TIMESTAMP)` reaching a microsecond sibling through an
+    aggregate, window, join side, UNION subquery, LATERAL, lambda or MERGE source — main
+    stores; head refuses (`CAST` stores).
+  - Verify 3: a nanosecond-typed NULL beside an untyped NULL or a microsecond value — main
+    stores the statement fully; head refuses.
+  - Verify 3: `EXPLAIN` of an INSERT whose UNION holds a DATE branch prints another plan.
+  - Verify 3: `EXPLAIN VERBOSE` prints marker names for string literals holding a double
+    quote; the eraser eats user text.
+  - Verify 3: `INSERT … SELECT` from `VALUES` of a `timestamptz_ns` literal into
+    `timestamp_ns` — main and head store cut.
+  - Verify 3: a written CAST over `array(c, NULL)[0]` differs from the cast over the plain
+    column in every non-UTC zone; main the same.
+  - Verify 3: `TRY_CAST(… AS DATE)` over a naive narrowed value differs from the twin in
+    every non-UTC zone; main the same.
+  - Verify 3: a cut value stored through an integer argument (`timestampadd(MICROSECOND,
+    unix_micros(…))`) and through `aggregate(… typed NULL … lambda)`; main the same.
+  - Verify 3: a refusal qualifies a temp view's column as `datafusion.public.tv9.ns`.
+  - Verify 3: ledger §13.9 is not the whole list, and three of its sentences are not what
+    the head does.
+  - Slice1: the site rule retypes NULLs that are not timestamp operands — 12 shapes
+    (`convert_timezone(NULL, ns)`, `from/to_utc_timestamp(ns, NULL)`, `string_agg(ns, NULL)`,
+    NULL-offset windows, struct UNION and CASE) error on head; main answers (Spark answers 8).
+  - Slice1: `struct(ns, NULL)` — second field void on main and Spark; nanosecond on head.
+  - Slice1: the fallback counter and debug line fire on re-analysis of statements with no
+    written cast.
+  - Slice1: written NTZ casts and literals, and casts to `timestamp_ns` / `timestamptz_ns`,
+    do not trigger the fallback (the slice text claims any written cast does).
+  - Slice1: 70 of the 258 carve-out cells are nanosecond targets, not microsecond TIMESTAMP
+    (head equals main).
+  - Slice1: the claimed `PARQUET:field_id` change does not exist against main `2ac03089`.
+  - Slice1b: a rewritten site feeds nanoseconds to refusing consumers — `sequence(site, …)`
+    and the pandas/Arrow doors with the frame's own schema error past the analyzer; main
+    answers (Spark answers the sequence shapes).
+  - Slice1b: three of the four mutant-killer pins do not kill (m4, m5, m7 survive again).
+  - Slice1b: 100 `moved onto twin` cells are back to equal-main (void fields, main's errors).
+  - Slice1b: nested-site and NULL-branch UNION statements cost more than 1.05 of main
+    (mostly pre-fold).
+  - Slice1c: `applyInPandas` over a rewritten site errors whenever the frame holds one more
+    column needing the declared schema; main answers all 52.
+  - Slice1c: `pandas_udf`, `arrow_udf` and `applyInArrow` over a rewritten site refuse; main
+    answers all 20.
+  - Slice1c: `applyInPandas` stores nanosecond ticks unconverted in a microsecond array
+    (`1767323045123456789`, year ~58,000); main stores the floor (now row R-020).
+  - Slice1c: a site inside a struct errors through `mapInArrow` and `applyInPandas`; main
+    answers all 8.
+  - Slice1c: the same-kind refusal takes `mapInPandas`, `applyInPandas`, cogrouped
+    `applyInPandas` and the zoned mirror; main answers all 10.
+  - Slice1c: newly answered `TIMESTAMP_NTZ` sequences differ from live Spark in four shapes
+    (default step, wall/instant mix, slice).
+  - Slice1c: a plain mixed-unit pre-epoch sequence differs from main; head equals the cast
+    twin, so not a parking difference.
+  - Narrow: a correlated subquery reading the feed column (`size(sequence(q.v, q.v))`) —
+    main stores both rows; head errors.
+  - Narrow: a WHERE reading the value (string/ordering/`unix_micros` comparison, scalar
+    subquery) — the stored row set differs from main.
+  - Narrow: kernel anchor — a written nanosecond cast in a WHERE rewrites a column the rest
+    of the read still consumes (type, value and `typeof` change; main answers).
+  - Narrow: functions-API frames and `INSERT … REPLACE WHERE` store the twin, not main's
+    (120 census cells).
+  - Narrow: an unaliased `INSERT … SELECT` item is never rewritten (stores main's); any
+    alias stores nine digits.
+  - Narrow: reverting the kernel-anchor commit alone leaves 2 red tests.
+  - Narrow: the fallback counter moves on reads of the written-cast class (values equal).
+  - Narrow: INSERT of a written nanosecond cast over a site takes the `rewrite_feeds` error
+    path (stores main's).
+  - Narrow: an UPDATE-over-site refusal becomes the internal `No field named
+    __common_expr_3` schema error.
 
 ### ICE-TSNS-SQL-1-R-018 — OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
 
@@ -3625,6 +3755,33 @@ still open is `isModifiable`.
   Cost: about 16 ms per million
   rows per nanosecond column, naive or aware; a frame with none is unchanged. Ledger
   `task/ledgers/completed/ice-tsns-frame-door-1-ledger.md`.
+
+### ICE-TSNS-SQL-1-R-020 — OPEN (measured 2026-10-13): `applyInPandas` returns a nanosecond array under a declared microsecond array type
+
+- **repark** — grouped `applyInPandas` and `cogroup().applyInPandas` (one shared conversion
+  point) return a `datetime64[ns]` array under a declared `array<timestamp>` or
+  `array<timestamp_ntz>`; RePark copies the nanosecond ticks and reads them as microseconds.
+  The defect is **unit reinterpretation**: the stored instant is wrong by a factor of 1000 in
+  ticks, never dropped digits. Measured on main: plain `array(ns)` grouped and cogrouped
+  answers element ticks `[1767323045123456789, -1]` where the floors are
+  `[1767323045123456, -1]` (the zoned twin likewise); a user-built object column of
+  `datetime64[ns]` arrays answers the same wrong ticks; a nested array answers wrong ticks at
+  depth two; a struct holding a nanosecond array answers values that raise `OverflowError:
+  date value out of range` on read. Reading the ticks back as datetimes overflows (year
+  ~58,000). Nanosecond values inside struct and map fields are card NS-NESTED-PANDAS-1.
+- **Apache Spark** — 4.1.2 measured (verdict 2 of draft PR #1047, 2026-10-13): floors the
+  array to microseconds under `array<timestamp>` (ticks `[1767323045123456,
+  1767323045000000]`); refuses it under `array<timestamp_ntz>` (`ArrowNotImplementedError:
+  Expected np.datetime64 but got: timestamp[ns]`). A Python integer under a declared
+  timestamp (struct field, `int64` column, list of integers under `array<timestamp_ntz>`) is
+  stored as microsecond ticks; a top-level `datetime64[ns]` column with sub-microsecond
+  digits raises `PySparkValueError`.
+- **Pin** — none; no test is added by this row.
+- **Rationale** — OPEN, dated 2026-10-13. A wrong stored value with no error at the pandas
+  door. Next step: [NS-ARRAY-FLOOR-1](../task/roadmap/mid-term/ns-array-floor-1-card-2026-10-13.md)
+  (target 1.5.6, a redesign that replaces draft PR #1047); nested struct and map fields:
+  NS-NESTED-PANDAS-1. Measured cells from the #1047 verdict and from the ledger of
+  `fix/ns-array-apply-in-pandas-refuse-1` (verifier round names, not paths, by the clerk rule).
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
