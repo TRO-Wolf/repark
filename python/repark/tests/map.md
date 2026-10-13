@@ -52,7 +52,16 @@ text, twin; main-first) into `ice_tsns_coercion_1_narrow_census.json` (8,320 mai
 1,280 twin, 0 neither).
 `_record_ice_tsns_coercion_1_narrow_sweep.py` runs every catalog function over an ns
 site on two modules into `ice_tsns_coercion_1_narrow_sweep.json` (872 cells, nothing
-refuses where main answers). pins: ice-tsns-coercion-1/C-005
+refuses where main answers).
+`_replay_ice_tsns_coercion_1_narrow_reads.py` replays the 117 probe cells where
+fold 1 errored and main answered against main's recorded outs into
+`ice_tsns_coercion_1_narrow_replay_reads.json` (117 ran, 0 differ, fallback
+untouched on every read).
+`_replay_ice_tsns_coercion_1_narrow_cdoors.py` replays the 46 consumer-door
+attribution cells in UTC and America/New_York into
+`ice_tsns_coercion_1_narrow_replay_cdoors.json` (92 ran, 0 differ; rows compare
+as multisets because the door returns the two struct rows in either order).
+pins: ice-tsns-coercion-1/C-005
 
 ICE-TSNS-COERCION-1 slice 1 fold 1 (2026-10-12): `test_ice_tsns_coercion_1_slice1_fold1.py`
 pins the twelve verifier shapes plus the struct probes — 15 SQL shapes and 4 DataFrame

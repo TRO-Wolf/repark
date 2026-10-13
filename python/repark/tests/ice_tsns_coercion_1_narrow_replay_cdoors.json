@@ -1,0 +1,466 @@
+{
+ "cells": {
+  "site|ns|site|+big|aip|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+big|aip|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+big|cog|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+big|cog|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+dec|aip|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+dec|aip|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+dec|cog|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+dec|cog|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+k|aip|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+k|aip|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+k|cog|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+k|cog|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+s|aip|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+s|aip|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+s|cog|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|+s|cog|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_add_float|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_add_float|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_add_str_none|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_add_str_none|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_agg_len|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_agg_len|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_ddl|timestamp|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_ddl|timestamp|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_id_int64|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_id_int64|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_reordered|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_reordered|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_struct|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|aip_struct|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|cog_ddl|timestamp|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|cog_ddl|timestamp|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|mia_ddl|timestamp|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|mia_ddl|timestamp|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|mia_struct|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|mia_struct|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|mip_ddl|timestamp|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|ns|site|mip_ddl|timestamp|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+big|aip|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+big|aip|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+big|cog|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+big|cog|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+dec|aip|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+dec|aip|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+dec|cog|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+dec|cog|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+k|aip|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+k|aip|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+k|cog|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+k|cog|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+s|aip|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+s|aip|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+s|cog|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|+s|cog|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_add_float|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_add_float|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_add_str_none|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_add_str_none|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_agg_len|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_agg_len|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_ddl|timestamp_ntz|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_ddl|timestamp_ntz|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_id_int64|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_id_int64|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_reordered|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_reordered|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_struct|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|aip_struct|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|cog_ddl|timestamp_ntz|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|cog_ddl|timestamp_ntz|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|mia_struct|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "site|tzns|site|mia_struct|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|apply_in_arrow|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|apply_in_arrow|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|arrow_udf_ret_ntz|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|arrow_udf_ret_ntz|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|arrow_udf_ret_ts|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|arrow_udf_ret_ts|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|pandas_udf_ret_ntz|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|pandas_udf_ret_ntz|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|pandas_udf_ret_ts|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|ns|pandas_udf_ret_ts|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|apply_in_arrow|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|apply_in_arrow|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|arrow_udf_ret_ntz|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|arrow_udf_ret_ntz|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|arrow_udf_ret_ts|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|arrow_udf_ret_ts|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|pandas_udf_ret_ntz|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|pandas_udf_ret_ntz|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|pandas_udf_ret_ts|America_New_York": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  },
+  "udf|site|tzns|pandas_udf_ret_ts|UTC": {
+   "equal": true,
+   "head_error": null,
+   "main_error": null
+  }
+ },
+ "differ": [],
+ "ran": 92
+}
