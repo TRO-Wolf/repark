@@ -1,0 +1,147 @@
+{
+ "sets": 5,
+ "repeats": 15,
+ "order": "odd sets head then main, even sets main then head",
+ "statements": {
+  "insert": {
+   "gated": true,
+   "main_set_medians_ms": [
+    24.94,
+    25.65,
+    18.22,
+    18.58,
+    18.31
+   ],
+   "head_set_medians_ms": [
+    25.57,
+    21.33,
+    18.26,
+    18.73,
+    18.14
+   ],
+   "pair_ratios": [
+    1.0253,
+    0.8316,
+    1.0022,
+    1.0081,
+    0.9907
+   ],
+   "median_pair_ratio": 1.0022,
+   "ratio_of_medians": 1.0081,
+   "max_pair_ratio": 1.0253,
+   "min_pair_ratio": 0.8316
+  },
+  "merge": {
+   "gated": true,
+   "main_set_medians_ms": [
+    73.62,
+    74.19,
+    63.74,
+    62.3,
+    62.24
+   ],
+   "head_set_medians_ms": [
+    78.13,
+    71.09,
+    65.12,
+    62.0,
+    61.09
+   ],
+   "pair_ratios": [
+    1.0613,
+    0.9582,
+    1.0217,
+    0.9952,
+    0.9815
+   ],
+   "median_pair_ratio": 0.9952,
+   "ratio_of_medians": 1.0217,
+   "max_pair_ratio": 1.0613,
+   "min_pair_ratio": 0.9582
+  },
+  "merge_mor": {
+   "gated": true,
+   "main_set_medians_ms": [
+    98.69,
+    94.4,
+    80.9,
+    77.52,
+    76.17
+   ],
+   "head_set_medians_ms": [
+    97.61,
+    89.27,
+    81.32,
+    75.42,
+    72.37
+   ],
+   "pair_ratios": [
+    0.9891,
+    0.9457,
+    1.0052,
+    0.9729,
+    0.9501
+   ],
+   "median_pair_ratio": 0.9729,
+   "ratio_of_medians": 1.0052,
+   "max_pair_ratio": 1.0052,
+   "min_pair_ratio": 0.9457
+  },
+  "nest8": {
+   "gated": true,
+   "main_set_medians_ms": [
+    36.49,
+    36.65,
+    28.62,
+    27.28,
+    27.33
+   ],
+   "head_set_medians_ms": [
+    36.06,
+    34.46,
+    27.25,
+    27.27,
+    27.14
+   ],
+   "pair_ratios": [
+    0.9882,
+    0.9402,
+    0.9521,
+    0.9996,
+    0.993
+   ],
+   "median_pair_ratio": 0.9882,
+   "ratio_of_medians": 0.9528,
+   "max_pair_ratio": 0.9996,
+   "min_pair_ratio": 0.9402
+  },
+  "union200": {
+   "gated": true,
+   "main_set_medians_ms": [
+    198.24,
+    196.93,
+    195.08,
+    194.39,
+    195.63
+   ],
+   "head_set_medians_ms": [
+    198.44,
+    195.07,
+    197.72,
+    194.38,
+    194.55
+   ],
+   "pair_ratios": [
+    1.001,
+    0.9906,
+    1.0135,
+    0.9999,
+    0.9945
+   ],
+   "median_pair_ratio": 0.9999,
+   "ratio_of_medians": 0.9971,
+   "max_pair_ratio": 1.0135,
+   "min_pair_ratio": 0.9906
+  }
+ }
+}

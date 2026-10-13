@@ -57,6 +57,11 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   cost: eight interleaved main-vs-head sets; gated median ratios 0.9946 / 1.0005 /
   1.0089 on insert/merge/merge_mor, no halt; ungated `nest8` 1.85 and `union200`
   1.13 (recorded, not gated).
+- [interleaved-sets-narrow.json](interleaved-sets-narrow.json) +
+  [interleaved-cost-narrow.json](interleaved-cost-narrow.json) — slice 1 narrow fold
+  cost: five interleaved main-vs-head sets of 15 repeats; gated median pair ratios
+  1.0022 / 0.9952 / 0.9729 on insert/merge/merge_mor and 0.9882 / 0.9999 on the
+  nested-eight and 200-branch UNION reads, all at or under 1.05.
 - [cells-fold2.md](cells-fold2.md) + [cells-fold2.json](cells-fold2.json) — slice 1
   fold 2 re-run of the second verifier's `sequence` and UDF probes on head and main:
   113 of the 117 refused cells answer, the four that do not, and the 43 cells main

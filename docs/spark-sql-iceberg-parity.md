@@ -3538,6 +3538,17 @@ still open is `isModifiable`.
   `date_trunc('second', ns)`, which store on main. Ledger clauses C-038 and C-043, question
   Q9.
 
+> **DISCLOSED 2026-10-13 (ICE-TSNS-COERCION-1).** On a read, a `timestamp_ns` or
+> `timestamptz_ns` value beside an untyped NULL (`coalesce`, `array`, `CASE`, `if`, a NULL
+> `UNION` branch, and any function that brings both to one type) is typed `TIMESTAMP`: the
+> digits below a microsecond are dropped and a naive value is read as a UTC wall, so outside
+> a UTC session it shifts by the zone offset. A frame carries that type into every DataFrame
+> write, `INSERT OVERWRITE`, `INSERT … BY NAME` and creating door. Stored with nine digits
+> and the right wall: the expression written directly as an `INSERT … SELECT` item, an
+> `UPDATE SET` or a MERGE `SET`/`VALUES` value into a nanosecond column. Until then give the
+> NULL its type: `CAST(NULL AS timestamp_ns)`. The fix is one typing chokepoint for every
+> consumer, card ICE-TSNS-READ-COERCION-1 (not scheduled).
+
 ### ICE-TSNS-SQL-1-R-018 — OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
 
 - **repark** — on main and at head, with no table involved: (1) a `TIMESTAMP '…'` literal

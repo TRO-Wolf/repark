@@ -271,6 +271,93 @@ One helper later: the frame door (ICE-TSNS-FRAME-DOOR-1, PR #1045, unmerged) hol
 same floor in `create_dataframe_arrow.py`; the two become one helper in the first unit that
 follows both merges. Nothing was merged or copied from that branch.
 
+## 10. Slice 1, narrow fold (2026-10-13)
+Rule: the rewrite stays only where the value's single reader is a nanosecond store
+column; every read-only statement is byte-identical to main except the one named class
+below. Commits, in order: `7c77237` item 1 revert (fold-2 product files back to main's
+bytes, gate `git diff --quiet origin/main -- spark_sequence* python/repark/src` holds at
+head); `57a114a` item 2 red pins (14 Rust `feed_tests.rs`, 6 facade narrow pins, shown red
+then green); `ca5b5fe3` item 3a anchor (b) `Dml` feeds, the wrapper's new order, the UNION /
+`VALUES` / aggregate / window deletions; `e79cb70e` item 3b anchor (a) kernel feeds plus the
+written-cast read exception; `be63305` item 4 re-home of the 54 `tests.rs` pins through
+`dml_feeds.rs` (`tests.rs` 972 lines after the split, no ceiling raised); `93cf2d3` item 5
+census and sweep; `4fb3e2c` item 5 replay scripts and reports; `fae8367f` item 5
+feed-anchored mutant killers and two stale-pin re-homes.
+Built: `timestamp_ns_coercion_feeds.rs` (anchor (b): `Dml(Insert|Update)` nanosecond-target
+positions, peel `Alias` plus one store-kernel, raw planner `Cast` never an anchor; `descend`
+crosses only `SubqueryAlias`, bare-column read-once `Projection`, non-reading
+`Filter`/`Sort`/`Limit`; root-only scalar/`CASE` rewrite; a subtree site refuses once) and
+anchor (a) (a kernel's single argument starts the same walk from its host
+`Projection`/`Filter`; other hosts unvisited, so `UNION` stays main's). Wrapper order: gate
+check, feeds, then `Unchanged` hands the inner plan over untouched with no counters,
+`Refused` counts gate plus fallback, `Rewritten` counts gate and falls back only on a
+surviving trigger or a rejected inner analysis.
+Census: 9,600 cells, 8,320 main / 1,280 kept / 0 neither, frozen in
+`python/repark/tests/ice_tsns_coercion_1_narrow_census.json` written by
+`_record_ice_tsns_coercion_1_narrow_census.py` on this head; ambiguous main==twin cells
+count main-first. Kept cells are the `Dml`-anchor feeds (`insert_select`
+coalesce/`CASE`/`if` into nanosecond columns) and the kernel-anchor feeds (MERGE and
+`UPDATE … WHERE` doors); frames, `OVERWRITE`, `BY NAME`, creating doors, `array`, `UNION`,
+joins and aggregates are main's.
+Sweep: `_record_ice_tsns_coercion_1_narrow_sweep.py` runs every catalog function over an
+ns site on two modules into `ice_tsns_coercion_1_narrow_sweep.json`: 872 cells, nothing
+refuses where main answers.
+Replay: `_replay_ice_tsns_coercion_1_narrow_reads.py` replays the 117 probe cells where
+fold 1 errored and main answered against main's recorded outs: 117 ran, 0 differ, fallback
+untouched on every read, `m_udf` setup errors identical to main's (steps 2–5, the
+`CREATE FUNCTION` parser refusal predates the fold). `_replay_…_narrow_cdoors.py` replays
+the 46 consumer-door attribution cells in UTC and America/New_York: 92 ran, 0 differ; rows
+compare as multisets because the door returns the two struct rows in either order on the
+same head (shown over three runs; the comparison still rejects a mutated row).
+Mutants, each red then restored (diffs reproduced from the recorded forms where they
+exist): n1 every projection item a feed kills 16 `tests.rs` pins; n2 crossing `Aggregate`
+kills `every_other_plan_node_stops_the_walk`; n3 dropped read-once count kills
+`column_read_twice_stops_the_walk`; n4 dropped Filter/Sort read checks kills
+`filter_or_sort_that_reads_the_column_stops_the_walk`; n5 dropped step 4 kills
+`site_left_inside_a_rewritten_root_restores_the_feed`; n6 microsecond target kills
+`microsecond_target_position_is_not_an_anchor`; n7 member descent kills the step-4 pin;
+n8 any call an anchor kills `dml_position_feed_is_rewritten` among others; n9 fallback with
+no refused feed kills the two counter pins. m7 in recorded form kills
+`null_case_when_condition_is_not_a_site` (8 pins red). m4 and m5 in recorded form do NOT
+die on their re-homed bare-read pins: a bare projection never reaches operand
+classification in the narrow fold (no `Dml` anchor, no kernel), so the pins are structurally
+insensitive — the E2 "re-run" premise is false for those two. Two feed-anchored killer
+pins added in `feed_tests.rs` (`microsecond_sibling_calls_at_a_feed_are_left_to_main`,
+`mixed_ns_and_tzns_siblings_at_a_feed_are_left_to_main`): m4 dies on the first, m5 on the
+second, each exactly one failure, 70 green after restore. m3 and m6 are named in sketch E2
+but defined in no record (probe mutant table, fold-2 evidence, this ledger, all briefs name
+only n1, n2, n3, m4, m5, m7, m8): open question, see §Q.
+Stale unit-own pins re-homed to ruled semantics: the fold-1 extension gate-count pin
+expected gate+1 on an open scan, contradicting the ruled order and the E1 pin — renamed to
+`configured_first_coercion_counts_nothing_without_a_rewritten_or_refused_feed` with 0/0;
+the nested-shapes no-`WHERE` update pin expected walls for `array({c}, NULL)[0]`, but main
+refuses that statement with the narrowed-store text (verified byte-identical on the main
+module for both `c` and `z`) — the spelling left the loop for a dedicated refusal pin
+`an_update_with_an_array_index_site_refuses_with_mains_text`, array-index stays main's per
+R5.
+Item 3b revert proof: `git revert --no-commit e79cb70e` applies clean at head (maps
+auto-merge); `timestamp_ns_coercion_feeds.rs` is byte-identical to 3a; `cargo test -p
+repark-functions --lib timestamp_ns_coercion` gives 69 pass with only
+`kernel_argument_feed_is_rewritten` red; `cargo test -p repark-spark --lib` gives 2705
+pass, 0 fail; `git revert --abort` restores the head. The owner can switch anchor (a) off
+with one revert.
+Cost: `task/wo/ice-tsns-coercion-1/interleaved_cost.py`, five sets of 15 repeats,
+alternating head-first/main-first, same release profile both sides, build lock checked free
+before each set. Median pair ratios: 1.0022 insert, 0.9952 merge, 0.9729 merge_mor, 0.9882
+nested-eight read, 0.9999 200-branch `UNION` read; gate max 1.0022, at or under 1.05 on all
+five. Gate counters stayed [0, 0] across every set. Evidence:
+`task/wo/ice-tsns-coercion-1/evidence/interleaved-sets-narrow.json` (10 raw sets) and
+`interleaved-cost-narrow.json` (summary).
+Named read exception (H1 on): a site that is the direct operand of a WRITTEN cast to a
+nanosecond type (`SELECT CAST(coalesce(ns, NULL) AS timestamp_ns)`) keeps its digits and
+equals the twin, type unchanged — pinned in `test_ice_tsns_coercion_1_narrow.py`, revertible
+with item 3b alone per the proof above.
+Disclosure: E3 row under `ICE-TSNS-SQL-1-R-017` in `docs/spark-sql-iceberg-parity.md`.
+Open: the walk's growth list (R5/G: `UNION` NULL branch and crossable node, `VALUES` rows,
+`Join`, pass-through `Aggregate`, first-value `Window`, member descent replacing the step-4
+restore, the reader on feed operands, the feed-root lattice, `array(…)[0]`); the m3/m6
+ruling; slice 2 honest typing. Next: the single verification.
+
 ## Q. Questions
 
 No ruling is requested by this ledger until the summary names a kind mismatch or an
@@ -282,3 +369,9 @@ disposes it without a ruling; see §2. No ruling requested. C-003 stays OPEN
 with its seed question above.
 
 Update (2026-10-12, Q2 re-record): C-003 PROVEN, see §5. No ruling requested.
+
+Update (2026-10-13, narrow fold §10): one ruling requested — sketch E2 names mutants m3
+and m6 of the earlier rounds, but no record defines them (the probe mutant table,
+`mutants-fold2.md`, this ledger and all briefs name only n1, n2, n3, m4, m5, m7 and m8).
+Lean: the defined sets all die on a Rust target (see §10), so treat m3/m6 as a sketch typo
+unless ruled otherwise.

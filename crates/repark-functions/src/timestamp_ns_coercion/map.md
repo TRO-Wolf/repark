@@ -30,6 +30,12 @@ rewriter lives in the sibling `../timestamp_ns_coercion_sites.rs`.
   the never-a-site pins (comparison, `IN`, join keys), plus the sink pins (one line per
   fallback, quiet on rewrite and closed gate, the `has_fallback_sink` accessor).
   pins: ice-tsns-coercion-1/C-005
+- `dml_feeds.rs` — the `#[cfg(test)]` `Dml` position builders the re-homed site pins
+  share: `dml_of` wraps projection items in an `Insert` over a caller-given target,
+  `dml_feed` supplies the four-column source scan, `dml_feed_with_trigger` pairs a feed
+  with each fallback trigger, `dml_input_of` reads the `Dml` input back. Pure move out of
+  `tests.rs`, which had passed its file ceiling.
+  pins: ice-tsns-coercion-1/C-005
 
 Narrow fold (2026-10-13): `feed_tests.rs` pins the feed rule — a read site is left to
 main, an open gate without a feed hands the inner rule the plan it was given, a `Dml`
