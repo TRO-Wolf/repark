@@ -46,5 +46,10 @@ Generated tables. Do not edit the summary by hand; regenerate it with
   [interleaved-cost-round2.json](interleaved-cost-round2.json) — slice 1 round 2
   cost: five interleaved baseline-vs-head pairs on insert/merge/merge_mor,
   ratios 0.98 – 1.01, no halt.
+- [cost-slice1-fold1.md](cost-slice1-fold1.md) +
+  [interleaved-sets-fold1.json](interleaved-sets-fold1.json) +
+  [interleaved-cost-fold1.json](interleaved-cost-fold1.json) — slice 1 fold 1
+  cost: five interleaved baseline-vs-head pairs on insert/merge/merge_mor,
+  median ratios 1.0067 / 1.0063 / 0.9929, no halt.
 
 Up: [../map.md](../map.md).

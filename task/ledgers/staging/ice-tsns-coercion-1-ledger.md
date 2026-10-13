@@ -137,6 +137,8 @@ never trip the fallback, which sees only surviving `Cast`/`TryCast` nodes.
 Open: the fallback counter over-counts analyses the wrapper runs twice (verdict
 finding 3; due before slice 2); whether Spark can read a table created from a
 rewritten read (verdict Q2; the owner is deciding).
+Cost: interleaved head/baseline 1.0067 insert, 1.0063 merge, 0.9929 merge_mor;
+largest pair ratio 1.0231.
 Next: slice 2, honest typing.
 
 ## Q. Questions

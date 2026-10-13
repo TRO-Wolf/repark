@@ -1,0 +1,62 @@
+{
+ "statements": {
+  "insert": {
+   "baseline_set_medians_ms": [
+    21.19,
+    20.95,
+    20.84,
+    21.02,
+    20.89
+   ],
+   "head_set_medians_ms": [
+    21.11,
+    21.09,
+    20.73,
+    21.31,
+    20.84
+   ],
+   "ratio_median_of_medians": 1.0067,
+   "smallest_pair_ratio": 0.9947,
+   "largest_pair_ratio": 1.0138
+  },
+  "merge": {
+   "baseline_set_medians_ms": [
+    67.21,
+    66.56,
+    66.18,
+    66.52,
+    65.52
+   ],
+   "head_set_medians_ms": [
+    68.03,
+    68.1,
+    66.26,
+    65.69,
+    66.94
+   ],
+   "ratio_median_of_medians": 1.0063,
+   "smallest_pair_ratio": 0.9875,
+   "largest_pair_ratio": 1.0231
+  },
+  "merge_mor": {
+   "baseline_set_medians_ms": [
+    72.23,
+    71.35,
+    72.75,
+    73.2,
+    72.76
+   ],
+   "head_set_medians_ms": [
+    72.98,
+    71.39,
+    70.92,
+    72.94,
+    72.23
+   ],
+   "ratio_median_of_medians": 0.9929,
+   "smallest_pair_ratio": 0.9748,
+   "largest_pair_ratio": 1.0104
+  }
+ },
+ "verdict": "every median ratio at or below 1.05; no halt"
+}
