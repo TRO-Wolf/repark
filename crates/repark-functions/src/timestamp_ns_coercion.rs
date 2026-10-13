@@ -256,7 +256,10 @@ impl AnalyzerRule for SparkTimestampNsCoercion {
         }
         let backup = plan.clone();
         match crate::timestamp_ns_coercion_sites::rewrite_sites(plan) {
-            Ok(Some(rewritten)) => self.inner.analyze(rewritten, config),
+            Ok(Some(rewritten)) => match self.inner.analyze(rewritten, config) {
+                Ok(done) => Ok(done),
+                Err(_) => self.fallback(backup, config, "rewrite was rejected"),
+            },
             Ok(None) => self.inner.analyze(backup, config),
             Err(error) => self.fallback(backup, config, &error.to_string()),
         }

@@ -11,6 +11,7 @@ use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
     Case, Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Projection, Union, Values,
 };
+use datafusion::optimizer::analyzer::type_coercion::TypeCoercionRewriter;
 
 use crate::timestamp_ns_cast::timestamp_ns_cast_expr;
 
@@ -34,11 +35,87 @@ fn classify_operand(operand: &Expr, schema: &DFSchema) -> OperandKind {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum SiteRewrite {
     Naive,
-    Zoned,
+    Zoned(Arc<str>),
     Skip,
+}
+
+fn site_target(rewrite: &SiteRewrite) -> Option<DataType> {
+    match rewrite {
+        SiteRewrite::Naive => Some(DataType::Timestamp(TimeUnit::Nanosecond, None)),
+        SiteRewrite::Zoned(zone) => Some(DataType::Timestamp(
+            TimeUnit::Nanosecond,
+            Some(Arc::clone(zone)),
+        )),
+        SiteRewrite::Skip => None,
+    }
+}
+
+fn df_coerced(node: &Expr, schema: &DFSchema) -> Option<Expr> {
+    let mut ask = TypeCoercionRewriter::new(schema);
+    node.clone().rewrite(&mut ask).ok().map(|out| out.data)
+}
+
+fn coerced_member_types(node: &Expr, schema: &DFSchema) -> Option<Vec<DataType>> {
+    let answered = df_coerced(node, schema)?;
+    if let Expr::Case(case) = &answered {
+        let mut types = Vec::with_capacity(case.when_then_expr.len() + 1);
+        for (_, then_branch) in &case.when_then_expr {
+            types.push(then_branch.get_type(schema).ok()?);
+        }
+        if let Some(else_branch) = &case.else_expr {
+            types.push(else_branch.get_type(schema).ok()?);
+        }
+        return Some(types);
+    }
+    let args: &[Expr] = match &answered {
+        Expr::ScalarFunction(function) => &function.args,
+        Expr::AggregateFunction(aggregate) => &aggregate.params.args,
+        Expr::WindowFunction(window) => &window.params.args,
+        _ => return None,
+    };
+    args.iter()
+        .map(|arg| arg.get_type(schema).ok())
+        .collect::<Option<Vec<DataType>>>()
+}
+
+fn member_nulls(
+    node: &Expr,
+    start: usize,
+    kinds: &[OperandKind],
+    target: &DataType,
+    schema: &DFSchema,
+) -> Vec<bool> {
+    let mut members = vec![false; kinds.len()];
+    let Some(types) = coerced_member_types(node, schema) else {
+        return members;
+    };
+    for (offset, kind) in kinds.iter().enumerate() {
+        if !matches!(kind, OperandKind::UntypedNull) {
+            continue;
+        }
+        if types.get(start + offset) == Some(target) {
+            members[offset] = true;
+        }
+    }
+    members
+}
+
+fn df_union_common(union: &Union) -> Option<Vec<DataType>> {
+    let coerced = TypeCoercionRewriter::coerce_union(union.clone()).ok()?;
+    let LogicalPlan::Union(coerced) = coerced else {
+        return None;
+    };
+    Some(
+        coerced
+            .schema
+            .fields()
+            .iter()
+            .map(|field| field.data_type().clone())
+            .collect(),
+    )
 }
 
 fn site_rewrite(operands: &[OperandKind]) -> SiteRewrite {
@@ -60,7 +137,7 @@ fn site_rewrite(operands: &[OperandKind]) -> SiteRewrite {
     }
     match common {
         Some(None) => SiteRewrite::Naive,
-        Some(Some(_)) => SiteRewrite::Zoned,
+        Some(Some(zone)) => SiteRewrite::Zoned(zone),
         None => SiteRewrite::Skip,
     }
 }
@@ -81,14 +158,23 @@ fn rewrite_scalar(function: ScalarFunction, schema: &DFSchema) -> Transformed<Ex
         .skip(start)
         .map(|arg| classify_operand(arg, schema))
         .collect();
-    let rewrite = site_rewrite(&kinds);
-    if rewrite == SiteRewrite::Skip {
+    let Some(target) = site_target(&site_rewrite(&kinds)) else {
+        return Transformed::no(Expr::ScalarFunction(function));
+    };
+    let members = member_nulls(
+        &Expr::ScalarFunction(function.clone()),
+        start,
+        &kinds,
+        &target,
+        schema,
+    );
+    if !members.iter().any(|member| *member) {
         return Transformed::no(Expr::ScalarFunction(function));
     }
-    let zoned = rewrite == SiteRewrite::Zoned;
+    let zoned = matches!(target, DataType::Timestamp(TimeUnit::Nanosecond, Some(_)));
     let mut args = Vec::with_capacity(function.args.len());
     for (index, arg) in function.args.into_iter().enumerate() {
-        if index >= start && matches!(kinds[index - start], OperandKind::UntypedNull) {
+        if index >= start && members[index - start] {
             args.push(timestamp_ns_cast_expr(arg, zoned));
         } else {
             args.push(arg);
@@ -110,14 +196,18 @@ fn rewrite_aggregate(aggregate: AggregateFunction, schema: &DFSchema) -> Transfo
         .iter()
         .map(|arg| classify_operand(arg, schema))
         .collect();
-    let rewrite = site_rewrite(&kinds);
-    if rewrite == SiteRewrite::Skip {
+    let Some(target) = site_target(&site_rewrite(&kinds)) else {
+        return Transformed::no(Expr::AggregateFunction(aggregate));
+    };
+    let node = Expr::AggregateFunction(aggregate.clone());
+    let members = member_nulls(&node, 0, &kinds, &target, schema);
+    if !members.iter().any(|member| *member) {
         return Transformed::no(Expr::AggregateFunction(aggregate));
     }
-    let zoned = rewrite == SiteRewrite::Zoned;
+    let zoned = matches!(target, DataType::Timestamp(TimeUnit::Nanosecond, Some(_)));
     let mut args = Vec::with_capacity(aggregate.params.args.len());
-    for (arg, kind) in aggregate.params.args.into_iter().zip(kinds.iter()) {
-        if matches!(kind, OperandKind::UntypedNull) {
+    for (arg, member) in aggregate.params.args.into_iter().zip(members.iter()) {
+        if *member {
             args.push(timestamp_ns_cast_expr(arg, zoned));
         } else {
             args.push(arg);
@@ -143,14 +233,23 @@ fn rewrite_window(window: Box<WindowFunction>, schema: &DFSchema) -> Transformed
         .iter()
         .map(|arg| classify_operand(arg, schema))
         .collect();
-    let rewrite = site_rewrite(&kinds);
-    if rewrite == SiteRewrite::Skip {
+    let Some(target) = site_target(&site_rewrite(&kinds)) else {
+        return Transformed::no(Expr::WindowFunction(Box::new(window)));
+    };
+    let members = member_nulls(
+        &Expr::WindowFunction(Box::new(window.clone())),
+        0,
+        &kinds,
+        &target,
+        schema,
+    );
+    if !members.iter().any(|member| *member) {
         return Transformed::no(Expr::WindowFunction(Box::new(window)));
     }
-    let zoned = rewrite == SiteRewrite::Zoned;
+    let zoned = matches!(target, DataType::Timestamp(TimeUnit::Nanosecond, Some(_)));
     let mut args = Vec::with_capacity(window.params.args.len());
-    for (arg, kind) in window.params.args.into_iter().zip(kinds.iter()) {
-        if matches!(kind, OperandKind::UntypedNull) {
+    for (arg, member) in window.params.args.into_iter().zip(members.iter()) {
+        if *member {
             args.push(timestamp_ns_cast_expr(arg, zoned));
         } else {
             args.push(arg);
@@ -177,21 +276,24 @@ fn rewrite_case(case: Case, schema: &DFSchema) -> Transformed<Expr> {
         .iter()
         .map(|branch| classify_operand(branch, schema))
         .collect();
-    let rewrite = site_rewrite(&kinds);
-    if rewrite == SiteRewrite::Skip {
+    let Some(target) = site_target(&site_rewrite(&kinds)) else {
+        return Transformed::no(Expr::Case(case));
+    };
+    let members = member_nulls(&Expr::Case(case.clone()), 0, &kinds, &target, schema);
+    if !members.iter().any(|member| *member) {
         return Transformed::no(Expr::Case(case));
     }
-    let zoned = rewrite == SiteRewrite::Zoned;
+    let zoned = matches!(target, DataType::Timestamp(TimeUnit::Nanosecond, Some(_)));
     let mut when_then = Vec::with_capacity(case.when_then_expr.len());
     for (index, (when, then)) in case.when_then_expr.into_iter().enumerate() {
-        if matches!(kinds[index], OperandKind::UntypedNull) {
+        if members[index] {
             when_then.push((when, Box::new(timestamp_ns_cast_expr(*then, zoned))));
         } else {
             when_then.push((when, then));
         }
     }
     let else_expr = case.else_expr.map(|expr| {
-        if matches!(kinds[when_then.len()], OperandKind::UntypedNull) {
+        if members[when_then.len()] {
             Box::new(timestamp_ns_cast_expr(*expr, zoned))
         } else {
             expr
@@ -227,7 +329,7 @@ fn rewrite_union(union: Union) -> Result<Transformed<LogicalPlan>> {
         return Ok(Transformed::no(LogicalPlan::Union(union)));
     }
     let width = *first;
-    let mut wraps: Vec<Vec<(usize, bool)>> = vec![Vec::new(); union.inputs.len()];
+    let mut gated: Vec<(Vec<OperandKind>, Option<DataType>)> = Vec::with_capacity(width);
     for column in 0..width {
         let kinds: Vec<OperandKind> = union
             .inputs
@@ -238,11 +340,24 @@ fn rewrite_union(union: Union) -> Result<Transformed<LogicalPlan>> {
                 _ => OperandKind::Other,
             })
             .collect();
-        let rewrite = site_rewrite(&kinds);
-        if rewrite == SiteRewrite::Skip {
+        let target = site_target(&site_rewrite(&kinds));
+        gated.push((kinds, target));
+    }
+    if gated.iter().all(|(_, target)| target.is_none()) {
+        return Ok(Transformed::no(LogicalPlan::Union(union)));
+    }
+    let Some(common) = df_union_common(&union) else {
+        return Ok(Transformed::no(LogicalPlan::Union(union)));
+    };
+    let mut wraps: Vec<Vec<(usize, bool)>> = vec![Vec::new(); union.inputs.len()];
+    for (column, (kinds, target)) in gated.iter().enumerate() {
+        let Some(target) = target else {
+            continue;
+        };
+        if common.get(column) != Some(target) {
             continue;
         }
-        let zoned = rewrite == SiteRewrite::Zoned;
+        let zoned = matches!(target, DataType::Timestamp(TimeUnit::Nanosecond, Some(_)));
         for (index, kind) in kinds.iter().enumerate() {
             if matches!(kind, OperandKind::UntypedNull) {
                 wraps[index].push((column, zoned));

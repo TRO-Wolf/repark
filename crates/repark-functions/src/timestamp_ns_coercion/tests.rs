@@ -3,12 +3,12 @@ use std::sync::{Arc, Mutex};
 use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema, TimeUnit};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
-use datafusion::common::{Result, ScalarValue};
+use datafusion::common::{DataFusionError, Result, ScalarValue};
 use datafusion::datasource::{MemTable, provider_as_source};
-use datafusion::logical_expr::expr::{BinaryExpr, InList, ScalarFunction};
+use datafusion::logical_expr::expr::{AggregateFunction, BinaryExpr, InList, ScalarFunction};
 use datafusion::logical_expr::{
-    Case, Cast, Expr, JoinType, LogicalPlan, LogicalPlanBuilder, Operator, ScalarUDF, TableSource,
-    TryCast, col, lit,
+    AggregateUDF, Case, Cast, Expr, JoinType, LogicalPlan, LogicalPlanBuilder, Operator, ScalarUDF,
+    TableSource, TryCast, col, lit,
 };
 use datafusion::optimizer::AnalyzerRule;
 use datafusion_spark::function::array::spark_array::SparkArray;
@@ -320,6 +320,49 @@ fn array_call(args: Vec<Expr>) -> Expr {
 
 fn if_call(args: Vec<Expr>) -> Expr {
     call_of(datafusion_spark::function::conditional::r#if(), args)
+}
+
+fn string_agg_call(args: Vec<Expr>) -> Expr {
+    let udaf = Arc::new(AggregateUDF::new_from_impl(
+        datafusion::functions_aggregate::string_agg::StringAgg::new(),
+    ));
+    Expr::AggregateFunction(AggregateFunction::new_udf(
+        udaf,
+        args,
+        false,
+        None,
+        vec![],
+        None,
+    ))
+}
+
+fn lag_call(arg: Expr) -> Expr {
+    datafusion::functions_window::expr_fn::lag(arg, None, None)
+}
+
+fn struct_call(args: Vec<Expr>) -> Expr {
+    call_of(
+        Arc::new(ScalarUDF::from(
+            datafusion::functions::core::r#struct::StructFunc::new(),
+        )),
+        args,
+    )
+}
+
+fn main_rule_alone(plan: LogicalPlan) -> Result<LogicalPlan> {
+    let rule = datafusion::optimizer::analyzer::type_coercion::TypeCoercion::new();
+    rule.analyze(plan, &ConfigOptions::new())
+}
+
+fn assert_matches_main(plan: LogicalPlan) {
+    let _guard = SERIAL.lock().expect("test serial lock");
+    let wrapper = SparkTimestampNsCoercion::new(Arc::new(
+        datafusion::optimizer::analyzer::type_coercion::TypeCoercion::new(),
+    ));
+    let config = ConfigOptions::new();
+    let out = format!("{:?}", wrapper.analyze(plan.clone(), &config));
+    let want = format!("{:?}", main_rule_alone(plan));
+    assert_eq!(out, want);
 }
 
 fn case_call(column: &str) -> Expr {
@@ -737,4 +780,160 @@ fn wrapper_reports_whether_a_sink_is_set() {
     let (sink, _) = recording_sink();
     let wired = SparkTimestampNsCoercion::new(Arc::new(PassThroughRule)).with_fallback_sink(sink);
     assert!(wired.has_fallback_sink());
+}
+
+#[test]
+fn scalar_with_a_non_timestamp_null_argument_matches_main() {
+    let scan = scan_of(vec![ns_field("ns"), tzns_field("tzns")]);
+    let naive = project_of(
+        scan.clone(),
+        vec![crate::expr_fn::from_utc_timestamp(col("ns"), null_lit()).alias("v")],
+    );
+    assert_matches_main(naive);
+    let zoned = project_of(
+        scan,
+        vec![crate::expr_fn::from_utc_timestamp(col("tzns"), null_lit()).alias("v")],
+    );
+    assert_matches_main(zoned);
+}
+
+#[test]
+fn aggregate_with_a_non_timestamp_null_argument_matches_main() {
+    let scan = scan_of(vec![ns_field("ns"), Field::new("s", DataType::Utf8, true)]);
+    let plan = project_of(scan, vec![string_agg_call(vec![col("s"), null_lit()])]);
+    assert_matches_main(plan);
+}
+
+#[test]
+fn window_with_a_null_offset_matches_main() {
+    let scan = scan_of(vec![
+        ns_field("ns"),
+        Field::new("id", DataType::Int64, true),
+    ]);
+    let plan = project_of(scan, vec![lag_call(col("ns")).alias("v")]);
+    assert_matches_main(plan);
+}
+
+#[test]
+fn struct_union_with_a_void_field_matches_main() {
+    let left = project_of(
+        scan_of(vec![ns_field("ns")]),
+        vec![struct_call(vec![col("ns"), null_lit()]).alias("v")],
+    );
+    let right = project_of(
+        scan_of(vec![ns_field("ns")]),
+        vec![struct_call(vec![col("ns"), lit(5)]).alias("v")],
+    );
+    assert_matches_main(union_of(left, right));
+}
+
+#[test]
+fn struct_case_with_a_void_field_matches_main() {
+    let scan = scan_of(vec![ns_field("ns")]);
+    let case = Expr::Case(Case {
+        expr: None,
+        when_then_expr: vec![(
+            Box::new(lit(true)),
+            Box::new(struct_call(vec![col("ns"), null_lit()])),
+        )],
+        else_expr: Some(Box::new(struct_call(vec![col("ns"), lit(5)]))),
+    });
+    assert_matches_main(project_of(scan, vec![case.alias("v")]));
+}
+
+#[test]
+fn struct_with_null_keeps_a_void_second_field() {
+    let scan = scan_of(vec![ns_field("ns")]);
+    let plan = project_of(
+        scan,
+        vec![struct_call(vec![col("ns"), null_lit()]).alias("v")],
+    );
+    assert_matches_main(plan.clone());
+    let out = analyzed(plan);
+    let DataType::Struct(fields) = output_type(&out) else {
+        panic!("expected a struct output, got {:?}", output_type(&out));
+    };
+    assert_eq!(fields[1].data_type(), &DataType::Null);
+}
+
+#[derive(Debug)]
+struct FailOnKernelRule;
+
+impl AnalyzerRule for FailOnKernelRule {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        if plan_calls_kernel(&plan, TIMESTAMP_NS_CAST_NAME)
+            || plan_calls_kernel(&plan, TIMESTAMPTZ_NS_CAST_NAME)
+        {
+            return Err(DataFusionError::Plan("kernel plan rejected".to_string()));
+        }
+        Ok(plan)
+    }
+
+    fn name(&self) -> &'static str {
+        "fail_on_kernel"
+    }
+}
+
+#[test]
+fn rejected_rewrite_retries_on_the_original_plan() {
+    let _guard = SERIAL.lock().expect("test serial lock");
+    let (sink, lines) = recording_sink();
+    let wrapper =
+        SparkTimestampNsCoercion::new(Arc::new(FailOnKernelRule)).with_fallback_sink(sink);
+    let config = ConfigOptions::new();
+    let scan = scan_of(vec![ns_field("ns")]);
+    let plan = project_of(scan, vec![coalesce_call(vec![col("ns"), null_lit()])]);
+    let before_open = gate_open_count();
+    let before_fallback = fallback_count();
+    let out = wrapper
+        .analyze(plan.clone(), &config)
+        .expect("retry analyzes");
+    assert_eq!(format!("{out:?}"), format!("{plan:?}"));
+    assert_eq!(gate_open_count() - before_open, 1);
+    assert_eq!(fallback_count() - before_fallback, 1);
+    let lines = lines.lock().expect("test serial lock");
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].contains("rewrite was rejected"));
+}
+
+#[test]
+fn null_beside_a_microsecond_sibling_is_not_wrapped() {
+    let scan = scan_of(vec![micro_field(), ns_field("ns")]);
+    let plan = project_of(scan, vec![coalesce_call(vec![col("ts"), null_lit()])]);
+    assert_matches_main(plan);
+}
+
+#[test]
+fn null_beside_mixed_ns_and_tzns_follows_the_mixed_rule() {
+    let scan = scan_of(vec![ns_field("ns"), tzns_field("tzns")]);
+    let plan = project_of(
+        scan,
+        vec![coalesce_call(vec![col("ns"), col("tzns"), null_lit()])],
+    );
+    assert_matches_main(plan);
+}
+
+#[test]
+fn null_case_when_condition_is_not_a_site() {
+    let scan = scan_of(vec![ns_field("ns")]);
+    let case = Expr::Case(Case {
+        expr: None,
+        when_then_expr: vec![(Box::new(null_lit()), Box::new(col("ns")))],
+        else_expr: Some(Box::new(col("ns"))),
+    });
+    assert_matches_main(project_of(scan, vec![case.alias("v")]));
+}
+
+#[test]
+fn union_kernel_lands_on_the_null_branch_only() {
+    let _guard = SERIAL.lock().expect("test serial lock");
+    let valued = project_of(scan_of(vec![ns_field("v")]), vec![col("v")]);
+    let nulls = project_of(scan_of(vec![micro_field()]), vec![null_lit().alias("v")]);
+    let out = analyzed(union_of(valued, nulls));
+    let LogicalPlan::Union(union) = &out else {
+        panic!("expected a union, got {out:?}");
+    };
+    assert_eq!(union.inputs.len(), 2);
+    assert!(!plan_calls_kernel(&union.inputs[0], TIMESTAMP_NS_CAST_NAME));
+    assert!(plan_calls_kernel(&union.inputs[1], TIMESTAMP_NS_CAST_NAME));
 }

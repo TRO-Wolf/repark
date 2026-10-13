@@ -30,6 +30,21 @@ rewriter lives in the sibling `../timestamp_ns_coercion_sites.rs`.
   fallback, quiet on rewrite and closed gate, the `has_fallback_sink` accessor).
   pins: ice-tsns-coercion-1/C-005
 
+Fold 1 (2026-10-12) asks DataFusion before it wraps a NULL: each candidate node is run
+through `TypeCoercionRewriter` on a clone, and an untyped NULL is wrapped only when the
+answer brings it to the site's `Timestamp(ns, _)` together with the nanosecond operand,
+so a NULL the answer leaves alone or brings to another type (`Utf8` timezone and
+delimiter positions, window offsets, struct fields) is never wrapped and a cast the
+answer inserts is never applied, only read. `SiteRewrite::Zoned` carries the zone so the
+membership test compares full types. Union columns ask `coerce_union` for the common
+schema and wrap a NULL branch only when it equals the gate's target. A rejected rewrite
+retries on the original plan with one fallback and the `rewrite was rejected` line. New
+pins: each of the twelve shapes' classes matches main's rule alone (`from_utc_timestamp`,
+`string_agg`, `lag`, struct UNION, struct CASE, `struct(ns, NULL)` keeping a void second
+field), the retry pin, and the four surviving-mutant pins (NULL beside a microsecond
+sibling, beside mixed zones, as a CASE WHEN condition, union kernel on the NULL branch
+only). pins: ice-tsns-coercion-1/C-005
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

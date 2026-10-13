@@ -1475,4 +1475,8 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   `to_timestamp_ltz`, `timestamp`), and on any rewrite error. The sink
   is an `Arc<dyn Fn(&str)>` set by the seat, which owns the only `tracing` call, because
   `repark-functions` cannot reach a logger without a manifest edit.
+  Fold 1 (2026-10-12): a NULL is wrapped only when `TypeCoercionRewriter`, run on the
+  node, brings it to the site's `Timestamp(ns, _)`; union columns ask `coerce_union`;
+  a rewrite the inner rule rejects retries on the original plan with the
+  `rewrite was rejected` line.
   pins: ice-tsns-coercion-1/C-005
