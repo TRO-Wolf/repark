@@ -2,12 +2,13 @@ use std::sync::{Arc, Mutex};
 
 use datafusion::arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
-use datafusion::common::{Result, ScalarValue, TableReference};
+use datafusion::common::{DataFusionError, Result, ScalarValue, TableReference};
 use datafusion::datasource::{MemTable, provider_as_source};
 use datafusion::logical_expr::dml::InsertOp;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
-    Case, DmlStatement, Expr, LogicalPlan, LogicalPlanBuilder, ScalarUDF, WriteOp, col, lit,
+    Case, DmlStatement, Expr, LogicalPlan, LogicalPlanBuilder, ScalarUDF, Volatility, WriteOp, col,
+    create_udf, lit,
 };
 use datafusion::optimizer::AnalyzerRule;
 
@@ -512,4 +513,57 @@ fn refused_feed_counts_once_and_reanalysis_counts_nothing() {
     let _ = wrapper.analyze(clean, &config).expect("plan analyzes");
     assert_eq!(lines.lock().expect("test serial lock").len(), 1);
     let _ = TIMESTAMPTZ_NS_CAST_NAME.len() + case_call("ns").to_string().len();
+}
+
+fn tzns_field(name: &str) -> Field {
+    Field::new(
+        name,
+        DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC"))),
+        true,
+    )
+}
+
+fn call_of(func: Arc<ScalarUDF>, args: Vec<Expr>) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(func, args))
+}
+
+#[test]
+fn microsecond_sibling_calls_at_a_feed_are_left_to_main() {
+    let scan = scan_of(vec![micro_field(), ns_field("ns")]);
+    let nanosecond = DataType::Timestamp(TimeUnit::Nanosecond, None);
+    let fixed = create_udf(
+        "takes_two_nanosecond_timestamps",
+        vec![nanosecond.clone(), nanosecond.clone()],
+        nanosecond,
+        Volatility::Immutable,
+        Arc::new(|_| Err(DataFusionError::Plan("never invoked".to_string()))),
+    );
+    for call in [
+        coalesce_call(vec![col("ns"), col("ts"), null_lit()]),
+        coalesce_call(vec![col("ts"), null_lit()]),
+        call_of(Arc::new(fixed), vec![col("ts"), null_lit()]),
+    ] {
+        let input = project_of(scan.clone(), vec![call.alias("v")]);
+        let plan = dml_insert(vec![ns_field("v")], input);
+        assert!(matches!(
+            rewrite_feeds(plan).expect("feed walk runs"),
+            FeedOutcome::Unchanged
+        ));
+    }
+}
+
+#[test]
+fn mixed_ns_and_tzns_siblings_at_a_feed_are_left_to_main() {
+    let scan = scan_of(vec![ns_field("ns"), tzns_field("tzns")]);
+    for operands in [
+        vec![col("ns"), col("tzns"), null_lit()],
+        vec![col("tzns"), col("ns"), null_lit()],
+    ] {
+        let input = project_of(scan.clone(), vec![coalesce_call(operands).alias("v")]);
+        let plan = dml_insert(vec![ns_field("v")], input);
+        assert!(matches!(
+            rewrite_feeds(plan).expect("feed walk runs"),
+            FeedOutcome::Unchanged
+        ));
+    }
 }

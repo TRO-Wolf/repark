@@ -109,7 +109,7 @@ fn analyzer_configuration_keeps_the_rule_names_and_count_through_the_wrapper() {
 }
 
 #[test]
-fn configured_first_coercion_counts_open_analyses_and_ignores_closed_ones() {
+fn configured_first_coercion_counts_nothing_without_a_rewritten_or_refused_feed() {
     let rules = SparkExtension
         .configure_analyzer_rules(Analyzer::new().rules)
         .expect("default analyzer contains type_coercion");
@@ -131,11 +131,11 @@ fn configured_first_coercion_counts_open_analyses_and_ignores_closed_ones() {
     let before_open = gate_open_count();
     let before_fallback = fallback_count();
     let _ = coercion.analyze(open, &config).expect("open scan analyzes");
-    assert_eq!(gate_open_count() - before_open, 1);
+    assert_eq!(gate_open_count() - before_open, 0);
     let _ = coercion
         .analyze(closed, &config)
         .expect("closed scan analyzes");
-    assert_eq!(gate_open_count() - before_open, 1);
+    assert_eq!(gate_open_count() - before_open, 0);
     assert_eq!(fallback_count() - before_fallback, 0);
 }
 

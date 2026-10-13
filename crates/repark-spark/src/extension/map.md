@@ -65,6 +65,10 @@ function-registry + analyzer-rule installation + the composed
   **ICE-TSNS-COERCION-1 slice 1 round 2 (2026-10-12):**
   `configured_wrapper_carries_a_fallback_sink` pins the seat wiring the `tracing::debug!`
   fallback sink into the wrapped first `type_coercion` rule.
+  Narrow fold (2026-10-13):
+  `configured_first_coercion_counts_nothing_without_a_rewritten_or_refused_feed` re-homes
+  the fold-1 gate-count pin to the ruled order — a scan with no feed hands the inner rule
+  the plan with both counters untouched.
   pins: ice-tsns-coercion-1/C-005
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `apply_default_catalog(session, name)`
   (registry and carrier, a no-op once `USE` pinned the current catalog),

@@ -37,7 +37,9 @@ position feed and a kernel-argument feed are rewritten, feeds behind alias/subqu
 bare projection, sort and filter are rewritten, reading filters/sorts, double reads
 and every other plan node stop the walk, a consumer at the feed root is left to main,
 a site left inside a rewritten root refuses once, a microsecond target and a raw
-planner cast are not anchors. pins: ice-tsns-coercion-1/C-005
+planner cast are not anchors, and microsecond-sibling and mixed-zone calls at a feed
+are left to main (the feed-anchored halves of the m4 and m5 pins, which the bare-read
+forms cannot kill). pins: ice-tsns-coercion-1/C-005
 
 Fold 1 (2026-10-12) asks DataFusion before it wraps a NULL: each candidate node is run
 through `TypeCoercionRewriter` on a clone, and an untyped NULL is wrapped only when the

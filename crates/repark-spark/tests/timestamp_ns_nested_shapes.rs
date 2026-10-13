@@ -476,12 +476,42 @@ async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
     }
 }
 
-const UNTYPED_NULL_UPDATES: [&str; 4] = [
+const UNTYPED_NULL_UPDATES: [&str; 3] = [
     "CASE WHEN id > 0 THEN {c} ELSE NULL END",
     "CASE WHEN id < 0 THEN NULL ELSE {c} END",
     "if(id > 0, {c}, NULL)",
-    "array({c}, NULL)[0]",
 ];
+
+#[tokio::test]
+async fn an_update_with_an_array_index_site_refuses_with_mains_text() {
+    let session = session("America/New_York");
+    let _warehouse = catalog(&session).await;
+    run(
+        &session,
+        "CREATE TABLE ice.ns.u (id INT, v timestamp_ns, c timestamp_ns, z timestamptz_ns) USING \
+         iceberg TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    run(
+        &session,
+        "INSERT INTO ice.ns.u VALUES \
+         (1, NULL, CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns), \
+          CAST('2026-01-02 03:04:05.123456789+00:00' AS timestamptz_ns))",
+    )
+    .await;
+    let expected = "Cannot safely cast `v` \"TIMESTAMP\" to \"TIMESTAMP_NS\". The value was \
+                    narrowed from nanoseconds to microseconds before the store; give the NULL \
+                    beside it the type timestamp_ns. SQLSTATE: KD000";
+    for column in ["c", "z"] {
+        let refused = attempt(
+            &session,
+            &format!("UPDATE ice.ns.u SET v = array({column}, NULL)[0]"),
+        )
+        .await
+        .expect_err("array index site refuses");
+        assert!(refused.ends_with(expected), "{column}: {refused}");
+    }
+}
 
 #[tokio::test]
 async fn an_update_with_no_where_stores_a_nanosecond_value_built_from_an_untyped_null() {
