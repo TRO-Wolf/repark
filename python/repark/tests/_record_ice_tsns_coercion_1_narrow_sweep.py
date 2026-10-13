@@ -44,8 +44,7 @@ def _answers(spark: Any, name: str, form: str) -> bool:
             "TBLPROPERTIES ('format-version' = '3')"
         )
         spark.sql(
-            f"INSERT INTO ice.ns.sweep_tgt SELECT {name}({column}, {other}) AS v "
-            "FROM ice.ns.src"
+            f"INSERT INTO ice.ns.sweep_tgt SELECT {name}({column}, {other}) AS v FROM ice.ns.src"
         )
         spark.sql("SELECT * FROM ice.ns.sweep_tgt").toArrow()
     except Exception:
