@@ -106,8 +106,8 @@ def _open_session() -> Any:
     return ReparkSession.builder.appName("ice-tsns-coercion-1-slice1").getOrCreate()
 
 
-def test_pandas_datetime64_ns_frame_scans_as_ns() -> None:
-    """pins: ice-tsns-coercion-1/C-005 — a datetime64[ns] frame scans as Timestamp(ns)."""
+def test_pandas_datetime64_ns_frame_scans_as_microseconds() -> None:
+    """pins: ice-tsns-coercion-1/C-005 — a datetime64[ns] frame scans as Timestamp(us)."""
     pdf = pd.DataFrame(
         {
             "id": [1, 2],
@@ -126,7 +126,7 @@ def test_pandas_datetime64_ns_frame_scans_as_ns() -> None:
         before_open, before_fallback = _counts()
         table = spark.sql("SELECT t FROM v_ns_frame").toArrow()
         opened, fallback = _counts()
-        assert table.schema.types[0] == pa.timestamp("ns")
+        assert table.schema.types[0] == pa.timestamp("us")
         assert opened == before_open
         assert fallback == before_fallback
     finally:
