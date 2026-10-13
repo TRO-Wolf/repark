@@ -10076,3 +10076,6 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   when the box lane is absent. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here.
   pins: parity-live-infra-2/C-001
+
+NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (2026-10-13): `test_ns_array_apply_in_pandas_refuse_1.py` pins the interim refusal of the nanosecond array applyInPandas stores wrong: plain array(ns) and array(timestamptz_ns) through grouped and cogrouped doors, a user-built object column of numpy datetime64[ns] arrays with no table, and depth-two nested plus struct-held nanosecond arrays refuse PySparkTypeError naming the column, the unit and the `.astype("datetime64[us]")` hint; the microsecond array, the hint cast, the top-level ns refusal text, the empty list, the list of nulls, and the nested/struct microsecond controls keep main's answers.
+pins: ns-array-apply-in-pandas-refuse-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
