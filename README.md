@@ -8,11 +8,12 @@ first-class Apache Iceberg integration — AWS Glue and S3 Tables catalogs first
 
 ## Status
 
-**v1.0.0 on PyPI (2026-09-03).** The engine was ported here from a private codebase where it
+**v1.5.4 on PyPI (2026-10-10).** The engine was ported here from a private codebase where it
 runs production pipelines; the port, the format-v3 north star and the API freeze are complete.
 [STATUS.md](STATUS.md) is the single source of truth for current state: what is delivered, what
-is deferred, and release state. From 1.0.0 the public API moves additively within the major;
-the rule and the frozen inventory are in [docs/release.md](docs/release.md).
+is deferred, and release state. From 1.0.0, the first stable release (2026-09-03), the public
+API moves additively within the major; the rule and the frozen inventory are in
+[docs/release.md](docs/release.md).
 
 Issues and bug reports are welcome. External code contributions are not accepted yet — see
 [CONTRIBUTING.md](CONTRIBUTING.md).

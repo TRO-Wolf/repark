@@ -1,0 +1,171 @@
+{
+ "date": "2026-10-13",
+ "main": "8c51fbc4",
+ "unit_ms": "median per process",
+ "fold_1_tick_floor": [
+  {
+   "set": 1,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.623,
+    "one_nanosecond_column": 4.812,
+    "one_utc_nanosecond_column": 5.171,
+    "one_new_york_nanosecond_column": 6.682,
+    "one_nanosecond_column_declared_timestamp": 15187.066
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.721,
+    "one_nanosecond_column": 21.005,
+    "one_utc_nanosecond_column": 20.801,
+    "one_new_york_nanosecond_column": 21.217,
+    "one_nanosecond_column_declared_timestamp": 9461.785
+   }
+  },
+  {
+   "set": 2,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.671,
+    "one_nanosecond_column": 4.958,
+    "one_utc_nanosecond_column": 5.402,
+    "one_new_york_nanosecond_column": 6.078
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.727,
+    "one_nanosecond_column": 21.664,
+    "one_utc_nanosecond_column": 22.008,
+    "one_new_york_nanosecond_column": 21.88
+   }
+  },
+  {
+   "set": 3,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 5.451,
+    "one_nanosecond_column": 4.657,
+    "one_utc_nanosecond_column": 5.406,
+    "one_new_york_nanosecond_column": 6.093
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.687,
+    "one_nanosecond_column": 20.789,
+    "one_utc_nanosecond_column": 20.851,
+    "one_new_york_nanosecond_column": 21.167
+   }
+  },
+  {
+   "set": 4,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.703,
+    "one_nanosecond_column": 4.715,
+    "one_utc_nanosecond_column": 5.136,
+    "one_new_york_nanosecond_column": 6.034
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.674,
+    "one_nanosecond_column": 21.014,
+    "one_utc_nanosecond_column": 20.845,
+    "one_new_york_nanosecond_column": 21.47
+   }
+  },
+  {
+   "set": 5,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.63,
+    "one_nanosecond_column": 4.846,
+    "one_utc_nanosecond_column": 5.428,
+    "one_new_york_nanosecond_column": 6.33
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.798,
+    "one_nanosecond_column": 21.349,
+    "one_utc_nanosecond_column": 21.51,
+    "one_new_york_nanosecond_column": 21.496
+   }
+  }
+ ],
+ "before_fold_1_floor_temporal": [
+  {
+   "set": 1,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.62,
+    "one_nanosecond_column": 4.609,
+    "one_nanosecond_column_declared_timestamp": 15394.781
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.693,
+    "one_nanosecond_column": 21.854,
+    "one_nanosecond_column_declared_timestamp": 9626.625
+   }
+  },
+  {
+   "set": 2,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.649,
+    "one_nanosecond_column": 4.697,
+    "one_nanosecond_column_declared_timestamp": 15314.09
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 5.107,
+    "one_nanosecond_column": 22.497,
+    "one_nanosecond_column_declared_timestamp": 9822.87
+   }
+  },
+  {
+   "set": 3,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.637,
+    "one_nanosecond_column": 4.68,
+    "one_nanosecond_column_declared_timestamp": 15339.032
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.709,
+    "one_nanosecond_column": 21.799,
+    "one_nanosecond_column_declared_timestamp": 9510.911
+   }
+  },
+  {
+   "set": 4,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 5.201,
+    "one_nanosecond_column": 4.68,
+    "one_nanosecond_column_declared_timestamp": 15330.347
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.65,
+    "one_nanosecond_column": 21.424,
+    "one_nanosecond_column_declared_timestamp": 9466.57
+   }
+  },
+  {
+   "set": 5,
+   "main": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.717,
+    "one_nanosecond_column": 4.708,
+    "one_nanosecond_column_declared_timestamp": 15304.83
+   },
+   "head": {
+    "rows": 1000000,
+    "no_nanosecond_column": 4.63,
+    "one_nanosecond_column": 21.565,
+    "one_nanosecond_column_declared_timestamp": 9607.883
+   }
+  }
+ ]
+}

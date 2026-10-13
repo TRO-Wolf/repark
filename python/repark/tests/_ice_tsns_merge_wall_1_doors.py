@@ -8,13 +8,13 @@ control whose answer is main's recorded one.
 
 from __future__ import annotations
 
+import itertools
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-import pandas as pd
 import pyarrow as pa
 
 from repark import ReparkSession, functions
@@ -57,6 +57,7 @@ TARGETS = {
 }
 IDS = tuple(range(1, len(MOMENTS) + 1))
 SRC = "ice.ns.src"
+FRAME_NAMES = itertools.count()
 
 
 def nanos_of(text: str) -> int:
@@ -122,7 +123,9 @@ def source_array(source: str) -> pa.Array:
 
 def frame_of(spark: Any, table: pa.Table) -> Any:
     """Return a DataFrame over ``table`` that keeps every Arrow type."""
-    return spark.createDataFrame(table.to_pandas(types_mapper=pd.ArrowDtype))
+    name = f"frame_of_{next(FRAME_NAMES)}"
+    spark._ensure_alive().register_arrow_stream_as_temp_view(name, table)
+    return spark.table(name)
 
 
 def open_session(zone: str, warehouse: Path) -> Any:
