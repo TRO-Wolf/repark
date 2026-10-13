@@ -22,8 +22,8 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pytest
-import repark.functions as F
 
+from repark import functions as F  # noqa: N812 — PySpark idiom
 from repark.errors import PySparkException, PySparkTypeError
 
 EPOCH = datetime(1970, 1, 1)
@@ -180,9 +180,7 @@ def test_cogrouped_user_ns_object_column_refuses(tmp_path: Path) -> None:
 def test_grouped_nested_ns_array_refuses(tmp_path: Path) -> None:
     """Grouped applyInPandas over array(array(ns)) refuses at depth two."""
     with _source_session(tmp_path) as spark:
-        frame = spark.table(doors.SRC).select(
-            "id", F.array(F.array(F.col("ns"))).alias("v")
-        )
+        frame = spark.table(doors.SRC).select("id", F.array(F.array(F.col("ns"))).alias("v"))
         with pytest.raises(PySparkTypeError) as caught:
             frame.groupBy("id").applyInPandas(_identity, frame.schema).toArrow()
         _assert_ns_array_refusal(caught.value, "v")
@@ -216,9 +214,7 @@ def test_grouped_hint_cast_answers(tmp_path: Path) -> None:
     with _source_session(tmp_path) as spark:
         frame = spark.table(doors.SRC).select("id", F.array(F.col("ns")).alias("v"))
         result = (
-            frame.groupBy("id")
-            .applyInPandas(_cast_arrays_to_microseconds, frame.schema)
-            .toArrow()
+            frame.groupBy("id").applyInPandas(_cast_arrays_to_microseconds, frame.schema).toArrow()
         )
         assert str(result.schema.field("v").type) == "list<item: timestamp[us]>"
         assert _sorted_ticks(result, "v") == sorted(EXPECTED_US_FLOOR)
@@ -239,9 +235,7 @@ def test_grouped_empty_list_answers(tmp_path: Path) -> None:
     with _source_session(tmp_path) as spark:
         frame = spark.table(doors.SRC).select("id", F.array().alias("v"))
         result = (
-            frame.groupBy("id")
-            .applyInPandas(_identity, "id int, v array<timestamp_ntz>")
-            .toArrow()
+            frame.groupBy("id").applyInPandas(_identity, "id int, v array<timestamp_ntz>").toArrow()
         )
         assert str(result.schema.field("v").type) == "list<item: timestamp[us]>"
         rows = result.to_pylist()
@@ -254,9 +248,7 @@ def test_grouped_list_of_nulls_answers(tmp_path: Path) -> None:
     with _source_session(tmp_path) as spark:
         frame = spark.table(doors.SRC).select("id", F.array(F.lit(None)).alias("v"))
         result = (
-            frame.groupBy("id")
-            .applyInPandas(_identity, "id int, v array<timestamp_ntz>")
-            .toArrow()
+            frame.groupBy("id").applyInPandas(_identity, "id int, v array<timestamp_ntz>").toArrow()
         )
         assert str(result.schema.field("v").type) == "list<item: timestamp[us]>"
         rows = result.to_pylist()

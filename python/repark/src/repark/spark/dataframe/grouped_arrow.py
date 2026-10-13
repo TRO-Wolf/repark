@@ -158,9 +158,7 @@ def _series_nanosecond_unit(series: Any) -> str | None:
     import pandas as pd
 
     dtype = series.dtype
-    if isinstance(dtype, pd.ArrowDtype) and _arrow_holds_nanosecond_in_list(
-        dtype.pyarrow_dtype
-    ):
+    if isinstance(dtype, pd.ArrowDtype) and _arrow_holds_nanosecond_in_list(dtype.pyarrow_dtype):
         return "timestamp[ns]"
     return None
 

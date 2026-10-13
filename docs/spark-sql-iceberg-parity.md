@@ -3561,6 +3561,28 @@ still open is `isModifiable`.
   no write door is reached and nothing is stored; measured by the nested matrices of
   ICE-TSNS-MERGE-WALL-1 and out of its scope. Ledger clause C-039, question Q10.
 
+### ICE-TSNS-SQL-1-R-019 — OPEN (measured 2026-10-13): `applyInPandas` stores a nanosecond array without converting the unit; the interim fix refuses
+
+- **repark** — grouped and cogrouped `applyInPandas` convert the pandas result with
+  `pa.Table.from_pandas(out_pdf, schema=…)`, which takes an object column of numpy
+  `datetime64[ns]` arrays into `list<timestamp[us]>` without converting the unit and
+  without raising: `array(ns)` over `ice.ns.src` answers element ticks
+  `1767323045123456789` and `-1` where the floored values are `1767323045123456` and
+  `-1` (naive; the zoned twin likewise). Since NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 the
+  same door raises `PySparkTypeError` naming the column, the declared type and the
+  unit, with the hint to cast the elements to microseconds in the function
+  (`.astype("datetime64[us]")`) before returning. The refusal covers any list depth
+  plus struct fields and map values, decided from the data dtype with a
+  first-decisive-cell scan of that one object column.
+- **Apache Spark** — cannot write the type. *(oracle: none — the nanosecond types do
+  not convert; the floored values are the rule the other doors follow.)*
+- **Pin** — `python/repark/tests/test_ns_array_apply_in_pandas_refuse_1.py` (the
+  refusal pins and the controls that keep main's answers).
+- **Rationale** — OPEN, dated 2026-10-13, severity S0. Interim refusal by owner ruling
+  of that day: a wrong stored value with no error. The fix proper (floor like the
+  other doors) is future work. Ledger
+  `task/ledgers/staging/ns-array-apply-in-pandas-refuse-1-ledger.md`.
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers

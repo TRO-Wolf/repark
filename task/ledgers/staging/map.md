@@ -2406,3 +2406,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixed) (C-004). `risk_tier: standard`. Branch
   `test/parity-live-infra-2`.
   pins: parity-live-infra-2/C-001, C-002, C-003, C-004
+- [ns-array-apply-in-pandas-refuse-1-ledger.md](ns-array-apply-in-pandas-refuse-1-ledger.md) —
+  **NS-ARRAY-APPLY-IN-PANDAS-REFUSE-1 (2026-10-13), parity row R-019:** grouped and
+  cogrouped `applyInPandas` stored a nanosecond array unconverted into
+  `list<timestamp[us]>` (ticks `1767323045123456789` for `1767323045123456`, S0); the
+  interim fix refuses at the shared pandas-to-Arrow conversion with a `PySparkTypeError`
+  naming the column, the type and the unit plus the microsecond-cast hint, over any list
+  depth, struct fields and map values. Red-first pins, controls equal to main, neighbours
+  green, three mutants red then restored. `risk_tier: standard`. Branch
+  `fix/ns-array-apply-in-pandas-refuse-1`.
+  pins: ns-array-apply-in-pandas-refuse-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
