@@ -9,6 +9,9 @@ named only as "the cutover pipeline" here.
 
 ## Contents
 
+- [production-audit-2026-10-11.md](production-audit-2026-10-11.md) — findings-only production readiness review at main `07be1dc9`: ranked security, safety, data-integrity, resource, validation and documentation findings, with qualified scope and remediation acceptance checks.
+- [production-audit-evidence-2026-10-11.md](production-audit-evidence-2026-10-11.md) — reproduction scripts, fresh module identity, live Spark classification, functional outputs and gate outcomes for that review.
+
 - [inventory.md](inventory.md) — **the cutover inventory (2026-09-04):** six workloads in run
   order, table ownership before and after, the matrix rows already measured (SQL-HARDEN-1/2,
   DATE-FN-1), the six acceptance checks, rollback by snapshot, the canary steps C0–C6, and the

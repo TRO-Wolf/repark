@@ -10,6 +10,13 @@ This file closes when the H-3 campaign archives to `docs/history/`.
 
 ## Contents
 
+- [production-performance-audit-2026-10-11.md](production-performance-audit-2026-10-11.md) —
+  **Production audit (2026-10-11):** current-source review of speed and memory across planning,
+  Arrow/Python export, caches, Iceberg scans/writes/MERGE, Postgres, microbatch and optional
+  cluster execution. Twelve ranked improvement candidates with owner paths, correctness risks
+  and inexpensive acceptance experiments; nine isolated 100k-row development diagnostics and
+  four current EXPLAIN controls. Explicitly separates debug diagnostics, historical release
+  measurements, source costs and hypotheses; no current release-performance qualification.
 - [cast-cost-2026-09-12.md](cast-cost-2026-09-12.md) — **PERF-CAST-1 step 1 Upstream: apache/datafusion#25248.
   (2026-09-12):** where a CAST costs a millisecond. 200k-row MemTable, CAST
   counts 50 / 250 / 2500, three plan shapes; plan vs `EXPLAIN ANALYZE` execute;

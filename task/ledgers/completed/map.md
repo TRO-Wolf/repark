@@ -845,6 +845,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   the pre-PR gate locally instead of failing CI's Python job (#427). `risk_tier: standard`.
   Branch `feat/preflight-parity-1`.
   pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
+- [production-audit-2026-10-11-ledger.md](production-audit-2026-10-11-ledger.md) — findings-only production audit and subsequent Sol performance review at main `07be1dc9`.
 - [profiles-1-ledger.md](profiles-1-ledger.md) — Unit ledger — PROFILES-1 steps 1–3 · the measurement bed, the knob sweep, and the two profiles
 - [rdf-schema-evo-1-ledger.md](rdf-schema-evo-1-ledger.md) — §10 records the RP-15 bump and the RePark-side critic PASS.
   **RDF-SCHEMA-EVO-1 (2026-09-06), in flight:** `rewrite_data_files` after schema evolution —
