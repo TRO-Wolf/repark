@@ -116,6 +116,12 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   Polars, RisingWave, Supabase ETL, Iggy and Sail inside the ruled fourteen-crate layout, the four
   production lists (safety, security, performance, solidity), the operator surface in Spark's names,
   carried ideas, and the three cases that still halt. Below every ruled row; above executor judgment.
+- [s3-tables-fastest-north-star-2026-10-12.md](s3-tables-fastest-north-star-2026-10-12.md) — **the S3
+  Tables performance goal (owner-set 2026-10-12, FUTURE, unscheduled):** "the fastest known query
+  engine on S3 Tables" defined as a measurable claim — one node, S3 Tables as catalog and store,
+  three workload classes cold and warm, a named comparison set, a published re-runnable page; where
+  main stands at that date (no AWS measurement recorded), the PERF-S3T-0…5 path, the open owner
+  decisions. No lane runs on it until the owner schedules it.
 - [contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) — **contracts ahead of code (ruled
   2026-10-01):** the crate contracts between the pre-declared crates — CC-1 core consumes the services and
   Session owns embedded capture under four shutdown rules, CC-2 the narrow T-6 identity move with a
