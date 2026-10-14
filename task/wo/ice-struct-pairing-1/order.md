@@ -1,7 +1,7 @@
 # ICE-STRUCT-PAIRING-1 (U-6, R-016): one rule pairs struct fields on every write door     grade: A   engine: Claude Opus 5.5 high, self-directed   release: 1.5.6
 
-**Status:** order, dispatchable unchanged once the owner accepts [sketch.md](sketch.md) and
-answers its Q1 to Q3. Written by Claude (claude-opus-5-5), lane B of the Iceberg closeout, on
+**Status:** order, dispatched for the build on 2026-10-14 after step 0 and the owner's answers
+of the same day (§1). Written by Claude (claude-opus-5-5), lane B of the Iceberg closeout, on
 2026-10-13, from registry row ICE-TSNS-SQL-1-R-016 (audit item PA-07), ledger clause C-037 and
 question Q8 of `task/ledgers/staging/ice-tsns-merge-wall-1-ledger.md`. Main at writing:
 `018d0efd`. The sketch is part of this order: where the order says §n it means the sketch's
@@ -41,9 +41,37 @@ reading of how a value was produced: the unit is refused at review if one appear
 - **Lessons 2026-10-12 and 2026-10-13** (`task/lessons.md`): rounds are counted against the
   finding class; a census cell's expected category comes from the harness; a provisional
   decision ships with a revert-alone run and its pasted test count.
-- **Sketch Q1, Q2, Q3:** the owner's answers are pasted here before dispatch. The order is
-  written to the leans: follow Spark with no switch; register the kernel as the store kernels
-  are registered and add its name to R-013's row; refuse with hint H-1 below the router.
+- **Sketch Q1, Q2, Q3 (owner, 2026-10-14, triage questions 13 to 15 and 36):** adopted at the
+  leans. Q1: follow Spark with no switch; the 1.5.6 note carries one line for the doors that
+  change what they store (`task/roadmap/mid-term/v1-5-6-release-notes-draft.md`). Q2: see the
+  question-35 ruling below. Q3: the Rust `append` API and the streaming sink refuse an unpaired
+  struct with hint H-1 in 1.5.6; a mode of their own only when a user asks.
+- **Step 0 (2026-10-14, `step-0.md`):** H1, H2, H3, H5 not met; H4 and H7 met; the owner ruled
+  both on the same day, so the unit goes on with one seam.
+- **Owner, 2026-10-14, question 34 (H7, the static-partition overwrite route):** that route
+  (`crates/repark-spark/src/insert_overwrite.rs`, `execute_partition_overwrite`) stages through
+  `zone_stores` and then S3, with no `conform_types` and no `wrap_store_outputs` call. U-3
+  (R-009, PR #1059) fixed its nanosecond floor inside `zone_stores`, a top-level timestamp
+  projection; it did not route the door through the common store stage. So the guard ships:
+  one check, the H-1 error, a hint that names the route and the workaround (write the struct in
+  the table's field order), and a dated row in `docs/spark-sql-iceberg-parity.md`. No second
+  pairing site on that route.
+- **Owner, 2026-10-14, question 35 (H4):** register `StorePairKernel` as the store kernels are
+  registered and add its name to R-013's row, on three conditions: one registration table holds
+  every by-name store kernel; a session-build pin proves it; R-009's retirement sketch covers
+  every name on R-013's row.
+- **Owner, 2026-10-14, question 37:** R-022 (`mergeSchema` surplus struct field dropped; Spark
+  answers `EXTRA_STRUCT_FIELDS`) is in this unit's class: one fixture cell on the head; if the
+  seam closes it, the row closes here with its pin, otherwise the hand-back says so and it gets
+  a card. R-021 (case-twin struct fields under BY NAME; Spark answers `AMBIGUOUS_COLUMN_NAME`)
+  has its own card; if hint H-2 closes it, say so with the cell, but the unit does not grow for
+  it.
+- **Stacked on U-3 (2026-10-14):** the branch merges `fix/ice-tsns-floor-doors-1` at
+  `fb325e57`. After U-3, S1 (`conform.rs`, `conform_batch_scoped`), S2 (`overwrite.rs`) and S3
+  (`partition_overwrite.rs`) all go through `conform::strict_store_cast`, U-3's provisional
+  guard (owner lean A, pending). The H-1 guard may then be one check there for all three casts.
+  If the owner strikes lean A, U-3's revert restores the three casts and the guard goes back to
+  the three places §2 lists. Merge `origin/main` once U-3 lands; never rebase.
 
 ## 2. Files
 
