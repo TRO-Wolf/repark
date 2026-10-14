@@ -15,7 +15,7 @@ prints nothing), so sketch §3 line numbers still hold; lines re-verified at HEA
 | H3 DataFusion raises before the rule | NOT MET | stored pairs never raise early; recased raises at execution, §2 |
 | H4 kernel visible to user SQL | MET | both names resolve in user SQL; Q2 open, §2 |
 | H5 source_by_name moves route or cost | NOT MET | two readers; flag true vs false identical rows, §2 |
-| H6 cost above 1.05 or EXPLAIN differs | pending cost bar | see §4 |
+| H6 cost above 1.05 or EXPLAIN differs | bar recorded, no verdict at step 0 | ctas 143.11, ctas_partitioned8 203.55, parquet_zstd 111.77, §4 |
 | H7 route to S1/S2/S3 past neither call site | MET | static-partition route stages with no wrap call, §2 |
 
 Seams: more than one (H4, H7).
@@ -221,5 +221,16 @@ both engines; Spark still refuses the surplus struct field.
 
 ## 4. Cost bar (order item f)
 
-Pending; write-cost medians of main's module on the write set under `docs/perf/`,
-five interleaved sets (D4 commit).
+Main's module (release, built from `293896ce`), write cells of
+`python/repark-parity/bench/writepath/probe_cell.py` over the 1M-row bed,
+`spark.sql.shuffle.partitions = 8`, memory catalog, fresh table per iteration, 1
+warm-up + 5 timed iterations per run, five interleaved passes (15 runs). No cargo
+or maturin build ran during timing: the build lock was taken free before the first
+pass and still free after the last; 1-minute load 4.7-5.8 throughout. Bar for
+step 5 (median of the five pass-medians):
+
+| Cell | Bar median | Pass medians (ms) | Files |
+|---|---|---|---|
+| `iceberg_write/1000000/ctas` | 143.11 | 143.60, 143.11, 141.06, 140.46, 146.92 | 8 |
+| `iceberg_write/1000000/ctas_partitioned8` | 203.55 | 205.71, 203.55, 200.18, 199.51, 208.47 | 8 |
+| `iceberg_write/1000000/df_write_parquet_zstd` | 111.77 | 110.28, 111.79, 111.90, 105.48, 111.77 | n/a |
