@@ -7,6 +7,6 @@ ledger is
 [ns-array-floor-1-ledger.md](../../ledgers/staging/ns-array-floor-1-ledger.md).
 This directory closes when the unit's pull request merges.
 
-- [evidence/](evidence/map.md) — the D1 input cells, the D2 output cells, and the D3 refusal sites.
+- [evidence/](evidence/map.md) — the D1 input cells, the D2 output cells, the D3 refusal sites, and the F2 echo cells.
 
 Up: [../map.md](../map.md).

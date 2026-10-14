@@ -10221,3 +10221,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   and Iceberg read-back ticks are both recorded. Evidence
   `task/wo/ns-array-floor-1/evidence/output-cells.md` plus JSON.
   pins: ns-array-floor-1/C-003, C-004, C-005
+- [_record_ns_array_floor_1_lane_a.py](_record_ns_array_floor_1_lane_a.py) —
+  **NS-ARRAY-FLOOR-1 F2 (2026-10-14):** the Lane A echo recorder: the function
+  returns its input frame unchanged under the frame's own schema, over a plain
+  timestamp_ns column, coalesce(ns, NULL), and a microsecond control (on live
+  Spark the control plus a datetime64[ns] pandas frame). Evidence
+  `task/wo/ns-array-floor-1/evidence/lane-a-cells.md` plus JSON.
+  pins: ns-array-floor-1/C-006, C-007

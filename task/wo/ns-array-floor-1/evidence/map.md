@@ -12,5 +12,8 @@
 - [sites.md](sites.md) — D3: the refusal and copy site of every erroring and
   every floor-answering output cell, with the door-to-site table and the
   one-line site count.
+- [lane-a-cells.md](lane-a-cells.md) + [lane-a-cells.json](lane-a-cells.json) —
+  F2: the echo shape behind the 108 lost statements on main, the U-1 head,
+  and live Spark, with the declared schema spelling and integer ticks.
 
 Up: [../map.md](../map.md).

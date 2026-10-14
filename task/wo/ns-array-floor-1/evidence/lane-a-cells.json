@@ -1,0 +1,2486 @@
+{
+ "runs": [
+  {
+   "meta": {
+    "label": "main",
+    "base_sha": "293896ce",
+    "zone": "UTC",
+    "live": false,
+    "safe_setting": "n/a"
+   },
+   "cells": [
+    {
+     "door": "grouped_applyin",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: -1', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 146,
+       "func": "_apply_in_pandas_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: -1', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 127,
+       "func": "_cogrouped_pandas_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 371,
+       "func": "_apply_in_arrow_group_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 178,
+       "func": "_cogrouped_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "pandas_udf 'func' failed converting result to declared type timestamp[us] (timestamp_ntz): Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 313,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 262,
+       "func": "_emit_pandas_udf_batch"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 140,
+       "func": "_pandas_udf_series_to_arrow"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "arrow_udf 'func' failed converting result to declared type timestamp[us]: Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 312,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 152,
+       "func": "_run_pandas_udf_scalar_on_batch"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 141,
+       "func": "__call__"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 121,
+       "func": "_normalize_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyin",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "grouped_applyin",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    }
+   ]
+  },
+  {
+   "meta": {
+    "label": "u1",
+    "base_sha": "07cbe563",
+    "zone": "UTC",
+    "live": false,
+    "safe_setting": "n/a"
+   },
+   "cells": [
+    {
+     "door": "grouped_applyin",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: -1', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 146,
+       "func": "_apply_in_pandas_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: -1', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 127,
+       "func": "_cogrouped_pandas_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 371,
+       "func": "_apply_in_arrow_group_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 178,
+       "func": "_cogrouped_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "pandas_udf 'func' failed converting result to declared type timestamp[us] (timestamp_ntz): Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 313,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 262,
+       "func": "_emit_pandas_udf_batch"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 140,
+       "func": "_pandas_udf_series_to_arrow"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "ns_plain",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "arrow_udf 'func' failed converting result to declared type timestamp[us]: Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 312,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 152,
+       "func": "_run_pandas_udf_scalar_on_batch"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 141,
+       "func": "__call__"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 121,
+       "func": "_normalize_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyin",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: -1', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 146,
+       "func": "_apply_in_pandas_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: -1', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 127,
+       "func": "_cogrouped_pandas_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 371,
+       "func": "_apply_in_arrow_group_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 178,
+       "func": "_cogrouped_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "pandas_udf 'func' failed converting result to declared type timestamp[us] (timestamp_ntz): Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 313,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 262,
+       "func": "_emit_pandas_udf_batch"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 140,
+       "func": "_pandas_udf_series_to_arrow"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "ns_coal",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp_ntz"
+      ]
+     ],
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "arrow_udf 'func' failed converting result to declared type timestamp[us]: Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 312,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 152,
+       "func": "_run_pandas_udf_scalar_on_batch"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 141,
+       "func": "__call__"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 121,
+       "func": "_normalize_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyin",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      -1,
+      1767323045123456,
+      1767323045000000,
+      -2
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "us",
+     "input_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      -1,
+      -2
+     ]
+    }
+   ]
+  },
+  {
+   "meta": {
+    "label": "spark412",
+    "base_sha": "none",
+    "zone": "UTC",
+    "live": true,
+    "safe_setting": "true",
+    "banner": "spark 4.1.2 zone UTC"
+   },
+   "cells": [
+    {
+     "door": "grouped_applyin",
+     "source": "us",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      17999999999,
+      1767341045123456,
+      1767341045000000,
+      17999999998
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "us",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      17999999999,
+      1767341045123456,
+      1767341045000000,
+      17999999998
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "us",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      17999999999,
+      1767341045123456,
+      1767341045000000,
+      17999999998
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "us",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      17999999999,
+      1767341045123456,
+      1767341045000000,
+      17999999998
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "source": "us",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767341045123456,
+      null,
+      1767341045000000,
+      17999999999,
+      17999999998
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "source": "us",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767341045123456,
+      null,
+      1767341045000000,
+      17999999999,
+      17999999998
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "us",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767341045123456,
+      null,
+      1767341045000000,
+      17999999999,
+      17999999998
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "us",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "int"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767341045123456,
+      null,
+      1767341045000000,
+      17999999999,
+      17999999998
+     ]
+    },
+    {
+     "door": "grouped_applyin",
+     "source": "ns_pandas",
+     "input_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "bigint"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      17999999999,
+      1767341045123456,
+      1767341045000000,
+      17999999998
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "ns_pandas",
+     "input_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "bigint"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      17999999999,
+      1767341045123456,
+      1767341045000000,
+      17999999998
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "ns_pandas",
+     "input_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "bigint"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      17999999999,
+      1767341045123456,
+      1767341045000000,
+      17999999998
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "ns_pandas",
+     "input_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "bigint"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      null,
+      17999999999,
+      1767341045123456,
+      1767341045000000,
+      17999999998
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "source": "ns_pandas",
+     "input_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "bigint"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767341045123456,
+      null,
+      1767341045000000,
+      17999999999,
+      17999999998
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "source": "ns_pandas",
+     "input_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "bigint"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767341045123456,
+      null,
+      1767341045000000,
+      17999999999,
+      17999999998
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "ns_pandas",
+     "input_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "bigint"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767341045123456,
+      null,
+      1767341045000000,
+      17999999999,
+      17999999998
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "ns_pandas",
+     "input_arrow": "k: int64 v: timestamp[us, tz=UTC]",
+     "schema_simple": [
+      [
+       "k",
+       "bigint"
+      ],
+      [
+       "v",
+       "timestamp"
+      ]
+     ],
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "ticks": [
+      1767341045123456,
+      null,
+      1767341045000000,
+      17999999999,
+      17999999998
+     ]
+    }
+   ]
+  }
+ ]
+}
