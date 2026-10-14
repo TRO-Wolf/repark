@@ -27,6 +27,7 @@ where the narrowing is decided.
 | C-005 | The seam list names each door's narrowing expression and wall-localisation site with file and line, cross-checked by EXPLAIN. | `seams.md` with the plan pastes. | **PROVEN** | `task/wo/ice-tsns-floor-doors-1/evidence/seams.md`: N1 the RePark floor-plus-zone kernel, N2 the write-side Arrow cast, N3 the store-assignment cast; INSERT-family EXPLAIN pasted; MERGE EXPLAIN refused by the router and DataFrame writers have no SQL EXPLAIN, so those doors rest on code plus values. pins: ice-tsns-floor-doors-1/C-005 |
 | C-006 | There is one seam where every door's narrowing is decided, by target column type. | The sketch owed before step 1. | **OPEN** | Q1: step 0 counts three distinct narrowing points (floor-plus-zone kernel, write-side Arrow cast, store-assignment cast), and the overwrite EXPLAIN displays N1 while storing N2/N3 values. The order halts on more than one seam. |
 | C-007 | Step 0 measures only the listed surface and changes no product file. | The diff and the not-measured list of §4. | **PROVEN** | §4; `git diff --stat origin/main HEAD -- 'crates/*/src' python/repark/src` prints nothing. pins: ice-tsns-floor-doors-1/C-007 |
+| C-008 | The build's fixture derives every expected tick from the recorder's rule and is red first on main's release module. | `test_ice_tsns_floor_doors_1.py` run on main's module, with a tick count per door and target. | **PROVEN** | §6: 180 of 246 tests red on main; 4400 of 26928 ticks red, 1976 `TIMESTAMP` and 2424 `TIMESTAMP_NTZ`, every one from a nanosecond source; the step 0 subset is red on 712 ticks (304 and 408), as the sketch counted. pins: ice-tsns-floor-doors-1/C-008 |
 
 ## 1. The matrix (C-001)
 
@@ -67,6 +68,39 @@ leaves (R-011, R-015); the frame door (R-019); `applyInPandas` (R-020); the
 create door; nanosecond targets; MERGE spelling variants beyond the single
 insert and update arms; the cost gate; any planner head (U-1 lands first and
 the build re-measures the 72 control cells there).
+
+## 6. The fixture, red first (C-008)
+
+`python/repark/tests/test_ice_tsns_floor_doors_1.py`, committed failing. Every
+expected tick is `rule_expected` of the step 0 recorder: the floor by `//`,
+the naive wall localised in the session zone and the instant shifted to the
+session wall through `zoneinfo`. A `TIMESTAMP_NTZ` or `TIMESTAMP` source runs
+through the same rule on its nanosecond twin (`micros * 1000`). Run on main's
+release module (built from `293896ce`; main has moved by docs and tests
+only since):
+
+| Group | Tests | Red tests | Ticks | Red ticks | Expected v2 refusals |
+|---|---|---|---|---|---|
+| Step 0 doors, nanosecond sources | 108 | 75 | 2376 | 712 (304 `TIMESTAMP`, 408 `TIMESTAMP_NTZ`) | 132 ticks |
+| Added doors x four layouts, nanosecond sources | 132 | 102 | 11088 | 3688 (1672, 2016) | 0 |
+| Microsecond sources, every door and layout | (same tests) | | 13464 | 0 | 0 |
+| Read casts (`TIMESTAMP_NTZ` on its own name; `TIMESTAMP` control) | 6 | 3 (`TIMESTAMP_NTZ`) | | | |
+| All | 246 | 180 | 26928 | 4400 | 132 |
+
+Red ticks by door and target, nanosecond sources, every zone, version and layout:
+
+| Door | `TIMESTAMP` | `TIMESTAMP_NTZ` |
+|---|---|---|
+| INSERT, `insertInto` append, `writeTo().append()`, MERGE update arm | 0 | 48 each |
+| UPDATE from a sibling column (v3; v2 refuses) | 0 | 24 |
+| INSERT OVERWRITE, MERGE insert arm, `overwritePartitions`, `insertInto(overwrite=True)` | 76 each | 48 each |
+| INSERT BY NAME, INSERT OVERWRITE BY NAME, INSERT OVERWRITE (k, v, id), MERGE insert `*`, MERGE insert literal | 304 each | 192 each |
+| INSERT OVERWRITE `PARTITION (k = 0)` (partitioned layouts only) | 152 | 96 |
+| REPLACE WHERE, `overwrite(cond)`, `saveAsTable` append, MERGE update `*`, MERGE update literal | 0 | 192 each |
+
+H1 restated for main: every door that step 0 recorded 66 of 66 on `TIMESTAMP`
+(INSERT, MERGE update arm, UPDATE on v3, `writeTo().append()`, `insertInto`
+append) is green here on every tick. Not hit.
 
 ## 5. Gates
 
@@ -122,4 +156,4 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
-VERDICT: 7 clauses, 6 PROVEN, 1 OPEN, 0 REJECTED.
+VERDICT: 8 clauses, 7 PROVEN, 1 OPEN, 0 REJECTED.

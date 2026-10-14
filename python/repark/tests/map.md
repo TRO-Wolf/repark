@@ -10219,3 +10219,26 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   No module docstring beyond the one line: the lane's no-comments ruling
   covers the new file; the contract lives here.
   pins: ice-tsns-floor-doors-1/C-001, C-002, C-003, C-004, C-005, C-007
+- [test_ice_tsns_floor_doors_1.py](test_ice_tsns_floor_doors_1.py) —
+  **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14), parity row R-009:** one floor on every
+  door into a microsecond `TIMESTAMP` or `TIMESTAMP_NTZ` column, 246 tests.
+  `test_every_step0_door_stores_the_floor_in_the_session_zone`: step 0's 216
+  combinations (nine doors, `TIMESTAMP` and `TIMESTAMP_NTZ` on format versions 2
+  and 3, three zones, eleven ticks) plus a `TIMESTAMP_NTZ` and a `TIMESTAMP`
+  source on every door. `test_every_added_door_and_layout_stores_the_floor_in_the_session_zone`:
+  INSERT BY NAME, INSERT OVERWRITE BY NAME and with a column list, INSERT
+  OVERWRITE with a static `PARTITION`, REPLACE WHERE, `overwrite(cond)`,
+  `saveAsTable` append and the star and literal MERGE spellings, each unpartitioned
+  and partitioned by `k`, copy-on-write and merge-on-read (the static `PARTITION`
+  door partitioned only). Every expected tick comes from the recorder's
+  `rule_expected` (floor by `//`, the wall through `zoneinfo`); a microsecond
+  source runs through the same rule on its nanosecond twin, and every microsecond
+  cell is green on main, so the head must store what main stores there. The only
+  expected refusal is the v2 UPDATE of a nanosecond sibling column (`not supported
+  until v3`). `test_the_ntz_read_cast_of_a_nanosecond_source_floors` pins the
+  read `CAST(ns AS TIMESTAMP_NTZ)` on its own name (built on the orchestrator's
+  lean B: `-1 ns` reads `-1 µs`, main `0`);
+  `test_the_ltz_read_cast_of_a_nanosecond_source_floors` is its control. Red
+  first on main: 180 of 246 tests, 4400 ticks. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: ice-tsns-floor-doors-1/C-008
