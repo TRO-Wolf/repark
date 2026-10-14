@@ -10252,6 +10252,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   read `CAST(ns AS TIMESTAMP_NTZ)` on its own name (built on the orchestrator's
   lean B: `-1 ns` reads `-1 µs`, main `0`);
   `test_the_ltz_read_cast_of_a_nanosecond_source_floors` is its control. Red
-  first on main: 180 of 246 tests, 4400 ticks. No module docstring: the lane's
-  no-comments ruling covers the new file; the contract lives here.
-  pins: ice-tsns-floor-doors-1/C-008
+  first on main: 180 of 246 tests, 4400 ticks; green on the head. It is the pin of
+  registry row R-009 (FIXED 2026-10-14) and of the 1.5.6 notes draft's stored-value lines.
+  No module docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here. pins: ice-tsns-floor-doors-1/C-008, C-013

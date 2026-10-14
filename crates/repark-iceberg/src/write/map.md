@@ -606,7 +606,8 @@ repark-core's error map.
   plans, and the analyzer turns it into the narrowing kernel. `wall_kernel_reads` accepts a
   naive nanosecond source for a `TIMESTAMP_NTZ` target, which then goes through the NTZ wall
   kernel. Why: those doors narrowed in the write-side Arrow cast, toward zero and reading a
-  naive wall as UTC. pins: ice-tsns-floor-doors-1/C-010
+  naive wall as UTC. Write cost against main, five interleaved sets of 2,000,000 rows: 0.75 to
+  1.04 (the ledger's cost table). pins: ice-tsns-floor-doors-1/C-010, C-012
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the NTZ store gate in the
   `void_store` shape: `refuse_ntz_writes` runs the session analyzer over the planned
   write and refuses, for a `Timestamp(µs, None)` target, any source the ANSI matrix
