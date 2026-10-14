@@ -1,0 +1,3542 @@
+{
+ "provenance": {
+  "engine": "repark",
+  "repark": "1.5.5",
+  "catalog": "memory",
+  "date": "2026-10-14"
+ },
+ "cells": [
+  {
+   "id": "create_insert_z_new_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "insert",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_insert_z_new_v2 AS INSERT INTO wbc1.ns.t_create_insert_z_new_v2 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_insert_z_exists_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "insert",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_insert_z_exists_v2 AS INSERT INTO wbc1.ns.t_create_insert_z_exists_v2 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_insert_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_insert_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "create_overwrite_z_new_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "overwrite",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_overwrite_z_new_v2 AS INSERT OVERWRITE wbc1.ns.t_create_overwrite_z_new_v2 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_overwrite_z_exists_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "overwrite",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_overwrite_z_exists_v2 AS INSERT OVERWRITE wbc1.ns.t_create_overwrite_z_exists_v2 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_overwrite_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_overwrite_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "create_update_z_new_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "update",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_update_z_new_v2 AS UPDATE wbc1.ns.t_create_update_z_new_v2 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "x"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_update_z_exists_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "update",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_update_z_exists_v2 AS UPDATE wbc1.ns.t_create_update_z_exists_v2 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_update_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_update_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "create_delete_z_new_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "delete",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_delete_z_new_v2 AS DELETE FROM wbc1.ns.t_create_delete_z_new_v2 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       1,
+       "a"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_delete_z_exists_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "delete",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_delete_z_exists_v2 AS DELETE FROM wbc1.ns.t_create_delete_z_exists_v2 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_delete_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_delete_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "create_merge_z_new_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "merge",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_merge_z_new_v2 AS MERGE INTO wbc1.ns.t_create_merge_z_new_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_new_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "UnsupportedOperationException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_create_merge_z_new_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_new_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+    "message": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_create_merge_z_new_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_new_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_merge_z_exists_v2",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "merge",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_merge_z_exists_v2 AS MERGE INTO wbc1.ns.t_create_merge_z_exists_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_exists_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_merge_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_merge_z_exists_v2` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_insert_z_new_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "insert",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_insert_z_new_v2 AS INSERT INTO wbc1.ns.t_or_replace_insert_z_new_v2 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_insert_z_exists_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "insert",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_insert_z_exists_v2 AS INSERT INTO wbc1.ns.t_or_replace_insert_z_exists_v2 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_overwrite_z_new_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "overwrite",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_overwrite_z_new_v2 AS INSERT OVERWRITE wbc1.ns.t_or_replace_overwrite_z_new_v2 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_overwrite_z_exists_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "overwrite",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_overwrite_z_exists_v2 AS INSERT OVERWRITE wbc1.ns.t_or_replace_overwrite_z_exists_v2 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_update_z_new_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "update",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_update_z_new_v2 AS UPDATE wbc1.ns.t_or_replace_update_z_new_v2 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "x"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_update_z_exists_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "update",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_update_z_exists_v2 AS UPDATE wbc1.ns.t_or_replace_update_z_exists_v2 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "x"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_delete_z_new_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "delete",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_delete_z_new_v2 AS DELETE FROM wbc1.ns.t_or_replace_delete_z_new_v2 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       1,
+       "a"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_delete_z_exists_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "delete",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_delete_z_exists_v2 AS DELETE FROM wbc1.ns.t_or_replace_delete_z_exists_v2 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       1,
+       "a"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_merge_z_new_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "merge",
+   "z_state": "z_new",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_merge_z_new_v2 AS MERGE INTO wbc1.ns.t_or_replace_merge_z_new_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_new_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "UnsupportedOperationException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_or_replace_merge_z_new_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_new_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+    "message": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_or_replace_merge_z_new_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_new_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_merge_z_exists_v2",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "merge",
+   "z_state": "z_exists",
+   "version": 2,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_merge_z_exists_v2 AS MERGE INTO wbc1.ns.t_or_replace_merge_z_exists_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_exists_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "UnsupportedOperationException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_or_replace_merge_z_exists_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_exists_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+    "message": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_or_replace_merge_z_exists_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_exists_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "create_insert_z_new_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "insert",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_insert_z_new_v3 AS INSERT INTO wbc1.ns.t_create_insert_z_new_v3 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_insert_z_exists_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "insert",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_insert_z_exists_v3 AS INSERT INTO wbc1.ns.t_create_insert_z_exists_v3 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_insert_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_insert_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "create_overwrite_z_new_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "overwrite",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_overwrite_z_new_v3 AS INSERT OVERWRITE wbc1.ns.t_create_overwrite_z_new_v3 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_overwrite_z_exists_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "overwrite",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_overwrite_z_exists_v3 AS INSERT OVERWRITE wbc1.ns.t_create_overwrite_z_exists_v3 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_overwrite_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_overwrite_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "create_update_z_new_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "update",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_update_z_new_v3 AS UPDATE wbc1.ns.t_create_update_z_new_v3 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "x"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_update_z_exists_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "update",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_update_z_exists_v3 AS UPDATE wbc1.ns.t_create_update_z_exists_v3 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_update_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_update_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "create_delete_z_new_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "delete",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_delete_z_new_v3 AS DELETE FROM wbc1.ns.t_create_delete_z_new_v3 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       1,
+       "a"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_delete_z_exists_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "delete",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_delete_z_exists_v3 AS DELETE FROM wbc1.ns.t_create_delete_z_exists_v3 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_delete_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_delete_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "create_merge_z_new_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "merge",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_merge_z_new_v3 AS MERGE INTO wbc1.ns.t_create_merge_z_new_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_new_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "UnsupportedOperationException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_create_merge_z_new_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_new_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+    "message": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_create_merge_z_new_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_new_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_merge_z_exists_v3",
+   "kind": "ctas",
+   "creator": "create",
+   "body": "merge",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE TABLE wbc1.ns.z_create_merge_z_exists_v3 AS MERGE INTO wbc1.ns.t_create_merge_z_exists_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_exists_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "AnalysisException",
+    "error_class": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "first_line": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_merge_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+    "message": "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `wbc1`.`ns`.`z_create_merge_z_exists_v3` because it already exists. Choose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_insert_z_new_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "insert",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_insert_z_new_v3 AS INSERT INTO wbc1.ns.t_or_replace_insert_z_new_v3 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_insert_z_exists_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "insert",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_insert_z_exists_v3 AS INSERT INTO wbc1.ns.t_or_replace_insert_z_exists_v3 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_overwrite_z_new_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "overwrite",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_overwrite_z_new_v3 AS INSERT OVERWRITE wbc1.ns.t_or_replace_overwrite_z_new_v3 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_overwrite_z_exists_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "overwrite",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_overwrite_z_exists_v3 AS INSERT OVERWRITE wbc1.ns.t_or_replace_overwrite_z_exists_v3 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range.",
+    "message": "DataInvalid => UInt64 is not supported. Use Int64 for values \u2264 9,223,372,036,854,775,807 or Decimal(20,0) for full uint64 range."
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_update_z_new_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "update",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_update_z_new_v3 AS UPDATE wbc1.ns.t_or_replace_update_z_new_v3 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "x"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_update_z_exists_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "update",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_update_z_exists_v3 AS UPDATE wbc1.ns.t_or_replace_update_z_exists_v3 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "x"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_delete_z_new_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "delete",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_delete_z_new_v3 AS DELETE FROM wbc1.ns.t_or_replace_delete_z_new_v3 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       1,
+       "a"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_delete_z_exists_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "delete",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_delete_z_exists_v3 AS DELETE FROM wbc1.ns.t_or_replace_delete_z_exists_v3 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "PySparkException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column",
+    "message": "datafusion engine error: Arrow error: Invalid argument error: must either specify a row count or at least one column"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       1,
+       "a"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "or_replace_merge_z_new_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "merge",
+   "z_state": "z_new",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_merge_z_new_v3 AS MERGE INTO wbc1.ns.t_or_replace_merge_z_new_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_new_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "UnsupportedOperationException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_or_replace_merge_z_new_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_new_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+    "message": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_or_replace_merge_z_new_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_new_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_merge_z_exists_v3",
+   "kind": "ctas",
+   "creator": "or_replace",
+   "body": "merge",
+   "z_state": "z_exists",
+   "version": 3,
+   "statements": [
+    "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_merge_z_exists_v3 AS MERGE INTO wbc1.ns.t_or_replace_merge_z_exists_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_exists_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "UnsupportedOperationException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_or_replace_merge_z_exists_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_exists_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+    "message": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_or_replace_merge_z_exists_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_exists_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "explain_insert_v2",
+   "kind": "explain",
+   "body": "insert",
+   "version": 2,
+   "statements": [
+    "EXPLAIN ANALYZE INSERT INTO wbc1.ns.t_explain_insert_v2 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": true,
+    "answer_rows": 1
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    }
+   }
+  },
+  {
+   "id": "explain_overwrite_v2",
+   "kind": "explain",
+   "body": "overwrite",
+   "version": 2,
+   "statements": [
+    "EXPLAIN ANALYZE INSERT OVERWRITE wbc1.ns.t_explain_overwrite_v2 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": true,
+    "answer_rows": 1
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "explain_update_v2",
+   "kind": "explain",
+   "body": "update",
+   "version": 2,
+   "statements": [
+    "EXPLAIN ANALYZE UPDATE wbc1.ns.t_explain_update_v2 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": true,
+    "answer_rows": 1
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "x"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "explain_delete_v2",
+   "kind": "explain",
+   "body": "delete",
+   "version": 2,
+   "statements": [
+    "EXPLAIN ANALYZE DELETE FROM wbc1.ns.t_explain_delete_v2 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": true,
+    "answer_rows": 1
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       1,
+       "a"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "explain_merge_v2",
+   "kind": "explain",
+   "body": "merge",
+   "version": 2,
+   "statements": [
+    "EXPLAIN ANALYZE MERGE INTO wbc1.ns.t_explain_merge_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_explain_merge_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "UnsupportedOperationException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_explain_merge_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_explain_merge_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+    "message": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_explain_merge_v2 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_explain_merge_v2.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "explain_insert_v3",
+   "kind": "explain",
+   "body": "insert",
+   "version": 3,
+   "statements": [
+    "EXPLAIN ANALYZE INSERT INTO wbc1.ns.t_explain_insert_v3 VALUES (3, 'c')"
+   ],
+   "outcome": {
+    "answered": true,
+    "answer_rows": 1
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    }
+   }
+  },
+  {
+   "id": "explain_overwrite_v3",
+   "kind": "explain",
+   "body": "overwrite",
+   "version": 3,
+   "statements": [
+    "EXPLAIN ANALYZE INSERT OVERWRITE wbc1.ns.t_explain_overwrite_v3 VALUES (10, 'w')"
+   ],
+   "outcome": {
+    "answered": true,
+    "answer_rows": 1
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "explain_update_v3",
+   "kind": "explain",
+   "body": "update",
+   "version": 3,
+   "statements": [
+    "EXPLAIN ANALYZE UPDATE wbc1.ns.t_explain_update_v3 SET v = 'x' WHERE id = 1"
+   ],
+   "outcome": {
+    "answered": true,
+    "answer_rows": 1
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "x"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "explain_delete_v3",
+   "kind": "explain",
+   "body": "delete",
+   "version": 3,
+   "statements": [
+    "EXPLAIN ANALYZE DELETE FROM wbc1.ns.t_explain_delete_v3 WHERE id = 2"
+   ],
+   "outcome": {
+    "answered": true,
+    "answer_rows": 1
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       1,
+       "a"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "explain_merge_v3",
+   "kind": "explain",
+   "body": "merge",
+   "version": 3,
+   "statements": [
+    "EXPLAIN ANALYZE MERGE INTO wbc1.ns.t_explain_merge_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_explain_merge_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   ],
+   "outcome": {
+    "answered": false,
+    "class": "UnsupportedOperationException",
+    "error_class": null,
+    "condition": null,
+    "sqlstate": null,
+    "first_line": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_explain_merge_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_explain_merge_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+    "message": "This feature is not implemented: Unsupported SQL statement: MERGE INTO wbc1.ns.t_explain_merge_v3 USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_explain_merge_v3.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "prepare_insert_v2",
+   "kind": "prepare",
+   "body": "insert",
+   "version": 2,
+   "statements": [
+    "PREPARE wbc_prepare_insert_v2 AS INSERT INTO wbc1.ns.t_prepare_insert_v2 VALUES (3, 'c')",
+    "EXECUTE wbc_prepare_insert_v2"
+   ],
+   "outcome": {
+    "prepare": {
+     "answered": true,
+     "answer_rows": 0
+    },
+    "execute": {
+     "answered": true,
+     "answer_rows": 1
+    }
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    }
+   }
+  },
+  {
+   "id": "prepare_overwrite_v2",
+   "kind": "prepare",
+   "body": "overwrite",
+   "version": 2,
+   "statements": [
+    "PREPARE wbc_prepare_overwrite_v2 AS INSERT OVERWRITE wbc1.ns.t_prepare_overwrite_v2 VALUES (10, 'w')",
+    "EXECUTE wbc_prepare_overwrite_v2"
+   ],
+   "outcome": {
+    "prepare": {
+     "answered": true,
+     "answer_rows": 0
+    },
+    "execute": {
+     "answered": true,
+     "answer_rows": 1
+    }
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  },
+  {
+   "id": "prepare_insert_v3",
+   "kind": "prepare",
+   "body": "insert",
+   "version": 3,
+   "statements": [
+    "PREPARE wbc_prepare_insert_v3 AS INSERT INTO wbc1.ns.t_prepare_insert_v3 VALUES (3, 'c')",
+    "EXECUTE wbc_prepare_insert_v3"
+   ],
+   "outcome": {
+    "prepare": {
+     "answered": true,
+     "answer_rows": 0
+    },
+    "execute": {
+     "answered": true,
+     "answer_rows": 1
+    }
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 3,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       3,
+       "c"
+      ]
+     ],
+     "data_files": 2
+    }
+   }
+  },
+  {
+   "id": "prepare_overwrite_v3",
+   "kind": "prepare",
+   "body": "overwrite",
+   "version": 3,
+   "statements": [
+    "PREPARE wbc_prepare_overwrite_v3 AS INSERT OVERWRITE wbc1.ns.t_prepare_overwrite_v3 VALUES (10, 'w')",
+    "EXECUTE wbc_prepare_overwrite_v3"
+   ],
+   "outcome": {
+    "prepare": {
+     "answered": true,
+     "answer_rows": 0
+    },
+    "execute": {
+     "answered": true,
+     "answer_rows": 1
+    }
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ],
+     "data_files": 1
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 2,
+     "row_count": 1,
+     "rows": [
+      [
+       10,
+       "w"
+      ]
+     ],
+     "data_files": 1
+    }
+   }
+  }
+ ]
+}
