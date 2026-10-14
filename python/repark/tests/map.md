@@ -10225,4 +10225,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   with ``t`` and ``z`` unchanged, plus one ``REPLACE TABLE`` cell per body and
   one parenthesised-body cell per body; the 14 wrapper cells, the 5 ANSI-door
   cells and the plain-CTAS neighbours pin main's measured answers.
+  **Fold 1 (2026-10-14):** 20 ``IF NOT EXISTS`` cells, 10 doubly parenthesised
+  cells, 4 WITH-prefixed cells (bare and parenthesised) and 10 missing-target
+  ``REPLACE TABLE`` cells refuse the same way with ``t`` and ``z`` unchanged.
   pins: write-body-carriers-1/C-004, C-005

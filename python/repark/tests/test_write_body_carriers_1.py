@@ -205,6 +205,86 @@ def test_parenthesised_write_body_refuses_before_any_write(spark: ReparkSession)
         assert _state(spark, z) == {"exists": False}, body
 
 
+def test_ctas_if_not_exists_write_body_refuses_before_any_write(spark: ReparkSession) -> None:
+    """All 20 IF NOT EXISTS CTAS cells refuse with Spark text and move no table."""
+    for version in VERSIONS:
+        for body in BODIES:
+            for zstate in ("z_new", "z_exists"):
+                cell = f"if_not_exists_{body}_{zstate}_v{version}"
+                t = f"{CATALOG}.{NAMESPACE}.t_{cell}"
+                z = f"{CATALOG}.{NAMESPACE}.z_{cell}"
+                _seed(spark, t, version)
+                if zstate == "z_exists":
+                    _seed(spark, z, version, "(100, 'z')")
+                else:
+                    spark.sql(f"DROP TABLE IF EXISTS {z}")
+                before_t = _state(spark, t)
+                before_z = _state(spark, z)
+                statement = f"CREATE TABLE IF NOT EXISTS {z} AS {BODIES[body].format(t=t)}"
+                with pytest.raises(ParseException) as caught:
+                    spark.sql(statement).collect()
+                _assert_parse_refusal(caught.value, KEYWORDS[body])
+                assert _state(spark, t) == before_t, cell
+                assert _state(spark, z) == before_z, cell
+
+
+def test_double_parenthesised_write_body_refuses_before_any_write(spark: ReparkSession) -> None:
+    """A doubly parenthesised write body reaches the same refusal and moves no table."""
+    for version in VERSIONS:
+        for body in BODIES:
+            cell = f"paren2_{body}_v{version}"
+            t = f"{CATALOG}.{NAMESPACE}.t_{cell}"
+            z = f"{CATALOG}.{NAMESPACE}.z_{cell}"
+            _seed(spark, t, version)
+            spark.sql(f"DROP TABLE IF EXISTS {z}")
+            before_t = _state(spark, t)
+            with pytest.raises(ParseException) as caught:
+                spark.sql(f"CREATE TABLE {z} AS (({BODIES[body].format(t=t)}))").collect()
+            _assert_parse_refusal(caught.value, KEYWORDS[body])
+            assert _state(spark, t) == before_t, cell
+            assert _state(spark, z) == {"exists": False}, cell
+
+
+def test_with_prefixed_write_body_refuses_before_any_write(spark: ReparkSession) -> None:
+    """A WITH-prefixed write body refuses with Spark text and moves no table."""
+    templates: tuple[str, str] = (
+        "CREATE TABLE {z} AS WITH c AS (SELECT 3 AS id, 'c' AS v) "
+        "INSERT INTO {t} SELECT * FROM c",
+        "CREATE TABLE {z} AS (WITH c AS (SELECT 3 AS id, 'c' AS v) "
+        "INSERT INTO {t} SELECT * FROM c)",
+    )
+    for version in VERSIONS:
+        for index, template in enumerate(templates):
+            cell = f"cte_prefixed_{index}_v{version}"
+            t = f"{CATALOG}.{NAMESPACE}.t_{cell}"
+            z = f"{CATALOG}.{NAMESPACE}.z_{cell}"
+            _seed(spark, t, version)
+            spark.sql(f"DROP TABLE IF EXISTS {z}")
+            before_t = _state(spark, t)
+            with pytest.raises(ParseException) as caught:
+                spark.sql(template.format(z=z, t=t)).collect()
+            _assert_parse_refusal(caught.value, "INSERT")
+            assert _state(spark, t) == before_t, cell
+            assert _state(spark, z) == {"exists": False}, cell
+
+
+def test_replace_missing_write_body_refuses_before_any_write(spark: ReparkSession) -> None:
+    """REPLACE TABLE onto a missing target refuses with Spark text and moves no table."""
+    for version in VERSIONS:
+        for body in BODIES:
+            cell = f"replace_missing_{body}_v{version}"
+            t = f"{CATALOG}.{NAMESPACE}.t_{cell}"
+            z = f"{CATALOG}.{NAMESPACE}.z_{cell}"
+            _seed(spark, t, version)
+            spark.sql(f"DROP TABLE IF EXISTS {z}")
+            before_t = _state(spark, t)
+            with pytest.raises(ParseException) as caught:
+                spark.sql(f"REPLACE TABLE {z} AS {BODIES[body].format(t=t)}").collect()
+            _assert_parse_refusal(caught.value, KEYWORDS[body])
+            assert _state(spark, t) == before_t, cell
+            assert _state(spark, z) == {"exists": False}, cell
+
+
 def test_wrappers_keep_running_their_write(spark: ReparkSession) -> None:
     """EXPLAIN ANALYZE and PREPARE/EXECUTE answer as main answers them."""
     expected_rows: dict[str, list[list[Any]]] = {

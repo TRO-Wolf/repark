@@ -973,6 +973,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   body's leading keyword before any write, over the `CREATE TABLE`, `CREATE OR REPLACE
   TABLE` and `REPLACE TABLE` creators and the parenthesised body, with `t` row counts
   and `z` presence unchanged; a SELECT-body CTAS still answers.
+  **Fold 1 (2026-10-14):** the same refusal is pinned for `IF NOT EXISTS` targets
+  new and existing, the doubly parenthesised body, the WITH-prefixed body bare and
+  parenthesised, and the missing-target `REPLACE TABLE` body.
   pins: write-body-carriers-1/C-004
 - `insert_arity.rs` — **IPI-51 PR9 (2026-09-21):** short-VALUES arity pins on the
   inventory 3-col table. The e2e pin stamps `Plan` +
