@@ -21,8 +21,8 @@ owner ruling 2026-10-10.
 | C-001 | Spark 4.1.2 refuses all 20 CTAS cells at parse with PARSE_SYNTAX_ERROR and SQLSTATE 42601, and no table reads back different. | The Spark fixture and its recorder. | **PROVEN** | §1; [spark-cells.json](../../wo/write-body-carriers-1/evidence/spark-cells.json): 20 refused, 0 moved. |
 | C-002 | Main's 40 CTAS cells: 24 commit the inner write then fail, 10 refuse already-exists, 6 refuse the MERGE body; format versions 2 and 3 answer identically. | The main fixture and its recorder. | **PROVEN** | §2; [main-cells.json](../../wo/write-body-carriers-1/evidence/main-cells.json): 24 commit-before-fail, 16 fail-before-write, 0 answered, `z` never moves. |
 | C-003 | Main's 14 wrapper cells: EXPLAIN ANALYZE runs the four non-MERGE writes and refuses MERGE; PREPARE plus EXECUTE run both writes. | The main fixture and its recorder. | **PROVEN** | §3; 8 answered with the write committed, 2 MERGE refusals with nothing written, 4 prepare pairs answered with the write committed. |
-| C-004 | The fix refuses the CTAS shape before any file is written, with Spark's measured class and text. | The build battery (§6). | **PROVEN** | Q1 taken with the orchestrator's lean (parse wins over already-exists); owner-pending. |
-| C-005 | The ANSI door takes or declines the same refusal. | The ANSI pins (§6). | **PROVEN** | Q2 taken with the orchestrator's lean (door declined, already refuses pre-commit); owner-pending. |
+| C-004 | The fix refuses the CTAS shape before any file is written, with Spark's measured class and text. | The build battery (§6). | **PROVEN** | Q1 taken with the orchestrator's lean (parse wins over already-exists); owner ruled (a) 2026-10-14. |
+| C-005 | The ANSI door takes or declines the same refusal. | The ANSI pins (§6). | **PROVEN** | Q2 taken with the orchestrator's lean (door declined, already refuses pre-commit); owner ruled (a) 2026-10-14. |
 
 ## 1. Spark's answer (C-001)
 
@@ -118,16 +118,20 @@ Spark column, as the card rules.
   before reaching the body (§2), because the existence check precedes it. A
   refusal placed after that check keeps the divergence on 10 of 40 cells.
   *Lean:* Spark's text at parse altitude, since the card rules the text follows
-  Spark's measured answer. *Build round 1 (2026-10-14):* taken with the lean;
-  the owner has not yet answered.
+  Spark's measured answer. *Build round 1 (2026-10-14):* taken with the lean.
+  *Owner, 2026-10-14:* (a), the parse refusal wins, as built.
 - **Q2 (C-005, RULING).** Should the ANSI door take the same named refusal?
   *Premise:* the card's refusal is a Spark-parity refusal and the ANSI door
   carries no Spark claim; the reading of §4 says it already refuses before any
   file is written, unverified. *Lean:* run one ANSI cell in the fix step and
   refuse by name only if it commits; otherwise leave the door untouched.
   *Build round 1 (2026-10-14):* five ANSI cells ran on main and head; no cell
-  commits, so the door is untouched, with the lean; the owner has not yet
-  answered.
+  commits, so the door is untouched, with the lean. *Owner, 2026-10-14:* (a),
+  the door stays untouched, as built.
+- **Q3 (C-004, OWNER, answered).** The refusal omits Spark's `(line, pos)`
+  suffix. *Owner, 2026-10-14:* (a), accepted and recorded: class, condition,
+  SQLSTATE and keyword match Spark; the position is omitted, because the parser
+  does not report the keyword's position.
 
 ## 6. Build round 1 (2026-10-14)
 
