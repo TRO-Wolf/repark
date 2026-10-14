@@ -16,8 +16,8 @@ against a local warehouse, and on AWS when the owner wires the workflow step.
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-001 | The shared helper adopts each RePark table into Spark and compares schema and rows, returning one EQUAL, DIFFERENT or SPARK-CANNOT-READ outcome per table, with nanosecond-column tables reported and never skipped. | The helper module plus its map row; pure-function smoke green. | PROVEN | `python/repark/tests/_acceptance_cross_read.py` (ruff check and format clean, comment gate 0); smoke of columns, rows, schema and row compare plus the outcome table render, all as designed. |
-| C-002 | The local leg runs the MOR, create-or-replace-twice and v3 offline scenarios unchanged and cross-reads every table each wrote. | Three live cells, each reusing its scenario runner by import and asserting its own outcome first. | PROVEN | `python/repark/tests/test_acceptance_cross_read_local.py`: 3 passed in 9.67s on live Spark (see the outcome table below); 3 skipped without the live flag and 3 skipped with the flag but without PySpark. |
-| C-003 | The local per-table outcome table is recorded. | The table below, pasted from the run. | PROVEN | Four tables EQUAL, zero DIFFERENT, zero SPARK-CANNOT-READ; no table held nanosecond columns, so the R-002 path has no local evidence yet. |
+| C-002 | The local leg runs the MOR, create-or-replace-twice and v3 offline scenarios unchanged and cross-reads every table each wrote. | Three live cells, each reusing its scenario runner by import and asserting its own outcome first, plus the nanosecond R-002 cell. | PROVEN | `python/repark/tests/test_acceptance_cross_read_local.py`: 4 passed in 9.18s on live Spark (see the outcome table below); 4 skipped without the live flag and 4 skipped with the flag but without PySpark. |
+| C-003 | The local per-table outcome table is recorded. | The table below, pasted from the run. | PROVEN | Five tables: four EQUAL, zero DIFFERENT, one expected SPARK-CANNOT-READ on nanosecond columns (Spark `UnsupportedOperationException`: `Cannot convert unsupported type to Spark: timestamp_ns`); the ns row below is the R-002 evidence. |
 | C-004 | The AWS leg discovers the scratch tables on Glue and on S3 Tables, gates like the AWS legs plus a PySpark skip, collects cleanly unset, and is not run. | Two discovery cells with the module-level skip; collect-only proof. | PROVEN | `python/repark/tests/test_aws_acceptance_cross_read.py`: 2 tests collected and 2 skipped with the variable unset, in an interpreter without PySpark. No AWS cell was attempted. |
 | C-005 | The AWS leg runs green on wired AWS. | The owner wires the workflow step from the unit order; the nightly then runs it. | OPEN | Pending owner wire-up; the step is proposed as a fenced diff in `task/wo/ice-spark-cross-read-1/order.md`. |
 
@@ -29,7 +29,11 @@ mem.ns.mw4mor | EQUAL | 20 | 20 | row-equal
 mem.ns.replace2mem | EQUAL | 5 | 5 | row-equal
 ice.sales.v3acc | EQUAL | 10 | 10 | row-equal
 ice.sales.v3acc_adopted | EQUAL | 10 | 10 | row-equal
+ice.ns.nsts | SPARK-CANNOT-READ | 2 | - | ns-columns; UnsupportedOperationException: Cannot convert unsupported type to Spark: timestamp_ns
 ```
+
+RePark's two ns rows, for the record (both read back with all nine digits):
+`[{'id': 1, 'ts': '2024-01-15 10:20:30.123456789', 'tz': '2024-01-15 10:20:30.123456789'}, {'id': 2, 'ts': '2023-06-30 12:34:56.987654321', 'tz': '2023-06-30 12:34:56.987654321'}]`.
 
 ## Measurement provenance
 

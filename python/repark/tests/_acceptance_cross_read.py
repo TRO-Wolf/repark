@@ -258,7 +258,9 @@ def adopt_into_spark(
 
 def spark_error_condition(error: BaseException) -> str | None:
     """Spark condition of a PySpark error, or None when the error carries none."""
-    getter = getattr(error, "getErrorClass", None)
+    getter = getattr(error, "getCondition", None)
+    if not callable(getter):
+        getter = getattr(error, "getErrorClass", None)
     if not callable(getter):
         return None
     try:

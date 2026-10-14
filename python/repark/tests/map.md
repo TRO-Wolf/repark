@@ -8243,7 +8243,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   single-file seeding does not apply — the runners' multi-file layouts are
   the point and rows, not file shapes, are compared). Runs under the
   sparkenv interpreter with the release module on PYTHONPATH; the unit
-  ledger records the exact command.
+  ledger records the exact command. Follow-up (2026-10-14): a fourth cell
+  writes a v3 (id, timestamp_ns, timestamptz_ns) table with two nine-digit
+  rows and pins the expected SPARK-CANNOT-READ with Spark's error text
+  (R-002 evidence in the ledger); the helper reads the condition via
+  getCondition now (the getErrorClass spelling warns deprecated on PySpark
+  4.1.2).
   pins: ice-spark-cross-read-1/C-002, C-003
 - [test_aws_acceptance_cross_read.py](test_aws_acceptance_cross_read.py) —
   **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the AWS cross-read leg, not run:

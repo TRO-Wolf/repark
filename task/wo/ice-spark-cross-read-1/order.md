@@ -46,12 +46,15 @@ paths for this box):
 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 PYTHONPATH=<repark release module's src>:<its site-packages> <the PySpark interpreter> -m pytest python/repark/tests/test_acceptance_cross_read_local.py -q -rA -s
 ```
 
-Result 2026-10-14: 3 passed. Four tables EQUAL (`mw4mor` 20 rows,
+Result 2026-10-14: 4 passed. Four tables EQUAL (`mw4mor` 20 rows,
 `replace2mem` 5 rows, `v3acc` and `v3acc_adopted` 10 rows each), zero
-DIFFERENT, zero SPARK-CANNOT-READ. The `-s` only shows the printed outcome
-tables; without it the run passes identically. Without the live flag, or
-without PySpark, the three cells skip cleanly. Spark banner for the run:
-4.1.2 with `iceberg-spark-runtime-4.1_2.13:1.11.0`, UTC, ANSI on.
+DIFFERENT, and the nanosecond table expected SPARK-CANNOT-READ
+(`UnsupportedOperationException: Cannot convert unsupported type to Spark:
+timestamp_ns`; R-002 evidence in the ledger). The `-s` only shows the
+printed outcome tables; without it the run passes identically. Without the
+live flag, or without PySpark, the four cells skip cleanly. Spark banner
+for the run: 4.1.2 with `iceberg-spark-runtime-4.1_2.13:1.11.0`, UTC, ANSI
+on.
 
 ## What could not run locally
 

@@ -17,6 +17,7 @@ import _live_parity as lp
 import pytest
 from _acceptance import assert_mor_maintenance_outcome, run_mor_merge_compact_expire
 from _acceptance_cross_read import (
+    SPARK_CANNOT_READ,
     assert_outcomes_expected,
     cross_read_local_tables,
     format_outcome_table,
@@ -144,5 +145,51 @@ def test_v3_tables_read_row_equal_on_live_spark(tmp_path: Path) -> None:
         _adopt_same_metadata(repark, "ice", "sales", adopted_name, metadata_file)
         spark = _spark_session(warehouse, "xread_v3")
         _cross_read_and_assert(repark, "ice", spark, "xread_v3", "sales", ["v3acc", adopted_name])
+    finally:
+        repark.stop()
+
+
+@pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
+def test_ns_table_is_expected_spark_cannot_read(tmp_path: Path) -> None:
+    """A v3 nanosecond table cross-reads as expected SPARK-CANNOT-READ (R-002)."""
+    pytest.importorskip("pyspark")
+    warehouse = tmp_path
+    repark = _repark_session("xread-ns", {V3_ALLOW_CREATE_KEY: "true"})
+    try:
+        repark.register_memory_catalog("ice", warehouse)
+        repark.sql("CREATE NAMESPACE ice.ns")
+        repark.sql(
+            "CREATE TABLE ice.ns.nsts (id INT, ts timestamp_ns, tz timestamptz_ns) "
+            "USING iceberg TBLPROPERTIES ('format-version' = '3')"
+        )
+        repark.sql(
+            "INSERT INTO ice.ns.nsts SELECT 1, "
+            "CAST('2024-01-15 10:20:30.123456789' AS timestamp_ns), "
+            "CAST('2024-01-15 10:20:30.123456789' AS timestamptz_ns)"
+        ).collect()
+        repark.sql(
+            "INSERT INTO ice.ns.nsts SELECT 2, "
+            "CAST('2023-06-30 12:34:56.987654321' AS timestamp_ns), "
+            "CAST('2023-06-30 12:34:56.987654321' AS timestamptz_ns)"
+        ).collect()
+        count = repark.sql("SELECT COUNT(*) AS n FROM ice.ns.nsts").to_arrow()
+        assert count.column("n").to_pylist() == [2]
+        rows = repark.sql(
+            "SELECT id, CAST(ts AS STRING) AS ts, CAST(tz AS STRING) AS tz "
+            "FROM ice.ns.nsts ORDER BY id"
+        ).to_arrow()
+        print(rows.to_pylist())
+        spark = _spark_session(warehouse, "xread_ns")
+        outcomes = cross_read_local_tables(repark, "ice", spark, "xread_ns", "ns", ["nsts"])
+        print(format_outcome_table(outcomes))
+        assert len(outcomes) == 1
+        outcome = outcomes[0]
+        assert outcome.has_ns_columns
+        assert outcome.status == SPARK_CANNOT_READ
+        assert outcome.spark_error_class is not None
+        condition = outcome.spark_error_condition or ""
+        print(
+            f"spark error: {outcome.spark_error_class} {condition} {outcome.spark_error_first_line}"
+        )
     finally:
         repark.stop()
