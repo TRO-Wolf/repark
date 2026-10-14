@@ -109,7 +109,14 @@ The registry is [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-icebe
 
 ## Matrix
 
-No ledger on main records a fresh 842-cell scoreboard run since the v1.5.4 build of
-`e845b73b` (scoreboard 2026-10-10), so these notes keep the v1.5.4 count:
-**705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT**. The rerun on the
-release build is TODO(orchestrator).
+The 842-cell matrix on a fresh release build of the release commit `293896ce` (scoreboard
+2026-10-13, the v1.5.4 harness and compare rules with the one change recorded below) reads
+**705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT**, with no per-family
+count moved against v1.5.4.
+
+Harness record, 2026-10-13: the first run read 704 EQUAL and 1 DIFFERENT. The cell was
+`P-RTP-DEFAULT` (`rewrite_table_path`), and the only differing field was the random
+staging-directory id, which RePark builds from a clock value and the process id in hex; the
+process id had five hex digits and the compare pattern of ruling R6 (2026-09-23) expected
+six. By the owner's ruling of 2026-10-13 the pattern was widened to any hex length and the
+procedure leg re-ran: the cell reads EQUAL. The product did not change.
