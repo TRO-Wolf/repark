@@ -319,8 +319,8 @@ mod tests {
         let list_view = DataType::List(Arc::new(Field::new("item", DataType::Utf8View, true)));
         let list_utf8 = DataType::List(Arc::new(Field::new("item", DataType::Utf8, true)));
         assert!(
-            !ansi_store_assignable(&list_view, &list_utf8),
-            "the v1 matrix judges nested pairs by identity"
+            ansi_store_assignable(&list_view, &list_utf8),
+            "the seam pairs a list and judges its element on the flat matrix"
         );
         assert!(
             refuse_unless_write_store_assignable("append", "v", &list_view, &list_utf8).is_ok(),

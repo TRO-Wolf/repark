@@ -296,7 +296,8 @@ mod tests {
         );
         assert_eq!(
             store_assignment_cast_sql("s.v", &target),
-            "arrow_cast((s.v), 'Struct(\"a\": Int32)')"
+            "arrow_cast((__repark_store_pair__((s.v), 'Struct(\"a\": Int32)', 'by_name', '``', \
+             '``')), 'Struct(\"a\": Int32)')"
         );
         assert_eq!(
             store_assignment_cast_sql("'it''s'", &DataType::Utf8),
