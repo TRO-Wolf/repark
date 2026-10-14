@@ -2417,3 +2417,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixed) (C-004). `risk_tier: standard`. Branch
   `test/parity-live-infra-2`.
   pins: parity-live-infra-2/C-001, C-002, C-003, C-004
+- [ice-spark-cross-read-1-ledger.md](ice-spark-cross-read-1-ledger.md) —
+  **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the cross-read helper (C-001),
+  the local leg over the MOR, replace-twice and v3 scenarios with four
+  tables EQUAL on live Spark (C-002, C-003), and the AWS discovery leg,
+  written and collect-clean but not run (C-004); the AWS green run is
+  pending the owner wire-up (C-005). `risk_tier: standard`. Branch
+  `test/ice-spark-cross-read-1`.
+  pins: ice-spark-cross-read-1/C-001, C-002, C-003, C-004
