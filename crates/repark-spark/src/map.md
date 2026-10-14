@@ -130,6 +130,9 @@ pins: rp-4-fork-repin/C-005, C-006
   statement kind is INSERT, UPDATE, DELETE or MERGE (unwrapping parenthesised
   `SetExpr::Query`) with `PARSE_SYNTAX_ERROR` 42601 naming the leading keyword,
   before `build_ctas` and any catalog read or file write.
+  **Fold 1 (2026-10-14):** the same refusal runs ahead of
+  `refuse_missing_replace_target`, so a missing-target `REPLACE TABLE` with a
+  write body answers the parse refusal; other bodies still reach the catalog check.
   pins: write-body-carriers-1/C-004
   **ICE-SYSTEM-FUNCTIONS-1 round 3 (2026-09-20):** `execute_inner` next runs
   `describe_show::rewrite_system_function_calls` (live-catalog-gated), and

@@ -322,6 +322,9 @@ async fn execute_inner(
     crate::refuse_declared_function_in_statement(&statement)?;
     refuse_options_on_non_write(&statement, write_options)?;
     if let Statement::CreateTable(create) = &statement {
+        refuse_ctas_write_body(create)?;
+    }
+    if let Statement::CreateTable(create) = &statement {
         crate::normalize::replace_table::refuse_missing_replace_target(catalogs, sql, &create.name)
             .await?;
     }
