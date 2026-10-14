@@ -12,7 +12,7 @@ microsecond control only:
     python _record_ns_array_floor_1_input.py --out e.json --md c.md
     JAVA_HOME=... SPARK_LOCAL_IP=127.0.0.1 python _record_ns_array_floor_1_input.py --live
 
-pins: ns-array-floor-1/C-001, ns-array-floor-1/C-002
+pins: ns-array-floor-1/C-001, C-002
 """
 
 from __future__ import annotations

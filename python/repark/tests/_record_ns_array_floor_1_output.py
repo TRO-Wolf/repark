@@ -10,7 +10,7 @@ Usage with a repark module under test, then with live Spark:
     python _record_ns_array_floor_1_output.py --out e.json --md c.md
     JAVA_HOME=... SPARK_LOCAL_IP=127.0.0.1 python _record_ns_array_floor_1_output.py --live
 
-pins: ns-array-floor-1/C-003, ns-array-floor-1/C-004, ns-array-floor-1/C-005
+pins: ns-array-floor-1/C-003, C-004, C-005
 """
 
 from __future__ import annotations
