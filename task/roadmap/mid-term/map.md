@@ -827,3 +827,10 @@ declines it (a dated ruling in the intake, then the archive).
   NS-NESTED-PANDAS-1 (2026-10-13, open, unscheduled, severity S0 on main):** nanosecond
   values inside struct and map fields returned from `applyInPandas` (parity row R-020).
   Cells from the #1047 verdict and ledger; the array door itself is NS-ARRAY-FLOOR-1.
+- [struct-case-twin-1-card-2026-10-14.md](struct-case-twin-1-card-2026-10-14.md) — **card
+  STRUCT-CASE-TWIN-1 (2026-10-14, open, unscheduled, not in the closeout):** a BY NAME
+  struct write whose source carries two fields differing only in letter case stores
+  `[[1,10,20],[2,1,2]]` where Spark 4.1.2 refuses
+  `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
+  R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
+  case twins already covered by ID-1a.
