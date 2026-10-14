@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use datafusion::logical_expr::planner::TypePlanner;
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{DataFrame, SessionContext};
 use repark_core::{EngineContext, SqlDialect};
 
@@ -15,6 +16,13 @@ pub struct AnsiDialect;
 impl SqlDialect for AnsiDialect {
     fn type_planner(&self) -> Option<Arc<dyn TypePlanner>> {
         Some(repark_functions::spark_type_planner())
+    }
+
+    fn configure_analyzer_rules(
+        &self,
+        rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+        repark_functions::analyzer_rules_with_timestamp_unit_widen(rules)
     }
 
     fn on_session_built(&self, ctx: &SessionContext) {

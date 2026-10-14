@@ -2,8 +2,8 @@
 
 The twenty mixed-unit cells run on both SQL doors in three session zones; every
 position of the lattice table runs beside an untyped NULL and beside each
-microsecond kind; the refusals, the microsecond pins of the two spellings the
-planner does not reach, the inferred CSV unit, and the R-010, R-013 and R-018
+microsecond kind; the refusals, the out-of-range raise in both ANSI modes, the microsecond pins of
+the two spellings the planner does not reach, the inferred CSV unit, and the R-010, R-013 and R-018
 statements are single named cells.
 
 pins: ice-tsns-type-planner-1/C-006
@@ -74,6 +74,7 @@ POSITIONS: tuple[tuple[str, str], ...] = (
     ("join_non_equi", "SELECT a.id FROM {S} a JOIN {S} b ON a.{c} >= @Xb"),
 )
 REFUSED = ("range", "generate_series")
+OUT_OF_RANGE = {"us_first": "coalesce(far, ns)", "ns_first": "greatest(ns, far)"}
 SERIES = "TIMESTAMP '2024-01-01 00:00:00', TIMESTAMP '2024-01-03 00:00:00', INTERVAL '1' DAY"
 
 
@@ -211,6 +212,13 @@ def _refusal(outcome: dict[str, Any], name: str) -> str:
     return ""
 
 
+def _overflow(outcome: dict[str, Any]) -> str:
+    if rule.answered(outcome):
+        return f"a microsecond value outside the nanosecond range answered: {outcome}"[:260]
+    text = outcome.get("error", "")
+    return "" if "OVERFLOW" in text else f"not the overflow class: {text}"[:260]
+
+
 def _unit(outcome: dict[str, Any], want: str, index: int = 0) -> str:
     if not rule.answered(outcome):
         return repr(outcome)[:260]
@@ -327,6 +335,11 @@ def _door_run(scratch: Path) -> dict[str, str]:
             if not reason and not rule.answered(values):
                 reason = repr(values)[:260]
             out[f"r018|values_{shape}_literal"] = reason
+        for ansi in ("true", "false"):
+            spark.conf.set("spark.sql.ansi.enabled", ansi)
+            for name, text in OUT_OF_RANGE.items():
+                outcome = rule.capture(rule.run_text(spark, f"SELECT {text} AS v FROM {rule.SRC}"))
+                out[f"range|{name}|ansi{ansi}"] = _overflow(outcome)
     finally:
         spark.stop()
     return out
@@ -334,7 +347,7 @@ def _door_run(scratch: Path) -> dict[str, str]:
 
 def door_groups() -> list[rule.Group]:
     """Return the refusal, microsecond-pin, CSV and registry-row cells."""
-    return [rule.Group(name="doors|UTC", family="doors", zone="UTC", run=_door_run, cells=15)]
+    return [rule.Group(name="doors|UTC", family="doors", zone="UTC", run=_door_run, cells=19)]
 
 
 def _postgres_run(scratch: Path) -> dict[str, str]:

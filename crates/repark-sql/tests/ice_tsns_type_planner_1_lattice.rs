@@ -104,11 +104,12 @@ fn unit_of(data_type: &DataType) -> Option<TimeUnit> {
 }
 
 async fn result_type(session: &ReparkSession, sql: &str) -> DataType {
-    let frame = session
-        .sql(sql)
+    optimized(session, sql)
         .await
-        .unwrap_or_else(|error| panic!("plan `{sql}`: {error}"));
-    frame.schema().field(0).data_type().clone()
+        .schema()
+        .field(0)
+        .data_type()
+        .clone()
 }
 
 async fn optimized(session: &ReparkSession, sql: &str) -> LogicalPlan {

@@ -396,6 +396,29 @@ scalars live under [`try_invert/`](try_invert/map.md).
   NULL struct to NULL); non-struct arguments refuse loud. Remediation 16a
   reuses the batched timestamp kernels; behavior unchanged.
   pins: fnp-win-1/C-003
+- `timestamp_unit_widen.rs` — **ICE-TSNS-TYPE-PLANNER-1 amendment 1 (2026-10-13):**
+  `SparkTimestampUnitWiden`, the unit lattice rule. DataFusion 54.1 joins two timestamp
+  units to the coarser one (`timeunit_coercion`, a free function with no hook), which
+  drops digits once `TIMESTAMP` is planned as microseconds. This analyzer rule runs
+  before `type_coercion`, first among the pre-coercion rules
+  (`analyzer_rules_with_higher_order_preparation` on the Spark door and the
+  expression-string session, `analyzer_rules_with_timestamp_unit_widen` on the other
+  two doors). Where two or more timestamp-typed expressions must share one type and
+  their units differ, every coarser one is cast to the finest unit present and keeps its
+  own zone; DataFusion's coercion then sees equal units and decides only the zone, as
+  before. It decides by the types at the position, never by where an expression came
+  from. Positions: the arguments of `coalesce`, `nvl`, `ifnull`, `greatest`, `least`,
+  `array` / `make_array`; the value arguments of `nvl2` and `if`; a list and its element
+  in `array_append`, `array_prepend`, `array_contains`, `array_position`,
+  `array_remove`, `element_at`; the lists of `array_concat` / `concat`; the results of a
+  `CASE` and the operands of a simple `CASE`; the comparison operators, `BETWEEN`,
+  `IN (list)`, `<=>` (join `ON` keys arrive as these expressions); the inputs of a
+  `UNION`, per column, through a projection. It never narrows, and it leaves equal
+  units, a single timestamp beside a string, an integer or a NULL, and aggregates alone;
+  an untouched plan is returned without a schema recompute. A microsecond value outside
+  the nanosecond range raises when the cast runs. Seven unit tests over a plain
+  DataFusion session with the rule placed.
+  pins: ice-tsns-type-planner-1/C-012
 - `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
   the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
   written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`
@@ -405,7 +428,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   and keeps DataFusion's mapping (`TIMESTAMP(3)`, `TIMESTAMP WITH TIME ZONE`, …). A
   `Timestamp(ns, _)` cast target therefore means nanoseconds. DataFusion's planner read an
   `Int64` cast to its nanosecond `TIMESTAMP` as seconds; that special case no longer fires,
-  so `integer_cast_to_instant` (in `instant_ts.rs`) writes the same two casts by type, and
+  so `planned_instant_cast` writes the same two casts by type for the Spark session rule
+  (`instant_ts.rs`, both `spark.sql.timestampType` modes), and
   `PlannedTimestampCast` is that one rewrite as an analyzer rule for the doors that do not
   run the Spark session rule (`install_planned_timestamp_cast`: the Rust `AnsiDialect`
   door and the Python native door). The zone label is `"UTC"`, not the session zone: the

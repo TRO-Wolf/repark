@@ -31,6 +31,7 @@ parity row ICE-TSNS-SQL-1-R-017.
 | C-009 | The parking repros of R-017's seven verifier rounds, by name, equal their twins. | The repro test green on the head. | **OPEN** | `test_parking_repros_of_the_seven_rounds`. |
 | C-010 | The amended pins hold: twenty mixed-unit cells on both doors in three zones, every lattice position, the H1 refusals, the H2 microsecond pins, P15, R-010, R-013, R-018(1), the Postgres reads. | The pin tests green on the head. | **OPEN** | `test_mixed_units_widen_to_the_finest_on_both_doors`, `test_every_lattice_position_equals_its_typed_twin`, `test_refusals_microsecond_pins_and_registry_rows`, `test_postgres_timestamps_read_as_microseconds`. |
 | C-011 | One planner types the five written names on both doors, and a join key in the optimized plan carries one unit. | The Rust pins green on the head. | **OPEN** | `crates/repark-sql/tests/ice_tsns_type_planner_1_lattice.rs`. |
+| C-012 | `SparkTimestampUnitWiden` runs before type coercion on every door and widens mixed timestamp units to the finest, by the types at the position, never narrowing and never touching equal units. | The rule's unit tests plus the lattice and position cells on the head. | **OPEN** | `crates/repark-functions/src/timestamp_unit_widen.rs` (7 unit tests); the fixture cells of C-010. |
 
 ## 1. The completed producer table (P1 to P15)
 

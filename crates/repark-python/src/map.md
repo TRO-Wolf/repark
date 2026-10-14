@@ -19,7 +19,8 @@ and hand execution, SQL, and ML semantics to the engine crates.
   extension, whose only hook is `type_planner` (`repark_functions::SparkTypePlanner`), and
   `register_native_door_functions` installs `PlannedTimestampCast` so an `Int64` cast to
   `TIMESTAMP` still reads seconds. The Spark door takes the planner from `SparkExtension`.
-  pins: ice-tsns-type-planner-1/C-011
+  `NativeDoorTypes::configure_analyzer_rules` places `SparkTimestampUnitWiden` before
+  `type_coercion` (amendment 1). pins: ice-tsns-type-planner-1/C-011, C-012
 - `session_runtime.rs` — **CATALOG-1 (2026-09-26):** `set_runtime_config` / `unset_runtime_config`
   serve `spark.sql.defaultCatalog` through `repark_spark::session_catalog::apply_default_catalog`
   (an empty value is unset); `current_catalog_checked`, `auto_session_catalog_wanted` and
