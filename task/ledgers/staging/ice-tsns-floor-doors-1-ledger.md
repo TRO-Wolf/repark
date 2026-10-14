@@ -30,6 +30,7 @@ where the narrowing is decided.
 | C-008 | The build's fixture derives every expected tick from the recorder's rule and is red first on main's release module. | `test_ice_tsns_floor_doors_1.py` run on main's module, with a tick count per door and target. | **PROVEN** | §6: 180 of 246 tests red on main; 4400 of 26928 ticks red, 1976 `TIMESTAMP` and 2424 `TIMESTAMP_NTZ`, every one from a nanosecond source; the step 0 subset is red on 712 ticks (304 and 408), as the sketch counted. pins: ice-tsns-floor-doors-1/C-008 |
 | C-009 | One function, `store_micros` in `timestamp_ns_cast.rs`, makes the tick of every narrowing into a microsecond `TIMESTAMP` or `TIMESTAMP_NTZ`, by source type, target type and session zone; its callers are the LTZ kernel and `ntz_single`. | The seam commit, the fixture's NTZ slice on it, and the mutants of §7. | **OPEN** | Built in the seam commit; proven in the records commit. |
 | C-010 | The two router predicates in `ntz_store.rs` send every staged door's nanosecond source to `store_micros` by type: `needs_ltz_instant_cast` accepts `Timestamp(Nanosecond, _)`, `wall_kernel_reads` a naive nanosecond source for a `TIMESTAMP_NTZ` target. | The routers commit, the whole fixture on it, and the mutants of §7. | **OPEN** | Built in the routers commit; proven in the records commit. |
+| C-011 | The merge-wall control cells of a nanosecond source into a microsecond target move from main's recording to the rule; no other control cell moves. | The re-pin commit; the unchanged control test run on the routers commit. | **OPEN** | Built in the re-pin commit; proven in the records commit. |
 
 ## 1. The matrix (C-001)
 
@@ -158,4 +159,4 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
-VERDICT: 10 clauses, 7 PROVEN, 3 OPEN, 0 REJECTED.
+VERDICT: 11 clauses, 7 PROVEN, 4 OPEN, 0 REJECTED.

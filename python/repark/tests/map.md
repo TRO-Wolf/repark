@@ -3231,7 +3231,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   main's recorded cells. The file below no longer holds `timestamptz_ns` as a control; its
   microsecond controls are unchanged.
   pins: ice-tstzns-wall-1/C-002, C-003, C-004, C-005, C-006, C-012
-- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-MERGE-WALL-1
+- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-FLOOR-DOORS-1
+  (2026-10-14), the re-pin:** the control test no longer holds a `timestamp_ns` or
+  `timestamptz_ns` source into a microsecond target as main answered it. `control_cell` takes
+  those cells' ticks from `_record_ice_tsns_floor_doors_1_main.rule_expected` (the floor and the
+  New York wall) and keeps main's recorded type, ids and refusals; every other source stays main's
+  recording. `test_main_held_the_floor_on_every_nanosecond_control_cell_but_the_moved_ones`
+  counts what moved: 94 of main's 152 such cells differed from the rule (24 `TIMESTAMP` cells on
+  the six overwrite and MERGE insert doors, 70 `TIMESTAMP_NTZ` cells), 46 held it, 12 are
+  refusals (4 the v2 `UPDATE` of a nanosecond column, 8 R-010's `UPDATE` literal). `ice_tsns_merge_wall_1_main.json` is unchanged: re-recorded on main's
+  module (`293896ce`) its 384 control cells are byte-equal, and its nanosecond-target cells are
+  the `40fc916f` history the first test counts. The module docstring's sentence that every
+  control answers main was deleted, as was the control test's docstring.
+  pins: ice-tsns-floor-doors-1/C-011
+  **ICE-TSNS-MERGE-WALL-1
   fold 1 (2026-10-09), the pin budget:** the module is cut from 464 tests to 179. Kept: the 57
   `timestamp_ns` door tests in all three zones, and the control doors in **one** zone,
   America/New_York (95 tests); they are the pins that kill the lane's mutant M5 and the
