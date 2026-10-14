@@ -8217,6 +8217,49 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   partitioned text (4 parts), localCheckpoint (20), transpose (1) and the
   ML fit ([2.0, [3.0]]). Every constant recorded from a base run first.
   pins: grown-stack-gate-1/C-002, C-003, C-004
+- [_acceptance_cross_read.py](_acceptance_cross_read.py) —
+  **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the cross-read helper both legs
+  share. `cross_read_local_tables` adopts each RePark table's newest metadata
+  file into a private Spark Hadoop catalog over the same warehouse
+  (`register_table`: a Hadoop catalog cannot see memory-catalog tables
+  directly, measured 2026-10-14) and `cross_read_table_pair` compares schema
+  (names, common-vocabulary types, nullability) and rows (order-insensitive,
+  exact, floats by repr so NaN and signed zero compare exactly as stored;
+  zone-aware instants normalize to UTC-naive so the session rendering zone
+  cannot fake a difference). One outcome per table — EQUAL, DIFFERENT with
+  the first differences, SPARK-CANNOT-READ with Spark error class and first
+  line — and nanosecond-column tables report `has_ns_columns` and are never
+  skipped (registry ICE-TSNS-SQL-1-R-002 evidence). No expectation is typed
+  per table: the rule is Spark's rows equal RePark's rows.
+  pins: ice-spark-cross-read-1/C-001
+- [test_acceptance_cross_read_local.py](test_acceptance_cross_read_local.py) —
+  **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the local cross-read leg: three
+  live cells (MOR, create-or-replace-twice, v3 DV plus adopted twin) run the
+  offline acceptance runners unchanged, assert their own outcomes, then
+  adopt every written table into a private live Spark catalog and assert
+  Spark rows equal RePark rows. Gated on the live flag plus a PySpark
+  importorskip; follows the live-cell rules (the shared session is never
+  stopped, one private catalog per test, no env reads in the body;
+  single-file seeding does not apply — the runners' multi-file layouts are
+  the point and rows, not file shapes, are compared). Runs under the
+  sparkenv interpreter with the release module on PYTHONPATH; the unit
+  ledger records the exact command. Follow-up (2026-10-14): a fourth cell
+  writes a v3 (id, timestamp_ns, timestamptz_ns) table with two nine-digit
+  rows and pins the expected SPARK-CANNOT-READ with Spark's error text
+  (R-002 evidence in the ledger); the helper reads the condition via
+  getCondition now (the getErrorClass spelling warns deprecated on PySpark
+  4.1.2).
+  pins: ice-spark-cross-read-1/C-002, C-003
+- [test_aws_acceptance_cross_read.py](test_aws_acceptance_cross_read.py) —
+  **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the AWS cross-read leg, not run:
+  two cells discover every testing_ table under the scratch namespace on
+  Glue and on S3 Tables and read each on both engines through the shared
+  helper (direct catalog reads both sides, no adoption; the Spark session
+  carries the pinned Iceberg runtime plus the AWS bundle jars). Same
+  module-level REPARK_AWS_ACCEPTANCE skip as the AWS legs plus a PySpark
+  importorskip; never drops anything. Collects cleanly with the variable
+  unset; the owner wires the workflow step from the unit order.
+  pins: ice-spark-cross-read-1/C-004
 
 ## I want to...
 
