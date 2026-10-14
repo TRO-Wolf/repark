@@ -196,7 +196,28 @@ Seams: more than one (H4, H7).
 
 ## 3. Added cells, both engines (order item d)
 
-Pending; recorder plus `ice_struct_pairing_1_step0.json` beside this file (D3 commit).
+Live Spark 4.1.2 with Iceberg 1.11 (`sparkenv`, `JAVA_HOME` Zulu 17, Hadoop
+catalog; banner `4.1.2 f0bb2e6a47d0ebda424ffd633fcea8644a597954`, zone UTC) and
+main's module (built from `293896ce`; product-identical to this base). Table
+`(id INT, st STRUCT<a: INT, b: INT>)`, format v2, seed `(10,20)`, written `(1,2)`;
+readback `(id, st.a, st.b)`. Machine JSON beside this file:
+[ice_struct_pairing_1_step0.json](ice_struct_pairing_1_step0.json), assembled by a
+recorder script from the two engines' printed outputs.
+
+| Cell | Spark 4.1.2 | Main | Same? |
+|---|---|---|---|
+| `overwrite(condition)` reordered | `[[2,2,1]]`, by name; seed gone | `[[2,2,1]]` | yes |
+| `overwrite(condition)` renamed | `CFD` for `` `st`.`b` `` | `CFD` for `` `st`.`b` `` | yes |
+| write with `mergeSchema`, surplus struct field | `ESF`, extra `c` refused | stores `[[1,10,20],[2,1,2]]`, drops `c` | NO, new divergence |
+| BY NAME, two source fields differ only in case | `AMBIGUOUS_COLUMN_NAME` at `` `st`.`a` `` | stores `[[1,10,20],[2,1,2]]` | NO, new divergence |
+| BY NAME, recased fields | stores `[[1,10,20],[2,1,2]]` | stores `[[1,10,20],[2,1,2]]` | yes |
+| required struct field, NULL supplied | seed stores; NULL refused `NOT_NULL_ASSERT_VIOLATION` (`SparkRuntimeException`) | seed stores; NULL refused Arrow non-nullable (`PySparkException`) | both refuse, texts differ |
+
+Notes: `overwrite(condition)` pairs by name on Spark, matching the facade, which
+already binds that door's source by name (`writer_layout.py:131`). The case-twin
+refusal confirms hint H-2's text shape (`AMBIGUOUS_COLUMN_NAME` with the dotted
+path). The `mergeSchema` cell used `writeTo(t).option("merge-schema","true")` on
+both engines; Spark still refuses the surplus struct field.
 
 ## 4. Cost bar (order item f)
 
