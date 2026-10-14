@@ -3330,6 +3330,57 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `=`. Reads and range cells are in the same fixture. A value Python cannot convert stays
   a per-row `conversion_error` beside its tick.
   pins: ice-tsns-coercion-1/C-001, C-003
+- [test_ice_tsns_type_planner_1.py](test_ice_tsns_type_planner_1.py) —
+  **ICE-TSNS-TYPE-PLANNER-1 step 1 (2026-10-13):** the unit's fixture, run live. Every
+  expectation is derived by the rule module from three clauses (a NULL beside a nanosecond
+  value is nanoseconds; a written `TIMESTAMP` cast over a nanosecond value floors to
+  microseconds; mixed units widen to the finest): a cell is green when its statement and
+  its twin (the same statement with the NULL typed, or the coarser operand cast, to the
+  nanosecond type of the position) give one outcome. No test names an expected value.
+  Families: the 9,600-cell census (one test per zone, target and source), the 420 cache
+  cells, the 117 reads, the 92 consumer-door cells, the parking repros of R-017's seven
+  verifier rounds, the twenty mixed-unit cells on both SQL doors in three zones, every
+  position of the lattice table beside a NULL and beside each microsecond kind, the H1
+  refusals, the H2 microsecond pins, the P15 cells, the R-010, R-013 and R-018(1)
+  statements, and the two Postgres read cells (they skip without `REPARK_PG_URL`). A
+  statement that answered on main's module must answer here.
+  pins: ice-tsns-type-planner-1/C-006, C-007, C-008, C-009, C-010
+- [_ice_tsns_type_planner_1_rule.py](_ice_tsns_type_planner_1_rule.py) —
+  **ICE-TSNS-TYPE-PLANNER-1:** the rule as a harness. `statement_of` and `twin_of` write
+  the two texts of a cell from one marked text (`{N}` is the NULL, `<<x>>` an operand
+  the rule widens); `category` is what the two outcomes must share (the error class, or
+  the Arrow types and ticks, or the Parquet type and stored ticks); `note` records
+  whether a statement answered. pins: ice-tsns-type-planner-1/C-006
+- [_ice_tsns_type_planner_1_cells.py](_ice_tsns_type_planner_1_cells.py) +
+  [ice_tsns_type_planner_1_reads.json](ice_tsns_type_planner_1_reads.json) —
+  **ICE-TSNS-TYPE-PLANNER-1:** the census (the door module of ICE-TSNS-COERCION-1, the
+  twin now spelled as a cast), the cache cells (a cached append against the same frame
+  uncached and against its twin), the 117 reads (the statements of the closed #1042's
+  verifier suites, as data) and the consumer doors (`applyInPandas`, cogrouped
+  `applyInPandas`, `mapInArrow`, `mapInPandas`, `pandas_udf`, `arrow_udf`, `applyInArrow`
+  over a site against the same door over the plain column).
+  pins: ice-tsns-type-planner-1/C-007, C-008
+- [_ice_tsns_type_planner_1_repros.py](_ice_tsns_type_planner_1_repros.py) +
+  [ice_tsns_type_planner_1_repros.json](ice_tsns_type_planner_1_repros.json) —
+  **ICE-TSNS-TYPE-PLANNER-1:** the parking repros by name (`v1_…`, `v2_…`, `v3_…` for
+  #1027's three verifies, `s1_…`, `s1b_…`, `nar_…` for #1042's, `r017_…` for the row's
+  own three written casts), as stores into a nanosecond column, seeded updates and
+  reads, two sources, two zones. Ten read cells only ask that the statement answers.
+  pins: ice-tsns-type-planner-1/C-009
+- [_ice_tsns_type_planner_1_pins.py](_ice_tsns_type_planner_1_pins.py) —
+  **ICE-TSNS-TYPE-PLANNER-1:** the amended pins: the lattice cells on the Spark door and
+  on `repark.sql` (zone set with `SET TIME ZONE`), the positions, the refusal texts
+  (they must name the function and `sequence`), the microsecond pins of the DDL column
+  and `Column.cast`, the inferred CSV unit through `read_csv` and `read.csv`, the
+  R-010 `UPDATE` and `DELETE` statements against their `INSERT` twins, R-013 on
+  `repark.sql`, R-018(1)'s three `VALUES` shapes against their `SELECT` twins, and the
+  Postgres cells. pins: ice-tsns-type-planner-1/C-010
+- [_record_ice_tsns_type_planner_1.py](_record_ice_tsns_type_planner_1.py) +
+  [ice_tsns_type_planner_1_main.json](ice_tsns_type_planner_1_main.json) —
+  **ICE-TSNS-TYPE-PLANNER-1:** runs every group on the installed module and prints green,
+  red and skipped cells by family; `--main <sha>` writes the statements that errored on
+  main's module (938 of 11,275 on `293896ce`), the list behind the fixture's
+  main-answers-so-this-answers check. pins: ice-tsns-type-planner-1/C-006
 - [_record_ice_tsns_coercion_1_spark_lattice.py](_record_ice_tsns_coercion_1_spark_lattice.py) +
   [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) —
   **ICE-TSNS-COERCION-1 slice 0:** Spark 4.1.2, five zones, both ANSI modes. `timestamp_ns`

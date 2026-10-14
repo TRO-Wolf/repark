@@ -25,6 +25,12 @@ parity row ICE-TSNS-SQL-1-R-017.
 | C-003 | The H2 probe (marker planner at both builders, probe-branch release module, eight spelling outcomes) is recorded with the probe sha. | The evidence file. | **PROVEN** | `task/wo/ice-tsns-type-planner-1/evidence/h2-probe.md`; probe branch `probe/type-planner-h2` at `42ed8b55`, never merged. |
 | C-004 | The H4 reader table and the P1 to P15 producer table in section 1 are recorded from the release module of main. | The evidence file plus section 1. | **PROVEN** | `task/wo/ice-tsns-type-planner-1/evidence/h4-reader-types.md`; section 1 below. One new producer row (P15) carries an empty disposition. |
 | C-005 | Step 1 (planner, deletions, analyzer, P5 dispositions) opens only after the ruling on H1 to H3. | The ruling. | **OPEN** | Halts recorded in section 2; no product file moves on the unit branch. |
+| C-006 | The fixture is committed before any product code, its expectations are derived by the harness from the rule, and its red and green counts on main's module are recorded. | The fixture commit plus section 4. | **OPEN** | `python/repark/tests/test_ice_tsns_type_planner_1.py`, `_ice_tsns_type_planner_1_rule.py`; counts in section 4. Stays open until the head is green. |
+| C-007 | Every census cell (9,600) and every cache cell (420) stores what its typed twin stores. | The census and cache tests green on the head. | **OPEN** | `test_census_cell_equals_its_typed_twin`, `test_cached_frame_stores_what_the_frame_stores`. |
+| C-008 | The 117 reads and the 92 consumer-door cells answer what their typed twin, or the plain column, answers. | The two tests green on the head, or the halt they hit. | **OPEN** | `test_read_over_a_site_equals_its_typed_twin`, `test_consumer_door_over_a_site_equals_the_column`. |
+| C-009 | The parking repros of R-017's seven verifier rounds, by name, equal their twins. | The repro test green on the head. | **OPEN** | `test_parking_repros_of_the_seven_rounds`. |
+| C-010 | The amended pins hold: twenty mixed-unit cells on both doors in three zones, every lattice position, the H1 refusals, the H2 microsecond pins, P15, R-010, R-013, R-018(1), the Postgres reads. | The pin tests green on the head. | **OPEN** | `test_mixed_units_widen_to_the_finest_on_both_doors`, `test_every_lattice_position_equals_its_typed_twin`, `test_refusals_microsecond_pins_and_registry_rows`, `test_postgres_timestamps_read_as_microseconds`. |
+| C-011 | One planner types the five written names on both doors, and a join key in the optimized plan carries one unit. | The Rust pins green on the head. | **OPEN** | `crates/repark-sql/tests/ice_tsns_type_planner_1_lattice.rs`. |
 
 ## 1. The completed producer table (P1 to P15)
 
@@ -98,6 +104,59 @@ there; the ANSI door answers `ns` for `now()` and `current_timestamp()`
 - Write doors beyond the P12 smoke (`UPDATE`, `MERGE`, `OVERWRITE`, `BY NAME`, CTAS).
 - Non-default session zones: every run used the default zone.
 - Spark-internal names (`__repark_*`): no `DESCRIBE` by construction.
+
+## 4. Step 1, the fixture (commit 0), red first
+
+**Model:** Claude (claude-opus-5-5), executor lane A, 2026-10-13. Base of step 1: `d997e2cc`.
+Main's release module: `293896ce`, the profile of the lane's own builds.
+
+Every expectation is derived by `_ice_tsns_type_planner_1_rule.py`: a cell is one statement
+with markers, its twin is that statement with the NULL typed, or the coarser operand cast,
+to the nanosecond type of the position, and the cell is green when both give one outcome
+(error class, or Arrow types and ticks, or Parquet type and stored ticks). The census, cache
+and repro stores read the Parquet files. No cell names an expected value; the harness holds
+no category copied from #1027 or #1042. The twin is spelled `CAST(… AS timestamp_ns)`, not
+the kernel name, so it survives the retirement of the by-name registration.
+
+Counts on main's module (`_record_ice_tsns_type_planner_1.py --jobs 8 --main 293896ce`):
+
+| Family | Cells | Green on main | Red on main |
+|---|---|---|---|
+| census (5 zones, 6 target and source pairs, 5 forms, 64 doors) | 9,600 | 2,619 | 6,981 |
+| cache (21 spellings, 2 targets, 2 sources, 5 zones) | 420 | 60 | 360 |
+| reads (the 117 of #1042's verify-slice1b) | 117 | 0 | 117 |
+| consumer doors (46 cells, 2 zones) | 92 | 0 | 92 |
+| parking repros (87 named statements, 2 sources, 2 zones) | 348 | 135 | 213 |
+| lattice (20 cells, 2 doors, 3 zones) | 120 | 0 | 120 |
+| positions (32 positions, 3 siblings, 2 sources, 3 zones) | 576 | 193 | 383 |
+| doors (H1, H2, P15, R-010, R-013, R-018(1)) | 15 | 5 | 10 |
+| Postgres (`timestamp`, `timestamptz`) | 2 | 2 | 0 |
+| Rust pins, both doors (`ice_tsns_type_planner_1_lattice.rs`) | 6 tests | 1 | 5 |
+
+Notes on the counts, as measured:
+
+- The 420 cache cells are derived, not copied: the fifteen spellings of #1027's matrix that
+  narrow beside an untyped NULL and its six beside a typed NULL or a microsecond value, two
+  nanosecond targets, two sources, the five zones of that matrix. A cached append is
+  compared with the same frame uncached and with its typed twin.
+- The consumer cells compare a door over `coalesce(c, NULL)` with the same door over `c`:
+  by the first clause the site is the column. On main all 92 differ.
+- 938 of 11,275 statements error on main's module
+  (`ice_tsns_type_planner_1_main.json`); the fixture fails a cell whose statement answered
+  on main and errors on the head.
+- The green cells on main are controls: the written `TIMESTAMP` casts, the NULLs that are
+  not timestamp operands, the positions main already types by the finest unit (`nvl`,
+  `ifnull`, `array_append`, `array_prepend`, `array_position`, the comparisons beside a
+  NULL), the two microsecond pins, the integer `range` relation, `repark.sql` not
+  resolving the kernel name (the Python native door never registered it; the Rust
+  `AnsiDialect` door does, and its cell is red), and both Postgres cells.
+- The P15 cell through `spark.read.options(...).csv(...)` is green on main: that spelling
+  already reads microseconds. `spark.read_csv(path, options)` reads `timestamp[s]` and is
+  red.
+- The Postgres cells ran against `make pg-up` on the rootless socket, in plaintext
+  (`sslmode=disable`); without `REPARK_PG_URL` they skip.
+- The join-key pin reads the optimized plan in Rust (`into_optimized_plan`), on both doors,
+  for `=`, `<` and `<=>`.
 
 ## Q. Questions
 
