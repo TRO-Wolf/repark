@@ -10256,3 +10256,28 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   registry row R-009 (FIXED 2026-10-14) and of the 1.5.6 notes draft's stored-value lines.
   No module docstring: the lane's no-comments ruling covers the new file; the contract
   lives here. pins: ice-tsns-floor-doors-1/C-008, C-013
+- [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
+  **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
+  and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)
+  recorded from live Spark 4.1.2 with the Iceberg GAV of `_oracle_pins`; writes
+  `spark-cells.json` and `spark-cells.md` into
+  `task/wo/write-body-carriers-1/evidence/`. Takes an optional warehouse path.
+  pins: write-body-carriers-1/C-001
+- [_record_write_body_carriers_1_main.py](_record_write_body_carriers_1_main.py) —
+  **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 54 main cells on the release
+  module over a memory catalog (the 20 CTAS cells on format versions 2 and 3,
+  `EXPLAIN ANALYZE` of each body, `PREPARE` / `EXECUTE` of INSERT and INSERT
+  OVERWRITE); writes `main-cells.json` and `main-cells.md` into
+  `task/wo/write-body-carriers-1/evidence/`. Takes an optional warehouse path.
+  pins: write-body-carriers-1/C-002, C-003
+- [test_write_body_carriers_1.py](test_write_body_carriers_1.py) —
+  **WRITE-BODY-CARRIERS-1 build (2026-10-14):** the 40 step-0 CTAS cells (2
+  creators x 5 bodies x z new and existing x format versions 2 and 3) refuse
+  with Spark 4.1.2's measured class, condition, SQLSTATE and leading keyword
+  with ``t`` and ``z`` unchanged, plus one ``REPLACE TABLE`` cell per body and
+  one parenthesised-body cell per body; the 14 wrapper cells, the 5 ANSI-door
+  cells and the plain-CTAS neighbours pin main's measured answers.
+  **Fold 1 (2026-10-14):** 20 ``IF NOT EXISTS`` cells, 10 doubly parenthesised
+  cells, 4 WITH-prefixed cells (bare and parenthesised) and 10 missing-target
+  ``REPLACE TABLE`` cells refuse the same way with ``t`` and ``z`` unchanged.
+  pins: write-body-carriers-1/C-004, C-005

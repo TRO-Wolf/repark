@@ -5,7 +5,10 @@ use std::collections::HashSet;
 use datafusion::common::TableReference;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{Insert, ObjectType, Statement, TableObject};
+use datafusion::sql::sqlparser::ast::{
+    CreateTable, Insert, ObjectType, SetExpr, Statement, TableObject,
+};
+use repark_common::spark_error;
 use repark_core::{CatalogRegistry, TempViewSession};
 
 use crate::{
@@ -319,11 +322,15 @@ async fn execute_inner(
     crate::refuse_declared_function_in_statement(&statement)?;
     refuse_options_on_non_write(&statement, write_options)?;
     if let Statement::CreateTable(create) = &statement {
+        refuse_ctas_write_body(create)?;
+    }
+    if let Statement::CreateTable(create) = &statement {
         crate::normalize::replace_table::refuse_missing_replace_target(catalogs, sql, &create.name)
             .await?;
     }
     match &statement {
         Statement::CreateTable(create) if create.query.is_some() => {
+            refuse_ctas_write_body(create)?;
             execute_ctas(
                 ctx,
                 catalogs,
@@ -461,6 +468,28 @@ async fn execute_insert_routed(
     };
     crate::catalog_ops::refuse_encrypted_write_target(ctx, catalogs, target).await?;
     passthrough_after_p11(ctx, catalogs, sql, refusal).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn refuse_ctas_write_body(create: &CreateTable) -> Result<()> {
+    let Some(query) = create.query.as_ref() else {
+        return Ok(());
+    };
+    let mut body = query.body.as_ref();
+    while let SetExpr::Query(inner) = body {
+        body = inner.body.as_ref();
+    }
+    let keyword = match body {
+        SetExpr::Insert(_) => "INSERT",
+        SetExpr::Update(_) => "UPDATE",
+        SetExpr::Delete(_) => "DELETE",
+        SetExpr::Merge(_) => "MERGE",
+        _ => return Ok(()),
+    };
+    let near = format!("'{keyword}'");
+    Err(crate::view_ddl::temp_parse::spark_parse_error(
+        spark_error::message(spark_error::PARSE_SYNTAX_ERROR, &[("near", near.as_str())]),
+    ))
 }
 
 fn refuse_options_on_non_write(

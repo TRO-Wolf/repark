@@ -126,6 +126,14 @@ pins: rp-4-fork-repin/C-005, C-006
   `repark_functions::cast_map::rewrite_map_casts`, so a `CAST` / `TRY_CAST` naming `MAP<…>`
   reaches every intercept and the parser as the shared cast UDF call.
   pins: cast-map-spell-1/C-005
+  **WRITE-BODY-CARRIERS-1 build (2026-10-14):** the CTAS arm refuses a body whose
+  statement kind is INSERT, UPDATE, DELETE or MERGE (unwrapping parenthesised
+  `SetExpr::Query`) with `PARSE_SYNTAX_ERROR` 42601 naming the leading keyword,
+  before `build_ctas` and any catalog read or file write.
+  **Fold 1 (2026-10-14):** the same refusal runs ahead of
+  `refuse_missing_replace_target`, so a missing-target `REPLACE TABLE` with a
+  write body answers the parse refusal; other bodies still reach the catalog check.
+  pins: write-body-carriers-1/C-004
   **ICE-SYSTEM-FUNCTIONS-1 round 3 (2026-09-20):** `execute_inner` next runs
   `describe_show::rewrite_system_function_calls` (live-catalog-gated), and
   `try_preparse_intercepts` gains the `SHOW [USER] FUNCTIONS IN <cat>.system`

@@ -807,7 +807,7 @@ declines it (a dated ruling in the intake, then the archive).
   R-011). The release note must say that nested NTZ values written by INSERT before the fix hold the UTC wall. Sibling:
   ICE-TSNS-NESTED-1.
 - [write-body-carriers-1-card-2026-10-10.md](write-body-carriers-1-card-2026-10-10.md) — **card
-  WRITE-BODY-CARRIERS-1 (2026-10-10, open, target not assigned):** owner ruling 2026-10-10 that `CREATE [OR REPLACE] TABLE
+  WRITE-BODY-CARRIERS-1 (2026-10-10, build round 1 landed 2026-10-14):** owner ruling 2026-10-10 that `CREATE [OR REPLACE] TABLE
   z AS INSERT INTO t ...` refuses at parse, as Spark does; today it commits the inner INSERT and then fails with
   `UInt64 is not supported`. Measures Spark 4.1.2 on the CTAS shape before the refusal lands. `EXPLAIN ANALYZE <write>`
   and `PREPARE` / `EXECUTE` run the write body, documented with no parity claim. Records 36 of 48 top-level
@@ -835,3 +835,11 @@ declines it (a dated ruling in the intake, then the archive).
   `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
   R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
   case twins already covered by ID-1a.
+- [ns-encoded-nested-floor-1-card-2026-10-14.md](ns-encoded-nested-floor-1-card-2026-10-14.md) —
+  **card NS-ENCODED-NESTED-FLOOR-1 (2026-10-14, open, target v1.5.7, nanosecond
+  carve-out):** floor a dictionary-encoded or run-end-encoded nanosecond source, and a
+  nanosecond leaf in a struct, list or map source, into a microsecond `TIMESTAMP` or
+  `TIMESTAMP_NTZ` leaf and read its wall in the session zone, the rule of R-009 (parity row
+  R-024; owner ruling, question 53, 2026-10-14). From finding F4 of the verifier of PR
+  #1059: same on main in every cell. Reconciles with the R-015 refusal of a nested
+  `timestamp_ns` target leaf.
