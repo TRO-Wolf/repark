@@ -29,5 +29,6 @@ them.
 - [ice-ntz-nested-wall-1/](ice-ntz-nested-wall-1/map.md) — the design note for the nested TIMESTAMP_NTZ store kernel (parked 2026-10-12).
 - [ice-tsns-type-planner-1/](ice-tsns-type-planner-1/map.md) — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the Fable 5.1 sketch that fixes parity row R-017 by the SQL type name (docs only, no product code); closes unmerged #1027 and #1042.
 - [ice-tsns-floor-doors-1.md](ice-tsns-floor-doors-1.md) — **ICE-TSNS-FLOOR-DOORS-1 (U-3, R-009, grade B, 2026-10-13):** the order of record for U-3 of the Iceberg closeout: one floor on every door into microsecond TIMESTAMP and TIMESTAMP_NTZ columns; measurement step 0 may run now, the build waits for the planner head.
+- [write-body-carriers-1/](write-body-carriers-1/map.md) — **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the CTAS-with-write-body measurements (Spark cells, main cells, the seam note); measurement only, no product code.
 
 Up: [../map.md](../map.md).

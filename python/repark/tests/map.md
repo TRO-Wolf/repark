@@ -10161,3 +10161,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   when the box lane is absent. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here.
   pins: parity-live-infra-2/C-001
+- [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
+  **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
+  and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)
+  recorded from live Spark 4.1.2 with the Iceberg GAV of `_oracle_pins`; writes
+  `spark-cells.json` and `spark-cells.md` into
+  `task/wo/write-body-carriers-1/evidence/`. Takes an optional warehouse path.
