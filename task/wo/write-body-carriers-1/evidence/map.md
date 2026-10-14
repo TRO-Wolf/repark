@@ -10,5 +10,8 @@ in each row.
   the 54 main cells (40 CTAS cells on format versions 2 and 3, 10
   `EXPLAIN ANALYZE` cells, 4 `PREPARE` / `EXECUTE` cells), written by
   [python/repark/tests/_record_write_body_carriers_1_main.py](../../../../python/repark/tests/_record_write_body_carriers_1_main.py).
+- [seam.md](seam.md) — reading only: the two product paths that reach a CTAS
+  body, with file and line, and the one candidate refusal point on the Spark
+  door.
 
 Up: [../map.md](../map.md).
