@@ -8217,6 +8217,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   partitioned text (4 parts), localCheckpoint (20), transpose (1) and the
   ML fit ([2.0, [3.0]]). Every constant recorded from a base run first.
   pins: grown-stack-gate-1/C-002, C-003, C-004
+- [_acceptance_cross_read.py](_acceptance_cross_read.py) —
+  **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the cross-read helper both legs
+  share. `cross_read_local_tables` adopts each RePark table's newest metadata
+  file into a private Spark Hadoop catalog over the same warehouse
+  (`register_table`: a Hadoop catalog cannot see memory-catalog tables
+  directly, measured 2026-10-14) and `cross_read_table_pair` compares schema
+  (names, common-vocabulary types, nullability) and rows (order-insensitive,
+  exact, floats by repr so NaN and signed zero compare exactly as stored;
+  zone-aware instants normalize to UTC-naive so the session rendering zone
+  cannot fake a difference). One outcome per table — EQUAL, DIFFERENT with
+  the first differences, SPARK-CANNOT-READ with Spark error class and first
+  line — and nanosecond-column tables report `has_ns_columns` and are never
+  skipped (registry ICE-TSNS-SQL-1-R-002 evidence). No expectation is typed
+  per table: the rule is Spark's rows equal RePark's rows.
+  pins: ice-spark-cross-read-1/C-001
 
 ## I want to...
 
