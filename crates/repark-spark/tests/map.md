@@ -122,6 +122,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `INSERT`'s answer in the same America/New_York session, read back in the test, and that
   answer must differ from plain `INSERT` in a UTC session. The verify's mutants M2 (the MERGE
   insert arm reads the wall as UTC) and M10 (the wall is not localised) each red it.
+  pins: ice-tsns-floor-doors-1/C-015
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,

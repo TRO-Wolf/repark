@@ -11,10 +11,10 @@ lane A · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 Step 0 changed no product file. The build (2026-10-14) runs on main by the owner's rulings
 of that day, not on the type-planner head: one deciding function (`store_micros`), two
 router arms, the fixture red first, the merge-wall re-pin and these records. The provisional
-guard (lean A) is built and measured but held off this branch by the halt on a file outside the
-sketch's list (Q6): it sits on the local branch `probe/floor-doors-guard`, with its revert-alone
-run on `probe/floor-doors-guard-revert`, neither pushed. Built on the orchestrator's leans A to
-C, pending the owner's word (§Q).
+guard (lean A) is commit `fb325e57` on this branch, with its file-size ratchet inside it (Q6);
+the owner kept it on 2026-10-14 (question 49 (a)). Its revert-alone run was on the local
+branch `probe/floor-doors-guard-revert`, never pushed. The owner's answers of 2026-10-14 are
+in §Q; fold 1 (§11) adds the door pin the verify asked for.
 
 **Why.** Into a microsecond `TIMESTAMP` column, INSERT floors a nanosecond
 source and reads a naive wall in the session zone, while the overwrite doors
@@ -40,7 +40,8 @@ where the narrowing is decided.
 | C-011 | The merge-wall control cells of a nanosecond source into a microsecond target move from main's recording to the rule; no other control cell moves. | The re-pin commit; the unchanged control test run on the routers commit. | **PROVEN** | §6: unchanged, the control test fails 47 tests (94 cells) on the routers commit; re-pinned, all 988 tests of the fixture and the three neighbours pass. 94 of main's 152 nanosecond control cells moved (24 `TIMESTAMP`, 70 `TIMESTAMP_NTZ`), 46 held the rule, 12 are refusals; the 384 microsecond-source control cells are byte-equal to a fresh recording on main. pins: ice-tsns-floor-doors-1/C-011 |
 | C-012 | Write cost stays within 1.05 of main. | Ratios of five interleaved set medians on the write set, same build profile both sides. | **PROVEN** | §8: every ratio at or below 1.038; the overwrite doors fell to 0.75 to 0.79 of main. pins: ice-tsns-floor-doors-1/C-012 |
 | C-013 | The 1.5.6 release note carries one line per stored-value change, for a reader who will not open the registry, and registry row R-009 is FIXED with its pins. | The notes draft and the registry row. | **PROVEN** | `task/roadmap/mid-term/v1-5-6-release-notes-draft.md` (three lines: the overwrite doors' wall, the floor on every door, the NTZ read; tables already written keep their values); `docs/spark-sql-iceberg-parity.md` R-009 FIXED 2026-10-14 with the door count restated (ten `TIMESTAMP` doors of the fixture's twenty, all twenty into `TIMESTAMP_NTZ`). pins: ice-tsns-floor-doors-1/C-013 |
-| C-014 | Provisional (lean A): the five batch casts that narrowed a nanosecond source on main refuse, with an internal error naming the column, a top-level timestamp whose unit would get coarser, and are today's strict cast otherwise; no fixture cell reaches the refusal, and reverting the commit alone leaves the fixture and the neighbours green. | The guard's commit, mutants M5, M6 and M9, and the revert-alone run on `probe/floor-doors-guard-revert`. | **PROVEN** | §10. pins: ice-tsns-floor-doors-1/C-014 |
+| C-014 | Provisional (lean A, kept by the owner 2026-10-14): the five batch casts that narrowed a nanosecond source on main refuse, with an internal error naming the column, a top-level timestamp whose unit would get coarser, and are today's strict cast otherwise; no fixture cell reaches the refusal, and reverting the commit alone leaves the fixture and the neighbours green. | The guard's commit, mutants M5, M6 and M9, and the revert-alone run on `probe/floor-doors-guard-revert`. | **PROVEN** | §10. pins: ice-tsns-floor-doors-1/C-014 |
+| C-015 | Fold 1: one Rust door test stores, in an America/New_York session, what plain INSERT stores for the same nanosecond source on the MERGE insert arm (column list and `INSERT *`), `INSERT OVERWRITE` and `INSERT … BY NAME`, into `TIMESTAMP` from `timestamp_ns` and into `TIMESTAMP_NTZ` from `timestamptz_ns`, format versions 2 and 3; plain INSERT's answer differs from a UTC session's; the verify's mutants M2 and M10 each red it. | The test on the head and under each mutant applied alone. | **PROVEN** | §11: 64 cells green on the head; M2, M10 (and M9) each red `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york`. pins: ice-tsns-floor-doors-1/C-015 |
 
 ## 1. The matrix (C-001)
 
@@ -218,6 +219,38 @@ The guard shrinks `overwrite.rs` from 1053 to 1049 lines, so the commit ratchets
 baseline in `scripts/check_rust_file_size.py` and its mirror
 `python/repark-parity/tests/test_cap_1_source_file_line_cap.py` (Q6); the revert restores both.
 
+## 11. Fold 1 (C-015)
+
+The scoped verify of the pull request (2026-10-14, PASS) found that its mutant M2 (the MERGE
+insert arm skips the session-zone read) survived every Rust test, that its M10 (the
+naive-to-instant localisation skipped in `store_micros`) died only on kernel unit tests, and
+that the header still placed the guard off the branch. Owner question 52: one fold, tests and
+docs only. No product file changed.
+
+`every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` in
+`crates/repark-spark/tests/timestamp_ns_wall_doors.rs` seeds `-1 ns`, `-1,001 ns`, an exact
+microsecond, New York's gap wall `2026-03-08 02:30:00.000000001` and a NULL row, and writes
+them through four doors: MERGE `WHEN NOT MATCHED THEN INSERT (…) VALUES (…)`, MERGE
+`INSERT *`, `INSERT OVERWRITE` and `INSERT … BY NAME`; `timestamp_ns` into `TIMESTAMP` and
+`timestamptz_ns` into `TIMESTAMP_NTZ`; format versions 2 and 3; tables partitioned by a
+constant. 64 cells (4 doors x 2 targets x 2 versions x 4 values), every row read back. The
+expected rows are plain `INSERT`'s in the same America/New_York session, read back in the
+test, and they must differ from plain `INSERT`'s in a UTC session (they differ on every
+value).
+
+Each mutant was applied alone to a scratch edit of the branch, the test run inside the build
+lock, and the sources restored; none was committed. The mutant names are the verify's
+(`verify1/w/mutants.py`), not §7's.
+
+| Mutant (verify) | Edit | Fails | Where |
+|---|---|---|---|
+| M2 | the MERGE insert arm reads a naive nanosecond wall as UTC | `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` | the door assertion: `timestamp_ns` into `TIMESTAMP` v2, the MERGE insert arm stores `-1` where INSERT stores `17999999999` |
+| M10 | `store_micros` skips the naive-to-instant localisation | `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` | the UTC assertion: `timestamp_ns` into `TIMESTAMP` v2, INSERT equals the UTC session's answer |
+| M9 | `store_micros` skips the instant-to-wall shift | `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york`, `a_nested_microsecond_ntz_field_keeps_the_split_main_has` | the UTC assertion: `timestamptz_ns` into `TIMESTAMP_NTZ` v2 |
+
+The `TIMESTAMP_NTZ` half is the instant-to-wall direction, so it is M9's cell, not M10's;
+M10 dies on the `TIMESTAMP` half.
+
 ## Gates
 
 Gates run before the final hand-back per the brief; exit codes are recorded there, not here.
@@ -227,10 +260,10 @@ Gates run before the final hand-back per the brief; exit codes are recorded ther
 - **Q1 (C-006, OWNER). ANSWERED 2026-10-14:** the owner gave the go on the sketch's
   one-chokepoint proposal (six narrowing functions, one deciding function); the build runs
   on main.
-- **Q2 (OWNER, lean A).** Built as leaned, pending the owner's word: the closed batch casts
-  raise an internal error when a top-level timestamp would get coarser (`strict_store_cast`).
-  It is one commit on `probe/floor-doors-guard` over this branch, held by Q6; its own ledger
-  section there carries mutants M5, M6, M9 and the revert-alone count. *Lean:* keep it.
+- **Q2 (OWNER, lean A). ANSWERED 2026-10-14 (question 49 (a)): keep the guard.** The closed
+  batch casts raise an internal error when a top-level timestamp would get coarser
+  (`strict_store_cast`). The guard is commit `fb325e57` on this branch; §10 carries mutants
+  M5, M6, M9 and the revert-alone count.
 - **Q3 (RULING).** The brief says the 72 control cells of `ice_tsns_merge_wall_1_main.json`
   move and the recorder file moves in the same commit. The JSON holds the New York controls
   only; 94 of its nanosecond control cells move (24 `TIMESTAMP`, 70 `TIMESTAMP_NTZ`); the 72
@@ -238,11 +271,12 @@ Gates run before the final hand-back per the brief; exit codes are recorded ther
   were left unchanged, because a fresh recording on main equals the control cells byte for
   byte and would rewrite 68 history cells another test counts. *Premise:* §6. *Lean:* accept
   the re-pin as built; no recorder change.
-- **Q4 (OWNER, lean B).** The read `CAST(ns AS TIMESTAMP_NTZ)` moves with the seam
+- **Q4 (OWNER, lean B). ANSWERED 2026-10-14 (question 50): keep the read `CAST` floor.** The read `CAST(ns AS TIMESTAMP_NTZ)` moves with the seam
   (`-1 ns` reads `-1 µs`, main `0`), pinned on its own name
   `test_the_ntz_read_cast_of_a_nanosecond_source_floors` and given its own release-note
   line. *Lean:* keep it; it is the same function as the store.
-- **Q5 (OWNER, lean C).** INSERT … BY NAME and INSERT OVERWRITE with a static `PARTITION`
+- **Q5 (OWNER, lean C). ANSWERED 2026-10-14 (question 51): keep the BY NAME, column-list
+  and static `PARTITION` doors in the unit.** INSERT … BY NAME and INSERT OVERWRITE with a static `PARTITION`
   are in this unit: they truncated and read the wall as UTC on main, and the routers fix them
   with the rest. The registry row's door count is restated (ten of twenty). *Lean:* keep.
 - **Q6 (RULING, halt).** The guard shrinks `crates/repark-iceberg/src/write/overwrite.rs` from
@@ -252,8 +286,12 @@ Gates run before the final hand-back per the brief; exit codes are recorded ther
   the sketch's section 3, which the brief makes a halt. *Premise:* `make check-rust-file-size`
   exits 2 with "shrank to 1049 lines below exact baseline 1053". *Lean:* allow the two-number
   ratchet (and the `scripts/` and parity-tests map rows) inside the guard's commit, so the
-  guard and its ratchet revert together; then cherry-pick `probe/floor-doors-guard` as the last
-  commit.
+  guard and its ratchet revert together. *As landed:* `fb325e57` on this branch carries the
+  guard with the two-number ratchet and the map rows.
+- **Owner's answers of 2026-10-14.** 49 (a): keep the guard (Q2). 50: keep the read `CAST`
+  floor (Q4). 51: keep the BY NAME, column-list and static `PARTITION` doors in the unit (Q5).
+  52: one fold, tests and docs only, no re-verifier (§11). 53: encoded (dictionary,
+  run-end) and nested nanosecond sources are a dated row and a card outside this unit.
 
 ```
 COVERAGE_ATTESTATION:
@@ -300,4 +338,4 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
-VERDICT: 14 clauses, 14 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 15 clauses, 15 PROVEN, 0 OPEN, 0 REJECTED.
