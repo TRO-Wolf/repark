@@ -487,6 +487,7 @@ pub fn register_store_cast_udfs(ctx: &SessionContext) {
     ctx.register_udf(store_int32_udf().as_ref().clone());
     ctx.register_udf(store_int64_udf().as_ref().clone());
     ctx.register_udf(store_int_guard_udf().as_ref().clone());
+    ctx.register_udf(super::struct_pairing::store_pair_udf().as_ref().clone());
 }
 
 #[cfg(test)]

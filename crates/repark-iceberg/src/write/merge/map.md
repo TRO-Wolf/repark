@@ -319,6 +319,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   pins: rp-5-fork-repin/C-004
   **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** `quote_scratch_name` is `pub(crate)` so
   predicate DML quotes 3-part scratch names per segment like the MERGE SQL builders.
+- `insert.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `insert_projection_with_defaults` wraps a value assigned to a
+  struct-holding column in `__repark_store_pair__` by name under the statement's case rule, so
+  `MERGE … INSERT` pairs before its gate. The store-assignment gate pairs a nested pair through
+  the seam (`incompatible_paired_message`) and judges its leaves; the UPDATE SET gate and
+  `update_stream_checked` take the by-name mode from `spec.case_insensitive`.
 - `insert.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** the MERGE store-assignment refusal asks
   `../update_cast.rs`'s `incompatible_nested_message` first when either side is a map, so
   `UPDATE SET` and `NOT MATCHED INSERT` refuse a map key or value with Spark's

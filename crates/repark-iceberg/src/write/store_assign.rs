@@ -2,8 +2,10 @@
 
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Field, Fields};
+use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::error::{DataFusionError, Result};
+
+use super::struct_pairing::{StructPairing, pair_store_value};
 
 /// Spark's error class for the MERGE store-assignment refusals.
 pub(crate) const MERGE_SPARK_CLASS: &str = "INCOMPATIBLE_DATA_FOR_TABLE";
@@ -30,11 +32,8 @@ pub fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     if src == dst {
         return true;
     }
-    if let (DataType::Struct(from), DataType::Struct(to)) = (src, dst) {
-        return struct_fields_store_assignable(from, to);
-    }
-    if let (DataType::Map(from, _), DataType::Map(to, _)) = (src, dst) {
-        return map_entries_store_assignable(from.data_type(), to.data_type());
+    if let (Some(from), Some(to)) = (container_kind(src), container_kind(dst)) {
+        return from == to && nested_store_assignable(src, dst);
     }
     // NullType → anything (the projection NULL-fills nullable columns as untyped NULL).
     if matches!(src, Null) {
@@ -85,29 +84,28 @@ pub fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     false
 }
 
-fn struct_fields_store_assignable(from: &Fields, to: &Fields) -> bool {
-    from.len() == to.len()
-        && from.iter().zip(to.iter()).all(|(source, target)| {
-            source.name().eq_ignore_ascii_case(target.name())
-                && ansi_store_assignable(
-                    normalize_for_assignment(source.data_type()),
-                    normalize_for_assignment(target.data_type()),
-                )
-        })
+fn container_kind(data_type: &DataType) -> Option<u8> {
+    match data_type {
+        DataType::Struct(_) => Some(0),
+        DataType::Map(_, _) => Some(1),
+        DataType::List(_)
+        | DataType::LargeList(_)
+        | DataType::ListView(_)
+        | DataType::LargeListView(_)
+        | DataType::FixedSizeList(_, _) => Some(2),
+        _ => None,
+    }
 }
 
-fn map_entries_store_assignable(from: &DataType, to: &DataType) -> bool {
-    let (DataType::Struct(from), DataType::Struct(to)) = (from, to) else {
-        return false;
-    };
-    from.len() == 2
-        && to.len() == 2
-        && from.iter().zip(to.iter()).all(|(source, target)| {
+fn nested_store_assignable(src: &DataType, dst: &DataType) -> bool {
+    pair_store_value(StructPairing::by_name(false), "``", "", src, dst).is_ok_and(|pairs| {
+        pairs.leaves().iter().all(|leaf| {
             ansi_store_assignable(
-                normalize_for_assignment(source.data_type()),
-                normalize_for_assignment(target.data_type()),
+                normalize_for_assignment(&leaf.source),
+                normalize_for_assignment(&leaf.target),
             )
         })
+    })
 }
 
 pub(crate) fn without_field_metadata(data_type: &DataType) -> DataType {

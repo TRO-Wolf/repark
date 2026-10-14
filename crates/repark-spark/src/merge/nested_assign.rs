@@ -12,8 +12,10 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::struct_pairing::{StructPairing, holds_struct_type};
 use repark_iceberg::write::update_cast::{
-    incompatible_update_message, nested_leaf_cast_sql, store_assignment_cast_sql,
+    incompatible_paired_message, incompatible_update_message, paired_assignment_cast_sql,
+    paired_nested_cast_sql,
 };
 
 mod expand;
@@ -132,13 +134,6 @@ fn source_field<'a>(
         return fields.iter().find(|field| field.name() == name);
     }
     find_field(fields, name)
-}
-
-fn has_required_field(fields: &Fields) -> bool {
-    fields.iter().any(|field| {
-        !field.is_nullable()
-            || matches!(field.data_type(), DataType::Struct(inner) if has_required_field(inner))
-    })
 }
 
 fn unqualified<'p>(
@@ -382,31 +377,28 @@ fn leaf_sql(
     let value_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut value);
     match &keyed.value_type {
         Some(source) => value_sql_for(&value_sql, source, target, path, case_sensitive),
-        None => Ok(assignment_cast_sql(&value_sql, target, path)),
+        None => Ok(assignment_cast_sql(
+            &value_sql,
+            target,
+            path,
+            case_sensitive,
+        )),
     }
 }
 
-fn assignment_cast_sql(value_sql: &str, target: &DataType, path: &[String]) -> String {
+fn assignment_cast_sql(
+    value_sql: &str,
+    target: &DataType,
+    path: &[String],
+    case_sensitive: bool,
+) -> String {
+    let pairing = StructPairing::by_name(case_sensitive);
+    let root = render::backtick_path(path);
     if path.len() > 1 {
-        nested_leaf_cast_sql(value_sql, target)
+        paired_nested_cast_sql(value_sql, target, pairing, &root)
     } else {
-        store_assignment_cast_sql(value_sql, target)
+        paired_assignment_cast_sql(value_sql, target, pairing, &root)
     }
-}
-
-fn names_match_exactly(source: &Fields, target: &Fields) -> bool {
-    source.len() == target.len()
-        && target.iter().all(|target_field| {
-            source.iter().any(|source_field| {
-                source_field.name() == target_field.name()
-                    && match (source_field.data_type(), target_field.data_type()) {
-                        (DataType::Struct(inner_source), DataType::Struct(inner_target)) => {
-                            names_match_exactly(inner_source, inner_target)
-                        }
-                        _ => true,
-                    }
-            })
-        })
 }
 
 fn value_sql_for(
@@ -416,54 +408,17 @@ fn value_sql_for(
     path: &[String],
     case_sensitive: bool,
 ) -> Result<String> {
-    let (DataType::Struct(source_fields), DataType::Struct(target_fields)) = (source, target)
-    else {
-        if let Some(text) =
-            incompatible_update_message("``", &render::backtick_path(path), source, target)
-        {
-            return Err(DataFusionError::Plan(text));
-        }
-        return Ok(assignment_cast_sql(value_sql, target, path));
+    let column = render::backtick_path(path);
+    let refusal = if holds_struct_type(source) || holds_struct_type(target) {
+        let pairing = StructPairing::by_name(case_sensitive);
+        incompatible_paired_message(pairing, &column, source, target)
+    } else {
+        incompatible_update_message("``", &column, source, target)
     };
-    let mut members = Vec::with_capacity(target_fields.len());
-    let mut used = HashSet::new();
-    for target_field in target_fields {
-        let mut child_path = path.to_vec();
-        child_path.push(target_field.name().clone());
-        let source_field = source_field(source_fields, target_field.name(), case_sensitive)
-            .ok_or_else(|| render::cannot_find_data(&child_path))?;
-        used.insert(source_field.name().clone());
-        let child_sql = format!(
-            "get_field(({value_sql}), {})",
-            render::string_literal(source_field.name())
-        );
-        let member = value_sql_for(
-            &child_sql,
-            source_field.data_type(),
-            target_field.data_type(),
-            &child_path,
-            case_sensitive,
-        )?;
-        members.push(format!(
-            "{}, {member}",
-            render::string_literal(target_field.name())
-        ));
+    if let Some(text) = refusal {
+        return Err(DataFusionError::Plan(text));
     }
-    let extra = source_fields
-        .iter()
-        .filter(|field| !used.contains(field.name()))
-        .map(|field| field.name().clone())
-        .collect::<Vec<_>>();
-    if !extra.is_empty() {
-        return Err(render::extra_struct_fields(&extra, path));
-    }
-    if names_match_exactly(source_fields, target_fields) && !has_required_field(target_fields) {
-        return Ok(assignment_cast_sql(value_sql, target, path));
-    }
-    Ok(format!(
-        "CASE WHEN ({value_sql}) IS NULL THEN NULL ELSE named_struct({}) END",
-        members.join(", ")
-    ))
+    Ok(assignment_cast_sql(value_sql, target, path, case_sensitive))
 }
 
 fn parse_expr(sql: &str) -> Result<Expr> {
@@ -753,12 +708,6 @@ pub(crate) async fn fold_merge_clauses(
     if has_star && case_sensitive && !schema_evolution {
         expand::refuse_unwritten_star_columns(&schema, source)?;
     }
-    let star = match source_alias.filter(|_| has_star && !schema_evolution) {
-        Some((_, rendered)) => {
-            expand::star_source(ctx, &schema, source, &rendered, case_sensitive).await
-        }
-        None => None,
-    };
     let scope = AssignmentScope {
         qualifiers,
         sql_qualifier: target_alias,
@@ -772,13 +721,6 @@ pub(crate) async fn fold_merge_clauses(
     for clause in &mut folded {
         match &mut clause.action {
             MergeAction::Update(update) => {
-                if let Some(star) = star
-                    .as_ref()
-                    .filter(|_| matches!(super::star_update(&update.assignments), Ok(Some(_))))
-                {
-                    update.assignments = star.assignments()?;
-                    changed = true;
-                }
                 if let Some(assignments) =
                     fold_nested_assignments(ctx, &schema, &scope, &update.assignments).await?
                 {
@@ -788,11 +730,6 @@ pub(crate) async fn fold_merge_clauses(
             }
             MergeAction::Insert(insert) => {
                 refuse_nested_insert_keys(&schema, &scope, insert)?;
-                if let Some(star) = star.as_ref().filter(|_| super::star_insert(insert)) {
-                    star.expand_insert(insert)?;
-                    changed = true;
-                }
-                changed |= expand::fold_insert_values(ctx, &schema, &scope, insert).await?;
             }
             MergeAction::Delete { .. } => {}
         }

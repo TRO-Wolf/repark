@@ -207,27 +207,6 @@ pub(super) fn unexpected_index_type(base: &str, part: &str) -> DataFusionError {
     ))
 }
 
-pub(super) fn cannot_find_data(path: &[String]) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the \
-         table ``: Cannot find data for the output column {}. SQLSTATE: KD000",
-        backtick_path(path)
-    ))
-}
-
-pub(super) fn extra_struct_fields(extra: &[String], path: &[String]) -> DataFusionError {
-    let fields = extra
-        .iter()
-        .map(|field| backtick(field))
-        .collect::<Vec<_>>()
-        .join(", ");
-    DataFusionError::Plan(format!(
-        "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for \
-         the table ``: Cannot write extra fields {fields} to the struct {}. SQLSTATE: KD000",
-        backtick_path(path)
-    ))
-}
-
 pub(super) fn row_level_refusal(pretty: &[String], errors: &[String]) -> DataFusionError {
     let assignments = pretty
         .iter()

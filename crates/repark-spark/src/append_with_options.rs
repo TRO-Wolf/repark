@@ -51,9 +51,13 @@ pub(crate) async fn execute_append_with_options(
         None => None,
         Some(_) => insert_sql_without_write_ref(insert, table_name),
     };
-    let source_df =
-        spark_ast::execute_insert_source(ctx, catalogs, planning_sql.as_deref().unwrap_or(sql))
-            .await?;
+    let source_df = spark_ast::execute_insert_source(
+        ctx,
+        catalogs,
+        planning_sql.as_deref().unwrap_or(sql),
+        options.source_by_name,
+    )
+    .await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let (mut snapshot_extra, mut staging) = options.resolve_with_session(ctx)?;

@@ -473,13 +473,13 @@ fn the_kernel_text_names_the_target_and_the_mode_only_for_a_struct_target() {
             &target_struct(),
             StructPairing::by_name(true),
             "``",
-            "it's"
+            "`it's`"
         )
         .as_deref(),
         Some(
             format!(
                 "{STORE_PAIR_KERNEL_NAME}((s.st), 'Struct(\"a\": Int32, \"b\": Int32)', \
-                 'by_name_case_sensitive', '``', 'it''s')"
+                 'by_name_case_sensitive', '``', '`it''s`')"
             )
             .as_str()
         )
@@ -494,7 +494,7 @@ async fn the_kernel_refuses_at_plan_time_and_pairs_at_run_time() {
     let paired = ctx
         .sql(&format!(
             "SELECT {STORE_PAIR_KERNEL_NAME}(named_struct('b', 2, 'a', 1), '{target}', \
-             'by_name', '``', 'st') AS st"
+             'by_name', '``', '`st`') AS st"
         ))
         .await
         .expect("plans")
@@ -513,7 +513,7 @@ async fn the_kernel_refuses_at_plan_time_and_pairs_at_run_time() {
     let refused = ctx
         .sql(&format!(
             "SELECT {STORE_PAIR_KERNEL_NAME}(named_struct('a', 1, 'q', 2), '{target}', \
-             'by_name', '``', 'st') AS st"
+             'by_name', '``', '`st`') AS st"
         ))
         .await
         .expect_err("plan-time refusal")

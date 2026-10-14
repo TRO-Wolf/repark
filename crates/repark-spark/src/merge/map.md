@@ -20,6 +20,12 @@ and the star-sentinel rewrite live here instead of in it.
   form stock sqlparser parses, and only there.
   pins: ipi-19-56-37-schema-evolution-write/C-005
 
+- `nested_assign.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the struct arm of `value_sql_for`, `names_match_exactly` and
+  `has_required_field` are deleted: a whole struct value goes to `assignment_cast_sql`, which
+  renders `__repark_store_pair__` by name under the scope's case rule in front of the leaf cast;
+  a nested pair is judged by the seam. `source_field` stays: field assignment resolves its key
+  with it. The star expansion's rebuild (`star_source`) and `fold_insert_values` are deleted;
+  the MERGE `INSERT` projection pairs in repark-iceberg.
 - `nested_assign.rs` (store cast) — **ICE-TSTZNS-WALL-1 (2026-10-10):** `assignment_cast_sql`
   picks the cast by depth: a top-level assignment takes `store_assignment_cast_sql`, which
   now names the zoned nanosecond kernel; a leaf below the top level takes

@@ -364,6 +364,8 @@ repark-core's error map.
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `selection_sql`
   renders through `sql_text::render_for_reparse` so string values re-parse
   exactly. pins: string-literal-escape-1/C-010
+- `predicate_dml.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the identity UPDATE hands `wrap_store_outputs` the by-name mode
+  under the statement's case rule (`spec.case_insensitive`) and Spark's empty table label.
 - `predicate_dml.rs` — **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the identity-collector
   scratch refs quote through the split-aware scratch quoter (982 → 983, under the default ceiling).
   **WO U5 PR2b round 2 (2026-09-25):** merge-on-read DELETE/UPDATE on a v1 table raise Spark's
@@ -516,6 +518,13 @@ repark-core's error map.
   where they refuse earlier and more clearly; nothing depends on them for safety: the
   guard in `../catalog/encryption_guard.rs` holds without them.
   pins: enc-1/C-008
+- `conform.rs`, `partition_overwrite.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the guard of hint H-1 is one check in front
+  of the three batch casts: `strict_store_cast` (S1 `conform_batch_scoped`, S2 the two
+  positional maps of `overwrite.rs`) and `strict_partition_store_cast` (S3, the static-partition
+  overwrite) call `struct_pairing::refuse_unpaired_struct` before the leaf cast, so a struct whose
+  field names are not the target's in order is refused and no batch cast pairs fields by a rule
+  of its own. The static-partition hint names the route and the workaround (owner, question 34).
+  `overwrite.rs` is unchanged: its two casts already go through `strict_store_cast`.
 - `conform.rs`, `overwrite.rs`, `partition_overwrite.rs`, `merge/mod.rs` — **ICE-TSNS-FLOOR-DOORS-1
   guard (2026-10-14, provisional, the order's lean A):** `conform::strict_store_cast(name, column,
   target)` is today's strict cast unless a top-level timestamp's unit would get coarser, where
@@ -581,6 +590,12 @@ repark-core's error map.
   `commit_truncate_to` commits onto a named branch.
   pins: dml-c-truncate/C-001, C-005
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `store_assignment_cast_sql` renders `__repark_store_pair__` (by
+  name, case-insensitive) in front of the leaf cast when the target holds a struct;
+  `paired_assignment_cast_sql` and `paired_nested_cast_sql` take the mode and the column path
+  from the MERGE and UPDATE fold. The struct and map arms of `incompatible_nested_message` and
+  `struct_member` are deleted: a nested pair is paired by the seam (`incompatible_paired_message`)
+  and its leaves are judged by the flat matrix with their paths.
 - `update_cast.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_cast_sql` is the one
   home of the `arrow_cast((expr), '<type>')` store-assignment cast, with the field ids
   stripped from the type name. MERGE's `insert.rs` and the Spark door's nested-assignment fold
@@ -1152,6 +1167,16 @@ repark-core's error map.
   gate (`repark-spark/src/void_type/insert_source_types.rs`). This rule is unchanged.
   Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
+- `store_overflow.rs` + [store_overflow/](store_overflow/map.md) — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** call site 1 of the
+  seam. `ConformStoreFlags` carries the door's `StructPairing` and table label;
+  `conform_one_store_expr` asks `pair_store_output` first: a struct-holding target whose source
+  does not pair as the identity is wrapped in the kernel, under DataFusion's own cast when the
+  planner added one (the leaf conversion stays with that cast). `transform_store_dml` reads the
+  statement's mode from its state snapshot (`statement_pairing`: by position for an INSERT
+  unless the DataFrame door carried `source_by_name`, by name for an UPDATE) and labels the
+  table (`table_label`; Spark's empty label for an UPDATE); `conform_values_rows` pairs a
+  `VALUES` row the same way. `wrap_store_outputs` takes the mode and the label from its
+  caller. The test module moved to `store_overflow/tests.rs` (file-size ceiling).
 - `store_overflow.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** `StoreOverflowCast`, an
   `AnalyzerRule` over `LogicalPlan::Dml` that maps out-of-range fractional/decimal stores
   into integer columns to Spark's `CAST_OVERFLOW_IN_TABLE_INSERT` (SQLSTATE 22003), naming
@@ -1187,6 +1212,8 @@ repark-core's error map.
   treats a fetch-less literal OFFSET of 1 or more over a single-row constant source
   (`limit_input_is_single_row` through Projection/SubqueryAlias/Sort to a one-row
   EmptyRelation) like `LIMIT 0`. A Filter or JOIN between keeps the refusal.
+- `store_cast.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `register_store_cast_udfs` registers `__repark_store_pair__` beside
+  the store-cast kernels (owner, question 35): the MERGE and UPDATE rewrite text names it.
 - `store_cast.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** rewritten as the Spark-boundary
   checked-cast kernel: `__repark_store_int{8,16,32,64}__` UDFs refuse NaN, infinities and
   out-of-range floats with the overflow message and store in-range values truncated like
@@ -1686,6 +1713,11 @@ repark-core's error map.
   carrying only session snapshot properties under `wap.id` instead of
   committing on main; re-exported through `write/mod.rs`.
   pins: ice-write-options-1/C-014, C-016, C-017
+- `store_assign.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `struct_fields_store_assignable` and `map_entries_store_assignable`
+  are replaced by the seam: two structs, two maps or two lists are store-assignable when they
+  pair by name and every leaf pair is (`nested_store_assignable`), through lists too.
+  `refuse_unless_write_store_assignable` keeps its nested return: its INSERT callers run before
+  the pairing, and the batch casts carry hint H-1 instead.
 - `struct_pairing.rs` — **ICE-STRUCT-PAIRING-1 step 2 (2026-10-14), parity row R-016:** the one
   rule that pairs a struct source with a struct target on a write. `pair_store_value(pairing,
   table, column, source, target)` walks both types: two structs pair by the door's

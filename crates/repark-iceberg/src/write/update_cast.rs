@@ -1,19 +1,43 @@
 use std::borrow::Cow;
-use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Field, Fields, TimeUnit};
+use datafusion::arrow::datatypes::{DataType, TimeUnit};
+use datafusion::error::DataFusionError;
 use repark_common::spark_error;
 
 use super::store_assign::{
     ansi_store_assignable, normalize_for_assignment, without_field_metadata,
 };
+use super::struct_pairing::{StructPairing, pair_store_value_at, store_pair_sql};
 
 #[must_use]
 pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
+    paired_assignment_cast_sql(expr, target, StructPairing::by_name(false), "``")
+}
+
+#[must_use]
+pub fn paired_assignment_cast_sql(
+    expr: &str,
+    target: &DataType,
+    pairing: StructPairing,
+    root: &str,
+) -> String {
+    let paired = store_pair_sql(expr, target, pairing, "``", root);
+    let expr = paired.as_deref().unwrap_or(expr);
     match super::ntz_store::store_kernel_sql(expr, target) {
         Some(stored) => stored,
         None => nested_leaf_cast_sql(expr, target),
     }
+}
+
+#[must_use]
+pub fn paired_nested_cast_sql(
+    expr: &str,
+    target: &DataType,
+    pairing: StructPairing,
+    root: &str,
+) -> String {
+    let paired = store_pair_sql(expr, target, pairing, "``", root);
+    nested_leaf_cast_sql(paired.as_deref().unwrap_or(expr), target)
 }
 
 #[must_use]
@@ -63,7 +87,11 @@ fn incompatible_message(
     if ansi_store_assignable(source, target) {
         return None;
     }
-    if matches!(source, DataType::Map(_, _)) || matches!(target, DataType::Map(_, _)) {
+    if super::struct_pairing::holds_struct_type(source)
+        || super::struct_pairing::holds_struct_type(target)
+        || matches!(source, DataType::Map(_, _))
+        || matches!(target, DataType::Map(_, _))
+    {
         return incompatible_nested_message(column, source, target);
     }
     let from = store_type_name(source, name_decimals)?;
@@ -99,59 +127,37 @@ pub fn incompatible_nested_message(
     source: &DataType,
     target: &DataType,
 ) -> Option<String> {
-    let source = normalize_for_assignment(source);
-    let target = normalize_for_assignment(target);
-    match (source, target) {
-        (DataType::Map(from, _), DataType::Map(to, _)) => {
-            let (DataType::Struct(from), DataType::Struct(to)) = (from.data_type(), to.data_type())
-            else {
-                return None;
-            };
-            from.iter().zip(to.iter()).zip(["key", "value"]).find_map(
-                |((source, target), label)| {
-                    incompatible_nested_message(
-                        &format!("{column}.`{label}`"),
-                        source.data_type(),
-                        target.data_type(),
-                    )
-                },
-            )
+    incompatible_paired_message(StructPairing::by_name(false), column, source, target)
+}
+
+#[must_use]
+pub fn incompatible_paired_message(
+    pairing: StructPairing,
+    column: &str,
+    source: &DataType,
+    target: &DataType,
+) -> Option<String> {
+    let pairs = match pair_store_value_at(pairing, "``", column, source, target) {
+        Ok(pairs) => pairs,
+        Err(DataFusionError::Plan(text)) => return Some(text),
+        Err(other) => return Some(other.to_string()),
+    };
+    pairs.leaves().iter().find_map(|leaf| {
+        let from = normalize_for_assignment(&leaf.source);
+        let to = normalize_for_assignment(&leaf.target);
+        if ansi_store_assignable(from, to) {
+            return None;
         }
-        (DataType::Struct(from), DataType::Struct(to)) => to.iter().find_map(|target| {
-            let child = format!("{column}.`{}`", target.name());
-            match struct_member(from, target.name()) {
-                Some(source) => {
-                    incompatible_nested_message(&child, source.data_type(), target.data_type())
-                }
-                None => Some(format!(
-                    "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible \
-                     data for the table ``: Cannot find data for the output column {child}. \
-                     SQLSTATE: KD000"
-                )),
-            }
-        }),
-        _ if ansi_store_assignable(source, target) => None,
-        _ => Some(spark_error::message(
+        Some(spark_error::message(
             spark_error::INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST,
             &[
                 ("tableName", "``"),
-                ("columnName", column),
-                ("fromType", spark_update_type_name(source)?),
-                ("toType", spark_update_type_name(target)?),
+                ("columnName", &leaf.path),
+                ("fromType", spark_update_type_name(from)?),
+                ("toType", spark_update_type_name(to)?),
             ],
-        )),
-    }
-}
-
-fn struct_member<'a>(fields: &'a Fields, name: &str) -> Option<&'a Arc<Field>> {
-    fields
-        .iter()
-        .find(|field| field.name() == name)
-        .or_else(|| {
-            fields
-                .iter()
-                .find(|field| field.name().eq_ignore_ascii_case(name))
-        })
+        ))
+    })
 }
 
 fn spark_update_type_name(data_type: &DataType) -> Option<&'static str> {

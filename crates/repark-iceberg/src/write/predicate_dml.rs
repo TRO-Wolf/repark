@@ -409,7 +409,15 @@ async fn collect_identity_update_rows(
         .iter()
         .map(|field| (field.name().clone(), field.data_type().clone()))
         .collect();
-    let plan = crate::write::store_overflow::wrap_store_outputs(raw, &targets, true, false, None)?;
+    let plan = crate::write::store_overflow::wrap_store_outputs(
+        raw,
+        &targets,
+        true,
+        false,
+        None,
+        crate::write::struct_pairing::StructPairing::by_name(!spec.case_insensitive),
+        "``",
+    )?;
     let mut stream = ctx
         .execute_logical_plan(plan)
         .await?

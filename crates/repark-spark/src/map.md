@@ -35,6 +35,10 @@ pins: rp-4-fork-repin/C-005, C-006
   **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s
   `analyze_built_plan` on the existing `normalize` line (the root stays at 156), for the
   binding's native join door. pins: stamp-2-r5p6-2/C-002
+- `insert_by_name.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `insert_by_name/nested.rs` (`refuse_nested_mismatch`) is
+  deleted: the BY NAME append hands `wrap_store_outputs` the by-name mode under the session's
+  case rule and the table label, and the by-name source of `REPLACE WHERE` pairs at the planned
+  INSERT.
 - `router.rs`, `catalog_ops.rs`, `merge.rs`, `insert_overwrite.rs`, `insert_by_name.rs`,
   `append_with_options.rs`, `truncate.rs`, `ctas.rs`, `spark_ast.rs` — **ENC-1 round 2
   (2026-10-09):** the Spark seats of the keyed-table refusal. `catalog_ops.rs` gains
@@ -53,6 +57,12 @@ pins: rp-4-fork-repin/C-005, C-006
   `repark-iceberg` refuses the file and the commit without them. Pinned in
   `tests/enc_1_fold.rs`.
   pins: enc-1/C-007, C-008
+- `router.rs`, `spark_ast.rs`, `append_with_options.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the DataFrame door's
+  `source_by_name` reaches the conform: `execute_passthrough_inner` puts a `StatementPairing`
+  (`source_by_name`, `case_sensitive`) on the statement's own state snapshot, where
+  `StoreOverflowCast` reads it; `execute_passthrough_by` and `execute_insert_source` take the
+  flag, and the plain-INSERT route of `execute_insert_routed` and the write-options append pass
+  it.
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)
@@ -239,6 +249,9 @@ pins: rp-4-fork-repin/C-005, C-006
   a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
   0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
   before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
+- `insert_overwrite.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the stage-then-swap path hands `conform_types` the door's
+  mode (by name for `overwritePartitions`, by position otherwise) and the table label. The
+  static-partition route keeps no pairing site: hint H-1 guards its cast.
 - `insert_overwrite.rs` — **RP-56 (2026-09-28):** the empty-overwrite target probe reads
   through a scratch alias (engine machinery, like its sibling probes), and the
   ambiguous-overwrite read-back counts (`SELECT 1 … HAVING COUNT(*)=1`) instead of starring.

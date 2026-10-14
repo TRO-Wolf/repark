@@ -175,10 +175,7 @@ fn backtick(part: &str) -> String {
 }
 
 fn render_path(path: &[String]) -> String {
-    path.iter()
-        .map(|part| backtick(part))
-        .collect::<Vec<_>>()
-        .join(".")
+    path.join(".")
 }
 
 fn render_names<'a>(names: impl Iterator<Item = &'a str>) -> String {
@@ -192,8 +189,7 @@ fn incompatible(table: &str, class: &str, detail: &str) -> DataFusionError {
     ))
 }
 
-#[must_use]
-pub fn cannot_find_data(table: &str, path: &[String]) -> DataFusionError {
+fn cannot_find_data(table: &str, path: &[String]) -> DataFusionError {
     incompatible(
         table,
         "CANNOT_FIND_DATA",
@@ -204,8 +200,7 @@ pub fn cannot_find_data(table: &str, path: &[String]) -> DataFusionError {
     )
 }
 
-#[must_use]
-pub fn extra_struct_fields(table: &str, extra: &[String], path: &[String]) -> DataFusionError {
+fn extra_struct_fields(table: &str, extra: &[String], path: &[String]) -> DataFusionError {
     incompatible(
         table,
         "EXTRA_STRUCT_FIELDS",
@@ -371,11 +366,11 @@ impl Walk<'_> {
                 else {
                     return Ok(self.leaf(source, target, path));
                 };
-                path.push("key".to_string());
+                path.push("`key`".to_string());
                 let key_pair = self.pair(key.data_type(), target_key.data_type(), path);
                 path.pop();
                 let (key_plan, key_type) = key_pair?;
-                path.push("value".to_string());
+                path.push("`value`".to_string());
                 let value_pair = self.pair(value.data_type(), target_value.data_type(), path);
                 path.pop();
                 let (value_plan, value_type) = value_pair?;
@@ -401,7 +396,7 @@ impl Walk<'_> {
             }
             _ => match (list_element(source), list_element(target)) {
                 (Some(element), Some(target_element)) => {
-                    path.push("element".to_string());
+                    path.push("`element`".to_string());
                     let pair = self.pair(element.data_type(), target_element.data_type(), path);
                     path.pop();
                     let (plan, paired) = pair?;
@@ -459,7 +454,7 @@ impl Walk<'_> {
         }
         let mut picks = Vec::with_capacity(to.len());
         for field in to {
-            path.push(field.name().clone());
+            path.push(backtick(field.name()));
             let picked = self.pick(from, field.name(), path);
             path.pop();
             picks.push(picked?);
@@ -488,7 +483,7 @@ impl Walk<'_> {
         let mut fields = Vec::with_capacity(to.len());
         for (position, (index, target)) in picks.iter().zip(to.iter()).enumerate() {
             let source = &from[*index];
-            path.push(target.name().clone());
+            path.push(backtick(target.name()));
             let pair = self.pair(source.data_type(), target.data_type(), path);
             path.pop();
             let (plan, paired) = pair?;
@@ -535,12 +530,23 @@ pub fn pair_store_value(
     source: &DataType,
     target: &DataType,
 ) -> Result<StorePairs> {
+    pair_store_value_at(pairing, table, &backtick(column), source, target)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn pair_store_value_at(
+    pairing: StructPairing,
+    table: &str,
+    root: &str,
+    source: &DataType,
+    target: &DataType,
+) -> Result<StorePairs> {
     let mut walk = Walk {
         pairing,
         table,
         leaves: Vec::new(),
     };
-    let mut path = vec![column.to_string()];
+    let mut path = vec![root.to_string()];
     let (plan, paired) = walk.pair(source, target, &mut path)?;
     Ok(StorePairs {
         plan,
@@ -575,7 +581,7 @@ fn first_unpaired<'a>(
                 return Some(Unpaired::Fields(path.clone(), from, to));
             }
             from.iter().zip(to.iter()).find_map(|(source, target)| {
-                path.push(target.name().clone());
+                path.push(backtick(target.name()));
                 let found = first_unpaired(source.data_type(), target.data_type(), path);
                 path.pop();
                 found
@@ -583,20 +589,20 @@ fn first_unpaired<'a>(
         }
         (DataType::Map(from, _), DataType::Map(to, _)) => {
             let ((key, value), (target_key, target_value)) = (map_pair(from)?, map_pair(to)?);
-            path.push("key".to_string());
+            path.push("`key`".to_string());
             let found = first_unpaired(key.data_type(), target_key.data_type(), path);
             path.pop();
             if found.is_some() {
                 return found;
             }
-            path.push("value".to_string());
+            path.push("`value`".to_string());
             let found = first_unpaired(value.data_type(), target_value.data_type(), path);
             path.pop();
             found
         }
         _ => {
             let (element, target_element) = (list_element(source)?, list_element(target)?);
-            path.push("element".to_string());
+            path.push("`element`".to_string());
             let found = first_unpaired(element.data_type(), target_element.data_type(), path);
             path.pop();
             found
@@ -615,7 +621,7 @@ pub fn refuse_unpaired_struct(
     if !holds_struct(target) {
         return Ok(());
     }
-    let mut path = vec![column.to_string()];
+    let mut path = vec![backtick(column)];
     match first_unpaired(source, target, &mut path) {
         Some(Unpaired::Fields(at, from, to)) => Err(unpaired_struct(table, entry, &at, from, to)),
         Some(Unpaired::Layout(at, layout)) => Err(unpaired_layout(table, entry, &at, layout)),
@@ -629,7 +635,7 @@ pub fn store_pair_sql(
     target: &DataType,
     pairing: StructPairing,
     table: &str,
-    column: &str,
+    root: &str,
 ) -> Option<String> {
     if !holds_struct(target) {
         return None;
@@ -640,7 +646,7 @@ pub fn store_pair_sql(
         quote(&without_field_metadata(target).to_string()),
         quote(pairing.literal()),
         quote(table),
-        quote(column)
+        quote(root)
     ))
 }
 
@@ -660,7 +666,7 @@ pub fn store_pair_expr(
             text(&without_field_metadata(target).to_string()),
             text(pairing.literal()),
             text(table),
-            text(column),
+            text(&backtick(column)),
         ],
     ))
 }
@@ -670,11 +676,19 @@ pub fn holds_struct_type(data_type: &DataType) -> bool {
     holds_struct(data_type)
 }
 
+#[must_use]
+pub fn column_root(path: &[String]) -> String {
+    path.iter()
+        .map(|part| backtick(part))
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
 struct KernelSpec {
     target: DataType,
     pairing: StructPairing,
     table: String,
-    column: String,
+    root: String,
 }
 
 fn kernel_text(value: Option<&ScalarValue>, what: &str) -> Result<String> {
@@ -706,18 +720,12 @@ impl KernelSpec {
             target,
             pairing,
             table: kernel_text(*table, "table label")?,
-            column: kernel_text(*column, "column")?,
+            root: kernel_text(*column, "column")?,
         })
     }
 
     fn pairs(&self, source: &DataType) -> Result<StorePairs> {
-        pair_store_value(
-            self.pairing,
-            &self.table,
-            &self.column,
-            source,
-            &self.target,
-        )
+        pair_store_value_at(self.pairing, &self.table, &self.root, source, &self.target)
     }
 }
 
